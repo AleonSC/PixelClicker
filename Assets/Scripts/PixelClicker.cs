@@ -68,6 +68,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Tier is available from the very beginning.")]
         public bool unlockedAtStart = false;
 
+        [Tooltip("Amount of this currency you start the game with (handy for testing the shop).")]
+        public double startingAmount = 0;
+
         [Tooltip("How this tier unlocks: by collecting the previous tier, or only through the shop.")]
         public TierUnlockMode unlockMode = TierUnlockMode.PreviousTierThreshold;
 
@@ -371,6 +374,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             if (tiers[i].unlockedAtStart) tiers[i].unlocked = true;
+            tiers[i].count = tiers[i].startingAmount;
         }
     }
 
@@ -585,7 +589,7 @@ public class PixelClicker : MonoBehaviour
 
         PixelTier copy = definition.Clone();
         copy.unlocked = false;
-        copy.count = 0;
+        copy.count = copy.startingAmount;
         copy.totalCollected = 0;
 
         List<PixelTier> list = new List<PixelTier>(tiers) { copy };
