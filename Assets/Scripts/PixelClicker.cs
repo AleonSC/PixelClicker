@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
@@ -30,7 +32,18 @@ public class PixelClicker : MonoBehaviour
         White = 0,
         Gray = 1,
         Black = 2,
-        // Future: Red, Green, Blue ...
+        Red = 3,
+        Green = 4,
+        Blue = 5,
+    }
+
+    /// <summary>How a tier becomes available.</summary>
+    public enum TierUnlockMode
+    {
+        /// <summary>Unlocks automatically once the previous tier's lifetime total reaches Unlock Threshold.</summary>
+        PreviousTierThreshold = 0,
+        /// <summary>Never unlocks on its own. Unlocked by a shop purchase (or code calling UnlockTier).</summary>
+        ShopOnly = 1,
     }
 
     /// <summary>Everything that defines one currency/tier. Fully editable in the Inspector.</summary>
@@ -55,6 +68,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Tier is available from the very beginning.")]
         public bool unlockedAtStart = false;
 
+        [Tooltip("How this tier unlocks: by collecting the previous tier, or only through the shop.")]
+        public TierUnlockMode unlockMode = TierUnlockMode.PreviousTierThreshold;
+
         [Tooltip("Relative chance this tier is picked when a new pixel spawns (only used while Randomize Spawn Tier is on). 0 = never spawns.")]
         [Min(0f)] public float spawnWeight = 1f;
 
@@ -74,6 +90,9 @@ public class PixelClicker : MonoBehaviour
 
         [Tooltip("Has this tier been unlocked?")]
         public bool unlocked;
+
+        /// <summary>Shallow copy (used by the shop to add its reward tiers).</summary>
+        public PixelTier Clone() => (PixelTier)MemberwiseClone();
     }
 
     // ------------------------------------------------------------------
@@ -202,6 +221,9 @@ public class PixelClicker : MonoBehaviour
 
     [Tooltip("Ignore clicks while the pixel is still materializing.")]
     [SerializeField] private bool blockClicksWhileSpawning = false;
+
+    [Tooltip("Ignore clicks that land on UI (buttons, panels), so pressing the Shop button doesn't also collect a pixel.")]
+    [SerializeField] private bool ignoreClicksOverUI = true;
 
     [Header("Suspended In Midair")]
     [Tooltip("Keep the pixel floating: disables gravity on any Rigidbody on the pixel and makes it kinematic.")]
@@ -351,6 +373,7 @@ public class PixelClicker : MonoBehaviour
         CleanOldPixels();
 
         if (!WasClickedThisFrame() || targetCamera == null) return;
+        if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         Ray ray = targetCamera.ScreenPointToRay(PointerPosition());
         RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers);
@@ -479,6 +502,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 1; i < tiers.Length; i++)
         {
             if (tiers[i].unlocked) continue;
+            if (tiers[i].unlockMode == TierUnlockMode.ShopOnly) continue;
             if (tiers[i - 1].totalCollected >= tiers[i].unlockThreshold)
             {
                 tiers[i].unlocked = true;
@@ -494,7 +518,8 @@ public class PixelClicker : MonoBehaviour
 
     private bool IsValidTier(int i) => tiers != null && i >= 0 && i < tiers.Length;
 
-    private int IndexOf(PixelType type)
+    /// <summary>Index of the tier with this currency type, or -1 if there isn't one.</summary>
+    public int IndexOf(PixelType type)
     {
         for (int i = 0; i < tiers.Length; i++)
             if (tiers[i].type == type) return i;
@@ -503,9 +528,47 @@ public class PixelClicker : MonoBehaviour
 
     private int GetHighestUnlockedIndex()
     {
+        // Shop tiers are skipped so buying them doesn't change the "highest tier" click behaviour.
         for (int i = tiers.Length - 1; i >= 0; i--)
-            if (tiers[i].unlocked) return i;
+            if (tiers[i].unlocked && tiers[i].unlockMode != TierUnlockMode.ShopOnly) return i;
         return 0;
+    }
+
+    /// <summary>Is the tier with this currency type unlocked?</summary>
+    public bool IsUnlocked(PixelType type)
+    {
+        int i = IndexOf(type);
+        return i >= 0 && tiers[i].unlocked;
+    }
+
+    /// <summary>Unlocks a tier directly (shops, achievements...). Returns false if invalid or already unlocked.</summary>
+    public bool UnlockTier(int index)
+    {
+        if (!IsValidTier(index) || tiers[index].unlocked) return false;
+        tiers[index].unlocked = true;
+        PlaySound(unlockSound);
+        onTierUnlocked?.Invoke(index);
+        NotifyChanged();
+        return true;
+    }
+
+    /// <summary>
+    /// Makes sure a tier of this type exists, appending a locked copy of <paramref name="definition"/> if not.
+    /// Returns its index. Lets the shop add Red/Green/Blue without editing the Tiers list by hand.
+    /// </summary>
+    public int EnsureTier(PixelTier definition)
+    {
+        int existing = IndexOf(definition.type);
+        if (existing >= 0) return existing;
+
+        PixelTier copy = definition.Clone();
+        copy.unlocked = false;
+        copy.count = 0;
+        copy.totalCollected = 0;
+
+        List<PixelTier> list = new List<PixelTier>(tiers) { copy };
+        tiers = list.ToArray();
+        return tiers.Length - 1;
     }
 
     /// <summary>Weighted random pick among unlocked tiers.</summary>
@@ -762,7 +825,7 @@ public class PixelClicker : MonoBehaviour
             int next = -1;
             for (int i = 1; i < tiers.Length; i++)
             {
-                if (!tiers[i].unlocked) { next = i; break; }
+                if (!tiers[i].unlocked && tiers[i].unlockMode != TierUnlockMode.ShopOnly) { next = i; break; }
             }
 
             nextUnlockLabel.text = next < 0

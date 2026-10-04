@@ -175,7 +175,8 @@ public class PixelUI : MonoBehaviour
     // Unity lifecycle
     // ------------------------------------------------------------------
 
-    private void Awake()
+    // Start (not Awake) so tiers appended by PixelShop during Awake are included.
+    private void Start()
     {
         if (clicker == null)
         {
