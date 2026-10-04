@@ -155,6 +155,45 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Ignore clicks while the pixel is still materializing.")]
     [SerializeField] private bool blockClicksWhileSpawning = false;
 
+    [Header("Suspended In Midair")]
+    [Tooltip("Keep the pixel floating: disables gravity on any Rigidbody on the pixel and makes it kinematic.")]
+    [SerializeField] private bool suspendInMidair = true;
+
+    [Tooltip("Gently bob up and down while floating.")]
+    [SerializeField] private bool hoverBob = true;
+
+    [Tooltip("How far (world units) the pixel bobs up and down.")]
+    [SerializeField] private float hoverAmplitude = 0.1f;
+
+    [Tooltip("Bob cycles per second.")]
+    [SerializeField] private float hoverSpeed = 0.5f;
+
+    [Tooltip("Slowly spin the pixel (degrees per second per axis). Set to 0 for no spin.")]
+    [SerializeField] private Vector3 idleSpin = new Vector3(0f, 20f, 0f);
+
+    [Header("Pulsing")]
+    [Tooltip("Enable the pulsing scale effect.")]
+    [SerializeField] private bool pulseEnabled = true;
+
+    [Tooltip("How much the size changes. 0.05 = +/-5% of the base scale.")]
+    [SerializeField] private float pulseAmount = 0.05f;
+
+    [Tooltip("Pulses per second.")]
+    [SerializeField] private float pulseSpeed = 1f;
+
+    [Tooltip("Shape of one pulse (time 0..1 across a cycle, value -1..1). Default is a smooth sine-like wave.")]
+    [SerializeField] private AnimationCurve pulseCurve = new AnimationCurve(
+        new Keyframe(0f, 0f, 0f, 2f * Mathf.PI * 0.5f),
+        new Keyframe(0.25f, 1f, 0f, 0f),
+        new Keyframe(0.75f, -1f, 0f, 0f),
+        new Keyframe(1f, 0f, 2f * Mathf.PI * 0.5f, 0f));
+
+    [Tooltip("Also pulse the pixel's brightness along with its size.")]
+    [SerializeField] private bool pulseBrightness = false;
+
+    [Tooltip("Brightness change at the pulse peak (0.1 = +/-10%). Only used if Pulse Brightness is on.")]
+    [SerializeField] private float brightnessAmount = 0.1f;
+
     [Header("Effects")]
     [Tooltip("Particle system played at the pixel on click. Its start colour is set to the tier colour.")]
     [SerializeField] private ParticleSystem clickParticles;
@@ -194,6 +233,9 @@ public class PixelClicker : MonoBehaviour
     private bool isSpawning;
     private MaterialPropertyBlock propertyBlock;
     private int colorPropertyId;
+    private Vector3 basePosition;
+    private float materializeFactor = 1f;
+    private Color currentColor = Color.white;
 
     /// <summary>C# event version of onCurrencyChanged, handy for other scripts.</summary>
     public event Action CurrencyChanged;
@@ -217,6 +259,17 @@ public class PixelClicker : MonoBehaviour
         }
 
         baseScale = pixelTransform.localScale;
+        basePosition = pixelTransform.position;
+
+        if (suspendInMidair)
+        {
+            Rigidbody body = pixelTransform.GetComponent<Rigidbody>();
+            if (body != null)
+            {
+                body.useGravity = false;
+                body.isKinematic = true;
+            }
+        }
         propertyBlock = new MaterialPropertyBlock();
         colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
@@ -235,6 +288,8 @@ public class PixelClicker : MonoBehaviour
 
     private void Update()
     {
+        AnimatePixel();
+
         if (WasClickedThisFrame() && IsPointerOverPixel())
         {
             Collect();
@@ -381,8 +436,36 @@ public class PixelClicker : MonoBehaviour
     // Visuals
     // ------------------------------------------------------------------
 
-    private void ApplyPixelColor(Color color)
+    /// <summary>Applies float, spin and pulse every frame. Scale = base * materialize * pulse.</summary>
+    private void AnimatePixel()
     {
+        float time = Time.time;
+
+        if (suspendInMidair && hoverBob)
+        {
+            pixelTransform.position = basePosition +
+                Vector3.up * (Mathf.Sin(time * hoverSpeed * Mathf.PI * 2f) * hoverAmplitude);
+        }
+
+        if (idleSpin != Vector3.zero)
+            pixelTransform.Rotate(idleSpin * Time.deltaTime, Space.Self);
+
+        float pulse = 0f;
+        if (pulseEnabled)
+        {
+            float cycle = Mathf.Repeat(time * pulseSpeed, 1f);
+            pulse = pulseCurve.Evaluate(cycle); // -1..1
+        }
+
+        pixelTransform.localScale = baseScale * (materializeFactor * (1f + pulse * pulseAmount));
+
+        if (pulseEnabled && pulseBrightness)
+            ApplyPixelColor(currentColor * (1f + pulse * brightnessAmount), false);
+    }
+
+    private void ApplyPixelColor(Color color, bool remember = true)
+    {
+        if (remember) currentColor = color;
         if (pixelRenderer == null) return;
         pixelRenderer.GetPropertyBlock(propertyBlock);
         propertyBlock.SetColor(colorPropertyId, color);
@@ -401,18 +484,18 @@ public class PixelClicker : MonoBehaviour
     {
         isSpawning = true;
         ApplyPixelColor(newColor);
-        pixelTransform.localScale = Vector3.zero;
+        materializeFactor = 0f;
 
         float t = 0f;
         while (t < materializeDuration)
         {
             t += Time.deltaTime;
             float k = materializeDuration > 0f ? Mathf.Clamp01(t / materializeDuration) : 1f;
-            pixelTransform.localScale = baseScale * materializeCurve.Evaluate(k);
+            materializeFactor = materializeCurve.Evaluate(k);
             yield return null;
         }
 
-        pixelTransform.localScale = baseScale;
+        materializeFactor = 1f;
         isSpawning = false;
         materializeRoutine = null;
     }
