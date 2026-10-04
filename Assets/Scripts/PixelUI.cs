@@ -145,6 +145,15 @@ public class PixelUI : MonoBehaviour
     [Tooltip("How far (canvas units) the popup rises over its life.")]
     [SerializeField] private float popupRise = 120f;
 
+    [Tooltip("Popups from the AUTO CLICKER appear over the cube instead of at the cursor.")]
+    [SerializeField] private bool autoPopupsOverCube = true;
+
+    [Tooltip("Auto-click popups keep following the cube as it bobs and spins.")]
+    [SerializeField] private bool cubePopupFollowsCube = true;
+
+    [Tooltip("Offset from the cube's screen position where auto-click popups start (canvas units).")]
+    [SerializeField] private Vector2 cubePopupStartOffset = new Vector2(0f, 110f);
+
     [Tooltip("Offset from the cursor where the popup starts (canvas units).")]
     [SerializeField] private Vector2 popupStartOffset = new Vector2(0f, 50f);
 
@@ -169,7 +178,6 @@ public class PixelUI : MonoBehaviour
     private GameObject autoRoot;
     private bool built;
     private RectTransform popupCanvasRect;
-    private double[] lastTotals;
 
     // ------------------------------------------------------------------
     // Unity lifecycle
@@ -208,8 +216,7 @@ public class PixelUI : MonoBehaviour
         }
 
         BuildPopupCanvas();
-        lastTotals = new double[clicker.Tiers.Length];
-        for (int i = 0; i < lastTotals.Length; i++) lastTotals[i] = clicker.Tiers[i].totalCollected;
+        clicker.PixelCollected += OnPixelCollected;
 
         built = true;
     }
@@ -218,13 +225,13 @@ public class PixelUI : MonoBehaviour
     {
         if (autoRoot != null) Destroy(autoRoot);
         if (popupRoot != null) Destroy(popupRoot);
+        if (clicker != null) clicker.PixelCollected -= OnPixelCollected;
     }
 
     private void Update()
     {
         if (!built) return;
         Refresh();
-        DetectGains();
     }
 
     // ------------------------------------------------------------------
@@ -250,21 +257,6 @@ public class PixelUI : MonoBehaviour
 
     private GameObject popupRoot;
 
-    /// <summary>Compares lifetime totals each frame; any increase spawns a popup.</summary>
-    private void DetectGains()
-    {
-        PixelClicker.PixelTier[] tiers = clicker.Tiers;
-        if (lastTotals.Length != tiers.Length) lastTotals = new double[tiers.Length];
-
-        for (int i = 0; i < tiers.Length; i++)
-        {
-            double gained = tiers[i].totalCollected - lastTotals[i];
-            lastTotals[i] = tiers[i].totalCollected;
-
-            if (gained > 0d && showGainPopups) SpawnPopup(tiers[i], gained);
-        }
-    }
-
     private Vector2 CursorScreenPosition()
     {
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
@@ -281,15 +273,52 @@ public class PixelUI : MonoBehaviour
         return local;
     }
 
-    private void SpawnPopup(PixelClicker.PixelTier tier, double amount)
+    /// <summary>World position of the cube in the popup canvas's local space.</summary>
+    private Vector2 CubeLocal()
     {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null || clicker.PixelTransform == null) return lastCubeLocal;
+
+        Vector3 screen = cam.WorldToScreenPoint(clicker.PixelTransform.position);
+        if (screen.z < 0f) return lastCubeLocal; // behind the camera
+
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(popupCanvasRect, screen, null, out Vector2 local);
+        lastCubeLocal = local;
+        return local;
+    }
+
+    private Vector2 lastCubeLocal;
+
+    /// <summary>Called for every collected pixel; automatic clicks pop up over the cube, manual ones at the cursor.</summary>
+    private void OnPixelCollected(int tierIndex, double amount, bool automatic)
+    {
+        if (!showGainPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
+
+        PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
         Color color = popupUsesTierColor ? tier.color : popupColor;
         string text = string.Format(popupFormat, FormatAmount(amount));
         Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
-        StartCoroutine(PopupRoutine(text, color, CursorLocal(), jitter));
+
+        Func<Vector2> anchor;
+        Vector2 offset;
+
+        if (automatic && autoPopupsOverCube)
+        {
+            Vector2 fixedPoint = CubeLocal();
+            anchor = cubePopupFollowsCube ? (Func<Vector2>)CubeLocal : () => fixedPoint;
+            offset = cubePopupStartOffset;
+        }
+        else
+        {
+            Vector2 fixedPoint = CursorLocal();
+            anchor = followCursor ? (Func<Vector2>)CursorLocal : () => fixedPoint;
+            offset = popupStartOffset;
+        }
+
+        StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter));
     }
 
-    private IEnumerator PopupRoutine(string text, Color color, Vector2 startCursor, Vector2 jitter)
+    private IEnumerator PopupRoutine(string text, Color color, Func<Vector2> getAnchor, Vector2 offset)
     {
         GameObject go = new GameObject("GainPopup", typeof(RectTransform));
         go.transform.SetParent(popupCanvasRect, false);
@@ -317,8 +346,7 @@ public class PixelUI : MonoBehaviour
             t += Time.unscaledDeltaTime;
             float k = popupDuration > 0f ? Mathf.Clamp01(t / popupDuration) : 1f;
 
-            Vector2 anchor = followCursor ? CursorLocal() : startCursor;
-            rt.anchoredPosition = anchor + popupStartOffset + jitter + Vector2.up * (popupRise * k);
+            rt.anchoredPosition = getAnchor() + offset + Vector2.up * (popupRise * k);
             rt.localScale = Vector3.one * popupScale.Evaluate(k);
 
             Color c = color;

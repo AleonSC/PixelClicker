@@ -324,6 +324,12 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Fired whenever currency is gained: (tier index, amount). Used by PixelUI for "+1" popups.</summary>
     public event Action<int, double> CurrencyGained;
 
+    /// <summary>
+    /// Fired for every collected pixel: (tier index, amount, wasAutomatic).
+    /// wasAutomatic is true for clicks made by the auto clicker (see <see cref="AutoCollect"/>).
+    /// </summary>
+    public event Action<int, double, bool> PixelCollected;
+
     public PixelTier[] Tiers => tiers;
     public Transform PixelTransform => pixelTransform;
     public Camera TargetCamera => targetCamera;
@@ -445,14 +451,21 @@ public class PixelClicker : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>Performs one click. Public so buttons or automation can call it too.</summary>
-    public void Collect()
+    public void Collect() => CollectInternal(false);
+
+    /// <summary>A click made by automation (the auto clicker). Same as <see cref="Collect"/>, but flagged as automatic.</summary>
+    public void AutoCollect() => CollectInternal(true);
+
+    private void CollectInternal(bool automatic)
     {
         if (blockClicksWhileSpawning && isSpawning) return;
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
 
-        AddCurrency(tierIndex, tier.amountPerClick * clickMultiplier);
+        double amount = tier.amountPerClick * clickMultiplier;
+        AddCurrency(tierIndex, amount);
+        PixelCollected?.Invoke(tierIndex, amount, automatic);
 
         PlayClickEffects(tier);
         if (spawnFallingCopy) SpawnFallingCopy();

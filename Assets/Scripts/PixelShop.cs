@@ -19,6 +19,7 @@ using UnityEngine.UI;
 ///
 /// Add this to any GameObject (e.g. the cube). The UI builds itself at runtime.
 /// </summary>
+[RequireComponent(typeof(PixelAutoClicker))]
 public class PixelShop : MonoBehaviour
 {
     public enum ButtonCorner { TopLeft, TopRight, BottomLeft, BottomRight }
@@ -46,7 +47,7 @@ public class PixelShop : MonoBehaviour
         public string displayName = "Pack";
 
         [TextArea(1, 3)]
-        [Tooltip("Short description shown under the name.")]
+        [Tooltip("Short description shown under the name. Use {interval} to show the auto clicker's interval in seconds.")]
         public string description = "";
 
         [Tooltip("Everything the player must pay. All costs are paid together.")]
@@ -55,6 +56,15 @@ public class PixelShop : MonoBehaviour
         [Tooltip("Tiers unlocked by this pack. Added to PixelClicker automatically if it doesn't have them. " +
                  "Set Spawn Weight to control how often each appears.")]
         public PixelClicker.PixelTier[] rewardTiers;
+
+        [Tooltip("Index (in the Packs list, starting at 0) of a pack that must be bought first. -1 = no requirement.")]
+        public int requiresPackIndex = -1;
+
+        [Tooltip("Buying this pack switches on the auto clicker.")]
+        public bool unlocksAutoClicker = false;
+
+        [Tooltip("Runtime: has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.)")]
+        public bool purchased = false;
     }
 
     // ------------------------------------------------------------------
@@ -65,6 +75,9 @@ public class PixelShop : MonoBehaviour
     [Tooltip("The PixelClicker to use. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
+    [Tooltip("The auto clicker switched on by the Auto Clicker pack. Taken from this GameObject (or found in the scene) if empty. Edit its interval on that component.")]
+    [SerializeField] private PixelAutoClicker autoClicker;
+
     [Tooltip("Font for the shop UI. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
@@ -74,9 +87,25 @@ public class PixelShop : MonoBehaviour
 
     [Header("Packs")]
     [Tooltip("The shop's items. Add more entries here later.")]
-    [SerializeField] private ShopPack[] packs =
+    [SerializeField] private ShopPack[] packs = { CreateRgbPack(), CreateAutoClickerPack() };
+
+    [Tooltip("If none of the packs unlocks the auto clicker (e.g. this component was added before the auto clicker existed), " +
+             "add the default Auto Clicker pack at startup.")]
+    [SerializeField] private bool addDefaultAutoClickerPack = true;
+
+    [Tooltip("Show packs whose requirement isn't met yet (greyed out as 'Locked'). Off = hidden until the requirement is bought.")]
+    [SerializeField] private bool showLockedPacks = false;
+
+    [Tooltip("Buy button text for a pack whose requirement isn't met (only when 'Show Locked Packs' is on).")]
+    [SerializeField] private string lockedText = "Locked";
+
+    [Tooltip("Text shown instead of the cost for a locked pack. {0} = name of the required pack.")]
+    [SerializeField] private string requiresFormat = "Requires: {0}";
+
+    /// <summary>Default RGB pack: 100 White + 100 Gray + 100 Black for Red, Green and Blue.</summary>
+    private static ShopPack CreateRgbPack()
     {
-        new ShopPack
+        return new ShopPack
         {
             displayName = "RGB Pack",
             description = "Adds Red, Green and Blue pixels to the random spawn pool.",
@@ -104,8 +133,42 @@ public class PixelShop : MonoBehaviour
                     amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
-        }
-    };
+        };
+    }
+
+    /// <summary>Default Auto Clicker pack: all six pixel types, available after the RGB pack (index 0).</summary>
+    private static ShopPack CreateAutoClickerPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Auto Clicker",
+            description = "Clicks the cube for you every {interval} seconds.",
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.White, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Gray,  amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 100 },
+            },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            requiresPackIndex = 0,
+            unlocksAutoClicker = true,
+        };
+    }
+
+#if UNITY_EDITOR
+    /// <summary>Right-click the component header > Add Default Auto Clicker Pack, to make it editable in the list.</summary>
+    [ContextMenu("Add Default Auto Clicker Pack To List")]
+    private void AddAutoClickerPackToList()
+    {
+        UnityEditor.Undo.RecordObject(this, "Add Auto Clicker Pack");
+        Array.Resize(ref packs, packs.Length + 1);
+        packs[packs.Length - 1] = CreateAutoClickerPack();
+        UnityEditor.EditorUtility.SetDirty(this);
+    }
+#endif
 
     // ------------------------------------------------------------------
     // Shop button
@@ -151,7 +214,7 @@ public class PixelShop : MonoBehaviour
     [SerializeField] private float panelWidth = 900f;
 
     [Tooltip("Height of each pack row.")]
-    [SerializeField] private float rowHeight = 200f;
+    [SerializeField] private float rowHeight = 230f;
 
     [Tooltip("Gap between pack rows.")]
     [SerializeField] private float rowSpacing = 14f;
@@ -246,12 +309,15 @@ public class PixelShop : MonoBehaviour
 
     private class PackRow
     {
+        public RectTransform rect;
+        public TMP_Text descLabel;
         public Button buyButton;
         public Image buyImage;
         public TMP_Text buyLabel;
         public TMP_Text costLabel;
     }
 
+    private RectTransform panelRect;
     private GameObject canvasRoot;
     private GameObject shopButtonObject;
     private GameObject panelObject;
@@ -280,6 +346,28 @@ public class PixelShop : MonoBehaviour
             Debug.LogError("PixelShop: no PixelClicker found in the scene.", this);
             enabled = false;
             return;
+        }
+
+        if (autoClicker == null) autoClicker = GetComponent<PixelAutoClicker>();
+        if (autoClicker == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            autoClicker = FindFirstObjectByType<PixelAutoClicker>();
+#else
+            autoClicker = FindObjectOfType<PixelAutoClicker>();
+#endif
+        }
+        if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
+
+        if (addDefaultAutoClickerPack)
+        {
+            bool hasAutoPack = false;
+            foreach (ShopPack pack in packs) if (pack.unlocksAutoClicker) hasAutoPack = true;
+            if (!hasAutoPack)
+            {
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateAutoClickerPack();
+            }
         }
 
         // Make sure every reward tier exists in PixelClicker (added locked, unlocked on purchase).
@@ -326,10 +414,19 @@ public class PixelShop : MonoBehaviour
     public bool IsPurchased(int packIndex)
     {
         ShopPack pack = packs[packIndex];
+        if (pack.purchased) return true;
         if (pack.rewardTiers == null || pack.rewardTiers.Length == 0) return false;
         foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
             if (!clicker.IsUnlocked(reward.type)) return false;
         return true;
+    }
+
+    /// <summary>True when the pack's required pack (if any) has been bought.</summary>
+    public bool IsRequirementMet(int packIndex)
+    {
+        int req = packs[packIndex].requiresPackIndex;
+        if (req < 0 || req >= packs.Length || req == packIndex) return true;
+        return IsPurchased(req);
     }
 
     /// <summary>True when the player holds enough of every currency in the pack's cost.</summary>
@@ -346,7 +443,7 @@ public class PixelShop : MonoBehaviour
     public bool TryBuy(int packIndex)
     {
         if (packIndex < 0 || packIndex >= packs.Length) return false;
-        if (IsPurchased(packIndex) || !CanAfford(packIndex)) return false;
+        if (IsPurchased(packIndex) || !IsRequirementMet(packIndex) || !CanAfford(packIndex)) return false;
 
         ShopPack pack = packs[packIndex];
 
@@ -362,6 +459,9 @@ public class PixelShop : MonoBehaviour
                 if (index >= 0) clicker.UnlockTier(index);
             }
         }
+
+        pack.purchased = true;
+        if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate();
 
         if (purchaseSound != null)
         {
@@ -430,7 +530,11 @@ public class PixelShop : MonoBehaviour
         rt.anchoredPosition = new Vector2(anchor.x > 0.5f ? -buttonMargin.x : buttonMargin.x,
                                           anchor.y > 0.5f ? -buttonMargin.y : buttonMargin.y);
 
-        button.onClick.AddListener(() => panelObject.SetActive(!panelObject.activeSelf));
+        button.onClick.AddListener(() =>
+        {
+            panelObject.SetActive(!panelObject.activeSelf);
+            if (panelObject.activeSelf) RefreshRows();
+        });
         shopButtonObject.SetActive(false); // Update() reveals it once the required tier is unlocked.
     }
 
@@ -440,7 +544,7 @@ public class PixelShop : MonoBehaviour
 
         panelObject = new GameObject("Shop Panel", typeof(RectTransform), typeof(Image));
         panelObject.transform.SetParent(parent, false);
-        RectTransform panelRect = panelObject.GetComponent<RectTransform>();
+        panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(panelWidth, height);
         panelRect.anchoredPosition = Vector2.zero;
@@ -486,23 +590,30 @@ public class PixelShop : MonoBehaviour
         rr.anchorMax = new Vector2(1f, 1f);
         rr.pivot = new Vector2(0.5f, 1f);
         rr.sizeDelta = new Vector2(-panelPadding * 2f, rowHeight);
-        rr.anchoredPosition = new Vector2(0f, -(headerHeight + index * (rowHeight + rowSpacing)));
+        rr.anchoredPosition = new Vector2(0f, -(headerHeight + index * (rowHeight + rowSpacing))); // re-laid out in RefreshRows
+        row.rect = rr;
 
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
 
         TMP_Text name = CreateText(rowGo.transform, "Name", pack.displayName, nameFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        SetBand(name.rectTransform, 0.64f, 1f, textRightInset);
+        SetBand(name.rectTransform, 0.70f, 1f, textRightInset);
 
         TMP_Text desc = CreateText(rowGo.transform, "Description", pack.description, descriptionFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         desc.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
-        SetBand(desc.rectTransform, 0.36f, 0.64f, textRightInset);
+        SetBand(desc.rectTransform, 0.42f, 0.70f, textRightInset);
+        row.descLabel = desc;
 
         row.costLabel = CreateText(rowGo.transform, "Cost", "", costFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         row.costLabel.richText = true;
-        SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, textRightInset);
+        // Long cost lists (six currencies) shrink to fit instead of overflowing.
+        row.costLabel.enableAutoSizing = true;
+        row.costLabel.fontSizeMax = costFontSize;
+        row.costLabel.fontSizeMin = Mathf.Min(14f, costFontSize);
+        row.costLabel.alignment = TextAlignmentOptions.TopLeft;
+        SetBand(row.costLabel.rectTransform, 0.04f, 0.42f, textRightInset);
 
         row.buyButton = CreateButton(rowGo.transform, "Buy", buyText, buyButtonSize, buyColor, textColor,
                                      buyFontSize, out row.buyLabel, out row.buyImage);
@@ -571,18 +682,56 @@ public class PixelShop : MonoBehaviour
 
     private void RefreshRows()
     {
+        float y = headerHeight;
+        int visibleCount = 0;
+
         for (int i = 0; i < packs.Length && i < rows.Length; i++)
         {
             PackRow row = rows[i];
+            ShopPack pack = packs[i];
+
             bool owned = IsPurchased(i);
+            bool requirementMet = IsRequirementMet(i);
+            bool visible = requirementMet || showLockedPacks || owned;
+
+            row.rect.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            // Stack visible rows from the top.
+            row.rect.anchoredPosition = new Vector2(0f, -y);
+            y += rowHeight + rowSpacing;
+            visibleCount++;
+
+            row.descLabel.text = ResolveDescription(pack);
+
             bool affordable = CanAfford(i);
+            bool canBuy = !owned && requirementMet && affordable;
 
-            row.costLabel.text = owned ? "" : BuildCostText(packs[i]);
+            if (owned) row.costLabel.text = "";
+            else if (!requirementMet) row.costLabel.text = string.Format(requiresFormat, RequirementName(pack));
+            else row.costLabel.text = BuildCostText(pack);
 
-            row.buyButton.interactable = !owned && affordable;
-            row.buyLabel.text = owned ? ownedText : buyText;
-            row.buyImage.color = (!owned && affordable) ? buyColor : disabledColor;
+            row.buyButton.interactable = canBuy;
+            row.buyLabel.text = owned ? ownedText : (requirementMet ? buyText : lockedText);
+            row.buyImage.color = canBuy ? buyColor : disabledColor;
         }
+
+        // Panel height follows however many packs are visible.
+        float height = y - (visibleCount > 0 ? rowSpacing : 0f) + panelPadding;
+        panelRect.sizeDelta = new Vector2(panelWidth, height);
+    }
+
+    private string ResolveDescription(ShopPack pack)
+    {
+        string text = pack.description ?? "";
+        if (autoClicker != null) text = text.Replace("{interval}", autoClicker.Interval.ToString("0.##"));
+        return text;
+    }
+
+    private string RequirementName(ShopPack pack)
+    {
+        int req = pack.requiresPackIndex;
+        return req >= 0 && req < packs.Length ? packs[req].displayName : "?";
     }
 
     /// <summary>"Cost: 100 White Pixels  100 Gray Pixels ..." with each part green/red by affordability.</summary>
