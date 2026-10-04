@@ -36,6 +36,7 @@ public class PixelClicker : MonoBehaviour
         Green = 4,
         Blue = 5,
         Glass = 6,
+        Vacuum = 7,
     }
 
     /// <summary>How a tier becomes available.</summary>
@@ -68,6 +69,9 @@ public class PixelClicker : MonoBehaviour
 
         [Tooltip("Tier is available from the very beginning.")]
         public bool unlockedAtStart = false;
+
+        [Tooltip("Clicking this tier sucks up every old pixel currently in the scene and collects them again (a '+X' popup shows the total).")]
+        public bool vacuum = false;
 
         [Tooltip("Render the pixel as see-through while this tier is active. A transparent copy of the pixel's material is made automatically " +
                  "(works with the Standard and URP Lit shaders). The tier colour's alpha sets how see-through it is.")]
@@ -186,6 +190,13 @@ public class PixelClicker : MonoBehaviour
     [Header("Respawn Animation")]
     [Tooltip("Spawn a falling copy of the pixel on every click.")]
     [SerializeField] private bool spawnFallingCopy = true;
+
+    [Header("Vacuum Pixel")]
+    [Tooltip("Seconds old pixels take to fly into the cube when a Vacuum pixel is clicked.")]
+    [SerializeField] private float vacuumSuckDuration = 0.4f;
+
+    [Tooltip("Speed curve of the suck-in (time 0..1, progress 0..1). Rising curves pull faster toward the end.")]
+    [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Header("Old Pixel Physics")]
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
@@ -351,6 +362,9 @@ public class PixelClicker : MonoBehaviour
     /// </summary>
     public event Action<int, double, bool> PixelCollected;
 
+    /// <summary>Fired when a Vacuum pixel is clicked: (vacuum tier index, total amount re-collected, number of pixels).</summary>
+    public event Action<int, double, int> PixelsVacuumed;
+
     public PixelTier[] Tiers => tiers;
 
     /// <summary>The shared UI font (may be null). All UI scripts use this when it is set.</summary>
@@ -497,7 +511,8 @@ public class PixelClicker : MonoBehaviour
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 
         PlayClickEffects(tier);
-        if (spawnFallingCopy) SpawnFallingCopy();
+        if (tier.vacuum) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
+        if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
         if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
@@ -820,8 +835,62 @@ public class PixelClicker : MonoBehaviour
         materializeRoutine = null;
     }
 
+    /// <summary>
+    /// Vacuum pixel effect: every old pixel flies into the cube and its original reward is added again.
+    /// </summary>
+    private void Vacuum(int vacuumTierIndex)
+    {
+        double total = 0d;
+        int count = 0;
+
+        for (int i = 0; i < oldPixels.Count; i++)
+        {
+            Rigidbody body = oldPixels[i];
+            if (body == null) continue;
+
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info != null && IsValidTier(info.tierIndex))
+            {
+                AddCurrency(info.tierIndex, info.amount);
+                total += info.amount;
+                count++;
+            }
+
+            StartCoroutine(SuckRoutine(body));
+        }
+
+        oldPixels.Clear();
+        if (count > 0) PixelsVacuumed?.Invoke(vacuumTierIndex, total, count);
+    }
+
+    /// <summary>Pulls one old pixel into the cube while shrinking it, then removes it.</summary>
+    private IEnumerator SuckRoutine(Rigidbody body)
+    {
+        Transform t = body.transform;
+        foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
+        body.isKinematic = true;
+
+        Vector3 startPos = t.position;
+        Vector3 startScale = t.localScale;
+        float time = 0f;
+
+        while (time < vacuumSuckDuration)
+        {
+            if (t == null) yield break; // destroyed (lifetime ran out) while flying
+            time += Time.deltaTime;
+            float k = vacuumSuckDuration > 0f ? Mathf.Clamp01(time / vacuumSuckDuration) : 1f;
+            float eased = vacuumSuckCurve.Evaluate(k);
+
+            t.position = Vector3.Lerp(startPos, pixelTransform.position, eased);
+            t.localScale = startScale * (1f - eased);
+            yield return null;
+        }
+
+        if (t != null) Destroy(t.gameObject);
+    }
+
     /// <summary>Clones the visible pixel, adds real physics, and pops it out in a random direction.</summary>
-    private void SpawnFallingCopy()
+    private void SpawnFallingCopy(int tierIndex, double amount)
     {
         // Skip if the pixel is mid-materialize and basically invisible.
         if (pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
@@ -899,6 +968,10 @@ public class PixelClicker : MonoBehaviour
                      ForceMode.VelocityChange);
 
         if (fallingCopyLifetime > 0f) Destroy(copy, fallingCopyLifetime);
+
+        OldPixelInfo info = copy.AddComponent<OldPixelInfo>();
+        info.tierIndex = tierIndex;
+        info.amount = amount;
 
         oldPixels.Add(rb);
         while (maxFallingCopies > 0 && oldPixels.Count > maxFallingCopies)
@@ -1034,4 +1107,14 @@ public class ScaledGravity : MonoBehaviour
         if (body != null && !body.isKinematic)
             body.AddForce(Physics.gravity * scale, ForceMode.Acceleration);
     }
+}
+
+/// <summary>
+/// Runtime tag on each old pixel: which tier it was and how much it paid out.
+/// The Vacuum pixel uses it to pay that amount again.
+/// </summary>
+public class OldPixelInfo : MonoBehaviour
+{
+    [HideInInspector] public int tierIndex;
+    [HideInInspector] public double amount;
 }

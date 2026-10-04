@@ -197,6 +197,18 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Offset from the cube's screen position where auto-click popups start (canvas units).")]
     [SerializeField] private Vector2 cubePopupStartOffset = new Vector2(0f, 110f);
 
+    [Tooltip("Show a '+X' popup over the cube when a Vacuum pixel sucks up old pixels.")]
+    [SerializeField] private bool showVacuumPopup = true;
+
+    [Tooltip("Vacuum popup text. {0} = total amount collected from the old pixels.")]
+    [SerializeField] private string vacuumPopupFormat = "+{0}";
+
+    [Tooltip("Vacuum popup size relative to a normal popup.")]
+    [SerializeField] private float vacuumPopupSize = 1.5f;
+
+    [Tooltip("Extra offset added to the cube popup position for the vacuum popup (so it doesn't cover the normal +1).")]
+    [SerializeField] private Vector2 vacuumPopupExtraOffset = new Vector2(0f, 70f);
+
     [Tooltip("Offset from the cursor where the popup starts (canvas units).")]
     [SerializeField] private Vector2 popupStartOffset = new Vector2(0f, 50f);
 
@@ -275,6 +287,7 @@ public class PixelUI : MonoBehaviour
 
         BuildPopupCanvas();
         clicker.PixelCollected += OnPixelCollected;
+        clicker.PixelsVacuumed += OnPixelsVacuumed;
 
         built = true;
     }
@@ -283,7 +296,11 @@ public class PixelUI : MonoBehaviour
     {
         if (autoRoot != null) Destroy(autoRoot);
         if (popupRoot != null) Destroy(popupRoot);
-        if (clicker != null) clicker.PixelCollected -= OnPixelCollected;
+        if (clicker != null)
+        {
+            clicker.PixelCollected -= OnPixelCollected;
+            clicker.PixelsVacuumed -= OnPixelsVacuumed;
+        }
     }
 
     private void Update()
@@ -374,10 +391,21 @@ public class PixelUI : MonoBehaviour
             offset = popupStartOffset;
         }
 
-        StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter));
+        StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, 1f));
     }
 
-    private IEnumerator PopupRoutine(string text, Color color, Func<Vector2> getAnchor, Vector2 offset)
+    /// <summary>"+X" popup over the cube totalling everything a Vacuum pixel just sucked up.</summary>
+    private void OnPixelsVacuumed(int vacuumTierIndex, double total, int count)
+    {
+        if (!showVacuumPopup || count <= 0) return;
+
+        Color color = clicker.Tiers[vacuumTierIndex].UIColor;
+        string text = string.Format(vacuumPopupFormat, FormatAmount(total));
+        StartCoroutine(PopupRoutine(text, color, CubeLocal, cubePopupStartOffset + vacuumPopupExtraOffset,
+                                    vacuumPopupSize));
+    }
+
+    private IEnumerator PopupRoutine(string text, Color color, Func<Vector2> getAnchor, Vector2 offset, float sizeMultiplier)
     {
         GameObject go = new GameObject("GainPopup", typeof(RectTransform));
         go.transform.SetParent(popupCanvasRect, false);
@@ -388,7 +416,7 @@ public class PixelUI : MonoBehaviour
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
-        tmp.fontSize = popupFontSize;
+        tmp.fontSize = popupFontSize * sizeMultiplier;
         tmp.fontStyle = FontStyles.Bold;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.raycastTarget = false;

@@ -122,9 +122,13 @@ public class PixelShop : MonoBehaviour
     [Tooltip("The shop's items. Add more entries here later.")]
     [SerializeField] private ShopPack[] packs =
     {
-        CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0),
+        CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0), CreateVacuumPack(2),
         CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1)
     };
+
+    [Tooltip("If none of the packs unlocks the Vacuum pixel (e.g. this component was added before it existed), " +
+             "add the default Vacuum pack at startup.")]
+    [SerializeField] private bool addDefaultVacuumPack = true;
 
     [Tooltip("If none of the packs unlocks Glass pixels (e.g. this component was added before glass existed), " +
              "add the default Glass pack at startup.")]
@@ -222,6 +226,33 @@ public class PixelShop : MonoBehaviour
         };
     }
 
+    /// <summary>Default Vacuum pack: a rare pixel that re-collects every old pixel. Needs the Glass pack first.</summary>
+    private static ShopPack CreateVacuumPack(int requiresGlassIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Vacuum Pack",
+            description = "Adds a rare Vacuum pixel. Clicking it sucks up every old pixel and collects them again.",
+            requiresPackIndex = requiresGlassIndex,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 100 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Vacuum, displayName = "Vacuum Pixels",
+                    color = new Color(0.65f, 0.3f, 0.95f, 1f), vacuum = true,
+                    amountPerClick = 1, spawnWeight = 0.2f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     private static PackCost[] AllSix(double amount)
     {
         return new[]
@@ -298,6 +329,17 @@ public class PixelShop : MonoBehaviour
 
 #if UNITY_EDITOR
     /// <summary>Right-click the component header > Add Default Auto Clicker Pack, to make it editable in the list.</summary>
+    [ContextMenu("Add Default Vacuum Pack To List")]
+    private void AddVacuumPackToList()
+    {
+        int glass = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
+        UnityEditor.Undo.RecordObject(this, "Add Vacuum Pack");
+        Array.Resize(ref packs, packs.Length + 1);
+        packs[packs.Length - 1] = CreateVacuumPack(glass);
+        UnityEditor.EditorUtility.SetDirty(this);
+    }
+
     [ContextMenu("Add Default Glass Pack To List")]
     private void AddGlassPackToList()
     {
@@ -568,6 +610,22 @@ public class PixelShop : MonoBehaviour
                                                            Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Red));
                 Array.Resize(ref packs, packs.Length + 1);
                 packs[packs.Length - 1] = CreateGlassPack(rgbIndex);
+            }
+        }
+
+        if (addDefaultVacuumPack)
+        {
+            bool hasVacuum = false;
+            foreach (ShopPack pack in packs)
+                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Vacuum))
+                    hasVacuum = true;
+
+            if (!hasVacuum)
+            {
+                int glassIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                             Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateVacuumPack(glassIndex);
             }
         }
 
