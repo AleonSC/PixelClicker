@@ -25,7 +25,7 @@ public class PixelLog : MonoBehaviour
     [Tooltip("The PixelClicker to read from. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Tooltip("Font for the log UI. Empty = TextMeshPro default font.")]
+    [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
     // ------------------------------------------------------------------
@@ -177,6 +177,8 @@ public class PixelLog : MonoBehaviour
             enabled = false;
             return;
         }
+
+        if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
 
         EnsureEventSystem();
         BuildUI();

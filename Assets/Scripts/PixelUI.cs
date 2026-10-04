@@ -34,7 +34,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("MANUAL MODE: one TextMeshPro text per tier (element 0 = first tier, 1 = second...). Leave empty for automatic mode.")]
     [SerializeField] private TMP_Text[] tierLabels;
 
-    [Tooltip("Font for auto-created texts. Empty = TextMeshPro default font.")]
+    [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
     // ------------------------------------------------------------------
@@ -249,6 +249,15 @@ public class PixelUI : MonoBehaviour
                            "or drag it into the 'Clicker' field.", this);
             enabled = false;
             return;
+        }
+
+        // One shared font for the whole game (set on PixelClicker).
+        if (clicker.UIFont != null)
+        {
+            font = clicker.UIFont;
+            if (tierLabels != null)
+                foreach (TMP_Text label in tierLabels)
+                    if (label != null) label.font = font;
         }
 
         bool hasManualLabels = tierLabels != null && tierLabels.Length > 0 && tierLabels[0] != null;

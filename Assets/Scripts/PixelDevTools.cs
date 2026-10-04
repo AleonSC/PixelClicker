@@ -21,7 +21,7 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("The PixelClicker to add to. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Tooltip("Font for the button. Empty = TextMeshPro default font.")]
+    [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
     [Header("Cheat")]
@@ -89,6 +89,8 @@ public class PixelDevTools : MonoBehaviour
             enabled = false;
             return;
         }
+
+        if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
 
         EnsureEventSystem();
         BuildButton();

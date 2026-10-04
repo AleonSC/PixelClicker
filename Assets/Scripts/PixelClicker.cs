@@ -151,6 +151,11 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Global multiplier applied to every click. Hook shops/upgrades into this later.")]
     [SerializeField] private double clickMultiplier = 1;
 
+    [Header("UI Font")]
+    [Tooltip("ONE font for every piece of UI in the game (count box, shop, log, dev button, popups, and the labels assigned below). " +
+             "Leave empty to use each script's own font / the TextMeshPro default.")]
+    [SerializeField] private TMP_FontAsset uiFont;
+
     [Header("UI (optional)")]
     [Tooltip("Label for a combined summary of all unlocked currencies.")]
     [SerializeField] private TMP_Text summaryLabel;
@@ -334,6 +339,9 @@ public class PixelClicker : MonoBehaviour
     public event Action<int, double, bool> PixelCollected;
 
     public PixelTier[] Tiers => tiers;
+
+    /// <summary>The shared UI font (may be null). All UI scripts use this when it is set.</summary>
+    public TMP_FontAsset UIFont => uiFont;
     public Transform PixelTransform => pixelTransform;
     public Camera TargetCamera => targetCamera;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
@@ -382,6 +390,7 @@ public class PixelClicker : MonoBehaviour
     private void Start()
     {
         if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
+        ApplyUIFont();
         ApplyPixelColor(GetClickTier().color);
         RefreshUI();
     }
@@ -859,6 +868,16 @@ public class PixelClicker : MonoBehaviour
         RefreshUI();
         onCurrencyChanged?.Invoke();
         CurrencyChanged?.Invoke();
+    }
+
+    /// <summary>Applies the shared UI font to the labels assigned to this script.</summary>
+    private void ApplyUIFont()
+    {
+        if (uiFont == null) return;
+        if (summaryLabel != null) summaryLabel.font = uiFont;
+        if (nextUnlockLabel != null) nextUnlockLabel.font = uiFont;
+        foreach (PixelTier t in tiers)
+            if (t.countLabel != null) t.countLabel.font = uiFont;
     }
 
     /// <summary>Refreshes every assigned label. Safe to call any time.</summary>

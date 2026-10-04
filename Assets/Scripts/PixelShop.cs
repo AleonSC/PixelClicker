@@ -111,7 +111,7 @@ public class PixelShop : MonoBehaviour
     [Tooltip("The auto clicker switched on by the Auto Clicker pack. Taken from this GameObject (or found in the scene) if empty. Edit its interval on that component.")]
     [SerializeField] private PixelAutoClicker autoClicker;
 
-    [Tooltip("Font for the shop UI. Empty = TextMeshPro default font.")]
+    [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
     // ------------------------------------------------------------------
@@ -467,6 +467,8 @@ public class PixelShop : MonoBehaviour
             enabled = false;
             return;
         }
+
+        if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
 
         if (autoClicker == null) autoClicker = GetComponent<PixelAutoClicker>();
         if (autoClicker == null)
