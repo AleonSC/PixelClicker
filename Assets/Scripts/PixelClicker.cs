@@ -112,6 +112,12 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Layers the click raycast can hit.")]
     [SerializeField] private LayerMask clickableLayers = ~0;
 
+    [Tooltip("Use a separate, always-full-size click area. Without it, clicks miss while the pixel is still scaling up after a click, which makes fast clicking lose clicks.")]
+    [SerializeField] private bool fullSizeHitbox = true;
+
+    [Tooltip("Size of the click area relative to the pixel's full size (1 = exactly the pixel, 1.2 = a bit more forgiving).")]
+    [SerializeField] private float hitboxScale = 1f;
+
     [Tooltip("Max raycast distance.")]
     [SerializeField] private float maxRayDistance = 100f;
 
@@ -306,6 +312,7 @@ public class PixelClicker : MonoBehaviour
     private Vector3 basePosition;
     private float materializeFactor = 1f;
     private Color currentColor = Color.white;
+    private Transform hitbox;
     private int currentTierIndex; // tier of the pixel currently on screen (random mode)
 
     // Old pixels currently in the scene (used for the cap and kill height).
@@ -349,6 +356,8 @@ public class PixelClicker : MonoBehaviour
                 body.isKinematic = true;
             }
         }
+        if (fullSizeHitbox) BuildHitbox();
+
         propertyBlock = new MaterialPropertyBlock();
         colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
@@ -376,7 +385,7 @@ public class PixelClicker : MonoBehaviour
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         Ray ray = targetCamera.ScreenPointToRay(PointerPosition());
-        RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers);
+        RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (RaycastHit hit in hits)
@@ -384,7 +393,7 @@ public class PixelClicker : MonoBehaviour
             // Old pixels are skipped unless they're allowed to block clicks.
             if (!oldPixelsBlockClicks && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
 
-            if (hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
+            if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
                 Collect();
             return; // first non-ignored hit decides
         }
@@ -610,6 +619,35 @@ public class PixelClicker : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>Applies float, spin and pulse every frame. Scale = base * materialize * pulse.</summary>
+    /// <summary>
+    /// The pixel's own collider shrinks to nothing while it materializes (it scales with the cube),
+    /// so clicks landing in that moment used to miss. This invisible trigger box stays full size
+    /// and follows the pixel, so every click registers.
+    /// </summary>
+    private void BuildHitbox()
+    {
+        GameObject go = new GameObject("PixelHitbox");
+        go.layer = pixelTransform.gameObject.layer;
+        hitbox = go.transform;
+        hitbox.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);
+        hitbox.localScale = pixelTransform.lossyScale * hitboxScale;
+
+        BoxCollider box = go.AddComponent<BoxCollider>();
+        box.isTrigger = true; // never pushes physics objects around
+
+        BoxCollider source = pixelTransform.GetComponent<BoxCollider>();
+        if (source != null)
+        {
+            box.center = source.center;
+            box.size = source.size;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (hitbox != null) Destroy(hitbox.gameObject);
+    }
+
     private void AnimatePixel()
     {
         float time = Time.time;
@@ -622,6 +660,8 @@ public class PixelClicker : MonoBehaviour
 
         if (idleSpin != Vector3.zero)
             pixelTransform.Rotate(idleSpin * Time.deltaTime, Space.Self);
+
+        if (hitbox != null) hitbox.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);
 
         float pulse = 0f;
         if (pulseEnabled)
