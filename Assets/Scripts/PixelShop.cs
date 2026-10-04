@@ -564,6 +564,30 @@ public class PixelShop : MonoBehaviour
         }
         if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
 
+        EnsureDefaultPacks();
+
+        // Make sure every reward tier exists in PixelClicker (added locked, unlocked on purchase).
+        foreach (ShopPack pack in packs)
+        {
+            if (pack.rewardTiers == null) continue;
+            foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+            {
+                int tierIndex = clicker.EnsureTier(reward);
+                if (reward.startingAmount > 0)
+                    Debug.Log("PixelShop: " + reward.displayName + " starts at " + clicker.Tiers[tierIndex].count + ".", this);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds any default pack (Auto Clicker, upgrades, Glass, Vacuum) missing from the Packs list.
+    /// Runs at startup and, in the Editor, when the component is loaded - so older components get the
+    /// new packs as real, editable entries in the Inspector. Returns true if anything was added.
+    /// </summary>
+    private bool EnsureDefaultPacks()
+    {
+        int before = packs.Length;
+
         if (addDefaultAutoClickerPack)
         {
             bool hasAutoPack = false;
@@ -629,18 +653,22 @@ public class PixelShop : MonoBehaviour
             }
         }
 
-        // Make sure every reward tier exists in PixelClicker (added locked, unlocked on purchase).
-        foreach (ShopPack pack in packs)
-        {
-            if (pack.rewardTiers == null) continue;
-            foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
-            {
-                int tierIndex = clicker.EnsureTier(reward);
-                if (reward.startingAmount > 0)
-                    Debug.Log("PixelShop: " + reward.displayName + " starts at " + clicker.Tiers[tierIndex].count + ".", this);
-            }
-        }
+        return packs.Length != before;
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying) return;
+
+        // Delayed: serialized data must not be changed from inside OnValidate itself.
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+            if (EnsureDefaultPacks()) UnityEditor.EditorUtility.SetDirty(this);
+        };
+    }
+#endif
 
     private void Start()
     {
