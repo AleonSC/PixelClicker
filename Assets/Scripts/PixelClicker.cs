@@ -374,7 +374,8 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             if (tiers[i].unlockedAtStart) tiers[i].unlocked = true;
-            tiers[i].count = tiers[i].startingAmount;
+            // Keep any Count typed into the Inspector; Starting Amount raises it if it's higher.
+            if (tiers[i].count < tiers[i].startingAmount) tiers[i].count = tiers[i].startingAmount;
         }
     }
 
@@ -598,8 +599,9 @@ public class PixelClicker : MonoBehaviour
 
         PixelTier copy = definition.Clone();
         copy.unlocked = false;
-        copy.count = copy.startingAmount;
-        copy.totalCollected = 0;
+        // Keep Count / Total Collected typed on the shop's definition (as for normal tiers);
+        // Starting Amount raises Count if it's higher.
+        if (copy.count < copy.startingAmount) copy.count = copy.startingAmount;
 
         List<PixelTier> list = new List<PixelTier>(tiers) { copy };
         tiers = list.ToArray();
