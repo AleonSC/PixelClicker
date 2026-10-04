@@ -368,6 +368,9 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Fired when a Vacuum pixel is clicked: (vacuum tier index, total amount re-collected, number of pixels).</summary>
     public event Action<int, double, int> PixelsVacuumed;
 
+    /// <summary>Fired with the amount re-collected per tier (indexed like <see cref="Tiers"/>) when a Vacuum pixel is clicked.</summary>
+    public event Action<double[]> VacuumBreakdown;
+
     public PixelTier[] Tiers => tiers;
 
     /// <summary>The shared UI font (may be null). All UI scripts use this when it is set.</summary>
@@ -874,7 +877,11 @@ public class PixelClicker : MonoBehaviour
             Debug.Log(sb.Append(")").ToString(), this);
         }
 
-        if (count > 0) PixelsVacuumed?.Invoke(vacuumTierIndex, total, count);
+        if (count > 0)
+        {
+            VacuumBreakdown?.Invoke(perTier);
+            PixelsVacuumed?.Invoke(vacuumTierIndex, total, count);
+        }
     }
 
     /// <summary>Pulls one old pixel into the cube while shrinking it, then removes it.</summary>

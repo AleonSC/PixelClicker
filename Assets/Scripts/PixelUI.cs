@@ -115,6 +115,25 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Start with the box open.")]
     [SerializeField] private bool startOpen = false;
 
+    [Header("Vacuum Indicator (+X next to each entry)")]
+    [Tooltip("After a Vacuum pixel is clicked, show a '+X' next to each entry that gained currency.")]
+    [SerializeField] private bool showVacuumDeltas = true;
+
+    [Tooltip("Indicator text. {0} = amount gained.")]
+    [SerializeField] private string deltaFormat = "+{0}";
+
+    [Tooltip("Indicator colour.")]
+    [SerializeField] private Color deltaColor = new Color(0.45f, 1f, 0.5f, 1f);
+
+    [Tooltip("Indicator text size relative to the entry text.")]
+    [SerializeField] private float deltaFontScale = 0.85f;
+
+    [Tooltip("Seconds the indicator stays (it fades out over this time).")]
+    [SerializeField] private float deltaDuration = 1.6f;
+
+    [Tooltip("How far (canvas units) the indicator drifts upward while fading.")]
+    [SerializeField] private float deltaRise = 10f;
+
     // ------------------------------------------------------------------
     // Text
     // ------------------------------------------------------------------
@@ -235,6 +254,8 @@ public class PixelUI : MonoBehaviour
     private RectTransform boxRect;
     private bool autoMode;
     private TMP_Text titleLabel;
+    private TMP_Text[] deltaLabels;
+    private float[] deltaTimers;
     private TMP_Text buttonLabel;
     private bool built;
     private RectTransform popupCanvasRect;
@@ -288,6 +309,7 @@ public class PixelUI : MonoBehaviour
         BuildPopupCanvas();
         clicker.PixelCollected += OnPixelCollected;
         clicker.PixelsVacuumed += OnPixelsVacuumed;
+        clicker.VacuumBreakdown += OnVacuumBreakdown;
 
         built = true;
     }
@@ -300,12 +322,14 @@ public class PixelUI : MonoBehaviour
         {
             clicker.PixelCollected -= OnPixelCollected;
             clicker.PixelsVacuumed -= OnPixelsVacuumed;
+            clicker.VacuumBreakdown -= OnVacuumBreakdown;
         }
     }
 
     private void Update()
     {
         if (!built) return;
+        TickDeltas();
         if (autoMode && !boxObject.activeSelf) return; // closed box: nothing to update
         Refresh();
     }
@@ -392,6 +416,44 @@ public class PixelUI : MonoBehaviour
         }
 
         StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, 1f));
+    }
+
+    /// <summary>Starts a "+X" indicator next to every entry that the Vacuum just paid.</summary>
+    private void OnVacuumBreakdown(double[] perTier)
+    {
+        if (!showVacuumDeltas || deltaLabels == null) return;
+
+        for (int i = 0; i < perTier.Length && i < deltaLabels.Length; i++)
+        {
+            if (perTier[i] <= 0d) continue;
+            deltaLabels[i].text = string.Format(deltaFormat, FormatAmount(perTier[i]));
+            deltaTimers[i] = deltaDuration;
+            deltaLabels[i].gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>Fades and lifts active indicators, then hides them.</summary>
+    private void TickDeltas()
+    {
+        if (deltaLabels == null) return;
+
+        for (int i = 0; i < deltaLabels.Length; i++)
+        {
+            if (deltaTimers[i] <= 0f) continue;
+
+            deltaTimers[i] -= Time.unscaledDeltaTime;
+            float remaining = deltaDuration > 0f ? Mathf.Clamp01(deltaTimers[i] / deltaDuration) : 0f;
+            float progress = 1f - remaining;
+
+            Color c = deltaColor;
+            c.a = deltaColor.a * remaining;
+            deltaLabels[i].color = c;
+
+            RectTransform dr = deltaLabels[i].rectTransform;
+            dr.offsetMin = dr.offsetMax = new Vector2(0f, deltaRise * progress);
+
+            if (deltaTimers[i] <= 0f) deltaLabels[i].gameObject.SetActive(false);
+        }
     }
 
     /// <summary>"+X" popup over the cube totalling everything a Vacuum pixel just sucked up.</summary>
@@ -577,6 +639,8 @@ public class PixelUI : MonoBehaviour
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
+        deltaLabels = new TMP_Text[count];
+        deltaTimers = new float[count];
         for (int i = 0; i < count; i++)
         {
             TMP_Text tmp = MakeText(boxObject.transform, "Tier " + i, "", fontSize,
@@ -595,6 +659,17 @@ public class PixelUI : MonoBehaviour
             }
 
             tierLabels[i] = tmp;
+
+            // "+X" indicator that fills the entry's row, aligned to the opposite side of the text.
+            TMP_Text delta = MakeText(tmp.transform, "Delta", "", fontSize * deltaFontScale,
+                                      anchor.x > 0.5f ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.MidlineRight,
+                                      FontStyles.Bold, deltaColor);
+            RectTransform dr = delta.rectTransform;
+            dr.anchorMin = Vector2.zero;
+            dr.anchorMax = Vector2.one;
+            dr.offsetMin = dr.offsetMax = Vector2.zero;
+            delta.gameObject.SetActive(false);
+            deltaLabels[i] = delta;
         }
 
         boxObject.SetActive(startOpen);

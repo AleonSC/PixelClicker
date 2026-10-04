@@ -118,6 +118,29 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Compact numbers (1.2K, 3.4M). Off = full number with separators.")]
     [SerializeField] private bool abbreviateNumbers = true;
 
+    [Header("Vacuum Indicator (+X next to each entry)")]
+    [Tooltip("After a Vacuum pixel is clicked, show a '+X' next to each entry that gained currency.")]
+    [SerializeField] private bool showVacuumDeltas = true;
+
+    [Tooltip("Indicator text. {0} = amount gained.")]
+    [SerializeField] private string deltaFormat = "+{0}";
+
+    [Tooltip("Indicator colour.")]
+    [SerializeField] private Color deltaColor = new Color(0.45f, 1f, 0.5f, 1f);
+
+    [Tooltip("Indicator text size relative to the row text.")]
+    [SerializeField] private float deltaFontScale = 0.85f;
+
+    [Tooltip("Seconds the indicator stays (it fades out over this time).")]
+    [SerializeField] private float deltaDuration = 1.6f;
+
+    [Tooltip("How far (canvas units) the indicator drifts upward while fading.")]
+    [SerializeField] private float deltaRise = 8f;
+
+    [Tooltip("Distance from the right edge where the indicator ends (leave room for the amount).")]
+    [SerializeField] private float deltaRightInset = 150f;
+
+    [Header("Misc")]
     [Tooltip("Colour of the divider line above the overall total.")]
     [SerializeField] private Color dividerColor = new Color(1f, 1f, 1f, 0.2f);
 
@@ -145,6 +168,8 @@ public class PixelLog : MonoBehaviour
         public TMP_Text name;
         public TMP_Text amount;
         public Image swatch;
+        public TMP_Text delta;
+        public float deltaTimer;
     }
 
     private GameObject canvasRoot;
@@ -182,6 +207,7 @@ public class PixelLog : MonoBehaviour
 
         EnsureEventSystem();
         BuildUI();
+        clicker.VacuumBreakdown += OnVacuumBreakdown;
         built = true;
         Refresh();
         panelObject.SetActive(startOpen);
@@ -189,12 +215,55 @@ public class PixelLog : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (clicker != null) clicker.VacuumBreakdown -= OnVacuumBreakdown;
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
     private void Update()
     {
-        if (built && panelObject.activeSelf) Refresh();
+        if (!built) return;
+        TickDeltas();
+        if (panelObject.activeSelf) Refresh();
+    }
+
+    /// <summary>Starts a "+X" indicator next to every entry that the Vacuum just paid.</summary>
+    private void OnVacuumBreakdown(double[] perTier)
+    {
+        if (!showVacuumDeltas || rows == null) return;
+
+        for (int i = 0; i < perTier.Length && i < rows.Length; i++)
+        {
+            Row row = rows[i];
+            if (perTier[i] <= 0d || row == null || row.delta == null) continue;
+
+            row.delta.text = string.Format(deltaFormat, FormatAmount(perTier[i]));
+            row.deltaTimer = deltaDuration;
+            row.delta.gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>Fades and lifts active indicators, then hides them.</summary>
+    private void TickDeltas()
+    {
+        if (rows == null) return;
+
+        foreach (Row row in rows)
+        {
+            if (row == null || row.delta == null || row.deltaTimer <= 0f) continue;
+
+            row.deltaTimer -= Time.unscaledDeltaTime;
+            float remaining = deltaDuration > 0f ? Mathf.Clamp01(row.deltaTimer / deltaDuration) : 0f;
+
+            Color c = deltaColor;
+            c.a = deltaColor.a * remaining;
+            row.delta.color = c;
+
+            RectTransform dr = row.delta.rectTransform;
+            dr.offsetMin = new Vector2(0f, deltaRise * (1f - remaining));
+            dr.offsetMax = new Vector2(-deltaRightInset, deltaRise * (1f - remaining));
+
+            if (row.deltaTimer <= 0f) row.delta.gameObject.SetActive(false);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -357,6 +426,18 @@ public class PixelLog : MonoBehaviour
         ar.anchorMax = Vector2.one;
         ar.offsetMin = new Vector2(nameLeft + 100f, 0f);
         ar.offsetMax = Vector2.zero;
+
+        if (!isTotal)
+        {
+            row.delta = CreateText(go.transform, "Delta", "", rowFontSize * deltaFontScale,
+                                   TextAlignmentOptions.MidlineRight, FontStyles.Bold, deltaColor);
+            RectTransform dr = row.delta.rectTransform;
+            dr.anchorMin = Vector2.zero;
+            dr.anchorMax = Vector2.one;
+            dr.offsetMin = Vector2.zero;
+            dr.offsetMax = new Vector2(-deltaRightInset, 0f);
+            row.delta.gameObject.SetActive(false);
+        }
 
         return row;
     }
