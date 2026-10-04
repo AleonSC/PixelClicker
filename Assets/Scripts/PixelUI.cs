@@ -1,161 +1,116 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Simple self-building HUD for Pixel Clicker.
+/// Simple HUD for Pixel Clicker. Shows how many pixels of each tier you have.
 ///
-/// - A panel listing every unlocked currency with a colour swatch and its amount.
-/// - A little "punch" animation on a row when its amount changes.
-/// - Floating "+N" popups above the pixel when you gain currency.
+/// Two ways to use it:
+///  A) MANUAL: create TextMeshPro texts in your own Canvas and drag them into "Tier Labels"
+///     (element 0 = first tier, element 1 = second tier, ...).
+///  B) AUTOMATIC: leave "Tier Labels" empty and keep "Auto Create Labels" on. The script builds
+///     its own canvas, panel and one text per tier when the game starts.
 ///
-/// Add this to any GameObject (e.g. the same cube as PixelClicker). It creates its own
-/// Canvas and TextMeshPro objects at runtime, so no manual UI setup is required.
+/// It only reads PixelClicker.Tiers and refreshes every frame, so there is nothing to wire up
+/// besides the PixelClicker reference (found automatically if left empty).
 /// </summary>
 public class PixelUI : MonoBehaviour
 {
     public enum PanelCorner { TopLeft, TopRight, BottomLeft, BottomRight }
 
     // ------------------------------------------------------------------
-    // Inspector fields
+    // References
     // ------------------------------------------------------------------
 
     [Header("References")]
-    [Tooltip("The PixelClicker to display. Auto-found in the scene if empty.")]
+    [Tooltip("The PixelClicker to display. Found automatically in the scene if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
-    [Tooltip("Existing Canvas to build the UI inside. Leave empty to create a new Screen Space - Overlay canvas.")]
-    [SerializeField] private Canvas targetCanvas;
+    [Tooltip("MANUAL MODE: one TextMeshPro text per tier (element 0 = first tier, 1 = second...). Leave empty for automatic mode.")]
+    [SerializeField] private TMP_Text[] tierLabels;
 
-    [Tooltip("Font for all text. Leave empty to use the TextMeshPro default font.")]
+    [Tooltip("Font for auto-created texts. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
-    [Header("Canvas (only used if a canvas is created)")]
-    [Tooltip("Reference resolution the UI scales from.")]
-    [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
+    // ------------------------------------------------------------------
+    // Automatic mode
+    // ------------------------------------------------------------------
 
-    [Range(0f, 1f)]
-    [Tooltip("0 = match width, 1 = match height when the screen aspect differs from the reference.")]
-    [SerializeField] private float matchWidthOrHeight = 0.5f;
+    [Header("Automatic Mode")]
+    [Tooltip("Build a canvas + one text per tier at startup when 'Tier Labels' is empty.")]
+    [SerializeField] private bool autoCreateLabels = true;
 
-    [Tooltip("Sorting order of the created canvas.")]
-    [SerializeField] private int sortingOrder = 10;
-
-    [Header("Panel")]
-    [Tooltip("Which screen corner the panel sits in.")]
+    [Tooltip("Which screen corner the auto-created panel sits in.")]
     [SerializeField] private PanelCorner corner = PanelCorner.TopLeft;
 
-    [Tooltip("Distance from the screen edges.")]
+    [Tooltip("Distance of the panel from the screen edge, in pixels.")]
     [SerializeField] private Vector2 margin = new Vector2(30f, 30f);
 
-    [Tooltip("Inner spacing between the panel edge and its rows. X = left, Y = right, Z = top, W = bottom.")]
-    [SerializeField] private Vector4 padding = new Vector4(20f, 20f, 14f, 14f);
+    [Tooltip("Width of the panel.")]
+    [SerializeField] private float panelWidth = 520f;
 
-    [Tooltip("Vertical gap between rows.")]
-    [SerializeField] private float rowSpacing = 8f;
+    [Tooltip("Height of each text line.")]
+    [SerializeField] private float lineHeight = 60f;
 
-    [Tooltip("Panel background colour (alpha = transparency).")]
-    [SerializeField] private Color panelColor = new Color(0.08f, 0.08f, 0.1f, 0.75f);
+    [Tooltip("Padding between the panel edge and the text.")]
+    [SerializeField] private float panelPadding = 16f;
 
-    [Tooltip("Show the panel background at all.")]
-    [SerializeField] private bool showPanelBackground = true;
+    [Tooltip("Draw a background behind the text.")]
+    [SerializeField] private bool showBackground = true;
 
-    [Header("Rows")]
-    [Tooltip("Text size for each currency line.")]
+    [Tooltip("Background colour (alpha = transparency).")]
+    [SerializeField] private Color backgroundColor = new Color(0.08f, 0.08f, 0.1f, 0.75f);
+
+    [Tooltip("Sorting order of the auto-created canvas.")]
+    [SerializeField] private int sortingOrder = 100;
+
+    [Tooltip("Reference resolution used by the auto-created canvas scaler.")]
+    [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
+
+    // ------------------------------------------------------------------
+    // Text
+    // ------------------------------------------------------------------
+
+    [Header("Text")]
+    [Tooltip("Text size for auto-created texts.")]
     [SerializeField] private float fontSize = 40f;
 
-    [Tooltip("Text colour for the amounts. Swatches already show each tier's colour.")]
+    [Tooltip("Text colour (when 'Color Text By Tier' is off).")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Tooltip("Text format. {0} = tier name, {1} = amount.")]
-    [SerializeField] private string rowFormat = "{0}: {1}";
+    [Tooltip("Colour each line with its tier's colour. Black pixels will be hard to read on a dark background, so use the outline below.")]
+    [SerializeField] private bool colorTextByTier = false;
 
-    [Tooltip("Size of the colour swatch next to each line. Set 0 to hide swatches.")]
-    [SerializeField] private float swatchSize = 36f;
-
-    [Tooltip("Gap between the swatch and the text.")]
-    [SerializeField] private float swatchSpacing = 12f;
-
-    [Tooltip("Colour of the border drawn around a swatch (helps white/black swatches stay visible).")]
-    [SerializeField] private Color swatchBorderColor = new Color(1f, 1f, 1f, 0.35f);
-
-    [Tooltip("Thickness of the swatch border.")]
-    [SerializeField] private float swatchBorderSize = 3f;
-
-    [Tooltip("Also show tiers that aren't unlocked yet (as locked text).")]
-    [SerializeField] private bool showLockedTiers = false;
-
-    [Tooltip("Text shown for locked tiers when 'Show Locked Tiers' is on.")]
-    [SerializeField] private string lockedText = "???";
-
-    [Header("Change Animation")]
-    [Tooltip("Scale-up of a row when its amount changes (0.2 = +20%).")]
-    [SerializeField] private float punchScale = 0.2f;
-
-    [Tooltip("Seconds the punch animation takes.")]
-    [SerializeField] private float punchDuration = 0.2f;
-
-    [Header("Gain Popups (+N)")]
-    [Tooltip("Show floating '+N' text above the pixel when currency is gained.")]
-    [SerializeField] private bool showGainPopups = true;
-
-    [Tooltip("Popup text. {0} = amount gained.")]
-    [SerializeField] private string popupFormat = "+{0}";
-
-    [Tooltip("Popup text size.")]
-    [SerializeField] private float popupFontSize = 56f;
-
-    [Tooltip("Use the tier's colour for the popup (with an outline so it's visible on any background).")]
-    [SerializeField] private bool popupUsesTierColor = true;
-
-    [Tooltip("Popup colour when 'Popup Uses Tier Color' is off.")]
-    [SerializeField] private Color popupColor = Color.white;
-
-    [Tooltip("Outline colour for popups.")]
-    [SerializeField] private Color popupOutlineColor = Color.black;
+    [Tooltip("Outline colour (used for auto-created texts).")]
+    [SerializeField] private Color outlineColor = Color.black;
 
     [Range(0f, 1f)]
-    [Tooltip("Outline thickness for popups.")]
-    [SerializeField] private float popupOutlineWidth = 0.25f;
+    [Tooltip("Outline thickness for auto-created texts. 0 = none.")]
+    [SerializeField] private float outlineWidth = 0f;
 
-    [Tooltip("Seconds a popup lives.")]
-    [SerializeField] private float popupDuration = 0.9f;
+    [Tooltip("Line format. {0} = tier name, {1} = amount.")]
+    [SerializeField] private string lineFormat = "{0}: {1}";
 
-    [Tooltip("How far (canvas units) the popup rises.")]
-    [SerializeField] private float popupRise = 140f;
+    [Tooltip("Compact numbers (1.2K, 3.4M). Off = full number.")]
+    [SerializeField] private bool abbreviateNumbers = true;
 
-    [Tooltip("Offset from the pixel's screen position where popups start.")]
-    [SerializeField] private Vector2 popupStartOffset = new Vector2(0f, 90f);
+    [Header("Locked Tiers")]
+    [Tooltip("Show tiers that aren't unlocked yet.")]
+    [SerializeField] private bool showLockedTiers = false;
 
-    [Tooltip("Random horizontal offset (+/-) so rapid clicks don't stack exactly.")]
-    [SerializeField] private float popupRandomX = 40f;
+    [Tooltip("Text shown as the amount of a locked tier (only when 'Show Locked Tiers' is on).")]
+    [SerializeField] private string lockedText = "???";
 
-    [Tooltip("Popup opacity over its life (0..1 time, 0..1 alpha).")]
-    [SerializeField] private AnimationCurve popupAlpha = new AnimationCurve(
-        new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f));
-
-    [Tooltip("Popup scale over its life (0..1 time, scale multiplier).")]
-    [SerializeField] private AnimationCurve popupScale = new AnimationCurve(
-        new Keyframe(0f, 0.6f), new Keyframe(0.15f, 1.2f), new Keyframe(0.3f, 1f), new Keyframe(1f, 1f));
+    [Tooltip("Text colour for locked tiers.")]
+    [SerializeField] private Color lockedColor = new Color(1f, 1f, 1f, 0.35f);
 
     // ------------------------------------------------------------------
     // Runtime
     // ------------------------------------------------------------------
 
-    private class Row
-    {
-        public GameObject root;
-        public TMP_Text label;
-        public Image swatch;
-        public float punchTimer;
-        public double lastCount;
-    }
-
-    private readonly List<Row> rows = new List<Row>();
-    private RectTransform canvasRect;
-    private RectTransform panelRect;
+    private GameObject autoRoot;
+    private bool built;
 
     // ------------------------------------------------------------------
     // Unity lifecycle
@@ -163,262 +118,161 @@ public class PixelUI : MonoBehaviour
 
     private void Awake()
     {
-        if (clicker == null) clicker = FindFirstObjectByType<PixelClicker>();
         if (clicker == null)
         {
-            Debug.LogWarning("PixelUI: no PixelClicker found in the scene.", this);
+#if UNITY_2023_1_OR_NEWER
+            clicker = FindFirstObjectByType<PixelClicker>();
+#else
+            clicker = FindObjectOfType<PixelClicker>();
+#endif
+        }
+
+        if (clicker == null)
+        {
+            Debug.LogError("PixelUI: no PixelClicker found in the scene. Add PixelClicker to your cube first, " +
+                           "or drag it into the 'Clicker' field.", this);
             enabled = false;
             return;
         }
 
-        BuildCanvas();
-        BuildPanel();
+        bool hasManualLabels = tierLabels != null && tierLabels.Length > 0 && tierLabels[0] != null;
+        if (!hasManualLabels)
+        {
+            if (!autoCreateLabels)
+            {
+                Debug.LogError("PixelUI: 'Tier Labels' is empty and 'Auto Create Labels' is off, so there is nothing to show.", this);
+                enabled = false;
+                return;
+            }
+            BuildAutomaticUI();
+        }
+
+        built = true;
     }
 
-    private void OnEnable()
+    private void OnDestroy()
     {
-        if (clicker == null) return;
-        clicker.CurrencyChanged += Refresh;
-        clicker.CurrencyGained += OnCurrencyGained;
-    }
-
-    private void OnDisable()
-    {
-        if (clicker == null) return;
-        clicker.CurrencyChanged -= Refresh;
-        clicker.CurrencyGained -= OnCurrencyGained;
-    }
-
-    private void Start()
-    {
-        // PixelClicker unlocks start tiers in its Awake, so by now the data is ready.
-        Refresh();
+        if (autoRoot != null) Destroy(autoRoot);
     }
 
     private void Update()
     {
-        // Row punch animation.
-        for (int i = 0; i < rows.Count; i++)
-        {
-            Row row = rows[i];
-            if (row.punchTimer <= 0f) continue;
-
-            row.punchTimer -= Time.unscaledDeltaTime;
-            float k = punchDuration > 0f ? 1f - Mathf.Clamp01(row.punchTimer / punchDuration) : 1f;
-            row.root.transform.localScale = Vector3.one * (1f + punchScale * Mathf.Sin(k * Mathf.PI));
-            if (row.punchTimer <= 0f) row.root.transform.localScale = Vector3.one;
-        }
+        if (built) Refresh();
     }
 
     // ------------------------------------------------------------------
-    // Building the UI
+    // Automatic UI
     // ------------------------------------------------------------------
 
-    private void BuildCanvas()
+    private void BuildAutomaticUI()
     {
-        if (targetCanvas == null)
+        if (TMP_Settings.instance == null && font == null)
         {
-            GameObject go = new GameObject("PixelUI Canvas");
-            targetCanvas = go.AddComponent<Canvas>();
-            targetCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            targetCanvas.sortingOrder = sortingOrder;
-
-            CanvasScaler scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = referenceResolution;
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = matchWidthOrHeight;
+            Debug.LogError("PixelUI: TextMeshPro Essential Resources are missing. " +
+                           "Use Window > TextMeshPro > Import TMP Essential Resources, then press Play again.", this);
         }
 
-        canvasRect = targetCanvas.GetComponent<RectTransform>();
-    }
+        int count = clicker.Tiers.Length;
 
-    private void BuildPanel()
-    {
-        GameObject panel = new GameObject("Currency Panel", typeof(RectTransform));
-        panel.transform.SetParent(targetCanvas.transform, false);
-        panelRect = panel.GetComponent<RectTransform>();
+        // Canvas
+        autoRoot = new GameObject("PixelUI Canvas");
+        Canvas canvas = autoRoot.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = sortingOrder;
 
-        // Anchor + pivot in the chosen corner.
+        CanvasScaler scaler = autoRoot.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = referenceResolution;
+        scaler.matchWidthOrHeight = 0.5f;
+
+        // Panel (fixed size, anchored to the chosen corner)
+        float height = panelPadding * 2f + lineHeight * count;
+        GameObject panel = new GameObject("Panel", typeof(RectTransform));
+        panel.transform.SetParent(autoRoot.transform, false);
+        RectTransform panelRect = panel.GetComponent<RectTransform>();
+
         Vector2 anchor = new Vector2(
             corner == PanelCorner.TopRight || corner == PanelCorner.BottomRight ? 1f : 0f,
             corner == PanelCorner.TopLeft || corner == PanelCorner.TopRight ? 1f : 0f);
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
+        panelRect.sizeDelta = new Vector2(panelWidth, height);
         panelRect.anchoredPosition = new Vector2(
             anchor.x > 0.5f ? -margin.x : margin.x,
             anchor.y > 0.5f ? -margin.y : margin.y);
 
-        if (showPanelBackground)
+        if (showBackground)
         {
             Image bg = panel.AddComponent<Image>();
-            bg.color = panelColor;
+            bg.color = backgroundColor;
             bg.raycastTarget = false;
         }
 
-        VerticalLayoutGroup vlg = panel.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = new RectOffset(
-            Mathf.RoundToInt(padding.x), Mathf.RoundToInt(padding.y),
-            Mathf.RoundToInt(padding.z), Mathf.RoundToInt(padding.w));
-        vlg.spacing = rowSpacing;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = true;
-        vlg.childForceExpandWidth = false;
-        vlg.childForceExpandHeight = false;
-        vlg.childAlignment = anchor.x > 0.5f ? TextAnchor.UpperRight : TextAnchor.UpperLeft;
-
-        ContentSizeFitter fitter = panel.AddComponent<ContentSizeFitter>();
-        fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        for (int i = 0; i < clicker.Tiers.Length; i++)
-            rows.Add(BuildRow(i));
-    }
-
-    private Row BuildRow(int tierIndex)
-    {
-        Row row = new Row();
-
-        row.root = new GameObject("Row " + tierIndex, typeof(RectTransform));
-        row.root.transform.SetParent(panelRect, false);
-
-        HorizontalLayoutGroup hlg = row.root.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = swatchSpacing;
-        hlg.childControlWidth = true;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = false;
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-
-        if (swatchSize > 0f)
+        // One text per tier, stacked from the top of the panel.
+        tierLabels = new TMP_Text[count];
+        for (int i = 0; i < count; i++)
         {
-            // Border (outer) + fill (inner) so any colour reads against the panel.
-            GameObject border = new GameObject("Swatch", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-            border.transform.SetParent(row.root.transform, false);
-            Image borderImg = border.GetComponent<Image>();
-            borderImg.color = swatchBorderColor;
-            borderImg.raycastTarget = false;
-            LayoutElement le = border.GetComponent<LayoutElement>();
-            le.preferredWidth = le.preferredHeight = swatchSize;
+            GameObject go = new GameObject("Tier " + i, typeof(RectTransform));
+            go.transform.SetParent(panel.transform, false);
 
-            GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fill.transform.SetParent(border.transform, false);
-            RectTransform fr = fill.GetComponent<RectTransform>();
-            fr.anchorMin = Vector2.zero;
-            fr.anchorMax = Vector2.one;
-            fr.offsetMin = new Vector2(swatchBorderSize, swatchBorderSize);
-            fr.offsetMax = new Vector2(-swatchBorderSize, -swatchBorderSize);
-            row.swatch = fill.GetComponent<Image>();
-            row.swatch.raycastTarget = false;
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(-panelPadding * 2f, lineHeight);
+            rt.anchoredPosition = new Vector2(0f, -panelPadding - lineHeight * i);
+
+            TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.fontSize = fontSize;
+            tmp.color = textColor;
+            tmp.alignment = anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+            tmp.raycastTarget = false;
+            if (font != null) tmp.font = font;
+            if (outlineWidth > 0f)
+            {
+                tmp.outlineColor = outlineColor;
+                tmp.outlineWidth = outlineWidth;
+            }
+
+            tierLabels[i] = tmp;
         }
 
-        GameObject textGo = new GameObject("Label", typeof(RectTransform));
-        textGo.transform.SetParent(row.root.transform, false);
-        row.label = textGo.AddComponent<TextMeshProUGUI>();
-        row.label.fontSize = fontSize;
-        row.label.color = textColor;
-        row.label.alignment = TextAlignmentOptions.MidlineLeft;
-        row.label.raycastTarget = false;
-        if (font != null) row.label.font = font;
-
-        row.lastCount = clicker.Tiers[tierIndex].count;
-        return row;
+        Debug.Log("PixelUI: created " + count + " text lines.", this);
     }
 
     // ------------------------------------------------------------------
-    // Updating
+    // Refresh
     // ------------------------------------------------------------------
 
-    /// <summary>Updates all rows from the current PixelClicker data.</summary>
+    /// <summary>Writes the current amounts into the texts. Runs every frame.</summary>
     public void Refresh()
     {
-        if (clicker == null) return;
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
 
-        for (int i = 0; i < rows.Count && i < tiers.Length; i++)
+        for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
-            Row row = rows[i];
-            PixelClicker.PixelTier tier = tiers[i];
+            TMP_Text label = tierLabels[i];
+            if (label == null) continue;
 
+            PixelClicker.PixelTier tier = tiers[i];
             bool visible = tier.unlocked || showLockedTiers;
-            row.root.SetActive(visible);
+            if (label.gameObject.activeSelf != visible) label.gameObject.SetActive(visible);
             if (!visible) continue;
 
-            row.label.text = tier.unlocked
-                ? string.Format(rowFormat, tier.displayName, PixelClicker.FormatNumber(tier.count))
-                : string.Format(rowFormat, tier.displayName, lockedText);
+            string amount = tier.unlocked ? FormatAmount(tier.count) : lockedText;
+            label.text = string.Format(lineFormat, tier.displayName, amount);
 
-            if (row.swatch != null) row.swatch.color = tier.unlocked ? tier.color : new Color(0.3f, 0.3f, 0.3f, 1f);
-
-            // Punch when the amount changed (but not on the very first refresh).
-            if (tier.count != row.lastCount && punchDuration > 0f && punchScale > 0f)
-                row.punchTimer = punchDuration;
-            row.lastCount = tier.count;
+            if (!tier.unlocked) label.color = lockedColor;
+            else label.color = colorTextByTier ? tier.color : textColor;
         }
-
-        if (panelRect != null) LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
     }
 
-    // ------------------------------------------------------------------
-    // Gain popups
-    // ------------------------------------------------------------------
-
-    private void OnCurrencyGained(int tierIndex, double amount)
+    private string FormatAmount(double value)
     {
-        if (!showGainPopups || canvasRect == null) return;
+        if (!abbreviateNumbers || value < 1000d) return Math.Floor(value).ToString("0");
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        if (cam == null || clicker.PixelTransform == null) return;
-
-        Vector3 screen = cam.WorldToScreenPoint(clicker.PixelTransform.position);
-        if (screen.z < 0f) return; // behind the camera
-
-        // Overlay canvases take screen coordinates directly (null camera).
-        Camera uiCam = targetCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : targetCanvas.worldCamera;
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, uiCam, out Vector2 local)) return;
-
-        Color color = popupUsesTierColor ? clicker.Tiers[tierIndex].color : popupColor;
-        string text = string.Format(popupFormat, PixelClicker.FormatNumber(amount));
-        Vector2 start = local + popupStartOffset + new Vector2(Random.Range(-popupRandomX, popupRandomX), 0f);
-
-        StartCoroutine(PopupRoutine(text, color, start));
-    }
-
-    private IEnumerator PopupRoutine(string text, Color color, Vector2 start)
-    {
-        GameObject go = new GameObject("GainPopup", typeof(RectTransform));
-        go.transform.SetParent(canvasRect, false);
-
-        RectTransform rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = start;
-        rt.sizeDelta = new Vector2(600f, 150f); // wide enough that the text never needs to wrap
-
-        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = popupFontSize;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.raycastTarget = false;
-        tmp.fontStyle = FontStyles.Bold;
-        tmp.outlineColor = popupOutlineColor;
-        tmp.outlineWidth = popupOutlineWidth;
-        if (font != null) tmp.font = font;
-
-        float t = 0f;
-        while (t < popupDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = popupDuration > 0f ? Mathf.Clamp01(t / popupDuration) : 1f;
-
-            rt.anchoredPosition = start + Vector2.up * (popupRise * k);
-            rt.localScale = Vector3.one * popupScale.Evaluate(k);
-
-            Color c = color;
-            c.a = color.a * popupAlpha.Evaluate(k);
-            tmp.color = c;
-
-            yield return null;
-        }
-
-        Destroy(go);
+        string[] suffix = { "", "K", "M", "B", "T" };
+        int s = 0;
+        while (value >= 1000d && s < suffix.Length - 1) { value /= 1000d; s++; }
+        return value.ToString("0.##") + suffix[s];
     }
 }
