@@ -50,8 +50,8 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Distance from the screen edges.")]
     [SerializeField] private Vector2 margin = new Vector2(30f, 30f);
 
-    [Tooltip("Inner spacing between the panel edge and its rows (left, right, top, bottom).")]
-    [SerializeField] private RectOffset padding = new RectOffset(20, 20, 14, 14);
+    [Tooltip("Inner spacing between the panel edge and its rows. X = left, Y = right, Z = top, W = bottom.")]
+    [SerializeField] private Vector4 padding = new Vector4(20f, 20f, 14f, 14f);
 
     [Tooltip("Vertical gap between rows.")]
     [SerializeField] private float rowSpacing = 8f;
@@ -256,7 +256,9 @@ public class PixelUI : MonoBehaviour
         }
 
         VerticalLayoutGroup vlg = panel.AddComponent<VerticalLayoutGroup>();
-        vlg.padding = padding;
+        vlg.padding = new RectOffset(
+            Mathf.RoundToInt(padding.x), Mathf.RoundToInt(padding.y),
+            Mathf.RoundToInt(padding.z), Mathf.RoundToInt(padding.w));
         vlg.spacing = rowSpacing;
         vlg.childControlWidth = true;
         vlg.childControlHeight = true;
