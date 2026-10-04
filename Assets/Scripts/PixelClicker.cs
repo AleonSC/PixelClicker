@@ -292,7 +292,12 @@ public class PixelClicker : MonoBehaviour
     /// <summary>C# event version of onCurrencyChanged, handy for other scripts.</summary>
     public event Action CurrencyChanged;
 
+    /// <summary>Fired whenever currency is gained: (tier index, amount). Used by PixelUI for "+1" popups.</summary>
+    public event Action<int, double> CurrencyGained;
+
     public PixelTier[] Tiers => tiers;
+    public Transform PixelTransform => pixelTransform;
+    public Camera TargetCamera => targetCamera;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
 
     // ------------------------------------------------------------------
@@ -434,6 +439,7 @@ public class PixelClicker : MonoBehaviour
 
         tiers[tierIndex].count += amount;
         tiers[tierIndex].totalCollected += amount;
+        CurrencyGained?.Invoke(tierIndex, amount);
 
         CheckUnlocks();
         NotifyChanged();
@@ -767,7 +773,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Compact number formatting (1.2K, 3.4M ...). Replace with your own for big-number support.</summary>
-    private static string FormatNumber(double value)
+    public static string FormatNumber(double value)
     {
         if (value < 1000) return Math.Floor(value).ToString("0");
         string[] suffix = { "", "K", "M", "B", "T" };
