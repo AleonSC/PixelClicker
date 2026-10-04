@@ -354,7 +354,7 @@ public class PixelUI : MonoBehaviour
         if (!showGainPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
 
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        Color color = popupUsesTierColor ? tier.color : popupColor;
+        Color color = popupUsesTierColor ? tier.UIColor : popupColor;
         string text = string.Format(popupFormat, FormatAmount(amount));
         Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
 
@@ -603,7 +603,7 @@ public class PixelUI : MonoBehaviour
             label.text = string.Format(lineFormat, tier.displayName, amount);
 
             if (!tier.unlocked && !holding) label.color = lockedColor;
-            else label.color = colorTextByTier ? tier.color : textColor;
+            else label.color = colorTextByTier ? tier.UIColor : textColor;
 
             if (autoMode)
             {

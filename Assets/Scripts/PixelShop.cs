@@ -122,9 +122,13 @@ public class PixelShop : MonoBehaviour
     [Tooltip("The shop's items. Add more entries here later.")]
     [SerializeField] private ShopPack[] packs =
     {
-        CreateRgbPack(), CreateAutoClickerPack(),
+        CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0),
         CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1)
     };
+
+    [Tooltip("If none of the packs unlocks Glass pixels (e.g. this component was added before glass existed), " +
+             "add the default Glass pack at startup.")]
+    [SerializeField] private bool addDefaultGlassPack = true;
 
     [Tooltip("If none of the packs is an auto clicker upgrade (e.g. this component was added before upgrades existed), " +
              "add the default upgrade packs at startup.")]
@@ -187,6 +191,32 @@ public class PixelShop : MonoBehaviour
                 {
                     type = PixelClicker.PixelType.Blue, displayName = "Blue Pixels", color = Color.blue,
                     amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>Default Glass pack: unlocks see-through Glass pixels for 100 Red + 100 Green + 100 Blue. Needs the RGB pack first.</summary>
+    private static ShopPack CreateGlassPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Glass Pack",
+            description = "Adds see-through Glass pixels to the random spawn pool.",
+            requiresPackIndex = requiresRgbIndex,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 100 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Glass, displayName = "Glass Pixels",
+                    color = new Color(0.7f, 0.92f, 1f, 0.35f), translucent = true,
+                    amountPerClick = 1, spawnWeight = 0.5f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
         };
@@ -268,6 +298,17 @@ public class PixelShop : MonoBehaviour
 
 #if UNITY_EDITOR
     /// <summary>Right-click the component header > Add Default Auto Clicker Pack, to make it editable in the list.</summary>
+    [ContextMenu("Add Default Glass Pack To List")]
+    private void AddGlassPackToList()
+    {
+        int rgb = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                              Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Red));
+        UnityEditor.Undo.RecordObject(this, "Add Glass Pack");
+        Array.Resize(ref packs, packs.Length + 1);
+        packs[packs.Length - 1] = CreateGlassPack(rgb);
+        UnityEditor.EditorUtility.SetDirty(this);
+    }
+
     [ContextMenu("Add Default Auto Clicker Upgrade Packs To List")]
     private void AddUpgradePacksToList()
     {
@@ -511,6 +552,22 @@ public class PixelShop : MonoBehaviour
             {
                 Array.Resize(ref packs, packs.Length + 1);
                 packs[packs.Length - 1] = CreateClicksUpgradePack(autoIndex);
+            }
+        }
+
+        if (addDefaultGlassPack)
+        {
+            bool hasGlass = false;
+            foreach (ShopPack pack in packs)
+                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Glass))
+                    hasGlass = true;
+
+            if (!hasGlass)
+            {
+                int rgbIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                           Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Red));
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateGlassPack(rgbIndex);
             }
         }
 

@@ -35,6 +35,7 @@ public class PixelClicker : MonoBehaviour
         Red = 3,
         Green = 4,
         Blue = 5,
+        Glass = 6,
     }
 
     /// <summary>How a tier becomes available.</summary>
@@ -68,6 +69,13 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Tier is available from the very beginning.")]
         public bool unlockedAtStart = false;
 
+        [Tooltip("Render the pixel as see-through while this tier is active. A transparent copy of the pixel's material is made automatically " +
+                 "(works with the Standard and URP Lit shaders). The tier colour's alpha sets how see-through it is.")]
+        public bool translucent = false;
+
+        [Tooltip("Optional: a material to use for this tier instead of the pixel's normal one (e.g. your own glass material). Overrides 'Translucent'.")]
+        public Material materialOverride;
+
         [Tooltip("Amount of this currency you start the game with (handy for testing the shop).")]
         public double startingAmount = 0;
 
@@ -93,6 +101,9 @@ public class PixelClicker : MonoBehaviour
 
         [Tooltip("Has this tier been unlocked?")]
         public bool unlocked;
+
+        /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
+        public Color UIColor => new Color(color.r, color.g, color.b, 1f);
 
         /// <summary>Shallow copy (used by the shop to add its reward tiers).</summary>
         public PixelTier Clone() => (PixelTier)MemberwiseClone();
@@ -320,6 +331,8 @@ public class PixelClicker : MonoBehaviour
     private Vector3 basePosition;
     private float materializeFactor = 1f;
     private Color currentColor = Color.white;
+    private Material defaultMaterial;
+    private Material transparentMaterial;
     private Transform hitbox;
     private int currentTierIndex; // tier of the pixel currently on screen (random mode)
 
@@ -361,6 +374,8 @@ public class PixelClicker : MonoBehaviour
             audioSource.playOnAwake = false;
         }
 
+        if (pixelRenderer != null) defaultMaterial = pixelRenderer.sharedMaterial;
+
         baseScale = pixelTransform.localScale;
         basePosition = pixelTransform.position;
 
@@ -391,7 +406,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
         ApplyUIFont();
-        ApplyPixelColor(GetClickTier().color);
+        ApplyTierLook(GetClickTier());
         RefreshUI();
     }
 
@@ -486,7 +501,7 @@ public class PixelClicker : MonoBehaviour
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
         if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
-        Materialize(GetClickTier().color);
+        Materialize(GetClickTier());
 
         onPixelClicked?.Invoke();
     }
@@ -528,7 +543,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (!IsValidTier(index) || !tiers[index].unlocked) return;
         activeTierIndex = index;
-        ApplyPixelColor(tiers[index].color);
+        ApplyTierLook(tiers[index]);
         RefreshUI();
     }
 
@@ -710,7 +725,11 @@ public class PixelClicker : MonoBehaviour
         pixelTransform.localScale = baseScale * (materializeFactor * (1f + pulse * pulseAmount));
 
         if (pulseEnabled && pulseBrightness)
-            ApplyPixelColor(currentColor * (1f + pulse * brightnessAmount), false);
+        {
+            Color pulsed = currentColor * (1f + pulse * brightnessAmount);
+            pulsed.a = currentColor.a; // brightness only, keep see-through tiers see-through
+            ApplyPixelColor(pulsed, false);
+        }
     }
 
     private void ApplyPixelColor(Color color, bool remember = true)
@@ -724,16 +743,67 @@ public class PixelClicker : MonoBehaviour
         pixelRenderer.SetPropertyBlock(propertyBlock);
     }
 
-    private void Materialize(Color newColor)
+    /// <summary>Applies a tier's material (normal, translucent or override) and colour to the pixel.</summary>
+    private void ApplyTierLook(PixelTier tier)
     {
-        if (materializeRoutine != null) StopCoroutine(materializeRoutine);
-        materializeRoutine = StartCoroutine(MaterializeRoutine(newColor));
+        if (pixelRenderer != null)
+        {
+            Material wanted = defaultMaterial;
+            if (tier.materialOverride != null) wanted = tier.materialOverride;
+            else if (tier.translucent && defaultMaterial != null)
+            {
+                if (transparentMaterial == null) transparentMaterial = BuildTransparentMaterial(defaultMaterial);
+                wanted = transparentMaterial;
+            }
+
+            if (wanted != null && pixelRenderer.sharedMaterial != wanted) pixelRenderer.sharedMaterial = wanted;
+        }
+
+        ApplyPixelColor(tier.color);
     }
 
-    private IEnumerator MaterializeRoutine(Color newColor)
+    /// <summary>Copies a material and switches it to alpha blending (Standard or URP Lit/Unlit).</summary>
+    private static Material BuildTransparentMaterial(Material source)
+    {
+        Material m = new Material(source) { name = source.name + " (Transparent)" };
+
+        if (m.HasProperty("_Surface")) // URP
+        {
+            m.SetFloat("_Surface", 1f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_ZWrite", 0f);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.DisableKeyword("_ALPHATEST_ON");
+        }
+        else if (m.HasProperty("_Mode")) // Built-in Standard
+        {
+            m.SetFloat("_Mode", 3f);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_ZWrite", 0f);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.DisableKeyword("_ALPHATEST_ON");
+            m.EnableKeyword("_ALPHABLEND_ON");
+            m.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        }
+
+        m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        return m;
+    }
+
+    private void Materialize(PixelTier tier)
+    {
+        if (materializeRoutine != null) StopCoroutine(materializeRoutine);
+        materializeRoutine = StartCoroutine(MaterializeRoutine(tier));
+    }
+
+    private IEnumerator MaterializeRoutine(PixelTier tier)
     {
         isSpawning = true;
-        ApplyPixelColor(newColor);
+        ApplyTierLook(tier);
         materializeFactor = 0f;
 
         float t = 0f;

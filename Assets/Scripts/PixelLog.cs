@@ -432,7 +432,7 @@ public class PixelLog : MonoBehaviour
             PixelClicker.PixelTier tier = tiers[i];
             row.name.text = tier.displayName;
             row.amount.text = FormatAmount(tier.totalCollected);
-            if (row.swatch != null) row.swatch.color = tier.color;
+            if (row.swatch != null) row.swatch.color = tier.UIColor;
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
             y += rowHeight;
