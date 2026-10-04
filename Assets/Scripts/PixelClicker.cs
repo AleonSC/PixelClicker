@@ -55,6 +55,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Tier is available from the very beginning.")]
         public bool unlockedAtStart = false;
 
+        [Tooltip("Relative chance this tier is picked when a new pixel spawns (only used while Randomize Spawn Tier is on). 0 = never spawns.")]
+        [Min(0f)] public float spawnWeight = 1f;
+
         [Tooltip("Optional: one TMP label showing this tier's current count. Leave empty to skip.")]
         public TMP_Text countLabel;
 
@@ -107,6 +110,9 @@ public class PixelClicker : MonoBehaviour
         new PixelTier { type = PixelType.Black, displayName = "Black Pixels", color = Color.black,
                         amountPerClick = 1, unlockThreshold = 10 },
     };
+
+    [Tooltip("Each new pixel spawns as a random UNLOCKED tier (weighted by each tier's Spawn Weight). Clicking it gives that tier's currency. Overrides the two settings below.")]
+    [SerializeField] private bool randomizeSpawnTier = true;
 
     [Tooltip("If on, clicks always produce the highest unlocked tier. If off, use SetActiveTier() (e.g. from a button).")]
     [SerializeField] private bool autoUseHighestTier = true;
@@ -278,6 +284,7 @@ public class PixelClicker : MonoBehaviour
     private Vector3 basePosition;
     private float materializeFactor = 1f;
     private Color currentColor = Color.white;
+    private int currentTierIndex; // tier of the pixel currently on screen (random mode)
 
     // Old pixels currently in the scene (used for the cap and kill height).
     private readonly System.Collections.Generic.List<Rigidbody> oldPixels = new System.Collections.Generic.List<Rigidbody>();
@@ -327,6 +334,7 @@ public class PixelClicker : MonoBehaviour
 
     private void Start()
     {
+        if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
         ApplyPixelColor(GetClickTier().color);
         RefreshUI();
     }
@@ -411,7 +419,10 @@ public class PixelClicker : MonoBehaviour
 
         PlayClickEffects(tier);
         if (spawnFallingCopy) SpawnFallingCopy();
-        Materialize(GetClickTier().color); // re-read: the click may have unlocked a higher tier
+
+        // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
+        if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
+        Materialize(GetClickTier().color);
 
         onPixelClicked?.Invoke();
     }
@@ -491,8 +502,32 @@ public class PixelClicker : MonoBehaviour
         return 0;
     }
 
+    /// <summary>Weighted random pick among unlocked tiers.</summary>
+    private int PickSpawnTier()
+    {
+        float total = 0f;
+        for (int i = 0; i < tiers.Length; i++)
+            if (tiers[i].unlocked) total += Mathf.Max(0f, tiers[i].spawnWeight);
+
+        if (total <= 0f) return GetHighestUnlockedIndex();
+
+        float roll = UnityEngine.Random.value * total;
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            if (!tiers[i].unlocked) continue;
+            roll -= Mathf.Max(0f, tiers[i].spawnWeight);
+            if (roll <= 0f) return i;
+        }
+        return GetHighestUnlockedIndex();
+    }
+
     private int GetClickTierIndex()
     {
+        if (randomizeSpawnTier)
+            return IsValidTier(currentTierIndex) && tiers[currentTierIndex].unlocked
+                ? currentTierIndex
+                : GetHighestUnlockedIndex();
+
         if (autoUseHighestTier) return GetHighestUnlockedIndex();
         return IsValidTier(activeTierIndex) && tiers[activeTierIndex].unlocked
             ? activeTierIndex
