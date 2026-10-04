@@ -315,7 +315,6 @@ public class PixelUI : MonoBehaviour
         row.label.fontSize = fontSize;
         row.label.color = textColor;
         row.label.alignment = TextAlignmentOptions.MidlineLeft;
-        row.label.textWrappingMode = TextWrappingModes.NoWrap;
         row.label.raycastTarget = false;
         if (font != null) row.label.font = font;
 
@@ -390,12 +389,12 @@ public class PixelUI : MonoBehaviour
         RectTransform rt = go.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = start;
+        rt.sizeDelta = new Vector2(600f, 150f); // wide enough that the text never needs to wrap
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
         tmp.fontSize = popupFontSize;
         tmp.alignment = TextAlignmentOptions.Center;
-        tmp.textWrappingMode = TextWrappingModes.NoWrap;
         tmp.raycastTarget = false;
         tmp.fontStyle = FontStyles.Bold;
         tmp.outlineColor = popupOutlineColor;
