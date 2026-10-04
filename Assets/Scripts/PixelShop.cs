@@ -375,7 +375,11 @@ public class PixelShop : MonoBehaviour
         {
             if (pack.rewardTiers == null) continue;
             foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
-                clicker.EnsureTier(reward);
+            {
+                int tierIndex = clicker.EnsureTier(reward);
+                if (reward.startingAmount > 0)
+                    Debug.Log("PixelShop: " + reward.displayName + " starts at " + clicker.Tiers[tierIndex].count + ".", this);
+            }
         }
     }
 

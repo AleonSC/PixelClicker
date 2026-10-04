@@ -453,14 +453,15 @@ public class PixelUI : MonoBehaviour
             if (label == null) continue;
 
             PixelClicker.PixelTier tier = tiers[i];
-            bool visible = tier.unlocked || showLockedTiers;
+            bool holding = tier.count > 0d; // e.g. a Starting Amount on a tier that is still locked
+            bool visible = tier.unlocked || holding || showLockedTiers;
             if (label.gameObject.activeSelf != visible) label.gameObject.SetActive(visible);
             if (!visible) continue;
 
-            string amount = tier.unlocked ? FormatAmount(tier.count) : lockedText;
+            string amount = (tier.unlocked || holding) ? FormatAmount(tier.count) : lockedText;
             label.text = string.Format(lineFormat, tier.displayName, amount);
 
-            if (!tier.unlocked) label.color = lockedColor;
+            if (!tier.unlocked && !holding) label.color = lockedColor;
             else label.color = colorTextByTier ? tier.color : textColor;
         }
     }

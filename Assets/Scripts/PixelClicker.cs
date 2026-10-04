@@ -585,7 +585,16 @@ public class PixelClicker : MonoBehaviour
     public int EnsureTier(PixelTier definition)
     {
         int existing = IndexOf(definition.type);
-        if (existing >= 0) return existing;
+        if (existing >= 0)
+        {
+            // The Tiers list already has this type: still honour a Starting Amount set on the shop's definition.
+            if (definition.startingAmount > 0 && tiers[existing].startingAmount <= 0)
+            {
+                tiers[existing].startingAmount = definition.startingAmount;
+                tiers[existing].count = definition.startingAmount;
+            }
+            return existing;
+        }
 
         PixelTier copy = definition.Clone();
         copy.unlocked = false;
