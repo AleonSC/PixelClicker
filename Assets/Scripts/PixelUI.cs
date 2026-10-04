@@ -72,6 +72,37 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Reference resolution used by the auto-created canvas scaler.")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
 
+    [Header("Currency Box (automatic mode)")]
+    [Tooltip("Text on the button that opens/closes the currency box.")]
+    [SerializeField] private string buttonText = "Currency";
+
+    [Tooltip("Size of the button.")]
+    [SerializeField] private Vector2 buttonSize = new Vector2(240f, 80f);
+
+    [Tooltip("Button text size.")]
+    [SerializeField] private float buttonFontSize = 38f;
+
+    [Tooltip("Button colour.")]
+    [SerializeField] private Color buttonColor = new Color(0.25f, 0.6f, 0.4f, 1f);
+
+    [Tooltip("Button text colour.")]
+    [SerializeField] private Color buttonTextColor = Color.white;
+
+    [Tooltip("Title shown at the top of the box.")]
+    [SerializeField] private string boxTitle = "Currency";
+
+    [Tooltip("Title text size.")]
+    [SerializeField] private float titleFontSize = 44f;
+
+    [Tooltip("Height of the title bar.")]
+    [SerializeField] private float headerHeight = 80f;
+
+    [Tooltip("Gap between the button and the box.")]
+    [SerializeField] private float gapBelowButton = 12f;
+
+    [Tooltip("Start with the box open.")]
+    [SerializeField] private bool startOpen = false;
+
     // ------------------------------------------------------------------
     // Text
     // ------------------------------------------------------------------
@@ -176,6 +207,9 @@ public class PixelUI : MonoBehaviour
     // ------------------------------------------------------------------
 
     private GameObject autoRoot;
+    private GameObject boxObject;
+    private RectTransform boxRect;
+    private bool autoMode;
     private bool built;
     private RectTransform popupCanvasRect;
 
@@ -213,6 +247,7 @@ public class PixelUI : MonoBehaviour
                 return;
             }
             BuildAutomaticUI();
+            autoMode = true;
         }
 
         BuildPopupCanvas();
@@ -231,6 +266,7 @@ public class PixelUI : MonoBehaviour
     private void Update()
     {
         if (!built) return;
+        if (autoMode && !boxObject.activeSelf) return; // closed box: nothing to update
         Refresh();
     }
 
@@ -363,6 +399,56 @@ public class PixelUI : MonoBehaviour
     // Automatic UI
     // ------------------------------------------------------------------
 
+    private static void EnsureEventSystem()
+    {
+#if UNITY_2023_1_OR_NEWER
+        if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() != null) return;
+#else
+        if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() != null) return;
+#endif
+        GameObject es = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem));
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#else
+        es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+#endif
+    }
+
+    private TMP_Text MakeText(Transform parent, string objectName, string text, float size,
+                              TextAlignmentOptions alignment, FontStyles style, Color color)
+    {
+        GameObject go = new GameObject(objectName, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = size;
+        tmp.fontStyle = style;
+        tmp.alignment = alignment;
+        tmp.color = color;
+        tmp.raycastTarget = false;
+        if (font != null) tmp.font = font;
+        return tmp;
+    }
+
+    private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, Color color,
+                              Color labelColor, float labelSize)
+    {
+        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(parent, false);
+        go.GetComponent<RectTransform>().sizeDelta = size;
+        Image image = go.GetComponent<Image>();
+        image.color = color;
+        go.GetComponent<Button>().targetGraphic = image;
+
+        TMP_Text text = MakeText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center,
+                                 FontStyles.Bold, labelColor);
+        RectTransform tr = text.rectTransform;
+        tr.anchorMin = Vector2.zero;
+        tr.anchorMax = Vector2.one;
+        tr.offsetMin = tr.offsetMax = Vector2.zero;
+        return go.GetComponent<Button>();
+    }
+
     private void BuildAutomaticUI()
     {
         if (TMP_Settings.instance == null && font == null)
@@ -384,48 +470,70 @@ public class PixelUI : MonoBehaviour
         scaler.referenceResolution = referenceResolution;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // Panel (fixed size, anchored to the chosen corner)
-        float height = panelPadding * 2f + lineHeight * count;
-        GameObject panel = new GameObject("Panel", typeof(RectTransform));
-        panel.transform.SetParent(autoRoot.transform, false);
-        RectTransform panelRect = panel.GetComponent<RectTransform>();
+        autoRoot.AddComponent<GraphicRaycaster>();
+        EnsureEventSystem();
 
         Vector2 anchor = new Vector2(
             corner == PanelCorner.TopRight || corner == PanelCorner.BottomRight ? 1f : 0f,
             corner == PanelCorner.TopLeft || corner == PanelCorner.TopRight ? 1f : 0f);
-        panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
-        panelRect.sizeDelta = new Vector2(panelWidth, height);
-        panelRect.anchoredPosition = new Vector2(
-            anchor.x > 0.5f ? -margin.x : margin.x,
-            anchor.y > 0.5f ? -margin.y : margin.y);
+        float sx = anchor.x > 0.5f ? -1f : 1f;
+        float sy = anchor.y > 0.5f ? -1f : 1f;
 
-        if (showBackground)
+        // --- Currency button
+        Button button = MakeButton(autoRoot.transform, "Currency Button", buttonText, buttonSize, buttonColor,
+                                   buttonTextColor, buttonFontSize);
+        RectTransform br = button.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = anchor;
+        br.anchoredPosition = new Vector2(sx * margin.x, sy * margin.y);
+        button.onClick.AddListener(() =>
         {
-            Image bg = panel.AddComponent<Image>();
-            bg.color = backgroundColor;
-            bg.raycastTarget = false;
-        }
+            boxObject.SetActive(!boxObject.activeSelf);
+            if (boxObject.activeSelf) Refresh();
+        });
 
-        // One text per tier, stacked from the top of the panel.
+        // --- Box (sits next to the button, growing away from the screen edge)
+        boxObject = new GameObject("Currency Box", typeof(RectTransform), typeof(Image));
+        boxObject.transform.SetParent(autoRoot.transform, false);
+        Image bg = boxObject.GetComponent<Image>();
+        bg.color = showBackground ? backgroundColor : new Color(0f, 0f, 0f, 0f);
+        bg.raycastTarget = true; // clicks on the box shouldn't reach the pixel behind it
+
+        boxRect = boxObject.GetComponent<RectTransform>();
+        boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = anchor;
+        boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + lineHeight * count);
+        boxRect.anchoredPosition = new Vector2(sx * margin.x, sy * (margin.y + buttonSize.y + gapBelowButton));
+
+        // Title
+        TMP_Text title = MakeText(boxObject.transform, "Title", boxTitle, titleFontSize,
+                                  TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(-(panelPadding * 2f + 140f), headerHeight);
+        tr.anchoredPosition = Vector2.zero;
+
+        // Close button
+        Button close = MakeButton(boxObject.transform, "Close", "X", new Vector2(64f, 64f),
+                                  new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+        cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
+        close.onClick.AddListener(() => boxObject.SetActive(false));
+
+        // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
         for (int i = 0; i < count; i++)
         {
-            GameObject go = new GameObject("Tier " + i, typeof(RectTransform));
-            go.transform.SetParent(panel.transform, false);
-
-            RectTransform rt = go.GetComponent<RectTransform>();
+            TMP_Text tmp = MakeText(boxObject.transform, "Tier " + i, "", fontSize,
+                                    anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft,
+                                    FontStyles.Normal, textColor);
+            RectTransform rt = tmp.rectTransform;
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
             rt.sizeDelta = new Vector2(-panelPadding * 2f, lineHeight);
-            rt.anchoredPosition = new Vector2(0f, -panelPadding - lineHeight * i);
 
-            TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-            tmp.fontSize = fontSize;
-            tmp.color = textColor;
-            tmp.alignment = anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
-            tmp.raycastTarget = false;
-            if (font != null) tmp.font = font;
             if (outlineWidth > 0f)
             {
                 tmp.outlineColor = outlineColor;
@@ -435,17 +543,19 @@ public class PixelUI : MonoBehaviour
             tierLabels[i] = tmp;
         }
 
-        Debug.Log("PixelUI: created " + count + " text lines.", this);
+        boxObject.SetActive(startOpen);
+        Debug.Log("PixelUI: created the Currency box with " + count + " lines.", this);
     }
 
     // ------------------------------------------------------------------
     // Refresh
     // ------------------------------------------------------------------
 
-    /// <summary>Writes the current amounts into the texts. Runs every frame.</summary>
+    /// <summary>Writes the current amounts into the texts (and stacks visible lines in automatic mode).</summary>
     public void Refresh()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
+        float y = headerHeight + panelPadding * 0.5f;
 
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
@@ -463,7 +573,17 @@ public class PixelUI : MonoBehaviour
 
             if (!tier.unlocked && !holding) label.color = lockedColor;
             else label.color = colorTextByTier ? tier.color : textColor;
+
+            if (autoMode)
+            {
+                label.rectTransform.anchoredPosition = new Vector2(0f, -y);
+                y += lineHeight;
+            }
         }
+
+        // Box height follows the number of visible lines.
+        if (autoMode && boxRect != null)
+            boxRect.sizeDelta = new Vector2(panelWidth, y + panelPadding);
     }
 
     private string FormatAmount(double value)
