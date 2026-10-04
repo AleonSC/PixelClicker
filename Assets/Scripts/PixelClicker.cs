@@ -192,6 +192,9 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private bool spawnFallingCopy = true;
 
     [Header("Vacuum Pixel")]
+    [Tooltip("Print a console line listing what each Vacuum click re-collected, per pixel type (for checking the numbers).")]
+    [SerializeField] private bool logVacuum = true;
+
     [Tooltip("Seconds old pixels take to fly into the cube when a Vacuum pixel is clicked.")]
     [SerializeField] private float vacuumSuckDuration = 0.4f;
 
@@ -842,6 +845,7 @@ public class PixelClicker : MonoBehaviour
     {
         double total = 0d;
         int count = 0;
+        double[] perTier = new double[tiers.Length];
 
         for (int i = 0; i < oldPixels.Count; i++)
         {
@@ -852,6 +856,7 @@ public class PixelClicker : MonoBehaviour
             if (info != null && IsValidTier(info.tierIndex))
             {
                 AddCurrency(info.tierIndex, info.amount);
+                perTier[info.tierIndex] += info.amount;
                 total += info.amount;
                 count++;
             }
@@ -860,6 +865,15 @@ public class PixelClicker : MonoBehaviour
         }
 
         oldPixels.Clear();
+
+        if (logVacuum && count > 0)
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder("Vacuum: re-collected " + count + " old pixels worth " + total + " (");
+            for (int i = 0; i < tiers.Length; i++)
+                if (perTier[i] > 0d) sb.Append(tiers[i].displayName).Append(" +").Append(perTier[i]).Append("  ");
+            Debug.Log(sb.Append(")").ToString(), this);
+        }
+
         if (count > 0) PixelsVacuumed?.Invoke(vacuumTierIndex, total, count);
     }
 
