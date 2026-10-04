@@ -91,6 +91,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Title shown at the top of the box.")]
     [SerializeField] private string boxTitle = "Currency";
 
+    [Tooltip("Show the title in capital letters (CURRENCY).")]
+    [SerializeField] private bool uppercaseTitle = true;
+
     [Tooltip("Title text size.")]
     [SerializeField] private float titleFontSize = 44f;
 
@@ -505,21 +508,14 @@ public class PixelUI : MonoBehaviour
 
         // Title
         TMP_Text title = MakeText(boxObject.transform, "Title", boxTitle, titleFontSize,
-                                  TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+                                  TextAlignmentOptions.Center,
+                                  uppercaseTitle ? FontStyles.Bold | FontStyles.UpperCase : FontStyles.Bold, textColor);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
         tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-(panelPadding * 2f + 140f), headerHeight);
+        tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
         tr.anchoredPosition = Vector2.zero;
-
-        // Close button
-        Button close = MakeButton(boxObject.transform, "Close", "X", new Vector2(64f, 64f),
-                                  new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-        close.onClick.AddListener(() => boxObject.SetActive(false));
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
