@@ -315,7 +315,7 @@ public class PixelUI : MonoBehaviour
         row.label.fontSize = fontSize;
         row.label.color = textColor;
         row.label.alignment = TextAlignmentOptions.MidlineLeft;
-        row.label.enableWordWrapping = false;
+        row.label.textWrappingMode = TextWrappingModes.NoWrap;
         row.label.raycastTarget = false;
         if (font != null) row.label.font = font;
 
@@ -395,7 +395,7 @@ public class PixelUI : MonoBehaviour
         tmp.text = text;
         tmp.fontSize = popupFontSize;
         tmp.alignment = TextAlignmentOptions.Center;
-        tmp.enableWordWrapping = false;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
         tmp.raycastTarget = false;
         tmp.fontStyle = FontStyles.Bold;
         tmp.outlineColor = popupOutlineColor;
