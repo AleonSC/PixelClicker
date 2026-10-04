@@ -137,8 +137,23 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Spawn a falling copy of the pixel on every click.")]
     [SerializeField] private bool spawnFallingCopy = true;
 
-    [Tooltip("Seconds before the falling copy is destroyed.")]
-    [SerializeField] private float fallingCopyLifetime = 1.5f;
+    [Tooltip("Seconds before an old pixel is destroyed. 0 = never (they stay until the cap below is hit).")]
+    [SerializeField] private float fallingCopyLifetime = 0f;
+
+    [Tooltip("Max old pixels kept in the scene. The oldest is destroyed first. 0 = no cap.")]
+    [SerializeField] private int maxFallingCopies = 25;
+
+    [Tooltip("Old pixels fall with gravity. Off = they drift away and hang in midair, ready to be dragged.")]
+    [SerializeField] private bool fallingCopyUseGravity = false;
+
+    [Tooltip("Air resistance on old pixels so they slow to a stop (linear).")]
+    [SerializeField] private float fallingCopyDrag = 1.5f;
+
+    [Tooltip("Air resistance on old pixels' spin.")]
+    [SerializeField] private float fallingCopyAngularDrag = 1f;
+
+    [Tooltip("Old pixels fall below this world Y are destroyed (only matters with gravity on).")]
+    [SerializeField] private float fallingCopyKillHeight = -50f;
 
     [Tooltip("Random sideways/up push applied to the falling copy.")]
     [SerializeField] private float fallingCopyImpulse = 1.5f;
@@ -154,6 +169,19 @@ public class PixelClicker : MonoBehaviour
 
     [Tooltip("Ignore clicks while the pixel is still materializing.")]
     [SerializeField] private bool blockClicksWhileSpawning = false;
+
+    [Header("Dragging Old Pixels")]
+    [Tooltip("Let the player drag old pixels with the mouse (hold left button on one).")]
+    [SerializeField] private bool draggableCopies = true;
+
+    [Tooltip("How quickly a dragged pixel follows the mouse. Higher = snappier.")]
+    [SerializeField] private float dragFollowSpeed = 25f;
+
+    [Tooltip("Release while moving to fling the pixel. Multiplies the release velocity (0 = just drop).")]
+    [SerializeField] private float throwMultiplier = 1f;
+
+    [Tooltip("Limit the speed of a thrown pixel.")]
+    [SerializeField] private float maxThrowSpeed = 15f;
 
     [Header("Suspended In Midair")]
     [Tooltip("Keep the pixel floating: disables gravity on any Rigidbody on the pixel and makes it kinematic.")]
@@ -237,6 +265,14 @@ public class PixelClicker : MonoBehaviour
     private float materializeFactor = 1f;
     private Color currentColor = Color.white;
 
+    // Old-pixel tracking / dragging
+    private readonly System.Collections.Generic.List<Rigidbody> oldPixels = new System.Collections.Generic.List<Rigidbody>();
+    private Rigidbody draggedBody;
+    private Plane dragPlane;
+    private Vector3 dragOffset;
+    private Vector3 dragVelocity;
+    private Vector3 lastDragTarget;
+
     /// <summary>C# event version of onCurrencyChanged, handy for other scripts.</summary>
     public event Action CurrencyChanged;
 
@@ -290,9 +326,108 @@ public class PixelClicker : MonoBehaviour
     {
         AnimatePixel();
 
-        if (WasClickedThisFrame() && IsPointerOverPixel())
+        CleanOldPixels();
+
+        if (draggedBody != null)
+        {
+            UpdateDrag();
+            return;
+        }
+
+        if (!WasClickedThisFrame() || targetCamera == null) return;
+
+        Ray ray = targetCamera.ScreenPointToRay(PointerPosition());
+        if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, clickableLayers)) return;
+
+        if (hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
         {
             Collect();
+        }
+        else if (draggableCopies && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody))
+        {
+            BeginDrag(hit.rigidbody, ray, hit.point);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Dragging old pixels
+    // ------------------------------------------------------------------
+
+    private bool IsPointerHeld()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Mouse.current != null && Mouse.current.leftButton.isPressed;
+#else
+        return Input.GetMouseButton(0);
+#endif
+    }
+
+    /// <summary>Starts dragging on a plane facing the camera, through the grabbed point.</summary>
+    private void BeginDrag(Rigidbody body, Ray ray, Vector3 hitPoint)
+    {
+        draggedBody = body;
+        dragPlane = new Plane(-targetCamera.transform.forward, hitPoint);
+        dragOffset = body.position - hitPoint;
+        dragVelocity = Vector3.zero;
+        lastDragTarget = body.position;
+
+        body.isKinematic = true; // we move it ourselves while held
+    }
+
+    private void UpdateDrag()
+    {
+        if (!IsPointerHeld())
+        {
+            EndDrag();
+            return;
+        }
+
+        Ray ray = targetCamera.ScreenPointToRay(PointerPosition());
+        if (!dragPlane.Raycast(ray, out float enter)) return;
+
+        Vector3 target = ray.GetPoint(enter) + dragOffset;
+        Vector3 next = Vector3.Lerp(draggedBody.position, target, 1f - Mathf.Exp(-dragFollowSpeed * Time.deltaTime));
+
+        if (Time.deltaTime > 0f)
+            dragVelocity = Vector3.Lerp(dragVelocity, (next - lastDragTarget) / Time.deltaTime, 0.5f);
+        lastDragTarget = next;
+
+        draggedBody.position = next;
+        draggedBody.transform.position = next;
+    }
+
+    private void EndDrag()
+    {
+        if (draggedBody != null)
+        {
+            draggedBody.isKinematic = false;
+            Vector3 v = Vector3.ClampMagnitude(dragVelocity * throwMultiplier, maxThrowSpeed);
+            SetBodyVelocity(draggedBody, v);
+        }
+        draggedBody = null;
+    }
+
+    private static void SetBodyVelocity(Rigidbody body, Vector3 v)
+    {
+#if UNITY_6000_0_OR_NEWER
+        body.linearVelocity = v;
+#else
+        body.velocity = v;
+#endif
+    }
+
+    /// <summary>Drops destroyed/out-of-bounds pixels from the list and enforces the cap.</summary>
+    private void CleanOldPixels()
+    {
+        for (int i = oldPixels.Count - 1; i >= 0; i--)
+        {
+            Rigidbody b = oldPixels[i];
+            if (b == null) { oldPixels.RemoveAt(i); continue; }
+            if (b != draggedBody && b.position.y < fallingCopyKillHeight)
+            {
+                Destroy(b.gameObject);
+                oldPixels.RemoveAt(i);
+            }
         }
     }
 
@@ -316,14 +451,6 @@ public class PixelClicker : MonoBehaviour
 #else
         return Input.mousePosition;
 #endif
-    }
-
-    private bool IsPointerOverPixel()
-    {
-        if (targetCamera == null) return false;
-        Ray ray = targetCamera.ScreenPointToRay(PointerPosition());
-        if (!Physics.Raycast(ray, out RaycastHit hit, maxRayDistance, clickableLayers)) return false;
-        return hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform);
     }
 
     // ------------------------------------------------------------------
@@ -524,11 +651,31 @@ public class PixelClicker : MonoBehaviour
 
         copy.AddComponent<BoxCollider>();
         Rigidbody rb = copy.AddComponent<Rigidbody>();
+        rb.useGravity = fallingCopyUseGravity;
+#if UNITY_6000_0_OR_NEWER
+        rb.linearDamping = fallingCopyDrag;
+        rb.angularDamping = fallingCopyAngularDrag;
+#else
+        rb.drag = fallingCopyDrag;
+        rb.angularDrag = fallingCopyAngularDrag;
+#endif
         rb.AddForce(new Vector3(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(0.2f, 1f),
                                 UnityEngine.Random.Range(-1f, 1f)) * fallingCopyImpulse, ForceMode.Impulse);
         rb.AddTorque(UnityEngine.Random.insideUnitSphere * fallingCopyTorque, ForceMode.Impulse);
 
-        Destroy(copy, fallingCopyLifetime);
+        if (fallingCopyLifetime > 0f) Destroy(copy, fallingCopyLifetime);
+
+        oldPixels.Add(rb);
+        while (maxFallingCopies > 0 && oldPixels.Count > maxFallingCopies)
+        {
+            Rigidbody oldest = oldPixels[0];
+            oldPixels.RemoveAt(0);
+            if (oldest != null)
+            {
+                if (oldest == draggedBody) draggedBody = null;
+                Destroy(oldest.gameObject);
+            }
+        }
     }
 
     private void PlayClickEffects(PixelTier tier)
@@ -624,7 +771,8 @@ public class PixelClicker : MonoBehaviour
         if (tiers != null && tiers.Length > 0)
             activeTierIndex = Mathf.Clamp(activeTierIndex, 0, tiers.Length - 1);
         materializeDuration = Mathf.Max(0f, materializeDuration);
-        fallingCopyLifetime = Mathf.Max(0.1f, fallingCopyLifetime);
+        fallingCopyLifetime = Mathf.Max(0f, fallingCopyLifetime);
+        maxFallingCopies = Mathf.Max(0, maxFallingCopies);
     }
 #endif
 }
