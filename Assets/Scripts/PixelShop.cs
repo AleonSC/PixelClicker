@@ -393,6 +393,10 @@ public class PixelShop : MonoBehaviour
 
     private void Update()
     {
+        // Packs ticked as "Purchased" in the Inspector (before or during Play) take effect too.
+        foreach (ShopPack pack in packs)
+            if (pack.purchased) ApplyPackEffects(pack);
+
         if (!builtOk) return;
 
         bool visible = alwaysShowButton || clicker.IsUnlocked(requiredTier);
@@ -439,6 +443,21 @@ public class PixelShop : MonoBehaviour
         return true;
     }
 
+    /// <summary>Unlocks a pack's reward tiers and starts the auto clicker if it has one. Safe to call repeatedly.</summary>
+    private void ApplyPackEffects(ShopPack pack)
+    {
+        if (pack.rewardTiers != null)
+        {
+            foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+            {
+                int index = clicker.IndexOf(reward.type);
+                if (index >= 0) clicker.UnlockTier(index); // no-op if already unlocked
+            }
+        }
+
+        if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
+    }
+
     /// <summary>Buys a pack: spends all costs, unlocks the reward tiers. Returns false if not possible.</summary>
     public bool TryBuy(int packIndex)
     {
@@ -451,17 +470,8 @@ public class PixelShop : MonoBehaviour
             foreach (PackCost cost in pack.costs)
                 clicker.TrySpend(cost.type, cost.amount);
 
-        if (pack.rewardTiers != null)
-        {
-            foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
-            {
-                int index = clicker.IndexOf(reward.type);
-                if (index >= 0) clicker.UnlockTier(index);
-            }
-        }
-
         pack.purchased = true;
-        if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate();
+        ApplyPackEffects(pack);
 
         if (purchaseSound != null)
         {
