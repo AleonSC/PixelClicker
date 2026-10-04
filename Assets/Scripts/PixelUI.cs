@@ -97,8 +97,8 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Title text size.")]
     [SerializeField] private float titleFontSize = 44f;
 
-    [Tooltip("Height of the title bar.")]
-    [SerializeField] private float headerHeight = 80f;
+    /// <summary>Title bar height follows the title font size (no fixed spare room).</summary>
+    private float headerHeight => titleFontSize * 1.25f;
 
     [Tooltip("Gap between the button and the box.")]
     [SerializeField] private float gapBelowButton = 12f;
@@ -515,7 +515,7 @@ public class PixelUI : MonoBehaviour
         tr.anchorMax = new Vector2(1f, 1f);
         tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
-        tr.anchoredPosition = Vector2.zero;
+        tr.anchoredPosition = new Vector2(0f, -panelPadding * 0.5f);
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
@@ -551,7 +551,7 @@ public class PixelUI : MonoBehaviour
     public void Refresh()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
-        float y = headerHeight + panelPadding * 0.5f;
+        float y = headerHeight + panelPadding * 0.5f; // title bar, then the lines
 
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
