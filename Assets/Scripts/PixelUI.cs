@@ -1,7 +1,11 @@
 using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
 /// Simple HUD for Pixel Clicker. Shows how many pixels of each tier you have.
@@ -106,11 +110,66 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private Color lockedColor = new Color(1f, 1f, 1f, 0.35f);
 
     // ------------------------------------------------------------------
+    // Gain popups
+    // ------------------------------------------------------------------
+
+    [Header("Gain Popups (+N at the cursor)")]
+    [Tooltip("Show a floating '+N' when you gain currency.")]
+    [SerializeField] private bool showGainPopups = true;
+
+    [Tooltip("Popup keeps following the mouse cursor while it rises. Off = it stays where you clicked.")]
+    [SerializeField] private bool followCursor = true;
+
+    [Tooltip("Popup text. {0} = amount gained.")]
+    [SerializeField] private string popupFormat = "+{0}";
+
+    [Tooltip("Popup text size.")]
+    [SerializeField] private float popupFontSize = 56f;
+
+    [Tooltip("Use the tier's colour for the popup. Off = use 'Popup Color'.")]
+    [SerializeField] private bool popupUsesTierColor = true;
+
+    [Tooltip("Popup colour when 'Popup Uses Tier Color' is off.")]
+    [SerializeField] private Color popupColor = Color.white;
+
+    [Tooltip("Outline colour so the popup reads on any background.")]
+    [SerializeField] private Color popupOutlineColor = Color.black;
+
+    [Range(0f, 1f)]
+    [Tooltip("Outline thickness. 0 = none.")]
+    [SerializeField] private float popupOutlineWidth = 0.25f;
+
+    [Tooltip("Seconds a popup lives.")]
+    [SerializeField] private float popupDuration = 0.9f;
+
+    [Tooltip("How far (canvas units) the popup rises over its life.")]
+    [SerializeField] private float popupRise = 120f;
+
+    [Tooltip("Offset from the cursor where the popup starts (canvas units).")]
+    [SerializeField] private Vector2 popupStartOffset = new Vector2(0f, 50f);
+
+    [Tooltip("Random horizontal offset (+/-) so rapid clicks don't stack exactly.")]
+    [SerializeField] private float popupRandomX = 30f;
+
+    [Tooltip("Popup opacity over its life (time 0..1, alpha 0..1).")]
+    [SerializeField] private AnimationCurve popupAlpha = new AnimationCurve(
+        new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0f));
+
+    [Tooltip("Popup scale over its life (time 0..1, scale multiplier).")]
+    [SerializeField] private AnimationCurve popupScale = new AnimationCurve(
+        new Keyframe(0f, 0.6f), new Keyframe(0.15f, 1.2f), new Keyframe(0.3f, 1f), new Keyframe(1f, 1f));
+
+    [Tooltip("Sorting order of the popup canvas (keep above the panel).")]
+    [SerializeField] private int popupSortingOrder = 200;
+
+    // ------------------------------------------------------------------
     // Runtime
     // ------------------------------------------------------------------
 
     private GameObject autoRoot;
     private bool built;
+    private RectTransform popupCanvasRect;
+    private double[] lastTotals;
 
     // ------------------------------------------------------------------
     // Unity lifecycle
@@ -147,17 +206,128 @@ public class PixelUI : MonoBehaviour
             BuildAutomaticUI();
         }
 
+        BuildPopupCanvas();
+        lastTotals = new double[clicker.Tiers.Length];
+        for (int i = 0; i < lastTotals.Length; i++) lastTotals[i] = clicker.Tiers[i].totalCollected;
+
         built = true;
     }
 
     private void OnDestroy()
     {
         if (autoRoot != null) Destroy(autoRoot);
+        if (popupRoot != null) Destroy(popupRoot);
     }
 
     private void Update()
     {
-        if (built) Refresh();
+        if (!built) return;
+        Refresh();
+        DetectGains();
+    }
+
+    // ------------------------------------------------------------------
+    // Popups
+    // ------------------------------------------------------------------
+
+    private void BuildPopupCanvas()
+    {
+        // Separate overlay canvas so popups work in both automatic and manual mode.
+        GameObject go = new GameObject("PixelUI Popups");
+        Canvas canvas = go.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = popupSortingOrder;
+
+        CanvasScaler scaler = go.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = referenceResolution;
+        scaler.matchWidthOrHeight = 0.5f;
+
+        popupCanvasRect = go.GetComponent<RectTransform>();
+        popupRoot = go;
+    }
+
+    private GameObject popupRoot;
+
+    /// <summary>Compares lifetime totals each frame; any increase spawns a popup.</summary>
+    private void DetectGains()
+    {
+        PixelClicker.PixelTier[] tiers = clicker.Tiers;
+        if (lastTotals.Length != tiers.Length) lastTotals = new double[tiers.Length];
+
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            double gained = tiers[i].totalCollected - lastTotals[i];
+            lastTotals[i] = tiers[i].totalCollected;
+
+            if (gained > 0d && showGainPopups) SpawnPopup(tiers[i], gained);
+        }
+    }
+
+    private Vector2 CursorScreenPosition()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+#else
+        return Input.mousePosition;
+#endif
+    }
+
+    /// <summary>Cursor position in the popup canvas's local space.</summary>
+    private Vector2 CursorLocal()
+    {
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(popupCanvasRect, CursorScreenPosition(), null, out Vector2 local);
+        return local;
+    }
+
+    private void SpawnPopup(PixelClicker.PixelTier tier, double amount)
+    {
+        Color color = popupUsesTierColor ? tier.color : popupColor;
+        string text = string.Format(popupFormat, FormatAmount(amount));
+        Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
+        StartCoroutine(PopupRoutine(text, color, CursorLocal(), jitter));
+    }
+
+    private IEnumerator PopupRoutine(string text, Color color, Vector2 startCursor, Vector2 jitter)
+    {
+        GameObject go = new GameObject("GainPopup", typeof(RectTransform));
+        go.transform.SetParent(popupCanvasRect, false);
+
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(600f, 150f); // wide enough that the text never needs to wrap
+
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = popupFontSize;
+        tmp.fontStyle = FontStyles.Bold;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.raycastTarget = false;
+        if (font != null) tmp.font = font;
+        if (popupOutlineWidth > 0f)
+        {
+            tmp.outlineColor = popupOutlineColor;
+            tmp.outlineWidth = popupOutlineWidth;
+        }
+
+        float t = 0f;
+        while (t < popupDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = popupDuration > 0f ? Mathf.Clamp01(t / popupDuration) : 1f;
+
+            Vector2 anchor = followCursor ? CursorLocal() : startCursor;
+            rt.anchoredPosition = anchor + popupStartOffset + jitter + Vector2.up * (popupRise * k);
+            rt.localScale = Vector3.one * popupScale.Evaluate(k);
+
+            Color c = color;
+            c.a = color.a * popupAlpha.Evaluate(k);
+            tmp.color = c;
+
+            yield return null;
+        }
+
+        Destroy(go);
     }
 
     // ------------------------------------------------------------------
