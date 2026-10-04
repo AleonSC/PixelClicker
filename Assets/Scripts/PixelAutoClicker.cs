@@ -55,6 +55,13 @@ public class PixelAutoClicker : MonoBehaviour
         set => intervalSeconds = Mathf.Max(0.02f, value);
     }
 
+    /// <summary>Clicks made each time the interval elapses.</summary>
+    public int ClicksPerTick
+    {
+        get => clicksPerTick;
+        set => clicksPerTick = Mathf.Max(1, value);
+    }
+
     private void Awake()
     {
         if (clicker == null)
