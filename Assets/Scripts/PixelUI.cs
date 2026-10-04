@@ -91,6 +91,12 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Title shown at the top of the box.")]
     [SerializeField] private string boxTitle = "Currency";
 
+    [Tooltip("Show a title inside the box. Off = no title bar, the lines start at the top.")]
+    [SerializeField] private bool showTitle = true;
+
+    [Tooltip("Show the button text in capital letters (CURRENCY).")]
+    [SerializeField] private bool uppercaseButton = true;
+
     [Tooltip("Show the title in capital letters (CURRENCY).")]
     [SerializeField] private bool uppercaseTitle = true;
 
@@ -98,7 +104,10 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private float titleFontSize = 44f;
 
     /// <summary>Title bar height follows the title font size (no fixed spare room).</summary>
-    private float headerHeight => titleFontSize * 1.25f;
+    private float headerHeight => showTitle ? titleFontSize * 1.25f : 0f;
+
+    /// <summary>Vertical distance between lines. Never smaller than the text, so lines can't overlap.</summary>
+    private float LinePitch => Mathf.Max(lineHeight, fontSize * 1.3f);
 
     [Tooltip("Gap between the button and the box.")]
     [SerializeField] private float gapBelowButton = 12f;
@@ -213,6 +222,8 @@ public class PixelUI : MonoBehaviour
     private GameObject boxObject;
     private RectTransform boxRect;
     private bool autoMode;
+    private TMP_Text titleLabel;
+    private TMP_Text buttonLabel;
     private bool built;
     private RectTransform popupCanvasRect;
 
@@ -485,6 +496,8 @@ public class PixelUI : MonoBehaviour
         // --- Currency button
         Button button = MakeButton(autoRoot.transform, "Currency Button", buttonText, buttonSize, buttonColor,
                                    buttonTextColor, buttonFontSize);
+        buttonLabel = button.GetComponentInChildren<TMP_Text>();
+        if (uppercaseButton) buttonLabel.fontStyle |= FontStyles.UpperCase;
         RectTransform br = button.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = anchor;
         br.anchoredPosition = new Vector2(sx * margin.x, sy * margin.y);
@@ -503,19 +516,27 @@ public class PixelUI : MonoBehaviour
 
         boxRect = boxObject.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = anchor;
-        boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + lineHeight * count);
+        boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + LinePitch * count);
         boxRect.anchoredPosition = new Vector2(sx * margin.x, sy * (margin.y + buttonSize.y + gapBelowButton));
 
-        // Title
-        TMP_Text title = MakeText(boxObject.transform, "Title", boxTitle, titleFontSize,
+        // Title (optional)
+        if (showTitle)
+        {
+            titleLabel = MakeText(boxObject.transform, "Title", boxTitle, titleFontSize,
                                   TextAlignmentOptions.Center,
                                   uppercaseTitle ? FontStyles.Bold | FontStyles.UpperCase : FontStyles.Bold, textColor);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
-        tr.anchoredPosition = new Vector2(0f, -panelPadding * 0.5f);
+            titleLabel.enableAutoSizing = true; // never clipped or wrapped, whatever the box width
+            titleLabel.fontSizeMax = titleFontSize;
+            titleLabel.fontSizeMin = Mathf.Min(12f, titleFontSize);
+            titleLabel.overflowMode = TextOverflowModes.Overflow;
+
+            RectTransform tr = titleLabel.rectTransform;
+            tr.anchorMin = new Vector2(0f, 1f);
+            tr.anchorMax = new Vector2(1f, 1f);
+            tr.pivot = new Vector2(0.5f, 1f);
+            tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
+            tr.anchoredPosition = new Vector2(0f, -panelPadding * 0.5f);
+        }
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
@@ -528,7 +549,7 @@ public class PixelUI : MonoBehaviour
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(1f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(-panelPadding * 2f, lineHeight);
+            rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
 
             if (outlineWidth > 0f)
             {
@@ -551,6 +572,11 @@ public class PixelUI : MonoBehaviour
     public void Refresh()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
+        if (autoMode)
+        {
+            if (buttonLabel != null) buttonLabel.text = buttonText;
+            if (titleLabel != null) titleLabel.text = boxTitle;
+        }
         float y = headerHeight + panelPadding * 0.5f; // title bar, then the lines
 
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
@@ -573,7 +599,7 @@ public class PixelUI : MonoBehaviour
             if (autoMode)
             {
                 label.rectTransform.anchoredPosition = new Vector2(0f, -y);
-                y += lineHeight;
+                y += LinePitch;
             }
         }
 
