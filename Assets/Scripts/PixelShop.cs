@@ -762,6 +762,14 @@ public class PixelShop : MonoBehaviour
         EnsureEventSystem();
         BuildUI();
         builtOk = true;
+
+        // Diagnostic: where each pack is listed and what it is waiting for.
+        StringBuilder log = new StringBuilder("PixelShop: " + packs.Length + " packs.");
+        for (int i = 0; i < packs.Length; i++)
+            log.Append("\n  [").Append(i).Append("] ").Append(packs[i].displayName)
+               .Append(" -> ").Append(TabOf(packs[i]))
+               .Append(IsRequirementMet(i) ? "" : "  (hidden until \"" + RequirementName(packs[i]) + "\" is bought)");
+        Debug.Log(log.ToString(), this);
     }
 
     private void OnDestroy()
