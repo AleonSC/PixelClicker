@@ -101,14 +101,17 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Size of the spinning cube icon.")]
     [SerializeField] private float achievementIconSize = 72f;
 
-    [Tooltip("Line above the list. {0} = earned, {1} = total.")]
-    [SerializeField] private string achievementSummaryFormat = "{0} / {1} unlocked";
+    [Tooltip("Line above the list. {0} = tiers earned, {1} = total tiers.")]
+    [SerializeField] private string achievementSummaryFormat = "{0} / {1} earned";
+
+    [Tooltip("Added after the description of a tiered achievement. {0} = tier being worked on, {1} = number of tiers.")]
+    [SerializeField] private string achievementTierFormat = "   -   Tier {0}/{1}";
 
     [Tooltip("Progress text of an achievement that is not earned yet. {0} = progress, {1} = target.")]
     [SerializeField] private string achievementProgressFormat = "{0} / {1}";
 
-    [Tooltip("Text shown instead of the progress once an achievement is earned.")]
-    [SerializeField] private string achievementUnlockedText = "Unlocked";
+    [Tooltip("Text shown instead of the progress once every tier of an achievement is earned.")]
+    [SerializeField] private string achievementUnlockedText = "Complete";
 
     [Tooltip("Shown when there are no achievements.")]
     [SerializeField] private string noAchievementsText = "No achievements.";
@@ -857,17 +860,21 @@ public class PixelLog : MonoBehaviour
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
-            bool unlocked = achievements.IsUnlocked(i);
-            float dim = unlocked ? 1f : achievementLockedBrightness;
+            bool unlocked = achievements.IsComplete(i);           // every tier earned
+            bool started = achievements.HasAnyTier(i);            // at least one tier earned
+            float dim = started ? 1f : achievementLockedBrightness;
 
+            int tierCount = achievements.GetTierCount(i);
+            string tierText = tierCount > 1
+                ? string.Format(achievementTierFormat, Math.Min(achievements.GetEarnedTiers(i) + 1, tierCount), tierCount) : "";
             row.title.text = achievements.GetTitle(i);
-            row.description.text = achievements.GetDescription(i);
+            row.description.text = achievements.GetDescription(i) + tierText;
             row.title.color = unlocked ? achievementUnlockedColor : new Color(textColor.r * dim, textColor.g * dim, textColor.b * dim, textColor.a);
 
-            PixelAchievements.Achievement a = achievements.Get(i);
+            double currentTarget = achievements.GetCurrentTarget(i);
             row.progress.text = unlocked
                 ? achievementUnlockedText
-                : string.Format(achievementProgressFormat, FormatAmount(Math.Min(achievements.GetProgress(i), a.target)), FormatAmount(a.target));
+                : string.Format(achievementProgressFormat, FormatAmount(Math.Min(achievements.GetProgress(i), currentTarget)), FormatAmount(currentTarget));
             row.progress.color = unlocked ? achievementUnlockedColor : amountColor;
 
             Color icon = achievements.GetIconColor(i);
@@ -882,7 +889,7 @@ public class PixelLog : MonoBehaviour
 
         achievementsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));
         noAchievementsLabel.gameObject.SetActive(count == 0);
-        achievementSummary.text = string.Format(achievementSummaryFormat, achievements != null ? achievements.UnlockedCount : 0, count);
+        achievementSummary.text = string.Format(achievementSummaryFormat, achievements != null ? achievements.EarnedTierTotal : 0, achievements != null ? achievements.TierTotal : 0);
 
         float summaryHeight = rowFontSize * 1.3f;
         panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + summaryHeight + 6f + achievementsViewHeight + panelPadding);

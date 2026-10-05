@@ -295,7 +295,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             if (blackhole != null) data.singularityCount = blackhole.SingularityCount;
-            if (achievements != null) data.achievements = achievements.GetUnlockedIds();
+            if (achievements != null) data.achievements = achievements.GetSaveState();
 
             if (autoClicker != null)
             {
@@ -396,7 +396,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             if (blackhole != null) blackhole.SetSingularityCount(data.singularityCount);
-            if (achievements != null) achievements.SetUnlockedIds(data.achievements);
+            if (achievements != null) achievements.SetSaveState(data.achievements);
 
             clicker.FinishLoad();
 

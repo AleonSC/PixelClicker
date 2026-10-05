@@ -9,17 +9,19 @@ using UnityEngine.UI;
 /// Achievement system for Pixel Clicker. Built to be easy to extend.
 ///
 /// HOW IT WORKS
-///  - Each achievement has a Kind (what is measured), optional parameters (e.g. which pixel type) and a Target.
-///  - Progress is measured by <see cref="GetProgress"/>; an achievement unlocks the moment progress reaches its target.
+///  - Each achievement has a Kind (what is measured), optional parameters (e.g. which pixel type) and one or more
+///    TIERS (targets). "Collect" achievements have six tiers: 10, 100, 1K, 10K, 100K and 1M.
+///  - Progress is measured by <see cref="GetProgress"/>; each tier is earned the moment progress reaches its target,
+///    and the achievement then moves on to the next tier.
 ///  - Unlocked achievements are saved by PixelSaveGame and listed in the Log's Achievements tab.
 ///  - A small popup announces each new achievement.
 ///
 /// ADDING MORE
-///  - In the Inspector: add an entry to 'Achievements' (a unique Id, title, description, kind, target).
+///  - In the Inspector: add an entry to 'Achievements' (a unique Id, title, description, kind, and Tiers - or a single Target).
 ///  - New kind of goal: add a value to <see cref="Kind"/> and a matching case in <see cref="GetProgress"/>. Done.
 ///  - From other scripts: call <see cref="Register"/> with a function that returns the current progress.
 ///
-/// Titles and descriptions may use {pixel} (the pixel type) and {target}.
+/// Titles and descriptions may use {pixel} (the pixel type), {target} (the tier being worked on) and {tier} (its roman numeral).
 /// Add this to any GameObject (e.g. the cube). PixelLog adds it automatically if it is missing.
 /// </summary>
 public class PixelAchievements : MonoBehaviour
@@ -54,15 +56,32 @@ public class PixelAchievements : MonoBehaviour
         [Tooltip("The pixel type for 'Collect Pixel Type' (and the cube icon's colour).")]
         public PixelClicker.PixelType pixelType = PixelClicker.PixelType.White;
 
+        [Tooltip("The target of each tier, in order (e.g. 10, 100, 1000...). Leave empty for a single-tier achievement that uses 'Target'.")]
+        public double[] tiers = { 10, 100, 1000, 10000, 100000, 1000000 };
+
         [Min(1)]
-        [Tooltip("Progress needed to unlock.")]
+        [Tooltip("Progress needed to unlock when 'Tiers' is empty.")]
         public double target = 1000;
 
         [Tooltip("Colour of the spinning cube icon when the kind has no pixel type (e.g. Collect Any Pixel).")]
         public Color iconColor = Color.white;
 
-        [Tooltip("Runtime: has this been earned? (Saved with the game. Tick it to test.)")]
-        public bool unlocked = false;
+        [Min(0)]
+        [Tooltip("Runtime: how many tiers have been earned. (Saved with the game.)")]
+        public int earnedTiers = 0;
+
+        /// <summary>Number of tiers (1 for a single-target achievement).</summary>
+        public int TierCount => tiers != null && tiers.Length > 0 ? tiers.Length : 1;
+
+        /// <summary>Target of a tier (0 = first).</summary>
+        public double TargetOf(int tier)
+        {
+            if (tiers == null || tiers.Length == 0) return target;
+            return tiers[Mathf.Clamp(tier, 0, tiers.Length - 1)];
+        }
+
+        /// <summary>True once every tier has been earned.</summary>
+        public bool Complete => earnedTiers >= TierCount;
     }
 
     // ------------------------------------------------------------------
@@ -77,15 +96,14 @@ public class PixelAchievements : MonoBehaviour
     [SerializeField] private TMP_FontAsset font;
 
     [Header("Achievements")]
-    [Tooltip("All achievements. 'Collect 1K' for every pixel type is created for you; add your own below.")]
+    [Tooltip("All achievements. A tiered 'Collect' achievement (10 to 1M) for every pixel type is created for you; add your own below.")]
     [SerializeField] private List<Achievement> achievements = CreateDefaultAchievements();
 
-    [Tooltip("Add a 'Collect 1K' achievement for any pixel type that has none (e.g. when a new pixel type is added to the game).")]
+    [Tooltip("Add a tiered 'Collect' achievement for any pixel type that has none (e.g. when a new pixel type is added to the game).")]
     [SerializeField] private bool addDefaultAchievements = true;
 
-    [Min(1)]
-    [Tooltip("Target of the automatically created 'Collect' achievements.")]
-    [SerializeField] private double defaultTarget = 1000;
+    [Tooltip("Tier targets of the automatically created 'Collect' achievements.")]
+    [SerializeField] private double[] defaultTiers = { 10, 100, 1000, 10000, 100000, 1000000 };
 
     [Min(0.05f)]
     [Tooltip("How often (seconds) progress is checked.")]
@@ -134,16 +152,18 @@ public class PixelAchievements : MonoBehaviour
     // Defaults
     // ------------------------------------------------------------------
 
-    private static Achievement CreateCollectAchievement(PixelClicker.PixelType type, double target)
+    private static readonly double[] BuiltInTiers = { 10, 100, 1000, 10000, 100000, 1000000 };
+
+    private static Achievement CreateCollectAchievement(PixelClicker.PixelType type, double[] tiers)
     {
         return new Achievement
         {
             id = "collect_" + type.ToString().ToLowerInvariant(),
-            title = "{pixel} Collector",
+            title = "{pixel} Collector {tier}",
             description = "Collect {target} {pixel} pixels in total.",
             kind = Kind.CollectPixelType,
             pixelType = type,
-            target = target,
+            tiers = (double[])tiers.Clone(),
         };
     }
 
@@ -151,7 +171,7 @@ public class PixelAchievements : MonoBehaviour
     {
         List<Achievement> list = new List<Achievement>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
-            list.Add(CreateCollectAchievement(type, 1000));
+            list.Add(CreateCollectAchievement(type, BuiltInTiers));
         return list;
     }
 
@@ -159,16 +179,36 @@ public class PixelAchievements : MonoBehaviour
     {
         if (!addDefaultAchievements) return false;
         if (achievements == null) achievements = new List<Achievement>();
+        double[] tiers = defaultTiers != null && defaultTiers.Length > 0 ? defaultTiers : BuiltInTiers;
 
-        bool added = false;
+        bool changed = false;
+
+        // Upgrade the old single-target 'Collect 1K' entries (made before tiers existed) to tiered ones.
+        foreach (Achievement a in achievements)
+        {
+            if (a == null || a.kind != Kind.CollectPixelType || !a.id.StartsWith("collect_")) continue;
+            if (a.tiers == null || a.tiers.Length == 0)
+            {
+                if (a.target != 1000) continue; // a custom target someone chose on purpose
+                a.tiers = (double[])tiers.Clone();
+                changed = true;
+            }
+
+            if (a.tiers.Length > 1 && a.title == "{pixel} Collector")
+            {
+                a.title = "{pixel} Collector {tier}"; // show the roman numeral of the tier
+                changed = true;
+            }
+        }
+
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
             // Skip a type that already has any 'Collect Pixel Type' achievement.
             if (achievements.Exists(a => a != null && a.kind == Kind.CollectPixelType && a.pixelType == type)) continue;
-            achievements.Add(CreateCollectAchievement(type, defaultTarget));
-            added = true;
+            achievements.Add(CreateCollectAchievement(type, tiers));
+            changed = true;
         }
-        return added;
+        return changed;
     }
 
 #if UNITY_EDITOR
@@ -203,17 +243,44 @@ public class PixelAchievements : MonoBehaviour
 
     public Achievement Get(int index) => achievements[index];
 
-    public bool IsUnlocked(int index) => achievements[index].unlocked;
-
-    /// <summary>How many have been earned.</summary>
-    public int UnlockedCount
+    /// <summary>Total tiers earned across all achievements.</summary>
+    public int EarnedTierTotal
     {
         get
         {
             int n = 0;
-            foreach (Achievement a in achievements) if (a.unlocked) n++;
+            foreach (Achievement a in achievements) n += Mathf.Min(a.earnedTiers, a.TierCount);
             return n;
         }
+    }
+
+    /// <summary>Total tiers that exist across all achievements.</summary>
+    public int TierTotal
+    {
+        get
+        {
+            int n = 0;
+            foreach (Achievement a in achievements) n += a.TierCount;
+            return n;
+        }
+    }
+
+    /// <summary>Tiers earned so far for one achievement.</summary>
+    public int GetEarnedTiers(int index) => achievements[index].earnedTiers;
+
+    public int GetTierCount(int index) => achievements[index].TierCount;
+
+    /// <summary>True once every tier of the achievement has been earned.</summary>
+    public bool IsComplete(int index) => achievements[index].Complete;
+
+    /// <summary>True if at least one tier has been earned.</summary>
+    public bool HasAnyTier(int index) => achievements[index].earnedTiers > 0;
+
+    /// <summary>The target being worked on now (the last tier's target once everything is earned).</summary>
+    public double GetCurrentTarget(int index)
+    {
+        Achievement a = achievements[index];
+        return a.TargetOf(Mathf.Min(a.earnedTiers, a.TierCount - 1));
     }
 
     private void Awake()
@@ -295,28 +362,30 @@ public class PixelAchievements : MonoBehaviour
     /// <summary>Progress as 0..1.</summary>
     public float GetFraction(int index)
     {
-        double target = achievements[index].target;
+        if (achievements[index].Complete) return 1f;
+        double target = GetCurrentTarget(index);
         return target > 0d ? (float)Math.Min(1d, GetProgress(index) / target) : 1f;
     }
 
-    /// <summary>Checks every achievement and unlocks the ones that reached their target.</summary>
+    /// <summary>Checks every achievement and earns every tier whose target has been reached.</summary>
     private void Evaluate(bool silent)
     {
         for (int i = 0; i < achievements.Count; i++)
         {
             Achievement a = achievements[i];
-            if (a.unlocked || GetProgress(i) < a.target) continue;
-            Unlock(i, silent);
+            if (a.Complete) continue;
+
+            double progress = GetProgress(i);
+            int before = a.earnedTiers;
+            while (!a.Complete && progress >= a.TargetOf(a.earnedTiers)) a.earnedTiers++;
+
+            // One popup per achievement, for the highest tier just reached (no spam if several tiers pass at once).
+            if (a.earnedTiers > before && !silent)
+            {
+                onAchievementUnlocked?.Invoke(i);
+                if (showPopup) ShowPopup(i, a.earnedTiers - 1);
+            }
         }
-    }
-
-    private void Unlock(int index, bool silent)
-    {
-        achievements[index].unlocked = true;
-        if (silent) return;
-
-        onAchievementUnlocked?.Invoke(index);
-        if (showPopup) ShowPopup(index);
     }
 
     /// <summary>
@@ -336,18 +405,37 @@ public class PixelAchievements : MonoBehaviour
     // Text / look helpers for UI
     // ------------------------------------------------------------------
 
-    /// <summary>Replaces {pixel} and {target} in a title or description.</summary>
-    public string Format(int index, string text)
+    /// <summary>Replaces {pixel}, {target} and {tier} in a title or description for the given tier (0 = first).</summary>
+    private string FormatForTier(int index, string text, int tier)
     {
         Achievement a = achievements[index];
+        string numeral = a.TierCount > 1 ? ToRoman(tier + 1) : "";
         return (text ?? "")
             .Replace("{pixel}", a.kind == Kind.CollectPixelType ? a.pixelType.ToString() : "")
-            .Replace("{target}", PixelClicker.FormatNumber(a.target));
+            .Replace("{target}", PixelClicker.FormatNumber(a.TargetOf(tier)))
+            .Replace("{tier}", numeral)
+            .Trim();
     }
 
-    public string GetTitle(int index) => Format(index, achievements[index].title);
+    /// <summary>Title of the tier being worked on (the last tier once everything is earned).</summary>
+    public string GetTitle(int index)
+    {
+        Achievement a = achievements[index];
+        return FormatForTier(index, a.title, Mathf.Min(a.earnedTiers, a.TierCount - 1));
+    }
 
-    public string GetDescription(int index) => Format(index, achievements[index].description);
+    /// <summary>Description of the tier being worked on.</summary>
+    public string GetDescription(int index)
+    {
+        Achievement a = achievements[index];
+        return FormatForTier(index, a.description, Mathf.Min(a.earnedTiers, a.TierCount - 1));
+    }
+
+    private static string ToRoman(int number)
+    {
+        string[] numerals = { "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
+        return number >= 1 && number < numerals.Length ? numerals[number] : number.ToString();
+    }
 
     /// <summary>Colour of the achievement's cube icon (the pixel's colour for pixel-type achievements).</summary>
     public Color GetIconColor(int index)
@@ -370,19 +458,33 @@ public class PixelAchievements : MonoBehaviour
     // Saving
     // ------------------------------------------------------------------
 
-    /// <summary>Ids of the earned achievements (for the save file).</summary>
-    public string[] GetUnlockedIds()
+    /// <summary>Earned tiers as "id:tiers" entries (for the save file).</summary>
+    public string[] GetSaveState()
     {
-        List<string> ids = new List<string>();
-        foreach (Achievement a in achievements) if (a.unlocked) ids.Add(a.id);
-        return ids.ToArray();
+        List<string> entries = new List<string>();
+        foreach (Achievement a in achievements)
+            if (a.earnedTiers > 0) entries.Add(a.id + ":" + a.earnedTiers);
+        return entries.ToArray();
     }
 
-    /// <summary>Restores earned achievements from a save. Anything not listed (but already met) is re-earned quietly.</summary>
-    public void SetUnlockedIds(string[] ids)
+    /// <summary>
+    /// Restores earned tiers from a save. Because progress comes from the saved totals, anything already
+    /// reached is re-earned quietly anyway (this also upgrades saves from before tiers existed).
+    /// </summary>
+    public void SetSaveState(string[] entries)
     {
         foreach (Achievement a in achievements)
-            a.unlocked = ids != null && Array.IndexOf(ids, a.id) >= 0;
+        {
+            a.earnedTiers = 0;
+            if (entries == null) continue;
+
+            foreach (string entry in entries)
+            {
+                string[] parts = entry.Split(':');
+                if (parts.Length == 2 && parts[0] == a.id && int.TryParse(parts[1], out int tiers))
+                    a.earnedTiers = Mathf.Clamp(tiers, 0, a.TierCount);
+            }
+        }
         Evaluate(true);
     }
 
@@ -458,10 +560,10 @@ public class PixelAchievements : MonoBehaviour
         return tmp;
     }
 
-    private void ShowPopup(int index)
+    private void ShowPopup(int index, int tier)
     {
         if (popupRect == null) return;
-        popupTitleLabel.text = GetTitle(index);
+        popupTitleLabel.text = FormatForTier(index, achievements[index].title, tier);
         popupIcon.color = GetIconColor(index);
         popupTimer = popupSeconds;
         popupRect.gameObject.SetActive(true);
