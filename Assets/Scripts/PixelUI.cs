@@ -130,6 +130,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Tab text size.")]
     [SerializeField] private float subTabFontSize = 28f;
 
+    [Tooltip("Tab text colour.")]
+    [SerializeField] private Color subTabTextColor = Color.white;
+
     [Tooltip("Colour of the selected tab.")]
     [SerializeField] private Color subTabActiveColor = new Color(0.25f, 0.6f, 0.4f, 1f);
 
@@ -831,7 +834,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < names.Length; i++)
         {
             Button tab = MakeButton(boxObject.transform, "Tab " + names[i], names[i],
-                                    new Vector2(tabWidth, subTabHeight), subTabInactiveColor, textColor,
+                                    new Vector2(tabWidth, subTabHeight), subTabInactiveColor, subTabTextColor,
                                     subTabFontSize > 0f ? subTabFontSize : 28f);
             subTabImages[i] = tab.GetComponent<Image>();
 
@@ -842,7 +845,7 @@ public class PixelUI : MonoBehaviour
 
             TMP_Text label = tab.GetComponentInChildren<TMP_Text>();
             label.text = names[i];
-            label.color = textColor;
+            label.color = subTabTextColor;
             label.alignment = TextAlignmentOptions.Center;
 
             int captured = i;
