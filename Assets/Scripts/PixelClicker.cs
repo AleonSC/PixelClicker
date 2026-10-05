@@ -37,6 +37,7 @@ public class PixelClicker : MonoBehaviour
         Blue = 5,
         Glass = 6,
         Vacuum = 7,
+        Obsidian = 8,
     }
 
     /// <summary>How a tier becomes available.</summary>
@@ -63,6 +64,10 @@ public class PixelClicker : MonoBehaviour
 
         [Tooltip("Currency gained per click on this tier.")]
         public double amountPerClick = 1;
+
+        [Min(1)]
+        [Tooltip("How many clicks it takes to collect one pixel of this tier. Only the last click pays out (the pixel is just hit before that).")]
+        public int clicksToCollect = 1;
 
         [Tooltip("Lifetime amount of the PREVIOUS tier needed to unlock this tier. Ignored if 'Unlocked At Start' is on.")]
         public double unlockThreshold = 10;
@@ -116,6 +121,15 @@ public class PixelClicker : MonoBehaviour
     // ------------------------------------------------------------------
     // Inspector fields
     // ------------------------------------------------------------------
+
+    [Header("Tough Pixels (Clicks To Collect > 1)")]
+    [Range(0f, 0.6f)]
+    [Tooltip("How much the pixel squashes when it is hit but not yet collected. 0 = no reaction.")]
+    [SerializeField] private float hitPunchAmount = 0.18f;
+
+    [Min(0.01f)]
+    [Tooltip("How long the squash lasts (seconds).")]
+    [SerializeField] private float hitPunchDuration = 0.12f;
 
     [Header("Pixel Object")]
     [Tooltip("The cube the player clicks. Defaults to this GameObject if empty.")]
@@ -344,6 +358,8 @@ public class PixelClicker : MonoBehaviour
     private int colorPropertyId;
     private Vector3 basePosition;
     private float materializeFactor = 1f;
+    private int hitsOnCurrentPixel;
+    private float hitPunchTimer;
     private Color currentColor = Color.white;
     private Material defaultMaterial;
     private Material transparentMaterial;
@@ -364,6 +380,9 @@ public class PixelClicker : MonoBehaviour
     /// wasAutomatic is true for clicks made by the auto clicker (see <see cref="AutoCollect"/>).
     /// </summary>
     public event Action<int, double, bool> PixelCollected;
+
+    /// <summary>Fired when a click only damages a multi-click pixel: (tier index, hits so far, hits needed, automatic).</summary>
+    public event Action<int, int, int, bool> PixelHit;
 
     /// <summary>Fired when a Vacuum pixel is clicked: (vacuum tier index, total amount re-collected, number of pixels).</summary>
     public event Action<int, double, int> PixelsVacuumed;
@@ -512,6 +531,21 @@ public class PixelClicker : MonoBehaviour
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
+
+        // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
+        if (tier.clicksToCollect > 1)
+        {
+            hitsOnCurrentPixel++;
+            if (hitsOnCurrentPixel < tier.clicksToCollect)
+            {
+                hitPunchTimer = hitPunchDuration;
+                PlayClickEffects(tier);
+                PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, tier.clicksToCollect, automatic);
+                onPixelClicked?.Invoke();
+                return;
+            }
+        }
+        hitsOnCurrentPixel = 0;
 
         double amount = tier.amountPerClick * clickMultiplier;
         AddCurrency(tierIndex, amount);
@@ -792,7 +826,15 @@ public class PixelClicker : MonoBehaviour
             pulse = pulseCurve.Evaluate(cycle); // -1..1
         }
 
-        pixelTransform.localScale = baseScale * (materializeFactor * (1f + pulse * pulseAmount));
+        // Squash briefly when a tough pixel is hit but not yet collected.
+        float punch = 1f;
+        if (hitPunchTimer > 0f)
+        {
+            hitPunchTimer -= Time.deltaTime;
+            punch = 1f - hitPunchAmount * Mathf.Clamp01(hitPunchTimer / Mathf.Max(0.01f, hitPunchDuration));
+        }
+
+        pixelTransform.localScale = baseScale * (materializeFactor * punch * (1f + pulse * pulseAmount));
 
         if (pulseEnabled && pulseBrightness)
         {
@@ -866,6 +908,7 @@ public class PixelClicker : MonoBehaviour
 
     private void Materialize(PixelTier tier)
     {
+        hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
         if (materializeRoutine != null) StopCoroutine(materializeRoutine);
         materializeRoutine = StartCoroutine(MaterializeRoutine(tier));
     }

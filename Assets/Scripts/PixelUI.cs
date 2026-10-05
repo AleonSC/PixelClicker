@@ -281,6 +281,15 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Offset from the cube's screen position where auto-click popups start (canvas units).")]
     [SerializeField] private Vector2 cubePopupStartOffset = new Vector2(0f, 110f);
 
+    [Tooltip("Show a hit counter (e.g. 2/5) when a click only damages a tough pixel such as Obsidian.")]
+    [SerializeField] private bool showHitPopups = true;
+
+    [Tooltip("Hit popup text. {0} = hits so far, {1} = hits needed.")]
+    [SerializeField] private string hitPopupFormat = "{0}/{1}";
+
+    [Tooltip("Hit popup size relative to a normal popup.")]
+    [SerializeField] private float hitPopupSize = 0.75f;
+
     [Tooltip("Show a '+X' popup over the cube when a Vacuum pixel sucks up old pixels.")]
     [SerializeField] private bool showVacuumPopup = true;
 
@@ -398,6 +407,7 @@ public class PixelUI : MonoBehaviour
         BuildPopupCanvas();
         BuildActiveHud();
         clicker.PixelCollected += OnPixelCollected;
+        clicker.PixelHit += OnPixelHit;
         clicker.PixelsVacuumed += OnPixelsVacuumed;
         clicker.VacuumBreakdown += OnVacuumBreakdown;
 
@@ -411,6 +421,7 @@ public class PixelUI : MonoBehaviour
         if (clicker != null)
         {
             clicker.PixelCollected -= OnPixelCollected;
+            clicker.PixelHit -= OnPixelHit;
             clicker.PixelsVacuumed -= OnPixelsVacuumed;
             clicker.VacuumBreakdown -= OnVacuumBreakdown;
         }
@@ -479,6 +490,32 @@ public class PixelUI : MonoBehaviour
     }
 
     private Vector2 lastCubeLocal;
+
+    /// <summary>A click that only damaged a tough pixel: shows how many hits it has taken.</summary>
+    private void OnPixelHit(int tierIndex, int hits, int needed, bool automatic)
+    {
+        if (!showHitPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
+
+        // Tough pixels are often dark, so lighten the tier colour to keep the counter readable.
+        Color color = Color.Lerp(clicker.Tiers[tierIndex].UIColor, Color.white, 0.6f);
+        string text = string.Format(hitPopupFormat, hits, needed);
+        Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
+
+        Func<Vector2> anchor;
+        Vector2 offset;
+        if (automatic && autoPopupsOverCube)
+        {
+            anchor = CubeLocal;
+            offset = cubePopupStartOffset;
+        }
+        else
+        {
+            anchor = CursorLocal;
+            offset = popupStartOffset;
+        }
+
+        StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, hitPopupSize));
+    }
 
     /// <summary>Called for every collected pixel; automatic clicks pop up over the cube, manual ones at the cursor.</summary>
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)

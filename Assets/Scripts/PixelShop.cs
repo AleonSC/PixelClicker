@@ -140,8 +140,12 @@ public class PixelShop : MonoBehaviour
     [SerializeField] private ShopPack[] packs =
     {
         CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0), CreateVacuumPack(2),
-        CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1)
+        CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1), CreateObsidianPack(2)
     };
+
+    [Tooltip("If none of the packs unlocks the Obsidian pixel (e.g. this component was added before it existed), " +
+             "add the default Obsidian pack at startup.")]
+    [SerializeField] private bool addDefaultObsidianPack = true;
 
     [Tooltip("If none of the packs unlocks the Vacuum pixel (e.g. this component was added before it existed), " +
              "add the default Vacuum pack at startup.")]
@@ -268,6 +272,33 @@ public class PixelShop : MonoBehaviour
                     type = PixelClicker.PixelType.Vacuum, displayName = "Vacuum Pixels",
                     color = new Color(0.65f, 0.3f, 0.95f, 1f), vacuum = true,
                     amountPerClick = 1, spawnWeight = 0.2f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>Default Obsidian pack: a tough pixel that takes several clicks to collect but pays more. Needs the Glass pack first.</summary>
+    private static ShopPack CreateObsidianPack(int requiresGlassIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Obsidian Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the tough Obsidian pixel. It takes {clicks} clicks to collect, but pays more.",
+            requiresPackIndex = requiresGlassIndex,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 500 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 100 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Obsidian, displayName = "Obsidian Pixels",
+                    color = new Color(0.22f, 0.1f, 0.35f, 1f),
+                    amountPerClick = 5, clicksToCollect = 5, spawnWeight = 0.4f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
         };
@@ -795,6 +826,22 @@ public class PixelShop : MonoBehaviour
                                                              Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
                 Array.Resize(ref packs, packs.Length + 1);
                 packs[packs.Length - 1] = CreateVacuumPack(glassIndex);
+            }
+        }
+
+        if (addDefaultObsidianPack)
+        {
+            bool hasObsidian = false;
+            foreach (ShopPack pack in packs)
+                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Obsidian))
+                    hasObsidian = true;
+
+            if (!hasObsidian)
+            {
+                int glassIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                             Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateObsidianPack(glassIndex);
             }
         }
 
@@ -1596,6 +1643,8 @@ public class PixelShop : MonoBehaviour
     private string ResolveDescription(ShopPack pack)
     {
         string text = pack.description ?? "";
+        if (pack.rewardTiers != null && pack.rewardTiers.Length > 0)
+            text = text.Replace("{clicks}", pack.rewardTiers[0].clicksToCollect.ToString());
         if (autoClicker != null) text = text.Replace("{interval}", autoClicker.Interval.ToString("0.##"));
 
         if (IsLeveled(pack))
