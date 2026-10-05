@@ -102,6 +102,13 @@ public class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack switches on the ghost minigame.")]
         public bool unlocksGhostMinigame = false;
 
+        [Tooltip("Buying this pack switches on the black hole minigame.")]
+        public bool unlocksBlackholeMinigame = false;
+
+        [Tooltip("This pack can only be bought once the singularity tracker has reached its threshold " +
+                 "(set on the Pixel Blackhole Minigame component).")]
+        public bool requiresSingularity = false;
+
         [Tooltip("Runtime: has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.)")]
         public bool purchased = false;
 
@@ -129,6 +136,9 @@ public class PixelShop : MonoBehaviour
     [Tooltip("The auto clicker switched on by the Auto Clicker pack. Taken from this GameObject (or found in the scene) if empty. Edit its interval on that component.")]
     [SerializeField] private PixelAutoClicker autoClicker;
 
+    [Tooltip("The black hole minigame switched on by the Black Hole pack, and the owner of the singularity tracker. Found in the scene (or added to this GameObject) if empty. Edit its timing, size and threshold on that component.")]
+    [SerializeField] private PixelBlackholeMinigame blackholeMinigame;
+
     [Tooltip("The ghost minigame switched on by the Ghost Hunt pack. Found in the scene (or added to this GameObject) if empty. Edit its timing and look on that component.")]
     [SerializeField] private PixelGhostMinigame ghostMinigame;
 
@@ -148,8 +158,15 @@ public class PixelShop : MonoBehaviour
     {
         CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0), CreateVacuumPack(2),
         CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1), CreateObsidianPack(2),
-        CreateLuminescentPack(6), CreateGhostPack(2)
+        CreateLuminescentPack(6), CreateGhostPack(2), CreateBlackholePack(3), CreateSingularityPack(9)
     };
+
+    [Tooltip("If none of the packs unlocks the black hole minigame (e.g. this component was added before it existed), " +
+             "add the default Black Hole pack at startup.")]
+    [SerializeField] private bool addDefaultBlackholePack = true;
+
+    [Tooltip("If none of the packs unlocks the Singularity pixel, add the default Singularity Pixel pack at startup.")]
+    [SerializeField] private bool addDefaultSingularityPack = true;
 
     [Tooltip("If none of the packs unlocks the ghost minigame (e.g. this component was added before it existed), " +
              "add the default Ghost Hunt pack at startup.")]
@@ -363,6 +380,53 @@ public class PixelShop : MonoBehaviour
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksGhostMinigame = true,
+        };
+    }
+
+    /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
+    private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Black Hole",
+            tab = ShopTab.Minigames,
+            description = "Now and then a swirling black hole opens on the floor and swallows old pixels. Every pixel it takes feeds the singularity.",
+            requiresPackIndex = requiresVacuumIndex,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Black,  amount = 500 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 50 },
+            },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksBlackholeMinigame = true,
+        };
+    }
+
+    /// <summary>Default Singularity Pixel pack (Pixels tab): needs the Black Hole pack AND the tracker's goal.</summary>
+    private static ShopPack CreateSingularityPack(int requiresBlackholeIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Singularity Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Singularity pixel, forged from everything the black hole has swallowed. Tough, but pays hugely.",
+            requiresPackIndex = requiresBlackholeIndex,
+            requiresSingularity = true,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum,   amount = 50 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Singularity, displayName = "Singularity Pixels",
+                    color = new Color(0.25f, 0.05f, 0.4f, 1f), glow = true, glowIntensity = 2f,
+                    amountPerClick = 25, clicksToCollect = 3, spawnWeight = 0.2f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
         };
     }
 
@@ -593,6 +657,35 @@ public class PixelShop : MonoBehaviour
     [Tooltip("Shown after the potion name. {0} = how many you own.")]
     [SerializeField] private string potionOwnedFormat = "Owned: {0}";
 
+    [Header("Singularity Tracker (Minigames tab)")]
+    [Tooltip("Show the tracker in the Minigames tab once the Black Hole is bought (or the tracker has any pixels).")]
+    [SerializeField] private bool showSingularityTracker = true;
+
+    [Tooltip("Tracker title.")]
+    [SerializeField] private string trackerTitle = "Singularity Tracker";
+
+    [TextArea(1, 3)]
+    [Tooltip("Tracker description.")]
+    [SerializeField] private string trackerDescription = "Pixels fed to the black hole. Reach the goal to unlock the Singularity Pixel.";
+
+    [Tooltip("Count while the goal has not been reached. {0} = pixels so far, {1} = goal.")]
+    [SerializeField] private string trackerFormat = "{0} / {1}";
+
+    [Tooltip("Count once the goal has been reached (it keeps counting). {0} = pixels so far.")]
+    [SerializeField] private string trackerReachedFormat = "{0}  (goal reached)";
+
+    [Tooltip("Locked-pack text for a pack gated by the tracker. {0} = pixels so far, {1} = goal.")]
+    [SerializeField] private string singularityRequiresFormat = "Requires: {0} / {1} pixels in the singularity";
+
+    [Tooltip("Height of the tracker row.")]
+    [SerializeField] private float trackerRowHeight = 190f;
+
+    [Tooltip("Colour of the progress bar's empty part.")]
+    [SerializeField] private Color trackerBarBackColor = new Color(0.06f, 0.06f, 0.09f, 1f);
+
+    [Tooltip("Colour of the progress bar's filled part.")]
+    [SerializeField] private Color trackerBarFillColor = new Color(0.65f, 0.3f, 0.95f, 1f);
+
     [Header("Upgrades Window")]
     [Tooltip("Upgrade packs (packs with levels that require another pack, e.g. the auto clicker upgrades) are not listed in a tab. " +
              "The pack they require gets an arrow that opens them in a second window.")]
@@ -771,6 +864,17 @@ public class PixelShop : MonoBehaviour
 #endif
         }
         if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
+
+        if (blackholeMinigame == null) blackholeMinigame = GetComponent<PixelBlackholeMinigame>();
+        if (blackholeMinigame == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            blackholeMinigame = FindFirstObjectByType<PixelBlackholeMinigame>();
+#else
+            blackholeMinigame = FindObjectOfType<PixelBlackholeMinigame>();
+#endif
+        }
+        if (blackholeMinigame == null) blackholeMinigame = gameObject.AddComponent<PixelBlackholeMinigame>();
 
         if (ghostMinigame == null) ghostMinigame = GetComponent<PixelGhostMinigame>();
         if (ghostMinigame == null)
@@ -951,6 +1055,35 @@ public class PixelShop : MonoBehaviour
             }
         }
 
+        if (addDefaultBlackholePack)
+        {
+            bool hasBlackhole = false;
+            foreach (ShopPack pack in packs) if (pack.unlocksBlackholeMinigame) hasBlackhole = true;
+
+            if (!hasBlackhole)
+            {
+                int vacuumIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                              Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Vacuum));
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateBlackholePack(vacuumIndex);
+            }
+        }
+
+        if (addDefaultSingularityPack)
+        {
+            bool hasSingularity = false;
+            foreach (ShopPack pack in packs)
+                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Singularity))
+                    hasSingularity = true;
+
+            if (!hasSingularity)
+            {
+                int blackholeIndex = Array.FindIndex(packs, p => p.unlocksBlackholeMinigame);
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateSingularityPack(blackholeIndex);
+            }
+        }
+
         return renamed || packs.Length != before;
     }
 
@@ -987,6 +1120,17 @@ public class PixelShop : MonoBehaviour
                 UnityEditor.Undo.AddComponent<PixelGhostMinigame>(gameObject);
                 UnityEditor.EditorUtility.SetDirty(gameObject);
             }
+
+#if UNITY_2023_1_OR_NEWER
+            bool hasBlackhole = FindFirstObjectByType<PixelBlackholeMinigame>() != null;
+#else
+            bool hasBlackhole = FindObjectOfType<PixelBlackholeMinigame>() != null;
+#endif
+            if (!hasBlackhole)
+            {
+                UnityEditor.Undo.AddComponent<PixelBlackholeMinigame>(gameObject);
+                UnityEditor.EditorUtility.SetDirty(gameObject);
+            }
         };
     }
 #endif
@@ -1002,7 +1146,7 @@ public class PixelShop : MonoBehaviour
         for (int i = 0; i < packs.Length; i++)
             log.Append("\n  [").Append(i).Append("] ").Append(packs[i].displayName)
                .Append(" -> ").Append(TabOf(packs[i]))
-               .Append(IsRequirementMet(i) ? "" : "  (hidden until \"" + RequirementName(packs[i]) + "\" is bought)");
+               .Append(IsPackRequirementMet(i) ? "" : "  (hidden until \"" + RequirementName(packs[i]) + "\" is bought)");
         Debug.Log(log.ToString(), this);
     }
 
@@ -1075,6 +1219,7 @@ public class PixelShop : MonoBehaviour
         pack.appliedLevel = pack.level;
 
         if (pack.unlocksGhostMinigame && !purchased && ghostMinigame != null) ghostMinigame.Deactivate();
+        if (pack.unlocksBlackholeMinigame && !purchased && blackholeMinigame != null) blackholeMinigame.Deactivate();
     }
 
     /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
@@ -1099,11 +1244,29 @@ public class PixelShop : MonoBehaviour
     }
 
     /// <summary>True when the pack's required pack (if any) has been bought.</summary>
-    public bool IsRequirementMet(int packIndex)
+    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsSingularityMet(packIndex);
+
+    /// <summary>True when the pack that must be bought first (if any) has been bought.</summary>
+    public bool IsPackRequirementMet(int packIndex)
     {
         int req = packs[packIndex].requiresPackIndex;
         if (req < 0 || req >= packs.Length || req == packIndex) return true;
         return HasPack(req);
+    }
+
+    /// <summary>True unless the pack needs the singularity tracker's goal and it has not been reached.</summary>
+    public bool IsSingularityMet(int packIndex)
+    {
+        if (!packs[packIndex].requiresSingularity) return true;
+        return blackholeMinigame != null && blackholeMinigame.ThresholdReached;
+    }
+
+    private string RequirementText(int packIndex)
+    {
+        if (!IsPackRequirementMet(packIndex)) return string.Format(requiresFormat, RequirementName(packs[packIndex]));
+        if (blackholeMinigame == null) return "";
+        return string.Format(singularityRequiresFormat, PixelClicker.FormatNumber(blackholeMinigame.SingularityCount),
+                             PixelClicker.FormatNumber(blackholeMinigame.SingularityThreshold));
     }
 
     /// <summary>True when the player holds enough of every currency for the pack's next purchase.</summary>
@@ -1169,6 +1332,7 @@ public class PixelShop : MonoBehaviour
 
         if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
         if (pack.unlocksGhostMinigame && ghostMinigame != null) ghostMinigame.Activate(); // no-op if already running
+        if (pack.unlocksBlackholeMinigame && blackholeMinigame != null) blackholeMinigame.Activate(); // no-op if already running
     }
 
     /// <summary>Buys a pack: spends all costs, unlocks the reward tiers. Returns false if not possible.</summary>
@@ -1312,6 +1476,8 @@ public class PixelShop : MonoBehaviour
         rows = new PackRow[packs.Length];
         for (int i = 0; i < packs.Length; i++)
             rows[i] = BuildRow(IsChild(i) ? subContentRect : contentRect, i);
+
+        BuildTrackerRow(contentRect);
 
         // One row per potion, listed on the Consumables tab.
         int potionCount = consumables != null ? consumables.ItemCount : 0;
@@ -1585,6 +1751,66 @@ public class PixelShop : MonoBehaviour
         return row;
     }
 
+    private GameObject trackerRow;
+    private RectTransform trackerRowRect;
+    private TMP_Text trackerValueLabel;
+    private RectTransform trackerFill;
+
+    /// <summary>The Singularity Tracker: title, count and a progress bar. Shown on the Minigames tab.</summary>
+    private void BuildTrackerRow(Transform parent)
+    {
+        trackerRow = new GameObject("Singularity Tracker", typeof(RectTransform), typeof(Image));
+        trackerRow.transform.SetParent(parent, false);
+        trackerRow.GetComponent<Image>().color = rowColor;
+
+        trackerRowRect = trackerRow.GetComponent<RectTransform>();
+        trackerRowRect.anchorMin = new Vector2(0f, 1f);
+        trackerRowRect.anchorMax = new Vector2(1f, 1f);
+        trackerRowRect.pivot = new Vector2(0.5f, 1f);
+        trackerRowRect.sizeDelta = new Vector2(0f, trackerRowHeight);
+
+        TMP_Text title = CreateText(trackerRow.transform, "Title", trackerTitle, nameFontSize,
+                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        SetBand(title.rectTransform, 0.62f, 1f, 340f);
+
+        trackerValueLabel = CreateText(trackerRow.transform, "Count", "", nameFontSize,
+                                       TextAlignmentOptions.MidlineRight, FontStyles.Bold);
+        trackerValueLabel.color = levelColor;
+        trackerValueLabel.enableAutoSizing = true;
+        trackerValueLabel.fontSizeMax = nameFontSize;
+        trackerValueLabel.fontSizeMin = 18f;
+        RectTransform vr = trackerValueLabel.rectTransform;
+        vr.anchorMin = new Vector2(0.4f, 0.62f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.offsetMin = new Vector2(0f, 0f);
+        vr.offsetMax = new Vector2(-20f, 0f);
+
+        TMP_Text desc = CreateText(trackerRow.transform, "Description", trackerDescription, descriptionFontSize,
+                                   TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
+        desc.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
+        SetBand(desc.rectTransform, 0.34f, 0.62f, 20f);
+
+        // Progress bar.
+        GameObject back = new GameObject("Bar", typeof(RectTransform), typeof(Image));
+        back.transform.SetParent(trackerRow.transform, false);
+        back.GetComponent<Image>().color = trackerBarBackColor;
+        RectTransform br = back.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0f, 0.08f);
+        br.anchorMax = new Vector2(1f, 0.28f);
+        br.offsetMin = new Vector2(20f, 0f);
+        br.offsetMax = new Vector2(-20f, 0f);
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fill.transform.SetParent(back.transform, false);
+        fill.GetComponent<Image>().color = trackerBarFillColor;
+        trackerFill = fill.GetComponent<RectTransform>();
+        trackerFill.anchorMin = Vector2.zero;
+        trackerFill.anchorMax = new Vector2(0f, 1f);
+        trackerFill.offsetMin = trackerFill.offsetMax = Vector2.zero;
+
+        trackerRow.SetActive(false);
+    }
+
     /// <summary>Stretches a text across a horizontal band of its parent (anchors are 0..1 vertically).</summary>
     private void SetBand(RectTransform rt, float yMin, float yMax, float rightInset)
     {
@@ -1656,6 +1882,24 @@ public class PixelShop : MonoBehaviour
         if (openParent >= 0 && !HasPack(openParent)) CloseUpgradesWindow();
         if (openParent >= 0) subTitle.text = string.Format(upgradesWindowTitle, packs[openParent].displayName);
 
+        // Singularity tracker: first thing on the Minigames tab, once the black hole is in play.
+        bool showTracker = showSingularityTracker && currentTab == ShopTab.Minigames && blackholeMinigame != null &&
+                           (blackholeMinigame.Running || blackholeMinigame.SingularityCount > 0d);
+        if (trackerRow != null && trackerRow.activeSelf != showTracker) trackerRow.SetActive(showTracker);
+        if (showTracker)
+        {
+            trackerRowRect.anchoredPosition = new Vector2(0f, -y);
+            y += trackerRowHeight + rowSpacing;
+            visibleCount++;
+
+            double count = blackholeMinigame.SingularityCount;
+            double goal = blackholeMinigame.SingularityThreshold;
+            trackerValueLabel.text = blackholeMinigame.ThresholdReached
+                ? string.Format(trackerReachedFormat, PixelClicker.FormatNumber(count))
+                : string.Format(trackerFormat, PixelClicker.FormatNumber(count), PixelClicker.FormatNumber(goal));
+            trackerFill.anchorMax = new Vector2(goal > 0d ? Mathf.Clamp01((float)(count / goal)) : 1f, 1f);
+        }
+
         for (int i = 0; i < packs.Length && i < rows.Length; i++)
         {
             PackRow row = rows[i];
@@ -1665,7 +1909,7 @@ public class PixelShop : MonoBehaviour
 
             bool owned = IsPurchased(i); // one-time: bought. upgrade: max level.
             bool requirementMet = IsRequirementMet(i);
-            bool listed = requirementMet || showLockedPacks || HasPack(i);
+            bool listed = IsPackRequirementMet(i) || showLockedPacks || HasPack(i);
             bool visible = child
                 ? openParent >= 0 && pack.requiresPackIndex == openParent && listed
                 : TabOf(pack) == currentTab && listed;
@@ -1693,7 +1937,7 @@ public class PixelShop : MonoBehaviour
             bool canBuy = !owned && requirementMet && CanAfford(i);
 
             if (owned) row.costLabel.text = "";
-            else if (!requirementMet) row.costLabel.text = string.Format(requiresFormat, RequirementName(pack));
+            else if (!requirementMet) row.costLabel.text = RequirementText(i);
             else row.costLabel.text = BuildCostText(CurrentCosts(pack));
 
             row.buyButton.interactable = canBuy;

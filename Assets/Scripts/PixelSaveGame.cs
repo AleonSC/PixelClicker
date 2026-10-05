@@ -65,6 +65,7 @@ public class PixelSaveGame : MonoBehaviour
         public PackSave[] packs;
         public PotionSave[] potions;
         public DeviceSave[] devices;
+        public double singularityCount;
         public bool autoClickerRunning;
         public float autoClickerInterval;
         public int autoClickerClicks;
@@ -83,6 +84,9 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("The potions you own are saved.")]
     [SerializeField] private PixelConsumables consumables;
+
+    [Tooltip("The black hole minigame whose singularity tracker count is saved.")]
+    [SerializeField] private PixelBlackholeMinigame blackhole;
 
     [Tooltip("The auto clicker's running state, interval and clicks per tick are saved.")]
     [SerializeField] private PixelAutoClicker autoClicker;
@@ -206,10 +210,12 @@ public class PixelSaveGame : MonoBehaviour
         if (clicker == null) clicker = FindFirstObjectByType<PixelClicker>();
         if (shop == null) shop = FindFirstObjectByType<PixelShop>();
         if (autoClicker == null) autoClicker = FindFirstObjectByType<PixelAutoClicker>();
+        if (blackhole == null) blackhole = FindFirstObjectByType<PixelBlackholeMinigame>();
 #else
         if (clicker == null) clicker = FindObjectOfType<PixelClicker>();
         if (shop == null) shop = FindObjectOfType<PixelShop>();
         if (autoClicker == null) autoClicker = FindObjectOfType<PixelAutoClicker>();
+        if (blackhole == null) blackhole = FindObjectOfType<PixelBlackholeMinigame>();
 #endif
         // Use the potions the shop sells into, so both always agree.
         if (shop != null && shop.Consumables != null) consumables = shop.Consumables;
@@ -281,6 +287,8 @@ public class PixelSaveGame : MonoBehaviour
                         owned = consumables.GetDevice(i).owned,
                     };
             }
+
+            if (blackhole != null) data.singularityCount = blackhole.SingularityCount;
 
             if (autoClicker != null)
             {
@@ -379,6 +387,8 @@ public class PixelSaveGame : MonoBehaviour
                     consumables.GetDevice(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
                 }
             }
+
+            if (blackhole != null) blackhole.SetSingularityCount(data.singularityCount);
 
             clicker.FinishLoad();
 

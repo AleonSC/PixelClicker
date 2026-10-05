@@ -39,6 +39,7 @@ public class PixelClicker : MonoBehaviour
         Vacuum = 7,
         Obsidian = 8,
         Luminescent = 9,
+        Singularity = 10,
     }
 
     /// <summary>How a tier becomes available.</summary>
@@ -1093,6 +1094,22 @@ public class PixelClicker : MonoBehaviour
         }
 
         StartCoroutine(SuckRoutine(body, target));
+        return true;
+    }
+
+    /// <summary>
+    /// Takes an old pixel out of the game's old-pixel list so something else (the black hole) can handle it.
+    /// 'credit' re-adds its original reward. The caller is responsible for removing the object. Returns false if it wasn't listed.
+    /// </summary>
+    public bool ReleaseOldPixel(Rigidbody body, bool credit)
+    {
+        if (body == null || !oldPixels.Remove(body)) return false;
+
+        if (credit)
+        {
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info != null && IsValidTier(info.tierIndex)) AddCurrency(info.tierIndex, info.amount);
+        }
         return true;
     }
 
