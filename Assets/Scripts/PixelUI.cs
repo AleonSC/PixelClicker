@@ -164,6 +164,41 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Colour of a potion line while the mouse is over it.")]
     [SerializeField] private Color potionHoverColor = new Color(1f, 1f, 1f, 0.15f);
 
+    [Header("Tier Guide (top of the screen)")]
+    [Tooltip("Show a hint telling the player what to do to reach the next tier.")]
+    [SerializeField] private bool showTierGuide = true;
+
+    [Min(2)]
+    [Tooltip("How many of the first tiers get the guide. 3 = the White, Gray and Black phases.")]
+    [SerializeField] private int guideTierCount = 3;
+
+    [Tooltip("Hint while the next tier unlocks by collecting. {0} = pixels still needed, {1} = pixel type you need (White, Gray...).")]
+    [SerializeField] private string guideFormat = "Click {0} more {1} pixels to progress to the next tier.";
+
+    [Tooltip("Hint once the last guided tier is unlocked and the next one comes from the shop.")]
+    [SerializeField] private string shopGuideText = "Buy the RGB Pack in the shop to progress to the next tier.";
+
+    [Tooltip("Hint text size.")]
+    [SerializeField] private float guideFontSize = 34f;
+
+    [Tooltip("Hint text colour.")]
+    [SerializeField] private Color guideColor = new Color(1f, 1f, 1f, 0.9f);
+
+    [Tooltip("Distance of the hint from the top of the screen (canvas units). Keep it below the potion timer.")]
+    [SerializeField] private float guideTopMargin = 110f;
+
+    [Tooltip("Message shown when a new tier unlocks. {0} = pixel type (Gray, Black...).")]
+    [SerializeField] private string unlockFormat = "{0} pixel unlocked";
+
+    [Tooltip("How long the unlock message stays (seconds). It fades out at the end.")]
+    [SerializeField] private float unlockSeconds = 4f;
+
+    [Tooltip("Unlock message text size.")]
+    [SerializeField] private float unlockFontSize = 52f;
+
+    [Tooltip("Also show the unlock message for tiers bought in the shop (Red, Green, Blue, Glass...).")]
+    [SerializeField] private bool announceShopUnlocks = false;
+
     [Header("Active Potion Timer (on screen)")]
     [Tooltip("Show the running potion and its time left at the top of the screen.")]
     [SerializeField] private bool showActivePotionHud = true;
@@ -341,6 +376,10 @@ public class PixelUI : MonoBehaviour
     private TMP_Text[] potionLabels;
     private GameObject[] potionRowObjects;
     private TMP_Text hudLabel;
+    private TMP_Text guideLabel;
+    private float unlockTimer;
+    private string unlockMessage;
+    private Color unlockColor = Color.white;
 
     // ------------------------------------------------------------------
     // Unity lifecycle
@@ -406,6 +445,8 @@ public class PixelUI : MonoBehaviour
 
         BuildPopupCanvas();
         BuildActiveHud();
+        BuildGuide();
+        if (clicker.onTierUnlocked != null) clicker.onTierUnlocked.AddListener(OnTierUnlocked);
         clicker.PixelCollected += OnPixelCollected;
         clicker.PixelHit += OnPixelHit;
         clicker.PixelsVacuumed += OnPixelsVacuumed;
@@ -422,6 +463,7 @@ public class PixelUI : MonoBehaviour
         {
             clicker.PixelCollected -= OnPixelCollected;
             clicker.PixelHit -= OnPixelHit;
+            if (clicker.onTierUnlocked != null) clicker.onTierUnlocked.RemoveListener(OnTierUnlocked);
             clicker.PixelsVacuumed -= OnPixelsVacuumed;
             clicker.VacuumBreakdown -= OnVacuumBreakdown;
         }
@@ -432,6 +474,7 @@ public class PixelUI : MonoBehaviour
         if (!built) return;
         TickDeltas();
         UpdateActiveHud();
+        UpdateGuide();
         if (autoMode && !boxObject.activeSelf) return; // closed box: nothing to update
         Refresh();
     }
@@ -1047,6 +1090,93 @@ public class PixelUI : MonoBehaviour
     // ------------------------------------------------------------------
     // Active potion timer (top of the screen)
     // ------------------------------------------------------------------
+
+    // ------------------------------------------------------------------
+    // Tier guide / unlock message
+    // ------------------------------------------------------------------
+
+    private void BuildGuide()
+    {
+        guideLabel = MakeText(popupCanvasRect, "Tier Guide", "", guideFontSize,
+                              TextAlignmentOptions.Center, FontStyles.Bold, guideColor);
+        if (popupOutlineWidth > 0f)
+        {
+            guideLabel.outlineColor = popupOutlineColor;
+            guideLabel.outlineWidth = popupOutlineWidth;
+        }
+
+        RectTransform rt = guideLabel.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(1500f, Mathf.Max(guideFontSize, unlockFontSize) * 1.5f);
+        rt.anchoredPosition = new Vector2(0f, -guideTopMargin);
+        guideLabel.gameObject.SetActive(false);
+    }
+
+    private void OnTierUnlocked(int index)
+    {
+        if (index < 0 || index >= clicker.Tiers.Length) return;
+
+        PixelClicker.PixelTier tier = clicker.Tiers[index];
+        if (!announceShopUnlocks && tier.unlockMode == PixelClicker.TierUnlockMode.ShopOnly) return;
+
+        unlockMessage = string.Format(unlockFormat, tier.type);
+        // Lightened so dark tiers (Black, Obsidian) stay readable.
+        unlockColor = Color.Lerp(tier.UIColor, Color.white, 0.5f);
+        unlockTimer = unlockSeconds;
+    }
+
+    /// <summary>What the player should do next, or null when there is nothing to say.</summary>
+    private string BuildGuideText()
+    {
+        PixelClicker.PixelTier[] tiers = clicker.Tiers;
+        int stages = Mathf.Min(guideTierCount, tiers.Length);
+
+        for (int i = 1; i < stages; i++)
+        {
+            if (tiers[i].unlocked || tiers[i].unlockMode == PixelClicker.TierUnlockMode.ShopOnly) continue;
+
+            double remaining = Math.Ceiling(Math.Max(0d, tiers[i].unlockThreshold - tiers[i - 1].totalCollected));
+            return string.Format(guideFormat, FormatAmount(remaining), tiers[i - 1].type);
+        }
+
+        // All guided tiers are unlocked: the next one is sold in the shop.
+        if (stages < tiers.Length && !tiers[stages].unlocked &&
+            tiers[stages].unlockMode == PixelClicker.TierUnlockMode.ShopOnly)
+            return shopGuideText;
+
+        return null;
+    }
+
+    private void UpdateGuide()
+    {
+        if (guideLabel == null) return;
+
+        string text = null;
+        Color color = guideColor;
+        float size = guideFontSize;
+
+        if (unlockTimer > 0f)
+        {
+            unlockTimer -= Time.unscaledDeltaTime;
+            text = unlockMessage;
+            size = unlockFontSize;
+            color = unlockColor;
+            // Fade over the last second.
+            color.a *= Mathf.Clamp01(unlockTimer / Mathf.Min(1f, Mathf.Max(0.01f, unlockSeconds)));
+        }
+        else if (showTierGuide)
+        {
+            text = BuildGuideText();
+        }
+
+        bool visible = !string.IsNullOrEmpty(text);
+        if (guideLabel.gameObject.activeSelf != visible) guideLabel.gameObject.SetActive(visible);
+        if (!visible) return;
+
+        guideLabel.text = text;
+        guideLabel.fontSize = size;
+        guideLabel.color = color;
+    }
 
     private void BuildActiveHud()
     {
