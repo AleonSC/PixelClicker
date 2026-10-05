@@ -67,6 +67,10 @@ public class PixelSaveGame : MonoBehaviour
         public DeviceSave[] devices;
         public double singularityCount;
         public string[] achievements;
+        public long statManualClicks;
+        public long statAutoClicks;
+        public double statPlaySeconds;
+        public double statPixelsSpent;
         public bool autoClickerRunning;
         public float autoClickerInterval;
         public int autoClickerClicks;
@@ -85,6 +89,9 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("The potions you own are saved.")]
     [SerializeField] private PixelConsumables consumables;
+
+    [Tooltip("The play statistics (clicks, time played, pixels spent) that are saved.")]
+    [SerializeField] private PixelStats stats;
 
     [Tooltip("The achievements whose earned list is saved.")]
     [SerializeField] private PixelAchievements achievements;
@@ -216,12 +223,14 @@ public class PixelSaveGame : MonoBehaviour
         if (autoClicker == null) autoClicker = FindFirstObjectByType<PixelAutoClicker>();
         if (blackhole == null) blackhole = FindFirstObjectByType<PixelBlackholeMinigame>();
         if (achievements == null) achievements = FindFirstObjectByType<PixelAchievements>();
+        if (stats == null) stats = FindFirstObjectByType<PixelStats>();
 #else
         if (clicker == null) clicker = FindObjectOfType<PixelClicker>();
         if (shop == null) shop = FindObjectOfType<PixelShop>();
         if (autoClicker == null) autoClicker = FindObjectOfType<PixelAutoClicker>();
         if (blackhole == null) blackhole = FindObjectOfType<PixelBlackholeMinigame>();
         if (achievements == null) achievements = FindObjectOfType<PixelAchievements>();
+        if (stats == null) stats = FindObjectOfType<PixelStats>();
 #endif
         // Use the potions the shop sells into, so both always agree.
         if (shop != null && shop.Consumables != null) consumables = shop.Consumables;
@@ -296,6 +305,13 @@ public class PixelSaveGame : MonoBehaviour
 
             if (blackhole != null) data.singularityCount = blackhole.SingularityCount;
             if (achievements != null) data.achievements = achievements.GetSaveState();
+            if (stats != null)
+            {
+                data.statManualClicks = stats.ManualClicks;
+                data.statAutoClicks = stats.AutoClicks;
+                data.statPlaySeconds = stats.PlaySeconds;
+                data.statPixelsSpent = stats.PixelsSpent;
+            }
 
             if (autoClicker != null)
             {
@@ -397,6 +413,8 @@ public class PixelSaveGame : MonoBehaviour
 
             if (blackhole != null) blackhole.SetSingularityCount(data.singularityCount);
             if (achievements != null) achievements.SetSaveState(data.achievements);
+            if (stats != null)
+                stats.SetState(data.statManualClicks, data.statAutoClicks, data.statPlaySeconds, data.statPixelsSpent);
 
             clicker.FinishLoad();
 

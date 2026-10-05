@@ -18,7 +18,8 @@
 | `PixelCubeIcon.cs` | UI `MaskableGraphic` drawing a tiny spinning shaded 3D cube (no camera/render texture) - achievement icons. |
 | `PixelLog.cs` | Bottom-left "Log" toggle with two tabs: Pixels (unlocked tiers with lifetime totals, overall total, vacuum `+X` deltas) and Achievements (scrolling list with progress bars + spinning cube icons). Has its own local `FormatAmount`. |
 | `PixelSaveGame.cs` | Save/load to JSON in `Application.persistentDataPath` (tiers, shop packs by name, auto clicker, potions owned). Loads on start (1 frame delayed), autosaves, saves on quit. Pause menu has Save / Load buttons; Restart deletes the save. Uses `PixelClicker.LoadTierState/FinishLoad` and `PixelShop.SetPackState`. |
-| `PixelPauseMenu.cs` | Pause menu (Esc / on-screen Pause button): sets `Time.timeScale = 0`, Resume / Restart / Quit, `PixelPauseMenu.IsPaused`. PixelClicker ignores clicks while `Time.timeScale <= 0`. |
+| `PixelStats.cs` | Play stats (manual/auto clicks via `PixelCollected`+`PixelHit`, play time excluding pause, pixels spent via `PixelClicker.CurrencySpent`); saved by PixelSaveGame; shown in the pause menu's Stats section. |
+| `PixelPauseMenu.cs` | Pause menu (Esc / on-screen Pause button): sets `Time.timeScale = 0`, Resume / Save+Load / Stats+Settings / Restart / Quit (Settings: tick boxes for cube rotation and pulsing -> `PixelClicker.AllowRotation/AllowPulsing`, stored in PlayerPrefs), `PixelPauseMenu.IsPaused`. PixelClicker ignores clicks while `Time.timeScale <= 0`. |
 | `PixelDevTools.cs` | Bottom-right dev button, adds `amountToAdd` (10) to each unlocked tier through `AddCurrency`. Self-removes in non-dev builds. |
 
 ### Data model

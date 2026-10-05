@@ -29,6 +29,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Save / load component used by the Save, Load and Restart buttons. Found automatically (or added) if left empty.")]
     [SerializeField] private PixelSaveGame saveGame;
 
+    [Tooltip("Play statistics shown in the Stats section. Found automatically (or added) if left empty.")]
+    [SerializeField] private PixelStats stats;
+
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
@@ -89,6 +92,71 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Restart also deletes the save file, so it starts a brand-new game. Off = Restart reloads the scene and then loads your save again.")]
     [SerializeField] private bool restartDeletesSave = true;
 
+    [Header("Stats and Settings")]
+    [Tooltip("Show the Stats button.")]
+    [SerializeField] private bool showStats = true;
+
+    [Tooltip("Show the Settings button.")]
+    [SerializeField] private bool showSettings = true;
+
+    [Tooltip("Stats button text.")]
+    [SerializeField] private string statsText = "Stats";
+
+    [Tooltip("Settings button text.")]
+    [SerializeField] private string settingsText = "Settings";
+
+    [Tooltip("Text on the Back button of the Stats and Settings sections.")]
+    [SerializeField] private string backText = "Back";
+
+    [Tooltip("Title of the Stats section.")]
+    [SerializeField] private string statsTitle = "Stats";
+
+    [Tooltip("Title of the Settings section.")]
+    [SerializeField] private string settingsTitle = "Settings";
+
+    [Tooltip("Label of the cube rotation tick box (accessibility).")]
+    [SerializeField] private string rotationLabel = "Cube rotation";
+
+    [Tooltip("Label of the cube pulsing tick box (accessibility).")]
+    [SerializeField] private string pulsingLabel = "Cube pulsing";
+
+    [Tooltip("Label of the total clicks stat.")]
+    [SerializeField] private string totalClicksLabel = "Total clicks";
+
+    [Tooltip("Label of the manual clicks line.")]
+    [SerializeField] private string manualClicksLabel = "   Your clicks";
+
+    [Tooltip("Label of the auto clicks line.")]
+    [SerializeField] private string autoClicksLabel = "   Auto clicker";
+
+    [Tooltip("Label of the time played stat.")]
+    [SerializeField] private string timePlayedLabel = "Time played";
+
+    [Tooltip("Label of the pixels spent stat.")]
+    [SerializeField] private string pixelsSpentLabel = "Pixels spent";
+
+    [Tooltip("Height of each stat / setting row.")]
+    [SerializeField] private float rowHeight = 64f;
+
+    [Tooltip("Text size of stat / setting rows.")]
+    [SerializeField] private float rowFontSize = 34f;
+
+    [Tooltip("Colour of the stat numbers.")]
+    [SerializeField] private Color statValueColor = new Color(1f, 0.92f, 0.5f, 1f);
+
+    [Tooltip("Size of a tick box.")]
+    [SerializeField] private float tickBoxSize = 52f;
+
+    [Tooltip("Colour of an empty tick box.")]
+    [SerializeField] private Color tickBoxColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+
+    [Tooltip("Colour of the tick inside a ticked box.")]
+    [SerializeField] private Color tickColor = new Color(0.45f, 1f, 0.5f, 1f);
+
+    [Tooltip("Compact big numbers in Stats (1.2K, 3.4M). Off = full number.")]
+    [SerializeField] private bool abbreviateNumbers = false;
+
+    [Header("Restart / Quit")]
     [Tooltip("Show the Restart button (reloads the scene, so all progress is lost).")]
     [SerializeField] private bool showRestart = true;
 
@@ -137,6 +205,9 @@ public class PixelPauseMenu : MonoBehaviour
 
     private GameObject canvasRoot;
     private GameObject menuRoot;
+    private GameObject mainPanel, statsPanel, settingsPanel;
+    private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
+    private Toggle rotationToggle, pulsingToggle;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -161,6 +232,16 @@ public class PixelPauseMenu : MonoBehaviour
         }
         if (saveGame == null && addSaveGameIfMissing) saveGame = gameObject.AddComponent<PixelSaveGame>();
 
+        if (stats == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            stats = FindFirstObjectByType<PixelStats>();
+#else
+            stats = FindObjectOfType<PixelStats>();
+#endif
+        }
+        if (stats == null) stats = gameObject.AddComponent<PixelStats>();
+
         EnsureEventSystem();
         BuildUI();
     }
@@ -183,12 +264,26 @@ public class PixelPauseMenu : MonoBehaviour
             UnityEditor.Undo.AddComponent<PixelSaveGame>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);
         };
+
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+#if UNITY_2023_1_OR_NEWER
+            bool has = FindFirstObjectByType<PixelStats>() != null;
+#else
+            bool has = FindObjectOfType<PixelStats>() != null;
+#endif
+            if (has) return;
+            UnityEditor.Undo.AddComponent<PixelStats>(gameObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+        };
     }
 #endif
 
     private void Update()
     {
         if (PauseKeyPressed()) SetPaused(!IsPaused);
+        if (statsPanel != null && statsPanel.activeSelf) RefreshStats();
     }
 
     private void OnDestroy()
@@ -219,6 +314,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         if (pauseAudio) AudioListener.pause = paused;
         if (menuRoot != null) menuRoot.SetActive(paused);
+        if (paused) ShowView(mainPanel);
     }
 
     private bool PauseKeyPressed()
@@ -360,6 +456,7 @@ public class PixelPauseMenu : MonoBehaviour
         dr.offsetMin = dr.offsetMax = Vector2.zero;
 
         GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        mainPanel = panel;
         panel.transform.SetParent(menuRoot.transform, false);
         panel.GetComponent<Image>().color = panelColor;
         RectTransform panelRect = panel.GetComponent<RectTransform>();
@@ -378,10 +475,14 @@ public class PixelPauseMenu : MonoBehaviour
         float y = 30f + titleFontSize * 1.6f + 20f;
         AddMenuButton(panel.transform, resumeText, menuButtonColor, ref y, () => SetPaused(false));
         if (showSaveLoad && saveGame != null)
-        {
-            AddMenuButton(panel.transform, saveText, menuButtonColor, ref y, () => saveGame.Save());
-            AddMenuButton(panel.transform, loadText, menuButtonColor, ref y, () => saveGame.Load());
-        }
+            AddButtonPair(panel.transform, saveText, () => saveGame.Save(), loadText, () => saveGame.Load(), ref y);
+
+        BuildStatsPanel();
+        BuildSettingsPanel();
+        if (showStats && showSettings)
+            AddButtonPair(panel.transform, statsText, () => ShowView(statsPanel), settingsText, () => ShowView(settingsPanel), ref y);
+        else if (showStats) AddMenuButton(panel.transform, statsText, menuButtonColor, ref y, () => ShowView(statsPanel));
+        else if (showSettings) AddMenuButton(panel.transform, settingsText, menuButtonColor, ref y, () => ShowView(settingsPanel));
         if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, Restart);
         if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
 
@@ -390,6 +491,192 @@ public class PixelPauseMenu : MonoBehaviour
         if (needed > panelRect.sizeDelta.y) panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, needed);
 
         menuRoot.SetActive(false);
+    }
+
+    // ------------------------------------------------------------------
+    // Stats and Settings sections
+    // ------------------------------------------------------------------
+
+    /// <summary>Shows one of the menu's views (main, stats or settings) and hides the others.</summary>
+    private void ShowView(GameObject view)
+    {
+        if (view == null) return;
+        if (mainPanel != null) mainPanel.SetActive(view == mainPanel);
+        if (statsPanel != null) statsPanel.SetActive(view == statsPanel);
+        if (settingsPanel != null) settingsPanel.SetActive(view == settingsPanel);
+
+        if (view == statsPanel) RefreshStats();
+        if (view == settingsPanel && clicker != null)
+        {
+            rotationToggle.SetIsOnWithoutNotify(clicker.AllowRotation);
+            pulsingToggle.SetIsOnWithoutNotify(clicker.AllowPulsing);
+        }
+    }
+
+    /// <summary>A centred panel with a title; rows are added below it, then a Back button.</summary>
+    private GameObject BuildSectionPanel(string objectName, string title, out float y)
+    {
+        GameObject panel = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(menuRoot.transform, false);
+        panel.GetComponent<Image>().color = panelColor;
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = panelSize;
+        rect.anchoredPosition = Vector2.zero;
+
+        TMP_Text t = MakeText(panel.transform, "Title", title, titleFontSize, FontStyles.Bold);
+        RectTransform tr = t.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
+        tr.anchoredPosition = new Vector2(0f, -30f);
+
+        y = 30f + titleFontSize * 1.6f + 10f;
+        return panel;
+    }
+
+    /// <summary>Adds the Back button, grows the panel to fit and hides it until it is opened.</summary>
+    private void FinishSectionPanel(GameObject panel, float y)
+    {
+        y += 10f;
+        AddMenuButton(panel.transform, backText, menuButtonColor, ref y, () => ShowView(mainPanel));
+
+        RectTransform rect = panel.GetComponent<RectTransform>();
+        float needed = y + 30f;
+        if (needed > rect.sizeDelta.y) rect.sizeDelta = new Vector2(rect.sizeDelta.x, needed);
+        panel.SetActive(false);
+    }
+
+    private TMP_Text AddRowLabel(Transform parent, string text, float y, out RectTransform row)
+    {
+        GameObject go = new GameObject(text + " Row", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        row = go.GetComponent<RectTransform>();
+        row.anchorMin = new Vector2(0f, 1f);
+        row.anchorMax = new Vector2(1f, 1f);
+        row.pivot = new Vector2(0.5f, 1f);
+        row.sizeDelta = new Vector2(-80f, rowHeight);
+        row.anchoredPosition = new Vector2(0f, -y);
+
+        TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize, FontStyles.Normal);
+        label.alignment = TextAlignmentOptions.MidlineLeft;
+        label.enableAutoSizing = true;
+        label.fontSizeMax = rowFontSize;
+        label.fontSizeMin = 14f;
+        RectTransform lr = label.rectTransform;
+        lr.anchorMin = Vector2.zero;
+        lr.anchorMax = new Vector2(0.62f, 1f);
+        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        return label;
+    }
+
+    private TMP_Text AddStatRow(Transform parent, string label, ref float y)
+    {
+        AddRowLabel(parent, label, y, out RectTransform row);
+
+        TMP_Text value = MakeText(row, "Value", "", rowFontSize, FontStyles.Bold);
+        value.alignment = TextAlignmentOptions.MidlineRight;
+        value.color = statValueColor;
+        value.enableAutoSizing = true;
+        value.fontSizeMax = rowFontSize;
+        value.fontSizeMin = 14f;
+        RectTransform vr = value.rectTransform;
+        vr.anchorMin = new Vector2(0.4f, 0f);
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = vr.offsetMax = Vector2.zero;
+
+        y += rowHeight + 6f;
+        return value;
+    }
+
+    private Toggle AddToggleRow(Transform parent, string label, bool isOn, UnityEngine.Events.UnityAction<bool> onChanged, ref float y)
+    {
+        AddRowLabel(parent, label, y, out RectTransform row);
+
+        GameObject box = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
+        box.transform.SetParent(row, false);
+        Image bg = box.GetComponent<Image>();
+        bg.color = tickBoxColor;
+        RectTransform br = box.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
+        br.anchoredPosition = Vector2.zero;
+
+        GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
+        tick.transform.SetParent(box.transform, false);
+        tick.GetComponent<Image>().color = tickColor;
+        tick.GetComponent<Image>().raycastTarget = false;
+        RectTransform tkr = tick.GetComponent<RectTransform>();
+        tkr.anchorMin = Vector2.zero;
+        tkr.anchorMax = Vector2.one;
+        tkr.offsetMin = new Vector2(tickBoxSize * 0.2f, tickBoxSize * 0.2f);
+        tkr.offsetMax = new Vector2(-tickBoxSize * 0.2f, -tickBoxSize * 0.2f);
+
+        Toggle toggle = box.GetComponent<Toggle>();
+        toggle.targetGraphic = bg;
+        toggle.graphic = tick.GetComponent<Image>();
+        toggle.isOn = isOn;
+        toggle.onValueChanged.AddListener(onChanged);
+
+        y += rowHeight + 6f;
+        return toggle;
+    }
+
+    private void BuildStatsPanel()
+    {
+        statsPanel = BuildSectionPanel("Stats Panel", statsTitle, out float y);
+        totalClicksValue = AddStatRow(statsPanel.transform, totalClicksLabel, ref y);
+        manualClicksValue = AddStatRow(statsPanel.transform, manualClicksLabel, ref y);
+        autoClicksValue = AddStatRow(statsPanel.transform, autoClicksLabel, ref y);
+        timePlayedValue = AddStatRow(statsPanel.transform, timePlayedLabel, ref y);
+        pixelsSpentValue = AddStatRow(statsPanel.transform, pixelsSpentLabel, ref y);
+        FinishSectionPanel(statsPanel, y);
+    }
+
+    private void BuildSettingsPanel()
+    {
+        settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float y);
+        rotationToggle = AddToggleRow(settingsPanel.transform, rotationLabel, clicker == null || clicker.AllowRotation,
+                                      on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
+        pulsingToggle = AddToggleRow(settingsPanel.transform, pulsingLabel, clicker == null || clicker.AllowPulsing,
+                                     on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
+        FinishSectionPanel(settingsPanel, y);
+    }
+
+    private string FormatCount(double value)
+    {
+        if (!abbreviateNumbers || value < 1000d) return System.Math.Floor(value).ToString("N0");
+        return PixelClicker.FormatNumber(value);
+    }
+
+    private void RefreshStats()
+    {
+        if (stats == null) return;
+        totalClicksValue.text = FormatCount(stats.TotalClicks);
+        manualClicksValue.text = FormatCount(stats.ManualClicks);
+        autoClicksValue.text = FormatCount(stats.AutoClicks);
+        timePlayedValue.text = PixelStats.FormatTime(stats.PlaySeconds);
+        pixelsSpentValue.text = FormatCount(stats.PixelsSpent);
+    }
+
+    /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>
+    private void AddButtonPair(Transform parent, string labelA, UnityEngine.Events.UnityAction a,
+                               string labelB, UnityEngine.Events.UnityAction b, ref float y)
+    {
+        float gap = 16f;
+        Vector2 half = new Vector2((menuButtonSize.x - gap) * 0.5f, menuButtonSize.y);
+        string[] labels = { labelA, labelB };
+        UnityEngine.Events.UnityAction[] actions = { a, b };
+        for (int i = 0; i < 2; i++)
+        {
+            Button button = MakeButton(parent, labels[i] + " Button", labels[i], half, menuButtonColor, menuButtonFontSize);
+            RectTransform rt = button.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2((i == 0 ? -1f : 1f) * (half.x * 0.5f + gap * 0.5f), -y);
+            button.onClick.AddListener(actions[i]);
+        }
+        y += menuButtonSize.y + menuButtonSpacing;
     }
 
     private void AddMenuButton(Transform parent, string label, Color color, ref float y, UnityEngine.Events.UnityAction onClick)

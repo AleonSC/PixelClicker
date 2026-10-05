@@ -390,6 +390,25 @@ public class PixelClicker : MonoBehaviour
     private float materializeFactor = 1f;
     private int hitsOnCurrentPixel;
     private bool clicksBlocked;
+
+    private const string PrefRotation = "PixelClicker.Setting.Rotation";
+    private const string PrefPulsing = "PixelClicker.Setting.Pulsing";
+    private bool allowRotation = true;
+    private bool allowPulsing = true;
+
+    /// <summary>Player setting (accessibility): turns the cube's idle rotation on or off. Remembered between sessions.</summary>
+    public bool AllowRotation
+    {
+        get => allowRotation;
+        set { allowRotation = value; PlayerPrefs.SetInt(PrefRotation, value ? 1 : 0); }
+    }
+
+    /// <summary>Player setting (accessibility): turns the cube's pulsing (size and brightness) on or off. Remembered between sessions.</summary>
+    public bool AllowPulsing
+    {
+        get => allowPulsing;
+        set { allowPulsing = value; PlayerPrefs.SetInt(PrefPulsing, value ? 1 : 0); }
+    }
     private float hitPunchTimer;
     private Color currentColor = Color.white;
     private Material defaultMaterial;
@@ -418,6 +437,9 @@ public class PixelClicker : MonoBehaviour
 
     /// <summary>Fired when a click only damages a multi-click pixel: (tier index, hits so far, hits needed, automatic).</summary>
     public event Action<int, int, int, bool> PixelHit;
+
+    /// <summary>Fired when currency is spent (tier index, amount).</summary>
+    public event Action<int, double> CurrencySpent;
 
     /// <summary>Fired when a Vacuum pixel is clicked: (vacuum tier index, total amount re-collected, number of pixels).</summary>
     public event Action<int, double, int> PixelsVacuumed;
@@ -465,6 +487,8 @@ public class PixelClicker : MonoBehaviour
         if (fullSizeHitbox) BuildHitbox();
 
         propertyBlock = new MaterialPropertyBlock();
+        allowRotation = PlayerPrefs.GetInt(PrefRotation, 1) != 0;
+        allowPulsing = PlayerPrefs.GetInt(PrefPulsing, 1) != 0;
         colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
         // Apply start-unlocked flags.
@@ -616,6 +640,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (!IsValidTier(tierIndex) || amount < 0 || tiers[tierIndex].count < amount) return false;
         tiers[tierIndex].count -= amount;
+        if (amount > 0d) CurrencySpent?.Invoke(tierIndex, amount);
         NotifyChanged();
         return true;
     }
@@ -850,13 +875,13 @@ public class PixelClicker : MonoBehaviour
                 Vector3.up * (Mathf.Sin(time * hoverSpeed * Mathf.PI * 2f) * hoverAmplitude);
         }
 
-        if (idleSpin != Vector3.zero)
+        if (idleSpin != Vector3.zero && allowRotation)
             pixelTransform.Rotate(idleSpin * Time.deltaTime, Space.Self);
 
         if (hitbox != null) hitbox.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);
 
         float pulse = 0f;
-        if (pulseEnabled)
+        if (pulseEnabled && allowPulsing)
         {
             float cycle = Mathf.Repeat(time * pulseSpeed, 1f);
             pulse = pulseCurve.Evaluate(cycle); // -1..1
@@ -872,7 +897,7 @@ public class PixelClicker : MonoBehaviour
 
         pixelTransform.localScale = baseScale * (materializeFactor * punch * (1f + pulse * pulseAmount));
 
-        if (pulseEnabled && pulseBrightness)
+        if (pulseEnabled && allowPulsing && pulseBrightness)
         {
             Color pulsed = currentColor * (1f + pulse * brightnessAmount);
             pulsed.a = currentColor.a; // brightness only, keep see-through tiers see-through
