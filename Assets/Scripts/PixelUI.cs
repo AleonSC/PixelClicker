@@ -801,7 +801,11 @@ public class PixelUI : MonoBehaviour
             }
         }
 
-        if (autoMode && inventoryTab == 1) y = RefreshConsumables(ContentTop);
+        if (autoMode)
+        {
+            if (inventoryTab == 1) y = RefreshConsumables(ContentTop);
+            else HideConsumableWidgets();
+        }
 
         // Box height follows the number of visible lines.
         if (autoMode && boxRect != null)
@@ -820,26 +824,26 @@ public class PixelUI : MonoBehaviour
         string[] names = { currencyTabText, consumablesTabText };
         subTabImages = new Image[names.Length];
 
-        GameObject bar = new GameObject("Tabs", typeof(RectTransform));
-        bar.transform.SetParent(boxObject.transform, false);
-        RectTransform barRect = bar.GetComponent<RectTransform>();
-        barRect.anchorMin = new Vector2(0f, 1f);
-        barRect.anchorMax = new Vector2(1f, 1f);
-        barRect.pivot = new Vector2(0.5f, 1f);
-        barRect.sizeDelta = new Vector2(-panelPadding * 2f, subTabHeight);
-        barRect.anchoredPosition = new Vector2(0f, -(headerHeight + panelPadding * 0.5f));
+        float innerWidth = panelWidth - panelPadding * 2f;
+        float tabWidth = (innerWidth - 8f) * 0.5f;
+        float tabTop = headerHeight + panelPadding * 0.5f;
 
         for (int i = 0; i < names.Length; i++)
         {
-            Button tab = MakeButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero, subTabInactiveColor,
-                                    textColor, subTabFontSize);
+            Button tab = MakeButton(boxObject.transform, "Tab " + names[i], names[i],
+                                    new Vector2(tabWidth, subTabHeight), subTabInactiveColor, textColor,
+                                    subTabFontSize > 0f ? subTabFontSize : 28f);
             subTabImages[i] = tab.GetComponent<Image>();
+
             RectTransform rt = tab.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(i * 0.5f, 0f);
-            rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(i == 0 ? 0f : 4f, 0f);
-            rt.offsetMax = new Vector2(i == 0 ? -4f : 0f, 0f);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(tabWidth, subTabHeight);
+            rt.anchoredPosition = new Vector2((i == 0 ? -1f : 1f) * (tabWidth * 0.5f + 4f), -tabTop);
+
+            TMP_Text label = tab.GetComponentInChildren<TMP_Text>();
+            label.text = names[i];
+            label.color = textColor;
+            label.alignment = TextAlignmentOptions.Center;
 
             int captured = i;
             tab.onClick.AddListener(() => { inventoryTab = captured; Refresh(); });
@@ -909,6 +913,17 @@ public class PixelUI : MonoBehaviour
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
         rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
+    }
+
+    /// <summary>Hides everything that belongs to the Consumables tab.</summary>
+    private void HideConsumableWidgets()
+    {
+        if (activeLabel != null) activeLabel.gameObject.SetActive(false);
+        if (noConsumablesLabel != null) noConsumablesLabel.gameObject.SetActive(false);
+        if (hintLabel != null) hintLabel.gameObject.SetActive(false);
+        if (potionRowObjects != null)
+            foreach (GameObject row in potionRowObjects)
+                if (row != null) row.SetActive(false);
     }
 
     /// <summary>Lays out the Consumables tab starting at 'top'. Returns the y below its last line.</summary>
