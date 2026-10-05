@@ -50,6 +50,13 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     [Serializable]
+    private class DeviceSave
+    {
+        public string name;
+        public int owned;
+    }
+
+    [Serializable]
     private class SaveData
     {
         public int version = 1;
@@ -57,6 +64,7 @@ public class PixelSaveGame : MonoBehaviour
         public TierSave[] tiers;
         public PackSave[] packs;
         public PotionSave[] potions;
+        public DeviceSave[] devices;
         public bool autoClickerRunning;
         public float autoClickerInterval;
         public int autoClickerClicks;
@@ -263,6 +271,17 @@ public class PixelSaveGame : MonoBehaviour
                     };
             }
 
+            if (consumables != null)
+            {
+                data.devices = new DeviceSave[consumables.DeviceCount];
+                for (int i = 0; i < data.devices.Length; i++)
+                    data.devices[i] = new DeviceSave
+                    {
+                        name = consumables.GetDevice(i).displayName,
+                        owned = consumables.GetDevice(i).owned,
+                    };
+            }
+
             if (autoClicker != null)
             {
                 data.autoClickerRunning = autoClicker.Running;
@@ -347,6 +366,17 @@ public class PixelSaveGame : MonoBehaviour
                     PotionSave saved = data.potions != null
                         ? Array.Find(data.potions, p => p.type == (int)consumables.Get(i).type) : null;
                     consumables.Get(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
+                }
+            }
+
+            if (consumables != null)
+            {
+                consumables.CancelPlacement();
+                for (int i = 0; i < consumables.DeviceCount; i++)
+                {
+                    DeviceSave saved = data.devices != null
+                        ? Array.Find(data.devices, d => d.name == consumables.GetDevice(i).displayName) : null;
+                    consumables.GetDevice(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
                 }
             }
 

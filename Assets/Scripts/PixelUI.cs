@@ -153,7 +153,7 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private string noConsumablesText = "No consumables yet.";
 
     [Tooltip("Hint at the bottom of the tab.")]
-    [SerializeField] private string consumableHint = "Right-click a potion to drink it.";
+    [SerializeField] private string consumableHint = "Right-click an item to use it.";
 
     [Tooltip("Hint text size.")]
     [SerializeField] private float hintFontSize = 24f;
@@ -218,6 +218,9 @@ public class PixelUI : MonoBehaviour
 
     [Tooltip("Timer text. {0} = potion name, {1} = seconds left.")]
     [SerializeField] private string activeHudFormat = "{0}  {1}s";
+
+    [Tooltip("Message shown while you are placing a device. {0} = device name.")]
+    [SerializeField] private string placingHudFormat = "Click the floor to place the {0}  (right-click to cancel)";
 
     [Tooltip("Timer text size.")]
     [SerializeField] private float activeHudFontSize = 44f;
@@ -997,7 +1000,7 @@ public class PixelUI : MonoBehaviour
                 if (old != null) Destroy(old);
 
         TextAlignmentOptions align = consumableAlign;
-        int count = consumables != null ? consumables.Count : 0;
+        int count = consumables != null ? consumables.ItemCount : 0;
         potionLabels = new TMP_Text[count];
         potionRowObjects = new GameObject[count];
         for (int i = 0; i < count; i++)
@@ -1013,7 +1016,7 @@ public class PixelUI : MonoBehaviour
             click.highlight = image;
             click.hoverColor = potionHoverColor;
             int captured = i;
-            click.onRightClick = () => { if (consumables != null && consumables.TryConsume(captured)) Refresh(); };
+            click.onRightClick = () => { if (consumables != null && consumables.TryUseItem(captured)) Refresh(); };
 
             TMP_Text label = MakeText(row.transform, "Label", "", fontSize, align, FontStyles.Normal, textColor);
             RectTransform lr = label.rectTransform;
@@ -1065,15 +1068,15 @@ public class PixelUI : MonoBehaviour
             y += LinePitch;
         }
 
-        if (consumables != null && (potionRowObjects == null || potionRowObjects.Length != consumables.Count))
+        if (consumables != null && (potionRowObjects == null || potionRowObjects.Length != consumables.ItemCount))
             BuildPotionRows();
 
         int shown = 0;
         int count = potionRowObjects != null ? potionRowObjects.Length : 0;
         for (int i = 0; i < count; i++)
         {
-            PixelConsumables.Potion potion = consumables.Get(i);
-            bool visible = potion.owned > 0;
+            int owned = consumables.ItemOwned(i);
+            bool visible = owned > 0;
             if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
             if (!visible) continue;
 
@@ -1081,8 +1084,8 @@ public class PixelUI : MonoBehaviour
             y += LinePitch;
             shown++;
 
-            potionLabels[i].text = string.Format(consumableLineFormat, potion.displayName, FormatAmount(potion.owned));
-            int tierIndex = clicker.IndexOf(potion.type);
+            potionLabels[i].text = string.Format(consumableLineFormat, consumables.ItemName(i), FormatAmount(owned));
+            int tierIndex = clicker.IndexOf(consumables.ItemRequiredType(i));
             potionLabels[i].color = colorTextByTier && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : textColor;
         }
 
@@ -1251,9 +1254,18 @@ public class PixelUI : MonoBehaviour
     {
         if (hudLabel == null) return;
 
-        bool active = consumables != null && consumables.IsActive;
+        // While placing a device the line tells you what to do; otherwise it shows the running potion.
+        bool placing = consumables != null && consumables.IsPlacing;
+        bool active = placing || (consumables != null && consumables.IsActive);
         if (hudLabel.gameObject.activeSelf != active) hudLabel.gameObject.SetActive(active);
         if (!active) return;
+
+        if (placing)
+        {
+            hudLabel.text = string.Format(placingHudFormat, consumables.PlacingName);
+            hudLabel.color = Color.white;
+            return;
+        }
 
         PixelConsumables.Potion potion = consumables.Get(consumables.ActiveIndex);
         hudLabel.text = string.Format(activeHudFormat, potion.displayName, Mathf.CeilToInt(consumables.Remaining));

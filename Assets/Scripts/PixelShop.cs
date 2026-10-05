@@ -1049,20 +1049,21 @@ public class PixelShop : MonoBehaviour
         return true;
     }
 
-    /// <summary>Buys one potion: spends its price and adds it to the inventory. Returns false if you can't afford it.</summary>
-    public bool TryBuyPotion(int potionIndex)
+    /// <summary>Buys one consumable (potion or device): spends its price and adds it to the inventory.</summary>
+    public bool TryBuyPotion(int itemIndex)
     {
-        if (consumables == null || potionIndex < 0 || potionIndex >= consumables.Count) return false;
+        if (consumables == null || itemIndex < 0 || itemIndex >= consumables.ItemCount) return false;
 
-        PixelConsumables.Potion potion = consumables.Get(potionIndex);
-        if (!CanAffordCosts(potion.costs)) return false;
+        PackCost[] costs = consumables.ItemCosts(itemIndex);
+        if (!CanAffordCosts(costs)) return false;
 
-        if (potion.costs != null)
-            foreach (PackCost cost in potion.costs)
+        if (costs != null)
+            foreach (PackCost cost in costs)
                 clicker.TrySpend(cost.type, cost.amount);
 
-        consumables.Add(potionIndex, 1);
-        Debug.Log("PixelShop: bought " + potion.displayName + " - you now own " + potion.owned + ".", this);
+        consumables.AddItem(itemIndex, 1);
+        Debug.Log("PixelShop: bought " + consumables.ItemName(itemIndex) + " - you now own " +
+                  consumables.ItemOwned(itemIndex) + ".", this);
         PlayPurchaseSound();
         RefreshRows();
         return true;
@@ -1241,7 +1242,7 @@ public class PixelShop : MonoBehaviour
             rows[i] = BuildRow(IsChild(i) ? subContentRect : contentRect, i);
 
         // One row per potion, listed on the Consumables tab.
-        int potionCount = consumables != null ? consumables.Count : 0;
+        int potionCount = consumables != null ? consumables.ItemCount : 0;
         potionRows = new PackRow[potionCount];
         for (int i = 0; i < potionCount; i++)
             potionRows[i] = BuildRow(contentRect, i, true);
@@ -1443,8 +1444,8 @@ public class PixelShop : MonoBehaviour
 
     private PackRow BuildRow(Transform parent, int index, bool potion = false)
     {
-        string rowName = potion ? consumables.Get(index).displayName : packs[index].displayName;
-        string rowDescription = potion ? consumables.Describe(index) : packs[index].description;
+        string rowName = potion ? consumables.ItemName(index) : packs[index].displayName;
+        string rowDescription = potion ? consumables.ItemDescription(index) : packs[index].description;
         PackRow row = new PackRow { isPotion = potion };
 
         GameObject rowGo = new GameObject((potion ? "Potion " : "Pack ") + index, typeof(RectTransform), typeof(Image));
@@ -1636,12 +1637,13 @@ public class PixelShop : MonoBehaviour
         // Potions: listed after the Consumables-tab packs.
         if (potionRows != null && consumables != null)
         {
-            for (int p = 0; p < potionRows.Length && p < consumables.Count; p++)
+            for (int p = 0; p < potionRows.Length && p < consumables.ItemCount; p++)
             {
                 PackRow row = potionRows[p];
-                PixelConsumables.Potion potion = consumables.Get(p);
+                int owned = consumables.ItemOwned(p);
+                PackCost[] costs = consumables.ItemCosts(p);
 
-                bool listed = !potionsNeedUnlockedPixel || clicker.IsUnlocked(potion.type) || potion.owned > 0;
+                bool listed = !potionsNeedUnlockedPixel || clicker.IsUnlocked(consumables.ItemRequiredType(p)) || owned > 0;
                 bool visible = currentTab == ShopTab.Consumables && listed;
                 row.rect.gameObject.SetActive(visible);
                 if (!visible) continue;
@@ -1650,12 +1652,12 @@ public class PixelShop : MonoBehaviour
                 y += rowHeight + rowSpacing;
                 visibleCount++;
 
-                row.nameLabel.text = potion.displayName + "   <size=65%><color=#" + ColorUtility.ToHtmlStringRGB(levelColor) +
-                                     ">" + string.Format(potionOwnedFormat, potion.owned) + "</color></size>";
-                row.descLabel.text = consumables.Describe(p);
-                row.costLabel.text = BuildCostText(potion.costs);
+                row.nameLabel.text = consumables.ItemName(p) + "   <size=65%><color=#" + ColorUtility.ToHtmlStringRGB(levelColor) +
+                                     ">" + string.Format(potionOwnedFormat, owned) + "</color></size>";
+                row.descLabel.text = consumables.ItemDescription(p);
+                row.costLabel.text = BuildCostText(costs);
 
-                bool canBuy = CanAffordCosts(potion.costs);
+                bool canBuy = CanAffordCosts(costs);
                 row.buyButton.interactable = canBuy;
                 row.buyLabel.text = buyText;
                 row.buyImage.color = canBuy ? buyColor : disabledColor;

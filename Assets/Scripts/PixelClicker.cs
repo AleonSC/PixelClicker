@@ -388,6 +388,7 @@ public class PixelClicker : MonoBehaviour
     private Vector3 basePosition;
     private float materializeFactor = 1f;
     private int hitsOnCurrentPixel;
+    private bool clicksBlocked;
     private float hitPunchTimer;
     private Color currentColor = Color.white;
     private Material defaultMaterial;
@@ -489,6 +490,7 @@ public class PixelClicker : MonoBehaviour
         CleanOldPixels();
 
         if (Time.timeScale <= 0f) return; // paused (see PixelPauseMenu)
+        if (clicksBlocked) return;        // e.g. placing a vacuum device (see PixelConsumables)
         if (!WasClickedThisFrame() || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
@@ -1070,14 +1072,59 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
-    /// <summary>Pulls one old pixel into the cube while shrinking it, then removes it.</summary>
-    private IEnumerator SuckRoutine(Rigidbody body)
+    /// <summary>The old pixels currently lying around (read-only). Used by the vacuum device.</summary>
+    public System.Collections.Generic.IReadOnlyList<Rigidbody> OldPixels => oldPixels;
+
+    /// <summary>
+    /// Collects one old pixel again (its reward is re-added) and pulls it into 'target' while it shrinks.
+    /// Returns false if it isn't an old pixel any more.
+    /// </summary>
+    public bool AbsorbOldPixel(Rigidbody body, Transform target)
     {
+        if (body == null || !oldPixels.Remove(body)) return false;
+
+        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        if (info != null && IsValidTier(info.tierIndex))
+        {
+            AddCurrency(info.tierIndex, info.amount);
+            double[] perTier = new double[tiers.Length];
+            perTier[info.tierIndex] = info.amount;
+            VacuumBreakdown?.Invoke(perTier);
+        }
+
+        StartCoroutine(SuckRoutine(body, target));
+        return true;
+    }
+
+    /// <summary>While true, clicks on the cube are ignored (used while a device is being placed).</summary>
+    public void SetClicksBlocked(bool blocked) => clicksBlocked = blocked;
+
+    /// <summary>
+    /// A copy of the pixel's material tinted with 'color' - for simple scene objects that should match the game's look.
+    /// 'transparent' makes it see-through (the colour's alpha sets how much).
+    /// </summary>
+    public Material CreateVisualMaterial(Color color, bool transparent)
+    {
+        Material source = defaultMaterial != null ? defaultMaterial
+                        : pixelRenderer != null ? pixelRenderer.sharedMaterial : null;
+        if (source == null) return null;
+
+        Material mat = transparent ? BuildTransparentMaterial(source) : new Material(source);
+        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+        if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
+        return mat;
+    }
+
+    /// <summary>Pulls one old pixel into the cube while shrinking it, then removes it.</summary>
+    private IEnumerator SuckRoutine(Rigidbody body, Transform target = null)
+    {
+        Transform dest = target != null ? target : pixelTransform;
         Transform t = body.transform;
         foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
         body.isKinematic = true;
 
         Vector3 startPos = t.position;
+        Vector3 endPos = dest != null ? dest.position : startPos;
         Vector3 startScale = t.localScale;
         float time = 0f;
 
@@ -1088,7 +1135,8 @@ public class PixelClicker : MonoBehaviour
             float k = vacuumSuckDuration > 0f ? Mathf.Clamp01(time / vacuumSuckDuration) : 1f;
             float eased = vacuumSuckCurve.Evaluate(k);
 
-            t.position = Vector3.Lerp(startPos, pixelTransform.position, eased);
+            if (dest != null) endPos = dest.position;
+            t.position = Vector3.Lerp(startPos, endPos, eased);
             t.localScale = startScale * (1f - eased);
             yield return null;
         }
