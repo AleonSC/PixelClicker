@@ -569,6 +569,27 @@ public class PixelClicker : MonoBehaviour
         RefreshUI();
     }
 
+    /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked)
+    {
+        int index = IndexOf(type);
+        if (index < 0) return;
+
+        PixelTier tier = tiers[index];
+        tier.count = System.Math.Max(0d, count);
+        tier.totalCollected = System.Math.Max(0d, totalCollected);
+        tier.unlocked = unlocked || tier.unlockedAtStart;
+    }
+
+    /// <summary>Call after <see cref="LoadTierState"/>: re-rolls the pixel on screen and refreshes every display.</summary>
+    public void FinishLoad()
+    {
+        ClearForcedSpawnTier();
+        if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
+        Materialize(GetClickTier());
+        NotifyChanged();
+    }
+
     /// <summary>Unlock tier N once tier N-1's lifetime total reaches N's threshold.</summary>
     private void CheckUnlocks()
     {

@@ -26,6 +26,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Used only to share the game's UI font. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
 
+    [Tooltip("Save / load component used by the Save, Load and Restart buttons. Found automatically (or added) if left empty.")]
+    [SerializeField] private PixelSaveGame saveGame;
+
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
@@ -70,6 +73,21 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Quit button text.")]
     [SerializeField] private string quitText = "Quit";
+
+    [Tooltip("Add a Pixel Save Game component at startup if the scene has none.")]
+    [SerializeField] private bool addSaveGameIfMissing = true;
+
+    [Tooltip("Show the Save and Load buttons.")]
+    [SerializeField] private bool showSaveLoad = true;
+
+    [Tooltip("Save button text.")]
+    [SerializeField] private string saveText = "Save";
+
+    [Tooltip("Load button text.")]
+    [SerializeField] private string loadText = "Load";
+
+    [Tooltip("Restart also deletes the save file, so it starts a brand-new game. Off = Restart reloads the scene and then loads your save again.")]
+    [SerializeField] private bool restartDeletesSave = true;
 
     [Tooltip("Show the Restart button (reloads the scene, so all progress is lost).")]
     [SerializeField] private bool showRestart = true;
@@ -133,9 +151,40 @@ public class PixelPauseMenu : MonoBehaviour
         }
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont; // one shared font
 
+        if (saveGame == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            saveGame = FindFirstObjectByType<PixelSaveGame>();
+#else
+            saveGame = FindObjectOfType<PixelSaveGame>();
+#endif
+        }
+        if (saveGame == null && addSaveGameIfMissing) saveGame = gameObject.AddComponent<PixelSaveGame>();
+
         EnsureEventSystem();
         BuildUI();
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying || !addSaveGameIfMissing) return;
+
+        // Delayed: components must not be added from inside OnValidate itself.
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+#if UNITY_2023_1_OR_NEWER
+            bool has = FindFirstObjectByType<PixelSaveGame>() != null;
+#else
+            bool has = FindObjectOfType<PixelSaveGame>() != null;
+#endif
+            if (has) return;
+            UnityEditor.Undo.AddComponent<PixelSaveGame>(gameObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+        };
+    }
+#endif
 
     private void Update()
     {
@@ -200,6 +249,11 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void Restart()
     {
+        if (saveGame != null && restartDeletesSave)
+        {
+            saveGame.SuppressSaving(); // so autosave / quit can't write the old game back
+            saveGame.DeleteSave();
+        }
         SetPaused(false);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
@@ -323,6 +377,11 @@ public class PixelPauseMenu : MonoBehaviour
 
         float y = 30f + titleFontSize * 1.6f + 20f;
         AddMenuButton(panel.transform, resumeText, menuButtonColor, ref y, () => SetPaused(false));
+        if (showSaveLoad && saveGame != null)
+        {
+            AddMenuButton(panel.transform, saveText, menuButtonColor, ref y, () => saveGame.Save());
+            AddMenuButton(panel.transform, loadText, menuButtonColor, ref y, () => saveGame.Load());
+        }
         if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, Restart);
         if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
 

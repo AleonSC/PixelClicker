@@ -229,6 +229,14 @@ public class PixelConsumables : MonoBehaviour
         return true;
     }
 
+    /// <summary>Ends the running potion without firing the expired event (used when loading a save).</summary>
+    public void StopActive()
+    {
+        activeIndex = -1;
+        remaining = 0f;
+        if (clicker != null) clicker.ClearForcedSpawnTier();
+    }
+
     private void Expire()
     {
         activeIndex = -1;

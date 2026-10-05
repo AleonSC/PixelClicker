@@ -892,6 +892,25 @@ public class PixelShop : MonoBehaviour
     }
 
     /// <summary>One-time packs: bought. Upgrade packs: at max level (nothing left to buy).</summary>
+    // --- Save / load access (used by PixelSaveGame) ---
+
+    public int PackCount => packs.Length;
+
+    public string GetPackName(int index) => packs[index].displayName;
+
+    public bool GetPackPurchased(int index) => packs[index].purchased;
+
+    public int GetPackLevel(int index) => packs[index].level;
+
+    /// <summary>Restores a pack's bought flag and level without re-applying its effect (the save restores those separately).</summary>
+    public void SetPackState(int index, bool purchased, int level)
+    {
+        ShopPack pack = packs[index];
+        pack.purchased = purchased;
+        pack.level = IsLeveled(pack) ? Mathf.Clamp(level, 0, pack.levels.Length) : 0;
+        pack.appliedLevel = pack.level;
+    }
+
     /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
     public PixelConsumables Consumables => consumables;
 
