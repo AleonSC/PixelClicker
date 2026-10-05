@@ -285,6 +285,9 @@ public class PixelConsumables : MonoBehaviour
 
     private void Awake()
     {
+        // Escape cancels placing a device before it closes anything else.
+        PixelWindows.Register(this, 100, () => IsPlacing, CancelPlacement);
+
         if (clicker == null)
         {
 #if UNITY_2023_1_OR_NEWER
@@ -316,6 +319,7 @@ public class PixelConsumables : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelWindows.Unregister(this);
         if (preview != null) Destroy(preview);
         if (IsPlacing && clicker != null) clicker.SetClicksBlocked(false);
         if (activeIndex >= 0 && clicker != null) clicker.ClearForcedSpawnTier();

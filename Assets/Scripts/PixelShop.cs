@@ -1141,6 +1141,10 @@ public class PixelShop : MonoBehaviour
         BuildUI();
         builtOk = true;
 
+        // Escape closes the upgrades window first, then the shop.
+        PixelWindows.Register(this, 40, () => subPanelObject != null && subPanelObject.activeSelf, CloseUpgradesWindow);
+        PixelWindows.Register(this, 30, () => panelObject != null && panelObject.activeSelf, () => panelObject.SetActive(false));
+
         // Diagnostic: where each pack is listed and what it is waiting for.
         StringBuilder log = new StringBuilder("PixelShop: " + packs.Length + " packs.");
         for (int i = 0; i < packs.Length; i++)
@@ -1152,6 +1156,7 @@ public class PixelShop : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelWindows.Unregister(this);
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 

@@ -333,6 +333,7 @@ public class PixelLog : MonoBehaviour
         built = true;
         Refresh();
         panelObject.SetActive(startOpen);
+        PixelWindows.Register(this, 20, () => panelObject != null && panelObject.activeSelf, () => panelObject.SetActive(false));
     }
 
 #if UNITY_EDITOR
@@ -358,6 +359,7 @@ public class PixelLog : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelWindows.Unregister(this);
         if (clicker != null) clicker.VacuumBreakdown -= OnVacuumBreakdown;
         if (canvasRoot != null) Destroy(canvasRoot);
     }

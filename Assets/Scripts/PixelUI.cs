@@ -476,6 +476,7 @@ public class PixelUI : MonoBehaviour
 
     private void OnDestroy()
     {
+        PixelWindows.Unregister(this);
         if (autoRoot != null) Destroy(autoRoot);
         if (popupRoot != null) Destroy(popupRoot);
         if (guideCanvasRoot != null) Destroy(guideCanvasRoot);
@@ -867,6 +868,7 @@ public class PixelUI : MonoBehaviour
 
         boxObject.SetActive(startOpen);
         BuildConsumableList(anchor);
+        PixelWindows.Register(this, 10, () => boxObject != null && boxObject.activeSelf, () => boxObject.SetActive(false));
         Debug.Log("PixelUI: created the Inventory box with " + count + " currency lines.", this);
     }
 

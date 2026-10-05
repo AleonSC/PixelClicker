@@ -296,7 +296,27 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void Update()
     {
-        if (PauseKeyPressed()) SetPaused(!IsPaused);
+        if (EscapePressed())
+        {
+            if (IsPaused)
+            {
+                // Inside Stats / Settings, Escape steps back; from the main view it resumes.
+                if (mainPanel != null && !mainPanel.activeSelf) ShowView(mainPanel);
+                else SetPaused(false);
+            }
+            else if (PixelWindows.CloseTopmost())
+            {
+                // An open window (placing, upgrades, shop, log, inventory) took the key press.
+            }
+            else if (pauseKey == PauseKey.Escape)
+            {
+                SetPaused(true); // only opens when no other window is open
+            }
+        }
+        else if (pauseKey != PauseKey.Escape && PauseKeyPressed())
+        {
+            SetPaused(!IsPaused);
+        }
         if (statsPanel != null && statsPanel.activeSelf) RefreshStats();
     }
 
@@ -339,6 +359,15 @@ public class PixelPauseMenu : MonoBehaviour
 
         GameStopped = freeze;
         if (pauseAudio) AudioListener.pause = freeze;
+    }
+
+    private static bool EscapePressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.Escape);
+#endif
     }
 
     private bool PauseKeyPressed()
