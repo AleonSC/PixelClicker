@@ -49,6 +49,16 @@ public class PixelShop : MonoBehaviour
         AutoClickerClicks = 2,
     }
 
+    /// <summary>The shop tabs. 'Automatic' picks Pixels or Upgrades from what the pack does.</summary>
+    public enum ShopTab
+    {
+        /// <summary>Packs that unlock pixels go to Pixels; auto clicker / upgrade packs go to Upgrades.</summary>
+        Automatic = 0,
+        Pixels = 1,
+        Upgrades = 2,
+        Consumables = 3,
+    }
+
     /// <summary>One purchasable level of an upgrade pack.</summary>
     [Serializable]
     public class PackLevel
@@ -70,6 +80,10 @@ public class PixelShop : MonoBehaviour
         [TextArea(1, 3)]
         [Tooltip("Short description shown under the name. Use {interval} to show the auto clicker's interval in seconds.")]
         public string description = "";
+
+        [Tooltip("Which shop tab this item is listed on. Automatic = Pixels for packs that unlock pixels, " +
+                 "Upgrades for the auto clicker and its upgrades.")]
+        public ShopTab tab = ShopTab.Automatic;
 
         [Tooltip("Everything the player must pay. All costs are paid together.")]
         public PackCost[] costs;
@@ -172,6 +186,7 @@ public class PixelShop : MonoBehaviour
         return new ShopPack
         {
             displayName = "RGB Pack",
+            tab = ShopTab.Pixels,
             description = "Adds Red, Green and Blue pixels to the random spawn pool.",
             costs = new[]
             {
@@ -206,6 +221,7 @@ public class PixelShop : MonoBehaviour
         return new ShopPack
         {
             displayName = "Glass Pack",
+            tab = ShopTab.Pixels,
             description = "Adds see-through Glass pixels to the random spawn pool.",
             requiresPackIndex = requiresRgbIndex,
             costs = new[]
@@ -232,6 +248,7 @@ public class PixelShop : MonoBehaviour
         return new ShopPack
         {
             displayName = "Vacuum Pack",
+            tab = ShopTab.Pixels,
             description = "Adds a rare Vacuum pixel. Clicking it sucks up every old pixel and collects them again.",
             requiresPackIndex = requiresGlassIndex,
             costs = new[]
@@ -272,6 +289,7 @@ public class PixelShop : MonoBehaviour
         return new ShopPack
         {
             displayName = "Faster Clicking",
+            tab = ShopTab.Upgrades,
             description = "Auto clicker interval: {current}s  →  {next}s",
             requiresPackIndex = requiresAutoClickerIndex,
             upgradeEffect = UpgradeEffect.AutoClickerInterval,
@@ -292,6 +310,7 @@ public class PixelShop : MonoBehaviour
         return new ShopPack
         {
             displayName = "Multi-Click",
+            tab = ShopTab.Upgrades,
             description = "Clicks per auto click: {current}  →  {next}",
             requiresPackIndex = requiresAutoClickerIndex,
             upgradeEffect = UpgradeEffect.AutoClickerClicks,
@@ -311,6 +330,7 @@ public class PixelShop : MonoBehaviour
         return new ShopPack
         {
             displayName = "Auto Clicker",
+            tab = ShopTab.Upgrades,
             description = "Clicks the cube for you every {interval} seconds.",
             costs = new[]
             {
@@ -415,6 +435,9 @@ public class PixelShop : MonoBehaviour
     [Tooltip("Panel width (canvas units).")]
     [SerializeField] private float panelWidth = 900f;
 
+    [Tooltip("Total height of the panel. Lists taller than the space available scroll.")]
+    [SerializeField] private float panelHeight = 880f;
+
     [Tooltip("Height of each pack row.")]
     [SerializeField] private float rowHeight = 230f;
 
@@ -433,6 +456,51 @@ public class PixelShop : MonoBehaviour
     [Tooltip("Background colour of each pack row.")]
     [SerializeField] private Color rowColor = new Color(0.16f, 0.16f, 0.2f, 1f);
 
+    [Header("Tabs")]
+    [Tooltip("Tab that is open when the shop is first shown.")]
+    [SerializeField] private ShopTab startTab = ShopTab.Pixels;
+
+    [Tooltip("Label of the Pixels tab.")]
+    [SerializeField] private string pixelsTabText = "Pixels";
+
+    [Tooltip("Label of the Upgrades tab.")]
+    [SerializeField] private string upgradesTabText = "Upgrades";
+
+    [Tooltip("Label of the Consumables tab.")]
+    [SerializeField] private string consumablesTabText = "Consumables";
+
+    [Tooltip("Text shown when a tab has nothing to list yet.")]
+    [SerializeField] private string emptyTabText = "Nothing here yet.";
+
+    [Tooltip("Height of the tab buttons.")]
+    [SerializeField] private float tabHeight = 70f;
+
+    [Tooltip("Gap between the tab buttons.")]
+    [SerializeField] private float tabSpacing = 10f;
+
+    [Tooltip("Tab text size.")]
+    [SerializeField] private float tabFontSize = 34f;
+
+    [Tooltip("Colour of the selected tab.")]
+    [SerializeField] private Color tabActiveColor = new Color(0.2f, 0.45f, 0.9f, 1f);
+
+    [Tooltip("Colour of the other tabs.")]
+    [SerializeField] private Color tabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
+
+    [Header("Scrolling")]
+    [Tooltip("Mouse wheel / trackpad scroll speed.")]
+    [SerializeField] private float scrollSpeed = 60f;
+
+    [Tooltip("Width of the scrollbar (it hides when the list fits).")]
+    [SerializeField] private float scrollbarWidth = 24f;
+
+    [Tooltip("Scrollbar track colour.")]
+    [SerializeField] private Color scrollbarTrackColor = new Color(0.16f, 0.16f, 0.2f, 1f);
+
+    [Tooltip("Scrollbar handle colour.")]
+    [SerializeField] private Color scrollbarHandleColor = new Color(0.5f, 0.5f, 0.6f, 1f);
+
+    [Header("Panel Behaviour")]
     [Tooltip("Open the shop panel automatically the first time the button appears.")]
     [SerializeField] private bool openWhenFirstAvailable = false;
 
@@ -521,6 +589,11 @@ public class PixelShop : MonoBehaviour
     }
 
     private RectTransform panelRect;
+    private RectTransform contentRect;
+    private ScrollRect scrollRect;
+    private TMP_Text emptyLabel;
+    private Image[] tabImages;
+    private ShopTab currentTab = ShopTab.Pixels;
     private GameObject canvasRoot;
     private GameObject shopButtonObject;
     private GameObject panelObject;
@@ -893,13 +966,13 @@ public class PixelShop : MonoBehaviour
 
     private void BuildPanel(Transform parent)
     {
-        float height = headerHeight + panelPadding + packs.Length * (rowHeight + rowSpacing) + panelPadding - rowSpacing;
+        currentTab = startTab == ShopTab.Automatic ? ShopTab.Pixels : startTab;
 
         panelObject = new GameObject("Shop Panel", typeof(RectTransform), typeof(Image));
         panelObject.transform.SetParent(parent, false);
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
-        panelRect.sizeDelta = new Vector2(panelWidth, height);
+        panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
         panelRect.anchoredPosition = Vector2.zero;
         panelObject.GetComponent<Image>().color = panelColor;
 
@@ -921,12 +994,136 @@ public class PixelShop : MonoBehaviour
         cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
         close.onClick.AddListener(() => panelObject.SetActive(false));
 
-        // Pack rows
+        BuildTabs(panelObject.transform);
+        BuildScrollArea(panelObject.transform);
+
+        // Pack rows live inside the scrolling content.
         rows = new PackRow[packs.Length];
         for (int i = 0; i < packs.Length; i++)
-            rows[i] = BuildRow(panelObject.transform, i);
+            rows[i] = BuildRow(contentRect, i);
 
         panelObject.SetActive(false);
+    }
+
+    private void BuildTabs(Transform parent)
+    {
+        string[] names = { pixelsTabText, upgradesTabText, consumablesTabText };
+        ShopTab[] tabs = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables };
+        tabImages = new Image[tabs.Length];
+
+        GameObject bar = new GameObject("Tabs", typeof(RectTransform));
+        bar.transform.SetParent(parent, false);
+        RectTransform barRect = bar.GetComponent<RectTransform>();
+        barRect.anchorMin = new Vector2(0f, 1f);
+        barRect.anchorMax = new Vector2(1f, 1f);
+        barRect.pivot = new Vector2(0.5f, 1f);
+        barRect.sizeDelta = new Vector2(-panelPadding * 2f, tabHeight);
+        barRect.anchoredPosition = new Vector2(0f, -headerHeight);
+
+        float slice = 1f / tabs.Length;
+        for (int i = 0; i < tabs.Length; i++)
+        {
+            Button tabButton = CreateButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero,
+                                            tabInactiveColor, textColor, tabFontSize, out _, out tabImages[i]);
+            RectTransform rt = tabButton.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(i * slice, 0f);
+            rt.anchorMax = new Vector2((i + 1) * slice, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(i == 0 ? 0f : tabSpacing * 0.5f, 0f);
+            rt.offsetMax = new Vector2(i == tabs.Length - 1 ? 0f : -tabSpacing * 0.5f, 0f);
+
+            ShopTab captured = tabs[i];
+            tabButton.onClick.AddListener(() => SelectTab(captured));
+        }
+    }
+
+    private void BuildScrollArea(Transform parent)
+    {
+        float top = headerHeight + tabHeight + panelPadding * 0.5f;
+
+        // Scroll view (also the viewport; the transparent image lets empty space take wheel/drag input).
+        GameObject scrollGo = new GameObject("Scroll View", typeof(RectTransform), typeof(Image),
+                                             typeof(RectMask2D), typeof(ScrollRect));
+        scrollGo.transform.SetParent(parent, false);
+        scrollGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+
+        RectTransform sr = scrollGo.GetComponent<RectTransform>();
+        sr.anchorMin = Vector2.zero;
+        sr.anchorMax = Vector2.one;
+        sr.pivot = new Vector2(0.5f, 0.5f);
+        sr.offsetMin = new Vector2(panelPadding, panelPadding);
+        sr.offsetMax = new Vector2(-(panelPadding + scrollbarWidth + 8f), -top);
+
+        // Content
+        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
+        contentGo.transform.SetParent(scrollGo.transform, false);
+        contentRect = contentGo.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.sizeDelta = Vector2.zero;
+        contentRect.anchoredPosition = Vector2.zero;
+
+        // Scrollbar
+        GameObject barGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        barGo.transform.SetParent(parent, false);
+        barGo.GetComponent<Image>().color = scrollbarTrackColor;
+        RectTransform br = barGo.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(1f, 0f);
+        br.anchorMax = new Vector2(1f, 1f);
+        br.pivot = new Vector2(1f, 0.5f);
+        br.offsetMin = new Vector2(-(panelPadding + scrollbarWidth), panelPadding);
+        br.offsetMax = new Vector2(-panelPadding, -top);
+
+        GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleGo.transform.SetParent(barGo.transform, false);
+        Image handleImage = handleGo.GetComponent<Image>();
+        handleImage.color = scrollbarHandleColor;
+        RectTransform hr = handleGo.GetComponent<RectTransform>();
+        hr.offsetMin = hr.offsetMax = Vector2.zero;
+
+        Scrollbar scrollbar = barGo.GetComponent<Scrollbar>();
+        scrollbar.handleRect = hr;
+        scrollbar.targetGraphic = handleImage;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+        // Scroll behaviour
+        scrollRect = scrollGo.GetComponent<ScrollRect>();
+        scrollRect.content = contentRect;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = scrollSpeed;
+        scrollRect.verticalScrollbar = scrollbar;
+        scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
+        // "Nothing here yet" message for empty tabs.
+        emptyLabel = CreateText(scrollGo.transform, "Empty", emptyTabText, descriptionFontSize + 6f,
+                                TextAlignmentOptions.Center, FontStyles.Italic);
+        emptyLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
+        RectTransform er = emptyLabel.rectTransform;
+        er.anchorMin = Vector2.zero;
+        er.anchorMax = Vector2.one;
+        er.offsetMin = er.offsetMax = Vector2.zero;
+        emptyLabel.gameObject.SetActive(false);
+    }
+
+    /// <summary>Switches to a tab and scrolls back to the top.</summary>
+    public void SelectTab(ShopTab tab)
+    {
+        if (tab == ShopTab.Automatic) tab = ShopTab.Pixels;
+        currentTab = tab;
+        if (contentRect != null) contentRect.anchoredPosition = Vector2.zero;
+        if (scrollRect != null) scrollRect.StopMovement();
+        if (rows != null) RefreshRows();
+    }
+
+    /// <summary>The tab a pack is listed on (resolves 'Automatic').</summary>
+    private ShopTab TabOf(ShopPack pack)
+    {
+        if (pack.tab != ShopTab.Automatic) return pack.tab;
+        bool upgrade = IsLeveled(pack) || pack.unlocksAutoClicker || pack.upgradeEffect != UpgradeEffect.None;
+        return upgrade ? ShopTab.Upgrades : ShopTab.Pixels;
     }
 
     private PackRow BuildRow(Transform parent, int index)
@@ -942,8 +1139,8 @@ public class PixelShop : MonoBehaviour
         rr.anchorMin = new Vector2(0f, 1f);
         rr.anchorMax = new Vector2(1f, 1f);
         rr.pivot = new Vector2(0.5f, 1f);
-        rr.sizeDelta = new Vector2(-panelPadding * 2f, rowHeight);
-        rr.anchoredPosition = new Vector2(0f, -(headerHeight + index * (rowHeight + rowSpacing))); // re-laid out in RefreshRows
+        rr.sizeDelta = new Vector2(0f, rowHeight);
+        rr.anchoredPosition = new Vector2(0f, -(index * (rowHeight + rowSpacing))); // re-laid out in RefreshRows
         row.rect = rr;
 
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
@@ -1037,8 +1234,16 @@ public class PixelShop : MonoBehaviour
 
     private void RefreshRows()
     {
-        float y = headerHeight;
+        float y = 0f;
         int visibleCount = 0;
+
+        // Tab buttons: highlight the open one.
+        if (tabImages != null)
+        {
+            ShopTab[] order = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables };
+            for (int t = 0; t < tabImages.Length; t++)
+                tabImages[t].color = order[t] == currentTab ? tabActiveColor : tabInactiveColor;
+        }
 
         for (int i = 0; i < packs.Length && i < rows.Length; i++)
         {
@@ -1048,7 +1253,7 @@ public class PixelShop : MonoBehaviour
 
             bool owned = IsPurchased(i); // one-time: bought. upgrade: max level.
             bool requirementMet = IsRequirementMet(i);
-            bool visible = requirementMet || showLockedPacks || HasPack(i);
+            bool visible = TabOf(pack) == currentTab && (requirementMet || showLockedPacks || HasPack(i));
 
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
@@ -1074,9 +1279,13 @@ public class PixelShop : MonoBehaviour
             row.buyImage.color = canBuy ? buyColor : disabledColor;
         }
 
-        // Panel height follows however many packs are visible.
-        float height = y - (visibleCount > 0 ? rowSpacing : 0f) + panelPadding;
-        panelRect.sizeDelta = new Vector2(panelWidth, height);
+        // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.
+        float contentHeight = visibleCount > 0 ? y - rowSpacing : 0f;
+        if (!Mathf.Approximately(contentRect.sizeDelta.y, contentHeight))
+            contentRect.sizeDelta = new Vector2(0f, contentHeight);
+
+        if (emptyLabel != null && emptyLabel.gameObject.activeSelf != (visibleCount == 0))
+            emptyLabel.gameObject.SetActive(visibleCount == 0);
     }
 
     /// <summary>Pack name, plus "Level 2/5" for upgrade packs.</summary>
