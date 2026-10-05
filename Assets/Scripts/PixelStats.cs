@@ -68,7 +68,7 @@ public class PixelStats : MonoBehaviour
 
     private void Update()
     {
-        if (!countTimeWhilePaused && PixelPauseMenu.IsPaused) return;
+        if (!countTimeWhilePaused && PixelPauseMenu.GameStopped) return;
         playSeconds += Time.unscaledDeltaTime;
     }
 

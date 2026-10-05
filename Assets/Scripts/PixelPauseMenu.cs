@@ -120,6 +120,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the cube pulsing tick box (accessibility).")]
     [SerializeField] private string pulsingLabel = "Cube pulsing";
 
+    [Tooltip("Label of the tick box that decides whether the pause menu freezes the game.")]
+    [SerializeField] private string pauseStopsLabel = "Pausing stops the game";
+
     [Tooltip("Label of the tick box that keeps the game running while you are alt-tabbed.")]
     [SerializeField] private string runInBackgroundLabel = "Run when alt-tabbed";
 
@@ -206,11 +209,17 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>True while the game is paused by this menu.</summary>
     public static bool IsPaused { get; private set; }
 
+    /// <summary>True while the menu is open AND it has frozen the game (see the 'Pausing stops the game' setting).</summary>
+    public static bool GameStopped { get; private set; }
+
+    private const string PrefPauseStops = "PixelClicker.Setting.PauseStopsGame";
+    private bool pauseStopsGame = true;
+
     private GameObject canvasRoot;
     private GameObject menuRoot;
     private GameObject mainPanel, statsPanel, settingsPanel;
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
-    private Toggle rotationToggle, pulsingToggle, backgroundToggle;
+    private Toggle rotationToggle, pulsingToggle, backgroundToggle, pauseStopsToggle;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -224,6 +233,8 @@ public class PixelPauseMenu : MonoBehaviour
 #endif
         }
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont; // one shared font
+
+        pauseStopsGame = PlayerPrefs.GetInt(PrefPauseStops, 1) != 0;
 
         if (saveGame == null)
         {
@@ -305,19 +316,29 @@ public class PixelPauseMenu : MonoBehaviour
         if (paused == IsPaused) return;
         IsPaused = paused;
 
-        if (paused)
+        ApplyFreeze();
+
+        if (menuRoot != null) menuRoot.SetActive(paused);
+        if (paused) ShowView(mainPanel);
+    }
+
+    /// <summary>Freezes or unfreezes time to match 'menu open' and the 'Pausing stops the game' setting.</summary>
+    private void ApplyFreeze()
+    {
+        bool freeze = IsPaused && pauseStopsGame;
+
+        if (freeze && !GameStopped)
         {
             previousTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
             Time.timeScale = 0f;
         }
-        else
+        else if (!freeze && GameStopped)
         {
             Time.timeScale = previousTimeScale;
         }
 
-        if (pauseAudio) AudioListener.pause = paused;
-        if (menuRoot != null) menuRoot.SetActive(paused);
-        if (paused) ShowView(mainPanel);
+        GameStopped = freeze;
+        if (pauseAudio) AudioListener.pause = freeze;
     }
 
     private bool PauseKeyPressed()
@@ -514,6 +535,7 @@ public class PixelPauseMenu : MonoBehaviour
             rotationToggle.SetIsOnWithoutNotify(clicker.AllowRotation);
             pulsingToggle.SetIsOnWithoutNotify(clicker.AllowPulsing);
             backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
+            pauseStopsToggle.SetIsOnWithoutNotify(pauseStopsGame);
         }
     }
 
@@ -647,6 +669,12 @@ public class PixelPauseMenu : MonoBehaviour
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         backgroundToggle = AddToggleRow(settingsPanel.transform, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
                                         on => { if (clicker != null) clicker.RunInBackground = on; }, ref y);
+        pauseStopsToggle = AddToggleRow(settingsPanel.transform, pauseStopsLabel, pauseStopsGame, on =>
+        {
+            pauseStopsGame = on;
+            PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
+            ApplyFreeze(); // takes effect right away, even though the menu is open
+        }, ref y);
         FinishSectionPanel(settingsPanel, y);
     }
 
