@@ -184,6 +184,19 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Hint text colour.")]
     [SerializeField] private Color guideColor = new Color(1f, 1f, 1f, 0.9f);
 
+    [Range(0f, 1f)]
+    [Tooltip("Opacity of the black box behind the guide text. 0 = no box, 1 = solid black.")]
+    [SerializeField] private float guideBackgroundOpacity = 0.6f;
+
+    [Tooltip("Colour of the box behind the guide text (its alpha is ignored - use Guide Background Opacity).")]
+    [SerializeField] private Color guideBackgroundColor = Color.black;
+
+    [Tooltip("Space between the guide text and the edge of its box (x = left/right, y = top/bottom).")]
+    [SerializeField] private Vector2 guidePadding = new Vector2(36f, 14f);
+
+    [Tooltip("Sorting order of the guide's canvas. Keep it BELOW the shop (150) so the shop covers the guide.")]
+    [SerializeField] private int guideSortingOrder = 50;
+
     [Tooltip("Distance of the hint from the top of the screen (canvas units). Keep it below the potion timer.")]
     [SerializeField] private float guideTopMargin = 110f;
 
@@ -377,6 +390,9 @@ public class PixelUI : MonoBehaviour
     private GameObject[] potionRowObjects;
     private TMP_Text hudLabel;
     private TMP_Text guideLabel;
+    private GameObject guideRoot;
+    private Image guideBackground;
+    private GameObject guideCanvasRoot;
     private float unlockTimer;
     private string unlockMessage;
     private Color unlockColor = Color.white;
@@ -459,6 +475,7 @@ public class PixelUI : MonoBehaviour
     {
         if (autoRoot != null) Destroy(autoRoot);
         if (popupRoot != null) Destroy(popupRoot);
+        if (guideCanvasRoot != null) Destroy(guideCanvasRoot);
         if (clicker != null)
         {
             clicker.PixelCollected -= OnPixelCollected;
@@ -1097,7 +1114,28 @@ public class PixelUI : MonoBehaviour
 
     private void BuildGuide()
     {
-        guideLabel = MakeText(popupCanvasRect, "Tier Guide", "", guideFontSize,
+        // Own canvas, sorted below the shop (150) so the shop panel covers the guide.
+        guideCanvasRoot = new GameObject("PixelUI Guide");
+        Canvas canvas = guideCanvasRoot.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = guideSortingOrder;
+
+        CanvasScaler scaler = guideCanvasRoot.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = referenceResolution;
+        scaler.matchWidthOrHeight = 0.5f;
+
+        // Box behind the text; resized to fit the text in UpdateGuide.
+        guideRoot = new GameObject("Tier Guide", typeof(RectTransform), typeof(Image));
+        guideRoot.transform.SetParent(guideCanvasRoot.transform, false);
+        guideBackground = guideRoot.GetComponent<Image>();
+        guideBackground.raycastTarget = false;
+
+        RectTransform rr = guideRoot.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 1f);
+        rr.anchoredPosition = new Vector2(0f, -guideTopMargin);
+
+        guideLabel = MakeText(guideRoot.transform, "Text", "", guideFontSize,
                               TextAlignmentOptions.Center, FontStyles.Bold, guideColor);
         if (popupOutlineWidth > 0f)
         {
@@ -1106,10 +1144,11 @@ public class PixelUI : MonoBehaviour
         }
 
         RectTransform rt = guideLabel.rectTransform;
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(1500f, Mathf.Max(guideFontSize, unlockFontSize) * 1.5f);
-        rt.anchoredPosition = new Vector2(0f, -guideTopMargin);
-        guideLabel.gameObject.SetActive(false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+
+        guideRoot.SetActive(false);
     }
 
     private void OnTierUnlocked(int index)
@@ -1154,6 +1193,7 @@ public class PixelUI : MonoBehaviour
         string text = null;
         Color color = guideColor;
         float size = guideFontSize;
+        float fade = 1f;
 
         if (unlockTimer > 0f)
         {
@@ -1162,7 +1202,7 @@ public class PixelUI : MonoBehaviour
             size = unlockFontSize;
             color = unlockColor;
             // Fade over the last second.
-            color.a *= Mathf.Clamp01(unlockTimer / Mathf.Min(1f, Mathf.Max(0.01f, unlockSeconds)));
+            fade = Mathf.Clamp01(unlockTimer / Mathf.Min(1f, Mathf.Max(0.01f, unlockSeconds)));
         }
         else if (showTierGuide)
         {
@@ -1170,12 +1210,22 @@ public class PixelUI : MonoBehaviour
         }
 
         bool visible = !string.IsNullOrEmpty(text);
-        if (guideLabel.gameObject.activeSelf != visible) guideLabel.gameObject.SetActive(visible);
+        if (guideRoot.activeSelf != visible) guideRoot.SetActive(visible);
         if (!visible) return;
 
         guideLabel.text = text;
         guideLabel.fontSize = size;
+        color.a *= fade;
         guideLabel.color = color;
+
+        Color bg = guideBackgroundColor;
+        bg.a = guideBackgroundOpacity * fade;
+        guideBackground.color = bg;
+
+        // Fit the box around the text.
+        Vector2 preferred = guideLabel.GetPreferredValues(text);
+        guideRoot.GetComponent<RectTransform>().sizeDelta =
+            new Vector2(preferred.x + guidePadding.x * 2f, preferred.y + guidePadding.y * 2f);
     }
 
     private void BuildActiveHud()
