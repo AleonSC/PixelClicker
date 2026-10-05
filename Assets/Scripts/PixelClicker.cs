@@ -38,6 +38,7 @@ public class PixelClicker : MonoBehaviour
         Glass = 6,
         Vacuum = 7,
         Obsidian = 8,
+        Luminescent = 9,
     }
 
     /// <summary>How a tier becomes available.</summary>
@@ -82,6 +83,14 @@ public class PixelClicker : MonoBehaviour
                  "(works with the Standard and URP Lit shaders). The tier colour's alpha sets how see-through it is.")]
         public bool translucent = false;
 
+        [Tooltip("Make the pixel glow (emission) and light up its surroundings while this tier is active. " +
+                 "Works with the Standard and URP Lit shaders.")]
+        public bool glow = false;
+
+        [Min(0f)]
+        [Tooltip("How bright the glow is (multiplies the tier colour). 1 = same as the colour, 3+ = strongly glowing.")]
+        public float glowIntensity = 2f;
+
         [Tooltip("Optional: a material to use for this tier instead of the pixel's normal one (e.g. your own glass material). Overrides 'Translucent'.")]
         public Material materialOverride;
 
@@ -121,6 +130,26 @@ public class PixelClicker : MonoBehaviour
     // ------------------------------------------------------------------
     // Inspector fields
     // ------------------------------------------------------------------
+
+    [Header("Glow (tiers with Glow ticked)")]
+    [Range(0f, 1f)]
+    [Tooltip("How much the glow breathes in and out. 0 = steady glow.")]
+    [SerializeField] private float glowBreathAmount = 0.3f;
+
+    [Min(0f)]
+    [Tooltip("Speed of the glow breathing (cycles per second).")]
+    [SerializeField] private float glowBreathSpeed = 0.8f;
+
+    [Tooltip("Also add a real light at the pixel so a glowing tier lights up nearby old pixels and the scene.")]
+    [SerializeField] private bool glowCastsLight = true;
+
+    [Min(0f)]
+    [Tooltip("Brightness of that light (multiplied by the tier's Glow Intensity).")]
+    [SerializeField] private float glowLightIntensity = 1.2f;
+
+    [Min(0.1f)]
+    [Tooltip("How far the light reaches.")]
+    [SerializeField] private float glowLightRange = 6f;
 
     [Header("Tough Pixels (Clicks To Collect > 1)")]
     [Range(0f, 0.6f)]
@@ -363,6 +392,10 @@ public class PixelClicker : MonoBehaviour
     private Color currentColor = Color.white;
     private Material defaultMaterial;
     private Material transparentMaterial;
+    private readonly System.Collections.Generic.Dictionary<Material, Material> glowMaterials =
+        new System.Collections.Generic.Dictionary<Material, Material>();
+    private float activeGlow;      // 0 = the current tier doesn't glow
+    private Light glowLight;
     private Transform hitbox;
     private int currentTierIndex; // tier of the pixel currently on screen (random mode)
 
@@ -842,6 +875,16 @@ public class PixelClicker : MonoBehaviour
             pulsed.a = currentColor.a; // brightness only, keep see-through tiers see-through
             ApplyPixelColor(pulsed, false);
         }
+        else if (activeGlow > 0f)
+        {
+            ApplyPixelColor(currentColor, false); // keeps the glow breathing
+        }
+
+        if (glowLight != null && glowLight.enabled)
+        {
+            float breath = 1f + glowBreathAmount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f);
+            glowLight.intensity = glowLightIntensity * activeGlow * breath;
+        }
     }
 
     private void ApplyPixelColor(Color color, bool remember = true)
@@ -852,6 +895,18 @@ public class PixelClicker : MonoBehaviour
         propertyBlock.SetColor(colorPropertyId, color);
         // Also set the built-in name so either pipeline works if the property name is left default.
         propertyBlock.SetColor("_Color", color);
+
+        // Glowing tiers: emission follows the colour (and breathes). Black emission = off for everything else.
+        if (activeGlow > 0f)
+        {
+            float breath = 1f + glowBreathAmount * Mathf.Sin(Time.time * glowBreathSpeed * Mathf.PI * 2f);
+            Color emission = new Color(color.r, color.g, color.b, 1f) * (activeGlow * breath);
+            propertyBlock.SetColor("_EmissionColor", emission);
+        }
+        else
+        {
+            propertyBlock.SetColor("_EmissionColor", Color.black);
+        }
         pixelRenderer.SetPropertyBlock(propertyBlock);
     }
 
@@ -868,13 +923,52 @@ public class PixelClicker : MonoBehaviour
                 wanted = transparentMaterial;
             }
 
+            // Glowing tiers need a copy of the material with emission switched on.
+            if (tier.glow && tier.materialOverride == null && wanted != null) wanted = GetGlowMaterial(wanted);
+
             if (wanted != null && pixelRenderer.sharedMaterial != wanted) pixelRenderer.sharedMaterial = wanted;
         }
 
+        activeGlow = tier.glow ? tier.glowIntensity : 0f;
+        UpdateGlowLight(tier);
         ApplyPixelColor(tier.color);
     }
 
     /// <summary>Copies a material and switches it to alpha blending (Standard or URP Lit/Unlit).</summary>
+    /// <summary>A copy of the material with emission enabled (cached per source material).</summary>
+    private Material GetGlowMaterial(Material source)
+    {
+        if (glowMaterials.TryGetValue(source, out Material cached) && cached != null) return cached;
+
+        Material copy = new Material(source) { name = source.name + " (Glow)" };
+        copy.EnableKeyword("_EMISSION");
+        copy.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+        glowMaterials[source] = copy;
+        return copy;
+    }
+
+    /// <summary>Creates / updates / hides the point light that goes with a glowing tier.</summary>
+    private void UpdateGlowLight(PixelTier tier)
+    {
+        bool wanted = tier.glow && glowCastsLight && pixelTransform != null;
+        if (wanted && glowLight == null)
+        {
+            GameObject go = new GameObject("Glow Light");
+            go.transform.SetParent(pixelTransform, false);
+            glowLight = go.AddComponent<Light>();
+            glowLight.type = LightType.Point;
+            glowLight.shadows = LightShadows.None;
+        }
+
+        if (glowLight == null) return;
+        glowLight.enabled = wanted;
+        if (!wanted) return;
+
+        glowLight.color = new Color(tier.color.r, tier.color.g, tier.color.b, 1f);
+        glowLight.range = glowLightRange;
+        glowLight.intensity = glowLightIntensity * tier.glowIntensity;
+    }
+
     private static Material BuildTransparentMaterial(Material source)
     {
         Material m = new Material(source) { name = source.name + " (Transparent)" };

@@ -140,8 +140,13 @@ public class PixelShop : MonoBehaviour
     [SerializeField] private ShopPack[] packs =
     {
         CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0), CreateVacuumPack(2),
-        CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1), CreateObsidianPack(2)
+        CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1), CreateObsidianPack(2),
+        CreateLuminescentPack(6)
     };
+
+    [Tooltip("If none of the packs unlocks the Luminescent pixel (e.g. this component was added before it existed), " +
+             "add the default Luminescent pack at startup.")]
+    [SerializeField] private bool addDefaultLuminescentPack = true;
 
     [Tooltip("If none of the packs unlocks the Obsidian pixel (e.g. this component was added before it existed), " +
              "add the default Obsidian pack at startup.")]
@@ -298,6 +303,33 @@ public class PixelShop : MonoBehaviour
                     type = PixelClicker.PixelType.Obsidian, displayName = "Obsidian Pixels",
                     color = new Color(0.22f, 0.1f, 0.35f, 1f),
                     amountPerClick = 5, clicksToCollect = 5, spawnWeight = 0.4f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>Default Luminescent pack: a glowing pixel that pays more. Needs the Obsidian pack first.</summary>
+    private static ShopPack CreateLuminescentPack(int requiresObsidianIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Luminescent Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the glowing Luminescent pixel, which pays more per click.",
+            requiresPackIndex = requiresObsidianIndex,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 200 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 25 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Luminescent, displayName = "Luminescent Pixels",
+                    color = new Color(0.4f, 1f, 0.7f, 1f), glow = true, glowIntensity = 2.5f,
+                    amountPerClick = 3, spawnWeight = 0.5f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
@@ -842,6 +874,22 @@ public class PixelShop : MonoBehaviour
                                                              Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
                 Array.Resize(ref packs, packs.Length + 1);
                 packs[packs.Length - 1] = CreateObsidianPack(glassIndex);
+            }
+        }
+
+        if (addDefaultLuminescentPack)
+        {
+            bool hasLuminescent = false;
+            foreach (ShopPack pack in packs)
+                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Luminescent))
+                    hasLuminescent = true;
+
+            if (!hasLuminescent)
+            {
+                int obsidianIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                                Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Obsidian));
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateLuminescentPack(obsidianIndex);
             }
         }
 
