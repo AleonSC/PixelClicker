@@ -393,6 +393,7 @@ public class PixelClicker : MonoBehaviour
 
     private const string PrefRotation = "PixelClicker.Setting.Rotation";
     private const string PrefPulsing = "PixelClicker.Setting.Pulsing";
+    private const string PrefBackground = "PixelClicker.Setting.RunInBackground";
     private bool allowRotation = true;
     private bool allowPulsing = true;
 
@@ -401,6 +402,13 @@ public class PixelClicker : MonoBehaviour
     {
         get => allowRotation;
         set { allowRotation = value; PlayerPrefs.SetInt(PrefRotation, value ? 1 : 0); }
+    }
+
+    /// <summary>Player setting: keep the game running while its window is not in focus (alt-tabbed). Remembered between sessions.</summary>
+    public bool RunInBackground
+    {
+        get => Application.runInBackground;
+        set { Application.runInBackground = value; PlayerPrefs.SetInt(PrefBackground, value ? 1 : 0); }
     }
 
     /// <summary>Player setting (accessibility): turns the cube's pulsing (size and brightness) on or off. Remembered between sessions.</summary>
@@ -489,6 +497,7 @@ public class PixelClicker : MonoBehaviour
         propertyBlock = new MaterialPropertyBlock();
         allowRotation = PlayerPrefs.GetInt(PrefRotation, 1) != 0;
         allowPulsing = PlayerPrefs.GetInt(PrefPulsing, 1) != 0;
+        if (PlayerPrefs.HasKey(PrefBackground)) Application.runInBackground = PlayerPrefs.GetInt(PrefBackground) != 0;
         colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
         // Apply start-unlocked flags.

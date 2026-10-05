@@ -120,6 +120,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the cube pulsing tick box (accessibility).")]
     [SerializeField] private string pulsingLabel = "Cube pulsing";
 
+    [Tooltip("Label of the tick box that keeps the game running while you are alt-tabbed.")]
+    [SerializeField] private string runInBackgroundLabel = "Run when alt-tabbed";
+
     [Tooltip("Label of the total clicks stat.")]
     [SerializeField] private string totalClicksLabel = "Total clicks";
 
@@ -207,7 +210,7 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject menuRoot;
     private GameObject mainPanel, statsPanel, settingsPanel;
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
-    private Toggle rotationToggle, pulsingToggle;
+    private Toggle rotationToggle, pulsingToggle, backgroundToggle;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -510,6 +513,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             rotationToggle.SetIsOnWithoutNotify(clicker.AllowRotation);
             pulsingToggle.SetIsOnWithoutNotify(clicker.AllowPulsing);
+            backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
         }
     }
 
@@ -641,6 +645,8 @@ public class PixelPauseMenu : MonoBehaviour
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
         pulsingToggle = AddToggleRow(settingsPanel.transform, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
+        backgroundToggle = AddToggleRow(settingsPanel.transform, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
+                                        on => { if (clicker != null) clicker.RunInBackground = on; }, ref y);
         FinishSectionPanel(settingsPanel, y);
     }
 
