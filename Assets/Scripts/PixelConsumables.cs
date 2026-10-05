@@ -50,10 +50,22 @@ public class PixelConsumables : MonoBehaviour
         public int owned = 0;
     }
 
-    /// <summary>A consumable object you place in the world (the Vacuum Device).</summary>
+    /// <summary>What a placeable device does.</summary>
+    public enum DeviceKind
+    {
+        /// <summary>Pulls old pixels in and collects them again.</summary>
+        Vacuum = 0,
+        /// <summary>Gently blows old pixels along a cone in front of it.</summary>
+        Fan = 1,
+    }
+
+    /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
     [Serializable]
     public class Device
     {
+        [Tooltip("What this device does.")]
+        public DeviceKind kind = DeviceKind.Vacuum;
+
         [Tooltip("Name shown in the shop and the inventory.")]
         public string displayName = "Vacuum Device";
 
@@ -72,7 +84,7 @@ public class PixelConsumables : MonoBehaviour
         public float durationSeconds = 30f;
 
         [Min(0.1f)]
-        [Tooltip("How far (world units) from the device old pixels are pulled in.")]
+        [Tooltip("Reach (world units). Vacuum: how far old pixels are pulled in from. Fan: how long the cone is.")]
         public float radius = 4f;
 
         [Min(0f)]
@@ -82,6 +94,31 @@ public class PixelConsumables : MonoBehaviour
         [Min(0.05f)]
         [Tooltip("A pixel this close to the top of the device is collected.")]
         public float absorbDistance = 0.7f;
+
+        [Header("Fan only")]
+        [Range(10f, 160f)]
+        [Tooltip("Fan: opening angle of the cone (degrees, measured across the whole cone).")]
+        public float coneAngle = 55f;
+
+        [Min(0.5f)]
+        [Tooltip("Fan: how high above the floor the cone reaches (world units).")]
+        public float coneHeight = 2.5f;
+
+        [Min(0f)]
+        [Tooltip("Fan: how hard pixels are pushed along the cone (acceleration; friction needs about 6 to get things sliding).")]
+        public float blowAcceleration = 10f;
+
+        [Min(0f)]
+        [Tooltip("Fan: extra upward push so pixels hop a little instead of only sliding.")]
+        public float liftAcceleration = 3f;
+
+        [Tooltip("Fan: how fast the blades spin (degrees per second).")]
+        public float bladeSpinDegrees = 900f;
+
+        [Header("Look and placing")]
+        [TextArea(1, 2)]
+        [Tooltip("Message while placing. {0} = device name. Empty = the default message from Pixel UI.")]
+        public string placingMessage = "";
 
         [Tooltip("Colour of the cylinder.")]
         public Color color = new Color(0.65f, 0.3f, 0.95f, 1f);
@@ -127,6 +164,14 @@ public class PixelConsumables : MonoBehaviour
     [Range(0f, 1f)]
     [Tooltip("Surfaces steeper than this can't be placed on (1 = only perfectly flat, 0 = anything).")]
     [SerializeField] private float minSurfaceNormalY = 0.5f;
+
+    [Min(1f)]
+    [Tooltip("Fan: degrees turned per mouse-wheel notch while placing.")]
+    [SerializeField] private float rotateStepDegrees = 15f;
+
+    [Min(1f)]
+    [Tooltip("Fan: degrees per second turned while holding Q or E.")]
+    [SerializeField] private float rotateSpeedDegrees = 120f;
 
     [Range(0.05f, 1f)]
     [Tooltip("How see-through the cylinder is while you are choosing where to put it.")]
@@ -230,7 +275,28 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
-    private static Device[] CreateDefaultDevices() => new[] { CreateDefaultDevice() };
+    private static Device CreateDefaultFan()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Fan,
+            displayName = "Fan",
+            description = "Place it and turn it. It gently blows old pixels along a cone up to {radius} units long for {duration} seconds.",
+            requiredType = PixelClicker.PixelType.Glass,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 150 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Green, amount = 100 },
+            },
+            radius = 6f,
+            color = new Color(0.4f, 0.85f, 1f, 1f),
+            bodyDiameter = 0.9f,
+            bodyHeight = 0.9f,
+            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
+        };
+    }
+
+    private static Device[] CreateDefaultDevices() => new[] { CreateDefaultDevice(), CreateDefaultFan() };
 
     private static Potion[] CreateDefaultPotions()
     {
@@ -246,10 +312,19 @@ public class PixelConsumables : MonoBehaviour
     {
         bool added = false;
 
-        if (addDefaultDevices && (devices == null || devices.Length == 0))
+        if (addDefaultDevices)
         {
-            devices = CreateDefaultDevices();
-            added = true;
+            if (devices == null || devices.Length == 0)
+            {
+                devices = CreateDefaultDevices();
+                added = true;
+            }
+            else if (!Array.Exists(devices, d => d != null && d.kind == DeviceKind.Fan))
+            {
+                Array.Resize(ref devices, devices.Length + 1);
+                devices[devices.Length - 1] = CreateDefaultFan();
+                added = true;
+            }
         }
 
         if (!addDefaultPotions) return added;
@@ -471,6 +546,11 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>Name of the device being placed (empty when not placing).</summary>
     public string PlacingName => IsPlacing ? devices[placingIndex].displayName : "";
 
+    /// <summary>The device's own placing message (empty = use the default one).</summary>
+    public string PlacingMessage => IsPlacing ? devices[placingIndex].placingMessage : "";
+
+    private float placingYaw;
+
     /// <summary>Starts placing a device: a cylinder follows the mouse until you click the floor. Returns false if you own none.</summary>
     public bool BeginPlacement(int deviceIndex)
     {
@@ -479,7 +559,11 @@ public class PixelConsumables : MonoBehaviour
 
         placingIndex = deviceIndex;
         placeStartFrame = Time.frameCount;
-        preview = BuildDeviceObject(devices[deviceIndex], true, out _, out _);
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        placingYaw = cam != null ? cam.transform.eulerAngles.y : 0f; // a fan starts out blowing away from the camera
+        preview = devices[deviceIndex].kind == DeviceKind.Fan
+            ? BuildFanObject(devices[deviceIndex], true, out _, out _)
+            : BuildDeviceObject(devices[deviceIndex], true, out _, out _);
         preview.SetActive(false);
         clicker.SetClicksBlocked(true); // so the placing click doesn't also hit the cube
         return true;
@@ -514,6 +598,13 @@ public class PixelConsumables : MonoBehaviour
         preview.SetActive(hasPoint);
         if (hasPoint) preview.transform.position = point;
 
+        // A fan can be turned with the mouse wheel or Q / E.
+        if (devices[placingIndex].kind == DeviceKind.Fan)
+        {
+            placingYaw += TurnInput();
+            preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
+        }
+
         if (LeftPressed() && hasPoint && !PointerOverUI()) PlaceDevice(point);
         else if (RightPressed()) CancelPlacement();
     }
@@ -524,12 +615,25 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         d.owned = Mathf.Max(0, d.owned - 1);
 
-        GameObject root = BuildDeviceObject(d, false, out Transform suckPoint, out TextMeshPro timer);
-        root.transform.position = point;
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (d.kind == DeviceKind.Fan)
+        {
+            GameObject fan = BuildFanObject(d, false, out Transform blades, out TextMeshPro fanTimer);
+            fan.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, placingYaw, 0f));
 
-        PixelVacuumDevice device = root.AddComponent<PixelVacuumDevice>();
-        device.Init(clicker, clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main, suckPoint, timer,
-                    timerFormat, d.durationSeconds, d.radius, d.pullAcceleration, d.absorbDistance, shrinkSeconds);
+            PixelFanDevice fanDevice = fan.AddComponent<PixelFanDevice>();
+            fanDevice.Init(clicker, cam, blades, fanTimer, timerFormat, d.durationSeconds, d.radius, d.coneAngle,
+                           d.coneHeight, d.blowAcceleration, d.liftAcceleration, d.bladeSpinDegrees, shrinkSeconds);
+        }
+        else
+        {
+            GameObject root = BuildDeviceObject(d, false, out Transform suckPoint, out TextMeshPro timer);
+            root.transform.position = point;
+
+            PixelVacuumDevice device = root.AddComponent<PixelVacuumDevice>();
+            device.Init(clicker, cam, suckPoint, timer, timerFormat, d.durationSeconds, d.radius, d.pullAcceleration,
+                        d.absorbDistance, shrinkSeconds);
+        }
 
         EndPlacement();
         onDevicePlaced?.Invoke(index);
@@ -626,6 +730,142 @@ public class PixelConsumables : MonoBehaviour
         }
 
         return root;
+    }
+
+    /// <summary>
+    /// Builds the fan: a post, a round housing, spinning blades, a floor wedge showing the blown area and (for a real
+    /// fan) the timer. The fan blows along the object's forward (+Z) direction.
+    /// </summary>
+    private GameObject BuildFanObject(Device d, bool isPreview, out Transform blades, out TextMeshPro timer)
+    {
+        GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
+        float opacity = isPreview ? previewOpacity : 1f;
+
+        Color bodyColor = d.color;
+        bodyColor.a = opacity;
+        Color darkColor = new Color(d.color.r * 0.45f, d.color.g * 0.45f, d.color.b * 0.45f, opacity);
+
+        // Post.
+        GameObject post = MakePrimitive(PrimitiveType.Cylinder, "Post", root.transform, darkColor, isPreview);
+        post.transform.localScale = new Vector3(0.12f, d.bodyHeight * 0.5f, 0.12f);
+        post.transform.localPosition = new Vector3(0f, d.bodyHeight * 0.5f, 0f);
+
+        // Head: a flat round housing facing forward.
+        GameObject head = new GameObject("Head");
+        head.transform.SetParent(root.transform, false);
+        head.transform.localPosition = new Vector3(0f, d.bodyHeight, 0f);
+
+        GameObject housing = MakePrimitive(PrimitiveType.Cylinder, "Housing", head.transform, darkColor, isPreview);
+        housing.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        housing.transform.localScale = new Vector3(d.bodyDiameter, 0.05f, d.bodyDiameter);
+
+        // Blades: three bars crossing at the centre = six blade tips, spun around the forward axis.
+        GameObject bladeRoot = new GameObject("Blades");
+        bladeRoot.transform.SetParent(head.transform, false);
+        bladeRoot.transform.localPosition = new Vector3(0f, 0f, 0.08f);
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject blade = MakePrimitive(PrimitiveType.Cube, "Blade " + i, bladeRoot.transform, bodyColor, isPreview);
+            blade.transform.localRotation = Quaternion.Euler(0f, 0f, i * 60f);
+            blade.transform.localScale = new Vector3(d.bodyDiameter * 0.9f, d.bodyDiameter * 0.16f, 0.015f);
+        }
+        blades = bladeRoot.transform;
+
+        // The area that gets blown: a flat wedge on the floor.
+        if (showRange)
+        {
+            GameObject wedge = new GameObject("Blow Area", typeof(MeshFilter), typeof(MeshRenderer));
+            wedge.transform.SetParent(root.transform, false);
+            wedge.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            wedge.GetComponent<MeshFilter>().sharedMesh = BuildWedgeMesh(d.radius, d.coneAngle);
+
+            Color wedgeColor = d.color;
+            wedgeColor.a = rangeOpacity;
+            MeshRenderer mr = wedge.GetComponent<MeshRenderer>();
+            Material mat = clicker.CreateVisualMaterial(wedgeColor, true);
+            if (mat != null) mr.sharedMaterial = mat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+        }
+
+        timer = null;
+        if (!isPreview)
+        {
+            GameObject tg = new GameObject("Timer");
+            tg.transform.SetParent(root.transform, false);
+            tg.transform.localPosition = new Vector3(0f, d.bodyHeight + d.bodyDiameter * 0.5f + timerHeightAbove, 0f);
+            timer = tg.AddComponent<TextMeshPro>();
+            timer.text = string.Format(timerFormat, Mathf.CeilToInt(d.durationSeconds));
+            timer.fontSize = timerFontSize;
+            timer.fontStyle = FontStyles.Bold;
+            timer.alignment = TextAlignmentOptions.Center;
+            timer.color = timerColor;
+            if (clicker.UIFont != null) timer.font = clicker.UIFont;
+        }
+
+        return root;
+    }
+
+    /// <summary>A primitive with no collider and the game's material tinted with 'color'.</summary>
+    private GameObject MakePrimitive(PrimitiveType type, string objectName, Transform parent, Color color, bool transparent)
+    {
+        GameObject go = GameObject.CreatePrimitive(type);
+        go.name = objectName;
+        Destroy(go.GetComponent<Collider>());
+        go.transform.SetParent(parent, false);
+
+        Renderer r = go.GetComponent<Renderer>();
+        Material mat = clicker.CreateVisualMaterial(color, transparent);
+        if (mat != null) r.sharedMaterial = mat;
+        else r.material.color = color;
+        return go;
+    }
+
+    /// <summary>A flat pie slice opening along +Z, lying on the XZ plane (faces up).</summary>
+    private static Mesh BuildWedgeMesh(float length, float fullAngle)
+    {
+        const int segments = 24;
+        float half = fullAngle * 0.5f * Mathf.Deg2Rad;
+
+        Vector3[] vertices = new Vector3[segments + 2];
+        int[] triangles = new int[segments * 3];
+        vertices[0] = Vector3.zero;
+        for (int i = 0; i <= segments; i++)
+        {
+            float a = Mathf.Lerp(-half, half, i / (float)segments);
+            vertices[i + 1] = new Vector3(Mathf.Sin(a) * length, 0f, Mathf.Cos(a) * length);
+        }
+        for (int i = 0; i < segments; i++)
+        {
+            triangles[i * 3] = 0;
+            triangles[i * 3 + 1] = i + 1;
+            triangles[i * 3 + 2] = i + 2;
+        }
+
+        Mesh mesh = new Mesh { name = "Fan Wedge", vertices = vertices, triangles = triangles };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>Degrees to turn this frame from the mouse wheel and the Q / E keys.</summary>
+    private float TurnInput()
+    {
+        float degrees = 0f;
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        if (Mouse.current != null) degrees += Mathf.Sign(Mouse.current.scroll.ReadValue().y) * (Mathf.Abs(Mouse.current.scroll.ReadValue().y) > 0.01f ? 1f : 0f) * rotateStepDegrees;
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.eKey.isPressed) degrees += rotateSpeedDegrees * Time.deltaTime;
+            if (Keyboard.current.qKey.isPressed) degrees -= rotateSpeedDegrees * Time.deltaTime;
+        }
+#else
+        float wheel = Input.mouseScrollDelta.y;
+        if (Mathf.Abs(wheel) > 0.01f) degrees += Mathf.Sign(wheel) * rotateStepDegrees;
+        if (Input.GetKey(KeyCode.E)) degrees += rotateSpeedDegrees * Time.deltaTime;
+        if (Input.GetKey(KeyCode.Q)) degrees -= rotateSpeedDegrees * Time.deltaTime;
+#endif
+        return degrees;
     }
 
     // --- Mouse input (works with both input systems) ---

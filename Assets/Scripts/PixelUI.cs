@@ -219,7 +219,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Timer text. {0} = potion name, {1} = seconds left.")]
     [SerializeField] private string activeHudFormat = "{0}  {1}s";
 
-    [Tooltip("Message shown while you are placing a device. {0} = device name.")]
+    [Tooltip("Message shown while you are placing a device (a device can have its own message). {0} = device name.")]
     [SerializeField] private string placingHudFormat = "Click the floor to place the {0}  (right-click to cancel)";
 
     [Tooltip("Timer text size.")]
@@ -1264,7 +1264,8 @@ public class PixelUI : MonoBehaviour
 
         if (placing)
         {
-            hudLabel.text = string.Format(placingHudFormat, consumables.PlacingName);
+            string own = consumables.PlacingMessage;
+            hudLabel.text = string.Format(string.IsNullOrEmpty(own) ? placingHudFormat : own, consumables.PlacingName);
             hudLabel.color = Color.white;
             return;
         }
