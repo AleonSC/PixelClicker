@@ -220,9 +220,9 @@ public class PixelShop : MonoBehaviour
     {
         return new ShopPack
         {
-            displayName = "Glass Pack",
+            displayName = "Glass Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds see-through Glass pixels to the random spawn pool.",
+            description = "Adds the see-through Glass pixel to the random spawn pool.",
             requiresPackIndex = requiresRgbIndex,
             costs = new[]
             {
@@ -247,9 +247,9 @@ public class PixelShop : MonoBehaviour
     {
         return new ShopPack
         {
-            displayName = "Vacuum Pack",
+            displayName = "Vacuum Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds a rare Vacuum pixel. Clicking it sucks up every old pixel and collects them again.",
+            description = "Adds the rare Vacuum pixel. Clicking it sucks up every old pixel and collects them again.",
             requiresPackIndex = requiresGlassIndex,
             costs = new[]
             {
@@ -660,6 +660,20 @@ public class PixelShop : MonoBehaviour
     private bool EnsureDefaultPacks()
     {
         int before = packs.Length;
+        bool renamed = false;
+
+        // Older components saved the previous names; Glass and Vacuum are single pixels listed on the Pixels tab.
+        foreach (ShopPack pack in packs)
+        {
+            if (pack.rewardTiers == null) continue;
+            bool isGlass = Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Glass);
+            bool isVacuum = Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Vacuum);
+            if (!isGlass && !isVacuum) continue;
+
+            if (pack.displayName == "Glass Pack") { pack.displayName = "Glass Pixel"; renamed = true; }
+            if (pack.displayName == "Vacuum Pack") { pack.displayName = "Vacuum Pixel"; renamed = true; }
+            if (pack.tab != ShopTab.Pixels) { pack.tab = ShopTab.Pixels; renamed = true; }
+        }
 
         if (addDefaultAutoClickerPack)
         {
@@ -726,7 +740,7 @@ public class PixelShop : MonoBehaviour
             }
         }
 
-        return packs.Length != before;
+        return renamed || packs.Length != before;
     }
 
 #if UNITY_EDITOR
