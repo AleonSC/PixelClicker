@@ -1,0 +1,15 @@
+name: Build PhotoSorter
+on:
+  push:
+    paths: ['PhotoSorter/**', '.github/workflows/photosorter.yml']
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet publish PhotoSorter/PhotoSorter.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out
+      - uses: actions/upload-artifact@v4
+        with: { name: PhotoSorter-win-x64, path: out/PhotoSorter.exe }
