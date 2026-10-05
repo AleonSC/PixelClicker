@@ -687,6 +687,14 @@ public class PixelShop : MonoBehaviour
         }
         if (consumables == null) consumables = gameObject.AddComponent<PixelConsumables>();
 
+#if UNITY_2023_1_OR_NEWER
+        if (FindObjectsByType<PixelConsumables>(FindObjectsSortMode.None).Length > 1)
+#else
+        if (FindObjectsOfType<PixelConsumables>().Length > 1)
+#endif
+            Debug.LogWarning("PixelShop: more than one PixelConsumables component exists in the scene. " +
+                             "Remove the extra one so purchases and the inventory use the same potions.", this);
+
         EnsureDefaultPacks();
 
         // Make sure every reward tier exists in PixelClicker (added locked, unlocked on purchase).
@@ -884,6 +892,9 @@ public class PixelShop : MonoBehaviour
     }
 
     /// <summary>One-time packs: bought. Upgrade packs: at max level (nothing left to buy).</summary>
+    /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
+    public PixelConsumables Consumables => consumables;
+
     public bool IsPurchased(int packIndex)
     {
         ShopPack pack = packs[packIndex];

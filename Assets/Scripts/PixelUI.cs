@@ -366,6 +366,22 @@ public class PixelUI : MonoBehaviour
                     if (label != null) label.font = font;
         }
 
+        // Use the same potions the shop sells into, so purchases always show up here.
+#if UNITY_2023_1_OR_NEWER
+        PixelShop shop = FindFirstObjectByType<PixelShop>();
+#else
+        PixelShop shop = FindObjectOfType<PixelShop>();
+#endif
+        if (shop != null && shop.Consumables != null) consumables = shop.Consumables;
+        if (consumables == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            consumables = FindFirstObjectByType<PixelConsumables>();
+#else
+            consumables = FindObjectOfType<PixelConsumables>();
+#endif
+        }
+
         bool hasManualLabels = tierLabels != null && tierLabels.Length > 0 && tierLabels[0] != null;
         if (!hasManualLabels)
         {
@@ -377,15 +393,6 @@ public class PixelUI : MonoBehaviour
             }
             BuildAutomaticUI();
             autoMode = true;
-        }
-
-        if (consumables == null)
-        {
-#if UNITY_2023_1_OR_NEWER
-            consumables = FindFirstObjectByType<PixelConsumables>();
-#else
-            consumables = FindObjectOfType<PixelConsumables>();
-#endif
         }
 
         BuildPopupCanvas();
