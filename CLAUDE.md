@@ -12,6 +12,7 @@
 | `PixelShop.cs` | Shop button (appears once `requiredTier` = Black is unlocked) + panel. `ShopPack` list: RGB Pack, Auto Clicker, Glass Pixel, Vacuum Pixel (Pixels tab), Faster Clicking, Multi-Click. Three tabs (Pixels / Upgrades / Consumables; per-pack `tab`, `Automatic` infers it) over a fixed-size scrolling list (ScrollRect + scrollbar). Leveled packs that require another pack (the auto clicker upgrades) are not in a tab: the required pack gets an arrow button opening a second "Upgrades Window". Handles buying, requirements, affordability colouring, levels/upgrades, Inspector-ticked `purchased`. `[RequireComponent(typeof(PixelAutoClicker))]`. |
 | `PixelAutoClicker.cs` | Timer that calls `clicker.AutoCollect()`; `Interval` / `ClicksPerTick` properties; `Activate()` from shop; `startRunning` for testing. |
 | `PixelLog.cs` | Bottom-left "Log" toggle: unlocked tiers with lifetime totals, overall total, vacuum `+X` deltas. Has its own local `FormatAmount`. |
+| `PixelPauseMenu.cs` | Pause menu (Esc / on-screen Pause button): sets `Time.timeScale = 0`, Resume / Restart / Quit, `PixelPauseMenu.IsPaused`. PixelClicker ignores clicks while `Time.timeScale <= 0`. |
 | `PixelDevTools.cs` | Bottom-right dev button, adds `amountToAdd` (10) to each unlocked tier through `AddCurrency`. Self-removes in non-dev builds. |
 
 ### Data model

@@ -436,6 +436,7 @@ public class PixelClicker : MonoBehaviour
 
         CleanOldPixels();
 
+        if (Time.timeScale <= 0f) return; // paused (see PixelPauseMenu)
         if (!WasClickedThisFrame() || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
