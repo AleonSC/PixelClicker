@@ -653,9 +653,36 @@ public class PixelClicker : MonoBehaviour
         return tiers.Length - 1;
     }
 
-    /// <summary>Weighted random pick among unlocked tiers.</summary>
+    private int forcedTierIndex = -1;
+
+    /// <summary>True while a potion (or other effect) restricts spawning to one pixel type.</summary>
+    public bool HasForcedSpawnTier => forcedTierIndex >= 0;
+
+    /// <summary>
+    /// Makes only this pixel type spawn until <see cref="ClearForcedSpawnTier"/> is called. The pixel
+    /// currently shown is swapped for it straight away. Ignored if the tier is missing or locked.
+    /// </summary>
+    public void SetForcedSpawnTier(PixelType type)
+    {
+        int index = IndexOf(type);
+        if (index < 0 || !tiers[index].unlocked) return;
+
+        forcedTierIndex = index;
+        if (randomizeSpawnTier && currentTierIndex != index)
+        {
+            currentTierIndex = index;
+            Materialize(GetClickTier());
+        }
+    }
+
+    /// <summary>Back to the normal weighted random spawning.</summary>
+    public void ClearForcedSpawnTier() => forcedTierIndex = -1;
+
+    /// <summary>Weighted random pick among unlocked tiers (or the forced tier while a potion is active).</summary>
     private int PickSpawnTier()
     {
+        if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked) return forcedTierIndex;
+
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
             if (tiers[i].unlocked) total += Mathf.Max(0f, tiers[i].spawnWeight);

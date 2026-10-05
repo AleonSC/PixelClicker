@@ -2,13 +2,15 @@ using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
 
 /// <summary>
-/// Simple HUD for Pixel Clicker. Shows how many pixels of each tier you have.
+/// Simple HUD for Pixel Clicker. An "Inventory" box with a Currency tab (how many pixels of each tier you have)
+/// and a Consumables tab (potions you own - right-click one to drink it).
 ///
 /// Two ways to use it:
 ///  A) MANUAL: create TextMeshPro texts in your own Canvas and drag them into "Tier Labels"
@@ -72,9 +74,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Reference resolution used by the auto-created canvas scaler.")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
 
-    [Header("Currency Box (automatic mode)")]
-    [Tooltip("Text on the button that opens/closes the currency box.")]
-    [SerializeField] private string buttonText = "Currency";
+    [Header("Inventory Box (automatic mode)")]
+    [Tooltip("Text on the button that opens/closes the inventory box.")]
+    [SerializeField] private string inventoryButtonText = "Inventory";
 
     [Tooltip("Size of the button.")]
     [SerializeField] private Vector2 buttonSize = new Vector2(240f, 80f);
@@ -89,7 +91,7 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private Color buttonTextColor = Color.white;
 
     [Tooltip("Title shown at the top of the box.")]
-    [SerializeField] private string boxTitle = "Currency";
+    [SerializeField] private string inventoryTitle = "Inventory";
 
     [Tooltip("Show a title inside the box. Off = no title bar, the lines start at the top.")]
     [SerializeField] private bool showTitle = true;
@@ -114,6 +116,66 @@ public class PixelUI : MonoBehaviour
 
     [Tooltip("Start with the box open.")]
     [SerializeField] private bool startOpen = false;
+
+    [Header("Inventory Tabs")]
+    [Tooltip("Label of the tab that lists your pixel amounts.")]
+    [SerializeField] private string currencyTabText = "Currency";
+
+    [Tooltip("Label of the tab that lists your potions.")]
+    [SerializeField] private string consumablesTabText = "Consumables";
+
+    [Tooltip("Height of the two tab buttons inside the box.")]
+    [SerializeField] private float subTabHeight = 56f;
+
+    [Tooltip("Tab text size.")]
+    [SerializeField] private float subTabFontSize = 28f;
+
+    [Tooltip("Colour of the selected tab.")]
+    [SerializeField] private Color subTabActiveColor = new Color(0.25f, 0.6f, 0.4f, 1f);
+
+    [Tooltip("Colour of the other tab.")]
+    [SerializeField] private Color subTabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
+
+    [Tooltip("Gap under the tab buttons.")]
+    [SerializeField] private float subTabGap = 10f;
+
+    [Header("Consumables Tab")]
+    [Tooltip("The potions. Found automatically in the scene if left empty.")]
+    [SerializeField] private PixelConsumables consumables;
+
+    [Tooltip("One potion line. {0} = name, {1} = amount owned.")]
+    [SerializeField] private string consumableLineFormat = "{0}   x{1}";
+
+    [Tooltip("Shown when you own no potions.")]
+    [SerializeField] private string noConsumablesText = "No consumables yet.";
+
+    [Tooltip("Hint at the bottom of the tab.")]
+    [SerializeField] private string consumableHint = "Right-click a potion to drink it.";
+
+    [Tooltip("Hint text size.")]
+    [SerializeField] private float hintFontSize = 24f;
+
+    [Tooltip("Line shown at the top of the tab while a potion is active. {0} = name, {1} = seconds left.")]
+    [SerializeField] private string activePotionFormat = "Active: {0}  {1}s";
+
+    [Tooltip("Colour of a potion line while the mouse is over it.")]
+    [SerializeField] private Color potionHoverColor = new Color(1f, 1f, 1f, 0.15f);
+
+    [Header("Active Potion Timer (on screen)")]
+    [Tooltip("Show the running potion and its time left at the top of the screen.")]
+    [SerializeField] private bool showActivePotionHud = true;
+
+    [Tooltip("Timer text. {0} = potion name, {1} = seconds left.")]
+    [SerializeField] private string activeHudFormat = "{0}  {1}s";
+
+    [Tooltip("Timer text size.")]
+    [SerializeField] private float activeHudFontSize = 44f;
+
+    [Tooltip("Distance of the timer from the top of the screen.")]
+    [SerializeField] private float activeHudTopMargin = 30f;
+
+    [Tooltip("Use the potion's pixel colour for the timer. Off = white.")]
+    [SerializeField] private bool activeHudUsesTierColor = true;
 
     [Header("Vacuum Indicator (+X next to each entry)")]
     [Tooltip("After a Vacuum pixel is clicked, show a '+X' next to each entry that gained currency.")]
@@ -259,6 +321,14 @@ public class PixelUI : MonoBehaviour
     private TMP_Text buttonLabel;
     private bool built;
     private RectTransform popupCanvasRect;
+    private int inventoryTab; // 0 = Currency, 1 = Consumables
+    private Image[] subTabImages;
+    private TMP_Text activeLabel;
+    private TMP_Text noConsumablesLabel;
+    private TMP_Text hintLabel;
+    private TMP_Text[] potionLabels;
+    private GameObject[] potionRowObjects;
+    private TMP_Text hudLabel;
 
     // ------------------------------------------------------------------
     // Unity lifecycle
@@ -306,7 +376,17 @@ public class PixelUI : MonoBehaviour
             autoMode = true;
         }
 
+        if (consumables == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            consumables = FindFirstObjectByType<PixelConsumables>();
+#else
+            consumables = FindObjectOfType<PixelConsumables>();
+#endif
+        }
+
         BuildPopupCanvas();
+        BuildActiveHud();
         clicker.PixelCollected += OnPixelCollected;
         clicker.PixelsVacuumed += OnPixelsVacuumed;
         clicker.VacuumBreakdown += OnVacuumBreakdown;
@@ -330,6 +410,7 @@ public class PixelUI : MonoBehaviour
     {
         if (!built) return;
         TickDeltas();
+        UpdateActiveHud();
         if (autoMode && !boxObject.activeSelf) return; // closed box: nothing to update
         Refresh();
     }
@@ -592,8 +673,8 @@ public class PixelUI : MonoBehaviour
         float sx = anchor.x > 0.5f ? -1f : 1f;
         float sy = anchor.y > 0.5f ? -1f : 1f;
 
-        // --- Currency button
-        Button button = MakeButton(autoRoot.transform, "Currency Button", buttonText, buttonSize, buttonColor,
+        // --- Inventory button
+        Button button = MakeButton(autoRoot.transform, "Inventory Button", inventoryButtonText, buttonSize, buttonColor,
                                    buttonTextColor, buttonFontSize);
         buttonLabel = button.GetComponentInChildren<TMP_Text>();
         if (uppercaseButton) buttonLabel.fontStyle |= FontStyles.UpperCase;
@@ -607,7 +688,7 @@ public class PixelUI : MonoBehaviour
         });
 
         // --- Box (sits next to the button, growing away from the screen edge)
-        boxObject = new GameObject("Currency Box", typeof(RectTransform), typeof(Image));
+        boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image));
         boxObject.transform.SetParent(autoRoot.transform, false);
         Image bg = boxObject.GetComponent<Image>();
         bg.color = showBackground ? backgroundColor : new Color(0f, 0f, 0f, 0f);
@@ -621,7 +702,7 @@ public class PixelUI : MonoBehaviour
         // Title (optional)
         if (showTitle)
         {
-            titleLabel = MakeText(boxObject.transform, "Title", boxTitle, titleFontSize,
+            titleLabel = MakeText(boxObject.transform, "Title", inventoryTitle, titleFontSize,
                                   TextAlignmentOptions.Center,
                                   uppercaseTitle ? FontStyles.Bold | FontStyles.UpperCase : FontStyles.Bold, textColor);
             titleLabel.enableAutoSizing = true; // never clipped or wrapped, whatever the box width
@@ -636,6 +717,8 @@ public class PixelUI : MonoBehaviour
             tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
             tr.anchoredPosition = new Vector2(0f, -panelPadding * 0.5f);
         }
+
+        BuildInventoryTabs(anchor);
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
@@ -673,7 +756,8 @@ public class PixelUI : MonoBehaviour
         }
 
         boxObject.SetActive(startOpen);
-        Debug.Log("PixelUI: created the Currency box with " + count + " lines.", this);
+        BuildConsumableList(anchor);
+        Debug.Log("PixelUI: created the Inventory box with " + count + " currency lines.", this);
     }
 
     // ------------------------------------------------------------------
@@ -686,10 +770,12 @@ public class PixelUI : MonoBehaviour
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         if (autoMode)
         {
-            if (buttonLabel != null) buttonLabel.text = buttonText;
-            if (titleLabel != null) titleLabel.text = boxTitle;
+            if (buttonLabel != null) buttonLabel.text = inventoryButtonText;
+            if (titleLabel != null) titleLabel.text = inventoryTitle;
         }
-        float y = headerHeight + panelPadding * 0.5f; // title bar, then the lines
+        if (autoMode) UpdateSubTabs();
+        bool showCurrency = !autoMode || inventoryTab == 0;
+        float y = ContentTop; // title bar, tabs, then the lines
 
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
@@ -698,7 +784,7 @@ public class PixelUI : MonoBehaviour
 
             PixelClicker.PixelTier tier = tiers[i];
             bool holding = tier.count > 0d; // e.g. a Starting Amount on a tier that is still locked
-            bool visible = tier.unlocked || holding || showLockedTiers;
+            bool visible = (tier.unlocked || holding || showLockedTiers) && showCurrency;
             if (label.gameObject.activeSelf != visible) label.gameObject.SetActive(visible);
             if (!visible) continue;
 
@@ -715,9 +801,203 @@ public class PixelUI : MonoBehaviour
             }
         }
 
+        if (autoMode && inventoryTab == 1) y = RefreshConsumables(ContentTop);
+
         // Box height follows the number of visible lines.
         if (autoMode && boxRect != null)
             boxRect.sizeDelta = new Vector2(panelWidth, y + panelPadding);
+    }
+
+    /// <summary>Where the lines start: below the title bar and (in automatic mode) the two tab buttons.</summary>
+    private float ContentTop => headerHeight + panelPadding * 0.5f + (autoMode ? subTabHeight + subTabGap : 0f);
+
+    // ------------------------------------------------------------------
+    // Inventory tabs / consumables
+    // ------------------------------------------------------------------
+
+    private void BuildInventoryTabs(Vector2 anchor)
+    {
+        string[] names = { currencyTabText, consumablesTabText };
+        subTabImages = new Image[names.Length];
+
+        GameObject bar = new GameObject("Tabs", typeof(RectTransform));
+        bar.transform.SetParent(boxObject.transform, false);
+        RectTransform barRect = bar.GetComponent<RectTransform>();
+        barRect.anchorMin = new Vector2(0f, 1f);
+        barRect.anchorMax = new Vector2(1f, 1f);
+        barRect.pivot = new Vector2(0.5f, 1f);
+        barRect.sizeDelta = new Vector2(-panelPadding * 2f, subTabHeight);
+        barRect.anchoredPosition = new Vector2(0f, -(headerHeight + panelPadding * 0.5f));
+
+        for (int i = 0; i < names.Length; i++)
+        {
+            Button tab = MakeButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero, subTabInactiveColor,
+                                    textColor, subTabFontSize);
+            subTabImages[i] = tab.GetComponent<Image>();
+            RectTransform rt = tab.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(i * 0.5f, 0f);
+            rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(i == 0 ? 0f : 4f, 0f);
+            rt.offsetMax = new Vector2(i == 0 ? -4f : 0f, 0f);
+
+            int captured = i;
+            tab.onClick.AddListener(() => { inventoryTab = captured; Refresh(); });
+        }
+    }
+
+    private void UpdateSubTabs()
+    {
+        if (subTabImages == null) return;
+        for (int i = 0; i < subTabImages.Length; i++)
+            subTabImages[i].color = i == inventoryTab ? subTabActiveColor : subTabInactiveColor;
+    }
+
+    /// <summary>Builds one clickable line per potion kind (shown only while you own some), plus the status and hint texts.</summary>
+    private void BuildConsumableList(Vector2 anchor)
+    {
+        TextAlignmentOptions align = anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+
+        activeLabel = MakeText(boxObject.transform, "Active Potion", "", fontSize * 0.85f, align, FontStyles.Bold, textColor);
+        PlaceLine(activeLabel.rectTransform);
+        activeLabel.gameObject.SetActive(false);
+
+        int count = consumables != null ? consumables.Count : 0;
+        potionLabels = new TMP_Text[count];
+        potionRowObjects = new GameObject[count];
+        for (int i = 0; i < count; i++)
+        {
+            GameObject row = new GameObject("Potion " + i, typeof(RectTransform), typeof(Image), typeof(PotionRowClick));
+            row.transform.SetParent(boxObject.transform, false);
+            Image image = row.GetComponent<Image>();
+            image.color = new Color(1f, 1f, 1f, 0f);
+            image.raycastTarget = true;
+            PlaceLine(row.GetComponent<RectTransform>());
+
+            PotionRowClick click = row.GetComponent<PotionRowClick>();
+            click.highlight = image;
+            click.hoverColor = potionHoverColor;
+            int captured = i;
+            click.onRightClick = () => { if (consumables != null && consumables.TryConsume(captured)) Refresh(); };
+
+            TMP_Text label = MakeText(row.transform, "Label", "", fontSize, align, FontStyles.Normal, textColor);
+            RectTransform lr = label.rectTransform;
+            lr.anchorMin = Vector2.zero;
+            lr.anchorMax = Vector2.one;
+            lr.offsetMin = lr.offsetMax = Vector2.zero;
+
+            potionLabels[i] = label;
+            potionRowObjects[i] = row;
+            row.SetActive(false);
+        }
+
+        noConsumablesLabel = MakeText(boxObject.transform, "No Consumables", noConsumablesText, fontSize * 0.9f, align,
+                                      FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        PlaceLine(noConsumablesLabel.rectTransform);
+        noConsumablesLabel.gameObject.SetActive(false);
+
+        hintLabel = MakeText(boxObject.transform, "Hint", consumableHint, hintFontSize, align, FontStyles.Italic,
+                             new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        PlaceLine(hintLabel.rectTransform);
+        hintLabel.gameObject.SetActive(false);
+    }
+
+    /// <summary>Stretches a line across the box's width, anchored to the top (Refresh sets the y position).</summary>
+    private void PlaceLine(RectTransform rt)
+    {
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
+    }
+
+    /// <summary>Lays out the Consumables tab starting at 'top'. Returns the y below its last line.</summary>
+    private float RefreshConsumables(float top)
+    {
+        float y = top;
+
+        bool active = consumables != null && consumables.IsActive;
+        activeLabel.gameObject.SetActive(active);
+        if (active)
+        {
+            activeLabel.text = string.Format(activePotionFormat, consumables.Get(consumables.ActiveIndex).displayName,
+                                             Mathf.CeilToInt(consumables.Remaining));
+            activeLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            y += LinePitch;
+        }
+
+        int shown = 0;
+        int count = potionRowObjects != null ? potionRowObjects.Length : 0;
+        for (int i = 0; i < count; i++)
+        {
+            PixelConsumables.Potion potion = consumables.Get(i);
+            bool visible = potion.owned > 0;
+            if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
+            if (!visible) continue;
+
+            potionRowObjects[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -y);
+            y += LinePitch;
+            shown++;
+
+            potionLabels[i].text = string.Format(consumableLineFormat, potion.displayName, FormatAmount(potion.owned));
+            int tierIndex = clicker.IndexOf(potion.type);
+            potionLabels[i].color = colorTextByTier && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : textColor;
+        }
+
+        noConsumablesLabel.gameObject.SetActive(shown == 0);
+        if (shown == 0)
+        {
+            noConsumablesLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            y += LinePitch;
+        }
+
+        bool showHint = shown > 0 && !string.IsNullOrEmpty(consumableHint);
+        hintLabel.gameObject.SetActive(showHint);
+        if (showHint)
+        {
+            hintLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            y += hintFontSize * 1.5f;
+        }
+
+        return y;
+    }
+
+    // ------------------------------------------------------------------
+    // Active potion timer (top of the screen)
+    // ------------------------------------------------------------------
+
+    private void BuildActiveHud()
+    {
+        if (!showActivePotionHud) return;
+
+        hudLabel = MakeText(popupCanvasRect, "Active Potion Timer", "", activeHudFontSize,
+                            TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        if (popupOutlineWidth > 0f)
+        {
+            hudLabel.outlineColor = popupOutlineColor;
+            hudLabel.outlineWidth = popupOutlineWidth;
+        }
+
+        RectTransform rt = hudLabel.rectTransform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(900f, activeHudFontSize * 1.4f);
+        rt.anchoredPosition = new Vector2(0f, -activeHudTopMargin);
+        hudLabel.gameObject.SetActive(false);
+    }
+
+    private void UpdateActiveHud()
+    {
+        if (hudLabel == null) return;
+
+        bool active = consumables != null && consumables.IsActive;
+        if (hudLabel.gameObject.activeSelf != active) hudLabel.gameObject.SetActive(active);
+        if (!active) return;
+
+        PixelConsumables.Potion potion = consumables.Get(consumables.ActiveIndex);
+        hudLabel.text = string.Format(activeHudFormat, potion.displayName, Mathf.CeilToInt(consumables.Remaining));
+
+        int tierIndex = clicker.IndexOf(potion.type);
+        hudLabel.color = activeHudUsesTierColor && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : Color.white;
     }
 
     private string FormatAmount(double value)
@@ -728,5 +1008,35 @@ public class PixelUI : MonoBehaviour
         int s = 0;
         while (value >= 1000d && s < suffix.Length - 1) { value /= 1000d; s++; }
         return value.ToString("0.##") + suffix[s];
+    }
+}
+
+/// <summary>
+/// A row in the inventory's Consumables list: highlights on hover and reports right-clicks.
+/// </summary>
+public class PotionRowClick : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+{
+    public Action onRightClick;
+    public Image highlight;
+    public Color hoverColor = new Color(1f, 1f, 1f, 0.15f);
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Right) onRightClick?.Invoke();
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (highlight != null) highlight.color = hoverColor;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (highlight != null) highlight.color = new Color(hoverColor.r, hoverColor.g, hoverColor.b, 0f);
+    }
+
+    private void OnDisable()
+    {
+        if (highlight != null) highlight.color = new Color(hoverColor.r, hoverColor.g, hoverColor.b, 0f);
     }
 }
