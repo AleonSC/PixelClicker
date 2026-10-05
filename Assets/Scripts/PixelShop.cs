@@ -390,7 +390,7 @@ public class PixelShop : MonoBehaviour
         {
             displayName = "Black Hole",
             tab = ShopTab.Minigames,
-            description = "Now and then a swirling black hole opens on the floor and swallows old pixels. Every pixel it takes feeds the singularity.",
+            description = "A black hole sometimes opens on the floor and swallows old pixels, feeding the singularity.",
             requiresPackIndex = requiresVacuumIndex,
             costs = new[]
             {
@@ -409,7 +409,7 @@ public class PixelShop : MonoBehaviour
         {
             displayName = "Singularity Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Singularity pixel, forged from everything the black hole has swallowed. Tough, but pays hugely.",
+            description = "Adds the tough Singularity pixel, forged from what the black hole swallowed. Pays hugely.",
             requiresPackIndex = requiresBlackholeIndex,
             requiresSingularity = true,
             costs = new[]
@@ -1710,12 +1710,20 @@ public class PixelShop : MonoBehaviour
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
         name.richText = true;
         row.nameLabel = name;
-        SetBand(name.rectTransform, 0.70f, 1f, textRightInset);
+        // Long names / descriptions shrink to fit their band instead of spilling over the lines below.
+        name.enableAutoSizing = true;
+        name.fontSizeMax = nameFontSize;
+        name.fontSizeMin = Mathf.Min(16f, nameFontSize);
+        SetBand(name.rectTransform, 0.74f, 1f, textRightInset);
 
         TMP_Text desc = CreateText(rowGo.transform, "Description", rowDescription, descriptionFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         desc.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
-        SetBand(desc.rectTransform, 0.42f, 0.70f, textRightInset);
+        desc.enableAutoSizing = true;
+        desc.fontSizeMax = descriptionFontSize;
+        desc.fontSizeMin = Mathf.Min(12f, descriptionFontSize);
+        desc.alignment = TextAlignmentOptions.TopLeft;
+        SetBand(desc.rectTransform, 0.38f, 0.74f, textRightInset);
         row.descLabel = desc;
 
         row.costLabel = CreateText(rowGo.transform, "Cost", "", costFontSize,
@@ -1726,7 +1734,7 @@ public class PixelShop : MonoBehaviour
         row.costLabel.fontSizeMax = costFontSize;
         row.costLabel.fontSizeMin = Mathf.Min(14f, costFontSize);
         row.costLabel.alignment = TextAlignmentOptions.TopLeft;
-        SetBand(row.costLabel.rectTransform, 0.04f, 0.42f, textRightInset);
+        SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, textRightInset);
 
         row.buyButton = CreateButton(rowGo.transform, "Buy", buyText, buyButtonSize, buyColor, textColor,
                                      buyFontSize, out row.buyLabel, out row.buyImage);
@@ -1788,6 +1796,9 @@ public class PixelShop : MonoBehaviour
         TMP_Text desc = CreateText(trackerRow.transform, "Description", trackerDescription, descriptionFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         desc.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
+        desc.enableAutoSizing = true;
+        desc.fontSizeMax = descriptionFontSize;
+        desc.fontSizeMin = Mathf.Min(12f, descriptionFontSize);
         SetBand(desc.rectTransform, 0.34f, 0.62f, 20f);
 
         // Progress bar.
