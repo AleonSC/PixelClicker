@@ -128,6 +128,14 @@ public class PixelGhostMinigame : MonoBehaviour
     [Tooltip("How long the message rises and fades (seconds).")]
     [SerializeField] private float caughtSeconds = 1.4f;
 
+    [Header("Ghost Pixel Unlock")]
+    [Min(1)]
+    [Tooltip("Ghosts that must be caught in total before the Ghost Pixel can be bought. The count keeps going afterwards.")]
+    [SerializeField] private double ghostThreshold = 10;
+
+    [Tooltip("Runtime: ghosts caught so far (saved with the game). You can type a number to test the unlock.")]
+    [SerializeField] private double ghostsCaught = 0;
+
     [Header("Sound / Events")]
     [Tooltip("Sound played when a ghost is caught.")]
     [SerializeField] private AudioClip caughtSound;
@@ -145,12 +153,27 @@ public class PixelGhostMinigame : MonoBehaviour
     [Tooltip("Fired when a ghost floats away uncaught.")]
     public UnityEvent onGhostMissed;
 
+    [Tooltip("Fired once, when the number of ghosts caught first reaches the threshold.")]
+    public UnityEvent onThresholdReached;
+
     private float spawnTimer;
     private bool ghostActive;
     private Material ghostMaterial;
     private AudioSource audioSource;
 
     public bool Running => running;
+
+    /// <summary>Ghosts caught so far.</summary>
+    public double GhostsCaught => ghostsCaught;
+
+    /// <summary>Ghosts needed to unlock the Ghost Pixel.</summary>
+    public double GhostThreshold => ghostThreshold;
+
+    /// <summary>True once enough ghosts have been caught.</summary>
+    public bool ThresholdReached => ghostsCaught >= ghostThreshold;
+
+    /// <summary>Sets the count (used when loading a save).</summary>
+    public void SetGhostsCaught(double value) => ghostsCaught = System.Math.Max(0d, value);
 
     private void Awake()
     {
@@ -307,6 +330,10 @@ public class PixelGhostMinigame : MonoBehaviour
 
     private void Catch(Vector3 position, Camera cam)
     {
+        bool reachedBefore = ThresholdReached;
+        ghostsCaught += 1d;
+        if (!reachedBefore && ThresholdReached) onThresholdReached?.Invoke();
+
         string buffName = "";
         int potion = -1;
         if (consumables != null) potion = consumables.GrantRandomBuff(buffDurationMultiplier, out buffName);

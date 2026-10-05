@@ -40,6 +40,7 @@ public class PixelClicker : MonoBehaviour
         Obsidian = 8,
         Luminescent = 9,
         Singularity = 10,
+        Ghost = 11,
     }
 
     /// <summary>How a tier becomes available.</summary>
