@@ -57,6 +57,7 @@ public class PixelShop : MonoBehaviour
         Pixels = 1,
         Upgrades = 2,
         Consumables = 3,
+        Minigames = 4,
     }
 
     /// <summary>One purchasable level of an upgrade pack.</summary>
@@ -98,6 +99,9 @@ public class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack switches on the auto clicker.")]
         public bool unlocksAutoClicker = false;
 
+        [Tooltip("Buying this pack switches on the ghost minigame.")]
+        public bool unlocksGhostMinigame = false;
+
         [Tooltip("Runtime: has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.)")]
         public bool purchased = false;
 
@@ -125,6 +129,9 @@ public class PixelShop : MonoBehaviour
     [Tooltip("The auto clicker switched on by the Auto Clicker pack. Taken from this GameObject (or found in the scene) if empty. Edit its interval on that component.")]
     [SerializeField] private PixelAutoClicker autoClicker;
 
+    [Tooltip("The ghost minigame switched on by the Ghost Hunt pack. Found in the scene (or added to this GameObject) if empty. Edit its timing and look on that component.")]
+    [SerializeField] private PixelGhostMinigame ghostMinigame;
+
     [Tooltip("Holds the potions sold in the Consumables tab. Found in the scene (or added to this GameObject) if empty. Edit prices and durations on that component.")]
     [SerializeField] private PixelConsumables consumables;
 
@@ -141,8 +148,12 @@ public class PixelShop : MonoBehaviour
     {
         CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0), CreateVacuumPack(2),
         CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1), CreateObsidianPack(2),
-        CreateLuminescentPack(6)
+        CreateLuminescentPack(6), CreateGhostPack(2)
     };
+
+    [Tooltip("If none of the packs unlocks the ghost minigame (e.g. this component was added before it existed), " +
+             "add the default Ghost Hunt pack at startup.")]
+    [SerializeField] private bool addDefaultGhostPack = true;
 
     [Tooltip("If none of the packs unlocks the Luminescent pixel (e.g. this component was added before it existed), " +
              "add the default Luminescent pack at startup.")]
@@ -333,6 +344,25 @@ public class PixelShop : MonoBehaviour
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
+        };
+    }
+
+    /// <summary>Default Ghost Hunt pack (Minigames tab): switches on the ghost minigame. Needs the Glass pack first.</summary>
+    private static ShopPack CreateGhostPack(int requiresGlassIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Ghost Hunt",
+            tab = ShopTab.Minigames,
+            description = "A faint ghost cube floats across the screen now and then. Click it for a random pixel buff.",
+            requiresPackIndex = requiresGlassIndex,
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 200 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 50 },
+            },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksGhostMinigame = true,
         };
     }
 
@@ -534,6 +564,9 @@ public class PixelShop : MonoBehaviour
 
     [Tooltip("Label of the Consumables tab.")]
     [SerializeField] private string consumablesTabText = "Consumables";
+
+    [Tooltip("Label of the Minigames tab.")]
+    [SerializeField] private string minigamesTabText = "Minigames";
 
     [Tooltip("Text shown when a tab has nothing to list yet.")]
     [SerializeField] private string emptyTabText = "Nothing here yet.";
@@ -739,6 +772,17 @@ public class PixelShop : MonoBehaviour
         }
         if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
 
+        if (ghostMinigame == null) ghostMinigame = GetComponent<PixelGhostMinigame>();
+        if (ghostMinigame == null)
+        {
+#if UNITY_2023_1_OR_NEWER
+            ghostMinigame = FindFirstObjectByType<PixelGhostMinigame>();
+#else
+            ghostMinigame = FindObjectOfType<PixelGhostMinigame>();
+#endif
+        }
+        if (ghostMinigame == null) ghostMinigame = gameObject.AddComponent<PixelGhostMinigame>();
+
         if (consumables == null) consumables = GetComponent<PixelConsumables>();
         if (consumables == null)
         {
@@ -893,6 +937,20 @@ public class PixelShop : MonoBehaviour
             }
         }
 
+        if (addDefaultGhostPack)
+        {
+            bool hasGhost = false;
+            foreach (ShopPack pack in packs) if (pack.unlocksGhostMinigame) hasGhost = true;
+
+            if (!hasGhost)
+            {
+                int glassIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
+                                                             Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
+                Array.Resize(ref packs, packs.Length + 1);
+                packs[packs.Length - 1] = CreateGhostPack(glassIndex);
+            }
+        }
+
         return renamed || packs.Length != before;
     }
 
@@ -916,6 +974,17 @@ public class PixelShop : MonoBehaviour
             if (!hasConsumables)
             {
                 UnityEditor.Undo.AddComponent<PixelConsumables>(gameObject);
+                UnityEditor.EditorUtility.SetDirty(gameObject);
+            }
+
+#if UNITY_2023_1_OR_NEWER
+            bool hasGhost = FindFirstObjectByType<PixelGhostMinigame>() != null;
+#else
+            bool hasGhost = FindObjectOfType<PixelGhostMinigame>() != null;
+#endif
+            if (!hasGhost)
+            {
+                UnityEditor.Undo.AddComponent<PixelGhostMinigame>(gameObject);
                 UnityEditor.EditorUtility.SetDirty(gameObject);
             }
         };
@@ -1004,6 +1073,8 @@ public class PixelShop : MonoBehaviour
         pack.purchased = purchased;
         pack.level = IsLeveled(pack) ? Mathf.Clamp(level, 0, pack.levels.Length) : 0;
         pack.appliedLevel = pack.level;
+
+        if (pack.unlocksGhostMinigame && !purchased && ghostMinigame != null) ghostMinigame.Deactivate();
     }
 
     /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
@@ -1097,6 +1168,7 @@ public class PixelShop : MonoBehaviour
         }
 
         if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
+        if (pack.unlocksGhostMinigame && ghostMinigame != null) ghostMinigame.Activate(); // no-op if already running
     }
 
     /// <summary>Buys a pack: spends all costs, unlocks the reward tiers. Returns false if not possible.</summary>
@@ -1253,8 +1325,8 @@ public class PixelShop : MonoBehaviour
 
     private void BuildTabs(Transform parent)
     {
-        string[] names = { pixelsTabText, upgradesTabText, consumablesTabText };
-        ShopTab[] tabs = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables };
+        string[] names = { pixelsTabText, upgradesTabText, consumablesTabText, minigamesTabText };
+        ShopTab[] tabs = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables, ShopTab.Minigames };
         tabImages = new Image[tabs.Length];
 
         GameObject bar = new GameObject("Tabs", typeof(RectTransform));
@@ -1270,7 +1342,11 @@ public class PixelShop : MonoBehaviour
         for (int i = 0; i < tabs.Length; i++)
         {
             Button tabButton = CreateButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero,
-                                            tabInactiveColor, textColor, tabFontSize, out _, out tabImages[i]);
+                                            tabInactiveColor, textColor, tabFontSize, out TMP_Text tabLabel, out tabImages[i]);
+            // Four tabs share the width, so long names shrink to fit instead of overflowing.
+            tabLabel.enableAutoSizing = true;
+            tabLabel.fontSizeMax = tabFontSize;
+            tabLabel.fontSizeMin = Mathf.Min(16f, tabFontSize);
             RectTransform rt = tabButton.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(i * slice, 0f);
             rt.anchorMax = new Vector2((i + 1) * slice, 1f);
@@ -1571,7 +1647,7 @@ public class PixelShop : MonoBehaviour
         // Tab buttons: highlight the open one.
         if (tabImages != null)
         {
-            ShopTab[] order = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables };
+            ShopTab[] order = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables, ShopTab.Minigames };
             for (int t = 0; t < tabImages.Length; t++)
                 tabImages[t].color = order[t] == currentTab ? tabActiveColor : tabInactiveColor;
         }

@@ -344,8 +344,16 @@ public class PixelConsumables : MonoBehaviour
         if (potion.owned <= 0 || !clicker.IsUnlocked(potion.type)) return false;
 
         potion.owned--;
+        ApplyPotion(index, 1f);
+        return true;
+    }
+
+    /// <summary>Starts a potion's effect (without using one up).</summary>
+    private void ApplyPotion(int index, float durationMultiplier)
+    {
+        Potion potion = potions[index];
         activeIndex = index;
-        remaining = potion.durationSeconds;
+        remaining = potion.durationSeconds * durationMultiplier;
         clicker.SetForcedSpawnTier(potion.type);
 
         if (drinkSound != null)
@@ -359,7 +367,24 @@ public class PixelConsumables : MonoBehaviour
         }
 
         onPotionConsumed?.Invoke(index);
-        return true;
+    }
+
+    /// <summary>
+    /// A free buff: starts a random potion whose pixel type is unlocked (used by the ghost minigame).
+    /// Returns the potion's index, or -1 if none can be given.
+    /// </summary>
+    public int GrantRandomBuff(float durationMultiplier, out string potionName)
+    {
+        potionName = "";
+        System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < potions.Length; i++)
+            if (clicker.IsUnlocked(potions[i].type)) candidates.Add(i);
+        if (candidates.Count == 0) return -1;
+
+        int pick = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        potionName = potions[pick].displayName;
+        ApplyPotion(pick, durationMultiplier);
+        return pick;
     }
 
     /// <summary>Ends the running potion without firing the expired event (used when loading a save).</summary>
