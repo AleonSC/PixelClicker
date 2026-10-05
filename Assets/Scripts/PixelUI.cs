@@ -876,6 +876,30 @@ public class PixelUI : MonoBehaviour
         PlaceLine(activeLabel.rectTransform);
         activeLabel.gameObject.SetActive(false);
 
+        consumableAlign = align;
+        BuildPotionRows();
+
+        noConsumablesLabel = MakeText(boxObject.transform, "No Consumables", noConsumablesText, fontSize * 0.9f, align,
+                                      FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        PlaceLine(noConsumablesLabel.rectTransform);
+        noConsumablesLabel.gameObject.SetActive(false);
+
+        hintLabel = MakeText(boxObject.transform, "Hint", consumableHint, hintFontSize, align, FontStyles.Italic,
+                             new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        PlaceLine(hintLabel.rectTransform);
+        hintLabel.gameObject.SetActive(false);
+    }
+
+    private TextAlignmentOptions consumableAlign;
+
+    /// <summary>(Re)creates one clickable line per potion kind. Lines are only shown while you own that potion.</summary>
+    private void BuildPotionRows()
+    {
+        if (potionRowObjects != null)
+            foreach (GameObject old in potionRowObjects)
+                if (old != null) Destroy(old);
+
+        TextAlignmentOptions align = consumableAlign;
         int count = consumables != null ? consumables.Count : 0;
         potionLabels = new TMP_Text[count];
         potionRowObjects = new GameObject[count];
@@ -905,15 +929,8 @@ public class PixelUI : MonoBehaviour
             row.SetActive(false);
         }
 
-        noConsumablesLabel = MakeText(boxObject.transform, "No Consumables", noConsumablesText, fontSize * 0.9f, align,
-                                      FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.6f));
-        PlaceLine(noConsumablesLabel.rectTransform);
-        noConsumablesLabel.gameObject.SetActive(false);
-
-        hintLabel = MakeText(boxObject.transform, "Hint", consumableHint, hintFontSize, align, FontStyles.Italic,
-                             new Color(textColor.r, textColor.g, textColor.b, 0.6f));
-        PlaceLine(hintLabel.rectTransform);
-        hintLabel.gameObject.SetActive(false);
+        Debug.Log("PixelUI: inventory knows " + count + " potion kinds (PixelConsumables on '" +
+                  (consumables != null ? consumables.gameObject.name : "none") + "').", this);
     }
 
     /// <summary>Stretches a line across the box's width, anchored to the top (Refresh sets the y position).</summary>
@@ -950,6 +967,9 @@ public class PixelUI : MonoBehaviour
             activeLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
             y += LinePitch;
         }
+
+        if (consumables != null && (potionRowObjects == null || potionRowObjects.Length != consumables.Count))
+            BuildPotionRows();
 
         int shown = 0;
         int count = potionRowObjects != null ? potionRowObjects.Length : 0;

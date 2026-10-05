@@ -948,6 +948,7 @@ public class PixelShop : MonoBehaviour
                 clicker.TrySpend(cost.type, cost.amount);
 
         consumables.Add(potionIndex, 1);
+        Debug.Log("PixelShop: bought " + potion.displayName + " - you now own " + potion.owned + ".", this);
         PlayPurchaseSound();
         RefreshRows();
         return true;
