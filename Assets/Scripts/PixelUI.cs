@@ -100,20 +100,26 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Title shown at the top of the box.")]
     [SerializeField] private string inventoryTitle = "Inventory";
 
-    [Tooltip("Show a title inside the box. Off = no title bar, the lines start at the top.")]
-    [SerializeField] private bool showTitle = true;
+    [Tooltip("Show the header at the top of the box: the title and a close (X) button, like the Pixel Log. Off = no header, the tabs start at the top.")]
+    [SerializeField] private bool showHeader = true;
+
+    [Tooltip("Height of the header (title bar) above the tab buttons.")]
+    [SerializeField] private float headerBarHeight = 90f;
+
+    [Tooltip("Header title text size.")]
+    [SerializeField] private float headerTitleSize = 48f;
+
+    [Tooltip("Size of the close (X) button in the header. 0 = no close button.")]
+    [SerializeField] private float closeButtonSize = 70f;
+
+    [Tooltip("Colour of the close (X) button.")]
+    [SerializeField] private Color closeButtonColor = new Color(0.3f, 0.3f, 0.35f, 1f);
 
     [Tooltip("Show the button text in capital letters (CURRENCY).")]
     [SerializeField] private bool uppercaseButton = true;
 
-    [Tooltip("Show the title in capital letters (CURRENCY).")]
-    [SerializeField] private bool uppercaseTitle = true;
-
-    [Tooltip("Title text size.")]
-    [SerializeField] private float titleFontSize = 44f;
-
-    /// <summary>Title bar height follows the title font size (no fixed spare room).</summary>
-    private float headerHeight => showTitle ? titleFontSize * 1.25f : 0f;
+    /// <summary>Height of the header above the tabs (0 when the header is off).</summary>
+    private float headerHeight => showHeader ? headerBarHeight : 0f;
 
     /// <summary>Vertical distance between lines. Never smaller than the text, so lines can't overlap.</summary>
     private float LinePitch => Mathf.Max(lineHeight, fontSize * 1.3f);
@@ -840,23 +846,33 @@ public class PixelUI : MonoBehaviour
         boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + LinePitch * count);
         boxRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * (hud.BandThickness + gapBelowButton)); // the inventory's own gap below the bar
 
-        // Title (optional)
-        if (showTitle)
+        // Header: title and close button (same look as the Pixel Log)
+        if (showHeader)
         {
-            titleLabel = MakeText(boxObject.transform, "Title", inventoryTitle, titleFontSize,
-                                  TextAlignmentOptions.Center,
-                                  uppercaseTitle ? FontStyles.Bold | FontStyles.UpperCase : FontStyles.Bold, textColor);
+            float closeSpace = closeButtonSize > 0f ? closeButtonSize + panelPadding : 0f;
+            titleLabel = MakeText(boxObject.transform, "Title", inventoryTitle, headerTitleSize,
+                                  TextAlignmentOptions.Center, FontStyles.Bold, textColor);
             titleLabel.enableAutoSizing = true; // never clipped or wrapped, whatever the box width
-            titleLabel.fontSizeMax = titleFontSize;
-            titleLabel.fontSizeMin = Mathf.Min(12f, titleFontSize);
+            titleLabel.fontSizeMax = headerTitleSize;
+            titleLabel.fontSizeMin = Mathf.Min(12f, headerTitleSize);
             titleLabel.overflowMode = TextOverflowModes.Overflow;
 
             RectTransform tr = titleLabel.rectTransform;
             tr.anchorMin = new Vector2(0f, 1f);
             tr.anchorMax = new Vector2(1f, 1f);
             tr.pivot = new Vector2(0.5f, 1f);
-            tr.sizeDelta = new Vector2(-panelPadding * 2f, headerHeight);
-            tr.anchoredPosition = new Vector2(0f, -panelPadding * 0.5f);
+            tr.sizeDelta = new Vector2(-(panelPadding * 2f + closeSpace * 2f), headerHeight); // centred, with room for the X
+            tr.anchoredPosition = Vector2.zero;
+
+            if (closeButtonSize > 0f)
+            {
+                Button close = MakeButton(boxObject.transform, "Close", "X", new Vector2(closeButtonSize, closeButtonSize),
+                                          closeButtonColor, textColor, closeButtonSize * 0.5f);
+                RectTransform cr = close.GetComponent<RectTransform>();
+                cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+                cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
+                close.onClick.AddListener(() => boxObject.SetActive(false));
+            }
         }
 
         BuildInventoryTabs(anchor);
@@ -1037,7 +1053,7 @@ public class PixelUI : MonoBehaviour
     }
 
     /// <summary>Where the lines start: below the title bar and (in automatic mode) the two tab buttons.</summary>
-    private float ContentTop => headerHeight + panelPadding * 0.5f + (autoMode ? subTabHeight + subTabGap : 0f);
+    private float ContentTop => headerHeight + (showHeader ? 0f : panelPadding * 0.5f) + (autoMode ? subTabHeight + subTabGap : 0f);
 
     // ------------------------------------------------------------------
     // Inventory tabs / consumables
@@ -1050,7 +1066,7 @@ public class PixelUI : MonoBehaviour
 
         float innerWidth = panelWidth - panelPadding * 2f;
         float tabWidth = (innerWidth - 8f) * 0.5f;
-        float tabTop = headerHeight + panelPadding * 0.5f;
+        float tabTop = headerHeight + (showHeader ? 0f : panelPadding * 0.5f);
 
         for (int i = 0; i < names.Length; i++)
         {

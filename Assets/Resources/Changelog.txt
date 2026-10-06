@@ -1,3 +1,4 @@
 [2026-10-06 22:14 UTC] Dev Tools: added a Skip intro button that unlocks the Gray and Black pixels and gives the RGB pack and Auto Clicker for free.
 [2026-10-06 22:39 UTC] Black hole is easier to see: brighter swirl arms, a glowing ring around its dark centre and a self-lit look (new Brightness, Rim and Glow settings); size and shape unchanged.
 [2026-10-06 22:42 UTC] While a black hole is open, old pixels stop despawning (time dilation) and age normally again when it closes; there is a Freeze Old Pixels tick box on the black hole.
+[2026-10-06 22:50 UTC] The Inventory now has a header like the Pixel Log: a centred title with a close (X) button above the Currency and Consumables tabs (new Show Header settings replace the old title ones).
