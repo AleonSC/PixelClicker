@@ -99,19 +99,18 @@ public class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack switches on the auto clicker.")]
         public bool unlocksAutoClicker = false;
 
-        [Tooltip("Buying this pack switches on the ghost minigame.")]
-        public bool unlocksGhostMinigame = false;
+        [Tooltip("Id of a minigame that buying this pack switches on (e.g. ghost, blackhole). Empty = none.")]
+        public string unlocksMinigame = "";
 
-        [Tooltip("Buying this pack switches on the black hole minigame.")]
-        public bool unlocksBlackholeMinigame = false;
+        [Tooltip("Id of a minigame whose goal must be reached before this pack can be bought " +
+                 "(e.g. ghost = enough ghosts caught, blackhole = singularity goal). Empty = none.")]
+        public string requiresMinigameGoal = "";
 
-        [Tooltip("This pack can only be bought once the singularity tracker has reached its threshold " +
-                 "(set on the Pixel Blackhole Minigame component).")]
-        public bool requiresSingularity = false;
-
-        [Tooltip("This pack can only be bought once enough ghosts have been caught " +
-                 "(set on the Pixel Ghost Minigame component).")]
-        public bool requiresGhosts = false;
+        // Older versions used one tick box per minigame. They are read once and turned into the ids above.
+        [HideInInspector] public bool unlocksGhostMinigame;
+        [HideInInspector] public bool unlocksBlackholeMinigame;
+        [HideInInspector] public bool requiresSingularity;
+        [HideInInspector] public bool requiresGhosts;
 
         [Tooltip("Runtime: has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.)")]
         public bool purchased = false;
@@ -139,12 +138,6 @@ public class PixelShop : MonoBehaviour
 
     [Tooltip("The auto clicker switched on by the Auto Clicker pack. Taken from this GameObject (or found in the scene) if empty. Edit its interval on that component.")]
     [SerializeField] private PixelAutoClicker autoClicker;
-
-    [Tooltip("The black hole minigame switched on by the Black Hole pack, and the owner of the singularity tracker. Found in the scene (or added to this GameObject) if empty. Edit its timing, size and threshold on that component.")]
-    [SerializeField] private PixelBlackholeMinigame blackholeMinigame;
-
-    [Tooltip("The ghost minigame switched on by the Ghost Hunt pack. Found in the scene (or added to this GameObject) if empty. Edit its timing and look on that component.")]
-    [SerializeField] private PixelGhostMinigame ghostMinigame;
 
     [Tooltip("Holds the potions sold in the Consumables tab. Found in the scene (or added to this GameObject) if empty. Edit prices and durations on that component.")]
     [SerializeField] private PixelConsumables consumables;
@@ -386,7 +379,7 @@ public class PixelShop : MonoBehaviour
                 new PackCost { type = PixelClicker.PixelType.Glass, amount = 50 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
-            unlocksGhostMinigame = true,
+            unlocksMinigame = "ghost",
         };
     }
 
@@ -399,7 +392,7 @@ public class PixelShop : MonoBehaviour
             tab = ShopTab.Pixels,
             description = "Adds the faint, see-through Ghost pixel to the spawn pool. Pays well.",
             requiresPackIndex = requiresGhostHuntIndex,
-            requiresGhosts = true,
+            requiresMinigameGoal = "ghost",
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Glass,        amount = 300 },
@@ -433,7 +426,7 @@ public class PixelShop : MonoBehaviour
                 new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 50 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
-            unlocksBlackholeMinigame = true,
+            unlocksMinigame = "blackhole",
         };
     }
 
@@ -446,7 +439,7 @@ public class PixelShop : MonoBehaviour
             tab = ShopTab.Pixels,
             description = "Adds the tough Singularity pixel, forged from what the black hole swallowed. Pays hugely.",
             requiresPackIndex = requiresBlackholeIndex,
-            requiresSingularity = true,
+            requiresMinigameGoal = "blackhole",
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 100 },
@@ -692,35 +685,15 @@ public class PixelShop : MonoBehaviour
     [Tooltip("Shown after the potion name. {0} = how many you own.")]
     [SerializeField] private string potionOwnedFormat = "Owned: {0}";
 
-    [Header("Singularity Tracker (Minigames tab)")]
-    [Tooltip("Show the tracker in the Minigames tab once the Black Hole is bought (or the tracker has any pixels).")]
-    [SerializeField] private bool showSingularityTracker = true;
+    [Header("Minigame Trackers (Minigames tab)")]
+    [Tooltip("Show each minigame's tracker row (e.g. Singularity, Ghosts Caught) in the Minigames tab once the minigame is running or has progress. Titles and descriptions are set on the minigame components.")]
+    [SerializeField] private bool showMinigameTrackers = true;
 
-    [Tooltip("Tracker title.")]
-    [SerializeField] private string trackerTitle = "Singularity Tracker";
-
-    [TextArea(1, 3)]
-    [Tooltip("Tracker description.")]
-    [SerializeField] private string trackerDescription = "Pixels fed to the black hole. Reach the goal to unlock the Singularity Pixel.";
-
-    [Tooltip("Count while the goal has not been reached. {0} = pixels so far, {1} = goal.")]
+    [Tooltip("Tracker count while the goal has not been reached. {0} = progress so far, {1} = goal.")]
     [SerializeField] private string trackerFormat = "{0} / {1}";
 
-    [Tooltip("Count once the goal has been reached (it keeps counting). {0} = pixels so far.")]
+    [Tooltip("Tracker count once the goal has been reached (it keeps counting). {0} = progress so far.")]
     [SerializeField] private string trackerReachedFormat = "{0}  (goal reached)";
-
-    [Tooltip("Locked-pack text for a pack gated by the tracker. {0} = pixels so far, {1} = goal.")]
-    [SerializeField] private string singularityRequiresFormat = "Requires: {0} / {1} pixels in the singularity";
-
-    [Tooltip("Ghost tracker title.")]
-    [SerializeField] private string ghostTrackerTitle = "Ghosts Caught";
-
-    [TextArea(1, 3)]
-    [Tooltip("Ghost tracker description.")]
-    [SerializeField] private string ghostTrackerDescription = "Click ghosts as they float past. Catch enough to unlock the Ghost Pixel.";
-
-    [Tooltip("Locked-pack text for a pack gated by the ghost count. {0} = ghosts caught, {1} = goal.")]
-    [SerializeField] private string ghostRequiresFormat = "Requires: {0} / {1} ghosts caught";
 
     [Tooltip("Height of the tracker row.")]
     [SerializeField] private float trackerRowHeight = 190f;
@@ -910,27 +883,9 @@ public class PixelShop : MonoBehaviour
         }
         if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
 
-        if (blackholeMinigame == null) blackholeMinigame = GetComponent<PixelBlackholeMinigame>();
-        if (blackholeMinigame == null)
-        {
-#if UNITY_2023_1_OR_NEWER
-            blackholeMinigame = FindFirstObjectByType<PixelBlackholeMinigame>();
-#else
-            blackholeMinigame = FindObjectOfType<PixelBlackholeMinigame>();
-#endif
-        }
-        if (blackholeMinigame == null) blackholeMinigame = gameObject.AddComponent<PixelBlackholeMinigame>();
-
-        if (ghostMinigame == null) ghostMinigame = GetComponent<PixelGhostMinigame>();
-        if (ghostMinigame == null)
-        {
-#if UNITY_2023_1_OR_NEWER
-            ghostMinigame = FindFirstObjectByType<PixelGhostMinigame>();
-#else
-            ghostMinigame = FindObjectOfType<PixelGhostMinigame>();
-#endif
-        }
-        if (ghostMinigame == null) ghostMinigame = gameObject.AddComponent<PixelGhostMinigame>();
+        // The built-in minigames must exist in the scene (the shop switches them on).
+        EnsureMinigame<PixelGhostMinigame>();
+        EnsureMinigame<PixelBlackholeMinigame>();
 
         if (consumables == null) consumables = GetComponent<PixelConsumables>();
         if (consumables == null)
@@ -966,6 +921,15 @@ public class PixelShop : MonoBehaviour
         }
     }
 
+    private void EnsureMinigame<T>() where T : PixelMinigame
+    {
+#if UNITY_2023_1_OR_NEWER
+        if (FindFirstObjectByType<T>() == null) gameObject.AddComponent<T>();
+#else
+        if (FindObjectOfType<T>() == null) gameObject.AddComponent<T>();
+#endif
+    }
+
     /// <summary>
     /// Adds any default pack (Auto Clicker, upgrades, Glass, Vacuum) missing from the Packs list.
     /// Runs at startup and, in the Editor, when the component is loaded - so older components get the
@@ -975,6 +939,15 @@ public class PixelShop : MonoBehaviour
     {
         int before = packs.Length;
         bool renamed = false;
+
+        // Turn the old per-minigame tick boxes into minigame ids.
+        foreach (ShopPack pack in packs)
+        {
+            if (pack.unlocksGhostMinigame) { pack.unlocksMinigame = "ghost"; pack.unlocksGhostMinigame = false; renamed = true; }
+            if (pack.unlocksBlackholeMinigame) { pack.unlocksMinigame = "blackhole"; pack.unlocksBlackholeMinigame = false; renamed = true; }
+            if (pack.requiresGhosts) { pack.requiresMinigameGoal = "ghost"; pack.requiresGhosts = false; renamed = true; }
+            if (pack.requiresSingularity) { pack.requiresMinigameGoal = "blackhole"; pack.requiresSingularity = false; renamed = true; }
+        }
 
         // Older components saved the previous names; Glass and Vacuum are single pixels listed on the Pixels tab.
         foreach (ShopPack pack in packs)
@@ -1089,7 +1062,7 @@ public class PixelShop : MonoBehaviour
         if (addDefaultGhostPack)
         {
             bool hasGhost = false;
-            foreach (ShopPack pack in packs) if (pack.unlocksGhostMinigame) hasGhost = true;
+            foreach (ShopPack pack in packs) if (pack.unlocksMinigame == "ghost") hasGhost = true;
 
             if (!hasGhost)
             {
@@ -1103,7 +1076,7 @@ public class PixelShop : MonoBehaviour
         if (addDefaultBlackholePack)
         {
             bool hasBlackhole = false;
-            foreach (ShopPack pack in packs) if (pack.unlocksBlackholeMinigame) hasBlackhole = true;
+            foreach (ShopPack pack in packs) if (pack.unlocksMinigame == "blackhole") hasBlackhole = true;
 
             if (!hasBlackhole)
             {
@@ -1123,7 +1096,7 @@ public class PixelShop : MonoBehaviour
 
             if (!hasSingularity)
             {
-                int blackholeIndex = Array.FindIndex(packs, p => p.unlocksBlackholeMinigame);
+                int blackholeIndex = Array.FindIndex(packs, p => p.unlocksMinigame == "blackhole");
                 Array.Resize(ref packs, packs.Length + 1);
                 packs[packs.Length - 1] = CreateSingularityPack(blackholeIndex);
             }
@@ -1138,7 +1111,7 @@ public class PixelShop : MonoBehaviour
 
             if (!hasGhostPixel)
             {
-                int ghostHuntIndex = Array.FindIndex(packs, p => p.unlocksGhostMinigame);
+                int ghostHuntIndex = Array.FindIndex(packs, p => p.unlocksMinigame == "ghost");
                 Array.Resize(ref packs, packs.Length + 1);
                 packs[packs.Length - 1] = CreateGhostPixelPack(ghostHuntIndex);
             }
@@ -1158,40 +1131,23 @@ public class PixelShop : MonoBehaviour
             if (this == null || Application.isPlaying) return;
             if (EnsureDefaultPacks()) UnityEditor.EditorUtility.SetDirty(this);
 
-            // Make sure the potions exist as an editable component on the scene.
-#if UNITY_2023_1_OR_NEWER
-            bool hasConsumables = FindFirstObjectByType<PixelConsumables>() != null;
-#else
-            bool hasConsumables = FindObjectOfType<PixelConsumables>() != null;
-#endif
-            if (!hasConsumables)
-            {
-                UnityEditor.Undo.AddComponent<PixelConsumables>(gameObject);
-                UnityEditor.EditorUtility.SetDirty(gameObject);
-            }
-
-#if UNITY_2023_1_OR_NEWER
-            bool hasGhost = FindFirstObjectByType<PixelGhostMinigame>() != null;
-#else
-            bool hasGhost = FindObjectOfType<PixelGhostMinigame>() != null;
-#endif
-            if (!hasGhost)
-            {
-                UnityEditor.Undo.AddComponent<PixelGhostMinigame>(gameObject);
-                UnityEditor.EditorUtility.SetDirty(gameObject);
-            }
-
-#if UNITY_2023_1_OR_NEWER
-            bool hasBlackhole = FindFirstObjectByType<PixelBlackholeMinigame>() != null;
-#else
-            bool hasBlackhole = FindObjectOfType<PixelBlackholeMinigame>() != null;
-#endif
-            if (!hasBlackhole)
-            {
-                UnityEditor.Undo.AddComponent<PixelBlackholeMinigame>(gameObject);
-                UnityEditor.EditorUtility.SetDirty(gameObject);
-            }
+            // Make sure the helper components exist in the scene, so their settings are editable in the Inspector.
+            EditorEnsureComponent<PixelConsumables>();
+            EditorEnsureComponent<PixelGhostMinigame>();
+            EditorEnsureComponent<PixelBlackholeMinigame>();
         };
+    }
+
+    private void EditorEnsureComponent<T>() where T : Component
+    {
+#if UNITY_2023_1_OR_NEWER
+        bool exists = FindFirstObjectByType<T>() != null;
+#else
+        bool exists = FindObjectOfType<T>() != null;
+#endif
+        if (exists) return;
+        UnityEditor.Undo.AddComponent<T>(gameObject);
+        UnityEditor.EditorUtility.SetDirty(gameObject);
     }
 #endif
 
@@ -1283,8 +1239,7 @@ public class PixelShop : MonoBehaviour
         pack.level = IsLeveled(pack) ? Mathf.Clamp(level, 0, pack.levels.Length) : 0;
         pack.appliedLevel = pack.level;
 
-        if (pack.unlocksGhostMinigame && !purchased && ghostMinigame != null) ghostMinigame.Deactivate();
-        if (pack.unlocksBlackholeMinigame && !purchased && blackholeMinigame != null) blackholeMinigame.Deactivate();
+        if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
 
     /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
@@ -1309,7 +1264,7 @@ public class PixelShop : MonoBehaviour
     }
 
     /// <summary>True when the pack's required pack (if any) has been bought.</summary>
-    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsSingularityMet(packIndex) && IsGhostMet(packIndex);
+    public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsMinigameGoalMet(packIndex);
 
     /// <summary>True when the pack that must be bought first (if any) has been bought.</summary>
     public bool IsPackRequirementMet(int packIndex)
@@ -1319,29 +1274,24 @@ public class PixelShop : MonoBehaviour
         return HasPack(req);
     }
 
-    /// <summary>True unless the pack needs the singularity tracker's goal and it has not been reached.</summary>
-    public bool IsSingularityMet(int packIndex)
+    /// <summary>True unless the pack needs a minigame's goal (ghosts caught, singularity...) and it has not been reached.</summary>
+    public bool IsMinigameGoalMet(int packIndex)
     {
-        if (!packs[packIndex].requiresSingularity) return true;
-        return blackholeMinigame != null && blackholeMinigame.ThresholdReached;
-    }
+        string id = packs[packIndex].requiresMinigameGoal;
+        if (string.IsNullOrEmpty(id)) return true;
 
-    /// <summary>True unless the pack needs the ghost goal (enough ghosts caught) and it has not been reached.</summary>
-    public bool IsGhostMet(int packIndex)
-    {
-        if (!packs[packIndex].requiresGhosts) return true;
-        return ghostMinigame != null && ghostMinigame.ThresholdReached;
+        PixelMinigame minigame = PixelMinigame.Find(id);
+        return minigame != null && minigame.GoalReached;
     }
 
     private string RequirementText(int packIndex)
     {
         if (!IsPackRequirementMet(packIndex)) return string.Format(requiresFormat, RequirementName(packs[packIndex]));
-        if (!IsGhostMet(packIndex))
-            return string.Format(ghostRequiresFormat, PixelClicker.FormatNumber(ghostMinigame.GhostsCaught),
-                                 PixelClicker.FormatNumber(ghostMinigame.GhostThreshold));
-        if (blackholeMinigame == null) return "";
-        return string.Format(singularityRequiresFormat, PixelClicker.FormatNumber(blackholeMinigame.SingularityCount),
-                             PixelClicker.FormatNumber(blackholeMinigame.SingularityThreshold));
+
+        PixelMinigame minigame = PixelMinigame.Find(packs[packIndex].requiresMinigameGoal);
+        if (minigame == null) return "";
+        return string.Format(minigame.RequirementFormat, PixelClicker.FormatNumber(minigame.TrackerCount),
+                             PixelClicker.FormatNumber(minigame.TrackerGoal));
     }
 
     /// <summary>True when the player holds enough of every currency for the pack's next purchase.</summary>
@@ -1406,8 +1356,7 @@ public class PixelShop : MonoBehaviour
         }
 
         if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
-        if (pack.unlocksGhostMinigame && ghostMinigame != null) ghostMinigame.Activate(); // no-op if already running
-        if (pack.unlocksBlackholeMinigame && blackholeMinigame != null) blackholeMinigame.Activate(); // no-op if already running
+        if (!string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Activate(); // no-op if already running
     }
 
     /// <summary>Buys a pack: spends all costs, unlocks the reward tiers. Returns false if not possible.</summary>
@@ -1527,8 +1476,11 @@ public class PixelShop : MonoBehaviour
         for (int i = 0; i < packs.Length; i++)
             rows[i] = BuildRow(IsChild(i) ? subContentRect : contentRect, i);
 
-        singularityTracker = BuildTracker(contentRect, "Singularity Tracker", trackerTitle, trackerDescription);
-        ghostTracker = BuildTracker(contentRect, "Ghost Tracker", ghostTrackerTitle, ghostTrackerDescription);
+        // One tracker row for every minigame that has a goal counter.
+        trackers.Clear();
+        foreach (PixelMinigame minigame in PixelMinigame.All)
+            if (minigame != null && minigame.HasTracker)
+                trackers[minigame] = BuildTracker(contentRect, minigame.Id + " Tracker", minigame.TrackerTitle, minigame.TrackerDescription);
 
         // One row per potion, listed on the Consumables tab.
         int potionCount = consumables != null ? consumables.ItemCount : 0;
@@ -1819,8 +1771,8 @@ public class PixelShop : MonoBehaviour
         public RectTransform fill;
     }
 
-    private TrackerUI singularityTracker;
-    private TrackerUI ghostTracker;
+    private readonly System.Collections.Generic.Dictionary<PixelMinigame, TrackerUI> trackers =
+        new System.Collections.Generic.Dictionary<PixelMinigame, TrackerUI>();
 
     private TrackerUI BuildTracker(Transform parent, string objectName, string title, string description)
     {
@@ -1956,17 +1908,14 @@ public class PixelShop : MonoBehaviour
         if (openParent >= 0) subTitle.text = string.Format(upgradesWindowTitle, packs[openParent].displayName);
 
         // Trackers: first things on the Minigames tab, once their minigame is in play.
-        bool minigames = showSingularityTracker && currentTab == ShopTab.Minigames;
-        bool showSingularity = minigames && blackholeMinigame != null &&
-                               (blackholeMinigame.Running || blackholeMinigame.SingularityCount > 0d);
-        bool showGhosts = minigames && ghostMinigame != null &&
-                          (ghostMinigame.Running || ghostMinigame.GhostsCaught > 0d);
-        PlaceTracker(singularityTracker, showSingularity,
-                     blackholeMinigame != null ? blackholeMinigame.SingularityCount : 0d,
-                     blackholeMinigame != null ? blackholeMinigame.SingularityThreshold : 1d, ref y, ref visibleCount);
-        PlaceTracker(ghostTracker, showGhosts,
-                     ghostMinigame != null ? ghostMinigame.GhostsCaught : 0d,
-                     ghostMinigame != null ? ghostMinigame.GhostThreshold : 1d, ref y, ref visibleCount);
+        foreach (var pair in trackers)
+        {
+            PixelMinigame m = pair.Key;
+            bool show = showMinigameTrackers && currentTab == ShopTab.Minigames && m != null &&
+                        (m.Running || m.TrackerCount > 0d);
+            PlaceTracker(pair.Value, show, m != null ? m.TrackerCount : 0d, m != null ? m.TrackerGoal : 1d,
+                         ref y, ref visibleCount);
+        }
 
         for (int i = 0; i < packs.Length && i < rows.Length; i++)
         {

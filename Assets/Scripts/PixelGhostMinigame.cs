@@ -18,7 +18,7 @@ using UnityEngine.InputSystem;
 /// Everything is adjustable: how often it appears, how fast it crosses, how see-through it is, how it wobbles.
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelGhostMinigame : MonoBehaviour
+public class PixelGhostMinigame : PixelMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera and the cube's position). Found automatically if left empty.")]
@@ -136,6 +136,16 @@ public class PixelGhostMinigame : MonoBehaviour
     [Tooltip("Runtime: ghosts caught so far (saved with the game). You can type a number to test the unlock.")]
     [SerializeField] private double ghostsCaught = 0;
 
+    [Tooltip("Title of this minigame's tracker row in the shop.")]
+    [SerializeField] private string trackerTitle = "Ghosts Caught";
+
+    [TextArea(1, 3)]
+    [Tooltip("Description of the tracker row.")]
+    [SerializeField] private string trackerDescription = "Click ghosts as they float past. Catch enough to unlock the Ghost Pixel.";
+
+    [Tooltip("Text on a locked shop pack that needs the goal. {0} = ghosts caught, {1} = goal.")]
+    [SerializeField] private string requirementFormat = "Requires: {0} / {1} ghosts caught";
+
     [Header("Sound / Events")]
     [Tooltip("Sound played when a ghost is caught.")]
     [SerializeField] private AudioClip caughtSound;
@@ -161,7 +171,18 @@ public class PixelGhostMinigame : MonoBehaviour
     private Material ghostMaterial;
     private AudioSource audioSource;
 
-    public bool Running => running;
+    public override string Id => "ghost";
+
+    public override bool Running => running;
+
+    // --- Tracker: ghosts caught (see PixelMinigame) ---
+    public override bool HasTracker => true;
+    public override string TrackerTitle => trackerTitle;
+    public override string TrackerDescription => trackerDescription;
+    public override double TrackerCount => ghostsCaught;
+    public override double TrackerGoal => ghostThreshold;
+    public override string RequirementFormat => requirementFormat;
+    public override void SetTrackerCount(double value) => ghostsCaught = System.Math.Max(0d, value);
 
     /// <summary>Ghosts caught so far.</summary>
     public double GhostsCaught => ghostsCaught;
@@ -175,8 +196,9 @@ public class PixelGhostMinigame : MonoBehaviour
     /// <summary>Sets the count (used when loading a save).</summary>
     public void SetGhostsCaught(double value) => ghostsCaught = System.Math.Max(0d, value);
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         if (clicker == null)
         {
 #if UNITY_2023_1_OR_NEWER
@@ -214,7 +236,7 @@ public class PixelGhostMinigame : MonoBehaviour
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>
-    public void Activate()
+    public override void Activate()
     {
         if (running) return;
         running = true;
@@ -222,7 +244,7 @@ public class PixelGhostMinigame : MonoBehaviour
     }
 
     /// <summary>Stops the minigame.</summary>
-    public void Deactivate() => running = false;
+    public override void Deactivate() => running = false;
 
     /// <summary>Makes a ghost appear right now (handy for testing: right-click the component &gt; Spawn Ghost Now).</summary>
     [ContextMenu("Spawn Ghost Now")]

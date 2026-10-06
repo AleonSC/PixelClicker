@@ -57,6 +57,13 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     [Serializable]
+    private class MinigameSave
+    {
+        public string id;
+        public double value;
+    }
+
+    [Serializable]
     private class SaveData
     {
         public int version = 1;
@@ -65,6 +72,9 @@ public class PixelSaveGame : MonoBehaviour
         public PackSave[] packs;
         public PotionSave[] potions;
         public DeviceSave[] devices;
+        public MinigameSave[] minigames;
+
+        // Older saves (before minigames were saved by id).
         public double singularityCount;
         public double ghostsCaught;
         public string[] achievements;
@@ -96,12 +106,6 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("The achievements whose earned list is saved.")]
     [SerializeField] private PixelAchievements achievements;
-
-    [Tooltip("The ghost minigame whose 'ghosts caught' count is saved.")]
-    [SerializeField] private PixelGhostMinigame ghost;
-
-    [Tooltip("The black hole minigame whose singularity tracker count is saved.")]
-    [SerializeField] private PixelBlackholeMinigame blackhole;
 
     [Tooltip("The auto clicker's running state, interval and clicks per tick are saved.")]
     [SerializeField] private PixelAutoClicker autoClicker;
@@ -225,18 +229,14 @@ public class PixelSaveGame : MonoBehaviour
         if (clicker == null) clicker = FindFirstObjectByType<PixelClicker>();
         if (shop == null) shop = FindFirstObjectByType<PixelShop>();
         if (autoClicker == null) autoClicker = FindFirstObjectByType<PixelAutoClicker>();
-        if (blackhole == null) blackhole = FindFirstObjectByType<PixelBlackholeMinigame>();
         if (achievements == null) achievements = FindFirstObjectByType<PixelAchievements>();
         if (stats == null) stats = FindFirstObjectByType<PixelStats>();
-        if (ghost == null) ghost = FindFirstObjectByType<PixelGhostMinigame>();
 #else
         if (clicker == null) clicker = FindObjectOfType<PixelClicker>();
         if (shop == null) shop = FindObjectOfType<PixelShop>();
         if (autoClicker == null) autoClicker = FindObjectOfType<PixelAutoClicker>();
-        if (blackhole == null) blackhole = FindObjectOfType<PixelBlackholeMinigame>();
         if (achievements == null) achievements = FindObjectOfType<PixelAchievements>();
         if (stats == null) stats = FindObjectOfType<PixelStats>();
-        if (ghost == null) ghost = FindObjectOfType<PixelGhostMinigame>();
 #endif
         // Use the potions the shop sells into, so both always agree.
         if (shop != null && shop.Consumables != null) consumables = shop.Consumables;
@@ -309,8 +309,11 @@ public class PixelSaveGame : MonoBehaviour
                     };
             }
 
-            if (blackhole != null) data.singularityCount = blackhole.SingularityCount;
-            if (ghost != null) data.ghostsCaught = ghost.GhostsCaught;
+            // Every minigame with a goal counter saves its count under its id.
+            System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
+            foreach (PixelMinigame m in PixelMinigame.All)
+                if (m != null && m.HasTracker) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.TrackerCount });
+            data.minigames = minigameSaves.ToArray();
             if (achievements != null) data.achievements = achievements.GetSaveState();
             if (stats != null)
             {
@@ -418,8 +421,16 @@ public class PixelSaveGame : MonoBehaviour
                 }
             }
 
-            if (blackhole != null) blackhole.SetSingularityCount(data.singularityCount);
-            if (ghost != null) ghost.SetGhostsCaught(data.ghostsCaught);
+            foreach (PixelMinigame m in PixelMinigame.All)
+            {
+                if (m == null || !m.HasTracker) continue;
+
+                MinigameSave saved = data.minigames != null ? Array.Find(data.minigames, x => x.id == m.Id) : null;
+                double value = saved != null ? saved.value
+                             : m.Id == "ghost" ? data.ghostsCaught            // save from before minigames were saved by id
+                             : m.Id == "blackhole" ? data.singularityCount : 0d;
+                m.SetTrackerCount(value);
+            }
             if (achievements != null) achievements.SetSaveState(data.achievements);
             if (stats != null)
                 stats.SetState(data.statManualClicks, data.statAutoClicks, data.statPlaySeconds, data.statPixelsSpent);

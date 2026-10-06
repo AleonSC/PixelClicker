@@ -14,7 +14,7 @@ using UnityEngine.Events;
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
-public class PixelBlackholeMinigame : MonoBehaviour
+public class PixelBlackholeMinigame : PixelMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, old pixels). Found automatically if left empty.")]
@@ -34,6 +34,16 @@ public class PixelBlackholeMinigame : MonoBehaviour
 
     [Tooltip("Runtime: pixels swallowed so far (saved with the game). You can type a number to test the unlock.")]
     [SerializeField] private double singularityCount = 0;
+
+    [Tooltip("Title of this minigame's tracker row in the shop.")]
+    [SerializeField] private string trackerTitle = "Singularity Tracker";
+
+    [TextArea(1, 3)]
+    [Tooltip("Description of the tracker row.")]
+    [SerializeField] private string trackerDescription = "Pixels fed to the black hole. Reach the goal to unlock the Singularity Pixel.";
+
+    [Tooltip("Text on a locked shop pack that needs the goal. {0} = pixels swallowed, {1} = goal.")]
+    [SerializeField] private string requirementFormat = "Requires: {0} / {1} pixels in the singularity";
 
     [Tooltip("Also pay out the pixels' original reward when they are swallowed (like the Vacuum). Off = they are simply lost to the singularity.")]
     [SerializeField] private bool creditSwallowedPixels = false;
@@ -159,7 +169,18 @@ public class PixelBlackholeMinigame : MonoBehaviour
     private Material outerMaterial, innerMaterial;
     private bool thresholdAnnounced;
 
-    public bool Running => running;
+    public override string Id => "blackhole";
+
+    public override bool Running => running;
+
+    // --- Tracker: the singularity (see PixelMinigame) ---
+    public override bool HasTracker => true;
+    public override string TrackerTitle => trackerTitle;
+    public override string TrackerDescription => trackerDescription;
+    public override double TrackerCount => singularityCount;
+    public override double TrackerGoal => singularityThreshold;
+    public override string RequirementFormat => requirementFormat;
+    public override void SetTrackerCount(double value) => SetSingularityCount(value);
 
     /// <summary>Pixels swallowed so far.</summary>
     public double SingularityCount => singularityCount;
@@ -170,8 +191,9 @@ public class PixelBlackholeMinigame : MonoBehaviour
     /// <summary>True once enough pixels have been swallowed to unlock the Singularity Pixel.</summary>
     public bool ThresholdReached => singularityCount >= singularityThreshold;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         if (clicker == null)
         {
 #if UNITY_2023_1_OR_NEWER
@@ -201,7 +223,7 @@ public class PixelBlackholeMinigame : MonoBehaviour
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>
-    public void Activate()
+    public override void Activate()
     {
         if (running) return;
         running = true;
@@ -209,7 +231,7 @@ public class PixelBlackholeMinigame : MonoBehaviour
     }
 
     /// <summary>Stops the minigame (the tracker keeps its count).</summary>
-    public void Deactivate() => running = false;
+    public override void Deactivate() => running = false;
 
     /// <summary>Sets the tracker (used when loading a save).</summary>
     public void SetSingularityCount(double value)
@@ -477,8 +499,9 @@ public class PixelBlackholeMinigame : MonoBehaviour
         return tex;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
         if (outerTexture != null) Destroy(outerTexture);
         if (innerTexture != null) Destroy(innerTexture);
         if (outerMaterial != null) Destroy(outerMaterial);
