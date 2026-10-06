@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// The Toggles window: a button that slides out of the middle of the right edge of the screen opens a window with
 /// every on/off switch in the game, in three groups (buttons at the top of the window):
 ///   Pixels    - switch the spawning of the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor) on or off
-///   Upgrades  - switch the Auto Clicker and Pixel Grabbing on or off
+///   Upgrades  - switch the Auto Clicker, Pixel Grabbing and Time Stop on or off
 ///   Minigames - switch each bought minigame on or off
 /// Only things you own are listed. The choices are saved with the game.
 ///
@@ -50,6 +50,9 @@ public class PixelToggles : MonoBehaviour
 
     [Tooltip("Label of the Pixel Grabbing toggle.")]
     [SerializeField] private string grabbingLabel = "Pixel Grabbing";
+
+    [Tooltip("Label of the Time Stop toggle.")]
+    [SerializeField] private string timeStopLabel = "Time Stop";
 
     [Tooltip("Label of a pixel's toggle. {0} = pixel name.")]
     [SerializeField] private string pixelLabelFormat = "{0} spawn";
@@ -127,6 +130,7 @@ public class PixelToggles : MonoBehaviour
 
     private PixelAutoClicker autoClicker;
     private PixelGrab grab;
+    private PixelTimeStop timeStop;
 
     private void Awake()
     {
@@ -191,6 +195,7 @@ public class PixelToggles : MonoBehaviour
         {
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
             if (grab == null) grab = PixelFind.First<PixelGrab>();
+            if (timeStop == null) timeStop = PixelFind.First<PixelTimeStop>();
 
             PixelAutoClicker ac = autoClicker;
             if (ac != null && (ac.Running || ac.UserDisabled))
@@ -199,6 +204,10 @@ public class PixelToggles : MonoBehaviour
             PixelGrab g = grab;
             if (g != null && (g.Active || g.UserDisabled))
                 list.Add(new Entry { label = grabbingLabel, on = !g.UserDisabled, setter = on => g.UserDisabled = !on });
+
+            PixelTimeStop ts = timeStop;
+            if (ts != null && (ts.Active || ts.UserDisabled))
+                list.Add(new Entry { label = timeStopLabel, on = !ts.UserDisabled, setter = on => ts.UserDisabled = !on });
         }
         else
         {

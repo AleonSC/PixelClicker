@@ -401,6 +401,20 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Time Stop upgrade (Upgrades tab): the T key freezes the whole game.</summary>
+    private static ShopPack CreateTimeStopPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Time Stop",
+            tab = ShopTab.Upgrades,
+            description = "Press T to stop time - everything freezes, even countdowns. Press T again to resume.",
+            costs = AllSix(400),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksTimeStop = true,
+        };
+    }
+
     /// <summary>Default Combo Meter upgrade: quick clicks build a multiplier; each level raises its maximum.</summary>
     private static ShopPack CreateComboPack()
     {
@@ -523,6 +537,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateCraftingPack() },
         new DefaultPack { isThis = p => p.unlocksGrabbing,
                           requires = null, create = i => CreateGrabbingPack() },
+        new DefaultPack { isThis = p => p.unlocksTimeStop,
+                          requires = null, create = i => CreateTimeStopPack() },
     };
 
 #if UNITY_EDITOR

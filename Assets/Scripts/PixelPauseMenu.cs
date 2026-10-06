@@ -144,8 +144,8 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the cube pulsing tick box (accessibility).")]
     [SerializeField] private string pulsingLabel = "Cube pulsing";
 
-    [Tooltip("Label of the tick box that switches between abbreviated (1.2K) and full (1,200) numbers.")]
-    [SerializeField] private string abbreviateLabel = "Abbreviate numbers (1.2K)";
+    [Tooltip("Label of the tick box that switches between abbreviated and full (1,200) numbers.")]
+    [SerializeField] private string abbreviateLabel = "Abbreviate numbers";
 
     [Tooltip("Label of the tick box that decides whether the pause menu freezes the game.")]
     [SerializeField] private string pauseStopsLabel = "Pausing stops the game";

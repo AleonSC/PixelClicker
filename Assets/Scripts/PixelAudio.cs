@@ -195,6 +195,8 @@ public class PixelAudio : MonoBehaviour
             Make("pad_click", 0.05f, 0.92f, 1.08f),
             Make("pad_wrong", 0.05f),
             Make("pad_ultra", 0.2f, 1f, 1f),
+            Make("time_stop", 0.3f, 1f, 1f),
+            Make("time_resume", 0.3f, 1f, 1f),
             Make("bomb_spawn", 0.2f),
             Make("bomb_click", 0.1f),
             Make("bomb_tick", 0.1f, 1f, 1f),

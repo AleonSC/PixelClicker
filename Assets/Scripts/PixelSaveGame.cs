@@ -93,6 +93,7 @@ public class PixelSaveGame : MonoBehaviour
         public bool autoClickerRunning;
         public bool autoClickerDisabled; // switched off by the player (Toggles window)
         public bool grabDisabled;
+        public bool timeStopDisabled;
         public float autoClickerInterval;
         public int autoClickerClicks;
     }
@@ -122,6 +123,9 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("Pixel Grabbing (for its on/off switch). Found automatically if left empty.")]
     [SerializeField] private PixelGrab grab;
+
+    [Tooltip("Time Stop (for its on/off switch). Found automatically if left empty.")]
+    [SerializeField] private PixelTimeStop timeStop;
 
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
@@ -259,6 +263,7 @@ public class PixelSaveGame : MonoBehaviour
         if (shop == null) shop = PixelFind.First<PixelShop>();
         if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
         if (grab == null) grab = PixelFind.First<PixelGrab>();
+        if (timeStop == null) timeStop = PixelFind.First<PixelTimeStop>();
         if (achievements == null) achievements = PixelFind.First<PixelAchievements>();
         if (stats == null) stats = PixelFind.First<PixelStats>();
         // Use the potions the shop sells into, so both always agree.
@@ -357,6 +362,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             if (grab != null) data.grabDisabled = grab.UserDisabled;
+            if (timeStop != null) data.timeStopDisabled = timeStop.UserDisabled;
 
             // Write to a temp file first so a crash mid-write can't destroy the old save.
             string path = FilePath;
@@ -429,6 +435,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             if (grab != null) grab.UserDisabled = data.grabDisabled;
+            if (timeStop != null) timeStop.UserDisabled = data.timeStopDisabled;
 
             // Potions.
             if (consumables != null)
