@@ -149,6 +149,29 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("Sorter: random wobble (degrees) of the stream so it isn't a perfectly straight line.")]
         public float sorterSpreadDegrees = 4f;
 
+        [Range(5f, 90f)]
+        [Tooltip("Sorter: half-angle (degrees) of the cone you click inside to bend the pipe. The pipe's end can turn this far either way.")]
+        public float sorterBendConeDegrees = 45f;
+
+        [Tooltip("Sorter: speed multipliers of the three force buttons on the ring (left to right: 1, 2, 3).")]
+        public float[] sorterForceMultipliers = { 0.5f, 1f, 1.8f };
+
+        [Min(0)]
+        [Tooltip("Sorter: which force button is selected when the sorter is placed (0 = the first).")]
+        public int sorterDefaultForce = 1;
+
+        [Min(0.1f)]
+        [Tooltip("Sorter: size of the round force buttons on the ring (world units).")]
+        public float sorterButtonSize = 0.3f;
+
+        [Range(5f, 60f)]
+        [Tooltip("Sorter: angle (degrees) between neighbouring force buttons around the ring.")]
+        public float sorterButtonSpacing = 24f;
+
+        [TextArea(1, 2)]
+        [Tooltip("Sorter: message while bending the pipe (second placing step). {0} = device name.")]
+        public string sorterBendMessage = "Click inside the cone to bend the {0}'s pipe  (right-click to go back)";
+
         [Header("Look and placing")]
         [TextArea(1, 2)]
         [Tooltip("Message while placing. {0} = device name. Empty = the default message from Pixel UI.")]
@@ -359,7 +382,7 @@ public class PixelConsumables : MonoBehaviour
             },
             durationSeconds = 45f,
             color = new Color(1f, 0.7f, 0.25f, 1f),
-            placingMessage = "Scroll or Q / E to aim the {0}'s pipe, click to place it  (right-click to cancel)",
+            placingMessage = "Scroll or Q / E to aim the {0}'s pipe, click to confirm  (right-click to cancel)",
         };
     }
 
@@ -753,10 +776,14 @@ public class PixelConsumables : MonoBehaviour
     public string PlacingName => IsPlacing ? devices[placingIndex].displayName : "";
 
     /// <summary>The device's own placing message (empty = use the default one).</summary>
-    public string PlacingMessage => IsPlacing ? devices[placingIndex].placingMessage : "";
+    public string PlacingMessage => !IsPlacing ? ""
+        : devices[placingIndex].kind == DeviceKind.Sorter && sorterPhase == 1 ? devices[placingIndex].sorterBendMessage
+        : devices[placingIndex].placingMessage;
 
     private float placingYaw;
-    private Transform previewPivot;
+    private PixelSorterDevice.Parts previewSorter;
+    private int sorterPhase;      // 0 = turning the pipe, 1 = bending it
+    private float sorterBend;
 
     /// <summary>Starts placing a device: a cylinder follows the mouse until you click the floor. Returns false if you own none.</summary>
     public bool BeginPlacement(int deviceIndex)
@@ -768,12 +795,15 @@ public class PixelConsumables : MonoBehaviour
         placeStartFrame = Time.frameCount;
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         placingYaw = cam != null ? cam.transform.eulerAngles.y : 0f; // a fan starts out blowing away from the camera
-        previewPivot = null;
+        previewSorter = null;
         if (devices[deviceIndex].kind == DeviceKind.Sorter)
         {
             placingYaw = 0f; // for the sorter this is the pipe's angle around the ring (0 = pointing right on screen)
-            preview = BuildSorterObject(devices[deviceIndex], true, out previewPivot, out _);
-            preview.SetActive(true);
+            sorterPhase = 0;
+            sorterBend = 0f;
+            previewSorter = PixelSorterDevice.Parts.Create(clicker, devices[deviceIndex], cam, true, previewOpacity);
+            previewSorter.Apply(placingYaw, 0f, false, devices[deviceIndex].sorterDefaultForce);
+            preview = previewSorter.Root;
         }
         else
         {
@@ -814,12 +844,7 @@ public class PixelConsumables : MonoBehaviour
 
         if (devices[placingIndex].kind == DeviceKind.Sorter)
         {
-            // The sorter is fixed around the cube: only the pipe turns.
-            placingYaw += TurnInput();
-            if (previewPivot != null) previewPivot.localRotation = Quaternion.Euler(0f, 0f, placingYaw);
-
-            if (LeftPressed() && !PointerOverUI()) PlaceSorter();
-            else if (RightPressed()) CancelPlacement();
+            UpdateSorterPlacement();
             return;
         }
 
@@ -838,6 +863,34 @@ public class PixelConsumables : MonoBehaviour
         else if (RightPressed()) CancelPlacement();
     }
 
+    /// <summary>
+    /// The sorter is fixed around the cube. Step 1: turn the pipe (scroll / Q / E), click to confirm. Step 2: the pipe
+    /// follows the mouse inside a cone; click inside the cone to place it (right-click goes back to step 1).
+    /// </summary>
+    private void UpdateSorterPlacement()
+    {
+        Device d = devices[placingIndex];
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+
+        if (sorterPhase == 0)
+        {
+            placingYaw += TurnInput();
+            sorterBend = 0f;
+            previewSorter.Apply(placingYaw, 0f, false, d.sorterDefaultForce);
+
+            if (LeftPressed() && !PointerOverUI()) sorterPhase = 1;
+            else if (RightPressed()) CancelPlacement();
+            return;
+        }
+
+        bool inCone = PixelSorterDevice.TryGetBend(previewSorter, cam, placingYaw, d.sorterBendConeDegrees, out float bend);
+        if (!PointerOverUI()) sorterBend = bend;
+        previewSorter.Apply(placingYaw, sorterBend, true, d.sorterDefaultForce);
+
+        if (LeftPressed() && inCone && !PointerOverUI()) PlaceSorter();
+        else if (RightPressed()) { sorterPhase = 0; sorterBend = 0f; }
+    }
+
     private void PlaceSorter()
     {
         int index = placingIndex;
@@ -845,85 +898,25 @@ public class PixelConsumables : MonoBehaviour
         d.owned = Mathf.Max(0, d.owned - 1);
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        GameObject root = BuildSorterObject(d, false, out Transform pivot, out TextMeshPro timer);
-        pivot.localRotation = Quaternion.Euler(0f, 0f, placingYaw);
+        PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, false, 1f);
 
-        float outer = PipeStart(SorterOuterRadius(d)); // the device adds the pipe length to this to find the mouth
-        PixelSorterDevice sorter = root.AddComponent<PixelSorterDevice>();
-        sorter.Init(clicker, cam, pivot, timer, timerFormat, d.durationSeconds, outer, d.sorterPipeLength,
-                    d.sorterExitSpeed, d.sorterSpreadDegrees, placingYaw, shrinkSeconds);
+        GameObject tg = new GameObject("Timer");
+        tg.transform.SetParent(parts.Root.transform, false);
+        tg.transform.localPosition = new Vector3(0f, parts.Outer + timerHeightAbove, 0f);
+        TextMeshPro timer = tg.AddComponent<TextMeshPro>();
+        timer.text = string.Format(timerFormat, Mathf.CeilToInt(d.durationSeconds));
+        timer.fontSize = timerFontSize;
+        timer.fontStyle = FontStyles.Bold;
+        timer.alignment = TextAlignmentOptions.Center;
+        timer.color = timerColor;
+        if (clicker.UIFont != null) timer.font = clicker.UIFont;
+
+        PixelSorterDevice sorter = parts.Root.AddComponent<PixelSorterDevice>();
+        sorter.Init(clicker, cam, parts, d, timer, timerFormat, placingYaw, sorterBend, shrinkSeconds);
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
         onDevicePlaced?.Invoke(index);
-    }
-
-    /// <summary>Where the pipe begins along its axis: a touch inside the ring's outer edge so there is no gap.</summary>
-    private static float PipeStart(float outerRadius) => outerRadius - 0.05f;
-
-    /// <summary>Outer radius of the sorter's ring: just bigger than the cube's corners.</summary>
-    private float SorterOuterRadius(Device d)
-    {
-        float inner = clicker.PixelBaseSize * 0.5f * 1.42f + d.sorterRingPadding;
-        return inner + d.sorterRingThickness;
-    }
-
-    /// <summary>
-    /// Builds the sorter: a ring facing the camera, centred on the cube, with a pipe that can turn around it (the pivot)
-    /// and, for a real sorter, the timer text.
-    /// </summary>
-    private GameObject BuildSorterObject(Device d, bool isPreview, out Transform pivot, out TextMeshPro timer)
-    {
-        GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        Vector3 center = clicker.PixelTransform != null ? clicker.PixelTransform.position : Vector3.zero;
-        root.transform.SetPositionAndRotation(center, cam != null ? cam.transform.rotation : Quaternion.identity);
-
-        float outer = SorterOuterRadius(d);
-        float inner = outer - d.sorterRingThickness;
-        float opacity = isPreview ? previewOpacity : 1f;
-        Color bodyColor = d.color;
-        bodyColor.a = opacity;
-
-        // Ring.
-        GameObject ring = new GameObject("Ring", typeof(MeshFilter), typeof(MeshRenderer));
-        ring.transform.SetParent(root.transform, false);
-        ring.GetComponent<MeshFilter>().sharedMesh = PixelSorterDevice.BuildRingMesh(inner, outer, d.sorterRingThickness, 48);
-        Material ringMat = clicker.CreateVisualMaterial(bodyColor, isPreview);
-        if (ringMat != null) ring.GetComponent<MeshRenderer>().sharedMaterial = ringMat;
-
-        // Pipe: a cylinder lying along the pivot's local X axis, starting at the ring's edge.
-        GameObject pivotObject = new GameObject("Pipe Pivot");
-        pivotObject.transform.SetParent(root.transform, false);
-        pivot = pivotObject.transform;
-
-        GameObject pipe = MakePrimitive(PrimitiveType.Cylinder, "Pipe", pivot, bodyColor, isPreview);
-        pipe.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-        pipe.transform.localScale = new Vector3(d.sorterPipeDiameter, d.sorterPipeLength * 0.5f, d.sorterPipeDiameter);
-        pipe.transform.localPosition = new Vector3(PipeStart(outer) + d.sorterPipeLength * 0.5f, 0f, 0f);
-
-        // A darker lip at the mouth so the end of the pipe is easy to see.
-        Color darkColor = new Color(d.color.r * 0.45f, d.color.g * 0.45f, d.color.b * 0.45f, opacity);
-        GameObject lip = MakePrimitive(PrimitiveType.Cylinder, "Lip", pivot, darkColor, isPreview);
-        lip.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-        lip.transform.localScale = new Vector3(d.sorterPipeDiameter * 1.25f, 0.06f, d.sorterPipeDiameter * 1.25f);
-        lip.transform.localPosition = new Vector3(PipeStart(outer) + d.sorterPipeLength - 0.03f, 0f, 0f);
-
-        timer = null;
-        if (!isPreview)
-        {
-            GameObject tg = new GameObject("Timer");
-            tg.transform.SetParent(root.transform, false);
-            tg.transform.localPosition = new Vector3(0f, outer + timerHeightAbove, 0f);
-            timer = tg.AddComponent<TextMeshPro>();
-            timer.text = string.Format(timerFormat, Mathf.CeilToInt(d.durationSeconds));
-            timer.fontSize = timerFontSize;
-            timer.fontStyle = FontStyles.Bold;
-            timer.alignment = TextAlignmentOptions.Center;
-            timer.color = timerColor;
-            if (clicker.UIFont != null) timer.font = clicker.UIFont;
-        }
-        return root;
     }
 
     private void PlaceDevice(Vector3 point)
