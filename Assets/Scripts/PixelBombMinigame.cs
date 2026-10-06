@@ -93,7 +93,11 @@ public class PixelBombMinigame : PixelMinigame
     [SerializeField] private float swayDegrees = 4f;
 
     [Tooltip("Colour of the bomb's casing.")]
-    [SerializeField] private Color bodyColor = new Color(0.14f, 0.14f, 0.17f, 1f);
+    [SerializeField] private Color casingColor = new Color(0.32f, 0.33f, 0.4f, 1f);
+
+    [Min(0f)]
+    [Tooltip("How much the casing glows, so it stands out against a dark background.")]
+    [SerializeField] private float casingGlow = 0.25f;
 
     [Tooltip("Colour of the red wire.")]
     [SerializeField] private Color redWireColor = new Color(1f, 0.2f, 0.2f, 1f);
@@ -124,7 +128,11 @@ public class PixelBombMinigame : PixelMinigame
 
     [Min(0.5f)]
     [Tooltip("Size of the timer text (3D text: about 10 per world unit).")]
-    [SerializeField] private float timerFontSize = 6f;
+    [SerializeField] private float timerTextSize = 3.5f;
+
+    [Min(0.3f)]
+    [Tooltip("Size of the hint text above the bomb.")]
+    [SerializeField] private float hintTextSize = 1.6f;
 
     [Min(0f)]
     [Tooltip("The timer turns red and flashes when this many seconds are left.")]
@@ -275,7 +283,7 @@ public class PixelBombMinigame : PixelMinigame
         return m;
     }
 
-    private TextMeshPro MakeText(Transform parent, string name, string text, float size, Color color, Vector3 localPos)
+    private TextMeshPro MakeText(Transform parent, string name, string text, float size, Color color, Vector3 localPos, float width)
     {
         GameObject go = new GameObject(name);
         go.transform.SetParent(parent, false);
@@ -287,7 +295,8 @@ public class PixelBombMinigame : PixelMinigame
         t.alignment = TextAlignmentOptions.Center;
         t.color = color;
         if (clicker.UIFont != null) t.font = clicker.UIFont;
-        t.rectTransform.sizeDelta = new Vector2(bombSize * 3f, bombSize * 0.6f);
+        t.overflowMode = TextOverflowModes.Overflow;
+        t.rectTransform.sizeDelta = new Vector2(width, bombSize * 0.6f); // wide, so the text never wraps onto a second line
         return t;
     }
 
@@ -321,14 +330,14 @@ public class PixelBombMinigame : PixelMinigame
         Destroy(body.GetComponent<Collider>());
         body.transform.SetParent(root.transform, false);
         body.transform.localScale = new Vector3(bw, bh, bd);
-        Material bodyMat = MakeMaterial(bodyColor, 0f);
+        Material bodyMat = MakeMaterial(casingColor, casingGlow);
         if (bodyMat != null) body.GetComponent<Renderer>().sharedMaterial = bodyMat;
 
-        TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerFontSize, timerColor,
-                                     new Vector3(0f, 0f, -(bd * 0.5f + 0.02f)));
+        TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, timerColor,
+                                     new Vector3(0f, 0f, -(bd * 0.5f + 0.02f)), bw);
         if (!string.IsNullOrEmpty(hintText))
-            MakeText(root.transform, "Hint", hintText, timerFontSize * 0.33f, new Color(1f, 1f, 1f, 0.8f),
-                     new Vector3(0f, bh * 0.5f + bombSize * 0.18f, 0f));
+            MakeText(root.transform, "Hint", hintText, hintTextSize, new Color(1f, 1f, 1f, 0.9f),
+                     new Vector3(0f, bh * 0.5f + bombSize * 0.2f, -(bd * 0.5f)), bombSize * 8f);
 
         // Three wires hanging from the bottom: red, green, blue.
         Color[] colors = { redWireColor, greenWireColor, blueWireColor };

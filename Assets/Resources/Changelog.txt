@@ -12,3 +12,4 @@
 [2026-10-06 16:38 UTC] Fixed the 'ui_click' sound not playing on shop buttons, and added it to the tick boxes in the shop, pause menu and dev tools.
 [2026-10-06 16:43 UTC] Added a 'ui_scroll' sound (a tick every few lines scrolled) to every scrolling list: shop, log, inventory, stats, changelog, crafting, offline window and dropdowns.
 [2026-10-06 16:52 UTC] Added the Bomb Defusal minigame (Minigames tab, needs the RGB pack): a bomb with red, green and blue wires appears now and then; cut the wire of the RGB pixel you hold the most of before the 12s timer ends to earn bomb parts (shown as a tracker), or a wrong wire / timeout explodes it and destroys all old pixels.
+[2026-10-06 16:56 UTC] Bomb Defusal: fixed the bomb's hint and timer text overlapping, made the timer smaller, and made the casing lighter and glowing so the bomb is easier to see.
