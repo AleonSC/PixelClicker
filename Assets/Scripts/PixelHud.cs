@@ -24,8 +24,8 @@ public class PixelHud : MonoBehaviour
     [Tooltip("Colour of the bars.")]
     [SerializeField] private Color barColor = Color.black;
 
-    [Tooltip("Sorting order of the bars' canvas. Keep it below the buttons' canvases (100+) so the buttons draw on top.")]
-    [SerializeField] private int barSortingOrder = 90;
+    [Tooltip("Sorting order of the bars' canvas. It must be BELOW every other UI canvas (the buttons' canvases are 100+), so it is kept at -1 or lower whatever you type.")]
+    [SerializeField] private int barsSortingOrder = -10;
 
     [Header("Buttons (all the same size)")]
     [Tooltip("Size of every docked button (canvas units). Keep the height a little less than the bar height.")]
@@ -104,7 +104,7 @@ public class PixelHud : MonoBehaviour
     private void BuildBars()
     {
         if (!barsEnabled) return;
-        canvasRoot = PixelUIKit.CreateCanvas("PixelHud Canvas", barSortingOrder, new Vector2(1920f, 1080f), true);
+        canvasRoot = PixelUIKit.CreateCanvas("PixelHud Canvas", Mathf.Min(barsSortingOrder, -1), new Vector2(1920f, 1080f), true);
         for (int i = 0; i < 2; i++)
         {
             bool top = i == 0;
@@ -141,6 +141,11 @@ public class PixelHud : MonoBehaviour
             label.fontSizeMax = buttonFontSize;
             label.fontSizeMin = 12f;
         }
+
+        Canvas owner = button.GetComponentInParent<Canvas>();
+        if (owner != null)
+            Debug.Log("PixelHud: docked '" + button.name + "' (canvas sorting order " + owner.sortingOrder + ", bars " +
+                      Mathf.Min(barsSortingOrder, -1) + ").", this);
 
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
