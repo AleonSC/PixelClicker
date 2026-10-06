@@ -421,11 +421,8 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Title of the right card (devices you place).")]
     [SerializeField] private string utilitiesCardTitle = "Utilities";
 
-    [Tooltip("Drop-down entry. {0} = item name, {1} = how many you own.")]
-    [SerializeField] private string consumableOptionFormat = "{0}   (own {1})";
-
-    [Tooltip("Added to the drop-down entry of an item that is still locked.")]
-    [SerializeField] private string lockedItemSuffix = "  [Locked]";
+    [Tooltip("Colour of a locked item's name in the drop-down.")]
+    [SerializeField] private Color lockedItemColor = new Color(0.55f, 0.55f, 0.6f, 1f);
 
     [Tooltip("Shown instead of the cost on a locked item. {0} = the pixel type that must be unlocked first.")]
     [SerializeField] private string lockedRequirementFormat = "Locked: unlock {0} first";

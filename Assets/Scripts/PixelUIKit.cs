@@ -94,6 +94,11 @@ public static class PixelUIKit
         rootImage.color = boxColor;
 
         TMP_Text label = CreateText(font, root.transform, "Label", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+        label.richText = true;
+        label.enableAutoSizing = true; // a long name shrinks to fit instead of wrapping over the arrow
+        label.fontSizeMax = fontSize;
+        label.fontSizeMin = 10f;
+        label.overflowMode = TextOverflowModes.Ellipsis;
         RectTransform lr = label.rectTransform;
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
         lr.offsetMin = new Vector2(14f, 2f); lr.offsetMax = new Vector2(-size.y, -2f);
@@ -144,6 +149,11 @@ public static class PixelUIKit
         Stretch(check.GetComponent<RectTransform>());
 
         TMP_Text itemLabel = CreateText(font, item.transform, "Item Label", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+        itemLabel.richText = true;
+        itemLabel.enableAutoSizing = true;
+        itemLabel.fontSizeMax = fontSize;
+        itemLabel.fontSizeMin = 10f;
+        itemLabel.overflowMode = TextOverflowModes.Ellipsis;
         RectTransform ilr = itemLabel.rectTransform;
         ilr.anchorMin = Vector2.zero; ilr.anchorMax = Vector2.one;
         ilr.offsetMin = new Vector2(14f, 2f); ilr.offsetMax = new Vector2(-8f, -2f);

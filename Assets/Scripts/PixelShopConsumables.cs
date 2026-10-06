@@ -177,8 +177,10 @@ public partial class PixelShop
         List<string> options = new List<string>();
         foreach (int i in list)
         {
-            string text = string.Format(consumableOptionFormat, consumables.ItemName(i), consumables.ItemOwned(i)) +
-                          (ItemLocked(i) ? lockedItemSuffix : "");
+            // Just the name; a locked item is shown in grey.
+            string text = ItemLocked(i)
+                ? "<color=#" + ColorUtility.ToHtmlStringRGB(lockedItemColor) + ">" + consumables.ItemName(i) + "</color>"
+                : consumables.ItemName(i);
             options.Add(text);
             sb.Append(text).Append('|');
         }
