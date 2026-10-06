@@ -367,8 +367,8 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private AnimationCurve popupScale = new AnimationCurve(
         new Keyframe(0f, 0.6f), new Keyframe(0.15f, 1.2f), new Keyframe(0.3f, 1f), new Keyframe(1f, 1f));
 
-    [Tooltip("Sorting order of the popup canvas (keep above the panel).")]
-    [SerializeField] private int popupSortingOrder = 200;
+    [Tooltip("Sorting order of the popup canvas. Above the inventory panel (100) but BELOW the Log (140) and Shop (150) windows, so popups never draw over them.")]
+    [SerializeField] private int popupCanvasOrder = 120;
 
     // ------------------------------------------------------------------
     // Runtime
@@ -495,7 +495,7 @@ public class PixelUI : MonoBehaviour
     private void BuildPopupCanvas()
     {
         // Separate overlay canvas so popups work in both automatic and manual mode.
-        GameObject go = PixelUIKit.CreateCanvas("PixelUI Popups", popupSortingOrder, referenceResolution, false);
+        GameObject go = PixelUIKit.CreateCanvas("PixelUI Popups", popupCanvasOrder, referenceResolution, false);
 
         popupCanvasRect = go.GetComponent<RectTransform>();
         popupRoot = go;

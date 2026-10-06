@@ -78,6 +78,13 @@ public class PixelOfflineProgress : MonoBehaviour
     [Tooltip("Text size of the lines.")]
     [SerializeField] private float lineFontSize = 36f;
 
+    [Min(100f)]
+    [Tooltip("Tallest the earnings list can get (canvas units). A longer list scrolls (mouse wheel or scroll bar).")]
+    [SerializeField] private float maxListHeight = 420f;
+
+    [Tooltip("Scroll bar colour.")]
+    [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
+
     [Tooltip("Button size.")]
     [SerializeField] private Vector2 buttonSize = new Vector2(320f, 90f);
 
@@ -217,8 +224,19 @@ public class PixelOfflineProgress : MonoBehaviour
             lineCount++;
         }
 
+        float textWidth = windowWidth - 40f;
         float lineHeight = lineFontSize * 1.3f;
-        float height = 40f + titleFontSize * 1.4f + 2f * lineHeight + 20f + lineCount * lineHeight + 30f + buttonSize.y + 40f;
+        string awayText = string.Format(awayFormat, PixelStats.FormatTime(awaySeconds));
+        string clicksText = string.Format(clicksFormat, PixelClicker.FormatNumber(clicks));
+
+        // Measure each wrapped text so nothing overlaps, whatever the text lengths.
+        float titleH = Measure(title, titleFontSize, FontStyles.Bold, textWidth);
+        float awayH = Measure(awayText, lineFontSize, FontStyles.Normal, textWidth);
+        float clicksH = Measure(clicksText, lineFontSize, FontStyles.Normal, textWidth);
+        float listH = lineCount > 0 ? Measure(lines.ToString(), lineFontSize, FontStyles.Bold, textWidth - 24f) : 0f;
+        float viewH = Mathf.Min(listH, maxListHeight);
+
+        float height = 40f + titleH + 12f + awayH + 6f + clicksH + 16f + viewH + 30f + buttonSize.y + 40f;
 
         GameObject window = new GameObject("Window", typeof(RectTransform), typeof(Image));
         window.transform.SetParent(dim.transform, false);
@@ -228,15 +246,12 @@ public class PixelOfflineProgress : MonoBehaviour
         wr.sizeDelta = new Vector2(windowWidth, height);
 
         float y = 40f;
-        AddLine(window.transform, title, titleFontSize, FontStyles.Bold, ref y, titleFontSize * 1.4f);
-        AddLine(window.transform, string.Format(awayFormat, PixelStats.FormatTime(awaySeconds)), lineFontSize,
-                FontStyles.Normal, ref y, lineHeight);
-        AddLine(window.transform, string.Format(clicksFormat, PixelClicker.FormatNumber(clicks)), lineFontSize,
-                FontStyles.Normal, ref y, lineHeight + 20f);
+        AddLine(window.transform, title, titleFontSize, FontStyles.Bold, ref y, titleH + 12f);
+        AddLine(window.transform, awayText, lineFontSize, FontStyles.Normal, ref y, awayH + 6f);
+        AddLine(window.transform, clicksText, lineFontSize, FontStyles.Normal, ref y, clicksH + 16f);
 
-        TMP_Text list = AddLine(window.transform, lines.ToString(), lineFontSize, FontStyles.Bold, ref y, lineCount * lineHeight);
-        list.richText = true;
-        y += 30f;
+        if (lineCount > 0) BuildScrollList(window.transform, lines.ToString(), y, viewH, listH, textWidth);
+        y += viewH + 30f;
 
         Button ok = PixelUIKit.CreateButton(font, window.transform, "Continue Button", buttonText, buttonSize, buttonColor,
                                             textColor, lineFontSize);
@@ -248,6 +263,73 @@ public class PixelOfflineProgress : MonoBehaviour
         // Escape closes it too (and before anything else, since it is on top).
         PixelWindows.Unregister(this);
         PixelWindows.Register(this, 200, () => canvasRoot != null, Close);
+    }
+
+    /// <summary>Height a text needs when wrapped to 'width' (uses the same font as the window).</summary>
+    private float Measure(string text, float size, FontStyles style, float width)
+    {
+        TMP_Text probe = PixelUIKit.CreateText(font, canvasRoot.transform, "Probe", text, size, TextAlignmentOptions.Center, style, textColor);
+        probe.richText = true;
+        float h = probe.GetPreferredValues(text, width, 0f).y;
+        Destroy(probe.gameObject);
+        return Mathf.Ceil(h);
+    }
+
+    /// <summary>The earnings lines inside a scroll view (mouse wheel + a thin scroll bar when the list is taller than the view).</summary>
+    private void BuildScrollList(Transform parent, string text, float y, float viewHeight, float contentHeight, float textWidth)
+    {
+        GameObject view = new GameObject("List", typeof(RectTransform), typeof(RectMask2D), typeof(ScrollRect));
+        view.transform.SetParent(parent, false);
+        RectTransform vr = view.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0.5f, 1f);
+        vr.anchorMax = new Vector2(0.5f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(textWidth, viewHeight);
+        vr.anchoredPosition = new Vector2(0f, -y);
+
+        TMP_Text list = PixelUIKit.CreateText(font, view.transform, "Lines", text, lineFontSize, TextAlignmentOptions.Top,
+                                              FontStyles.Bold, textColor);
+        list.richText = true;
+        list.raycastTarget = true; // so dragging / wheel over the text scrolls
+        RectTransform lr = list.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = new Vector2(1f, 1f);
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.offsetMin = new Vector2(12f, -contentHeight);
+        lr.offsetMax = new Vector2(-12f, 0f);
+
+        ScrollRect scroll = view.GetComponent<ScrollRect>();
+        scroll.content = lr;
+        scroll.viewport = vr;
+        scroll.horizontal = false;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = lineFontSize * 1.3f;
+
+        if (contentHeight > viewHeight + 0.5f)
+        {
+            GameObject bar = new GameObject("Scroll Bar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            bar.transform.SetParent(view.transform, false);
+            bar.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
+            RectTransform br = bar.GetComponent<RectTransform>();
+            br.anchorMin = new Vector2(1f, 0f);
+            br.anchorMax = new Vector2(1f, 1f);
+            br.pivot = new Vector2(1f, 0.5f);
+            br.sizeDelta = new Vector2(10f, 0f);
+            br.anchoredPosition = Vector2.zero;
+
+            GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            handle.transform.SetParent(bar.transform, false);
+            Image hi = handle.GetComponent<Image>();
+            hi.color = scrollbarColor;
+            PixelUIKit.Stretch(handle.GetComponent<RectTransform>());
+
+            Scrollbar sb = bar.GetComponent<Scrollbar>();
+            sb.direction = Scrollbar.Direction.BottomToTop;
+            sb.handleRect = handle.GetComponent<RectTransform>();
+            sb.targetGraphic = hi;
+            scroll.verticalScrollbar = sb;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        }
     }
 
     private TMP_Text AddLine(Transform parent, string text, float size, FontStyles style, ref float y, float height)

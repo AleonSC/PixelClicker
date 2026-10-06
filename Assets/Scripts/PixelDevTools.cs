@@ -103,8 +103,8 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private Color tickColor = new Color(0.4f, 0.9f, 0.5f, 1f);
 
     [Header("Canvas")]
-    [Tooltip("Sorting order of the canvas (above the pause menu).")]
-    [SerializeField] private int sortingOrder = 600;
+    [Tooltip("Sorting order of the canvas. Must be above the pause menu (500) so the panel is not hidden by it.")]
+    [SerializeField] private int panelSortingOrder = 700;
 
     [Tooltip("Reference resolution for the canvas scaler.")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
@@ -261,7 +261,7 @@ public class PixelDevTools : MonoBehaviour
 
     private void BuildPanel()
     {
-        canvasRoot = PixelUIKit.CreateCanvas("PixelDevTools Canvas", sortingOrder, referenceResolution, true);
+        canvasRoot = PixelUIKit.CreateCanvas("PixelDevTools Canvas", panelSortingOrder, referenceResolution, true);
 
         // Full-screen dimmer that also blocks clicks behind the panel.
         GameObject dim = new GameObject("Dev Tools", typeof(RectTransform), typeof(Image));
