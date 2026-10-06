@@ -30,6 +30,7 @@
 | `PixelStats.cs` | Play stats (manual/auto clicks via `PixelCollected`+`PixelHit`, play time excluding pause, pixels spent via `PixelClicker.CurrencySpent`; plus ghosts/meteors clicked, meteors/black holes spawned via static `PixelMinigame.Happened`, fans/vacuum devices placed via `PixelConsumables.DevicePlaced`, potions used per name via `PixelConsumables.PotionDrunk`, highest combo via `PixelCombo.ComboReached`); saved by PixelSaveGame (`ExtraData`); shown in the pause menu's Stats section (scrolling list + collapsible "Potions used" box). |
 | `PixelWindows.cs` | Static registry of closable windows (placing a device 100, shop upgrades window 40, shop 30, log 20, inventory 10). Escape closes the topmost one; the pause menu only opens on Escape when none is open. New windows should `PixelWindows.Register(this, priority, isOpen, close)` and `Unregister(this)` in OnDestroy. |
 | `PixelPauseMenu.cs` | Pause menu (Esc / on-screen Pause button, bottom-right): sets `Time.timeScale = 0`, Resume / Save+Load / Stats+Settings / Restart / Quit (Settings: tick boxes for cube rotation and pulsing -> `PixelClicker.AllowRotation/AllowPulsing`, stored in PlayerPrefs), `PixelPauseMenu.IsPaused`. PixelClicker ignores clicks while `Time.timeScale <= 0`. |
+| `PixelPauseMenu` changelog | Changelog button/screen reads `Resources/Changelog.txt` (see Changelog workflow below). |
 | `PixelDevTools.cs` | Dev tools (Editor/dev builds only; removes itself otherwise): a "Dev Tools" button in the pause menu (shown via `PixelDevTools.Available`) opens a panel: pixel dropdown + amount field + Add, add-to-all, minigame dropdown + Spawn (`PixelMinigame.SpawnNow`/`DisplayName`), Unlock all shop items (`PixelShop.DevUnlockAll`), tick box for Q = `PixelClicker.ClearOldPixels`. Uses `PixelUIKit.CreateDropdown/CreateInputField`. Escape closes the panel first. |
 
 ### Data model
@@ -39,6 +40,11 @@
 - Events: `CurrencyChanged`, `CurrencyGained`, `PixelCollected(tier, amount, automatic)`, `PixelsVacuumed(vacuumTier, total, count)`, `VacuumBreakdown(double[] perTier)`.
 - Shop reward tiers are added to `PixelClicker` at runtime via `EnsureTier` (locked until bought). `EnsureTier` and Awake must only **raise** `Count`, never wipe typed starting values.
 - `PixelShop.EnsureDefaultPacks()` (called from `Awake` and editor-only `OnValidate` via `delayCall`) walks the `BuiltInPacks` table and inserts any missing built-in pack into the serialized list so it is editable in the Inspector. One toggle: `addDefaultPacks`. Context menu: "Add Missing Default Packs". Older saved data is upgraded by `MigrateOldPackData()`.
+
+## Changelog workflow (standing instruction from the user)
+- The pause menu's **Changelog** screen shows `Assets/Resources/Changelog.txt` (one change per line, newest shown first).
+- **After every change you make, append one line** to that file: `[YYYY-MM-DD HH:MM UTC] what was added/changed/fixed` (get the time with `date -u +"%Y-%m-%d %H:%M"`). Keep it one plain-language sentence; commit it with the change.
+- When the user says to **clear the changelog** (they're making a build), empty the file (keep the file, zero lines) and commit.
 
 ## Active conventions
 - **Every variable must be editable in Unity**: `[SerializeField] private` + `[Tooltip]` (+ `[Header]` grouping). Nested config classes are `[Serializable]`.

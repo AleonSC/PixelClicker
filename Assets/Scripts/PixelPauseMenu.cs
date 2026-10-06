@@ -188,6 +188,33 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Background of the potions-used box.")]
     [SerializeField] private Color potionsBoxColor = new Color(0f, 0f, 0f, 0.35f);
 
+    [Header("Changelog")]
+    [Tooltip("Show the Changelog button in the pause menu.")]
+    [SerializeField] private bool showChangelog = true;
+
+    [Tooltip("Text of the Changelog button and the title of its screen.")]
+    [SerializeField] private string changelogText = "Changelog";
+
+    [Tooltip("Name of the text file in a Resources folder that holds the changelog (Assets/Resources/Changelog.txt), one change per line.")]
+    [SerializeField] private string changelogResource = "Changelog";
+
+    [Tooltip("Shown when the changelog is empty.")]
+    [SerializeField] private string emptyChangelogText = "No changes since the last build.";
+
+    [Tooltip("Newest change first.")]
+    [SerializeField] private bool newestFirst = true;
+
+    [Min(300f)]
+    [Tooltip("Width of the changelog screen (canvas units).")]
+    [SerializeField] private float changelogWidth = 980f;
+
+    [Min(100f)]
+    [Tooltip("Height of the scrolling changelog text (canvas units).")]
+    [SerializeField] private float changelogViewHeight = 560f;
+
+    [Tooltip("Size of the changelog text.")]
+    [SerializeField] private float changelogFontSize = 28f;
+
     [Tooltip("Height of each stat / setting row.")]
     [SerializeField] private float rowHeight = 64f;
 
@@ -264,7 +291,10 @@ public class PixelPauseMenu : MonoBehaviour
 
     private GameObject canvasRoot;
     private GameObject menuRoot;
-    private GameObject mainPanel, statsPanel, settingsPanel;
+    private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel;
+    private ScrollRect changelogScroll;
+    private GameObject changelogBar;
+    private TMP_Text changelogLabel;
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
     private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, comboValue;
     private ScrollRect statsScroll, potionsScroll;
@@ -526,6 +556,8 @@ public class PixelPauseMenu : MonoBehaviour
         else if (showStats) AddMenuButton(panel.transform, statsText, menuButtonColor, ref y, () => ShowView(statsPanel));
         else if (showSettings) AddMenuButton(panel.transform, settingsText, menuButtonColor, ref y, () => ShowView(settingsPanel));
         if (PixelDevTools.Available) AddMenuButton(panel.transform, PixelDevTools.ButtonText, menuButtonColor, ref y, PixelDevTools.OpenPanel);
+        BuildChangelogPanel();
+        if (showChangelog) AddMenuButton(panel.transform, changelogText, menuButtonColor, ref y, () => ShowView(changelogPanel));
         if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, Restart);
         if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
 
@@ -547,6 +579,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (mainPanel != null) mainPanel.SetActive(view == mainPanel);
         if (statsPanel != null) statsPanel.SetActive(view == statsPanel);
         if (settingsPanel != null) settingsPanel.SetActive(view == settingsPanel);
+        if (changelogPanel != null) changelogPanel.SetActive(view == changelogPanel);
+        if (view == changelogPanel) RefreshChangelog();
 
         if (view == statsPanel) RefreshStats();
         if (view == settingsPanel && clicker != null)
@@ -759,6 +793,58 @@ public class PixelPauseMenu : MonoBehaviour
         statsBackRect.anchoredPosition = new Vector2(0f, -y);
         y += menuButtonSize.y + 30f;
         statsPanelRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
+    }
+
+    private void BuildChangelogPanel()
+    {
+        changelogPanel = BuildSectionPanel("Changelog Panel", changelogText, out float y);
+        RectTransform pr = changelogPanel.GetComponent<RectTransform>();
+        pr.sizeDelta = new Vector2(changelogWidth, pr.sizeDelta.y);
+
+        changelogScroll = PixelUIKit.CreateScrollView(changelogPanel.transform, "Changelog List", scrollbarColor, 12f,
+                                                      changelogFontSize * 1.5f, out RectTransform content, out changelogBar);
+        RectTransform vr = changelogScroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(-60f, changelogViewHeight);
+        vr.anchoredPosition = new Vector2(0f, -y);
+
+        changelogLabel = MakeText(content, "Changelog Text", "", changelogFontSize, FontStyles.Normal);
+        changelogLabel.alignment = TextAlignmentOptions.TopLeft;
+        changelogLabel.richText = false; // the text is shown exactly as written
+        RectTransform lr = changelogLabel.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = new Vector2(1f, 1f);
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.offsetMin = new Vector2(10f, -changelogViewHeight);
+        lr.offsetMax = new Vector2(-26f, 0f);
+
+        FinishSectionPanel(changelogPanel, y + changelogViewHeight);
+    }
+
+    /// <summary>Reads the changelog file (one change per line) and shows it, newest first.</summary>
+    private void RefreshChangelog()
+    {
+        TextAsset asset = Resources.Load<TextAsset>(changelogResource);
+        string[] lines = asset != null ? asset.text.Split('\n') : new string[0];
+
+        System.Collections.Generic.List<string> entries = new System.Collections.Generic.List<string>();
+        foreach (string raw in lines)
+        {
+            string line = raw.Trim();
+            if (line.Length > 0) entries.Add(line);
+        }
+        if (newestFirst) entries.Reverse();
+
+        // A blank line between entries keeps wrapped lines readable.
+        string text = entries.Count > 0 ? string.Join("\n\n", entries) : emptyChangelogText;
+        changelogLabel.text = text;
+
+        float width = changelogLabel.rectTransform.rect.width > 1f ? changelogLabel.rectTransform.rect.width : changelogWidth - 100f;
+        float height = Mathf.Ceil(changelogLabel.GetPreferredValues(text, width, 0f).y) + 10f;
+        changelogLabel.rectTransform.offsetMin = new Vector2(10f, -height);
+        PixelUIKit.UpdateScrollView(changelogScroll, changelogBar, height, changelogViewHeight);
     }
 
     private void BuildSettingsPanel()

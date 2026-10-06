@@ -1,0 +1,1 @@
+[2026-10-06 14:52 UTC] Added a Changelog screen to the pause menu (reads this file). New changes are listed here until a build is made.
