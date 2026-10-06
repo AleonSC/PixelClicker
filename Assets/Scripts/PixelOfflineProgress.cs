@@ -144,6 +144,8 @@ public class PixelOfflineProgress : MonoBehaviour
         {
             if (gains[i] < 1d) continue;
             clicker.AddCurrency(i, gains[i]);
+            double perPixel = Math.Max(1e-9, clicker.Tiers[i].amountPerClick * clicker.ClickMultiplier);
+            clicker.AddTimesCollected(i, (long)Math.Round(gains[i] / perPixel));
             any = true;
         }
         if (!any) return false;

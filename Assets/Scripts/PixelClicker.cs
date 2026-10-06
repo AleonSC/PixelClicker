@@ -144,6 +144,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds.")]
         public double totalCollected;
 
+        [Tooltip("How many pixels of this type have been collected (one per payout, whatever it paid). Used by the 'times clicked' achievements.")]
+        public long timesCollected;
+
         [Tooltip("Has this tier been unlocked?")]
         public bool unlocked;
 
@@ -721,6 +724,7 @@ public class PixelClicker : MonoBehaviour
         hitsOnCurrentPixel = 0;
 
         double amount = tier.amountPerClick * clickMultiplier * (automatic ? 1d : ManualClickBonus);
+        tier.timesCollected++;
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 
@@ -778,7 +782,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false)
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0)
     {
         int index = IndexOf(type);
         if (index < 0) return;
@@ -788,6 +792,13 @@ public class PixelClicker : MonoBehaviour
         tier.totalCollected = System.Math.Max(0d, totalCollected);
         tier.unlocked = unlocked || tier.unlockedAtStart;
         tier.spawnDisabled = spawnDisabled;
+        tier.timesCollected = System.Math.Max(0L, timesCollected);
+    }
+
+    /// <summary>Adds to a tier's "times collected" (used for offline progress, which pays without clicking).</summary>
+    public void AddTimesCollected(int tierIndex, long count)
+    {
+        if (IsValidTier(tierIndex) && count > 0) tiers[tierIndex].timesCollected += count;
     }
 
     /// <summary>Switches a pixel type's spawning on or off (only pixels that can be switched off). Re-rolls the next pixel if needed.</summary>

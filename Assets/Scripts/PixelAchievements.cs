@@ -33,6 +33,8 @@ public class PixelAchievements : MonoBehaviour
         CollectPixelType = 0,
         /// <summary>Lifetime total collected of all pixel types together.</summary>
         CollectAnyPixel = 1,
+        /// <summary>How many pixels of one type have been clicked (collected), whatever each paid (uses 'Pixel Type').</summary>
+        ClickPixelType = 2,
         /// <summary>Progress comes from a function registered in code (see Register).</summary>
         Custom = 99,
     }
@@ -154,6 +156,21 @@ public class PixelAchievements : MonoBehaviour
 
     private static readonly double[] BuiltInTiers = { 10, 100, 1000, 10000, 100000, 1000000 };
 
+    private static readonly double[] BuiltInClickTiers = { 10, 50, 250, 1000, 5000, 25000 };
+
+    private static Achievement CreateClickAchievement(PixelClicker.PixelType type)
+    {
+        return new Achievement
+        {
+            id = "click_" + type.ToString().ToLowerInvariant(),
+            title = "{pixel} Clicker {tier}",
+            description = "Click {target} {pixel} pixels.",
+            kind = Kind.ClickPixelType,
+            pixelType = type,
+            tiers = (double[])BuiltInClickTiers.Clone(),
+        };
+    }
+
     private static Achievement CreateCollectAchievement(PixelClicker.PixelType type, double[] tiers)
     {
         return new Achievement
@@ -171,7 +188,10 @@ public class PixelAchievements : MonoBehaviour
     {
         List<Achievement> list = new List<Achievement>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
+        {
             list.Add(CreateCollectAchievement(type, BuiltInTiers));
+            list.Add(CreateClickAchievement(type));
+        }
         return list;
     }
 
@@ -206,6 +226,14 @@ public class PixelAchievements : MonoBehaviour
             // Skip a type that already has any 'Collect Pixel Type' achievement.
             if (achievements.Exists(a => a != null && a.kind == Kind.CollectPixelType && a.pixelType == type)) continue;
             achievements.Add(CreateCollectAchievement(type, tiers));
+            changed = true;
+        }
+
+        // The "times clicked" achievement of each pixel type.
+        foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
+        {
+            if (achievements.Exists(a => a != null && a.kind == Kind.ClickPixelType && a.pixelType == type)) continue;
+            achievements.Add(CreateClickAchievement(type));
             changed = true;
         }
         return changed;
@@ -342,6 +370,12 @@ public class PixelAchievements : MonoBehaviour
                 return tier >= 0 ? clicker.Tiers[tier].totalCollected : 0d;
             }
 
+            case Kind.ClickPixelType:
+            {
+                int tier = clicker.IndexOf(a.pixelType);
+                return tier >= 0 ? clicker.Tiers[tier].timesCollected : 0d;
+            }
+
             case Kind.CollectAnyPixel:
             {
                 double total = 0d;
@@ -407,7 +441,7 @@ public class PixelAchievements : MonoBehaviour
         Achievement a = achievements[index];
         string numeral = a.TierCount > 1 ? ToRoman(tier + 1) : "";
         return (text ?? "")
-            .Replace("{pixel}", a.kind == Kind.CollectPixelType ? a.pixelType.ToString() : "")
+            .Replace("{pixel}", a.kind == Kind.CollectPixelType || a.kind == Kind.ClickPixelType ? a.pixelType.ToString() : "")
             .Replace("{target}", PixelClicker.FormatNumber(a.TargetOf(tier)))
             .Replace("{tier}", numeral)
             .Trim();
@@ -437,7 +471,7 @@ public class PixelAchievements : MonoBehaviour
     public Color GetIconColor(int index)
     {
         Achievement a = achievements[index];
-        if (a.kind == Kind.CollectPixelType)
+        if (a.kind == Kind.CollectPixelType || a.kind == Kind.ClickPixelType)
         {
             int tier = clicker.IndexOf(a.pixelType);
             if (tier >= 0)
