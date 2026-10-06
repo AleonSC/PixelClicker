@@ -1709,7 +1709,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Compact number formatting (1.2K, 3.4M ...). Replace with your own for big-number support.</summary>
     public static string FormatNumber(double value)
     {
-        if (value < 1000) return Math.Floor(value).ToString("0");
+        if (value < 999.995) return value.ToString("0.##"); // small amounts keep their decimals (e.g. 6.25)
         string[] suffix = { "", "K", "M", "B", "T" };
         int s = 0;
         while (value >= 1000 && s < suffix.Length - 1) { value /= 1000; s++; }

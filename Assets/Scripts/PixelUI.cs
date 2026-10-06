@@ -1391,7 +1391,8 @@ public class PixelUI : MonoBehaviour
 
     private string FormatAmount(double value)
     {
-        if (!abbreviateNumbers || value < 1000d) return Math.Floor(value).ToString("0");
+        if (!abbreviateNumbers) return value.ToString("#,0.##");
+        if (value < 999.995d) return value.ToString("0.##"); // small amounts keep their decimals (e.g. 6.25)
 
         string[] suffix = { "", "K", "M", "B", "T" };
         int s = 0;
