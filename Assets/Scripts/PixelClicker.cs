@@ -1884,6 +1884,9 @@ public class OldPixelDespawn : MonoBehaviour
     /// <summary>True while the player holds this pixel (its lifetime is frozen).</summary>
     public bool Held { get; set; }
 
+    /// <summary>While true, no old pixel's lifetime counts down (a black hole is open: time dilation). Pixels already vanishing finish.</summary>
+    public static bool Frozen { get; set; }
+
     /// <summary>True once it has started swelling and shrinking away.</summary>
     public bool IsDespawning => despawning;
     private Vector3 baseScale;
@@ -1914,7 +1917,7 @@ public class OldPixelDespawn : MonoBehaviour
     {
         if (!despawning)
         {
-            if (Held) return;
+            if (Held || Frozen) return;
             age += Time.deltaTime;
             if (lifetime > 0f && age >= lifetime) Begin();
             return;

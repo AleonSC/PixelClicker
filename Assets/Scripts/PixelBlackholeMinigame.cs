@@ -119,6 +119,9 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("The event horizon: a pixel is swallowed once it reaches this fraction of the hole's radius from the centre.")]
     [SerializeField] private float horizonFraction = 0.12f;
 
+    [Tooltip("Time dilation: while a black hole is open, old pixels stop despawning (their lifetime stops counting down). They age normally again when it closes.")]
+    [SerializeField] private bool freezeOldPixels = true;
+
     [Header("Look")]
     [Tooltip("Colour of the swirl arms.")]
     [SerializeField] private Color armColor = new Color(0.55f, 0.2f, 0.95f, 1f);
@@ -295,6 +298,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         Transform inner = BuildSwirl(root.transform, "Inner Swirl", innerMaterial, 0.01f);
 
         onHoleOpened?.Invoke();
+        if (freezeOldPixels) OldPixelDespawn.Frozen = true; // time dilation: old pixels stop ageing while the hole is open
 
         float t = 0f;
         float total = openSeconds + durationSeconds + closeSeconds;
@@ -320,6 +324,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         }
 
         Destroy(root);
+        OldPixelDespawn.Frozen = false;
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         holeActive = false;
     }
@@ -539,6 +544,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     protected override void OnDestroy()
     {
         base.OnDestroy();
+        OldPixelDespawn.Frozen = false;
         if (outerTexture != null) Destroy(outerTexture);
         if (innerTexture != null) Destroy(innerTexture);
         if (outerMaterial != null) Destroy(outerMaterial);
