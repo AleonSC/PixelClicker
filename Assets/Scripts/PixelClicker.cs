@@ -106,6 +106,16 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Relative chance this tier is picked when a new pixel spawns (only used while Randomize Spawn Tier is on). 0 = never spawns.")]
         [Min(0f)] public float spawnWeight = 1f;
 
+        [Tooltip("Instead of dropping and bouncing, the old pixel of this tier flies away in a straight line like a meteor.")]
+        public bool flyAway = false;
+
+        [Tooltip("Screen direction a fly-away pixel leaves in (x = right, y = up).")]
+        public Vector2 flyDirection = new Vector2(1f, 0.6f);
+
+        [Min(0f)]
+        [Tooltip("Speed of a fly-away pixel (world units per second).")]
+        public float flySpeed = 30f;
+
         [Tooltip("Optional: one TMP label showing this tier's current count. Leave empty to skip.")]
         public TMP_Text countLabel;
 
