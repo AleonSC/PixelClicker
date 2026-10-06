@@ -464,6 +464,7 @@ public partial class PixelShop
         toggle.graphic = tickImage;
         toggle.isOn = true;
         toggle.onValueChanged.AddListener(onChange);
+        toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
         row.activeToggle = toggle;
         boxGo.SetActive(false); // shown by RefreshRows once the pack is bought
     }
@@ -580,6 +581,7 @@ public partial class PixelShop
 
         Button button = go.GetComponent<Button>();
         button.targetGraphic = image;
+        button.onClick.AddListener(() => PixelAudio.Play("ui_click")); // the shop builds its own buttons, so it adds the sound itself
 
         labelText = CreateText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center, FontStyles.Bold);
         labelText.color = labelColor;

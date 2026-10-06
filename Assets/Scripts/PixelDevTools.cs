@@ -383,5 +383,6 @@ public class PixelDevTools : MonoBehaviour
         toggle.graphic = tickImage;
         toggle.isOn = clearKeyEnabled;
         toggle.onValueChanged.AddListener(on => clearKeyEnabled = on);
+        toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
     }
 }

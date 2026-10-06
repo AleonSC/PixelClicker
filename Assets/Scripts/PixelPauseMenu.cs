@@ -765,6 +765,7 @@ public class PixelPauseMenu : MonoBehaviour
         toggle.graphic = tick.GetComponent<Image>();
         toggle.isOn = isOn;
         toggle.onValueChanged.AddListener(onChanged);
+        toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
 
         y += rowHeight + 6f;
         return toggle;
