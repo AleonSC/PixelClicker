@@ -326,6 +326,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Gap between the tab buttons.")]
     [SerializeField] private float tabSpacing = 10f;
 
+    [Tooltip("Space between a tab button's edges and its text. Longer names shrink to fit inside.")]
+    [SerializeField] private float tabTextPadding = 16f;
+
     [Tooltip("Tab text size.")]
     [SerializeField] private float tabFontSize = 34f;
 

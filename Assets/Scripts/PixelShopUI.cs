@@ -159,7 +159,12 @@ public partial class PixelShop
         for (int i = 0; i < 2; i++)
         {
             Button b = CreateButton(go.transform, "Sub Tab " + names[i], names[i], Vector2.zero, tabInactiveColor, textColor,
-                                    tabFontSize, out _, out subTabImages[i]);
+                                    tabFontSize, out TMP_Text subLabel, out subTabImages[i]);
+            subLabel.enableAutoSizing = true;
+            subLabel.fontSizeMax = tabFontSize;
+            subLabel.fontSizeMin = Mathf.Min(14f, tabFontSize);
+            subLabel.rectTransform.offsetMin = new Vector2(tabTextPadding, 4f);
+            subLabel.rectTransform.offsetMax = new Vector2(-tabTextPadding, -4f);
             RectTransform rt = b.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(i * 0.5f, 0f);
             rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
@@ -264,7 +269,9 @@ public partial class PixelShop
             // Four tabs share the width, so long names shrink to fit instead of overflowing.
             tabLabel.enableAutoSizing = true;
             tabLabel.fontSizeMax = tabFontSize;
-            tabLabel.fontSizeMin = Mathf.Min(16f, tabFontSize);
+            tabLabel.fontSizeMin = Mathf.Min(14f, tabFontSize);
+            tabLabel.rectTransform.offsetMin = new Vector2(tabTextPadding, 4f);   // keep the text off the button's edges
+            tabLabel.rectTransform.offsetMax = new Vector2(-tabTextPadding, -4f);
             RectTransform rt = tabButton.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(i * slice, 0f);
             rt.anchorMax = new Vector2((i + 1) * slice, 1f);

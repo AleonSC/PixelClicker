@@ -74,11 +74,17 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("How far above the pad an old pixel still counts as 'on' it (world units).")]
     [SerializeField] private float captureHeight = 1.2f;
 
-    [Tooltip("Where on the screen a pad can appear (viewport fractions): lowest corner.")]
-    [SerializeField] private Vector2 screenAreaMin = new Vector2(0.15f, 0.12f);
+    [Tooltip("The pad appears to the LEFT or RIGHT of the clicker cube, between the cube and the screen edge. " +
+             "This is how far from the cube's centre (as a fraction of the screen's width) the pad's area starts.")]
+    [Range(0.05f, 0.45f)]
+    [SerializeField] private float cubeClearance = 0.14f;
 
-    [Tooltip("Where on the screen a pad can appear (viewport fractions): highest corner.")]
-    [SerializeField] private Vector2 screenAreaMax = new Vector2(0.85f, 0.5f);
+    [Tooltip("How far in from the screen edge the pad's area ends (fraction of the screen's width).")]
+    [Range(0f, 0.3f)]
+    [SerializeField] private float screenEdgeMargin = 0.07f;
+
+    [Tooltip("How high up the screen the pad can appear (viewport fractions): lowest and highest.")]
+    [SerializeField] private Vector2 heightRange = new Vector2(0.15f, 0.5f);
 
     [Tooltip("Layers that count as ground when picking a spot.")]
     [SerializeField] private LayerMask floorLayers = ~0;
@@ -216,11 +222,19 @@ public class PixelPadMinigame : PixelMinigame
     private bool TryPickSpot(Camera cam, out Vector3 point)
     {
         point = Vector3.zero;
+        // Beside the cube: pick the left or right side, then a spot between the cube and that screen edge.
+        float cubeX = 0.5f;
+        if (clicker.PixelTransform != null) cubeX = cam.WorldToViewportPoint(clicker.PixelTransform.position).x;
+        bool left = Random.value < 0.5f;
+        float xNear = left ? cubeX - cubeClearance : cubeX + cubeClearance;
+        float xFar = left ? screenEdgeMargin : 1f - screenEdgeMargin;
+        float xMin = Mathf.Clamp01(Mathf.Min(xNear, xFar)), xMax = Mathf.Clamp01(Mathf.Max(xNear, xFar));
+
         for (int attempt = 0; attempt < 12; attempt++)
         {
             Vector3 viewport = new Vector3(
-                Random.Range(Mathf.Min(screenAreaMin.x, screenAreaMax.x), Mathf.Max(screenAreaMin.x, screenAreaMax.x)),
-                Random.Range(Mathf.Min(screenAreaMin.y, screenAreaMax.y), Mathf.Max(screenAreaMin.y, screenAreaMax.y)), 0f);
+                Random.Range(xMin, xMax),
+                Random.Range(Mathf.Min(heightRange.x, heightRange.y), Mathf.Max(heightRange.x, heightRange.y)), 0f);
             Ray ray = cam.ViewportPointToRay(viewport);
 
             RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, floorLayers, QueryTriggerInteraction.Ignore);
