@@ -274,6 +274,19 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Seconds right after spawning that an old pixel has NO collision (so quick clicks don't make them pile up). 0 = solid at once.")]
     [SerializeField] private float popNoCollisionSeconds = 0.2f;
 
+    [Header("Old Pixel Despawn")]
+    [Range(1f, 2f)]
+    [Tooltip("How big an old pixel swells (times its size) just before it vanishes.")]
+    [SerializeField] private float despawnSwellScale = 1.25f;
+
+    [Min(0.01f)]
+    [Tooltip("Seconds the swell takes.")]
+    [SerializeField] private float despawnSwellSeconds = 0.08f;
+
+    [Min(0.01f)]
+    [Tooltip("Seconds it then takes to shrink to nothing and disappear.")]
+    [SerializeField] private float despawnShrinkSeconds = 0.15f;
+
     [Header("Fly-Away Pixels (tiers with Fly Away on)")]
     [Min(0.1f)]
     [Tooltip("Seconds before a fly-away old pixel is removed.")]
@@ -1162,7 +1175,7 @@ public class PixelClicker : MonoBehaviour
     public void ClearOldPixels()
     {
         for (int i = 0; i < oldPixels.Count; i++)
-            if (oldPixels[i] != null) Destroy(oldPixels[i].gameObject);
+            if (oldPixels[i] != null) DespawnOldPixel(oldPixels[i].gameObject);
         oldPixels.Clear();
     }
 
@@ -1255,6 +1268,25 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Clones the visible pixel, adds real physics, and pops it out in a random direction.</summary>
+    /// <summary>Gives an old pixel its lifetime: after 'lifetime' seconds (0 = never) it swells, shrinks away and is destroyed.</summary>
+    private void AddDespawn(GameObject copy, float lifetime)
+    {
+        OldPixelDespawn d = copy.AddComponent<OldPixelDespawn>();
+        d.Setup(lifetime, despawnSwellScale, despawnSwellSeconds, despawnShrinkSeconds);
+    }
+
+    /// <summary>Makes an old pixel swell and shrink away now (instead of just vanishing).</summary>
+    private void DespawnOldPixel(GameObject copy)
+    {
+        OldPixelDespawn d = copy.GetComponent<OldPixelDespawn>();
+        if (d == null)
+        {
+            AddDespawn(copy, 0f);
+            d = copy.GetComponent<OldPixelDespawn>();
+        }
+        d.Begin();
+    }
+
     private void SpawnFallingCopy(int tierIndex, double amount)
     {
         // Skip if the pixel is mid-materialize and basically invisible.
@@ -1357,7 +1389,7 @@ public class PixelClicker : MonoBehaviour
 
         if (fly)
         {
-            Destroy(copy, flyLifetime);
+            AddDespawn(copy, flyLifetime);
             OldPixelInfo flyInfo = copy.AddComponent<OldPixelInfo>();
             flyInfo.tierIndex = tierIndex;
             flyInfo.amount = amount;
@@ -1384,7 +1416,7 @@ public class PixelClicker : MonoBehaviour
             pop.Setup(box, copy.transform.localScale, popStartScale, popGrowSeconds, popNoCollisionSeconds);
         }
 
-        if (fallingCopyLifetime > 0f) Destroy(copy, fallingCopyLifetime);
+        AddDespawn(copy, fallingCopyLifetime);
 
         OldPixelInfo info = copy.AddComponent<OldPixelInfo>();
         info.tierIndex = tierIndex;
@@ -1395,7 +1427,7 @@ public class PixelClicker : MonoBehaviour
         {
             Rigidbody oldest = oldPixels[0];
             oldPixels.RemoveAt(0);
-            if (oldest != null) Destroy(oldest.gameObject);
+            if (oldest != null) DespawnOldPixel(oldest.gameObject);
         }
     }
 
@@ -1556,6 +1588,62 @@ public class OldPixelPopIn : MonoBehaviour
         }
         if (body != null && body.isTrigger && age >= ghostSeconds) body.isTrigger = false;
         if (age >= growSeconds && age >= ghostSeconds) Destroy(this);
+    }
+}
+
+/// <summary>
+/// Ends an old pixel's life: after its lifetime (or when Begin is called) it swells slightly for a split second,
+/// then shrinks very quickly to nothing and is destroyed.
+/// </summary>
+public class OldPixelDespawn : MonoBehaviour
+{
+    private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
+    private bool despawning;
+    private Vector3 baseScale;
+
+    public void Setup(float life, float swell, float swellTime, float shrinkTime)
+    {
+        lifetime = life;
+        swellScale = swell;
+        swellSeconds = Mathf.Max(0.01f, swellTime);
+        shrinkSeconds = Mathf.Max(0.01f, shrinkTime);
+    }
+
+    /// <summary>Starts the swell-and-shrink now. Safe to call more than once.</summary>
+    public void Begin()
+    {
+        if (despawning) return;
+        despawning = true;
+        baseScale = transform.localScale;
+
+        OldPixelPopIn pop = GetComponent<OldPixelPopIn>();
+        if (pop != null) Destroy(pop); // stop growing; we take over the scale
+
+        Collider c = GetComponent<Collider>();
+        if (c != null) c.isTrigger = true; // a vanishing pixel shouldn't shove others around
+    }
+
+    private void Update()
+    {
+        if (!despawning)
+        {
+            age += Time.deltaTime;
+            if (lifetime > 0f && age >= lifetime) Begin();
+            return;
+        }
+
+        phaseTime += Time.deltaTime;
+        if (phaseTime < swellSeconds)
+        {
+            float k = phaseTime / swellSeconds;
+            transform.localScale = baseScale * Mathf.Lerp(1f, swellScale, k);
+        }
+        else
+        {
+            float k = (phaseTime - swellSeconds) / shrinkSeconds;
+            if (k >= 1f) { Destroy(gameObject); return; }
+            transform.localScale = baseScale * Mathf.Lerp(swellScale, 0f, k * k);
+        }
     }
 }
 

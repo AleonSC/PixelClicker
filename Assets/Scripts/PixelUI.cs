@@ -56,6 +56,13 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Width of the panel.")]
     [SerializeField] private float panelWidth = 520f;
 
+    [Min(200f)]
+    [Tooltip("Tallest the inventory box can get (canvas units). A longer list scrolls (mouse wheel or the scroll bar).")]
+    [SerializeField] private float maxPanelHeight = 640f;
+
+    [Tooltip("Scroll bar colour.")]
+    [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
+
     [Tooltip("Height of each text line.")]
     [SerializeField] private float lineHeight = 60f;
 
@@ -377,6 +384,10 @@ public class PixelUI : MonoBehaviour
     private GameObject autoRoot;
     private GameObject boxObject;
     private RectTransform boxRect;
+    private RectTransform listViewport;
+    private RectTransform listContent;
+    private ScrollRect listScroll;
+    private GameObject listBarObject;
     private bool autoMode;
     private TMP_Text titleLabel;
     private TMP_Text[] deltaLabels;
@@ -758,6 +769,7 @@ public class PixelUI : MonoBehaviour
         }
 
         BuildInventoryTabs(anchor);
+        BuildListViewport();
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
         tierLabels = new TMP_Text[count];
@@ -765,7 +777,7 @@ public class PixelUI : MonoBehaviour
         deltaTimers = new float[count];
         for (int i = 0; i < count; i++)
         {
-            TMP_Text tmp = MakeText(boxObject.transform, "Tier " + i, "", fontSize,
+            TMP_Text tmp = MakeText(ListParent, "Tier " + i, "", fontSize,
                                     anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft,
                                     FontStyles.Normal, textColor);
             RectTransform rt = tmp.rectTransform;
@@ -815,7 +827,7 @@ public class PixelUI : MonoBehaviour
         }
         if (autoMode) UpdateSubTabs();
         bool showCurrency = !autoMode || inventoryTab == 0;
-        float y = ContentTop; // title bar, tabs, then the lines
+        float y = 0f; // lines are laid out inside the scrolling list (its top = just below the tabs)
 
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
@@ -843,13 +855,81 @@ public class PixelUI : MonoBehaviour
 
         if (autoMode)
         {
-            if (inventoryTab == 1) y = RefreshConsumables(ContentTop);
+            if (inventoryTab == 1) y = RefreshConsumables(0f);
             else HideConsumableWidgets();
         }
 
         // Box height follows the number of visible lines.
         if (autoMode && boxRect != null)
-            boxRect.sizeDelta = new Vector2(panelWidth, y + panelPadding);
+        {
+            float boxHeight = Mathf.Min(ContentTop + y + panelPadding, maxPanelHeight);
+            boxRect.sizeDelta = new Vector2(panelWidth, boxHeight);
+
+            // The list scrolls when it is taller than the room the box has for it.
+            float viewHeight = boxHeight - ContentTop - panelPadding;
+            listContent.sizeDelta = new Vector2(0f, Mathf.Max(y, 1f));
+            bool scrolls = y > viewHeight + 0.5f;
+            if (listBarObject != null && listBarObject.activeSelf != scrolls) listBarObject.SetActive(scrolls);
+            if (!scrolls) listContent.anchoredPosition = Vector2.zero;
+        }
+    }
+
+    /// <summary>The place the currency lines and potion rows live: the scrolling list in automatic mode, else the box itself.</summary>
+    private Transform ListParent => listContent != null ? (Transform)listContent : boxObject.transform;
+
+    /// <summary>A masked scroll area under the tabs (mouse wheel + a thin scroll bar) that holds all the lines.</summary>
+    private void BuildListViewport()
+    {
+        if (!autoMode) return;
+
+        GameObject view = new GameObject("List", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+        view.transform.SetParent(boxObject.transform, false);
+        view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible, but catches the mouse wheel
+        listViewport = view.GetComponent<RectTransform>();
+        listViewport.anchorMin = Vector2.zero;
+        listViewport.anchorMax = Vector2.one;
+        listViewport.offsetMin = new Vector2(0f, panelPadding);
+        listViewport.offsetMax = new Vector2(0f, -ContentTop);
+
+        GameObject content = new GameObject("Content", typeof(RectTransform));
+        content.transform.SetParent(view.transform, false);
+        listContent = content.GetComponent<RectTransform>();
+        listContent.anchorMin = new Vector2(0f, 1f);
+        listContent.anchorMax = new Vector2(1f, 1f);
+        listContent.pivot = new Vector2(0.5f, 1f);
+        listContent.sizeDelta = Vector2.zero;
+        listContent.anchoredPosition = Vector2.zero;
+
+        listScroll = view.GetComponent<ScrollRect>();
+        listScroll.viewport = listViewport;
+        listScroll.content = listContent;
+        listScroll.horizontal = false;
+        listScroll.movementType = ScrollRect.MovementType.Clamped;
+        listScroll.scrollSensitivity = LinePitch;
+
+        listBarObject = new GameObject("Scroll Bar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        listBarObject.transform.SetParent(view.transform, false);
+        listBarObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
+        RectTransform br = listBarObject.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(1f, 0f);
+        br.anchorMax = new Vector2(1f, 1f);
+        br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(10f, 0f);
+        br.anchoredPosition = new Vector2(-2f, 0f);
+
+        GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handle.transform.SetParent(listBarObject.transform, false);
+        Image handleImage = handle.GetComponent<Image>();
+        handleImage.color = scrollbarColor;
+        PixelUIKit.Stretch(handle.GetComponent<RectTransform>());
+
+        Scrollbar bar = listBarObject.GetComponent<Scrollbar>();
+        bar.direction = Scrollbar.Direction.BottomToTop;
+        bar.handleRect = handle.GetComponent<RectTransform>();
+        bar.targetGraphic = handleImage;
+        listScroll.verticalScrollbar = bar;
+        listScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        listBarObject.SetActive(false);
     }
 
     /// <summary>Where the lines start: below the title bar and (in automatic mode) the two tab buttons.</summary>
@@ -886,7 +966,12 @@ public class PixelUI : MonoBehaviour
             label.alignment = TextAlignmentOptions.Center;
 
             int captured = i;
-            tab.onClick.AddListener(() => { inventoryTab = captured; Refresh(); });
+            tab.onClick.AddListener(() =>
+            {
+                inventoryTab = captured;
+                if (listContent != null) listContent.anchoredPosition = Vector2.zero; // new tab starts at the top
+                Refresh();
+            });
         }
     }
 
@@ -902,19 +987,19 @@ public class PixelUI : MonoBehaviour
     {
         TextAlignmentOptions align = anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
 
-        activeLabel = MakeText(boxObject.transform, "Active Potion", "", fontSize * 0.85f, align, FontStyles.Bold, textColor);
+        activeLabel = MakeText(ListParent, "Active Potion", "", fontSize * 0.85f, align, FontStyles.Bold, textColor);
         PlaceLine(activeLabel.rectTransform);
         activeLabel.gameObject.SetActive(false);
 
         consumableAlign = align;
         BuildPotionRows();
 
-        noConsumablesLabel = MakeText(boxObject.transform, "No Consumables", noConsumablesText, fontSize * 0.9f, align,
+        noConsumablesLabel = MakeText(ListParent, "No Consumables", noConsumablesText, fontSize * 0.9f, align,
                                       FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.6f));
         PlaceLine(noConsumablesLabel.rectTransform);
         noConsumablesLabel.gameObject.SetActive(false);
 
-        hintLabel = MakeText(boxObject.transform, "Hint", consumableHint, hintFontSize, align, FontStyles.Italic,
+        hintLabel = MakeText(ListParent, "Hint", consumableHint, hintFontSize, align, FontStyles.Italic,
                              new Color(textColor.r, textColor.g, textColor.b, 0.6f));
         PlaceLine(hintLabel.rectTransform);
         hintLabel.gameObject.SetActive(false);
@@ -936,7 +1021,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             GameObject row = new GameObject("Potion " + i, typeof(RectTransform), typeof(Image), typeof(PotionRowClick));
-            row.transform.SetParent(boxObject.transform, false);
+            row.transform.SetParent(ListParent, false);
             Image image = row.GetComponent<Image>();
             image.color = new Color(1f, 1f, 1f, 0f);
             image.raycastTarget = true;
