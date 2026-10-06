@@ -261,6 +261,19 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
     [SerializeField] private float fallingCopyLifetime = 6f;
 
+    [Header("Old Pixel Pop-In")]
+    [Range(0.01f, 1f)]
+    [Tooltip("Size an old pixel starts at, as a fraction of its normal size (0.05 = tiny).")]
+    [SerializeField] private float popStartScale = 0.05f;
+
+    [Min(0f)]
+    [Tooltip("Seconds an old pixel takes to grow back to full size while falling. 0 = full size at once.")]
+    [SerializeField] private float popGrowSeconds = 0.35f;
+
+    [Min(0f)]
+    [Tooltip("Seconds right after spawning that an old pixel has NO collision (so quick clicks don't make them pile up). 0 = solid at once.")]
+    [SerializeField] private float popNoCollisionSeconds = 0.2f;
+
     [Header("Fly-Away Pixels (tiers with Fly Away on)")]
     [Min(0.1f)]
     [Tooltip("Seconds before a fly-away old pixel is removed.")]
@@ -1364,6 +1377,13 @@ public class PixelClicker : MonoBehaviour
         rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
                      ForceMode.VelocityChange);
 
+        if (popGrowSeconds > 0f || popNoCollisionSeconds > 0f)
+        {
+            // Spawns tiny and collision-free so fast clicking doesn't make a pile-up; grows and becomes solid while falling.
+            OldPixelPopIn pop = copy.AddComponent<OldPixelPopIn>();
+            pop.Setup(box, copy.transform.localScale, popStartScale, popGrowSeconds, popNoCollisionSeconds);
+        }
+
         if (fallingCopyLifetime > 0f) Destroy(copy, fallingCopyLifetime);
 
         OldPixelInfo info = copy.AddComponent<OldPixelInfo>();
@@ -1503,6 +1523,39 @@ public class ScaledGravity : MonoBehaviour
     {
         if (body != null && !body.isKinematic)
             body.AddForce(Physics.gravity * scale, ForceMode.Acceleration);
+    }
+}
+
+/// <summary>
+/// Makes a new old pixel start tiny and non-colliding, then grow to full size and become solid again.
+/// </summary>
+public class OldPixelPopIn : MonoBehaviour
+{
+    private Collider body;
+    private Vector3 fullScale;
+    private float startScale, growSeconds, ghostSeconds, age;
+
+    public void Setup(Collider collider, Vector3 full, float start, float grow, float noCollision)
+    {
+        body = collider;
+        fullScale = full;
+        startScale = start;
+        growSeconds = grow;
+        ghostSeconds = noCollision;
+        if (body != null && ghostSeconds > 0f) body.isTrigger = true; // a trigger doesn't collide (keeps ignore-collision settings)
+        transform.localScale = fullScale * (growSeconds > 0f ? startScale : 1f);
+    }
+
+    private void Update()
+    {
+        age += Time.deltaTime;
+        if (growSeconds > 0f)
+        {
+            float k = Mathf.Clamp01(age / growSeconds);
+            transform.localScale = fullScale * Mathf.Lerp(startScale, 1f, k * (2f - k)); // ease out
+        }
+        if (body != null && body.isTrigger && age >= ghostSeconds) body.isTrigger = false;
+        if (age >= growSeconds && age >= ghostSeconds) Destroy(this);
     }
 }
 
