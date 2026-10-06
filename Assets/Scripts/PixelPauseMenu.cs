@@ -144,6 +144,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the cube pulsing tick box (accessibility).")]
     [SerializeField] private string pulsingLabel = "Cube pulsing";
 
+    [Tooltip("Label of the tick box that switches between abbreviated (1.2K) and full (1,200) numbers.")]
+    [SerializeField] private string abbreviateLabel = "Abbreviate numbers (1.2K)";
+
     [Tooltip("Label of the tick box that decides whether the pause menu freezes the game.")]
     [SerializeField] private string pauseStopsLabel = "Pausing stops the game";
 
@@ -278,9 +281,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Colour of the tick inside a ticked box.")]
     [SerializeField] private Color tickColor = new Color(0.45f, 1f, 0.5f, 1f);
 
-    [Tooltip("Compact big numbers in Stats (1.2K, 3.4M). Off = full number.")]
-    [SerializeField] private bool abbreviateNumbers = false;
-
     [Header("Restart / Quit")]
     [Tooltip("Show the Restart button (reloads the scene, so all progress is lost).")]
     [SerializeField] private bool showRestart = true;
@@ -352,7 +352,7 @@ public class PixelPauseMenu : MonoBehaviour
     private float statsContentHeight, statsListTop;
     private bool potionsOpen;
     private string shownPotionsText;
-    private Toggle rotationToggle, pulsingToggle, backgroundToggle, pauseStopsToggle;
+    private Toggle rotationToggle, pulsingToggle, abbreviateToggle, backgroundToggle, pauseStopsToggle;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -666,6 +666,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             rotationToggle.SetIsOnWithoutNotify(clicker.AllowRotation);
             pulsingToggle.SetIsOnWithoutNotify(clicker.AllowPulsing);
+            abbreviateToggle.SetIsOnWithoutNotify(PixelClicker.AbbreviateNumbers);
             backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
             pauseStopsToggle.SetIsOnWithoutNotify(pauseStopsGame);
         }
@@ -1004,6 +1005,8 @@ public class PixelPauseMenu : MonoBehaviour
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
         pulsingToggle = AddToggleRow(settingsPanel.transform, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
+        abbreviateToggle = AddToggleRow(settingsPanel.transform, abbreviateLabel, PixelClicker.AbbreviateNumbers,
+                                        on => PixelClicker.AbbreviateNumbers = on, ref y);
         backgroundToggle = AddToggleRow(settingsPanel.transform, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
                                         on => { if (clicker != null) clicker.RunInBackground = on; }, ref y);
         pauseStopsToggle = AddToggleRow(settingsPanel.transform, pauseStopsLabel, pauseStopsGame, on =>
@@ -1027,7 +1030,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private string FormatCount(double value)
     {
-        if (!abbreviateNumbers || value < 1000d) return System.Math.Floor(value).ToString("N0");
+        if (!PixelClicker.AbbreviateNumbers || value < 1000d) return System.Math.Floor(value).ToString("N0");
         return PixelClicker.FormatNumber(value);
     }
 

@@ -11,3 +11,4 @@
 [2026-10-06 18:38 UTC] Shop tab buttons now keep their text off the edges (long names shrink to fit). The Ultra Pad now only appears to the left or right of the clicker cube, between the cube and the screen edge.
 [2026-10-06 18:50 UTC] Added a 'pixel_land' sound event: it plays whenever an old pixel hits the floor (quieter for soft landings, no sound for pixels just touching each other). Add a clip to 'pixel_land' in the PixelAudio sounds list.
 [2026-10-06 19:00 UTC] Numbers under 1,000 now show their decimals (for example 6.25 instead of 6) in the inventory, popups, log and shop, so boosted payouts like x1.25 are visible.
+[2026-10-06 19:05 UTC] Added an "Abbreviate numbers" tick box to Settings: off shows full numbers (1,200) instead of 1.2K everywhere, remembered between sessions.

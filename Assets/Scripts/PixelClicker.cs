@@ -1706,9 +1706,24 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
-    /// <summary>Compact number formatting (1.2K, 3.4M ...). Replace with your own for big-number support.</summary>
+    private const string PrefAbbreviate = "PixelClicker.Setting.AbbreviateNumbers";
+    private static int abbreviateCache = -1; // -1 = not read yet
+
+    /// <summary>Player setting: show big numbers as 1.2K / 3.4M (on) or in full as 1,200 (off). Remembered between sessions; used by every number display.</summary>
+    public static bool AbbreviateNumbers
+    {
+        get
+        {
+            if (abbreviateCache < 0) abbreviateCache = PlayerPrefs.GetInt(PrefAbbreviate, 1) != 0 ? 1 : 0;
+            return abbreviateCache != 0;
+        }
+        set { abbreviateCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefAbbreviate, abbreviateCache); }
+    }
+
+    /// <summary>Number formatting: compact (1.2K, 3.4M ...) or full with separators (1,200), depending on <see cref="AbbreviateNumbers"/>.</summary>
     public static string FormatNumber(double value)
     {
+        if (!AbbreviateNumbers) return value.ToString("#,0.##");
         if (value < 999.995) return value.ToString("0.##"); // small amounts keep their decimals (e.g. 6.25)
         string[] suffix = { "", "K", "M", "B", "T" };
         int s = 0;

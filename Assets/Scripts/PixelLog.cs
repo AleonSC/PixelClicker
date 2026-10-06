@@ -216,9 +216,6 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Colour of the amounts on the right.")]
     [SerializeField] private Color amountColor = new Color(1f, 0.92f, 0.5f, 1f);
 
-    [Tooltip("Compact numbers (1.2K, 3.4M). Off = full number with separators.")]
-    [SerializeField] private bool abbreviateNumbers = true;
-
     [Header("Vacuum Indicator (+X next to each entry)")]
     [Tooltip("After a Vacuum pixel is clicked, show a '+X' next to each entry that gained currency.")]
     [SerializeField] private bool showVacuumDeltas = true;
@@ -1024,12 +1021,6 @@ public class PixelLog : MonoBehaviour
 
     private string FormatAmount(double value)
     {
-        if (!abbreviateNumbers) return value.ToString("#,0.##");
-        if (value < 999.995d) return value.ToString("0.##"); // small amounts keep their decimals (e.g. 6.25)
-
-        string[] suffix = { "", "K", "M", "B", "T" };
-        int s = 0;
-        while (value >= 1000d && s < suffix.Length - 1) { value /= 1000d; s++; }
-        return value.ToString("0.##") + suffix[s];
+        return PixelClicker.FormatNumber(value);
     }
 }

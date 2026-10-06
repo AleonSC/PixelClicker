@@ -284,9 +284,6 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Line format. {0} = tier name, {1} = amount.")]
     [SerializeField] private string lineFormat = "{0}: {1}";
 
-    [Tooltip("Compact numbers (1.2K, 3.4M). Off = full number.")]
-    [SerializeField] private bool abbreviateNumbers = true;
-
     [Header("Locked Tiers")]
     [Tooltip("Show tiers that aren't unlocked yet.")]
     [SerializeField] private bool showLockedTiers = false;
@@ -1391,13 +1388,7 @@ public class PixelUI : MonoBehaviour
 
     private string FormatAmount(double value)
     {
-        if (!abbreviateNumbers) return value.ToString("#,0.##");
-        if (value < 999.995d) return value.ToString("0.##"); // small amounts keep their decimals (e.g. 6.25)
-
-        string[] suffix = { "", "K", "M", "B", "T" };
-        int s = 0;
-        while (value >= 1000d && s < suffix.Length - 1) { value /= 1000d; s++; }
-        return value.ToString("0.##") + suffix[s];
+        return PixelClicker.FormatNumber(value);
     }
 }
 
