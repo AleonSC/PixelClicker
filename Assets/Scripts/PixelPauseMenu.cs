@@ -422,14 +422,6 @@ public class PixelPauseMenu : MonoBehaviour
             UnityEditor.Undo.AddComponent<PixelHud>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);
         };
-
-        UnityEditor.EditorApplication.delayCall += () =>
-        {
-            if (this == null || Application.isPlaying) return;
-            if (PixelFind.First<PixelWalls>() != null) return;
-            UnityEditor.Undo.AddComponent<PixelWalls>(gameObject);
-            UnityEditor.EditorUtility.SetDirty(gameObject);
-        };
     }
 #endif
 

@@ -93,7 +93,6 @@ public class PixelHud : MonoBehaviour
         }
         instance = this;
         BuildBars();
-        if (PixelFind.First<PixelWalls>() == null) gameObject.AddComponent<PixelWalls>(); // the invisible walls that box in the old pixels
     }
 
     private void OnDestroy()

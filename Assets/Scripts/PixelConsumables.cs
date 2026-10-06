@@ -730,7 +730,6 @@ public class PixelConsumables : MonoBehaviour
 
         foreach (RaycastHit hit in hits)
         {
-            if (hit.collider.GetComponent<PixelWallMarker>() != null) continue;     // not on the invisible walls
             if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue; // not on top of old pixels
             if (clicker.PixelTransform != null && hit.transform.IsChildOf(clicker.PixelTransform)) continue; // not on the cube
             if (hit.normal.y < minSurfaceNormalY) continue;                          // walls / steep slopes
