@@ -419,6 +419,7 @@ public class PixelBlackholeMinigame : PixelMinigame
             System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             foreach (RaycastHit hit in hits)
             {
+                if (hit.collider.GetComponent<PixelWallMarker>() != null) continue; // not on the invisible walls
                 if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
                 if (clicker.PixelTransform != null && hit.transform.IsChildOf(clicker.PixelTransform)) continue;
                 if (hit.normal.y < 0.5f) continue;

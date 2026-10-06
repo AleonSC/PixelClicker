@@ -42,6 +42,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Start with the 'Press Q to clear old pixels' box ticked.")]
     [SerializeField] private bool clearKeyEnabled = false;
 
+    [Tooltip("Draw the invisible walls that box in the old pixels, slightly see-through (dev mode only; they are always invisible in a normal build).")]
+    [SerializeField] private bool wallsVisible = true;
+
     [Tooltip("Only exist in the Editor and Development Builds. In a release build this component removes itself.")]
     [SerializeField] private bool devBuildsOnly = true;
 
@@ -63,6 +66,9 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Label of the clear-old-pixels tick box.")]
     [SerializeField] private string clearToggleText = "Press Q to clear old pixels";
+
+    [Tooltip("Label of the show-walls tick box.")]
+    [SerializeField] private string wallsToggleText = "Show invisible walls";
 
     [Tooltip("Label of the close button.")]
     [SerializeField] private string closeText = "Close";
@@ -122,6 +128,9 @@ public class PixelDevTools : MonoBehaviour
 
     /// <summary>The text for the pause menu's button.</summary>
     public static string ButtonText => instance != null ? instance.title : "Dev Tools";
+
+    /// <summary>Should the invisible walls be drawn (dev mode only)?</summary>
+    public static bool WallsVisible => instance != null && instance.wallsVisible;
 
     /// <summary>Is the dev tools panel showing?</summary>
     public static bool IsOpen => instance != null && instance.panel != null && instance.panel.activeSelf;
@@ -329,7 +338,11 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for the clear key
-        BuildToggleRow(box.transform, clearToggleText, y, inner);
+        BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => clearKeyEnabled = on);
+        y += rowHeight + 24f;
+
+        // Row: tick box for showing the walls
+        BuildToggleRow(box.transform, wallsToggleText, y, inner, wallsVisible, on => wallsVisible = on);
         y += rowHeight + 24f;
 
         // Close
@@ -353,7 +366,7 @@ public class PixelDevTools : MonoBehaviour
         rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    private void BuildToggleRow(Transform parent, string label, float y, float width)
+    private void BuildToggleRow(Transform parent, string label, float y, float width, bool initial, System.Action<bool> onChanged)
     {
         TMP_Text text = PixelUIKit.CreateText(font, parent, "Clear Label", label, fontSize,
                                               TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
@@ -381,8 +394,8 @@ public class PixelDevTools : MonoBehaviour
         Toggle toggle = boxGo.GetComponent<Toggle>();
         toggle.targetGraphic = bg;
         toggle.graphic = tickImage;
-        toggle.isOn = clearKeyEnabled;
-        toggle.onValueChanged.AddListener(on => clearKeyEnabled = on);
+        toggle.isOn = initial;
+        toggle.onValueChanged.AddListener(on => onChanged(on));
         toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
     }
 }

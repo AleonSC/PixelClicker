@@ -647,6 +647,7 @@ public class PixelClicker : MonoBehaviour
         {
             // Old pixels are skipped unless they're allowed to block clicks.
             if (!oldPixelsBlockClicks && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
+            if (hit.collider.GetComponent<PixelWallMarker>() != null) continue; // the invisible walls never block a click
 
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
                 Collect();
