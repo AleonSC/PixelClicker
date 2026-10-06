@@ -1409,6 +1409,18 @@ public class PixelClicker : MonoBehaviour
         return true;
     }
 
+    /// <summary>The cube's normal size in world units (not counting pulsing / materializing). Used to size things around it.</summary>
+    public float PixelBaseSize
+    {
+        get
+        {
+            if (pixelTransform == null) return 1f;
+            Vector3 s = baseScale;
+            if (pixelTransform.parent != null) s = Vector3.Scale(s, pixelTransform.parent.lossyScale);
+            return Mathf.Max(s.x, s.y, s.z);
+        }
+    }
+
     /// <summary>While true, clicks on the cube are ignored (used while a device is being placed).</summary>
     public void SetClicksBlocked(bool blocked) => clicksBlocked = blocked;
 
@@ -1482,8 +1494,15 @@ public class PixelClicker : MonoBehaviour
         // Skip if the pixel is mid-materialize and basically invisible.
         if (pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
 
+        // A working sorter spits the pixel out of its pipe instead of popping it out at random (not for fly-away pixels).
+        bool routed = false;
+        Vector3 routedPosition = pixelTransform.position, routedVelocity = Vector3.zero;
+        bool flyType = tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].flyAway;
+        if (!flyType && PixelSorterDevice.Current != null)
+            routed = PixelSorterDevice.Current.TryRoute(out routedPosition, out routedVelocity);
+
         GameObject copy = new GameObject("OldPixel");
-        copy.transform.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);
+        copy.transform.SetPositionAndRotation(routed ? routedPosition : pixelTransform.position, pixelTransform.rotation);
         copy.transform.localScale = pixelTransform.lossyScale * oldPixelScale;
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) copy.layer = fallingCopyLayer;
 
@@ -1586,6 +1605,25 @@ public class PixelClicker : MonoBehaviour
             flyInfo.tierIndex = tierIndex;
             flyInfo.amount = amount;
             oldPixels.Add(rb);
+            return;
+        }
+
+        if (routed)
+        {
+            rb.AddForce(routedVelocity, ForceMode.VelocityChange);
+            rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
+                         ForceMode.VelocityChange);
+            AddDespawn(copy, fallingCopyLifetime);
+            OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
+            routedInfo.tierIndex = tierIndex;
+            routedInfo.amount = amount;
+            oldPixels.Add(rb);
+            while (maxFallingCopies > 0 && oldPixels.Count > maxFallingCopies)
+            {
+                Rigidbody oldest = oldPixels[0];
+                oldPixels.RemoveAt(0);
+                if (oldest != null) DespawnOldPixel(oldest.gameObject);
+            }
             return;
         }
 

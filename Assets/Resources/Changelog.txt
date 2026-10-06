@@ -13,3 +13,4 @@
 [2026-10-06 19:00 UTC] Numbers under 1,000 now show their decimals (for example 6.25 instead of 6) in the inventory, popups, log and shop, so boosted payouts like x1.25 are visible.
 [2026-10-06 19:05 UTC] Added an "Abbreviate numbers" tick box to Settings: off shows full numbers (1,200) instead of 1.2K everywhere, remembered between sessions.
 [2026-10-06 19:12 UTC] Added the Time Stop upgrade (Upgrades tab): press T to freeze everything, including countdowns, and again to resume; it can be switched off in the Toggles window. Also removed "(1.2K)" from the number setting's name.
+[2026-10-06 19:52 UTC] Added the Sorter utility: a ring around the cube with an aimable output pipe (scroll to turn) that spits every collected pixel out in a stream while it works.

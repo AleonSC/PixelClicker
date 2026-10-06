@@ -167,7 +167,7 @@ public class PixelStats : MonoBehaviour
     private void OnDevicePlaced(PixelConsumables.DeviceKind kind)
     {
         if (kind == PixelConsumables.DeviceKind.Fan) fansUsed++;
-        else vacuumDevicesUsed++;
+        else if (kind == PixelConsumables.DeviceKind.Vacuum) vacuumDevicesUsed++;
     }
 
     private void OnCombo(int count)
