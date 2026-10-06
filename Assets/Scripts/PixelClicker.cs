@@ -311,6 +311,19 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Each Ultra boost level adds this much to a pixel type's payout multiplier (0.25 = +25% of its normal payout per level).")]
     [SerializeField] private float ultraBonusPerLevel = 0.25f;
 
+    [Header("Old Pixel Landing Sound")]
+    [Min(0f)]
+    [Tooltip("An old pixel only makes a landing sound when it hits a surface at least this fast (world units per second), so resting or rolling pixels stay quiet.")]
+    [SerializeField] private float landMinSpeed = 1.5f;
+
+    [Min(0.1f)]
+    [Tooltip("The impact speed at which the landing sound is at full volume. Slower hits are quieter.")]
+    [SerializeField] private float landFullVolumeSpeed = 8f;
+
+    [Min(0f)]
+    [Tooltip("Shortest time (seconds) between landing sounds from the same old pixel (it bounces a few times).")]
+    [SerializeField] private float landCooldown = 0.12f;
+
     [Header("Old Pixel Size")]
     [Range(0.05f, 1f)]
     [Tooltip("Full size of an old pixel as a fraction of the clickable pixel (0.5 = half size). Smaller = less visual clutter.")]
@@ -568,6 +581,11 @@ public class PixelClicker : MonoBehaviour
     public Transform PixelTransform => pixelTransform;
     public Camera TargetCamera => targetCamera;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
+
+    /// <summary>Raised when an old pixel hits the floor (or any surface). Passes how hard, 0..1. Used by the sound system.</summary>
+    public static event System.Action<float> OldPixelLanded;
+
+    internal static void RaiseOldPixelLanded(float intensity) => OldPixelLanded?.Invoke(intensity);
 
     /// <summary>While true (the Pixel Grabbing upgrade), a click on an old pixel is caught by it instead of passing through to the cube.</summary>
     public bool GrabEnabled { get; set; }
@@ -1559,6 +1577,8 @@ public class PixelClicker : MonoBehaviour
         else if (gravityScale > 0f)
             copy.AddComponent<ScaledGravity>().scale = gravityScale;
 
+        if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
+
         if (fly)
         {
             AddDespawn(copy, flyLifetime);
@@ -1727,6 +1747,34 @@ public class ScaledGravity : MonoBehaviour
     {
         if (body != null && !body.isKinematic)
             body.AddForce(Physics.gravity * scale, ForceMode.Acceleration);
+    }
+}
+
+/// <summary>
+/// Reports when an old pixel hits a surface hard enough to be heard (PixelClicker.OldPixelLanded). Pixels bumping into
+/// each other don't count - only the floor and other solid surfaces.
+/// </summary>
+public class OldPixelImpact : MonoBehaviour
+{
+    private float minSpeed = 1.5f, fullSpeed = 8f, cooldown = 0.12f, lastTime = -99f;
+
+    public void Setup(float min, float full, float gap)
+    {
+        minSpeed = min;
+        fullSpeed = Mathf.Max(0.1f, full);
+        cooldown = gap;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
+        if (Time.time - lastTime < cooldown) return;
+
+        float speed = collision.relativeVelocity.magnitude;
+        if (speed < minSpeed) return;
+
+        lastTime = Time.time;
+        PixelClicker.RaiseOldPixelLanded(Mathf.Clamp01(speed / fullSpeed));
     }
 }
 

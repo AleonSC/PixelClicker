@@ -172,6 +172,7 @@ public class PixelAudio : MonoBehaviour
         List<Sound> list = new List<Sound>
         {
             Make("click", 0.02f, 0.92f, 1.08f),
+            Make("pixel_land", 0.02f, 0.88f, 1.12f),
             Make("auto_click", 0.06f, 0.92f, 1.08f),
             Make("hit", 0.03f, 0.92f, 1.08f),
             Make("vacuum", 0.2f),
@@ -344,7 +345,7 @@ public class PixelAudio : MonoBehaviour
         if (instance != null) instance.PlaySound(id, pitchMultiplier);
     }
 
-    private void PlaySound(string id, float pitchMultiplier)
+    private void PlaySound(string id, float pitchMultiplier, float volumeMultiplier = 1f)
     {
         if (muted || voices == null || !byId.TryGetValue(id, out Sound s)) return;
         if (s.clips == null || s.clips.Length == 0) return;
@@ -363,7 +364,7 @@ public class PixelAudio : MonoBehaviour
         AudioSource voice = voices[nextVoice];
         nextVoice = (nextVoice + 1) % voices.Length;
         voice.clip = clip;
-        voice.volume = s.volume * effectsVolume * masterVolume;
+        voice.volume = s.volume * effectsVolume * masterVolume * volumeMultiplier;
         voice.pitch = Mathf.Clamp(UnityEngine.Random.Range(s.pitchMin, s.pitchMax) * pitchMultiplier, 0.1f, 4f);
         voice.Play();
     }
