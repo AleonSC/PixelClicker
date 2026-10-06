@@ -44,6 +44,17 @@ public class PixelClicker : MonoBehaviour
         Meteor = 12,
     }
 
+    /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
+    public enum SpawnSwitch
+    {
+        /// <summary>The special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor) can be switched off; the others can't.</summary>
+        Auto = 0,
+        /// <summary>The player can always switch this pixel off.</summary>
+        Switchable = 1,
+        /// <summary>This pixel always spawns normally.</summary>
+        AlwaysOn = 2,
+    }
+
     /// <summary>How a tier becomes available.</summary>
     public enum TierUnlockMode
     {
@@ -123,6 +134,9 @@ public class PixelClicker : MonoBehaviour
         public AudioClip clickSound;
 
         // Runtime state (visible in the Inspector for debugging, editable at runtime).
+        [Tooltip("Can the player switch this pixel's spawning off with a tick box in the inventory? Auto = only the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor).")]
+        public SpawnSwitch spawnSwitch = SpawnSwitch.Auto;
+
         [Header("Runtime State")]
         [Tooltip("Current spendable amount.")]
         public double count;
@@ -132,6 +146,24 @@ public class PixelClicker : MonoBehaviour
 
         [Tooltip("Has this tier been unlocked?")]
         public bool unlocked;
+
+        [Tooltip("Runtime: the player switched this pixel's spawning off (saved).")]
+        public bool spawnDisabled;
+
+        /// <summary>True if the player may switch this pixel's spawning off.</summary>
+        public bool CanSwitchOff
+        {
+            get
+            {
+                if (spawnSwitch == SpawnSwitch.Switchable) return true;
+                if (spawnSwitch == SpawnSwitch.AlwaysOn) return false;
+                return type == PixelType.Vacuum || type == PixelType.Obsidian || type == PixelType.Singularity ||
+                       type == PixelType.Ghost || type == PixelType.Meteor;
+            }
+        }
+
+        /// <summary>Can this pixel spawn right now (unlocked and not switched off)?</summary>
+        public bool CanSpawn => unlocked && !(spawnDisabled && CanSwitchOff);
 
         /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
         public Color UIColor => new Color(color.r, color.g, color.b, 1f);
@@ -260,6 +292,11 @@ public class PixelClicker : MonoBehaviour
     [Header("Old Pixel Physics")]
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
     [SerializeField] private float fallingCopyLifetime = 6f;
+
+    [Header("Old Pixel Size")]
+    [Range(0.05f, 1f)]
+    [Tooltip("Full size of an old pixel as a fraction of the clickable pixel (0.5 = half size). Smaller = less visual clutter.")]
+    [SerializeField] private float oldPixelScale = 0.5f;
 
     [Header("Old Pixel Pop-In")]
     [Range(0.01f, 1f)]
@@ -741,7 +778,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked)
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false)
     {
         int index = IndexOf(type);
         if (index < 0) return;
@@ -750,6 +787,19 @@ public class PixelClicker : MonoBehaviour
         tier.count = System.Math.Max(0d, count);
         tier.totalCollected = System.Math.Max(0d, totalCollected);
         tier.unlocked = unlocked || tier.unlockedAtStart;
+        tier.spawnDisabled = spawnDisabled;
+    }
+
+    /// <summary>Switches a pixel type's spawning on or off (only pixels that can be switched off). Re-rolls the next pixel if needed.</summary>
+    public void SetSpawnEnabled(int tierIndex, bool enabled)
+    {
+        if (!IsValidTier(tierIndex) || !tiers[tierIndex].CanSwitchOff) return;
+        tiers[tierIndex].spawnDisabled = !enabled;
+        if (randomizeSpawnTier && !enabled && currentTierIndex == tierIndex && !isSpawning)
+        {
+            currentTierIndex = PickSpawnTier();
+            Materialize(GetClickTier());
+        }
     }
 
     /// <summary>Call after <see cref="LoadTierState"/>: re-rolls the pixel on screen and refreshes every display.</summary>
@@ -878,14 +928,14 @@ public class PixelClicker : MonoBehaviour
 
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].unlocked) total += Mathf.Max(0f, tiers[i].spawnWeight);
+            if (tiers[i].CanSpawn) total += Mathf.Max(0f, tiers[i].spawnWeight);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].unlocked) continue;
+            if (!tiers[i].CanSpawn) continue;
             roll -= Mathf.Max(0f, tiers[i].spawnWeight);
             if (roll <= 0f) return i;
         }
@@ -1297,7 +1347,7 @@ public class PixelClicker : MonoBehaviour
 
         GameObject copy = new GameObject("OldPixel");
         copy.transform.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);
-        copy.transform.localScale = pixelTransform.lossyScale;
+        copy.transform.localScale = pixelTransform.lossyScale * oldPixelScale;
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) copy.layer = fallingCopyLayer;
 
         // Copy only the visuals (mesh + material) so we don't duplicate this script.
