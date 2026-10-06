@@ -30,6 +30,16 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True while the left button is held down.</summary>
+    public static bool LeftHeld()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Mouse.current != null && Mouse.current.leftButton.isPressed;
+#else
+        return Input.GetMouseButton(0);
+#endif
+    }
+
     /// <summary>True on the frame the left button went down.</summary>
     public static bool LeftPressed()
     {

@@ -558,6 +558,9 @@ public class PixelClicker : MonoBehaviour
     public Camera TargetCamera => targetCamera;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
 
+    /// <summary>While true (the Pixel Grabbing upgrade), a click on an old pixel is caught by it instead of passing through to the cube.</summary>
+    public bool GrabEnabled { get; set; }
+
     /// <summary>Extra multiplier on YOUR clicks (not the auto clicker's). Set every frame by the combo meter.</summary>
     public double ManualClickBonus { get; set; } = 1d;
 
@@ -646,7 +649,7 @@ public class PixelClicker : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             // Old pixels are skipped unless they're allowed to block clicks.
-            if (!oldPixelsBlockClicks && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
+            if (!oldPixelsBlockClicks && !GrabEnabled && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
 
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
                 Collect();
@@ -1698,6 +1701,12 @@ public class OldPixelDespawn : MonoBehaviour
 {
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
     private bool despawning;
+
+    /// <summary>True while the player holds this pixel (its lifetime is frozen).</summary>
+    public bool Held { get; set; }
+
+    /// <summary>True once it has started swelling and shrinking away.</summary>
+    public bool IsDespawning => despawning;
     private Vector3 baseScale;
 
     public void Setup(float life, float swell, float swellTime, float shrinkTime)
@@ -1726,6 +1735,7 @@ public class OldPixelDespawn : MonoBehaviour
     {
         if (!despawning)
         {
+            if (Held) return;
             age += Time.deltaTime;
             if (lifetime > 0f && age >= lifetime) Begin();
             return;

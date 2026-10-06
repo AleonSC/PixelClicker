@@ -372,6 +372,20 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Pixel Grabbing upgrade (Upgrades tab): old pixels can be clicked and dragged.</summary>
+    private static ShopPack CreateGrabbingPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Pixel Grabbing",
+            tab = ShopTab.Upgrades,
+            description = "Click and drag old pixels around. Let go to drop or throw them.",
+            costs = AllSix(150),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksGrabbing = true,
+        };
+    }
+
     /// <summary>Default Combo Meter upgrade: quick clicks build a multiplier; each level raises its maximum.</summary>
     private static ShopPack CreateComboPack()
     {
@@ -490,6 +504,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBombPack },
         new DefaultPack { isThis = p => p.unlocksCrafting,
                           requires = null, create = i => CreateCraftingPack() },
+        new DefaultPack { isThis = p => p.unlocksGrabbing,
+                          requires = null, create = i => CreateGrabbingPack() },
     };
 
 #if UNITY_EDITOR

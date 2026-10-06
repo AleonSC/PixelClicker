@@ -141,6 +141,9 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack unlocks crafting (the Crafting button and window).")]
         public bool unlocksCrafting = false;
 
+        [Tooltip("Buying this pack lets the player click and drag old pixels.")]
+        public bool unlocksGrabbing = false;
+
         [Tooltip("Id of a minigame that buying this pack switches on (e.g. ghost, blackhole). Empty = none.")]
         public string unlocksMinigame = "";
 
@@ -180,6 +183,9 @@ public partial class PixelShop : MonoBehaviour
 
     [Tooltip("The crafting window the Crafting upgrade unlocks. Found (or added) automatically if left empty.")]
     [SerializeField] private PixelCrafting crafting;
+
+    [Tooltip("The grabbing the Pixel Grabbing upgrade unlocks. Found (or added) automatically if left empty.")]
+    [SerializeField] private PixelGrab grab;
 
     [Tooltip("The combo meter the Combo Meter upgrade controls. Found (or added) automatically if left empty.")]
     [SerializeField] private PixelCombo combo;
@@ -510,6 +516,8 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelBlackholeMinigame>();
         EnsureMinigame<PixelBombMinigame>();
 
+        if (grab == null) grab = PixelFind.First<PixelGrab>();
+        if (grab == null) grab = gameObject.AddComponent<PixelGrab>();
         if (crafting == null) crafting = PixelFind.First<PixelCrafting>();
         if (crafting == null) crafting = gameObject.AddComponent<PixelCrafting>();
         if (combo == null) combo = PixelFind.First<PixelCombo>();
@@ -633,6 +641,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelConsumables>();
             EditorEnsureComponent<PixelCombo>();
             EditorEnsureComponent<PixelCrafting>();
+            EditorEnsureComponent<PixelGrab>();
             EditorEnsureComponent<PixelGhostMinigame>();
             EditorEnsureComponent<PixelMeteorMinigame>();
             EditorEnsureComponent<PixelBlackholeMinigame>();
@@ -739,6 +748,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.upgradeEffect == UpgradeEffect.ComboMeter) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
 
         if (pack.unlocksCrafting && crafting != null && !purchased) crafting.Deactivate();
+        if (pack.unlocksGrabbing && grab != null && !purchased) grab.Deactivate();
         if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
 
@@ -892,6 +902,7 @@ public partial class PixelShop : MonoBehaviour
 
         if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
         if (pack.unlocksCrafting && crafting != null) crafting.Activate();
+        if (pack.unlocksGrabbing && grab != null) grab.Activate();
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
     }
 
