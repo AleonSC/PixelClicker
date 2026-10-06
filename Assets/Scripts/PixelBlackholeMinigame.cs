@@ -126,6 +126,29 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("Colour of the dark centre.")]
     [SerializeField] private Color coreColor = new Color(0.01f, 0f, 0.03f, 1f);
 
+    [Range(0.5f, 3f)]
+    [Tooltip("Brightens the swirl arms (1 = the arm colour as it is, 2 = twice as bright).")]
+    [SerializeField] private float armBrightness = 1.7f;
+
+    [Range(0f, 0.8f)]
+    [Tooltip("How visible the dark gaps between the arms are (0 = clear gaps, higher = the whole hole is a stronger disc).")]
+    [SerializeField] private float armMinAlpha = 0.22f;
+
+    [Tooltip("Colour of the bright ring around the dark centre (the accretion ring).")]
+    [SerializeField] private Color rimColor = new Color(0.9f, 0.7f, 1f, 1f);
+
+    [Range(0f, 1f)]
+    [Tooltip("Brightness of the ring around the centre (0 = no ring).")]
+    [SerializeField] private float rimStrength = 0.9f;
+
+    [Range(0.02f, 0.4f)]
+    [Tooltip("Thickness of the ring around the centre (fraction of the hole's radius).")]
+    [SerializeField] private float rimWidth = 0.08f;
+
+    [Range(0f, 4f)]
+    [Tooltip("Makes the swirl glow by itself so it stays visible on a dark background (0 = only lit by the scene's lights).")]
+    [SerializeField] private float glowIntensity = 1.5f;
+
     [Range(0.1f, 1f)]
     [Tooltip("Overall opacity of the hole.")]
     [SerializeField] private float opacity = 0.95f;
@@ -457,6 +480,14 @@ public class PixelBlackholeMinigame : PixelMinigame
         if (m == null) return null;
         if (m.HasProperty("_BaseMap")) m.SetTexture("_BaseMap", texture);
         if (m.HasProperty("_MainTex")) m.SetTexture("_MainTex", texture);
+
+        // Self-lit: the swirl's own colours glow, so it doesn't vanish into a dark background.
+        if (glowIntensity > 0f && m.HasProperty("_EmissionColor"))
+        {
+            m.EnableKeyword("_EMISSION");
+            m.SetColor("_EmissionColor", Color.white * glowIntensity);
+            if (m.HasProperty("_EmissionMap")) m.SetTexture("_EmissionMap", texture);
+        }
         return m;
     }
 
@@ -484,8 +515,16 @@ public class PixelBlackholeMinigame : PixelMinigame
                     float core = 1f - Mathf.SmoothStep(0f, coreSize, r);                 // dark in the middle
 
                     Color body = Color.Lerp(armColor * 0.35f, armColor, arm);
+                    body = new Color(Mathf.Clamp01(body.r * armBrightness), Mathf.Clamp01(body.g * armBrightness),
+                                     Mathf.Clamp01(body.b * armBrightness), 1f);
                     Color rgb = Color.Lerp(body, coreColor, core);
-                    float alpha = Mathf.Max(Mathf.Lerp(0.05f, 0.95f, arm) * edge, core * edge);
+                    float alpha = Mathf.Max(Mathf.Lerp(armMinAlpha, 0.95f, arm) * edge, core * edge);
+
+                    // A bright ring just outside the dark centre.
+                    float ring = rimStrength * Mathf.Exp(-Mathf.Pow((r - coreSize) / rimWidth, 2f));
+                    rgb = Color.Lerp(rgb, rimColor, ring);
+                    alpha = Mathf.Max(alpha, ring * edge);
+
                     c = new Color(rgb.r, rgb.g, rgb.b, alpha);
                 }
                 pixels[y * size + x] = c;
