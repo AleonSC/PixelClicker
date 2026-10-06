@@ -508,6 +508,7 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelGhostMinigame>();
         EnsureMinigame<PixelMeteorMinigame>();
         EnsureMinigame<PixelBlackholeMinigame>();
+        EnsureMinigame<PixelBombMinigame>();
 
         if (crafting == null) crafting = PixelFind.First<PixelCrafting>();
         if (crafting == null) crafting = gameObject.AddComponent<PixelCrafting>();
@@ -635,6 +636,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelGhostMinigame>();
             EditorEnsureComponent<PixelMeteorMinigame>();
             EditorEnsureComponent<PixelBlackholeMinigame>();
+            EditorEnsureComponent<PixelBombMinigame>();
         };
     }
 

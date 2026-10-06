@@ -202,6 +202,26 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Bomb Defusal pack (Minigames tab): switches on the bomb minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateBombPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Bomb Defusal",
+            tab = ShopTab.Minigames,
+            description = "A bomb with red, green and blue wires appears now and then. Cut the wire of the colour you hold the most of before the timer runs out, or it blows up your old pixels. Defusing earns bomb parts.",
+            requirements = Needs(requiresRgbIndex),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 200 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 200 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 200 },
+            },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "bomb",
+        };
+    }
+
     /// <summary>Default Meteor Strike pack (Minigames tab): switches on the meteor minigame. Needs the Obsidian pack first.</summary>
     private static ShopPack CreateMeteorStrikePack(int requiresObsidianIndex)
     {
@@ -466,6 +486,8 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
+        new DefaultPack { isThis = p => Unlocks(p, "bomb"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBombPack },
         new DefaultPack { isThis = p => p.unlocksCrafting,
                           requires = null, create = i => CreateCraftingPack() },
     };
