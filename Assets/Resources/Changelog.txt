@@ -1,3 +1,4 @@
 [2026-10-06 14:52 UTC] Added a Changelog screen to the pause menu (reads this file). New changes are listed here until a build is made.
 [2026-10-06 14:58 UTC] Added a '+X' next to each pixel's entry in the Currency and Log windows for every click (quick clicks add up), so gains stay readable when the cube popups get crowded.
 [2026-10-06 15:06 UTC] Each pixel type now has two achievements: 'Collector' (total value collected) and a new 'Clicker' (number of pixels clicked, whatever they paid: 10, 50, 250, 1K, 5K, 25K). Existing saves keep their progress; click counts start from zero.
+[2026-10-06 15:11 UTC] Log achievements: each pixel now has one entry; click it to switch between its 'value collected' and 'times clicked' achievement (a small tag shows which; your choice is remembered).

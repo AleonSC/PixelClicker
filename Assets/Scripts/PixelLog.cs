@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -93,6 +94,12 @@ public class PixelLog : MonoBehaviour
     [Header("Achievements Tab")]
     [Tooltip("The achievements to list. Found automatically (or added to this GameObject) if left empty.")]
     [SerializeField] private PixelAchievements achievements;
+
+    [Tooltip("Small tag on a pixel's achievement while it shows 'value collected'. Click the achievement to switch.")]
+    [SerializeField] private string valueModeText = "[Value - click to switch]";
+
+    [Tooltip("Small tag on a pixel's achievement while it shows 'times clicked'.")]
+    [SerializeField] private string clicksModeText = "[Clicks - click to switch]";
 
     [Tooltip("Height of the scrolling list (canvas units). Longer lists scroll.")]
     [SerializeField] private float achievementsViewHeight = 560f;
@@ -285,6 +292,8 @@ public class PixelLog : MonoBehaviour
         public Image barFill;
         public RectTransform barFillRect;
         public Image background;
+        public TMP_Text modeTag;
+        public int groupIndex;
     }
 
     private int currentTab; // 0 = Pixels, 1 = Achievements
@@ -698,7 +707,23 @@ public class PixelLog : MonoBehaviour
         dr.anchorMin = new Vector2(0f, 0.28f);
         dr.anchorMax = new Vector2(1f, 0.58f);
         dr.offsetMin = new Vector2(left, 0f);
-        dr.offsetMax = new Vector2(-12f, 0f);
+        dr.offsetMax = new Vector2(-170f, 0f);
+
+        // Small tag showing which of the pixel's two achievements this slot shows (click the row to switch).
+        row.modeTag = CreateText(go.transform, "Mode", "", rowFontSize * 0.6f, TextAlignmentOptions.MidlineRight,
+                                 FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.55f));
+        RectTransform mr = row.modeTag.rectTransform;
+        mr.anchorMin = new Vector2(1f, 0.28f);
+        mr.anchorMax = new Vector2(1f, 0.58f);
+        mr.pivot = new Vector2(1f, 0.5f);
+        mr.sizeDelta = new Vector2(160f, 0f);
+        mr.anchoredPosition = new Vector2(-10f, 0f);
+
+        // Clicking the row switches between "value collected" and "times clicked".
+        Button click = go.AddComponent<Button>();
+        click.targetGraphic = row.background;
+        click.transition = Selectable.Transition.None;
+        click.onClick.AddListener(() => ToggleAchievementMode(row.groupIndex));
 
         // Progress bar.
         GameObject back = new GameObject("Bar", typeof(RectTransform), typeof(Image));
@@ -827,11 +852,59 @@ public class PixelLog : MonoBehaviour
         emptyLabel.gameObject.SetActive(false);
     }
 
+    // A pixel's "Collector" and "Clicker" achievements share one row; clicking the row switches which one it shows.
+    private readonly List<List<int>> achievementGroups = new List<List<int>>();
+    private const string ModePrefKey = "PixelLog.AchievementMode.";
+
+    private static bool IsPixelKind(PixelAchievements.Kind k) =>
+        k == PixelAchievements.Kind.CollectPixelType || k == PixelAchievements.Kind.ClickPixelType;
+
+    private bool ShowsClicks(PixelClicker.PixelType type) => PlayerPrefs.GetInt(ModePrefKey + (int)type, 0) == 1;
+
+    /// <summary>Groups the achievements: one group per pixel type for the two per-pixel kinds, a group of one for the rest.</summary>
+    private void BuildAchievementGroups()
+    {
+        achievementGroups.Clear();
+        Dictionary<PixelClicker.PixelType, int> byType = new Dictionary<PixelClicker.PixelType, int>();
+        int total = achievements != null ? achievements.Count : 0;
+        for (int i = 0; i < total; i++)
+        {
+            PixelAchievements.Kind kind = achievements.GetKind(i);
+            if (IsPixelKind(kind))
+            {
+                PixelClicker.PixelType type = achievements.GetPixelType(i);
+                if (byType.TryGetValue(type, out int g)) { achievementGroups[g].Add(i); continue; }
+                byType[type] = achievementGroups.Count;
+            }
+            achievementGroups.Add(new List<int> { i });
+        }
+    }
+
+    /// <summary>The achievement a group currently shows.</summary>
+    private int ChosenAchievement(List<int> group)
+    {
+        if (group.Count == 1) return group[0];
+        PixelClicker.PixelType type = achievements.GetPixelType(group[0]);
+        PixelAchievements.Kind want = ShowsClicks(type) ? PixelAchievements.Kind.ClickPixelType : PixelAchievements.Kind.CollectPixelType;
+        foreach (int i in group)
+            if (achievements.GetKind(i) == want) return i;
+        return group[0];
+    }
+
+    private void ToggleAchievementMode(int groupIndex)
+    {
+        if (groupIndex < 0 || groupIndex >= achievementGroups.Count || achievementGroups[groupIndex].Count < 2) return;
+        PixelClicker.PixelType type = achievements.GetPixelType(achievementGroups[groupIndex][0]);
+        PlayerPrefs.SetInt(ModePrefKey + (int)type, ShowsClicks(type) ? 0 : 1);
+        Refresh();
+    }
+
     private void RefreshAchievementsTab()
     {
         HidePixelsTab();
 
-        int count = achievements != null ? achievements.Count : 0;
+        BuildAchievementGroups();
+        int count = achievementGroups.Count;
         while (achievementRows.Count < count) achievementRows.Add(BuildAchievementRow(achievementRows.Count));
 
         float y = 0f;
@@ -842,28 +915,38 @@ public class PixelLog : MonoBehaviour
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
-            bool unlocked = achievements.IsComplete(i);           // every tier earned
-            bool started = achievements.HasAnyTier(i);            // at least one tier earned
+            row.groupIndex = i;
+            List<int> group = achievementGroups[i];
+            int a = ChosenAchievement(group);
+            if (row.modeTag != null)
+            {
+                bool two = group.Count > 1;
+                row.modeTag.gameObject.SetActive(two);
+                if (two) row.modeTag.text = achievements.GetKind(a) == PixelAchievements.Kind.ClickPixelType ? clicksModeText : valueModeText;
+            }
+
+            bool unlocked = achievements.IsComplete(a);           // every tier earned
+            bool started = achievements.HasAnyTier(a);            // at least one tier earned
             float dim = started ? 1f : achievementLockedBrightness;
 
-            int tierCount = achievements.GetTierCount(i);
+            int tierCount = achievements.GetTierCount(a);
             string tierText = tierCount > 1
-                ? string.Format(achievementTierFormat, Math.Min(achievements.GetEarnedTiers(i) + 1, tierCount), tierCount) : "";
-            row.title.text = achievements.GetTitle(i);
-            row.description.text = achievements.GetDescription(i) + tierText;
+                ? string.Format(achievementTierFormat, Math.Min(achievements.GetEarnedTiers(a) + 1, tierCount), tierCount) : "";
+            row.title.text = achievements.GetTitle(a);
+            row.description.text = achievements.GetDescription(a) + tierText;
             row.title.color = unlocked ? achievementUnlockedColor : new Color(textColor.r * dim, textColor.g * dim, textColor.b * dim, textColor.a);
 
-            double currentTarget = achievements.GetCurrentTarget(i);
+            double currentTarget = achievements.GetCurrentTarget(a);
             row.progress.text = unlocked
                 ? achievementUnlockedText
-                : string.Format(achievementProgressFormat, FormatAmount(Math.Min(achievements.GetProgress(i), currentTarget)), FormatAmount(currentTarget));
+                : string.Format(achievementProgressFormat, FormatAmount(Math.Min(achievements.GetProgress(a), currentTarget)), FormatAmount(currentTarget));
             row.progress.color = unlocked ? achievementUnlockedColor : amountColor;
 
-            Color icon = achievements.GetIconColor(i);
+            Color icon = achievements.GetIconColor(a);
             row.icon.color = new Color(icon.r * dim, icon.g * dim, icon.b * dim, icon.a);
 
             row.barFill.color = unlocked ? achievementUnlockedColor : achievementBarColor;
-            row.barFillRect.anchorMax = new Vector2(unlocked ? 1f : achievements.GetFraction(i), 1f);
+            row.barFillRect.anchorMax = new Vector2(unlocked ? 1f : achievements.GetFraction(a), 1f);
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
             y += achievementRowHeight + achievementSpacing;

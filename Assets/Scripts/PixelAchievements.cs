@@ -389,6 +389,12 @@ public class PixelAchievements : MonoBehaviour
         return 0d;
     }
 
+    /// <summary>What an achievement measures.</summary>
+    public Kind GetKind(int index) => achievements[index].kind;
+
+    /// <summary>The pixel type of an achievement (only meaningful for per-pixel kinds).</summary>
+    public PixelClicker.PixelType GetPixelType(int index) => achievements[index].pixelType;
+
     /// <summary>Progress as 0..1.</summary>
     public float GetFraction(int index)
     {
