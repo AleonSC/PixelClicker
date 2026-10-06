@@ -97,13 +97,13 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("How strongly the rock glows.")]
     [SerializeField] private float glowIntensity = 1.2f;
 
-    [Range(0, 12)]
-    [Tooltip("Number of blobs that make the fiery tail.")]
-    [SerializeField] private int tailSegments = 6;
-
     [Min(0.1f)]
-    [Tooltip("Length of the tail (world units).")]
-    [SerializeField] private float tailLength = 5f;
+    [Tooltip("How long the fiery tail lasts behind the meteor (seconds). Longer = longer tail.")]
+    [SerializeField] private float tailSeconds = 2.5f;
+
+    [Range(0.1f, 1.5f)]
+    [Tooltip("Width of the tail where it leaves the meteor, as a fraction of the meteor's size. It tapers to a point.")]
+    [SerializeField] private float tailWidth = 0.8f;
 
     [Tooltip("Add a real light to the meteor so it lights up the scene as it passes.")]
     [SerializeField] private bool castLight = true;
@@ -233,8 +233,7 @@ public class PixelMeteorMinigame : PixelMinigame
         float lo = Mathf.Min(minHeight, maxHeight), hi = Mathf.Max(minHeight, maxHeight);
         float fromY = Random.Range(lo, hi), toY = Random.Range(lo, hi);
         Vector3 Path(float k) => cam.ViewportToWorldPoint(new Vector3(Mathf.Lerp(fromX, toX, k), Mathf.Lerp(fromY, toY, k), depth));
-        Vector3 travel = (Path(0.7f) - Path(0.3f)).normalized; // world direction of travel (the tail trails behind it)
-
+        
         // ---- Build it: lumpy rock, glowing heat, fiery tail, light.
         GameObject root = new GameObject("Meteor");
         GameObject rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -256,28 +255,20 @@ public class PixelMeteorMinigame : PixelMinigame
             rock.GetComponent<Renderer>().material.color = rockColor;
         }
 
-        Transform[] tail = new Transform[tailSegments];
-        for (int i = 0; i < tailSegments; i++)
-        {
-            float f = (i + 1f) / (tailSegments + 1f);               // 0..1 along the tail
-            GameObject blob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            blob.name = "Tail " + i;
-            Destroy(blob.GetComponent<Collider>());
-            blob.transform.SetParent(root.transform, false);
-            blob.transform.localPosition = -travel * (f * tailLength);
-            blob.transform.localScale = Vector3.one * meteorSize * Mathf.Lerp(0.85f, 0.2f, f);
-
-            Color c = flameColor;
-            c.a = Mathf.Lerp(0.55f, 0.05f, f);
-            Material m = clicker.CreateVisualMaterial(c, true);
-            if (m != null)
-            {
-                m.EnableKeyword("_EMISSION");
-                m.SetColor("_EmissionColor", flameColor * glowIntensity);
-                blob.GetComponent<Renderer>().sharedMaterial = m;
-            }
-            tail[i] = blob.transform;
-        }
+        // Smooth tapering tail: one trail renderer that fades from flame colour to transparent.
+        TrailRenderer trail = root.AddComponent<TrailRenderer>();
+        trail.time = tailSeconds;
+        trail.startWidth = meteorSize * tailWidth;
+        trail.endWidth = 0f;
+        trail.minVertexDistance = 0.05f;
+        trail.alignment = LineAlignment.View;
+        Shader trailShader = Shader.Find("Sprites/Default");
+        trail.sharedMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new[] { new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.4f), 0f), new GradientColorKey(flameColor, 0.35f), new GradientColorKey(new Color(flameColor.r * 0.6f, 0.1f, 0.05f), 1f) },
+            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.45f, 0.4f), new GradientAlphaKey(0f, 1f) });
+        trail.colorGradient = gradient;
 
         Light glow = null;
         if (castLight)
