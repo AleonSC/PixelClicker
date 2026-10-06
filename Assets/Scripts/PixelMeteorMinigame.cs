@@ -87,6 +87,9 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("Size of the meteor (world units).")]
     [SerializeField] private float meteorSize = 2.8f;
 
+    [Tooltip("Optional: your own 3D model for the meteor (a prefab, about 1 unit big, centred on its origin). It replaces the rock sphere; the click area, glow, tail and light stay. Empty = the built-in rock.")]
+    [SerializeField] private GameObject modelPrefab;
+
     [Tooltip("Colour of the rock.")]
     [SerializeField] private Color rockColor = new Color(0.32f, 0.2f, 0.14f, 1f);
 
@@ -245,6 +248,16 @@ public class PixelMeteorMinigame : PixelMinigame
         hit.isTrigger = true; // never pushes old pixels around
         hit.radius = 0.5f * clickSizeMultiplier;
 
+        if (modelPrefab != null)
+        {
+            // A custom model replaces the sphere's look (the sphere stays as the invisible click area).
+            rock.GetComponent<Renderer>().enabled = false;
+            GameObject model = Instantiate(modelPrefab, rock.transform);
+            model.transform.localPosition = Vector3.zero;
+            foreach (Collider c in model.GetComponentsInChildren<Collider>(true)) Destroy(c);
+            foreach (Rigidbody r in model.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+        }
+
         Material rockMat = clicker.CreateVisualMaterial(rockColor, false);
         if (rockMat != null)
         {
@@ -288,7 +301,7 @@ public class PixelMeteorMinigame : PixelMinigame
         // ---- Fly.
         float t = 0f;
         float punch = 0f;
-        Vector3 baseScale = new Vector3(1f, 0.85f, 1.1f) * meteorSize;
+        Vector3 baseScale = modelPrefab != null ? Vector3.one * meteorSize : new Vector3(1f, 0.85f, 1.1f) * meteorSize;
         Quaternion spin = Random.rotation;
         Vector3 spinAxis = Random.onUnitSphere;
 

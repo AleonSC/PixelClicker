@@ -105,6 +105,10 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("How bright the glow is (multiplies the tier colour). 1 = same as the colour, 3+ = strongly glowing.")]
         public float glowIntensity = 2f;
 
+        [Tooltip("Optional: a 3D model (prefab, about 1 unit big, centred on its origin) shown instead of the plain cube for this pixel type. " +
+                 "The model keeps its own materials. Old pixels use it too. Leave empty for the normal cube.")]
+        public GameObject modelPrefab;
+
         [Tooltip("Optional: a material to use for this tier instead of the pixel's normal one (e.g. your own glass material). Overrides 'Translucent'.")]
         public Material materialOverride;
 
@@ -1076,8 +1080,41 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Applies a tier's material (normal, translucent or override) and colour to the pixel.</summary>
+    private readonly System.Collections.Generic.Dictionary<GameObject, GameObject> modelInstances =
+        new System.Collections.Generic.Dictionary<GameObject, GameObject>();
+
+    /// <summary>A copy of a model prefab with colliders / bodies removed (the pixel's own hitbox handles clicks).</summary>
+    private GameObject MakeModel(GameObject prefab, Transform parent)
+    {
+        GameObject model = Instantiate(prefab, parent);
+        model.name = prefab.name;
+        model.transform.localPosition = Vector3.zero;
+        foreach (Collider c in model.GetComponentsInChildren<Collider>(true)) Destroy(c);
+        foreach (Rigidbody r in model.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+        return model;
+    }
+
+    /// <summary>Shows the tier's model instead of the cube mesh (or the cube if the tier has no model).</summary>
+    private void ApplyModel(PixelTier tier)
+    {
+        if (pixelRenderer != null) pixelRenderer.enabled = tier.modelPrefab == null;
+
+        foreach (var pair in modelInstances)
+            if (pair.Value != null) pair.Value.SetActive(pair.Key == tier.modelPrefab);
+
+        if (tier.modelPrefab == null || pixelTransform == null) return;
+        if (!modelInstances.TryGetValue(tier.modelPrefab, out GameObject instance) || instance == null)
+        {
+            instance = MakeModel(tier.modelPrefab, pixelTransform);
+            modelInstances[tier.modelPrefab] = instance;
+        }
+        instance.SetActive(true);
+    }
+
     private void ApplyTierLook(PixelTier tier)
     {
+        ApplyModel(tier);
+
         if (pixelRenderer != null)
         {
             Material wanted = defaultMaterial;
@@ -1363,7 +1400,11 @@ public class PixelClicker : MonoBehaviour
 
         // Copy only the visuals (mesh + material) so we don't duplicate this script.
         MeshFilter srcFilter = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
-        if (srcFilter != null && pixelRenderer != null)
+        if (tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].modelPrefab != null)
+        {
+            MakeModel(tiers[tierIndex].modelPrefab, copy.transform);
+        }
+        else if (srcFilter != null && pixelRenderer != null)
         {
             copy.AddComponent<MeshFilter>().sharedMesh = srcFilter.sharedMesh;
             MeshRenderer mr = copy.AddComponent<MeshRenderer>();
