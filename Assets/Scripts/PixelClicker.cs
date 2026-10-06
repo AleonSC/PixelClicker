@@ -612,6 +612,7 @@ public class PixelClicker : MonoBehaviour
 
     private void Awake()
     {
+        if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (pixelTransform == null) pixelTransform = transform;
         if (pixelRenderer == null) pixelRenderer = pixelTransform.GetComponentInChildren<Renderer>();
         if (targetCamera == null) targetCamera = Camera.main;
