@@ -112,6 +112,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Size of the close (X) button in the header. 0 = no close button.")]
     [SerializeField] private float closeButtonSize = 70f;
 
+    [Tooltip("Colour of the header's title and of the X on the close button.")]
+    [SerializeField] private Color headerTextColor = Color.white;
+
     [Tooltip("Colour of the close (X) button.")]
     [SerializeField] private Color closeButtonColor = new Color(0.3f, 0.3f, 0.35f, 1f);
 
@@ -851,7 +854,7 @@ public class PixelUI : MonoBehaviour
         {
             float closeSpace = closeButtonSize > 0f ? closeButtonSize + panelPadding : 0f;
             titleLabel = MakeText(boxObject.transform, "Title", inventoryTitle, headerTitleSize,
-                                  TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+                                  TextAlignmentOptions.Center, FontStyles.Bold, headerTextColor);
             titleLabel.enableAutoSizing = true; // never clipped or wrapped, whatever the box width
             titleLabel.fontSizeMax = headerTitleSize;
             titleLabel.fontSizeMin = Mathf.Min(12f, headerTitleSize);
@@ -867,7 +870,7 @@ public class PixelUI : MonoBehaviour
             if (closeButtonSize > 0f)
             {
                 Button close = MakeButton(boxObject.transform, "Close", "X", new Vector2(closeButtonSize, closeButtonSize),
-                                          closeButtonColor, textColor, closeButtonSize * 0.5f);
+                                          closeButtonColor, headerTextColor, closeButtonSize * 0.5f);
                 RectTransform cr = close.GetComponent<RectTransform>();
                 cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
                 cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
