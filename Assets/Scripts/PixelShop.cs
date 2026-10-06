@@ -459,11 +459,7 @@ public partial class PixelShop : MonoBehaviour
     {
         if (clicker == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            clicker = FindFirstObjectByType<PixelClicker>();
-#else
-            clicker = FindObjectOfType<PixelClicker>();
-#endif
+            clicker = PixelFind.First<PixelClicker>();
         }
 
         if (clicker == null)
@@ -478,11 +474,7 @@ public partial class PixelShop : MonoBehaviour
         if (autoClicker == null) autoClicker = GetComponent<PixelAutoClicker>();
         if (autoClicker == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            autoClicker = FindFirstObjectByType<PixelAutoClicker>();
-#else
-            autoClicker = FindObjectOfType<PixelAutoClicker>();
-#endif
+            autoClicker = PixelFind.First<PixelAutoClicker>();
         }
         if (autoClicker == null) autoClicker = gameObject.AddComponent<PixelAutoClicker>();
 
@@ -493,19 +485,11 @@ public partial class PixelShop : MonoBehaviour
         if (consumables == null) consumables = GetComponent<PixelConsumables>();
         if (consumables == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            consumables = FindFirstObjectByType<PixelConsumables>();
-#else
-            consumables = FindObjectOfType<PixelConsumables>();
-#endif
+            consumables = PixelFind.First<PixelConsumables>();
         }
         if (consumables == null) consumables = gameObject.AddComponent<PixelConsumables>();
 
-#if UNITY_2023_1_OR_NEWER
-        if (FindObjectsByType<PixelConsumables>(FindObjectsSortMode.None).Length > 1)
-#else
-        if (FindObjectsOfType<PixelConsumables>().Length > 1)
-#endif
+        if (PixelFind.Count<PixelConsumables>() > 1)
             Debug.LogWarning("PixelShop: more than one PixelConsumables component exists in the scene. " +
                              "Remove the extra one so purchases and the inventory use the same potions.", this);
 
@@ -526,11 +510,7 @@ public partial class PixelShop : MonoBehaviour
 
     private void EnsureMinigame<T>() where T : PixelMinigame
     {
-#if UNITY_2023_1_OR_NEWER
-        if (FindFirstObjectByType<T>() == null) gameObject.AddComponent<T>();
-#else
-        if (FindObjectOfType<T>() == null) gameObject.AddComponent<T>();
-#endif
+        if (PixelFind.First<T>() == null) gameObject.AddComponent<T>();
     }
 
     /// <summary>
@@ -743,11 +723,7 @@ public partial class PixelShop : MonoBehaviour
 
     private void EditorEnsureComponent<T>() where T : Component
     {
-#if UNITY_2023_1_OR_NEWER
-        bool exists = FindFirstObjectByType<T>() != null;
-#else
-        bool exists = FindObjectOfType<T>() != null;
-#endif
+        bool exists = PixelFind.First<T>() != null;
         if (exists) return;
         UnityEditor.Undo.AddComponent<T>(gameObject);
         UnityEditor.EditorUtility.SetDirty(gameObject);

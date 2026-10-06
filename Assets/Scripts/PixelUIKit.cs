@@ -12,11 +12,7 @@ public static class PixelUIKit
     /// <summary>Makes sure the scene has an EventSystem (with the right input module for the active input system).</summary>
     public static void EnsureEventSystem()
     {
-#if UNITY_2023_1_OR_NEWER
-        if (Object.FindFirstObjectByType<EventSystem>() != null) return;
-#else
-        if (Object.FindObjectOfType<EventSystem>() != null) return;
-#endif
+        if (PixelFind.First<EventSystem>() != null) return;
         GameObject es = new GameObject("EventSystem", typeof(EventSystem));
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();

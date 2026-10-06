@@ -201,11 +201,7 @@ public class PixelGhostMinigame : PixelMinigame
         base.Awake();
         if (clicker == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            clicker = FindFirstObjectByType<PixelClicker>();
-#else
-            clicker = FindObjectOfType<PixelClicker>();
-#endif
+            clicker = PixelFind.First<PixelClicker>();
         }
         if (clicker == null)
         {
@@ -216,11 +212,7 @@ public class PixelGhostMinigame : PixelMinigame
 
         if (consumables == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            consumables = FindFirstObjectByType<PixelConsumables>();
-#else
-            consumables = FindObjectOfType<PixelConsumables>();
-#endif
+            consumables = PixelFind.First<PixelConsumables>();
         }
 
         if (startRunning) running = true;

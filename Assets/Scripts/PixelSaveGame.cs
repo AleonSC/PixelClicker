@@ -225,26 +225,14 @@ public class PixelSaveGame : MonoBehaviour
 
     private void FindReferences()
     {
-#if UNITY_2023_1_OR_NEWER
-        if (clicker == null) clicker = FindFirstObjectByType<PixelClicker>();
-        if (shop == null) shop = FindFirstObjectByType<PixelShop>();
-        if (autoClicker == null) autoClicker = FindFirstObjectByType<PixelAutoClicker>();
-        if (achievements == null) achievements = FindFirstObjectByType<PixelAchievements>();
-        if (stats == null) stats = FindFirstObjectByType<PixelStats>();
-#else
-        if (clicker == null) clicker = FindObjectOfType<PixelClicker>();
-        if (shop == null) shop = FindObjectOfType<PixelShop>();
-        if (autoClicker == null) autoClicker = FindObjectOfType<PixelAutoClicker>();
-        if (achievements == null) achievements = FindObjectOfType<PixelAchievements>();
-        if (stats == null) stats = FindObjectOfType<PixelStats>();
-#endif
+        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (shop == null) shop = PixelFind.First<PixelShop>();
+        if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
+        if (achievements == null) achievements = PixelFind.First<PixelAchievements>();
+        if (stats == null) stats = PixelFind.First<PixelStats>();
         // Use the potions the shop sells into, so both always agree.
         if (shop != null && shop.Consumables != null) consumables = shop.Consumables;
-#if UNITY_2023_1_OR_NEWER
-        if (consumables == null) consumables = FindFirstObjectByType<PixelConsumables>();
-#else
-        if (consumables == null) consumables = FindObjectOfType<PixelConsumables>();
-#endif
+        if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont; // one shared font
     }
 

@@ -196,11 +196,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         base.Awake();
         if (clicker == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            clicker = FindFirstObjectByType<PixelClicker>();
-#else
-            clicker = FindObjectOfType<PixelClicker>();
-#endif
+            clicker = PixelFind.First<PixelClicker>();
         }
         if (clicker == null)
         {

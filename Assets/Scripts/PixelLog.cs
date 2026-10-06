@@ -301,11 +301,7 @@ public class PixelLog : MonoBehaviour
     {
         if (clicker == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            clicker = FindFirstObjectByType<PixelClicker>();
-#else
-            clicker = FindObjectOfType<PixelClicker>();
-#endif
+            clicker = PixelFind.First<PixelClicker>();
         }
 
         if (clicker == null)
@@ -319,11 +315,7 @@ public class PixelLog : MonoBehaviour
 
         if (achievements == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            achievements = FindFirstObjectByType<PixelAchievements>();
-#else
-            achievements = FindObjectOfType<PixelAchievements>();
-#endif
+            achievements = PixelFind.First<PixelAchievements>();
         }
         if (achievements == null) achievements = gameObject.AddComponent<PixelAchievements>();
 
@@ -345,11 +337,7 @@ public class PixelLog : MonoBehaviour
         UnityEditor.EditorApplication.delayCall += () =>
         {
             if (this == null || Application.isPlaying) return;
-#if UNITY_2023_1_OR_NEWER
-            bool has = FindFirstObjectByType<PixelAchievements>() != null;
-#else
-            bool has = FindObjectOfType<PixelAchievements>() != null;
-#endif
+            bool has = PixelFind.First<PixelAchievements>() != null;
             if (has) return;
             UnityEditor.Undo.AddComponent<PixelAchievements>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);

@@ -226,11 +226,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         if (clicker == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            clicker = FindFirstObjectByType<PixelClicker>();
-#else
-            clicker = FindObjectOfType<PixelClicker>();
-#endif
+            clicker = PixelFind.First<PixelClicker>();
         }
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont; // one shared font
 
@@ -238,21 +234,13 @@ public class PixelPauseMenu : MonoBehaviour
 
         if (saveGame == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            saveGame = FindFirstObjectByType<PixelSaveGame>();
-#else
-            saveGame = FindObjectOfType<PixelSaveGame>();
-#endif
+            saveGame = PixelFind.First<PixelSaveGame>();
         }
         if (saveGame == null && addSaveGameIfMissing) saveGame = gameObject.AddComponent<PixelSaveGame>();
 
         if (stats == null)
         {
-#if UNITY_2023_1_OR_NEWER
-            stats = FindFirstObjectByType<PixelStats>();
-#else
-            stats = FindObjectOfType<PixelStats>();
-#endif
+            stats = PixelFind.First<PixelStats>();
         }
         if (stats == null) stats = gameObject.AddComponent<PixelStats>();
 
@@ -269,11 +257,7 @@ public class PixelPauseMenu : MonoBehaviour
         UnityEditor.EditorApplication.delayCall += () =>
         {
             if (this == null || Application.isPlaying) return;
-#if UNITY_2023_1_OR_NEWER
-            bool has = FindFirstObjectByType<PixelSaveGame>() != null;
-#else
-            bool has = FindObjectOfType<PixelSaveGame>() != null;
-#endif
+            bool has = PixelFind.First<PixelSaveGame>() != null;
             if (has) return;
             UnityEditor.Undo.AddComponent<PixelSaveGame>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);
@@ -282,11 +266,7 @@ public class PixelPauseMenu : MonoBehaviour
         UnityEditor.EditorApplication.delayCall += () =>
         {
             if (this == null || Application.isPlaying) return;
-#if UNITY_2023_1_OR_NEWER
-            bool has = FindFirstObjectByType<PixelStats>() != null;
-#else
-            bool has = FindObjectOfType<PixelStats>() != null;
-#endif
+            bool has = PixelFind.First<PixelStats>() != null;
             if (has) return;
             UnityEditor.Undo.AddComponent<PixelStats>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);
