@@ -40,7 +40,6 @@ public partial class PixelShop
     private TMP_Text subEmptyLabel;
     private TMP_Text subTitle;
     private int openParent = -1;
-    private PackRow[] potionRows;
     private PackRow[] ultraRows;           // one boost row per pixel type (Upgrades > Pixel sub-tab)
     private RectTransform subTabRow;       // the "Upgrades | Pixel" buttons at the top of the Upgrades tab
     private Image[] subTabImages;
@@ -138,11 +137,8 @@ public partial class PixelShop
         // The two sub-tab buttons at the top of the Upgrades tab (normal upgrades | Pixel boosts).
         BuildSubTabs(contentRect);
 
-        // One row per potion, listed on the Consumables tab.
-        int potionCount = consumables != null ? consumables.ItemCount : 0;
-        potionRows = new PackRow[potionCount];
-        for (int i = 0; i < potionCount; i++)
-            potionRows[i] = BuildRow(contentRect, i, true);
+        // The Consumables tab is two purchase cards (potions / utilities), not part of the scrolling list.
+        BuildConsumablesArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f);
 
         panelObject.SetActive(false);
         subPanelObject.SetActive(false);
@@ -742,36 +738,8 @@ public partial class PixelShop
             }
         }
 
-        // Potions: listed after the Consumables-tab packs.
-        if (potionRows != null && consumables != null)
-        {
-            for (int p = 0; p < potionRows.Length && p < consumables.ItemCount; p++)
-            {
-                PackRow row = potionRows[p];
-                int owned = consumables.ItemOwned(p);
-                PackCost[] costs = consumables.ItemCosts(p);
-
-                bool listed = !consumables.ItemCraftOnly(p) && // combo potions can only be crafted
-                              (!potionsNeedUnlockedPixel || clicker.IsUnlocked(consumables.ItemRequiredType(p)) || owned > 0);
-                bool visible = currentTab == ShopTab.Consumables && listed;
-                row.rect.gameObject.SetActive(visible);
-                if (!visible) continue;
-
-                row.rect.anchoredPosition = new Vector2(0f, -y);
-                y += rowHeight + rowSpacing;
-                visibleCount++;
-
-                row.nameLabel.text = consumables.ItemName(p) + "   <size=65%><color=#" + ColorUtility.ToHtmlStringRGB(levelColor) +
-                                     ">" + string.Format(potionOwnedFormat, owned) + "</color></size>";
-                row.descLabel.text = consumables.ItemDescription(p);
-                row.costLabel.text = BuildCostText(costs);
-
-                bool canBuy = CanAffordCosts(costs);
-                row.buyButton.interactable = canBuy;
-                row.buyLabel.text = buyText;
-                row.buyImage.color = canBuy ? buyColor : disabledColor;
-            }
-        }
+        // Consumables tab: the two purchase cards replace the scrolling list.
+        if (consumables != null) RefreshConsumablesTab(currentTab == ShopTab.Consumables);
 
         // Upgrades > Pixel: one boost row per unlocked pixel type, paid for with Ultra pixels.
         EnsureUltraRows();

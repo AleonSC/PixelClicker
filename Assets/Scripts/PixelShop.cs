@@ -414,6 +414,40 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Normal text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
+    [Header("Consumables Tab (two purchase cards)")]
+    [Tooltip("Title of the left card (potions).")]
+    [SerializeField] private string potionsCardTitle = "Potions";
+
+    [Tooltip("Title of the right card (devices you place).")]
+    [SerializeField] private string utilitiesCardTitle = "Utilities";
+
+    [Tooltip("Drop-down entry. {0} = item name, {1} = how many you own.")]
+    [SerializeField] private string consumableOptionFormat = "{0}   (own {1})";
+
+    [Tooltip("Added to the drop-down entry of an item that is still locked.")]
+    [SerializeField] private string lockedItemSuffix = "  [Locked]";
+
+    [Tooltip("Shown instead of the cost on a locked item. {0} = the pixel type that must be unlocked first.")]
+    [SerializeField] private string lockedRequirementFormat = "Locked: unlock {0} first";
+
+    [Tooltip("Text of the Buy button. {0} = how many.")]
+    [SerializeField] private string buyCountFormat = "Buy x{0}";
+
+    [Tooltip("Shown on a card that has no items.")]
+    [SerializeField] private string noItemsText = "Nothing to buy here.";
+
+    [Min(200f)]
+    [Tooltip("Height of each purchase card (canvas units).")]
+    [SerializeField] private float cardHeight = 440f;
+
+    [Min(0f)]
+    [Tooltip("Gap between the two cards.")]
+    [SerializeField] private float cardGap = 20f;
+
+    [Min(1)]
+    [Tooltip("The most of one item you can buy in one go.")]
+    [SerializeField] private int maxPerPurchase = 999;
+
     [Header("Pixel Upgrades (spend Ultra pixels)")]
     [Tooltip("Text of the sub-tab that lists the normal upgrades (inside the Upgrades tab).")]
     [SerializeField] private string upgradesSubTabText = "Upgrades";
@@ -870,25 +904,28 @@ public partial class PixelShop : MonoBehaviour
         return true;
     }
 
-    /// <summary>Buys one consumable (potion or device): spends its price and adds it to the inventory.</summary>
-    public bool TryBuyPotion(int itemIndex)
+    /// <summary>Buys one of a potion / device (see <see cref="TryBuyItems"/>).</summary>
+    public bool TryBuyPotion(int itemIndex) => TryBuyItems(itemIndex, 1);
+
+    /// <summary>Buys several of a potion / device at once. Returns false if it is locked or you can't afford all of them.</summary>
+    public bool TryBuyItems(int itemIndex, int count)
     {
-        if (consumables == null || itemIndex < 0 || itemIndex >= consumables.ItemCount) return false;
+        if (consumables == null || itemIndex < 0 || itemIndex >= consumables.ItemCount || count < 1) return false;
+        if (consumables.ItemCraftOnly(itemIndex) || ItemLocked(itemIndex)) return false;
 
-        PackCost[] costs = consumables.ItemCosts(itemIndex);
-        if (!CanAffordCosts(costs)) return false;
+        PackCost[] total = ScaleCosts(consumables.ItemCosts(itemIndex), count);
+        if (!CanAffordCosts(total)) return false;
 
-        if (costs != null)
-            foreach (PackCost cost in costs)
-                clicker.TrySpend(cost.type, cost.amount);
+        foreach (PackCost cost in total) clicker.TrySpend(cost.type, cost.amount);
 
-        consumables.AddItem(itemIndex, 1);
-        Debug.Log("PixelShop: bought " + consumables.ItemName(itemIndex) + " - you now own " +
+        consumables.AddItem(itemIndex, count);
+        Debug.Log("PixelShop: bought " + count + " x " + consumables.ItemName(itemIndex) + " - you now own " +
                   consumables.ItemOwned(itemIndex) + ".", this);
         PlayPurchaseSound();
         RefreshRows();
         return true;
     }
+
 
     /// <summary>Sets the auto clicker's interval / clicks to the value of the pack's current level.</summary>
     private void ApplyUpgrade(ShopPack pack)
