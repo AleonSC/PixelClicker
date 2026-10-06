@@ -237,7 +237,7 @@ public class PixelSorterDevice : PixelPlacedDevice
             if (cone != null)
             {
                 cone.gameObject.SetActive(showCone);
-                if (showCone) BuildConeMesh(coneMesh, ConeApex(aim), aim, d.sorterBendConeDegrees, d.sorterPipeLength * 1.5f);
+                if (showCone) BuildConeMesh(coneMesh, ConeApex(aim), aim, d.sorterBendConeDegrees, d.sorterConeLength);
             }
         }
 

@@ -135,11 +135,15 @@ public class PixelConsumables : MonoBehaviour
 
         [Min(0.2f)]
         [Tooltip("Sorter: length of the output pipe (world units).")]
-        public float sorterPipeLength = 1.6f;
+        public float sorterPipeLength = 0.55f;
 
         [Min(0.05f)]
         [Tooltip("Sorter: width of the output pipe (world units).")]
-        public float sorterPipeDiameter = 0.35f;
+        public float sorterPipeDiameter = 0.12f;
+
+        [Min(0.3f)]
+        [Tooltip("Sorter: how far the bend cone reaches from the pipe's base (world units).")]
+        public float sorterConeLength = 1.6f;
 
         [Min(0f)]
         [Tooltip("Sorter: how fast pixels leave the end of the pipe (world units per second).")]
@@ -404,6 +408,17 @@ public class PixelConsumables : MonoBehaviour
 
         if (addDefaultDevices)
         {
+            // The sorter's pipe used to be 3x bigger; move untouched old values to the new size.
+            if (devices != null)
+                foreach (Device d in devices)
+                    if (d != null && d.kind == DeviceKind.Sorter && Mathf.Approximately(d.sorterPipeLength, 1.6f) &&
+                        Mathf.Approximately(d.sorterPipeDiameter, 0.35f))
+                    {
+                        d.sorterPipeLength = 0.55f;
+                        d.sorterPipeDiameter = 0.12f;
+                        added = true;
+                    }
+
             if (devices == null || devices.Length == 0)
             {
                 devices = CreateDefaultDevices();
