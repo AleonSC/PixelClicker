@@ -464,6 +464,19 @@ public class PixelClicker : MonoBehaviour
     public Camera TargetCamera => targetCamera;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
 
+    /// <summary>True if every new pixel is a random unlocked tier (the normal mode).</summary>
+    public bool RandomizesSpawnTier => randomizeSpawnTier;
+
+    /// <summary>The tier clicks produce when spawning is NOT random (the highest unlocked tier, or the chosen one).</summary>
+    public int FixedTierIndex
+    {
+        get
+        {
+            if (autoUseHighestTier) return GetHighestUnlockedIndex();
+            return IsValidTier(activeTierIndex) && tiers[activeTierIndex].unlocked ? activeTierIndex : GetHighestUnlockedIndex();
+        }
+    }
+
     // ------------------------------------------------------------------
     // Unity lifecycle
     // ------------------------------------------------------------------

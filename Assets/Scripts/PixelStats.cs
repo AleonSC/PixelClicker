@@ -80,6 +80,12 @@ public class PixelStats : MonoBehaviour
 
     private void OnCurrencySpent(int tier, double amount) => pixelsSpent += amount;
 
+    /// <summary>Adds automatic clicks that happened while the game was closed (offline progress).</summary>
+    public void AddAutoClicks(long count)
+    {
+        if (count > 0) autoClicks += count;
+    }
+
     /// <summary>Restores the numbers from a save.</summary>
     public void SetState(long manual, long auto, double seconds, double spent)
     {

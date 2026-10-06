@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// unlock, the shop purchases and upgrade levels, the auto clicker state, and the potions you own.
 /// (A potion that is currently active is not saved - it simply ends.)
 ///
-/// - Loads the save automatically when the game starts (optional).
+/// - Loads the save automatically when the game starts (optional), and pays offline progress (PixelOfflineProgress).
 /// - Saves automatically every N seconds, when the game closes and when the app loses focus (optional).
 /// - The pause menu gets Save / Load buttons when this component exists.
 /// - Other scripts can call Save(), Load() or DeleteSave().
@@ -68,6 +68,7 @@ public class PixelSaveGame : MonoBehaviour
     {
         public int version = 1;
         public string savedAt;
+        public long savedAtTicks;   // UTC, used for offline progress
         public TierSave[] tiers;
         public PackSave[] packs;
         public PotionSave[] potions;
@@ -193,7 +194,7 @@ public class PixelSaveGame : MonoBehaviour
 
         // One frame later, so every other script has finished its own startup first.
         yield return null;
-        if (loadOnStart && HasSave) Load(false);
+        if (loadOnStart && HasSave) Load(false, true);
     }
 
     private void Update()
@@ -207,6 +208,23 @@ public class PixelSaveGame : MonoBehaviour
             Save(messageOnAutoSave);
         }
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying) return;
+
+        // Delayed: components must not be added from inside OnValidate itself.
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+            if (PixelFind.First<PixelOfflineProgress>() != null) return;
+
+            UnityEditor.Undo.AddComponent<PixelOfflineProgress>(gameObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+        };
+    }
+#endif
 
     private void OnApplicationPause(bool paused)
     {
@@ -250,7 +268,7 @@ public class PixelSaveGame : MonoBehaviour
 
         try
         {
-            SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") };
+            SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks };
 
             PixelClicker.PixelTier[] tiers = clicker.Tiers;
             data.tiers = new TierSave[tiers.Length];
@@ -345,7 +363,8 @@ public class PixelSaveGame : MonoBehaviour
     [ContextMenu("Load Now")]
     public bool Load() => Load(true);
 
-    public bool Load(bool showMessage)
+    /// <summary>Loads the save. 'grantOffline' also pays out what the auto clicker earned while the game was closed (startup only).</summary>
+    public bool Load(bool showMessage, bool grantOffline = false)
     {
         if (clicker == null) return false;
 
@@ -422,6 +441,14 @@ public class PixelSaveGame : MonoBehaviour
             if (achievements != null) achievements.SetSaveState(data.achievements);
             if (stats != null)
                 stats.SetState(data.statManualClicks, data.statAutoClicks, data.statPlaySeconds, data.statPixelsSpent);
+
+            // Time away: only when the game has just started (loading by hand mid-game must not pay it again).
+            if (grantOffline && data.savedAtTicks > 0)
+            {
+                PixelOfflineProgress offline = PixelFind.First<PixelOfflineProgress>();
+                if (offline == null) offline = gameObject.AddComponent<PixelOfflineProgress>();
+                offline.Grant(new DateTime(data.savedAtTicks, DateTimeKind.Utc));
+            }
 
             clicker.FinishLoad();
 
