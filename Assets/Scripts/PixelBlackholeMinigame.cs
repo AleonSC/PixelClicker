@@ -251,6 +251,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     private IEnumerator HoleRoutine()
     {
         holeActive = true;
+        Report(MinigameEvent.Spawned);
 
         if (!TryPickSpot(out Vector3 center))
         {

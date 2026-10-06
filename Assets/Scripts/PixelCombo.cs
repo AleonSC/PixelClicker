@@ -90,6 +90,9 @@ public class PixelCombo : MonoBehaviour
     [Tooltip("Reference resolution for the canvas scaler.")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
 
+    /// <summary>Raised every time the combo grows (the new count). Used by the stats.</summary>
+    public static event System.Action<int> ComboReached;
+
     private int combo;
     private float timeLeft;
     private float pop;
@@ -157,6 +160,7 @@ public class PixelCombo : MonoBehaviour
     {
         if (!comboActive || (automatic && !autoClicksCount)) return;
         combo++;
+        ComboReached?.Invoke(combo);
         timeLeft = comboWindowSeconds;
         pop = 1f;
     }

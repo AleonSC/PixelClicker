@@ -141,6 +141,53 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the pixels spent stat.")]
     [SerializeField] private string pixelsSpentLabel = "Pixels spent";
 
+    [Tooltip("Label of the ghosts clicked stat.")]
+    [SerializeField] private string ghostsClickedLabel = "Ghosts clicked";
+
+    [Tooltip("Label of the meteors clicked stat.")]
+    [SerializeField] private string meteorsClickedLabel = "Meteors clicked";
+
+    [Tooltip("Label of the meteors spawned stat.")]
+    [SerializeField] private string meteorsSpawnedLabel = "Meteors spawned";
+
+    [Tooltip("Label of the black holes spawned stat.")]
+    [SerializeField] private string blackHolesSpawnedLabel = "Black holes spawned";
+
+    [Tooltip("Label of the fans used stat.")]
+    [SerializeField] private string fansUsedLabel = "Fans used";
+
+    [Tooltip("Label of the vacuum devices used stat.")]
+    [SerializeField] private string vacuumsUsedLabel = "Vacuum devices used";
+
+    [Tooltip("Label of the highest combo stat.")]
+    [SerializeField] private string highestComboLabel = "Highest combo";
+
+    [Tooltip("Text of the collapsible potions section's button. {0} = total potions used, {1} = + or - .")]
+    [SerializeField] private string potionsUsedFormat = "Potions used ({0})  [{1}]";
+
+    [Tooltip("Line in the potions box. {0} = potion name, {1} = how many were used.")]
+    [SerializeField] private string potionLineFormat = "{0}   x{1}";
+
+    [Tooltip("Shown in the potions box before any potion was used.")]
+    [SerializeField] private string noPotionsText = "None yet";
+
+    [Min(100f)]
+    [Tooltip("Height of the scrolling stats list (canvas units). More stats than fit scroll.")]
+    [SerializeField] private float statsViewHeight = 480f;
+
+    [Min(60f)]
+    [Tooltip("Height of the potions-used box (canvas units). A longer list scrolls.")]
+    [SerializeField] private float potionsBoxHeight = 170f;
+
+    [Tooltip("Open the potions-used section when the Stats screen is shown.")]
+    [SerializeField] private bool potionsOpenByDefault = false;
+
+    [Tooltip("Scroll bar colour in the Stats screen.")]
+    [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
+
+    [Tooltip("Background of the potions-used box.")]
+    [SerializeField] private Color potionsBoxColor = new Color(0f, 0f, 0f, 0.35f);
+
     [Tooltip("Height of each stat / setting row.")]
     [SerializeField] private float rowHeight = 64f;
 
@@ -219,6 +266,14 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject menuRoot;
     private GameObject mainPanel, statsPanel, settingsPanel;
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
+    private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, comboValue;
+    private ScrollRect statsScroll, potionsScroll;
+    private GameObject statsBar, potionsBar, potionsBox;
+    private TMP_Text potionsHeaderLabel, potionsText;
+    private RectTransform statsPanelRect, potionsHeaderRect, potionsBoxRect, statsBackRect;
+    private float statsContentHeight, statsListTop;
+    private bool potionsOpen;
+    private string shownPotionsText;
     private Toggle rotationToggle, pulsingToggle, backgroundToggle, pauseStopsToggle;
     private float previousTimeScale = 1f;
 
@@ -616,12 +671,94 @@ public class PixelPauseMenu : MonoBehaviour
     private void BuildStatsPanel()
     {
         statsPanel = BuildSectionPanel("Stats Panel", statsTitle, out float y);
-        totalClicksValue = AddStatRow(statsPanel.transform, totalClicksLabel, ref y);
-        manualClicksValue = AddStatRow(statsPanel.transform, manualClicksLabel, ref y);
-        autoClicksValue = AddStatRow(statsPanel.transform, autoClicksLabel, ref y);
-        timePlayedValue = AddStatRow(statsPanel.transform, timePlayedLabel, ref y);
-        pixelsSpentValue = AddStatRow(statsPanel.transform, pixelsSpentLabel, ref y);
-        FinishSectionPanel(statsPanel, y);
+        statsPanelRect = statsPanel.GetComponent<RectTransform>();
+        statsListTop = y;
+        potionsOpen = potionsOpenByDefault;
+
+        // The stats scroll when there are more than fit.
+        statsScroll = PixelUIKit.CreateScrollView(statsPanel.transform, "Stats List", scrollbarColor, 12f, rowHeight,
+                                                  out RectTransform content, out statsBar);
+        RectTransform vr = statsScroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(0f, statsViewHeight);
+        vr.anchoredPosition = new Vector2(0f, -y);
+
+        float cy = 0f;
+        totalClicksValue = AddStatRow(content, totalClicksLabel, ref cy);
+        manualClicksValue = AddStatRow(content, manualClicksLabel, ref cy);
+        autoClicksValue = AddStatRow(content, autoClicksLabel, ref cy);
+        timePlayedValue = AddStatRow(content, timePlayedLabel, ref cy);
+        pixelsSpentValue = AddStatRow(content, pixelsSpentLabel, ref cy);
+        ghostsValue = AddStatRow(content, ghostsClickedLabel, ref cy);
+        meteorsClickedValue = AddStatRow(content, meteorsClickedLabel, ref cy);
+        meteorsSpawnedValue = AddStatRow(content, meteorsSpawnedLabel, ref cy);
+        blackHolesValue = AddStatRow(content, blackHolesSpawnedLabel, ref cy);
+        fansValue = AddStatRow(content, fansUsedLabel, ref cy);
+        vacuumsValue = AddStatRow(content, vacuumsUsedLabel, ref cy);
+        comboValue = AddStatRow(content, highestComboLabel, ref cy);
+        statsContentHeight = cy;
+
+        // Collapsible "potions used" section: a button, then a box with a scroll bar.
+        Vector2 wide = new Vector2(panelSize.x - 80f, rowHeight);
+        Button header = MakeButton(statsPanel.transform, "Potions Header", "", wide, tickBoxColor, rowFontSize * 0.9f);
+        potionsHeaderLabel = header.GetComponentInChildren<TMP_Text>();
+        potionsHeaderRect = header.GetComponent<RectTransform>();
+        potionsHeaderRect.anchorMin = potionsHeaderRect.anchorMax = potionsHeaderRect.pivot = new Vector2(0.5f, 1f);
+        header.onClick.AddListener(() => { potionsOpen = !potionsOpen; RefreshStats(); });
+
+        potionsBox = new GameObject("Potions Box", typeof(RectTransform), typeof(Image));
+        potionsBox.transform.SetParent(statsPanel.transform, false);
+        potionsBox.GetComponent<Image>().color = potionsBoxColor;
+        potionsBoxRect = potionsBox.GetComponent<RectTransform>();
+        potionsBoxRect.anchorMin = potionsBoxRect.anchorMax = potionsBoxRect.pivot = new Vector2(0.5f, 1f);
+        potionsBoxRect.sizeDelta = new Vector2(wide.x, potionsBoxHeight);
+
+        potionsScroll = PixelUIKit.CreateScrollView(potionsBox.transform, "Potions List", scrollbarColor, 12f, rowFontSize * 1.3f,
+                                                    out RectTransform potionsContent, out potionsBar);
+        RectTransform pr = potionsScroll.GetComponent<RectTransform>();
+        PixelUIKit.Stretch(pr);
+        pr.offsetMin = new Vector2(8f, 8f);
+        pr.offsetMax = new Vector2(-8f, -8f);
+        potionsText = MakeText(potionsContent, "Potions Text", "", rowFontSize * 0.85f, FontStyles.Normal);
+        potionsText.alignment = TextAlignmentOptions.TopLeft;
+        potionsText.color = statValueColor;
+        RectTransform tr = potionsText.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.offsetMin = new Vector2(8f, -rowHeight);
+        tr.offsetMax = new Vector2(-24f, 0f);
+
+        // Back button (moves with the section)
+        Button back = MakeButton(statsPanel.transform, "Back Button", backText, menuButtonSize, menuButtonColor, menuButtonFontSize);
+        statsBackRect = back.GetComponent<RectTransform>();
+        statsBackRect.anchorMin = statsBackRect.anchorMax = statsBackRect.pivot = new Vector2(0.5f, 1f);
+        back.onClick.AddListener(() => ShowView(mainPanel));
+
+        LayoutStats();
+        statsPanel.SetActive(false);
+    }
+
+    /// <summary>Places the potions section and the Back button, and sizes the Stats panel (it grows when the potions box is open).</summary>
+    private void LayoutStats()
+    {
+        float y = statsListTop + statsViewHeight + 8f;
+        potionsHeaderRect.anchoredPosition = new Vector2(0f, -y);
+        y += rowHeight + 6f;
+
+        potionsBox.SetActive(potionsOpen);
+        if (potionsOpen)
+        {
+            potionsBoxRect.anchoredPosition = new Vector2(0f, -y);
+            y += potionsBoxHeight + 10f;
+        }
+        else y += 4f;
+
+        statsBackRect.anchoredPosition = new Vector2(0f, -y);
+        y += menuButtonSize.y + 30f;
+        statsPanelRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
     }
 
     private void BuildSettingsPanel()
@@ -656,6 +793,37 @@ public class PixelPauseMenu : MonoBehaviour
         autoClicksValue.text = FormatCount(stats.AutoClicks);
         timePlayedValue.text = PixelStats.FormatTime(stats.PlaySeconds);
         pixelsSpentValue.text = FormatCount(stats.PixelsSpent);
+        ghostsValue.text = FormatCount(stats.GhostsClicked);
+        meteorsClickedValue.text = FormatCount(stats.MeteorsClicked);
+        meteorsSpawnedValue.text = FormatCount(stats.MeteorsSpawned);
+        blackHolesValue.text = FormatCount(stats.BlackHolesSpawned);
+        fansValue.text = FormatCount(stats.FansUsed);
+        vacuumsValue.text = FormatCount(stats.VacuumDevicesUsed);
+        comboValue.text = FormatCount(stats.HighestCombo);
+        PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
+
+        // Potions used: a button that opens a scrolling box.
+        potionsHeaderLabel.text = string.Format(potionsUsedFormat, FormatCount(stats.TotalPotionsUsed), potionsOpen ? "-" : "+");
+        if (potionsBox.activeSelf != potionsOpen) LayoutStats();
+        if (potionsOpen)
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            foreach (System.Collections.Generic.KeyValuePair<string, long> p in stats.PotionsUsed)
+            {
+                if (sb.Length > 0) sb.Append('\n');
+                sb.Append(string.Format(potionLineFormat, p.Key, FormatCount(p.Value)));
+            }
+            string text = sb.Length > 0 ? sb.ToString() : noPotionsText;
+            if (text != shownPotionsText)
+            {
+                shownPotionsText = text;
+                potionsText.text = text;
+            }
+            float width = potionsText.rectTransform.rect.width > 1f ? potionsText.rectTransform.rect.width : panelSize.x - 140f;
+            float contentHeight = Mathf.Ceil(potionsText.GetPreferredValues(text, width, 0f).y) + 8f;
+            potionsText.rectTransform.offsetMin = new Vector2(8f, -contentHeight);
+            PixelUIKit.UpdateScrollView(potionsScroll, potionsBar, contentHeight, potionsBoxHeight - 16f);
+        }
     }
 
     /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>

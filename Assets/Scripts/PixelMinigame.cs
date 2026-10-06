@@ -39,6 +39,15 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Is the minigame running?</summary>
     public abstract bool Running { get; }
 
+    /// <summary>Things a minigame reports for the stats.</summary>
+    public enum MinigameEvent { Spawned, Clicked }
+
+    /// <summary>Raised whenever a minigame spawns its thing (ghost, meteor, hole) or the player clicks it.</summary>
+    public static event System.Action<PixelMinigame, MinigameEvent> Happened;
+
+    /// <summary>Subclasses call this when something happens (for the stats).</summary>
+    protected void Report(MinigameEvent what) => Happened?.Invoke(this, what);
+
     /// <summary>Name shown in menus (e.g. the dev tools). Defaults to the id.</summary>
     public virtual string DisplayName => Id;
 

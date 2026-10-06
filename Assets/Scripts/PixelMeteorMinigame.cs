@@ -218,6 +218,7 @@ public class PixelMeteorMinigame : PixelMinigame
     {
         meteorActive = true;
         onMeteorAppeared?.Invoke();
+        Report(MinigameEvent.Spawned);
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) { meteorActive = false; yield break; }
@@ -324,6 +325,7 @@ public class PixelMeteorMinigame : PixelMinigame
     {
         bool reachedBefore = chunks >= chunkThreshold;
         chunks += chunksPerClick;
+        Report(MinigameEvent.Clicked);
         onChunkCollected?.Invoke();
         if (!reachedBefore && chunks >= chunkThreshold && !thresholdAnnounced)
         {

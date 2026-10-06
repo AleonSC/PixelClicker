@@ -412,6 +412,12 @@ public class PixelConsumables : MonoBehaviour
     /// Drinks one potion: only its pixel type spawns for its duration. Drinking another potion replaces the
     /// running one. Returns false if you have none or its pixel type isn't unlocked.
     /// </summary>
+    /// <summary>Raised when the player drinks a potion (its name). Used by the stats.</summary>
+    public static event Action<string> PotionDrunk;
+
+    /// <summary>Raised when the player places a device. Used by the stats.</summary>
+    public static event Action<DeviceKind> DevicePlaced;
+
     public bool TryConsume(int index)
     {
         if (index < 0 || index >= potions.Length) return false;
@@ -421,6 +427,7 @@ public class PixelConsumables : MonoBehaviour
 
         potion.owned--;
         ApplyPotion(index, 1f);
+        PotionDrunk?.Invoke(ItemName(index));
         return true;
     }
 
@@ -633,6 +640,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         EndPlacement();
+        DevicePlaced?.Invoke(d.kind);
         onDevicePlaced?.Invoke(index);
     }
 

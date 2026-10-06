@@ -85,6 +85,11 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Colour of the other tab.")]
     [SerializeField] private Color tabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
 
+    [Header("Pixels Tab")]
+    [Min(200f)]
+    [Tooltip("Tallest the Pixels list can get (canvas units). A longer list scrolls (mouse wheel or the scroll bar).")]
+    [SerializeField] private float pixelsMaxListHeight = 560f;
+
     [Header("Achievements Tab")]
     [Tooltip("The achievements to list. Found automatically (or added to this GameObject) if left empty.")]
     [SerializeField] private PixelAchievements achievements;
@@ -250,6 +255,11 @@ public class PixelLog : MonoBehaviour
     // ------------------------------------------------------------------
     // Runtime
     // ------------------------------------------------------------------
+
+    private ScrollRect pixelsScroll;
+    private RectTransform pixelsViewport;
+    private RectTransform pixelsContent;
+    private GameObject pixelsBar;
 
     private class Row
     {
@@ -455,14 +465,23 @@ public class PixelLog : MonoBehaviour
         BuildTabs();
         BuildAchievementsGroup();
 
+        // The Pixels tab's rows live in a scroll view under the tabs.
+        pixelsScroll = PixelUIKit.CreateScrollView(panelObject.transform, "Pixels List", scrollbarHandleColor, 12f,
+                                                   achievementScrollSpeed, out pixelsContent, out pixelsBar);
+        pixelsViewport = pixelsScroll.GetComponent<RectTransform>();
+        pixelsViewport.anchorMin = Vector2.zero;
+        pixelsViewport.anchorMax = Vector2.one;
+        pixelsViewport.offsetMin = new Vector2(0f, panelPadding);
+        pixelsViewport.offsetMax = new Vector2(0f, -ContentTop);
+
         // One row per tier (hidden until unlocked).
         rows = new Row[clicker.Tiers.Length];
         for (int i = 0; i < rows.Length; i++)
-            rows[i] = BuildRow(panelObject.transform, "Row " + i, false);
+            rows[i] = BuildRow(pixelsContent, "Row " + i, false);
 
         // Divider + overall total row
         GameObject div = new GameObject("Divider", typeof(RectTransform), typeof(Image));
-        div.transform.SetParent(panelObject.transform, false);
+        div.transform.SetParent(pixelsContent, false);
         div.GetComponent<Image>().color = dividerColor;
         div.GetComponent<Image>().raycastTarget = false;
         dividerRect = div.GetComponent<RectTransform>();
@@ -471,9 +490,9 @@ public class PixelLog : MonoBehaviour
         dividerRect.pivot = new Vector2(0.5f, 1f);
         dividerRect.sizeDelta = new Vector2(-panelPadding * 2f, 2f);
 
-        totalRow = BuildRow(panelObject.transform, "Total Row", true);
+        totalRow = BuildRow(pixelsContent, "Total Row", true);
 
-        emptyLabel = CreateText(panelObject.transform, "Empty", emptyText, rowFontSize,
+        emptyLabel = CreateText(pixelsContent, "Empty", emptyText, rowFontSize,
                                 TextAlignmentOptions.Center, FontStyles.Italic,
                                 new Color(textColor.r, textColor.g, textColor.b, 0.6f));
         RectTransform er = emptyLabel.rectTransform;
@@ -481,7 +500,7 @@ public class PixelLog : MonoBehaviour
         er.anchorMax = new Vector2(1f, 1f);
         er.pivot = new Vector2(0.5f, 1f);
         er.sizeDelta = new Vector2(-panelPadding * 2f, rowHeight);
-        er.anchoredPosition = new Vector2(0f, -ContentTop);
+        er.anchoredPosition = Vector2.zero;
     }
 
     private void BuildTabs()
@@ -766,6 +785,7 @@ public class PixelLog : MonoBehaviour
 
         bool pixelsTab = currentTab == 0;
         achievementsGroup.SetActive(!pixelsTab);
+        pixelsViewport.gameObject.SetActive(pixelsTab);
 
         if (pixelsTab) RefreshPixelsTab();
         else RefreshAchievementsTab();
@@ -841,11 +861,11 @@ public class PixelLog : MonoBehaviour
             Row[] bigger = new Row[tiers.Length];
             Array.Copy(rows, bigger, rows.Length);
             for (int i = rows.Length; i < bigger.Length; i++)
-                bigger[i] = BuildRow(panelObject.transform, "Row " + i, false);
+                bigger[i] = BuildRow(pixelsContent, "Row " + i, false);
             rows = bigger;
         }
 
-        float y = ContentTop;
+        float y = 0f; // inside the scrolling list
         int visibleCount = 0;
         double overall = 0d;
 
@@ -883,7 +903,11 @@ public class PixelLog : MonoBehaviour
             y += rowHeight;
         }
 
-        panelRect.sizeDelta = new Vector2(panelWidth, y + panelPadding);
+        float viewHeight = Mathf.Min(y, pixelsMaxListHeight);
+        panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + viewHeight + panelPadding);
+        pixelsViewport.offsetMin = new Vector2(0f, panelPadding);
+        pixelsViewport.offsetMax = new Vector2(0f, -ContentTop);
+        PixelUIKit.UpdateScrollView(pixelsScroll, pixelsBar, y, viewHeight);
     }
 
     private string FormatAmount(double value)

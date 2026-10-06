@@ -84,6 +84,7 @@ public class PixelSaveGame : MonoBehaviour
         public long statAutoClicks;
         public double statPlaySeconds;
         public double statPixelsSpent;
+        public PixelStats.ExtraData statExtra;
         public bool autoClickerRunning;
         public float autoClickerInterval;
         public int autoClickerClicks;
@@ -328,6 +329,7 @@ public class PixelSaveGame : MonoBehaviour
                 data.statAutoClicks = stats.AutoClicks;
                 data.statPlaySeconds = stats.PlaySeconds;
                 data.statPixelsSpent = stats.PixelsSpent;
+                data.statExtra = stats.GetExtra();
             }
 
             if (autoClicker != null)
@@ -444,7 +446,10 @@ public class PixelSaveGame : MonoBehaviour
             }
             if (achievements != null) achievements.SetSaveState(data.achievements);
             if (stats != null)
+            {
                 stats.SetState(data.statManualClicks, data.statAutoClicks, data.statPlaySeconds, data.statPixelsSpent);
+                stats.SetExtra(data.statExtra);
+            }
 
             // Time away: only when the game has just started (loading by hand mid-game must not pay it again).
             if (grantOffline && data.savedAtTicks > 0)

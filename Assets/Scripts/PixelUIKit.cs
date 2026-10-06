@@ -199,4 +199,69 @@ public static class PixelUIKit
         input.placeholder = hint;
         return input;
     }
+
+    /// <summary>
+    /// A vertical scroll view: a masked viewport (mouse wheel / drag) with a content rect on top and a thin scroll bar
+    /// that is only shown while the content is taller than the viewport. The caller positions the returned viewport,
+    /// fills <paramref name="content"/> (anchored top, full width) and calls <see cref="UpdateScrollView"/> after
+    /// changing the content height.
+    /// </summary>
+    public static ScrollRect CreateScrollView(Transform parent, string objectName, Color handleColor, float barWidth,
+                                              float wheelSpeed, out RectTransform content, out GameObject barObject)
+    {
+        GameObject view = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
+        view.transform.SetParent(parent, false);
+        view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // invisible, but takes wheel / drag input
+        RectTransform viewport = view.GetComponent<RectTransform>();
+
+        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
+        contentGo.transform.SetParent(view.transform, false);
+        content = contentGo.GetComponent<RectTransform>();
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.sizeDelta = Vector2.zero;
+        content.anchoredPosition = Vector2.zero;
+
+        barObject = new GameObject("Scroll Bar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        barObject.transform.SetParent(view.transform, false);
+        barObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
+        RectTransform br = barObject.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(1f, 0f);
+        br.anchorMax = new Vector2(1f, 1f);
+        br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(barWidth, 0f);
+        br.anchoredPosition = new Vector2(-2f, 0f);
+
+        GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handle.transform.SetParent(barObject.transform, false);
+        Image handleImage = handle.GetComponent<Image>();
+        handleImage.color = handleColor;
+        Stretch(handle.GetComponent<RectTransform>());
+
+        Scrollbar bar = barObject.GetComponent<Scrollbar>();
+        bar.direction = Scrollbar.Direction.BottomToTop;
+        bar.handleRect = handle.GetComponent<RectTransform>();
+        bar.targetGraphic = handleImage;
+
+        ScrollRect scroll = view.GetComponent<ScrollRect>();
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = wheelSpeed;
+        scroll.verticalScrollbar = bar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        barObject.SetActive(false);
+        return scroll;
+    }
+
+    /// <summary>Sets a scroll view's content height and shows the scroll bar only when the content doesn't fit.</summary>
+    public static void UpdateScrollView(ScrollRect scroll, GameObject barObject, float contentHeight, float viewHeight)
+    {
+        scroll.content.sizeDelta = new Vector2(0f, Mathf.Max(contentHeight, 1f));
+        bool scrolls = contentHeight > viewHeight + 0.5f;
+        if (barObject.activeSelf != scrolls) barObject.SetActive(scrolls);
+        if (!scrolls) scroll.content.anchoredPosition = Vector2.zero;
+    }
 }

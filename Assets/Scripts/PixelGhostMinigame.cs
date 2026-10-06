@@ -254,6 +254,7 @@ public class PixelGhostMinigame : PixelMinigame
     private IEnumerator GhostRoutine()
     {
         ghostActive = true;
+        Report(MinigameEvent.Spawned);
         onGhostAppeared?.Invoke();
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
@@ -348,6 +349,7 @@ public class PixelGhostMinigame : PixelMinigame
     {
         bool reachedBefore = ThresholdReached;
         ghostsCaught += 1d;
+        Report(MinigameEvent.Clicked);
         if (!reachedBefore && ThresholdReached) onThresholdReached?.Invoke();
 
         string buffName = "";
