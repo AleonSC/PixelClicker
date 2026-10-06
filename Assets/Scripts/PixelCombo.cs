@@ -49,8 +49,8 @@ public class PixelCombo : MonoBehaviour
     [Tooltip("Meter size (canvas units).")]
     [SerializeField] private Vector2 meterSize = new Vector2(420f, 90f);
 
-    [Tooltip("Distance of the meter's bottom edge from the bottom of the screen. The default sits just above where the pause button used to be.")]
-    [SerializeField] private float bottomOffset = 120f;
+    [Tooltip("Distance of the meter's bottom edge from the bottom of the screen.")]
+    [SerializeField] private float meterBottomMargin = 30f;
 
     [Tooltip("Horizontal shift from the centre of the screen.")]
     [SerializeField] private float horizontalOffset = 0f;
@@ -211,7 +211,7 @@ public class PixelCombo : MonoBehaviour
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0f);
         br.sizeDelta = meterSize;
-        br.anchoredPosition = new Vector2(horizontalOffset, bottomOffset);
+        br.anchoredPosition = new Vector2(horizontalOffset, meterBottomMargin);
 
         float barHeight = Mathf.Max(8f, meterSize.y * 0.18f);
 

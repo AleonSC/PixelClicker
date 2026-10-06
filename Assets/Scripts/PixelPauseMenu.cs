@@ -43,8 +43,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private bool pauseAudio = false;
 
     [Header("Pause Button")]
-    [Tooltip("Show a Pause button on screen.")]
-    [SerializeField] private bool showPauseButton = true;
+    [Tooltip("Show a Pause button on screen. Off by default: Escape (or the Pause Key) pauses instead, and the bottom-right corner is used by the Crafting button.")]
+    [SerializeField] private bool showPauseButtonOnScreen = false;
 
     [Tooltip("Where the Pause button sits.")]
     [SerializeField] private ButtonAnchor pauseButtonAnchor = ButtonAnchor.BottomRight;
@@ -527,7 +527,7 @@ public class PixelPauseMenu : MonoBehaviour
         canvasRoot = PixelUIKit.CreateCanvas("PixelPauseMenu Canvas", sortingOrder, referenceResolution, true);
 
         // On-screen Pause button
-        if (showPauseButton)
+        if (showPauseButtonOnScreen)
         {
             Button pause = MakeButton(canvasRoot.transform, "Pause Button", pauseButtonText, buttonSize,
                                       pauseButtonColor, buttonFontSize);

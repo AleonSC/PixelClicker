@@ -3,3 +3,6 @@
 [2026-10-06 15:06 UTC] Each pixel type now has two achievements: 'Collector' (total value collected) and a new 'Clicker' (number of pixels clicked, whatever they paid: 10, 50, 250, 1K, 5K, 25K). Existing saves keep their progress; click counts start from zero.
 [2026-10-06 15:11 UTC] Log achievements: each pixel now has one entry; click it to switch between its 'value collected' and 'times clicked' achievement (a small tag shows which; your choice is remembered).
 [2026-10-06 15:16 UTC] Restart now asks for confirmation (warns it deletes everything) and needs the red button to be held for 2 seconds. Restart also now forces all achievements back to zero in the new game.
+[2026-10-06 15:37 UTC] Moved the combo meter to the bottom of the screen.
+[2026-10-06 15:37 UTC] Removed the on-screen Pause button (Escape still pauses and closes windows).
+[2026-10-06 15:37 UTC] Added a Crafting upgrade to the shop (Upgrades tab). It adds a Crafting button at the bottom-right: drag or click two items from your pixels and potions into the two boxes, see the recipe and cost, and craft the result into your consumables.

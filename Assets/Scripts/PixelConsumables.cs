@@ -528,6 +528,18 @@ public class PixelConsumables : MonoBehaviour
         }
     }
 
+    /// <summary>The kind of device an item index refers to (items past the potions are devices).</summary>
+    public DeviceKind DeviceKindOf(int item) => devices[item - potions.Length].kind;
+
+    /// <summary>Takes items out of the inventory (crafting). Returns false if you don't have that many.</summary>
+    public bool TryRemoveItem(int item, int amount)
+    {
+        if (item < 0 || item >= ItemCount || amount <= 0 || ItemOwned(item) < amount) return false;
+        if (IsDevice(item)) devices[item - potions.Length].owned -= amount;
+        else potions[item].owned -= amount;
+        return true;
+    }
+
     /// <summary>Right-click use: drinks a potion, or starts placing a device.</summary>
     public bool TryUseItem(int item) => IsDevice(item) ? BeginPlacement(item - potions.Length) : TryConsume(item);
 

@@ -338,6 +338,20 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Crafting upgrade (Upgrades tab): puts a Crafting button on screen.</summary>
+    private static ShopPack CreateCraftingPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Crafting",
+            tab = ShopTab.Upgrades,
+            description = "Unlocks the Crafting button: combine two items to make potions.",
+            costs = AllSix(300),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksCrafting = true,
+        };
+    }
+
     /// <summary>Default Combo Meter upgrade: quick clicks build a multiplier; each level raises its maximum.</summary>
     private static ShopPack CreateComboPack()
     {
@@ -452,6 +466,8 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
+        new DefaultPack { isThis = p => p.unlocksCrafting,
+                          requires = null, create = i => CreateCraftingPack() },
     };
 
 #if UNITY_EDITOR
