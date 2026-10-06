@@ -71,6 +71,29 @@ public partial class PixelShop : MonoBehaviour
         public float value = 1f;
     }
 
+    /// <summary>What a requirement checks.</summary>
+    public enum RequirementKind
+    {
+        /// <summary>Another pack must have been bought first.</summary>
+        Pack = 0,
+        /// <summary>A minigame's goal (e.g. ghosts caught) must have been reached.</summary>
+        MinigameGoal = 1,
+    }
+
+    /// <summary>One thing that must be true before a pack can be bought. A pack can have several; all must be met.</summary>
+    [Serializable]
+    public class PackRequirement
+    {
+        [Tooltip("Pack = another pack must be bought first. Minigame Goal = a minigame's goal must be reached.")]
+        public RequirementKind kind = RequirementKind.Pack;
+
+        [Tooltip("Pack: index (in the Packs list, starting at 0) of the pack that must be bought first.")]
+        public int packIndex = -1;
+
+        [Tooltip("Minigame Goal: id of the minigame (e.g. ghost, blackhole).")]
+        public string minigameId = "";
+    }
+
     /// <summary>Something purchasable: a price and the tiers it unlocks.</summary>
     [Serializable]
     public class ShopPack
@@ -93,8 +116,22 @@ public partial class PixelShop : MonoBehaviour
                  "Set Spawn Weight to control how often each appears.")]
         public PixelClicker.PixelTier[] rewardTiers;
 
-        [Tooltip("Index (in the Packs list, starting at 0) of a pack that must be bought first. -1 = no requirement.")]
-        public int requiresPackIndex = -1;
+        [Tooltip("Everything that must be true before this pack can be bought (other packs bought, minigame goals reached). " +
+                 "All of them are required. Empty = available from the start. " +
+                 "For an upgrade pack (one with levels), its first Pack requirement is the pack whose upgrades window lists it.")]
+        public PackRequirement[] requirements;
+
+        /// <summary>Index of the first required pack, or -1. Upgrade packs use it to find the pack they belong to.</summary>
+        public int ParentIndex
+        {
+            get
+            {
+                if (requirements != null)
+                    foreach (PackRequirement r in requirements)
+                        if (r.kind == RequirementKind.Pack && r.packIndex >= 0) return r.packIndex;
+                return -1;
+            }
+        }
 
         [Tooltip("Buying this pack switches on the auto clicker.")]
         public bool unlocksAutoClicker = false;
@@ -102,11 +139,11 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Id of a minigame that buying this pack switches on (e.g. ghost, blackhole). Empty = none.")]
         public string unlocksMinigame = "";
 
-        [Tooltip("Id of a minigame whose goal must be reached before this pack can be bought " +
-                 "(e.g. ghost = enough ghosts caught, blackhole = singularity goal). Empty = none.")]
-        public string requiresMinigameGoal = "";
-
         // Older versions used one tick box per minigame. They are read once and turned into the ids above.
+        // Older versions had one required pack index and one minigame goal id here; they are moved into 'requirements'.
+        [HideInInspector] public int requiresPackIndex = -1;
+        [HideInInspector] public string requiresMinigameGoal = "";
+
         [HideInInspector] public bool unlocksGhostMinigame;
         [HideInInspector] public bool unlocksBlackholeMinigame;
         [HideInInspector] public bool requiresSingularity;
@@ -513,6 +550,24 @@ public partial class PixelShop : MonoBehaviour
             if (pack.requiresSingularity) { pack.requiresMinigameGoal = "blackhole"; pack.requiresSingularity = false; renamed = true; }
         }
 
+        // Turn the old single requirement fields into the requirements list.
+        foreach (ShopPack pack in packs)
+        {
+            bool hadPack = pack.requiresPackIndex >= 0;
+            bool hadGoal = !string.IsNullOrEmpty(pack.requiresMinigameGoal);
+            if (!hadPack && !hadGoal) continue;
+
+            System.Collections.Generic.List<PackRequirement> list = new System.Collections.Generic.List<PackRequirement>();
+            if (pack.requirements != null) list.AddRange(pack.requirements);
+            if (hadPack) list.Add(new PackRequirement { kind = RequirementKind.Pack, packIndex = pack.requiresPackIndex });
+            if (hadGoal) list.Add(new PackRequirement { kind = RequirementKind.MinigameGoal, minigameId = pack.requiresMinigameGoal });
+
+            pack.requirements = list.ToArray();
+            pack.requiresPackIndex = -1;
+            pack.requiresMinigameGoal = "";
+            renamed = true;
+        }
+
         // Older components saved the previous names; Glass and Vacuum are single pixels listed on the Pixels tab.
         foreach (ShopPack pack in packs)
         {
@@ -671,32 +726,61 @@ public partial class PixelShop : MonoBehaviour
     /// <summary>True when the pack's required pack (if any) has been bought.</summary>
     public bool IsRequirementMet(int packIndex) => IsPackRequirementMet(packIndex) && IsMinigameGoalMet(packIndex);
 
-    /// <summary>True when the pack that must be bought first (if any) has been bought.</summary>
+    /// <summary>True when every pack this pack requires (if any) has been bought.</summary>
     public bool IsPackRequirementMet(int packIndex)
     {
-        int req = packs[packIndex].requiresPackIndex;
-        if (req < 0 || req >= packs.Length || req == packIndex) return true;
-        return HasPack(req);
+        PackRequirement[] requirements = packs[packIndex].requirements;
+        if (requirements == null) return true;
+
+        foreach (PackRequirement r in requirements)
+            if (r.kind == RequirementKind.Pack && IsRequiredPackMissing(r, packIndex)) return false;
+        return true;
     }
 
     /// <summary>True unless the pack needs a minigame's goal (ghosts caught, singularity...) and it has not been reached.</summary>
     public bool IsMinigameGoalMet(int packIndex)
     {
-        string id = packs[packIndex].requiresMinigameGoal;
-        if (string.IsNullOrEmpty(id)) return true;
+        PackRequirement[] requirements = packs[packIndex].requirements;
+        if (requirements == null) return true;
 
-        PixelMinigame minigame = PixelMinigame.Find(id);
+        foreach (PackRequirement r in requirements)
+            if (r.kind == RequirementKind.MinigameGoal && !IsGoalReached(r)) return false;
+        return true;
+    }
+
+    private bool IsRequiredPackMissing(PackRequirement r, int ownIndex)
+    {
+        if (r.packIndex < 0 || r.packIndex >= packs.Length || r.packIndex == ownIndex) return false;
+        return !HasPack(r.packIndex);
+    }
+
+    private static bool IsGoalReached(PackRequirement r)
+    {
+        PixelMinigame minigame = PixelMinigame.Find(r.minigameId);
         return minigame != null && minigame.GoalReached;
     }
 
+    /// <summary>The text for the first requirement that is not met yet ("Requires: ...").</summary>
     private string RequirementText(int packIndex)
     {
-        if (!IsPackRequirementMet(packIndex)) return string.Format(requiresFormat, RequirementName(packs[packIndex]));
+        PackRequirement[] requirements = packs[packIndex].requirements;
+        if (requirements == null) return "";
 
-        PixelMinigame minigame = PixelMinigame.Find(packs[packIndex].requiresMinigameGoal);
-        if (minigame == null) return "";
-        return string.Format(minigame.RequirementFormat, PixelClicker.FormatNumber(minigame.TrackerCount),
-                             PixelClicker.FormatNumber(minigame.TrackerGoal));
+        foreach (PackRequirement r in requirements)
+        {
+            if (r.kind == RequirementKind.Pack)
+            {
+                if (IsRequiredPackMissing(r, packIndex)) return string.Format(requiresFormat, packs[r.packIndex].displayName);
+            }
+            else if (!IsGoalReached(r))
+            {
+                PixelMinigame minigame = PixelMinigame.Find(r.minigameId);
+                if (minigame == null) return "";
+                return string.Format(minigame.RequirementFormat, PixelClicker.FormatNumber(minigame.TrackerCount),
+                                     PixelClicker.FormatNumber(minigame.TrackerGoal));
+            }
+        }
+        return "";
     }
 
     /// <summary>True when the player holds enough of every currency for the pack's next purchase.</summary>

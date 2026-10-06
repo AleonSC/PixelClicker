@@ -306,14 +306,14 @@ public partial class PixelShop
     private bool IsChild(int index)
     {
         ShopPack pack = packs[index];
-        int req = pack.requiresPackIndex;
+        int req = pack.ParentIndex;
         return IsLeveled(pack) && req >= 0 && req < packs.Length && req != index;
     }
 
     private bool HasChildren(int index)
     {
         for (int i = 0; i < packs.Length; i++)
-            if (IsChild(i) && packs[i].requiresPackIndex == index) return true;
+            if (IsChild(i) && packs[i].ParentIndex == index) return true;
         return false;
     }
 
@@ -576,7 +576,7 @@ public partial class PixelShop
             bool requirementMet = IsRequirementMet(i);
             bool listed = IsPackRequirementMet(i) || showLockedPacks || HasPack(i);
             bool visible = child
-                ? openParent >= 0 && pack.requiresPackIndex == openParent && listed
+                ? openParent >= 0 && pack.ParentIndex == openParent && listed
                 : TabOf(pack) == currentTab && listed;
 
             row.rect.gameObject.SetActive(visible);
@@ -699,7 +699,7 @@ public partial class PixelShop
 
     private string RequirementName(ShopPack pack)
     {
-        int req = pack.requiresPackIndex;
+        int req = pack.ParentIndex;
         return req >= 0 && req < packs.Length ? packs[req].displayName : "?";
     }
 

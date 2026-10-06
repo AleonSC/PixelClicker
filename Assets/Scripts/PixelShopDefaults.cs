@@ -55,7 +55,7 @@ public partial class PixelShop
             displayName = "Glass Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the see-through Glass pixel to the random spawn pool.",
-            requiresPackIndex = requiresRgbIndex,
+            requirements = Needs(requiresRgbIndex),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Red,   amount = 100 },
@@ -82,7 +82,7 @@ public partial class PixelShop
             displayName = "Vacuum Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the rare Vacuum pixel. Clicking it sucks up every old pixel and collects them again.",
-            requiresPackIndex = requiresGlassIndex,
+            requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Glass, amount = 100 },
@@ -110,7 +110,7 @@ public partial class PixelShop
             displayName = "Obsidian Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the tough Obsidian pixel. It takes {clicks} clicks to collect, but pays more.",
-            requiresPackIndex = requiresGlassIndex,
+            requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 500 },
@@ -137,7 +137,7 @@ public partial class PixelShop
             displayName = "Luminescent Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the glowing Luminescent pixel, which pays more per click.",
-            requiresPackIndex = requiresObsidianIndex,
+            requirements = Needs(requiresObsidianIndex),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Glass, amount = 200 },
@@ -164,7 +164,7 @@ public partial class PixelShop
             displayName = "Ghost Hunt",
             tab = ShopTab.Minigames,
             description = "A faint ghost cube floats across the screen now and then. Click it for a random pixel buff.",
-            requiresPackIndex = requiresGlassIndex,
+            requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 200 },
@@ -183,8 +183,7 @@ public partial class PixelShop
             displayName = "Ghost Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the faint, see-through Ghost pixel to the spawn pool. Pays well.",
-            requiresPackIndex = requiresGhostHuntIndex,
-            requiresMinigameGoal = "ghost",
+            requirements = Needs(requiresGhostHuntIndex, "ghost"),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Glass,        amount = 300 },
@@ -211,7 +210,7 @@ public partial class PixelShop
             displayName = "Black Hole",
             tab = ShopTab.Minigames,
             description = "A black hole sometimes opens on the floor and swallows old pixels, feeding the singularity.",
-            requiresPackIndex = requiresVacuumIndex,
+            requirements = Needs(requiresVacuumIndex),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black,  amount = 500 },
@@ -230,8 +229,7 @@ public partial class PixelShop
             displayName = "Singularity Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the tough Singularity pixel, forged from what the black hole swallowed. Pays hugely.",
-            requiresPackIndex = requiresBlackholeIndex,
-            requiresMinigameGoal = "blackhole",
+            requirements = Needs(requiresBlackholeIndex, "blackhole"),
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 100 },
@@ -248,6 +246,15 @@ public partial class PixelShop
                 },
             }
         };
+    }
+
+    /// <summary>A requirements list: the pack at this index must be bought (-1 = none) and, optionally, a minigame's goal reached.</summary>
+    private static PackRequirement[] Needs(int packIndex, string minigameGoal = null)
+    {
+        System.Collections.Generic.List<PackRequirement> list = new System.Collections.Generic.List<PackRequirement>();
+        if (packIndex >= 0) list.Add(new PackRequirement { kind = RequirementKind.Pack, packIndex = packIndex });
+        if (!string.IsNullOrEmpty(minigameGoal)) list.Add(new PackRequirement { kind = RequirementKind.MinigameGoal, minigameId = minigameGoal });
+        return list.ToArray();
     }
 
     private static PackCost[] AllSix(double amount)
@@ -271,7 +278,7 @@ public partial class PixelShop
             displayName = "Faster Clicking",
             tab = ShopTab.Upgrades,
             description = "Auto clicker interval: {current}s  →  {next}s",
-            requiresPackIndex = requiresAutoClickerIndex,
+            requirements = Needs(requiresAutoClickerIndex),
             upgradeEffect = UpgradeEffect.AutoClickerInterval,
             levels = new[]
             {
@@ -292,7 +299,7 @@ public partial class PixelShop
             displayName = "Multi-Click",
             tab = ShopTab.Upgrades,
             description = "Clicks per auto click: {current}  →  {next}",
-            requiresPackIndex = requiresAutoClickerIndex,
+            requirements = Needs(requiresAutoClickerIndex),
             upgradeEffect = UpgradeEffect.AutoClickerClicks,
             levels = new[]
             {
@@ -322,7 +329,7 @@ public partial class PixelShop
                 new PackCost { type = PixelClicker.PixelType.Blue,  amount = 100 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
-            requiresPackIndex = requiresRgbIndex,
+            requirements = Needs(requiresRgbIndex),
             unlocksAutoClicker = true,
         };
     }
