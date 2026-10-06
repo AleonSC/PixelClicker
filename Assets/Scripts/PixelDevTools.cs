@@ -92,7 +92,7 @@ public class PixelDevTools : MonoBehaviour
 
         if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
 
-        EnsureEventSystem();
+        PixelUIKit.EnsureEventSystem();
         BuildButton();
     }
 
@@ -116,41 +116,14 @@ public class PixelDevTools : MonoBehaviour
     // UI
     // ------------------------------------------------------------------
 
-    private static void EnsureEventSystem()
-    {
-#if UNITY_2023_1_OR_NEWER
-        if (FindFirstObjectByType<EventSystem>() != null) return;
-#else
-        if (FindObjectOfType<EventSystem>() != null) return;
-#endif
-        GameObject es = new GameObject("EventSystem", typeof(EventSystem));
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-        es.AddComponent<StandaloneInputModule>();
-#endif
-    }
-
     private void BuildButton()
     {
-        canvasRoot = new GameObject("PixelDevTools Canvas");
-        Canvas canvas = canvasRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = sortingOrder;
+        canvasRoot = PixelUIKit.CreateCanvas("PixelDevTools Canvas", sortingOrder, referenceResolution, true);
 
-        CanvasScaler scaler = canvasRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        canvasRoot.AddComponent<GraphicRaycaster>();
-
-        GameObject go = new GameObject("Dev Button", typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(canvasRoot.transform, false);
-
-        Image image = go.GetComponent<Image>();
-        image.color = buttonColor;
-        go.GetComponent<Button>().targetGraphic = image;
+        Button devButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "Dev Button",
+                                                   string.Format(label, PixelClicker.FormatNumber(amountToAdd)),
+                                                   size, buttonColor, textColor, fontSize);
+        GameObject go = devButton.gameObject;
 
         Vector2 anchor = new Vector2(
             corner == ButtonCorner.TopRight || corner == ButtonCorner.BottomRight ? 1f : 0f,
@@ -160,22 +133,6 @@ public class PixelDevTools : MonoBehaviour
         rt.sizeDelta = size;
         rt.anchoredPosition = new Vector2(anchor.x > 0.5f ? -margin.x : margin.x,
                                           anchor.y > 0.5f ? -margin.y : margin.y);
-
-        GameObject textGo = new GameObject("Label", typeof(RectTransform));
-        textGo.transform.SetParent(go.transform, false);
-        TextMeshProUGUI tmp = textGo.AddComponent<TextMeshProUGUI>();
-        tmp.text = string.Format(label, PixelClicker.FormatNumber(amountToAdd));
-        tmp.fontSize = fontSize;
-        tmp.fontStyle = FontStyles.Bold;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = textColor;
-        tmp.raycastTarget = false;
-        if (font != null) tmp.font = font;
-
-        RectTransform tr = tmp.rectTransform;
-        tr.anchorMin = Vector2.zero;
-        tr.anchorMax = Vector2.one;
-        tr.offsetMin = tr.offsetMax = Vector2.zero;
 
         go.GetComponent<Button>().onClick.AddListener(AddToAll);
     }

@@ -327,7 +327,7 @@ public class PixelLog : MonoBehaviour
         }
         if (achievements == null) achievements = gameObject.AddComponent<PixelAchievements>();
 
-        EnsureEventSystem();
+        PixelUIKit.EnsureEventSystem();
         BuildUI();
         clicker.VacuumBreakdown += OnVacuumBreakdown;
         built = true;
@@ -415,34 +415,9 @@ public class PixelLog : MonoBehaviour
     // Building
     // ------------------------------------------------------------------
 
-    private static void EnsureEventSystem()
-    {
-#if UNITY_2023_1_OR_NEWER
-        if (FindFirstObjectByType<EventSystem>() != null) return;
-#else
-        if (FindObjectOfType<EventSystem>() != null) return;
-#endif
-        GameObject es = new GameObject("EventSystem", typeof(EventSystem));
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-        es.AddComponent<StandaloneInputModule>();
-#endif
-    }
-
     private void BuildUI()
     {
-        canvasRoot = new GameObject("PixelLog Canvas");
-        Canvas canvas = canvasRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = sortingOrder;
-
-        CanvasScaler scaler = canvasRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        canvasRoot.AddComponent<GraphicRaycaster>();
+        canvasRoot = PixelUIKit.CreateCanvas("PixelLog Canvas", sortingOrder, referenceResolution, true);
 
         Vector2 anchor = new Vector2(
             buttonCorner == ButtonCorner.TopRight || buttonCorner == ButtonCorner.BottomRight ? 1f : 0f,
@@ -784,42 +759,12 @@ public class PixelLog : MonoBehaviour
     }
 
     private TMP_Text CreateText(Transform parent, string objectName, string text, float size,
-                                TextAlignmentOptions alignment, FontStyles style, Color color)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-
-        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = size;
-        tmp.fontStyle = style;
-        tmp.alignment = alignment;
-        tmp.color = color;
-        tmp.raycastTarget = false;
-        if (font != null) tmp.font = font;
-        return tmp;
-    }
+                        TextAlignmentOptions alignment, FontStyles style, Color color)
+        => PixelUIKit.CreateText(font, parent, objectName, text, size, alignment, style, color);
 
     private Button CreateButton(Transform parent, string objectName, string label, Vector2 size, Color color,
-                                Color labelColor, float labelSize)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        go.GetComponent<RectTransform>().sizeDelta = size;
-
-        Image image = go.GetComponent<Image>();
-        image.color = color;
-        go.GetComponent<Button>().targetGraphic = image;
-
-        TMP_Text text = CreateText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center,
-                                   FontStyles.Bold, labelColor);
-        RectTransform lr = text.rectTransform;
-        lr.anchorMin = Vector2.zero;
-        lr.anchorMax = Vector2.one;
-        lr.offsetMin = lr.offsetMax = Vector2.zero;
-
-        return go.GetComponent<Button>();
-    }
+                      Color labelColor, float labelSize)
+        => PixelUIKit.CreateButton(font, parent, objectName, label, size, color, labelColor, labelSize);
 
     // ------------------------------------------------------------------
     // Refresh

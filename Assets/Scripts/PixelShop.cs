@@ -1197,7 +1197,7 @@ public class PixelShop : MonoBehaviour
 
     private void Start()
     {
-        EnsureEventSystem();
+        PixelUIKit.EnsureEventSystem();
         BuildUI();
         builtOk = true;
 
@@ -1456,34 +1456,9 @@ public class PixelShop : MonoBehaviour
     // UI building
     // ------------------------------------------------------------------
 
-    private static void EnsureEventSystem()
-    {
-#if UNITY_2023_1_OR_NEWER
-        if (FindFirstObjectByType<EventSystem>() != null) return;
-#else
-        if (FindObjectOfType<EventSystem>() != null) return;
-#endif
-        GameObject es = new GameObject("EventSystem", typeof(EventSystem));
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-        es.AddComponent<StandaloneInputModule>();
-#endif
-    }
-
     private void BuildUI()
     {
-        canvasRoot = new GameObject("PixelShop Canvas");
-        Canvas canvas = canvasRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = sortingOrder;
-
-        CanvasScaler scaler = canvasRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        canvasRoot.AddComponent<GraphicRaycaster>();
+        canvasRoot = PixelUIKit.CreateCanvas("PixelShop Canvas", sortingOrder, referenceResolution, true);
 
         BuildShopButton(canvasRoot.transform);
         BuildPanel(canvasRoot.transform);
@@ -1933,20 +1908,7 @@ public class PixelShop : MonoBehaviour
 
     private TMP_Text CreateText(Transform parent, string objectName, string text, float size,
                                 TextAlignmentOptions alignment, FontStyles style)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-
-        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = size;
-        tmp.fontStyle = style;
-        tmp.alignment = alignment;
-        tmp.color = textColor;
-        tmp.raycastTarget = false;
-        if (font != null) tmp.font = font;
-        return tmp;
-    }
+        => PixelUIKit.CreateText(font, parent, objectName, text, size, alignment, style, textColor);
 
     private Button CreateButton(Transform parent, string objectName, string label, Vector2 size, Color color,
                                 Color labelColor, float labelSize, out TMP_Text labelText, out Image image)

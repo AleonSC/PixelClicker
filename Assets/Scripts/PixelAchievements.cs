@@ -494,15 +494,7 @@ public class PixelAchievements : MonoBehaviour
 
     private void BuildPopup()
     {
-        popupCanvas = new GameObject("PixelAchievements Popup");
-        Canvas canvas = popupCanvas.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = popupSortingOrder;
-
-        CanvasScaler scaler = popupCanvas.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
+        popupCanvas = PixelUIKit.CreateCanvas("PixelAchievements Popup", popupSortingOrder, referenceResolution, false);
 
         GameObject panel = new GameObject("Popup", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
         panel.transform.SetParent(popupCanvas.transform, false);
@@ -546,19 +538,7 @@ public class PixelAchievements : MonoBehaviour
     }
 
     private TMP_Text MakeText(Transform parent, string objectName, string text, float size, FontStyles style, Color color)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = size;
-        tmp.fontStyle = style;
-        tmp.alignment = TextAlignmentOptions.MidlineLeft;
-        tmp.color = color;
-        tmp.raycastTarget = false;
-        if (font != null) tmp.font = font;
-        return tmp;
-    }
+        => PixelUIKit.CreateText(font, parent, objectName, text, size, TextAlignmentOptions.MidlineLeft, style, color);
 
     private void ShowPopup(int index, int tier)
     {

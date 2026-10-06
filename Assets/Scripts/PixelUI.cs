@@ -507,15 +507,7 @@ public class PixelUI : MonoBehaviour
     private void BuildPopupCanvas()
     {
         // Separate overlay canvas so popups work in both automatic and manual mode.
-        GameObject go = new GameObject("PixelUI Popups");
-        Canvas canvas = go.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = popupSortingOrder;
-
-        CanvasScaler scaler = go.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
+        GameObject go = PixelUIKit.CreateCanvas("PixelUI Popups", popupSortingOrder, referenceResolution, false);
 
         popupCanvasRect = go.GetComponent<RectTransform>();
         popupRoot = go;
@@ -704,55 +696,13 @@ public class PixelUI : MonoBehaviour
     // Automatic UI
     // ------------------------------------------------------------------
 
-    private static void EnsureEventSystem()
-    {
-#if UNITY_2023_1_OR_NEWER
-        if (FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>() != null) return;
-#else
-        if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() != null) return;
-#endif
-        GameObject es = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem));
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-        es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-#endif
-    }
-
     private TMP_Text MakeText(Transform parent, string objectName, string text, float size,
-                              TextAlignmentOptions alignment, FontStyles style, Color color)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = size;
-        tmp.fontStyle = style;
-        tmp.alignment = alignment;
-        tmp.color = color;
-        tmp.raycastTarget = false;
-        if (font != null) tmp.font = font;
-        return tmp;
-    }
+                        TextAlignmentOptions alignment, FontStyles style, Color color)
+        => PixelUIKit.CreateText(font, parent, objectName, text, size, alignment, style, color);
 
     private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, Color color,
-                              Color labelColor, float labelSize)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        go.GetComponent<RectTransform>().sizeDelta = size;
-        Image image = go.GetComponent<Image>();
-        image.color = color;
-        go.GetComponent<Button>().targetGraphic = image;
-
-        TMP_Text text = MakeText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center,
-                                 FontStyles.Bold, labelColor);
-        RectTransform tr = text.rectTransform;
-        tr.anchorMin = Vector2.zero;
-        tr.anchorMax = Vector2.one;
-        tr.offsetMin = tr.offsetMax = Vector2.zero;
-        return go.GetComponent<Button>();
-    }
+                      Color labelColor, float labelSize)
+        => PixelUIKit.CreateButton(font, parent, objectName, label, size, color, labelColor, labelSize);
 
     private void BuildAutomaticUI()
     {
@@ -765,18 +715,8 @@ public class PixelUI : MonoBehaviour
         int count = clicker.Tiers.Length;
 
         // Canvas
-        autoRoot = new GameObject("PixelUI Canvas");
-        Canvas canvas = autoRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = sortingOrder;
-
-        CanvasScaler scaler = autoRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
-
-        autoRoot.AddComponent<GraphicRaycaster>();
-        EnsureEventSystem();
+        autoRoot = PixelUIKit.CreateCanvas("PixelUI Canvas", sortingOrder, referenceResolution, true);
+        PixelUIKit.EnsureEventSystem();
 
         Vector2 anchor = new Vector2(
             corner == PanelCorner.TopRight || corner == PanelCorner.BottomRight ? 1f : 0f,
@@ -1120,15 +1060,7 @@ public class PixelUI : MonoBehaviour
     private void BuildGuide()
     {
         // Own canvas, sorted below the shop (150) so the shop panel covers the guide.
-        guideCanvasRoot = new GameObject("PixelUI Guide");
-        Canvas canvas = guideCanvasRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = guideSortingOrder;
-
-        CanvasScaler scaler = guideCanvasRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
+        guideCanvasRoot = PixelUIKit.CreateCanvas("PixelUI Guide", guideSortingOrder, referenceResolution, false);
 
         // Box behind the text; resized to fit the text in UpdateGuide.
         guideRoot = new GameObject("Tier Guide", typeof(RectTransform), typeof(Image));

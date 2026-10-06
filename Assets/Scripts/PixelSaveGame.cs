@@ -462,15 +462,7 @@ public class PixelSaveGame : MonoBehaviour
 
     private void BuildMessageUI()
     {
-        canvasRoot = new GameObject("PixelSaveGame Canvas");
-        Canvas canvas = canvasRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = sortingOrder;
-
-        CanvasScaler scaler = canvasRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
+        canvasRoot = PixelUIKit.CreateCanvas("PixelSaveGame Canvas", sortingOrder, referenceResolution, false);
 
         GameObject go = new GameObject("Message", typeof(RectTransform));
         go.transform.SetParent(canvasRoot.transform, false);

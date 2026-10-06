@@ -256,7 +256,7 @@ public class PixelPauseMenu : MonoBehaviour
         }
         if (stats == null) stats = gameObject.AddComponent<PixelStats>();
 
-        EnsureEventSystem();
+        PixelUIKit.EnsureEventSystem();
         BuildUI();
     }
 
@@ -421,65 +421,15 @@ public class PixelPauseMenu : MonoBehaviour
     // UI
     // ------------------------------------------------------------------
 
-    private static void EnsureEventSystem()
-    {
-#if UNITY_2023_1_OR_NEWER
-        if (FindFirstObjectByType<EventSystem>() != null) return;
-#else
-        if (FindObjectOfType<EventSystem>() != null) return;
-#endif
-        GameObject es = new GameObject("EventSystem", typeof(EventSystem));
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-        es.AddComponent<StandaloneInputModule>();
-#endif
-    }
-
     private TMP_Text MakeText(Transform parent, string objectName, string text, float size, FontStyles style)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = size;
-        tmp.fontStyle = style;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = textColor;
-        tmp.raycastTarget = false;
-        if (font != null) tmp.font = font;
-        return tmp;
-    }
+        => PixelUIKit.CreateText(font, parent, objectName, text, size, TextAlignmentOptions.Center, style, textColor);
 
     private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, Color color, float labelSize)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        go.GetComponent<RectTransform>().sizeDelta = size;
-        Image image = go.GetComponent<Image>();
-        image.color = color;
-        go.GetComponent<Button>().targetGraphic = image;
-
-        TMP_Text text = MakeText(go.transform, "Label", label, labelSize, FontStyles.Bold);
-        RectTransform tr = text.rectTransform;
-        tr.anchorMin = Vector2.zero;
-        tr.anchorMax = Vector2.one;
-        tr.offsetMin = tr.offsetMax = Vector2.zero;
-        return go.GetComponent<Button>();
-    }
+        => PixelUIKit.CreateButton(font, parent, objectName, label, size, color, textColor, labelSize);
 
     private void BuildUI()
     {
-        canvasRoot = new GameObject("PixelPauseMenu Canvas");
-        Canvas canvas = canvasRoot.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = sortingOrder;
-
-        CanvasScaler scaler = canvasRoot.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
-        scaler.matchWidthOrHeight = 0.5f;
-        canvasRoot.AddComponent<GraphicRaycaster>();
+        canvasRoot = PixelUIKit.CreateCanvas("PixelPauseMenu Canvas", sortingOrder, referenceResolution, true);
 
         // On-screen Pause button
         if (showPauseButton)
