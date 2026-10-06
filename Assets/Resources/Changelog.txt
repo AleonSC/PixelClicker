@@ -6,3 +6,5 @@
 [2026-10-06 15:37 UTC] Moved the combo meter to the bottom of the screen.
 [2026-10-06 15:37 UTC] Removed the on-screen Pause button (Escape still pauses and closes windows).
 [2026-10-06 15:37 UTC] Added a Crafting upgrade to the shop (Upgrades tab). It adds a Crafting button at the bottom-right: drag or click two items from your pixels and potions into the two boxes, see the recipe and cost, and craft the result into your consumables.
+[2026-10-06 15:44 UTC] Crafting: right-click an item in a crafting box to remove it (left-click no longer clears it).
+[2026-10-06 15:44 UTC] Crafting: a potion plus a pixel that can't be toggled (White, Gray, Black, Red, Green, Blue, Glass, Luminescent) now makes a combo potion that spawns both pixel types (costs the potion plus 100 of the pixel). Combo potions are craft-only (not in the shop), go into your inventory and are saved.

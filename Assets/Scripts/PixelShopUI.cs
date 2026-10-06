@@ -695,7 +695,8 @@ public partial class PixelShop
                 int owned = consumables.ItemOwned(p);
                 PackCost[] costs = consumables.ItemCosts(p);
 
-                bool listed = !potionsNeedUnlockedPixel || clicker.IsUnlocked(consumables.ItemRequiredType(p)) || owned > 0;
+                bool listed = !consumables.ItemCraftOnly(p) && // combo potions can only be crafted
+                              (!potionsNeedUnlockedPixel || clicker.IsUnlocked(consumables.ItemRequiredType(p)) || owned > 0);
                 bool visible = currentTab == ShopTab.Consumables && listed;
                 row.rect.gameObject.SetActive(visible);
                 if (!visible) continue;

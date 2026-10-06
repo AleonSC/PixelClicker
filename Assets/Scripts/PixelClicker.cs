@@ -153,6 +153,11 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Runtime: the player switched this pixel's spawning off (saved).")]
         public bool spawnDisabled;
 
+        /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor) that can have their spawning switched off.</summary>
+        public static bool IsSpecialType(PixelType t) =>
+            t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
+            t == PixelType.Ghost || t == PixelType.Meteor;
+
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
         {
@@ -160,8 +165,7 @@ public class PixelClicker : MonoBehaviour
             {
                 if (spawnSwitch == SpawnSwitch.Switchable) return true;
                 if (spawnSwitch == SpawnSwitch.AlwaysOn) return false;
-                return type == PixelType.Vacuum || type == PixelType.Obsidian || type == PixelType.Singularity ||
-                       type == PixelType.Ghost || type == PixelType.Meteor;
+                return IsSpecialType(type);
             }
         }
 
@@ -929,13 +933,44 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+    private int forcedTierIndex2 = -1;
+
+    /// <summary>
+    /// Like <see cref="SetForcedSpawnTier"/> but for two pixel types (a combo potion): each new pixel is one of the two,
+    /// 50/50. If only one of them is unlocked, only that one spawns.
+    /// </summary>
+    public void SetForcedSpawnTiers(PixelType a, PixelType b)
+    {
+        int ia = IndexOf(a), ib = IndexOf(b);
+        bool okA = ia >= 0 && tiers[ia].unlocked, okB = ib >= 0 && tiers[ib].unlocked;
+        if (!okA && !okB) return;
+
+        forcedTierIndex = okA ? ia : ib;
+        forcedTierIndex2 = okA && okB ? ib : -1;
+
+        if (randomizeSpawnTier && currentTierIndex != forcedTierIndex && currentTierIndex != forcedTierIndex2)
+        {
+            currentTierIndex = PickSpawnTier();
+            Materialize(GetClickTier());
+        }
+    }
+
     /// <summary>Back to the normal weighted random spawning.</summary>
-    public void ClearForcedSpawnTier() => forcedTierIndex = -1;
+    public void ClearForcedSpawnTier()
+    {
+        forcedTierIndex = -1;
+        forcedTierIndex2 = -1;
+    }
 
     /// <summary>Weighted random pick among unlocked tiers (or the forced tier while a potion is active).</summary>
     private int PickSpawnTier()
     {
-        if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked) return forcedTierIndex;
+        if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
+        {
+            if (IsValidTier(forcedTierIndex2) && tiers[forcedTierIndex2].unlocked && UnityEngine.Random.value < 0.5f)
+                return forcedTierIndex2;
+            return forcedTierIndex;
+        }
 
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)

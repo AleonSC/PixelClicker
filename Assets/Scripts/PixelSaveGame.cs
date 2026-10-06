@@ -49,6 +49,7 @@ public class PixelSaveGame : MonoBehaviour
     {
         public int type;
         public int owned;
+        public int second; // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
     }
 
     [Serializable]
@@ -307,6 +308,7 @@ public class PixelSaveGame : MonoBehaviour
                     {
                         type = (int)consumables.Get(i).type,
                         owned = consumables.Get(i).owned,
+                        second = consumables.Get(i).craftOnly ? (int)consumables.Get(i).secondType + 1 : 0,
                     };
             }
 
@@ -418,8 +420,10 @@ public class PixelSaveGame : MonoBehaviour
                 consumables.StopActive();
                 for (int i = 0; i < consumables.Count; i++)
                 {
+                    PixelConsumables.Potion potion = consumables.Get(i);
+                    int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
                     PotionSave saved = data.potions != null
-                        ? Array.Find(data.potions, p => p.type == (int)consumables.Get(i).type) : null;
+                        ? Array.Find(data.potions, p => p.type == (int)potion.type && p.second == second) : null;
                     consumables.Get(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
                 }
             }
