@@ -479,7 +479,7 @@ public class PixelLog : MonoBehaviour
         panelObject.GetComponent<Image>().color = panelColor;
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
-        panelRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * hud.WindowOffset);
+        panelRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * (hud.BandThickness + gapAboveButton)); // the log's own gap beyond the bar
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,

@@ -80,7 +80,10 @@ public class PixelHud : MonoBehaviour
     /// How far from the screen edge a window opening from a docked button should start: below the button's band,
     /// plus the gap.
     /// </summary>
-    public float WindowOffset => (barsEnabled ? barHeight : buttonSize.y + 2f * sideMargin * 0.5f) + windowGap;
+    public float WindowOffset => BandThickness + windowGap;
+
+    /// <summary>Thickness of the band along the screen edge that the docked buttons occupy (the bar, or the button plus margin).</summary>
+    public float BandThickness => barsEnabled ? barHeight : buttonSize.y + sideMargin;
 
     private GameObject canvasRoot;
 
