@@ -1001,6 +1001,33 @@ public partial class PixelShop : MonoBehaviour
         if (m != null && !m.UserDisabled) m.Activate();
     }
 
+    /// <summary>
+    /// Dev tools: skips the pre-shop part of the game. Unlocks the Gray and Black pixels, and buys the RGB pack and the
+    /// Auto Clicker for free (no costs, requirements ignored).
+    /// </summary>
+    public void DevSkipIntro()
+    {
+        foreach (PixelClicker.PixelType type in new[] { PixelClicker.PixelType.White, PixelClicker.PixelType.Gray, PixelClicker.PixelType.Black })
+        {
+            int index = clicker.IndexOf(type);
+            if (index >= 0) clicker.UnlockTier(index); // no-op if already unlocked
+        }
+
+        for (int i = 0; i < packs.Length; i++)
+        {
+            ShopPack pack = packs[i];
+            if (pack.purchased || IsLeveled(pack)) continue;
+
+            bool givesRed = pack.rewardTiers != null && System.Array.Exists(pack.rewardTiers, t => t.type == PixelClicker.PixelType.Red);
+            if (!givesRed && !pack.unlocksAutoClicker) continue;
+
+            pack.purchased = true;
+            ApplyPackEffects(pack);
+            onPackPurchased?.Invoke(i);
+        }
+        RefreshRows();
+    }
+
     /// <summary>Dev tools: unlocks every pack for free (leveled packs go to their top level). Ignores requirements and costs.</summary>
     public void DevUnlockAll()
     {

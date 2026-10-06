@@ -18,3 +18,4 @@
 [2026-10-06 20:05 UTC] Sorter: after confirming the pipe's direction you now click inside a cone to bend the pipe, and three buttons on the ring set how hard pixels are spat out.
 [2026-10-06 20:08 UTC] Made the sorter's pipe about a third of its previous size (shorter and thinner); the bend cone keeps its size.
 [2026-10-06 20:14 UTC] Old pixels now bounce off the edges of the camera's view instead of leaving it (no walls: the screen edges are enforced in code; settings on the new Pixel View Bounds component).
+[2026-10-06 22:14 UTC] Dev Tools: added a Skip intro button that unlocks the Gray and Black pixels and gives the RGB pack and Auto Clicker for free.

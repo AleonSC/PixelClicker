@@ -61,6 +61,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the minigame spawn button.")]
     [SerializeField] private string spawnText = "Spawn";
 
+    [Tooltip("Label of the skip-intro button.")]
+    [SerializeField] private string skipIntroText = "Skip intro (Gray, Black, RGB, Auto Clicker)";
+
     [Tooltip("Label of the unlock-everything button.")]
     [SerializeField] private string unlockAllText = "Unlock all shop items";
 
@@ -223,6 +226,11 @@ public class PixelDevTools : MonoBehaviour
         if (game != null) game.SpawnNow();
     }
 
+    private void SkipIntro()
+    {
+        if (shop != null) shop.DevSkipIntro();
+    }
+
     private void UnlockAll()
     {
         if (shop != null) shop.DevUnlockAll();
@@ -330,6 +338,13 @@ public class PixelDevTools : MonoBehaviour
                                                buttonColor, textColor, fontSize);
         Place(spawn.GetComponent<RectTransform>(), 40f + mgW + 10f, y, spawnW);
         spawn.onClick.AddListener(SpawnSelected);
+        y += rowHeight + 24f;
+
+        // Row: skip intro
+        Button skip = PixelUIKit.CreateButton(font, box.transform, "Skip Intro Button", skipIntroText,
+                                              new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
+        skip.onClick.AddListener(SkipIntro);
         y += rowHeight + 24f;
 
         // Row: unlock all
