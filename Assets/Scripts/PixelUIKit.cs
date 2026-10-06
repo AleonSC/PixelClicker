@@ -81,4 +81,122 @@ public static class PixelUIKit
         rt.anchorMax = Vector2.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
     }
+
+    /// <summary>A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>.</summary>
+    public static TMP_Dropdown CreateDropdown(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
+                                              Color boxColor, Color listColor, Color textColor, float fontSize)
+    {
+        GameObject root = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(TMP_Dropdown));
+        root.transform.SetParent(parent, false);
+        root.GetComponent<RectTransform>().sizeDelta = size;
+        Image rootImage = root.GetComponent<Image>();
+        rootImage.color = boxColor;
+
+        TMP_Text label = CreateText(font, root.transform, "Label", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+        RectTransform lr = label.rectTransform;
+        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+        lr.offsetMin = new Vector2(14f, 2f); lr.offsetMax = new Vector2(-size.y, -2f);
+
+        TMP_Text arrow = CreateText(font, root.transform, "Arrow", "v", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        RectTransform ar = arrow.rectTransform;
+        ar.anchorMin = new Vector2(1f, 0f); ar.anchorMax = Vector2.one;
+        ar.pivot = new Vector2(1f, 0.5f);
+        ar.sizeDelta = new Vector2(size.y, 0f); ar.anchoredPosition = Vector2.zero;
+
+        // Template (the popup list), hidden until opened.
+        GameObject template = new GameObject("Template", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+        template.transform.SetParent(root.transform, false);
+        template.GetComponent<Image>().color = listColor;
+        RectTransform tr = template.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0f, 0f); tr.anchorMax = new Vector2(1f, 0f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.anchoredPosition = Vector2.zero;
+        tr.sizeDelta = new Vector2(0f, size.y * 6f);
+
+        GameObject viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+        viewport.transform.SetParent(template.transform, false);
+        Stretch(viewport.GetComponent<RectTransform>());
+
+        GameObject content = new GameObject("Content", typeof(RectTransform));
+        content.transform.SetParent(viewport.transform, false);
+        RectTransform cr = content.GetComponent<RectTransform>();
+        cr.anchorMin = new Vector2(0f, 1f); cr.anchorMax = Vector2.one;
+        cr.pivot = new Vector2(0.5f, 1f);
+        cr.sizeDelta = new Vector2(0f, size.y);
+
+        GameObject item = new GameObject("Item", typeof(RectTransform), typeof(Toggle));
+        item.transform.SetParent(content.transform, false);
+        RectTransform ir = item.GetComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0f, 0.5f); ir.anchorMax = new Vector2(1f, 0.5f);
+        ir.sizeDelta = new Vector2(0f, size.y);
+
+        GameObject itemBg = new GameObject("Item Background", typeof(RectTransform), typeof(Image));
+        itemBg.transform.SetParent(item.transform, false);
+        Stretch(itemBg.GetComponent<RectTransform>());
+        Image itemBgImage = itemBg.GetComponent<Image>();
+        itemBgImage.color = new Color(listColor.r + 0.08f, listColor.g + 0.08f, listColor.b + 0.08f, 1f);
+
+        GameObject check = new GameObject("Item Checkmark", typeof(RectTransform), typeof(Image));
+        check.transform.SetParent(item.transform, false);
+        Image checkImage = check.GetComponent<Image>();
+        checkImage.color = new Color(1f, 1f, 1f, 0.18f);
+        Stretch(check.GetComponent<RectTransform>());
+
+        TMP_Text itemLabel = CreateText(font, item.transform, "Item Label", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+        RectTransform ilr = itemLabel.rectTransform;
+        ilr.anchorMin = Vector2.zero; ilr.anchorMax = Vector2.one;
+        ilr.offsetMin = new Vector2(14f, 2f); ilr.offsetMax = new Vector2(-8f, -2f);
+
+        Toggle toggle = item.GetComponent<Toggle>();
+        toggle.targetGraphic = itemBgImage;
+        toggle.graphic = checkImage;
+        toggle.isOn = false;
+
+        ScrollRect scroll = template.GetComponent<ScrollRect>();
+        scroll.content = cr;
+        scroll.viewport = viewport.GetComponent<RectTransform>();
+        scroll.horizontal = false;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 30f;
+
+        TMP_Dropdown dropdown = root.GetComponent<TMP_Dropdown>();
+        dropdown.targetGraphic = rootImage;
+        dropdown.template = tr;
+        dropdown.captionText = label;
+        dropdown.itemText = itemLabel;
+        template.SetActive(false);
+        return dropdown;
+    }
+
+    /// <summary>A TMP input field built in code. Content type is free text; set it afterwards if needed.</summary>
+    public static TMP_InputField CreateInputField(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
+                                                  Color boxColor, Color textColor, float fontSize, string placeholder)
+    {
+        GameObject root = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+        root.transform.SetParent(parent, false);
+        root.GetComponent<RectTransform>().sizeDelta = size;
+        Image image = root.GetComponent<Image>();
+        image.color = boxColor;
+
+        GameObject area = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
+        area.transform.SetParent(root.transform, false);
+        RectTransform areaRect = area.GetComponent<RectTransform>();
+        Stretch(areaRect);
+        areaRect.offsetMin = new Vector2(12f, 4f);
+        areaRect.offsetMax = new Vector2(-12f, -4f);
+
+        TMP_Text hint = CreateText(font, area.transform, "Placeholder", placeholder, fontSize, TextAlignmentOptions.MidlineLeft,
+                                   FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.45f));
+        Stretch(hint.rectTransform);
+        TMP_Text text = CreateText(font, area.transform, "Text", "", fontSize, TextAlignmentOptions.MidlineLeft,
+                                   FontStyles.Normal, textColor);
+        Stretch(text.rectTransform);
+
+        TMP_InputField input = root.GetComponent<TMP_InputField>();
+        input.targetGraphic = image;
+        input.textViewport = areaRect;
+        input.textComponent = text;
+        input.placeholder = hint;
+        return input;
+    }
 }

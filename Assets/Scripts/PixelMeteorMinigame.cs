@@ -152,6 +152,7 @@ public class PixelMeteorMinigame : PixelMinigame
     private bool thresholdAnnounced;
     private AudioSource audioSource;
 
+    public override string DisplayName => "Meteor Strike";
     public override string Id => "meteor";
     public override bool Running => running;
 
@@ -204,7 +205,7 @@ public class PixelMeteorMinigame : PixelMinigame
 
     /// <summary>Sends a meteor right now (right-click the component &gt; Send Meteor Now).</summary>
     [ContextMenu("Send Meteor Now")]
-    public void SendNow()
+    public override void SpawnNow()
     {
         if (Application.isPlaying && !meteorActive) StartCoroutine(MeteorRoutine());
     }

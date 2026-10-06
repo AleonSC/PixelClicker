@@ -169,6 +169,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     private Material outerMaterial, innerMaterial;
     private bool thresholdAnnounced;
 
+    public override string DisplayName => "Black Hole";
     public override string Id => "blackhole";
 
     public override bool Running => running;
@@ -238,7 +239,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     /// <summary>Opens a black hole right now (right-click the component &gt; Open Black Hole Now).</summary>
     [ContextMenu("Open Black Hole Now")]
-    public void OpenNow()
+    public override void SpawnNow()
     {
         if (Application.isPlaying && !holeActive) StartCoroutine(HoleRoutine());
     }

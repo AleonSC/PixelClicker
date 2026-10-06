@@ -278,7 +278,11 @@ public class PixelPauseMenu : MonoBehaviour
     {
         if (EscapePressed())
         {
-            if (IsPaused)
+            if (IsPaused && PixelDevTools.ClosePanel())
+            {
+                // The dev tools panel (opened from this menu) took the key press.
+            }
+            else if (IsPaused)
             {
                 // Inside Stats / Settings, Escape steps back; from the main view it resumes.
                 if (mainPanel != null && !mainPanel.activeSelf) ShowView(mainPanel);
@@ -466,6 +470,7 @@ public class PixelPauseMenu : MonoBehaviour
             AddButtonPair(panel.transform, statsText, () => ShowView(statsPanel), settingsText, () => ShowView(settingsPanel), ref y);
         else if (showStats) AddMenuButton(panel.transform, statsText, menuButtonColor, ref y, () => ShowView(statsPanel));
         else if (showSettings) AddMenuButton(panel.transform, settingsText, menuButtonColor, ref y, () => ShowView(settingsPanel));
+        if (PixelDevTools.Available) AddMenuButton(panel.transform, PixelDevTools.ButtonText, menuButtonColor, ref y, PixelDevTools.OpenPanel);
         if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, Restart);
         if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
 

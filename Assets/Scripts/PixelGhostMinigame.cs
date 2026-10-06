@@ -172,6 +172,7 @@ public class PixelGhostMinigame : PixelMinigame
     private Material ghostMaterial;
     private AudioSource audioSource;
 
+    public override string DisplayName => "Ghost Hunt";
     public override string Id => "ghost";
 
     public override bool Running => running;
@@ -241,7 +242,7 @@ public class PixelGhostMinigame : PixelMinigame
 
     /// <summary>Makes a ghost appear right now (handy for testing: right-click the component &gt; Spawn Ghost Now).</summary>
     [ContextMenu("Spawn Ghost Now")]
-    public void SpawnNow()
+    public override void SpawnNow()
     {
         if (Application.isPlaying && !ghostActive) StartCoroutine(GhostRoutine());
     }

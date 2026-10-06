@@ -39,6 +39,12 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Is the minigame running?</summary>
     public abstract bool Running { get; }
 
+    /// <summary>Name shown in menus (e.g. the dev tools). Defaults to the id.</summary>
+    public virtual string DisplayName => Id;
+
+    /// <summary>Triggers one round of the minigame right now (dev tools / testing). Default: nothing.</summary>
+    public virtual void SpawnNow() { }
+
     /// <summary>Starts the minigame (a shop purchase). Safe to call more than once.</summary>
     public abstract void Activate();
 

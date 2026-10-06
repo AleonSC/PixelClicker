@@ -850,6 +850,29 @@ public partial class PixelShop : MonoBehaviour
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Activate(); // no-op if already running
     }
 
+    /// <summary>Dev tools: unlocks every pack for free (leveled packs go to their top level). Ignores requirements and costs.</summary>
+    public void DevUnlockAll()
+    {
+        for (int i = 0; i < packs.Length; i++)
+        {
+            ShopPack pack = packs[i];
+            if (IsLeveled(pack))
+            {
+                if (pack.level >= pack.levels.Length) continue;
+                pack.level = pack.levels.Length;
+                ApplyUpgrade(pack);
+            }
+            else
+            {
+                if (pack.purchased) continue;
+                pack.purchased = true;
+                ApplyPackEffects(pack);
+            }
+            onPackPurchased?.Invoke(i);
+        }
+        RefreshRows();
+    }
+
     /// <summary>Buys a pack: spends all costs, unlocks the reward tiers. Returns false if not possible.</summary>
     public bool TryBuy(int packIndex)
     {

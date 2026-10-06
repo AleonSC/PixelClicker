@@ -1145,6 +1145,14 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+    /// <summary>Removes every old pixel lying around (no payout). Used by the dev tools.</summary>
+    public void ClearOldPixels()
+    {
+        for (int i = 0; i < oldPixels.Count; i++)
+            if (oldPixels[i] != null) Destroy(oldPixels[i].gameObject);
+        oldPixels.Clear();
+    }
+
     /// <summary>The old pixels currently lying around (read-only). Used by the vacuum device.</summary>
     public System.Collections.Generic.IReadOnlyList<Rigidbody> OldPixels => oldPixels;
 

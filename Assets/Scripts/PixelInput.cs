@@ -20,6 +20,16 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True on the frame the Q key went down.</summary>
+    public static bool QPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Keyboard.current != null && Keyboard.current.qKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.Q);
+#endif
+    }
+
     /// <summary>True on the frame the left button went down.</summary>
     public static bool LeftPressed()
     {
