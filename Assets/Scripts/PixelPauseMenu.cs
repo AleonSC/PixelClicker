@@ -150,6 +150,27 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the tick box that keeps the game running while you are alt-tabbed.")]
     [SerializeField] private string runInBackgroundLabel = "Run when alt-tabbed";
 
+    [Tooltip("Label of the master volume slider.")]
+    [SerializeField] private string masterVolumeLabel = "Master volume";
+
+    [Tooltip("Label of the effects volume slider.")]
+    [SerializeField] private string effectsVolumeLabel = "Effects volume";
+
+    [Tooltip("Label of the music volume slider.")]
+    [SerializeField] private string musicVolumeLabel = "Music volume";
+
+    [Tooltip("Label of the mute tick box.")]
+    [SerializeField] private string muteLabel = "Mute all sound";
+
+    [Tooltip("Colour of the volume slider track.")]
+    [SerializeField] private Color sliderTrackColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+
+    [Tooltip("Colour of the filled part of a volume slider.")]
+    [SerializeField] private Color sliderFillColor = new Color(0.35f, 0.55f, 0.95f, 1f);
+
+    [Tooltip("Colour of a volume slider's handle.")]
+    [SerializeField] private Color sliderHandleColor = Color.white;
+
     [Tooltip("Label of the total clicks stat.")]
     [SerializeField] private string totalClicksLabel = "Total clicks";
 
@@ -316,6 +337,8 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject canvasRoot;
     private GameObject menuRoot;
     private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel, restartPanel;
+    private Slider masterSlider, effectsSlider, musicSlider;
+    private Toggle muteToggle;
     private PixelHoldButton restartHold;
     private ScrollRect changelogScroll;
     private GameObject changelogBar;
@@ -353,6 +376,7 @@ public class PixelPauseMenu : MonoBehaviour
             stats = PixelFind.First<PixelStats>();
         }
         if (stats == null) stats = gameObject.AddComponent<PixelStats>();
+        if (PixelFind.First<PixelAudio>() == null) gameObject.AddComponent<PixelAudio>(); // the sound system (and its volume settings)
 
         PixelUIKit.EnsureEventSystem();
         BuildUI();
@@ -379,6 +403,14 @@ public class PixelPauseMenu : MonoBehaviour
             bool has = PixelFind.First<PixelStats>() != null;
             if (has) return;
             UnityEditor.Undo.AddComponent<PixelStats>(gameObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+        };
+
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+            if (PixelFind.First<PixelAudio>() != null) return;
+            UnityEditor.Undo.AddComponent<PixelAudio>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);
         };
     }
@@ -619,6 +651,13 @@ public class PixelPauseMenu : MonoBehaviour
             backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
             pauseStopsToggle.SetIsOnWithoutNotify(pauseStopsGame);
         }
+        if (view == settingsPanel && PixelAudio.Instance != null && masterSlider != null)
+        {
+            masterSlider.SetValueWithoutNotify(PixelAudio.Instance.MasterVolume);
+            effectsSlider.SetValueWithoutNotify(PixelAudio.Instance.EffectsVolume);
+            musicSlider.SetValueWithoutNotify(PixelAudio.Instance.MusicVolume);
+            muteToggle.SetIsOnWithoutNotify(PixelAudio.Instance.Muted);
+        }
     }
 
     /// <summary>A centred panel with a title; rows are added below it, then a Back button.</summary>
@@ -729,6 +768,23 @@ public class PixelPauseMenu : MonoBehaviour
 
         y += rowHeight + 6f;
         return toggle;
+    }
+
+    /// <summary>A label with a 0..1 slider on its right.</summary>
+    private Slider AddSliderRow(Transform parent, string label, float value, UnityEngine.Events.UnityAction<float> onChanged, ref float y)
+    {
+        AddRowLabel(parent, label, y, out RectTransform row);
+
+        Slider slider = PixelUIKit.CreateSlider(row, "Slider", sliderTrackColor, sliderFillColor, sliderHandleColor);
+        RectTransform sr = slider.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0.62f, 0f);
+        sr.anchorMax = Vector2.one;
+        sr.offsetMin = sr.offsetMax = Vector2.zero;
+        slider.SetValueWithoutNotify(value);
+        slider.onValueChanged.AddListener(onChanged);
+
+        y += rowHeight + 6f;
+        return slider;
     }
 
     private void BuildStatsPanel()
@@ -937,6 +993,16 @@ public class PixelPauseMenu : MonoBehaviour
             PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
             ApplyFreeze(); // takes effect right away, even though the menu is open
         }, ref y);
+
+        // Sound: three volume sliders and a mute box (the sound system is added by Start, which runs first).
+        PixelAudio audio = PixelFind.First<PixelAudio>();
+        if (audio != null)
+        {
+            masterSlider = AddSliderRow(settingsPanel.transform, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
+            effectsSlider = AddSliderRow(settingsPanel.transform, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
+            musicSlider = AddSliderRow(settingsPanel.transform, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
+            muteToggle = AddToggleRow(settingsPanel.transform, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
+        }
         FinishSectionPanel(settingsPanel, y);
     }
 

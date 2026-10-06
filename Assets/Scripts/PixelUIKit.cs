@@ -67,6 +67,7 @@ public static class PixelUIKit
         Image image = go.GetComponent<Image>();
         image.color = color;
         go.GetComponent<Button>().targetGraphic = image;
+        go.GetComponent<Button>().onClick.AddListener(() => PixelAudio.Play("ui_click"));
 
         TMP_Text text = CreateText(font, go.transform, "Label", label, labelSize, TextAlignmentOptions.Center,
                                    FontStyles.Bold, labelColor);
@@ -263,5 +264,63 @@ public static class PixelUIKit
         bool scrolls = contentHeight > viewHeight + 0.5f;
         if (barObject.activeSelf != scrolls) barObject.SetActive(scrolls);
         if (!scrolls) scroll.content.anchoredPosition = Vector2.zero;
+    }
+
+    /// <summary>A horizontal 0..1 slider built in code (track, fill and a draggable handle).</summary>
+    public static Slider CreateSlider(Transform parent, string objectName, Color trackColor, Color fillColor, Color handleColor)
+    {
+        GameObject root = new GameObject(objectName, typeof(RectTransform), typeof(Slider));
+        root.transform.SetParent(parent, false);
+
+        GameObject bg = new GameObject("Background", typeof(RectTransform), typeof(Image));
+        bg.transform.SetParent(root.transform, false);
+        bg.GetComponent<Image>().color = trackColor;
+        RectTransform bgr = bg.GetComponent<RectTransform>();
+        bgr.anchorMin = new Vector2(0f, 0.35f);
+        bgr.anchorMax = new Vector2(1f, 0.65f);
+        bgr.offsetMin = bgr.offsetMax = Vector2.zero;
+
+        GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+        fillArea.transform.SetParent(root.transform, false);
+        RectTransform far = fillArea.GetComponent<RectTransform>();
+        far.anchorMin = new Vector2(0f, 0.35f);
+        far.anchorMax = new Vector2(1f, 0.65f);
+        far.offsetMin = new Vector2(8f, 0f);
+        far.offsetMax = new Vector2(-8f, 0f);
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fill.transform.SetParent(fillArea.transform, false);
+        fill.GetComponent<Image>().color = fillColor;
+        RectTransform fr = fill.GetComponent<RectTransform>();
+        fr.anchorMin = Vector2.zero;
+        fr.anchorMax = new Vector2(0f, 1f);
+        fr.sizeDelta = new Vector2(8f, 0f);
+
+        GameObject slideArea = new GameObject("Handle Slide Area", typeof(RectTransform));
+        slideArea.transform.SetParent(root.transform, false);
+        RectTransform sar = slideArea.GetComponent<RectTransform>();
+        sar.anchorMin = Vector2.zero;
+        sar.anchorMax = Vector2.one;
+        sar.offsetMin = new Vector2(10f, 0f);
+        sar.offsetMax = new Vector2(-10f, 0f);
+
+        GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handle.transform.SetParent(slideArea.transform, false);
+        Image hi = handle.GetComponent<Image>();
+        hi.color = handleColor;
+        RectTransform hr = handle.GetComponent<RectTransform>();
+        hr.anchorMin = Vector2.zero;
+        hr.anchorMax = new Vector2(0f, 1f);
+        hr.sizeDelta = new Vector2(22f, 0f);
+
+        Slider slider = root.GetComponent<Slider>();
+        slider.fillRect = fr;
+        slider.handleRect = hr;
+        slider.targetGraphic = hi;
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.wholeNumbers = false;
+        return slider;
     }
 }

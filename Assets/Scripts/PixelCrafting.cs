@@ -280,6 +280,9 @@ public class PixelCrafting : MonoBehaviour
         public bool built;
     }
 
+    /// <summary>Raised after something was crafted (used by the sound system).</summary>
+    public static event Action Crafted;
+
     private GameObject canvasRoot;
     private GameObject buttonObject;
     private GameObject windowObject;
@@ -984,6 +987,7 @@ public class PixelCrafting : MonoBehaviour
 
         statusLabel.text = string.Format(craftedFormat, consumables.ItemName(result), r.resultAmount);
         statusTimer = 2.5f;
+        Crafted?.Invoke();
         PlaySound();
         Refresh();
     }
