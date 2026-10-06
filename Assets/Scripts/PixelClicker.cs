@@ -514,6 +514,9 @@ public class PixelClicker : MonoBehaviour
     public Camera TargetCamera => targetCamera;
     public double ClickMultiplier { get => clickMultiplier; set => clickMultiplier = value; }
 
+    /// <summary>Extra multiplier on YOUR clicks (not the auto clicker's). Set every frame by the combo meter.</summary>
+    public double ManualClickBonus { get; set; } = 1d;
+
     /// <summary>True if every new pixel is a random unlocked tier (the normal mode).</summary>
     public bool RandomizesSpawnTier => randomizeSpawnTier;
 
@@ -680,7 +683,7 @@ public class PixelClicker : MonoBehaviour
         }
         hitsOnCurrentPixel = 0;
 
-        double amount = tier.amountPerClick * clickMultiplier;
+        double amount = tier.amountPerClick * clickMultiplier * (automatic ? 1d : ManualClickBonus);
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 

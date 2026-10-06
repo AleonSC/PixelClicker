@@ -740,7 +740,9 @@ public partial class PixelShop
         if (IsLeveled(pack))
         {
             float current = 0f;
-            if (autoClicker != null)
+            if (pack.upgradeEffect == UpgradeEffect.ComboMeter)
+                current = pack.level > 0 ? pack.levels[pack.level - 1].value : 1f;
+            else if (autoClicker != null)
                 current = pack.upgradeEffect == UpgradeEffect.AutoClickerClicks ? autoClicker.ClicksPerTick : autoClicker.Interval;
 
             float next = pack.level < pack.levels.Length ? pack.levels[Mathf.Max(0, pack.level)].value : current;

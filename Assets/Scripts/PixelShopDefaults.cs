@@ -338,6 +338,26 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Combo Meter upgrade: quick clicks build a multiplier; each level raises its maximum.</summary>
+    private static ShopPack CreateComboPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Combo Meter",
+            tab = ShopTab.Upgrades,
+            description = "Click fast to build a combo that boosts your clicks. Max multiplier: x{current}  →  x{next}",
+            upgradeEffect = UpgradeEffect.ComboMeter,
+            levels = new[]
+            {
+                new PackLevel { value = 1.5f, costs = AllSix(100) },
+                new PackLevel { value = 2f,   costs = AllSix(300) },
+                new PackLevel { value = 3f,   costs = AllSix(900) },
+                new PackLevel { value = 4f,   costs = AllSix(2700) },
+                new PackLevel { value = 5f,   costs = AllSix(8100) },
+            }
+        };
+    }
+
     /// <summary>Default "extra clicks" upgrade: 4 levels, +1 click per tick each.</summary>
     private static ShopPack CreateClicksUpgradePack(int requiresAutoClickerIndex)
     {
@@ -430,6 +450,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Obsidian), create = CreateMeteorStrikePack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Meteor),
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
+        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
+                          requires = null, create = i => CreateComboPack() },
     };
 
 #if UNITY_EDITOR

@@ -47,6 +47,8 @@ public partial class PixelShop : MonoBehaviour
         AutoClickerInterval = 1,
         /// <summary>Each level sets the auto clicker's clicks per tick to the level's Value.</summary>
         AutoClickerClicks = 2,
+        /// <summary>Level 1 switches the combo meter on; each level sets its maximum multiplier to the level's Value.</summary>
+        ComboMeter = 3,
     }
 
     /// <summary>The shop tabs. 'Automatic' picks Pixels or Upgrades from what the pack does.</summary>
@@ -172,6 +174,9 @@ public partial class PixelShop : MonoBehaviour
     [Header("References")]
     [Tooltip("The PixelClicker to use. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
+
+    [Tooltip("The combo meter the Combo Meter upgrade controls. Found (or added) automatically if left empty.")]
+    [SerializeField] private PixelCombo combo;
 
     [Tooltip("The auto clicker switched on by the Auto Clicker pack. Taken from this GameObject (or found in the scene) if empty. Edit its interval on that component.")]
     [SerializeField] private PixelAutoClicker autoClicker;
@@ -495,6 +500,9 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelMeteorMinigame>();
         EnsureMinigame<PixelBlackholeMinigame>();
 
+        if (combo == null) combo = PixelFind.First<PixelCombo>();
+        if (combo == null) combo = gameObject.AddComponent<PixelCombo>();
+
         if (consumables == null) consumables = GetComponent<PixelConsumables>();
         if (consumables == null)
         {
@@ -611,6 +619,7 @@ public partial class PixelShop : MonoBehaviour
 
             // Make sure the helper components exist in the scene, so their settings are editable in the Inspector.
             EditorEnsureComponent<PixelConsumables>();
+            EditorEnsureComponent<PixelCombo>();
             EditorEnsureComponent<PixelGhostMinigame>();
             EditorEnsureComponent<PixelMeteorMinigame>();
             EditorEnsureComponent<PixelBlackholeMinigame>();
@@ -713,6 +722,7 @@ public partial class PixelShop : MonoBehaviour
         pack.purchased = purchased;
         pack.level = IsLeveled(pack) ? Mathf.Clamp(level, 0, pack.levels.Length) : 0;
         pack.appliedLevel = pack.level;
+        if (pack.upgradeEffect == UpgradeEffect.ComboMeter) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
 
         if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
@@ -837,6 +847,12 @@ public partial class PixelShop : MonoBehaviour
     {
         pack.level = Mathf.Clamp(pack.level, 0, pack.levels.Length);
         pack.appliedLevel = pack.level;
+
+        if (pack.upgradeEffect == UpgradeEffect.ComboMeter)
+        {
+            if (combo != null) combo.SetUpgrade(pack.level > 0, pack.level > 0 ? pack.levels[pack.level - 1].value : 0f);
+            return;
+        }
         if (pack.level <= 0 || autoClicker == null) return;
 
         float value = pack.levels[pack.level - 1].value;

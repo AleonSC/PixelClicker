@@ -47,7 +47,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private bool showPauseButton = true;
 
     [Tooltip("Where the Pause button sits.")]
-    [SerializeField] private ButtonAnchor buttonAnchor = ButtonAnchor.BottomCenter;
+    [SerializeField] private ButtonAnchor pauseButtonAnchor = ButtonAnchor.BottomRight;
 
     [Tooltip("Distance of the button from the screen edge (canvas units).")]
     [SerializeField] private Vector2 buttonMargin = new Vector2(30f, 30f);
@@ -420,10 +420,10 @@ public class PixelPauseMenu : MonoBehaviour
         {
             Button pause = MakeButton(canvasRoot.transform, "Pause Button", pauseButtonText, buttonSize,
                                       pauseButtonColor, buttonFontSize);
-            float ax = buttonAnchor == ButtonAnchor.TopLeft || buttonAnchor == ButtonAnchor.BottomLeft ? 0f
-                     : buttonAnchor == ButtonAnchor.TopRight || buttonAnchor == ButtonAnchor.BottomRight ? 1f : 0.5f;
-            float ay = buttonAnchor == ButtonAnchor.TopLeft || buttonAnchor == ButtonAnchor.TopCenter
-                    || buttonAnchor == ButtonAnchor.TopRight ? 1f : 0f;
+            float ax = pauseButtonAnchor == ButtonAnchor.TopLeft || pauseButtonAnchor == ButtonAnchor.BottomLeft ? 0f
+                     : pauseButtonAnchor == ButtonAnchor.TopRight || pauseButtonAnchor == ButtonAnchor.BottomRight ? 1f : 0.5f;
+            float ay = pauseButtonAnchor == ButtonAnchor.TopLeft || pauseButtonAnchor == ButtonAnchor.TopCenter
+                    || pauseButtonAnchor == ButtonAnchor.TopRight ? 1f : 0f;
             RectTransform pr = pause.GetComponent<RectTransform>();
             pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(ax, ay);
             pr.anchoredPosition = new Vector2(ax < 0.25f ? buttonMargin.x : ax > 0.75f ? -buttonMargin.x : 0f,
