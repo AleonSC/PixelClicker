@@ -457,8 +457,8 @@ public class PixelUI : MonoBehaviour
                 enabled = false;
                 return;
             }
+            autoMode = true; // before building: the list and its offsets depend on it
             BuildAutomaticUI();
-            autoMode = true;
         }
 
         BuildPopupCanvas();
@@ -864,6 +864,10 @@ public class PixelUI : MonoBehaviour
         {
             float boxHeight = Mathf.Min(ContentTop + y + panelPadding, maxPanelHeight);
             boxRect.sizeDelta = new Vector2(panelWidth, boxHeight);
+
+            // Keep the list just below the tabs (the header height can change after the box is built).
+            listViewport.offsetMin = new Vector2(0f, panelPadding);
+            listViewport.offsetMax = new Vector2(0f, -ContentTop);
 
             // The list scrolls when it is taller than the room the box has for it.
             float viewHeight = boxHeight - ContentTop - panelPadding;
