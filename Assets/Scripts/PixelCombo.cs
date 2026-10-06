@@ -211,7 +211,7 @@ public class PixelCombo : MonoBehaviour
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0f);
         br.sizeDelta = meterSize;
-        br.anchoredPosition = new Vector2(horizontalOffset, meterBottomMargin);
+        br.anchoredPosition = new Vector2(horizontalOffset, meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)); // above the bottom bar
 
         float barHeight = Mathf.Max(8f, meterSize.y * 0.18f);
 

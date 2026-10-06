@@ -752,6 +752,8 @@ public class PixelUI : MonoBehaviour
         RectTransform br = button.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = anchor;
         br.anchoredPosition = new Vector2(sx * margin.x, sy * margin.y);
+        PixelHud hud = PixelHud.Ensure(gameObject);
+        hud.Dock(br, anchor, () => boxObject != null && boxObject.activeSelf); // standard size, slides out near the mouse
         button.onClick.AddListener(() =>
         {
             boxObject.SetActive(!boxObject.activeSelf);
@@ -768,7 +770,7 @@ public class PixelUI : MonoBehaviour
         boxRect = boxObject.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = anchor;
         boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + LinePitch * count);
-        boxRect.anchoredPosition = new Vector2(sx * margin.x, sy * (margin.y + buttonSize.y + gapBelowButton));
+        boxRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * hud.WindowOffset);
 
         // Title (optional)
         if (showTitle)
@@ -1170,7 +1172,7 @@ public class PixelUI : MonoBehaviour
 
         RectTransform rr = guideRoot.GetComponent<RectTransform>();
         rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 1f);
-        rr.anchoredPosition = new Vector2(0f, -guideTopMargin);
+        rr.anchoredPosition = new Vector2(0f, -(guideTopMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)));
 
         guideLabel = MakeText(guideRoot.transform, "Text", "", guideFontSize,
                               TextAlignmentOptions.Center, FontStyles.Bold, guideColor);
@@ -1280,7 +1282,7 @@ public class PixelUI : MonoBehaviour
         RectTransform rt = hudLabel.rectTransform;
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
         rt.sizeDelta = new Vector2(900f, activeHudFontSize * 1.4f);
-        rt.anchoredPosition = new Vector2(0f, -activeHudTopMargin);
+        rt.anchoredPosition = new Vector2(0f, -(activeHudTopMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)));
         hudLabel.gameObject.SetActive(false);
     }
 

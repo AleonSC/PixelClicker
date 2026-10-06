@@ -465,6 +465,8 @@ public class PixelLog : MonoBehaviour
         RectTransform br = button.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = anchor;
         br.anchoredPosition = new Vector2(sx * buttonMargin.x, sy * buttonMargin.y);
+        PixelHud hud = PixelHud.Ensure(gameObject);
+        hud.Dock(br, anchor, () => panelObject != null && panelObject.activeSelf);
         button.onClick.AddListener(() =>
         {
             panelObject.SetActive(!panelObject.activeSelf);
@@ -477,8 +479,7 @@ public class PixelLog : MonoBehaviour
         panelObject.GetComponent<Image>().color = panelColor;
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
-        panelRect.anchoredPosition = new Vector2(sx * buttonMargin.x,
-                                                 sy * (buttonMargin.y + buttonSize.y + gapAboveButton));
+        panelRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * hud.WindowOffset);
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,

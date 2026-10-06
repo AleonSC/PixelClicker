@@ -1,0 +1,215 @@
+using System;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// The screen frame: a black bar along the top and bottom of the screen, and the "docked" buttons that live on them.
+/// Every main UI button (Inventory, Shop, Log, Crafting) has the same size, and normally sits slid off the screen with
+/// only a thin sliver showing. When the mouse comes near, the button slides out onto the bar so it can be clicked; it
+/// stays out while its window is open. Windows that open next to a button start below/above the bar.
+///
+/// Add this to any GameObject. The UI scripts add one automatically if the scene has none.
+/// </summary>
+public class PixelHud : MonoBehaviour
+{
+    [Header("Black Bars")]
+    [Tooltip("Show a black bar along the top and bottom of the screen.")]
+    [SerializeField] private bool barsEnabled = true;
+
+    [Min(20f)]
+    [Tooltip("Height of each bar (canvas units).")]
+    [SerializeField] private float barHeight = 84f;
+
+    [Tooltip("Colour of the bars.")]
+    [SerializeField] private Color barColor = Color.black;
+
+    [Tooltip("Sorting order of the bars' canvas. Keep it below the buttons' canvases (100+) so the buttons draw on top.")]
+    [SerializeField] private int barSortingOrder = 90;
+
+    [Header("Buttons (all the same size)")]
+    [Tooltip("Size of every docked button (canvas units). Keep the height a little less than the bar height.")]
+    [SerializeField] private Vector2 buttonSize = new Vector2(230f, 64f);
+
+    [Tooltip("Text size on the docked buttons (long names shrink to fit).")]
+    [SerializeField] private float buttonFontSize = 30f;
+
+    [Tooltip("Distance of a button from the left or right edge of the screen.")]
+    [SerializeField] private float sideMargin = 24f;
+
+    [Tooltip("Gap between a button and the window that opens from it.")]
+    [SerializeField] private float windowGap = 12f;
+
+    [Header("Sliding")]
+    [Tooltip("Slide the buttons off screen until the mouse comes near. Off = buttons always stay out.")]
+    [SerializeField] private bool slideButtons = true;
+
+    [Min(1f)]
+    [Tooltip("How much of a hidden button still shows at the screen edge (canvas units).")]
+    [SerializeField] private float sliver = 14f;
+
+    [Min(0f)]
+    [Tooltip("The mouse counts as 'near' when it is this close (canvas units) to the button's spot, in any direction.")]
+    [SerializeField] private float triggerPadding = 50f;
+
+    [Min(0.01f)]
+    [Tooltip("Seconds a button takes to slide out or away.")]
+    [SerializeField] private float slideSeconds = 0.18f;
+
+    private static PixelHud instance;
+
+    /// <summary>The screen frame, or null if the scene has none yet.</summary>
+    public static PixelHud Instance => instance;
+
+    /// <summary>The frame; found, or added to 'host', if the scene has none.</summary>
+    public static PixelHud Ensure(GameObject host)
+    {
+        if (instance == null) instance = PixelFind.First<PixelHud>();
+        if (instance == null) instance = host.AddComponent<PixelHud>();
+        return instance;
+    }
+
+    public Vector2 ButtonSize => buttonSize;
+    public float ButtonFontSize => buttonFontSize;
+    public float SideMargin => sideMargin;
+
+    /// <summary>Thickness of the bar along the screen edge (0 when the bars are off).</summary>
+    public float BarHeight => barsEnabled ? barHeight : 0f;
+
+    /// <summary>
+    /// How far from the screen edge a window opening from a docked button should start: below the button's band,
+    /// plus the gap.
+    /// </summary>
+    public float WindowOffset => (barsEnabled ? barHeight : buttonSize.y + 2f * sideMargin * 0.5f) + windowGap;
+
+    private GameObject canvasRoot;
+
+    private void Awake()
+    {
+        if (instance != null && instance != this)
+        {
+            Debug.LogWarning("PixelHud: more than one in the scene; remove the extra one.", this);
+            return;
+        }
+        instance = this;
+        BuildBars();
+    }
+
+    private void OnDestroy()
+    {
+        if (instance == this) instance = null;
+        if (canvasRoot != null) Destroy(canvasRoot);
+    }
+
+    private void BuildBars()
+    {
+        if (!barsEnabled) return;
+        canvasRoot = PixelUIKit.CreateCanvas("PixelHud Canvas", barSortingOrder, new Vector2(1920f, 1080f), true);
+        for (int i = 0; i < 2; i++)
+        {
+            bool top = i == 0;
+            GameObject bar = new GameObject(top ? "Top Bar" : "Bottom Bar", typeof(RectTransform), typeof(Image));
+            bar.transform.SetParent(canvasRoot.transform, false);
+            bar.GetComponent<Image>().color = barColor; // raycast target on: clicks on a bar don't reach the cube behind it
+            RectTransform r = bar.GetComponent<RectTransform>();
+            r.anchorMin = new Vector2(0f, top ? 1f : 0f);
+            r.anchorMax = new Vector2(1f, top ? 1f : 0f);
+            r.pivot = new Vector2(0.5f, top ? 1f : 0f);
+            r.sizeDelta = new Vector2(0f, barHeight);
+            r.anchoredPosition = Vector2.zero;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Docking
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Makes a button one of the docked buttons: standard size, in the given corner (anchor x = 0 left / 1 right,
+    /// anchor y = 0 bottom / 1 top), slid off screen until the mouse comes near. 'keepOut' returns true while the
+    /// button's window is open, so it doesn't slide away then.
+    /// </summary>
+    public void Dock(RectTransform button, Vector2 anchor, Func<bool> keepOut)
+    {
+        button.anchorMin = button.anchorMax = button.pivot = anchor;
+        button.sizeDelta = buttonSize;
+
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>();
+        if (label != null)
+        {
+            label.enableAutoSizing = true;
+            label.fontSizeMax = buttonFontSize;
+            label.fontSizeMin = 12f;
+        }
+
+        PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
+        if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
+        dock.Setup(this, button, anchor, keepOut);
+    }
+
+    // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
+    internal float ShownInset => barsEnabled ? (barHeight - buttonSize.y) * 0.5f : sideMargin * 0.5f;
+    internal float HiddenInset => -(buttonSize.y - sliver);
+    internal bool SlideButtons => slideButtons;
+    internal float SlideSeconds => slideSeconds;
+    internal float TriggerPadding => triggerPadding;
+    internal float BandHeight => barsEnabled ? barHeight : buttonSize.y + sideMargin;
+}
+
+/// <summary>Slides one docked button out when the mouse is near and away when it isn't.</summary>
+public class PixelDockedButton : MonoBehaviour
+{
+    private PixelHud hud;
+    private RectTransform rect;
+    private Vector2 anchor;
+    private Func<bool> keepOut;
+    private float slide; // 0 = hidden, 1 = shown
+    private Canvas canvas;
+
+    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile)
+    {
+        hud = owner;
+        rect = button;
+        anchor = corner;
+        keepOut = keepOutWhile;
+        slide = hud.SlideButtons ? 0f : 1f;
+        Apply();
+    }
+
+    private void Update()
+    {
+        if (hud == null) return;
+
+        float target = !hud.SlideButtons || (keepOut != null && keepOut()) || PointerNear() ? 1f : 0f;
+        slide = Mathf.MoveTowards(slide, target, Time.unscaledDeltaTime / hud.SlideSeconds);
+        Apply();
+    }
+
+    private void Apply()
+    {
+        float shown = hud.ShownInset, hidden = hud.HiddenInset;
+        float inset = Mathf.Lerp(hidden, shown, Mathf.SmoothStep(0f, 1f, slide));
+        bool top = anchor.y > 0.5f;
+        float x = anchor.x > 0.5f ? -hud.SideMargin : hud.SideMargin;
+        rect.anchoredPosition = new Vector2(x, top ? -inset : inset);
+    }
+
+    /// <summary>Is the mouse over (or close to) the spot the button slides out to?</summary>
+    private bool PointerNear()
+    {
+        if (canvas == null) canvas = rect.GetComponentInParent<Canvas>();
+        if (canvas == null) return false;
+        float scale = Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor);
+        Vector2 p = PixelInput.PointerPosition();
+        if (p.x < 0f || p.y < 0f || p.x > Screen.width || p.y > Screen.height) return false;
+
+        float pad = hud.TriggerPadding;
+        float w = hud.ButtonSize.x, margin = hud.SideMargin;
+        float x0 = anchor.x > 0.5f ? Screen.width / scale - margin - w : margin;
+        float x1 = x0 + w;
+        float px = p.x / scale, py = p.y / scale;
+        float fromEdge = anchor.y > 0.5f ? Screen.height / scale - py : py; // distance of the mouse from the button's screen edge
+
+        return px >= x0 - pad && px <= x1 + pad && fromEdge <= hud.BandHeight + pad;
+    }
+}

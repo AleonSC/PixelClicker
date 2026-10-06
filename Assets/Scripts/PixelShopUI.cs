@@ -78,6 +78,7 @@ public partial class PixelShop
         rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
         rt.anchoredPosition = new Vector2(anchor.x > 0.5f ? -buttonMargin.x : buttonMargin.x,
                                           anchor.y > 0.5f ? -buttonMargin.y : buttonMargin.y);
+        PixelHud.Ensure(gameObject).Dock(rt, anchor, () => panelObject != null && panelObject.activeSelf);
 
         button.onClick.AddListener(() =>
         {

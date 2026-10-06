@@ -556,7 +556,7 @@ public class PixelAchievements : MonoBehaviour
         popupRect = panel.GetComponent<RectTransform>();
         popupRect.anchorMin = popupRect.anchorMax = popupRect.pivot = new Vector2(0.5f, 1f);
         popupRect.sizeDelta = popupSize;
-        popupRect.anchoredPosition = new Vector2(0f, -popupTopMargin);
+        popupRect.anchoredPosition = new Vector2(0f, -(popupTopMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)));
 
         float iconSize = popupSize.y * 0.75f;
         GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
