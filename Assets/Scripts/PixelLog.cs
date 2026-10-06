@@ -629,6 +629,7 @@ public class PixelLog : MonoBehaviour
         scrollbar.direction = Scrollbar.Direction.BottomToTop;
 
         ScrollRect scroll = view.GetComponent<ScrollRect>();
+        scroll.gameObject.AddComponent<PixelScrollSound>();
         scroll.content = achievementsContent;
         scroll.horizontal = false;
         scroll.vertical = true;

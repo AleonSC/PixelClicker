@@ -230,6 +230,7 @@ public partial class PixelShop
 
         // Scroll behaviour
         scroll = scrollGo.GetComponent<ScrollRect>();
+        scroll.gameObject.AddComponent<PixelScrollSound>();
         scroll.content = content;
         scroll.horizontal = false;
         scroll.vertical = true;

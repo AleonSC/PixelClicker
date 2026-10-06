@@ -73,7 +73,7 @@ public class PixelAudio : MonoBehaviour
 
     [Header("Sound Effects")]
     [Tooltip("Every sound effect, by id. Built-in ids: click, auto_click, hit, vacuum, combo, purchase, craft, drink, " +
-             "device_place, achievement, ui_click, ghost_spawn, ghost_click, meteor_spawn, meteor_click, blackhole_spawn, " +
+             "device_place, achievement, ui_click, ui_scroll, ghost_spawn, ghost_click, meteor_spawn, meteor_click, blackhole_spawn, " +
              "and pixel_<type> (e.g. pixel_vacuum, pixel_meteor) which plays when that pixel type is collected. " +
              "Leave 'Clips' empty for silence.")]
     [SerializeField] private List<Sound> sounds = CreateDefaultSounds();
@@ -182,6 +182,7 @@ public class PixelAudio : MonoBehaviour
             Make("device_place", 0.1f),
             Make("achievement", 0.2f),
             Make("ui_click", 0.05f),
+            Make("ui_scroll", 0.03f, 0.95f, 1.05f),
             Make("ghost_spawn", 0.2f),
             Make("ghost_click", 0.1f),
             Make("meteor_spawn", 0.2f),

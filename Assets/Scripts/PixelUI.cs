@@ -927,6 +927,7 @@ public class PixelUI : MonoBehaviour
         listContent.anchoredPosition = Vector2.zero;
 
         listScroll = view.GetComponent<ScrollRect>();
+        listScroll.gameObject.AddComponent<PixelScrollSound>();
         listScroll.viewport = listViewport;
         listScroll.content = listContent;
         listScroll.horizontal = false;

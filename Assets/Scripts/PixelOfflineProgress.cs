@@ -301,6 +301,7 @@ public class PixelOfflineProgress : MonoBehaviour
         lr.offsetMax = new Vector2(-12f, 0f);
 
         ScrollRect scroll = view.GetComponent<ScrollRect>();
+        scroll.gameObject.AddComponent<PixelScrollSound>();
         scroll.content = lr;
         scroll.viewport = vr;
         scroll.horizontal = false;

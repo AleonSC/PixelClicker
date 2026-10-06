@@ -154,6 +154,7 @@ public static class PixelUIKit
         toggle.isOn = false;
 
         ScrollRect scroll = template.GetComponent<ScrollRect>();
+        scroll.gameObject.AddComponent<PixelScrollSound>();
         scroll.content = cr;
         scroll.viewport = viewport.GetComponent<RectTransform>();
         scroll.horizontal = false;
@@ -246,6 +247,7 @@ public static class PixelUIKit
         bar.targetGraphic = handleImage;
 
         ScrollRect scroll = view.GetComponent<ScrollRect>();
+        scroll.gameObject.AddComponent<PixelScrollSound>();
         scroll.viewport = viewport;
         scroll.content = content;
         scroll.horizontal = false;

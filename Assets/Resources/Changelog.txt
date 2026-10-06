@@ -10,3 +10,4 @@
 [2026-10-06 15:44 UTC] Crafting: a potion plus a pixel that can't be toggled (White, Gray, Black, Red, Green, Blue, Glass, Luminescent) now makes a combo potion that spawns both pixel types (costs the potion plus 100 of the pixel). Combo potions are craft-only (not in the shop), go into your inventory and are saved.
 [2026-10-06 16:02 UTC] Added the sound system (PixelAudio): a list of named sounds you fill with clips, music tracks, and Master / Effects / Music volume sliders plus a mute box in Settings. Clicks, purchases, combos, crafting, potions, devices, minigames, achievements and buttons all play sounds once clips are assigned.
 [2026-10-06 16:38 UTC] Fixed the 'ui_click' sound not playing on shop buttons, and added it to the tick boxes in the shop, pause menu and dev tools.
+[2026-10-06 16:43 UTC] Added a 'ui_scroll' sound (a tick every few lines scrolled) to every scrolling list: shop, log, inventory, stats, changelog, crafting, offline window and dropdowns.
