@@ -96,9 +96,13 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("Text above the pad. {0} = pixel name, {1} = seconds left.")]
     [SerializeField] private string labelFormat = "Feed me: {0}   {1}s";
 
-    [Min(0.5f)]
+    [Min(0.3f)]
     [Tooltip("Size of that text (3D text: about 10 per world unit).")]
-    [SerializeField] private float labelFontSize = 4f;
+    [SerializeField] private float labelTextSize = 2f;
+
+    [Min(0f)]
+    [Tooltip("How far beyond the pad's far edge (the top of it on screen) the text sits, plus a little lift (world units).")]
+    [SerializeField] private float labelGap = 0.35f;
 
     [Header("Feedback")]
     [Tooltip("Text when a correct pixel is taken.")]
@@ -291,15 +295,21 @@ public class PixelPadMinigame : PixelMinigame
 
         GameObject labelGo = new GameObject("Label");
         labelGo.transform.SetParent(root.transform, false);
-        labelGo.transform.localPosition = new Vector3(0f, padSize * 0.55f, 0f);
         TextMeshPro label = labelGo.AddComponent<TextMeshPro>();
-        label.fontSize = labelFontSize;
+        label.fontSize = labelTextSize;
         label.fontStyle = FontStyles.Bold;
         label.alignment = TextAlignmentOptions.Center;
         label.color = Color.Lerp(colour, Color.white, 0.4f);
         label.overflowMode = TextOverflowModes.Overflow;
         if (clicker.UIFont != null) label.font = clicker.UIFont;
-        label.rectTransform.sizeDelta = new Vector2(padSize * 4f, 1f);
+        label.rectTransform.sizeDelta = new Vector2(padSize * 4f, 0.8f);
+
+        // The text floats just past the pad's far edge (the top end as seen on screen), facing the camera.
+        Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
+        if (flatForward.sqrMagnitude < 0.0001f) flatForward = Vector3.forward;
+        flatForward.Normalize();
+        labelGo.transform.position = point + flatForward * (padSize * 0.56f + labelGap) + Vector3.up * 0.3f;
+        labelGo.transform.rotation = cam.transform.rotation;
 
         // Grow in.
         float t = 0f;

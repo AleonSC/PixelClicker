@@ -1,3 +1,4 @@
 [2026-10-06 17:33 UTC] Moved the achievement popup to the left-centre of the screen.
 [2026-10-06 17:41 UTC] Added the Pixel Grabbing upgrade (Upgrades tab): once bought, old pixels can be clicked and dragged with the mouse, and thrown when you let go. A held pixel doesn't despawn, and clicking one no longer clicks the cube behind it.
 [2026-10-06 18:04 UTC] Added the Ultra Pad minigame (Minigames tab, needs the RGB pack): a coloured pad appears on the ground; old pixels of its colour that land on it have a chance to give an Ultra version of that pixel, wrong pixels are taken and their value is subtracted from your currency. Hover a pixel's entry in the inventory to see how many Ultras you have (saved, for future upgrades).
+[2026-10-06 18:08 UTC] Ultra Pad: the 'Feed me' text is now smaller and floats just past the far (top) edge of the pad instead of across its middle.
