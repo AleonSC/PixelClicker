@@ -554,7 +554,13 @@ public class PixelUI : MonoBehaviour
         tooltipRect.pivot = new Vector2(0f, 1f);
 
         tooltipLabel = MakeText(tooltipRoot.transform, "Text", "", tooltipFontSize, TextAlignmentOptions.Center, FontStyles.Bold, tooltipTextColor);
-        PixelUIKit.Stretch(tooltipLabel.rectTransform);
+        // The text's box is much wider than the tooltip, so it can never wrap (it is centred and simply overflows).
+        RectTransform lr = tooltipLabel.rectTransform;
+        lr.anchorMin = Vector2.zero;
+        lr.anchorMax = Vector2.one;
+        lr.offsetMin = new Vector2(-400f, 0f);
+        lr.offsetMax = new Vector2(400f, 0f);
+        tooltipLabel.overflowMode = TextOverflowModes.Overflow;
         tooltipRoot.SetActive(false);
     }
 
@@ -576,7 +582,9 @@ public class PixelUI : MonoBehaviour
         PixelClicker.PixelTier tier = clicker.Tiers[tooltipTier];
         string text = string.Format(ultraTooltipFormat, tier.displayName, FormatAmount(tier.ultraCount));
         tooltipLabel.text = text;
-        float width = tooltipLabel.GetPreferredValues(text, 0f, 0f).x + 36f;
+        tooltipLabel.ForceMeshUpdate();
+        float measured = tooltipLabel.preferredWidth;
+        float width = Mathf.Max(measured, text.Length * tooltipFontSize * 0.55f) + 36f; // generous, so the text always fits
         tooltipRect.sizeDelta = new Vector2(width, tooltipFontSize * 1.8f);
         tooltipRect.anchoredPosition = CursorLocal() + tooltipOffset;
     }
