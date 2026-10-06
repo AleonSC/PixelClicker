@@ -7,6 +7,7 @@ using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
+using static PixelInput;
 
 /// <summary>
 /// Ghost minigame for Pixel Clicker.
@@ -393,25 +394,4 @@ public class PixelGhostMinigame : PixelMinigame
         Destroy(go);
     }
 
-    // --- Mouse input (works with both input systems) ---
-
-    private static Vector2 PointerPosition()
-    {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-#else
-        return Input.mousePosition;
-#endif
-    }
-
-    private static bool LeftPressed()
-    {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#else
-        return Input.GetMouseButtonDown(0);
-#endif
-    }
-
-    private static bool PointerOverUI() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }

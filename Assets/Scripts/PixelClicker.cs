@@ -41,6 +41,7 @@ public class PixelClicker : MonoBehaviour
         Luminescent = 9,
         Singularity = 10,
         Ghost = 11,
+        Meteor = 12,
     }
 
     /// <summary>How a tier becomes available.</summary>
@@ -249,6 +250,19 @@ public class PixelClicker : MonoBehaviour
     [Header("Old Pixel Physics")]
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
     [SerializeField] private float fallingCopyLifetime = 6f;
+
+    [Header("Fly-Away Pixels (tiers with Fly Away on)")]
+    [Min(0.1f)]
+    [Tooltip("Seconds before a fly-away old pixel is removed.")]
+    [SerializeField] private float flyLifetime = 3f;
+
+    [Min(0f)]
+    [Tooltip("How long the fiery trail behind a fly-away pixel lasts (seconds). 0 = no trail.")]
+    [SerializeField] private float flyTrailSeconds = 0.6f;
+
+    [Range(0f, 45f)]
+    [Tooltip("Random angle (degrees) a fly-away pixel's direction may deviate.")]
+    [SerializeField] private float flySpreadDegrees = 6f;
 
     [Tooltip("Max old pixels kept in the scene. The oldest is destroyed first. 0 = no cap.")]
     [SerializeField] private int maxFallingCopies = 30;
@@ -1272,8 +1286,53 @@ public class PixelClicker : MonoBehaviour
         rb.drag = fallingCopyDrag;
         rb.angularDrag = fallingCopyAngularDrag;
 #endif
-        if (gravityScale > 0f)
+        bool fly = tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].flyAway;
+        if (fly)
+        {
+            // Meteor-style: no gravity, no collisions, one straight direction (camera-relative), with a trail.
+            box.enabled = false;
+            Camera fc = targetCamera != null ? targetCamera : Camera.main;
+            Vector2 d = tiers[tierIndex].flyDirection;
+            if (d.sqrMagnitude < 0.0001f) d = Vector2.right;
+            d.Normalize();
+            Vector3 dir = fc != null ? fc.transform.right * d.x + fc.transform.up * d.y : new Vector3(d.x, d.y, 0f);
+            dir = Quaternion.AngleAxis(UnityEngine.Random.Range(-flySpreadDegrees, flySpreadDegrees),
+                                       fc != null ? fc.transform.forward : Vector3.forward) * dir;
+#if UNITY_6000_0_OR_NEWER
+            rb.linearDamping = 0f;
+            rb.angularDamping = 0f;
+#else
+            rb.drag = 0f;
+            rb.angularDrag = 0f;
+#endif
+            rb.AddForce(dir.normalized * tiers[tierIndex].flySpeed, ForceMode.VelocityChange);
+            rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
+                         ForceMode.VelocityChange);
+
+            if (flyTrailSeconds > 0f)
+            {
+                TrailRenderer trail = copy.AddComponent<TrailRenderer>();
+                trail.time = flyTrailSeconds;
+                trail.startWidth = copy.transform.lossyScale.x;
+                trail.endWidth = 0f;
+                Color tc = tiers[tierIndex].color;
+                trail.sharedMaterial = CreateVisualMaterial(new Color(tc.r, tc.g, tc.b, 0.6f), true);
+                trail.startColor = new Color(tc.r, tc.g, tc.b, 0.8f);
+                trail.endColor = new Color(tc.r, tc.g, tc.b, 0f);
+            }
+        }
+        else if (gravityScale > 0f)
             copy.AddComponent<ScaledGravity>().scale = gravityScale;
+
+        if (fly)
+        {
+            Destroy(copy, flyLifetime);
+            OldPixelInfo flyInfo = copy.AddComponent<OldPixelInfo>();
+            flyInfo.tierIndex = tierIndex;
+            flyInfo.amount = amount;
+            oldPixels.Add(rb);
+            return;
+        }
 
         // Random direction: random heading on the ground plane, random vertical component.
         Vector2 flat = UnityEngine.Random.insideUnitCircle;

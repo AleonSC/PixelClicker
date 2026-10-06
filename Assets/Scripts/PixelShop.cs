@@ -479,6 +479,7 @@ public partial class PixelShop : MonoBehaviour
 
         // The built-in minigames must exist in the scene (the shop switches them on).
         EnsureMinigame<PixelGhostMinigame>();
+        EnsureMinigame<PixelMeteorMinigame>();
         EnsureMinigame<PixelBlackholeMinigame>();
 
         if (consumables == null) consumables = GetComponent<PixelConsumables>();
@@ -598,6 +599,7 @@ public partial class PixelShop : MonoBehaviour
             // Make sure the helper components exist in the scene, so their settings are editable in the Inspector.
             EditorEnsureComponent<PixelConsumables>();
             EditorEnsureComponent<PixelGhostMinigame>();
+            EditorEnsureComponent<PixelMeteorMinigame>();
             EditorEnsureComponent<PixelBlackholeMinigame>();
         };
     }

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The shop's built-in packs (RGB, Auto Clicker, Glass, Vacuum, Obsidian, Luminescent, Ghost Hunt, Black Hole,
-/// Singularity Pixel, Ghost Pixel, the auto clicker upgrades). Part of <see cref="PixelShop"/>: edit a pack's numbers
+/// Singularity Pixel, Ghost Pixel, Meteor Strike, Meteor Pixel, the auto clicker upgrades). Part of <see cref="PixelShop"/>: edit a pack's numbers
 /// here to change what NEW shops start with, or in the Inspector's Packs list for the one in your scene.
 /// </summary>
 public partial class PixelShop
@@ -202,6 +202,53 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Meteor Strike pack (Minigames tab): switches on the meteor minigame. Needs the Obsidian pack first.</summary>
+    private static ShopPack CreateMeteorStrikePack(int requiresObsidianIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Meteor Strike",
+            tab = ShopTab.Minigames,
+            description = "A huge meteor drifts slowly across the screen now and then. Every click on it chips off a meteor chunk.",
+            requirements = Needs(requiresObsidianIndex),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 500 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 20 },
+            },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "meteor",
+        };
+    }
+
+    /// <summary>Default Meteor Pixel pack (Pixels tab): needs Meteor Strike AND enough meteor chunks.</summary>
+    private static ShopPack CreateMeteorPixelPack(int requiresMeteorIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Meteor Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the fiery Meteor pixel. When clicked it doesn't fall - it streaks away like a meteor.",
+            requirements = Needs(requiresMeteorIndex, "meteor"),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 100 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 50 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Meteor, displayName = "Meteor Pixels",
+                    color = new Color(0.9f, 0.4f, 0.1f, 1f), glow = true, glowIntensity = 2f,
+                    amountPerClick = 15, spawnWeight = 0.25f,
+                    flyAway = true, flyDirection = new Vector2(1f, 0.6f), flySpeed = 30f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -379,6 +426,10 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "blackhole"), create = CreateSingularityPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Ghost),
                           requires = p => Unlocks(p, "ghost"), create = CreateGhostPixelPack },
+        new DefaultPack { isThis = p => Unlocks(p, "meteor"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Obsidian), create = CreateMeteorStrikePack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Meteor),
+                          requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
     };
 
 #if UNITY_EDITOR

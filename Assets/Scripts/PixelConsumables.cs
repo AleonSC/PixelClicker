@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
+using static PixelInput;
 
 /// <summary>
 /// Consumables for Pixel Clicker: potions and placeable devices.
@@ -863,37 +864,6 @@ public class PixelConsumables : MonoBehaviour
 #endif
         return degrees;
     }
-
-    // --- Mouse input (works with both input systems) ---
-
-    private static Vector2 PointerPosition()
-    {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
-#else
-        return Input.mousePosition;
-#endif
-    }
-
-    private static bool LeftPressed()
-    {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-#else
-        return Input.GetMouseButtonDown(0);
-#endif
-    }
-
-    private static bool RightPressed()
-    {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
-#else
-        return Input.GetMouseButtonDown(1);
-#endif
-    }
-
-    private static bool PointerOverUI() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
     /// <summary>Description with {pixel} and {duration} filled in.</summary>
     public string Describe(int index)
