@@ -151,46 +151,12 @@ public partial class PixelShop : MonoBehaviour
 
     [Header("Packs")]
     [Tooltip("The shop's items. Add more entries here later.")]
-    [SerializeField] private ShopPack[] packs =
-    {
-        CreateRgbPack(), CreateAutoClickerPack(), CreateGlassPack(0), CreateVacuumPack(2),
-        CreateIntervalUpgradePack(1), CreateClicksUpgradePack(1), CreateObsidianPack(2),
-        CreateLuminescentPack(6), CreateGhostPack(2), CreateBlackholePack(3), CreateSingularityPack(9), CreateGhostPixelPack(8)
-    };
+    [SerializeField] private ShopPack[] packs = new ShopPack[0];
 
-    [Tooltip("If none of the packs unlocks the Ghost pixel, add the default Ghost Pixel pack at startup.")]
-    [SerializeField] private bool addDefaultGhostPixelPack = true;
-
-    [Tooltip("If none of the packs unlocks the black hole minigame (e.g. this component was added before it existed), " +
-             "add the default Black Hole pack at startup.")]
-    [SerializeField] private bool addDefaultBlackholePack = true;
-
-    [Tooltip("If none of the packs unlocks the Singularity pixel, add the default Singularity Pixel pack at startup.")]
-    [SerializeField] private bool addDefaultSingularityPack = true;
-
-    [Tooltip("If none of the packs unlocks the ghost minigame (e.g. this component was added before it existed), " +
-             "add the default Ghost Hunt pack at startup.")]
-    [SerializeField] private bool addDefaultGhostPack = true;
-
-    [Tooltip("If none of the packs unlocks the Luminescent pixel (e.g. this component was added before it existed), " +
-             "add the default Luminescent pack at startup.")]
-    [SerializeField] private bool addDefaultLuminescentPack = true;
-
-    [Tooltip("If none of the packs unlocks the Obsidian pixel (e.g. this component was added before it existed), " +
-             "add the default Obsidian pack at startup.")]
-    [SerializeField] private bool addDefaultObsidianPack = true;
-
-    [Tooltip("If none of the packs unlocks the Vacuum pixel (e.g. this component was added before it existed), " +
-             "add the default Vacuum pack at startup.")]
-    [SerializeField] private bool addDefaultVacuumPack = true;
-
-    [Tooltip("If none of the packs unlocks Glass pixels (e.g. this component was added before glass existed), " +
-             "add the default Glass pack at startup.")]
-    [SerializeField] private bool addDefaultGlassPack = true;
-
-    [Tooltip("If none of the packs is an auto clicker upgrade (e.g. this component was added before upgrades existed), " +
-             "add the default upgrade packs at startup.")]
-    [SerializeField] private bool addDefaultUpgradePacks = true;
+    [Tooltip("Add any built-in pack that is missing from the list (RGB, Auto Clicker, Glass, Vacuum, Obsidian...) " +
+             "at startup and when the component is added in the Editor. The built-in packs are defined in PixelShopDefaults.cs. " +
+             "Turn this off if you deleted a built-in pack on purpose.")]
+    [SerializeField] private bool addDefaultPacks = true;
 
     [Tooltip("Level display for upgrade packs. {0} = current level, {1} = max level.")]
     [SerializeField] private string levelFormat = "Level {0}/{1}";
@@ -206,10 +172,6 @@ public partial class PixelShop : MonoBehaviour
 
     [Tooltip("Buy button text for upgrade packs at max level.")]
     [SerializeField] private string maxedText = "Max";
-
-    [Tooltip("If none of the packs unlocks the auto clicker (e.g. this component was added before the auto clicker existed), " +
-             "add the default Auto Clicker pack at startup.")]
-    [SerializeField] private bool addDefaultAutoClickerPack = true;
 
     [Tooltip("Show packs whose requirement isn't met yet (greyed out as 'Locked'). Off = hidden until the requirement is bought.")]
     [SerializeField] private bool showLockedPacks = false;
@@ -520,7 +482,26 @@ public partial class PixelShop : MonoBehaviour
     /// </summary>
     private bool EnsureDefaultPacks()
     {
-        int before = packs.Length;
+        bool changed = MigrateOldPackData();
+        if (!addDefaultPacks) return changed;
+        if (packs == null) packs = new ShopPack[0];
+
+        // Built-ins come in dependency order, so each one can find the pack it requires.
+        foreach (DefaultPack builtIn in BuiltInPacks)
+        {
+            if (Array.Exists(packs, p => builtIn.isThis(p))) continue;
+
+            int requiredIndex = builtIn.requires != null ? Array.FindIndex(packs, p => builtIn.requires(p)) : -1;
+            Array.Resize(ref packs, packs.Length + 1);
+            packs[packs.Length - 1] = builtIn.create(requiredIndex);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /// <summary>Brings packs saved by older versions up to date (renames, tab, minigame ids). Returns true if anything changed.</summary>
+    private bool MigrateOldPackData()
+    {
         bool renamed = false;
 
         // Turn the old per-minigame tick boxes into minigame ids.
@@ -545,162 +526,7 @@ public partial class PixelShop : MonoBehaviour
             if (pack.tab != ShopTab.Pixels) { pack.tab = ShopTab.Pixels; renamed = true; }
         }
 
-        if (addDefaultAutoClickerPack)
-        {
-            bool hasAutoPack = false;
-            foreach (ShopPack pack in packs) if (pack.unlocksAutoClicker) hasAutoPack = true;
-            if (!hasAutoPack)
-            {
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateAutoClickerPack();
-            }
-        }
-
-        if (addDefaultUpgradePacks)
-        {
-            int autoIndex = Array.FindIndex(packs, p => p.unlocksAutoClicker);
-            bool hasInterval = false, hasClicks = false;
-            foreach (ShopPack pack in packs)
-            {
-                if (pack.upgradeEffect == UpgradeEffect.AutoClickerInterval) hasInterval = true;
-                if (pack.upgradeEffect == UpgradeEffect.AutoClickerClicks) hasClicks = true;
-            }
-
-            if (!hasInterval)
-            {
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateIntervalUpgradePack(autoIndex);
-            }
-            if (!hasClicks)
-            {
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateClicksUpgradePack(autoIndex);
-            }
-        }
-
-        if (addDefaultGlassPack)
-        {
-            bool hasGlass = false;
-            foreach (ShopPack pack in packs)
-                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Glass))
-                    hasGlass = true;
-
-            if (!hasGlass)
-            {
-                int rgbIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                           Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Red));
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateGlassPack(rgbIndex);
-            }
-        }
-
-        if (addDefaultVacuumPack)
-        {
-            bool hasVacuum = false;
-            foreach (ShopPack pack in packs)
-                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Vacuum))
-                    hasVacuum = true;
-
-            if (!hasVacuum)
-            {
-                int glassIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                             Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateVacuumPack(glassIndex);
-            }
-        }
-
-        if (addDefaultObsidianPack)
-        {
-            bool hasObsidian = false;
-            foreach (ShopPack pack in packs)
-                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Obsidian))
-                    hasObsidian = true;
-
-            if (!hasObsidian)
-            {
-                int glassIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                             Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateObsidianPack(glassIndex);
-            }
-        }
-
-        if (addDefaultLuminescentPack)
-        {
-            bool hasLuminescent = false;
-            foreach (ShopPack pack in packs)
-                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Luminescent))
-                    hasLuminescent = true;
-
-            if (!hasLuminescent)
-            {
-                int obsidianIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                                Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Obsidian));
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateLuminescentPack(obsidianIndex);
-            }
-        }
-
-        if (addDefaultGhostPack)
-        {
-            bool hasGhost = false;
-            foreach (ShopPack pack in packs) if (pack.unlocksMinigame == "ghost") hasGhost = true;
-
-            if (!hasGhost)
-            {
-                int glassIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                             Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateGhostPack(glassIndex);
-            }
-        }
-
-        if (addDefaultBlackholePack)
-        {
-            bool hasBlackhole = false;
-            foreach (ShopPack pack in packs) if (pack.unlocksMinigame == "blackhole") hasBlackhole = true;
-
-            if (!hasBlackhole)
-            {
-                int vacuumIndex = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                              Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Vacuum));
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateBlackholePack(vacuumIndex);
-            }
-        }
-
-        if (addDefaultSingularityPack)
-        {
-            bool hasSingularity = false;
-            foreach (ShopPack pack in packs)
-                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Singularity))
-                    hasSingularity = true;
-
-            if (!hasSingularity)
-            {
-                int blackholeIndex = Array.FindIndex(packs, p => p.unlocksMinigame == "blackhole");
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateSingularityPack(blackholeIndex);
-            }
-        }
-
-        if (addDefaultGhostPixelPack)
-        {
-            bool hasGhostPixel = false;
-            foreach (ShopPack pack in packs)
-                if (pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Ghost))
-                    hasGhostPixel = true;
-
-            if (!hasGhostPixel)
-            {
-                int ghostHuntIndex = Array.FindIndex(packs, p => p.unlocksMinigame == "ghost");
-                Array.Resize(ref packs, packs.Length + 1);
-                packs[packs.Length - 1] = CreateGhostPixelPack(ghostHuntIndex);
-            }
-        }
-
-        return renamed || packs.Length != before;
+        return renamed;
     }
 
 #if UNITY_EDITOR

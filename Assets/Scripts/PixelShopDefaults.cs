@@ -305,7 +305,7 @@ public partial class PixelShop
     }
 
     /// <summary>Default Auto Clicker pack: all six pixel types, available after the RGB pack (index 0).</summary>
-    private static ShopPack CreateAutoClickerPack()
+    private static ShopPack CreateAutoClickerPack(int requiresRgbIndex)
     {
         return new ShopPack
         {
@@ -322,53 +322,65 @@ public partial class PixelShop
                 new PackCost { type = PixelClicker.PixelType.Blue,  amount = 100 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
-            requiresPackIndex = 0,
+            requiresPackIndex = requiresRgbIndex,
             unlocksAutoClicker = true,
         };
     }
 
+    // ------------------------------------------------------------------
+    // The built-in pack table: how to recognise each one in the list, what it needs, how to build it.
+    // To add a built-in pack: write its Create...Pack method above and add one line here (after the pack it requires).
+    // ------------------------------------------------------------------
+
+    private class DefaultPack
+    {
+        public Func<ShopPack, bool> isThis;      // recognises this pack in the Packs list
+        public Func<ShopPack, bool> requires;    // recognises the pack it requires (null = none)
+        public Func<int, ShopPack> create;       // builds it, given the index of the required pack (-1 if not found)
+    }
+
+    private static bool Rewards(ShopPack pack, PixelClicker.PixelType type)
+    {
+        return pack.rewardTiers != null && Array.Exists(pack.rewardTiers, r => r.type == type);
+    }
+
+    private static bool Unlocks(ShopPack pack, string minigameId) => pack.unlocksMinigame == minigameId;
+
+    private static readonly DefaultPack[] BuiltInPacks =
+    {
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Red),
+                          requires = null, create = i => CreateRgbPack() },
+        new DefaultPack { isThis = p => p.unlocksAutoClicker,
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateAutoClickerPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Glass),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Vacuum),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateVacuumPack },
+        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerInterval,
+                          requires = p => p.unlocksAutoClicker, create = CreateIntervalUpgradePack },
+        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerClicks,
+                          requires = p => p.unlocksAutoClicker, create = CreateClicksUpgradePack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Obsidian),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateObsidianPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Luminescent),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Obsidian), create = CreateLuminescentPack },
+        new DefaultPack { isThis = p => Unlocks(p, "ghost"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateGhostPack },
+        new DefaultPack { isThis = p => Unlocks(p, "blackhole"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Vacuum), create = CreateBlackholePack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Singularity),
+                          requires = p => Unlocks(p, "blackhole"), create = CreateSingularityPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Ghost),
+                          requires = p => Unlocks(p, "ghost"), create = CreateGhostPixelPack },
+    };
+
 #if UNITY_EDITOR
-    /// <summary>Right-click the component header > Add Default Auto Clicker Pack, to make it editable in the list.</summary>
-    [ContextMenu("Add Default Vacuum Pack To List")]
-    private void AddVacuumPackToList()
+    /// <summary>Right-click the component header &gt; Add Missing Default Packs, to fill in any built-in pack that is not in the list.</summary>
+    [ContextMenu("Add Missing Default Packs")]
+    private void AddMissingDefaultPacksFromMenu()
     {
-        int glass = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                                Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Glass));
-        UnityEditor.Undo.RecordObject(this, "Add Vacuum Pack");
-        Array.Resize(ref packs, packs.Length + 1);
-        packs[packs.Length - 1] = CreateVacuumPack(glass);
-        UnityEditor.EditorUtility.SetDirty(this);
-    }
-
-    [ContextMenu("Add Default Glass Pack To List")]
-    private void AddGlassPackToList()
-    {
-        int rgb = Array.FindIndex(packs, p => p.rewardTiers != null &&
-                                              Array.Exists(p.rewardTiers, r => r.type == PixelClicker.PixelType.Red));
-        UnityEditor.Undo.RecordObject(this, "Add Glass Pack");
-        Array.Resize(ref packs, packs.Length + 1);
-        packs[packs.Length - 1] = CreateGlassPack(rgb);
-        UnityEditor.EditorUtility.SetDirty(this);
-    }
-
-    [ContextMenu("Add Default Auto Clicker Upgrade Packs To List")]
-    private void AddUpgradePacksToList()
-    {
-        int auto = Array.FindIndex(packs, p => p.unlocksAutoClicker);
-        UnityEditor.Undo.RecordObject(this, "Add Upgrade Packs");
-        Array.Resize(ref packs, packs.Length + 2);
-        packs[packs.Length - 2] = CreateIntervalUpgradePack(auto);
-        packs[packs.Length - 1] = CreateClicksUpgradePack(auto);
-        UnityEditor.EditorUtility.SetDirty(this);
-    }
-
-    [ContextMenu("Add Default Auto Clicker Pack To List")]
-    private void AddAutoClickerPackToList()
-    {
-        UnityEditor.Undo.RecordObject(this, "Add Auto Clicker Pack");
-        Array.Resize(ref packs, packs.Length + 1);
-        packs[packs.Length - 1] = CreateAutoClickerPack();
-        UnityEditor.EditorUtility.SetDirty(this);
+        UnityEditor.Undo.RecordObject(this, "Add Default Packs");
+        if (EnsureDefaultPacks()) UnityEditor.EditorUtility.SetDirty(this);
     }
 #endif
 }
