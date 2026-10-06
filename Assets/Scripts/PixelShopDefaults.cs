@@ -222,6 +222,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Ultra Pad pack (Minigames tab): switches on the ultra pad minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreatePadPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Ultra Pad",
+            tab = ShopTab.Minigames,
+            description = "A coloured pad appears on the ground. Get old pixels of that colour onto it for a chance at Ultra pixels - but wrong pixels cost you currency.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(300),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "pad",
+        };
+    }
+
     /// <summary>Default Meteor Strike pack (Minigames tab): switches on the meteor minigame. Needs the Obsidian pack first.</summary>
     private static ShopPack CreateMeteorStrikePack(int requiresObsidianIndex)
     {
@@ -500,6 +515,8 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
+        new DefaultPack { isThis = p => Unlocks(p, "pad"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
         new DefaultPack { isThis = p => Unlocks(p, "bomb"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBombPack },
         new DefaultPack { isThis = p => p.unlocksCrafting,

@@ -144,6 +144,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds.")]
         public double totalCollected;
 
+        [Tooltip("How many Ultra versions of this pixel type you own (from the Ultra Pad minigame; saved). They will be used for upgrades later.")]
+        public long ultraCount;
+
         [Tooltip("How many pixels of this type have been collected (one per payout, whatever it paid). Used by the 'times clicked' achievements.")]
         public long timesCollected;
 
@@ -759,6 +762,43 @@ public class PixelClicker : MonoBehaviour
         NotifyChanged();
     }
 
+    /// <summary>Takes up to 'amount' off a tier's currency (never below zero) without counting it as spending. Returns how much was taken.</summary>
+    public double RemoveCurrency(int tierIndex, double amount)
+    {
+        if (!IsValidTier(tierIndex) || amount <= 0) return 0d;
+        double taken = System.Math.Min(tiers[tierIndex].count, amount);
+        if (taken <= 0d) return 0d;
+        tiers[tierIndex].count -= taken;
+        NotifyChanged();
+        return taken;
+    }
+
+    /// <summary>Gives Ultra versions of a pixel type.</summary>
+    public void AddUltra(int tierIndex, long amount)
+    {
+        if (!IsValidTier(tierIndex) || amount <= 0) return;
+        tiers[tierIndex].ultraCount += amount;
+        NotifyChanged();
+    }
+
+    /// <summary>Ultra versions owned of a pixel type.</summary>
+    public long GetUltra(PixelType type)
+    {
+        int i = IndexOf(type);
+        return i >= 0 ? tiers[i].ultraCount : 0L;
+    }
+
+    /// <summary>Ultra versions owned, of every pixel type together.</summary>
+    public long TotalUltra
+    {
+        get
+        {
+            long total = 0;
+            foreach (PixelTier t in tiers) total += t.ultraCount;
+            return total;
+        }
+    }
+
     /// <summary>Spends currency if the player can afford it. Use this from shops later.</summary>
     public bool TrySpend(int tierIndex, double amount)
     {
@@ -789,7 +829,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0)
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, long ultraCount = 0)
     {
         int index = IndexOf(type);
         if (index < 0) return;
@@ -800,6 +840,7 @@ public class PixelClicker : MonoBehaviour
         tier.unlocked = unlocked || tier.unlockedAtStart;
         tier.spawnDisabled = spawnDisabled;
         tier.timesCollected = System.Math.Max(0L, timesCollected);
+        tier.ultraCount = System.Math.Max(0L, ultraCount);
     }
 
     /// <summary>Adds to a tier's "times collected" (used for offline progress, which pays without clicking).</summary>

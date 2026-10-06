@@ -497,6 +497,7 @@ public class PixelUI : MonoBehaviour
     {
         if (!built) return;
         TickDeltas();
+        UpdateTooltip();
         UpdateActiveHud();
         UpdateGuide();
         if (autoMode && !boxObject.activeSelf) return; // closed box: nothing to update
@@ -514,9 +515,71 @@ public class PixelUI : MonoBehaviour
 
         popupCanvasRect = go.GetComponent<RectTransform>();
         popupRoot = go;
+        BuildTooltip();
     }
 
     private GameObject popupRoot;
+
+    // Tooltip over a pixel's entry: its Ultra count.
+    private GameObject tooltipRoot;
+    private TMP_Text tooltipLabel;
+    private RectTransform tooltipRect;
+    private int tooltipTier = -1;
+
+    [Header("Ultra Tooltip")]
+    [Tooltip("Tooltip shown when hovering a pixel's entry. {0} = pixel name, {1} = how many Ultra versions you own.")]
+    [SerializeField] private string ultraTooltipFormat = "Ultra {0}: {1}";
+
+    [Tooltip("Tooltip text size.")]
+    [SerializeField] private float tooltipFontSize = 30f;
+
+    [Tooltip("Tooltip background colour.")]
+    [SerializeField] private Color tooltipColor = new Color(0.05f, 0.05f, 0.08f, 0.95f);
+
+    [Tooltip("Tooltip text colour.")]
+    [SerializeField] private Color tooltipTextColor = new Color(1f, 0.88f, 0.4f, 1f);
+
+    [Tooltip("Where the tooltip sits relative to the mouse (canvas units).")]
+    [SerializeField] private Vector2 tooltipOffset = new Vector2(24f, -28f);
+
+    private void BuildTooltip()
+    {
+        tooltipRoot = new GameObject("Ultra Tooltip", typeof(RectTransform), typeof(Image));
+        tooltipRoot.transform.SetParent(popupCanvasRect, false);
+        Image bg = tooltipRoot.GetComponent<Image>();
+        bg.color = tooltipColor;
+        bg.raycastTarget = false;
+        tooltipRect = tooltipRoot.GetComponent<RectTransform>();
+        tooltipRect.anchorMin = tooltipRect.anchorMax = new Vector2(0.5f, 0.5f);
+        tooltipRect.pivot = new Vector2(0f, 1f);
+
+        tooltipLabel = MakeText(tooltipRoot.transform, "Text", "", tooltipFontSize, TextAlignmentOptions.Center, FontStyles.Bold, tooltipTextColor);
+        PixelUIKit.Stretch(tooltipLabel.rectTransform);
+        tooltipRoot.SetActive(false);
+    }
+
+    private void ShowTooltip(int tierIndex)
+    {
+        if (!PixelPadMinigame.UltraVisible) return;
+        tooltipTier = tierIndex;
+    }
+
+    private void HideTooltip() => tooltipTier = -1;
+
+    private void UpdateTooltip()
+    {
+        if (tooltipRoot == null) return;
+        bool show = tooltipTier >= 0 && tooltipTier < clicker.Tiers.Length && PixelPadMinigame.UltraVisible;
+        if (tooltipRoot.activeSelf != show) tooltipRoot.SetActive(show);
+        if (!show) return;
+
+        PixelClicker.PixelTier tier = clicker.Tiers[tooltipTier];
+        string text = string.Format(ultraTooltipFormat, tier.displayName, FormatAmount(tier.ultraCount));
+        tooltipLabel.text = text;
+        float width = tooltipLabel.GetPreferredValues(text, 0f, 0f).x + 36f;
+        tooltipRect.sizeDelta = new Vector2(width, tooltipFontSize * 1.8f);
+        tooltipRect.anchoredPosition = CursorLocal() + tooltipOffset;
+    }
 
     private Vector2 CursorScreenPosition()
     {
@@ -817,6 +880,13 @@ public class PixelUI : MonoBehaviour
             }
 
             tierLabels[i] = tmp;
+
+            // Hovering the entry shows its Ultra count (see the Ultra Pad minigame).
+            tmp.raycastTarget = true;
+            PixelHoverTip tip = tmp.gameObject.AddComponent<PixelHoverTip>();
+            int tierForTip = i;
+            tip.onEnter = () => ShowTooltip(tierForTip);
+            tip.onExit = HideTooltip;
 
             // "+X" indicator that fills the entry's row, aligned to the opposite side of the text.
             TMP_Text delta = MakeText(tmp.transform, "Delta", "", fontSize * deltaFontScale,
@@ -1350,4 +1420,14 @@ public class PotionRowClick : MonoBehaviour, IPointerClickHandler, IPointerEnter
     {
         if (highlight != null) highlight.color = new Color(hoverColor.r, hoverColor.g, hoverColor.b, 0f);
     }
+}
+
+/// <summary>Reports the mouse entering / leaving a UI element (used for tooltips).</summary>
+public class PixelHoverTip : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    public System.Action onEnter, onExit;
+
+    public void OnPointerEnter(PointerEventData eventData) { onEnter?.Invoke(); }
+    public void OnPointerExit(PointerEventData eventData) { onExit?.Invoke(); }
+    private void OnDisable() { onExit?.Invoke(); }
 }

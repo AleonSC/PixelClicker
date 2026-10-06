@@ -34,6 +34,7 @@ public class PixelSaveGame : MonoBehaviour
         public bool unlocked;
         public bool spawnDisabled;
         public long timesCollected;
+        public long ultraCount;
     }
 
     [Serializable]
@@ -286,6 +287,7 @@ public class PixelSaveGame : MonoBehaviour
                     unlocked = tiers[i].unlocked,
                     spawnDisabled = tiers[i].spawnDisabled,
                     timesCollected = tiers[i].timesCollected,
+                    ultraCount = tiers[i].ultraCount,
                 };
 
             if (shop != null)
@@ -392,7 +394,7 @@ public class PixelSaveGame : MonoBehaviour
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
                 clicker.LoadTierState(tier.type, 0d, 0d, false);
             foreach (TierSave t in data.tiers)
-                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected);
+                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraCount);
 
             // Shop: match packs by name.
             if (shop != null)
