@@ -245,6 +245,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Indicator text. {0} = amount gained.")]
     [SerializeField] private string deltaFormat = "+{0}";
 
+    [Tooltip("Also show a '+X' next to a pixel's entry for every click you or the auto clicker make. Clicks in quick succession add up. Same format, colour and fade as the vacuum indicator.")]
+    [SerializeField] private bool showGainDeltas = true;
+
     [Tooltip("Indicator colour.")]
     [SerializeField] private Color deltaColor = new Color(0.45f, 1f, 0.5f, 1f);
 
@@ -392,6 +395,7 @@ public class PixelUI : MonoBehaviour
     private TMP_Text titleLabel;
     private TMP_Text[] deltaLabels;
     private float[] deltaTimers;
+    private double[] gainSums;
     private TMP_Text buttonLabel;
     private bool built;
     private RectTransform popupCanvasRect;
@@ -575,6 +579,7 @@ public class PixelUI : MonoBehaviour
     /// <summary>Called for every collected pixel; automatic clicks pop up over the cube, manual ones at the cursor.</summary>
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)
     {
+        AddGainDelta(tierIndex, amount);
         if (!showGainPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
 
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
@@ -601,6 +606,17 @@ public class PixelUI : MonoBehaviour
         StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, 1f));
     }
 
+    /// <summary>Shows (and adds up) "+X" next to a pixel's entry for each click's payout.</summary>
+    private void AddGainDelta(int tierIndex, double amount)
+    {
+        if (!showGainDeltas || deltaLabels == null || tierIndex < 0 || tierIndex >= deltaLabels.Length) return;
+
+        gainSums[tierIndex] = deltaTimers[tierIndex] > 0f && gainSums[tierIndex] > 0d ? gainSums[tierIndex] + amount : amount;
+        deltaLabels[tierIndex].text = string.Format(deltaFormat, FormatAmount(gainSums[tierIndex]));
+        deltaTimers[tierIndex] = deltaDuration;
+        deltaLabels[tierIndex].gameObject.SetActive(true);
+    }
+
     /// <summary>Starts a "+X" indicator next to every entry that the Vacuum just paid.</summary>
     private void OnVacuumBreakdown(double[] perTier)
     {
@@ -610,6 +626,7 @@ public class PixelUI : MonoBehaviour
         {
             if (perTier[i] <= 0d) continue;
             deltaLabels[i].text = string.Format(deltaFormat, FormatAmount(perTier[i]));
+            gainSums[i] = 0d; // the vacuum total replaces the click sum
             deltaTimers[i] = deltaDuration;
             deltaLabels[i].gameObject.SetActive(true);
         }
@@ -635,7 +652,11 @@ public class PixelUI : MonoBehaviour
             RectTransform dr = deltaLabels[i].rectTransform;
             dr.offsetMin = dr.offsetMax = new Vector2(0f, deltaRise * progress);
 
-            if (deltaTimers[i] <= 0f) deltaLabels[i].gameObject.SetActive(false);
+            if (deltaTimers[i] <= 0f)
+            {
+                deltaLabels[i].gameObject.SetActive(false);
+                gainSums[i] = 0d;
+            }
         }
     }
 
@@ -775,6 +796,7 @@ public class PixelUI : MonoBehaviour
         tierLabels = new TMP_Text[count];
         deltaLabels = new TMP_Text[count];
         deltaTimers = new float[count];
+        gainSums = new double[count];
         for (int i = 0; i < count; i++)
         {
             TMP_Text tmp = MakeText(ListParent, "Tier " + i, "", fontSize,

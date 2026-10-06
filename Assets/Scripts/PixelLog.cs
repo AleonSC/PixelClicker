@@ -219,6 +219,9 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Indicator text. {0} = amount gained.")]
     [SerializeField] private string deltaFormat = "+{0}";
 
+    [Tooltip("Also show a '+X' next to a pixel's row for every click you or the auto clicker make. Clicks in quick succession add up. Same format, colour and fade as the vacuum indicator.")]
+    [SerializeField] private bool showGainDeltas = true;
+
     [Tooltip("Indicator colour.")]
     [SerializeField] private Color deltaColor = new Color(0.45f, 1f, 0.5f, 1f);
 
@@ -269,6 +272,7 @@ public class PixelLog : MonoBehaviour
         public Image swatch;
         public TMP_Text delta;
         public float deltaTimer;
+        public double gainSum;
     }
 
     private class AchievementRow
@@ -332,6 +336,7 @@ public class PixelLog : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         BuildUI();
         clicker.VacuumBreakdown += OnVacuumBreakdown;
+        clicker.PixelCollected += OnPixelCollected;
         built = true;
         Refresh();
         panelObject.SetActive(startOpen);
@@ -358,7 +363,11 @@ public class PixelLog : MonoBehaviour
     private void OnDestroy()
     {
         PixelWindows.Unregister(this);
-        if (clicker != null) clicker.VacuumBreakdown -= OnVacuumBreakdown;
+        if (clicker != null)
+        {
+            clicker.VacuumBreakdown -= OnVacuumBreakdown;
+            clicker.PixelCollected -= OnPixelCollected;
+        }
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
@@ -367,6 +376,19 @@ public class PixelLog : MonoBehaviour
         if (!built) return;
         TickDeltas();
         if (panelObject.activeSelf) Refresh();
+    }
+
+    /// <summary>Shows (and adds up) "+X" next to a pixel's row for each click's payout.</summary>
+    private void OnPixelCollected(int tierIndex, double amount, bool automatic)
+    {
+        if (!showGainDeltas || rows == null || tierIndex < 0 || tierIndex >= rows.Length) return;
+        Row row = rows[tierIndex];
+        if (row == null || row.delta == null) return;
+
+        row.gainSum = row.deltaTimer > 0f && row.gainSum > 0d ? row.gainSum + amount : amount;
+        row.delta.text = string.Format(deltaFormat, FormatAmount(row.gainSum));
+        row.deltaTimer = deltaDuration;
+        row.delta.gameObject.SetActive(true);
     }
 
     /// <summary>Starts a "+X" indicator next to every entry that the Vacuum just paid.</summary>
@@ -380,6 +402,7 @@ public class PixelLog : MonoBehaviour
             if (perTier[i] <= 0d || row == null || row.delta == null) continue;
 
             row.delta.text = string.Format(deltaFormat, FormatAmount(perTier[i]));
+            row.gainSum = 0d; // the vacuum total replaces the click sum
             row.deltaTimer = deltaDuration;
             row.delta.gameObject.SetActive(true);
         }
@@ -405,7 +428,11 @@ public class PixelLog : MonoBehaviour
             dr.offsetMin = new Vector2(0f, deltaRise * (1f - remaining));
             dr.offsetMax = new Vector2(-deltaRightInset, deltaRise * (1f - remaining));
 
-            if (row.deltaTimer <= 0f) row.delta.gameObject.SetActive(false);
+            if (row.deltaTimer <= 0f)
+            {
+                row.delta.gameObject.SetActive(false);
+                row.gainSum = 0d;
+            }
         }
     }
 

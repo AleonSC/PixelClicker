@@ -1,1 +1,2 @@
 [2026-10-06 14:52 UTC] Added a Changelog screen to the pause menu (reads this file). New changes are listed here until a build is made.
+[2026-10-06 14:58 UTC] Added a '+X' next to each pixel's entry in the Currency and Log windows for every click (quick clicks add up), so gains stay readable when the cube popups get crowded.
