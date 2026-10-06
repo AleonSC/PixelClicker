@@ -42,6 +42,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Start with the 'Press Q to clear old pixels' box ticked.")]
     [SerializeField] private bool clearKeyEnabled = false;
 
+    [Tooltip("Start with 'Infinite resources' ticked: everything in the shop and crafting costs nothing.")]
+    [SerializeField] private bool infiniteResources = false;
+
     [Tooltip("Only exist in the Editor and Development Builds. In a release build this component removes itself.")]
     [SerializeField] private bool devBuildsOnly = true;
 
@@ -63,6 +66,9 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Label of the clear-old-pixels tick box.")]
     [SerializeField] private string clearToggleText = "Press Q to clear old pixels";
+
+    [Tooltip("Label of the infinite-resources tick box.")]
+    [SerializeField] private string infiniteToggleText = "Infinite resources";
 
     [Tooltip("Label of the close button.")]
     [SerializeField] private string closeText = "Close";
@@ -141,6 +147,7 @@ public class PixelDevTools : MonoBehaviour
     {
         if (devBuildsOnly && !Debug.isDebugBuild) { Destroy(this); return; }
         instance = this;
+        PixelClicker.InfiniteResources = infiniteResources;
     }
 
     private void Start()
@@ -163,7 +170,11 @@ public class PixelDevTools : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (instance == this) instance = null;
+        if (instance == this)
+        {
+            instance = null;
+            PixelClicker.InfiniteResources = false;
+        }
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
@@ -329,7 +340,12 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for the clear key
-        BuildToggleRow(box.transform, clearToggleText, y, inner);
+        BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => clearKeyEnabled = on);
+        y += rowHeight + 24f;
+
+        // Row: tick box for infinite resources
+        BuildToggleRow(box.transform, infiniteToggleText, y, inner, infiniteResources,
+                       on => { infiniteResources = on; PixelClicker.InfiniteResources = on; });
         y += rowHeight + 24f;
 
         // Close
@@ -353,9 +369,9 @@ public class PixelDevTools : MonoBehaviour
         rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    private void BuildToggleRow(Transform parent, string label, float y, float width)
+    private void BuildToggleRow(Transform parent, string label, float y, float width, bool initial, System.Action<bool> onChange)
     {
-        TMP_Text text = PixelUIKit.CreateText(font, parent, "Clear Label", label, fontSize,
+        TMP_Text text = PixelUIKit.CreateText(font, parent, label + " Label", label, fontSize,
                                               TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
         Place(text.rectTransform, 40f, y, width - rowHeight - 10f);
 
@@ -381,8 +397,8 @@ public class PixelDevTools : MonoBehaviour
         Toggle toggle = boxGo.GetComponent<Toggle>();
         toggle.targetGraphic = bg;
         toggle.graphic = tickImage;
-        toggle.isOn = clearKeyEnabled;
-        toggle.onValueChanged.AddListener(on => clearKeyEnabled = on);
+        toggle.isOn = initial;
+        toggle.onValueChanged.AddListener(on => onChange(on));
         toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
     }
 }

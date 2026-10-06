@@ -1379,11 +1379,30 @@ public class PixelUI : MonoBehaviour
             return;
         }
 
+        // Hold the right mouse button on the line to cancel the potion.
+        PixelConsumables.Potion running = consumables.Get(consumables.ActiveIndex);
+        if (PixelHold.Update(this, PointerOverHudLabel() ? hudLabel : null, consumables.RemoveHoldSeconds,
+                             string.Format(consumables.CancelPotionText, running.displayName), consumables.RemoveMeterColor))
+        {
+            consumables.CancelActive();
+            return;
+        }
+
         PixelConsumables.Potion potion = consumables.Get(consumables.ActiveIndex);
         hudLabel.text = string.Format(activeHudFormat, potion.displayName, Mathf.CeilToInt(consumables.Remaining));
 
         int tierIndex = clicker.IndexOf(potion.type);
         hudLabel.color = activeHudUsesTierColor && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : Color.white;
+    }
+
+    /// <summary>Is the mouse on the text of the active-potion line?</summary>
+    private bool PointerOverHudLabel()
+    {
+        if (hudLabel == null || !hudLabel.gameObject.activeSelf) return false;
+        RectTransform rt = hudLabel.rectTransform;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, PixelInput.PointerPosition(), null, out Vector2 local)) return false;
+        float halfWidth = Mathf.Min(hudLabel.preferredWidth, rt.rect.width) * 0.5f + 12f;
+        return Mathf.Abs(local.x - rt.rect.center.x) <= halfWidth && Mathf.Abs(local.y - rt.rect.center.y) <= rt.rect.height * 0.5f;
     }
 
     private string FormatAmount(double value)

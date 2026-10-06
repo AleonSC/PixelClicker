@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -9,6 +10,11 @@ using UnityEngine;
 /// </summary>
 public abstract class PixelPlacedDevice : MonoBehaviour
 {
+    private static readonly List<PixelPlacedDevice> all = new List<PixelPlacedDevice>();
+
+    /// <summary>Every placed device that exists right now.</summary>
+    public static IReadOnlyList<PixelPlacedDevice> All => all;
+
     protected PixelClicker clicker;
     protected Camera cam;
 
@@ -23,6 +29,19 @@ public abstract class PixelPlacedDevice : MonoBehaviour
 
     /// <summary>True once time ran out and the device is shrinking away (it should stop working).</summary>
     protected bool IsDying => dying;
+
+    /// <summary>Is the device already shrinking away?</summary>
+    public bool IsRemoving => dying;
+
+    /// <summary>Removes the device now (it shrinks away like when its time runs out). No refund.</summary>
+    public void RemoveNow()
+    {
+        if (!dying) StartCoroutine(ShrinkAway());
+    }
+
+    private void OnEnable() => all.Add(this);
+
+    private void OnDisable() => all.Remove(this);
 
     /// <summary>Sets up the countdown. Called by the subclass's own Init.</summary>
     protected void InitCommon(PixelClicker owner, Camera camera, TextMeshPro timer, string format, float duration, float shrinkTime)

@@ -207,6 +207,20 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("Fan: degrees per second turned while holding Q or E.")]
     [SerializeField] private float rotateSpeedDegrees = 120f;
 
+    [Header("Removing")]
+    [Min(0.1f)]
+    [Tooltip("How long (seconds) you hold the right mouse button on a placed device to remove it. The same hold cancels the running potion.")]
+    [SerializeField] private float removeHoldSeconds = 0.8f;
+
+    [Tooltip("Text above the meter while removing a placed device. {0} = device name.")]
+    [SerializeField] private string removeText = "Removing {0}...";
+
+    [Tooltip("Text above the meter while cancelling the running potion. {0} = potion name.")]
+    [SerializeField] private string cancelPotionText = "Cancelling {0}...";
+
+    [Tooltip("Colour of the filling meter.")]
+    [SerializeField] private Color removeMeterColor = new Color(0.9f, 0.3f, 0.3f, 1f);
+
     [Range(0.05f, 1f)]
     [Tooltip("How see-through the cylinder is while you are choosing where to put it.")]
     [SerializeField] private float previewOpacity = 0.5f;
@@ -493,9 +507,69 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The second pixel type of a combo potion.</summary>
     public PixelClicker.PixelType ItemSecondType(int item) => potions[item].secondType;
 
+    /// <summary>Seconds of holding the right mouse button needed to remove a device / cancel a potion.</summary>
+    public float RemoveHoldSeconds => removeHoldSeconds;
+
+    /// <summary>Colour of the hold meter.</summary>
+    public Color RemoveMeterColor => removeMeterColor;
+
+    /// <summary>Label of the hold meter while cancelling a potion.</summary>
+    public string CancelPotionText => cancelPotionText;
+
+    /// <summary>Ends the running potion on purpose (no refund).</summary>
+    public void CancelActive()
+    {
+        if (activeIndex < 0) return;
+        StopActive();
+        PixelAudio.Play("device_remove");
+    }
+
+    private int placeEndFrame = -1;
+
+    /// <summary>Hold the right mouse button on a placed device to remove it.</summary>
+    private void UpdateRemoval()
+    {
+        PixelPlacedDevice target = null;
+        if (!IsPlacing && Time.frameCount != placeEndFrame && (RightPressed() || RightHeld()) && !PointerOverUI())
+            target = DeviceUnderPointer();
+
+        string text = target != null ? string.Format(removeText, target.name) : "";
+        if (PixelHold.Update(this, target, removeHoldSeconds, text, removeMeterColor))
+        {
+            target.RemoveNow();
+            PixelAudio.Play("device_remove");
+        }
+    }
+
+    /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings.</summary>
+    private PixelPlacedDevice DeviceUnderPointer()
+    {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return null;
+        Ray ray = cam.ScreenPointToRay(PointerPosition());
+
+        PixelPlacedDevice best = null;
+        float bestDistance = float.MaxValue;
+        foreach (PixelPlacedDevice device in PixelPlacedDevice.All)
+        {
+            if (device == null || device.IsRemoving) continue;
+            foreach (Renderer r in device.GetComponentsInChildren<Renderer>())
+            {
+                if (!r.enabled || r.name == "Range" || r.name == "Blow Area") continue;
+                if (r.bounds.IntersectRay(ray, out float distance) && distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = device;
+                }
+            }
+        }
+        return best;
+    }
+
     private void Update()
     {
         if (IsPlacing) UpdatePlacement();
+        UpdateRemoval();
 
         if (activeIndex < 0) return;
 
@@ -720,6 +794,7 @@ public class PixelConsumables : MonoBehaviour
 
     private void EndPlacement()
     {
+        placeEndFrame = Time.frameCount; // the click that ended placing must not start a removal hold
         placingIndex = -1;
         if (preview != null) Destroy(preview);
         preview = null;

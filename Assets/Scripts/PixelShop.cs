@@ -910,7 +910,7 @@ public partial class PixelShop : MonoBehaviour
     {
         if (costs == null) return true;
         foreach (PackCost cost in costs)
-            if (clicker.GetCount(cost.type) < cost.amount) return false;
+            if (!clicker.CanAfford(cost.type, cost.amount)) return false;
         return true;
     }
 

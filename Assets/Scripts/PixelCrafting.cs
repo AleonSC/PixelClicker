@@ -774,7 +774,7 @@ public class PixelCrafting : MonoBehaviour
 
     private double Have(Item item)
     {
-        if (item.kind == ItemKind.Pixel) return Math.Floor(clicker.GetCount(item.type));
+        if (item.kind == ItemKind.Pixel) return PixelClicker.InfiniteResources ? 1e9 : Math.Floor(clicker.GetCount(item.type));
         int p = item.combo ? consumables.FindComboPotion(item.type, item.second) : FindPotion(item.type);
         return p >= 0 ? consumables.ItemOwned(p) : 0;
     }

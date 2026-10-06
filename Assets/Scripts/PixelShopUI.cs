@@ -771,7 +771,7 @@ public partial class PixelShop
                                  ColorUtility.ToHtmlStringRGB(levelColor) + ">" + string.Format(ultraLevelFormat, tier.ultraLevel) + "</color></size>";
             row.descLabel.text = string.Format(ultraRowDescFormat, tier.displayName, now.ToString("0.##"), maxed ? now.ToString("0.##") : next.ToString("0.##"));
 
-            bool enough = tier.ultraCount >= cost;
+            bool enough = PixelClicker.InfiniteResources || tier.ultraCount >= cost;
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
                                  string.Format(ultraCostFormat, PixelClicker.FormatNumber(cost), tier.displayName, PixelClicker.FormatNumber(tier.ultraCount)) + "</color>";
 
@@ -848,7 +848,7 @@ public partial class PixelShop
             PackCost cost = costs[i];
             int tierIndex = clicker.IndexOf(cost.type);
             string name = tierIndex >= 0 ? clicker.Tiers[tierIndex].displayName : cost.type.ToString();
-            bool enough = clicker.GetCount(cost.type) >= cost.amount;
+            bool enough = clicker.CanAfford(cost.type, cost.amount);
 
             string part = string.Format(costEntryFormat, PixelClicker.FormatNumber(cost.amount), name);
             sb.Append("<color=#")

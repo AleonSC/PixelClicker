@@ -820,8 +820,8 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Spends Ultra pixels to raise a pixel type's boost level by one. Returns false if you don't have enough.</summary>
     public bool TryBuyUltraBoost(int tierIndex, long cost)
     {
-        if (!IsValidTier(tierIndex) || cost < 0 || tiers[tierIndex].ultraCount < cost) return false;
-        tiers[tierIndex].ultraCount -= cost;
+        if (!IsValidTier(tierIndex) || cost < 0 || (!InfiniteResources && tiers[tierIndex].ultraCount < cost)) return false;
+        if (!InfiniteResources) tiers[tierIndex].ultraCount -= cost;
         tiers[tierIndex].ultraLevel++;
         NotifyChanged();
         return true;
@@ -845,9 +845,16 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+    /// <summary>Dev cheat (set by Dev Tools): everything costs nothing - spending always works and takes nothing away.</summary>
+    public static bool InfiniteResources;
+
+    /// <summary>Can the player pay this much of a pixel type? (Always, with the infinite resources cheat.)</summary>
+    public bool CanAfford(PixelType type, double amount) => InfiniteResources || GetCount(type) >= amount;
+
     /// <summary>Spends currency if the player can afford it. Use this from shops later.</summary>
     public bool TrySpend(int tierIndex, double amount)
     {
+        if (InfiniteResources) return IsValidTier(tierIndex) && amount >= 0;
         if (!IsValidTier(tierIndex) || amount < 0 || tiers[tierIndex].count < amount) return false;
         tiers[tierIndex].count -= amount;
         if (amount > 0d) CurrencySpent?.Invoke(tierIndex, amount);
