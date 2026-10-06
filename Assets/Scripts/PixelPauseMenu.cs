@@ -74,6 +74,30 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Restart button text.")]
     [SerializeField] private string restartText = "Restart";
 
+    [Header("Restart Confirmation")]
+    [Tooltip("Title of the confirmation screen.")]
+    [SerializeField] private string restartConfirmTitle = "Restart?";
+
+    [TextArea(2, 4)]
+    [Tooltip("Warning shown on the confirmation screen.")]
+    [SerializeField] private string restartConfirmMessage = "This will delete EVERYTHING: your pixels, shop purchases, achievements and stats. This cannot be undone.";
+
+    [Tooltip("Text on the hold-to-confirm button.")]
+    [SerializeField] private string restartHoldText = "Hold to delete everything";
+
+    [Min(0.2f)]
+    [Tooltip("Seconds the player must keep the mouse button held on the confirm button.")]
+    [SerializeField] private float restartHoldSeconds = 2f;
+
+    [Tooltip("Colour of the confirm button.")]
+    [SerializeField] private Color restartHoldColor = new Color(0.8f, 0.25f, 0.25f, 1f);
+
+    [Tooltip("Colour of the fill that grows across the confirm button while it is held.")]
+    [SerializeField] private Color restartFillColor = new Color(1f, 0.85f, 0.3f, 0.85f);
+
+    [Tooltip("Colour of the warning text.")]
+    [SerializeField] private Color restartWarningColor = new Color(1f, 0.8f, 0.7f, 1f);
+
     [Tooltip("Quit button text.")]
     [SerializeField] private string quitText = "Quit";
 
@@ -291,7 +315,8 @@ public class PixelPauseMenu : MonoBehaviour
 
     private GameObject canvasRoot;
     private GameObject menuRoot;
-    private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel;
+    private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel, restartPanel;
+    private PixelHoldButton restartHold;
     private ScrollRect changelogScroll;
     private GameObject changelogBar;
     private TMP_Text changelogLabel;
@@ -472,6 +497,7 @@ public class PixelPauseMenu : MonoBehaviour
             saveGame.SuppressSaving(); // so autosave / quit can't write the old game back
             saveGame.DeleteSave();
         }
+        PixelAchievements.ResetOnNextStart = true; // achievements start from nothing in the new game too
         SetPaused(false);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
@@ -557,8 +583,9 @@ public class PixelPauseMenu : MonoBehaviour
         else if (showSettings) AddMenuButton(panel.transform, settingsText, menuButtonColor, ref y, () => ShowView(settingsPanel));
         if (PixelDevTools.Available) AddMenuButton(panel.transform, PixelDevTools.ButtonText, menuButtonColor, ref y, PixelDevTools.OpenPanel);
         BuildChangelogPanel();
+        BuildRestartPanel();
         if (showChangelog) AddMenuButton(panel.transform, changelogText, menuButtonColor, ref y, () => ShowView(changelogPanel));
-        if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, Restart);
+        if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, () => ShowView(restartPanel));
         if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
 
         // Grow the panel if the buttons need more room than 'Panel Size' gives.
@@ -580,6 +607,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (statsPanel != null) statsPanel.SetActive(view == statsPanel);
         if (settingsPanel != null) settingsPanel.SetActive(view == settingsPanel);
         if (changelogPanel != null) changelogPanel.SetActive(view == changelogPanel);
+        if (restartPanel != null) restartPanel.SetActive(view == restartPanel);
+        if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
         if (view == changelogPanel) RefreshChangelog();
 
         if (view == statsPanel) RefreshStats();
@@ -795,6 +824,52 @@ public class PixelPauseMenu : MonoBehaviour
         statsPanelRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
     }
 
+    /// <summary>"This deletes everything" screen: the player has to HOLD the red button to confirm.</summary>
+    private void BuildRestartPanel()
+    {
+        restartPanel = BuildSectionPanel("Restart Panel", restartConfirmTitle, out float y);
+
+        TMP_Text warning = MakeText(restartPanel.transform, "Warning", restartConfirmMessage, rowFontSize * 0.9f, FontStyles.Normal);
+        warning.color = restartWarningColor;
+        warning.alignment = TextAlignmentOptions.Top;
+        float width = panelSize.x - 80f;
+        float height = Mathf.Ceil(warning.GetPreferredValues(restartConfirmMessage, width, 0f).y) + 10f;
+        RectTransform wr = warning.rectTransform;
+        wr.anchorMin = new Vector2(0.5f, 1f);
+        wr.anchorMax = new Vector2(0.5f, 1f);
+        wr.pivot = new Vector2(0.5f, 1f);
+        wr.sizeDelta = new Vector2(width, height);
+        wr.anchoredPosition = new Vector2(0f, -y);
+        y += height + 20f;
+
+        // The hold-to-confirm button: a fill grows across it while the mouse button stays down.
+        Button hold = MakeButton(restartPanel.transform, "Hold To Confirm", "", menuButtonSize, restartHoldColor, menuButtonFontSize);
+        RectTransform hr = hold.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(0.5f, 1f);
+        hr.anchoredPosition = new Vector2(0f, -y);
+        TMP_Text holdLabel = hold.GetComponentInChildren<TMP_Text>();
+        holdLabel.text = restartHoldText;
+        holdLabel.enableAutoSizing = true;
+        holdLabel.fontSizeMax = menuButtonFontSize * 0.8f;
+        holdLabel.fontSizeMin = 14f;
+        holdLabel.transform.SetAsLastSibling();
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fill.transform.SetParent(hold.transform, false);
+        fill.transform.SetSiblingIndex(0); // behind the label
+        Image fillImage = fill.GetComponent<Image>();
+        fillImage.color = restartFillColor;
+        fillImage.raycastTarget = false;
+        RectTransform fr = fill.GetComponent<RectTransform>();
+        PixelUIKit.Stretch(fr);
+
+        restartHold = hold.gameObject.AddComponent<PixelHoldButton>();
+        restartHold.Setup(fr, restartHoldSeconds, Restart);
+        y += menuButtonSize.y + menuButtonSpacing;
+
+        FinishSectionPanel(restartPanel, y);
+    }
+
     private void BuildChangelogPanel()
     {
         changelogPanel = BuildSectionPanel("Changelog Panel", changelogText, out float y);
@@ -939,5 +1014,55 @@ public class PixelPauseMenu : MonoBehaviour
         rt.anchoredPosition = new Vector2(0f, -y);
         button.onClick.AddListener(onClick);
         y += menuButtonSize.y + menuButtonSpacing;
+    }
+}
+
+/// <summary>
+/// A button that only fires after the mouse button has been held down on it for a while. A fill grows across it as
+/// feedback; letting go or moving off the button starts over. Uses unscaled time, so it works while the game is paused.
+/// </summary>
+public class PixelHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+{
+    private RectTransform fill;
+    private float seconds = 2f;
+    private System.Action onComplete;
+    private bool holding;
+    private float held;
+
+    public void Setup(RectTransform fillRect, float holdSeconds, System.Action complete)
+    {
+        fill = fillRect;
+        seconds = Mathf.Max(0.05f, holdSeconds);
+        onComplete = complete;
+        ResetProgress();
+    }
+
+    public void ResetProgress()
+    {
+        holding = false;
+        held = 0f;
+        Apply();
+    }
+
+    public void OnPointerDown(PointerEventData e) { holding = true; }
+    public void OnPointerUp(PointerEventData e) { ResetProgress(); }
+    public void OnPointerExit(PointerEventData e) { ResetProgress(); }
+
+    private void Update()
+    {
+        if (!holding) return;
+        held += Time.unscaledDeltaTime;
+        Apply();
+        if (held >= seconds)
+        {
+            holding = false;
+            onComplete?.Invoke();
+        }
+    }
+
+    private void Apply()
+    {
+        if (fill == null) return;
+        fill.anchorMax = new Vector2(Mathf.Clamp01(held / seconds), 1f);
     }
 }

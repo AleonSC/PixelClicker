@@ -328,8 +328,22 @@ public class PixelAchievements : MonoBehaviour
         EnsureDefaultAchievements();
     }
 
+    /// <summary>Set by the Restart button: the next scene start clears every earned tier, whatever else is stored.</summary>
+    public static bool ResetOnNextStart;
+
+    /// <summary>Forgets every earned tier.</summary>
+    public void ResetAll()
+    {
+        foreach (Achievement a in achievements) a.earnedTiers = 0;
+    }
+
     private void Start()
     {
+        if (ResetOnNextStart)
+        {
+            ResetOnNextStart = false;
+            ResetAll();
+        }
         BuildPopup();
         Evaluate(true); // anything already earned (e.g. typed-in totals) is granted quietly
     }
