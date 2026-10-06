@@ -414,21 +414,42 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Normal text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Header("Minigame On/Off Box")]
-    [Tooltip("Label next to the tick box on a bought minigame's row (ticked = the minigame runs).")]
-    [SerializeField] private string minigameActiveText = "Active";
+    [Header("Pixel Upgrades (spend Ultra pixels)")]
+    [Tooltip("Text of the sub-tab that lists the normal upgrades (inside the Upgrades tab).")]
+    [SerializeField] private string upgradesSubTabText = "Upgrades";
 
-    [Tooltip("Label next to the tick box on a bought pixel pack's row (ticked = those pixels can spawn). Only shown for packs with switchable pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor).")]
-    [SerializeField] private string pixelSpawnText = "Spawns";
+    [Tooltip("Text of the sub-tab that lists the Ultra pixel boosts (inside the Upgrades tab).")]
+    [SerializeField] private string pixelSubTabText = "Pixel";
 
-    [Tooltip("Colour of the tick box.")]
-    [SerializeField] private Color tickBoxColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+    [Tooltip("Height of the two sub-tab buttons.")]
+    [SerializeField] private float subTabHeight = 56f;
 
-    [Tooltip("Colour of the tick.")]
-    [SerializeField] private Color tickColor = new Color(0.4f, 0.9f, 0.5f, 1f);
+    [Tooltip("Name of a boost row. {0} = pixel name.")]
+    [SerializeField] private string ultraRowNameFormat = "{0} Boost";
 
-    [Tooltip("Size of the tick box (canvas units).")]
-    [SerializeField] private float tickBoxSize = 44f;
+    [Tooltip("Description of a boost row. {0} = pixel name, {1} = payout multiplier now, {2} = after the next level.")]
+    [SerializeField] private string ultraRowDescFormat = "Each {0} click pays x{1}  →  x{2}";
+
+    [Tooltip("Cost line of a boost row. {0} = Ultra pixels needed, {1} = pixel name, {2} = how many you have.")]
+    [SerializeField] private string ultraCostFormat = "Cost: {0} Ultra {1}   (you have {2})";
+
+    [Tooltip("Level shown next to a boost row's name. {0} = the boost level.")]
+    [SerializeField] private string ultraLevelFormat = "Level {0}";
+
+    [Tooltip("Text of a boost row's button.")]
+    [SerializeField] private string ultraButtonText = "Boost";
+
+    [Min(1)]
+    [Tooltip("Ultra pixels the first boost level of a pixel type costs.")]
+    [SerializeField] private long ultraBaseCost = 1;
+
+    [Min(0)]
+    [Tooltip("Each level already bought makes the next one cost this many more Ultra pixels.")]
+    [SerializeField] private long ultraCostPerLevel = 1;
+
+    [Min(0)]
+    [Tooltip("Highest boost level a pixel type can reach. 0 = no limit.")]
+    [SerializeField] private int ultraMaxLevel = 20;
 
     [Tooltip("Colour of a cost you can afford.")]
     [SerializeField] private Color affordableColor = new Color(0.45f, 1f, 0.5f, 1f);
@@ -908,34 +929,21 @@ public partial class PixelShop : MonoBehaviour
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
     }
 
-    /// <summary>Does this pack unlock a pixel the player may switch off?</summary>
-    private static bool HasSwitchablePixel(ShopPack pack)
-    {
-        if (pack.rewardTiers == null) return false;
-        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
-            if (t.CanSwitchOff) return true;
-        return false;
-    }
+    /// <summary>Ultra pixels the next boost level of a pixel type costs.</summary>
+    public long UltraBoostCost(int tierIndex) =>
+        ultraBaseCost + (clicker.IsValidTierIndex(tierIndex) ? clicker.Tiers[tierIndex].ultraLevel : 0) * ultraCostPerLevel;
 
-    /// <summary>Are this pack's switchable pixels allowed to spawn?</summary>
-    private bool PackPixelsSpawn(ShopPack pack)
-    {
-        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
-        {
-            int i = clicker.IndexOf(t.type);
-            if (i >= 0 && t.CanSwitchOff) return !clicker.Tiers[i].spawnDisabled;
-        }
-        return true;
-    }
+    /// <summary>True when a pixel type has reached its highest boost level.</summary>
+    public bool UltraBoostMaxed(int tierIndex) =>
+        ultraMaxLevel > 0 && clicker.IsValidTierIndex(tierIndex) && clicker.Tiers[tierIndex].ultraLevel >= ultraMaxLevel;
 
-    /// <summary>The tick box on a bought pixel pack's row: lets its switchable pixels spawn or not.</summary>
-    private void SetPackPixelsSpawn(ShopPack pack, bool on)
+    /// <summary>Spends Ultra pixels to boost a pixel type's payout. Returns false if it is maxed or you can't afford it.</summary>
+    public bool TryBuyUltraBoost(int tierIndex)
     {
-        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
-        {
-            int i = clicker.IndexOf(t.type);
-            if (i >= 0 && t.CanSwitchOff) clicker.SetSpawnEnabled(i, on);
-        }
+        if (UltraBoostMaxed(tierIndex)) return false;
+        bool ok = clicker.TryBuyUltraBoost(tierIndex, UltraBoostCost(tierIndex));
+        if (ok) PlayPurchaseSound();
+        return ok;
     }
 
     /// <summary>Starts a minigame unless the player switched it off.</summary>
@@ -943,15 +951,6 @@ public partial class PixelShop : MonoBehaviour
     {
         PixelMinigame m = PixelMinigame.Find(id);
         if (m != null && !m.UserDisabled) m.Activate();
-    }
-
-    /// <summary>The tick box on a bought minigame's row: runs or stops it.</summary>
-    private static void SetMinigameEnabled(string id, bool on)
-    {
-        PixelMinigame m = PixelMinigame.Find(id);
-        if (m == null) return;
-        m.UserDisabled = !on;
-        if (on) m.Activate(); else m.Deactivate();
     }
 
     /// <summary>Dev tools: unlocks every pack for free (leveled packs go to their top level). Ignores requirements and costs.</summary>

@@ -378,6 +378,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (stats == null) stats = gameObject.AddComponent<PixelStats>();
         if (PixelFind.First<PixelAudio>() == null) gameObject.AddComponent<PixelAudio>(); // the sound system (and its volume settings)
         PixelHud.Ensure(gameObject); // the black bars and docked buttons
+        if (PixelFind.First<PixelToggles>() == null) gameObject.AddComponent<PixelToggles>(); // the Toggles window
 
         PixelUIKit.EnsureEventSystem();
         BuildUI();
@@ -420,6 +421,14 @@ public class PixelPauseMenu : MonoBehaviour
             if (this == null || Application.isPlaying) return;
             if (PixelFind.First<PixelHud>() != null) return;
             UnityEditor.Undo.AddComponent<PixelHud>(gameObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+        };
+
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+            if (PixelFind.First<PixelToggles>() != null) return;
+            UnityEditor.Undo.AddComponent<PixelToggles>(gameObject);
             UnityEditor.EditorUtility.SetDirty(gameObject);
         };
     }

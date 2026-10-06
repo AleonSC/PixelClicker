@@ -51,8 +51,24 @@ public class PixelGrab : MonoBehaviour
     private Vector3 grabOffset;
     private Camera cam;
 
-    /// <summary>Is grabbing unlocked?</summary>
+    /// <summary>Is grabbing unlocked (bought)?</summary>
     public bool Active => grabbingActive;
+
+    /// <summary>The player switched grabbing off with the Toggles window. Saved.</summary>
+    public bool UserDisabled
+    {
+        get => userDisabled;
+        set
+        {
+            userDisabled = value;
+            if (userDisabled) Release();
+            ApplyToClicker();
+        }
+    }
+
+    private bool userDisabled;
+
+    private bool Working => grabbingActive && !userDisabled;
 
     /// <summary>Called by the shop when the upgrade is bought.</summary>
     public void Activate()
@@ -89,12 +105,12 @@ public class PixelGrab : MonoBehaviour
 
     private void ApplyToClicker()
     {
-        if (clicker != null) clicker.GrabEnabled = grabbingActive; // old pixels now catch clicks instead of letting them through
+        if (clicker != null) clicker.GrabEnabled = Working; // old pixels now catch clicks instead of letting them through
     }
 
     private void Update()
     {
-        if (!grabbingActive || clicker == null) return;
+        if (!Working || clicker == null) return;
         ApplyToClicker();
 
         if (held != null)

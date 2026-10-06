@@ -35,6 +35,7 @@ public class PixelSaveGame : MonoBehaviour
         public bool spawnDisabled;
         public long timesCollected;
         public long ultraCount;
+        public int ultraLevel;
     }
 
     [Serializable]
@@ -90,6 +91,8 @@ public class PixelSaveGame : MonoBehaviour
         public double statPixelsSpent;
         public PixelStats.ExtraData statExtra;
         public bool autoClickerRunning;
+        public bool autoClickerDisabled; // switched off by the player (Toggles window)
+        public bool grabDisabled;
         public float autoClickerInterval;
         public int autoClickerClicks;
     }
@@ -116,6 +119,9 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("The auto clicker's running state, interval and clicks per tick are saved.")]
     [SerializeField] private PixelAutoClicker autoClicker;
+
+    [Tooltip("Pixel Grabbing (for its on/off switch). Found automatically if left empty.")]
+    [SerializeField] private PixelGrab grab;
 
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
@@ -252,6 +258,7 @@ public class PixelSaveGame : MonoBehaviour
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
         if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
+        if (grab == null) grab = PixelFind.First<PixelGrab>();
         if (achievements == null) achievements = PixelFind.First<PixelAchievements>();
         if (stats == null) stats = PixelFind.First<PixelStats>();
         // Use the potions the shop sells into, so both always agree.
@@ -288,6 +295,7 @@ public class PixelSaveGame : MonoBehaviour
                     spawnDisabled = tiers[i].spawnDisabled,
                     timesCollected = tiers[i].timesCollected,
                     ultraCount = tiers[i].ultraCount,
+                    ultraLevel = tiers[i].ultraLevel,
                 };
 
             if (shop != null)
@@ -343,9 +351,12 @@ public class PixelSaveGame : MonoBehaviour
             if (autoClicker != null)
             {
                 data.autoClickerRunning = autoClicker.Running;
+                data.autoClickerDisabled = autoClicker.UserDisabled;
                 data.autoClickerInterval = autoClicker.Interval;
                 data.autoClickerClicks = autoClicker.ClicksPerTick;
             }
+
+            if (grab != null) data.grabDisabled = grab.UserDisabled;
 
             // Write to a temp file first so a crash mid-write can't destroy the old save.
             string path = FilePath;
@@ -394,7 +405,7 @@ public class PixelSaveGame : MonoBehaviour
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
                 clicker.LoadTierState(tier.type, 0d, 0d, false);
             foreach (TierSave t in data.tiers)
-                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraCount);
+                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraCount, t.ultraLevel);
 
             // Shop: match packs by name.
             if (shop != null)
@@ -412,9 +423,12 @@ public class PixelSaveGame : MonoBehaviour
             {
                 if (data.autoClickerInterval > 0f) autoClicker.Interval = data.autoClickerInterval;
                 if (data.autoClickerClicks > 0) autoClicker.ClicksPerTick = data.autoClickerClicks;
+                autoClicker.UserDisabled = data.autoClickerDisabled;
                 if (data.autoClickerRunning) autoClicker.Activate();
                 else autoClicker.Deactivate();
             }
+
+            if (grab != null) grab.UserDisabled = data.grabDisabled;
 
             // Potions.
             if (consumables != null)

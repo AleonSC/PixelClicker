@@ -144,6 +144,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds.")]
         public double totalCollected;
 
+        [Tooltip("Runtime: how many times the player has spent Ultra pixels to boost this pixel type's payout (saved). See the shop's Upgrades > Pixel tab.")]
+        public int ultraLevel;
+
         [Tooltip("How many Ultra versions of this pixel type you own (from the Ultra Pad minigame; saved). They will be used for upgrades later.")]
         public long ultraCount;
 
@@ -302,6 +305,11 @@ public class PixelClicker : MonoBehaviour
     [Header("Old Pixel Physics")]
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
     [SerializeField] private float fallingCopyLifetime = 6f;
+
+    [Header("Ultra Boosts")]
+    [Min(0f)]
+    [Tooltip("Each Ultra boost level adds this much to a pixel type's payout multiplier (0.25 = +25% of its normal payout per level).")]
+    [SerializeField] private float ultraBonusPerLevel = 0.25f;
 
     [Header("Old Pixel Size")]
     [Range(0.05f, 1f)]
@@ -733,7 +741,7 @@ public class PixelClicker : MonoBehaviour
         }
         hitsOnCurrentPixel = 0;
 
-        double amount = tier.amountPerClick * clickMultiplier * (automatic ? 1d : ManualClickBonus);
+        double amount = tier.amountPerClick * UltraMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
         tier.timesCollected++;
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
@@ -779,6 +787,26 @@ public class PixelClicker : MonoBehaviour
         if (!IsValidTier(tierIndex) || amount <= 0) return;
         tiers[tierIndex].ultraCount += amount;
         NotifyChanged();
+    }
+
+    /// <summary>How much each Ultra boost level adds to a pixel type's payout multiplier.</summary>
+    public float UltraBonusPerLevel => ultraBonusPerLevel;
+
+    /// <summary>Is this a valid index into the tier list?</summary>
+    public bool IsValidTierIndex(int index) => IsValidTier(index);
+
+    /// <summary>A pixel type's payout multiplier from its Ultra boost level (1 = no boost).</summary>
+    public double UltraMultiplier(int tierIndex) =>
+        IsValidTier(tierIndex) ? 1d + tiers[tierIndex].ultraLevel * (double)ultraBonusPerLevel : 1d;
+
+    /// <summary>Spends Ultra pixels to raise a pixel type's boost level by one. Returns false if you don't have enough.</summary>
+    public bool TryBuyUltraBoost(int tierIndex, long cost)
+    {
+        if (!IsValidTier(tierIndex) || cost < 0 || tiers[tierIndex].ultraCount < cost) return false;
+        tiers[tierIndex].ultraCount -= cost;
+        tiers[tierIndex].ultraLevel++;
+        NotifyChanged();
+        return true;
     }
 
     /// <summary>Ultra versions owned of a pixel type.</summary>
@@ -829,7 +857,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, long ultraCount = 0)
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, long ultraCount = 0, int ultraLevel = 0)
     {
         int index = IndexOf(type);
         if (index < 0) return;
@@ -841,6 +869,7 @@ public class PixelClicker : MonoBehaviour
         tier.spawnDisabled = spawnDisabled;
         tier.timesCollected = System.Math.Max(0L, timesCollected);
         tier.ultraCount = System.Math.Max(0L, ultraCount);
+        tier.ultraLevel = System.Math.Max(0, ultraLevel);
     }
 
     /// <summary>Adds to a tier's "times collected" (used for offline progress, which pays without clicking).</summary>

@@ -48,6 +48,12 @@ public class PixelAutoClicker : MonoBehaviour
 
     public bool Running => running;
 
+    /// <summary>The player switched the (bought) auto clicker off with the Toggles window. Saved.</summary>
+    public bool UserDisabled { get; set; }
+
+    /// <summary>Bought and not switched off: it is really clicking.</summary>
+    public bool Working => running && !UserDisabled;
+
     /// <summary>Seconds between automatic clicks.</summary>
     public float Interval
     {
@@ -81,7 +87,7 @@ public class PixelAutoClicker : MonoBehaviour
 
     private void Update()
     {
-        if (!running) return;
+        if (!running || UserDisabled) return;
 
         timer += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
 

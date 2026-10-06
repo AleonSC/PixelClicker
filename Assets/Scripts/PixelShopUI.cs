@@ -25,9 +25,6 @@ public partial class PixelShop
         public TMP_Text buyLabel;
         public TMP_Text costLabel;
         public Button arrowButton;
-        public Toggle activeToggle;
-        public string toggleMinigame;   // the toggle runs/stops this minigame...
-        public bool toggleSpawns;       // ...or switches spawning of this pack's switchable pixels
         public bool isPotion;
     }
 
@@ -44,6 +41,10 @@ public partial class PixelShop
     private TMP_Text subTitle;
     private int openParent = -1;
     private PackRow[] potionRows;
+    private PackRow[] ultraRows;           // one boost row per pixel type (Upgrades > Pixel sub-tab)
+    private RectTransform subTabRow;       // the "Upgrades | Pixel" buttons at the top of the Upgrades tab
+    private Image[] subTabImages;
+    private int upgradesSubTab;            // 0 = normal upgrades, 1 = Pixel boosts
     private GameObject canvasRoot;
     private GameObject shopButtonObject;
     private GameObject panelObject;
@@ -134,6 +135,9 @@ public partial class PixelShop
             if (minigame != null && minigame.HasTracker)
                 trackers[minigame] = BuildTracker(contentRect, minigame.Id + " Tracker", minigame.TrackerTitle, minigame.TrackerDescription);
 
+        // The two sub-tab buttons at the top of the Upgrades tab (normal upgrades | Pixel boosts).
+        BuildSubTabs(contentRect);
+
         // One row per potion, listed on the Consumables tab.
         int potionCount = consumables != null ? consumables.ItemCount : 0;
         potionRows = new PackRow[potionCount];
@@ -142,6 +146,103 @@ public partial class PixelShop
 
         panelObject.SetActive(false);
         subPanelObject.SetActive(false);
+    }
+
+    private void BuildSubTabs(Transform parent)
+    {
+        GameObject go = new GameObject("Upgrade Sub Tabs", typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        subTabRow = go.GetComponent<RectTransform>();
+        subTabRow.anchorMin = new Vector2(0f, 1f);
+        subTabRow.anchorMax = new Vector2(1f, 1f);
+        subTabRow.pivot = new Vector2(0.5f, 1f);
+        subTabRow.sizeDelta = new Vector2(0f, subTabHeight);
+
+        string[] names = { upgradesSubTabText, pixelSubTabText };
+        subTabImages = new Image[2];
+        for (int i = 0; i < 2; i++)
+        {
+            Button b = CreateButton(go.transform, "Sub Tab " + names[i], names[i], Vector2.zero, tabInactiveColor, textColor,
+                                    tabFontSize, out _, out subTabImages[i]);
+            RectTransform rt = b.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(i * 0.5f, 0f);
+            rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(i == 0 ? 0f : tabSpacing * 0.5f, 0f);
+            rt.offsetMax = new Vector2(i == 1 ? 0f : -tabSpacing * 0.5f, 0f);
+
+            int captured = i;
+            b.onClick.AddListener(() =>
+            {
+                upgradesSubTab = captured;
+                if (contentRect != null) contentRect.anchoredPosition = Vector2.zero;
+                RefreshRows();
+            });
+        }
+        go.SetActive(false);
+    }
+
+    /// <summary>A plain row (name, description, cost, button) not tied to a pack or potion; the caller wires the button.</summary>
+    private PackRow BuildPlainRow(Transform parent, string objectName)
+    {
+        PackRow row = new PackRow();
+        GameObject rowGo = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        rowGo.transform.SetParent(parent, false);
+        rowGo.GetComponent<Image>().color = rowColor;
+        RectTransform rr = rowGo.GetComponent<RectTransform>();
+        rr.anchorMin = new Vector2(0f, 1f);
+        rr.anchorMax = new Vector2(1f, 1f);
+        rr.pivot = new Vector2(0.5f, 1f);
+        rr.sizeDelta = new Vector2(0f, rowHeight);
+        row.rect = rr;
+
+        float inset = buyButtonSize.x + 40f;
+
+        row.nameLabel = CreateText(rowGo.transform, "Name", "", nameFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+        row.nameLabel.richText = true;
+        row.nameLabel.enableAutoSizing = true;
+        row.nameLabel.fontSizeMax = nameFontSize;
+        row.nameLabel.fontSizeMin = Mathf.Min(16f, nameFontSize);
+        SetBand(row.nameLabel.rectTransform, 0.74f, 1f, inset);
+
+        row.descLabel = CreateText(rowGo.transform, "Description", "", descriptionFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
+        row.descLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
+        row.descLabel.enableAutoSizing = true;
+        row.descLabel.fontSizeMax = descriptionFontSize;
+        row.descLabel.fontSizeMin = Mathf.Min(12f, descriptionFontSize);
+        SetBand(row.descLabel.rectTransform, 0.38f, 0.74f, inset);
+
+        row.costLabel = CreateText(rowGo.transform, "Cost", "", costFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
+        row.costLabel.richText = true;
+        row.costLabel.enableAutoSizing = true;
+        row.costLabel.fontSizeMax = costFontSize;
+        row.costLabel.fontSizeMin = Mathf.Min(14f, costFontSize);
+        SetBand(row.costLabel.rectTransform, 0.04f, 0.36f, inset);
+
+        row.buyButton = CreateButton(rowGo.transform, "Buy", ultraButtonText, buyButtonSize, buyColor, textColor, buyFontSize,
+                                     out row.buyLabel, out row.buyImage);
+        RectTransform br = row.buyButton.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.anchoredPosition = new Vector2(-20f, 0f);
+        return row;
+    }
+
+    /// <summary>Makes sure there is a boost row for every pixel type (the shop can add pixel types after the UI was built).</summary>
+    private void EnsureUltraRows()
+    {
+        int count = clicker.Tiers.Length;
+        if (ultraRows != null && ultraRows.Length >= count) return;
+
+        PackRow[] bigger = new PackRow[count];
+        if (ultraRows != null) System.Array.Copy(ultraRows, bigger, ultraRows.Length);
+        for (int i = ultraRows != null ? ultraRows.Length : 0; i < count; i++)
+        {
+            PackRow row = BuildPlainRow(contentRect, "Boost " + i);
+            int captured = i;
+            row.buyButton.onClick.AddListener(() => { TryBuyUltraBoost(captured); RefreshRows(); });
+            bigger[i] = row;
+        }
+        ultraRows = bigger;
     }
 
     private void BuildTabs(Transform parent)
@@ -360,10 +461,7 @@ public partial class PixelShop
 
         bool hasChildren = !potion && HasChildren(index);
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
-        bool hasMinigame = !potion && !string.IsNullOrEmpty(packs[index].unlocksMinigame);
         if (hasChildren) textRightInset += upgradesArrowSize.x + 10f;
-        bool hasSpawnSwitch = !potion && HasSwitchablePixel(packs[index]);
-        if (hasMinigame || hasSpawnSwitch) textRightInset += 150f + tickBoxSize;
 
         TMP_Text name = CreateText(rowGo.transform, "Name", rowName, nameFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
@@ -415,60 +513,7 @@ public partial class PixelShop
             row.arrowButton.onClick.AddListener(() => OpenUpgradesWindow(captured));
         }
 
-        if (hasMinigame)
-        {
-            row.toggleMinigame = packs[index].unlocksMinigame;
-            BuildActiveToggle(row, rowGo.transform, minigameActiveText, on => SetMinigameEnabled(packs[captured].unlocksMinigame, on));
-        }
-        else if (hasSpawnSwitch)
-        {
-            row.toggleSpawns = true;
-            BuildActiveToggle(row, rowGo.transform, pixelSpawnText, on => SetPackPixelsSpawn(packs[captured], on));
-        }
-
         return row;
-    }
-
-    /// <summary>"Active [x]" tick box left of the Buy button; turns a bought minigame on or off.</summary>
-    private void BuildActiveToggle(PackRow row, Transform rowTransform, string labelText, UnityEngine.Events.UnityAction<bool> onChange)
-    {
-        float right = 20f + buyButtonSize.x + 20f;
-
-        GameObject boxGo = new GameObject("Active Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
-        boxGo.transform.SetParent(rowTransform, false);
-        Image bg = boxGo.GetComponent<Image>();
-        bg.color = tickBoxColor;
-        RectTransform br = boxGo.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
-        br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
-        br.anchoredPosition = new Vector2(-right, 0f);
-
-        GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
-        tick.transform.SetParent(boxGo.transform, false);
-        Image tickImage = tick.GetComponent<Image>();
-        tickImage.color = tickColor;
-        tickImage.raycastTarget = false;
-        RectTransform kr = tick.GetComponent<RectTransform>();
-        PixelUIKit.Stretch(kr);
-        kr.offsetMin = new Vector2(tickBoxSize * 0.2f, tickBoxSize * 0.2f);
-        kr.offsetMax = new Vector2(-tickBoxSize * 0.2f, -tickBoxSize * 0.2f);
-
-        TMP_Text label = CreateText(boxGo.transform, "Label", labelText, descriptionFontSize,
-                                    TextAlignmentOptions.MidlineRight, FontStyles.Normal);
-        RectTransform lr = label.rectTransform;
-        lr.anchorMin = lr.anchorMax = new Vector2(0f, 0.5f);
-        lr.pivot = new Vector2(1f, 0.5f);
-        lr.sizeDelta = new Vector2(130f, tickBoxSize);
-        lr.anchoredPosition = new Vector2(-10f, 0f);
-
-        Toggle toggle = boxGo.GetComponent<Toggle>();
-        toggle.targetGraphic = bg;
-        toggle.graphic = tickImage;
-        toggle.isOn = true;
-        toggle.onValueChanged.AddListener(onChange);
-        toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
-        row.activeToggle = toggle;
-        boxGo.SetActive(false); // shown by RefreshRows once the pack is bought
     }
 
     /// <summary>A stat row with a title, a count and a progress bar (the Singularity and Ghost trackers).</summary>
@@ -627,6 +672,22 @@ public partial class PixelShop
                          ref y, ref visibleCount);
         }
 
+        // Upgrades tab: the "Upgrades | Pixel" sub-tab buttons come first.
+        bool onUpgrades = currentTab == ShopTab.Upgrades;
+        if (subTabRow != null)
+        {
+            if (subTabRow.gameObject.activeSelf != onUpgrades) subTabRow.gameObject.SetActive(onUpgrades);
+            if (onUpgrades)
+            {
+                subTabRow.anchoredPosition = new Vector2(0f, -y);
+                y += subTabHeight + rowSpacing;
+                visibleCount++;
+                for (int s = 0; s < subTabImages.Length; s++)
+                    subTabImages[s].color = s == upgradesSubTab ? tabActiveColor : tabInactiveColor;
+            }
+        }
+        bool showGeneral = !onUpgrades || upgradesSubTab == 0;
+
         for (int i = 0; i < packs.Length && i < rows.Length; i++)
         {
             PackRow row = rows[i];
@@ -639,7 +700,7 @@ public partial class PixelShop
             bool listed = IsPackRequirementMet(i) || showLockedPacks || HasPack(i);
             bool visible = child
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed
-                : TabOf(pack) == currentTab && listed;
+                : TabOf(pack) == currentTab && listed && showGeneral;
 
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
@@ -672,15 +733,6 @@ public partial class PixelShop
             else if (!requirementMet) row.buyLabel.text = lockedText;
             else row.buyLabel.text = leveled ? upgradeText : buyText;
             row.buyImage.color = canBuy ? buyColor : disabledColor;
-
-            // Minigame on/off box: only once the pack is bought.
-            if (row.activeToggle != null)
-            {
-                PixelMinigame mg = row.toggleSpawns ? null : PixelMinigame.Find(pack.unlocksMinigame);
-                bool showBox = owned && (row.toggleSpawns || mg != null);
-                if (row.activeToggle.gameObject.activeSelf != showBox) row.activeToggle.gameObject.SetActive(showBox);
-                if (showBox) row.activeToggle.SetIsOnWithoutNotify(row.toggleSpawns ? PackPixelsSpawn(pack) : !mg.UserDisabled);
-            }
 
             // Arrow to the upgrades window: only once the pack is owned.
             if (row.arrowButton != null)
@@ -719,6 +771,39 @@ public partial class PixelShop
                 row.buyLabel.text = buyText;
                 row.buyImage.color = canBuy ? buyColor : disabledColor;
             }
+        }
+
+        // Upgrades > Pixel: one boost row per unlocked pixel type, paid for with Ultra pixels.
+        EnsureUltraRows();
+        for (int t = 0; t < ultraRows.Length && t < clicker.Tiers.Length; t++)
+        {
+            PackRow row = ultraRows[t];
+            PixelClicker.PixelTier tier = clicker.Tiers[t];
+            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked;
+            row.rect.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            row.rect.anchoredPosition = new Vector2(0f, -y);
+            y += rowHeight + rowSpacing;
+            visibleCount++;
+
+            bool maxed = UltraBoostMaxed(t);
+            long cost = UltraBoostCost(t);
+            double now = clicker.UltraMultiplier(t);
+            double next = now + clicker.UltraBonusPerLevel;
+
+            row.nameLabel.text = string.Format(ultraRowNameFormat, tier.displayName) + "   <size=65%><color=#" +
+                                 ColorUtility.ToHtmlStringRGB(levelColor) + ">" + string.Format(ultraLevelFormat, tier.ultraLevel) + "</color></size>";
+            row.descLabel.text = string.Format(ultraRowDescFormat, tier.displayName, now.ToString("0.##"), maxed ? now.ToString("0.##") : next.ToString("0.##"));
+
+            bool enough = tier.ultraCount >= cost;
+            row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
+                                 string.Format(ultraCostFormat, PixelClicker.FormatNumber(cost), tier.displayName, PixelClicker.FormatNumber(tier.ultraCount)) + "</color>";
+
+            bool canBuy = !maxed && enough;
+            row.buyButton.interactable = canBuy;
+            row.buyLabel.text = maxed ? maxedText : ultraButtonText;
+            row.buyImage.color = canBuy ? buyColor : disabledColor;
         }
 
         // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.

@@ -150,6 +150,7 @@ public class PixelHud : MonoBehaviour
             Debug.Log("PixelHud: docked '" + button.name + "' (canvas sorting order " + owner.sortingOrder + ", bars " +
                       Mathf.Min(barsSortingOrder, -1) + ").", this);
 
+        // A button anchored at the vertical middle (anchor.y = 0.5) docks to the left / right edge instead of the top / bottom.
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
         dock.Setup(this, button, anchor, keepOut);
@@ -158,6 +159,10 @@ public class PixelHud : MonoBehaviour
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
     internal float ShownInset => barsEnabled ? (barHeight - buttonSize.y) * 0.5f : sideMargin * 0.5f;
     internal float HiddenInset => -(buttonSize.y - sliver);
+
+    // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
+    internal float SideShownInset => sideMargin * 0.35f;
+    internal float SideHiddenInset => -(buttonSize.x - sliver);
     internal bool SlideButtons => slideButtons;
     internal float SlideSeconds => slideSeconds;
     internal float TriggerPadding => triggerPadding;
@@ -195,6 +200,14 @@ public class PixelDockedButton : MonoBehaviour
 
     private void Apply()
     {
+        if (Mathf.Approximately(anchor.y, 0.5f))
+        {
+            // Docked to a side edge: slides sideways, centred vertically.
+            float sideInset = Mathf.Lerp(hud.SideHiddenInset, hud.SideShownInset, Mathf.SmoothStep(0f, 1f, slide));
+            rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -sideInset : sideInset, 0f);
+            return;
+        }
+
         float shown = hud.ShownInset, hidden = hud.HiddenInset;
         float inset = Mathf.Lerp(hidden, shown, Mathf.SmoothStep(0f, 1f, slide));
         bool top = anchor.y > 0.5f;
@@ -212,6 +225,13 @@ public class PixelDockedButton : MonoBehaviour
         if (p.x < 0f || p.y < 0f || p.x > Screen.width || p.y > Screen.height) return false;
 
         float pad = hud.TriggerPadding;
+        if (Mathf.Approximately(anchor.y, 0.5f))
+        {
+            float sw = hud.ButtonSize.x, sh = hud.ButtonSize.y;
+            float fromSide = anchor.x > 0.5f ? Screen.width / scale - p.x / scale : p.x / scale;
+            return fromSide <= sw + pad && Mathf.Abs(p.y / scale - Screen.height / scale * 0.5f) <= sh * 0.5f + pad;
+        }
+
         float w = hud.ButtonSize.x, margin = hud.SideMargin;
         float x0 = anchor.x > 0.5f ? Screen.width / scale - margin - w : margin;
         float x1 = x0 + w;
