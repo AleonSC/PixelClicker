@@ -56,16 +56,6 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Width of the panel.")]
     [SerializeField] private float panelWidth = 520f;
 
-    [Range(0.3f, 1f)]
-    [Tooltip("Size of the spawn tick box next to switchable pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor), as a fraction of the line height.")]
-    [SerializeField] private float spawnToggleScale = 0.6f;
-
-    [Tooltip("Colour of the spawn tick box.")]
-    [SerializeField] private Color spawnToggleColor = new Color(0.25f, 0.25f, 0.3f, 1f);
-
-    [Tooltip("Colour of the tick (ticked = this pixel can spawn).")]
-    [SerializeField] private Color spawnTickColor = new Color(0.45f, 1f, 0.5f, 1f);
-
     [Min(200f)]
     [Tooltip("Tallest the inventory box can get (canvas units). A longer list scrolls (mouse wheel or the scroll bar).")]
     [SerializeField] private float maxPanelHeight = 640f;
@@ -803,7 +793,6 @@ public class PixelUI : MonoBehaviour
             }
 
             tierLabels[i] = tmp;
-            if (clicker.Tiers[i].CanSwitchOff) BuildSpawnToggle(tmp, i, anchor.x > 0.5f);
 
             // "+X" indicator that fills the entry's row, aligned to the opposite side of the text.
             TMP_Text delta = MakeText(tmp.transform, "Delta", "", fontSize * deltaFontScale,
@@ -857,13 +846,6 @@ public class PixelUI : MonoBehaviour
             if (!tier.unlocked && !holding) label.color = lockedColor;
             else label.color = colorTextByTier ? tier.UIColor : textColor;
 
-            if (spawnToggles != null && i < spawnToggles.Length && spawnToggles[i] != null)
-            {
-                bool showBox = tier.unlocked;
-                if (spawnToggles[i].gameObject.activeSelf != showBox) spawnToggles[i].gameObject.SetActive(showBox);
-                spawnToggles[i].SetIsOnWithoutNotify(!tier.spawnDisabled);
-            }
-
             if (autoMode)
             {
                 label.rectTransform.anchoredPosition = new Vector2(0f, -y);
@@ -894,43 +876,6 @@ public class PixelUI : MonoBehaviour
             if (listBarObject != null && listBarObject.activeSelf != scrolls) listBarObject.SetActive(scrolls);
             if (!scrolls) listContent.anchoredPosition = Vector2.zero;
         }
-    }
-
-    private Toggle[] spawnToggles;
-
-    /// <summary>A tick box on a pixel's line: ticked = this pixel can spawn, unticked = it's switched off.</summary>
-    private void BuildSpawnToggle(TMP_Text label, int tierIndex, bool rightSide)
-    {
-        if (spawnToggles == null) spawnToggles = new Toggle[clicker.Tiers.Length];
-
-        float size = Mathf.Max(16f, LinePitch * spawnToggleScale);
-        GameObject box = new GameObject("Spawn Toggle", typeof(RectTransform), typeof(Image), typeof(Toggle));
-        box.transform.SetParent(label.transform, false);
-        Image bg = box.GetComponent<Image>();
-        bg.color = spawnToggleColor;
-        RectTransform br = box.GetComponent<RectTransform>();
-        float side = rightSide ? 1f : 0f;
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(side, 0.5f);
-        br.sizeDelta = new Vector2(size, size);
-        br.anchoredPosition = Vector2.zero;
-        if (!rightSide) label.margin = new Vector4(size + 10f, 0f, 0f, 0f); // keep the text clear of the box
-
-        GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
-        tick.transform.SetParent(box.transform, false);
-        Image tickImage = tick.GetComponent<Image>();
-        tickImage.color = spawnTickColor;
-        tickImage.raycastTarget = false;
-        RectTransform kr = tick.GetComponent<RectTransform>();
-        PixelUIKit.Stretch(kr);
-        kr.offsetMin = new Vector2(size * 0.2f, size * 0.2f);
-        kr.offsetMax = new Vector2(-size * 0.2f, -size * 0.2f);
-
-        Toggle toggle = box.GetComponent<Toggle>();
-        toggle.targetGraphic = bg;
-        toggle.graphic = tickImage;
-        toggle.isOn = !clicker.Tiers[tierIndex].spawnDisabled;
-        toggle.onValueChanged.AddListener(on => clicker.SetSpawnEnabled(tierIndex, on));
-        spawnToggles[tierIndex] = toggle;
     }
 
     /// <summary>The place the currency lines and potion rows live: the scrolling list in automatic mode, else the box itself.</summary>

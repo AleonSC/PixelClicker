@@ -26,6 +26,8 @@ public partial class PixelShop
         public TMP_Text costLabel;
         public Button arrowButton;
         public Toggle activeToggle;
+        public string toggleMinigame;   // the toggle runs/stops this minigame...
+        public bool toggleSpawns;       // ...or switches spawning of this pack's switchable pixels
         public bool isPotion;
     }
 
@@ -358,7 +360,8 @@ public partial class PixelShop
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
         bool hasMinigame = !potion && !string.IsNullOrEmpty(packs[index].unlocksMinigame);
         if (hasChildren) textRightInset += upgradesArrowSize.x + 10f;
-        if (hasMinigame) textRightInset += 150f + tickBoxSize;
+        bool hasSpawnSwitch = !potion && HasSwitchablePixel(packs[index]);
+        if (hasMinigame || hasSpawnSwitch) textRightInset += 150f + tickBoxSize;
 
         TMP_Text name = CreateText(rowGo.transform, "Name", rowName, nameFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
@@ -410,13 +413,22 @@ public partial class PixelShop
             row.arrowButton.onClick.AddListener(() => OpenUpgradesWindow(captured));
         }
 
-        if (hasMinigame) BuildActiveToggle(row, rowGo.transform, packs[index].unlocksMinigame);
+        if (hasMinigame)
+        {
+            row.toggleMinigame = packs[index].unlocksMinigame;
+            BuildActiveToggle(row, rowGo.transform, minigameActiveText, on => SetMinigameEnabled(packs[captured].unlocksMinigame, on));
+        }
+        else if (hasSpawnSwitch)
+        {
+            row.toggleSpawns = true;
+            BuildActiveToggle(row, rowGo.transform, pixelSpawnText, on => SetPackPixelsSpawn(packs[captured], on));
+        }
 
         return row;
     }
 
     /// <summary>"Active [x]" tick box left of the Buy button; turns a bought minigame on or off.</summary>
-    private void BuildActiveToggle(PackRow row, Transform rowTransform, string minigameId)
+    private void BuildActiveToggle(PackRow row, Transform rowTransform, string labelText, UnityEngine.Events.UnityAction<bool> onChange)
     {
         float right = 20f + buyButtonSize.x + 20f;
 
@@ -439,7 +451,7 @@ public partial class PixelShop
         kr.offsetMin = new Vector2(tickBoxSize * 0.2f, tickBoxSize * 0.2f);
         kr.offsetMax = new Vector2(-tickBoxSize * 0.2f, -tickBoxSize * 0.2f);
 
-        TMP_Text label = CreateText(boxGo.transform, "Label", minigameActiveText, descriptionFontSize,
+        TMP_Text label = CreateText(boxGo.transform, "Label", labelText, descriptionFontSize,
                                     TextAlignmentOptions.MidlineRight, FontStyles.Normal);
         RectTransform lr = label.rectTransform;
         lr.anchorMin = lr.anchorMax = new Vector2(0f, 0.5f);
@@ -451,7 +463,7 @@ public partial class PixelShop
         toggle.targetGraphic = bg;
         toggle.graphic = tickImage;
         toggle.isOn = true;
-        toggle.onValueChanged.AddListener(on => SetMinigameEnabled(minigameId, on));
+        toggle.onValueChanged.AddListener(onChange);
         row.activeToggle = toggle;
         boxGo.SetActive(false); // shown by RefreshRows once the pack is bought
     }
@@ -660,10 +672,10 @@ public partial class PixelShop
             // Minigame on/off box: only once the pack is bought.
             if (row.activeToggle != null)
             {
-                PixelMinigame mg = PixelMinigame.Find(pack.unlocksMinigame);
-                bool showBox = owned && mg != null;
+                PixelMinigame mg = row.toggleSpawns ? null : PixelMinigame.Find(pack.unlocksMinigame);
+                bool showBox = owned && (row.toggleSpawns || mg != null);
                 if (row.activeToggle.gameObject.activeSelf != showBox) row.activeToggle.gameObject.SetActive(showBox);
-                if (showBox) row.activeToggle.SetIsOnWithoutNotify(!mg.UserDisabled);
+                if (showBox) row.activeToggle.SetIsOnWithoutNotify(row.toggleSpawns ? PackPixelsSpawn(pack) : !mg.UserDisabled);
             }
 
             // Arrow to the upgrades window: only once the pack is owned.

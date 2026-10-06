@@ -406,6 +406,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Label next to the tick box on a bought minigame's row (ticked = the minigame runs).")]
     [SerializeField] private string minigameActiveText = "Active";
 
+    [Tooltip("Label next to the tick box on a bought pixel pack's row (ticked = those pixels can spawn). Only shown for packs with switchable pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor).")]
+    [SerializeField] private string pixelSpawnText = "Spawns";
+
     [Tooltip("Colour of the tick box.")]
     [SerializeField] private Color tickBoxColor = new Color(0.25f, 0.25f, 0.3f, 1f);
 
@@ -877,6 +880,36 @@ public partial class PixelShop : MonoBehaviour
 
         if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
+    }
+
+    /// <summary>Does this pack unlock a pixel the player may switch off?</summary>
+    private static bool HasSwitchablePixel(ShopPack pack)
+    {
+        if (pack.rewardTiers == null) return false;
+        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
+            if (t.CanSwitchOff) return true;
+        return false;
+    }
+
+    /// <summary>Are this pack's switchable pixels allowed to spawn?</summary>
+    private bool PackPixelsSpawn(ShopPack pack)
+    {
+        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
+        {
+            int i = clicker.IndexOf(t.type);
+            if (i >= 0 && t.CanSwitchOff) return !clicker.Tiers[i].spawnDisabled;
+        }
+        return true;
+    }
+
+    /// <summary>The tick box on a bought pixel pack's row: lets its switchable pixels spawn or not.</summary>
+    private void SetPackPixelsSpawn(ShopPack pack, bool on)
+    {
+        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
+        {
+            int i = clicker.IndexOf(t.type);
+            if (i >= 0 && t.CanSwitchOff) clicker.SetSpawnEnabled(i, on);
+        }
     }
 
     /// <summary>Starts a minigame unless the player switched it off.</summary>
