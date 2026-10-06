@@ -3,3 +3,4 @@
 [2026-10-06 22:42 UTC] While a black hole is open, old pixels stop despawning (time dilation) and age normally again when it closes; there is a Freeze Old Pixels tick box on the black hole.
 [2026-10-06 22:50 UTC] The Inventory now has a header like the Pixel Log: a centred title with a close (X) button above the Currency and Consumables tabs (new Show Header settings replace the old title ones).
 [2026-10-06 23:02 UTC] Fixed the Inventory's close button showing an empty box: the X and the title now use their own white Header Text Color.
+[2026-10-06 23:03 UTC] Moved the achievement popup to the right side of the screen (vertically centred; Popup Right Margin setting).

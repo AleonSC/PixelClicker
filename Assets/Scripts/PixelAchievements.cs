@@ -125,8 +125,8 @@ public class PixelAchievements : MonoBehaviour
     [Tooltip("Popup size (canvas units).")]
     [SerializeField] private Vector2 popupSize = new Vector2(640f, 120f);
 
-    [Tooltip("Distance of the achievement popup from the left edge of the screen. It sits at the left, vertically centred.")]
-    [SerializeField] private float popupLeftMargin = 24f;
+    [Tooltip("Distance of the achievement popup from the right edge of the screen. It sits at the right, vertically centred.")]
+    [SerializeField] private float popupRightMargin = 60f;
 
     [Tooltip("Move the popup up (positive) or down (negative) from the vertical centre of the screen.")]
     [SerializeField] private float popupVerticalOffset = 0f;
@@ -557,9 +557,9 @@ public class PixelAchievements : MonoBehaviour
         popupGroup.blocksRaycasts = false;
 
         popupRect = panel.GetComponent<RectTransform>();
-        popupRect.anchorMin = popupRect.anchorMax = popupRect.pivot = new Vector2(0f, 0.5f); // left edge, vertically centred
+        popupRect.anchorMin = popupRect.anchorMax = popupRect.pivot = new Vector2(1f, 0.5f); // right edge, vertically centred
         popupRect.sizeDelta = popupSize;
-        popupRect.anchoredPosition = new Vector2(popupLeftMargin, popupVerticalOffset);
+        popupRect.anchoredPosition = new Vector2(-popupRightMargin, popupVerticalOffset);
 
         float iconSize = popupSize.y * 0.75f;
         GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
