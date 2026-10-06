@@ -1,19 +1,1 @@
-[2026-10-06 14:52 UTC] Added a Changelog screen to the pause menu (reads this file). New changes are listed here until a build is made.
-[2026-10-06 14:58 UTC] Added a '+X' next to each pixel's entry in the Currency and Log windows for every click (quick clicks add up), so gains stay readable when the cube popups get crowded.
-[2026-10-06 15:06 UTC] Each pixel type now has two achievements: 'Collector' (total value collected) and a new 'Clicker' (number of pixels clicked, whatever they paid: 10, 50, 250, 1K, 5K, 25K). Existing saves keep their progress; click counts start from zero.
-[2026-10-06 15:11 UTC] Log achievements: each pixel now has one entry; click it to switch between its 'value collected' and 'times clicked' achievement (a small tag shows which; your choice is remembered).
-[2026-10-06 15:16 UTC] Restart now asks for confirmation (warns it deletes everything) and needs the red button to be held for 2 seconds. Restart also now forces all achievements back to zero in the new game.
-[2026-10-06 15:37 UTC] Moved the combo meter to the bottom of the screen.
-[2026-10-06 15:37 UTC] Removed the on-screen Pause button (Escape still pauses and closes windows).
-[2026-10-06 15:37 UTC] Added a Crafting upgrade to the shop (Upgrades tab). It adds a Crafting button at the bottom-right: drag or click two items from your pixels and potions into the two boxes, see the recipe and cost, and craft the result into your consumables.
-[2026-10-06 15:44 UTC] Crafting: right-click an item in a crafting box to remove it (left-click no longer clears it).
-[2026-10-06 15:44 UTC] Crafting: a potion plus a pixel that can't be toggled (White, Gray, Black, Red, Green, Blue, Glass, Luminescent) now makes a combo potion that spawns both pixel types (costs the potion plus 100 of the pixel). Combo potions are craft-only (not in the shop), go into your inventory and are saved.
-[2026-10-06 16:02 UTC] Added the sound system (PixelAudio): a list of named sounds you fill with clips, music tracks, and Master / Effects / Music volume sliders plus a mute box in Settings. Clicks, purchases, combos, crafting, potions, devices, minigames, achievements and buttons all play sounds once clips are assigned.
-[2026-10-06 16:38 UTC] Fixed the 'ui_click' sound not playing on shop buttons, and added it to the tick boxes in the shop, pause menu and dev tools.
-[2026-10-06 16:43 UTC] Added a 'ui_scroll' sound (a tick every few lines scrolled) to every scrolling list: shop, log, inventory, stats, changelog, crafting, offline window and dropdowns.
-[2026-10-06 16:52 UTC] Added the Bomb Defusal minigame (Minigames tab, needs the RGB pack): a bomb with red, green and blue wires appears now and then; cut the wire of the RGB pixel you hold the most of before the 12s timer ends to earn bomb parts (shown as a tracker), or a wrong wire / timeout explodes it and destroys all old pixels.
-[2026-10-06 16:56 UTC] Bomb Defusal: fixed the bomb's hint and timer text overlapping, made the timer smaller, and made the casing lighter and glowing so the bomb is easier to see.
-[2026-10-06 17:00 UTC] Added black bars along the top and bottom of the screen. The Inventory, Shop, Log and Crafting buttons are now all the same size, sit mostly off screen with a thin sliver showing, and slide out onto the bar when the mouse comes near (they stay out while their window is open).
-[2026-10-06 17:04 UTC] Screen bars now always draw underneath every other UI canvas, so they can't hide a docked button.
-[2026-10-06 17:11 UTC] Fixed a compiler warning: the inventory and log windows use their own 'gap' settings again when opening beside the bar.
 [2026-10-06 17:33 UTC] Moved the achievement popup to the left-centre of the screen.
