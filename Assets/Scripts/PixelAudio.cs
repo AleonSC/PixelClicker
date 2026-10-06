@@ -72,7 +72,7 @@ public class PixelAudio : MonoBehaviour
     [SerializeField] private bool muted = false;
 
     [Header("Sound Effects")]
-    [Tooltip("Every sound effect, by id. Built-in ids: click, auto_click, hit, vacuum, combo, purchase, craft, drink, " +
+    [Tooltip("Every sound effect, by id. Built-in ids: click, auto_click, pixel_land (an old pixel hits the floor), hit, vacuum, combo, purchase, craft, drink, " +
              "device_place, achievement, ui_click, ui_scroll, grab, drop, ghost_spawn, ghost_click, meteor_spawn, meteor_click, blackhole_spawn, pad_spawn, pad_click, pad_wrong, pad_ultra, bomb_spawn, bomb_click, bomb_tick, bomb_explode, " +
              "and pixel_<type> (e.g. pixel_vacuum, pixel_meteor) which plays when that pixel type is collected. " +
              "Leave 'Clips' empty for silence.")]
@@ -282,6 +282,7 @@ public class PixelAudio : MonoBehaviour
             clicker.PixelHit += OnHit;
             clicker.PixelsVacuumed += OnVacuumed;
         }
+        PixelClicker.OldPixelLanded += OnLanded;
 
         achievements = PixelFind.First<PixelAchievements>();
         if (achievements != null) achievements.onAchievementUnlocked.AddListener(OnAchievement);
@@ -310,6 +311,7 @@ public class PixelAudio : MonoBehaviour
         if (achievements != null) achievements.onAchievementUnlocked.RemoveListener(OnAchievement);
         if (shop != null) shop.onPackPurchased.RemoveListener(OnPurchase);
 
+        PixelClicker.OldPixelLanded -= OnLanded;
         PixelConsumables.PotionDrunk -= OnPotionDrunk;
         PixelConsumables.DevicePlaced -= OnDevicePlaced;
         PixelMinigame.Happened -= OnMinigame;
@@ -419,6 +421,8 @@ public class PixelAudio : MonoBehaviour
     private void OnHit(int tierIndex, int hits, int needed, bool automatic) => PlaySound("hit", 1f);
 
     private void OnVacuumed(int tierIndex, double total, int count) => PlaySound("vacuum", 1f);
+
+    private void OnLanded(float intensity) => PlaySound("pixel_land", 1f, Mathf.Lerp(0.25f, 1f, intensity));
 
     private void OnPurchase(int packIndex) => PlaySound("purchase", 1f);
 
