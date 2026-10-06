@@ -118,7 +118,7 @@ var app struct {
 	record, level, status uintptr
 	dpi                   int
 	deviceIDs             []uintptr
-	rec                   *recorder
+	rec                   capture
 	path                  string
 	started               time.Time
 	smooth                int
@@ -154,15 +154,16 @@ func setText(h uintptr, s string) { pSetWindowText.Call(h, uintptr(unsafe.Pointe
 
 func buildUI() {
 	const left, labelW, comboX, comboW = 16, 100, 120, 284
-	child("STATIC", "Input device:", 0, left, 20, labelW, 22, 0)
+	child("STATIC", "Record from:", 0, left, 20, labelW, 22, 0)
 	app.device = child("COMBOBOX", "", wsTabStop|wsVScroll|cbsDropDownList, comboX, 16, comboW, 200, idDevice)
 	child("STATIC", "Format:", 0, left, 56, labelW, 22, 0)
 	app.format = child("COMBOBOX", "", wsTabStop|wsVScroll|cbsDropDownList, comboX, 52, comboW, 200, idFormat)
 	child("STATIC", "Channels:", 0, left, 92, labelW, 22, 0)
 	app.chans = child("COMBOBOX", "", wsTabStop|wsVScroll|cbsDropDownList, comboX, 88, comboW, 200, idChans)
 
-	addItems(app.device, "Default device")
-	app.deviceIDs = []uintptr{waveMapper}
+	addItems(app.device, "Default microphone")
+	addItems2(app.device, "System sound (what you hear)")
+	app.deviceIDs = []uintptr{waveMapper, loopbackID}
 	for i, n := range inputDevices() {
 		addItems2(app.device, n)
 		app.deviceIDs = append(app.deviceIDs, uintptr(i))
@@ -223,7 +224,12 @@ func startRecording() {
 		msgBox("Cannot create the file:\n" + err.Error())
 		return
 	}
-	rec, err := startRecorder(app.deviceIDs[sel], channels, out)
+	var rec capture
+	if app.deviceIDs[sel] == loopbackID {
+		rec, err = startLoopback(channels, out)
+	} else {
+		rec, err = startRecorder(app.deviceIDs[sel], channels, out)
+	}
 	if err != nil {
 		out.Close()
 		os.Remove(path)
@@ -268,8 +274,9 @@ func poll() {
 	}
 	app.smooth = lvl
 	pSendMessage.Call(app.level, pbmSetPos, uintptr(lvl), 0)
-	secs := int(app.rec.Bytes / uint64(app.rec.BytesPerSec))
-	setText(app.status, fmt.Sprintf("Recording  %02d:%02d   (%.1f MB)", secs/60, secs%60, float64(app.rec.Bytes)/1e6))
+	bytes, perSec := app.rec.Stats()
+	secs := int(bytes / uint64(perSec))
+	setText(app.status, fmt.Sprintf("Recording  %02d:%02d   (%.1f MB)", secs/60, secs%60, float64(bytes)/1e6))
 }
 
 func wndProc(hwnd, m, wParam, lParam uintptr) uintptr {
@@ -312,6 +319,7 @@ func wndProc(hwnd, m, wParam, lParam uintptr) uintptr {
 
 func main() {
 	runtime.LockOSThread()
+	initCOM()
 
 	app.dpi = 96
 	pSetProcessDPIAware.Call()

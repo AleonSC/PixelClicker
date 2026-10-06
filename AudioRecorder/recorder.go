@@ -93,7 +93,7 @@ func mmErr(what string, r uintptr) error {
 	return fmt.Errorf("%s failed (MMSYSERR %d)", what, r)
 }
 
-func startRecorder(device uintptr, channels int, out sink) (*recorder, error) {
+func startRecorder(device uintptr, channels int, out sink) (capture, error) {
 	format := waveFormatEx{
 		FormatTag:      1,
 		Channels:       uint16(channels),
@@ -162,6 +162,8 @@ func (r *recorder) drain(requeue bool) (int, error) {
 	}
 	return peak, err
 }
+
+func (r *recorder) Stats() (uint64, uint32) { return r.Bytes, r.BytesPerSec }
 
 func (r *recorder) Poll() (int, error) { return r.drain(true) }
 
