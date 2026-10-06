@@ -61,6 +61,7 @@ public class PixelSaveGame : MonoBehaviour
     {
         public string id;
         public double value;
+        public bool disabled; // switched off by the player in the shop
     }
 
     [Serializable]
@@ -318,7 +319,7 @@ public class PixelSaveGame : MonoBehaviour
             // Every minigame with a goal counter saves its count under its id.
             System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
             foreach (PixelMinigame m in PixelMinigame.All)
-                if (m != null && m.HasTracker) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.TrackerCount });
+                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled });
             data.minigames = minigameSaves.ToArray();
             if (achievements != null) data.achievements = achievements.GetSaveState();
             if (stats != null)
@@ -430,9 +431,12 @@ public class PixelSaveGame : MonoBehaviour
 
             foreach (PixelMinigame m in PixelMinigame.All)
             {
-                if (m == null || !m.HasTracker) continue;
+                if (m == null) continue;
 
                 MinigameSave saved = data.minigames != null ? Array.Find(data.minigames, x => x.id == m.Id) : null;
+                m.UserDisabled = saved != null && saved.disabled;
+                if (m.UserDisabled) m.Deactivate();
+                if (!m.HasTracker) continue;
                 double value = saved != null ? saved.value
                              : m.Id == "ghost" ? data.ghostsCaught            // save from before minigames were saved by id
                              : m.Id == "blackhole" ? data.singularityCount : 0d;

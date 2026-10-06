@@ -25,6 +25,7 @@ public partial class PixelShop
         public TMP_Text buyLabel;
         public TMP_Text costLabel;
         public Button arrowButton;
+        public Toggle activeToggle;
         public bool isPotion;
     }
 
@@ -355,7 +356,9 @@ public partial class PixelShop
 
         bool hasChildren = !potion && HasChildren(index);
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
+        bool hasMinigame = !potion && !string.IsNullOrEmpty(packs[index].unlocksMinigame);
         if (hasChildren) textRightInset += upgradesArrowSize.x + 10f;
+        if (hasMinigame) textRightInset += 150f + tickBoxSize;
 
         TMP_Text name = CreateText(rowGo.transform, "Name", rowName, nameFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
@@ -407,7 +410,50 @@ public partial class PixelShop
             row.arrowButton.onClick.AddListener(() => OpenUpgradesWindow(captured));
         }
 
+        if (hasMinigame) BuildActiveToggle(row, rowGo.transform, packs[index].unlocksMinigame);
+
         return row;
+    }
+
+    /// <summary>"Active [x]" tick box left of the Buy button; turns a bought minigame on or off.</summary>
+    private void BuildActiveToggle(PackRow row, Transform rowTransform, string minigameId)
+    {
+        float right = 20f + buyButtonSize.x + 20f;
+
+        GameObject boxGo = new GameObject("Active Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
+        boxGo.transform.SetParent(rowTransform, false);
+        Image bg = boxGo.GetComponent<Image>();
+        bg.color = tickBoxColor;
+        RectTransform br = boxGo.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
+        br.anchoredPosition = new Vector2(-right, 0f);
+
+        GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
+        tick.transform.SetParent(boxGo.transform, false);
+        Image tickImage = tick.GetComponent<Image>();
+        tickImage.color = tickColor;
+        tickImage.raycastTarget = false;
+        RectTransform kr = tick.GetComponent<RectTransform>();
+        PixelUIKit.Stretch(kr);
+        kr.offsetMin = new Vector2(tickBoxSize * 0.2f, tickBoxSize * 0.2f);
+        kr.offsetMax = new Vector2(-tickBoxSize * 0.2f, -tickBoxSize * 0.2f);
+
+        TMP_Text label = CreateText(boxGo.transform, "Label", minigameActiveText, descriptionFontSize,
+                                    TextAlignmentOptions.MidlineRight, FontStyles.Normal);
+        RectTransform lr = label.rectTransform;
+        lr.anchorMin = lr.anchorMax = new Vector2(0f, 0.5f);
+        lr.pivot = new Vector2(1f, 0.5f);
+        lr.sizeDelta = new Vector2(130f, tickBoxSize);
+        lr.anchoredPosition = new Vector2(-10f, 0f);
+
+        Toggle toggle = boxGo.GetComponent<Toggle>();
+        toggle.targetGraphic = bg;
+        toggle.graphic = tickImage;
+        toggle.isOn = true;
+        toggle.onValueChanged.AddListener(on => SetMinigameEnabled(minigameId, on));
+        row.activeToggle = toggle;
+        boxGo.SetActive(false); // shown by RefreshRows once the pack is bought
     }
 
     /// <summary>A stat row with a title, a count and a progress bar (the Singularity and Ghost trackers).</summary>
@@ -610,6 +656,15 @@ public partial class PixelShop
             else if (!requirementMet) row.buyLabel.text = lockedText;
             else row.buyLabel.text = leveled ? upgradeText : buyText;
             row.buyImage.color = canBuy ? buyColor : disabledColor;
+
+            // Minigame on/off box: only once the pack is bought.
+            if (row.activeToggle != null)
+            {
+                PixelMinigame mg = PixelMinigame.Find(pack.unlocksMinigame);
+                bool showBox = owned && mg != null;
+                if (row.activeToggle.gameObject.activeSelf != showBox) row.activeToggle.gameObject.SetActive(showBox);
+                if (showBox) row.activeToggle.SetIsOnWithoutNotify(!mg.UserDisabled);
+            }
 
             // Arrow to the upgrades window: only once the pack is owned.
             if (row.arrowButton != null)

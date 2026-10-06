@@ -397,6 +397,19 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Normal text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
+    [Header("Minigame On/Off Box")]
+    [Tooltip("Label next to the tick box on a bought minigame's row (ticked = the minigame runs).")]
+    [SerializeField] private string minigameActiveText = "Active";
+
+    [Tooltip("Colour of the tick box.")]
+    [SerializeField] private Color tickBoxColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+
+    [Tooltip("Colour of the tick.")]
+    [SerializeField] private Color tickColor = new Color(0.4f, 0.9f, 0.5f, 1f);
+
+    [Tooltip("Size of the tick box (canvas units).")]
+    [SerializeField] private float tickBoxSize = 44f;
+
     [Tooltip("Colour of a cost you can afford.")]
     [SerializeField] private Color affordableColor = new Color(0.45f, 1f, 0.5f, 1f);
 
@@ -847,7 +860,23 @@ public partial class PixelShop : MonoBehaviour
         }
 
         if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.Activate(); // no-op if already running
-        if (!string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Activate(); // no-op if already running
+        if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
+    }
+
+    /// <summary>Starts a minigame unless the player switched it off.</summary>
+    private static void ActivateMinigame(string id)
+    {
+        PixelMinigame m = PixelMinigame.Find(id);
+        if (m != null && !m.UserDisabled) m.Activate();
+    }
+
+    /// <summary>The tick box on a bought minigame's row: runs or stops it.</summary>
+    private static void SetMinigameEnabled(string id, bool on)
+    {
+        PixelMinigame m = PixelMinigame.Find(id);
+        if (m == null) return;
+        m.UserDisabled = !on;
+        if (on) m.Activate(); else m.Deactivate();
     }
 
     /// <summary>Dev tools: unlocks every pack for free (leveled packs go to their top level). Ignores requirements and costs.</summary>

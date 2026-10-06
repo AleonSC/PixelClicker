@@ -45,6 +45,9 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Triggers one round of the minigame right now (dev tools / testing). Default: nothing.</summary>
     public virtual void SpawnNow() { }
 
+    /// <summary>The player switched this (bought) minigame off in the shop. Saved. The shop won't start it while this is true.</summary>
+    public bool UserDisabled { get; set; }
+
     /// <summary>Starts the minigame (a shop purchase). Safe to call more than once.</summary>
     public abstract void Activate();
 
