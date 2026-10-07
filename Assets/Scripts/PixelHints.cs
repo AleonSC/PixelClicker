@@ -159,7 +159,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Singularity", "Singularity Pixels unlocked! A very rare pixel born from the black holes you fed."),
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),
-        H("pixel_Red", "The RGB Pack unlocked Red, Green and Blue pixels! They pay out more than the plain ones."),
+        H("pixel_Red", "The RGB Pack unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones, but you need them to unlock Glass pixels and more."),
         H("ultra", "Ultra pixel earned! Spend Ultra pixels in the shop's Upgrades > Pixel sub-tab to boost a pixel type's payout."),
     };
 
