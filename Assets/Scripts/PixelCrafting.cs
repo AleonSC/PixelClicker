@@ -97,7 +97,7 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Every recipe. Add your own: pick two ingredients and what they make.")]
     [SerializeField] private List<Recipe> recipes = CreateDefaultRecipes();
 
-    [Tooltip("Add the built-in recipes (each pixel's potion from that pixel + Glass) if they are missing.")]
+    [Tooltip("Add the built-in recipes (each pixel's potion from that pixel + Glass; the Glass potion uses Glass in both boxes) if they are missing.")]
     [SerializeField] private bool addDefaultRecipes = true;
 
     [Min(1)]
@@ -322,7 +322,6 @@ public class PixelCrafting : MonoBehaviour
         List<Recipe> list = new List<Recipe>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (type == PixelClicker.PixelType.Glass) continue;
             list.Add(new Recipe
             {
                 label = type + " Potion",
@@ -342,7 +341,6 @@ public class PixelCrafting : MonoBehaviour
         bool changed = false;
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (type == PixelClicker.PixelType.Glass) continue;
             if (recipes.Exists(r => r != null && r.resultKind == ResultKind.Potion && r.resultPotion == type)) continue;
             recipes.Add(new Recipe
             {

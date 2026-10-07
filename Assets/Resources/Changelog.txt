@@ -16,3 +16,4 @@
 [2026-10-07 10:48 UTC] Pixel Bank hose: hold the right mouse button to suck up an area of old pixels of the selected type (a ring shows the area; with nothing selected it takes the type of the pixel nearest the nozzle); a quick right-click still takes one pixel.
 [2026-10-07 10:51 UTC] Pixel Bank hose: a quick flick of the mouse now aims the nozzle the way you moved it (so you can shoot toward the bottom left or any direction), then it swings back along the hose; the nozzle's mouth now sits right at the cursor.
 [2026-10-07 10:53 UTC] Fixed the unused Potion Owned Format warning in the shop by removing the leftover setting.
+[2026-10-07 10:55 UTC] You can now craft Glass potions: put Glass in both Crafting boxes (it costs the pixel amount plus the glass amount, 70 Glass by default).
