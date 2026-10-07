@@ -26,3 +26,4 @@
 [2026-10-07 11:48 UTC] Time Stop now has an energy meter (drains while stopped, refills instantly after, hides after full) and clicks stockpile old pixels that burst out on resume; potion/device tabs are now a dropdown and the right-click hint is brighter.
 [2026-10-07 11:54 UTC] Time Stop now shows a blue haze/vignette over the screen and plays a looping sound (time_stop_loop) while active; PixelAudio gained looping sound support.
 [2026-10-07 11:57 UTC] Added first-time tip boxes (new PixelHints) for crafting, grabbing, Time Stop, the bank, each minigame, potions, devices, crafting, combos and Ultra pixels; each shows once.
+[2026-10-07 12:02 UTC] Added a short event line at the bottom left (new unlocks, tips, auto clicker, black hole) that fades out; click it or press Enter to reopen the full tip.

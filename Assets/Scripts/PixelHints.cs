@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// First-time tips. The first time something happens (a feature is bought, a minigame appears, a potion is drunk...)
@@ -24,6 +26,9 @@ public class PixelHints : MonoBehaviour
         [TextArea(2, 5)]
         [Tooltip("The message in the tip box.")]
         public string text = "";
+
+        [Tooltip("The short line shown in the bottom-left overlay when this happens (click it, or press Enter, to reopen the full tip). Empty = no overlay line.")]
+        public string shortText = "";
     }
 
     [Header("Settings")]
@@ -37,6 +42,42 @@ public class PixelHints : MonoBehaviour
     [Min(0f)]
     [Tooltip("Close a tip by itself after this many seconds (0 = it stays until the player clicks Got it).")]
     [SerializeField] private float autoCloseSeconds = 0f;
+
+    [Tooltip("Open the full tip box by itself when something happens (the overlay line always shows). Untick to only show the short line and let the player open the tip.")]
+    [SerializeField] private bool autoOpenTips = true;
+
+    [Tooltip("Ignore events during the first few seconds after the game starts (loading a save re-triggers unlocks).")]
+    [SerializeField] private float startupQuietSeconds = 3f;
+
+    [Header("Overlay (bottom-left line)")]
+    [Tooltip("Show the short event line at the bottom left, above the black bar.")]
+    [SerializeField] private bool showOverlay = true;
+
+    [Min(0f)]
+    [Tooltip("Seconds the line stays fully visible before fading.")]
+    [SerializeField] private float overlayVisibleSeconds = 5f;
+
+    [Min(0f)]
+    [Tooltip("Seconds the line takes to fade away.")]
+    [SerializeField] private float overlayFadeSeconds = 1.2f;
+
+    [Tooltip("Key that reopens the latest event (shows the line; pressing it again while the line is visible opens its tip).")]
+    [SerializeField] private KeyCode reopenKey = KeyCode.Return;
+
+    [Tooltip("Font size of the overlay line.")]
+    [SerializeField] private float overlayFontSize = 28f;
+
+    [Tooltip("Text colour of the overlay line.")]
+    [SerializeField] private Color overlayTextColor = new Color(1f, 0.95f, 0.7f, 1f);
+
+    [Tooltip("Background colour behind the overlay line.")]
+    [SerializeField] private Color overlayBackColor = new Color(0f, 0f, 0f, 0.55f);
+
+    [Tooltip("Distance from the left edge and from the black bar (canvas units).")]
+    [SerializeField] private Vector2 overlayMargin = new Vector2(24f, 16f);
+
+    [Tooltip("Small hint appended to the line, telling the player how to open it.")]
+    [SerializeField] private string overlayHintSuffix = "  <size=70%><color=#9fb7c9>(click or press Enter)</color></size>";
 
     [Tooltip("Add the built-in tips that are missing from the list below.")]
     [SerializeField] private bool addDefaultHints = true;
@@ -52,7 +93,30 @@ public class PixelHints : MonoBehaviour
 
     private const string PrefPrefix = "PixelClicker.Hint.";
 
-    private static Hint H(string id, string text) => new Hint { id = id, text = text };
+    private static Hint H(string id, string text) => new Hint { id = id, text = text, shortText = ShortFor(id) };
+
+    private static string ShortFor(string id)
+    {
+        switch (id)
+        {
+            case "crafting": return "You unlocked Crafting!";
+            case "grab": return "You unlocked Pixel Grabbing!";
+            case "timestop": return "You unlocked Time Stop! (press T)";
+            case "bank": return "You unlocked the Pixel Bank!";
+            case "minigame_ghost": return "A ghost appeared!";
+            case "minigame_meteor": return "A meteor appeared!";
+            case "minigame_bomb": return "A bomb appeared!";
+            case "minigame_pad": return "An Ultra Pad appeared!";
+            case "potion": return "You drank a potion!";
+            case "device_Vacuum": return "You placed a Vacuum Device!";
+            case "device_Fan": return "You placed a Fan!";
+            case "device_Sorter": return "You placed a Sorter!";
+            case "craft": return "You crafted something!";
+            case "combo": return "Combo started!";
+            case "ultra": return "You earned an Ultra pixel!";
+            default: return "";
+        }
+    }
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
@@ -80,7 +144,12 @@ public class PixelHints : MonoBehaviour
         bool changed = false;
         foreach (Hint d in DefaultHints())
         {
-            if (hints.Exists(h => h != null && h.id == d.id)) continue;
+            Hint existing = hints.Find(h => h != null && h.id == d.id);
+            if (existing != null)
+            {
+                if (string.IsNullOrEmpty(existing.shortText) && !string.IsNullOrEmpty(d.shortText)) { existing.shortText = d.shortText; changed = true; }
+                continue;
+            }
             hints.Add(d);
             changed = true;
         }
@@ -168,12 +237,140 @@ public class PixelHints : MonoBehaviour
         Hint hint = hints != null ? hints.Find(h => h != null && h.id == id) : null;
         if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
         MarkSeen(id);
+        string full = hint.text;
+        Announce(hint.shortText, () => PixelNotice.Show(full, autoCloseSeconds));
+        if (!autoOpenTips) return;
         queue.Enqueue(hint);
         if (waitTimer <= 0f && !PixelNotice.IsShowing) waitTimer = showDelay;
     }
 
+    // ------------------------------------------------------------------
+    // The overlay line
+    // ------------------------------------------------------------------
+
+    private string lastShort;
+    private Action lastOpen;
+    private float overlayTimer;
+    private GameObject overlayRoot;
+    private CanvasGroup overlayGroup;
+    private TMP_Text overlayLabel;
+
+    /// <summary>
+    /// Shows a short line at the bottom left ("You unlocked the Auto Clicker!"). Clicking it or pressing Enter runs 'open'
+    /// (usually reopening the full tip). Ignored right after the game starts.
+    /// </summary>
+    public static void Announce(string shortText, Action open = null)
+    {
+        if (instance != null) instance.ShowOverlay(shortText, open);
+    }
+
+    private void ShowOverlay(string shortText, Action open)
+    {
+        if (!hintsEnabled || !showOverlay || string.IsNullOrEmpty(shortText)) return;
+        if (Time.realtimeSinceStartup < startupQuietSeconds) return;
+        lastShort = shortText;
+        lastOpen = open;
+        DisplayOverlay();
+    }
+
+    private void DisplayOverlay()
+    {
+        if (string.IsNullOrEmpty(lastShort)) return;
+        if (overlayRoot == null) BuildOverlay();
+        overlayLabel.text = lastShort + (lastOpen != null ? overlayHintSuffix : "");
+        Vector2 size = overlayLabel.GetPreferredValues(overlayLabel.text, 1200f, 0f);
+        RectTransform back = (RectTransform)overlayLabel.transform.parent;
+        back.sizeDelta = new Vector2(Mathf.Ceil(size.x) + 36f, Mathf.Ceil(size.y) + 16f);
+        overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
+        overlayGroup.alpha = 1f;
+        overlayRoot.SetActive(true);
+    }
+
+    private void BuildOverlay()
+    {
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        TMP_FontAsset font = clicker != null ? clicker.UIFont : null;
+        PixelUIKit.EnsureEventSystem();
+        overlayRoot = PixelUIKit.CreateCanvas("Pixel Event Line", 90, new Vector2(1920f, 1080f), true);
+        overlayRoot.transform.SetParent(transform, false);
+        overlayGroup = overlayRoot.AddComponent<CanvasGroup>();
+
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        GameObject back = new GameObject("Back", typeof(RectTransform), typeof(Image), typeof(Button));
+        back.transform.SetParent(overlayRoot.transform, false);
+        Image img = back.GetComponent<Image>();
+        img.color = overlayBackColor;
+        RectTransform br = (RectTransform)back.transform;
+        br.anchorMin = br.anchorMax = br.pivot = Vector2.zero;
+        br.anchoredPosition = new Vector2(overlayMargin.x, bar + overlayMargin.y);
+        back.GetComponent<Button>().onClick.AddListener(OpenLatest);
+
+        overlayLabel = PixelUIKit.CreateText(font, back.transform, "Text", "", overlayFontSize, TextAlignmentOptions.Left, FontStyles.Bold, overlayTextColor);
+        overlayLabel.raycastTarget = false;
+        overlayLabel.overflowMode = TextOverflowModes.Overflow;
+        RectTransform lr = overlayLabel.rectTransform;
+        lr.anchorMin = Vector2.zero;
+        lr.anchorMax = Vector2.one;
+        lr.offsetMin = new Vector2(18f, 4f);
+        lr.offsetMax = new Vector2(-18f, -4f);
+    }
+
+    private void OpenLatest()
+    {
+        if (lastOpen != null) lastOpen();
+        overlayTimer = 0f;
+        if (overlayRoot != null) overlayRoot.SetActive(false);
+    }
+
+    private bool ReopenKeyPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        return kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
+#else
+        return Input.GetKeyDown(reopenKey) || Input.GetKeyDown(KeyCode.KeypadEnter);
+#endif
+    }
+
+    private void UpdateOverlay()
+    {
+        if (PixelPauseMenu.IsPaused || string.IsNullOrEmpty(lastShort)) return;
+
+        // Don't steal Enter from a text box.
+        UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
+        bool typing = es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null;
+
+        bool visible = overlayRoot != null && overlayRoot.activeSelf;
+        if (!typing && ReopenKeyPressed())
+        {
+            if (visible && lastOpen != null) OpenLatest();
+            else DisplayOverlay();
+            return;
+        }
+
+        if (!visible) return;
+        overlayTimer -= Time.unscaledDeltaTime;
+        overlayGroup.alpha = overlayFadeSeconds > 0f ? Mathf.Clamp01(overlayTimer / overlayFadeSeconds) : (overlayTimer > 0f ? 1f : 0f);
+        overlayGroup.blocksRaycasts = overlayGroup.alpha > 0.3f;
+        if (overlayTimer <= 0f) overlayRoot.SetActive(false);
+    }
+
+    private void Start()
+    {
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker != null && clicker.onTierUnlocked != null) clicker.onTierUnlocked.AddListener(OnTierUnlocked);
+    }
+
+    private void OnTierUnlocked(int index)
+    {
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null || !clicker.IsValidTierIndex(index)) return;
+        ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].name + "!", null);
+    }
+
     private void Update()
     {
+        UpdateOverlay();
         bool showing = PixelNotice.IsShowing;
         if (wasShowing && !showing) waitTimer = Mathf.Max(waitTimer, 0.3f); // short gap between queued tips
         wasShowing = showing;

@@ -1146,6 +1146,7 @@ public partial class PixelShop : MonoBehaviour
             {
                 autoClicker.UserDisabled = true;
                 PixelToggles.ShowHint();
+                PixelHints.Announce("You unlocked the Auto Clicker!", () => PixelToggles.ShowHint());
             }
         }
 

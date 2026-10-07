@@ -15,6 +15,7 @@ Hold right-click ("Active:" line) | Cancel the potion
 Esc | Pause menu / close the top window
 T | Stop and resume time (Time Stop; uses an energy meter, you can still click the cube)
 B | Equip / put away the hose (Pixel Bank)
+Enter | Show the latest event line again; press it again (or click the line) to reopen its tip
 Q or E | Turn a fan or sorter while placing it
 Mouse wheel | Turn a fan or sorter while placing it
 
