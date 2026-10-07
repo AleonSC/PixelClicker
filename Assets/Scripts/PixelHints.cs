@@ -91,6 +91,18 @@ public class PixelHints : MonoBehaviour
     [SerializeField] private int historyMax = 100;
 
 
+    [Header("Intro (first start of a new game)")]
+    [Tooltip("On a brand-new game, open the Log and then the Inventory with a short explanation of each.")]
+    [SerializeField] private bool showIntro = true;
+
+    [TextArea(2, 5)]
+    [Tooltip("Tip shown with the Log open.")]
+    [SerializeField] private string introLogText = "This is your Log. It lists every pixel type you have unlocked with its lifetime total, and its second tab tracks your achievements. Open it any time with the Log button at the bottom left.";
+
+    [TextArea(2, 5)]
+    [Tooltip("Tip shown with the Inventory open.")]
+    [SerializeField] private string introInventoryText = "This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.";
+
     [Tooltip("Add the built-in tips that are missing from the list below.")]
     [SerializeField] private bool addDefaultHints = true;
 
@@ -568,8 +580,32 @@ public class PixelHints : MonoBehaviour
         ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", "");
     }
 
+    private bool introChecked;
+
+    private void TryStartIntro()
+    {
+        if (introChecked || Time.realtimeSinceStartup < startupQuietSeconds + 0.5f) return;
+        introChecked = true;
+        if (!showIntro || !hintsEnabled || Seen("intro_log")) return;
+
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) return;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            if (t.totalCollected > 0d) return; // not a new game
+
+        MarkSeen("intro_log");
+        PixelLog.SetLogOpen(true);
+        PixelNotice.Show(introLogText, 0f, () =>
+        {
+            PixelLog.SetLogOpen(false);
+            PixelUI.SetInventoryOpen(true);
+            PixelNotice.Show(introInventoryText, 0f, () => PixelUI.SetInventoryOpen(false));
+        });
+    }
+
     private void Update()
     {
+        TryStartIntro();
         UpdateOverlay();
         bool showing = PixelNotice.IsShowing;
         if (wasShowing && !showing) waitTimer = Mathf.Max(waitTimer, 0.3f); // short gap between queued tips

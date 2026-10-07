@@ -12,10 +12,10 @@ public static class PixelNotice
     private static PixelNoticeBox box;
 
     /// <summary>Shows a message. 'seconds' = 0 keeps it until the player closes it.</summary>
-    public static void Show(string message, float seconds = 0f)
+    public static void Show(string message, float seconds = 0f, System.Action onClosed = null)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(message, seconds);
+        box.Open(message, seconds, onClosed);
     }
 
     /// <summary>Is a tip box on screen right now?</summary>
@@ -69,8 +69,9 @@ public class PixelNoticeBox : MonoBehaviour
         ok.onClick.AddListener(Close);
     }
 
-    public void Open(string message, float seconds)
+    public void Open(string message, float seconds, System.Action onClosed = null)
     {
+        closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
         if (canvasRoot == null) Build();
 
         label.text = message;
@@ -86,9 +87,15 @@ public class PixelNoticeBox : MonoBehaviour
 
     public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf;
 
+    private System.Action closedCallback;
+
     public void Close()
     {
+        bool wasOpen = canvasRoot != null && canvasRoot.activeSelf;
         if (canvasRoot != null) canvasRoot.SetActive(false);
+        System.Action callback = closedCallback;
+        closedCallback = null;
+        if (wasOpen) callback?.Invoke();
     }
 
     private void Update()

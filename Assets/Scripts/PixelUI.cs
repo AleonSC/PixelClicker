@@ -211,7 +211,7 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private string shopGuideText = "Buy the RGB Pack in the shop to progress to the next tier.";
 
     [Tooltip("Hint text size.")]
-    [SerializeField] private float guideFontSize = 34f;
+    [SerializeField] private float guideTextSize = 24f;
 
     [Tooltip("Hint text colour.")]
     [SerializeField] private Color guideColor = new Color(1f, 1f, 1f, 0.9f);
@@ -224,7 +224,7 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private Color guideBackgroundColor = Color.black;
 
     [Tooltip("Space between the guide text and the edge of its box (x = left/right, y = top/bottom).")]
-    [SerializeField] private Vector2 guidePadding = new Vector2(36f, 14f);
+    [SerializeField] private Vector2 guideBoxPadding = new Vector2(22f, 8f);
 
     [Tooltip("Sorting order of the guide's canvas. Keep it BELOW the shop (150) so the shop covers the guide.")]
     [SerializeField] private int guideSortingOrder = 50;
@@ -501,8 +501,27 @@ public class PixelUI : MonoBehaviour
         built = true;
     }
 
+    private static PixelUI inventoryInstance;
+
+    /// <summary>Is the Inventory box open?</summary>
+    public static bool InventoryOpen => inventoryInstance != null && inventoryInstance.boxObject != null && inventoryInstance.boxObject.activeSelf;
+
+    /// <summary>Opens or closes the Inventory box. Opening it closes the Log (they never show together).</summary>
+    public static void SetInventoryOpen(bool open)
+    {
+        PixelUI ui = inventoryInstance;
+        if (ui == null || ui.boxObject == null) return;
+        ui.boxObject.SetActive(open);
+        if (open)
+        {
+            ui.Refresh();
+            PixelLog.SetLogOpen(false);
+        }
+    }
+
     private void OnDestroy()
     {
+        if (inventoryInstance == this) inventoryInstance = null;
         PixelWindows.Unregister(this);
         if (autoRoot != null) Destroy(autoRoot);
         if (popupRoot != null) Destroy(popupRoot);
@@ -849,11 +868,7 @@ public class PixelUI : MonoBehaviour
         br.anchoredPosition = new Vector2(sx * margin.x, sy * margin.y);
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => boxObject != null && boxObject.activeSelf); // standard size, slides out near the mouse
-        button.onClick.AddListener(() =>
-        {
-            boxObject.SetActive(!boxObject.activeSelf);
-            if (boxObject.activeSelf) Refresh();
-        });
+        button.onClick.AddListener(() => SetInventoryOpen(!boxObject.activeSelf));
 
         // --- Box (sits next to the button, growing away from the screen edge)
         boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image));
@@ -945,6 +960,7 @@ public class PixelUI : MonoBehaviour
         boxObject.SetActive(startOpen);
         BuildConsumableList(anchor);
         PixelWindows.Register(this, 10, () => boxObject != null && boxObject.activeSelf, () => boxObject.SetActive(false));
+        inventoryInstance = this;
         Debug.Log("PixelUI: created the Inventory box with " + count + " currency lines.", this);
     }
 
@@ -1331,7 +1347,7 @@ public class PixelUI : MonoBehaviour
         rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 1f);
         rr.anchoredPosition = new Vector2(0f, -(guideTopMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)));
 
-        guideLabel = MakeText(guideRoot.transform, "Text", "", guideFontSize,
+        guideLabel = MakeText(guideRoot.transform, "Text", "", guideTextSize,
                               TextAlignmentOptions.Center, FontStyles.Bold, guideColor);
         if (popupOutlineWidth > 0f)
         {
@@ -1388,7 +1404,7 @@ public class PixelUI : MonoBehaviour
 
         string text = null;
         Color color = guideColor;
-        float size = guideFontSize;
+        float size = guideTextSize;
         float fade = 1f;
 
         if (unlockTimer > 0f)
@@ -1421,7 +1437,7 @@ public class PixelUI : MonoBehaviour
         // Fit the box around the text.
         Vector2 preferred = guideLabel.GetPreferredValues(text);
         guideRoot.GetComponent<RectTransform>().sizeDelta =
-            new Vector2(preferred.x + guidePadding.x * 2f, preferred.y + guidePadding.y * 2f);
+            new Vector2(preferred.x + guideBoxPadding.x * 2f, preferred.y + guideBoxPadding.y * 2f);
     }
 
     private void BuildActiveHud()

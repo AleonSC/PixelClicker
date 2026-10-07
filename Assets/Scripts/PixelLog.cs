@@ -347,6 +347,7 @@ public class PixelLog : MonoBehaviour
         Refresh();
         panelObject.SetActive(startOpen);
         PixelWindows.Register(this, 20, () => panelObject != null && panelObject.activeSelf, () => panelObject.SetActive(false));
+        logInstance = this;
     }
 
 #if UNITY_EDITOR
@@ -366,8 +367,24 @@ public class PixelLog : MonoBehaviour
     }
 #endif
 
+    private static PixelLog logInstance;
+
+    /// <summary>Opens or closes the Log panel. Opening it closes the Inventory (they never show together).</summary>
+    public static void SetLogOpen(bool open)
+    {
+        PixelLog log = logInstance;
+        if (log == null || log.panelObject == null) return;
+        log.panelObject.SetActive(open);
+        if (open)
+        {
+            log.Refresh();
+            PixelUI.SetInventoryOpen(false);
+        }
+    }
+
     private void OnDestroy()
     {
+        if (logInstance == this) logInstance = null;
         PixelWindows.Unregister(this);
         if (clicker != null)
         {
@@ -464,11 +481,7 @@ public class PixelLog : MonoBehaviour
         br.anchoredPosition = new Vector2(sx * buttonMargin.x, sy * buttonMargin.y);
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => panelObject != null && panelObject.activeSelf);
-        button.onClick.AddListener(() =>
-        {
-            panelObject.SetActive(!panelObject.activeSelf);
-            if (panelObject.activeSelf) Refresh();
-        });
+        button.onClick.AddListener(() => SetLogOpen(!panelObject.activeSelf));
 
         // --- Panel (sits next to the button, growing away from the screen edge)
         panelObject = new GameObject("Log Panel", typeof(RectTransform), typeof(Image));
