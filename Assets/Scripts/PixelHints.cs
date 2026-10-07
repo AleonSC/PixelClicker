@@ -365,7 +365,7 @@ public class PixelHints : MonoBehaviour
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null || !clicker.IsValidTierIndex(index)) return;
-        ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].name + "!", null);
+        ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", null);
     }
 
     private void Update()
