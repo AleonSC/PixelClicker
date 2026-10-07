@@ -381,6 +381,7 @@ public class PixelHints : MonoBehaviour
         overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
         overlayGroup.alpha = 1f;
         overlayRoot.SetActive(true);
+        Canvas.ForceUpdateCanvases();
         RebuildRows();
     }
 
@@ -472,7 +473,11 @@ public class PixelHints : MonoBehaviour
     private void ApplyScroll()
     {
         if (boxRect == null) return;
-        viewHeight = boxRect.rect.height;
+        // The box's height computed from the screen (its own rect isn't valid until the canvas has updated once).
+        Canvas canvas = overlayRoot.GetComponent<Canvas>();
+        float scale = canvas != null && canvas.scaleFactor > 0.01f ? canvas.scaleFactor : 1f;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        viewHeight = Mathf.Max(0f, Screen.height / scale - 2f * (bar + overlayMargin.y));
         float max = Mathf.Max(0f, contentHeight - viewHeight);
         scrollOffset = Mathf.Clamp(scrollOffset, 0f, max);
         listRect.anchoredPosition = new Vector2(0f, scrollOffset);
