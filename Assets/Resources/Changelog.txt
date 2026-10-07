@@ -9,3 +9,4 @@
 [2026-10-07 00:36 UTC] A vacuum pixel spat out of the bank hose now vacuums up all old pixels again (and pays them out once more), like clicking a vacuum pixel.
 [2026-10-07 00:40 UTC] Added a minimum gap of 0.07 seconds between manual clicks on the cube (about 14 clicks per second) to stop macros; it is the Min Click Interval setting on the clicker.
 [2026-10-07 00:43 UTC] Added Bank Storage upgrades (5 levels) in the shop: spend glass, vacuum pixels and bomb parts to raise how many pixels the Pixel Bank can hold (60 up to 600).
+[2026-10-07 01:12 UTC] Added How to Play and Controls screens to the pause menu; they show the text files Assets/Resources/HowToPlay.txt and Controls.txt, which you can edit yourself.

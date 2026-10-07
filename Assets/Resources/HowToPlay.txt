@@ -1,0 +1,56 @@
+// HOW TO PLAY - shown in the pause menu under "How to Play". Edit this file any time.
+// Lines starting with // are notes for you and are not shown.
+// A line starting with # is a heading. Everything else is shown as written.
+// A blank line leaves a gap. Long lines wrap by themselves. Simple tags like <b>bold</b> and <i>italic</i> work.
+
+# The Goal
+Click the cube to collect pixels. Every pixel type is its own currency. Collect enough of one type and the next, better type unlocks. Spend your pixels in the Shop to unlock new pixel types, upgrades, potions, devices and minigames.
+
+# Collecting
+Each click pays out the pixel the cube is showing. A smaller copy of that pixel then falls to the floor: an "old pixel". Old pixels vanish after a few seconds, but a lot of the game is about doing something useful with them before they do.
+The cube is also clicked for you by the Auto Clicker once you buy it, even while the game is closed (you get a "Welcome back" payout for the time away).
+Clicks are limited to about 14 per second.
+
+# The Shop
+The Shop button appears once you have unlocked the Black pixel. It has four tabs:
+<b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
+<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop, the Pixel Bank and its storage upgrades. The "Pixel" sub-tab spends Ultra pixels on payout boosts.
+<b>Consumables</b> - potions and utilities (see below).
+<b>Minigames</b> - events that appear on their own once bought.
+Things you can't buy yet show in grey with what they need.
+
+# Special Pixels
+<b>Glass</b> - the ingredient for potions in Crafting.
+<b>Vacuum</b> - when you collect one, every old pixel on the floor flies into the cube and pays out again.
+<b>Obsidian</b> and <b>Luminescent</b> - tougher or rarer pixels worth more.
+<b>Singularity</b>, <b>Ghost</b> and <b>Meteor</b> - rare pixels you earn by playing their minigames.
+
+# Potions and Devices
+Open the inventory's Consumables tab. Right-click a potion to drink it: for a while only that pixel type spawns.
+Right-click a device (Vacuum Device, Fan, Sorter) to place it. The Vacuum Device pulls in old pixels and collects them again. The Fan blows old pixels along the floor. The Sorter wraps around the cube and spits every pixel you collect out of an aimable pipe.
+Hold the right mouse button on a placed device to remove it, or on the "Active:" line at the top to cancel a potion. There is no refund.
+
+# Minigames
+<b>Ghost Hunt</b> - a faint cube floats by. Click it for a free potion.
+<b>Black Hole</b> - a swirling hole opens on the floor and swallows old pixels. While it is open, old pixels stop vanishing.
+<b>Bomb Defusal</b> - a bomb appears. Cut the wire of the colour you own the most of (Red, Green or Blue) before the timer runs out. A wrong wire or running out of time clears your old pixels. Defusing earns bomb parts.
+<b>Ultra Pad</b> - a coloured pad appears on one side of the cube. Throw or drop old pixels of that colour onto it for a chance at an Ultra version. Pixels of any other colour cost you some of that currency.
+<b>Meteor Strike</b> - a meteor drifts by. Click it for meteor chunks.
+Switch any of them off in the Toggles window.
+
+# Upgrades Worth Knowing
+<b>Pixel Grabbing</b> - click and drag old pixels, then let go to throw them.
+<b>Time Stop</b> - press T to freeze everything, including timers. Press T again to resume.
+<b>Combo Meter</b> - quick clicks build a bonus multiplier.
+<b>Crafting</b> - combine two items to make potions and more.
+<b>Pixel Bank</b> - store old pixels and spit them back out. Press B for the hose. Bank Storage upgrades raise how much it holds (they cost glass, vacuum pixels and bomb parts).
+
+# Useful Windows
+<b>Inventory</b> (top left) - your pixels, and your potions and devices.
+<b>Log</b> (bottom left) - pixel totals and achievements.
+<b>Toggles</b> (right edge) - switch pixel spawns, upgrades and minigames on or off.
+<b>Bank</b> (left edge) - what the Pixel Bank holds.
+Buttons slide out of the edge of the screen when your mouse gets close to them.
+
+# Saving
+The game saves by itself and when you quit. You can also Save and Load from the pause menu. Restart deletes everything.

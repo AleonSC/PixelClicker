@@ -263,6 +263,53 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Size of the changelog text.")]
     [SerializeField] private float changelogFontSize = 28f;
 
+    [Header("How to Play and Controls")]
+    [Tooltip("Show the How to Play button in the pause menu.")]
+    [SerializeField] private bool showHowToPlay = true;
+
+    [Tooltip("Text of the How to Play button and the title of its screen.")]
+    [SerializeField] private string howToPlayText = "How to Play";
+
+    [Tooltip("Name of the text file in a Resources folder that holds the How to Play text (Assets/Resources/HowToPlay.txt). Edit that file to change what the screen says.")]
+    [SerializeField] private string howToPlayResource = "HowToPlay";
+
+    [Tooltip("Shown when the How to Play file is missing or empty.")]
+    [SerializeField] private string emptyHowToPlayText = "Nothing to show yet. Add text to Assets/Resources/HowToPlay.txt.";
+
+    [Tooltip("Show the Controls button in the pause menu.")]
+    [SerializeField] private bool showControls = true;
+
+    [Tooltip("Text of the Controls button and the title of its screen.")]
+    [SerializeField] private string controlsText = "Controls";
+
+    [Tooltip("Name of the text file in a Resources folder that holds the controls list (Assets/Resources/Controls.txt). Edit that file to change what the screen says.")]
+    [SerializeField] private string controlsResource = "Controls";
+
+    [Tooltip("Shown when the Controls file is missing or empty.")]
+    [SerializeField] private string emptyControlsText = "Nothing to show yet. Add text to Assets/Resources/Controls.txt.";
+
+    [Min(300f)]
+    [Tooltip("Width of the How to Play / Controls screens (canvas units).")]
+    [SerializeField] private float guideWidth = 1100f;
+
+    [Min(100f)]
+    [Tooltip("Height of the scrolling text on those screens (canvas units).")]
+    [SerializeField] private float guideViewHeight = 600f;
+
+    [Tooltip("Size of the text on those screens.")]
+    [SerializeField] private float guideFontSize = 28f;
+
+    [Tooltip("Colour of the # headings in those files.")]
+    [SerializeField] private Color guideHeadingColor = new Color(1f, 0.85f, 0.4f, 1f);
+
+    [Range(100f, 200f)]
+    [Tooltip("Size of a # heading, in percent of the normal text.")]
+    [SerializeField] private float guideHeadingPercent = 130f;
+
+    [Range(10f, 70f)]
+    [Tooltip("Where the second column starts on a 'Key | Action' line, as a percentage of the width.")]
+    [SerializeField] private float guideColumnPercent = 40f;
+
     [Tooltip("Height of each stat / setting row.")]
     [SerializeField] private float rowHeight = 64f;
 
@@ -343,6 +390,18 @@ public class PixelPauseMenu : MonoBehaviour
     private ScrollRect changelogScroll;
     private GameObject changelogBar;
     private TMP_Text changelogLabel;
+
+    /// <summary>One of the scrolling text screens fed from a Resources text file (How to Play, Controls).</summary>
+    private class GuideScreen
+    {
+        public GameObject panel;
+        public ScrollRect scroll;
+        public GameObject bar;
+        public TMP_Text label;
+        public string resource, empty;
+    }
+
+    private GuideScreen howToPlayScreen, controlsScreen;
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
     private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, comboValue;
     private ScrollRect statsScroll, potionsScroll;
@@ -634,6 +693,13 @@ public class PixelPauseMenu : MonoBehaviour
         if (PixelDevTools.Available) AddMenuButton(panel.transform, PixelDevTools.ButtonText, menuButtonColor, ref y, PixelDevTools.OpenPanel);
         BuildChangelogPanel();
         BuildRestartPanel();
+        if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", howToPlayText, howToPlayResource, emptyHowToPlayText);
+        if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", controlsText, controlsResource, emptyControlsText);
+        if (howToPlayScreen != null && controlsScreen != null)
+            AddButtonPair(panel.transform, howToPlayText, () => ShowView(howToPlayScreen.panel),
+                          controlsText, () => ShowView(controlsScreen.panel), ref y);
+        else if (howToPlayScreen != null) AddMenuButton(panel.transform, howToPlayText, menuButtonColor, ref y, () => ShowView(howToPlayScreen.panel));
+        else if (controlsScreen != null) AddMenuButton(panel.transform, controlsText, menuButtonColor, ref y, () => ShowView(controlsScreen.panel));
         if (showChangelog) AddMenuButton(panel.transform, changelogText, menuButtonColor, ref y, () => ShowView(changelogPanel));
         if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, () => ShowView(restartPanel));
         if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
@@ -657,6 +723,10 @@ public class PixelPauseMenu : MonoBehaviour
         if (statsPanel != null) statsPanel.SetActive(view == statsPanel);
         if (settingsPanel != null) settingsPanel.SetActive(view == settingsPanel);
         if (changelogPanel != null) changelogPanel.SetActive(view == changelogPanel);
+        if (howToPlayScreen != null) howToPlayScreen.panel.SetActive(view == howToPlayScreen.panel);
+        if (controlsScreen != null) controlsScreen.panel.SetActive(view == controlsScreen.panel);
+        if (howToPlayScreen != null && view == howToPlayScreen.panel) RefreshGuideScreen(howToPlayScreen);
+        if (controlsScreen != null && view == controlsScreen.panel) RefreshGuideScreen(controlsScreen);
         if (restartPanel != null) restartPanel.SetActive(view == restartPanel);
         if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
         if (view == changelogPanel) RefreshChangelog();
@@ -972,6 +1042,89 @@ public class PixelPauseMenu : MonoBehaviour
         lr.offsetMax = new Vector2(-26f, 0f);
 
         FinishSectionPanel(changelogPanel, y + changelogViewHeight);
+    }
+
+    private GuideScreen BuildGuideScreen(string objectName, string title, string resource, string emptyText)
+    {
+        GuideScreen s = new GuideScreen { resource = resource, empty = emptyText };
+        s.panel = BuildSectionPanel(objectName, title, out float y);
+        RectTransform pr = s.panel.GetComponent<RectTransform>();
+        pr.sizeDelta = new Vector2(guideWidth, pr.sizeDelta.y);
+
+        s.scroll = PixelUIKit.CreateScrollView(s.panel.transform, title + " List", scrollbarColor, 12f, guideFontSize * 1.5f,
+                                               out RectTransform content, out s.bar);
+        RectTransform vr = s.scroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(-60f, guideViewHeight);
+        vr.anchoredPosition = new Vector2(0f, -y);
+
+        s.label = MakeText(content, title + " Text", "", guideFontSize, FontStyles.Normal);
+        s.label.alignment = TextAlignmentOptions.TopLeft;
+        s.label.richText = true;
+        RectTransform lr = s.label.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = new Vector2(1f, 1f);
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.offsetMin = new Vector2(10f, -guideViewHeight);
+        lr.offsetMax = new Vector2(-26f, 0f);
+
+        FinishSectionPanel(s.panel, y + guideViewHeight);
+        return s;
+    }
+
+    /// <summary>Reloads the screen's text file and shows it.</summary>
+    private void RefreshGuideScreen(GuideScreen s)
+    {
+        TextAsset asset = Resources.Load<TextAsset>(s.resource);
+        string text = FormatGuideText(asset != null ? asset.text : "");
+        if (text.Trim().Length == 0) text = s.empty;
+        s.label.text = text;
+
+        float width = s.label.rectTransform.rect.width > 1f ? s.label.rectTransform.rect.width : guideWidth - 100f;
+        float height = Mathf.Ceil(s.label.GetPreferredValues(text, width, 0f).y) + 10f;
+        s.label.rectTransform.offsetMin = new Vector2(10f, -height);
+        s.scroll.content.anchoredPosition = Vector2.zero;
+        PixelUIKit.UpdateScrollView(s.scroll, s.bar, height, guideViewHeight);
+    }
+
+    /// <summary>
+    /// Turns the text file into what is shown: lines starting with // are skipped, a line starting with # is a coloured
+    /// heading, and "Key | Action" becomes two columns. Everything else is shown as written.
+    /// </summary>
+    private string FormatGuideText(string raw)
+    {
+        string headingHex = ColorUtility.ToHtmlStringRGB(guideHeadingColor);
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        bool first = true;
+
+        foreach (string rawLine in raw.Replace("\r", "").Split('\n'))
+        {
+            string line = rawLine.TrimEnd();
+            if (line.TrimStart().StartsWith("//")) continue;
+
+            string trimmed = line.TrimStart();
+            string shown;
+            if (trimmed.StartsWith("#"))
+            {
+                shown = "<size=" + guideHeadingPercent.ToString("0") + "%><b><color=#" + headingHex + ">" +
+                        trimmed.TrimStart('#').Trim() + "</color></b></size>";
+                if (!first) sb.Append('\n'); // an extra blank line above each heading
+            }
+            else if (line.Contains(" | "))
+            {
+                int bar = line.IndexOf(" | ", System.StringComparison.Ordinal);
+                shown = "<b>" + line.Substring(0, bar).Trim() + "</b><pos=" + guideColumnPercent.ToString("0") + "%>" +
+                        line.Substring(bar + 3).Trim();
+            }
+            else shown = line;
+
+            if (!first) sb.Append('\n');
+            sb.Append(shown);
+            first = false;
+        }
+        return sb.ToString();
     }
 
     /// <summary>Reads the changelog file (one change per line) and shows it, newest first.</summary>

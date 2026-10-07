@@ -1,0 +1,51 @@
+// CONTROLS - shown in the pause menu under "Controls". Edit this file any time.
+// Lines starting with // are notes for you and are not shown.
+// A line starting with # is a heading. A line like  Key | What it does  is shown as two columns.
+// Keep the right-hand part short so it stays on one line.
+
+# Mouse
+Left-click the cube | Collect a pixel
+Left-click a button | Use it
+Mouse to a screen edge | Slide out the docked buttons
+Right-click (inventory item) | Drink a potion / start placing a device
+Hold right-click (placed device) | Remove it
+Hold right-click ("Active:" line) | Cancel the potion
+
+# Keyboard
+Esc | Pause menu / close the top window
+T | Stop and resume time (Time Stop)
+B | Equip / put away the hose (Pixel Bank)
+Q or E | Turn a fan or sorter while placing it
+Mouse wheel | Turn a fan or sorter while placing it
+
+# Placing a Device
+Left-click the floor | Place a Vacuum Device or Fan
+Scroll or Q / E | Turn a Fan or the Sorter's pipe
+Left-click (Sorter) | Confirm the pipe's direction
+Left-click in the cone | Place the Sorter with that bend
+Right-click | Go back / cancel
+
+# Pixel Grabbing
+Hold left-click on an old pixel | Pick it up and drag it
+Release | Drop or throw it
+
+# Pixel Bank Hose
+Mouse wheel | Choose which stored pixel to use
+Left-click | Spit one out
+Right-click | Suck up the old pixel under the nozzle
+Click a Bank row | Select that pixel type
+
+# Devices and Minigames
+Click buttons 1-3 on the Sorter | Change how hard it spits
+Click a wire (Bomb) | Cut it
+Click the ghost or meteor | Collect the reward
+
+# Crafting
+Click or drag an item | Put it in a box
+Right-click a box | Empty it
+
+# Log
+Click an achievement row | Switch Collector / Clicker
+
+# Dev Tools
+Q (when ticked in Dev Tools) | Clear all old pixels
