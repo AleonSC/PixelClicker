@@ -95,6 +95,10 @@ public class PixelHints : MonoBehaviour
     [Tooltip("On a brand-new game, open the Log and then the Inventory with a short explanation of each.")]
     [SerializeField] private bool showIntro = true;
 
+    [Min(0f)]
+    [Tooltip("Seconds to wait after the game starts (after Play) before the intro tips begin.")]
+    [SerializeField] private float introDelay = 0.8f;
+
     [TextArea(2, 5)]
     [Tooltip("Tip shown with the Log open.")]
     [SerializeField] private string introLogText = "This is your Log. It lists every pixel type you have unlocked with its lifetime total, and its second tab tracks your achievements. Open it any time with the Log button at the bottom left.";
@@ -392,7 +396,7 @@ public class PixelHints : MonoBehaviour
     private void ShowOverlay(string shortText, string fullText)
     {
         if (!hintsEnabled || string.IsNullOrEmpty(shortText)) return;
-        if (Time.realtimeSinceStartup < startupQuietSeconds || Time.realtimeSinceStartup < suppressUntil) return;
+        if (Time.timeSinceLevelLoad < startupQuietSeconds || Time.realtimeSinceStartup < suppressUntil) return;
         history.Add(new Entry { text = shortText, full = fullText ?? "" });
         TrimHistory();
         rowsDirty = true;
@@ -596,10 +600,13 @@ public class PixelHints : MonoBehaviour
     }
 
     private bool introChecked;
+    private float introWait;
 
     private void TryStartIntro()
     {
-        if (introChecked || PixelTitleScreen.Showing || Time.realtimeSinceStartup < startupQuietSeconds + 0.5f) return;
+        if (introChecked || PixelTitleScreen.Showing) return;
+        introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play)
+        if (introWait < introDelay) return;
         introChecked = true;
         if (!showIntro || !hintsEnabled || Seen("intro_log")) return;
 

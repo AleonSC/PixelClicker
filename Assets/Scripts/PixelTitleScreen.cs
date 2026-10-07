@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// the picture comes back into focus, and after a short delay the game starts.
 ///
 /// The blur is made at start-up by rendering the main camera into a small texture (a few bilinear down-scales), so it needs
-/// no post-processing. Restart skips the screen (the player is already in the game).
+/// no post-processing. It shows again after the pause menu's Restart, like a fresh launch.
 /// Added automatically by PixelClicker.
 /// </summary>
 public class PixelTitleScreen : MonoBehaviour
@@ -17,9 +17,6 @@ public class PixelTitleScreen : MonoBehaviour
     [Header("Screen")]
     [Tooltip("Show the start screen when the game launches.")]
     [SerializeField] private bool showTitleScreen = true;
-
-    [Tooltip("Show it again after the pause menu's Restart. Off = Restart goes straight into the new game.")]
-    [SerializeField] private bool showAfterRestart = false;
 
     [Tooltip("Sorting order of the screen's canvas (above every other window).")]
     [SerializeField] private int sortingOrder = 1000;
@@ -87,9 +84,6 @@ public class PixelTitleScreen : MonoBehaviour
     /// <summary>True while the start screen is up (the game is frozen).</summary>
     public static bool Showing { get; private set; }
 
-    /// <summary>Set by Restart: the next scene load skips the start screen.</summary>
-    public static bool SkipNext;
-
     private GameObject canvasRoot;
     private Image cover, bar, dim;
     private RawImage lightImage, strongImage;
@@ -102,9 +96,7 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void Awake()
     {
-        bool skip = SkipNext && !showAfterRestart;
-        SkipNext = false;
-        if (!showTitleScreen || skip) { Destroy(this); return; }
+        if (!showTitleScreen) { Destroy(this); return; }
 
         Showing = true;
         timeScaleBefore = Time.timeScale > 0f ? Time.timeScale : 1f;
