@@ -819,6 +819,8 @@ public partial class PixelShop
             float current = 0f;
             if (pack.upgradeEffect == UpgradeEffect.ComboMeter)
                 current = pack.level > 0 ? pack.levels[pack.level - 1].value : 1f;
+            else if (pack.upgradeEffect == UpgradeEffect.BankCapacity)
+                current = bank != null ? bank.Capacity : 0f;
             else if (autoClicker != null)
                 current = pack.upgradeEffect == UpgradeEffect.AutoClickerClicks ? autoClicker.ClicksPerTick : autoClicker.Interval;
 
@@ -846,9 +848,8 @@ public partial class PixelShop
         for (int i = 0; i < costs.Length; i++)
         {
             PackCost cost = costs[i];
-            int tierIndex = clicker.IndexOf(cost.type);
-            string name = tierIndex >= 0 ? clicker.Tiers[tierIndex].displayName : cost.type.ToString();
-            bool enough = clicker.CanAfford(cost.type, cost.amount);
+            string name = CostName(cost);
+            bool enough = CanAffordCost(cost);
 
             string part = string.Format(costEntryFormat, PixelClicker.FormatNumber(cost.amount), name);
             sb.Append("<color=#")

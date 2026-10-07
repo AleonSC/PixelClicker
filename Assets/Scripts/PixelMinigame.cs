@@ -89,6 +89,14 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Sets the progress (used when loading a save).</summary>
     public virtual void SetTrackerCount(double value) { }
 
+    /// <summary>Spends some of the goal counter (e.g. bomb parts) as a shop price. Returns false, and spends nothing, if there isn't enough.</summary>
+    public bool TrySpendTracker(double amount)
+    {
+        if (!HasTracker || amount < 0d || TrackerCount < amount) return false;
+        SetTrackerCount(TrackerCount - amount);
+        return true;
+    }
+
     // ------------------------------------------------------------------
     // Registration
     // ------------------------------------------------------------------

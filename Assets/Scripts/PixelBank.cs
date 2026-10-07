@@ -270,8 +270,13 @@ public class PixelBank : MonoBehaviour
         }
     }
 
-    /// <summary>How many pixels the bank can hold.</summary>
-    public int Capacity => capacity;
+    /// <summary>How many pixels the bank can hold (the Bank Storage upgrade raises it).</summary>
+    public int Capacity => capacityOverride > 0 ? capacityOverride : capacity;
+
+    private int capacityOverride;
+
+    /// <summary>Sets the capacity from the Bank Storage upgrade (0 = back to the base capacity). The shop calls this.</summary>
+    public void SetCapacityOverride(int value) => capacityOverride = Mathf.Max(0, value);
 
     /// <summary>Stored pixels of a tier.</summary>
     public long Stored(int tierIndex) => tierIndex >= 0 && tierIndex < counts.Length ? counts[tierIndex] : 0;
@@ -631,7 +636,7 @@ public class PixelBank : MonoBehaviour
     {
         if (candidate == null) return;
 
-        if (Total >= capacity)
+        if (Total >= Capacity)
         {
             fullTimer = 0.9f;
             emptyFlash = false;
@@ -829,7 +834,7 @@ public class PixelBank : MonoBehaviour
 
     private void RefreshWindow()
     {
-        capacityLabel.text = string.Format(capacityFormat, PixelClicker.FormatNumber(Total), PixelClicker.FormatNumber(capacity));
+        capacityLabel.text = string.Format(capacityFormat, PixelClicker.FormatNumber(Total), PixelClicker.FormatNumber(Capacity));
 
         // One row per unlocked pixel type that can be stored.
         PixelClicker.PixelTier[] tiers = clicker.Tiers;

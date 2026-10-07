@@ -158,7 +158,7 @@ public partial class PixelShop
     {
         if (costs == null) return new PackCost[0];
         PackCost[] scaled = new PackCost[costs.Length];
-        for (int i = 0; i < costs.Length; i++) scaled[i] = new PackCost { type = costs[i].type, amount = costs[i].amount * count };
+        for (int i = 0; i < costs.Length; i++) scaled[i] = new PackCost { type = costs[i].type, amount = costs[i].amount * count, minigameCurrency = costs[i].minigameCurrency };
         return scaled;
     }
 

@@ -37,6 +37,9 @@ public partial class PixelShop : MonoBehaviour
 
         [Tooltip("How much of it is spent.")]
         public double amount = 100;
+
+        [Tooltip("Spend a minigame's goal counter instead of a pixel: the minigame's id (bomb = bomb parts). Empty = spend the pixel type above.")]
+        public string minigameCurrency = "";
     }
 
     /// <summary>What a leveled (upgrade) pack changes on the auto clicker.</summary>
@@ -49,6 +52,8 @@ public partial class PixelShop : MonoBehaviour
         AutoClickerClicks = 2,
         /// <summary>Level 1 switches the combo meter on; each level sets its maximum multiplier to the level's Value.</summary>
         ComboMeter = 3,
+        /// <summary>Each level sets how many pixels the Pixel Bank can hold to the level's Value.</summary>
+        BankCapacity = 4,
     }
 
     /// <summary>The shop tabs. 'Automatic' picks Pixels or Upgrades from what the pack does.</summary>
@@ -820,7 +825,7 @@ public partial class PixelShop : MonoBehaviour
         pack.purchased = purchased;
         pack.level = IsLeveled(pack) ? Mathf.Clamp(level, 0, pack.levels.Length) : 0;
         pack.appliedLevel = pack.level;
-        if (pack.upgradeEffect == UpgradeEffect.ComboMeter) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
+        if (pack.upgradeEffect == UpgradeEffect.ComboMeter || pack.upgradeEffect == UpgradeEffect.BankCapacity) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
 
         if (pack.unlocksCrafting && crafting != null && !purchased) crafting.Deactivate();
         if (pack.unlocksGrabbing && grab != null && !purchased) grab.Deactivate();
@@ -920,8 +925,38 @@ public partial class PixelShop : MonoBehaviour
     {
         if (costs == null) return true;
         foreach (PackCost cost in costs)
-            if (!clicker.CanAfford(cost.type, cost.amount)) return false;
+            if (!CanAffordCost(cost)) return false;
         return true;
+    }
+
+    /// <summary>Can the player pay this one line of a price (a pixel type, or a minigame counter like bomb parts)?</summary>
+    private bool CanAffordCost(PackCost cost)
+    {
+        if (string.IsNullOrEmpty(cost.minigameCurrency)) return clicker.CanAfford(cost.type, cost.amount);
+        if (PixelClicker.InfiniteResources) return true;
+        PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
+        return m != null && m.HasTracker && m.TrackerCount >= cost.amount;
+    }
+
+    /// <summary>Pays one line of a price.</summary>
+    private void SpendCost(PackCost cost)
+    {
+        if (string.IsNullOrEmpty(cost.minigameCurrency)) { clicker.TrySpend(cost.type, cost.amount); return; }
+        if (PixelClicker.InfiniteResources) return;
+        PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
+        if (m != null) m.TrySpendTracker(cost.amount);
+    }
+
+    /// <summary>Name of what a price line is paid in (a pixel's name, or the minigame counter's title).</summary>
+    private string CostName(PackCost cost)
+    {
+        if (!string.IsNullOrEmpty(cost.minigameCurrency))
+        {
+            PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
+            return m != null && !string.IsNullOrEmpty(m.TrackerTitle) ? m.TrackerTitle : cost.minigameCurrency;
+        }
+        int tierIndex = clicker.IndexOf(cost.type);
+        return tierIndex >= 0 ? clicker.Tiers[tierIndex].displayName : cost.type.ToString();
     }
 
     /// <summary>Buys one of a potion / device (see <see cref="TryBuyItems"/>).</summary>
@@ -936,7 +971,7 @@ public partial class PixelShop : MonoBehaviour
         PackCost[] total = ScaleCosts(consumables.ItemCosts(itemIndex), count);
         if (!CanAffordCosts(total)) return false;
 
-        foreach (PackCost cost in total) clicker.TrySpend(cost.type, cost.amount);
+        foreach (PackCost cost in total) SpendCost(cost);
 
         consumables.AddItem(itemIndex, count);
         Debug.Log("PixelShop: bought " + count + " x " + consumables.ItemName(itemIndex) + " - you now own " +
@@ -956,6 +991,11 @@ public partial class PixelShop : MonoBehaviour
         if (pack.upgradeEffect == UpgradeEffect.ComboMeter)
         {
             if (combo != null) combo.SetUpgrade(pack.level > 0, pack.level > 0 ? pack.levels[pack.level - 1].value : 0f);
+            return;
+        }
+        if (pack.upgradeEffect == UpgradeEffect.BankCapacity)
+        {
+            if (bank != null) bank.SetCapacityOverride(pack.level > 0 ? Mathf.RoundToInt(pack.levels[pack.level - 1].value) : 0);
             return;
         }
         if (pack.level <= 0 || autoClicker == null) return;
@@ -1073,7 +1113,7 @@ public partial class PixelShop : MonoBehaviour
         PackCost[] costs = CurrentCosts(pack);
         if (costs != null)
             foreach (PackCost cost in costs)
-                clicker.TrySpend(cost.type, cost.amount);
+                SpendCost(cost);
 
         if (IsLeveled(pack))
         {

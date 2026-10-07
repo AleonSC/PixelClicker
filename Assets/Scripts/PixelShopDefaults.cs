@@ -415,6 +415,37 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Bank Storage upgrade: 5 levels, each raising how much the Pixel Bank holds. Paid in glass, vacuum pixels and bomb parts.</summary>
+    private static ShopPack CreateBankStoragePack(int requiresBankIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Bank Storage",
+            tab = ShopTab.Upgrades,
+            description = "Pixel Bank capacity: {current}  →  {next}",
+            requirements = Needs(requiresBankIndex),
+            upgradeEffect = UpgradeEffect.BankCapacity,
+            levels = new[]
+            {
+                new PackLevel { value = 100f, costs = BankStorageCost(100, 20, 4) },
+                new PackLevel { value = 160f, costs = BankStorageCost(200, 40, 8) },
+                new PackLevel { value = 250f, costs = BankStorageCost(400, 80, 14) },
+                new PackLevel { value = 400f, costs = BankStorageCost(800, 160, 22) },
+                new PackLevel { value = 600f, costs = BankStorageCost(1600, 320, 32) },
+            }
+        };
+    }
+
+    private static PackCost[] BankStorageCost(double glass, double vacuum, double bombParts)
+    {
+        return new[]
+        {
+            new PackCost { type = PixelClicker.PixelType.Glass, amount = glass },
+            new PackCost { type = PixelClicker.PixelType.Vacuum, amount = vacuum },
+            new PackCost { minigameCurrency = "bomb", amount = bombParts },
+        };
+    }
+
     /// <summary>Default Time Stop upgrade (Upgrades tab): the T key freezes the whole game.</summary>
     private static ShopPack CreateTimeStopPack()
     {
@@ -555,6 +586,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateTimeStopPack() },
         new DefaultPack { isThis = p => p.unlocksBank,
                           requires = null, create = i => CreateBankPack() },
+        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.BankCapacity,
+                          requires = p => p.unlocksBank, create = CreateBankStoragePack },
     };
 
 #if UNITY_EDITOR
