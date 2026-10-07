@@ -57,6 +57,9 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Toggles window label of the Combo Meter.")]
     [SerializeField] private string comboLabel = "Combo Meter";
 
+    [Tooltip("Keep the Toggles tab hidden until the Auto Clicker has been bought.")]
+    [SerializeField] private bool hideUntilAutoClicker = true;
+
     [Tooltip("Label of a pixel's toggle. {0} = pixel name.")]
     [SerializeField] private string pixelLabelFormat = "{0} spawn";
 
@@ -139,7 +142,7 @@ public class PixelToggles : MonoBehaviour
         public Action<bool> setter;
     }
 
-    private GameObject canvasRoot, windowObject, emptyObject, hintObject;
+    private GameObject canvasRoot, windowObject, emptyObject, hintObject, openObject;
     private float hintTimer;
     private static PixelToggles instance;
     private Image[] groupImages;
@@ -209,6 +212,14 @@ public class PixelToggles : MonoBehaviour
 
     private void Update()
     {
+        if (built && openObject != null)
+        {
+            if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
+            bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled));
+            if (openObject.activeSelf != show) openObject.SetActive(show);
+            if (!show && windowObject != null && windowObject.activeSelf) windowObject.SetActive(false);
+        }
+
         if (built && hintObject != null && hintObject.activeSelf && hintSeconds > 0f)
         {
             hintTimer -= Time.unscaledDeltaTime;
@@ -386,6 +397,7 @@ public class PixelToggles : MonoBehaviour
         hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f),
                  () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)); // stays out while its hint is showing
         open.onClick.AddListener(Toggle);
+        openObject = open.gameObject;
 
         // --- The window, just left of the button.
         windowObject = new GameObject("Toggles Window", typeof(RectTransform), typeof(Image));
