@@ -36,6 +36,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Does 'Add to all' also include tiers that aren't unlocked yet? Off = only unlocked tiers.")]
     [SerializeField] private bool includeLockedTiers = false;
 
+    [Tooltip("The Add buttons also give the same amount of Ultra pixels of that type (rounded down to a whole number).")]
+    [SerializeField] private bool alsoAddUltra = true;
+
     [Tooltip("Amount filled into the text field when the panel is first built.")]
     [SerializeField] private string defaultAmount = "100";
 
@@ -207,8 +210,15 @@ public class PixelDevTools : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             if (!includeLockedTiers && !tiers[i].unlocked) continue;
-            clicker.AddCurrency(i, amountToAdd);
+            GiveAmount(i, amountToAdd);
         }
+    }
+
+    /// <summary>Adds pixels of one type, and (if ticked in the Inspector) the same number of Ultra pixels.</summary>
+    private void GiveAmount(int tierIndex, double amount)
+    {
+        clicker.AddCurrency(tierIndex, amount);
+        if (alsoAddUltra && amount >= 1d) clicker.AddUltra(tierIndex, (long)System.Math.Floor(amount));
     }
 
     private void AddSelected()
@@ -216,7 +226,7 @@ public class PixelDevTools : MonoBehaviour
         if (pixelDropdown == null || amountField == null) return;
         string text = amountField.text.Trim().Replace(",", "");
         if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double amount)) return;
-        clicker.AddCurrency(pixelDropdown.value, amount);
+        GiveAmount(pixelDropdown.value, amount);
     }
 
     private void SpawnSelected()
