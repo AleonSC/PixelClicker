@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -335,8 +336,28 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Show the Quit button (stops Play mode in the Editor, closes the game in a build).")]
     [SerializeField] private bool showQuit = true;
 
-    [Tooltip("Menu panel size.")]
+    [Tooltip("Menu panel size. The main menu uses its own width (Main Panel Width) and fits its height to its buttons.")]
     [SerializeField] private Vector2 panelSize = new Vector2(560f, 560f);
+
+    [Header("Layout")]
+    [Min(300f)]
+    [Tooltip("Width of the main pause menu (canvas units). Wider than before so the buttons sit in columns and the menu is shorter.")]
+    [SerializeField] private float mainPanelWidth = 1000f;
+
+    [Range(1, 4)]
+    [Tooltip("How many columns of buttons the main menu has.")]
+    [SerializeField] private int mainColumns = 2;
+
+    [Min(0f)]
+    [Tooltip("Gap between buttons in the same row.")]
+    [SerializeField] private float columnGap = 20f;
+
+    [Tooltip("Keep the menu (and the Changelog / How to Play / Controls screens) between the black bars at the top and bottom of the screen: if it would be taller, the buttons or scrolling text shrink to fit.")]
+    [SerializeField] private bool fitBetweenBars = true;
+
+    [Min(0f)]
+    [Tooltip("Extra empty space kept between the menu and each black bar.")]
+    [SerializeField] private float barMargin = 20f;
 
     [Tooltip("Title text size.")]
     [SerializeField] private float titleFontSize = 60f;
@@ -399,9 +420,18 @@ public class PixelPauseMenu : MonoBehaviour
         public GameObject bar;
         public TMP_Text label;
         public string resource, empty;
+        public float viewHeight;
     }
 
     private GuideScreen howToPlayScreen, controlsScreen;
+    private float changelogFitHeight;
+
+    private struct MenuEntry
+    {
+        public string label;
+        public Color color;
+        public UnityEngine.Events.UnityAction action;
+    }
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
     private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, comboValue;
     private ScrollRect statsScroll, potionsScroll;
@@ -680,33 +710,30 @@ public class PixelPauseMenu : MonoBehaviour
         tr.anchoredPosition = new Vector2(0f, -30f);
 
         float y = 30f + titleFontSize * 1.6f + 20f;
-        AddMenuButton(panel.transform, resumeText, menuButtonColor, ref y, () => SetPaused(false));
+        List<MenuEntry> entries = new List<MenuEntry>();
+        entries.Add(new MenuEntry { label = resumeText, color = menuButtonColor, action = () => SetPaused(false) });
         if (showSaveLoad && saveGame != null)
-            AddButtonPair(panel.transform, saveText, () => saveGame.Save(), loadText, () => saveGame.Load(), ref y);
+        {
+            entries.Add(new MenuEntry { label = saveText, color = menuButtonColor, action = () => saveGame.Save() });
+            entries.Add(new MenuEntry { label = loadText, color = menuButtonColor, action = () => saveGame.Load() });
+        }
 
         BuildStatsPanel();
         BuildSettingsPanel();
-        if (showStats && showSettings)
-            AddButtonPair(panel.transform, statsText, () => ShowView(statsPanel), settingsText, () => ShowView(settingsPanel), ref y);
-        else if (showStats) AddMenuButton(panel.transform, statsText, menuButtonColor, ref y, () => ShowView(statsPanel));
-        else if (showSettings) AddMenuButton(panel.transform, settingsText, menuButtonColor, ref y, () => ShowView(settingsPanel));
-        if (PixelDevTools.Available) AddMenuButton(panel.transform, PixelDevTools.ButtonText, menuButtonColor, ref y, PixelDevTools.OpenPanel);
+        if (showStats) entries.Add(new MenuEntry { label = statsText, color = menuButtonColor, action = () => ShowView(statsPanel) });
+        if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
+        if (PixelDevTools.Available) entries.Add(new MenuEntry { label = PixelDevTools.ButtonText, color = menuButtonColor, action = PixelDevTools.OpenPanel });
         BuildChangelogPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", howToPlayText, howToPlayResource, emptyHowToPlayText);
         if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", controlsText, controlsResource, emptyControlsText);
-        if (howToPlayScreen != null && controlsScreen != null)
-            AddButtonPair(panel.transform, howToPlayText, () => ShowView(howToPlayScreen.panel),
-                          controlsText, () => ShowView(controlsScreen.panel), ref y);
-        else if (howToPlayScreen != null) AddMenuButton(panel.transform, howToPlayText, menuButtonColor, ref y, () => ShowView(howToPlayScreen.panel));
-        else if (controlsScreen != null) AddMenuButton(panel.transform, controlsText, menuButtonColor, ref y, () => ShowView(controlsScreen.panel));
-        if (showChangelog) AddMenuButton(panel.transform, changelogText, menuButtonColor, ref y, () => ShowView(changelogPanel));
-        if (showRestart) AddMenuButton(panel.transform, restartText, menuButtonColor, ref y, () => ShowView(restartPanel));
-        if (showQuit) AddMenuButton(panel.transform, quitText, quitButtonColor, ref y, Quit);
+        if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
+        if (controlsScreen != null) entries.Add(new MenuEntry { label = controlsText, color = menuButtonColor, action = () => ShowView(controlsScreen.panel) });
+        if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
+        if (showRestart) entries.Add(new MenuEntry { label = restartText, color = menuButtonColor, action = () => ShowView(restartPanel) });
+        if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = Quit });
 
-        // Grow the panel if the buttons need more room than 'Panel Size' gives.
-        float needed = y + 30f;
-        if (needed > panelRect.sizeDelta.y) panelRect.sizeDelta = new Vector2(panelRect.sizeDelta.x, needed);
+        LayoutMainButtons(panel.transform, entries, y, panelRect);
 
         menuRoot.SetActive(false);
     }
@@ -1019,6 +1046,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void BuildChangelogPanel()
     {
         changelogPanel = BuildSectionPanel("Changelog Panel", changelogText, out float y);
+        changelogFitHeight = FitViewHeight(changelogViewHeight, y);
         RectTransform pr = changelogPanel.GetComponent<RectTransform>();
         pr.sizeDelta = new Vector2(changelogWidth, pr.sizeDelta.y);
 
@@ -1028,7 +1056,7 @@ public class PixelPauseMenu : MonoBehaviour
         vr.anchorMin = new Vector2(0f, 1f);
         vr.anchorMax = new Vector2(1f, 1f);
         vr.pivot = new Vector2(0.5f, 1f);
-        vr.sizeDelta = new Vector2(-60f, changelogViewHeight);
+        vr.sizeDelta = new Vector2(-60f, changelogFitHeight);
         vr.anchoredPosition = new Vector2(0f, -y);
 
         changelogLabel = MakeText(content, "Changelog Text", "", changelogFontSize, FontStyles.Normal);
@@ -1038,10 +1066,10 @@ public class PixelPauseMenu : MonoBehaviour
         lr.anchorMin = new Vector2(0f, 1f);
         lr.anchorMax = new Vector2(1f, 1f);
         lr.pivot = new Vector2(0.5f, 1f);
-        lr.offsetMin = new Vector2(10f, -changelogViewHeight);
+        lr.offsetMin = new Vector2(10f, -changelogFitHeight);
         lr.offsetMax = new Vector2(-26f, 0f);
 
-        FinishSectionPanel(changelogPanel, y + changelogViewHeight);
+        FinishSectionPanel(changelogPanel, y + changelogFitHeight);
     }
 
     private GuideScreen BuildGuideScreen(string objectName, string title, string resource, string emptyText)
@@ -1049,6 +1077,7 @@ public class PixelPauseMenu : MonoBehaviour
         GuideScreen s = new GuideScreen { resource = resource, empty = emptyText };
         s.panel = BuildSectionPanel(objectName, title, out float y);
         RectTransform pr = s.panel.GetComponent<RectTransform>();
+        s.viewHeight = FitViewHeight(guideViewHeight, y);
         pr.sizeDelta = new Vector2(guideWidth, pr.sizeDelta.y);
 
         s.scroll = PixelUIKit.CreateScrollView(s.panel.transform, title + " List", scrollbarColor, 12f, guideFontSize * 1.5f,
@@ -1057,7 +1086,7 @@ public class PixelPauseMenu : MonoBehaviour
         vr.anchorMin = new Vector2(0f, 1f);
         vr.anchorMax = new Vector2(1f, 1f);
         vr.pivot = new Vector2(0.5f, 1f);
-        vr.sizeDelta = new Vector2(-60f, guideViewHeight);
+        vr.sizeDelta = new Vector2(-60f, s.viewHeight);
         vr.anchoredPosition = new Vector2(0f, -y);
 
         s.label = MakeText(content, title + " Text", "", guideFontSize, FontStyles.Normal);
@@ -1067,10 +1096,10 @@ public class PixelPauseMenu : MonoBehaviour
         lr.anchorMin = new Vector2(0f, 1f);
         lr.anchorMax = new Vector2(1f, 1f);
         lr.pivot = new Vector2(0.5f, 1f);
-        lr.offsetMin = new Vector2(10f, -guideViewHeight);
+        lr.offsetMin = new Vector2(10f, -s.viewHeight);
         lr.offsetMax = new Vector2(-26f, 0f);
 
-        FinishSectionPanel(s.panel, y + guideViewHeight);
+        FinishSectionPanel(s.panel, y + s.viewHeight);
         return s;
     }
 
@@ -1086,7 +1115,7 @@ public class PixelPauseMenu : MonoBehaviour
         float height = Mathf.Ceil(s.label.GetPreferredValues(text, width, 0f).y) + 10f;
         s.label.rectTransform.offsetMin = new Vector2(10f, -height);
         s.scroll.content.anchoredPosition = Vector2.zero;
-        PixelUIKit.UpdateScrollView(s.scroll, s.bar, height, guideViewHeight);
+        PixelUIKit.UpdateScrollView(s.scroll, s.bar, height, s.viewHeight);
     }
 
     /// <summary>
@@ -1148,7 +1177,7 @@ public class PixelPauseMenu : MonoBehaviour
         float width = changelogLabel.rectTransform.rect.width > 1f ? changelogLabel.rectTransform.rect.width : changelogWidth - 100f;
         float height = Mathf.Ceil(changelogLabel.GetPreferredValues(text, width, 0f).y) + 10f;
         changelogLabel.rectTransform.offsetMin = new Vector2(10f, -height);
-        PixelUIKit.UpdateScrollView(changelogScroll, changelogBar, height, changelogViewHeight);
+        PixelUIKit.UpdateScrollView(changelogScroll, changelogBar, height, changelogFitHeight);
     }
 
     private void BuildSettingsPanel()
@@ -1229,6 +1258,60 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>
+    /// <summary>
+    /// Lays the main menu's buttons out in columns and sizes the panel to fit them: wider than tall, and (if Fit Between
+    /// Bars is on) never taller than the space between the black bars - the buttons shrink if there are too many.
+    /// </summary>
+    private void LayoutMainButtons(Transform parent, List<MenuEntry> entries, float top, RectTransform panelRect)
+    {
+        int columns = Mathf.Max(1, mainColumns);
+        int rows = Mathf.CeilToInt(entries.Count / (float)columns);
+        float cellWidth = (mainPanelWidth - 80f - columnGap * (columns - 1)) / columns;
+
+        float buttonHeight = menuButtonSize.y;
+        float available = AvailableHeight();
+        if (fitBetweenBars)
+        {
+            float room = available - top - 30f;
+            float fitted = room / Mathf.Max(1, rows) - menuButtonSpacing;
+            buttonHeight = Mathf.Clamp(Mathf.Min(buttonHeight, fitted), 40f, menuButtonSize.y);
+        }
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            int row = i / columns, col = i % columns;
+            bool lastAlone = i == entries.Count - 1 && col == 0 && columns > 1;
+            float width = lastAlone ? mainPanelWidth - 80f : cellWidth; // a lone last button spans the row
+            float x = lastAlone ? 0f : -(mainPanelWidth - 80f) * 0.5f + cellWidth * 0.5f + col * (cellWidth + columnGap);
+
+            Button button = MakeButton(parent, entries[i].label + " Button", entries[i].label, new Vector2(width, buttonHeight),
+                                       entries[i].color, menuButtonFontSize);
+            RectTransform rt = button.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(x, -(top + row * (buttonHeight + menuButtonSpacing)));
+            button.onClick.AddListener(entries[i].action);
+        }
+
+        float needed = top + rows * (buttonHeight + menuButtonSpacing) + 10f;
+        if (fitBetweenBars) needed = Mathf.Min(needed, available);
+        panelRect.sizeDelta = new Vector2(mainPanelWidth, needed);
+    }
+
+    /// <summary>Height between the black bars (canvas units), minus the margin kept next to each bar.</summary>
+    private float AvailableHeight()
+    {
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        return Mathf.Max(300f, referenceResolution.y - 2f * (bar + barMargin));
+    }
+
+    /// <summary>A scrolling text height that still leaves room for the title above and the Back button below, between the bars.</summary>
+    private float FitViewHeight(float desired, float yTop)
+    {
+        if (!fitBetweenBars) return desired;
+        float below = 10f + menuButtonSize.y + menuButtonSpacing + 30f; // Back button block
+        return Mathf.Max(120f, Mathf.Min(desired, AvailableHeight() - yTop - below));
+    }
+
     private void AddButtonPair(Transform parent, string labelA, UnityEngine.Events.UnityAction a,
                                string labelB, UnityEngine.Events.UnityAction b, ref float y)
     {
