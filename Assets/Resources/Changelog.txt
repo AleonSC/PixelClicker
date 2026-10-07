@@ -31,3 +31,4 @@
 [2026-10-07 12:06 UTC] Added first-time tips and event lines for the auto clicker, combo, bank and Ultra upgrades and for each newly unlocked pixel type from the shop.
 [2026-10-07 12:09 UTC] Fixed the RGB pack tip: red, green and blue pay the same as the monochrome pixels.
 [2026-10-07 12:12 UTC] Added Pixel Bank and Time Stop first-use tips, and a new Info window (press I) listing purchased upgrades and recent events.
+[2026-10-07 12:13 UTC] Every shop purchase, upgrade level and Ultra boost now shows on the bottom-left event line (click or Enter shows its description); removed the separate Info window.

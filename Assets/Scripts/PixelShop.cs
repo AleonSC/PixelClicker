@@ -829,17 +829,6 @@ public partial class PixelShop : MonoBehaviour
 
     public int GetPackLevel(int index) => packs[index].level;
 
-    /// <summary>For the Info window: is this pack owned (bought, or at least level 1)? Gives its title (with level) and description.</summary>
-    public bool GetOwnedPackInfo(int index, out string title, out string description)
-    {
-        title = description = "";
-        if (index < 0 || index >= packs.Length || !HasPack(index)) return false;
-        ShopPack pack = packs[index];
-        title = IsLeveled(pack) ? pack.displayName + "  (level " + pack.level + "/" + pack.levels.Length + ")" : pack.displayName;
-        description = ResolveDescription(pack);
-        return true;
-    }
-
     /// <summary>Restores a pack's bought flag and level without re-applying its effect (the save restores those separately).</summary>
     public void SetPackState(int index, bool purchased, int level)
     {
@@ -1066,6 +1055,11 @@ public partial class PixelShop : MonoBehaviour
         if (ok)
         {
             PlayPurchaseSound();
+            if (clicker.IsValidTierIndex(tierIndex))
+            {
+                string boostLine = "Ultra boost bought: " + clicker.Tiers[tierIndex].displayName + " level " + clicker.Tiers[tierIndex].ultraLevel + "!";
+                PixelHints.Announce(boostLine, () => PixelNotice.Show(boostLine));
+            }
             PixelHints.Trigger("upgrade_ultra");
         }
         return ok;
@@ -1099,6 +1093,7 @@ public partial class PixelShop : MonoBehaviour
             if (!givesRed && !pack.unlocksAutoClicker) continue;
 
             pack.purchased = true;
+            AnnouncePurchase(pack, "You bought " + pack.displayName + "!");
             ApplyPackEffects(pack);
 
             if (pack.unlocksCrafting) PixelHints.Trigger("crafting");
@@ -1152,6 +1147,7 @@ public partial class PixelShop : MonoBehaviour
         if (IsLeveled(pack))
         {
             pack.level++;
+            AnnouncePurchase(pack, pack.displayName + " upgraded to level " + pack.level + "!");
             ApplyUpgrade(pack);
             switch (pack.upgradeEffect)
             {
@@ -1180,6 +1176,13 @@ public partial class PixelShop : MonoBehaviour
         onPackPurchased?.Invoke(packIndex);
         RefreshRows();
         return true;
+    }
+
+    /// <summary>The bottom-left event line for a purchase; clicking it (or Enter) shows the pack's name and description.</summary>
+    private void AnnouncePurchase(ShopPack pack, string line)
+    {
+        string info = "<b>" + pack.displayName + "</b>\n" + ResolveDescription(pack);
+        PixelHints.Announce(line, () => PixelNotice.Show(info));
     }
 
     private void PlayPurchaseSound()

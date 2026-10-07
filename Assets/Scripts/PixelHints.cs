@@ -86,22 +86,6 @@ public class PixelHints : MonoBehaviour
     [Tooltip("One entry per tip.")]
     [SerializeField] private List<Hint> hints = new List<Hint>();
 
-    /// <summary>One line of the event history (shown in the Info window).</summary>
-    public class Entry
-    {
-        public string text;
-        public Action open;
-    }
-
-    [Min(1)]
-    [Tooltip("How many recent events the Info window remembers.")]
-    [SerializeField] private int historyMax = 40;
-
-    private readonly List<Entry> history = new List<Entry>();
-
-    /// <summary>Recent events (oldest first), for the Info window.</summary>
-    public static IReadOnlyList<Entry> History => instance != null ? instance.history : null;
-
     private static PixelHints instance;
     private readonly Queue<Hint> queue = new Queue<Hint>();
     private float waitTimer;
@@ -227,7 +211,6 @@ public class PixelHints : MonoBehaviour
         if (instance != null && instance != this) { Destroy(this); return; }
         instance = this;
         EnsureDefaultHints();
-        if (GetComponent<PixelInfoWindow>() == null) gameObject.AddComponent<PixelInfoWindow>();
     }
 
     private void OnEnable()
@@ -325,8 +308,6 @@ public class PixelHints : MonoBehaviour
         if (Time.realtimeSinceStartup < startupQuietSeconds) return;
         lastShort = shortText;
         lastOpen = open;
-        history.Add(new Entry { text = shortText, open = open });
-        while (history.Count > historyMax) history.RemoveAt(0);
         DisplayOverlay();
     }
 
