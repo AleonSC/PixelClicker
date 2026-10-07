@@ -1135,6 +1135,13 @@ public partial class PixelShop : MonoBehaviour
         {
             pack.purchased = true;
             ApplyPackEffects(pack);
+
+            // The auto clicker starts switched off: a box points the player to the Toggles window to turn it on.
+            if (pack.unlocksAutoClicker && autoClicker != null)
+            {
+                autoClicker.UserDisabled = true;
+                PixelToggles.ShowHint();
+            }
         }
 
         PlayPurchaseSound();

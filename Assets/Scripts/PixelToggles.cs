@@ -96,6 +96,24 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Scroll bar colour.")]
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
 
+    [Header("Hint Box (shown after buying the Auto Clicker)")]
+    [TextArea(2, 4)]
+    [Tooltip("Message in the box that points the player to this window.")]
+    [SerializeField] private string hintText = "Auto Clicker bought!\nIt starts switched off. Open the Toggles window (the tab on the right edge of the screen), go to Upgrades and tick Auto Clicker.";
+
+    [Tooltip("Text on the button that closes the hint box.")]
+    [SerializeField] private string hintOkText = "Got it";
+
+    [Min(0f)]
+    [Tooltip("The hint box closes by itself after this many seconds. 0 = it stays until you close it or open the Toggles window.")]
+    [SerializeField] private float hintSeconds = 0f;
+
+    [Tooltip("Size of the hint box (canvas units).")]
+    [SerializeField] private Vector2 hintSize = new Vector2(620f, 300f);
+
+    [Tooltip("Hint box background colour.")]
+    [SerializeField] private Color hintColor = new Color(0.12f, 0.2f, 0.3f, 0.98f);
+
     [Header("Canvas")]
     [Tooltip("Sorting order of the canvas (above the inventory, below the log and shop).")]
     [SerializeField] private int sortingOrder = 130;
@@ -118,7 +136,9 @@ public class PixelToggles : MonoBehaviour
         public Action<bool> setter;
     }
 
-    private GameObject canvasRoot, windowObject, emptyObject;
+    private GameObject canvasRoot, windowObject, emptyObject, hintObject;
+    private float hintTimer;
+    private static PixelToggles instance;
     private Image[] groupImages;
     private ScrollRect scroll;
     private RectTransform content;
@@ -142,6 +162,29 @@ public class PixelToggles : MonoBehaviour
             return;
         }
         if (clicker.UIFont != null) font = clicker.UIFont;
+        instance = this;
+    }
+
+    /// <summary>
+    /// Shows the hint box next to the Toggles tab (which slides out to point at it). With no text, the box's own message is used.
+    /// Closing it, or opening the Toggles window, dismisses it.
+    /// </summary>
+    public static void ShowHint(string message = null)
+    {
+        if (instance != null) instance.OpenHint(message);
+    }
+
+    private void OpenHint(string message)
+    {
+        if (!built || hintObject == null || windowObject.activeSelf) return;
+        if (!string.IsNullOrEmpty(message)) hintObject.GetComponentInChildren<TMP_Text>().text = message;
+        hintObject.SetActive(true);
+        hintTimer = hintSeconds;
+    }
+
+    private void CloseHint()
+    {
+        if (hintObject != null) hintObject.SetActive(false);
     }
 
     private void Start()
@@ -153,12 +196,19 @@ public class PixelToggles : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (instance == this) instance = null;
         PixelWindows.Unregister(this);
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
     private void Update()
     {
+        if (built && hintObject != null && hintObject.activeSelf && hintSeconds > 0f)
+        {
+            hintTimer -= Time.unscaledDeltaTime;
+            if (hintTimer <= 0f) CloseHint();
+        }
+
         if (!built || !windowObject.activeSelf) return;
         refreshTimer -= Time.unscaledDeltaTime;
         if (refreshTimer <= 0f)
@@ -323,7 +373,8 @@ public class PixelToggles : MonoBehaviour
         Button open = PixelUIKit.CreateButton(font, canvasRoot.transform, "Toggles Button", buttonText, new Vector2(230f, 64f),
                                               buttonColor, buttonTextColor, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
-        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), () => windowObject != null && windowObject.activeSelf);
+        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f),
+                 () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)); // stays out while its hint is showing
         open.onClick.AddListener(Toggle);
 
         // --- The window, just left of the button.
@@ -397,6 +448,31 @@ public class PixelToggles : MonoBehaviour
         er.anchoredPosition = new Vector2(0f, -(y + 10f));
         emptyObject = empty.gameObject;
 
+        // --- The hint box: sits where the window would, next to the slid-out tab.
+        hintObject = new GameObject("Toggles Hint", typeof(RectTransform), typeof(Image));
+        hintObject.transform.SetParent(canvasRoot.transform, false);
+        hintObject.GetComponent<Image>().color = hintColor;
+        RectTransform hr = hintObject.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 0.5f);
+        hr.sizeDelta = hintSize;
+        hr.anchoredPosition = new Vector2(-(hud.ButtonSize.x + gapToButton + hud.SideMargin * 0.35f), 0f);
+
+        TMP_Text hintLabel = PixelUIKit.CreateText(font, hintObject.transform, "Hint Text", hintText, fontSize * 0.95f,
+                                                   TextAlignmentOptions.Center, FontStyles.Normal, textColor);
+        RectTransform tr2 = hintLabel.rectTransform;
+        tr2.anchorMin = Vector2.zero;
+        tr2.anchorMax = Vector2.one;
+        tr2.offsetMin = new Vector2(24f, 90f);
+        tr2.offsetMax = new Vector2(-24f, -20f);
+
+        Button ok = PixelUIKit.CreateButton(font, hintObject.transform, "Hint Ok", hintOkText, new Vector2(200f, 60f), groupActiveColor,
+                                            textColor, fontSize);
+        RectTransform okr = ok.GetComponent<RectTransform>();
+        okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
+        okr.anchoredPosition = new Vector2(0f, 20f);
+        ok.onClick.AddListener(CloseHint);
+        hintObject.SetActive(false);
+
         windowObject.SetActive(false);
         PixelWindows.Register(this, 15, () => windowObject != null && windowObject.activeSelf, Close);
     }
@@ -406,6 +482,7 @@ public class PixelToggles : MonoBehaviour
         if (windowObject.activeSelf) Close();
         else
         {
+            CloseHint(); // the player found the window
             windowObject.SetActive(true);
             refreshTimer = 0f;
             Refresh();

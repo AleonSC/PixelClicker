@@ -8,7 +8,7 @@ Click the cube to collect pixels. Every pixel type is its own currency. Collect 
 
 # Collecting
 Each click pays out the pixel the cube is showing. A smaller copy of that pixel then falls to the floor: an "old pixel". Old pixels vanish after a few seconds, but a lot of the game is about doing something useful with them before they do.
-The cube is also clicked for you by the Auto Clicker once you buy it, even while the game is closed (you get a "Welcome back" payout for the time away).
+The cube is also clicked for you by the Auto Clicker once you buy it and switch it on (it starts off: open the Toggles window on the right edge, go to Upgrades and tick it), even while the game is closed (you get a "Welcome back" payout for the time away).
 Clicks are limited to about 14 per second.
 
 # The Shop

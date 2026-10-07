@@ -17,3 +17,4 @@
 [2026-10-07 10:51 UTC] Pixel Bank hose: a quick flick of the mouse now aims the nozzle the way you moved it (so you can shoot toward the bottom left or any direction), then it swings back along the hose; the nozzle's mouth now sits right at the cursor.
 [2026-10-07 10:53 UTC] Fixed the unused Potion Owned Format warning in the shop by removing the leftover setting.
 [2026-10-07 10:55 UTC] You can now craft Glass potions: put Glass in both Crafting boxes (it costs the pixel amount plus the glass amount, 70 Glass by default).
+[2026-10-07 10:57 UTC] Buying the Auto Clicker no longer switches it on: it starts off and a hint box next to the Toggles tab tells the player to turn it on under Upgrades in the Toggles window.
