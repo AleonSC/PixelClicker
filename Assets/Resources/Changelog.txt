@@ -7,3 +7,4 @@
 [2026-10-07 00:08 UTC] The running potion and every placed device (vacuum, fan, sorter, with its aim, bend and force setting) are now saved and come back with the time they had left when you load or restart the game.
 [2026-10-07 00:31 UTC] Added the Pixel Bank upgrade: a Bank tab on the left edge with a Hose button (or press B) that equips a bendy hose; scroll to pick a stored pixel, left-click spits it out, right-click sucks up the old pixel under the nozzle and stores it.
 [2026-10-07 00:36 UTC] A vacuum pixel spat out of the bank hose now vacuums up all old pixels again (and pays them out once more), like clicking a vacuum pixel.
+[2026-10-07 00:40 UTC] Added a minimum gap of 0.07 seconds between manual clicks on the cube (about 14 clicks per second) to stop macros; it is the Min Click Interval setting on the clicker.

@@ -306,6 +306,11 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
     [SerializeField] private float fallingCopyLifetime = 6f;
 
+    [Header("Click Limit")]
+    [Min(0f)]
+    [Tooltip("Shortest time (seconds) allowed between two manual clicks on the cube. A click that comes sooner is ignored. 0.07 = at most about 14 clicks per second, which stops macros that click faster than a person can. 0 = no limit. The auto clicker, the hose and minigame clicks are not affected.")]
+    [SerializeField] private float minClickInterval = 0.07f;
+
     [Header("Ultra Boosts")]
     [Min(0f)]
     [Tooltip("Each Ultra boost level adds this much to a pixel type's payout multiplier (0.25 = +25% of its normal payout per level).")]
@@ -509,6 +514,7 @@ public class PixelClicker : MonoBehaviour
     private float materializeFactor = 1f;
     private int hitsOnCurrentPixel;
     private bool clicksBlocked;
+    private float lastManualClickTime = -99f;
 
     /// <summary>While true, clicks on the cube are ignored (set by the pixel bank's hose, which uses the mouse buttons itself).</summary>
     public static bool ExternalClickBlock;
@@ -685,7 +691,14 @@ public class PixelClicker : MonoBehaviour
             if (!oldPixelsBlockClicks && !GrabEnabled && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
 
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
-                Collect();
+            {
+                // Too soon after the last click: ignore it (stops macros clicking faster than a person can).
+                if (Time.unscaledTime - lastManualClickTime >= minClickInterval)
+                {
+                    lastManualClickTime = Time.unscaledTime;
+                    Collect();
+                }
+            }
             return; // first non-ignored hit decides
         }
     }
