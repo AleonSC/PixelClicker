@@ -612,6 +612,11 @@ public class PixelBank : MonoBehaviour
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         Quaternion wobble = Quaternion.AngleAxis(UnityEngine.Random.Range(-spitSpread, spitSpread), cam.transform.forward);
+
+        // A vacuum pixel works again when it is spat out: every old pixel flies into the cube and pays out once more.
+        // (Done before the spat pixel exists, so it isn't sucked up itself.)
+        if (clicker.Tiers[tier].vacuum) clicker.Vacuum(tier);
+
         clicker.SpawnStoredPixel(tier, amount, mouthPosition, wobble * mouthDirection * spitSpeed);
 
         kick = 1f;

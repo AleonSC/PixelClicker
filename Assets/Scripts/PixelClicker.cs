@@ -1338,7 +1338,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>
     /// Vacuum pixel effect: every old pixel flies into the cube and its original reward is added again.
     /// </summary>
-    private void Vacuum(int vacuumTierIndex)
+    public void Vacuum(int vacuumTierIndex)
     {
         double total = 0d;
         int count = 0;
