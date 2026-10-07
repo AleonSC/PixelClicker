@@ -829,6 +829,17 @@ public partial class PixelShop : MonoBehaviour
 
     public int GetPackLevel(int index) => packs[index].level;
 
+    /// <summary>For the Info window: is this pack owned (bought, or at least level 1)? Gives its title (with level) and description.</summary>
+    public bool GetOwnedPackInfo(int index, out string title, out string description)
+    {
+        title = description = "";
+        if (index < 0 || index >= packs.Length || !HasPack(index)) return false;
+        ShopPack pack = packs[index];
+        title = IsLeveled(pack) ? pack.displayName + "  (level " + pack.level + "/" + pack.levels.Length + ")" : pack.displayName;
+        description = ResolveDescription(pack);
+        return true;
+    }
+
     /// <summary>Restores a pack's bought flag and level without re-applying its effect (the save restores those separately).</summary>
     public void SetPackState(int index, bool purchased, int level)
     {

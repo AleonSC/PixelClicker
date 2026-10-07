@@ -479,6 +479,7 @@ public class PixelBank : MonoBehaviour
         controlReady = false;
         aimReady = false;
         PixelAudio.Play("hose_toggle");
+        if (on) PixelHints.Trigger("bank_hose");
         RefreshHoseButton();
     }
 
@@ -846,6 +847,7 @@ public class PixelBank : MonoBehaviour
 
         kick = 1f;
         PixelAudio.Play("bank_spit");
+        PixelHints.Trigger("bank_spit");
         if (counts[tier] <= 0) selected = NextStocked(tier, 1);
         refreshTimer = 0f;
     }
@@ -864,6 +866,7 @@ public class PixelBank : MonoBehaviour
             fullTimer = 0.9f;
             flashMessage = fullText;
             PixelAudio.Play("bank_full");
+            PixelHints.Trigger("bank_full");
             return false;
         }
 
@@ -876,6 +879,7 @@ public class PixelBank : MonoBehaviour
 
         kick = 1f;
         PixelAudio.Play("bank_suck");
+        PixelHints.Trigger("bank_suck");
         StartCoroutine(FlyIntoNozzle(body));
         refreshTimer = 0f;
         return true;

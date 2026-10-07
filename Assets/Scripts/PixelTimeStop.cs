@@ -197,6 +197,7 @@ public class PixelTimeStop : MonoBehaviour
                 {
                     energy = 0f;
                     SetStopped(false); // out of energy: time starts again by itself
+                    PixelHints.Trigger("timestop_empty");
                 }
             }
             else if (energy < 1f)
@@ -230,6 +231,7 @@ public class PixelTimeStop : MonoBehaviour
 
         if (!stopped && energy >= 1f) fullTimer = hideDelaySeconds;
         PixelAudio.Play(stopped ? "time_stop" : "time_resume");
+        if (stopped) PixelHints.Trigger("timestop_first");
         if (stopped) PixelAudio.StartLoop(loopSoundId);
         else PixelAudio.StopLoop(loopSoundId);
     }

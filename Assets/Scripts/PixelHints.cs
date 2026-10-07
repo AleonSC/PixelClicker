@@ -86,6 +86,22 @@ public class PixelHints : MonoBehaviour
     [Tooltip("One entry per tip.")]
     [SerializeField] private List<Hint> hints = new List<Hint>();
 
+    /// <summary>One line of the event history (shown in the Info window).</summary>
+    public class Entry
+    {
+        public string text;
+        public Action open;
+    }
+
+    [Min(1)]
+    [Tooltip("How many recent events the Info window remembers.")]
+    [SerializeField] private int historyMax = 40;
+
+    private readonly List<Entry> history = new List<Entry>();
+
+    /// <summary>Recent events (oldest first), for the Info window.</summary>
+    public static IReadOnlyList<Entry> History => instance != null ? instance.history : null;
+
     private static PixelHints instance;
     private readonly Queue<Hint> queue = new Queue<Hint>();
     private float waitTimer;
@@ -127,6 +143,12 @@ public class PixelHints : MonoBehaviour
             case "pixel_Ghost": return "You unlocked Ghost Pixels!";
             case "pixel_Meteor": return "You unlocked Meteor Pixels!";
             case "pixel_Red": return "You unlocked Red, Green and Blue Pixels!";
+            case "bank_hose": return "Hose equipped!";
+            case "bank_suck": return "Pixel stored in the Bank!";
+            case "bank_spit": return "Spat out a stored pixel!";
+            case "bank_full": return "The Bank is full!";
+            case "timestop_first": return "Time stopped!";
+            case "timestop_empty": return "Time Stop ran out of energy!";
             default: return "";
         }
     }
@@ -160,6 +182,12 @@ public class PixelHints : MonoBehaviour
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),
         H("pixel_Red", "The RGB Pack unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones, but you need them to unlock Glass pixels and more."),
+        H("bank_hose", "The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest old pixel, and holding right-click sucks up everything of that type around the nozzle."),
+        H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
+        H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
+        H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
+        H("timestop_first", "Time is stopped! Everything freezes, but you can keep clicking the cube. The meter at the top drains while time is stopped and refills once it runs again; press T to resume."),
+        H("timestop_empty", "The Time Stop meter ran out, so time started again. It refills quickly while time runs - wait until it is a little full before stopping time again."),
         H("ultra", "Ultra pixel earned! Spend Ultra pixels in the shop's Upgrades > Pixel sub-tab to boost a pixel type's payout."),
     };
 
@@ -199,6 +227,7 @@ public class PixelHints : MonoBehaviour
         if (instance != null && instance != this) { Destroy(this); return; }
         instance = this;
         EnsureDefaultHints();
+        if (GetComponent<PixelInfoWindow>() == null) gameObject.AddComponent<PixelInfoWindow>();
     }
 
     private void OnEnable()
@@ -296,6 +325,8 @@ public class PixelHints : MonoBehaviour
         if (Time.realtimeSinceStartup < startupQuietSeconds) return;
         lastShort = shortText;
         lastOpen = open;
+        history.Add(new Entry { text = shortText, open = open });
+        while (history.Count > historyMax) history.RemoveAt(0);
         DisplayOverlay();
     }
 
