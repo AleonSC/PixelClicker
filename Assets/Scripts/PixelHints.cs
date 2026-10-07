@@ -155,7 +155,7 @@ public class PixelHints : MonoBehaviour
     {
         H("crafting", "Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion."),
         H("grab", "Pixel Grabbing unlocked! Hold the left mouse button on an old pixel to pick it up, then let go to throw it."),
-        H("timestop", "Time Stop unlocked! Press T to freeze time. It drains an energy meter, but you can still click the cube - the old pixels pile up and burst out when time resumes."),
+        H("timestop", "Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the old pixels pile up and burst out when time resumes."),
         H("bank", "Pixel Bank unlocked! Right-click an old pixel to store it. Open the Bank tab on the left edge, or press B for the hose: left-click spits a pixel out, hold right-click sucks up an area."),
         H("minigame_ghost", "A ghost! Click it before it floats away to catch it and get a free potion."),
         H("minigame_meteor", "A meteor! Click it as often as you like to chip off meteor chunks."),

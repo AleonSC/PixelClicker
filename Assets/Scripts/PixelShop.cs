@@ -1093,16 +1093,7 @@ public partial class PixelShop : MonoBehaviour
             if (!givesRed && !pack.unlocksAutoClicker) continue;
 
             pack.purchased = true;
-            AnnouncePurchase(pack, "You bought " + pack.displayName + "!");
             ApplyPackEffects(pack);
-
-            if (pack.unlocksCrafting) PixelHints.Trigger("crafting");
-            if (pack.unlocksGrabbing) PixelHints.Trigger("grab");
-            if (pack.unlocksTimeStop) PixelHints.Trigger("timestop");
-            if (pack.unlocksBank) PixelHints.Trigger("bank");
-            if (pack.rewardTiers != null)
-                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
-                    PixelHints.Trigger("pixel_" + reward.type);
             onPackPurchased?.Invoke(i);
         }
         RefreshRows();
@@ -1160,7 +1151,16 @@ public partial class PixelShop : MonoBehaviour
         else
         {
             pack.purchased = true;
+            AnnouncePurchase(pack, "You bought " + pack.displayName + "!");
             ApplyPackEffects(pack);
+
+            if (pack.unlocksCrafting) PixelHints.Trigger("crafting");
+            if (pack.unlocksGrabbing) PixelHints.Trigger("grab");
+            if (pack.unlocksTimeStop) PixelHints.Trigger("timestop");
+            if (pack.unlocksBank) PixelHints.Trigger("bank");
+            if (pack.rewardTiers != null)
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    PixelHints.Trigger("pixel_" + reward.type);
 
             // The auto clicker starts switched off: a box points the player to the Toggles window to turn it on.
             if (pack.unlocksAutoClicker && autoClicker != null)

@@ -33,3 +33,4 @@
 [2026-10-07 12:12 UTC] Added Pixel Bank and Time Stop first-use tips, and a new Info window (press I) listing purchased upgrades and recent events.
 [2026-10-07 12:13 UTC] Every shop purchase, upgrade level and Ultra boost now shows on the bottom-left event line (click or Enter shows its description); removed the separate Info window.
 [2026-10-07 12:18 UTC] The bottom-left event text is now a scrollable log box (mouse wheel) as tall as the screen between the black bars that keeps every event and is saved with the save file.
+[2026-10-07 12:21 UTC] Fixed the first-time tips and purchase lines for one-time packs (Time Stop, Pixel Grabbing, Crafting, Bank, pixel unlocks) not showing when bought in the shop.
