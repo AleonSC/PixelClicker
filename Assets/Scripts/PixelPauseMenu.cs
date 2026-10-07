@@ -648,7 +648,9 @@ public class PixelPauseMenu : MonoBehaviour
         {
             saveGame.SuppressSaving(); // so autosave / quit can't write the old game back
             saveGame.DeleteSave();
+            PixelHints.ResetSeen(); // a new game shows the first-time tips (and the intro) again
         }
+        PixelCrashLog.EndSessionCleanly(); // a deliberate restart is not a crash
         PixelAchievements.ResetOnNextStart = true; // achievements start from nothing in the new game too
         SetPaused(false);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

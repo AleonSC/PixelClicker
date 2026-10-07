@@ -275,6 +275,21 @@ public class PixelHints : MonoBehaviour
 
     // ------------------------------------------------------------------
 
+    /// <summary>Forgets which tips were shown (a brand-new game shows them all again).</summary>
+    public static void ResetSeen()
+    {
+        try
+        {
+            if (instance != null && instance.hints != null)
+                foreach (Hint h in instance.hints)
+                    if (h != null && !string.IsNullOrEmpty(h.id)) PlayerPrefs.DeleteKey(PrefPrefix + h.id);
+            PlayerPrefs.DeleteKey(PrefPrefix + "intro_log");
+            PlayerPrefs.DeleteKey(PrefPrefix + "BlackHole");
+            PlayerPrefs.Save();
+        }
+        catch (Exception) { /* no PlayerPrefs: nothing to forget */ }
+    }
+
     /// <summary>Shows the tip with this id the first time it is triggered (ever). Unknown / disabled / already-seen ids do nothing.</summary>
     public static void Trigger(string id)
     {

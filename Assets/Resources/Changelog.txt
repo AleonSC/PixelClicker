@@ -39,3 +39,4 @@
 [2026-10-07 12:36 UTC] Added a Combo Meter switch to the Toggles window, and made the Pixel Bank's Hose button half as wide and centred under the Bank tab so it no longer peeks out.
 [2026-10-07 12:38 UTC] The Toggles tab is now hidden until the Auto Clicker is bought.
 [2026-10-07 12:42 UTC] Made the tier guide text and box smaller, added a new-game intro that opens the Log then the Inventory with explanatory tips, and the Log and Inventory can no longer be open together.
+[2026-10-07 12:44 UTC] Restart now resets the first-time tips and intro, and no longer triggers the crash notice.

@@ -152,6 +152,19 @@ public class PixelCrashLog : MonoBehaviour
         instance = null;
     }
 
+    /// <summary>Call right before reloading the scene on purpose (Restart): ends this session cleanly so the new one doesn't report a crash.</summary>
+    public static void EndSessionCleanly()
+    {
+        if (instance == null || string.IsNullOrEmpty(instance.markerFile)) return;
+        try
+        {
+            instance.FlushRepeats();
+            instance.Append("\n=== Session restarted by the player at " + Stamp() + " ===\n");
+            if (File.Exists(instance.markerFile)) File.Delete(instance.markerFile);
+        }
+        catch (Exception) { /* not worth failing a restart over */ }
+    }
+
     private void OnApplicationQuit()
     {
         if (!enableReports || string.IsNullOrEmpty(markerFile)) return;
