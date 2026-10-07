@@ -76,6 +76,7 @@
 - Git: develop on `claude/pixelclicker-initial-script-un1ao1`; commit + push when work is done; no PRs unless asked.
 
 ## Roadmap / open notes
+- **Agreed plan (as of 2026-10-07):** (1) review the whole project and compile optimization ideas (performance, duplicated code, fragile spots, cleanup) without changing code until the user picks; (2) then write a full handoff document (project info + the optimization ideas) for a new session. If the user asks for anything else first, remind them of this plan.
 - The UI helper (`PixelUIKit`) and minigame base (`PixelMinigame`) refactors are verified in Unity by the user.
 - Cleanup still worth doing: (`PixelShop` is now split into three partial-class files; a deeper split into separate logic and UI classes is still possible); (the shop's "add missing defaults" code is now one table-driven loop; potions/devices/achievements keep their own small versions); optionally replace scene searches with one shared game object that owns the references (the version-check duplication is already gone via `PixelFind`).
 - Possible next steps (not requested yet – confirm before building): more shop packs/tiers, particle polish, filling in sound clips, balancing pass on spawn weights and costs, prestige, prefabs for the runtime-built UI.
