@@ -33,6 +33,7 @@ Release | Drop or throw it
 Mouse wheel | Choose which stored pixel to use
 Left-click | Spit one out
 Right-click | Suck up the old pixel under the nozzle
+Hold right-click | Suck up an area of the selected pixel type
 Click a Bank row | Select that pixel type
 
 # Devices and Minigames

@@ -102,6 +102,30 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Random wobble (degrees) of the direction a pixel is spat out.")]
     [SerializeField] private float spitSpread = 4f;
 
+    [Header("Area Suction (hold the right mouse button)")]
+    [Min(0.05f)]
+    [Tooltip("How long (seconds) you hold the right button before the hose switches from sucking up one pixel to sucking up an area.")]
+    [SerializeField] private float areaHoldSeconds = 0.4f;
+
+    [Min(0.1f)]
+    [Tooltip("Radius of the area (world units, measured across the screen around the nozzle). Only old pixels of the selected type inside it are pulled in.")]
+    [SerializeField] private float areaRadius = 2f;
+
+    [Min(0.5f)]
+    [Tooltip("How many pixels the area suction pulls in per second.")]
+    [SerializeField] private float areaRate = 8f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How see-through the ring that shows the area is.")]
+    [SerializeField] private float areaRingOpacity = 0.75f;
+
+    [Range(0.02f, 0.4f)]
+    [Tooltip("Thickness of the area ring, as a fraction of its radius.")]
+    [SerializeField] private float areaRingThickness = 0.08f;
+
+    [Tooltip("Text near the nozzle when you hold for area suction but there is no pixel type to match (nothing selected and no old pixel under the nozzle).")]
+    [SerializeField] private string areaNoTypeText = "No pixel type to match";
+
     [Header("Selected Pixel Display")]
     [Min(0.05f)]
     [Tooltip("Size of the little spinning cube that shows the selected pixel (world units).")]
@@ -231,6 +255,17 @@ public class PixelBank : MonoBehaviour
     private float nozzleDepth;
     private float kick;           // brief nozzle punch when spitting / sucking
     private float fullTimer;
+    private string flashMessage = "";
+
+    // Area suction
+    private bool rightDown, areaActive, areaFinished;
+    private float rightHeldTime, areaTimer;
+    private int areaTier = -1;
+    private Vector3 tipPosition;
+    private Transform areaRing;
+    private Renderer areaRingRenderer;
+    private Material areaRingMaterial;
+    private int areaRingTier = -2;
     private int displayTier = -1;
     private PixelConsumables consumables;
 
@@ -418,6 +453,7 @@ public class PixelBank : MonoBehaviour
         if (HoseOn == on) return;
         HoseOn = on;
         PixelClicker.ExternalClickBlock = on;
+        if (!on) StopArea();
         if (hoseRoot != null) hoseRoot.SetActive(on);
         controlReady = false;
         PixelAudio.Play("hose_toggle");
@@ -466,6 +502,15 @@ public class PixelBank : MonoBehaviour
         displayText.rectTransform.sizeDelta = new Vector2(6f, 1f);
         displayText.rectTransform.pivot = new Vector2(0f, 0.5f); // the text starts at its position and runs to the right
         if (clicker.UIFont != null) displayText.font = clicker.UIFont;
+
+        // The ring that shows the area (a unit-radius ring, scaled to the area's radius).
+        GameObject ring = new GameObject("Area Ring", typeof(MeshFilter), typeof(MeshRenderer));
+        ring.transform.SetParent(hoseRoot.transform, false);
+        ring.GetComponent<MeshFilter>().sharedMesh = PixelSorterDevice.BuildRingMesh(1f - areaRingThickness, 1f, 0.02f, 56);
+        areaRing = ring.transform;
+        areaRingRenderer = ring.GetComponent<Renderer>();
+        areaRingRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        areaRing.gameObject.SetActive(false);
     }
 
     private void UpdateHose()
@@ -518,6 +563,7 @@ public class PixelBank : MonoBehaviour
         nozzle.position = tip - heading * (nozzleLength * 0.5f - 0.02f);
         mouthPosition = tip + heading * 0.05f;
         mouthDirection = heading;
+        tipPosition = tip;
 
         UpdateDisplay(cam, tip);
         HandleInput(cam, candidate);
@@ -562,13 +608,146 @@ public class PixelBank : MonoBehaviour
 
     private void HandleInput(Camera cam, Rigidbody candidate)
     {
-        if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PointerOverUI()) return;
+        if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f)
+        {
+            StopArea();
+            return;
+        }
 
-        int scrollSteps = ScrollSteps();
-        if (scrollSteps != 0) SelectNext(scrollSteps);
+        bool overUI = PointerOverUI();
+        if (!overUI)
+        {
+            int scrollSteps = ScrollSteps();
+            if (scrollSteps != 0) SelectNext(scrollSteps);
+            if (LeftPressed()) Spit();
+        }
 
-        if (LeftPressed()) Spit();
-        else if (RightPressed()) Suck(candidate);
+        // Right button: a click sucks up one pixel; holding on turns that into area suction.
+        if (!overUI && RightPressed())
+        {
+            rightDown = true;
+            rightHeldTime = 0f;
+            areaActive = areaFinished = false;
+            Suck(candidate);
+        }
+
+        if (rightDown)
+        {
+            if (!RightHeld() || overUI) StopArea();
+            else
+            {
+                rightHeldTime += Time.unscaledDeltaTime;
+                UpdateArea(cam);
+            }
+        }
+        else UpdateAreaRing(cam, false, 0f);
+    }
+
+    private void StopArea()
+    {
+        rightDown = false;
+        areaActive = false;
+        areaFinished = false;
+        rightHeldTime = 0f;
+        if (areaRing != null && areaRing.gameObject.activeSelf) areaRing.gameObject.SetActive(false);
+    }
+
+    /// <summary>The hold has gone on long enough: pull in old pixels of the selected type around the nozzle, a few a second.</summary>
+    private void UpdateArea(Camera cam)
+    {
+        float charge = Mathf.Clamp01(rightHeldTime / areaHoldSeconds);
+
+        if (!areaActive && !areaFinished && rightHeldTime >= areaHoldSeconds)
+        {
+            // The type to take: the selected one, or (if nothing is selected) the type of the old pixel nearest the nozzle.
+            areaTier = selected >= 0 && selected < counts.Length ? selected : -1;
+            if (areaTier < 0)
+            {
+                Rigidbody nearest = FindSuckCandidate(cam.ScreenPointToRay(PointerPosition()), out _);
+                OldPixelInfo info = nearest != null ? nearest.GetComponent<OldPixelInfo>() : null;
+                if (info != null) areaTier = info.tierIndex;
+            }
+
+            if (areaTier < 0)
+            {
+                flashMessage = areaNoTypeText;
+                fullTimer = 0.9f;
+                PixelAudio.Play("bank_empty");
+                areaFinished = true; // nothing to match: no area suction for the rest of this hold
+            }
+            else
+            {
+                areaActive = true;
+                areaTimer = 0f;
+            }
+        }
+
+        if (areaActive)
+        {
+            areaTimer -= Time.unscaledDeltaTime;
+            while (areaTimer <= 0f && areaActive)
+            {
+                areaTimer += 1f / Mathf.Max(0.5f, areaRate);
+                Rigidbody target = FindAreaTarget(cam);
+                if (target == null) { areaTimer = 0.05f; break; }
+                if (!TakeIntoBank(target))
+                {
+                    areaActive = false;   // the bank is full
+                    areaFinished = true;
+                }
+            }
+        }
+
+        bool showRing = rightHeldTime > 0.08f && !areaFinished;
+        UpdateAreaRing(cam, showRing, areaActive ? 1f : charge);
+    }
+
+    /// <summary>The nearest old pixel of the area's type inside the ring (measured across the screen around the nozzle).</summary>
+    private Rigidbody FindAreaTarget(Camera cam)
+    {
+        Rigidbody best = null;
+        float bestDistance = areaRadius;
+        Vector3 forward = cam.transform.forward;
+
+        var pixels = clicker.OldPixels;
+        for (int i = 0; i < pixels.Count; i++)
+        {
+            Rigidbody body = pixels[i];
+            if (body == null || body.isKinematic) continue;
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info == null || info.tierIndex != areaTier || clicker.Tiers[info.tierIndex].flyAway) continue;
+            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            if (despawn != null && despawn.IsDespawning) continue;
+
+            Vector3 to = body.position - tipPosition;
+            float across = (to - forward * Vector3.Dot(to, forward)).magnitude; // distance on the screen plane
+            if (across <= bestDistance) { bestDistance = across; best = body; }
+        }
+        return best;
+    }
+
+    private void UpdateAreaRing(Camera cam, bool show, float fraction)
+    {
+        if (areaRing == null) return;
+        if (areaRing.gameObject.activeSelf != show) areaRing.gameObject.SetActive(show);
+        if (!show) return;
+
+        // The ring takes the selected pixel's colour (white while nothing is selected).
+        int tier = areaActive ? areaTier : selected;
+        if (areaRingTier != tier)
+        {
+            areaRingTier = tier;
+            Color c = tier >= 0 && tier < clicker.Tiers.Length ? clicker.Tiers[tier].color : Color.white;
+            c.a = areaRingOpacity;
+            if (areaRingMaterial != null) Destroy(areaRingMaterial);
+            areaRingMaterial = clicker.CreateVisualMaterial(c, true);
+            if (areaRingMaterial != null) areaRingRenderer.sharedMaterial = areaRingMaterial;
+        }
+
+        float pulse = areaActive ? 1f + Mathf.Sin(Time.unscaledTime * 12f) * 0.03f : 1f;
+        areaRing.position = tipPosition;
+        areaRing.rotation = cam.transform.rotation;
+        areaRing.localScale = Vector3.one * (areaRadius * Mathf.Lerp(0.15f, 1f, fraction) * pulse);
     }
 
     private static int ScrollSteps()
@@ -606,7 +785,7 @@ public class PixelBank : MonoBehaviour
         if (selected < 0 || selected >= counts.Length || counts[selected] <= 0)
         {
             selected = NextStocked(selected, 1);
-            if (selected < 0) { PixelAudio.Play("bank_empty"); fullTimer = 0.9f; emptyFlash = true; }
+            if (selected < 0) { PixelAudio.Play("bank_empty"); fullTimer = 0.9f; flashMessage = emptyDisplayText; }
             return;
         }
 
@@ -630,22 +809,25 @@ public class PixelBank : MonoBehaviour
         refreshTimer = 0f;
     }
 
-    private bool emptyFlash;
 
     private void Suck(Rigidbody candidate)
     {
-        if (candidate == null) return;
+        if (candidate != null) TakeIntoBank(candidate);
+    }
 
+    /// <summary>Stores one old pixel (it flies into the nozzle). Returns false, and says so, if the bank is full.</summary>
+    private bool TakeIntoBank(Rigidbody body)
+    {
         if (Total >= Capacity)
         {
             fullTimer = 0.9f;
-            emptyFlash = false;
+            flashMessage = fullText;
             PixelAudio.Play("bank_full");
-            return;
+            return false;
         }
 
-        OldPixelInfo info = candidate.GetComponent<OldPixelInfo>();
-        if (info == null || !clicker.ReleaseOldPixel(candidate, false)) return;
+        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        if (info == null || !clicker.ReleaseOldPixel(body, false)) return true; // gone already: not a reason to stop
 
         counts[info.tierIndex]++;
         values[info.tierIndex] += info.amount;
@@ -653,8 +835,9 @@ public class PixelBank : MonoBehaviour
 
         kick = 1f;
         PixelAudio.Play("bank_suck");
-        StartCoroutine(FlyIntoNozzle(candidate));
+        StartCoroutine(FlyIntoNozzle(body));
         refreshTimer = 0f;
+        return true;
     }
 
     private IEnumerator FlyIntoNozzle(Rigidbody body)
@@ -708,7 +891,7 @@ public class PixelBank : MonoBehaviour
 
         fullTimer = Mathf.Max(0f, fullTimer - Time.unscaledDeltaTime);
         string text;
-        if (fullTimer > 0f) text = emptyFlash ? emptyDisplayText : fullText;
+        if (fullTimer > 0f) text = flashMessage;
         else if (hasSelection) text = string.Format(displayTextFormat, clicker.Tiers[selected].displayName, counts[selected]);
         else text = emptyDisplayText;
 
