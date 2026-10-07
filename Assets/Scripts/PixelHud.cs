@@ -133,10 +133,10 @@ public class PixelHud : MonoBehaviour
     /// button's window is open, so it doesn't slide away then. 'sideOffsetY' moves a side-docked button up (positive) or
     /// down (negative) from the vertical middle, so two buttons can be docked one under the other.
     /// </summary>
-    public void Dock(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY = 0f)
+    public void Dock(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY = 0f, float widthScale = 1f)
     {
         button.anchorMin = button.anchorMax = button.pivot = anchor;
-        button.sizeDelta = buttonSize;
+        button.sizeDelta = new Vector2(buttonSize.x * widthScale, buttonSize.y);
 
         TMP_Text label = button.GetComponentInChildren<TMP_Text>();
         if (label != null)
@@ -154,7 +154,7 @@ public class PixelHud : MonoBehaviour
         // A button anchored at the vertical middle (anchor.y = 0.5) docks to the left / right edge instead of the top / bottom.
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
-        dock.Setup(this, button, anchor, keepOut, sideOffsetY);
+        dock.Setup(this, button, anchor, keepOut, sideOffsetY, (buttonSize.x - button.sizeDelta.x) * 0.5f);
     }
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
@@ -181,13 +181,15 @@ public class PixelDockedButton : MonoBehaviour
     private Canvas canvas;
 
     private float sideOffsetY;
+    private float sideOffsetX; // a narrower side button is centred under a full-width one
 
     /// <summary>How far out the button is (0 = hidden, 1 = fully shown).</summary>
     public float SlideAmount => slide;
 
-    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f)
+    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f, float offsetX = 0f)
     {
         sideOffsetY = offsetY;
+        sideOffsetX = offsetX;
         hud = owner;
         rect = button;
         anchor = corner;
@@ -211,7 +213,7 @@ public class PixelDockedButton : MonoBehaviour
         {
             // Docked to a side edge: slides sideways, centred vertically.
             float sideInset = Mathf.Lerp(hud.SideHiddenInset, hud.SideShownInset, Mathf.SmoothStep(0f, 1f, slide));
-            rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -sideInset : sideInset, sideOffsetY);
+            rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -(sideInset + sideOffsetX) : sideInset + sideOffsetX, sideOffsetY);
             return;
         }
 
@@ -234,7 +236,7 @@ public class PixelDockedButton : MonoBehaviour
         float pad = hud.TriggerPadding;
         if (Mathf.Approximately(anchor.y, 0.5f))
         {
-            float sw = hud.ButtonSize.x, sh = hud.ButtonSize.y;
+            float sw = rect.sizeDelta.x + sideOffsetX, sh = hud.ButtonSize.y;
             float fromSide = anchor.x > 0.5f ? Screen.width / scale - p.x / scale : p.x / scale;
             return fromSide <= sw + pad && Mathf.Abs(p.y / scale - (Screen.height / scale * 0.5f + sideOffsetY)) <= sh * 0.5f + pad;
         }

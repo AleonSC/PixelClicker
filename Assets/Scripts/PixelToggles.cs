@@ -54,6 +54,9 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Label of the Time Stop toggle.")]
     [SerializeField] private string timeStopLabel = "Time Stop";
 
+    [Tooltip("Toggles window label of the Combo Meter.")]
+    [SerializeField] private string comboLabel = "Combo Meter";
+
     [Tooltip("Label of a pixel's toggle. {0} = pixel name.")]
     [SerializeField] private string pixelLabelFormat = "{0} spawn";
 
@@ -257,6 +260,10 @@ public class PixelToggles : MonoBehaviour
             PixelGrab g = grab;
             if (g != null && (g.Active || g.UserDisabled))
                 list.Add(new Entry { label = grabbingLabel, on = !g.UserDisabled, setter = on => g.UserDisabled = !on });
+
+            PixelCombo combo = PixelFind.First<PixelCombo>();
+            if (combo != null && (combo.Active || combo.UserDisabled))
+                list.Add(new Entry { label = comboLabel, on = !combo.UserDisabled, setter = on => combo.UserDisabled = !on });
 
             PixelTimeStop ts = timeStop;
             if (ts != null && (ts.Active || ts.UserDisabled))

@@ -102,6 +102,7 @@ public class PixelSaveGame : MonoBehaviour
         public bool autoClickerDisabled; // switched off by the player (Toggles window)
         public bool grabDisabled;
         public bool timeStopDisabled;
+        public bool comboDisabled;
         public string[] eventTexts;
         public string[] eventFulls;
         public float autoClickerInterval;
@@ -388,6 +389,8 @@ public class PixelSaveGame : MonoBehaviour
 
             if (grab != null) data.grabDisabled = grab.UserDisabled;
             if (timeStop != null) data.timeStopDisabled = timeStop.UserDisabled;
+            PixelCombo comboMeter = PixelFind.First<PixelCombo>();
+            if (comboMeter != null) data.comboDisabled = comboMeter.UserDisabled;
             PixelHints.ExportHistory(out data.eventTexts, out data.eventFulls);
 
             // Write to a temp file first so a crash mid-write can't destroy the old save.
@@ -464,6 +467,8 @@ public class PixelSaveGame : MonoBehaviour
 
             if (grab != null) grab.UserDisabled = data.grabDisabled;
             if (timeStop != null) timeStop.UserDisabled = data.timeStopDisabled;
+            PixelCombo comboMeterLoad = PixelFind.First<PixelCombo>();
+            if (comboMeterLoad != null) comboMeterLoad.UserDisabled = data.comboDisabled;
             PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
 
             // Potions.

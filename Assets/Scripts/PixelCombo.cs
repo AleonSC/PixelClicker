@@ -102,11 +102,29 @@ public class PixelCombo : MonoBehaviour
     private Image barFill;
     private RectTransform barFillRect;
 
+    /// <summary>Is the Combo Meter bought?</summary>
+    public bool Active => comboActive;
+
+    /// <summary>The player switched the combo meter off in the Toggles window. Saved.</summary>
+    public bool UserDisabled
+    {
+        get => userDisabled;
+        set
+        {
+            userDisabled = value;
+            if (userDisabled) combo = 0;
+            Apply();
+        }
+    }
+
+    private bool userDisabled;
+    private bool Working => comboActive && !userDisabled;
+
     /// <summary>The highest multiplier the combo can reach.</summary>
     public float MaxMultiplier => maxMultiplier;
 
     /// <summary>Current multiplier (1 when there is no combo or the meter is off).</summary>
-    public double Multiplier => comboActive ? System.Math.Min(maxMultiplier, 1d + combo * multiplierPerClick) : 1d;
+    public double Multiplier => Working ? System.Math.Min(maxMultiplier, 1d + combo * multiplierPerClick) : 1d;
 
     /// <summary>Called by the shop: switches the meter on/off and sets its maximum multiplier.</summary>
     public void SetUpgrade(bool active, float max)
@@ -158,7 +176,7 @@ public class PixelCombo : MonoBehaviour
 
     private void AddClick(bool automatic)
     {
-        if (!comboActive || (automatic && !autoClicksCount)) return;
+        if (!Working || (automatic && !autoClicksCount)) return;
         combo++;
         ComboReached?.Invoke(combo);
         timeLeft = comboWindowSeconds;
@@ -182,7 +200,7 @@ public class PixelCombo : MonoBehaviour
     private void Apply()
     {
         if (canvasRoot == null) return;
-        bool visible = comboActive && showMeter;
+        bool visible = Working && showMeter;
         if (canvasRoot.activeSelf != visible) canvasRoot.SetActive(visible);
         if (!visible) return;
 

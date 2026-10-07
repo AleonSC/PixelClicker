@@ -36,3 +36,4 @@
 [2026-10-07 12:21 UTC] Fixed the first-time tips and purchase lines for one-time packs (Time Stop, Pixel Grabbing, Crafting, Bank, pixel unlocks) not showing when bought in the shop.
 [2026-10-07 12:29 UTC] Event log is narrower with smaller text; Enter only shows or hides it, right-click hides it, and left-clicking a line opens its tip.
 [2026-10-07 12:32 UTC] Fixed the event log scrolling: it now only scrolls once the entries no longer fit in the box.
+[2026-10-07 12:36 UTC] Added a Combo Meter switch to the Toggles window, and made the Pixel Bank's Hose button half as wide and centred under the Bank tab so it no longer peeks out.

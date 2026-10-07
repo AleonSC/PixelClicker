@@ -191,6 +191,10 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Gap between the two buttons.")]
     [SerializeField] private float buttonGap = 12f;
 
+    [Range(0.2f, 1f)]
+    [Tooltip("Width of the Hose button compared with the Bank tab (0.5 = half as wide, centred under it so it stays hidden while the tab is tucked away).")]
+    [SerializeField] private float hoseButtonWidthScale = 0.5f;
+
     [Header("Window")]
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "Pixel Bank";
@@ -966,7 +970,7 @@ public class PixelBank : MonoBehaviour
 
         hud.Dock(bank.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut);
         hud.Dock(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut,
-                 -(hud.ButtonSize.y + buttonGap));
+                 -(hud.ButtonSize.y + buttonGap), hoseButtonWidthScale);
         bankDock = bank.GetComponent<PixelDockedButton>();
         hoseDock = hoseButton.GetComponent<PixelDockedButton>();
 
