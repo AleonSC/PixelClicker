@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -38,12 +39,33 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Singularity Tracker";
 
-    [TextArea(1, 3)]
-    [Tooltip("Description of the tracker row.")]
-    [SerializeField] private string trackerDescription = "Pixels fed to the black hole. Reach the goal to unlock the Singularity Pixel.";
+    [TextArea(1, 4)]
+    [Tooltip("Description of the tracker row in the shop's Minigames tab.")]
+    [SerializeField] private string trackerHelp = "Black holes swallow old pixels that land near them. Push pixels toward an open hole with the fan, Pixel Grabbing or the hose. Feed it enough to unlock the Singularity Pixel.";
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = pixels swallowed, {1} = goal.")]
-    [SerializeField] private string requirementFormat = "Requires: {0} / {1} pixels in the singularity";
+    [SerializeField] private string requirementLine = "Feed {1} pixels to black holes: {0} / {1}";
+
+    [Header("Hints")]
+    [Tooltip("The first time a black hole opens, show a tip box explaining what to do (once; remembered between sessions).")]
+    [SerializeField] private bool showFirstHoleHint = true;
+
+    [TextArea(2, 5)]
+    [Tooltip("The tip. {0} = the goal.")]
+    [SerializeField] private string firstHoleHint = "A black hole has opened!\nIt swallows old pixels that land near it. Push them in with the fan, Pixel Grabbing or the hose. Feed it {0} pixels to unlock the Singularity Pixel.";
+
+    [Tooltip("Show a live counter above each black hole (pixels swallowed / goal).")]
+    [SerializeField] private bool showHoleCounter = true;
+
+    [Min(1f)]
+    [Tooltip("Size of the counter text above a black hole.")]
+    [SerializeField] private float counterTextSize = 4f;
+
+    [Tooltip("Counter text. {0} = pixels swallowed, {1} = goal.")]
+    [SerializeField] private string counterFormat = "{0} / {1}";
+
+    [Tooltip("Counter text once the goal has been reached. {0} = pixels swallowed.")]
+    [SerializeField] private string counterReachedFormat = "{0} swallowed";
 
     [Tooltip("Also pay out the pixels' original reward when they are swallowed (like the Vacuum). Off = they are simply lost to the singularity.")]
     [SerializeField] private bool creditSwallowedPixels = false;
@@ -203,10 +225,10 @@ public class PixelBlackholeMinigame : PixelMinigame
     // --- Tracker: the singularity (see PixelMinigame) ---
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
-    public override string TrackerDescription => trackerDescription;
+    public override string TrackerDescription => trackerHelp;
     public override double TrackerCount => singularityCount;
     public override double TrackerGoal => singularityThreshold;
-    public override string RequirementFormat => requirementFormat;
+    public override string RequirementFormat => requirementLine;
     public override void SetTrackerCount(double value) => SetSingularityCount(value);
 
     /// <summary>Pixels swallowed so far.</summary>
@@ -297,7 +319,27 @@ public class PixelBlackholeMinigame : PixelMinigame
         Transform outer = BuildSwirl(root.transform, "Outer Swirl", outerMaterial, 0f);
         Transform inner = BuildSwirl(root.transform, "Inner Swirl", innerMaterial, 0.01f);
 
+        // A live counter above the hole.
+        TextMeshPro counter = null;
+        if (showHoleCounter)
+        {
+            GameObject counterObject = new GameObject("Hole Counter");
+            counterObject.transform.SetParent(root.transform, false);
+            counter = counterObject.AddComponent<TextMeshPro>();
+            counter.fontSize = counterTextSize;
+            counter.fontStyle = FontStyles.Bold;
+            counter.alignment = TextAlignmentOptions.Center;
+            counter.color = Color.white;
+            counter.outlineWidth = 0.2f;
+            counter.outlineColor = new Color32(0, 0, 0, 255);
+            counter.rectTransform.sizeDelta = new Vector2(8f, 2f);
+            if (clicker != null && clicker.UIFont != null) counter.font = clicker.UIFont;
+        }
+        double shownCount = -1d;
+        float punch = 0f;
+
         onHoleOpened?.Invoke();
+        ShowFirstHoleHint();
         if (freezeOldPixels) OldPixelDespawn.Frozen = true; // time dilation: old pixels stop ageing while the hole is open
 
         float t = 0f;
@@ -319,6 +361,24 @@ public class PixelBlackholeMinigame : PixelMinigame
 
             // Catch old pixels that come close (only while it is open enough to matter).
             if (size > 0.3f) CatchPixels(center, currentRadius, radius);
+
+            if (counter != null)
+            {
+                if (singularityCount != shownCount)
+                {
+                    if (shownCount >= 0d) punch = 1f; // a pixel went in: the counter jumps
+                    shownCount = singularityCount;
+                    counter.text = ThresholdReached
+                        ? string.Format(counterReachedFormat, PixelClicker.FormatNumber(singularityCount))
+                        : string.Format(counterFormat, PixelClicker.FormatNumber(singularityCount), PixelClicker.FormatNumber(singularityThreshold));
+                }
+                punch = Mathf.MoveTowards(punch, 0f, Time.deltaTime * 4f);
+
+                Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+                counter.transform.position = center + Vector3.up * (0.9f + radius * 0.15f);
+                if (cam != null) counter.transform.rotation = cam.transform.rotation;
+                counter.transform.localScale = Vector3.one * (size * (1f + punch * 0.35f));
+            }
 
             yield return null;
         }
@@ -412,6 +472,22 @@ public class PixelBlackholeMinigame : PixelMinigame
 
         if (t != null) Destroy(t.gameObject);
         RegisterContribution();
+    }
+
+    private const string HintPref = "PixelClicker.Hint.BlackHole";
+
+    /// <summary>The very first black hole explains what to do (once, remembered between sessions).</summary>
+    private void ShowFirstHoleHint()
+    {
+        if (!showFirstHoleHint || singularityCount > 0d) return;
+        try
+        {
+            if (PlayerPrefs.GetInt(HintPref, 0) != 0) return;
+            PlayerPrefs.SetInt(HintPref, 1);
+        }
+        catch (System.Exception) { /* no PlayerPrefs: just show it */ }
+
+        PixelNotice.Show(string.Format(firstHoleHint, PixelClicker.FormatNumber(singularityThreshold)));
     }
 
     private void RegisterContribution()
