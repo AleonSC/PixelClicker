@@ -267,6 +267,13 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Size of the changelog text.")]
     [SerializeField] private float changelogFontSize = 28f;
 
+    [Header("Report Folder")]
+    [Tooltip("Show the Report Folder button (opens the folder with the crash / error reports, for sending to the developer).")]
+    [SerializeField] private bool showReportFolder = true;
+
+    [Tooltip("Text of the Report Folder button.")]
+    [SerializeField] private string reportFolderText = "Report Folder";
+
     [Header("How to Play and Controls")]
     [Tooltip("Show the How to Play button in the pause menu.")]
     [SerializeField] private bool showHowToPlay = true;
@@ -733,6 +740,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
         if (controlsScreen != null) entries.Add(new MenuEntry { label = controlsText, color = menuButtonColor, action = () => ShowView(controlsScreen.panel) });
         if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
+        if (showReportFolder && PixelCrashLog.Available)
+            entries.Add(new MenuEntry { label = reportFolderText, color = menuButtonColor, action = PixelCrashLog.OpenFolder });
         if (showRestart) entries.Add(new MenuEntry { label = restartText, color = menuButtonColor, action = () => ShowView(restartPanel) });
         if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = Quit });
 

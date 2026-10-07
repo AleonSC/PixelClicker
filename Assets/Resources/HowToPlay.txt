@@ -54,3 +54,6 @@ Buttons slide out of the edge of the screen when your mouse gets close to them.
 
 # Saving
 The game saves by itself and when you quit. You can also Save and Load from the pause menu. Restart deletes everything.
+
+# If Something Goes Wrong
+The game writes error and crash reports to text files. If it crashes or misbehaves, open Pause > Report Folder and send the newest .txt file to the developer. If the game closed unexpectedly last time, a box tells you so when you start it.
