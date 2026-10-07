@@ -76,7 +76,7 @@
 - Git: develop on `claude/pixelclicker-initial-script-un1ao1`; commit + push when work is done; no PRs unless asked.
 
 ## Roadmap / open notes
-- **Agreed plan (as of 2026-10-07):** (1) review the whole project and compile optimization ideas (performance, duplicated code, fragile spots, cleanup) without changing code until the user picks; (2) then write a full handoff document (project info + the optimization ideas) for a new session. If the user asks for anything else first, remind them of this plan.
+- **Handoff + optimization review written (2026-10-07): see `HANDOFF.md` in the repo root** (working rules recap, unverified items, lessons, and a prioritized optimization list). Next step: the user picks which optimizations to do; nothing from the list has been changed yet.
 - **Reminder for the user:** they made a build for a friend (after the 'Added a start screen / Restart returns to the Play screen' changelog lines) and asked to be reminded to clear the changelog. Remind them at the start of the next session; clear it (empty file, keep it) only when they say so.
 - The UI helper (`PixelUIKit`) and minigame base (`PixelMinigame`) refactors are verified in Unity by the user.
 - Cleanup still worth doing: (`PixelShop` is now split into three partial-class files; a deeper split into separate logic and UI classes is still possible); (the shop's "add missing defaults" code is now one table-driven loop; potions/devices/achievements keep their own small versions); optionally replace scene searches with one shared game object that owns the references (the version-check duplication is already gone via `PixelFind`).
