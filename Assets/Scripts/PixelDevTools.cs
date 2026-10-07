@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Developer tools for Pixel Clicker. Adds a "Dev Tools" button to the pause menu (only in the Editor and Development
-/// Builds) that opens a panel with:
+/// Builds) that opens a panel with: (Tick "Allow In Full Build" on the component to keep it in a normal build, e.g. for a tester.)
 ///   - add pixels: pick a pixel type from a dropdown, type an amount, press Add
 ///   - add the "all pixels" amount to every unlocked pixel type
 ///   - spawn a minigame: pick one from a dropdown, press Spawn
@@ -48,8 +48,8 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Start with 'Infinite resources' ticked: everything in the shop and crafting costs nothing.")]
     [SerializeField] private bool infiniteResources = false;
 
-    [Tooltip("Only exist in the Editor and Development Builds. In a release build this component removes itself.")]
-    [SerializeField] private bool devBuildsOnly = true;
+    [Tooltip("TICK THIS to let the dev tools work in a normal (full) build too, e.g. one you give to a tester. Unticked, the dev tools only exist in the Editor and Development Builds, and the Dev Tools button is missing from the pause menu in a full build.")]
+    [SerializeField] private bool allowInFullBuild = false;
 
     [Header("Text")]
     [Tooltip("Title of the dev tools panel (also the text of the pause menu button).")]
@@ -151,7 +151,7 @@ public class PixelDevTools : MonoBehaviour
 
     private void Awake()
     {
-        if (devBuildsOnly && !Debug.isDebugBuild) { Destroy(this); return; }
+        if (!allowInFullBuild && !Debug.isDebugBuild) { Destroy(this); return; }
         instance = this;
         PixelClicker.InfiniteResources = infiniteResources;
     }

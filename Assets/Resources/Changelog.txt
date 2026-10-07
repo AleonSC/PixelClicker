@@ -20,3 +20,4 @@
 [2026-10-07 10:57 UTC] Buying the Auto Clicker no longer switches it on: it starts off and a hint box next to the Toggles tab tells the player to turn it on under Upgrades in the Toggles window.
 [2026-10-07 11:00 UTC] Fixed spending Ultra pixels on boosts lowering the Ultra Pad's goal in the shop: the goal now counts Ultra pixels ever earned.
 [2026-10-07 11:04 UTC] Added crash and error reports: the game writes a text report for every session (errors, stack traces, recent log lines, game state) and notices when the last session closed unexpectedly; Pause > Report Folder opens the folder so testers can send the files.
+[2026-10-07 11:06 UTC] Dev Tools: replaced the Dev Builds Only setting with an Allow In Full Build tick box; tick it before making a build to give the dev tools to a tester.
