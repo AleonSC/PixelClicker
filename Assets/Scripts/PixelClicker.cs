@@ -376,6 +376,9 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Max old pixels kept in the scene. The oldest is destroyed first. 0 = no cap.")]
     [SerializeField] private int maxFallingCopies = 30;
 
+    [Tooltip("Max old pixels kept while Time Stop is on (the stockpile that bursts out when time resumes). 0 = no cap.")]
+    [SerializeField] private int timeStopStockpileMax = 150;
+
     [Tooltip("Old pixels below this world Y are destroyed (catches pixels that fall off the world).")]
     [SerializeField] private float fallingCopyKillHeight = -50f;
 
@@ -677,7 +680,7 @@ public class PixelClicker : MonoBehaviour
 
         CleanOldPixels();
 
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu)
+        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         if (!WasClickedThisFrame() || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
@@ -1162,6 +1165,11 @@ public class PixelClicker : MonoBehaviour
         if (hitbox != null) Destroy(hitbox.gameObject);
     }
 
+    /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
+    private int CopyCap => PixelTimeStop.IsStopped ? timeStopStockpileMax : maxFallingCopies;
+
+    private static float AnimDelta => PixelTimeStop.IsStopped ? Time.unscaledDeltaTime : Time.deltaTime;
+
     private void AnimatePixel()
     {
         float time = Time.time;
@@ -1188,7 +1196,7 @@ public class PixelClicker : MonoBehaviour
         float punch = 1f;
         if (hitPunchTimer > 0f)
         {
-            hitPunchTimer -= Time.deltaTime;
+            hitPunchTimer -= AnimDelta;
             punch = 1f - hitPunchAmount * Mathf.Clamp01(hitPunchTimer / Mathf.Max(0.01f, hitPunchDuration));
         }
 
@@ -1347,7 +1355,7 @@ public class PixelClicker : MonoBehaviour
         float t = 0f;
         while (t < materializeDuration)
         {
-            t += Time.deltaTime;
+            t += AnimDelta;
             float k = materializeDuration > 0f ? Mathf.Clamp01(t / materializeDuration) : 1f;
             materializeFactor = materializeCurve.Evaluate(k);
             yield return null;
@@ -1697,7 +1705,7 @@ public class PixelClicker : MonoBehaviour
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
             oldPixels.Add(rb);
-            while (maxFallingCopies > 0 && oldPixels.Count > maxFallingCopies)
+            while (CopyCap > 0 && oldPixels.Count > CopyCap)
             {
                 Rigidbody oldest = oldPixels[0];
                 oldPixels.RemoveAt(0);
@@ -1732,7 +1740,7 @@ public class PixelClicker : MonoBehaviour
         info.amount = amount;
 
         oldPixels.Add(rb);
-        while (maxFallingCopies > 0 && oldPixels.Count > maxFallingCopies)
+        while (CopyCap > 0 && oldPixels.Count > CopyCap)
         {
             Rigidbody oldest = oldPixels[0];
             oldPixels.RemoveAt(0);

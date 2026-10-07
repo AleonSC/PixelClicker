@@ -168,20 +168,27 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Shown when you own no potions.")]
     [SerializeField] private string noConsumablesText = "No potions yet.";
 
-    [Tooltip("Text of the Potions sub-tab inside the Consumables tab.")]
-    [SerializeField] private string potionsSubTabText = "Potions";
+    [Tooltip("The kinds of consumable in the drop-down at the top of the Consumables tab. The first is potions, the second devices (fan, sorter, vacuum device...). Add names here when new kinds exist.")]
+    [SerializeField] private string[] consumableCategories = { "Potions", "Devices" };
 
-    [Tooltip("Text of the Devices sub-tab inside the Consumables tab (fan, sorter, vacuum device...).")]
-    [SerializeField] private string devicesSubTabText = "Devices";
+    [Min(20f)]
+    [Tooltip("Height of that drop-down.")]
+    [SerializeField] private float categoryDropdownHeight = 52f;
 
     [Tooltip("Shown on the Devices sub-tab when you own no devices.")]
     [SerializeField] private string noDevicesText = "No devices yet.";
 
-    [Tooltip("Hint at the bottom of the tab.")]
-    [SerializeField] private string consumableHint = "Right-click an item to use it.";
+    [Tooltip("Hint at the top of the Potions list.")]
+    [SerializeField] private string potionHint = "Right-click a potion to drink it";
+
+    [Tooltip("Hint at the top of the Devices list.")]
+    [SerializeField] private string deviceHint = "Right-click a device to place it";
 
     [Tooltip("Hint text size.")]
-    [SerializeField] private float hintFontSize = 24f;
+    [SerializeField] private float hintFontSize = 26f;
+
+    [Tooltip("Hint text colour (bright, so it can be read).")]
+    [SerializeField] private Color hintColor = new Color(1f, 0.93f, 0.55f, 1f);
 
     [Tooltip("Line shown at the top of the tab while a potion is active. {0} = name, {1} = seconds left.")]
     [SerializeField] private string activePotionFormat = "Active: {0}  {1}s";
@@ -416,8 +423,7 @@ public class PixelUI : MonoBehaviour
     private RectTransform popupCanvasRect;
     private int inventoryTab; // 0 = Currency, 1 = Consumables
     private int consumableSubTab; // inside Consumables: 0 = Potions, 1 = Devices
-    private Image[] consumableSubTabImages;
-    private GameObject[] consumableSubTabObjects;
+    private TMP_Dropdown categoryDropdown;
     private Image[] subTabImages;
     private TMP_Text activeLabel;
     private TMP_Text noConsumablesLabel;
@@ -985,7 +991,15 @@ public class PixelUI : MonoBehaviour
 
         if (autoMode)
         {
-            if (inventoryTab == 1) y = RefreshConsumables(0f);
+            if (inventoryTab == 1)
+            {
+                if (categoryDropdown != null)
+                {
+                    if (!categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(true);
+                    if (categoryDropdown.value != consumableSubTab) categoryDropdown.SetValueWithoutNotify(consumableSubTab);
+                }
+                y = RefreshConsumables(0f);
+            }
             else HideConsumableWidgets();
         }
 
@@ -1068,7 +1082,8 @@ public class PixelUI : MonoBehaviour
     }
 
     /// <summary>Where the lines start: below the title bar and (in automatic mode) the two tab buttons.</summary>
-    private float ContentTop => headerHeight + (showHeader ? 0f : panelPadding * 0.5f) + (autoMode ? subTabHeight + subTabGap : 0f);
+    private float ContentTop => headerHeight + (showHeader ? 0f : panelPadding * 0.5f) + (autoMode ? subTabHeight + subTabGap : 0f)
+                                + (autoMode && inventoryTab == 1 ? categoryDropdownHeight + subTabGap : 0f); // room for the category drop-down
 
     // ------------------------------------------------------------------
     // Inventory tabs / consumables
@@ -1108,6 +1123,28 @@ public class PixelUI : MonoBehaviour
                 Refresh();
             });
         }
+
+        // The kind-of-consumable drop-down, under the tabs (only on the Consumables tab). It sits on the box itself, not in
+        // the scrolling list, so its pop-up list is never cut off.
+        categoryDropdown = PixelUIKit.CreateDropdown(font, boxObject.transform, "Category Dropdown",
+                                                     new Vector2(innerWidth, categoryDropdownHeight), subTabInactiveColor,
+                                                     new Color(0.12f, 0.12f, 0.16f, 1f), subTabTextColor,
+                                                     subTabFontSize > 0f ? subTabFontSize * 0.9f : 26f);
+        RectTransform dr = categoryDropdown.GetComponent<RectTransform>();
+        dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 1f);
+        dr.sizeDelta = new Vector2(innerWidth, categoryDropdownHeight);
+        dr.anchoredPosition = new Vector2(0f, -(tabTop + subTabHeight + subTabGap));
+        categoryDropdown.options.Clear();
+        foreach (string category in consumableCategories) categoryDropdown.options.Add(new TMP_Dropdown.OptionData(category));
+        categoryDropdown.SetValueWithoutNotify(0);
+        categoryDropdown.RefreshShownValue();
+        categoryDropdown.onValueChanged.AddListener(value =>
+        {
+            consumableSubTab = value;
+            if (listContent != null) listContent.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
+        categoryDropdown.gameObject.SetActive(false);
     }
 
     private void UpdateSubTabs()
@@ -1126,36 +1163,6 @@ public class PixelUI : MonoBehaviour
         PlaceLine(activeLabel.rectTransform);
         activeLabel.gameObject.SetActive(false);
 
-        // Potions | Devices, the first line of the Consumables tab.
-        string[] subNames = { potionsSubTabText, devicesSubTabText };
-        consumableSubTabImages = new Image[2];
-        consumableSubTabObjects = new GameObject[2];
-        float tabHeight = subTabHeight * 0.85f;
-        for (int i = 0; i < 2; i++)
-        {
-            Button b = MakeButton(ListParent, "Consumable Tab " + subNames[i], subNames[i], new Vector2(100f, tabHeight),
-                                  subTabInactiveColor, subTabTextColor, (subTabFontSize > 0f ? subTabFontSize : 28f) * 0.9f);
-            consumableSubTabImages[i] = b.GetComponent<Image>();
-            consumableSubTabObjects[i] = b.gameObject;
-
-            RectTransform rt = b.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(i * 0.5f, 1f);
-            rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(-(panelPadding + 6f), tabHeight);
-            float off = panelPadding * 0.5f - 3f;
-            rt.anchoredPosition = new Vector2(i == 0 ? off : -off, 0f);
-            b.gameObject.SetActive(false);
-
-            int captured = i;
-            b.onClick.AddListener(() =>
-            {
-                consumableSubTab = captured;
-                if (listContent != null) listContent.anchoredPosition = Vector2.zero;
-                Refresh();
-            });
-        }
-
         consumableAlign = align;
         BuildPotionRows();
 
@@ -1164,8 +1171,11 @@ public class PixelUI : MonoBehaviour
         PlaceLine(noConsumablesLabel.rectTransform);
         noConsumablesLabel.gameObject.SetActive(false);
 
-        hintLabel = MakeText(ListParent, "Hint", consumableHint, hintFontSize, align, FontStyles.Italic,
-                             new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        hintLabel = MakeText(ListParent, "Hint", potionHint, hintFontSize, align, FontStyles.Bold, hintColor);
+        hintLabel.enableAutoSizing = true; // shrinks to fit the box instead of wrapping
+        hintLabel.fontSizeMax = hintFontSize;
+        hintLabel.fontSizeMin = 12f;
+        hintLabel.overflowMode = TextOverflowModes.Ellipsis;
         PlaceLine(hintLabel.rectTransform);
         hintLabel.gameObject.SetActive(false);
     }
@@ -1226,9 +1236,7 @@ public class PixelUI : MonoBehaviour
     private void HideConsumableWidgets()
     {
         if (activeLabel != null) activeLabel.gameObject.SetActive(false);
-        if (consumableSubTabObjects != null)
-            foreach (GameObject tabObject in consumableSubTabObjects)
-                if (tabObject != null) tabObject.SetActive(false);
+        if (categoryDropdown != null && categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(false);
         if (noConsumablesLabel != null) noConsumablesLabel.gameObject.SetActive(false);
         if (hintLabel != null) hintLabel.gameObject.SetActive(false);
         if (potionRowObjects != null)
@@ -1241,20 +1249,22 @@ public class PixelUI : MonoBehaviour
     {
         float y = top;
 
-        // The Potions | Devices sub-tabs.
-        if (consumableSubTabObjects != null)
-        {
-            float tabHeight = subTabHeight * 0.85f;
-            for (int i = 0; i < consumableSubTabObjects.Length; i++)
-            {
-                consumableSubTabObjects[i].SetActive(true);
-                consumableSubTabObjects[i].GetComponent<RectTransform>().anchoredPosition =
-                    new Vector2(i == 0 ? panelPadding * 0.5f - 3f : -(panelPadding * 0.5f - 3f), -y);
-                consumableSubTabImages[i].color = i == consumableSubTab ? subTabActiveColor : subTabInactiveColor;
-            }
-            y += tabHeight + 8f;
-        }
         bool onDevices = consumableSubTab == 1;
+
+        // The hint comes first, so it is always in view.
+        bool anyOwned = false;
+        if (consumables != null)
+            for (int i = 0; i < consumables.ItemCount && !anyOwned; i++)
+                anyOwned = consumables.ItemOwned(i) > 0 && consumables.IsDevice(i) == onDevices;
+        hintLabel.text = onDevices ? deviceHint : potionHint;
+        bool showHint = anyOwned && !string.IsNullOrEmpty(hintLabel.text);
+        hintLabel.gameObject.SetActive(showHint);
+        if (showHint)
+        {
+            hintLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            hintLabel.rectTransform.sizeDelta = new Vector2(-panelPadding * 2f, hintFontSize * 1.5f);
+            y += hintFontSize * 1.5f + 6f;
+        }
 
         bool active = consumables != null && consumables.IsActive && !onDevices;
         activeLabel.gameObject.SetActive(active);
@@ -1293,14 +1303,6 @@ public class PixelUI : MonoBehaviour
             noConsumablesLabel.text = onDevices ? noDevicesText : noConsumablesText;
             noConsumablesLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
             y += LinePitch;
-        }
-
-        bool showHint = shown > 0 && !string.IsNullOrEmpty(consumableHint);
-        hintLabel.gameObject.SetActive(showHint);
-        if (showHint)
-        {
-            hintLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
-            y += hintFontSize * 1.5f;
         }
 
         return y;
