@@ -24,6 +24,9 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     private float shrinkSeconds;
     private bool dying;
 
+    /// <summary>Which entry of the consumables' device list this is (set when it is placed; used by the save system).</summary>
+    public int DeviceIndex { get; set; } = -1;
+
     /// <summary>Seconds left.</summary>
     public float Remaining => remaining;
 

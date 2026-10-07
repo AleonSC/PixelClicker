@@ -23,15 +23,24 @@ public class PixelSorterDevice : PixelPlacedDevice
     private int force = 1;
 
     /// <summary>Called by the consumables script after it built the sorter.</summary>
+    /// <summary>Where the pipe points (degrees around the ring, 0 = right on screen).</summary>
+    public float AimDegrees => aimDegrees;
+
+    /// <summary>How far the pipe is bent (degrees).</summary>
+    public float BendDegrees => bendDegrees;
+
+    /// <summary>Which force button is selected (0 = the first).</summary>
+    public int Force => force;
+
     public void Init(PixelClicker owner, Camera camera, Parts builtParts, PixelConsumables.Device device, TextMeshPro timer,
-                     string format, float aim, float bend, float shrinkTime)
+                     string format, float duration, float aim, float bend, int startForce, float shrinkTime)
     {
-        InitCommon(owner, camera, timer, format, device.durationSeconds, shrinkTime);
+        InitCommon(owner, camera, timer, format, duration, shrinkTime);
         parts = builtParts;
         settings = device;
         aimDegrees = aim;
         bendDegrees = bend;
-        force = Mathf.Clamp(device.sorterDefaultForce, 0, Forces(device).Length - 1);
+        force = Mathf.Clamp(startForce < 0 ? device.sorterDefaultForce : startForce, 0, Forces(device).Length - 1);
         parts.Apply(aim, bend, false, force);
         Current = this;
     }

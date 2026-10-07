@@ -90,6 +90,11 @@ public class PixelSaveGame : MonoBehaviour
         public double statPlaySeconds;
         public double statPixelsSpent;
         public PixelStats.ExtraData statExtra;
+        public bool hasActivePotion;
+        public int activePotionType;
+        public int activePotionSecond;   // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
+        public float activePotionRemaining;
+        public PixelConsumables.PlacedState[] placedDevices;
         public bool autoClickerRunning;
         public bool autoClickerDisabled; // switched off by the player (Toggles window)
         public bool grabDisabled;
@@ -338,6 +343,16 @@ public class PixelSaveGame : MonoBehaviour
                     };
             }
 
+            if (consumables != null && consumables.IsActive)
+            {
+                PixelConsumables.Potion running = consumables.Get(consumables.ActiveIndex);
+                data.hasActivePotion = true;
+                data.activePotionType = (int)running.type;
+                data.activePotionSecond = running.craftOnly ? (int)running.secondType + 1 : 0;
+                data.activePotionRemaining = consumables.Remaining;
+            }
+            if (consumables != null) data.placedDevices = consumables.GetPlacedDevices().ToArray();
+
             // Every minigame with a goal counter saves its count under its id.
             System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
             foreach (PixelMinigame m in PixelMinigame.All)
@@ -491,6 +506,26 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             clicker.FinishLoad();
+
+            // The running potion and the devices in the world (after FinishLoad, which resets the spawn choice).
+            if (consumables != null)
+            {
+                consumables.ClearPlacedDevices();
+                if (data.placedDevices != null)
+                    foreach (PixelConsumables.PlacedState placed in data.placedDevices) consumables.RestorePlacedDevice(placed);
+
+                if (data.hasActivePotion)
+                {
+                    for (int i = 0; i < consumables.Count; i++)
+                    {
+                        PixelConsumables.Potion potion = consumables.Get(i);
+                        int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
+                        if ((int)potion.type != data.activePotionType || second != data.activePotionSecond) continue;
+                        consumables.RestoreActive(i, data.activePotionRemaining);
+                        break;
+                    }
+                }
+            }
 
             if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
             if (showMessage) ShowMessage("Game loaded");

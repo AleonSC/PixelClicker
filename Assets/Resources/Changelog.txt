@@ -4,3 +4,4 @@
 [2026-10-06 22:50 UTC] The Inventory now has a header like the Pixel Log: a centred title with a close (X) button above the Currency and Consumables tabs (new Show Header settings replace the old title ones).
 [2026-10-06 23:02 UTC] Fixed the Inventory's close button showing an empty box: the X and the title now use their own white Header Text Color.
 [2026-10-06 23:03 UTC] Moved the achievement popup to the right side of the screen (vertically centred; Popup Right Margin setting).
+[2026-10-07 00:08 UTC] The running potion and every placed device (vacuum, fan, sorter, with its aim, bend and force setting) are now saved and come back with the time they had left when you load or restart the game.

@@ -912,22 +912,7 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         d.owned = Mathf.Max(0, d.owned - 1);
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, false, 1f);
-
-        GameObject tg = new GameObject("Timer");
-        tg.transform.SetParent(parts.Root.transform, false);
-        tg.transform.localPosition = new Vector3(0f, parts.Outer + timerHeightAbove, 0f);
-        TextMeshPro timer = tg.AddComponent<TextMeshPro>();
-        timer.text = string.Format(timerFormat, Mathf.CeilToInt(d.durationSeconds));
-        timer.fontSize = timerFontSize;
-        timer.fontStyle = FontStyles.Bold;
-        timer.alignment = TextAlignmentOptions.Center;
-        timer.color = timerColor;
-        if (clicker.UIFont != null) timer.font = clicker.UIFont;
-
-        PixelSorterDevice sorter = parts.Root.AddComponent<PixelSorterDevice>();
-        sorter.Init(clicker, cam, parts, d, timer, timerFormat, placingYaw, sorterBend, shrinkSeconds);
+        SpawnDevice(index, Vector3.zero, 0f, d.durationSeconds, placingYaw, sorterBend, -1);
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -940,15 +925,48 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         d.owned = Mathf.Max(0, d.owned - 1);
 
+        SpawnDevice(index, point, placingYaw, d.durationSeconds, 0f, 0f, -1);
+
+        EndPlacement();
+        DevicePlaced?.Invoke(d.kind);
+        onDevicePlaced?.Invoke(index);
+    }
+
+    /// <summary>Builds a working device in the world (placing it, or restoring it from a save).</summary>
+    private PixelPlacedDevice SpawnDevice(int index, Vector3 point, float yaw, float duration, float aim, float bend, int force)
+    {
+        Device d = devices[index];
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        PixelPlacedDevice result;
+
         if (d.kind == DeviceKind.Fan)
         {
             GameObject fan = BuildFanObject(d, false, out Transform blades, out TextMeshPro fanTimer);
-            fan.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, placingYaw, 0f));
+            fan.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
 
             PixelFanDevice fanDevice = fan.AddComponent<PixelFanDevice>();
-            fanDevice.Init(clicker, cam, blades, fanTimer, timerFormat, d.durationSeconds, d.radius, d.coneAngle,
+            fanDevice.Init(clicker, cam, blades, fanTimer, timerFormat, duration, d.radius, d.coneAngle,
                            d.coneHeight, d.blowAcceleration, d.liftAcceleration, d.bladeSpinDegrees, shrinkSeconds);
+            result = fanDevice;
+        }
+        else if (d.kind == DeviceKind.Sorter)
+        {
+            PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, false, 1f);
+
+            GameObject tg = new GameObject("Timer");
+            tg.transform.SetParent(parts.Root.transform, false);
+            tg.transform.localPosition = new Vector3(0f, parts.Outer + timerHeightAbove, 0f);
+            TextMeshPro timer = tg.AddComponent<TextMeshPro>();
+            timer.text = string.Format(timerFormat, Mathf.CeilToInt(duration));
+            timer.fontSize = timerFontSize;
+            timer.fontStyle = FontStyles.Bold;
+            timer.alignment = TextAlignmentOptions.Center;
+            timer.color = timerColor;
+            if (clicker.UIFont != null) timer.font = clicker.UIFont;
+
+            PixelSorterDevice sorter = parts.Root.AddComponent<PixelSorterDevice>();
+            sorter.Init(clicker, cam, parts, d, timer, timerFormat, duration, aim, bend, force, shrinkSeconds);
+            result = sorter;
         }
         else
         {
@@ -956,13 +974,82 @@ public class PixelConsumables : MonoBehaviour
             root.transform.position = point;
 
             PixelVacuumDevice device = root.AddComponent<PixelVacuumDevice>();
-            device.Init(clicker, cam, suckPoint, timer, timerFormat, d.durationSeconds, d.radius, d.pullAcceleration,
+            device.Init(clicker, cam, suckPoint, timer, timerFormat, duration, d.radius, d.pullAcceleration,
                         d.absorbDistance, shrinkSeconds);
+            result = device;
         }
 
-        EndPlacement();
-        DevicePlaced?.Invoke(d.kind);
-        onDevicePlaced?.Invoke(index);
+        result.DeviceIndex = index;
+        return result;
+    }
+
+    // ------------------------------------------------------------------
+    // Saving: the running potion and the devices standing in the world
+    // ------------------------------------------------------------------
+
+    /// <summary>A placed device as the save system stores it.</summary>
+    [Serializable]
+    public class PlacedState
+    {
+        public string device;
+        public Vector3 position;
+        public float yaw;
+        public float remaining;
+        public float aim;
+        public float bend;
+        public int force;
+    }
+
+    /// <summary>The devices currently standing in the world (those not already shrinking away).</summary>
+    public System.Collections.Generic.List<PlacedState> GetPlacedDevices()
+    {
+        System.Collections.Generic.List<PlacedState> list = new System.Collections.Generic.List<PlacedState>();
+        foreach (PixelPlacedDevice placed in PixelPlacedDevice.All)
+        {
+            if (placed == null || placed.IsRemoving || placed.DeviceIndex < 0 || placed.DeviceIndex >= devices.Length) continue;
+            PlacedState state = new PlacedState
+            {
+                device = devices[placed.DeviceIndex].displayName,
+                position = placed.transform.position,
+                yaw = placed.transform.eulerAngles.y,
+                remaining = placed.Remaining,
+            };
+            if (placed is PixelSorterDevice sorter)
+            {
+                state.aim = sorter.AimDegrees;
+                state.bend = sorter.BendDegrees;
+                state.force = sorter.Force;
+            }
+            list.Add(state);
+        }
+        return list;
+    }
+
+    /// <summary>Removes every placed device at once (before a save is loaded).</summary>
+    public void ClearPlacedDevices()
+    {
+        foreach (PixelPlacedDevice placed in new System.Collections.Generic.List<PixelPlacedDevice>(PixelPlacedDevice.All))
+            if (placed != null) Destroy(placed.gameObject);
+    }
+
+    /// <summary>Puts a saved device back in the world with the time it had left.</summary>
+    public void RestorePlacedDevice(PlacedState state)
+    {
+        if (state == null || state.remaining <= 0f) return;
+        int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
+        if (index < 0) return;
+        SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
+    }
+
+    /// <summary>Starts a potion again with the time it had left (no sound, nothing used up). Used when loading a save.</summary>
+    public void RestoreActive(int index, float secondsLeft)
+    {
+        if (index < 0 || index >= potions.Length || secondsLeft <= 0f) return;
+        Potion potion = potions[index];
+        activeIndex = index;
+        remaining = secondsLeft;
+        if (potion.craftOnly) clicker.SetForcedSpawnTiers(potion.type, potion.secondType);
+        else clicker.SetForcedSpawnTier(potion.type);
     }
 
     /// <summary>The floor point under the mouse: the first suitable collider hit, else the fallback plane.</summary>
