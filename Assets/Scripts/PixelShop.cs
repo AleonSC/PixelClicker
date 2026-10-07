@@ -1058,7 +1058,7 @@ public partial class PixelShop : MonoBehaviour
             if (clicker.IsValidTierIndex(tierIndex))
             {
                 string boostLine = "Ultra boost bought: " + clicker.Tiers[tierIndex].displayName + " level " + clicker.Tiers[tierIndex].ultraLevel + "!";
-                PixelHints.Announce(boostLine, () => PixelNotice.Show(boostLine));
+                PixelHints.Announce(boostLine, boostLine);
             }
             PixelHints.Trigger("upgrade_ultra");
         }
@@ -1167,7 +1167,7 @@ public partial class PixelShop : MonoBehaviour
             {
                 autoClicker.UserDisabled = true;
                 PixelToggles.ShowHint();
-                PixelHints.Announce("You unlocked the Auto Clicker!", () => PixelToggles.ShowHint());
+                PixelHints.Announce("You unlocked the Auto Clicker!", PixelToggles.HintMessage);
             }
         }
 
@@ -1182,7 +1182,7 @@ public partial class PixelShop : MonoBehaviour
     private void AnnouncePurchase(ShopPack pack, string line)
     {
         string info = "<b>" + pack.displayName + "</b>\n" + ResolveDescription(pack);
-        PixelHints.Announce(line, () => PixelNotice.Show(info));
+        PixelHints.Announce(line, info);
     }
 
     private void PlayPurchaseSound()

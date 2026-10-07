@@ -102,6 +102,8 @@ public class PixelSaveGame : MonoBehaviour
         public bool autoClickerDisabled; // switched off by the player (Toggles window)
         public bool grabDisabled;
         public bool timeStopDisabled;
+        public string[] eventTexts;
+        public string[] eventFulls;
         public float autoClickerInterval;
         public int autoClickerClicks;
     }
@@ -386,6 +388,7 @@ public class PixelSaveGame : MonoBehaviour
 
             if (grab != null) data.grabDisabled = grab.UserDisabled;
             if (timeStop != null) data.timeStopDisabled = timeStop.UserDisabled;
+            PixelHints.ExportHistory(out data.eventTexts, out data.eventFulls);
 
             // Write to a temp file first so a crash mid-write can't destroy the old save.
             string path = FilePath;
@@ -425,6 +428,8 @@ public class PixelSaveGame : MonoBehaviour
             return false;
         }
 
+        PixelHints.SuppressFor(2f); // loading re-fires unlocks; they are not new events
+
         try
         {
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(FilePath));
@@ -459,6 +464,7 @@ public class PixelSaveGame : MonoBehaviour
 
             if (grab != null) grab.UserDisabled = data.grabDisabled;
             if (timeStop != null) timeStop.UserDisabled = data.timeStopDisabled;
+            PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
 
             // Potions.
             if (consumables != null)

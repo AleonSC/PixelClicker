@@ -165,6 +165,9 @@ public class PixelToggles : MonoBehaviour
         instance = this;
     }
 
+    /// <summary>The Auto Clicker hint text (for the event log).</summary>
+    public static string HintMessage => instance != null ? instance.hintText : null;
+
     /// <summary>
     /// Shows the hint box next to the Toggles tab (which slides out to point at it). With no text, the box's own message is used.
     /// Closing it, or opening the Toggles window, dismisses it.

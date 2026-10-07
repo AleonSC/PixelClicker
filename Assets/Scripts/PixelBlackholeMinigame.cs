@@ -489,7 +489,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
         string hintMessage = string.Format(firstHoleHint, PixelClicker.FormatNumber(singularityThreshold));
         PixelNotice.Show(hintMessage);
-        PixelHints.Announce("A black hole opened!", () => PixelNotice.Show(hintMessage));
+        PixelHints.Announce("A black hole opened!", hintMessage);
     }
 
     private void RegisterContribution()

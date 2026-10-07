@@ -71,10 +71,24 @@ public class PixelHints : MonoBehaviour
     [SerializeField] private Color overlayTextColor = new Color(1f, 0.95f, 0.7f, 1f);
 
     [Tooltip("Background colour behind the overlay line.")]
-    [SerializeField] private Color overlayBackColor = new Color(0f, 0f, 0f, 0.55f);
+    [SerializeField] private Color overlayBackColor = new Color(0f, 0f, 0f, 0.3f);
 
     [Tooltip("Distance from the left edge and from the black bar (canvas units).")]
     [SerializeField] private Vector2 overlayMargin = new Vector2(24f, 16f);
+
+    [Min(100f)]
+    [Tooltip("Width of the event log box (canvas units). Its height runs from above the bottom black bar up to the top black bar.")]
+    [SerializeField] private float overlayWidth = 640f;
+
+    [Tooltip("Background colour of each line.")]
+    [SerializeField] private Color overlayRowColor = new Color(0.1f, 0.18f, 0.28f, 0.8f);
+
+    [Tooltip("Pixels the box scrolls per mouse-wheel notch.")]
+    [SerializeField] private float overlayScrollSpeed = 70f;
+
+    [Min(1)]
+    [Tooltip("How many events the log keeps (saved with the save file).")]
+    [SerializeField] private int historyMax = 100;
 
     [Tooltip("Small hint appended to the line, telling the player how to open it.")]
     [SerializeField] private string overlayHintSuffix = "  <size=70%><color=#9fb7c9>(click or press Enter)</color></size>";
@@ -276,86 +290,210 @@ public class PixelHints : MonoBehaviour
         if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
         MarkSeen(id);
         string full = hint.text;
-        Announce(hint.shortText, () => PixelNotice.Show(full, autoCloseSeconds));
+        Announce(hint.shortText, full);
         if (!autoOpenTips) return;
         queue.Enqueue(hint);
         if (waitTimer <= 0f && !PixelNotice.IsShowing) waitTimer = showDelay;
     }
 
     // ------------------------------------------------------------------
-    // The overlay line
+    // The event log (bottom-left box)
     // ------------------------------------------------------------------
 
-    private string lastShort;
-    private Action lastOpen;
-    private float overlayTimer;
-    private GameObject overlayRoot;
-    private CanvasGroup overlayGroup;
-    private TMP_Text overlayLabel;
-
-    /// <summary>
-    /// Shows a short line at the bottom left ("You unlocked the Auto Clicker!"). Clicking it or pressing Enter runs 'open'
-    /// (usually reopening the full tip). Ignored right after the game starts.
-    /// </summary>
-    public static void Announce(string shortText, Action open = null)
+    /// <summary>One line of the event log.</summary>
+    public class Entry
     {
-        if (instance != null) instance.ShowOverlay(shortText, open);
+        public string text;
+        public string full; // the tip shown when the line is clicked (may be empty)
     }
 
-    private void ShowOverlay(string shortText, Action open)
+    private readonly List<Entry> history = new List<Entry>();
+    private float overlayTimer;
+    private float scrollOffset;       // pixels scrolled up from the newest line
+    private float suppressUntil;
+    private bool rowsDirty;
+    private GameObject overlayRoot;
+    private CanvasGroup overlayGroup;
+    private RectTransform boxRect, listRect, handleRect;
+    private TMP_FontAsset overlayFont;
+    private float contentHeight, viewHeight;
+
+    /// <summary>
+    /// Adds a short line to the event log at the bottom left ("You unlocked the Auto Clicker!") and shows the box.
+    /// Clicking the line (or Enter for the newest) shows 'fullText' in the tip box. Ignored right after the game starts or loads.
+    /// </summary>
+    public static void Announce(string shortText, string fullText = null)
     {
-        if (!hintsEnabled || !showOverlay || string.IsNullOrEmpty(shortText)) return;
-        if (Time.realtimeSinceStartup < startupQuietSeconds) return;
-        lastShort = shortText;
-        lastOpen = open;
-        DisplayOverlay();
+        if (instance != null) instance.ShowOverlay(shortText, fullText);
+    }
+
+    /// <summary>Ignores announcements for a moment (loading a save re-fires unlocks).</summary>
+    public static void SuppressFor(float seconds)
+    {
+        if (instance != null) instance.suppressUntil = Time.realtimeSinceStartup + seconds;
+    }
+
+    /// <summary>The log of the current save, for the save file.</summary>
+    public static void ExportHistory(out string[] texts, out string[] fulls)
+    {
+        List<Entry> list = instance != null ? instance.history : new List<Entry>();
+        texts = new string[list.Count];
+        fulls = new string[list.Count];
+        for (int i = 0; i < list.Count; i++) { texts[i] = list[i].text; fulls[i] = list[i].full ?? ""; }
+    }
+
+    /// <summary>Replaces the log with the one from a save file (no box is shown).</summary>
+    public static void ImportHistory(string[] texts, string[] fulls)
+    {
+        if (instance == null) return;
+        instance.history.Clear();
+        if (texts != null)
+        {
+            for (int i = 0; i < texts.Length; i++)
+                instance.history.Add(new Entry { text = texts[i], full = fulls != null && i < fulls.Length ? fulls[i] : "" });
+        }
+        instance.TrimHistory();
+        instance.rowsDirty = true;
+        instance.scrollOffset = 0f;
+        instance.overlayTimer = 0f;
+        if (instance.overlayRoot != null) instance.overlayRoot.SetActive(false);
+    }
+
+    private void TrimHistory()
+    {
+        while (history.Count > historyMax) history.RemoveAt(0);
+    }
+
+    private void ShowOverlay(string shortText, string fullText)
+    {
+        if (!hintsEnabled || string.IsNullOrEmpty(shortText)) return;
+        if (Time.realtimeSinceStartup < startupQuietSeconds || Time.realtimeSinceStartup < suppressUntil) return;
+        history.Add(new Entry { text = shortText, full = fullText ?? "" });
+        TrimHistory();
+        rowsDirty = true;
+        scrollOffset = 0f;
+        if (showOverlay) DisplayOverlay();
     }
 
     private void DisplayOverlay()
     {
-        if (string.IsNullOrEmpty(lastShort)) return;
+        if (history.Count == 0) return;
         if (overlayRoot == null) BuildOverlay();
-        overlayLabel.text = lastShort + (lastOpen != null ? overlayHintSuffix : "");
-        Vector2 size = overlayLabel.GetPreferredValues(overlayLabel.text, 1200f, 0f);
-        RectTransform back = (RectTransform)overlayLabel.transform.parent;
-        back.sizeDelta = new Vector2(Mathf.Ceil(size.x) + 36f, Mathf.Ceil(size.y) + 16f);
         overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
         overlayGroup.alpha = 1f;
         overlayRoot.SetActive(true);
+        RebuildRows();
     }
 
     private void BuildOverlay()
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
-        TMP_FontAsset font = clicker != null ? clicker.UIFont : null;
+        overlayFont = clicker != null ? clicker.UIFont : null;
         PixelUIKit.EnsureEventSystem();
-        overlayRoot = PixelUIKit.CreateCanvas("Pixel Event Line", 90, new Vector2(1920f, 1080f), true);
+        overlayRoot = PixelUIKit.CreateCanvas("Pixel Event Log", 90, new Vector2(1920f, 1080f), true);
         overlayRoot.transform.SetParent(transform, false);
         overlayGroup = overlayRoot.AddComponent<CanvasGroup>();
 
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        GameObject back = new GameObject("Back", typeof(RectTransform), typeof(Image), typeof(Button));
-        back.transform.SetParent(overlayRoot.transform, false);
-        Image img = back.GetComponent<Image>();
+        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
+        box.transform.SetParent(overlayRoot.transform, false);
+        Image img = box.GetComponent<Image>();
         img.color = overlayBackColor;
-        RectTransform br = (RectTransform)back.transform;
-        br.anchorMin = br.anchorMax = br.pivot = Vector2.zero;
-        br.anchoredPosition = new Vector2(overlayMargin.x, bar + overlayMargin.y);
-        back.GetComponent<Button>().onClick.AddListener(OpenLatest);
+        img.raycastTarget = false; // empty space in the box never blocks clicks
+        boxRect = box.GetComponent<RectTransform>();
+        boxRect.anchorMin = new Vector2(0f, 0f);
+        boxRect.anchorMax = new Vector2(0f, 1f);
+        boxRect.pivot = new Vector2(0f, 0.5f);
+        boxRect.offsetMin = new Vector2(overlayMargin.x, bar + overlayMargin.y);
+        boxRect.offsetMax = new Vector2(overlayMargin.x + overlayWidth, -(bar + overlayMargin.y));
 
-        overlayLabel = PixelUIKit.CreateText(font, back.transform, "Text", "", overlayFontSize, TextAlignmentOptions.Left, FontStyles.Bold, overlayTextColor);
-        overlayLabel.raycastTarget = false;
-        overlayLabel.overflowMode = TextOverflowModes.Overflow;
-        RectTransform lr = overlayLabel.rectTransform;
-        lr.anchorMin = Vector2.zero;
-        lr.anchorMax = Vector2.one;
-        lr.offsetMin = new Vector2(18f, 4f);
-        lr.offsetMax = new Vector2(-18f, -4f);
+        GameObject list = new GameObject("List", typeof(RectTransform));
+        list.transform.SetParent(box.transform, false);
+        listRect = list.GetComponent<RectTransform>();
+        listRect.anchorMin = new Vector2(0f, 0f);
+        listRect.anchorMax = new Vector2(1f, 0f);
+        listRect.pivot = new Vector2(0.5f, 0f);
+        listRect.anchoredPosition = Vector2.zero;
+        listRect.sizeDelta = Vector2.zero;
+
+        GameObject handle = new GameObject("Scroll Handle", typeof(RectTransform), typeof(Image));
+        handle.transform.SetParent(box.transform, false);
+        handle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.35f);
+        handle.GetComponent<Image>().raycastTarget = false;
+        handleRect = handle.GetComponent<RectTransform>();
+        handleRect.anchorMin = new Vector2(1f, 0f);
+        handleRect.anchorMax = new Vector2(1f, 0f);
+        handleRect.pivot = new Vector2(1f, 0f);
+        handleRect.sizeDelta = new Vector2(6f, 40f);
+        handleRect.anchoredPosition = new Vector2(-3f, 0f);
     }
 
-    private void OpenLatest()
+    private void RebuildRows()
     {
-        if (lastOpen != null) lastOpen();
+        rowsDirty = false;
+        if (listRect == null) return;
+        for (int i = listRect.childCount - 1; i >= 0; i--) Destroy(listRect.GetChild(i).gameObject);
+
+        float width = overlayWidth - 40f;
+        float y = 8f;
+        for (int i = history.Count - 1; i >= 0; i--) // newest at the bottom
+        {
+            Entry entry = history[i];
+            bool newest = i == history.Count - 1;
+            string text = entry.text + (newest && !string.IsNullOrEmpty(entry.full) ? overlayHintSuffix : "");
+
+            GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button));
+            row.transform.SetParent(listRect, false);
+            row.GetComponent<Image>().color = overlayRowColor;
+            RectTransform rr = row.GetComponent<RectTransform>();
+            rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 0f);
+
+            TMP_Text label = PixelUIKit.CreateText(overlayFont, row.transform, "Text", text, overlayFontSize,
+                                                   TextAlignmentOptions.TopLeft, FontStyles.Bold, overlayTextColor);
+            label.overflowMode = TextOverflowModes.Overflow;
+            float h = Mathf.Ceil(label.GetPreferredValues(text, width, 0f).y) + 12f;
+            RectTransform lr = label.rectTransform;
+            lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+            lr.offsetMin = new Vector2(10f, 6f); lr.offsetMax = new Vector2(-10f, -6f);
+
+            rr.sizeDelta = new Vector2(width, h);
+            rr.anchoredPosition = new Vector2(8f, y);
+            y += h + 6f;
+
+            string full = entry.full;
+            Button b = row.GetComponent<Button>();
+            if (!string.IsNullOrEmpty(full)) b.onClick.AddListener(() => PixelNotice.Show(full, autoCloseSeconds));
+            else b.interactable = false;
+        }
+
+        contentHeight = y + 4f;
+        listRect.sizeDelta = new Vector2(0f, contentHeight);
+        ApplyScroll();
+    }
+
+    private void ApplyScroll()
+    {
+        if (boxRect == null) return;
+        viewHeight = boxRect.rect.height;
+        float max = Mathf.Max(0f, contentHeight - viewHeight);
+        scrollOffset = Mathf.Clamp(scrollOffset, 0f, max);
+        listRect.anchoredPosition = new Vector2(0f, scrollOffset);
+
+        bool scrolls = max > 0.5f;
+        if (handleRect.gameObject.activeSelf != scrolls) handleRect.gameObject.SetActive(scrolls);
+        if (scrolls)
+        {
+            float handleH = Mathf.Max(30f, viewHeight * viewHeight / contentHeight);
+            handleRect.sizeDelta = new Vector2(6f, handleH);
+            handleRect.anchoredPosition = new Vector2(-3f, (viewHeight - handleH) * (scrollOffset / max));
+        }
+    }
+
+    private void OpenNewest()
+    {
+        if (history.Count == 0) return;
+        string full = history[history.Count - 1].full;
+        if (!string.IsNullOrEmpty(full)) PixelNotice.Show(full, autoCloseSeconds);
         overlayTimer = 0f;
         if (overlayRoot != null) overlayRoot.SetActive(false);
     }
@@ -370,9 +508,18 @@ public class PixelHints : MonoBehaviour
 #endif
     }
 
+    private static float ScrollWheel()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.scroll.ReadValue().y / 120f : 0f;
+#else
+        return Input.mouseScrollDelta.y;
+#endif
+    }
+
     private void UpdateOverlay()
     {
-        if (PixelPauseMenu.IsPaused || string.IsNullOrEmpty(lastShort)) return;
+        if (PixelPauseMenu.IsPaused || history.Count == 0) return;
 
         // Don't steal Enter from a text box.
         UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
@@ -381,12 +528,23 @@ public class PixelHints : MonoBehaviour
         bool visible = overlayRoot != null && overlayRoot.activeSelf;
         if (!typing && ReopenKeyPressed())
         {
-            if (visible && lastOpen != null) OpenLatest();
-            else DisplayOverlay();
+            if (visible) OpenNewest();
+            else { scrollOffset = 0f; DisplayOverlay(); }
             return;
         }
 
         if (!visible) return;
+        if (rowsDirty) RebuildRows();
+
+        // Hovering the box keeps it open and the mouse wheel scrolls it.
+        bool hover = RectTransformUtility.RectangleContainsScreenPoint(boxRect, PixelInput.PointerPosition(), null);
+        if (hover)
+        {
+            float wheel = ScrollWheel();
+            if (Mathf.Abs(wheel) > 0.001f) { scrollOffset += wheel * overlayScrollSpeed; ApplyScroll(); }
+            overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
+        }
+
         overlayTimer -= Time.unscaledDeltaTime;
         overlayGroup.alpha = overlayFadeSeconds > 0f ? Mathf.Clamp01(overlayTimer / overlayFadeSeconds) : (overlayTimer > 0f ? 1f : 0f);
         overlayGroup.blocksRaycasts = overlayGroup.alpha > 0.3f;
@@ -403,7 +561,7 @@ public class PixelHints : MonoBehaviour
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null || !clicker.IsValidTierIndex(index)) return;
-        ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", null);
+        ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", "");
     }
 
     private void Update()
