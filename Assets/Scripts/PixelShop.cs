@@ -1085,6 +1085,11 @@ public partial class PixelShop : MonoBehaviour
 
             pack.purchased = true;
             ApplyPackEffects(pack);
+
+            if (pack.unlocksCrafting) PixelHints.Trigger("crafting");
+            if (pack.unlocksGrabbing) PixelHints.Trigger("grab");
+            if (pack.unlocksTimeStop) PixelHints.Trigger("timestop");
+            if (pack.unlocksBank) PixelHints.Trigger("bank");
             onPackPurchased?.Invoke(i);
         }
         RefreshRows();

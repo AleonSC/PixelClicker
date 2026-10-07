@@ -597,6 +597,9 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Raised when an old pixel hits the floor (or any surface). Passes how hard, 0..1. Used by the sound system.</summary>
     public static event System.Action<float> OldPixelLanded;
 
+    /// <summary>Raised whenever Ultra pixels are given (first-time tips).</summary>
+    public static event System.Action UltraGained;
+
     internal static void RaiseOldPixelLanded(float intensity) => OldPixelLanded?.Invoke(intensity);
 
     /// <summary>While true (the Pixel Grabbing upgrade), a click on an old pixel is caught by it instead of passing through to the cube.</summary>
@@ -624,6 +627,7 @@ public class PixelClicker : MonoBehaviour
 
     private void Awake()
     {
+        if (PixelFind.First<PixelHints>() == null) gameObject.AddComponent<PixelHints>(); // first-time tips
         if (PixelFind.First<PixelCrashLog>() == null) gameObject.AddComponent<PixelCrashLog>(); // writes error / crash reports
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (pixelTransform == null) pixelTransform = transform;
@@ -835,6 +839,7 @@ public class PixelClicker : MonoBehaviour
         ultraEarned += amount;
         tiers[tierIndex].ultraCount += amount;
         NotifyChanged();
+        UltraGained?.Invoke();
     }
 
     /// <summary>How much each Ultra boost level adds to a pixel type's payout multiplier.</summary>

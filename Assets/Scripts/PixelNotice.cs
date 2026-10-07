@@ -18,6 +18,9 @@ public static class PixelNotice
         box.Open(message, seconds);
     }
 
+    /// <summary>Is a tip box on screen right now?</summary>
+    public static bool IsShowing => box != null && box.IsOpen;
+
     /// <summary>Closes the box if it is showing.</summary>
     public static void Hide()
     {
@@ -80,6 +83,8 @@ public class PixelNoticeBox : MonoBehaviour
         timed = seconds > 0f;
         timer = seconds;
     }
+
+    public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf;
 
     public void Close()
     {
