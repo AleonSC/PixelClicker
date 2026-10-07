@@ -359,9 +359,6 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Only list a potion once its pixel type is unlocked (or you already own some).")]
     [SerializeField] private bool potionsNeedUnlockedPixel = true;
 
-    [Tooltip("Shown after the potion name. {0} = how many you own.")]
-    [SerializeField] private string potionOwnedFormat = "Owned: {0}";
-
     [Header("Minigame Trackers (Minigames tab)")]
     [Tooltip("Show each minigame's tracker row (e.g. Singularity, Ghosts Caught) in the Minigames tab once the minigame is running or has progress. Titles and descriptions are set on the minigame components.")]
     [SerializeField] private bool showMinigameTrackers = true;
