@@ -816,10 +816,19 @@ public class PixelClicker : MonoBehaviour
         return taken;
     }
 
+    private long ultraEarned;
+
+    /// <summary>Ultra pixels ever earned (spending them on boosts does not lower this). The Ultra Pad's goal counter uses it.</summary>
+    public long UltraEarned => ultraEarned;
+
+    /// <summary>Restores the lifetime Ultra count when loading a save (never below what you currently hold).</summary>
+    public void SetUltraEarned(long value) => ultraEarned = System.Math.Max(System.Math.Max(0L, value), TotalUltra);
+
     /// <summary>Gives Ultra versions of a pixel type.</summary>
     public void AddUltra(int tierIndex, long amount)
     {
         if (!IsValidTier(tierIndex) || amount <= 0) return;
+        ultraEarned += amount;
         tiers[tierIndex].ultraCount += amount;
         NotifyChanged();
     }

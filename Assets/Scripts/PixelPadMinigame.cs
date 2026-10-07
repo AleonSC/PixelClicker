@@ -151,11 +151,12 @@ public class PixelPadMinigame : PixelMinigame
     public override string DisplayName => "Ultra Pad";
     public override bool Running => running;
 
-    // --- Tracker: the total of Ultra pixels (the real counts live on the pixel types and are saved with them) ---
+    // --- Tracker: Ultra pixels ever earned (spending them on boosts does not lower it; what you currently hold lives on the pixel types) ---
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
-    public override double TrackerCount => clicker != null ? clicker.TotalUltra : 0d;
+    public override double TrackerCount => clicker != null ? clicker.UltraEarned : 0d;
+    public override void SetTrackerCount(double value) { if (clicker != null) clicker.SetUltraEarned((long)System.Math.Floor(value)); }
     public override double TrackerGoal => ultraGoal;
     public override string RequirementFormat => requirementFormat;
 
@@ -165,7 +166,7 @@ public class PixelPadMinigame : PixelMinigame
         get
         {
             PixelPadMinigame pad = Find("pad") as PixelPadMinigame;
-            return pad != null && (pad.running || (pad.clicker != null && pad.clicker.TotalUltra > 0));
+            return pad != null && (pad.running || (pad.clicker != null && pad.clicker.UltraEarned > 0));
         }
     }
 
