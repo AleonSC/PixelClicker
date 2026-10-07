@@ -102,6 +102,22 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Random wobble (degrees) of the direction a pixel is spat out.")]
     [SerializeField] private float spitSpread = 4f;
 
+    [Header("Nozzle Aim")]
+    [Tooltip("Flick to aim: moving the mouse quickly points the nozzle the way you are moving it, so you can shoot in any direction (including back toward the left edge). Off = the nozzle always points along the hose.")]
+    [SerializeField] private bool flickAim = true;
+
+    [Min(0.1f)]
+    [Tooltip("How fast (world units per second) the mouse has to move to count as a flick that aims the nozzle.")]
+    [SerializeField] private float flickMinSpeed = 2.5f;
+
+    [Min(0f)]
+    [Tooltip("How long (seconds) the nozzle keeps pointing the way you flicked after the mouse slows down, so you have time to click. Then it swings back along the hose.")]
+    [SerializeField] private float flickHoldSeconds = 0.6f;
+
+    [Min(1f)]
+    [Tooltip("How quickly the nozzle swings to its new aim (higher = snappier).")]
+    [SerializeField] private float aimSharpness = 14f;
+
     [Header("Area Suction (hold the right mouse button)")]
     [Min(0.05f)]
     [Tooltip("How long (seconds) you hold the right button before the hose switches from sucking up one pixel to sucking up an area.")]
@@ -256,6 +272,11 @@ public class PixelBank : MonoBehaviour
     private float kick;           // brief nozzle punch when spitting / sucking
     private float fullTimer;
     private string flashMessage = "";
+
+    // Nozzle aim
+    private Vector3 aimDirection, lastTip, tipVelocity, flickDirection;
+    private float lastFlickTime = -99f;
+    private bool aimReady;
 
     // Area suction
     private bool rightDown, areaActive, areaFinished;
@@ -456,6 +477,7 @@ public class PixelBank : MonoBehaviour
         if (!on) StopArea();
         if (hoseRoot != null) hoseRoot.SetActive(on);
         controlReady = false;
+        aimReady = false;
         PixelAudio.Play("hose_toggle");
         RefreshHoseButton();
     }
@@ -539,6 +561,21 @@ public class PixelBank : MonoBehaviour
         Vector3 tip = ray.origin + ray.direction * along;
         Vector3 anchor = cam.ViewportToWorldPoint(new Vector3(hoseAnchor.x, hoseAnchor.y, baseDepth));
 
+        // Nozzle aim: normally along the hose; a quick flick of the mouse points it the way you moved.
+        if (!aimReady) { aimDirection = cam.transform.right; lastTip = tip; tipVelocity = Vector3.zero; aimReady = true; }
+        Vector3 motion = tip - lastTip;
+        motion -= cam.transform.forward * Vector3.Dot(motion, cam.transform.forward); // only movement across the screen
+        tipVelocity = Vector3.Lerp(tipVelocity, motion / Mathf.Max(0.0001f, dt), 1f - Mathf.Exp(-18f * dt));
+        lastTip = tip;
+        if (flickAim && tipVelocity.magnitude > flickMinSpeed)
+        {
+            lastFlickTime = Time.unscaledTime;
+            flickDirection = tipVelocity.normalized;
+        }
+
+        // The hose ends where the nozzle's back end is, so the nozzle's mouth sits right at the cursor.
+        Vector3 hoseEnd = tip - aimDirection * (nozzleLength * 0.9f);
+
         // The hose's middle trails the ends and sags, so it bends and swings as the mouse moves.
         Vector3 wantedControl = (anchor + tip) * 0.5f - cam.transform.up * ((tip - anchor).magnitude * sag);
         if (!controlReady) { control = wantedControl; controlReady = true; }
@@ -548,7 +585,7 @@ public class PixelBank : MonoBehaviour
         for (int i = 0; i <= segments; i++)
         {
             float t = i / (float)segments;
-            hosePoints[i] = (1f - t) * (1f - t) * anchor + 2f * (1f - t) * t * control + t * t * tip;
+            hosePoints[i] = (1f - t) * (1f - t) * anchor + 2f * (1f - t) * t * control + t * t * hoseEnd;
         }
         hoseMesh = PixelTube.Build(hosePoints, hoseRadius, hoseSides, hoseMesh);
         hoseFilter.sharedMesh = hoseMesh;
@@ -556,6 +593,10 @@ public class PixelBank : MonoBehaviour
         // Nozzle: a short cylinder along the end of the hose; its open end is where pixels come out.
         Vector3 heading = (hosePoints[segments] - hosePoints[segments - 2]).normalized;
         if (heading.sqrMagnitude < 0.0001f) heading = cam.transform.right;
+        bool flicked = flickAim && Time.unscaledTime - lastFlickTime < flickHoldSeconds;
+        Vector3 wantedAim = flicked ? flickDirection : heading;
+        aimDirection = Vector3.Slerp(aimDirection, wantedAim, 1f - Mathf.Exp(-aimSharpness * dt)).normalized;
+        heading = aimDirection; // the nozzle and the spat-out pixels follow the aim
         kick = Mathf.MoveTowards(kick, 0f, dt * 4f);
         float punch = 1f + kick * 0.35f;
         nozzle.rotation = Quaternion.FromToRotation(Vector3.up, heading);

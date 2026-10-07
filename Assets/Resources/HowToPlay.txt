@@ -43,7 +43,7 @@ Switch any of them off in the Toggles window.
 <b>Time Stop</b> - press T to freeze everything, including timers. Press T again to resume.
 <b>Combo Meter</b> - quick clicks build a bonus multiplier.
 <b>Crafting</b> - combine two items to make potions and more.
-<b>Pixel Bank</b> - store old pixels and spit them back out. Press B for the hose. Click to suck up one pixel; hold the right button to suck up every old pixel of the selected type in a ring around the nozzle (with nothing selected, it takes the type of the pixel nearest the nozzle). Bank Storage upgrades raise how much it holds (they cost glass, vacuum pixels and bomb parts).
+<b>Pixel Bank</b> - store old pixels and spit them back out. Press B for the hose. The nozzle normally points along the hose, but a quick flick of the mouse aims it the way you moved, so you can shoot in any direction. Click to suck up one pixel; hold the right button to suck up every old pixel of the selected type in a ring around the nozzle (with nothing selected, it takes the type of the pixel nearest the nozzle). Bank Storage upgrades raise how much it holds (they cost glass, vacuum pixels and bomb parts).
 
 # Useful Windows
 <b>Inventory</b> (top left) - your pixels, and your potions and devices.
