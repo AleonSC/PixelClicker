@@ -61,11 +61,11 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Seconds the line takes to fade away.")]
     [SerializeField] private float overlayFadeSeconds = 1.2f;
 
-    [Tooltip("Key that reopens the latest event (shows the line; pressing it again while the line is visible opens its tip).")]
+    [Tooltip("Key that shows the event log (pressing it while the log is open fades it away).")]
     [SerializeField] private KeyCode reopenKey = KeyCode.Return;
 
     [Tooltip("Font size of the overlay line.")]
-    [SerializeField] private float overlayFontSize = 28f;
+    [SerializeField] private float logFontSize = 20f;
 
     [Tooltip("Text colour of the overlay line.")]
     [SerializeField] private Color overlayTextColor = new Color(1f, 0.95f, 0.7f, 1f);
@@ -78,7 +78,7 @@ public class PixelHints : MonoBehaviour
 
     [Min(100f)]
     [Tooltip("Width of the event log box (canvas units). Its height runs from above the bottom black bar up to the top black bar.")]
-    [SerializeField] private float overlayWidth = 640f;
+    [SerializeField] private float logWidth = 420f;
 
     [Tooltip("Background colour of each line.")]
     [SerializeField] private Color overlayRowColor = new Color(0.1f, 0.18f, 0.28f, 0.8f);
@@ -90,8 +90,6 @@ public class PixelHints : MonoBehaviour
     [Tooltip("How many events the log keeps (saved with the save file).")]
     [SerializeField] private int historyMax = 100;
 
-    [Tooltip("Small hint appended to the line, telling the player how to open it.")]
-    [SerializeField] private string overlayHintSuffix = "  <size=70%><color=#9fb7c9>(click or press Enter)</color></size>";
 
     [Tooltip("Add the built-in tips that are missing from the list below.")]
     [SerializeField] private bool addDefaultHints = true;
@@ -320,7 +318,7 @@ public class PixelHints : MonoBehaviour
 
     /// <summary>
     /// Adds a short line to the event log at the bottom left ("You unlocked the Auto Clicker!") and shows the box.
-    /// Clicking the line (or Enter for the newest) shows 'fullText' in the tip box. Ignored right after the game starts or loads.
+    /// Clicking the line shows 'fullText' in the tip box. Ignored right after the game starts or loads.
     /// </summary>
     public static void Announce(string shortText, string fullText = null)
     {
@@ -379,6 +377,7 @@ public class PixelHints : MonoBehaviour
     {
         if (history.Count == 0) return;
         if (overlayRoot == null) BuildOverlay();
+        forceFade = false;
         overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
         overlayGroup.alpha = 1f;
         overlayRoot.SetActive(true);
@@ -405,7 +404,7 @@ public class PixelHints : MonoBehaviour
         boxRect.anchorMax = new Vector2(0f, 1f);
         boxRect.pivot = new Vector2(0f, 0.5f);
         boxRect.offsetMin = new Vector2(overlayMargin.x, bar + overlayMargin.y);
-        boxRect.offsetMax = new Vector2(overlayMargin.x + overlayWidth, -(bar + overlayMargin.y));
+        boxRect.offsetMax = new Vector2(overlayMargin.x + logWidth, -(bar + overlayMargin.y));
 
         GameObject list = new GameObject("List", typeof(RectTransform));
         list.transform.SetParent(box.transform, false);
@@ -434,13 +433,12 @@ public class PixelHints : MonoBehaviour
         if (listRect == null) return;
         for (int i = listRect.childCount - 1; i >= 0; i--) Destroy(listRect.GetChild(i).gameObject);
 
-        float width = overlayWidth - 40f;
+        float width = logWidth - 40f;
         float y = 8f;
         for (int i = history.Count - 1; i >= 0; i--) // newest at the bottom
         {
             Entry entry = history[i];
-            bool newest = i == history.Count - 1;
-            string text = entry.text + (newest && !string.IsNullOrEmpty(entry.full) ? overlayHintSuffix : "");
+                        string text = entry.text;
 
             GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button));
             row.transform.SetParent(listRect, false);
@@ -448,7 +446,7 @@ public class PixelHints : MonoBehaviour
             RectTransform rr = row.GetComponent<RectTransform>();
             rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 0f);
 
-            TMP_Text label = PixelUIKit.CreateText(overlayFont, row.transform, "Text", text, overlayFontSize,
+            TMP_Text label = PixelUIKit.CreateText(overlayFont, row.transform, "Text", text, logFontSize,
                                                    TextAlignmentOptions.TopLeft, FontStyles.Bold, overlayTextColor);
             label.overflowMode = TextOverflowModes.Overflow;
             float h = Mathf.Ceil(label.GetPreferredValues(text, width, 0f).y) + 12f;
@@ -489,13 +487,13 @@ public class PixelHints : MonoBehaviour
         }
     }
 
-    private void OpenNewest()
+    private bool forceFade;
+
+    /// <summary>Makes the open log fade away now, even while the mouse is over it.</summary>
+    private void FadeNow()
     {
-        if (history.Count == 0) return;
-        string full = history[history.Count - 1].full;
-        if (!string.IsNullOrEmpty(full)) PixelNotice.Show(full, autoCloseSeconds);
-        overlayTimer = 0f;
-        if (overlayRoot != null) overlayRoot.SetActive(false);
+        forceFade = true;
+        overlayTimer = Mathf.Min(overlayTimer, overlayFadeSeconds);
     }
 
     private bool ReopenKeyPressed()
@@ -528,16 +526,17 @@ public class PixelHints : MonoBehaviour
         bool visible = overlayRoot != null && overlayRoot.activeSelf;
         if (!typing && ReopenKeyPressed())
         {
-            if (visible) OpenNewest();
+            if (visible) FadeNow();
             else { scrollOffset = 0f; DisplayOverlay(); }
             return;
         }
+        if (visible && PixelInput.RightPressed()) FadeNow(); // right-click anywhere closes the log
 
         if (!visible) return;
         if (rowsDirty) RebuildRows();
 
         // Hovering the box keeps it open and the mouse wheel scrolls it.
-        bool hover = RectTransformUtility.RectangleContainsScreenPoint(boxRect, PixelInput.PointerPosition(), null);
+        bool hover = !forceFade && RectTransformUtility.RectangleContainsScreenPoint(boxRect, PixelInput.PointerPosition(), null);
         if (hover)
         {
             float wheel = ScrollWheel();
