@@ -6,7 +6,7 @@ Written 2026-10-07 at the end of a long session. Read `CLAUDE.md` first (it is t
 
 ## 1. What the project is
 
-3D incremental clicker in Unity (C#, TextMeshPro). Click a cube to collect pixels, buy upgrades/minigames/devices in a shop. ~22.7k lines in `Assets/Scripts/` (42 scripts), **all UI is built at runtime** (no prefabs, no scene UI). Content text files the user edits live in `Assets/Resources/` (`Changelog.txt`, `HowToPlay.txt`, `Controls.txt`).
+3D incremental clicker in Unity (C#, TextMeshPro). Click a cube to collect pixels, buy upgrades/minigames/devices in a shop. ~22.7k lines in `Assets/Scripts/` (46 scripts), **all UI is built at runtime** (no prefabs, no scene UI). Content text files the user edits live in `Assets/Resources/` (`Changelog.txt`, `HowToPlay.txt`, `Controls.txt`).
 
 Claude cannot compile or run Unity. The user tests in the editor and pastes errors/screenshots. Everything below that says "untested" means "written but the user has not confirmed it works".
 
