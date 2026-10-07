@@ -40,3 +40,4 @@
 [2026-10-07 12:38 UTC] The Toggles tab is now hidden until the Auto Clicker is bought.
 [2026-10-07 12:42 UTC] Made the tier guide text and box smaller, added a new-game intro that opens the Log then the Inventory with explanatory tips, and the Log and Inventory can no longer be open together.
 [2026-10-07 12:44 UTC] Restart now resets the first-time tips and intro, and no longer triggers the crash notice.
+[2026-10-07 12:49 UTC] Added a start screen with a big Play button over a blurred background and a black bar that shrinks away as the game comes into focus; the intro tips now only count as seen once both are confirmed.

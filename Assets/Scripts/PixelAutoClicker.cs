@@ -87,7 +87,7 @@ public class PixelAutoClicker : MonoBehaviour
 
     private void Update()
     {
-        if (!running || UserDisabled) return;
+        if (!running || UserDisabled || PixelTitleScreen.Showing) return;
 
         timer += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
 

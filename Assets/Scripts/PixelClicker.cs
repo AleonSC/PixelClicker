@@ -627,6 +627,7 @@ public class PixelClicker : MonoBehaviour
 
     private void Awake()
     {
+        if (PixelFind.First<PixelTitleScreen>() == null) gameObject.AddComponent<PixelTitleScreen>(); // start screen (Play button)
         if (PixelFind.First<PixelHints>() == null) gameObject.AddComponent<PixelHints>(); // first-time tips
         if (PixelFind.First<PixelCrashLog>() == null) gameObject.AddComponent<PixelCrashLog>(); // writes error / crash reports
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen

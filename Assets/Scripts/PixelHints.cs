@@ -599,7 +599,7 @@ public class PixelHints : MonoBehaviour
 
     private void TryStartIntro()
     {
-        if (introChecked || Time.realtimeSinceStartup < startupQuietSeconds + 0.5f) return;
+        if (introChecked || PixelTitleScreen.Showing || Time.realtimeSinceStartup < startupQuietSeconds + 0.5f) return;
         introChecked = true;
         if (!showIntro || !hintsEnabled || Seen("intro_log")) return;
 
@@ -608,13 +608,16 @@ public class PixelHints : MonoBehaviour
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
             if (t.totalCollected > 0d) return; // not a new game
 
-        MarkSeen("intro_log");
         PixelLog.SetLogOpen(true);
         PixelNotice.Show(introLogText, 0f, () =>
         {
             PixelLog.SetLogOpen(false);
             PixelUI.SetInventoryOpen(true);
-            PixelNotice.Show(introInventoryText, 0f, () => PixelUI.SetInventoryOpen(false));
+            PixelNotice.Show(introInventoryText, 0f, () =>
+            {
+                PixelUI.SetInventoryOpen(false);
+                MarkSeen("intro_log"); // only counts once the player has been through both tips
+            });
         });
     }
 
