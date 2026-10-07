@@ -148,6 +148,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the tick box that switches between abbreviated and full (1,200) numbers.")]
     [SerializeField] private string abbreviateLabel = "Abbreviate numbers";
 
+    [Tooltip("Label of the tick box that hides shop items you have already bought.")]
+    [SerializeField] private string hidePurchasedLabel = "Hide purchased shop items";
+
     [Tooltip("Label of the tick box that decides whether the pause menu freezes the game.")]
     [SerializeField] private string pauseStopsLabel = "Pausing stops the game";
 
@@ -441,7 +444,7 @@ public class PixelPauseMenu : MonoBehaviour
     private float statsContentHeight, statsListTop;
     private bool potionsOpen;
     private string shownPotionsText;
-    private Toggle rotationToggle, pulsingToggle, abbreviateToggle, backgroundToggle, pauseStopsToggle;
+    private Toggle rotationToggle, pulsingToggle, abbreviateToggle, hidePurchasedToggle, backgroundToggle, pauseStopsToggle;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -764,6 +767,7 @@ public class PixelPauseMenu : MonoBehaviour
             rotationToggle.SetIsOnWithoutNotify(clicker.AllowRotation);
             pulsingToggle.SetIsOnWithoutNotify(clicker.AllowPulsing);
             abbreviateToggle.SetIsOnWithoutNotify(PixelClicker.AbbreviateNumbers);
+            hidePurchasedToggle.SetIsOnWithoutNotify(PixelShop.HidePurchased);
             backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
             pauseStopsToggle.SetIsOnWithoutNotify(pauseStopsGame);
         }
@@ -1189,6 +1193,8 @@ public class PixelPauseMenu : MonoBehaviour
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         abbreviateToggle = AddToggleRow(settingsPanel.transform, abbreviateLabel, PixelClicker.AbbreviateNumbers,
                                         on => PixelClicker.AbbreviateNumbers = on, ref y);
+        hidePurchasedToggle = AddToggleRow(settingsPanel.transform, hidePurchasedLabel, PixelShop.HidePurchased,
+                                           on => PixelShop.HidePurchased = on, ref y);
         backgroundToggle = AddToggleRow(settingsPanel.transform, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
                                         on => { if (clicker != null) clicker.RunInBackground = on; }, ref y);
         pauseStopsToggle = AddToggleRow(settingsPanel.transform, pauseStopsLabel, pauseStopsGame, on =>

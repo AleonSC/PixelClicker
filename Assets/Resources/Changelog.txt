@@ -11,3 +11,4 @@
 [2026-10-07 00:43 UTC] Added Bank Storage upgrades (5 levels) in the shop: spend glass, vacuum pixels and bomb parts to raise how many pixels the Pixel Bank can hold (60 up to 600).
 [2026-10-07 01:12 UTC] Added How to Play and Controls screens to the pause menu; they show the text files Assets/Resources/HowToPlay.txt and Controls.txt, which you can edit yourself.
 [2026-10-07 01:19 UTC] Pause menu is wider and shorter: buttons sit in two columns and the menu (and the Changelog, How to Play and Controls screens) now fits between the black bars at the top and bottom of the screen.
+[2026-10-07 01:51 UTC] Added a Hide purchased shop items tick box to Settings: bought packs and maxed-out upgrades disappear from the shop list (a bought pack stays while it still has upgrades left to buy).

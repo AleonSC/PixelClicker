@@ -798,6 +798,20 @@ public partial class PixelShop : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>True when every reward tier of the pack is already unlocked.</summary>
+    private const string PrefHidePurchased = "PixelClicker.Setting.HidePurchased";
+    private static int hidePurchasedCache = -1; // -1 = not read yet
+
+    /// <summary>Player setting: hide shop items that are already bought (or maxed out). Remembered between sessions.</summary>
+    public static bool HidePurchased
+    {
+        get
+        {
+            if (hidePurchasedCache < 0) hidePurchasedCache = PlayerPrefs.GetInt(PrefHidePurchased, 0) != 0 ? 1 : 0;
+            return hidePurchasedCache != 0;
+        }
+        set { hidePurchasedCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefHidePurchased, hidePurchasedCache); }
+    }
+
     private static bool IsLeveled(ShopPack pack) => pack.levels != null && pack.levels.Length > 0;
 
     /// <summary>The costs for the pack's next purchase (the next level for upgrade packs). Null if nothing left to buy.</summary>

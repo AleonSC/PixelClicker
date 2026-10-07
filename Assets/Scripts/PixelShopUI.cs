@@ -419,6 +419,18 @@ public partial class PixelShop
         return IsLeveled(pack) && req >= 0 && req < packs.Length && req != index;
     }
 
+    /// <summary>
+    /// Should this pack be left out of the list because it is bought and the player chose to hide bought items?
+    /// A bought pack stays listed while it still has upgrades left to buy (its arrow opens them).
+    /// </summary>
+    private bool HiddenAsPurchased(int index)
+    {
+        if (!HidePurchased || !IsPurchased(index)) return false;
+        for (int i = 0; i < packs.Length; i++)
+            if (IsChild(i) && packs[i].ParentIndex == index && !IsPurchased(i)) return false;
+        return true;
+    }
+
     private bool HasChildren(int index)
     {
         for (int i = 0; i < packs.Length; i++)
@@ -702,8 +714,8 @@ public partial class PixelShop
             bool requirementMet = IsRequirementMet(i);
             bool listed = IsPackRequirementMet(i) || showLockedPacks || HasPack(i);
             bool visible = child
-                ? openParent >= 0 && pack.ParentIndex == openParent && listed
-                : TabOf(pack) == currentTab && listed && showGeneral;
+                ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
+                : TabOf(pack) == currentTab && listed && showGeneral && !HiddenAsPurchased(i);
 
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
@@ -754,7 +766,7 @@ public partial class PixelShop
         {
             PackRow row = ultraRows[t];
             PixelClicker.PixelTier tier = clicker.Tiers[t];
-            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked;
+            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked && !(HidePurchased && UltraBoostMaxed(t));
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
