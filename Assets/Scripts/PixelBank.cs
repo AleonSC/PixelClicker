@@ -246,7 +246,6 @@ public class PixelBank : MonoBehaviour
     private readonly List<RowUI> rows = new List<RowUI>();
     private float refreshTimer;
     private bool built;
-    private bool lastActive;
 
     private class RowUI
     {
