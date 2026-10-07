@@ -28,8 +28,11 @@ public class PixelBombMinigame : PixelMinigame
     [SerializeField] private bool running = false;
 
     [Header("Bomb Parts (tracker)")]
-    [Tooltip("Runtime: bomb parts collected (saved with the game). Other systems will spend these later; you can type a number to test.")]
+    [Tooltip("Runtime: bomb parts you have right now (saved with the game). Spending them in the shop lowers this; you can type a number to test.")]
     [SerializeField] private double bombParts = 0;
+
+    [Tooltip("Runtime: bomb parts ever earned (saved with the game). This is what the tracker bar in the shop shows, so spending parts doesn't lower it.")]
+    [SerializeField] private double bombPartsEarned = 0;
 
     [Min(1)]
     [Tooltip("The goal shown on the tracker's progress bar (the count keeps going past it).")]
@@ -200,12 +203,20 @@ public class PixelBombMinigame : PixelMinigame
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
-    public override double TrackerCount => bombParts;
+    public override double TrackerCount => bombPartsEarned;
+    public override double SpendableCount => bombParts;
+    public override double ExtraValue => bombParts;
+    public override void SetExtraValue(double value)
+    {
+        bombParts = System.Math.Max(0d, value);
+        bombPartsEarned = System.Math.Max(bombPartsEarned, bombParts);
+    }
+    public override bool TrySpendTracker(double amount) => TrySpendParts(amount);
     public override double TrackerGoal => partsGoal;
     public override string RequirementFormat => requirementFormat;
-    public override void SetTrackerCount(double value) => bombParts = System.Math.Max(0d, value);
+    public override void SetTrackerCount(double value) => bombPartsEarned = System.Math.Max(System.Math.Max(0d, value), bombParts);
 
-    /// <summary>Bomb parts you have. Other systems spend them with <see cref="TrySpendParts"/>.</summary>
+    /// <summary>Bomb parts you have right now. Other systems spend them with <see cref="TrySpendParts"/>.</summary>
     public double BombParts => bombParts;
 
     /// <summary>Spends bomb parts. Returns false (and spends nothing) if you don't have enough.</summary>
@@ -417,6 +428,7 @@ public class PixelBombMinigame : PixelMinigame
         {
             int parts = Random.Range(Mathf.Min(partsMin, partsMax), Mathf.Max(partsMin, partsMax) + 1);
             bombParts += parts;
+            bombPartsEarned += parts;
             Report(MinigameEvent.Clicked);
             onDefused?.Invoke();
             timer.text = "OK";

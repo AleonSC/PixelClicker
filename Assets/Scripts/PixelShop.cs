@@ -946,7 +946,7 @@ public partial class PixelShop : MonoBehaviour
         if (string.IsNullOrEmpty(cost.minigameCurrency)) return clicker.CanAfford(cost.type, cost.amount);
         if (PixelClicker.InfiniteResources) return true;
         PixelMinigame m = PixelMinigame.Find(cost.minigameCurrency);
-        return m != null && m.HasTracker && m.TrackerCount >= cost.amount;
+        return m != null && m.HasTracker && m.SpendableCount >= cost.amount;
     }
 
     /// <summary>Pays one line of a price.</summary>

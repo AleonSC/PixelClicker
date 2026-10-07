@@ -166,7 +166,16 @@ public class PixelUI : MonoBehaviour
     [SerializeField] private string consumableLineFormat = "{0}   x{1}";
 
     [Tooltip("Shown when you own no potions.")]
-    [SerializeField] private string noConsumablesText = "No consumables yet.";
+    [SerializeField] private string noConsumablesText = "No potions yet.";
+
+    [Tooltip("Text of the Potions sub-tab inside the Consumables tab.")]
+    [SerializeField] private string potionsSubTabText = "Potions";
+
+    [Tooltip("Text of the Devices sub-tab inside the Consumables tab (fan, sorter, vacuum device...).")]
+    [SerializeField] private string devicesSubTabText = "Devices";
+
+    [Tooltip("Shown on the Devices sub-tab when you own no devices.")]
+    [SerializeField] private string noDevicesText = "No devices yet.";
 
     [Tooltip("Hint at the bottom of the tab.")]
     [SerializeField] private string consumableHint = "Right-click an item to use it.";
@@ -406,6 +415,9 @@ public class PixelUI : MonoBehaviour
     private bool built;
     private RectTransform popupCanvasRect;
     private int inventoryTab; // 0 = Currency, 1 = Consumables
+    private int consumableSubTab; // inside Consumables: 0 = Potions, 1 = Devices
+    private Image[] consumableSubTabImages;
+    private GameObject[] consumableSubTabObjects;
     private Image[] subTabImages;
     private TMP_Text activeLabel;
     private TMP_Text noConsumablesLabel;
@@ -1114,6 +1126,36 @@ public class PixelUI : MonoBehaviour
         PlaceLine(activeLabel.rectTransform);
         activeLabel.gameObject.SetActive(false);
 
+        // Potions | Devices, the first line of the Consumables tab.
+        string[] subNames = { potionsSubTabText, devicesSubTabText };
+        consumableSubTabImages = new Image[2];
+        consumableSubTabObjects = new GameObject[2];
+        float tabHeight = subTabHeight * 0.85f;
+        for (int i = 0; i < 2; i++)
+        {
+            Button b = MakeButton(ListParent, "Consumable Tab " + subNames[i], subNames[i], new Vector2(100f, tabHeight),
+                                  subTabInactiveColor, subTabTextColor, (subTabFontSize > 0f ? subTabFontSize : 28f) * 0.9f);
+            consumableSubTabImages[i] = b.GetComponent<Image>();
+            consumableSubTabObjects[i] = b.gameObject;
+
+            RectTransform rt = b.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(i * 0.5f, 1f);
+            rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(-(panelPadding + 6f), tabHeight);
+            float off = panelPadding * 0.5f - 3f;
+            rt.anchoredPosition = new Vector2(i == 0 ? off : -off, 0f);
+            b.gameObject.SetActive(false);
+
+            int captured = i;
+            b.onClick.AddListener(() =>
+            {
+                consumableSubTab = captured;
+                if (listContent != null) listContent.anchoredPosition = Vector2.zero;
+                Refresh();
+            });
+        }
+
         consumableAlign = align;
         BuildPotionRows();
 
@@ -1184,6 +1226,9 @@ public class PixelUI : MonoBehaviour
     private void HideConsumableWidgets()
     {
         if (activeLabel != null) activeLabel.gameObject.SetActive(false);
+        if (consumableSubTabObjects != null)
+            foreach (GameObject tabObject in consumableSubTabObjects)
+                if (tabObject != null) tabObject.SetActive(false);
         if (noConsumablesLabel != null) noConsumablesLabel.gameObject.SetActive(false);
         if (hintLabel != null) hintLabel.gameObject.SetActive(false);
         if (potionRowObjects != null)
@@ -1196,7 +1241,22 @@ public class PixelUI : MonoBehaviour
     {
         float y = top;
 
-        bool active = consumables != null && consumables.IsActive;
+        // The Potions | Devices sub-tabs.
+        if (consumableSubTabObjects != null)
+        {
+            float tabHeight = subTabHeight * 0.85f;
+            for (int i = 0; i < consumableSubTabObjects.Length; i++)
+            {
+                consumableSubTabObjects[i].SetActive(true);
+                consumableSubTabObjects[i].GetComponent<RectTransform>().anchoredPosition =
+                    new Vector2(i == 0 ? panelPadding * 0.5f - 3f : -(panelPadding * 0.5f - 3f), -y);
+                consumableSubTabImages[i].color = i == consumableSubTab ? subTabActiveColor : subTabInactiveColor;
+            }
+            y += tabHeight + 8f;
+        }
+        bool onDevices = consumableSubTab == 1;
+
+        bool active = consumables != null && consumables.IsActive && !onDevices;
         activeLabel.gameObject.SetActive(active);
         if (active)
         {
@@ -1214,7 +1274,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int owned = consumables.ItemOwned(i);
-            bool visible = owned > 0;
+            bool visible = owned > 0 && consumables.IsDevice(i) == onDevices; // this sub-tab's kind only
             if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
             if (!visible) continue;
 
@@ -1230,6 +1290,7 @@ public class PixelUI : MonoBehaviour
         noConsumablesLabel.gameObject.SetActive(shown == 0);
         if (shown == 0)
         {
+            noConsumablesLabel.text = onDevices ? noDevicesText : noConsumablesText;
             noConsumablesLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
             y += LinePitch;
         }

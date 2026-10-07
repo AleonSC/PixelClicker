@@ -101,6 +101,9 @@ public class PixelAchievements : MonoBehaviour
     [Tooltip("All achievements. A tiered 'Collect' achievement (10 to 1M) for every pixel type is created for you; add your own below.")]
     [SerializeField] private List<Achievement> achievements = CreateDefaultAchievements();
 
+    [Tooltip("Add the two usage achievements: drink every kind of potion once, and place every kind of device once.")]
+    [SerializeField] private bool addUsageAchievements = true;
+
     [Tooltip("Add a tiered 'Collect' achievement for any pixel type that has none (e.g. when a new pixel type is added to the game).")]
     [SerializeField] private bool addDefaultAchievements = true;
 
@@ -347,6 +350,7 @@ public class PixelAchievements : MonoBehaviour
             ResetOnNextStart = false;
             ResetAll();
         }
+        RegisterUsageAchievements();
         BuildPopup();
         Evaluate(true); // anything already earned (e.g. typed-in totals) is granted quietly
     }
@@ -452,6 +456,66 @@ public class PixelAchievements : MonoBehaviour
         achievement.kind = Kind.Custom;
         customProgress[achievement.id] = progress;
         if (!achievements.Exists(a => a.id == achievement.id)) achievements.Add(achievement);
+    }
+
+    /// <summary>
+    /// "Potion Taster" (drink every kind of potion once) and "Gadgeteer" (place every kind of device once). Progress is
+    /// how many different ones you have used so far; combo potions made in Crafting don't count.
+    /// </summary>
+    private void RegisterUsageAchievements()
+    {
+        if (!addUsageAchievements) return;
+        PixelConsumables consumables = PixelFind.First<PixelConsumables>();
+        PixelStats stats = PixelFind.First<PixelStats>();
+        if (consumables == null || stats == null) return;
+
+        // The potions that can be bought (not the craft-only combos).
+        List<string> potionNames = new List<string>();
+        for (int i = 0; i < consumables.Count; i++)
+            if (!consumables.Get(i).craftOnly) potionNames.Add(consumables.ItemName(i));
+
+        Register(new Achievement
+        {
+            id = "use_all_potions",
+            title = "Potion Taster",
+            description = "Drink every kind of potion at least once.",
+            tiers = new double[0],
+            target = Math.Max(1, potionNames.Count),
+            iconColor = new Color(0.75f, 0.45f, 0.95f, 1f),
+        }, () =>
+        {
+            int used = 0;
+            foreach (string name in potionNames)
+                foreach (KeyValuePair<string, long> p in stats.PotionsUsed)
+                    if (p.Key == name && p.Value > 0) { used++; break; }
+            return used;
+        });
+
+        // The kinds of device that exist.
+        List<PixelConsumables.DeviceKind> kinds = new List<PixelConsumables.DeviceKind>();
+        for (int i = 0; i < consumables.DeviceCount; i++)
+            if (!kinds.Contains(consumables.GetDevice(i).kind)) kinds.Add(consumables.GetDevice(i).kind);
+
+        Register(new Achievement
+        {
+            id = "use_all_devices",
+            title = "Gadgeteer",
+            description = "Place every kind of device at least once.",
+            tiers = new double[0],
+            target = Math.Max(1, kinds.Count),
+            iconColor = new Color(0.4f, 0.85f, 1f, 1f),
+        }, () =>
+        {
+            int used = 0;
+            foreach (PixelConsumables.DeviceKind kind in kinds)
+            {
+                long placed = kind == PixelConsumables.DeviceKind.Fan ? stats.FansUsed
+                            : kind == PixelConsumables.DeviceKind.Vacuum ? stats.VacuumDevicesUsed
+                            : kind == PixelConsumables.DeviceKind.Sorter ? stats.SortersUsed : 0L;
+                if (placed > 0) used++;
+            }
+            return used;
+        });
     }
 
     // ------------------------------------------------------------------

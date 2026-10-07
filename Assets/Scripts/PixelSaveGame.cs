@@ -67,6 +67,8 @@ public class PixelSaveGame : MonoBehaviour
         public string id;
         public double value;
         public bool disabled; // switched off by the player in the shop
+        public double extra;  // a second number some minigames keep (the bomb's parts held)
+        public bool hasExtra; // false in older saves, which only stored the one number
     }
 
     [Serializable]
@@ -362,7 +364,7 @@ public class PixelSaveGame : MonoBehaviour
             // Every minigame with a goal counter saves its count under its id.
             System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
             foreach (PixelMinigame m in PixelMinigame.All)
-                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled });
+                if (m != null) minigameSaves.Add(new MinigameSave { id = m.Id, value = m.HasTracker ? m.TrackerCount : 0d, disabled = m.UserDisabled, extra = m.ExtraValue, hasExtra = true });
             data.minigames = minigameSaves.ToArray();
             if (achievements != null) data.achievements = achievements.GetSaveState();
             if (stats != null)
@@ -495,6 +497,9 @@ public class PixelSaveGame : MonoBehaviour
                              : m.Id == "ghost" ? data.ghostsCaught            // save from before minigames were saved by id
                              : m.Id == "blackhole" ? data.singularityCount : 0d;
                 m.SetTrackerCount(value);
+
+                // Older saves stored only one number: for the bomb that was the parts held, so it becomes both.
+                if (saved != null) m.SetExtraValue(saved.hasExtra ? saved.extra : saved.value);
             }
             if (achievements != null) achievements.SetSaveState(data.achievements);
             if (stats != null)

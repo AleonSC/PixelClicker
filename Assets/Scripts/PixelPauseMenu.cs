@@ -211,6 +211,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the vacuum devices used stat.")]
     [SerializeField] private string vacuumsUsedLabel = "Vacuum devices used";
 
+    [Tooltip("Label of the sorters used stat.")]
+    [SerializeField] private string sortersUsedLabel = "Sorters used";
+
     [Tooltip("Label of the highest combo stat.")]
     [SerializeField] private string highestComboLabel = "Highest combo";
 
@@ -443,7 +446,7 @@ public class PixelPauseMenu : MonoBehaviour
         public UnityEngine.Events.UnityAction action;
     }
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
-    private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, comboValue;
+    private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, sortersValue, comboValue;
     private ScrollRect statsScroll, potionsScroll;
     private GameObject statsBar, potionsBar, potionsBox;
     private TMP_Text potionsHeaderLabel, potionsText;
@@ -946,6 +949,7 @@ public class PixelPauseMenu : MonoBehaviour
         blackHolesValue = AddStatRow(content, blackHolesSpawnedLabel, ref cy);
         fansValue = AddStatRow(content, fansUsedLabel, ref cy);
         vacuumsValue = AddStatRow(content, vacuumsUsedLabel, ref cy);
+        sortersValue = AddStatRow(content, sortersUsedLabel, ref cy);
         comboValue = AddStatRow(content, highestComboLabel, ref cy);
         statsContentHeight = cy;
 
@@ -1245,6 +1249,7 @@ public class PixelPauseMenu : MonoBehaviour
         blackHolesValue.text = FormatCount(stats.BlackHolesSpawned);
         fansValue.text = FormatCount(stats.FansUsed);
         vacuumsValue.text = FormatCount(stats.VacuumDevicesUsed);
+        sortersValue.text = FormatCount(stats.SortersUsed);
         comboValue.text = FormatCount(stats.HighestCombo);
         PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
 
