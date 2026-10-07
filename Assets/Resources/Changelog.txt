@@ -28,3 +28,4 @@
 [2026-10-07 11:57 UTC] Added first-time tip boxes (new PixelHints) for crafting, grabbing, Time Stop, the bank, each minigame, potions, devices, crafting, combos and Ultra pixels; each shows once.
 [2026-10-07 12:02 UTC] Added a short event line at the bottom left (new unlocks, tips, auto clicker, black hole) that fades out; click it or press Enter to reopen the full tip.
 [2026-10-07 12:04 UTC] Fixed a compile error in the new event line (pixel name field).
+[2026-10-07 12:06 UTC] Added first-time tips and event lines for the auto clicker, combo, bank and Ultra upgrades and for each newly unlocked pixel type from the shop.

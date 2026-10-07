@@ -1052,7 +1052,11 @@ public partial class PixelShop : MonoBehaviour
     {
         if (UltraBoostMaxed(tierIndex)) return false;
         bool ok = clicker.TryBuyUltraBoost(tierIndex, UltraBoostCost(tierIndex));
-        if (ok) PlayPurchaseSound();
+        if (ok)
+        {
+            PlayPurchaseSound();
+            PixelHints.Trigger("upgrade_ultra");
+        }
         return ok;
     }
 
@@ -1090,6 +1094,9 @@ public partial class PixelShop : MonoBehaviour
             if (pack.unlocksGrabbing) PixelHints.Trigger("grab");
             if (pack.unlocksTimeStop) PixelHints.Trigger("timestop");
             if (pack.unlocksBank) PixelHints.Trigger("bank");
+            if (pack.rewardTiers != null)
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    PixelHints.Trigger("pixel_" + reward.type);
             onPackPurchased?.Invoke(i);
         }
         RefreshRows();
@@ -1135,6 +1142,13 @@ public partial class PixelShop : MonoBehaviour
         {
             pack.level++;
             ApplyUpgrade(pack);
+            switch (pack.upgradeEffect)
+            {
+                case UpgradeEffect.AutoClickerInterval: PixelHints.Trigger("upgrade_interval"); break;
+                case UpgradeEffect.AutoClickerClicks: PixelHints.Trigger("upgrade_clicks"); break;
+                case UpgradeEffect.ComboMeter: PixelHints.Trigger("upgrade_combo"); break;
+                case UpgradeEffect.BankCapacity: PixelHints.Trigger("upgrade_bank"); break;
+            }
         }
         else
         {

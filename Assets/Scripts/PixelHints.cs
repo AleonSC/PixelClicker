@@ -114,6 +114,19 @@ public class PixelHints : MonoBehaviour
             case "craft": return "You crafted something!";
             case "combo": return "Combo started!";
             case "ultra": return "You earned an Ultra pixel!";
+            case "upgrade_interval": return "Auto Clicker upgraded: faster clicks!";
+            case "upgrade_clicks": return "Auto Clicker upgraded: more clicks per tick!";
+            case "upgrade_combo": return "Combo Meter upgraded!";
+            case "upgrade_bank": return "Bank Storage upgraded!";
+            case "upgrade_ultra": return "Ultra boost bought!";
+            case "pixel_Glass": return "You unlocked Glass Pixels!";
+            case "pixel_Vacuum": return "You unlocked Vacuum Pixels!";
+            case "pixel_Obsidian": return "You unlocked Obsidian Pixels!";
+            case "pixel_Luminescent": return "You unlocked Luminescent Pixels!";
+            case "pixel_Singularity": return "You unlocked Singularity Pixels!";
+            case "pixel_Ghost": return "You unlocked Ghost Pixels!";
+            case "pixel_Meteor": return "You unlocked Meteor Pixels!";
+            case "pixel_Red": return "You unlocked Red, Green and Blue Pixels!";
             default: return "";
         }
     }
@@ -134,6 +147,19 @@ public class PixelHints : MonoBehaviour
         H("device_Sorter", "Sorter placed! Click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),
         H("combo", "Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment."),
+        H("upgrade_interval", "The auto clicker now clicks faster. Each level shortens the time between its clicks."),
+        H("upgrade_clicks", "Multi-Click upgraded! The auto clicker now makes more clicks every time it ticks."),
+        H("upgrade_combo", "Combo Meter upgraded! Quick manual clicks build a bonus on your payouts; each level raises the highest bonus you can reach."),
+        H("upgrade_bank", "Bank Storage upgraded! The Pixel Bank can now hold more stored pixels."),
+        H("upgrade_ultra", "Ultra boost bought! That pixel type now pays more for every click. You can keep boosting it with more Ultra pixels."),
+        H("pixel_Glass", "Glass Pixels unlocked! They are see-through, and you can combine one with another pixel in Crafting to make a potion."),
+        H("pixel_Vacuum", "Vacuum Pixels unlocked! Clicking one sucks nearby old pixels in and collects them."),
+        H("pixel_Obsidian", "Obsidian Pixels unlocked! A tougher pixel that takes more than one click to collect."),
+        H("pixel_Luminescent", "Luminescent Pixels unlocked! They glow, and they are worth a lot more than the plain ones."),
+        H("pixel_Singularity", "Singularity Pixels unlocked! A very rare pixel born from the black holes you fed."),
+        H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
+        H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),
+        H("pixel_Red", "The RGB Pack unlocked Red, Green and Blue pixels! They pay out more than the plain ones."),
         H("ultra", "Ultra pixel earned! Spend Ultra pixels in the shop's Upgrades > Pixel sub-tab to boost a pixel type's payout."),
     };
 
