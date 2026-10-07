@@ -75,6 +75,27 @@ public class PixelTimeStop : MonoBehaviour
     [Tooltip("Gap (reference pixels) between the top black bar and the meter.")]
     [SerializeField] private float textGap = 12f;
 
+    [Header("Haze")]
+    [Tooltip("Show a haze over the screen while time is stopped.")]
+    [SerializeField] private bool showHaze = true;
+
+    [Tooltip("Colour of the haze (alpha = strength in the middle of the screen).")]
+    [SerializeField] private Color hazeColor = new Color(0.55f, 0.7f, 1f, 0.12f);
+
+    [Tooltip("Colour of the haze at the screen edges (alpha = strength there; a vignette).")]
+    [SerializeField] private Color hazeEdgeColor = new Color(0.25f, 0.35f, 0.7f, 0.5f);
+
+    [Min(0f)]
+    [Tooltip("Seconds the haze takes to fade in and out.")]
+    [SerializeField] private float hazeFadeSeconds = 0.35f;
+
+    [Tooltip("Sorting order of the haze canvas (below the other windows).")]
+    [SerializeField] private int hazeSortingOrder = -50;
+
+    [Header("Sound")]
+    [Tooltip("Id of the looping sound played while time is stopped (set its clip in PixelAudio's Sounds list; it loops). Leave the clip empty for silence.")]
+    [SerializeField] private string loopSoundId = "time_stop_loop";
+
     // ------------------------------------------------------------------
 
     /// <summary>True while time is stopped (read by the cube, which keeps taking clicks and animating during it).</summary>
@@ -89,6 +110,9 @@ public class PixelTimeStop : MonoBehaviour
     private float energy = 1f;       // 0..1
     private float fullTimer;          // counts down once the meter is full
     private float timeScaleBefore = 1f;
+    private GameObject hazeRoot;
+    private CanvasGroup hazeGroup;
+    private Texture2D hazeTexture;
 
     /// <summary>Is Time Stop unlocked (bought)?</summary>
     public bool Active => timeStopActive;
@@ -132,6 +156,9 @@ public class PixelTimeStop : MonoBehaviour
         SetStopped(false);
         IsStopped = false;
         if (canvasRoot != null) Destroy(canvasRoot);
+        if (hazeRoot != null) Destroy(hazeRoot);
+        if (hazeTexture != null) Destroy(hazeTexture);
+        PixelAudio.StopLoop(loopSoundId);
     }
 
     private void Update()
@@ -183,6 +210,8 @@ public class PixelTimeStop : MonoBehaviour
         UpdateMeter();
     }
 
+    private void LateUpdate() => UpdateHaze();
+
     private void SetStopped(bool value)
     {
         if (value == stopped) return;
@@ -201,6 +230,8 @@ public class PixelTimeStop : MonoBehaviour
 
         if (!stopped && energy >= 1f) fullTimer = hideDelaySeconds;
         PixelAudio.Play(stopped ? "time_stop" : "time_resume");
+        if (stopped) PixelAudio.StartLoop(loopSoundId);
+        else PixelAudio.StopLoop(loopSoundId);
     }
 
     private bool StopKeyPressed()
@@ -210,6 +241,59 @@ public class PixelTimeStop : MonoBehaviour
 #else
         return Input.GetKeyDown(stopKey);
 #endif
+    }
+
+    // ------------------------------------------------------------------
+    // The haze
+    // ------------------------------------------------------------------
+
+    private void UpdateHaze()
+    {
+        float target = showHaze && stopped ? 1f : 0f;
+        if (hazeRoot == null)
+        {
+            if (target <= 0f) return;
+            BuildHaze();
+        }
+
+        float step = hazeFadeSeconds > 0f ? Time.unscaledDeltaTime / hazeFadeSeconds : 1f;
+        hazeGroup.alpha = Mathf.MoveTowards(hazeGroup.alpha, target, step);
+        bool visible = hazeGroup.alpha > 0.001f;
+        if (hazeRoot.activeSelf != visible) hazeRoot.SetActive(visible);
+    }
+
+    private void BuildHaze()
+    {
+        // A small radial gradient (centre colour -> edge colour) stretched over the whole screen.
+        const int size = 64;
+        hazeTexture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = (x + 0.5f) / size * 2f - 1f;
+                float dy = (y + 0.5f) / size * 2f - 1f;
+                float d = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy) / 1.2f);
+                hazeTexture.SetPixel(x, y, Color.Lerp(hazeColor, hazeEdgeColor, d * d));
+            }
+        }
+        hazeTexture.Apply();
+
+        hazeRoot = PixelUIKit.CreateCanvas("Time Stop Haze", hazeSortingOrder, new Vector2(1920f, 1080f), false);
+        hazeGroup = hazeRoot.AddComponent<CanvasGroup>();
+        hazeGroup.alpha = 0f;
+        hazeGroup.blocksRaycasts = false;
+        hazeGroup.interactable = false;
+
+        GameObject img = new GameObject("Haze", typeof(RectTransform), typeof(RawImage));
+        img.transform.SetParent(hazeRoot.transform, false);
+        RawImage raw = img.GetComponent<RawImage>();
+        raw.texture = hazeTexture;
+        raw.raycastTarget = false;
+        RectTransform r = raw.rectTransform;
+        r.anchorMin = Vector2.zero;
+        r.anchorMax = Vector2.one;
+        r.offsetMin = r.offsetMax = Vector2.zero;
     }
 
     // ------------------------------------------------------------------

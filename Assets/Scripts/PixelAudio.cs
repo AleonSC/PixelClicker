@@ -205,6 +205,7 @@ public class PixelAudio : MonoBehaviour
             Make("bank_full", 0.3f, 1f, 1f),
             Make("bank_empty", 0.3f, 1f, 1f),
             Make("time_resume", 0.3f, 1f, 1f),
+            Make("time_stop_loop", 0f, 1f, 1f),
             Make("bomb_spawn", 0.2f),
             Make("bomb_click", 0.1f),
             Make("bomb_tick", 0.1f, 1f, 1f),
@@ -332,6 +333,69 @@ public class PixelAudio : MonoBehaviour
     private void Update()
     {
         UpdateMusic();
+        UpdateLoops();
+    }
+
+    // ------------------------------------------------------------------
+    // Looping sounds (a hum that runs while something is active)
+    // ------------------------------------------------------------------
+
+    private class LoopVoice
+    {
+        public AudioSource source;
+        public float level;      // 0..1 fade
+        public bool wanted;
+    }
+
+    private readonly Dictionary<string, LoopVoice> loops = new Dictionary<string, LoopVoice>();
+
+    [Min(0f)]
+    [Tooltip("Seconds a looping sound (e.g. the Time Stop hum) takes to fade in and out.")]
+    [SerializeField] private float loopFadeSeconds = 0.25f;
+
+    /// <summary>Starts a looping sound by id (uses the first clip of that sound, loops until StopLoop). Silent if it has no clip.</summary>
+    public static void StartLoop(string id)
+    {
+        if (instance != null) instance.SetLoop(id, true);
+    }
+
+    /// <summary>Fades out and stops a sound started with StartLoop.</summary>
+    public static void StopLoop(string id)
+    {
+        if (instance != null) instance.SetLoop(id, false);
+    }
+
+    private void SetLoop(string id, bool on)
+    {
+        if (!loops.TryGetValue(id, out LoopVoice v))
+        {
+            if (!on) return;
+            if (!byId.TryGetValue(id, out Sound s) || s.clips == null || s.clips.Length == 0 || s.clips[0] == null) return;
+            GameObject go = new GameObject("Loop " + id);
+            go.transform.SetParent(transform, false);
+            AudioSource src = go.AddComponent<AudioSource>();
+            src.playOnAwake = false;
+            src.loop = true;
+            src.clip = s.clips[0];
+            src.volume = 0f;
+            v = new LoopVoice { source = src };
+            loops[id] = v;
+        }
+        v.wanted = on;
+        if (on && !v.source.isPlaying) v.source.Play();
+    }
+
+    private void UpdateLoops()
+    {
+        foreach (KeyValuePair<string, LoopVoice> kv in loops)
+        {
+            LoopVoice v = kv.Value;
+            float step = loopFadeSeconds > 0f ? Time.unscaledDeltaTime / loopFadeSeconds : 1f;
+            v.level = Mathf.MoveTowards(v.level, v.wanted ? 1f : 0f, step);
+            float vol = byId.TryGetValue(kv.Key, out Sound s) ? s.volume : 1f;
+            v.source.volume = muted ? 0f : vol * effectsVolume * masterVolume * v.level;
+            if (!v.wanted && v.level <= 0f && v.source.isPlaying) v.source.Stop();
+        }
     }
 
     private void RebuildLookup()
