@@ -401,6 +401,20 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Pixel Bank upgrade (Upgrades tab): a hose that stores old pixels and spits them back out.</summary>
+    private static ShopPack CreateBankPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Pixel Bank",
+            tab = ShopTab.Upgrades,
+            description = "Store old pixels in a bank. Press B for a hose: right-click sucks a pixel up, left-click spits the selected one out, scroll to choose.",
+            costs = AllSix(250),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksBank = true,
+        };
+    }
+
     /// <summary>Default Time Stop upgrade (Upgrades tab): the T key freezes the whole game.</summary>
     private static ShopPack CreateTimeStopPack()
     {
@@ -539,6 +553,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateGrabbingPack() },
         new DefaultPack { isThis = p => p.unlocksTimeStop,
                           requires = null, create = i => CreateTimeStopPack() },
+        new DefaultPack { isThis = p => p.unlocksBank,
+                          requires = null, create = i => CreateBankPack() },
     };
 
 #if UNITY_EDITOR

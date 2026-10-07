@@ -95,6 +95,7 @@ public class PixelSaveGame : MonoBehaviour
         public int activePotionSecond;   // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
         public float activePotionRemaining;
         public PixelConsumables.PlacedState[] placedDevices;
+        public PixelBank.Entry[] bank;
         public bool autoClickerRunning;
         public bool autoClickerDisabled; // switched off by the player (Toggles window)
         public bool grabDisabled;
@@ -131,6 +132,9 @@ public class PixelSaveGame : MonoBehaviour
 
     [Tooltip("Time Stop (for its on/off switch). Found automatically if left empty.")]
     [SerializeField] private PixelTimeStop timeStop;
+
+    [Tooltip("The Pixel Bank whose stored pixels are saved. Found automatically if left empty.")]
+    [SerializeField] private PixelBank bank;
 
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
@@ -269,6 +273,7 @@ public class PixelSaveGame : MonoBehaviour
         if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
         if (grab == null) grab = PixelFind.First<PixelGrab>();
         if (timeStop == null) timeStop = PixelFind.First<PixelTimeStop>();
+        if (bank == null) bank = PixelFind.First<PixelBank>();
         if (achievements == null) achievements = PixelFind.First<PixelAchievements>();
         if (stats == null) stats = PixelFind.First<PixelStats>();
         // Use the potions the shop sells into, so both always agree.
@@ -352,6 +357,7 @@ public class PixelSaveGame : MonoBehaviour
                 data.activePotionRemaining = consumables.Remaining;
             }
             if (consumables != null) data.placedDevices = consumables.GetPlacedDevices().ToArray();
+            if (bank != null) data.bank = bank.GetState().ToArray();
 
             // Every minigame with a goal counter saves its count under its id.
             System.Collections.Generic.List<MinigameSave> minigameSaves = new System.Collections.Generic.List<MinigameSave>();
@@ -506,6 +512,8 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             clicker.FinishLoad();
+
+            if (bank != null) bank.SetState(data.bank);
 
             // The running potion and the devices in the world (after FinishLoad, which resets the spawn choice).
             if (consumables != null)

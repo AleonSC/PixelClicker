@@ -510,6 +510,9 @@ public class PixelClicker : MonoBehaviour
     private int hitsOnCurrentPixel;
     private bool clicksBlocked;
 
+    /// <summary>While true, clicks on the cube are ignored (set by the pixel bank's hose, which uses the mouse buttons itself).</summary>
+    public static bool ExternalClickBlock;
+
     private const string PrefRotation = "PixelClicker.Setting.Rotation";
     private const string PrefPulsing = "PixelClicker.Setting.Pulsing";
     private const string PrefBackground = "PixelClicker.Setting.RunInBackground";
@@ -668,7 +671,7 @@ public class PixelClicker : MonoBehaviour
         CleanOldPixels();
 
         if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu)
-        if (clicksBlocked) return;        // e.g. placing a vacuum device (see PixelConsumables)
+        if (clicksBlocked || ExternalClickBlock) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         if (!WasClickedThisFrame() || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
@@ -1209,22 +1212,28 @@ public class PixelClicker : MonoBehaviour
         pixelRenderer.SetPropertyBlock(propertyBlock);
     }
 
+    /// <summary>The material a tier's pixel is drawn with (normal, translucent, override, or glowing).</summary>
+    private Material MaterialForTier(PixelTier tier)
+    {
+        Material wanted = defaultMaterial;
+        if (tier.materialOverride != null) wanted = tier.materialOverride;
+        else if (tier.translucent && defaultMaterial != null)
+        {
+            if (transparentMaterial == null) transparentMaterial = BuildTransparentMaterial(defaultMaterial);
+            wanted = transparentMaterial;
+        }
+
+        // Glowing tiers need a copy of the material with emission switched on.
+        if (tier.glow && tier.materialOverride == null && wanted != null) wanted = GetGlowMaterial(wanted);
+        return wanted;
+    }
+
     /// <summary>Applies a tier's material (normal, translucent or override) and colour to the pixel.</summary>
     private void ApplyTierLook(PixelTier tier)
     {
         if (pixelRenderer != null)
         {
-            Material wanted = defaultMaterial;
-            if (tier.materialOverride != null) wanted = tier.materialOverride;
-            else if (tier.translucent && defaultMaterial != null)
-            {
-                if (transparentMaterial == null) transparentMaterial = BuildTransparentMaterial(defaultMaterial);
-                wanted = transparentMaterial;
-            }
-
-            // Glowing tiers need a copy of the material with emission switched on.
-            if (tier.glow && tier.materialOverride == null && wanted != null) wanted = GetGlowMaterial(wanted);
-
+            Material wanted = MaterialForTier(tier);
             if (wanted != null && pixelRenderer.sharedMaterial != wanted) pixelRenderer.sharedMaterial = wanted;
         }
 
@@ -1497,21 +1506,46 @@ public class PixelClicker : MonoBehaviour
         d.Begin();
     }
 
-    private void SpawnFallingCopy(int tierIndex, double amount)
+    /// <summary>
+    /// Puts an old pixel of any type into the world at 'position' moving at 'velocity' (the pixel bank spitting one out).
+    /// Fly-away types (meteor) can't be spawned this way.
+    /// </summary>
+    public bool SpawnStoredPixel(int tierIndex, double amount, Vector3 position, Vector3 velocity)
+    {
+        if (!IsValidTier(tierIndex) || tiers[tierIndex].flyAway || pixelTransform == null) return false;
+        SpawnFallingCopy(tierIndex, amount, true, position, velocity);
+        return true;
+    }
+
+    private void SpawnFallingCopy(int tierIndex, double amount, bool stored = false, Vector3 storedPosition = default,
+                                  Vector3 storedVelocity = default)
     {
         // Skip if the pixel is mid-materialize and basically invisible.
-        if (pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
+        if (!stored && pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
 
         // A working sorter spits the pixel out of its pipe instead of popping it out at random (not for fly-away pixels).
         bool routed = false;
         Vector3 routedPosition = pixelTransform.position, routedVelocity = Vector3.zero;
         bool flyType = tierIndex >= 0 && tierIndex < tiers.Length && tiers[tierIndex].flyAway;
-        if (!flyType && PixelSorterDevice.Current != null)
+        if (stored)
+        {
+            routed = true; // the pixel bank decides where it goes and how fast
+            routedPosition = storedPosition;
+            routedVelocity = storedVelocity;
+        }
+        else if (!flyType && PixelSorterDevice.Current != null)
             routed = PixelSorterDevice.Current.TryRoute(out routedPosition, out routedVelocity);
 
         GameObject copy = new GameObject("OldPixel");
-        copy.transform.SetPositionAndRotation(routed ? routedPosition : pixelTransform.position, pixelTransform.rotation);
-        copy.transform.localScale = pixelTransform.lossyScale * oldPixelScale;
+        copy.transform.SetPositionAndRotation(routed ? routedPosition : pixelTransform.position,
+                                              stored ? UnityEngine.Random.rotation : pixelTransform.rotation);
+        Vector3 sourceScale = pixelTransform.lossyScale;
+        if (stored)
+        {
+            sourceScale = baseScale; // the cube's normal size, whatever it is doing right now
+            if (pixelTransform.parent != null) sourceScale = Vector3.Scale(sourceScale, pixelTransform.parent.lossyScale);
+        }
+        copy.transform.localScale = sourceScale * oldPixelScale;
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) copy.layer = fallingCopyLayer;
 
         // Copy only the visuals (mesh + material) so we don't duplicate this script.
@@ -1520,9 +1554,23 @@ public class PixelClicker : MonoBehaviour
         {
             copy.AddComponent<MeshFilter>().sharedMesh = srcFilter.sharedMesh;
             MeshRenderer mr = copy.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = pixelRenderer.sharedMaterial;
             MaterialPropertyBlock block = new MaterialPropertyBlock();
-            pixelRenderer.GetPropertyBlock(block);
+            if (stored && IsValidTier(tierIndex))
+            {
+                // A stored pixel looks like its own type, not like whatever the cube currently shows.
+                PixelTier look = tiers[tierIndex];
+                Material m = MaterialForTier(look);
+                mr.sharedMaterial = m != null ? m : pixelRenderer.sharedMaterial;
+                block.SetColor(colorPropertyId, look.color);
+                block.SetColor("_Color", look.color);
+                block.SetColor("_EmissionColor", look.glow
+                    ? new Color(look.color.r, look.color.g, look.color.b, 1f) * look.glowIntensity : Color.black);
+            }
+            else
+            {
+                mr.sharedMaterial = pixelRenderer.sharedMaterial;
+                pixelRenderer.GetPropertyBlock(block);
+            }
             mr.SetPropertyBlock(block);
         }
 

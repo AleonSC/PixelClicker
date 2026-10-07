@@ -119,7 +119,7 @@ public class PixelGrab : MonoBehaviour
             return;
         }
 
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || !LeftPressed() || PointerOverUI()) return;
+        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || !LeftPressed() || PointerOverUI()) return;
         TryGrab();
     }
 

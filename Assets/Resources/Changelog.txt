@@ -5,3 +5,4 @@
 [2026-10-06 23:02 UTC] Fixed the Inventory's close button showing an empty box: the X and the title now use their own white Header Text Color.
 [2026-10-06 23:03 UTC] Moved the achievement popup to the right side of the screen (vertically centred; Popup Right Margin setting).
 [2026-10-07 00:08 UTC] The running potion and every placed device (vacuum, fan, sorter, with its aim, bend and force setting) are now saved and come back with the time they had left when you load or restart the game.
+[2026-10-07 00:31 UTC] Added the Pixel Bank upgrade: a Bank tab on the left edge with a Hose button (or press B) that equips a bendy hose; scroll to pick a stored pixel, left-click spits it out, right-click sucks up the old pixel under the nozzle and stores it.

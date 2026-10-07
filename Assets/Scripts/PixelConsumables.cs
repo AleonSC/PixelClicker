@@ -568,7 +568,7 @@ public class PixelConsumables : MonoBehaviour
     private void UpdateRemoval()
     {
         PixelPlacedDevice target = null;
-        if (!IsPlacing && Time.frameCount != placeEndFrame && (RightPressed() || RightHeld()) && !PointerOverUI())
+        if (!IsPlacing && !PixelBank.HoseOn && Time.frameCount != placeEndFrame && (RightPressed() || RightHeld()) && !PointerOverUI())
             target = DeviceUnderPointer();
 
         string text = target != null ? string.Format(removeText, target.name) : "";
