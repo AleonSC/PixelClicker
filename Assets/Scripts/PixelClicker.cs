@@ -1108,6 +1108,35 @@ public class PixelClicker : MonoBehaviour
         return tiers.Length - 1;
     }
 
+    private int[] devSpawnTiers; // dev tools: only these tiers spawn (locked ones too); null = normal spawning
+
+    /// <summary>True while the dev tools restrict spawning to chosen pixel types.</summary>
+    public bool HasDevSpawn => devSpawnTiers != null;
+
+    /// <summary>
+    /// Dev tools: only the given pixel types spawn (even locked ones; several = chosen at random). Null or empty = back to
+    /// normal spawning. The pixel on screen is swapped straight away.
+    /// </summary>
+    public void SetDevSpawnTiers(PixelType[] types)
+    {
+        System.Collections.Generic.List<int> list = new System.Collections.Generic.List<int>();
+        if (types != null)
+            foreach (PixelType type in types)
+            {
+                int index = IndexOf(type);
+                if (index >= 0 && !list.Contains(index)) list.Add(index);
+            }
+
+        devSpawnTiers = list.Count > 0 ? list.ToArray() : null;
+        if (!randomizeSpawnTier) return;
+
+        bool fine = devSpawnTiers != null ? System.Array.IndexOf(devSpawnTiers, currentTierIndex) >= 0
+                                          : IsValidTier(currentTierIndex) && tiers[currentTierIndex].unlocked;
+        if (fine) return;
+        currentTierIndex = PickSpawnTier();
+        Materialize(GetClickTier());
+    }
+
     private int forcedTierIndex = -1;
 
     /// <summary>True while a potion (or other effect) restricts spawning to one pixel type.</summary>
@@ -1162,6 +1191,8 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Weighted random pick among unlocked tiers (or the forced tier while a potion is active).</summary>
     private int PickSpawnTier()
     {
+        if (devSpawnTiers != null) return devSpawnTiers[UnityEngine.Random.Range(0, devSpawnTiers.Length)];
+
         if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
         {
             if (IsValidTier(forcedTierIndex2) && tiers[forcedTierIndex2].unlocked && UnityEngine.Random.value < 0.5f)
@@ -1187,6 +1218,7 @@ public class PixelClicker : MonoBehaviour
 
     private int GetClickTierIndex()
     {
+        if (randomizeSpawnTier && devSpawnTiers != null && IsValidTier(currentTierIndex)) return currentTierIndex; // dev tools: even locked tiers
         if (randomizeSpawnTier)
             return IsValidTier(currentTierIndex) && tiers[currentTierIndex].unlocked
                 ? currentTierIndex

@@ -48,6 +48,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Start with 'Infinite resources' ticked: everything in the shop and crafting costs nothing.")]
     [SerializeField] private bool infiniteResources = false;
 
+    [Tooltip("Start with the on-screen 'spawn selector' ticked: a drop-down at the top of the screen that makes only the chosen pixel (or the Monochrome / RGB pack) spawn.")]
+    [SerializeField] private bool spawnSelectorEnabled = false;
+
     [Tooltip("TICK THIS to let the dev tools work in a normal (full) build too, e.g. one you give to a tester. Unticked, the dev tools only exist in the Editor and Development Builds, and the Dev Tools button is missing from the pause menu in a full build.")]
     [SerializeField] private bool allowInFullBuild = false;
 
@@ -75,6 +78,21 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Label of the infinite-resources tick box.")]
     [SerializeField] private string infiniteToggleText = "Infinite resources";
+
+    [Tooltip("Label of the spawn-selector tick box.")]
+    [SerializeField] private string spawnSelectorToggleText = "On-screen spawn selector";
+
+    [Tooltip("First entry of the on-screen selector (normal random spawning).")]
+    [SerializeField] private string spawnNormalText = "Spawn: normal (random)";
+
+    [Tooltip("Entry that spawns only White, Gray and Black.")]
+    [SerializeField] private string spawnMonochromeText = "Spawn: Monochrome pack";
+
+    [Tooltip("Entry that spawns only Red, Green and Blue.")]
+    [SerializeField] private string spawnRgbText = "Spawn: RGB pack";
+
+    [Tooltip("Size of the on-screen selector (canvas units).")]
+    [SerializeField] private Vector2 selectorSize = new Vector2(440f, 56f);
 
     [Tooltip("Label of the close button.")]
     [SerializeField] private string closeText = "Close";
@@ -182,6 +200,8 @@ public class PixelDevTools : MonoBehaviour
             PixelClicker.InfiniteResources = false;
         }
         if (canvasRoot != null) Destroy(canvasRoot);
+        if (selectorRoot != null) Destroy(selectorRoot);
+        if (spawnSelectorEnabled && clicker != null && clicker.isActiveAndEnabled) clicker.SetDevSpawnTiers(null);
     }
 
     private void Update()
@@ -373,6 +393,10 @@ public class PixelDevTools : MonoBehaviour
                        on => { infiniteResources = on; PixelClicker.InfiniteResources = on; });
         y += rowHeight + 24f;
 
+        // Row: tick box for the on-screen spawn selector
+        BuildToggleRow(box.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
+        y += rowHeight + 24f;
+
         // Close
         Button close = PixelUIKit.CreateButton(font, box.transform, "Close Button", closeText,
                                                new Vector2(inner, rowHeight), new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
@@ -384,6 +408,78 @@ public class PixelDevTools : MonoBehaviour
 
         FillDropdowns();
         panel.SetActive(false);
+        if (spawnSelectorEnabled) SetSelector(true);
+    }
+
+    // ------------------------------------------------------------------
+    // On-screen spawn selector
+    // ------------------------------------------------------------------
+
+    private GameObject selectorRoot;
+    private TMP_Dropdown selectorDropdown;
+    private readonly List<PixelClicker.PixelType[]> selectorChoices = new List<PixelClicker.PixelType[]>();
+
+    private void SetSelector(bool on)
+    {
+        spawnSelectorEnabled = on;
+        if (clicker == null) return;
+        if (!on)
+        {
+            if (selectorRoot != null) selectorRoot.SetActive(false);
+            clicker.SetDevSpawnTiers(null);
+            return;
+        }
+
+        if (selectorRoot == null) BuildSelector();
+        FillSelector();
+        selectorRoot.SetActive(true);
+        ApplySelector(selectorDropdown.value);
+    }
+
+    private void BuildSelector()
+    {
+        selectorRoot = PixelUIKit.CreateCanvas("PixelDevTools Spawn Selector", 145, referenceResolution, true);
+        selectorRoot.transform.SetParent(transform, false);
+
+        selectorDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Spawn Dropdown", selectorSize,
+                                                     boxColor, listColor, textColor, fontSize);
+        RectTransform rt = selectorDropdown.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = selectorSize;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        rt.anchoredPosition = new Vector2(0f, -(bar + 12f));
+        selectorDropdown.onValueChanged.AddListener(ApplySelector);
+    }
+
+    /// <summary>Options: normal, Monochrome pack, RGB pack, then every pixel type (locked ones marked).</summary>
+    private void FillSelector()
+    {
+        int keep = selectorDropdown.value;
+        selectorChoices.Clear();
+        List<string> names = new List<string>();
+
+        names.Add(spawnNormalText); selectorChoices.Add(null);
+        names.Add(spawnMonochromeText);
+        selectorChoices.Add(new[] { PixelClicker.PixelType.White, PixelClicker.PixelType.Gray, PixelClicker.PixelType.Black });
+        names.Add(spawnRgbText);
+        selectorChoices.Add(new[] { PixelClicker.PixelType.Red, PixelClicker.PixelType.Green, PixelClicker.PixelType.Blue });
+
+        foreach (PixelClicker.PixelTier tier in clicker.Tiers)
+        {
+            names.Add(tier.displayName + (tier.unlocked ? "" : " (locked)"));
+            selectorChoices.Add(new[] { tier.type });
+        }
+
+        selectorDropdown.ClearOptions();
+        selectorDropdown.AddOptions(names);
+        selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, names.Count - 1));
+        selectorDropdown.RefreshShownValue();
+    }
+
+    private void ApplySelector(int index)
+    {
+        if (clicker == null || index < 0 || index >= selectorChoices.Count) return;
+        clicker.SetDevSpawnTiers(selectorChoices[index]);
     }
 
     /// <summary>Anchors a UI element to the panel's top-left corner at (x, y) with a width.</summary>
