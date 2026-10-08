@@ -70,7 +70,10 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Text colour of the overlay line.")]
     [SerializeField] private Color overlayTextColor = new Color(1f, 0.95f, 0.7f, 1f);
 
-    [Tooltip("Background colour behind the overlay line.")]
+    [Tooltip("Draw the dark box behind the log and the coloured block behind each line. Off = just the text.")]
+    [SerializeField] private bool showLogBackground = false;
+
+    [Tooltip("Background colour behind the overlay line (used when Show Log Background is on).")]
     [SerializeField] private Color overlayBackColor = new Color(0f, 0f, 0f, 0.3f);
 
     [Tooltip("Distance from the left edge and from the black bar (canvas units).")]
@@ -80,7 +83,7 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Width of the event log box (canvas units). Its height runs from above the bottom black bar up to the top black bar.")]
     [SerializeField] private float logWidth = 420f;
 
-    [Tooltip("Background colour of each line.")]
+    [Tooltip("Background colour of each line (used when Show Log Background is on).")]
     [SerializeField] private Color overlayRowColor = new Color(0.1f, 0.18f, 0.28f, 0.8f);
 
     [Tooltip("Pixels the box scrolls per mouse-wheel notch.")]
@@ -437,7 +440,7 @@ public class PixelHints : MonoBehaviour
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(RectMask2D));
         box.transform.SetParent(overlayRoot.transform, false);
         Image img = box.GetComponent<Image>();
-        img.color = overlayBackColor;
+        img.color = showLogBackground ? overlayBackColor : Color.clear;
         img.raycastTarget = false; // empty space in the box never blocks clicks
         boxRect = box.GetComponent<RectTransform>();
         boxRect.anchorMin = new Vector2(0f, 0f);
@@ -482,7 +485,7 @@ public class PixelHints : MonoBehaviour
 
             GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button));
             row.transform.SetParent(listRect, false);
-            row.GetComponent<Image>().color = overlayRowColor;
+            row.GetComponent<Image>().color = showLogBackground ? overlayRowColor : Color.clear; // clear still takes clicks
             RectTransform rr = row.GetComponent<RectTransform>();
             rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 0f);
 
