@@ -1112,7 +1112,7 @@ public class PixelPauseMenu : MonoBehaviour
         box.GetComponent<Image>().color = panelColor;
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(panelSize.x - 120f, 380f);
+        br.sizeDelta = new Vector2(panelSize.x - 30f, 460f);
 
         TMP_Text title = MakeText(box.transform, "Title", "", titleFontSize * 0.8f, FontStyles.Bold);
         title.color = overwriteWarningColor;
@@ -1120,20 +1120,35 @@ public class PixelPauseMenu : MonoBehaviour
         tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(0f, titleFontSize * 1.3f);
         tr.anchoredPosition = new Vector2(0f, -20f);
+        title.enableAutoSizing = true; // long titles shrink instead of overflowing
+        title.fontSizeMax = titleFontSize * 0.8f;
+        title.fontSizeMin = 16f;
         overwriteTitleLabel = title;
 
         overwriteText = MakeText(box.transform, "Message", "", rowFontSize * 0.9f, FontStyles.Normal);
         overwriteText.alignment = TextAlignmentOptions.Top;
         RectTransform mr = overwriteText.rectTransform;
-        mr.anchorMin = new Vector2(0f, 1f); mr.anchorMax = new Vector2(1f, 1f); mr.pivot = new Vector2(0.5f, 1f);
-        mr.offsetMin = new Vector2(30f, -(20f + titleFontSize * 1.3f + 150f));
-        mr.offsetMax = new Vector2(-30f, -(20f + titleFontSize * 1.3f + 10f));
+        mr.anchorMin = Vector2.zero; mr.anchorMax = Vector2.one; mr.pivot = new Vector2(0.5f, 0.5f);
+        mr.offsetMin = new Vector2(30f, 24f + menuButtonSize.y + 20f);               // above the buttons
+        mr.offsetMax = new Vector2(-30f, -(20f + titleFontSize * 1.3f + 10f));        // below the title
+        overwriteText.enableAutoSizing = true; // the message shrinks to fit its area
+        overwriteText.fontSizeMax = rowFontSize * 0.9f;
+        overwriteText.fontSizeMin = 14f;
+        overwriteText.overflowMode = TextOverflowModes.Ellipsis;
 
         float gap = 12f;
         Vector2 half = new Vector2((br.sizeDelta.x - 60f - gap) * 0.5f, menuButtonSize.y);
         Button confirm = MakeButton(box.transform, "Overwrite", overwriteConfirmText, half, overwriteWarningColor, menuButtonFontSize);
         Button cancel = MakeButton(box.transform, "Cancel", overwriteCancelText, half, menuButtonColor, menuButtonFontSize);
         RectTransform cr = confirm.GetComponent<RectTransform>(), xr = cancel.GetComponent<RectTransform>();
+        foreach (Button b in new[] { confirm, cancel })
+        {
+            TMP_Text bl = b.GetComponentInChildren<TMP_Text>();
+            bl.enableAutoSizing = true; // "Overwrite" never wraps
+            bl.fontSizeMax = menuButtonFontSize * 0.8f;
+            bl.fontSizeMin = 12f;
+            bl.overflowMode = TextOverflowModes.Ellipsis;
+        }
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
         xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(0.5f, 0f);
         cr.anchoredPosition = new Vector2(-(half.x + gap) * 0.5f, 24f);
