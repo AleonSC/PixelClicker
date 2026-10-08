@@ -99,15 +99,15 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("How much the pad glows (so it is easy to spot).")]
     [SerializeField] private float padGlow = 0.6f;
 
-    [Tooltip("Text above the pad (lines allowed with \\n). {0} = pixel name, {1} = seconds left.")]
-    [SerializeField] private string labelLines = "Feed me\n<size=70%>{1}s</size>";
+    [Tooltip("Text above the floating pixel (lines allowed with \\n). {0} = the pixel type in capitals, {1} = seconds left.")]
+    [SerializeField] private string labelText = "{0}\n<size=70%>{1}s</size>";
 
     [Min(0.3f)]
     [Tooltip("Size of that text (3D text: about 10 per world unit).")]
     [SerializeField] private float labelTextSize = 2f;
 
     [Min(0f)]
-    [Tooltip("How far beyond the pad's far edge (the top of it on screen) the text sits, plus a little lift (world units).")]
+    [Tooltip("How far above the floating pixel the text sits (world units).")]
     [SerializeField] private float labelGap = 0.35f;
 
     [Header("Feedback")]
@@ -292,10 +292,7 @@ public class PixelPadMinigame : PixelMinigame
         const float margin = 0.02f;
         float reach = padSize * 0.5f + (showArrows ? arrowTravel + arrowLength * 0.6f : 0.1f);
 
-        Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
-        if (flatForward.sqrMagnitude < 0.0001f) flatForward = Vector3.forward;
-        flatForward.Normalize();
-        Vector3 labelPos = point + flatForward * (padSize * 0.56f + labelGap) + Vector3.up * 0.45f;
+        Vector3 labelPos = point + Vector3.up * (modelLift + modelEdge * 0.5f + labelGap + 0.3f);
 
         Vector3[] checks =
         {
@@ -593,11 +590,8 @@ public class PixelPadMinigame : PixelMinigame
         if (clicker.UIFont != null) label.font = clicker.UIFont;
         label.rectTransform.sizeDelta = new Vector2(padSize * 4f, 0.8f);
 
-        // The text floats just past the pad's far edge (the top end as seen on screen), facing the camera.
-        Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
-        if (flatForward.sqrMagnitude < 0.0001f) flatForward = Vector3.forward;
-        flatForward.Normalize();
-        labelGo.transform.position = point + flatForward * (padSize * 0.56f + labelGap) + Vector3.up * 0.45f;
+        // The text floats above the pixel preview, facing the camera.
+        labelGo.transform.position = point + Vector3.up * (modelLift + modelEdge * 0.5f + labelGap + 0.3f); // above the floating pixel
         labelGo.transform.rotation = cam.transform.rotation;
 
         // Grow in.
@@ -622,7 +616,7 @@ public class PixelPadMinigame : PixelMinigame
             left -= Time.deltaTime;
             animTime += Time.deltaTime;
             visual.Animate(animTime);
-            label.text = string.Format(labelLines, tier.displayName, Mathf.CeilToInt(Mathf.Max(0f, left)));
+            label.text = string.Format(labelText, tier.displayName.ToUpperInvariant(), Mathf.CeilToInt(Mathf.Max(0f, left)));
             labelGo.transform.rotation = cam.transform.rotation;
             TakePixels(root.transform, target, cam);
             yield return null;
