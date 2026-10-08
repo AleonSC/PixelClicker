@@ -96,6 +96,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the skip-intro button.")]
     [SerializeField] private string skipIntroText = "Skip intro (Gray, Black, RGB, Auto Clicker)";
 
+    [Tooltip("Label of the button that opens the folder with the crash / error reports (for sending to the developer).")]
+    [SerializeField] private string reportFolderText = "Open report folder";
+
     [Tooltip("Label of the unlock-everything button.")]
     [SerializeField] private string unlockAllText = "Unlock all shop items";
 
@@ -467,6 +470,16 @@ public class PixelDevTools : MonoBehaviour
         Place(unlock.GetComponent<RectTransform>(), 40f, y, inner);
         unlock.onClick.AddListener(UnlockAll);
         y += rowHeight + 24f;
+
+        // Row: the crash / error report folder (it used to be in the pause menu)
+        if (PixelCrashLog.Available)
+        {
+            Button report = PixelUIKit.CreateButton(font, box.transform, "Report Folder Button", reportFolderText,
+                                                    new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+            Place(report.GetComponent<RectTransform>(), 40f, y, inner);
+            report.onClick.AddListener(PixelCrashLog.OpenFolder);
+            y += rowHeight + 24f;
+        }
 
         // Row: tick box for the clear key
         BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });

@@ -18,3 +18,4 @@
 [2026-10-08 11:36 UTC] Glass pixels can't break while carried with Pixel Grabbing; letting go gently sets them down softly and gives them extra time before they vanish.
 [2026-10-08 11:45 UTC] Dev tools: settings are remembered, Skip intro / Unlock all leave toggles OFF, the minigame spawner joins the on-screen selector, All pixels is a drop-down option, plus new Disable despawns and God pixel mode boxes.
 [2026-10-08 11:51 UTC] Dev tools now open from a glowing, divine slide-out button at the bottom of the screen (with a halo ring and sparkles) instead of the pause menu.
+[2026-10-08 12:00 UTC] Pause menu: Save/Load is one window with save slots and an overwrite warning, Restart moved to Stats (which now shows one Potions stat), Report Folder moved to Dev Tools.

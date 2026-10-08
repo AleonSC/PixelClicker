@@ -145,8 +145,12 @@ public class PixelSaveGame : MonoBehaviour
     [SerializeField] private TMP_FontAsset font;
 
     [Header("File")]
-    [Tooltip("Name of the save file. It lives in Application.persistentDataPath (see the Console when the game starts).")]
+    [Tooltip("Name of the save file of slot 1 (so an old single save keeps working). Other slots add _slot2, _slot3... before the extension. They live in Application.persistentDataPath (see the Console when the game starts).")]
     [SerializeField] private string saveFileName = "pixelclicker_save.json";
+
+    [Range(1, 12)]
+    [Tooltip("How many save slots the Save / Load window offers.")]
+    [SerializeField] private int slotCount = 5;
 
     [Header("When to save / load")]
     [Tooltip("Load the save when the game starts.")]
@@ -200,10 +204,75 @@ public class PixelSaveGame : MonoBehaviour
     private float autoSaveTimer;
     private bool suppressSaving;
 
-    private string FilePath => Path.Combine(Application.persistentDataPath, saveFileName);
+    private const string PrefSlot = "PixelClicker.Save.Slot";
 
-    /// <summary>True if a save file exists.</summary>
+    /// <summary>How many save slots there are.</summary>
+    public int SlotCount => Mathf.Max(1, slotCount);
+
+    /// <summary>
+    /// The slot autosave, saving on quit and the startup load use: the one you last saved to or loaded from.
+    /// Remembered between sessions.
+    /// </summary>
+    public int CurrentSlot
+    {
+        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefSlot, 1), 1, SlotCount);
+        private set { PlayerPrefs.SetInt(PrefSlot, Mathf.Clamp(value, 1, SlotCount)); PlayerPrefs.Save(); }
+    }
+
+    private string PathFor(int slot)
+    {
+        string name = slot <= 1 ? saveFileName
+            : Path.GetFileNameWithoutExtension(saveFileName) + "_slot" + slot + Path.GetExtension(saveFileName);
+        return Path.Combine(Application.persistentDataPath, name);
+    }
+
+    private string FilePath => PathFor(CurrentSlot);
+
+    /// <summary>True if the current slot has a save file.</summary>
     public bool HasSave => File.Exists(FilePath);
+
+    /// <summary>True if this slot has a save file.</summary>
+    public bool SlotHasSave(int slot) => File.Exists(PathFor(slot));
+
+    /// <summary>What a slot holds, for the slot list: when it was saved and how many pixels were collected in total.</summary>
+    public bool TryGetSlotInfo(int slot, out string savedAt, out double totalPixels)
+    {
+        savedAt = "";
+        totalPixels = 0d;
+        try
+        {
+            string path = PathFor(slot);
+            if (!File.Exists(path)) return false;
+            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+            if (data == null) return false;
+            savedAt = data.savedAt;
+            if (data.tiers != null) foreach (TierSave t in data.tiers) totalPixels += t.total;
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Saves into this slot (it becomes the current slot). The Save / Load window asks before overwriting.</summary>
+    public bool SaveToSlot(int slot)
+    {
+        CurrentSlot = slot;
+        return Save(true);
+    }
+
+    /// <summary>Loads this slot (it becomes the current slot).</summary>
+    public bool LoadSlot(int slot)
+    {
+        if (!SlotHasSave(slot))
+        {
+            ShowMessage("That slot is empty");
+            return false;
+        }
+        CurrentSlot = slot;
+        return Load(true);
+    }
 
     // ------------------------------------------------------------------
     // Unity lifecycle
@@ -220,7 +289,7 @@ public class PixelSaveGame : MonoBehaviour
         }
 
         BuildMessageUI();
-        if (logToConsole) Debug.Log("PixelSaveGame: save file is " + FilePath, this);
+        if (logToConsole) Debug.Log("PixelSaveGame: slot " + CurrentSlot + " is " + FilePath, this);
 
         // One frame later, so every other script has finished its own startup first.
         yield return null;
@@ -400,8 +469,8 @@ public class PixelSaveGame : MonoBehaviour
             if (File.Exists(path)) File.Delete(path);
             File.Move(temp, path);
 
-            if (logToConsole) Debug.Log("PixelSaveGame: saved.", this);
-            if (showMessage) ShowMessage("Game saved");
+            if (logToConsole) Debug.Log("PixelSaveGame: saved (slot " + CurrentSlot + ").", this);
+            if (showMessage) ShowMessage("Saved to slot " + CurrentSlot);
             return true;
         }
         catch (Exception e)
@@ -552,7 +621,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             if (logToConsole) Debug.Log("PixelSaveGame: loaded the save from " + data.savedAt + ".", this);
-            if (showMessage) ShowMessage("Game loaded");
+            if (showMessage) ShowMessage("Loaded slot " + CurrentSlot);
             return true;
         }
         catch (Exception e)

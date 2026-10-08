@@ -79,7 +79,7 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Resume button text.")]
     [SerializeField] private string resumeText = "Resume";
 
-    [Tooltip("Restart button text.")]
+    [Tooltip("Restart button text (on the Stats screen).")]
     [SerializeField] private string restartText = "Restart";
 
     [Header("Restart Confirmation")]
@@ -112,8 +112,52 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Add a Pixel Save Game component at startup if the scene has none.")]
     [SerializeField] private bool addSaveGameIfMissing = true;
 
-    [Tooltip("Show the Save and Load buttons.")]
+    [Tooltip("Show the Save / Load button (it opens a window with the save slots).")]
     [SerializeField] private bool showSaveLoad = true;
+
+    [Tooltip("Text of the main menu button that opens the save slots, and the title of that window.")]
+    [SerializeField] private string saveLoadText = "Save / Load";
+
+    [Tooltip("Slot name. {0} = the slot number.")]
+    [SerializeField] private string slotNameFormat = "Slot {0}";
+
+    [Tooltip("Added to the name of the slot the game is using right now (autosave goes there).")]
+    [SerializeField] private string currentSlotTag = "  (current)";
+
+    [Tooltip("Second line of a slot that has a save. {0} = when it was saved, {1} = pixels collected in total.")]
+    [SerializeField] private string slotInfoFormat = "{0}   -   {1} pixels collected";
+
+    [Tooltip("Second line of a slot with no save.")]
+    [SerializeField] private string emptySlotText = "Empty";
+
+    [Tooltip("Title of the overwrite warning. {0} = the slot number.")]
+    [SerializeField] private string overwriteTitle = "Overwrite slot {0}?";
+
+    [Tooltip("Text of the overwrite warning. {0} = the slot number, {1} = when that save was made.")]
+    [SerializeField] private string overwriteMessage = "Slot {0} already has a save from {1}. Saving now replaces it and it cannot be restored.";
+
+    [Tooltip("Button that confirms the overwrite.")]
+    [SerializeField] private string overwriteConfirmText = "Overwrite";
+
+    [Tooltip("Button that cancels the overwrite.")]
+    [SerializeField] private string overwriteCancelText = "Cancel";
+
+    [Min(40f)]
+    [Tooltip("Height of one slot row in the Save / Load window (canvas units).")]
+    [SerializeField] private float slotRowHeight = 84f;
+
+    [Range(2, 8)]
+    [Tooltip("How many slot rows show at once; more slots scroll.")]
+    [SerializeField] private int visibleSlotRows = 5;
+
+    [Tooltip("Slot row colour.")]
+    [SerializeField] private Color slotColor = new Color(0.22f, 0.22f, 0.28f, 1f);
+
+    [Tooltip("Colour of the selected slot.")]
+    [SerializeField] private Color slotSelectedColor = new Color(0.25f, 0.5f, 0.75f, 1f);
+
+    [Tooltip("Colour of the overwrite warning text and button.")]
+    [SerializeField] private Color overwriteWarningColor = new Color(0.9f, 0.35f, 0.3f, 1f);
 
     [Tooltip("Save button text.")]
     [SerializeField] private string saveText = "Save";
@@ -224,31 +268,15 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the highest combo stat.")]
     [SerializeField] private string highestComboLabel = "Highest combo";
 
-    [Tooltip("Text of the collapsible potions section's button. {0} = total potions used, {1} = + or - .")]
-    [SerializeField] private string potionsUsedFormat = "Potions used ({0})  [{1}]";
-
-    [Tooltip("Line in the potions box. {0} = potion name, {1} = how many were used.")]
-    [SerializeField] private string potionLineFormat = "{0}   x{1}";
-
-    [Tooltip("Shown in the potions box before any potion was used.")]
-    [SerializeField] private string noPotionsText = "None yet";
+    [Tooltip("Label of the potions stat (total potions drunk).")]
+    [SerializeField] private string potionsUsedLabel = "Potions used";
 
     [Min(100f)]
     [Tooltip("Height of the scrolling stats list (canvas units). More stats than fit scroll.")]
     [SerializeField] private float statsViewHeight = 480f;
 
-    [Min(60f)]
-    [Tooltip("Height of the potions-used box (canvas units). A longer list scrolls.")]
-    [SerializeField] private float potionsBoxHeight = 170f;
-
-    [Tooltip("Open the potions-used section when the Stats screen is shown.")]
-    [SerializeField] private bool potionsOpenByDefault = false;
-
     [Tooltip("Scroll bar colour in the Stats screen.")]
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
-
-    [Tooltip("Background of the potions-used box.")]
-    [SerializeField] private Color potionsBoxColor = new Color(0f, 0f, 0f, 0.35f);
 
     [Header("Changelog")]
     [Tooltip("Show the Changelog button in the pause menu.")]
@@ -276,13 +304,6 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Size of the changelog text.")]
     [SerializeField] private float changelogFontSize = 28f;
-
-    [Header("Report Folder")]
-    [Tooltip("Show the Report Folder button (opens the folder with the crash / error reports, for sending to the developer).")]
-    [SerializeField] private bool showReportFolder = true;
-
-    [Tooltip("Text of the Report Folder button.")]
-    [SerializeField] private string reportFolderText = "Report Folder";
 
     [Header("How to Play and Controls")]
     [Tooltip("Show the How to Play button in the pause menu.")]
@@ -454,13 +475,19 @@ public class PixelPauseMenu : MonoBehaviour
     }
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
     private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, sortersValue, comboValue;
-    private ScrollRect statsScroll, potionsScroll;
-    private GameObject statsBar, potionsBar, potionsBox;
-    private TMP_Text potionsHeaderLabel, potionsText;
-    private RectTransform statsPanelRect, potionsHeaderRect, potionsBoxRect, statsBackRect;
+    private ScrollRect statsScroll;
+    private GameObject statsBar;
+    private TMP_Text potionsValue;
+    private RectTransform statsPanelRect, statsRestartRect, statsBackRect;
     private float statsContentHeight, statsListTop;
-    private bool potionsOpen;
-    private string shownPotionsText;
+    private GameObject saveLoadPanel, overwriteOverlay;
+    private TMP_Text overwriteText;
+    private Button[] slotButtons;
+    private TMP_Text[] slotLabels;
+    private Button slotSaveButton, slotLoadButton;
+    private ScrollRect slotScroll;
+    private GameObject slotBar;
+    private int selectedSlot = 1;
     private Toggle rotationToggle, pulsingToggle, abbreviateToggle, hidePurchasedToggle, backgroundToggle, pauseStopsToggle;
     private float previousTimeScale = 1f;
 
@@ -554,7 +581,8 @@ public class PixelPauseMenu : MonoBehaviour
             else if (IsPaused)
             {
                 // Inside Stats / Settings, Escape steps back; from the main view it resumes.
-                if (mainPanel != null && !mainPanel.activeSelf) ShowView(mainPanel);
+                if (overwriteOverlay != null && overwriteOverlay.activeSelf) overwriteOverlay.SetActive(false);
+                else if (mainPanel != null && !mainPanel.activeSelf) ShowView(mainPanel);
                 else SetPaused(false);
             }
             else if (PixelWindows.CloseTopmost())
@@ -742,8 +770,8 @@ public class PixelPauseMenu : MonoBehaviour
         entries.Add(new MenuEntry { label = resumeText, color = menuButtonColor, action = () => SetPaused(false) });
         if (showSaveLoad && saveGame != null)
         {
-            entries.Add(new MenuEntry { label = saveText, color = menuButtonColor, action = () => saveGame.Save() });
-            entries.Add(new MenuEntry { label = loadText, color = menuButtonColor, action = () => saveGame.Load() });
+            BuildSaveLoadPanel();
+            entries.Add(new MenuEntry { label = saveLoadText, color = menuButtonColor, action = () => ShowView(saveLoadPanel) });
         }
 
         BuildStatsPanel();
@@ -757,9 +785,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
         if (controlsScreen != null) entries.Add(new MenuEntry { label = controlsText, color = menuButtonColor, action = () => ShowView(controlsScreen.panel) });
         if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
-        if (showReportFolder && PixelCrashLog.Available)
-            entries.Add(new MenuEntry { label = reportFolderText, color = menuButtonColor, action = PixelCrashLog.OpenFolder });
-        if (showRestart) entries.Add(new MenuEntry { label = restartText, color = menuButtonColor, action = () => ShowView(restartPanel) });
         if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = Quit });
 
         LayoutMainButtons(panel.transform, entries, y, panelRect);
@@ -784,6 +809,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (howToPlayScreen != null && view == howToPlayScreen.panel) RefreshGuideScreen(howToPlayScreen);
         if (controlsScreen != null && view == controlsScreen.panel) RefreshGuideScreen(controlsScreen);
         if (restartPanel != null) restartPanel.SetActive(view == restartPanel);
+        if (saveLoadPanel != null) saveLoadPanel.SetActive(view == saveLoadPanel);
+        if (view == saveLoadPanel) OpenSaveLoad();
         if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
         if (view == changelogPanel) RefreshChangelog();
 
@@ -830,10 +857,10 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>Adds the Back button, grows the panel to fit and hides it until it is opened.</summary>
-    private void FinishSectionPanel(GameObject panel, float y)
+    private void FinishSectionPanel(GameObject panel, float y, GameObject backTo = null)
     {
         y += 10f;
-        AddMenuButton(panel.transform, backText, menuButtonColor, ref y, () => ShowView(mainPanel));
+        AddMenuButton(panel.transform, backText, menuButtonColor, ref y, () => ShowView(backTo != null ? backTo : mainPanel));
 
         RectTransform rect = panel.GetComponent<RectTransform>();
         float needed = y + 30f;
@@ -939,7 +966,6 @@ public class PixelPauseMenu : MonoBehaviour
         statsPanel = BuildSectionPanel("Stats Panel", statsTitle, out float y);
         statsPanelRect = statsPanel.GetComponent<RectTransform>();
         statsListTop = y;
-        potionsOpen = potionsOpenByDefault;
 
         // The stats scroll when there are more than fit.
         statsScroll = PixelUIKit.CreateScrollView(statsPanel.transform, "Stats List", scrollbarColor, 12f, rowHeight,
@@ -965,38 +991,17 @@ public class PixelPauseMenu : MonoBehaviour
         vacuumsValue = AddStatRow(content, vacuumsUsedLabel, ref cy);
         sortersValue = AddStatRow(content, sortersUsedLabel, ref cy);
         comboValue = AddStatRow(content, highestComboLabel, ref cy);
+        potionsValue = AddStatRow(content, potionsUsedLabel, ref cy);
         statsContentHeight = cy;
 
-        // Collapsible "potions used" section: a button, then a box with a scroll bar.
-        Vector2 wide = new Vector2(panelSize.x - 80f, rowHeight);
-        Button header = MakeButton(statsPanel.transform, "Potions Header", "", wide, tickBoxColor, rowFontSize * 0.9f);
-        potionsHeaderLabel = header.GetComponentInChildren<TMP_Text>();
-        potionsHeaderRect = header.GetComponent<RectTransform>();
-        potionsHeaderRect.anchorMin = potionsHeaderRect.anchorMax = potionsHeaderRect.pivot = new Vector2(0.5f, 1f);
-        header.onClick.AddListener(() => { potionsOpen = !potionsOpen; RefreshStats(); });
-
-        potionsBox = new GameObject("Potions Box", typeof(RectTransform), typeof(Image));
-        potionsBox.transform.SetParent(statsPanel.transform, false);
-        potionsBox.GetComponent<Image>().color = potionsBoxColor;
-        potionsBoxRect = potionsBox.GetComponent<RectTransform>();
-        potionsBoxRect.anchorMin = potionsBoxRect.anchorMax = potionsBoxRect.pivot = new Vector2(0.5f, 1f);
-        potionsBoxRect.sizeDelta = new Vector2(wide.x, potionsBoxHeight);
-
-        potionsScroll = PixelUIKit.CreateScrollView(potionsBox.transform, "Potions List", scrollbarColor, 12f, rowFontSize * 1.3f,
-                                                    out RectTransform potionsContent, out potionsBar);
-        RectTransform pr = potionsScroll.GetComponent<RectTransform>();
-        PixelUIKit.Stretch(pr);
-        pr.offsetMin = new Vector2(8f, 8f);
-        pr.offsetMax = new Vector2(-8f, -8f);
-        potionsText = MakeText(potionsContent, "Potions Text", "", rowFontSize * 0.85f, FontStyles.Normal);
-        potionsText.alignment = TextAlignmentOptions.TopLeft;
-        potionsText.color = statValueColor;
-        RectTransform tr = potionsText.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.offsetMin = new Vector2(8f, -rowHeight);
-        tr.offsetMax = new Vector2(-24f, 0f);
+        // Restart lives here now (it opens the hold-to-confirm screen).
+        if (showRestart)
+        {
+            Button restart = MakeButton(statsPanel.transform, "Restart Button", restartText, menuButtonSize, quitButtonColor, menuButtonFontSize);
+            statsRestartRect = restart.GetComponent<RectTransform>();
+            statsRestartRect.anchorMin = statsRestartRect.anchorMax = statsRestartRect.pivot = new Vector2(0.5f, 1f);
+            restart.onClick.AddListener(() => ShowView(restartPanel));
+        }
 
         // Back button (moves with the section)
         Button back = MakeButton(statsPanel.transform, "Back Button", backText, menuButtonSize, menuButtonColor, menuButtonFontSize);
@@ -1008,24 +1013,189 @@ public class PixelPauseMenu : MonoBehaviour
         statsPanel.SetActive(false);
     }
 
-    /// <summary>Places the potions section and the Back button, and sizes the Stats panel (it grows when the potions box is open).</summary>
+    /// <summary>Places the Restart and Back buttons under the stats list and sizes the Stats panel.</summary>
     private void LayoutStats()
     {
-        float y = statsListTop + statsViewHeight + 8f;
-        potionsHeaderRect.anchoredPosition = new Vector2(0f, -y);
-        y += rowHeight + 6f;
-
-        potionsBox.SetActive(potionsOpen);
-        if (potionsOpen)
+        float y = statsListTop + statsViewHeight + 12f;
+        if (statsRestartRect != null)
         {
-            potionsBoxRect.anchoredPosition = new Vector2(0f, -y);
-            y += potionsBoxHeight + 10f;
+            statsRestartRect.anchoredPosition = new Vector2(0f, -y);
+            y += menuButtonSize.y + menuButtonSpacing;
         }
-        else y += 4f;
 
         statsBackRect.anchoredPosition = new Vector2(0f, -y);
         y += menuButtonSize.y + 30f;
         statsPanelRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
+    }
+
+    // ------------------------------------------------------------------
+    // Save / Load window (save slots)
+    // ------------------------------------------------------------------
+
+    private void BuildSaveLoadPanel()
+    {
+        int count = saveGame.SlotCount;
+        saveLoadPanel = BuildSectionPanel("Save Load Panel", saveLoadText, out float y);
+
+        // The slot list (scrolls when there are more slots than rows).
+        float rowStep = slotRowHeight + 8f;
+        float viewHeight = Mathf.Min(count, visibleSlotRows) * rowStep;
+        slotScroll = PixelUIKit.CreateScrollView(saveLoadPanel.transform, "Slot List", scrollbarColor, 12f, rowStep,
+                                                 out RectTransform content, out slotBar);
+        RectTransform vr = slotScroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(-40f, viewHeight);
+        vr.anchoredPosition = new Vector2(0f, -y);
+
+        slotButtons = new Button[count];
+        slotLabels = new TMP_Text[count];
+        for (int i = 0; i < count; i++)
+        {
+            int slot = i + 1;
+            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 100f, slotRowHeight), slotColor, rowFontSize);
+            RectTransform rt = b.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(-8f, -(i * rowStep));
+            b.onClick.AddListener(() => SelectSlot(slot));
+
+            TMP_Text label = b.GetComponentInChildren<TMP_Text>();
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.richText = true;
+            label.enableAutoSizing = false;
+            label.fontSize = rowFontSize;
+            label.rectTransform.offsetMin = new Vector2(20f, 4f);
+            label.rectTransform.offsetMax = new Vector2(-12f, -4f);
+            slotButtons[i] = b;
+            slotLabels[i] = label;
+        }
+        PixelUIKit.UpdateScrollView(slotScroll, slotBar, count * rowStep, viewHeight);
+        y += viewHeight + 14f;
+
+        // Save | Load for the selected slot.
+        float gap = 12f;
+        Vector2 half = new Vector2((panelSize.x - 80f - gap) * 0.5f, menuButtonSize.y);
+        slotSaveButton = MakeButton(saveLoadPanel.transform, "Slot Save", saveText, half, menuButtonColor, menuButtonFontSize);
+        slotLoadButton = MakeButton(saveLoadPanel.transform, "Slot Load", loadText, half, menuButtonColor, menuButtonFontSize);
+        RectTransform sr = slotSaveButton.GetComponent<RectTransform>(), lr = slotLoadButton.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0.5f, 1f);
+        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0.5f, 1f);
+        sr.anchoredPosition = new Vector2(-(half.x + gap) * 0.5f, -y);
+        lr.anchoredPosition = new Vector2((half.x + gap) * 0.5f, -y);
+        slotSaveButton.onClick.AddListener(OnSlotSave);
+        slotLoadButton.onClick.AddListener(OnSlotLoad);
+        y += menuButtonSize.y + 14f;
+
+        BuildOverwriteOverlay(saveLoadPanel.transform);
+        FinishSectionPanel(saveLoadPanel, y);
+        overwriteOverlay.transform.SetAsLastSibling(); // above the Back button too
+    }
+
+    /// <summary>The "this slot already has a save" warning: a dimmed box over the window with Overwrite / Cancel.</summary>
+    private void BuildOverwriteOverlay(Transform parent)
+    {
+        overwriteOverlay = new GameObject("Overwrite Warning", typeof(RectTransform), typeof(Image));
+        overwriteOverlay.transform.SetParent(parent, false);
+        overwriteOverlay.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.7f); // also blocks the clicks behind it
+        PixelUIKit.Stretch(overwriteOverlay.GetComponent<RectTransform>());
+
+        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        box.transform.SetParent(overwriteOverlay.transform, false);
+        box.GetComponent<Image>().color = panelColor;
+        RectTransform br = box.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
+        br.sizeDelta = new Vector2(panelSize.x - 120f, 380f);
+
+        TMP_Text title = MakeText(box.transform, "Title", "", titleFontSize * 0.8f, FontStyles.Bold);
+        title.color = overwriteWarningColor;
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(0f, titleFontSize * 1.3f);
+        tr.anchoredPosition = new Vector2(0f, -20f);
+        overwriteTitleLabel = title;
+
+        overwriteText = MakeText(box.transform, "Message", "", rowFontSize * 0.9f, FontStyles.Normal);
+        overwriteText.alignment = TextAlignmentOptions.Top;
+        RectTransform mr = overwriteText.rectTransform;
+        mr.anchorMin = new Vector2(0f, 1f); mr.anchorMax = new Vector2(1f, 1f); mr.pivot = new Vector2(0.5f, 1f);
+        mr.offsetMin = new Vector2(30f, -(20f + titleFontSize * 1.3f + 150f));
+        mr.offsetMax = new Vector2(-30f, -(20f + titleFontSize * 1.3f + 10f));
+
+        float gap = 12f;
+        Vector2 half = new Vector2((br.sizeDelta.x - 60f - gap) * 0.5f, menuButtonSize.y);
+        Button confirm = MakeButton(box.transform, "Overwrite", overwriteConfirmText, half, overwriteWarningColor, menuButtonFontSize);
+        Button cancel = MakeButton(box.transform, "Cancel", overwriteCancelText, half, menuButtonColor, menuButtonFontSize);
+        RectTransform cr = confirm.GetComponent<RectTransform>(), xr = cancel.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
+        xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(0.5f, 0f);
+        cr.anchoredPosition = new Vector2(-(half.x + gap) * 0.5f, 24f);
+        xr.anchoredPosition = new Vector2((half.x + gap) * 0.5f, 24f);
+        confirm.onClick.AddListener(() =>
+        {
+            overwriteOverlay.SetActive(false);
+            saveGame.SaveToSlot(selectedSlot);
+            RefreshSlots();
+        });
+        cancel.onClick.AddListener(() => overwriteOverlay.SetActive(false));
+
+        overwriteOverlay.SetActive(false);
+    }
+
+    private TMP_Text overwriteTitleLabel;
+
+    private void OpenSaveLoad()
+    {
+        selectedSlot = saveGame != null ? saveGame.CurrentSlot : 1;
+        if (overwriteOverlay != null) overwriteOverlay.SetActive(false);
+        RefreshSlots();
+    }
+
+    private void SelectSlot(int slot)
+    {
+        selectedSlot = slot;
+        RefreshSlots();
+    }
+
+    /// <summary>Fills every slot row (name, date, pixels) and marks the selected one; Load only works on a slot with a save.</summary>
+    private void RefreshSlots()
+    {
+        if (saveGame == null || slotButtons == null) return;
+        int current = saveGame.CurrentSlot;
+        for (int i = 0; i < slotButtons.Length; i++)
+        {
+            int slot = i + 1;
+            string name = string.Format(slotNameFormat, slot) + (slot == current ? currentSlotTag : "");
+            string detail = saveGame.TryGetSlotInfo(slot, out string savedAt, out double pixels)
+                ? string.Format(slotInfoFormat, savedAt, FormatCount(pixels)) : emptySlotText;
+            slotLabels[i].text = "<b>" + name + "</b>\n<size=78%>" + detail + "</size>";
+            slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;
+        }
+        slotLoadButton.interactable = saveGame.SlotHasSave(selectedSlot);
+    }
+
+    private void OnSlotSave()
+    {
+        if (saveGame == null) return;
+        if (!saveGame.SlotHasSave(selectedSlot))
+        {
+            saveGame.SaveToSlot(selectedSlot);
+            RefreshSlots();
+            return;
+        }
+
+        // Saving over an existing save: ask first.
+        saveGame.TryGetSlotInfo(selectedSlot, out string savedAt, out double _);
+        overwriteTitleLabel.text = string.Format(overwriteTitle, selectedSlot);
+        overwriteText.text = string.Format(overwriteMessage, selectedSlot, savedAt);
+        overwriteOverlay.SetActive(true);
+    }
+
+    private void OnSlotLoad()
+    {
+        if (saveGame == null) return;
+        saveGame.LoadSlot(selectedSlot);
+        RefreshSlots();
     }
 
     /// <summary>"This deletes everything" screen: the player has to HOLD the red button to confirm.</summary>
@@ -1071,7 +1241,7 @@ public class PixelPauseMenu : MonoBehaviour
         restartHold.Setup(fr, restartHoldSeconds, Restart);
         y += menuButtonSize.y + menuButtonSpacing;
 
-        FinishSectionPanel(restartPanel, y);
+        FinishSectionPanel(restartPanel, y, statsPanel);
     }
 
     private void BuildChangelogPanel()
@@ -1267,28 +1437,8 @@ public class PixelPauseMenu : MonoBehaviour
         comboValue.text = FormatCount(stats.HighestCombo);
         PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
 
-        // Potions used: a button that opens a scrolling box.
-        potionsHeaderLabel.text = string.Format(potionsUsedFormat, FormatCount(stats.TotalPotionsUsed), potionsOpen ? "-" : "+");
-        if (potionsBox.activeSelf != potionsOpen) LayoutStats();
-        if (potionsOpen)
-        {
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            foreach (System.Collections.Generic.KeyValuePair<string, long> p in stats.PotionsUsed)
-            {
-                if (sb.Length > 0) sb.Append('\n');
-                sb.Append(string.Format(potionLineFormat, p.Key, FormatCount(p.Value)));
-            }
-            string text = sb.Length > 0 ? sb.ToString() : noPotionsText;
-            if (text != shownPotionsText)
-            {
-                shownPotionsText = text;
-                potionsText.text = text;
-            }
-            float width = potionsText.rectTransform.rect.width > 1f ? potionsText.rectTransform.rect.width : panelSize.x - 140f;
-            float contentHeight = Mathf.Ceil(potionsText.GetPreferredValues(text, width, 0f).y) + 8f;
-            potionsText.rectTransform.offsetMin = new Vector2(8f, -contentHeight);
-            PixelUIKit.UpdateScrollView(potionsScroll, potionsBar, contentHeight, potionsBoxHeight - 16f);
-        }
+        potionsValue.text = FormatCount(stats.TotalPotionsUsed);
+        PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
     }
 
     /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>
