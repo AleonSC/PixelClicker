@@ -48,3 +48,4 @@
 [2026-10-08 14:51 UTC] Settings: Replay tutorial moved to the top, and each group lists its tick boxes first, then its other controls.
 [2026-10-08 14:54 UTC] Bomb wires are spaced further apart on a taller bomb, and their click areas no longer overlap.
 [2026-10-08 14:57 UTC] The ghost now carries a small glass potion with the buff's pixel inside; clicking the ghost makes him drop it, and the buff starts when it shatters.
+[2026-10-08 15:04 UTC] The first pixel unlock now shows a small 'Got it' tip beside the event log explaining what it is and that it can be switched off in Settings.

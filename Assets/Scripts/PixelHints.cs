@@ -121,6 +121,9 @@ public class PixelHints : MonoBehaviour
 
     private const string PrefPrefix = "PixelClicker.Hint.";
 
+    /// <summary>Distance from the left of the screen to the right edge of the event log (canvas units), for boxes placed beside it.</summary>
+    public static float LogRightEdge => instance != null ? instance.overlayMargin.x + instance.logWidth + 20f : 440f;
+
     private static Hint H(string id, string text) => new Hint { id = id, text = text, shortText = ShortFor(id) };
 
     private static string ShortFor(string id)
@@ -167,6 +170,7 @@ public class PixelHints : MonoBehaviour
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
+        H("event_log", "This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log."),
         H("crafting", "Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion."),
         H("grab", "Pixel Grabbing unlocked! Hold the left mouse button on an old pixel to pick it up, then let go to throw it."),
         H("timestop", "Time Stop unlocked! Press T to freeze time and T again to resume. It drains an energy meter, but you can still click the cube - the old pixels pile up and burst out when time resumes."),
@@ -665,6 +669,7 @@ public class PixelHints : MonoBehaviour
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null || !clicker.IsValidTierIndex(index)) return;
         ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", "");
+        Trigger("event_log"); // the very first line of the log: explain what the log is
     }
 
     private bool introChecked, freshAtStart = true;
@@ -724,7 +729,7 @@ public class PixelHints : MonoBehaviour
         Hint next = queue.Dequeue();
         // The tips for something that just happened in a minigame are small; the rest are shop-sized.
         PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && (next.id.StartsWith("minigame_") || next.id.StartsWith("timestop_")),
-                         aboveCombo: next.id == "combo"); // the first combo tip sits just above the combo meter
+                         aboveCombo: next.id == "combo", nearLog: next.id == "event_log"); // the first combo tip sits just above the combo meter
         wasShowing = true;
     }
 }
