@@ -27,3 +27,4 @@
 [2026-10-08 12:28 UTC] Ghost buff text is much smaller and always stays on screen, the meteor +1 chunk text is much smaller and slightly transparent, and only 2-3 minigames can run at once (editable).
 [2026-10-08 12:47 UTC] Reworked the meteor visuals: a craggy rock with glowing lava cracks, a fiery halo, a white-hot tail core and drifting embers.
 [2026-10-08 12:51 UTC] Singularity pixels spawn much less often, and an old singularity pixel now slowly pulls nearby old pixels in, shown by a very faint black ring.
+[2026-10-08 12:55 UTC] Singularity gravity wells now drag nearby old pixels at a constant speed (even across the floor) and keep working while the singularity pixel is carried with Pixel Grabbing.

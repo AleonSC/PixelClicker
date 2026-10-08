@@ -148,8 +148,12 @@ public class PixelLook
     public float wellRadius = 3.5f;
 
     [Min(0f)]
-    [Tooltip("How strong the pull is at the centre (acceleration; normal gravity is about 9.8). It fades towards the edge of the ring.")]
-    public float wellStrength = 4f;
+    [Tooltip("How fast nearby old pixels are dragged towards it (world units per second). The drag is constant inside the ring and overcomes the floor's friction.")]
+    public float wellPullSpeed = 1.6f;
+
+    [Min(0f)]
+    [Tooltip("How quickly a pixel settles into that drag speed (per second). Higher = it grabs hold harder.")]
+    public float wellGrip = 8f;
 
     [Range(0f, 1f)]
     [Tooltip("How visible the ring is (0 = invisible). Keep it very faint.")]
@@ -581,17 +585,18 @@ public static class PixelLooks
 public class OldPixelGravityWell : MonoBehaviour
 {
     private PixelClicker clicker;
-    private float radius, strength;
+    private float radius, pullSpeed, grip;
     private GameObject ring;
     private SpriteRenderer ringRenderer;
     private float startScale;
     private static Sprite ringSprite;
 
-    public void Setup(PixelClicker owner, float pullRadius, float pullStrength, float ringOpacity, Color ringColour)
+    public void Setup(PixelClicker owner, float pullRadius, float dragSpeed, float gripPerSecond, float ringOpacity, Color ringColour)
     {
         clicker = owner;
         radius = pullRadius;
-        strength = pullStrength;
+        pullSpeed = dragSpeed;
+        grip = gripPerSecond;
         startScale = Mathf.Max(0.0001f, transform.lossyScale.x);
 
         if (ringOpacity > 0f)
@@ -607,14 +612,33 @@ public class OldPixelGravityWell : MonoBehaviour
         }
     }
 
+    private static Vector3 VelocityOf(Rigidbody rb)
+    {
+#if UNITY_6000_0_OR_NEWER
+        return rb.linearVelocity;
+#else
+        return rb.velocity;
+#endif
+    }
+
+    private static void SetVelocityOf(Rigidbody rb, Vector3 v)
+    {
+#if UNITY_6000_0_OR_NEWER
+        rb.linearVelocity = v;
+#else
+        rb.velocity = v;
+#endif
+    }
+
     private void FixedUpdate()
     {
-        if (clicker == null || strength <= 0f) return;
-        // Only pulls while the well still has its full size (not while it is shrinking away).
+        if (clicker == null || pullSpeed <= 0f) return;
+        // The well keeps working while the player carries it (Pixel Grabbing); it only stops once it is shrinking away.
         if (transform.lossyScale.x < startScale * 0.9f) return;
 
         var list = clicker.OldPixels;
         Vector3 centre = transform.position;
+        float blend = Mathf.Clamp01(grip * Time.fixedDeltaTime);
         for (int i = 0; i < list.Count; i++)
         {
             Rigidbody other = list[i];
@@ -624,10 +648,14 @@ public class OldPixelGravityWell : MonoBehaviour
 
             Vector3 to = centre - other.position;
             float distance = to.magnitude;
-            if (distance > radius || distance < 0.05f) continue;
+            if (distance > radius || distance < 0.08f) continue;
 
-            float falloff = 1f - distance / radius; // strongest in the middle, nothing at the edge
-            other.AddForce(to / distance * (strength * falloff), ForceMode.Acceleration);
+            // A constant drag: whatever the pixel is doing (even sitting on the floor against its friction), its speed towards
+            // the well is brought up to the drag speed. Speed it already has towards the well is kept.
+            Vector3 dir = to / distance;
+            Vector3 v = VelocityOf(other);
+            float towards = Vector3.Dot(v, dir);
+            if (towards < pullSpeed) SetVelocityOf(other, v + dir * ((pullSpeed - towards) * blend));
         }
     }
 
