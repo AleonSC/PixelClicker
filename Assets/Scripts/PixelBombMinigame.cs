@@ -378,6 +378,14 @@ public class PixelBombMinigame : PixelMinigame
 
             wires[i] = wire;
             hitboxes[i] = box;
+
+            // Colour-blind support (Settings): a letter under each wire.
+            if (PixelDisplaySettings.ColorBlind)
+            {
+                string[] letters = { "R", "G", "B" };
+                MakeText(root.transform, "Wire Letter " + letters[i], letters[i], hintTextSize * 1.6f, Color.white,
+                         new Vector3(wire.transform.localPosition.x, -(bh * 0.5f + wireLength) - bombSize * 0.22f, -0.02f), bombSize);
+            }
         }
 
         // Count down.

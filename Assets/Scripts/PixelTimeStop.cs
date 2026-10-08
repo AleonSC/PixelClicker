@@ -28,10 +28,6 @@ public class PixelTimeStop : MonoBehaviour
     [Tooltip("Is Time Stop available? (The shop turns this on when the Time Stop upgrade is bought. Tick it to test.)")]
     [SerializeField] private bool timeStopActive = false;
 
-    [Header("Controls")]
-    [Tooltip("Key that stops and resumes time.")]
-    [SerializeField] private KeyCode stopKey = KeyCode.T;
-
     [Header("Energy")]
     [Min(0.5f)]
     [Tooltip("How many seconds a full meter lets you keep time stopped.")]
@@ -244,11 +240,7 @@ public class PixelTimeStop : MonoBehaviour
 
     private bool StopKeyPressed()
     {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.tKey.wasPressedThisFrame;
-#else
-        return Input.GetKeyDown(stopKey);
-#endif
+        return PixelKeys.Pressed(PixelAction.TimeStop); // rebindable in Settings
     }
 
     // ------------------------------------------------------------------

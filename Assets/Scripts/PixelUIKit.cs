@@ -22,7 +22,7 @@ public static class PixelUIKit
     }
 
     /// <summary>A screen-space overlay canvas that scales with the screen. 'clickable' adds a GraphicRaycaster.</summary>
-    public static GameObject CreateCanvas(string objectName, int sortingOrder, Vector2 referenceResolution, bool clickable)
+    public static GameObject CreateCanvas(string objectName, int sortingOrder, Vector2 referenceResolution, bool clickable, bool scalable = true)
     {
         GameObject root = new GameObject(objectName);
         Canvas canvas = root.AddComponent<Canvas>();
@@ -31,7 +31,8 @@ public static class PixelUIKit
 
         CanvasScaler scaler = root.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = referenceResolution;
+        // The player's UI scale (Settings): a smaller reference resolution makes everything bigger. The black bars opt out.
+        scaler.referenceResolution = scalable ? referenceResolution / PixelDisplaySettings.UIScale : referenceResolution;
         scaler.matchWidthOrHeight = 0.5f;
 
         if (clickable) root.AddComponent<GraphicRaycaster>();

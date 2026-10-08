@@ -78,7 +78,11 @@ public class PixelHud : MonoBehaviour
     public float SideMargin => sideMargin;
 
     /// <summary>Thickness of the bar along the screen edge (0 when the bars are off).</summary>
-    public float BarHeight => barsEnabled ? barHeight : 0f;
+    /// <summary>The bar's height in the units of the (scaled) UI canvases.</summary>
+    public float BarHeight => barsEnabled ? barHeight / PixelDisplaySettings.UIScale : 0f;
+
+    /// <summary>The bar's height in the units of the bars' own, unscaled canvas (what is really drawn).</summary>
+    public float RawBarHeight => barsEnabled ? barHeight : 0f;
 
     /// <summary>
     /// How far from the screen edge a window opening from a docked button should start: below the button's band,
@@ -87,7 +91,7 @@ public class PixelHud : MonoBehaviour
     public float WindowOffset => BandThickness + windowGap;
 
     /// <summary>Thickness of the band along the screen edge that the docked buttons occupy (the bar, or the button plus margin).</summary>
-    public float BandThickness => barsEnabled ? barHeight : buttonSize.y + sideMargin;
+    public float BandThickness => barsEnabled ? barHeight / PixelDisplaySettings.UIScale : buttonSize.y + sideMargin;
 
     private GameObject canvasRoot;
 
@@ -111,7 +115,7 @@ public class PixelHud : MonoBehaviour
     private void BuildBars()
     {
         if (!barsEnabled) return;
-        canvasRoot = PixelUIKit.CreateCanvas("PixelHud Canvas", Mathf.Min(barsSortingOrder, -1), new Vector2(1920f, 1080f), true);
+        canvasRoot = PixelUIKit.CreateCanvas("PixelHud Canvas", Mathf.Min(barsSortingOrder, -1), new Vector2(1920f, 1080f), true, false); // not scaled: the bars keep their size
         for (int i = 0; i < 2; i++)
         {
             bool top = i == 0;
@@ -162,7 +166,7 @@ public class PixelHud : MonoBehaviour
     }
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
-    internal float ShownInset => barsEnabled ? (barHeight - buttonSize.y) * 0.5f : sideMargin * 0.5f;
+    internal float ShownInset => barsEnabled ? (BarHeight - buttonSize.y) * 0.5f : sideMargin * 0.5f;
     internal float HiddenInset => -(buttonSize.y - sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
@@ -172,7 +176,7 @@ public class PixelHud : MonoBehaviour
     internal float SlideSeconds => slideSeconds;
     internal float TriggerPadding => triggerPadding;
     internal float SideTriggerDepth => sideTriggerDepth;
-    internal float BandHeight => barsEnabled ? barHeight : buttonSize.y + sideMargin;
+    internal float BandHeight => barsEnabled ? BarHeight : buttonSize.y + sideMargin;
 }
 
 /// <summary>Slides one docked button out when the mouse is near and away when it isn't.</summary>

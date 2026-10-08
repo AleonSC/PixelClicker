@@ -51,9 +51,6 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private int capacity = 60;
 
     [Header("Hose")]
-    [Tooltip("Key that equips / puts away the hose.")]
-    [SerializeField] private KeyCode hoseKey = KeyCode.B;
-
     [Tooltip("Where the hose comes in from, as a point on the screen (0 = left edge, 1 = right edge; 0 = bottom, 1 = top). Slightly negative x starts it just off screen.")]
     [SerializeField] private Vector2 hoseAnchor = new Vector2(-0.03f, 0.3f);
 
@@ -464,11 +461,7 @@ public class PixelBank : MonoBehaviour
 
     private bool HoseKeyPressed()
     {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        return Keyboard.current != null && Keyboard.current.bKey.wasPressedThisFrame;
-#else
-        return Input.GetKeyDown(hoseKey);
-#endif
+        return PixelKeys.Pressed(PixelAction.Hose); // rebindable in Settings
     }
 
     private static bool IsTyping()
@@ -1053,7 +1046,7 @@ public class PixelBank : MonoBehaviour
     private void RefreshHoseButton()
     {
         if (hoseButtonLabel == null) return;
-        hoseButtonLabel.text = HoseOn ? hoseOnText : string.Format(hoseOffText, hoseKey);
+        hoseButtonLabel.text = HoseOn ? hoseOnText : string.Format(hoseOffText, PixelKeys.Name(PixelAction.Hose));
         hoseButtonImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
     }
 

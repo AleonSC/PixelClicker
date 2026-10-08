@@ -799,8 +799,8 @@ public class PixelConsumables : MonoBehaviour
 
     /// <summary>The device's own placing message (empty = use the default one).</summary>
     public string PlacingMessage => !IsPlacing ? ""
-        : devices[placingIndex].kind == DeviceKind.Sorter && sorterPhase == 1 ? devices[placingIndex].sorterBendMessage
-        : devices[placingIndex].placingMessage;
+        : PixelKeys.Replace(devices[placingIndex].kind == DeviceKind.Sorter && sorterPhase == 1 ? devices[placingIndex].sorterBendMessage
+        : devices[placingIndex].placingMessage);
 
     private float placingYaw;
     private PixelSorterDevice.Parts previewSorter;
@@ -1274,17 +1274,12 @@ public class PixelConsumables : MonoBehaviour
         float degrees = 0f;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         if (Mouse.current != null) degrees += Mathf.Sign(Mouse.current.scroll.ReadValue().y) * (Mathf.Abs(Mouse.current.scroll.ReadValue().y) > 0.01f ? 1f : 0f) * rotateStepDegrees;
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.eKey.isPressed) degrees += rotateSpeedDegrees * Time.deltaTime;
-            if (Keyboard.current.qKey.isPressed) degrees -= rotateSpeedDegrees * Time.deltaTime;
-        }
 #else
         float wheel = Input.mouseScrollDelta.y;
         if (Mathf.Abs(wheel) > 0.01f) degrees += Mathf.Sign(wheel) * rotateStepDegrees;
-        if (Input.GetKey(KeyCode.E)) degrees += rotateSpeedDegrees * Time.deltaTime;
-        if (Input.GetKey(KeyCode.Q)) degrees -= rotateSpeedDegrees * Time.deltaTime;
 #endif
+        if (PixelKeys.Held(PixelAction.RotateRight)) degrees += rotateSpeedDegrees * Time.deltaTime; // rebindable (default E)
+        if (PixelKeys.Held(PixelAction.RotateLeft)) degrees -= rotateSpeedDegrees * Time.deltaTime;  // (default Q)
         return degrees;
     }
 

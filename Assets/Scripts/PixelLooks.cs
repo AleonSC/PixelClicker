@@ -124,6 +124,21 @@ public class PixelLook
     [Tooltip("Sideways speed it picks up when it starts to float away.")]
     public float floatDriftSpeed = 2.5f;
 
+    [Header("Colour-blind mark")]
+    [Range(0, 32)]
+    [Tooltip("Colour-blind support (Settings): draws a flat shape on every face - 3 = triangle, 4 = square, 32 = circle. 0 = none. Only shown while the colour-blind setting is on.")]
+    public int colorBlindSides = 0;
+
+    [Tooltip("Turns the colour-blind shape (degrees).")]
+    public float colorBlindRotation = 0f;
+
+    [Tooltip("Colour of the colour-blind shape.")]
+    public Color colorBlindColor = new Color(1f, 1f, 1f, 0.95f);
+
+    [Range(0.05f, 0.5f)]
+    [Tooltip("Size of the colour-blind shape as a fraction of the cube's width.")]
+    public float colorBlindRadius = 0.28f;
+
     [Header("Special")]
     [Tooltip("A swirling dark-matter core inside the cube (best with 'Force Translucent' and a dark, see-through colour).")]
     public bool darkMatter = false;
@@ -132,7 +147,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter || faceCircles;
+    public bool HasExtras => outline || darkMatter || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks;
@@ -149,6 +164,11 @@ public static class PixelLooks
             // White, gray and black keep their plain tier look (no entry).
 
             // Red, green and blue keep their plain flat colours (no entry).
+
+            // Red, green and blue stay flat colours; with the colour-blind setting on they get a shape on every face.
+            new PixelLook { type = PixelClicker.PixelType.Red, colorBlindSides = 3, colorBlindRotation = 90f },
+            new PixelLook { type = PixelClicker.PixelType.Green, colorBlindSides = 4, colorBlindRotation = 45f },
+            new PixelLook { type = PixelClicker.PixelType.Blue, colorBlindSides = 32 },
 
             // Vacuum: a dark purple see-through block with a black circle on every face.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
@@ -321,6 +341,19 @@ public static class PixelLooks
             cr.receiveShadows = false;
         }
 
+        if (look.colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind)
+        {
+            GameObject marks = new GameObject("Color Blind Marks", typeof(MeshFilter), typeof(MeshRenderer));
+            marks.transform.SetParent(root.transform, false);
+            marks.transform.localPosition = centre;
+            marks.layer = root.layer;
+            marks.GetComponent<MeshFilter>().sharedMesh = CircleMesh(size, look.colorBlindRadius, look.colorBlindColor, look.colorBlindSides, look.colorBlindRotation);
+            MeshRenderer kr = marks.GetComponent<MeshRenderer>();
+            kr.sharedMaterial = NeonMaterial();
+            kr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            kr.receiveShadows = false;
+        }
+
         if (look.darkMatter && baseMaterial != null)
         {
             GameObject core = new GameObject("Dark Matter Core", typeof(MeshFilter), typeof(MeshRenderer));
@@ -452,12 +485,13 @@ public static class PixelLooks
     private static readonly Dictionary<int, Mesh> circleMeshes = new Dictionary<int, Mesh>();
 
     /// <summary>Six flat discs, one just outside each face of a box of this size.</summary>
-    private static Mesh CircleMesh(Vector3 size, float radiusFraction, Color colour)
+    private static Mesh CircleMesh(Vector3 size, float radiusFraction, Color colour, int segments = 32, float rotationDegrees = 0f)
     {
-        int key = unchecked(size.GetHashCode() * 31 + radiusFraction.GetHashCode() * 17 + colour.GetHashCode() * 13);
+        int key = unchecked(size.GetHashCode() * 31 + radiusFraction.GetHashCode() * 17 + colour.GetHashCode() * 13 + segments * 7 + rotationDegrees.GetHashCode() * 3);
         if (circleMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
 
-        const int Segments = 32;
+        int Segments = Mathf.Clamp(segments, 3, 64);
+        float rot = rotationDegrees * Mathf.Deg2Rad;
         float gap = Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.004f; // just off the face so it never z-fights
         List<Vector3> v = new List<Vector3>();
         List<Color> col = new List<Color>();
@@ -475,7 +509,7 @@ public static class PixelLooks
                 v.Add(centre); col.Add(colour);
                 for (int i = 0; i < Segments; i++)
                 {
-                    float ang = i * Mathf.PI * 2f / Segments;
+                    float ang = rot + i * Mathf.PI * 2f / Segments;
                     Vector3 p = centre;
                     p[a] += Mathf.Cos(ang) * radius;
                     p[b] += Mathf.Sin(ang) * radius;
@@ -490,7 +524,7 @@ public static class PixelLooks
             }
         }
 
-        Mesh mesh = new Mesh { name = "FaceCircles" };
+        Mesh mesh = new Mesh { name = "FaceMarks" };
         mesh.SetVertices(v);
         mesh.SetColors(col);
         mesh.SetTriangles(tri, 0);

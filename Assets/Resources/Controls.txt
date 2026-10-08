@@ -2,6 +2,7 @@
 // Lines starting with // are notes for you and are not shown.
 // A line starting with # is a heading. A line like  Key | What it does  is shown as two columns.
 // Keep the right-hand part short so it stays on one line.
+// {key:TimeStop}, {key:Hose}, {key:EventLog}, {key:RotateLeft}, {key:RotateRight} are replaced by the player's current key bindings (Settings > Key Bindings).
 
 # Mouse
 Left-click the cube | Collect a pixel
@@ -13,15 +14,15 @@ Hold right-click ("Active:" line) | Cancel the potion
 
 # Keyboard
 Esc | Pause menu / close the top window
-T | Stop and resume time (Time Stop; uses an energy meter, you can still click the cube)
-B | Equip / put away the hose (Pixel Bank)
-Enter | Show the event log; press it again (or right-click) to hide it. Left-click a line to reopen its tip, mouse wheel scrolls
-Q or E | Turn a fan or sorter while placing it
+{key:TimeStop} | Stop and resume time (Time Stop; uses an energy meter, you can still click the cube)
+{key:Hose} | Equip / put away the hose (Pixel Bank)
+{key:EventLog} | Show the event log; press it again (or right-click) to hide it. Left-click a line to reopen its tip, mouse wheel scrolls
+{key:RotateLeft} or {key:RotateRight} | Turn a fan or sorter while placing it
 Mouse wheel | Turn a fan or sorter while placing it
 
 # Placing a Device
 Left-click the floor | Place a Vacuum Device or Fan
-Scroll or Q / E | Turn a Fan or the Sorter's pipe
+Scroll or {key:RotateLeft} / {key:RotateRight} | Turn a Fan or the Sorter's pipe
 Left-click (Sorter) | Confirm the pipe's direction
 Left-click in the cone | Place the Sorter with that bend
 Right-click | Go back / cancel

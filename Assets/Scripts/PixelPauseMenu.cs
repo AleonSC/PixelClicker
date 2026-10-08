@@ -190,6 +190,39 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Title of the Settings section.")]
     [SerializeField] private string settingsTitle = "Settings";
 
+    [Min(200f)]
+    [Tooltip("Height of the scrolling Settings list (canvas units). It is shortened to fit between the black bars.")]
+    [SerializeField] private float settingsViewHeight = 640f;
+
+    [Header("Settings Screen Rows")]
+    [SerializeField] private string headerGameplay = "Gameplay";
+    [SerializeField] private string headerInterface = "Interface";
+    [SerializeField] private string headerSaving = "Saving";
+    [SerializeField] private string headerDisplay = "Display";
+    [SerializeField] private string headerAudio = "Audio";
+    [SerializeField] private string headerControls = "Controls";
+    [SerializeField] private string tipsLabel = "Show first-time tips";
+    [SerializeField] private string replayTutorialText = "Replay tutorial";
+    [SerializeField] private string eventLogLabel = "Event log";
+    [SerializeField] private string eventLogSizeLabel = "Event log text size";
+    [SerializeField] private string popupsLabel = "Number popups (+N)";
+    [SerializeField] private string popupSizeLabel = "Popup size";
+    [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
+    [SerializeField] private string colorBlindLabel = "Colour-blind marks";
+    [SerializeField] private string autoSaveLabel = "Autosave every";
+    [SerializeField] private string autoSaveMessageLabel = "Show autosave message";
+    [SerializeField] private string qualityLabel = "Graphics quality";
+    [SerializeField] private string vsyncLabel = "VSync";
+    [SerializeField] private string fullscreenLabel = "Fullscreen";
+    [SerializeField] private string resolutionLabel = "Resolution";
+    [SerializeField] private string keyBindingsText = "Key bindings...";
+    [SerializeField] private string keyBindingsTitle = "Key Bindings";
+    [SerializeField] private string resetKeysText = "Reset keys to default";
+    [SerializeField] private string pressAKeyText = "Press a key...";
+
+    [Tooltip("Names of the rebindable actions, in the order of PixelAction (Time Stop, Hose, Turn left, Turn right, Event log).")]
+    [SerializeField] private string[] keyActionLabels = { "Time Stop", "Pixel Bank hose", "Turn left (fan / sorter)", "Turn right (fan / sorter)", "Event log" };
+
     [Tooltip("Label of the cube rotation tick box (accessibility).")]
     [SerializeField] private string rotationLabel = "Cube rotation";
 
@@ -481,6 +514,10 @@ public class PixelPauseMenu : MonoBehaviour
     private TMP_Text potionsValue;
     private RectTransform statsPanelRect, statsRestartRect, statsBackRect;
     private float statsContentHeight, statsListTop;
+    private GameObject keysPanel;
+    private readonly List<System.Action> settingsRefreshers = new List<System.Action>();
+    private TMP_Text[] keyButtonLabels;
+    private int capturingAction = -1;
     private GameObject saveLoadPanel, overwriteOverlay;
     private TMP_Text overwriteText;
     private Button[] slotButtons;
@@ -573,6 +610,8 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void Update()
     {
+        if (IsPaused && UpdateKeyCapture()) return;
+
         if (EscapePressed())
         {
             if (IsPaused && PixelDevTools.ClosePanel())
@@ -815,6 +854,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (controlsScreen != null && view == controlsScreen.panel) RefreshGuideScreen(controlsScreen);
         if (restartPanel != null) restartPanel.SetActive(view == restartPanel);
         if (saveLoadPanel != null) saveLoadPanel.SetActive(view == saveLoadPanel);
+        if (keysPanel != null) keysPanel.SetActive(view == keysPanel);
+        if (view == keysPanel) { capturingAction = -1; RefreshKeyLabels(); }
         if (view == saveLoadPanel) OpenSaveLoad();
         if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
         if (view == changelogPanel) RefreshChangelog();
@@ -829,6 +870,7 @@ public class PixelPauseMenu : MonoBehaviour
             backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
             pauseStopsToggle.SetIsOnWithoutNotify(pauseStopsGame);
         }
+        if (view == settingsPanel) foreach (System.Action refresh in settingsRefreshers) refresh();
         if (view == settingsPanel && PixelAudio.Instance != null && masterSlider != null)
         {
             masterSlider.SetValueWithoutNotify(PixelAudio.Instance.MasterVolume);
@@ -1351,7 +1393,7 @@ public class PixelPauseMenu : MonoBehaviour
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         bool first = true;
 
-        foreach (string rawLine in raw.Replace("\r", "").Split('\n'))
+        foreach (string rawLine in PixelKeys.Replace(raw).Replace("\r", "").Split('\n'))
         {
             string line = rawLine.TrimEnd();
             if (line.TrimStart().StartsWith("//")) continue;
@@ -1405,34 +1447,252 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void BuildSettingsPanel()
     {
-        settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float y);
-        rotationToggle = AddToggleRow(settingsPanel.transform, rotationLabel, clicker == null || clicker.AllowRotation,
+        settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float top);
+        settingsRefreshers.Clear();
+
+        // Everything scrolls: there are more rows than fit between the black bars.
+        float viewHeight = FitViewHeight(settingsViewHeight, top);
+        ScrollRect scroll = PixelUIKit.CreateScrollView(settingsPanel.transform, "Settings List", scrollbarColor, 12f, rowHeight,
+                                                        out RectTransform content, out GameObject bar);
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(0f, viewHeight);
+        vr.anchoredPosition = new Vector2(0f, -top);
+
+        Transform list = content;
+        float y = 0f;
+
+        // ---- Gameplay ----
+        AddHeaderRow(list, headerGameplay, ref y);
+        rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
-        pulsingToggle = AddToggleRow(settingsPanel.transform, pulsingLabel, clicker == null || clicker.AllowPulsing,
+        pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
-        abbreviateToggle = AddToggleRow(settingsPanel.transform, abbreviateLabel, PixelClicker.AbbreviateNumbers,
+        abbreviateToggle = AddToggleRow(list, abbreviateLabel, PixelClicker.AbbreviateNumbers,
                                         on => PixelClicker.AbbreviateNumbers = on, ref y);
-        hidePurchasedToggle = AddToggleRow(settingsPanel.transform, hidePurchasedLabel, PixelShop.HidePurchased,
+        hidePurchasedToggle = AddToggleRow(list, hidePurchasedLabel, PixelShop.HidePurchased,
                                            on => PixelShop.HidePurchased = on, ref y);
-        backgroundToggle = AddToggleRow(settingsPanel.transform, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
+        backgroundToggle = AddToggleRow(list, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
                                         on => { if (clicker != null) clicker.RunInBackground = on; }, ref y);
-        pauseStopsToggle = AddToggleRow(settingsPanel.transform, pauseStopsLabel, pauseStopsGame, on =>
+        pauseStopsToggle = AddToggleRow(list, pauseStopsLabel, pauseStopsGame, on =>
         {
             pauseStopsGame = on;
             PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
             ApplyFreeze(); // takes effect right away, even though the menu is open
         }, ref y);
 
-        // Sound: three volume sliders and a mute box (the sound system is added by Start, which runs first).
+        // ---- Interface ----
+        AddHeaderRow(list, headerInterface, ref y);
+        AddSettingToggle(list, tipsLabel, () => PixelHints.TipsEnabled, on => PixelHints.TipsEnabled = on, ref y);
+        AddWideButtonRow(list, replayTutorialText, () =>
+        {
+            PixelHints.ReplayTutorial();
+            SetPaused(false); // so the tips show over the game
+        }, ref y);
+        AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
+        AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
+        AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
+        AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
+        string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
+        for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
+        AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
+        AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
+
+        // ---- Saving ----
+        if (saveGame != null)
+        {
+            AddHeaderRow(list, headerSaving, ref y);
+            AddChoiceRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
+            AddSettingToggle(list, autoSaveMessageLabel, () => saveGame.AutoSaveMessageNow,
+                             on => PixelSaveGame.AutoSaveMessageChoice = on ? 1 : 0, ref y);
+        }
+
+        // ---- Display ----
+        AddHeaderRow(list, headerDisplay, ref y);
+        AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
+                     v => PixelDisplaySettings.QualityLevel = v, ref y);
+        AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
+        AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
+        List<Vector2Int> resolutions = PixelDisplaySettings.Resolutions;
+        string[] resolutionNames = new string[resolutions.Count];
+        for (int i = 0; i < resolutionNames.Length; i++) resolutionNames[i] = resolutions[i].x + " x " + resolutions[i].y;
+        AddChoiceRow(list, resolutionLabel, resolutionNames, () => Mathf.Max(0, resolutions.IndexOf(PixelDisplaySettings.Resolution)),
+                     v => PixelDisplaySettings.Resolution = resolutions[v], ref y);
+
+        // ---- Audio: three volume sliders and a mute box (the sound system is added by Start, which runs first) ----
         PixelAudio audio = PixelFind.First<PixelAudio>();
         if (audio != null)
         {
-            masterSlider = AddSliderRow(settingsPanel.transform, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
-            effectsSlider = AddSliderRow(settingsPanel.transform, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
-            musicSlider = AddSliderRow(settingsPanel.transform, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
-            muteToggle = AddToggleRow(settingsPanel.transform, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
+            AddHeaderRow(list, headerAudio, ref y);
+            masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
+            effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
+            musicSlider = AddSliderRow(list, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
+            muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
         }
-        FinishSectionPanel(settingsPanel, y);
+
+        // ---- Controls ----
+        AddHeaderRow(list, headerControls, ref y);
+        AddWideButtonRow(list, keyBindingsText, () => ShowView(keysPanel), ref y);
+
+        PixelUIKit.UpdateScrollView(scroll, bar, y, viewHeight);
+        BuildKeysPanel();
+        FinishSectionPanel(settingsPanel, top + viewHeight);
+    }
+
+    private int NearestUiScaleIndex()
+    {
+        float saved = PixelDisplaySettings.SavedUIScale;
+        int best = 0;
+        for (int i = 1; i < PixelDisplaySettings.UIScaleChoices.Length; i++)
+            if (Mathf.Abs(PixelDisplaySettings.UIScaleChoices[i] - saved) < Mathf.Abs(PixelDisplaySettings.UIScaleChoices[best] - saved)) best = i;
+        return best;
+    }
+
+    private int CurrentAutoSaveIndex()
+    {
+        if (PixelSaveGame.AutoSaveChoice >= 0) return PixelSaveGame.AutoSaveChoice;
+        // Not chosen yet: show the choice closest to the Inspector's interval.
+        float inspector = saveGame != null ? saveGame.InspectorAutoSaveSeconds : 0f;
+        int best = 0;
+        for (int i = 1; i < PixelSaveGame.AutoSaveChoices.Length; i++)
+            if (Mathf.Abs(PixelSaveGame.AutoSaveChoices[i] - inspector) < Mathf.Abs(PixelSaveGame.AutoSaveChoices[best] - inspector)) best = i;
+        return best;
+    }
+
+    /// <summary>A coloured section title inside the settings list.</summary>
+    private void AddHeaderRow(Transform parent, string text, ref float y)
+    {
+        y += 8f;
+        TMP_Text t = MakeText(parent, text + " Header", text, rowFontSize * 0.9f, FontStyles.Bold);
+        t.color = statValueColor;
+        t.alignment = TextAlignmentOptions.MidlineLeft;
+        RectTransform rt = t.rectTransform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(-80f, rowHeight * 0.8f);
+        rt.anchoredPosition = new Vector2(0f, -y);
+        y += rowHeight * 0.8f + 4f;
+    }
+
+    /// <summary>A tick box that reads / writes a setting; it re-reads the setting whenever the screen is shown.</summary>
+    private void AddSettingToggle(Transform parent, string label, System.Func<bool> get, System.Action<bool> set, ref float y)
+    {
+        Toggle toggle = AddToggleRow(parent, label, get(), on => set(on), ref y);
+        settingsRefreshers.Add(() => toggle.SetIsOnWithoutNotify(get()));
+    }
+
+    /// <summary>A label with a button on the right that steps through the options each click (wraps around).</summary>
+    private void AddChoiceRow(Transform parent, string label, string[] options, System.Func<int> get, System.Action<int> set, ref float y)
+    {
+        AddRowLabel(parent, label, y, out RectTransform row);
+        Button b = MakeButton(row, "Choice", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.8f);
+        RectTransform br = b.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0.6f, 0.06f);
+        br.anchorMax = new Vector2(1f, 0.94f);
+        br.offsetMin = br.offsetMax = Vector2.zero;
+        TMP_Text text = b.GetComponentInChildren<TMP_Text>();
+        text.enableAutoSizing = true;
+        text.fontSizeMax = rowFontSize * 0.8f;
+        text.fontSizeMin = 12f;
+        text.overflowMode = TextOverflowModes.Ellipsis;
+
+        System.Action refresh = () =>
+        {
+            int index = options.Length == 0 ? 0 : Mathf.Clamp(get(), 0, options.Length - 1);
+            text.text = options.Length == 0 ? "-" : options[index];
+        };
+        b.onClick.AddListener(() =>
+        {
+            if (options.Length == 0) return;
+            set((Mathf.Clamp(get(), 0, options.Length - 1) + 1) % options.Length);
+            refresh();
+        });
+        refresh();
+        settingsRefreshers.Add(refresh);
+        y += rowHeight + 6f;
+    }
+
+    /// <summary>A full-width button row (an action rather than a setting).</summary>
+    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y)
+    {
+        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.9f);
+        RectTransform rt = b.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(-80f, rowHeight);
+        rt.anchoredPosition = new Vector2(0f, -y);
+        b.onClick.AddListener(onClick);
+        y += rowHeight + 6f;
+    }
+
+    // ------------------------------------------------------------------
+    // Key bindings
+    // ------------------------------------------------------------------
+
+    private void BuildKeysPanel()
+    {
+        keysPanel = BuildSectionPanel("Key Bindings Panel", keyBindingsTitle, out float y);
+        int count = PixelKeys.Count;
+        keyButtonLabels = new TMP_Text[count];
+
+        for (int i = 0; i < count; i++)
+        {
+            int index = i;
+            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : ((PixelAction)i).ToString();
+            AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
+            Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.85f);
+            RectTransform br = b.GetComponent<RectTransform>();
+            br.anchorMin = new Vector2(0.6f, 0.06f);
+            br.anchorMax = new Vector2(1f, 0.94f);
+            br.offsetMin = br.offsetMax = Vector2.zero;
+            TMP_Text text = b.GetComponentInChildren<TMP_Text>();
+            text.enableAutoSizing = true;
+            text.fontSizeMax = rowFontSize * 0.85f;
+            text.fontSizeMin = 12f;
+            keyButtonLabels[i] = text;
+            b.onClick.AddListener(() => { capturingAction = index; RefreshKeyLabels(); });
+            y += rowHeight + 6f;
+        }
+
+        y += 10f;
+        AddMenuButton(keysPanel.transform, resetKeysText, menuButtonColor, ref y, () =>
+        {
+            PixelKeys.ResetAll();
+            capturingAction = -1;
+            RefreshKeyLabels();
+        });
+        RefreshKeyLabels();
+        FinishSectionPanel(keysPanel, y, settingsPanel);
+    }
+
+    private void RefreshKeyLabels()
+    {
+        if (keyButtonLabels == null) return;
+        for (int i = 0; i < keyButtonLabels.Length; i++)
+            keyButtonLabels[i].text = capturingAction == i ? pressAKeyText : PixelKeys.Name((PixelAction)i);
+    }
+
+    /// <summary>While a key button waits for a key: the next key press becomes the binding (Escape cancels).</summary>
+    private bool UpdateKeyCapture()
+    {
+        if (capturingAction < 0) return false;
+        if (EscapePressed())
+        {
+            capturingAction = -1;
+            RefreshKeyLabels();
+            return true;
+        }
+        if (PixelKeys.TryCapture(out KeyCode key))
+        {
+            PixelKeys.Set((PixelAction)capturingAction, key);
+            capturingAction = -1;
+            RefreshKeyLabels();
+        }
+        return true; // nothing else (like Escape closing the menu) reacts while waiting
     }
 
     private string FormatCount(double value)
@@ -1531,7 +1791,7 @@ public class PixelPauseMenu : MonoBehaviour
     private float AvailableHeight()
     {
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        return Mathf.Max(300f, referenceResolution.y - 2f * (bar + barMargin));
+        return Mathf.Max(300f, referenceResolution.y / PixelDisplaySettings.UIScale - 2f * (bar + barMargin));
     }
 
     /// <summary>A scrolling text height that still leaves room for the title above and the Back button below, between the bars.</summary>

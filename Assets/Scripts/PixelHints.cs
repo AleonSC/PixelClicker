@@ -61,9 +61,6 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Seconds the line takes to fade away.")]
     [SerializeField] private float overlayFadeSeconds = 1.2f;
 
-    [Tooltip("Key that shows the event log (pressing it while the log is open fades it away).")]
-    [SerializeField] private KeyCode reopenKey = KeyCode.Return;
-
     [Tooltip("Font size of the overlay line.")]
     [SerializeField] private float logFontSize = 20f;
 
@@ -282,6 +279,59 @@ public class PixelHints : MonoBehaviour
 
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // Player settings (Settings screen)
+    // ------------------------------------------------------------------
+
+    private const string PrefTips = "PixelClicker.Setting.Tips";
+    private const string PrefEventLog = "PixelClicker.Setting.EventLog";
+    private const string PrefLogSize = "PixelClicker.Setting.EventLogSize";
+
+    /// <summary>Show the first-time tip boxes? (The event log still records them either way.)</summary>
+    public static bool TipsEnabled
+    {
+        get => PlayerPrefs.GetInt(PrefTips, 1) != 0;
+        set { PlayerPrefs.SetInt(PrefTips, value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>Show the event log overlay at the bottom left? (Events are still recorded and saved.)</summary>
+    public static bool EventLogEnabled
+    {
+        get => PlayerPrefs.GetInt(PrefEventLog, 1) != 0;
+        set { PlayerPrefs.SetInt(PrefEventLog, value ? 1 : 0); PlayerPrefs.Save(); RefreshLog(); }
+    }
+
+    public static readonly string[] LogSizeNames = { "Small", "Medium", "Large" };
+    private static readonly float[] LogSizeScale = { 0.8f, 1f, 1.3f };
+
+    /// <summary>Event log text size: 0 = small, 1 = medium (the Inspector size), 2 = large.</summary>
+    public static int LogSizeChoice
+    {
+        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefLogSize, 1), 0, LogSizeNames.Length - 1);
+        set { PlayerPrefs.SetInt(PrefLogSize, Mathf.Clamp(value, 0, LogSizeNames.Length - 1)); PlayerPrefs.Save(); RefreshLog(); }
+    }
+
+    /// <summary>Rebuilds the event log lines (new text size) and hides it if it was switched off.</summary>
+    public static void RefreshLog()
+    {
+        if (instance == null) return;
+        instance.rowsDirty = true;
+        if (!EventLogEnabled && instance.overlayRoot != null) instance.overlayRoot.SetActive(false);
+    }
+
+    private bool forceIntro; // "Replay tutorial": run the intro even though this is not a brand-new game
+
+    /// <summary>Settings > Replay tutorial: forgets the shown tips and plays the intro tips (Log, Inventory) again.</summary>
+    public static void ReplayTutorial()
+    {
+        ResetSeen();
+        if (instance == null) return;
+        instance.forceIntro = true;
+        instance.introChecked = false;
+        instance.introWait = instance.introDelay; // start right away
+        instance.queue.Clear();
+    }
+
     /// <summary>Forgets which tips were shown (a brand-new game shows them all again).</summary>
     public static void ResetSeen()
     {
@@ -321,7 +371,7 @@ public class PixelHints : MonoBehaviour
 
     private void Enqueue(string id)
     {
-        if (!hintsEnabled || string.IsNullOrEmpty(id) || Seen(id)) return;
+        if (!hintsEnabled || string.IsNullOrEmpty(id) || Seen(id)) return; // (the tip boxes can also be switched off in Settings)
         Hint hint = hints != null ? hints.Find(h => h != null && h.id == id) : null;
 #if UNITY_EDITOR
         if (hint == null && warnedIds.Add(id))
@@ -331,6 +381,7 @@ public class PixelHints : MonoBehaviour
         MarkSeen(id);
         string full = hint.text;
         Announce(hint.shortText, full);
+        if (!TipsEnabled) return; // the event log line is kept, the tip box is not shown
         if (!autoOpenTips) return;
         queue.Enqueue(hint);
         if (waitTimer <= 0f && !PixelNotice.IsShowing) waitTimer = showDelay;
@@ -417,7 +468,7 @@ public class PixelHints : MonoBehaviour
 
     private void DisplayOverlay()
     {
-        if (history.Count == 0) return;
+        if (history.Count == 0 || !EventLogEnabled) return;
         if (overlayRoot == null) BuildOverlay();
         forceFade = false;
         overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
@@ -489,7 +540,7 @@ public class PixelHints : MonoBehaviour
             RectTransform rr = row.GetComponent<RectTransform>();
             rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 0f);
 
-            TMP_Text label = PixelUIKit.CreateText(overlayFont, row.transform, "Text", text, logFontSize,
+            TMP_Text label = PixelUIKit.CreateText(overlayFont, row.transform, "Text", text, logFontSize * LogSizeScale[LogSizeChoice],
                                                    TextAlignmentOptions.TopLeft, FontStyles.Bold, overlayTextColor);
             label.overflowMode = TextOverflowModes.Overflow;
             float h = Mathf.Ceil(label.GetPreferredValues(text, width, 0f).y) + 12f;
@@ -546,12 +597,7 @@ public class PixelHints : MonoBehaviour
 
     private bool ReopenKeyPressed()
     {
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        var kb = UnityEngine.InputSystem.Keyboard.current;
-        return kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
-#else
-        return Input.GetKeyDown(reopenKey) || Input.GetKeyDown(KeyCode.KeypadEnter);
-#endif
+        return PixelKeys.Pressed(PixelAction.EventLog); // rebindable in Settings
     }
 
     private static float ScrollWheel()
@@ -572,6 +618,11 @@ public class PixelHints : MonoBehaviour
         bool typing = es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null;
 
         bool visible = overlayRoot != null && overlayRoot.activeSelf;
+        if (!EventLogEnabled)
+        {
+            if (overlayRoot != null && overlayRoot.activeSelf) overlayRoot.SetActive(false);
+            return;
+        }
         if (!typing && ReopenKeyPressed())
         {
             if (visible) FadeNow();
@@ -620,12 +671,14 @@ public class PixelHints : MonoBehaviour
         introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play)
         if (introWait < introDelay) return;
         introChecked = true;
-        if (!showIntro || !hintsEnabled || Seen("intro_log")) return;
+        if (!showIntro || !hintsEnabled || !TipsEnabled || Seen("intro_log")) return;
 
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
-        foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (t.totalCollected > 0d) return; // not a new game
+        if (!forceIntro)
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                if (t.totalCollected > 0d) return; // not a new game
+        forceIntro = false;
 
         PixelLog.SetLogOpen(true);
         PixelNotice.Show(introLogText, 0f, compact: true, onClosed: () =>

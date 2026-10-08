@@ -296,15 +296,46 @@ public class PixelSaveGame : MonoBehaviour
         if (loadOnStart && HasSave) Load(false, true);
     }
 
+    private const string PrefAutoSave = "PixelClicker.Setting.AutoSave";
+    private const string PrefAutoSaveMessage = "PixelClicker.Setting.AutoSaveMessage";
+
+    /// <summary>The autosave intervals the player can pick in Settings (seconds; 0 = off).</summary>
+    public static readonly float[] AutoSaveChoices = { 0f, 30f, 60f, 300f };
+    public static readonly string[] AutoSaveNames = { "Off", "30 seconds", "1 minute", "5 minutes" };
+
+    /// <summary>Index into <see cref="AutoSaveChoices"/>; -1 (never chosen) = use the Inspector's interval.</summary>
+    public static int AutoSaveChoice
+    {
+        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefAutoSave, -1), -1, AutoSaveChoices.Length - 1);
+        set { PlayerPrefs.SetInt(PrefAutoSave, Mathf.Clamp(value, 0, AutoSaveChoices.Length - 1)); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>Show the "saved" message after every autosave? (Settings; before it is chosen, the Inspector's choice applies.)</summary>
+    public static int AutoSaveMessageChoice // -1 = not chosen yet, 0 = no, 1 = yes
+    {
+        get => PlayerPrefs.GetInt(PrefAutoSaveMessage, -1);
+        set { PlayerPrefs.SetInt(PrefAutoSaveMessage, value != 0 ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>The autosave interval in use (the player's choice, else the Inspector value). 0 = off.</summary>
+    public float AutoSaveInterval => AutoSaveChoice >= 0 ? AutoSaveChoices[AutoSaveChoice] : autoSaveSeconds;
+
+    /// <summary>The inspector's default for the autosave message, as a Settings value.</summary>
+    public bool AutoSaveMessageNow => AutoSaveMessageChoice >= 0 ? AutoSaveMessageChoice != 0 : messageOnAutoSave;
+
+    /// <summary>The Inspector's autosave interval (used until the player picks one).</summary>
+    public float InspectorAutoSaveSeconds => autoSaveSeconds;
+
     private void Update()
     {
-        if (autoSaveSeconds <= 0f) return;
+        float interval = AutoSaveInterval;
+        if (interval <= 0f) return;
 
         autoSaveTimer += Time.unscaledDeltaTime;
-        if (autoSaveTimer >= autoSaveSeconds)
+        if (autoSaveTimer >= interval)
         {
             autoSaveTimer = 0f;
-            Save(messageOnAutoSave);
+            Save(AutoSaveMessageNow);
         }
     }
 

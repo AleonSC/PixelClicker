@@ -228,7 +228,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -760,6 +760,19 @@ public class PixelClicker : MonoBehaviour
                 looks = extended.ToArray();
             }
             looksVersion = 6;
+        }
+        if (looksVersion < 7)
+        {
+            // Red, green and blue need an entry again (colour-blind marks); add any that are missing.
+            System.Collections.Generic.List<PixelLook> list7 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            foreach (PixelType t in new[] { PixelType.Red, PixelType.Green, PixelType.Blue })
+            {
+                if (PixelLooks.Find(list7.ToArray(), t) != null) continue;
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), t);
+                if (def != null) list7.Add(def);
+            }
+            looks = list7.ToArray();
+            looksVersion = 7;
         }
 
         if (pixelRenderer != null)
@@ -1340,6 +1353,20 @@ public class PixelClicker : MonoBehaviour
             box.center = source.center;
             box.size = source.size;
         }
+    }
+
+    private void OnEnable() => PixelDisplaySettings.ColorBlindChanged += RefreshLooks;
+
+    private void OnDisable() => PixelDisplaySettings.ColorBlindChanged -= RefreshLooks;
+
+    /// <summary>Re-draws the pixel on the cube with its current look (e.g. after the colour-blind setting changed).</summary>
+    private void RefreshLooks()
+    {
+        if (pixelRenderer == null || tiers == null || tiers.Length == 0) return;
+        if (liveExtras != null) Destroy(liveExtras);
+        liveExtras = null;
+        liveExtrasBuilt = false;
+        ApplyTierLook(GetClickTier());
     }
 
     private void OnDestroy()

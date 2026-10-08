@@ -23,7 +23,7 @@ public static class PixelNotice
     public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(message, seconds, onClosed, compact);
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>

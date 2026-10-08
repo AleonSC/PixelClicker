@@ -81,7 +81,7 @@ public class PixelViewBounds : MonoBehaviour
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return;
-        float barNow = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float barNow = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight : 0f;
         Transform ct = cam.transform;
         if (planesFov < 0f || ct.position != planesPosition || ct.forward != planesForward || cam.fieldOfView != planesFov ||
             cam.aspect != planesAspect || Screen.width != planesWidth || Screen.height != planesHeight || barNow != planesBars)
@@ -178,7 +178,7 @@ public class PixelViewBounds : MonoBehaviour
     private float BarFraction()
     {
         float scale = Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f); // the UI's canvas scaling
-        return Mathf.Clamp01(PixelHud.Instance.BarHeight * scale / Mathf.Max(1, Screen.height));
+        return Mathf.Clamp01(PixelHud.Instance.RawBarHeight * scale / Mathf.Max(1, Screen.height)); // the bars are drawn on an unscaled canvas
     }
 
     private static Vector3 GetVelocity(Rigidbody rb)

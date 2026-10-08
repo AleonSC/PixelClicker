@@ -683,7 +683,7 @@ public class PixelUI : MonoBehaviour
     /// <summary>A click that only damaged a tough pixel: shows how many hits it has taken.</summary>
     private void OnPixelHit(int tierIndex, int hits, int needed, bool automatic)
     {
-        if (!showHitPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
+        if (!PopupsEnabled || !showHitPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
 
         // Tough pixels are often dark, so lighten the tier colour to keep the counter readable.
         Color color = Color.Lerp(clicker.Tiers[tierIndex].UIColor, Color.white, 0.6f);
@@ -719,7 +719,7 @@ public class PixelUI : MonoBehaviour
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)
     {
         AddGainDelta(tierIndex, amount);
-        if (!showGainPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
+        if (!PopupsEnabled || !showGainPopups || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return;
 
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
         Color color = popupUsesTierColor ? tier.UIColor : popupColor;
@@ -805,13 +805,36 @@ public class PixelUI : MonoBehaviour
     /// <summary>"+X" popup over the cube totalling everything a Vacuum pixel just sucked up.</summary>
     private void OnPixelsVacuumed(int vacuumTierIndex, double total, int count)
     {
-        if (!showVacuumPopup || count <= 0) return;
+        if (!PopupsEnabled || !showVacuumPopup || count <= 0) return;
 
         Color color = clicker.Tiers[vacuumTierIndex].UIColor;
         string text = string.Format(vacuumPopupFormat, FormatAmount(total));
         StartCoroutine(PopupRoutine(text, color, CubeLocal, cubePopupStartOffset + vacuumPopupExtraOffset,
                                     vacuumPopupSize));
     }
+
+    // ---- player settings: the "+N" popups ----
+
+    private const string PrefPopups = "PixelClicker.Setting.Popups";
+    private const string PrefPopupSize = "PixelClicker.Setting.PopupSize";
+    public static readonly string[] PopupSizeNames = { "Small", "Medium", "Large", "Extra large" };
+    private static readonly float[] PopupSizeScale = { 0.7f, 1f, 1.4f, 1.8f };
+
+    /// <summary>Show the "+N" popups at the cursor / over the cube? (The inventory's "+N" next to each pixel is not affected.)</summary>
+    public static bool PopupsEnabled
+    {
+        get => PlayerPrefs.GetInt(PrefPopups, 1) != 0;
+        set { PlayerPrefs.SetInt(PrefPopups, value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>Popup size: 0 = small ... 3 = extra large; 1 (medium) is the size set in the Inspector.</summary>
+    public static int PopupSizeChoice
+    {
+        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefPopupSize, 1), 0, PopupSizeNames.Length - 1);
+        set { PlayerPrefs.SetInt(PrefPopupSize, Mathf.Clamp(value, 0, PopupSizeNames.Length - 1)); PlayerPrefs.Save(); }
+    }
+
+    private static float PopupScale => PopupSizeScale[PopupSizeChoice];
 
     private IEnumerator PopupRoutine(string text, Color color, Func<Vector2> getAnchor, Vector2 offset, float sizeMultiplier)
     {
@@ -824,7 +847,7 @@ public class PixelUI : MonoBehaviour
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
-        tmp.fontSize = popupFontSize * sizeMultiplier;
+        tmp.fontSize = popupFontSize * sizeMultiplier * PopupScale;
         tmp.fontStyle = FontStyles.Bold;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.raycastTarget = false;
