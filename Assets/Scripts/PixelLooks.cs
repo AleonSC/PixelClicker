@@ -60,6 +60,17 @@ public class PixelLook
     [Tooltip("Overall strength of the outline (0 = invisible, 1 = full).")]
     public float outlineStrength = 1f;
 
+    [Header("Face circles")]
+    [Tooltip("Draw a flat circle on each of the 6 faces of the cube.")]
+    public bool faceCircles = false;
+
+    [Tooltip("Colour of the face circles.")]
+    public Color faceCircleColor = Color.black;
+
+    [Range(0.05f, 0.5f)]
+    [Tooltip("Circle radius as a fraction of the cube's width (0.5 = touches the edges).")]
+    public float faceCircleRadius = 0.3f;
+
     [Header("Special")]
     [Tooltip("A swirling dark-matter core inside the cube (best with 'Force Translucent' and a dark, see-through colour).")]
     public bool darkMatter = false;
@@ -68,7 +79,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter;
+    public bool HasExtras => outline || darkMatter || faceCircles;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -82,6 +93,10 @@ public static class PixelLooks
             // White, gray and black keep their plain tier look (no entry).
 
             // Red, green and blue keep their plain flat colours (no entry).
+
+            // Vacuum: a dark purple see-through block with a black circle on every face.
+            new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
+                            forceTranslucent = true, smoothness = 0.95f, metallic = 0f, faceCircles = true },
 
             // Glass: very see-through, a faint edge so it can still be seen, shatters on the ground.
             new PixelLook { type = PixelClicker.PixelType.Glass, alpha = 0.4f, smoothness = 1f, metallic = 0f,
@@ -138,6 +153,19 @@ public static class PixelLooks
             mr.sharedMaterial = NeonMaterial();
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
+        }
+
+        if (look.faceCircles)
+        {
+            GameObject circles = new GameObject("Face Circles", typeof(MeshFilter), typeof(MeshRenderer));
+            circles.transform.SetParent(root.transform, false);
+            circles.transform.localPosition = centre;
+            circles.layer = root.layer;
+            circles.GetComponent<MeshFilter>().sharedMesh = CircleMesh(size, look.faceCircleRadius, look.faceCircleColor);
+            MeshRenderer cr = circles.GetComponent<MeshRenderer>();
+            cr.sharedMaterial = NeonMaterial();
+            cr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            cr.receiveShadows = false;
         }
 
         if (look.darkMatter && baseMaterial != null)
@@ -266,6 +294,56 @@ public static class PixelLooks
                 }
             }
         }
+    }
+
+    private static readonly Dictionary<int, Mesh> circleMeshes = new Dictionary<int, Mesh>();
+
+    /// <summary>Six flat discs, one just outside each face of a box of this size.</summary>
+    private static Mesh CircleMesh(Vector3 size, float radiusFraction, Color colour)
+    {
+        int key = unchecked(size.GetHashCode() * 31 + radiusFraction.GetHashCode() * 17 + colour.GetHashCode() * 13);
+        if (circleMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
+
+        const int Segments = 32;
+        float gap = Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.004f; // just off the face so it never z-fights
+        List<Vector3> v = new List<Vector3>();
+        List<Color> col = new List<Color>();
+        List<int> tri = new List<int>();
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            int a = (axis + 1) % 3, b = (axis + 2) % 3;
+            float radius = Mathf.Min(size[a], size[b]) * radiusFraction;
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+                Vector3 centre = Vector3.zero;
+                centre[axis] = sign * (size[axis] * 0.5f + gap);
+                int start = v.Count;
+                v.Add(centre); col.Add(colour);
+                for (int i = 0; i < Segments; i++)
+                {
+                    float ang = i * Mathf.PI * 2f / Segments;
+                    Vector3 p = centre;
+                    p[a] += Mathf.Cos(ang) * radius;
+                    p[b] += Mathf.Sin(ang) * radius;
+                    v.Add(p); col.Add(colour);
+                }
+                for (int i = 0; i < Segments; i++)
+                {
+                    int p1 = start + 1 + i, p2 = start + 1 + (i + 1) % Segments;
+                    tri.Add(start); tri.Add(p1); tri.Add(p2);   // both windings, so it shows from either side
+                    tri.Add(start); tri.Add(p2); tri.Add(p1);
+                }
+            }
+        }
+
+        Mesh mesh = new Mesh { name = "FaceCircles" };
+        mesh.SetVertices(v);
+        mesh.SetColors(col);
+        mesh.SetTriangles(tri, 0);
+        mesh.RecalculateBounds();
+        circleMeshes[key] = mesh;
+        return mesh;
     }
 
     private static readonly int[][] BoxQuads =

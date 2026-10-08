@@ -227,7 +227,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -717,6 +717,18 @@ public class PixelClicker : MonoBehaviour
                 looks = kept.ToArray();
             }
             looksVersion = 3;
+        }
+        if (looksVersion < 4)
+        {
+            // The Vacuum look (dark purple glass block with black circles) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Vacuum) == null)
+            {
+                PixelLook vacuumLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Vacuum);
+                System.Collections.Generic.List<PixelLook> extended = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (vacuumLook != null) extended.Add(vacuumLook);
+                looks = extended.ToArray();
+            }
+            looksVersion = 4;
         }
 
         if (pixelRenderer != null)
