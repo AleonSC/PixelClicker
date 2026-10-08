@@ -99,8 +99,8 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("How much the pad glows (so it is easy to spot).")]
     [SerializeField] private float padGlow = 0.6f;
 
-    [Tooltip("Text above the pad. {0} = pixel name, {1} = seconds left.")]
-    [SerializeField] private string labelFormat = "Feed me: {0}   {1}s";
+    [Tooltip("Text above the pad (lines allowed with \\n). {0} = pixel name, {1} = seconds left.")]
+    [SerializeField] private string labelLines = "Feed me\n<size=70%>{1}s</size>";
 
     [Min(0.3f)]
     [Tooltip("Size of that text (3D text: about 10 per world unit).")]
@@ -245,32 +245,74 @@ public class PixelPadMinigame : PixelMinigame
         float xFar = left ? screenEdgeMargin : 1f - screenEdgeMargin;
         float xMin = Mathf.Clamp01(Mathf.Min(xNear, xFar)), xMax = Mathf.Clamp01(Mathf.Max(xNear, xFar));
 
-        for (int attempt = 0; attempt < 12; attempt++)
+        // Try several spots; take the first where the whole pad (arrows, model, label) is inside the view, else the least cut off.
+        bool found = false;
+        float bestCut = float.MaxValue;
+        Vector3 bestPoint = Vector3.zero;
+        for (int attempt = 0; attempt < 40; attempt++)
         {
             Vector3 viewport = new Vector3(
                 Random.Range(xMin, xMax),
                 Random.Range(Mathf.Min(heightRange.x, heightRange.y), Mathf.Max(heightRange.x, heightRange.y)), 0f);
             Ray ray = cam.ViewportPointToRay(viewport);
 
+            Vector3 candidate = Vector3.zero;
+            bool ok = false;
             RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, floorLayers, QueryTriggerInteraction.Ignore);
-            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            System.Array.Sort(hits, (a2, b2) => a2.distance.CompareTo(b2.distance));
             foreach (RaycastHit hit in hits)
             {
                 if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
                 if (clicker.PixelTransform != null && hit.transform.IsChildOf(clicker.PixelTransform)) continue;
                 if (hit.normal.y < 0.5f) continue;
-                point = hit.point;
-                return true;
+                candidate = hit.point;
+                ok = true;
+                break;
             }
-
-            Plane floor = new Plane(Vector3.up, new Vector3(0f, fallbackFloorY, 0f));
-            if (floor.Raycast(ray, out float enter))
+            if (!ok)
             {
-                point = ray.GetPoint(enter);
-                return true;
+                Plane floor = new Plane(Vector3.up, new Vector3(0f, fallbackFloorY, 0f));
+                if (floor.Raycast(ray, out float enter)) { candidate = ray.GetPoint(enter); ok = true; }
             }
+            if (!ok) continue;
+
+            float cut = CutOff(cam, candidate);
+            if (cut < bestCut) { bestCut = cut; bestPoint = candidate; found = true; }
+            if (cut <= 0f) break;
         }
-        return false;
+        point = bestPoint;
+        return found;
+    }
+
+    /// <summary>How far (viewport fractions, summed) the pad's footprint, arrows, model and label would stick out of the view. 0 = fully visible.</summary>
+    private float CutOff(Camera cam, Vector3 point)
+    {
+        float bars = PixelHud.Instance != null
+            ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
+        const float margin = 0.02f;
+        float reach = padSize * 0.5f + (showArrows ? arrowTravel + arrowLength * 0.6f : 0.1f);
+
+        Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
+        if (flatForward.sqrMagnitude < 0.0001f) flatForward = Vector3.forward;
+        flatForward.Normalize();
+        Vector3 labelPos = point + flatForward * (padSize * 0.56f + labelGap) + Vector3.up * 0.45f;
+
+        Vector3[] checks =
+        {
+            point + new Vector3(reach, 0f, reach), point + new Vector3(-reach, 0f, reach),
+            point + new Vector3(reach, 0f, -reach), point + new Vector3(-reach, 0f, -reach),
+            point + Vector3.up * (modelLift + modelEdge),
+            labelPos + cam.transform.up * 0.8f, labelPos + cam.transform.right * 1.0f, labelPos - cam.transform.right * 1.0f,
+        };
+        float cut = 0f;
+        foreach (Vector3 w in checks)
+        {
+            Vector3 v = cam.WorldToViewportPoint(w);
+            if (v.z <= 0f) { cut += 1f; continue; }
+            cut += Mathf.Max(0f, margin - v.x) + Mathf.Max(0f, v.x - (1f - margin));
+            cut += Mathf.Max(0f, bars + margin - v.y) + Mathf.Max(0f, v.y - (1f - bars - margin));
+        }
+        return cut;
     }
 
     // ------------------------------------------------------------------
@@ -555,7 +597,7 @@ public class PixelPadMinigame : PixelMinigame
         Vector3 flatForward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
         if (flatForward.sqrMagnitude < 0.0001f) flatForward = Vector3.forward;
         flatForward.Normalize();
-        labelGo.transform.position = point + flatForward * (padSize * 0.56f + labelGap) + Vector3.up * 0.3f;
+        labelGo.transform.position = point + flatForward * (padSize * 0.56f + labelGap) + Vector3.up * 0.45f;
         labelGo.transform.rotation = cam.transform.rotation;
 
         // Grow in.
@@ -580,7 +622,7 @@ public class PixelPadMinigame : PixelMinigame
             left -= Time.deltaTime;
             animTime += Time.deltaTime;
             visual.Animate(animTime);
-            label.text = string.Format(labelFormat, tier.displayName, Mathf.CeilToInt(Mathf.Max(0f, left)));
+            label.text = string.Format(labelLines, tier.displayName, Mathf.CeilToInt(Mathf.Max(0f, left)));
             labelGo.transform.rotation = cam.transform.rotation;
             TakePixels(root.transform, target, cam);
             yield return null;
