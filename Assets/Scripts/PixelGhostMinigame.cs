@@ -111,6 +111,41 @@ public class PixelGhostMinigame : PixelMinigame
     [Tooltip("The clickable area is the ghost's size times this, so a faint ghost is still fair to click.")]
     [SerializeField] private float clickSizeMultiplier = 1.4f;
 
+    [Header("Potion (carried, then dropped)")]
+    [Range(0.1f, 1.5f)]
+    [Tooltip("Size of the glass potion the ghost carries, relative to the ghost's size.")]
+    [SerializeField] private float potionSize = 0.55f;
+
+    [Range(0.1f, 1f)]
+    [Tooltip("Size of the pixel cube inside the glass, relative to the glass.")]
+    [SerializeField] private float potionInnerScale = 0.55f;
+
+    [Tooltip("Colour of the potion's glass.")]
+    [SerializeField] private Color potionGlassColor = new Color(0.8f, 0.92f, 1f, 0.4f);
+
+    [Min(0.2f)]
+    [Tooltip("The dropped potion shatters when it lands, or after this many seconds if it never lands.")]
+    [SerializeField] private float dropMaxSeconds = 3f;
+
+    [Range(4, 40)]
+    [Tooltip("Glass shards when the potion shatters.")]
+    [SerializeField] private int shardCount = 16;
+
+    [Min(0.5f)]
+    [Tooltip("How fast the shards fly out.")]
+    [SerializeField] private float shardSpeed = 4f;
+
+    [Min(0.1f)]
+    [Tooltip("Seconds the shards stay before shrinking away.")]
+    [SerializeField] private float shardLife = 1.2f;
+
+    [Range(0.05f, 0.6f)]
+    [Tooltip("Size of a shard relative to the potion.")]
+    [SerializeField] private float shardSize = 0.3f;
+
+    [Tooltip("Sound played when the potion shatters (an id from PixelAudio).")]
+    [SerializeField] private string shatterSound = "glass_shatter";
+
     [Header("Reward")]
     [Min(0.1f)]
     [Tooltip("The buff lasts the potion's normal duration times this.")]
@@ -289,6 +324,10 @@ public class PixelGhostMinigame : PixelMinigame
         rend.receiveShadows = false;
         MaterialPropertyBlock block = new MaterialPropertyBlock();
 
+        // The potion the ghost carries (the buff you get when it shatters): a glass cube with the pixel cube inside.
+        int potion = consumables != null ? consumables.PickRandomBuff() : -1;
+        GameObject potionVisual = potion >= 0 ? BuildPotion(ghost.transform, potion) : null;
+
         // Distance along the camera's forward axis: a bit in front of the cube.
         float depth = 10f;
         if (clicker.PixelTransform != null)
@@ -340,9 +379,16 @@ public class PixelGhostMinigame : PixelMinigame
         }
 
         Vector3 lastPos = ghost.transform.position;
+        if (caught && potionVisual != null)
+        {
+            // He drops the potion: it falls and shatters, and the buff starts then.
+            potionVisual.transform.SetParent(null, true);
+            StartCoroutine(DropPotion(potionVisual, potion, cam));
+        }
+        else if (potionVisual != null) Destroy(potionVisual);
         Destroy(ghost);
 
-        if (caught) Catch(lastPos, cam);
+        if (caught) Catch(lastPos, cam, potionVisual != null ? potion : -2);
         else onGhostMissed?.Invoke();
 
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
@@ -355,16 +401,18 @@ public class PixelGhostMinigame : PixelMinigame
         return ghostCollider.Raycast(ray, out _, 1000f);
     }
 
-    private void Catch(Vector3 position, Camera cam)
+    private void Catch(Vector3 position, Camera cam, int carried)
     {
         bool reachedBefore = ThresholdReached;
         ghostsCaught += 1d;
         Report(MinigameEvent.Clicked);
         if (!reachedBefore && ThresholdReached) onThresholdReached?.Invoke();
 
+        // carried >= 0: the dropped potion applies itself when it shatters. -2: no carried potion, grant one right away.
         string buffName = "";
-        int potion = -1;
-        if (consumables != null) potion = consumables.GrantRandomBuff(buffDurationMultiplier, out buffName);
+        int potion = carried;
+        if (carried >= 0 && consumables != null) buffName = consumables.PotionName(carried);
+        else if (consumables != null) potion = consumables.GrantRandomBuff(buffDurationMultiplier, out buffName);
 
         if (caughtSound != null)
         {
@@ -427,4 +475,120 @@ public class PixelGhostMinigame : PixelMinigame
         Destroy(go);
     }
 
+    // ------------------------------------------------------------------
+    // The carried / dropped potion
+    // ------------------------------------------------------------------
+
+    private Color PotionPixelColor(int potion)
+    {
+        PixelClicker.PixelType type = consumables.PotionType(potion);
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            if (t.type == type) return new Color(t.color.r, t.color.g, t.color.b, 1f);
+        return Color.white;
+    }
+
+    /// <summary>A small glass cube with the potion's pixel cube inside, parented to the ghost (no colliders).</summary>
+    private GameObject BuildPotion(Transform parent, int potion)
+    {
+        GameObject root = new GameObject("Ghost Potion");
+        root.transform.SetParent(parent, false);
+        root.transform.localScale = Vector3.one * potionSize;
+
+        GameObject inner = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        inner.name = "Pixel";
+        Destroy(inner.GetComponent<Collider>());
+        inner.transform.SetParent(root.transform, false);
+        inner.transform.localScale = Vector3.one * potionInnerScale;
+        Material innerMat = clicker.CreateVisualMaterial(PotionPixelColor(potion), false);
+        if (innerMat != null) inner.GetComponent<Renderer>().sharedMaterial = innerMat;
+
+        GameObject glass = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        glass.name = "Glass";
+        Destroy(glass.GetComponent<Collider>());
+        glass.transform.SetParent(root.transform, false);
+        Material glassMat = clicker.CreateVisualMaterial(potionGlassColor, true);
+        if (glassMat != null) glass.GetComponent<Renderer>().sharedMaterial = glassMat;
+
+        foreach (Renderer r in root.GetComponentsInChildren<Renderer>())
+        {
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+        }
+        return root;
+    }
+
+    /// <summary>The potion falls from where the ghost was and shatters on landing (or after dropMaxSeconds), then the buff starts.</summary>
+    private IEnumerator DropPotion(GameObject potionObject, int potion, Camera cam)
+    {
+        Vector3 size = potionObject.transform.lossyScale;
+        potionObject.transform.localScale = size; // now free of the ghost's squash
+        BoxCollider box = potionObject.AddComponent<BoxCollider>();
+        box.size = Vector3.one;
+        Rigidbody rb = potionObject.AddComponent<Rigidbody>();
+        rb.useGravity = true;
+        rb.mass = 0.3f;
+        rb.AddTorque(Random.onUnitSphere * 2f, ForceMode.VelocityChange);
+        GhostPotionImpact impact = potionObject.AddComponent<GhostPotionImpact>();
+
+        float t = 0f;
+        while (t < dropMaxSeconds && !impact.Hit)
+        {
+            t += Time.deltaTime;
+            yield return null;
+        }
+
+        Vector3 point = potionObject.transform.position;
+        Vector3 normal = impact.Hit ? impact.Normal : Vector3.up;
+        ShatterPotion(potionObject, potion, point, normal);
+
+        if (consumables != null) consumables.ApplyBuff(potion, buffDurationMultiplier);
+    }
+
+    private void ShatterPotion(GameObject potionObject, int potion, Vector3 point, Vector3 normal)
+    {
+        if (!string.IsNullOrEmpty(shatterSound)) PixelAudio.Play(shatterSound);
+
+        Renderer glass = potionObject.transform.Find("Glass").GetComponent<Renderer>();
+        Renderer pixel = potionObject.transform.Find("Pixel").GetComponent<Renderer>();
+        MeshFilter mesh = glass.GetComponent<MeshFilter>();
+        float baseSize = potionObject.transform.lossyScale.x;
+
+        for (int i = 0; i < shardCount; i++)
+        {
+            bool isPixel = i % 3 == 0; // a few shards are the pixel inside
+            Renderer source = isPixel ? pixel : glass;
+            GameObject shard = new GameObject("PotionShard");
+            shard.transform.position = point + Random.insideUnitSphere * baseSize * 0.3f;
+            shard.transform.rotation = Random.rotation;
+            float s = baseSize * shardSize * (isPixel ? 0.5f : 1f);
+            shard.transform.localScale = new Vector3(s * Random.Range(0.6f, 1.2f), s * Random.Range(0.12f, 0.3f) * (isPixel ? 3f : 1f), s * Random.Range(0.5f, 1f));
+            shard.AddComponent<MeshFilter>().sharedMesh = mesh.sharedMesh;
+            MeshRenderer mr = shard.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = source.sharedMaterial;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            shard.AddComponent<BoxCollider>();
+            Rigidbody rb = shard.AddComponent<Rigidbody>();
+            rb.mass = 0.05f;
+            Vector3 push = normal * shardSpeed * Random.Range(0.4f, 1f) + Random.onUnitSphere * shardSpeed * 0.7f;
+            push.y = Mathf.Abs(push.y);
+            rb.AddForce(push, ForceMode.VelocityChange);
+            rb.AddTorque(Random.onUnitSphere * Random.Range(5f, 15f), ForceMode.VelocityChange);
+            shard.AddComponent<OldPixelShard>().Setup(shardLife * Random.Range(0.7f, 1.2f));
+        }
+        Destroy(potionObject);
+    }
+}
+
+/// <summary>Remembers that the dropped ghost potion hit something (the floor, the cube, an old pixel).</summary>
+public class GhostPotionImpact : MonoBehaviour
+{
+    public bool Hit { get; private set; }
+    public Vector3 Normal { get; private set; } = Vector3.up;
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (Hit || collision.collider.GetComponent<OldPixelShard>() != null) return;
+        Hit = true;
+        Normal = collision.GetContact(0).normal;
+    }
 }

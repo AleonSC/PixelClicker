@@ -705,6 +705,27 @@ public class PixelConsumables : MonoBehaviour
         return pick;
     }
 
+    /// <summary>Picks a random buff potion (unlocked pixel type, not craft-only) without starting it. -1 if none.</summary>
+    public int PickRandomBuff()
+    {
+        System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < potions.Length; i++)
+            if (!potions[i].craftOnly && clicker.IsUnlocked(potions[i].type)) candidates.Add(i);
+        return candidates.Count == 0 ? -1 : candidates[UnityEngine.Random.Range(0, candidates.Count)];
+    }
+
+    /// <summary>Name of a potion by index.</summary>
+    public string PotionName(int index) => potions[index].displayName;
+
+    /// <summary>Pixel type of a potion by index.</summary>
+    public PixelClicker.PixelType PotionType(int index) => potions[index].type;
+
+    /// <summary>Starts a potion's effect for free (used by the ghost minigame when the dropped potion shatters).</summary>
+    public void ApplyBuff(int index, float durationMultiplier)
+    {
+        if (index >= 0 && index < potions.Length) ApplyPotion(index, durationMultiplier);
+    }
+
     /// <summary>Ends the running potion without firing the expired event (used when loading a save).</summary>
     public void StopActive()
     {
