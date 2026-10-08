@@ -36,3 +36,4 @@
 [2026-10-08 13:56 UTC] The first-combo tip now appears at the bottom, just above the combo meter.
 [2026-10-08 13:59 UTC] Reworked how the black hole swallows pixels: they ease into a spiral, speed up as they fall in, stretch into curved streaks, darken, leave a purple trail and vanish with a small flash.
 [2026-10-08 14:02 UTC] Removed the harmless "no matching hint" warning for the black hole (it has its own first-time tip).
+[2026-10-08 14:05 UTC] Fixed the dead zone: old pixels right next to the clicker pixel can be grabbed now.

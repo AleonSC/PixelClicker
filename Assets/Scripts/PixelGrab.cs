@@ -140,6 +140,14 @@ public class PixelGrab : MonoBehaviour
         RaycastHit[] hits = Physics.SphereCastAll(ray, grabRadius, 1000f, ~0, QueryTriggerInteraction.Collide);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
+        // Where does the exact line under the cursor hit? (The fat grab sphere reaches the cube long before the cursor is on it,
+        // which used to make pixels next to the cube impossible to pick up.)
+        RaycastHit[] exact = Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide);
+        float cubeExact = float.PositiveInfinity;
+        if (clicker.PixelTransform != null)
+            foreach (RaycastHit h in exact)
+                if (h.transform.IsChildOf(clicker.PixelTransform) && h.distance < cubeExact) cubeExact = h.distance;
+
         foreach (RaycastHit hit in hits)
         {
             Rigidbody body = hit.rigidbody;
@@ -148,8 +156,12 @@ public class PixelGrab : MonoBehaviour
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null && despawn.IsDespawning) continue; // already vanishing
 
-            // The pixel in front of the cube wins; if the cube is nearer than any old pixel, the click goes to the cube.
-            if (HitsCubeFirst(hits, hit.distance)) return;
+            // The cube only wins when the cursor is really on it and it is in front of this pixel under the cursor.
+            // A pixel beside the cube (the cursor not on the cube) is always grabbable, even right up against it.
+            float pixelExact = float.PositiveInfinity;
+            foreach (RaycastHit h in exact)
+                if (h.rigidbody == body && h.distance < pixelExact) pixelExact = h.distance;
+            if (cubeExact < pixelExact) return;
             Grab(body, despawn, ray);
             return;
         }
