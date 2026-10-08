@@ -52,6 +52,10 @@ public class PixelHud : MonoBehaviour
     [Tooltip("The mouse counts as 'near' when it is this close (canvas units) to the button's spot, in any direction.")]
     [SerializeField] private float triggerPadding = 50f;
 
+    [Min(0f)]
+    [Tooltip("Buttons docked to the middle of the left / right edge (Bank, Toggles) slide out only when the mouse is this close (canvas units) to that screen edge. Once out, the button's own area keeps it out. Keep it small so windows near the edge (the event log) don't trigger it.")]
+    [SerializeField] private float sideTriggerDepth = 30f;
+
     [Min(0.01f)]
     [Tooltip("Seconds a button takes to slide out or away.")]
     [SerializeField] private float slideSeconds = 0.18f;
@@ -167,6 +171,7 @@ public class PixelHud : MonoBehaviour
     internal bool SlideButtons => slideButtons;
     internal float SlideSeconds => slideSeconds;
     internal float TriggerPadding => triggerPadding;
+    internal float SideTriggerDepth => sideTriggerDepth;
     internal float BandHeight => barsEnabled ? barHeight : buttonSize.y + sideMargin;
 }
 
@@ -238,7 +243,9 @@ public class PixelDockedButton : MonoBehaviour
         {
             float sw = rect.sizeDelta.x + sideOffsetX, sh = hud.ButtonSize.y;
             float fromSide = anchor.x > 0.5f ? Screen.width / scale - p.x / scale : p.x / scale;
-            return fromSide <= sw + pad && Mathf.Abs(p.y / scale - (Screen.height / scale * 0.5f + sideOffsetY)) <= sh * 0.5f + pad;
+            // Narrow strip along the edge to open; once sliding out, the visible part of the button keeps it open.
+            float depth = hud.SideTriggerDepth + slide * sw;
+            return fromSide <= depth && Mathf.Abs(p.y / scale - (Screen.height / scale * 0.5f + sideOffsetY)) <= sh * 0.5f + pad;
         }
 
         float w = hud.ButtonSize.x, margin = hud.SideMargin;
