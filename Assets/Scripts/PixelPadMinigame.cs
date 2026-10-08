@@ -268,16 +268,20 @@ public class PixelPadMinigame : PixelMinigame
     // ------------------------------------------------------------------
     // The pad
     [Header("Pad Look")]
-    [Tooltip("Arrows around the pad's border that drift inwards, showing it pulls pixels in.")]
+    [Tooltip("Arrows around the OUTSIDE of the pad that drift inwards toward its border, showing it pulls pixels in.")]
     [SerializeField] private bool showArrows = true;
 
     [Range(1, 6)]
     [Tooltip("Arrows on each side of the pad.")]
-    [SerializeField] private int arrowsPerSide = 3;
+    [SerializeField] private int arrowsEachSide = 4;
 
     [Min(0.05f)]
     [Tooltip("Size of an arrow (world units).")]
-    [SerializeField] private float arrowSize = 0.34f;
+    [SerializeField] private float arrowLength = 0.4f;
+
+    [Min(0.1f)]
+    [Tooltip("How far outside the pad's edge the arrows start before drifting in (world units).")]
+    [SerializeField] private float arrowTravel = 1.0f;
 
     [Min(0.05f)]
     [Tooltip("How fast the arrows drift inwards (cycles per second).")]
@@ -292,11 +296,11 @@ public class PixelPadMinigame : PixelMinigame
 
     [Min(0.1f)]
     [Tooltip("Edge length of the model (world units).")]
-    [SerializeField] private float modelSize = 0.95f;
+    [SerializeField] private float modelEdge = 0.55f;
 
     [Min(0f)]
-    [Tooltip("How high above the pad the model floats (world units).")]
-    [SerializeField] private float modelHeight = 1.15f;
+    [Tooltip("How high above the pad the model sits (world units). Low = it rests on the pad.")]
+    [SerializeField] private float modelLift = 0.42f;
 
     [Tooltip("Spin speed of the model (degrees per second, around the up axis).")]
     [SerializeField] private float modelSpin = 45f;
@@ -326,15 +330,18 @@ public class PixelPadMinigame : PixelMinigame
     {
         if (arrowMesh != null) return arrowMesh;
         arrowMesh = new Mesh { name = "Pad Arrow" };
+        // A chevron (two thick arms meeting at a tip), flat, pointing +Z.
         arrowMesh.vertices = new[]
         {
-            new Vector3(0f, 0f, 0.5f),      // tip
-            new Vector3(0.45f, 0f, -0.4f),  // right
-            new Vector3(0f, 0f, -0.1f),     // notch
-            new Vector3(-0.45f, 0f, -0.4f), // left
+            new Vector3(-0.5f, 0f, -0.3f),  // 0 left arm, outer
+            new Vector3(0f, 0f, 0.2f),      // 1 tip, outer
+            new Vector3(0.5f, 0f, -0.3f),   // 2 right arm, outer
+            new Vector3(-0.5f, 0f, -0.58f), // 3 left arm, inner
+            new Vector3(0f, 0f, -0.08f),    // 4 tip, inner
+            new Vector3(0.5f, 0f, -0.58f),  // 5 right arm, inner
         };
-        arrowMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-        Color[] colours = { Color.white, Color.white, Color.white, Color.white };
+        arrowMesh.triangles = new[] { 0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4 };
+        Color[] colours = { Color.white, Color.white, Color.white, Color.white, Color.white, Color.white };
         arrowMesh.colors = colours;
         arrowMesh.RecalculateNormals();
         arrowMesh.RecalculateBounds();
@@ -356,7 +363,7 @@ public class PixelPadMinigame : PixelMinigame
         public System.Collections.Generic.List<Arrow> arrows = new System.Collections.Generic.List<Arrow>();
         public Transform model;
         public Color arrowColour;
-        public float half, size, speed, opacity, modelHeight, modelSpin;
+        public float half, size, speed, opacity, modelLift, modelSpin, travel;
         private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
 
         public void Animate(float time)
@@ -368,7 +375,7 @@ public class PixelPadMinigame : PixelMinigame
                 float angle = a.side * 90f * Mathf.Deg2Rad;
                 Vector3 outward = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
                 Vector3 lateral = new Vector3(Mathf.Cos(angle), 0f, -Mathf.Sin(angle));
-                float from = half - size * 0.6f, to = half * 0.45f;
+                float from = half + travel, to = half + size * 0.55f; // outside the pad, drifting in toward its border
                 a.tf.localPosition = outward * Mathf.Lerp(from, to, t) + lateral * a.lateral + Vector3.up * 0.085f;
                 a.tf.localRotation = Quaternion.LookRotation(-outward, Vector3.up); // points inwards
 
@@ -380,8 +387,8 @@ public class PixelPadMinigame : PixelMinigame
 
             if (model != null)
             {
-                model.localPosition = new Vector3(0f, modelHeight + Mathf.Sin(time * 1.6f) * 0.08f, 0f);
-                model.localRotation = Quaternion.Euler(18f, time * modelSpin, 0f);
+                model.localPosition = new Vector3(0f, modelLift + Mathf.Sin(time * 1.6f) * 0.03f, 0f);
+                model.localRotation = Quaternion.Euler(0f, time * modelSpin, 0f);
             }
         }
     }
@@ -390,8 +397,8 @@ public class PixelPadMinigame : PixelMinigame
     {
         PadVisual v = new PadVisual
         {
-            half = padSize * 0.5f, size = arrowSize, speed = arrowSpeed, opacity = arrowOpacity,
-            modelHeight = modelHeight, modelSpin = modelSpin,
+            half = padSize * 0.5f, travel = arrowTravel, size = arrowLength, speed = arrowSpeed, opacity = arrowOpacity,
+            modelLift = modelLift, modelSpin = modelSpin,
             arrowColour = Color.Lerp(colour, Color.white, 0.55f),
         };
 
@@ -399,18 +406,18 @@ public class PixelPadMinigame : PixelMinigame
         {
             Material mat = ArrowMaterial(colour);
             for (int side = 0; side < 4; side++)
-                for (int i = 0; i < arrowsPerSide; i++)
+                for (int i = 0; i < arrowsEachSide; i++)
                 {
                     GameObject go = new GameObject("Arrow");
                     go.transform.SetParent(root, false);
-                    go.transform.localScale = Vector3.one * arrowSize;
+                    go.transform.localScale = Vector3.one * arrowLength;
                     go.AddComponent<MeshFilter>().sharedMesh = ArrowMesh();
                     MeshRenderer mr = go.AddComponent<MeshRenderer>();
                     mr.sharedMaterial = mat;
                     mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     mr.receiveShadows = false;
-                    float spread = padSize * 0.78f;
-                    float lateral = arrowsPerSide == 1 ? 0f : Mathf.Lerp(-spread * 0.5f, spread * 0.5f, i / (float)(arrowsPerSide - 1));
+                    float spread = padSize * 0.95f;
+                    float lateral = arrowsEachSide == 1 ? 0f : Mathf.Lerp(-spread * 0.5f, spread * 0.5f, i / (float)(arrowsEachSide - 1));
                     v.arrows.Add(new PadVisual.Arrow
                     {
                         tf = go.transform, renderer = mr, side = side, lateral = lateral,
@@ -421,7 +428,7 @@ public class PixelPadMinigame : PixelMinigame
 
         if (showModel)
         {
-            GameObject model = clicker.CreateDisplayPixel(target, root, modelSize);
+            GameObject model = clicker.CreateDisplayPixel(target, root, modelEdge);
             if (model != null) v.model = model.transform;
         }
         return v;
