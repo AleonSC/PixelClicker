@@ -227,6 +227,8 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again
+
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
 
@@ -701,6 +703,19 @@ public class PixelClicker : MonoBehaviour
         {
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
+        }
+
+        if (looksVersion < 2)
+        {
+            // White, gray and black are back to their plain look: drop the entries an earlier version added.
+            if (looks != null)
+            {
+                System.Collections.Generic.List<PixelLook> kept = new System.Collections.Generic.List<PixelLook>();
+                foreach (PixelLook l in looks)
+                    if (l != null && l.type != PixelType.White && l.type != PixelType.Gray && l.type != PixelType.Black) kept.Add(l);
+                looks = kept.ToArray();
+            }
+            looksVersion = 2;
         }
 
         if (pixelRenderer != null)

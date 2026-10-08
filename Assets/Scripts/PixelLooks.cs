@@ -79,15 +79,7 @@ public static class PixelLooks
     {
         return new[]
         {
-            // White, gray and black: clearly different from each other.
-            new PixelLook { type = PixelClicker.PixelType.White, useColor = true, color = new Color(1f, 0.99f, 0.95f, 1f),
-                            smoothness = 0.9f, metallic = 0f, emission = 0.35f },
-            new PixelLook { type = PixelClicker.PixelType.Gray, useColor = true, color = new Color(0.36f, 0.39f, 0.44f, 1f),
-                            metallic = 0.9f, smoothness = 0.55f },
-            new PixelLook { type = PixelClicker.PixelType.Black, useColor = true, color = new Color(0.012f, 0.012f, 0.018f, 1f),
-                            metallic = 0.2f, smoothness = 0.97f,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.62f, 0.7f, 1f),
-                            outlineThickness = 0.02f, outlineStrength = 0.55f },
+            // White, gray and black keep their plain tier look (no entry).
 
             // RGB: neon outline in their own colour.
             new PixelLook { type = PixelClicker.PixelType.Red, outline = true },

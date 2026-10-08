@@ -10,3 +10,4 @@
 [2026-10-08 11:01 UTC] The two intro "Got it" boxes (Log and Inventory) are small text-sized boxes at the top again, separate from the shop-sized tip boxes.
 [2026-10-08 11:09 UTC] Dev tools: new on-screen spawn selector tick box to spawn only one chosen pixel, the Monochrome pack or the RGB pack.
 [2026-10-08 11:13 UTC] If the pixel's material is missing (pink cube), the game now builds a temporary one instead of staying pink.
+[2026-10-08 11:17 UTC] White, gray and black pixels are back to their plain original looks.
