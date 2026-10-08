@@ -42,6 +42,13 @@ public class PixelLook
     [Tooltip("Multiplies the glow of a glowing tier (1 = unchanged, 0.3 = much dimmer).")]
     public float glowScale = 1f;
 
+    [Header("Surface texture")]
+    [Tooltip("Draw thin white streaks on a dark base (use a white Color above so the texture shows true). Used by Obsidian.")]
+    public bool streakTexture = false;
+
+    [Tooltip("Tough pixels (several clicks to collect): white cracks spread over the pixel with every hit, more with each click.")]
+    public bool damageCracks = false;
+
     [Header("Outline")]
     [Tooltip("Draw glowing neon lines along the 12 edges of the cube.")]
     public bool outline = false;
@@ -80,6 +87,9 @@ public class PixelLook
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
     public bool HasExtras => outline || darkMatter || faceCircles;
+
+    /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
+    public bool HasSurfaceTexture => streakTexture || damageCracks;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -103,6 +113,10 @@ public static class PixelLooks
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.85f, 0.97f, 1f, 1f),
                             outlineThickness = 0.02f, outlineStrength = 0.5f, shatter = true },
 
+            // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
+            new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
+                            metallic = 1f, smoothness = 0.95f, streakTexture = true, damageCracks = true },
+
             // Singularity: a box of dark matter.
             new PixelLook { type = PixelClicker.PixelType.Singularity, useColor = true, color = new Color(0.07f, 0.02f, 0.14f, 0.5f),
                             forceTranslucent = true, smoothness = 0.95f, metallic = 0f, glowScale = 0.3f,
@@ -117,6 +131,94 @@ public static class PixelLooks
         for (int i = 0; i < looks.Length; i++)
             if (looks[i] != null && looks[i].type == type) return looks[i];
         return null;
+    }
+
+    // ------------------------------------------------------------------
+    // Surface texture: black with white streaks, plus cracks that grow with damage
+    // ------------------------------------------------------------------
+
+    private static readonly Dictionary<int, Texture2D> surfaceTextures = new Dictionary<int, Texture2D>();
+
+    /// <summary>
+    /// The pixel's surface texture. 'level' 0 = undamaged; up to 'maxLevel' = about to break (more cracks each level).
+    /// Drawn once per level and shared.
+    /// </summary>
+    public static Texture2D SurfaceTexture(bool streaks, int level, int maxLevel)
+    {
+        maxLevel = Mathf.Max(1, maxLevel);
+        level = Mathf.Clamp(level, 0, maxLevel);
+        int key = (streaks ? 1 : 0) + level * 2 + maxLevel * 1000;
+        if (surfaceTextures.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+        const int size = 128;
+        Color32[] px = new Color32[size * size];
+        Color32 baseColour = new Color32(6, 6, 9, 255);
+        for (int i = 0; i < px.Length; i++) px[i] = baseColour;
+
+        if (streaks)
+        {
+            // Long, thin, slightly slanted white streaks of different strength (always the same ones).
+            System.Random rnd = new System.Random(77);
+            for (int i = 0; i < 9; i++)
+            {
+                float x0 = (float)rnd.NextDouble() * size, y0 = (float)rnd.NextDouble() * size;
+                float angle = 0.45f + ((float)rnd.NextDouble() - 0.5f) * 0.5f;
+                float length = size * (0.35f + (float)rnd.NextDouble() * 0.5f);
+                float strength = 0.35f + (float)rnd.NextDouble() * 0.65f;
+                DrawLine(px, size, x0, y0, x0 + Mathf.Cos(angle) * length, y0 + Mathf.Sin(angle) * length, 1, strength, 0.35f);
+            }
+        }
+
+        if (level > 0)
+        {
+            // Cracks: the same jagged paths every time, drawn a little further and in more places with each level.
+            int cracks = 2 + level * 2;
+            int segments = 3 + level * 2;
+            for (int c = 0; c < cracks; c++)
+            {
+                System.Random rnd = new System.Random(1000 + c * 31);
+                float x = size * (0.25f + (float)rnd.NextDouble() * 0.5f), y = size * (0.25f + (float)rnd.NextDouble() * 0.5f);
+                float angle = (float)rnd.NextDouble() * Mathf.PI * 2f;
+                for (int s = 0; s < 14; s++)
+                {
+                    angle += ((float)rnd.NextDouble() - 0.5f) * 1.1f;
+                    float step = 6f + (float)rnd.NextDouble() * 9f;
+                    float nx = x + Mathf.Cos(angle) * step, ny = y + Mathf.Sin(angle) * step;
+                    if (s < segments) DrawLine(px, size, x, y, nx, ny, level >= maxLevel ? 2 : 1, 1f, 0.97f);
+                    x = nx; y = ny;
+                }
+            }
+        }
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear, name = "PixelSurface" };
+        tex.SetPixels32(px);
+        tex.Apply(true, false);
+        surfaceTextures[key] = tex;
+        return tex;
+    }
+
+    /// <summary>Draws a line into the texture, lightening what is underneath towards 'tone' (wraps around the edges).</summary>
+    private static void DrawLine(Color32[] px, int size, float x0, float y0, float x1, float y1, int thickness, float strength, float tone)
+    {
+        int steps = Mathf.CeilToInt(Mathf.Max(Mathf.Abs(x1 - x0), Mathf.Abs(y1 - y0))) + 1;
+        byte target = (byte)Mathf.Clamp(Mathf.RoundToInt(tone * 255f), 0, 255);
+        for (int i = 0; i <= steps; i++)
+        {
+            float t = (float)i / steps;
+            int cx = Mathf.RoundToInt(Mathf.Lerp(x0, x1, t)), cy = Mathf.RoundToInt(Mathf.Lerp(y0, y1, t));
+            for (int dy = 0; dy < thickness; dy++)
+            {
+                for (int dx = 0; dx < thickness; dx++)
+                {
+                    int px_ = ((cx + dx) % size + size) % size, py_ = ((cy + dy) % size + size) % size;
+                    Color32 old = px[py_ * size + px_];
+                    byte r = (byte)Mathf.Lerp(old.r, target, strength);
+                    byte g = (byte)Mathf.Lerp(old.g, target, strength);
+                    byte b = (byte)Mathf.Lerp(old.b, Mathf.Min(255, target + 6), strength);
+                    px[py_ * size + px_] = new Color32(r, g, b, 255);
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------------

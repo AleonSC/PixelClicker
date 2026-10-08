@@ -642,6 +642,9 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Fired when a click only damages a multi-click pixel: (tier index, hits so far, hits needed, automatic).</summary>
     public event Action<int, int, int, bool> PixelHit;
 
+    /// <summary>Raised on the click that finally breaks a tough pixel (just before the payout): tier, hits needed, automatic. Used to show "5/5".</summary>
+    public event Action<int, int, bool> PixelFinalHit;
+
     /// <summary>Fired when currency is spent (tier index, amount).</summary>
     public event Action<int, double> CurrencySpent;
 
@@ -884,11 +887,17 @@ public class PixelClicker : MonoBehaviour
             if (hitsOnCurrentPixel < tier.clicksToCollect)
             {
                 hitPunchTimer = hitPunchDuration;
+                SetLiveDamage(tier, hitsOnCurrentPixel);
                 PlayClickEffects(tier);
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, tier.clicksToCollect, automatic);
                 onPixelClicked?.Invoke();
                 return;
             }
+        }
+        if (tier.clicksToCollect > 1)
+        {
+            SetLiveDamage(tier, tier.clicksToCollect); // the pieces that fall away are fully cracked
+            PixelFinalHit?.Invoke(tierIndex, tier.clicksToCollect, automatic);
         }
         hitsOnCurrentPixel = 0;
 
@@ -1382,6 +1391,24 @@ public class PixelClicker : MonoBehaviour
         return c;
     }
 
+    /// <summary>Puts a look's streak / crack texture on a property block (level = how damaged, 0..max).</summary>
+    private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
+    {
+        if (look == null || !look.HasSurfaceTexture) return;
+        Texture2D tex = PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max);
+        block.SetTexture("_BaseMap", tex);
+        block.SetTexture("_MainTex", tex);
+    }
+
+    /// <summary>A hit on a tough pixel: cracks spread over the live cube (level 0 = undamaged, max = about to break).</summary>
+    private void SetLiveDamage(PixelTier tier, int level)
+    {
+        if (pixelRenderer == null || activeLook == null || !activeLook.damageCracks) return;
+        pixelRenderer.GetPropertyBlock(propertyBlock);
+        ApplyLookTexture(propertyBlock, activeLook, level, tier.clicksToCollect);
+        pixelRenderer.SetPropertyBlock(propertyBlock);
+    }
+
     /// <summary>Metallic / glossiness from a look onto a property block.</summary>
     private static void ApplyLookSurface(MaterialPropertyBlock block, PixelLook look)
     {
@@ -1476,7 +1503,19 @@ public class PixelClicker : MonoBehaviour
         activeLook = LookOf(tier);
         UpdateGlowLight(tier);
         UpdateLiveExtras(tier, activeLook);
+        if (pixelRenderer != null)
+        {
+            // Start from a clean block so nothing (texture, glossiness) is left over from the previous pixel type.
+            propertyBlock.Clear();
+            pixelRenderer.SetPropertyBlock(propertyBlock);
+        }
         ApplyPixelColor(RenderColor(tier, activeLook));
+        if (pixelRenderer != null && activeLook != null && activeLook.HasSurfaceTexture)
+        {
+            pixelRenderer.GetPropertyBlock(propertyBlock);
+            ApplyLookTexture(propertyBlock, activeLook, 0, tier.clicksToCollect);
+            pixelRenderer.SetPropertyBlock(propertyBlock);
+        }
     }
 
     /// <summary>Copies a material and switches it to alpha blending (Standard or URP Lit/Unlit).</summary>
@@ -1908,6 +1947,7 @@ public class PixelClicker : MonoBehaviour
                 block.SetColor(colorPropertyId, drawColor);
                 block.SetColor("_Color", drawColor);
                 ApplyLookSurface(block, styled);
+                ApplyLookTexture(block, styled, 0, look.clicksToCollect);
                 float glowMul = styled != null ? styled.glowScale : 1f;
                 block.SetColor("_EmissionColor", look.glow
                     ? new Color(look.color.r, look.color.g, look.color.b, 1f) * (look.glowIntensity * glowMul)

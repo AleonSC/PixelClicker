@@ -122,7 +122,7 @@ public partial class PixelShop
                 {
                     type = PixelClicker.PixelType.Obsidian, displayName = "Obsidian Pixels",
                     color = new Color(0.22f, 0.1f, 0.35f, 1f),
-                    amountPerClick = 5, clicksToCollect = 5, spawnWeight = 0.4f,
+                    amountPerClick = 7, clicksToCollect = 5, spawnWeight = 0.4f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }

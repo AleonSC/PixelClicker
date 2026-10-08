@@ -377,6 +377,10 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Hit popup size relative to a normal popup.")]
     [SerializeField] private float hitPopupSize = 0.75f;
 
+    [Min(0f)]
+    [Tooltip("Tough pixels: the last click first shows the full counter (e.g. 5/5), then the payout (+7) pops up after this many seconds. 0 = both at once.")]
+    [SerializeField] private float toughPayoutDelay = 0.3f;
+
     [Tooltip("Show a '+X' popup over the cube when a Vacuum pixel sucks up old pixels.")]
     [SerializeField] private bool showVacuumPopup = true;
 
@@ -499,6 +503,7 @@ public class PixelUI : MonoBehaviour
         if (clicker.onTierUnlocked != null) clicker.onTierUnlocked.AddListener(OnTierUnlocked);
         clicker.PixelCollected += OnPixelCollected;
         clicker.PixelHit += OnPixelHit;
+        clicker.PixelFinalHit += OnPixelFinalHit;
         clicker.PixelsVacuumed += OnPixelsVacuumed;
         clicker.VacuumBreakdown += OnVacuumBreakdown;
 
@@ -534,6 +539,7 @@ public class PixelUI : MonoBehaviour
         {
             clicker.PixelCollected -= OnPixelCollected;
             clicker.PixelHit -= OnPixelHit;
+            clicker.PixelFinalHit -= OnPixelFinalHit;
             if (clicker.onTierUnlocked != null) clicker.onTierUnlocked.RemoveListener(OnTierUnlocked);
             clicker.PixelsVacuumed -= OnPixelsVacuumed;
             clicker.VacuumBreakdown -= OnVacuumBreakdown;
@@ -700,6 +706,15 @@ public class PixelUI : MonoBehaviour
         StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, hitPopupSize));
     }
 
+    /// <summary>The click that breaks a tough pixel: shows the full counter (e.g. 5/5) before the payout.</summary>
+    private void OnPixelFinalHit(int tierIndex, int needed, bool automatic) => OnPixelHit(tierIndex, needed, needed, automatic);
+
+    private IEnumerator DelayedPopup(float delay, string text, Color color, Func<Vector2> anchor, Vector2 offset)
+    {
+        yield return new WaitForSecondsRealtime(delay);
+        yield return StartCoroutine(PopupRoutine(text, color, anchor, offset, 1f));
+    }
+
     /// <summary>Called for every collected pixel; automatic clicks pop up over the cube, manual ones at the cursor.</summary>
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)
     {
@@ -727,7 +742,10 @@ public class PixelUI : MonoBehaviour
             offset = popupStartOffset;
         }
 
-        StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, 1f));
+        if (tier.clicksToCollect > 1 && showHitPopups && toughPayoutDelay > 0f)
+            StartCoroutine(DelayedPopup(toughPayoutDelay, text, color, anchor, offset + jitter)); // after the "5/5"
+        else
+            StartCoroutine(PopupRoutine(text, color, anchor, offset + jitter, 1f));
     }
 
     /// <summary>Shows (and adds up) "+X" next to a pixel's entry for each click's payout.</summary>
