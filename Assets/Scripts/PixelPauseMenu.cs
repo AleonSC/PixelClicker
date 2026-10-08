@@ -125,7 +125,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string currentSlotTag = "  (current)";
 
     [Tooltip("Second line of a slot that has a save. {0} = when it was saved, {1} = pixels collected in total.")]
-    [SerializeField] private string slotInfoFormat = "{0}   -   {1} pixels collected";
+    [SerializeField] private string slotDetailFormat = "{0}  -  {1} pixels";
 
     [Tooltip("Second line of a slot with no save.")]
     [SerializeField] private string emptySlotText = "Empty";
@@ -144,7 +144,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Min(40f)]
     [Tooltip("Height of one slot row in the Save / Load window (canvas units).")]
-    [SerializeField] private float slotRowHeight = 84f;
+    [SerializeField] private float slotHeight = 96f;
 
     [Range(2, 8)]
     [Tooltip("How many slot rows show at once; more slots scroll.")]
@@ -1038,7 +1038,7 @@ public class PixelPauseMenu : MonoBehaviour
         saveLoadPanel = BuildSectionPanel("Save Load Panel", saveLoadText, out float y);
 
         // The slot list (scrolls when there are more slots than rows).
-        float rowStep = slotRowHeight + 8f;
+        float rowStep = slotHeight + 8f;
         float viewHeight = Mathf.Min(count, visibleSlotRows) * rowStep;
         slotScroll = PixelUIKit.CreateScrollView(saveLoadPanel.transform, "Slot List", scrollbarColor, 12f, rowStep,
                                                  out RectTransform content, out slotBar);
@@ -1054,7 +1054,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int slot = i + 1;
-            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 100f, slotRowHeight), slotColor, rowFontSize);
+            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 100f, slotHeight), slotColor, rowFontSize);
             RectTransform rt = b.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(-8f, -(i * rowStep));
@@ -1063,10 +1063,12 @@ public class PixelPauseMenu : MonoBehaviour
             TMP_Text label = b.GetComponentInChildren<TMP_Text>();
             label.alignment = TextAlignmentOptions.MidlineLeft;
             label.richText = true;
-            label.enableAutoSizing = false;
-            label.fontSize = rowFontSize;
-            label.rectTransform.offsetMin = new Vector2(20f, 4f);
-            label.rectTransform.offsetMax = new Vector2(-12f, -4f);
+            label.enableAutoSizing = true; // two lines always fit the row: the text shrinks instead of overflowing
+            label.fontSizeMax = rowFontSize * 0.85f;
+            label.fontSizeMin = 12f;
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.rectTransform.offsetMin = new Vector2(20f, 6f);
+            label.rectTransform.offsetMax = new Vector2(-12f, -6f);
             slotButtons[i] = b;
             slotLabels[i] = label;
         }
@@ -1167,7 +1169,7 @@ public class PixelPauseMenu : MonoBehaviour
             int slot = i + 1;
             string name = string.Format(slotNameFormat, slot) + (slot == current ? currentSlotTag : "");
             string detail = saveGame.TryGetSlotInfo(slot, out string savedAt, out double pixels)
-                ? string.Format(slotInfoFormat, savedAt, FormatCount(pixels)) : emptySlotText;
+                ? string.Format(slotDetailFormat, savedAt, FormatCount(pixels)) : emptySlotText;
             slotLabels[i].text = "<b>" + name + "</b>\n<size=78%>" + detail + "</size>";
             slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;
         }
