@@ -227,7 +227,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -744,6 +744,18 @@ public class PixelClicker : MonoBehaviour
                 looks = extended.ToArray();
             }
             looksVersion = 5;
+        }
+        if (looksVersion < 6)
+        {
+            // The Ghost look (wobbly, matte, floats away) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Ghost) == null)
+            {
+                PixelLook ghostLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Ghost);
+                System.Collections.Generic.List<PixelLook> extended = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (ghostLook != null) extended.Add(ghostLook);
+                looks = extended.ToArray();
+            }
+            looksVersion = 6;
         }
 
         if (pixelRenderer != null)
@@ -1367,7 +1379,10 @@ public class PixelClicker : MonoBehaviour
             punch = 1f - hitPunchAmount * Mathf.Clamp01(hitPunchTimer / Mathf.Max(0.01f, hitPunchDuration));
         }
 
-        pixelTransform.localScale = baseScale * (materializeFactor * punch * (1f + pulse * pulseAmount));
+        Vector3 liveBase = baseScale;
+        if (activeLook != null && activeLook.wobble && allowPulsing)
+            liveBase = Vector3.Scale(baseScale, PixelWobble.Scale(time, activeLook.wobbleAmount, activeLook.wobbleSpeed, 0f));
+        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount));
 
         if (pulseEnabled && allowPulsing && pulseBrightness)
         {
@@ -1391,6 +1406,13 @@ public class PixelClicker : MonoBehaviour
     private GameObject liveExtras;         // outline / dark-matter core on the live cube
     private PixelType liveExtrasType;
     private bool liveExtrasBuilt;
+
+    /// <summary>True if old pixels of this tier pass through the screen edges (ghosts), see PixelLook.ignoreViewBounds.</summary>
+    public bool IgnoresViewBounds(int tierIndex)
+    {
+        PixelLook look = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
+        return look != null && look.ignoreViewBounds;
+    }
 
     /// <summary>The look of a tier, or null (looks off / none defined).</summary>
     private PixelLook LookOf(PixelTier tier) => useLooks && tier != null ? PixelLooks.Find(looks, tier.type) : null;
@@ -1751,10 +1773,47 @@ public class PixelClicker : MonoBehaviour
     private PhysicMaterial oldPixelPhysics;
 #endif
     private float oldPixelPhysicsBounce = -1f, oldPixelPhysicsFriction = -1f;
+    private readonly System.Collections.Generic.Dictionary<PixelType, UnityEngine.Object> lookPhysics =
+        new System.Collections.Generic.Dictionary<PixelType, UnityEngine.Object>();
     private readonly System.Collections.Generic.Dictionary<int, Material> trailMaterials = new System.Collections.Generic.Dictionary<int, Material>();
     private readonly System.Collections.Generic.Dictionary<int, Color> trailMaterialColors = new System.Collections.Generic.Dictionary<int, Color>();
 
     /// <summary>One physics material shared by every old pixel (rebuilt when bounciness / friction change).</summary>
+    /// <summary>Bounce / friction material of one pixel type's look (cached; rebuilt if the values change).</summary>
+#if UNITY_6000_0_OR_NEWER
+    private PhysicsMaterial LookPhysicsMaterial(PixelLook look)
+    {
+        if (lookPhysics.TryGetValue(look.type, out UnityEngine.Object cached) && cached != null)
+        {
+            PhysicsMaterial existing = (PhysicsMaterial)cached;
+            if (Mathf.Approximately(existing.bounciness, look.bounce) && Mathf.Approximately(existing.dynamicFriction, look.friction)) return existing;
+        }
+        PhysicsMaterial m = new PhysicsMaterial("OldPixel_" + look.type)
+        {
+            bounciness = look.bounce, dynamicFriction = look.friction, staticFriction = look.friction,
+            bounceCombine = PhysicsMaterialCombine.Maximum, frictionCombine = PhysicsMaterialCombine.Minimum
+        };
+        lookPhysics[look.type] = m;
+        return m;
+    }
+#else
+    private PhysicMaterial LookPhysicsMaterial(PixelLook look)
+    {
+        if (lookPhysics.TryGetValue(look.type, out UnityEngine.Object cached) && cached != null)
+        {
+            PhysicMaterial existing = (PhysicMaterial)cached;
+            if (Mathf.Approximately(existing.bounciness, look.bounce) && Mathf.Approximately(existing.dynamicFriction, look.friction)) return existing;
+        }
+        PhysicMaterial m = new PhysicMaterial("OldPixel_" + look.type)
+        {
+            bounciness = look.bounce, dynamicFriction = look.friction, staticFriction = look.friction,
+            bounceCombine = PhysicMaterialCombine.Maximum, frictionCombine = PhysicMaterialCombine.Minimum
+        };
+        lookPhysics[look.type] = m;
+        return m;
+    }
+#endif
+
 #if UNITY_6000_0_OR_NEWER
     private PhysicsMaterial SharedOldPixelPhysicsMaterial()
     {
@@ -1804,6 +1863,30 @@ public class PixelClicker : MonoBehaviour
         trailMaterials[tierIndex] = mat;
         trailMaterialColors[tierIndex] = tierColor;
         return mat;
+    }
+
+    /// <summary>
+    /// Moves a falling copy's drawing onto a child object that wobbles (the pixel's own scale is used by pop-in / despawn,
+    /// so the wobble can't share it).
+    /// </summary>
+    private static void MakeWobbleVisual(GameObject copy, PixelLook look)
+    {
+        MeshFilter mf = copy.GetComponent<MeshFilter>();
+        MeshRenderer mr = copy.GetComponent<MeshRenderer>();
+        if (mf == null || mr == null) return;
+
+        GameObject visual = new GameObject("Wobble Visual", typeof(MeshFilter), typeof(MeshRenderer));
+        visual.transform.SetParent(copy.transform, false);
+        visual.layer = copy.layer;
+        visual.GetComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+        MeshRenderer vr = visual.GetComponent<MeshRenderer>();
+        vr.sharedMaterial = mr.sharedMaterial;
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        mr.GetPropertyBlock(block);
+        vr.SetPropertyBlock(block);
+        vr.shadowCastingMode = mr.shadowCastingMode;
+        mr.enabled = false;
+        visual.AddComponent<PixelLookWobble>().Setup(look.wobbleAmount, look.wobbleSpeed);
     }
 
     private bool IsBrightOldPixel(int tierIndex)
@@ -1983,7 +2066,9 @@ public class PixelClicker : MonoBehaviour
 
         // Collider with a physics material so bounce/friction are tweakable.
         BoxCollider box = copy.AddComponent<BoxCollider>();
-        box.sharedMaterial = SharedOldPixelPhysicsMaterial();
+        PixelLook oldLook = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
+        bool custom = oldLook != null && oldLook.customPhysics;
+        box.sharedMaterial = custom ? LookPhysicsMaterial(oldLook) : SharedOldPixelPhysicsMaterial();
 
         // Keep the old pixel from colliding with / bumping the live one if requested.
         if (!collideWithLivePixel)
@@ -2039,7 +2124,7 @@ public class PixelClicker : MonoBehaviour
             }
         }
         else if (gravityScale > 0f)
-            copy.AddComponent<ScaledGravity>().scale = gravityScale;
+            copy.AddComponent<ScaledGravity>().scale = gravityScale * (custom ? oldLook.gravityMultiplier : 1f);
 
         if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
         if (!fly && IsValidTier(tierIndex) && srcFilter != null)
@@ -2049,6 +2134,9 @@ public class PixelClicker : MonoBehaviour
             if (styled != null)
             {
                 PixelLooks.AddExtras(copy.transform, srcFilter.sharedMesh, styled, tiers[tierIndex].color, defaultMaterial);
+                if (styled.wobble) MakeWobbleVisual(copy, styled);
+                if (styled.floatAway)
+                    copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.shatter)
                     copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
             }

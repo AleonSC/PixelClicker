@@ -108,7 +108,8 @@ public class PixelViewBounds : MonoBehaviour
                 info = body.GetComponent<OldPixelInfo>();
                 infoCache[body] = info;
             }
-            if (info != null && info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length && clicker.Tiers[info.tierIndex].flyAway) continue;
+            if (info != null && info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length &&
+                (clicker.Tiers[info.tierIndex].flyAway || clicker.IgnoresViewBounds(info.tierIndex))) continue;
 
             Vector3 position = body.position;
             Vector3 velocity = GetVelocity(body);

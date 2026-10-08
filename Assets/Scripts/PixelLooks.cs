@@ -78,6 +78,52 @@ public class PixelLook
     [Tooltip("Circle radius as a fraction of the cube's width (0.5 = touches the edges).")]
     public float faceCircleRadius = 0.3f;
 
+    [Header("Wobble (jelly)")]
+    [Tooltip("The cube squashes and stretches like jelly (the live pixel and its falling copies).")]
+    public bool wobble = false;
+
+    [Range(0f, 0.5f)]
+    [Tooltip("How much it squashes and stretches (0.15 = 15%).")]
+    public float wobbleAmount = 0.14f;
+
+    [Min(0f)]
+    [Tooltip("How fast it wobbles.")]
+    public float wobbleSpeed = 3.2f;
+
+    [Header("Falling (old pixels of this type)")]
+    [Tooltip("Use the bounce / friction / gravity below for this type's old pixels instead of the global ones.")]
+    public bool customPhysics = false;
+
+    [Range(0f, 1.5f)]
+    [Tooltip("Bounciness of the old pixels (1 = keeps all its speed).")]
+    public float bounce = 0.85f;
+
+    [Range(0f, 1f)]
+    [Tooltip("Friction of the old pixels (low = slides and keeps travelling).")]
+    public float friction = 0.05f;
+
+    [Min(0f)]
+    [Tooltip("Multiplies the normal gravity on these old pixels (0.25 = falls four times more slowly).")]
+    public float gravityMultiplier = 0.25f;
+
+    [Tooltip("Old pixels of this type pass through the invisible screen edges instead of bouncing off them.")]
+    public bool ignoreViewBounds = false;
+
+    [Tooltip("After a few bounces the old pixel starts to float away and leaves the screen.")]
+    public bool floatAway = false;
+
+    [Min(1)]
+    [Tooltip("How many ground bounces before it floats away.")]
+    public int floatAfterBounces = 2;
+
+    [Min(0f)]
+    [Tooltip("How strongly it drifts upwards once it floats away (fraction of gravity).")]
+    public float floatLift = 0.15f;
+
+    [Min(0f)]
+    [Tooltip("Sideways speed it picks up when it starts to float away.")]
+    public float floatDriftSpeed = 2.5f;
+
     [Header("Special")]
     [Tooltip("A swirling dark-matter core inside the cube (best with 'Force Translucent' and a dark, see-through colour).")]
     public bool darkMatter = false;
@@ -112,6 +158,11 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Glass, alpha = 0.4f, smoothness = 1f, metallic = 0f,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.85f, 0.97f, 1f, 1f),
                             outlineThickness = 0.02f, outlineStrength = 0.5f, shatter = true },
+
+            // Ghost: soft, matte, see-through (not shiny like glass), wobbling like jelly. Bounces slowly and floats off the screen.
+            new PixelLook { type = PixelClicker.PixelType.Ghost, useColor = true, color = new Color(0.88f, 0.94f, 1f, 0.28f),
+                            smoothness = 0f, metallic = 0f, emission = 0.7f,
+                            wobble = true, customPhysics = true, ignoreViewBounds = true, floatAway = true },
 
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
@@ -466,6 +517,96 @@ public static class PixelLooks
         {
             tri.Add(start + q[0]); tri.Add(start + q[1]); tri.Add(start + q[2]);
             tri.Add(start + q[0]); tri.Add(start + q[2]); tri.Add(start + q[3]);
+        }
+    }
+}
+
+/// <summary>Squash-and-stretch scale for the jelly wobble (keeps the volume about the same).</summary>
+public static class PixelWobble
+{
+    public static Vector3 Scale(float time, float amount, float speed, float phase)
+    {
+        float t = time * speed + phase;
+        float x = 1f + amount * Mathf.Sin(t);
+        float y = 1f + amount * Mathf.Sin(t * 1.31f + 2.1f);
+        float z = 1f + amount * Mathf.Sin(t * 0.77f + 4.2f);
+        float k = 1f / Mathf.Pow(Mathf.Max(0.01f, x * y * z), 1f / 3f);
+        return new Vector3(x * k, y * k, z * k);
+    }
+}
+
+/// <summary>Wobbles a falling copy's visual (a child of the old pixel, so the pixel's own scale animations still work).</summary>
+public class PixelLookWobble : MonoBehaviour
+{
+    private float amount, speed, phase;
+
+    public void Setup(float wobbleAmount, float wobbleSpeed)
+    {
+        amount = wobbleAmount;
+        speed = wobbleSpeed;
+        phase = UnityEngine.Random.value * 6.28f;
+    }
+
+    private void Update()
+    {
+        transform.localScale = PixelWobble.Scale(Time.time, amount, speed, phase);
+    }
+}
+
+/// <summary>
+/// An old pixel that bounces a few times and then floats away off the screen (ghosts). It stops colliding once it floats,
+/// drifts sideways and upwards, and is removed when it is well outside the camera's view.
+/// </summary>
+public class OldPixelFloat : MonoBehaviour
+{
+    private PixelClicker clicker;
+    private int bouncesLeft;
+    private float lift, drift;
+    private bool floating;
+    private Rigidbody body;
+
+    public void Setup(PixelClicker owner, int bounces, float liftFraction, float driftSpeed)
+    {
+        clicker = owner;
+        bouncesLeft = Mathf.Max(1, bounces);
+        lift = liftFraction;
+        drift = driftSpeed;
+        body = GetComponent<Rigidbody>();
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (floating) return;
+        if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
+        if (Vector3.Dot(collision.GetContact(0).normal, Vector3.up) < 0.4f) return;  // only the ground
+        if (--bouncesLeft > 0) return;
+        StartFloating();
+    }
+
+    private void StartFloating()
+    {
+        floating = true;
+        ScaledGravity gravity = GetComponent<ScaledGravity>();
+        if (gravity != null) gravity.scale = -lift; // gently upwards from now on
+        foreach (Collider c in GetComponents<Collider>()) c.enabled = false; // nothing stops it any more
+
+        Camera cam = Camera.main;
+        Vector3 side = cam != null ? cam.transform.right : Vector3.right;
+        float sign = cam != null && cam.WorldToViewportPoint(transform.position).x < 0.5f ? -1f : 1f;
+        if (UnityEngine.Random.value < 0.25f) sign = -sign;
+        if (body != null) body.AddForce(side * (sign * drift) + Vector3.up * (drift * 0.4f), ForceMode.VelocityChange);
+    }
+
+    private void Update()
+    {
+        if (!floating) return;
+        Camera cam = Camera.main;
+        if (cam == null) return;
+        Vector3 v = cam.WorldToViewportPoint(transform.position);
+        if (v.z < 0f || v.x < -0.4f || v.x > 1.4f || v.y > 1.4f || v.y < -0.4f)
+        {
+            if (clicker != null && body != null) clicker.ReleaseOldPixel(body, false);
+            Destroy(gameObject);
         }
     }
 }
