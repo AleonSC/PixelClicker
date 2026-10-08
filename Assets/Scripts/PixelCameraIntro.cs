@@ -41,8 +41,8 @@ public class PixelCameraIntro : MonoBehaviour
     [SerializeField] private float startFieldOfView = 0f;
 
     [Header("Skipping")]
-    [Tooltip("A mouse click jumps straight to the normal view.")]
-    [SerializeField] private bool skipOnInput = true;
+    [Tooltip("A mouse click jumps straight to the normal view. Off by default so the cube can be clicked during the zoom-out without disturbing it.")]
+    [SerializeField] private bool skipOnClick = false;
 
     private const string PrefIntro = "PixelClicker.Setting.CameraIntro";
 
@@ -106,7 +106,7 @@ public class PixelCameraIntro : MonoBehaviour
         if (PixelTitleScreen.Showing) { waited = 0f; Apply(0f); return; }
         if (waited < startDelay) { waited += Time.unscaledDeltaTime; Apply(0f); return; }
 
-        if (skipOnInput && (PixelInput.LeftPressed() || PixelInput.RightPressed())) { Finish(); return; }
+        if (skipOnClick && (PixelInput.LeftPressed() || PixelInput.RightPressed())) { Finish(); return; }
 
         moved += Time.unscaledDeltaTime;
         float k = Mathf.Clamp01(moved / introSeconds);
