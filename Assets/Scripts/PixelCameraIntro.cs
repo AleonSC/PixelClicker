@@ -41,6 +41,9 @@ public class PixelCameraIntro : MonoBehaviour
     [SerializeField] private float startFieldOfView = 0f;
 
     [Header("Skipping")]
+    [Tooltip("On a brand-new (or restarted) game the cube can't be clicked during the opening zoom-out, so the intro tutorial tips can start cleanly.")]
+    [SerializeField] private bool lockClicksOnNewGame = true;
+
     [Tooltip("A mouse click jumps straight to the normal view. Off by default so the cube can be clicked during the zoom-out without disturbing it.")]
     [SerializeField] private bool skipOnClick = false;
 
@@ -96,14 +99,27 @@ public class PixelCameraIntro : MonoBehaviour
         startOrtho = finalOrtho * 0.3f;
     }
 
+    /// <summary>True while the opening zoom-out runs on a brand-new game: the cube can't be clicked yet.</summary>
+    public static bool ClicksLocked { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { ClicksLocked = false; }
+
+    private bool fresh = true;
+
     private void LateUpdate()
     {
-        if (done) return;
+        if (done) { ClicksLocked = false; return; }
         if (!prepared) Prepare();
         if (done) return;
 
         // Wait on the title screen (and a moment after) in the close-up pose.
-        if (PixelTitleScreen.Showing) { waited = 0f; Apply(0f); return; }
+        if (PixelTitleScreen.Showing)
+        {
+            fresh = !AnyCollected();
+            ClicksLocked = lockClicksOnNewGame && fresh;
+            waited = 0f; Apply(0f); return;
+        }
         if (waited < startDelay) { waited += Time.unscaledDeltaTime; Apply(0f); return; }
 
         if (skipOnClick && (PixelInput.LeftPressed() || PixelInput.RightPressed())) { Finish(); return; }
@@ -130,8 +146,18 @@ public class PixelCameraIntro : MonoBehaviour
         if (cam.orthographic) cam.orthographicSize = Mathf.Lerp(startOrtho, finalOrtho, k);
     }
 
+    private static bool AnyCollected()
+    {
+        PixelClicker c = PixelFind.First<PixelClicker>();
+        if (c == null) return false;
+        foreach (PixelClicker.PixelTier t in c.Tiers)
+            if (t.totalCollected > 0d) return true;
+        return false;
+    }
+
     private void Finish()
     {
+        ClicksLocked = false;
         cam.transform.SetPositionAndRotation(finalPosition, finalRotation);
         cam.fieldOfView = finalFov;
         if (cam.orthographic) cam.orthographicSize = finalOrtho;
@@ -140,6 +166,7 @@ public class PixelCameraIntro : MonoBehaviour
 
     private void OnDestroy()
     {
+        ClicksLocked = false;
         // Never leave the camera stuck mid-move.
         if (cam != null && !done && prepared) Finish();
     }

@@ -846,7 +846,7 @@ public class PixelClicker : MonoBehaviour
         CleanOldPixels();
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
-        if (clicksBlocked || ExternalClickBlock || GodMode) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
+        if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         if (!WasClickedThisFrame() || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 

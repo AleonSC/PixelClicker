@@ -667,12 +667,26 @@ public class PixelHints : MonoBehaviour
         ShowOverlay("New pixel unlocked: " + clicker.Tiers[index].displayName + "!", "");
     }
 
-    private bool introChecked;
+    private bool introChecked, freshAtStart = true;
+
+    private static bool AnyCollected()
+    {
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) return false;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            if (t.totalCollected > 0d) return true;
+        return false;
+    }
     private float introWait;
 
     private void TryStartIntro()
     {
-        if (introChecked || PixelTitleScreen.Showing) return;
+        if (introChecked) return;
+        if (PixelTitleScreen.Showing)
+        {
+            freshAtStart = !AnyCollected(); // judged on the title screen, before the player can click anything
+            return;
+        }
         introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play)
         if (introWait < introDelay) return;
         introChecked = true;
@@ -680,9 +694,7 @@ public class PixelHints : MonoBehaviour
 
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
-        if (!forceIntro)
-            foreach (PixelClicker.PixelTier t in clicker.Tiers)
-                if (t.totalCollected > 0d) return; // not a new game
+        if (!forceIntro && !freshAtStart) return; // not a new game
         forceIntro = false;
 
         PixelLog.SetLogOpen(true);
