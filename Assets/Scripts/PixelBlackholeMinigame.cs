@@ -52,7 +52,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     [TextArea(2, 5)]
     [Tooltip("The tip. {0} = the goal.")]
-    [SerializeField] private string firstHoleHint = "A black hole has opened!\nIt swallows old pixels that land near it. Push them in with the fan, Pixel Grabbing or the hose. Feed it {0} pixels to unlock the Singularity Pixel.";
+    [SerializeField] private string firstHoleMessage = "A black hole has opened!\nIt is hungry for old pixels. Find a way to feed it - {0} pixels will unlock something new.";
 
     [Tooltip("Show a live counter above each black hole (pixels swallowed / goal).")]
     [SerializeField] private bool showHoleCounter = true;
@@ -493,7 +493,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         }
         catch (System.Exception) { /* no PlayerPrefs: just show it */ }
 
-        string hintMessage = string.Format(firstHoleHint, PixelClicker.FormatNumber(singularityThreshold));
+        string hintMessage = string.Format(firstHoleMessage, PixelClicker.FormatNumber(singularityThreshold));
         PixelNotice.Show(hintMessage, small: true);
         PixelHints.Announce("A black hole opened!", hintMessage);
     }
