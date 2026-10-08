@@ -23,3 +23,4 @@
 [2026-10-08 12:05 UTC] Pause menu reordered: Resume on top, then Save/Load + Stats, Settings + Controls, How to Play + Changelog, and Quit at the bottom.
 [2026-10-08 12:07 UTC] Fixed the overwrite warning text and buttons not fitting.
 [2026-10-08 12:17 UTC] Settings: first-time tips and replay tutorial, event log on/off and size, number popups on/off and size, autosave interval and message, UI scale, graphics quality, VSync, fullscreen, resolution, colour-blind marks, and rebindable keys.
+[2026-10-08 12:25 UTC] The Hose button under the Bank tab is wider so its text is full size and easy to read.
