@@ -434,9 +434,13 @@ public class PixelBlackholeMinigame : PixelMinigame
         }
     }
 
+    private static Material spiralTrailMaterial;
+    private static Sprite softSprite;
+
     /// <summary>
-    /// A caught pixel circles the centre, drawn inward faster and faster, and gets stretched along its direction
-    /// of travel and thinned out - spaghettification - until it crosses the event horizon.
+    /// A caught pixel is drawn into the hole: it eases into a spiral from wherever it was (no sudden jump), circles faster and
+    /// faster as it falls in, turns to point along its path and is stretched into a curved streak, darkens (red-shift), leaves a
+    /// fading purple trail, and vanishes across the event horizon with a small flash.
     /// </summary>
     private IEnumerator SpiralIn(Rigidbody body, Vector3 center, float captureRadius, float fullRadius)
     {
@@ -444,40 +448,157 @@ public class PixelBlackholeMinigame : PixelMinigame
         foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
         body.isKinematic = true;
 
+        // A trail that stays behind when the pixel is gone.
+        if (spiralTrailMaterial == null)
+        {
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader != null) spiralTrailMaterial = new Material(shader) { name = "HoleTrail" };
+        }
+        GameObject trailGo = new GameObject("Spiral Trail");
+        trailGo.transform.SetParent(t, false);
+        TrailRenderer trail = trailGo.AddComponent<TrailRenderer>();
+        trail.time = 0.45f;
+        trail.minVertexDistance = 0.03f;
+        trail.startWidth = Mathf.Max(0.05f, t.localScale.x * 0.55f);
+        trail.endWidth = 0f;
+        trail.alignment = LineAlignment.View;
+        if (spiralTrailMaterial != null) trail.sharedMaterial = spiralTrailMaterial;
+        Gradient trailGradient = new Gradient();
+        trailGradient.SetKeys(
+            new[] { new GradientColorKey(Color.Lerp(armColor, Color.white, 0.35f), 0f), new GradientColorKey(armColor, 0.5f), new GradientColorKey(coreColor, 1f) },
+            new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.4f, 0.5f), new GradientAlphaKey(0f, 1f) });
+        trail.colorGradient = trailGradient;
+
+        // Colour handling: the pixel darkens as it falls in.
+        Renderer[] renderers = t.GetComponentsInChildren<Renderer>();
+        Color[] originals = new Color[renderers.Length];
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        for (int r = 0; r < renderers.Length; r++)
+        {
+            renderers[r].GetPropertyBlock(block);
+            Material m = renderers[r].sharedMaterial;
+            originals[r] = !block.isEmpty ? block.GetColor("_BaseColor") : (m != null && m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : Color.white);
+            if (originals[r] == Color.clear && m != null && m.HasProperty("_BaseColor")) originals[r] = m.GetColor("_BaseColor");
+        }
+
         float uniform = t.localScale.x;
         Vector3 start = t.position;
         float dist = new Vector2(start.x - center.x, start.z - center.z).magnitude;
+        float startDist = Mathf.Max(0.01f, dist);
         float angle = Mathf.Atan2(start.z - center.z, start.x - center.x);
         float startHeight = start.y;
         float horizon = Mathf.Max(0.05f, fullRadius * horizonFraction);
         float span = Mathf.Max(0.01f, dist - horizon);
         float sign = outerSpinDegrees < 0f ? -1f : 1f; // circle the same way the swirl turns
+        float baseOmega = swirlDegreesPerSecond * Mathf.Deg2Rad;
+        float age = 0f;
+        Vector3 previous = start;
 
         while (t != null && dist > horizon)
         {
+            float dt = Time.deltaTime;
+            age += dt;
             float k = Mathf.Clamp01(1f - (dist - horizon) / span); // 0 when caught -> 1 at the horizon
+            float ease = Mathf.SmoothStep(0f, 1f, age / 0.3f);     // the first moments ease in, so nothing jumps
 
-            dist -= pullSpeed * (1f + 3f * k) * Time.deltaTime;
-            angle += sign * swirlDegreesPerSecond * Mathf.Deg2Rad * (1f + 2f * k) * Time.deltaTime;
+            // Falls in faster and faster; spins faster the closer it gets (like conserved angular momentum).
+            dist -= pullSpeed * (1f + 3f * k * k) * ease * dt;
+            float omega = baseOmega * Mathf.Pow(startDist / Mathf.Max(dist, horizon * 0.8f), 1.3f);
+            angle += sign * omega * ease * dt;
 
+            float drop = Mathf.SmoothStep(0f, 1f, k);
             Vector3 pos = new Vector3(center.x + Mathf.Cos(angle) * dist,
-                                      Mathf.Lerp(startHeight, center.y, k),
+                                      Mathf.Lerp(startHeight, center.y, drop),
                                       center.z + Mathf.Sin(angle) * dist);
-            Vector3 toCenter = center - pos;
             t.position = pos;
-            if (toCenter.sqrMagnitude > 0.0001f) t.rotation = Quaternion.LookRotation(toCenter.normalized, Vector3.up);
 
-            // Long and thin toward the centre (local Z points at it), and gone at the very end.
-            float stretch = 1f + k * maxStretch;
-            float thin = Mathf.Lerp(1f, minThickness, k);
-            float vanish = k > 0.85f ? 1f - (k - 0.85f) / 0.15f : 1f;
+            // Turn to point along the path (smoothly, from whatever way it was tumbling).
+            Vector3 travel = pos - previous;
+            if (travel.sqrMagnitude > 1e-8f)
+            {
+                Quaternion target = Quaternion.LookRotation(travel.normalized, Vector3.up);
+                t.rotation = Quaternion.Slerp(t.rotation, target, 1f - Mathf.Exp(-10f * dt));
+            }
+            previous = pos;
+
+            // Stretched along its path into a streak that thins as it lengthens, then fades to nothing at the very end.
+            float stretch = 1f + maxStretch * k * k;
+            float thin = Mathf.Max(minThickness, 1f / Mathf.Sqrt(stretch));
+            float vanish = Mathf.SmoothStep(1f, 0f, (k - 0.8f) / 0.2f);
             t.localScale = new Vector3(uniform * thin, uniform * thin, uniform * stretch) * vanish;
+
+            // Darkens as it falls in.
+            float fade = k * k;
+            for (int r = 0; r < renderers.Length; r++)
+            {
+                if (renderers[r] == null) continue;
+                Color c = Color.Lerp(originals[r], coreColor, fade);
+                c.a = originals[r].a;
+                renderers[r].GetPropertyBlock(block);
+                block.SetColor("_BaseColor", c);
+                block.SetColor("_Color", c);
+                renderers[r].SetPropertyBlock(block);
+            }
 
             yield return null;
         }
 
+        // Leave the trail to fade out by itself, then flash where the pixel went in.
+        if (trailGo != null)
+        {
+            trailGo.transform.SetParent(null, true);
+            Destroy(trailGo, trail.time + 0.1f);
+        }
         if (t != null) Destroy(t.gameObject);
+        StartCoroutine(AbsorbFlash(center, fullRadius));
         RegisterContribution();
+    }
+
+    /// <summary>A small soft flash at the centre each time the hole swallows a pixel.</summary>
+    private IEnumerator AbsorbFlash(Vector3 center, float fullRadius)
+    {
+        if (softSprite == null) softSprite = BuildSoftSprite();
+        GameObject go = new GameObject("Hole Flash");
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = softSprite;
+        sr.sortingOrder = 5;
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+
+        float size = Mathf.Max(0.4f, fullRadius * 0.45f);
+        const float duration = 0.3f;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / duration);
+            go.transform.position = center + Vector3.up * 0.15f;
+            if (cam != null) go.transform.rotation = cam.transform.rotation;
+            go.transform.localScale = Vector3.one * size * Mathf.Lerp(0.5f, 1.3f, k);
+            Color c = Color.Lerp(armColor, Color.white, 0.5f * (1f - k));
+            c.a = 0.85f * (1f - k) * (1f - k);
+            sr.color = c;
+            yield return null;
+        }
+        Destroy(go);
+    }
+
+    /// <summary>A white soft round blob (tinted by the sprite colour).</summary>
+    private static Sprite BuildSoftSprite()
+    {
+        const int size = 64;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "HoleFlash" };
+        Color32[] px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = ((x + 0.5f) / size - 0.5f) * 2f, v = ((y + 0.5f) / size - 0.5f) * 2f;
+                float a = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
+                a *= a;
+                px[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        tex.SetPixels32(px);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 64f);
     }
 
     private const string HintPref = "PixelClicker.Hint.BlackHole";
