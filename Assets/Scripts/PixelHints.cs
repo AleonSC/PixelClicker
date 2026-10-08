@@ -522,7 +522,8 @@ public class PixelHints : MonoBehaviour
         viewHeight = Mathf.Max(0f, Screen.height / scale - 2f * (bar + overlayMargin.y));
         float max = Mathf.Max(0f, contentHeight - viewHeight);
         scrollOffset = Mathf.Clamp(scrollOffset, 0f, max);
-        listRect.anchoredPosition = new Vector2(0f, scrollOffset);
+        // The list's bottom edge sits at the box's bottom (newest line); scrolling up (offset > 0) slides it DOWN to reveal older lines.
+        listRect.anchoredPosition = new Vector2(0f, -scrollOffset);
 
         bool scrolls = max > 0.5f;
         if (handleRect.gameObject.activeSelf != scrolls) handleRect.gameObject.SetActive(scrolls);
