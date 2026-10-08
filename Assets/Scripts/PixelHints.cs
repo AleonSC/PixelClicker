@@ -628,11 +628,11 @@ public class PixelHints : MonoBehaviour
             if (t.totalCollected > 0d) return; // not a new game
 
         PixelLog.SetLogOpen(true);
-        PixelNotice.Show(introLogText, 0f, () =>
+        PixelNotice.Show(introLogText, 0f, compact: true, onClosed: () =>
         {
             PixelLog.SetLogOpen(false);
             PixelUI.SetInventoryOpen(true);
-            PixelNotice.Show(introInventoryText, 0f, () =>
+            PixelNotice.Show(introInventoryText, 0f, compact: true, onClosed: () =>
             {
                 PixelUI.SetInventoryOpen(false);
                 MarkSeen("intro_log"); // only counts once the player has been through both tips

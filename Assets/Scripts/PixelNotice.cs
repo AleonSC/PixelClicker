@@ -19,10 +19,11 @@ public static class PixelNotice
     private static PixelNoticeBox box;
 
     /// <summary>Shows a message. 'seconds' = 0 keeps it until the player closes it.</summary>
-    public static void Show(string message, float seconds = 0f, System.Action onClosed = null)
+    /// <summary>'compact' = the small text-sized box at the top of the screen (tutorial tips next to the buttons), even if a fixed size is set.</summary>
+    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(message, seconds, onClosed);
+        box.Open(message, seconds, onClosed, compact);
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -79,13 +80,13 @@ public class PixelNoticeBox : MonoBehaviour
         ok.onClick.AddListener(Close);
     }
 
-    public void Open(string message, float seconds, System.Action onClosed = null)
+    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
         if (canvasRoot == null) Build();
 
         label.text = message;
-        Vector2 fixedSize = PixelNotice.FixedSize;
+        Vector2 fixedSize = compact ? Vector2.zero : PixelNotice.FixedSize;
         if (fixedSize.x > 0f && fixedSize.y > 0f)
         {
             // Same size as the shop, centred on screen.
