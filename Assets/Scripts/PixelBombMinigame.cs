@@ -505,8 +505,8 @@ public class PixelBombMinigame : PixelMinigame
         AddBox("Piece", rightPivot, new Vector3(-half * 0.5f, 0f, 0f), new Vector3(half, wireThickness, wireThickness), material);
 
         // Small bolts where the wire is fixed at each end.
-        AddBox("Bolt", parent, new Vector3(-half, y, z), new Vector3(wireThickness * 1.6f, wireThickness * 1.6f, wireThickness * 1.2f), null);
-        AddBox("Bolt", parent, new Vector3(half, y, z), new Vector3(wireThickness * 1.6f, wireThickness * 1.6f, wireThickness * 1.2f), null);
+        AddBox("Bolt", parent, new Vector3(-half, y, z), new Vector3(wireThickness * 1.6f, wireThickness * 1.6f, wireThickness * 1.2f), material);
+        AddBox("Bolt", parent, new Vector3(half, y, z), new Vector3(wireThickness * 1.6f, wireThickness * 1.6f, wireThickness * 1.2f), material);
 
         GameObject hit = new GameObject(objectName + " Hitbox");
         hit.transform.SetParent(parent, false);
