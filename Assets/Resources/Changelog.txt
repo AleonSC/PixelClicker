@@ -46,3 +46,4 @@
 [2026-10-08 14:40 UTC] The Time Stop first-use and meter-empty tip boxes are now the small size.
 [2026-10-08 14:44 UTC] Fixed the intro tutorial tips not appearing: the cube can't be clicked during the opening zoom-out of a new or restarted game, and a new game is judged on the title screen.
 [2026-10-08 14:51 UTC] Settings: Replay tutorial moved to the top, and each group lists its tick boxes first, then its other controls.
+[2026-10-08 14:54 UTC] Bomb wires are spaced further apart on a taller bomb, and their click areas no longer overlap.

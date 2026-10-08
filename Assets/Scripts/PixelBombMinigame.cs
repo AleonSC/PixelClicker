@@ -120,8 +120,8 @@ public class PixelBombMinigame : PixelMinigame
     [SerializeField] private float wireClickMultiplier = 3.5f;
 
     [Min(0.1f)]
-    [Tooltip("How far apart the wires are (fraction of the bomb's height, times a half).")]
-    [SerializeField] private float wireSpacing = 0.3f;
+    [Tooltip("How far apart the wires are (fraction of the bomb's height). Click areas never grow bigger than this, so wires can't overlap.")]
+    [SerializeField] private float wireGap = 0.22f;
 
     [Tooltip("Small hint shown above the bomb. Leave empty to hide it.")]
     [SerializeField] private string hintText = "Cut the colour you have the most of";
@@ -336,7 +336,7 @@ public class PixelBombMinigame : PixelMinigame
         float vy = Random.Range(Mathf.Min(heightRange.x, heightRange.y), Mathf.Max(heightRange.x, heightRange.y));
 
         // The bomb is a metal rectangle. Keep all of it (and the hint above it) inside the view.
-        float bw = bombSize * 1.6f, bh = bombSize * 0.95f, bd = bombSize * 0.35f;
+        float bw = bombSize * 1.6f, bh = bombSize * 1.25f, bd = bombSize * 0.35f;
         float viewHeight = 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
         float viewWidth = viewHeight * cam.aspect;
         float halfW = (bw * 0.6f) / viewWidth, halfDown = (bh * 0.65f) / viewHeight, halfUp = (bh * 0.65f + bombSize * 0.5f) / viewHeight;
@@ -375,7 +375,7 @@ public class PixelBombMinigame : PixelMinigame
         // The timer sits low on the front, under the wires.
         float frontZ = -(bd * 0.5f + 0.06f);
         TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, timerColor,
-                                     new Vector3(0f, -bh * 0.27f, frontZ), bw * 0.9f);
+                                     new Vector3(0f, -bh * 0.37f, frontZ), bw * 0.9f);
         TextMeshPro hint = null;
         Vector3 hintLocal = new Vector3(0f, bh * 0.5f + bombSize * 0.3f, 0f);
         if (!string.IsNullOrEmpty(hintText))
@@ -387,9 +387,10 @@ public class PixelBombMinigame : PixelMinigame
         Collider[][] hitboxes = new Collider[3][];
         Transform[] leftPivots = new Transform[3], rightPivots = new Transform[3];
         bool[] cut = new bool[3];
+        wireHitMax = bh * wireGap * 0.8f; // click boxes stay clearly apart
         for (int i = 0; i < 3; i++)
         {
-            float y = bh * 0.34f - i * bh * wireSpacing * 0.5f; // red on top, blue lowest, all above the timer
+            float y = bh * 0.30f - i * bh * wireGap; // red on top, blue lowest, all above the timer
             Material wm = MakeMaterial(colors[i], 0.45f);
             BuildWire("Wire " + i, root.transform, y, frontZ - wireThickness * 0.5f, wireSpan, wm, out leftPivots[i], out rightPivots[i], out hitboxes[i]);
 
@@ -489,6 +490,8 @@ public class PixelBombMinigame : PixelMinigame
     /// A wire straight across the front at height 'y', as two pieces that meet in the middle. Each piece hangs from a pivot at
     /// its far end, so when it is cut the pieces swing down. One wide invisible box along the wire makes it easy to click.
     /// </summary>
+    private float wireHitMax = 1f;
+
     private void BuildWire(string objectName, Transform parent, float y, float z, float span, Material material,
                            out Transform leftPivot, out Transform rightPivot, out Collider[] colliders)
     {
@@ -513,7 +516,8 @@ public class PixelBombMinigame : PixelMinigame
         hit.transform.localPosition = new Vector3(0f, y, z);
         BoxCollider box = hit.AddComponent<BoxCollider>();
         box.isTrigger = true;
-        box.size = new Vector3(span, wireThickness * wireClickMultiplier, wireThickness * wireClickMultiplier);
+        float hitSize = Mathf.Min(wireThickness * wireClickMultiplier, wireHitMax);
+        box.size = new Vector3(span, hitSize, wireThickness * wireClickMultiplier);
         colliders = new Collider[] { box };
     }
 
