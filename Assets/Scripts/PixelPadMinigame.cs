@@ -267,7 +267,192 @@ public class PixelPadMinigame : PixelMinigame
 
     // ------------------------------------------------------------------
     // The pad
+    [Header("Pad Look")]
+    [Tooltip("Arrows around the pad's border that drift inwards, showing it pulls pixels in.")]
+    [SerializeField] private bool showArrows = true;
+
+    [Range(1, 6)]
+    [Tooltip("Arrows on each side of the pad.")]
+    [SerializeField] private int arrowsPerSide = 3;
+
+    [Min(0.05f)]
+    [Tooltip("Size of an arrow (world units).")]
+    [SerializeField] private float arrowSize = 0.34f;
+
+    [Min(0.05f)]
+    [Tooltip("How fast the arrows drift inwards (cycles per second).")]
+    [SerializeField] private float arrowSpeed = 0.45f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How see-through the arrows are at their brightest.")]
+    [SerializeField] private float arrowOpacity = 0.85f;
+
+    [Tooltip("Show a spinning model of the wanted pixel (drawn with that pixel's current look) floating above the pad.")]
+    [SerializeField] private bool showModel = true;
+
+    [Min(0.1f)]
+    [Tooltip("Edge length of the model (world units).")]
+    [SerializeField] private float modelSize = 0.95f;
+
+    [Min(0f)]
+    [Tooltip("How high above the pad the model floats (world units).")]
+    [SerializeField] private float modelHeight = 1.15f;
+
+    [Tooltip("Spin speed of the model (degrees per second, around the up axis).")]
+    [SerializeField] private float modelSpin = 45f;
+
+    [Header("Pull")]
+    [Min(0f)]
+    [Tooltip("How strongly the pad pulls old pixels toward its middle (acceleration). Gentle: a black hole is far stronger. 0 = no pull.")]
+    [SerializeField] private float pullAcceleration = 8f;
+
+    [Min(0f)]
+    [Tooltip("How far beyond the pad's edge the pull reaches (world units). It fades with distance.")]
+    [SerializeField] private float pullRange = 1.4f;
+
+    [Min(0.2f)]
+    [Tooltip("Old pixels higher than this above the pad are not pulled (world units).")]
+    [SerializeField] private float pullHeight = 2f;
+
     // ------------------------------------------------------------------
+
+    private Transform padRoot;
+    private bool padPulling;
+    private static Mesh arrowMesh;
+    private static Material arrowMaterial;
+
+    /// <summary>A small flat dart pointing along +Z (lying on the pad).</summary>
+    private static Mesh ArrowMesh()
+    {
+        if (arrowMesh != null) return arrowMesh;
+        arrowMesh = new Mesh { name = "Pad Arrow" };
+        arrowMesh.vertices = new[]
+        {
+            new Vector3(0f, 0f, 0.5f),      // tip
+            new Vector3(0.45f, 0f, -0.4f),  // right
+            new Vector3(0f, 0f, -0.1f),     // notch
+            new Vector3(-0.45f, 0f, -0.4f), // left
+        };
+        arrowMesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        Color[] colours = { Color.white, Color.white, Color.white, Color.white };
+        arrowMesh.colors = colours;
+        arrowMesh.RecalculateNormals();
+        arrowMesh.RecalculateBounds();
+        return arrowMesh;
+    }
+
+    private Material ArrowMaterial(Color colour)
+    {
+        if (arrowMaterial != null) return arrowMaterial;
+        Shader shader = Shader.Find("Sprites/Default"); // unlit, alpha blended, vertex colour * _Color in every pipeline
+        arrowMaterial = shader != null ? new Material(shader) : clicker.CreateVisualMaterial(colour, true);
+        return arrowMaterial;
+    }
+
+    /// <summary>The animated extras of one pad: drifting arrows and the floating model.</summary>
+    private class PadVisual
+    {
+        public struct Arrow { public Transform tf; public Renderer renderer; public int side; public float lateral, phase; }
+        public System.Collections.Generic.List<Arrow> arrows = new System.Collections.Generic.List<Arrow>();
+        public Transform model;
+        public Color arrowColour;
+        public float half, size, speed, opacity, modelHeight, modelSpin;
+        private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
+
+        public void Animate(float time)
+        {
+            foreach (Arrow a in arrows)
+            {
+                if (a.tf == null) continue;
+                float t = Mathf.Repeat(time * speed + a.phase, 1f);
+                float angle = a.side * 90f * Mathf.Deg2Rad;
+                Vector3 outward = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+                Vector3 lateral = new Vector3(Mathf.Cos(angle), 0f, -Mathf.Sin(angle));
+                float from = half - size * 0.6f, to = half * 0.45f;
+                a.tf.localPosition = outward * Mathf.Lerp(from, to, t) + lateral * a.lateral + Vector3.up * 0.085f;
+                a.tf.localRotation = Quaternion.LookRotation(-outward, Vector3.up); // points inwards
+
+                Color c = arrowColour;
+                c.a = Mathf.Sin(t * Mathf.PI) * opacity;
+                block.SetColor("_Color", c);
+                a.renderer.SetPropertyBlock(block);
+            }
+
+            if (model != null)
+            {
+                model.localPosition = new Vector3(0f, modelHeight + Mathf.Sin(time * 1.6f) * 0.08f, 0f);
+                model.localRotation = Quaternion.Euler(18f, time * modelSpin, 0f);
+            }
+        }
+    }
+
+    private PadVisual BuildPadVisual(Transform root, int target, Color colour)
+    {
+        PadVisual v = new PadVisual
+        {
+            half = padSize * 0.5f, size = arrowSize, speed = arrowSpeed, opacity = arrowOpacity,
+            modelHeight = modelHeight, modelSpin = modelSpin,
+            arrowColour = Color.Lerp(colour, Color.white, 0.55f),
+        };
+
+        if (showArrows)
+        {
+            Material mat = ArrowMaterial(colour);
+            for (int side = 0; side < 4; side++)
+                for (int i = 0; i < arrowsPerSide; i++)
+                {
+                    GameObject go = new GameObject("Arrow");
+                    go.transform.SetParent(root, false);
+                    go.transform.localScale = Vector3.one * arrowSize;
+                    go.AddComponent<MeshFilter>().sharedMesh = ArrowMesh();
+                    MeshRenderer mr = go.AddComponent<MeshRenderer>();
+                    mr.sharedMaterial = mat;
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    mr.receiveShadows = false;
+                    float spread = padSize * 0.78f;
+                    float lateral = arrowsPerSide == 1 ? 0f : Mathf.Lerp(-spread * 0.5f, spread * 0.5f, i / (float)(arrowsPerSide - 1));
+                    v.arrows.Add(new PadVisual.Arrow
+                    {
+                        tf = go.transform, renderer = mr, side = side, lateral = lateral,
+                        phase = (i * 0.37f + side * 0.21f) % 1f, // staggered so they don't all pulse together
+                    });
+                }
+        }
+
+        if (showModel)
+        {
+            GameObject model = clicker.CreateDisplayPixel(target, root, modelSize);
+            if (model != null) v.model = model.transform;
+        }
+        return v;
+    }
+
+    private void FixedUpdate()
+    {
+        if (!padPulling || padRoot == null || pullAcceleration <= 0f) return;
+
+        float half = padSize * 0.5f;
+        var list = clicker.OldPixels;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rigidbody body = list[i];
+            if (body == null || body.isKinematic) continue;
+
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info == null || (info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length && clicker.Tiers[info.tierIndex].flyAway)) continue;
+            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            if (despawn != null && despawn.Held) continue; // the player is carrying it
+
+            Vector3 local = padRoot.InverseTransformPoint(body.position);
+            float edge = Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.z)); // square distance from the middle
+            if (edge > half + pullRange || local.y < -0.3f || local.y > pullHeight) continue;
+
+            Vector3 toCentre = padRoot.TransformDirection(new Vector3(-local.x, 0f, -local.z));
+            if (toCentre.sqrMagnitude < 0.0001f) continue;
+            float fade = 1f - Mathf.Clamp01((edge - half) / Mathf.Max(0.01f, pullRange)); // strongest on the pad, fading out
+            body.AddForce(toCentre.normalized * pullAcceleration * fade, ForceMode.Acceleration);
+        }
+    }
 
     private IEnumerator PadRoutine()
     {
@@ -306,13 +491,38 @@ public class PixelPadMinigame : PixelMinigame
         face.transform.SetParent(root.transform, false);
         face.transform.localScale = new Vector3(padSize, 0.06f, padSize);
         face.transform.localPosition = new Vector3(0f, 0.04f, 0f);
-        Material faceMat = clicker.CreateVisualMaterial(colour, false);
+        Color faceColour = Color.Lerp(colour, Color.black, 0.55f); // darker, so the arrows and the model stand out
+        Material faceMat = clicker.CreateVisualMaterial(faceColour, false);
         if (faceMat != null)
         {
             faceMat.EnableKeyword("_EMISSION");
-            faceMat.SetColor("_EmissionColor", colour * padGlow);
+            faceMat.SetColor("_EmissionColor", colour * padGlow * 0.5f);
             face.GetComponent<Renderer>().sharedMaterial = faceMat;
         }
+
+        // A bright glowing border strip around the face.
+        Material borderMat = clicker.CreateVisualMaterial(colour, false);
+        if (borderMat != null)
+        {
+            borderMat.EnableKeyword("_EMISSION");
+            borderMat.SetColor("_EmissionColor", colour * padGlow * 1.6f);
+        }
+        float strip = padSize * 0.035f;
+        for (int side = 0; side < 4; side++)
+        {
+            GameObject bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bar.name = "Border";
+            Destroy(bar.GetComponent<Collider>());
+            bar.transform.SetParent(root.transform, false);
+            bool alongX = side % 2 == 0;
+            float offset = (padSize * 0.5f - strip * 0.5f) * (side < 2 ? 1f : -1f);
+            bar.transform.localScale = alongX ? new Vector3(padSize, 0.065f, strip) : new Vector3(strip, 0.065f, padSize);
+            bar.transform.localPosition = alongX ? new Vector3(0f, 0.045f, offset) : new Vector3(offset, 0.045f, 0f);
+            if (borderMat != null) bar.GetComponent<Renderer>().sharedMaterial = borderMat;
+        }
+
+        PadVisual visual = BuildPadVisual(root.transform, target, colour);
+        float animTime = 0f;
 
         GameObject labelGo = new GameObject("Label");
         labelGo.transform.SetParent(root.transform, false);
@@ -337,17 +547,23 @@ public class PixelPadMinigame : PixelMinigame
         while (t < 0.35f)
         {
             t += Time.deltaTime;
+            animTime += Time.deltaTime;
+            visual.Animate(animTime);
             root.transform.localScale = new Vector3(1f, 1f, 1f) * Mathf.SmoothStep(0f, 1f, t / 0.35f);
             labelGo.transform.rotation = cam.transform.rotation;
             yield return null;
         }
         root.transform.localScale = Vector3.one;
+        padRoot = root.transform;
+        padPulling = true;
 
         // Wait for pixels.
         float left = padSeconds;
         while (left > 0f)
         {
             left -= Time.deltaTime;
+            animTime += Time.deltaTime;
+            visual.Animate(animTime);
             label.text = string.Format(labelFormat, tier.displayName, Mathf.CeilToInt(Mathf.Max(0f, left)));
             labelGo.transform.rotation = cam.transform.rotation;
             TakePixels(root.transform, target, cam);
@@ -355,13 +571,17 @@ public class PixelPadMinigame : PixelMinigame
         }
 
         // Shrink away.
+        padPulling = false;
         t = 0f;
         while (t < 0.4f)
         {
             t += Time.deltaTime;
+            animTime += Time.deltaTime;
+            visual.Animate(animTime);
             root.transform.localScale = Vector3.one * Mathf.Lerp(1f, 0f, t / 0.4f);
             yield return null;
         }
+        padRoot = null;
         Destroy(root);
 
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));

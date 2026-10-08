@@ -52,3 +52,4 @@
 [2026-10-08 15:06 UTC] Crafting window shows the real item counts (not the Infinite-resources amount), and Replay tutorial now ends with the event log tip.
 [2026-10-08 15:11 UTC] Inventory and other windows now draw over the event log; Quit in the pause menu asks Desktop or Main menu, and Main menu zooms the camera back into the cube and brings the title screen back.
 [2026-10-08 15:15 UTC] Fixed a black flash after pressing Play, and minigames no longer spawn in the first 30 seconds after Play.
+[2026-10-08 15:20 UTC] Ultra Pad redesigned: glowing border, arrows drifting inwards, a spinning model of the wanted pixel in its current look, and a gentle pull on nearby old pixels.

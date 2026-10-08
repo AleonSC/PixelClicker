@@ -2248,6 +2248,50 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// A display-only model of a pixel type (no physics) drawn with its current look: material, colour, surface texture, glow
+    /// and extras (dark-matter core, face circles, wobble...). 'size' = edge length in world units. Used by the Ultra Pad.
+    /// </summary>
+    public GameObject CreateDisplayPixel(int tierIndex, Transform parent, float size)
+    {
+        if (!IsValidTier(tierIndex) || pixelRenderer == null) return null;
+        MeshFilter srcFilter = pixelRenderer.GetComponent<MeshFilter>();
+        if (srcFilter == null) return null;
+
+        PixelTier tier = tiers[tierIndex];
+        PixelLook styled = LookOf(tier);
+        GameObject go = new GameObject("Pixel Model");
+        go.transform.SetParent(parent, false);
+        go.transform.localScale = Vector3.one * size;
+        if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
+
+        go.AddComponent<MeshFilter>().sharedMesh = srcFilter.sharedMesh;
+        MeshRenderer mr = go.AddComponent<MeshRenderer>();
+        Material m = MaterialForTier(tier);
+        mr.sharedMaterial = m != null ? m : pixelRenderer.sharedMaterial;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+        Color drawColor = RenderColor(tier, styled);
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        block.SetColor(colorPropertyId, drawColor);
+        block.SetColor("_Color", drawColor);
+        ApplyLookSurface(block, styled);
+        ApplyLookTexture(block, styled, 0, tier.clicksToCollect);
+        float glowMul = styled != null ? styled.glowScale : 1f;
+        block.SetColor("_EmissionColor", tier.glow
+            ? new Color(tier.color.r, tier.color.g, tier.color.b, 1f) * (tier.glowIntensity * glowMul)
+            : styled != null && styled.emission > 0f
+                ? new Color(drawColor.r, drawColor.g, drawColor.b, 1f) * styled.emission : Color.black);
+        mr.SetPropertyBlock(block);
+
+        if (styled != null)
+        {
+            PixelLooks.AddExtras(go.transform, srcFilter.sharedMesh, styled, tier.color, defaultMaterial);
+            if (styled.wobble) MakeWobbleVisual(go, styled);
+        }
+        return go;
+    }
+
     private void PlayClickEffects(PixelTier tier)
     {
         if (clickParticles != null)
