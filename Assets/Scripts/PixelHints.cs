@@ -700,6 +700,7 @@ public class PixelHints : MonoBehaviour
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
         if (!forceIntro && !freshAtStart) return; // not a new game
+        bool replay = forceIntro;
         forceIntro = false;
 
         PixelLog.SetLogOpen(true);
@@ -711,8 +712,21 @@ public class PixelHints : MonoBehaviour
             {
                 PixelUI.SetInventoryOpen(false);
                 MarkSeen("intro_log"); // only counts once the player has been through both tips
+                if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
             });
         });
+    }
+
+    /// <summary>Shows the event log (bottom left) and the small tip beside it explaining it.</summary>
+    private void ShowEventLogTip()
+    {
+        Hint hint = hints != null ? hints.Find(h => h != null && h.id == "event_log") : null;
+        if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
+        MarkSeen("event_log"); // so the first pixel unlock doesn't repeat it
+        DisplayOverlay();
+        overlayTimer = Mathf.Max(overlayTimer, 20f); // keep the log up while the tip is read
+        PixelNotice.Show(hint.text, autoCloseSeconds, nearLog: true);
+        wasShowing = true;
     }
 
     private void Update()

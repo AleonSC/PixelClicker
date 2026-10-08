@@ -49,3 +49,4 @@
 [2026-10-08 14:54 UTC] Bomb wires are spaced further apart on a taller bomb, and their click areas no longer overlap.
 [2026-10-08 14:57 UTC] The ghost now carries a small glass potion with the buff's pixel inside; clicking the ghost makes him drop it, and the buff starts when it shatters.
 [2026-10-08 15:04 UTC] The first pixel unlock now shows a small 'Got it' tip beside the event log explaining what it is and that it can be switched off in Settings.
+[2026-10-08 15:06 UTC] Crafting window shows the real item counts (not the Infinite-resources amount), and Replay tutorial now ends with the event log tip.

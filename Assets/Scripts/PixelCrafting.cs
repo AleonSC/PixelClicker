@@ -776,6 +776,12 @@ public class PixelCrafting : MonoBehaviour
     // Item list
     // ------------------------------------------------------------------
 
+    private double Shown(Item item)
+    {
+        if (item.kind == ItemKind.Pixel) return Math.Floor(clicker.GetCount(item.type));
+        return Have(item);
+    }
+
     private double Have(Item item)
     {
         if (item.kind == ItemKind.Pixel) return PixelClicker.InfiniteResources ? 1e9 : Math.Floor(clicker.GetCount(item.type));
@@ -814,7 +820,7 @@ public class PixelCrafting : MonoBehaviour
                 cell.built = true;
                 cell.nameLabel.text = ItemName(item);
             }
-            cell.count.text = PixelClicker.FormatNumber(Have(item));
+            cell.count.text = PixelClicker.FormatNumber(Shown(item)); // the real amount (Infinite resources only affects what can be spent)
 
             int col = i % columns, row = i / columns;
             cell.rect.anchoredPosition = new Vector2(col * (cellSize + cellGap), -row * (cellSize + cellGap));
