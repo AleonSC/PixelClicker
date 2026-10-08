@@ -209,6 +209,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string popupSizeLabel = "Popup size";
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
+    [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [SerializeField] private string autoSaveLabel = "Autosave every";
     [SerializeField] private string autoSaveMessageLabel = "Show autosave message";
     [SerializeField] private string qualityLabel = "Graphics quality";
@@ -1498,6 +1499,7 @@ public class PixelPauseMenu : MonoBehaviour
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
+        AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
 
         // ---- Saving ----

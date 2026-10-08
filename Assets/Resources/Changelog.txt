@@ -39,3 +39,4 @@
 [2026-10-08 14:05 UTC] Fixed the dead zone: old pixels right next to the clicker pixel can be grabbed now.
 [2026-10-08 14:12 UTC] New bomb: a round metal bomb in two halves with a fuse, the three wires run across its front, and cutting one splits the bomb in two; the black hole counter and bomb text now always stay in view.
 [2026-10-08 14:16 UTC] The bomb is a rectangle again with three wires straight across its top; cutting a wire now only snaps that wire in two.
+[2026-10-08 14:20 UTC] New camera intro: the game starts with a close-up side view of the cube and the camera swings up and back out to the normal view after Play (a click skips it, and it can be switched off in Settings).
