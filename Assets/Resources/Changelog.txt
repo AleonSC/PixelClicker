@@ -41,3 +41,4 @@
 [2026-10-08 14:16 UTC] The bomb is a rectangle again with three wires straight across its top; cutting a wire now only snaps that wire in two.
 [2026-10-08 14:20 UTC] New camera intro: the game starts with a close-up side view of the cube and the camera swings up and back out to the normal view after Play (a click skips it, and it can be switched off in Settings).
 [2026-10-08 14:30 UTC] Title screen: live blurred background with the cube spinning, pixel-art Pixel Clicker logo, shorter Play button with Load and Settings buttons under it, tiny Quit button at the bottom; camera intro starts closer to the cube.
+[2026-10-08 14:36 UTC] Tough pixels (Obsidian) now play their pixel sound on every hit, not only the breaking click.

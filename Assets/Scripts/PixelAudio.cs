@@ -494,7 +494,13 @@ public class PixelAudio : MonoBehaviour
             PlaySound("pixel_" + clicker.Tiers[tierIndex].type.ToString().ToLowerInvariant(), 1f);
     }
 
-    private void OnHit(int tierIndex, int hits, int needed, bool automatic) => PlaySound("hit", 1f);
+    private void OnHit(int tierIndex, int hits, int needed, bool automatic)
+    {
+        PlaySound("hit", 1f);
+        // Tough pixels (Obsidian) also play their own pixel sound on every hit, not only on the breaking click.
+        if (clicker != null && tierIndex >= 0 && tierIndex < clicker.Tiers.Length)
+            PlaySound("pixel_" + clicker.Tiers[tierIndex].type.ToString().ToLowerInvariant(), 1f);
+    }
 
     private void OnVacuumed(int tierIndex, double total, int count) => PlaySound("vacuum", 1f);
 
