@@ -227,7 +227,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -732,6 +732,18 @@ public class PixelClicker : MonoBehaviour
                 looks = extended.ToArray();
             }
             looksVersion = 4;
+        }
+        if (looksVersion < 5)
+        {
+            // The Obsidian look (polished black metal, white streaks, cracks) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Obsidian) == null)
+            {
+                PixelLook obsidianLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Obsidian);
+                System.Collections.Generic.List<PixelLook> extended = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (obsidianLook != null) extended.Add(obsidianLook);
+                looks = extended.ToArray();
+            }
+            looksVersion = 5;
         }
 
         if (pixelRenderer != null)
