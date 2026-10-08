@@ -704,7 +704,9 @@ public class PixelHints : MonoBehaviour
         if (queue.Count == 0 || showing) return;
         if (waitTimer > 0f) { waitTimer -= Time.unscaledDeltaTime; return; }
 
-        PixelNotice.Show(queue.Dequeue().text, autoCloseSeconds);
+        Hint next = queue.Dequeue();
+        // The tips for something that just happened in a minigame are small; the rest are shop-sized.
+        PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && next.id.StartsWith("minigame_"));
         wasShowing = true;
     }
 }

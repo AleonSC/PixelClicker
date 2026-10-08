@@ -20,10 +20,11 @@ public static class PixelNotice
 
     /// <summary>Shows a message. 'seconds' = 0 keeps it until the player closes it.</summary>
     /// <summary>'compact' = the small text-sized box at the top of the screen (tutorial tips next to the buttons), even if a fixed size is set.</summary>
-    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false)
+    /// <summary>'small' = a much smaller box (narrow, small text and button) at the top of the screen: for quick "this just happened" tips.</summary>
+    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -43,10 +44,12 @@ public static class PixelNotice
 public class PixelNoticeBox : MonoBehaviour
 {
     private const float Width = 900f;
+    private const float SmallWidth = 470f;
 
     private GameObject canvasRoot;
     private TMP_Text label;
-    private RectTransform boxRect;
+    private RectTransform boxRect, okRect;
+    private TMP_Text okLabel;
     private float timer;
     private bool timed;
 
@@ -78,15 +81,27 @@ public class PixelNoticeBox : MonoBehaviour
         okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
         okr.anchoredPosition = new Vector2(0f, 18f);
         ok.onClick.AddListener(Close);
+        okRect = okr;
+        okLabel = ok.GetComponentInChildren<TMP_Text>();
     }
 
-    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false)
+    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
         if (canvasRoot == null) Build();
 
+        // The small box: narrow, small text, small button.
+        float width = small ? SmallWidth : Width;
+        float textSize = small ? 22f : 30f;
+        label.fontSize = textSize;
+        label.rectTransform.offsetMin = small ? new Vector2(18f, 62f) : new Vector2(30f, 90f);
+        label.rectTransform.offsetMax = small ? new Vector2(-18f, -12f) : new Vector2(-30f, -20f);
+        okRect.sizeDelta = small ? new Vector2(150f, 44f) : new Vector2(200f, 60f);
+        okRect.anchoredPosition = new Vector2(0f, small ? 10f : 18f);
+        if (okLabel != null) okLabel.fontSize = small ? 22f : 30f;
+
         label.text = message;
-        Vector2 fixedSize = compact ? Vector2.zero : PixelNotice.FixedSize;
+        Vector2 fixedSize = compact || small ? Vector2.zero : PixelNotice.FixedSize;
         if (fixedSize.x > 0f && fixedSize.y > 0f)
         {
             // Same size as the shop, centred on screen.
@@ -96,10 +111,10 @@ public class PixelNoticeBox : MonoBehaviour
         }
         else
         {
-            float textHeight = Mathf.Ceil(label.GetPreferredValues(message, Width - 60f, 0f).y);
+            float textHeight = Mathf.Ceil(label.GetPreferredValues(message, width - (small ? 36f : 60f), 0f).y);
             float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
             boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 1f);
-            boxRect.sizeDelta = new Vector2(Width, textHeight + 130f);
+            boxRect.sizeDelta = new Vector2(width, textHeight + (small ? 84f : 130f));
             boxRect.anchoredPosition = new Vector2(0f, -(bar + 24f));
         }
 
