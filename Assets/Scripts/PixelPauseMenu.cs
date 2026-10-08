@@ -663,6 +663,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         if (paused == IsPaused) return;
         IsPaused = paused;
+        if (!paused) openedFromTitle = false;
 
         ApplyFreeze();
 
@@ -670,10 +671,26 @@ public class PixelPauseMenu : MonoBehaviour
         if (paused) ShowView(mainPanel);
     }
 
+    private bool openedFromTitle;
+
+    /// <summary>Opens the Settings screen straight from the title screen (Back / Escape return to the title).</summary>
+    public static void OpenSettingsFromTitle() { PixelFind.First<PixelPauseMenu>()?.OpenFromTitle(true); }
+
+    /// <summary>Opens the Save / Load window straight from the title screen.</summary>
+    public static void OpenLoadFromTitle() { PixelFind.First<PixelPauseMenu>()?.OpenFromTitle(false); }
+
+    private void OpenFromTitle(bool settings)
+    {
+        if (IsPaused) return;
+        SetPaused(true);
+        openedFromTitle = true;
+        ShowView(settings ? settingsPanel : saveLoadPanel);
+    }
+
     /// <summary>Freezes or unfreezes time to match 'menu open' and the 'Pausing stops the game' setting.</summary>
     private void ApplyFreeze()
     {
-        bool freeze = IsPaused && pauseStopsGame;
+        bool freeze = IsPaused && pauseStopsGame && !PixelTitleScreen.Showing; // the title screen already holds time at 0
 
         if (freeze && !GameStopped)
         {
@@ -845,6 +862,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void ShowView(GameObject view)
     {
         if (view == null) return;
+        if (openedFromTitle && view == mainPanel) { SetPaused(false); return; } // 'back' returns to the title screen
         if (mainPanel != null) mainPanel.SetActive(view == mainPanel);
         if (statsPanel != null) statsPanel.SetActive(view == statsPanel);
         if (settingsPanel != null) settingsPanel.SetActive(view == settingsPanel);

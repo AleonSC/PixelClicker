@@ -1387,7 +1387,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
     private int CopyCap => PixelTimeStop.IsStopped ? timeStopStockpileMax : maxFallingCopies;
 
-    private static float AnimDelta => PixelTimeStop.IsStopped ? Time.unscaledDeltaTime : Time.deltaTime;
+    private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
 
     private void AnimatePixel()
     {
@@ -1400,7 +1400,7 @@ public class PixelClicker : MonoBehaviour
         }
 
         if (idleSpin != Vector3.zero && allowRotation)
-            pixelTransform.Rotate(idleSpin * Time.deltaTime, Space.Self);
+            pixelTransform.Rotate(idleSpin * AnimDelta, Space.Self);
 
         if (hitbox != null) hitbox.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);
 

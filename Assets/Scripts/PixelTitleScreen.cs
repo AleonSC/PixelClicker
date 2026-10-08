@@ -1,17 +1,21 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The start screen. When the game launches the world is frozen behind a blurred picture of itself with a black bar across
-/// the middle of the screen and a big Play button. Clicking Play: the button shrinks to nothing, the bar thins away while
-/// the picture comes back into focus, and after a short delay the game starts.
+/// The start screen. When the game launches the world is frozen behind a live, blurred picture of itself (the cube keeps
+/// spinning) with a pixel-art "Pixel Clicker" logo at the top, a black bar across the middle with a Play button, a Load and
+/// a Settings button under it and a tiny Quit button at the bottom. Clicking Play: the buttons and logo shrink / fade away,
+/// the bar thins away while the picture comes back into focus, and after a short delay the game starts.
 ///
-/// The blur is made at start-up by rendering the main camera into a small texture (a few bilinear down-scales), so it needs
-/// no post-processing. It shows again after the pause menu's Restart, like a fresh launch.
+/// The blur is made every frame by rendering the main camera into a small texture and shrinking it in a few bilinear steps,
+/// so it needs no post-processing. Load / Settings open the pause menu's views above the title (Back returns here).
+/// It shows again after the pause menu's Restart, like a fresh launch.
 /// Added automatically by PixelClicker.
 /// </summary>
+[DefaultExecutionOrder(1000)]
 public class PixelTitleScreen : MonoBehaviour
 {
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -24,25 +28,49 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("Show the start screen when the game launches.")]
     [SerializeField] private bool showTitleScreen = true;
 
-    [Tooltip("Sorting order of the screen's canvas (above every other window).")]
+    [Tooltip("Sorting order of the screen's canvas (above every other window). Lowered while Load / Settings are open so they show on top.")]
     [SerializeField] private int sortingOrder = 1000;
 
-    [Header("Bar and Button")]
+    [Header("Logo")]
+    [Tooltip("Show the pixel-art 'Pixel Clicker' logo at the top of the screen.")]
+    [SerializeField] private bool showLogo = true;
+
+    [Min(100f)]
+    [Tooltip("Width of the logo (canvas units).")]
+    [SerializeField] private float logoWidth = 760f;
+
+    [Tooltip("Distance from the top of the screen to the logo (canvas units).")]
+    [SerializeField] private float logoTopMargin = 70f;
+
+    [Tooltip("How far the logo bobs up and down (canvas units).")]
+    [SerializeField] private float logoBobAmount = 8f;
+
+    [Tooltip("How fast the logo bobs (cycles per second).")]
+    [SerializeField] private float logoBobSpeed = 0.35f;
+
+    [Tooltip("Colours of the letters of the logo, used in turn (PIXEL, then CLICKER).")]
+    [SerializeField] private Color[] logoColors =
+    {
+        new Color(0.95f, 0.27f, 0.27f), new Color(1f, 0.58f, 0.15f), new Color(1f, 0.88f, 0.2f),
+        new Color(0.3f, 0.85f, 0.4f), new Color(0.3f, 0.6f, 1f),
+    };
+
+    [Header("Bar and Buttons")]
     [Min(0f)]
     [Tooltip("Height of the black bar across the middle of the screen (canvas units).")]
-    [SerializeField] private float barHeight = 260f;
+    [SerializeField] private float barHeight = 250f;
 
     [Tooltip("Colour of the bar.")]
     [SerializeField] private Color barColor = new Color(0f, 0f, 0f, 0.92f);
 
     [Tooltip("Size of the Play button.")]
-    [SerializeField] private Vector2 buttonSize = new Vector2(420f, 150f);
+    [SerializeField] private Vector2 buttonSize = new Vector2(420f, 100f);
 
     [Tooltip("Text on the Play button.")]
     [SerializeField] private string playText = "Play";
 
     [Tooltip("Font size of the Play button.")]
-    [SerializeField] private float playFontSize = 80f;
+    [SerializeField] private float playFontSize = 64f;
 
     [Tooltip("Colour of the Play button.")]
     [SerializeField] private Color buttonColor = new Color(0.2f, 0.65f, 0.35f, 1f);
@@ -50,15 +78,44 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("Colour of the Play button's text.")]
     [SerializeField] private Color buttonTextColor = Color.white;
 
-    [Tooltip("Optional title shown above the Play button inside the bar. Empty = none.")]
-    [SerializeField] private string titleText = "";
+    [Min(20f)]
+    [Tooltip("Height of the Load and Settings buttons (together they are as wide as the Play button).")]
+    [SerializeField] private float smallButtonHeight = 58f;
 
-    [Tooltip("Font size of the title.")]
-    [SerializeField] private float titleFontSize = 54f;
+    [Min(0f)]
+    [Tooltip("Gap between the buttons (canvas units).")]
+    [SerializeField] private float buttonGap = 12f;
+
+    [Tooltip("Font size of the Load and Settings buttons.")]
+    [SerializeField] private float smallFontSize = 32f;
+
+    [Tooltip("Text on the Load button.")]
+    [SerializeField] private string loadText = "Load";
+
+    [Tooltip("Text on the Settings button.")]
+    [SerializeField] private string settingsText = "Settings";
+
+    [Tooltip("Colour of the Load and Settings buttons.")]
+    [SerializeField] private Color smallButtonColor = new Color(0.25f, 0.3f, 0.4f, 1f);
+
+    [Tooltip("Show the tiny Quit button at the very bottom of the screen.")]
+    [SerializeField] private bool showQuit = true;
+
+    [Tooltip("Text on the Quit button.")]
+    [SerializeField] private string quitText = "Quit";
+
+    [Tooltip("Size of the Quit button.")]
+    [SerializeField] private Vector2 quitSize = new Vector2(110f, 34f);
+
+    [Tooltip("Font size of the Quit button.")]
+    [SerializeField] private float quitFontSize = 20f;
+
+    [Tooltip("Colour of the Quit button.")]
+    [SerializeField] private Color quitColor = new Color(0.45f, 0.18f, 0.18f, 0.9f);
 
     [Header("Animation")]
     [Min(0.05f)]
-    [Tooltip("Seconds the Play button takes to shrink to nothing.")]
+    [Tooltip("Seconds the buttons take to shrink to nothing.")]
     [SerializeField] private float buttonShrinkSeconds = 0.35f;
 
     [Min(0.05f)]
@@ -82,6 +139,10 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("The strong blur is the picture shrunk by this much (bigger = blurrier).")]
     [SerializeField] private int strongBlurDivisor = 32;
 
+    [Range(2, 8)]
+    [Tooltip("The live picture is rendered at 1/this of the screen size (bigger = cheaper).")]
+    [SerializeField] private int liveDivisor = 4;
+
     [Tooltip("Darkening laid over the blur (alpha = how dark).")]
     [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.25f);
 
@@ -90,15 +151,21 @@ public class PixelTitleScreen : MonoBehaviour
     /// <summary>True while the start screen is up (the game is frozen).</summary>
     public static bool Showing { get; private set; }
 
-    private GameObject canvasRoot;
+    private GameObject canvasRoot, foreground;
+    private Canvas canvas;
     private Image cover, bar, dim;
-    private RawImage lightImage, strongImage;
-    private RectTransform barRect, buttonRect;
-    private TMP_Text titleLabel;
+    private RawImage lightImage, strongImage, logoImage;
+    private RectTransform barRect, logoRect;
+    private readonly List<RectTransform> shrinkRects = new List<RectTransform>();
+    private readonly List<Button> buttons = new List<Button>();
     private Button playButton;
-    private RenderTexture lightTexture, strongTexture;
+    private RenderTexture liveTexture;
+    private readonly List<RenderTexture> chain = new List<RenderTexture>();
+    private readonly List<int> chainDivisors = new List<int>();
+    private Texture2D logoTexture;
     private float timeScaleBefore = 1f;
-    private bool playing;
+    private bool playing, pictureReady;
+    private int framesShown;
 
     private void Awake()
     {
@@ -111,24 +178,49 @@ public class PixelTitleScreen : MonoBehaviour
         PixelWindows.Register(this, 1000, () => Showing, () => { }); // Escape does nothing here
     }
 
-    private void Start()
-    {
-        if (Showing) StartCoroutine(CaptureRoutine());
-    }
-
     private void OnDestroy()
     {
         PixelWindows.Unregister(this);
         if (Showing && playing == false && Time.timeScale == 0f) Time.timeScale = timeScaleBefore;
         Showing = false;
         ReleaseTextures();
+        if (logoTexture != null) Destroy(logoTexture);
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
     private void ReleaseTextures()
     {
-        if (lightTexture != null) { lightTexture.Release(); Destroy(lightTexture); lightTexture = null; }
-        if (strongTexture != null) { strongTexture.Release(); Destroy(strongTexture); strongTexture = null; }
+        if (liveTexture != null) { liveTexture.Release(); Destroy(liveTexture); liveTexture = null; }
+        foreach (RenderTexture rt in chain) if (rt != null) { rt.Release(); Destroy(rt); }
+        chain.Clear();
+        chainDivisors.Clear();
+    }
+
+    private void Update()
+    {
+        if (canvas == null) return;
+
+        // While the pause menu's views are open on top of the title, hide the title's own widgets and drop below the menu.
+        bool menuOpen = PixelPauseMenu.IsPaused;
+        canvas.sortingOrder = menuOpen ? 400 : sortingOrder;
+        if (foreground != null && foreground.activeSelf == menuOpen) foreground.SetActive(!menuOpen);
+
+        if (logoRect != null && !playing)
+            logoRect.anchoredPosition = new Vector2(0f, -logoTopMargin + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
+    }
+
+    private void LateUpdate()
+    {
+        // Keep the blurred picture live (the cube spins behind the title). Waits one frame so the scene exists.
+        framesShown++;
+        if (framesShown < 2) return;
+        try { UpdateBlur(); }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("PixelTitleScreen: could not make the blurred background (" + e.Message + ").", this);
+            enabled = false;
+            if (!pictureReady) cover.color = new Color(0f, 0f, 0f, 0.85f);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -142,6 +234,19 @@ public class PixelTitleScreen : MonoBehaviour
         return r;
     }
 
+    private Button MakeButton(TMP_FontAsset font, string objectName, string label, Vector2 size, Color color, float fontSize,
+                              Vector2 anchor, Vector2 position, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = PixelUIKit.CreateButton(font, foreground.transform, objectName, label, size, color, buttonTextColor, fontSize);
+        RectTransform r = b.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = anchor;
+        r.anchoredPosition = position;
+        b.onClick.AddListener(onClick);
+        shrinkRects.Add(r);
+        buttons.Add(b);
+        return b;
+    }
+
     private void Build()
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
@@ -149,6 +254,7 @@ public class PixelTitleScreen : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         canvasRoot = PixelUIKit.CreateCanvas("Pixel Title Screen", sortingOrder, new Vector2(1920f, 1080f), true);
         canvasRoot.transform.SetParent(transform, false);
+        canvas = canvasRoot.GetComponent<Canvas>();
 
         // Opaque cover until the blurred picture is ready (so the sharp game never flashes).
         GameObject coverGo = new GameObject("Cover", typeof(RectTransform), typeof(Image));
@@ -167,8 +273,13 @@ public class PixelTitleScreen : MonoBehaviour
         dim.raycastTarget = false;
         Stretched(dimGo);
 
+        // Everything the player interacts with lives under 'foreground' (hidden while the pause menu shows on top).
+        foreground = new GameObject("Foreground", typeof(RectTransform));
+        foreground.transform.SetParent(canvasRoot.transform, false);
+        Stretched(foreground);
+
         GameObject barGo = new GameObject("Bar", typeof(RectTransform), typeof(Image));
-        barGo.transform.SetParent(canvasRoot.transform, false);
+        barGo.transform.SetParent(foreground.transform, false);
         bar = barGo.GetComponent<Image>();
         bar.color = barColor;
         bar.raycastTarget = false;
@@ -179,22 +290,24 @@ public class PixelTitleScreen : MonoBehaviour
         barRect.anchoredPosition = Vector2.zero;
         barRect.sizeDelta = new Vector2(0f, barHeight);
 
-        if (!string.IsNullOrEmpty(titleText))
-        {
-            titleLabel = PixelUIKit.CreateText(font, canvasRoot.transform, "Title", titleText, titleFontSize,
-                                               TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-            RectTransform tr = titleLabel.rectTransform;
-            tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 0.5f);
-            tr.sizeDelta = new Vector2(1200f, titleFontSize * 1.5f);
-            tr.anchoredPosition = new Vector2(0f, buttonSize.y * 0.5f + titleFontSize * 0.2f + 10f);
-        }
+        if (showLogo) BuildLogo();
 
-        playButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "Play Button", playText, buttonSize, buttonColor,
-                                             buttonTextColor, playFontSize);
-        buttonRect = playButton.GetComponent<RectTransform>();
-        buttonRect.anchorMin = buttonRect.anchorMax = buttonRect.pivot = new Vector2(0.5f, 0.5f);
-        buttonRect.anchoredPosition = titleLabel != null ? new Vector2(0f, -titleFontSize * 0.5f) : Vector2.zero;
-        playButton.onClick.AddListener(OnPlay);
+        // Play on top, Load + Settings side by side under it (together exactly as wide as Play).
+        Vector2 centre = new Vector2(0.5f, 0.5f);
+        float groupHeight = buttonSize.y + buttonGap + smallButtonHeight;
+        float playY = groupHeight * 0.5f - buttonSize.y * 0.5f;
+        float smallY = -groupHeight * 0.5f + smallButtonHeight * 0.5f;
+        float smallWidth = (buttonSize.x - buttonGap) * 0.5f;
+        Vector2 smallSize = new Vector2(smallWidth, smallButtonHeight);
+        float smallX = (smallWidth + buttonGap) * 0.5f;
+
+        playButton = MakeButton(font, "Play Button", playText, buttonSize, buttonColor, playFontSize, centre, new Vector2(0f, playY), OnPlay);
+        MakeButton(font, "Load Button", loadText, smallSize, smallButtonColor, smallFontSize, centre, new Vector2(-smallX, smallY), OnLoad);
+        MakeButton(font, "Settings Button", settingsText, smallSize, smallButtonColor, smallFontSize, centre, new Vector2(smallX, smallY), OnSettings);
+
+        if (showQuit)
+            MakeButton(font, "Quit Button", quitText, quitSize, quitColor, quitFontSize, new Vector2(0.5f, 0f),
+                       new Vector2(0f, quitSize.y * 0.5f + 12f), OnQuit);
     }
 
     private RawImage MakeRaw(string objectName)
@@ -209,46 +322,156 @@ public class PixelTitleScreen : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // The blurred picture
+    // The logo: a 5x7 pixel font drawn into one texture (bevelled cells with a drop shadow)
     // ------------------------------------------------------------------
 
-    private IEnumerator CaptureRoutine()
+    private static readonly Dictionary<char, string[]> Glyphs = new Dictionary<char, string[]>
     {
-        yield return null; // let the first frame of the scene exist
-        try { BuildBlur(); }
-        catch (System.Exception e) { Debug.LogWarning("PixelTitleScreen: could not make the blurred background (" + e.Message + ").", this); }
+        { 'P', new[] { "####.", "#...#", "#...#", "####.", "#....", "#....", "#...." } },
+        { 'I', new[] { "#####", "..#..", "..#..", "..#..", "..#..", "..#..", "#####" } },
+        { 'X', new[] { "#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#" } },
+        { 'E', new[] { "#####", "#....", "#....", "####.", "#....", "#....", "#####" } },
+        { 'L', new[] { "#....", "#....", "#....", "#....", "#....", "#....", "#####" } },
+        { 'C', new[] { ".####", "#....", "#....", "#....", "#....", "#....", ".####" } },
+        { 'K', new[] { "#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#" } },
+        { 'R', new[] { "####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#" } },
+    };
 
-        if (lightTexture != null && strongTexture != null)
+    private void BuildLogo()
+    {
+        const string top = "PIXEL", bottom = "CLICKER";
+        const int cell = 8, margin = 12, letterCols = 5, gapCols = 1, rows = 7;
+        int cols = bottom.Length * letterCols + (bottom.Length - 1) * gapCols;
+        int width = cols * cell + margin * 2;
+        int height = (rows * 2 + 1) * cell + margin * 2;
+
+        Color32[] pixels = new Color32[width * height];
+        for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color32(0, 0, 0, 0);
+
+        int colorIndex = 0;
+        DrawWord(pixels, width, height, top, cols, 0, ref colorIndex, cell, margin, letterCols, gapCols, rows);
+        DrawWord(pixels, width, height, bottom, cols, rows + 1, ref colorIndex, cell, margin, letterCols, gapCols, rows);
+
+        logoTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
         {
-            lightImage.texture = lightTexture;
-            strongImage.texture = strongTexture;
-            lightImage.enabled = strongImage.enabled = true;
-        }
-        else
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+            name = "Pixel Clicker Logo",
+        };
+        logoTexture.SetPixels32(pixels);
+        logoTexture.Apply(false, true);
+
+        GameObject go = new GameObject("Logo", typeof(RectTransform), typeof(RawImage));
+        go.transform.SetParent(foreground.transform, false);
+        logoImage = go.GetComponent<RawImage>();
+        logoImage.texture = logoTexture;
+        logoImage.raycastTarget = false;
+        logoRect = go.GetComponent<RectTransform>();
+        logoRect.anchorMin = logoRect.anchorMax = logoRect.pivot = new Vector2(0.5f, 1f);
+        logoRect.sizeDelta = new Vector2(logoWidth, logoWidth * height / width);
+        logoRect.anchoredPosition = new Vector2(0f, -logoTopMargin);
+    }
+
+    private void DrawWord(Color32[] pixels, int width, int height, string word, int totalCols, int rowOffset, ref int colorIndex,
+                          int cell, int margin, int letterCols, int gapCols, int rows)
+    {
+        int wordCols = word.Length * letterCols + (word.Length - 1) * gapCols;
+        int startCol = (totalCols - wordCols) / 2;
+        Color[] palette = logoColors != null && logoColors.Length > 0 ? logoColors : new[] { Color.white };
+
+        for (int li = 0; li < word.Length; li++)
         {
-            cover.color = new Color(0f, 0f, 0f, 0.85f); // no picture: just a dark cover
+            string[] glyph;
+            if (!Glyphs.TryGetValue(word[li], out glyph)) continue;
+            Color baseColor = palette[colorIndex % palette.Length];
+            colorIndex++;
+            int letterCol = startCol + li * (letterCols + gapCols);
+            for (int r = 0; r < rows; r++)
+            for (int c = 0; c < letterCols; c++)
+            {
+                if (glyph[r][c] != '#') continue;
+                int px = margin + (letterCol + c) * cell;
+                int py = height - margin - (rowOffset + r + 1) * cell; // row 0 is the top
+                // Lighter toward the top of each letter.
+                Color tint = Color.Lerp(baseColor, Color.white, 0.25f * (1f - r / (float)(rows - 1)));
+                FillCell(pixels, width, height, px + 3, py - 3, cell, new Color(0f, 0f, 0f, 0.55f), null); // drop shadow
+                FillCell(pixels, width, height, px, py, cell, tint, tint);
+            }
         }
     }
 
-    private static RenderTexture Shrink(RenderTexture source, int divisor)
+    /// <summary>Draws one square cell; with a base colour it gets a light top-left and dark bottom-right bevel.</summary>
+    private static void FillCell(Color32[] pixels, int width, int height, int x0, int y0, int size, Color fill, Color? bevelBase)
     {
-        int w = Mathf.Max(2, source.width / divisor), h = Mathf.Max(2, source.height / divisor);
-        RenderTexture target = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-        target.Create();
-        Graphics.Blit(source, target);
-        return target;
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            int px = x0 + x, py = y0 + y;
+            if (px < 0 || py < 0 || px >= width || py >= height) continue;
+            Color c = fill;
+            if (bevelBase.HasValue)
+            {
+                bool dark = y < 2 || x >= size - 2;
+                bool light = y >= size - 2 || x < 2;
+                if (dark) c = Color.Lerp(fill, Color.black, 0.45f);
+                else if (light) c = Color.Lerp(fill, Color.white, 0.55f);
+            }
+            else if (pixels[py * width + px].a > 0) continue; // shadows never cover letters
+            pixels[py * width + px] = c;
+        }
     }
 
-    private void BuildBlur()
+    // ------------------------------------------------------------------
+    // The blurred picture (live)
+    // ------------------------------------------------------------------
+
+    private RenderTexture NewTexture(int w, int h, int depth, FilterMode filter)
+    {
+        RenderTexture rt = new RenderTexture(Mathf.Max(2, w), Mathf.Max(2, h), depth, RenderTextureFormat.ARGB32)
+        {
+            filterMode = filter,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        rt.Create();
+        return rt;
+    }
+
+    private void EnsureChain()
+    {
+        if (liveTexture != null) return;
+        int w = Screen.width, h = Screen.height;
+        liveTexture = NewTexture(w / liveDivisor, h / liveDivisor, 24, FilterMode.Bilinear);
+
+        // A chain of ever smaller copies: /2 of the live size each step, up to the strong blur.
+        int divisor = liveDivisor;
+        while (divisor < strongBlurDivisor || chain.Count == 0)
+        {
+            divisor *= 2;
+            chain.Add(NewTexture(w / divisor, h / divisor, 0, FilterMode.Bilinear));
+            chainDivisors.Add(divisor);
+            if (chain.Count > 8) break;
+        }
+
+        lightImage.texture = PickChain(lightBlurDivisor);
+        strongImage.texture = PickChain(strongBlurDivisor);
+    }
+
+    private RenderTexture PickChain(int wanted)
+    {
+        for (int i = 0; i < chain.Count; i++) if (chainDivisors[i] >= wanted) return chain[i];
+        return chain[chain.Count - 1];
+    }
+
+    private void UpdateBlur()
     {
         Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();
         if (cam == null) return;
+        EnsureChain();
 
-        RenderTexture full = RenderTexture.GetTemporary(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32);
         RenderTexture previous = cam.targetTexture;
         try
         {
-            cam.targetTexture = full;
+            cam.targetTexture = liveTexture;
             cam.Render();
         }
         finally
@@ -256,43 +479,56 @@ public class PixelTitleScreen : MonoBehaviour
             cam.targetTexture = previous;
         }
 
-        // Shrink in steps (smoother than one big jump) and keep the two sizes we want.
-        RenderTexture step = Shrink(full, 2);
-        RenderTexture.ReleaseTemporary(full);
-        int size = 2;
-        RenderTexture light = null, strong = null;
-        while (size < strongBlurDivisor)
+        RenderTexture source = liveTexture;
+        foreach (RenderTexture step in chain)
         {
-            RenderTexture next = Shrink(step, 2);
-            if (step != light) { step.Release(); Destroy(step); }
-            step = next;
-            size *= 2;
-            if (light == null && size >= lightBlurDivisor) light = step;
-            if (size >= strongBlurDivisor) strong = step;
+            Graphics.Blit(source, step);
+            source = step;
         }
-        if (light == null) light = step;
-        if (strong == null) strong = step;
-        lightTexture = light;
-        strongTexture = strong;
+
+        if (!pictureReady)
+        {
+            pictureReady = true;
+            lightImage.enabled = strongImage.enabled = true;
+        }
     }
 
     // ------------------------------------------------------------------
-    // Play
+    // Buttons
     // ------------------------------------------------------------------
+
+    private void OnLoad()
+    {
+        if (!playing) PixelPauseMenu.OpenLoadFromTitle();
+    }
+
+    private void OnSettings()
+    {
+        if (!playing) PixelPauseMenu.OpenSettingsFromTitle();
+    }
+
+    private void OnQuit()
+    {
+        if (playing) return;
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
 
     private void OnPlay()
     {
         if (playing) return;
         playing = true;
-        playButton.interactable = false;
+        foreach (Button b in buttons) b.interactable = false;
         StartCoroutine(PlayRoutine());
     }
 
     private IEnumerator PlayRoutine()
     {
         PixelAudio.Play("game_start");
-        cover.color = new Color(0f, 0f, 0f, 0f); // from now on the blur layers do the covering (without a picture it fades below)
-        bool hasPicture = strongImage.enabled;
+        bool hasPicture = pictureReady;
         Color coverStart = hasPicture ? Color.clear : new Color(0f, 0f, 0f, 0.85f);
         cover.color = coverStart;
 
@@ -304,8 +540,8 @@ public class PixelTitleScreen : MonoBehaviour
 
             float button = Mathf.Clamp01(t / buttonShrinkSeconds);
             float s = 1f - button * button; // shrinks faster and faster
-            buttonRect.localScale = Vector3.one * Mathf.Max(0f, s);
-            if (titleLabel != null) titleLabel.color = new Color(1f, 1f, 1f, 1f - button);
+            foreach (RectTransform r in shrinkRects) if (r != null) r.localScale = Vector3.one * Mathf.Max(0f, s);
+            if (logoImage != null) logoImage.color = new Color(1f, 1f, 1f, 1f - button);
 
             float thin = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / barThinSeconds));
             barRect.sizeDelta = new Vector2(0f, barHeight * (1f - thin));

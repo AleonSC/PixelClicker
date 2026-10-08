@@ -27,7 +27,7 @@ public class PixelCameraIntro : MonoBehaviour
     [Header("Start Position (close-up from the side)")]
     [Min(0.5f)]
     [Tooltip("How far from the cube the camera starts, in cube sizes.")]
-    [SerializeField] private float closeDistanceInCubes = 2.6f;
+    [SerializeField] private float closeDistance = 1.8f;
 
     [Tooltip("How high the camera starts, in cube sizes above the middle of the cube (0 = level with it).")]
     [SerializeField] private float closeHeightInCubes = 0.15f;
@@ -89,7 +89,7 @@ public class PixelCameraIntro : MonoBehaviour
         if (right.sqrMagnitude < 0.0001f) right = Vector3.right;
         right.Normalize();
         float sign = Mathf.Lerp(-1f, 1f, side);
-        startOffset = right * (sign * cube * closeDistanceInCubes) + Vector3.up * (cube * closeHeightInCubes);
+        startOffset = right * (sign * cube * closeDistance) + Vector3.up * (cube * closeHeightInCubes);
         finalOffset = finalPosition - pivot;
 
         startFov = startFieldOfView > 0f ? startFieldOfView : finalFov;
