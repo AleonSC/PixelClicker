@@ -472,6 +472,7 @@ public class PixelPauseMenu : MonoBehaviour
         public string label;
         public Color color;
         public UnityEngine.Events.UnityAction action;
+        public bool fullRow; // spans the whole row (Resume, Quit)
     }
     private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
     private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, sortersValue, comboValue;
@@ -767,25 +768,29 @@ public class PixelPauseMenu : MonoBehaviour
 
         float y = 30f + titleFontSize * 1.6f + 20f;
         List<MenuEntry> entries = new List<MenuEntry>();
-        entries.Add(new MenuEntry { label = resumeText, color = menuButtonColor, action = () => SetPaused(false) });
-        if (showSaveLoad && saveGame != null)
-        {
-            BuildSaveLoadPanel();
-            entries.Add(new MenuEntry { label = saveLoadText, color = menuButtonColor, action = () => ShowView(saveLoadPanel) });
-        }
 
+        // Build every screen first, then list the buttons in the order they appear (two per row).
+        if (showSaveLoad && saveGame != null) BuildSaveLoadPanel();
         BuildStatsPanel();
         BuildSettingsPanel();
-        if (showStats) entries.Add(new MenuEntry { label = statsText, color = menuButtonColor, action = () => ShowView(statsPanel) });
-        if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
         BuildChangelogPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", howToPlayText, howToPlayResource, emptyHowToPlayText);
         if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", controlsText, controlsResource, emptyControlsText);
-        if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
+
+        // Resume on top, alone
+        entries.Add(new MenuEntry { label = resumeText, color = menuButtonColor, action = () => SetPaused(false), fullRow = true });
+        // Save / Load | Stats
+        if (saveLoadPanel != null) entries.Add(new MenuEntry { label = saveLoadText, color = menuButtonColor, action = () => ShowView(saveLoadPanel) });
+        if (showStats) entries.Add(new MenuEntry { label = statsText, color = menuButtonColor, action = () => ShowView(statsPanel) });
+        // Settings | Controls
+        if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
         if (controlsScreen != null) entries.Add(new MenuEntry { label = controlsText, color = menuButtonColor, action = () => ShowView(controlsScreen.panel) });
+        // How to Play | Changelog
+        if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
         if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
-        if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = Quit });
+        // Quit at the bottom, alone
+        if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = Quit, fullRow = true });
 
         LayoutMainButtons(panel.transform, entries, y, panelRect);
 
@@ -1451,8 +1456,34 @@ public class PixelPauseMenu : MonoBehaviour
     private void LayoutMainButtons(Transform parent, List<MenuEntry> entries, float top, RectTransform panelRect)
     {
         int columns = Mathf.Max(1, mainColumns);
-        int rows = Mathf.CeilToInt(entries.Count / (float)columns);
         float cellWidth = (mainPanelWidth - 80f - columnGap * (columns - 1)) / columns;
+
+        // Work out each button's row and column first. A full-row entry starts a new row and takes it alone;
+        // a lone last button also spans its row.
+        int[] rowOf = new int[entries.Count], colOf = new int[entries.Count];
+        bool[] spans = new bool[entries.Count];
+        int rowNow = 0, colNow = 0;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].fullRow || columns == 1)
+            {
+                if (colNow != 0) { rowNow++; colNow = 0; }
+                rowOf[i] = rowNow; colOf[i] = 0; spans[i] = true;
+                rowNow++;
+                continue;
+            }
+            rowOf[i] = rowNow; colOf[i] = colNow;
+            colNow++;
+            if (colNow >= columns) { colNow = 0; rowNow++; }
+        }
+        if (colNow != 0)
+        {
+            // The last row has a single button: let it span the row.
+            int last = entries.Count - 1;
+            if (!spans[last] && colOf[last] == 0) spans[last] = true;
+            rowNow++;
+        }
+        int rows = rowNow;
 
         float buttonHeight = menuButtonSize.y;
         float available = AvailableHeight();
@@ -1465,16 +1496,14 @@ public class PixelPauseMenu : MonoBehaviour
 
         for (int i = 0; i < entries.Count; i++)
         {
-            int row = i / columns, col = i % columns;
-            bool lastAlone = i == entries.Count - 1 && col == 0 && columns > 1;
-            float width = lastAlone ? mainPanelWidth - 80f : cellWidth; // a lone last button spans the row
-            float x = lastAlone ? 0f : -(mainPanelWidth - 80f) * 0.5f + cellWidth * 0.5f + col * (cellWidth + columnGap);
+            float width = spans[i] ? mainPanelWidth - 80f : cellWidth;
+            float x = spans[i] ? 0f : -(mainPanelWidth - 80f) * 0.5f + cellWidth * 0.5f + colOf[i] * (cellWidth + columnGap);
 
             Button button = MakeButton(parent, entries[i].label + " Button", entries[i].label, new Vector2(width, buttonHeight),
                                        entries[i].color, menuButtonFontSize);
             RectTransform rt = button.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(x, -(top + row * (buttonHeight + menuButtonSpacing)));
+            rt.anchoredPosition = new Vector2(x, -(top + rowOf[i] * (buttonHeight + menuButtonSpacing)));
             button.onClick.AddListener(entries[i].action);
         }
 
