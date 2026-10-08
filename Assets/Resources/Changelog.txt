@@ -61,3 +61,4 @@
 [2026-10-08 15:37 UTC] The Pixel Bank hose tip boxes (hose, suck, spit, full) are now the small size.
 [2026-10-08 15:37 UTC] Fixed the black hole counter text glitching while it fades.
 [2026-10-08 15:41 UTC] Ultra Pad text is now written flat on the top of the pad itself: the pixel type in capitals with the timer centred underneath.
+[2026-10-08 15:43 UTC] Ultra Pad timer moved to the bottom of the pad and made bigger; the pixel name stays at the top.

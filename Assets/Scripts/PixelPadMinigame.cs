@@ -99,8 +99,8 @@ public class PixelPadMinigame : PixelMinigame
     [Tooltip("How much the pad glows (so it is easy to spot).")]
     [SerializeField] private float padGlow = 0.6f;
 
-    [Tooltip("Text above the floating pixel (lines allowed with \\n). {0} = the pixel type in capitals, {1} = seconds left.")]
-    [SerializeField] private string labelText = "{0}\n<size=70%>{1}s</size>";
+    [Tooltip("Text at the top of the pad. {0} = the pixel type in capitals.")]
+    [SerializeField] private string nameText = "{0}";
 
     [Min(0.3f)]
     [Tooltip("Size of that text (3D text: about 10 per world unit). It is written flat on the pad.")]
@@ -109,6 +109,17 @@ public class PixelPadMinigame : PixelMinigame
     [Range(0f, 0.95f)]
     [Tooltip("Where the text sits on the pad: 0 = the middle, 1 = the pad's far edge (the top of it on screen).")]
     [SerializeField] private float labelInset = 0.58f;
+
+    [Tooltip("Timer text at the bottom of the pad. {0} = seconds left.")]
+    [SerializeField] private string timerText = "{0}s";
+
+    [Min(0.3f)]
+    [Tooltip("Size of the timer text (3D text: about 10 per world unit). Written flat on the pad.")]
+    [SerializeField] private float timerTextSize = 3.4f;
+
+    [Range(0f, 0.95f)]
+    [Tooltip("Where the timer sits on the pad: 0 = the middle, 1 = the pad's near edge (the bottom of it on screen).")]
+    [SerializeField] private float timerInset = 0.55f;
 
     [Header("Feedback")]
     [Tooltip("Text when a correct pixel is taken.")]
@@ -596,6 +607,20 @@ public class PixelPadMinigame : PixelMinigame
         labelGo.transform.position = point + far * (padSize * 0.5f * labelInset) + Vector3.up * 0.09f;
         labelGo.transform.rotation = Quaternion.LookRotation(Vector3.down, far);
 
+        // The timer: bigger, flat on the pad near its near (bottom-on-screen) edge.
+        GameObject timerGo = new GameObject("Timer");
+        timerGo.transform.SetParent(root.transform, false);
+        TextMeshPro timerLabel = timerGo.AddComponent<TextMeshPro>();
+        timerLabel.fontSize = timerTextSize;
+        timerLabel.fontStyle = FontStyles.Bold;
+        timerLabel.alignment = TextAlignmentOptions.Center;
+        timerLabel.color = Color.white;
+        timerLabel.overflowMode = TextOverflowModes.Overflow;
+        if (clicker.UIFont != null) timerLabel.font = clicker.UIFont;
+        timerLabel.rectTransform.sizeDelta = new Vector2(padSize, 1.2f);
+        timerGo.transform.position = point - far * (padSize * 0.5f * timerInset) + Vector3.up * 0.09f;
+        timerGo.transform.rotation = Quaternion.LookRotation(Vector3.down, far);
+
         // Grow in.
         float t = 0f;
         while (t < 0.35f)
@@ -617,7 +642,8 @@ public class PixelPadMinigame : PixelMinigame
             left -= Time.deltaTime;
             animTime += Time.deltaTime;
             visual.Animate(animTime);
-            label.text = string.Format(labelText, tier.displayName.ToUpperInvariant(), Mathf.CeilToInt(Mathf.Max(0f, left)));
+            label.text = string.Format(nameText, tier.displayName.ToUpperInvariant());
+            timerLabel.text = string.Format(timerText, Mathf.CeilToInt(Mathf.Max(0f, left)));
             TakePixels(root.transform, target, cam);
             yield return null;
         }
