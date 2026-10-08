@@ -407,9 +407,10 @@ public class PixelBlackholeMinigame : PixelMinigame
                 if (counterShowOnHover && cam != null && size > 0.3f && MouseOverHole(cam, center, currentRadius)) lastActivity = t;
                 float wanted = t - lastActivity < counterVisibleSeconds ? 1f : 0f;
                 counterAlpha = Mathf.MoveTowards(counterAlpha, wanted, Time.deltaTime / counterFadeSeconds);
-                counter.color = new Color(1f, 1f, 1f, counterAlpha);
-                counter.outlineColor = new Color32(0, 0, 0, (byte)Mathf.RoundToInt(255f * counterAlpha));
-                counter.gameObject.SetActive(counterAlpha > 0.001f);
+                // Only the vertex alpha changes (it fades the outline with the face); the outline colour / material stay untouched,
+                // because changing them every frame made the text glitch.
+                counter.alpha = counterAlpha;
+                counter.enabled = counterAlpha > 0.001f;
                 counter.transform.localScale = Vector3.one * (size * (1f + punch * 0.35f));
                 counter.transform.position = center + Vector3.up * (0.9f + radius * 0.15f);
                 if (cam != null)

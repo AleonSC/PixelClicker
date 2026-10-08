@@ -59,3 +59,4 @@
 [2026-10-08 15:32 UTC] Ultra Pad label now shows the pixel type in capitals (with the timer under it) above the floating pixel preview instead of 'Feed me'.
 [2026-10-08 15:33 UTC] Black hole goal counter now only shows when a pixel is consumed or the mouse is over the hole, and fades away after a few seconds of no activity.
 [2026-10-08 15:37 UTC] The Pixel Bank hose tip boxes (hose, suck, spit, full) are now the small size.
+[2026-10-08 15:37 UTC] Fixed the black hole counter text glitching while it fades.
