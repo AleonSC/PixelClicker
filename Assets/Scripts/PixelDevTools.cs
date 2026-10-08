@@ -30,10 +30,30 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private TMP_FontAsset font;
 
     [Header("Cheats")]
-    [Tooltip("Amount the 'Add to all' button gives each pixel type.")]
-    [SerializeField] private double amountToAdd = 10;
+    [Tooltip("Remember the tick boxes, the amount and the drop-down choices between play sessions (PlayerPrefs). The values set in the Inspector are the first-time defaults.")]
+    [SerializeField] private bool rememberSettings = true;
 
-    [Tooltip("Does 'Add to all' also include tiers that aren't unlocked yet? Off = only unlocked tiers.")]
+    [Tooltip("Start with 'Disable old pixel despawns' ticked: old pixels never expire on their own.")]
+    [SerializeField] private bool disableDespawn = false;
+
+    [Tooltip("Start with 'God pixel mode' ticked: the mouse spawns pixels (left click) and destroys them (right click); scroll to choose the pixel.")]
+    [SerializeField] private bool godMode = false;
+
+    [Min(1f)]
+    [Tooltip("God pixel mode: pixels spawned per second while the left button is held.")]
+    [SerializeField] private float godSpawnRate = 14f;
+
+    [Min(5f)]
+    [Tooltip("God pixel mode: how close (screen pixels) an old pixel must be to the cursor to be destroyed by a right click.")]
+    [SerializeField] private float godEraseRadius = 70f;
+
+    [Tooltip("God pixel mode: where the small display sits relative to the cursor (canvas units).")]
+    [SerializeField] private Vector2 godDisplayOffset = new Vector2(34f, -34f);
+
+    [Tooltip("God pixel mode: text size of the small display.")]
+    [SerializeField] private float godFontSize = 24f;
+
+    [Tooltip("Does the 'All pixels' add option also include tiers that aren't unlocked yet? Off = only unlocked tiers.")]
     [SerializeField] private bool includeLockedTiers = false;
 
     [Tooltip("The Add buttons also give the same amount of Ultra pixels of that type (rounded down to a whole number).")]
@@ -61,8 +81,14 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the add-pixels button.")]
     [SerializeField] private string addText = "Add";
 
-    [Tooltip("Label of the add-to-all button. {0} = the amount.")]
-    [SerializeField] private string addAllText = "Add +{0} to all pixels";
+    [Tooltip("First entry of the pixel drop-down: adds the amount to every pixel type.")]
+    [SerializeField] private string allPixelsText = "All pixels";
+
+    [Tooltip("Label of the disable-despawns tick box.")]
+    [SerializeField] private string noDespawnToggleText = "Disable old pixel despawns";
+
+    [Tooltip("Label of the god-pixel-mode tick box.")]
+    [SerializeField] private string godToggleText = "God pixel mode (scroll = pick, left = spawn, right = destroy)";
 
     [Tooltip("Label of the minigame spawn button.")]
     [SerializeField] private string spawnText = "Spawn";
@@ -91,8 +117,14 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Entry that spawns only Red, Green and Blue.")]
     [SerializeField] private string spawnRgbText = "Spawn: RGB pack";
 
-    [Tooltip("Size of the on-screen selector (canvas units).")]
+    [Tooltip("Size of the on-screen pixel selector (canvas units).")]
     [SerializeField] private Vector2 selectorSize = new Vector2(440f, 56f);
+
+    [Tooltip("Width of the on-screen minigame drop-down next to it (canvas units).")]
+    [SerializeField] private float minigameSelectorWidth = 340f;
+
+    [Tooltip("Width of the on-screen minigame Spawn button (canvas units).")]
+    [SerializeField] private float spawnButtonWidth = 130f;
 
     [Tooltip("Label of the close button.")]
     [SerializeField] private string closeText = "Close";
@@ -144,7 +176,6 @@ public class PixelDevTools : MonoBehaviour
     private GameObject panel;
     private TMP_Dropdown pixelDropdown;
     private TMP_InputField amountField;
-    private TMP_Dropdown minigameDropdown;
     private readonly List<PixelMinigame> dropdownMinigames = new List<PixelMinigame>();
 
     /// <summary>True when dev tools exist (Editor / development build). The pause menu uses this to show its button.</summary>
@@ -171,7 +202,45 @@ public class PixelDevTools : MonoBehaviour
     {
         if (!allowInFullBuild && !Debug.isDebugBuild) { Destroy(this); return; }
         instance = this;
+        LoadSettings();
         PixelClicker.InfiniteResources = infiniteResources;
+        OldPixelDespawn.DevNoDespawn = disableDespawn;
+        PixelClicker.GodMode = godMode;
+    }
+
+    // ------------------------------------------------------------------
+    // Remembered settings (PlayerPrefs)
+    // ------------------------------------------------------------------
+
+    private const string PrefPrefix = "PixelClicker.Dev.";
+
+    private bool GetBool(string key, bool fallback) =>
+        !rememberSettings ? fallback : PlayerPrefs.GetInt(PrefPrefix + key, fallback ? 1 : 0) != 0;
+
+    private void SetBool(string key, bool value)
+    {
+        if (!rememberSettings) return;
+        PlayerPrefs.SetInt(PrefPrefix + key, value ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    private int GetInt(string key, int fallback) => !rememberSettings ? fallback : PlayerPrefs.GetInt(PrefPrefix + key, fallback);
+
+    private void SetInt(string key, int value)
+    {
+        if (!rememberSettings) return;
+        PlayerPrefs.SetInt(PrefPrefix + key, value);
+        PlayerPrefs.Save();
+    }
+
+    private void LoadSettings()
+    {
+        clearKeyEnabled = GetBool("ClearKey", clearKeyEnabled);
+        infiniteResources = GetBool("Infinite", infiniteResources);
+        spawnSelectorEnabled = GetBool("Selector", spawnSelectorEnabled);
+        disableDespawn = GetBool("NoDespawn", disableDespawn);
+        godMode = GetBool("God", godMode);
+        if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
     }
 
     private void Start()
@@ -201,11 +270,15 @@ public class PixelDevTools : MonoBehaviour
         }
         if (canvasRoot != null) Destroy(canvasRoot);
         if (selectorRoot != null) Destroy(selectorRoot);
+        if (godRoot != null) Destroy(godRoot);
+        PixelClicker.GodMode = false;
+        OldPixelDespawn.DevNoDespawn = false;
         if (spawnSelectorEnabled && clicker != null && clicker.isActiveAndEnabled) clicker.SetDevSpawnTiers(null);
     }
 
     private void Update()
     {
+        UpdateGod();
         if (!clearKeyEnabled || clicker == null || PixelPauseMenu.IsPaused) return;
         if (IsTyping()) return;
         if (PixelInput.QPressed()) clicker.ClearOldPixels();
@@ -224,13 +297,13 @@ public class PixelDevTools : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>Adds the amount to every (eligible) pixel type.</summary>
-    public void AddToAll()
+    public void AddToAll(double amount)
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         for (int i = 0; i < tiers.Length; i++)
         {
             if (!includeLockedTiers && !tiers[i].unlocked) continue;
-            GiveAmount(i, amountToAdd);
+            GiveAmount(i, amount);
         }
     }
 
@@ -246,15 +319,10 @@ public class PixelDevTools : MonoBehaviour
         if (pixelDropdown == null || amountField == null) return;
         string text = amountField.text.Trim().Replace(",", "");
         if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double amount)) return;
-        GiveAmount(pixelDropdown.value, amount);
+        if (pixelDropdown.value == 0) AddToAll(amount); // "All pixels"
+        else GiveAmount(pixelDropdown.value - 1, amount);
     }
 
-    private void SpawnSelected()
-    {
-        if (minigameDropdown == null || minigameDropdown.value < 0 || minigameDropdown.value >= dropdownMinigames.Count) return;
-        PixelMinigame game = dropdownMinigames[minigameDropdown.value];
-        if (game != null) game.SpawnNow();
-    }
 
     private void SkipIntro()
     {
@@ -287,25 +355,13 @@ public class PixelDevTools : MonoBehaviour
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         int keep = pixelDropdown.value;
         List<string> names = new List<string>();
+        names.Add(allPixelsText);
         foreach (PixelClicker.PixelTier t in tiers) names.Add(t.unlocked ? t.displayName : t.displayName + " (locked)");
         pixelDropdown.ClearOptions();
         pixelDropdown.AddOptions(names);
         pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
         pixelDropdown.RefreshShownValue();
 
-        keep = minigameDropdown.value;
-        dropdownMinigames.Clear();
-        names.Clear();
-        foreach (PixelMinigame game in PixelMinigame.All)
-        {
-            if (game == null) continue;
-            dropdownMinigames.Add(game);
-            names.Add(game.DisplayName);
-        }
-        minigameDropdown.ClearOptions();
-        minigameDropdown.AddOptions(names);
-        minigameDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
-        minigameDropdown.RefreshShownValue();
     }
 
     private void BuildPanel()
@@ -344,31 +400,13 @@ public class PixelDevTools : MonoBehaviour
         amountField = PixelUIKit.CreateInputField(font, box.transform, "Amount Field", new Vector2(fieldW, rowHeight),
                                                   boxColor, textColor, fontSize, "amount");
         amountField.text = defaultAmount;
+        amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
         Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
         Button add = PixelUIKit.CreateButton(font, box.transform, "Add Button", addText, new Vector2(btnW, rowHeight),
                                              buttonColor, textColor, fontSize);
         Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, btnW);
         add.onClick.AddListener(AddSelected);
         y += rowHeight + 16f;
-
-        // Row: add to all
-        Button all = PixelUIKit.CreateButton(font, box.transform, "Add All Button",
-                                             string.Format(addAllText, PixelClicker.FormatNumber(amountToAdd)),
-                                             new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(all.GetComponent<RectTransform>(), 40f, y, inner);
-        all.onClick.AddListener(AddToAll);
-        y += rowHeight + 24f;
-
-        // Row: minigame dropdown | Spawn
-        float spawnW = inner * 0.28f, mgW = inner - spawnW - 10f;
-        minigameDropdown = PixelUIKit.CreateDropdown(font, box.transform, "Minigame Dropdown", new Vector2(mgW, rowHeight),
-                                                     boxColor, listColor, textColor, fontSize);
-        Place(minigameDropdown.GetComponent<RectTransform>(), 40f, y, mgW);
-        Button spawn = PixelUIKit.CreateButton(font, box.transform, "Spawn Button", spawnText, new Vector2(spawnW, rowHeight),
-                                               buttonColor, textColor, fontSize);
-        Place(spawn.GetComponent<RectTransform>(), 40f + mgW + 10f, y, spawnW);
-        spawn.onClick.AddListener(SpawnSelected);
-        y += rowHeight + 24f;
 
         // Row: skip intro
         Button skip = PixelUIKit.CreateButton(font, box.transform, "Skip Intro Button", skipIntroText,
@@ -385,16 +423,29 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for the clear key
-        BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => clearKeyEnabled = on);
+        BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for infinite resources
         BuildToggleRow(box.transform, infiniteToggleText, y, inner, infiniteResources,
-                       on => { infiniteResources = on; PixelClicker.InfiniteResources = on; });
+                       on => { infiniteResources = on; PixelClicker.InfiniteResources = on; SetBool("Infinite", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for the on-screen spawn selector
         BuildToggleRow(box.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
+        y += rowHeight + 24f;
+
+        // Row: tick box to stop old pixels despawning
+        BuildToggleRow(box.transform, noDespawnToggleText, y, inner, disableDespawn, on =>
+        {
+            disableDespawn = on;
+            OldPixelDespawn.DevNoDespawn = on;
+            SetBool("NoDespawn", on);
+        });
+        y += rowHeight + 24f;
+
+        // Row: tick box for god pixel mode
+        BuildToggleRow(box.transform, godToggleText, y, inner, godMode, SetGodMode);
         y += rowHeight + 24f;
 
         // Close
@@ -407,8 +458,12 @@ public class PixelDevTools : MonoBehaviour
         boxRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
 
         FillDropdowns();
+        pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("PixelIndex", 0), 0, pixelDropdown.options.Count - 1));
+        pixelDropdown.RefreshShownValue();
+        pixelDropdown.onValueChanged.AddListener(v => SetInt("PixelIndex", v));
         panel.SetActive(false);
         if (spawnSelectorEnabled) SetSelector(true);
+        if (godMode) SetGodMode(true);
     }
 
     // ------------------------------------------------------------------
@@ -419,9 +474,12 @@ public class PixelDevTools : MonoBehaviour
     private TMP_Dropdown selectorDropdown;
     private readonly List<PixelClicker.PixelType[]> selectorChoices = new List<PixelClicker.PixelType[]>();
 
+    private TMP_Dropdown selectorMinigameDropdown;
+
     private void SetSelector(bool on)
     {
         spawnSelectorEnabled = on;
+        SetBool("Selector", on);
         if (clicker == null) return;
         if (!on)
         {
@@ -436,25 +494,51 @@ public class PixelDevTools : MonoBehaviour
         ApplySelector(selectorDropdown.value);
     }
 
+    /// <summary>The on-screen row at the top: pixel drop-down, then minigame drop-down + Spawn button.</summary>
     private void BuildSelector()
     {
         selectorRoot = PixelUIKit.CreateCanvas("PixelDevTools Spawn Selector", 145, referenceResolution, true);
         selectorRoot.transform.SetParent(transform, false);
 
+        const float gap = 10f;
+        float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth;
+        float x = -total * 0.5f;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float top = -(bar + 12f);
+
         selectorDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Spawn Dropdown", selectorSize,
                                                      boxColor, listColor, textColor, fontSize);
-        RectTransform rt = selectorDropdown.GetComponent<RectTransform>();
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = selectorSize;
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        rt.anchoredPosition = new Vector2(0f, -(bar + 12f));
-        selectorDropdown.onValueChanged.AddListener(ApplySelector);
+        PlaceTop(selectorDropdown.GetComponent<RectTransform>(), x, top, selectorSize);
+        selectorDropdown.onValueChanged.AddListener(v => { SetInt("SelPixel", v); ApplySelector(v); });
+        x += selectorSize.x + gap;
+
+        Vector2 mgSize = new Vector2(minigameSelectorWidth, selectorSize.y);
+        selectorMinigameDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Minigame Dropdown", mgSize,
+                                                             boxColor, listColor, textColor, fontSize);
+        PlaceTop(selectorMinigameDropdown.GetComponent<RectTransform>(), x, top, mgSize);
+        selectorMinigameDropdown.onValueChanged.AddListener(v => SetInt("SelMinigame", v));
+        x += minigameSelectorWidth + gap;
+
+        Vector2 btnSize = new Vector2(spawnButtonWidth, selectorSize.y);
+        Button spawn = PixelUIKit.CreateButton(font, selectorRoot.transform, "Spawn Button", spawnText, btnSize,
+                                               buttonColor, textColor, fontSize);
+        PlaceTop(spawn.GetComponent<RectTransform>(), x, top, btnSize);
+        spawn.onClick.AddListener(SpawnSelected);
     }
 
-    /// <summary>Options: normal, Monochrome pack, RGB pack, then every pixel type (locked ones marked).</summary>
+    private static void PlaceTop(RectTransform rt, float x, float y, Vector2 size)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.sizeDelta = size;
+        rt.anchoredPosition = new Vector2(x, y);
+    }
+
+    /// <summary>Pixel options: normal, Monochrome pack, RGB pack, then every pixel type (locked ones marked). Plus the minigame list.</summary>
     private void FillSelector()
     {
-        int keep = selectorDropdown.value;
+        bool first = selectorChoices.Count == 0;
+        int keep = first ? GetInt("SelPixel", 0) : selectorDropdown.value;
         selectorChoices.Clear();
         List<string> names = new List<string>();
 
@@ -474,12 +558,163 @@ public class PixelDevTools : MonoBehaviour
         selectorDropdown.AddOptions(names);
         selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, names.Count - 1));
         selectorDropdown.RefreshShownValue();
+
+        // Minigames
+        int keepGame = first ? GetInt("SelMinigame", 0) : selectorMinigameDropdown.value;
+        dropdownMinigames.Clear();
+        names.Clear();
+        foreach (PixelMinigame game in PixelMinigame.All)
+        {
+            if (game == null) continue;
+            dropdownMinigames.Add(game);
+            names.Add(game.DisplayName);
+        }
+        selectorMinigameDropdown.ClearOptions();
+        selectorMinigameDropdown.AddOptions(names);
+        selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(keepGame, 0, Mathf.Max(0, names.Count - 1)));
+        selectorMinigameDropdown.RefreshShownValue();
     }
 
     private void ApplySelector(int index)
     {
         if (clicker == null || index < 0 || index >= selectorChoices.Count) return;
         clicker.SetDevSpawnTiers(selectorChoices[index]);
+    }
+
+    private void SpawnSelected()
+    {
+        if (selectorMinigameDropdown == null || selectorMinigameDropdown.value < 0 || selectorMinigameDropdown.value >= dropdownMinigames.Count) return;
+        PixelMinigame game = dropdownMinigames[selectorMinigameDropdown.value];
+        if (game != null) game.SpawnNow();
+    }
+
+    // ------------------------------------------------------------------
+    // God pixel mode: scroll = pick a pixel, left click = spawn, right click = destroy
+    // ------------------------------------------------------------------
+
+    private GameObject godRoot;
+    private RectTransform godRect, godCanvasRect;
+    private TMP_Text godLabel;
+    private Image godSwatch;
+    private readonly List<int> godTiers = new List<int>();
+    private int godChoice;
+    private float godSpawnTimer;
+
+    private void SetGodMode(bool on)
+    {
+        godMode = on;
+        SetBool("God", on);
+        PixelClicker.GodMode = on;
+        if (clicker == null) return;
+        if (on)
+        {
+            if (godRoot == null) BuildGodDisplay();
+            godChoice = Mathf.Clamp(GetInt("GodChoice", 0), 0, 999);
+        }
+        if (godRoot != null) godRoot.SetActive(on);
+    }
+
+    private void BuildGodDisplay()
+    {
+        godRoot = PixelUIKit.CreateCanvas("PixelDevTools God Pixel", 146, referenceResolution, false);
+        godRoot.transform.SetParent(transform, false);
+        godCanvasRect = godRoot.GetComponent<RectTransform>();
+
+        GameObject holder = new GameObject("Display", typeof(RectTransform));
+        holder.transform.SetParent(godRoot.transform, false);
+        godRect = holder.GetComponent<RectTransform>();
+        godRect.anchorMin = godRect.anchorMax = godRect.pivot = new Vector2(0f, 1f);
+        godRect.sizeDelta = new Vector2(10f, 10f);
+
+        GameObject sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
+        sw.transform.SetParent(holder.transform, false);
+        godSwatch = sw.GetComponent<Image>();
+        godSwatch.raycastTarget = false;
+        RectTransform sr = sw.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
+        sr.sizeDelta = new Vector2(godFontSize, godFontSize);
+        sr.anchoredPosition = Vector2.zero;
+
+        godLabel = PixelUIKit.CreateText(font, holder.transform, "Label", "", godFontSize, TextAlignmentOptions.MidlineLeft,
+                                         FontStyles.Bold, textColor);
+        godLabel.overflowMode = TextOverflowModes.Overflow;
+        RectTransform lr = godLabel.rectTransform;
+        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 1f);
+        lr.sizeDelta = new Vector2(400f, godFontSize * 1.2f);
+        lr.anchoredPosition = new Vector2(godFontSize + 8f, 0f);
+    }
+
+    private void UpdateGod()
+    {
+        if (!godMode || clicker == null || godRoot == null) return;
+        bool active = !PixelPauseMenu.IsPaused && !IsOpen && !PixelTitleScreen.Showing;
+        if (godRoot.activeSelf != active) godRoot.SetActive(active);
+        if (!active) return;
+
+        // The pixels that can be spawned (fly-away ones can't).
+        godTiers.Clear();
+        for (int i = 0; i < clicker.Tiers.Length; i++)
+            if (!clicker.Tiers[i].flyAway) godTiers.Add(i);
+        if (godTiers.Count == 0) return;
+        godChoice = ((godChoice % godTiers.Count) + godTiers.Count) % godTiers.Count;
+
+        Vector2 pointer = PixelInput.PointerPosition();
+        bool overUI = PixelInput.PointerOverUI();
+
+        // Scroll to choose.
+        float scroll = overUI ? 0f : PixelInput.ScrollY();
+        if (Mathf.Abs(scroll) > 0.01f)
+        {
+            godChoice += scroll > 0f ? -1 : 1;
+            godChoice = ((godChoice % godTiers.Count) + godTiers.Count) % godTiers.Count;
+            SetInt("GodChoice", godChoice);
+            PixelAudio.Play("bank_select");
+        }
+
+        PixelClicker.PixelTier tier = clicker.Tiers[godTiers[godChoice]];
+
+        // The little display next to the cursor.
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(godCanvasRect, pointer, null, out Vector2 local))
+            godRect.anchoredPosition = local - new Vector2(godCanvasRect.rect.xMin, godCanvasRect.rect.yMax) + godDisplayOffset; // relative to the top-left anchor
+        godSwatch.color = tier.UIColor;
+        PixelUIKit.SetText(godLabel, tier.displayName);
+
+        if (overUI || PixelBank.HoseOn) return;
+
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return;
+
+        // Left: spawn old pixels at the cursor (hold to keep spawning).
+        if (PixelInput.LeftPressed()) godSpawnTimer = 0f;
+        if (PixelInput.LeftHeld())
+        {
+            godSpawnTimer -= Time.unscaledDeltaTime;
+            if (godSpawnTimer <= 0f)
+            {
+                godSpawnTimer = 1f / godSpawnRate;
+                Transform cube = clicker.PixelTransform;
+                Vector3 anchor = cube != null ? cube.position : cam.transform.position + cam.transform.forward * 10f;
+                Plane plane = new Plane(-cam.transform.forward, anchor);
+                Ray ray = cam.ScreenPointToRay(pointer);
+                if (plane.Raycast(ray, out float enter))
+                    clicker.SpawnStoredPixel(godTiers[godChoice], tier.amountPerClick, ray.GetPoint(enter), Random.insideUnitSphere * 0.6f);
+            }
+        }
+
+        // Right: destroy old pixels near the cursor (no payout).
+        if (PixelInput.RightHeld() || PixelInput.RightPressed())
+        {
+            var list = clicker.OldPixels;
+            for (int i = list.Count - 1; i >= 0; i--)
+            {
+                Rigidbody rb = list[i];
+                if (rb == null) continue;
+                Vector3 sp = cam.WorldToScreenPoint(rb.position);
+                if (sp.z < 0f || ((Vector2)sp - pointer).sqrMagnitude > godEraseRadius * godEraseRadius) continue;
+                clicker.ReleaseOldPixel(rb, false);
+                Destroy(rb.gameObject);
+            }
+        }
     }
 
     /// <summary>Anchors a UI element to the panel's top-left corner at (x, y) with a width.</summary>

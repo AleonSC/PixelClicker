@@ -1137,6 +1137,7 @@ public partial class PixelShop : MonoBehaviour
             if (!givesRed && !pack.unlocksAutoClicker) continue;
 
             pack.purchased = true;
+            if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.UserDisabled = true; // unlocked but switched OFF (Toggles window)
             ApplyPackEffects(pack);
             onPackPurchased?.Invoke(i);
         }
@@ -1154,15 +1155,29 @@ public partial class PixelShop : MonoBehaviour
                 if (pack.level >= pack.levels.Length) continue;
                 pack.level = pack.levels.Length;
                 ApplyUpgrade(pack);
+                if (pack.upgradeEffect == UpgradeEffect.ComboMeter && combo != null) combo.UserDisabled = true; // unlocked but OFF
             }
             else
             {
                 if (pack.purchased) continue;
                 pack.purchased = true;
+
+                // Everything that has a switch in the Toggles window is unlocked but left switched OFF.
+                if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.UserDisabled = true;
+                if (pack.unlocksGrabbing && grab != null) grab.UserDisabled = true;
+                if (pack.unlocksTimeStop && timeStop != null) timeStop.UserDisabled = true;
+                if (!string.IsNullOrEmpty(pack.unlocksMinigame))
+                {
+                    PixelMinigame game = PixelMinigame.Find(pack.unlocksMinigame);
+                    if (game != null) game.UserDisabled = true;
+                }
                 ApplyPackEffects(pack);
             }
             onPackPurchased?.Invoke(i);
         }
+
+        // Pixel types with a spawn switch are left switched off too.
+        for (int t = 0; t < clicker.Tiers.Length; t++) clicker.SetSpawnEnabled(t, false);
         RefreshRows();
     }
 

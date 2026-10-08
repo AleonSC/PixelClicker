@@ -20,6 +20,16 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>Mouse wheel this frame in notches (positive = scrolled up).</summary>
+    public static float ScrollY()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Mouse.current != null ? Mouse.current.scroll.ReadValue().y / 120f : 0f;
+#else
+        return Input.mouseScrollDelta.y;
+#endif
+    }
+
     /// <summary>True on the frame the Q key went down.</summary>
     public static bool QPressed()
     {

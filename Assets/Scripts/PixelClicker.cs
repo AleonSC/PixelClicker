@@ -26,6 +26,7 @@ public class PixelClicker : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         ExternalClickBlock = false;
+        GodMode = false;
         InfiniteResources = false;
         OldPixelLanded = null;
         UltraGained = null;
@@ -587,6 +588,9 @@ public class PixelClicker : MonoBehaviour
     /// <summary>While true, clicks on the cube are ignored (set by the pixel bank's hose, which uses the mouse buttons itself).</summary>
     public static bool ExternalClickBlock;
 
+    /// <summary>Dev tools "god pixel" mode: the mouse spawns / destroys pixels instead of clicking the cube.</summary>
+    public static bool GodMode;
+
     private const string PrefRotation = "PixelClicker.Setting.Rotation";
     private const string PrefPulsing = "PixelClicker.Setting.Pulsing";
     private const string PrefBackground = "PixelClicker.Setting.RunInBackground";
@@ -820,7 +824,7 @@ public class PixelClicker : MonoBehaviour
         CleanOldPixels();
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
-        if (clicksBlocked || ExternalClickBlock) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
+        if (clicksBlocked || ExternalClickBlock || GodMode) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         if (!WasClickedThisFrame() || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
@@ -2419,6 +2423,7 @@ public class OldPixelDespawn : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         Frozen = false;
+        DevNoDespawn = false;
     }
 
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
@@ -2429,6 +2434,9 @@ public class OldPixelDespawn : MonoBehaviour
 
     /// <summary>While true, no old pixel's lifetime counts down (a black hole is open: time dilation). Pixels already vanishing finish.</summary>
     public static bool Frozen { get; set; }
+
+    /// <summary>Dev tools: old pixels never expire on their own while true.</summary>
+    public static bool DevNoDespawn { get; set; }
 
     /// <summary>Gives the pixel more time before it starts to vanish (no effect once it is vanishing or if it never expires).</summary>
     public void AddLifetime(float seconds)
@@ -2466,7 +2474,7 @@ public class OldPixelDespawn : MonoBehaviour
     {
         if (!despawning)
         {
-            if (Held || Frozen) return;
+            if (Held || Frozen || DevNoDespawn) return;
             age += Time.deltaTime;
             if (lifetime > 0f && age >= lifetime) Begin();
             return;

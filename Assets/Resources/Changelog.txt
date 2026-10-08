@@ -16,3 +16,4 @@
 [2026-10-08 11:29 UTC] Obsidian is now sheer polished black metal with white streaks that cracks more with every click, shows 5/5 on the last click and then pays +7.
 [2026-10-08 11:34 UTC] Ghost pixels wobble like jelly, look soft and see-through (not glassy), and their old pixels fall slowly, bounce gently, ignore the screen edges and float away.
 [2026-10-08 11:36 UTC] Glass pixels can't break while carried with Pixel Grabbing; letting go gently sets them down softly and gives them extra time before they vanish.
+[2026-10-08 11:45 UTC] Dev tools: settings are remembered, Skip intro / Unlock all leave toggles OFF, the minigame spawner joins the on-screen selector, All pixels is a drop-down option, plus new Disable despawns and God pixel mode boxes.
