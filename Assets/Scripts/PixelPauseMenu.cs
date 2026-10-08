@@ -1483,6 +1483,13 @@ public class PixelPauseMenu : MonoBehaviour
         Transform list = content;
         float y = 0f;
 
+        // Replay tutorial sits at the very top.
+        AddWideButtonRow(list, replayTutorialText, () =>
+        {
+            PixelHints.ReplayTutorial();
+            SetPaused(false); // so the tips show over the game
+        }, ref y);
+
         // ---- Gameplay ----
         AddHeaderRow(list, headerGameplay, ref y);
         rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
@@ -1505,51 +1512,46 @@ public class PixelPauseMenu : MonoBehaviour
         // ---- Interface ----
         AddHeaderRow(list, headerInterface, ref y);
         AddSettingToggle(list, tipsLabel, () => PixelHints.TipsEnabled, on => PixelHints.TipsEnabled = on, ref y);
-        AddWideButtonRow(list, replayTutorialText, () =>
-        {
-            PixelHints.ReplayTutorial();
-            SetPaused(false); // so the tips show over the game
-        }, ref y);
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
-        AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
+        AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
+        AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
+        AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
-        AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
-        AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
 
         // ---- Saving ----
         if (saveGame != null)
         {
             AddHeaderRow(list, headerSaving, ref y);
-            AddChoiceRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
             AddSettingToggle(list, autoSaveMessageLabel, () => saveGame.AutoSaveMessageNow,
                              on => PixelSaveGame.AutoSaveMessageChoice = on ? 1 : 0, ref y);
+            AddChoiceRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
         }
 
         // ---- Display ----
         AddHeaderRow(list, headerDisplay, ref y);
-        AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
-                     v => PixelDisplaySettings.QualityLevel = v, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
+        AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
+                     v => PixelDisplaySettings.QualityLevel = v, ref y);
         List<Vector2Int> resolutions = PixelDisplaySettings.Resolutions;
         string[] resolutionNames = new string[resolutions.Count];
         for (int i = 0; i < resolutionNames.Length; i++) resolutionNames[i] = resolutions[i].x + " x " + resolutions[i].y;
         AddChoiceRow(list, resolutionLabel, resolutionNames, () => Mathf.Max(0, resolutions.IndexOf(PixelDisplaySettings.Resolution)),
                      v => PixelDisplaySettings.Resolution = resolutions[v], ref y);
 
-        // ---- Audio: three volume sliders and a mute box (the sound system is added by Start, which runs first) ----
+        // ---- Audio: the mute box, then three volume sliders (the sound system is added by Start, which runs first) ----
         PixelAudio audio = PixelFind.First<PixelAudio>();
         if (audio != null)
         {
             AddHeaderRow(list, headerAudio, ref y);
+            muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
             masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
             effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
             musicSlider = AddSliderRow(list, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
-            muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
         }
 
         // ---- Controls ----
