@@ -169,13 +169,74 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void Awake()
     {
-        if (!showTitleScreen) { Destroy(this); return; }
+        PixelWindows.Register(this, 1000, () => Showing, () => { }); // Escape does nothing here
+        if (!showTitleScreen) return; // the component stays, so "Main menu" can still bring the screen back
+        Open(false);
+    }
 
+    /// <summary>Pause menu > Quit > Main menu: zooms the camera back into the cube, then brings the title screen back.</summary>
+    public static void ReturnToMenu()
+    {
+        PixelTitleScreen title = PixelFind.First<PixelTitleScreen>();
+        if (title != null) title.BeginReturn();
+    }
+
+    private bool returning;
+
+    private void BeginReturn()
+    {
+        if (Showing || returning) return;
+        for (int i = 0; i < 10 && PixelWindows.CloseTopmost(); i++) { } // close shop / inventory / log first
+        returning = true;
+        PixelCameraIntro intro = PixelFind.First<PixelCameraIntro>();
+        if (intro != null && intro.PlayReverse(FinishReturn)) return;
+        FinishReturn();
+    }
+
+    private void FinishReturn()
+    {
+        returning = false;
+        Open(true);
+    }
+
+    /// <summary>Shows the screen (freezing the game). 'animated' = fade it in the way Play fades it out, in reverse.</summary>
+    private void Open(bool animated)
+    {
+        if (Showing) return;
         Showing = true;
         timeScaleBefore = Time.timeScale > 0f ? Time.timeScale : 1f;
         Time.timeScale = 0f;
-        Build();
-        PixelWindows.Register(this, 1000, () => Showing, () => { }); // Escape does nothing here
+        if (canvasRoot == null) Build();
+        canvasRoot.SetActive(true);
+
+        playing = false;
+        pictureReady = false;
+        framesShown = animated ? 2 : 0;
+        cover.color = animated ? Color.clear : Color.black;
+        lightImage.enabled = strongImage.enabled = false;
+        foreach (Button b in buttons) b.interactable = !animated;
+        if (animated)
+        {
+            ApplyTransition(TransitionSeconds); // everything hidden, then it comes in
+            StartCoroutine(ReturnRoutine());
+        }
+        else ApplyTransition(0f);
+    }
+
+    private IEnumerator ReturnRoutine()
+    {
+        float guard = 0f;
+        while (!pictureReady && guard < 1f) { guard += Time.unscaledDeltaTime; yield return null; } // wait for the first blurred frame
+
+        float t = TransitionSeconds;
+        while (t > 0f)
+        {
+            t -= Time.unscaledDeltaTime;
+            ApplyTransition(Mathf.Max(0f, t));
+            yield return null;
+        }
+        ApplyTransition(0f);
+        foreach (Button b in buttons) b.interactable = true;
     }
 
     private void OnDestroy()
@@ -198,7 +259,7 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void Update()
     {
-        if (canvas == null) return;
+        if (!Showing || canvas == null) return;
 
         // While the pause menu's views are open on top of the title, hide the title's own widgets and drop below the menu.
         bool menuOpen = PixelPauseMenu.IsPaused;
@@ -211,6 +272,7 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (!Showing || canvas == null) return;
         // Keep the blurred picture live (the cube spins behind the title). Waits one frame so the scene exists.
         framesShown++;
         if (framesShown < 2) return;
@@ -525,43 +587,55 @@ public class PixelTitleScreen : MonoBehaviour
         StartCoroutine(PlayRoutine());
     }
 
+    private float TransitionSeconds => Mathf.Max(focusSeconds, Mathf.Max(barThinSeconds, buttonShrinkSeconds));
+
+    /// <summary>
+    /// The look of the screen 't' seconds into the Play animation (0 = the full title screen, TransitionSeconds = gone).
+    /// Play runs t upward; coming back from the game runs it downward.
+    /// </summary>
+    private void ApplyTransition(float t)
+    {
+        float button = Mathf.Clamp01(t / buttonShrinkSeconds);
+        float s = 1f - button * button; // shrinks faster and faster
+        foreach (RectTransform r in shrinkRects) if (r != null) r.localScale = Vector3.one * Mathf.Max(0f, s);
+        if (logoImage != null) logoImage.color = new Color(1f, 1f, 1f, 1f - button);
+
+        float thin = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / barThinSeconds));
+        barRect.sizeDelta = new Vector2(0f, barHeight * (1f - thin));
+
+        float focus = Mathf.Clamp01(t / focusSeconds);
+        SetAlpha(strongImage, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(focus / 0.7f)));
+        SetAlpha(lightImage, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((focus - 0.3f) / 0.7f)));
+        Color d = dimColor;
+        d.a *= 1f - focus;
+        dim.color = d;
+        if (!pictureReady && playing) cover.color = new Color(0f, 0f, 0f, 0.85f * (1f - focus)); // no picture: a dark cover fades instead
+    }
+
     private IEnumerator PlayRoutine()
     {
         PixelAudio.Play("game_start");
-        bool hasPicture = pictureReady;
-        Color coverStart = hasPicture ? Color.clear : new Color(0f, 0f, 0f, 0.85f);
-        cover.color = coverStart;
+        if (!pictureReady) cover.color = new Color(0f, 0f, 0f, 0.85f);
 
-        float total = Mathf.Max(focusSeconds, Mathf.Max(barThinSeconds, buttonShrinkSeconds));
+        float total = TransitionSeconds;
         float t = 0f;
         while (t < total)
         {
             t += Time.unscaledDeltaTime;
-
-            float button = Mathf.Clamp01(t / buttonShrinkSeconds);
-            float s = 1f - button * button; // shrinks faster and faster
-            foreach (RectTransform r in shrinkRects) if (r != null) r.localScale = Vector3.one * Mathf.Max(0f, s);
-            if (logoImage != null) logoImage.color = new Color(1f, 1f, 1f, 1f - button);
-
-            float thin = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / barThinSeconds));
-            barRect.sizeDelta = new Vector2(0f, barHeight * (1f - thin));
-
-            float focus = Mathf.Clamp01(t / focusSeconds);
-            SetAlpha(strongImage, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(focus / 0.7f)));
-            SetAlpha(lightImage, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((focus - 0.3f) / 0.7f)));
-            Color d = dimColor;
-            d.a *= 1f - focus;
-            dim.color = d;
-            if (!hasPicture) cover.color = new Color(0f, 0f, 0f, coverStart.a * (1f - focus));
+            ApplyTransition(t);
             yield return null;
         }
 
         barRect.sizeDelta = Vector2.zero;
         yield return new WaitForSecondsRealtime(startDelay);
 
+        // The screen stays built (hidden) so the pause menu's "Main menu" can bring it back.
         Time.timeScale = timeScaleBefore;
         Showing = false;
-        Destroy(this);
+        playing = false;
+        canvasRoot.SetActive(false);
+        ReleaseTextures();
+        pictureReady = false;
     }
 
     private static void SetAlpha(RawImage image, float alpha)

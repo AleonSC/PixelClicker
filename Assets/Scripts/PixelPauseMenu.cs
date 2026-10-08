@@ -106,6 +106,15 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Colour of the warning text.")]
     [SerializeField] private Color restartWarningColor = new Color(1f, 0.8f, 0.7f, 1f);
 
+    [Tooltip("Title of the box that opens when Quit is pressed.")]
+    [SerializeField] private string quitChoiceTitle = "Quit to...";
+
+    [Tooltip("Button text: leave the game.")]
+    [SerializeField] private string quitDesktopText = "Desktop";
+
+    [Tooltip("Button text: go back to the title screen.")]
+    [SerializeField] private string quitMainMenuText = "Main menu";
+
     [Tooltip("Quit button text.")]
     [SerializeField] private string quitText = "Quit";
 
@@ -479,7 +488,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private GameObject canvasRoot;
     private GameObject menuRoot;
-    private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel, restartPanel;
+    private GameObject mainPanel, statsPanel, settingsPanel, changelogPanel, restartPanel, quitPanel;
     private Slider masterSlider, effectsSlider, musicSlider;
     private Toggle muteToggle;
     private PixelHoldButton restartHold;
@@ -830,6 +839,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (showSaveLoad && saveGame != null) BuildSaveLoadPanel();
         BuildStatsPanel();
         BuildSettingsPanel();
+        BuildQuitPanel();
         BuildChangelogPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", howToPlayText, howToPlayResource, emptyHowToPlayText);
@@ -847,7 +857,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
         if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
         // Quit at the bottom, alone
-        if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = Quit, fullRow = true });
+        if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = () => ShowView(quitPanel), fullRow = true });
 
         LayoutMainButtons(panel.transform, entries, y, panelRect);
 
@@ -872,6 +882,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (howToPlayScreen != null && view == howToPlayScreen.panel) RefreshGuideScreen(howToPlayScreen);
         if (controlsScreen != null && view == controlsScreen.panel) RefreshGuideScreen(controlsScreen);
         if (restartPanel != null) restartPanel.SetActive(view == restartPanel);
+        if (quitPanel != null) quitPanel.SetActive(view == quitPanel);
         if (saveLoadPanel != null) saveLoadPanel.SetActive(view == saveLoadPanel);
         if (keysPanel != null) keysPanel.SetActive(view == keysPanel);
         if (view == keysPanel) { capturingAction = -1; RefreshKeyLabels(); }
@@ -1282,6 +1293,22 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>"This deletes everything" screen: the player has to HOLD the red button to confirm.</summary>
+    private void BuildQuitPanel()
+    {
+        quitPanel = BuildSectionPanel("Quit Panel", quitChoiceTitle, out float y);
+        AddMenuButton(quitPanel.transform, quitDesktopText, quitButtonColor, ref y, Quit);
+        AddMenuButton(quitPanel.transform, quitMainMenuText, menuButtonColor, ref y, ToMainMenu);
+        FinishSectionPanel(quitPanel, y);
+    }
+
+    /// <summary>Quit > Main menu: saves, then the camera zooms back into the cube and the title screen returns.</summary>
+    private void ToMainMenu()
+    {
+        if (saveGame != null) saveGame.Save(false);
+        SetPaused(false);
+        PixelTitleScreen.ReturnToMenu();
+    }
+
     private void BuildRestartPanel()
     {
         restartPanel = BuildSectionPanel("Restart Panel", restartConfirmTitle, out float y);

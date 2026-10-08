@@ -40,6 +40,11 @@ public class PixelCameraIntro : MonoBehaviour
     [Tooltip("Field of view at the start (degrees). 0 = the camera's normal field of view.")]
     [SerializeField] private float startFieldOfView = 0f;
 
+    [Header("Back to the main menu")]
+    [Min(0.5f)]
+    [Tooltip("Seconds the camera takes to zoom back into the cube when the player quits to the main menu.")]
+    [SerializeField] private float reverseSeconds = 2.4f;
+
     [Header("Skipping")]
     [Tooltip("On a brand-new (or restarted) game the cube can't be clicked during the opening zoom-out, so the intro tutorial tips can start cleanly.")]
     [SerializeField] private bool lockClicksOnNewGame = true;
@@ -63,7 +68,9 @@ public class PixelCameraIntro : MonoBehaviour
     private Vector3 pivot;
     private Vector3 startOffset, finalOffset;
     private float startOrtho, startFov;
-    private bool prepared, done;
+    private bool prepared, done, canReverse, reversing;
+    private float reverseTime;
+    private System.Action reverseDone;
     private float waited, moved;
 
     private void Awake()
@@ -97,6 +104,7 @@ public class PixelCameraIntro : MonoBehaviour
 
         startFov = startFieldOfView > 0f ? startFieldOfView : finalFov;
         startOrtho = finalOrtho * 0.3f;
+        canReverse = true;
     }
 
     /// <summary>True while the opening zoom-out runs on a brand-new game: the cube can't be clicked yet.</summary>
@@ -107,8 +115,41 @@ public class PixelCameraIntro : MonoBehaviour
 
     private bool fresh = true;
 
+    /// <summary>
+    /// Zooms the camera back to the close-up (the intro in reverse), then calls 'onDone'. Returns false (and does nothing)
+    /// if there is no intro to reverse (switched off in Settings, or no camera) - the caller carries on without it.
+    /// </summary>
+    public bool PlayReverse(System.Action onDone)
+    {
+        if (!canReverse || reversing || cam == null || !Enabled) return false;
+        reversing = true;
+        reverseTime = 0f;
+        reverseDone = onDone;
+        ClicksLocked = true;
+        return true;
+    }
+
     private void LateUpdate()
     {
+        if (reversing)
+        {
+            reverseTime += Time.unscaledDeltaTime;
+            float rk = Mathf.Clamp01(reverseTime / reverseSeconds);
+            Apply(1f - Mathf.SmoothStep(0f, 1f, rk));
+            if (rk >= 1f)
+            {
+                reversing = false;
+                done = false; // the title screen holds the close-up pose now and the next Play zooms out again
+                moved = 0f;
+                waited = 0f;
+                ClicksLocked = false;
+                System.Action callback = reverseDone;
+                reverseDone = null;
+                callback?.Invoke();
+            }
+            return;
+        }
+        if (done && canReverse && PixelTitleScreen.Showing) { done = false; moved = 0f; waited = 0f; }
         if (done) { ClicksLocked = false; return; }
         if (!prepared) Prepare();
         if (done) return;
