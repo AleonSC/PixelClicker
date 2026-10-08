@@ -22,7 +22,11 @@ public class PixelTitleScreen : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         Showing = false;
+        PlayTime = 0f;
     }
+
+    /// <summary>Game time (Time.time) when the game last started running: Awake, then each time Play is pressed.</summary>
+    public static float PlayTime { get; private set; }
 
     [Header("Screen")]
     [Tooltip("Show the start screen when the game launches.")]
@@ -169,6 +173,7 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void Awake()
     {
+        PlayTime = Time.time;
         PixelWindows.Register(this, 1000, () => Showing, () => { }); // Escape does nothing here
         if (!showTitleScreen) return; // the component stays, so "Main menu" can still bring the screen back
         Open(false);
@@ -615,7 +620,8 @@ public class PixelTitleScreen : MonoBehaviour
     private IEnumerator PlayRoutine()
     {
         PixelAudio.Play("game_start");
-        if (!pictureReady) cover.color = new Color(0f, 0f, 0f, 0.85f);
+        // The blur layers do the covering now; the black cover behind them must go or it shows through as they fade (a black flash).
+        cover.color = pictureReady ? Color.clear : new Color(0f, 0f, 0f, 0.85f);
 
         float total = TransitionSeconds;
         float t = 0f;
@@ -633,6 +639,7 @@ public class PixelTitleScreen : MonoBehaviour
         Time.timeScale = timeScaleBefore;
         Showing = false;
         playing = false;
+        PlayTime = Time.time;
         canvasRoot.SetActive(false);
         ReleaseTextures();
         pictureReady = false;

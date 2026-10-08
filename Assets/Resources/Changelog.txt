@@ -51,3 +51,4 @@
 [2026-10-08 15:04 UTC] The first pixel unlock now shows a small 'Got it' tip beside the event log explaining what it is and that it can be switched off in Settings.
 [2026-10-08 15:06 UTC] Crafting window shows the real item counts (not the Infinite-resources amount), and Replay tutorial now ends with the event log tip.
 [2026-10-08 15:11 UTC] Inventory and other windows now draw over the event log; Quit in the pause menu asks Desktop or Main menu, and Main menu zooms the camera back into the cube and brings the title screen back.
+[2026-10-08 15:15 UTC] Fixed a black flash after pressing Play, and minigames no longer spawn in the first 30 seconds after Play.

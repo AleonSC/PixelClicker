@@ -10,6 +10,10 @@ public class PixelMinigameLimits : MonoBehaviour
     [Tooltip("Turn the limit on or off. Off = minigames spawn completely independently, as before.")]
     [SerializeField] private bool limitAtOnce = true;
 
+    [Min(0f)]
+    [Tooltip("No minigame spawns for this many seconds after the player presses Play (or after the game starts, without a title screen).")]
+    [SerializeField] private float quietSecondsAfterPlay = 30f;
+
     [Min(1)]
     [Tooltip("At least this many minigames can be running together.")]
     [SerializeField] private int minAtOnce = 2;
@@ -46,6 +50,7 @@ public class PixelMinigameLimits : MonoBehaviour
             if (host != null) host.gameObject.AddComponent<PixelMinigameLimits>();
             if (instance == null) return true;
         }
+        if (Time.time - PixelTitleScreen.PlayTime < instance.quietSecondsAfterPlay) return false; // a calm start
         if (!instance.limitAtOnce) return true;
 
         int busy = 0;
