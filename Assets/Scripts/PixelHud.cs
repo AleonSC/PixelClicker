@@ -225,7 +225,7 @@ public class PixelDockedButton : MonoBehaviour
         float shown = hud.ShownInset, hidden = hud.HiddenInset;
         float inset = Mathf.Lerp(hidden, shown, Mathf.SmoothStep(0f, 1f, slide));
         bool top = anchor.y > 0.5f;
-        float x = anchor.x > 0.5f ? -hud.SideMargin : hud.SideMargin;
+        float x = Mathf.Approximately(anchor.x, 0.5f) ? 0f : anchor.x > 0.5f ? -hud.SideMargin : hud.SideMargin; // 0.5 = centred
         rect.anchoredPosition = new Vector2(x, top ? -inset : inset);
     }
 
@@ -249,7 +249,8 @@ public class PixelDockedButton : MonoBehaviour
         }
 
         float w = hud.ButtonSize.x, margin = hud.SideMargin;
-        float x0 = anchor.x > 0.5f ? Screen.width / scale - margin - w : margin;
+        float x0 = Mathf.Approximately(anchor.x, 0.5f) ? (Screen.width / scale - w) * 0.5f
+                 : anchor.x > 0.5f ? Screen.width / scale - margin - w : margin;
         float x1 = x0 + w;
         float px = p.x / scale, py = p.y / scale;
         float fromEdge = anchor.y > 0.5f ? Screen.height / scale - py : py; // distance of the mouse from the button's screen edge

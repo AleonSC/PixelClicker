@@ -126,6 +126,30 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Width of the on-screen minigame Spawn button (canvas units).")]
     [SerializeField] private float spawnButtonWidth = 130f;
 
+    [Header("Docked button (bottom of the screen)")]
+    [Tooltip("Text of the glowing slide-out button at the bottom of the screen that opens the dev tools.")]
+    [SerializeField] private string dockButtonText = "Dev Tools";
+
+    [Tooltip("Colour of the button.")]
+    [SerializeField] private Color dockButtonColor = new Color(1f, 0.86f, 0.45f, 1f);
+
+    [Tooltip("Text colour of the button.")]
+    [SerializeField] private Color dockTextColor = new Color(0.32f, 0.18f, 0f, 1f);
+
+    [Tooltip("Colour of the glow, the halo ring and the sparkles.")]
+    [SerializeField] private Color divineColor = new Color(1f, 0.9f, 0.55f, 1f);
+
+    [Min(0f)]
+    [Tooltip("How far the glow reaches past the button (canvas units).")]
+    [SerializeField] private float dockGlowSize = 46f;
+
+    [Range(0, 40)]
+    [Tooltip("How many sparkles drift up from the button.")]
+    [SerializeField] private int dockSparkles = 16;
+
+    [Tooltip("Sorting order of the docked button's canvas (it must be below the dev panel, 700).")]
+    [SerializeField] private int dockSortingOrder = 135;
+
     [Tooltip("Label of the close button.")]
     [SerializeField] private string closeText = "Close";
 
@@ -259,10 +283,32 @@ public class PixelDevTools : MonoBehaviour
         if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
         PixelUIKit.EnsureEventSystem();
         BuildPanel();
+        BuildDockButton();
+        PixelWindows.Register(this, 200, () => IsOpen, Close); // Escape closes the panel first
+    }
+
+    private GameObject dockRoot;
+
+    /// <summary>A glowing, divine slide-out button at the bottom-centre of the screen that opens the dev panel.</summary>
+    private void BuildDockButton()
+    {
+        dockRoot = PixelUIKit.CreateCanvas("PixelDevTools Button", dockSortingOrder, referenceResolution, true);
+        dockRoot.transform.SetParent(transform, false);
+
+        Button button = PixelUIKit.CreateButton(font, dockRoot.transform, "Dev Tools Button", dockButtonText, new Vector2(230f, 64f),
+                                                dockButtonColor, dockTextColor, fontSize);
+        RectTransform rt = button.GetComponent<RectTransform>();
+        PixelHud.Ensure(gameObject).Dock(rt, new Vector2(0.5f, 0f), () => IsOpen);
+        button.onClick.AddListener(Open);
+
+        PixelDevButtonFx fx = dockRoot.AddComponent<PixelDevButtonFx>();
+        fx.Setup(rt, rt.GetComponent<PixelDockedButton>(), divineColor, dockGlowSize, dockSparkles);
     }
 
     private void OnDestroy()
     {
+        PixelWindows.Unregister(this);
+        if (dockRoot != null) Destroy(dockRoot);
         if (instance == this)
         {
             instance = null;
@@ -756,5 +802,199 @@ public class PixelDevTools : MonoBehaviour
         toggle.isOn = initial;
         toggle.onValueChanged.AddListener(on => onChange(on));
         toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
+    }
+}
+
+/// <summary>
+/// The glowing, divine look of the dev tools button: a pulsing golden halo behind it, a gently floating halo ring above it
+/// and sparkles drifting up. Everything is drawn at runtime and follows the button as it slides.
+/// </summary>
+public class PixelDevButtonFx : MonoBehaviour
+{
+    private RectTransform button;
+    private PixelDockedButton dock;
+    private Color colour;
+    private float glowSize;
+
+    private RectTransform haloRect, ringRect;
+    private Image haloImage, ringImage;
+    private Image[] sparkles;
+    private float[] sparkAge, sparkLife, sparkX, sparkDrift;
+    private Texture2D haloTexture, ringTexture, dotTexture;
+    private Sprite haloSprite, ringSprite, dotSprite;
+    private Vector2 size;
+
+    public void Setup(RectTransform buttonRect, PixelDockedButton dockedButton, Color divine, float glowReach, int sparkleCount)
+    {
+        button = buttonRect;
+        dock = dockedButton;
+        colour = divine;
+        glowSize = glowReach;
+        size = button.sizeDelta;
+
+        haloImage = MakeImage("Halo", BuildHalo(size, glowSize), new Vector2(size.x + glowSize * 2f, size.y + glowSize * 2f), out haloRect);
+        ringImage = MakeImage("Halo Ring", BuildRing(), new Vector2(size.x * 0.75f, 34f), out ringRect);
+
+        sparkles = new Image[sparkleCount];
+        sparkAge = new float[sparkleCount]; sparkLife = new float[sparkleCount];
+        sparkX = new float[sparkleCount]; sparkDrift = new float[sparkleCount];
+        for (int i = 0; i < sparkleCount; i++)
+        {
+            RectTransform sr;
+            sparkles[i] = MakeImage("Sparkle", BuildDot(), new Vector2(10f, 10f), out sr);
+            Respawn(i, true);
+        }
+
+        // Everything sits behind the button itself.
+        for (int i = sparkleCount - 1; i >= 0; i--) sparkles[i].transform.SetAsFirstSibling();
+        ringImage.transform.SetAsFirstSibling();
+        haloImage.transform.SetAsFirstSibling();
+    }
+
+    private Image MakeImage(string objectName, Sprite sprite, Vector2 imageSize, out RectTransform rect)
+    {
+        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(transform, false);
+        Image img = go.GetComponent<Image>();
+        img.sprite = sprite;
+        img.raycastTarget = false;
+        rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = imageSize;
+        return img;
+    }
+
+    private void Respawn(int i, bool stagger)
+    {
+        sparkLife[i] = Random.Range(1.2f, 2.4f);
+        sparkAge[i] = stagger ? Random.value * sparkLife[i] : 0f;
+        sparkX[i] = Random.Range(-0.5f, 0.5f) * size.x;
+        sparkDrift[i] = Random.Range(-14f, 14f);
+    }
+
+    private void Update()
+    {
+        if (button == null) return;
+        float t = Time.unscaledTime;
+        float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        float slide = dock != null ? dock.SlideAmount : 1f;
+        float presence = Mathf.Lerp(0.4f, 1f, slide); // a faint glow even while the button is tucked away
+
+        Vector2 p = button.anchoredPosition;
+
+        // Halo glow, pulsing.
+        float pulse = 0.72f + 0.28f * Mathf.Sin(t * 2.4f);
+        Color c = colour; c.a = presence * pulse;
+        haloImage.color = c;
+        haloRect.anchoredPosition = p + new Vector2(0f, size.y * 0.5f);
+        haloRect.localScale = Vector3.one * (1f + 0.04f * Mathf.Sin(t * 1.6f));
+
+        // Halo ring floating above the button.
+        float bob = Mathf.Sin(t * 1.7f) * 4f;
+        Color rc = Color.Lerp(colour, Color.white, 0.4f); rc.a = presence * (0.85f + 0.15f * Mathf.Sin(t * 3.1f));
+        ringImage.color = rc;
+        ringRect.anchoredPosition = p + new Vector2(0f, size.y + 16f + bob);
+
+        // Sparkles rising from the top edge.
+        bool show = slide > 0.15f;
+        for (int i = 0; i < sparkles.Length; i++)
+        {
+            if (sparkles[i].gameObject.activeSelf != show) sparkles[i].gameObject.SetActive(show);
+            if (!show) continue;
+
+            sparkAge[i] += dt;
+            if (sparkAge[i] >= sparkLife[i]) Respawn(i, false);
+            float k = sparkAge[i] / sparkLife[i];
+            RectTransform sr = sparkles[i].rectTransform;
+            sr.anchoredPosition = p + new Vector2(sparkX[i] + sparkDrift[i] * k, size.y * 0.8f + k * 80f);
+            float s = Mathf.Lerp(12f, 3f, k) * (0.8f + 0.2f * Mathf.Sin(t * 9f + i));
+            sr.sizeDelta = new Vector2(s, s);
+            Color sc = Color.Lerp(Color.white, colour, k);
+            sc.a = Mathf.Clamp01(1f - k) * slide;
+            sparkles[i].color = sc;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (haloSprite != null) Destroy(haloSprite);
+        if (ringSprite != null) Destroy(ringSprite);
+        if (dotSprite != null) Destroy(dotSprite);
+        if (haloTexture != null) Destroy(haloTexture);
+        if (ringTexture != null) Destroy(ringTexture);
+        if (dotTexture != null) Destroy(dotTexture);
+    }
+
+    // ---- runtime-drawn textures (white; tinted by the Image colour) ----
+
+    private Sprite BuildHalo(Vector2 buttonSize, float reach)
+    {
+        float w = buttonSize.x + reach * 2f, h = buttonSize.y + reach * 2f;
+        int tw = Mathf.Clamp(Mathf.RoundToInt(w / 4f), 8, 256), th = Mathf.Clamp(Mathf.RoundToInt(h / 4f), 8, 256);
+        haloTexture = new Texture2D(tw, th, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[tw * th];
+        for (int y = 0; y < th; y++)
+        {
+            for (int x = 0; x < tw; x++)
+            {
+                float dx = Mathf.Max(0f, Mathf.Abs((x + 0.5f) / tw * w - w * 0.5f) - buttonSize.x * 0.5f);
+                float dy = Mathf.Max(0f, Mathf.Abs((y + 0.5f) / th * h - h * 0.5f) - buttonSize.y * 0.5f);
+                float a = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy) / reach);
+                a *= a;
+                px[y * tw + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        }
+        haloTexture.SetPixels32(px);
+        haloTexture.Apply(false, false);
+        haloSprite = Sprite.Create(haloTexture, new Rect(0, 0, tw, th), new Vector2(0.5f, 0.5f), 100f);
+        return haloSprite;
+    }
+
+    /// <summary>A thin glowing ellipse (the angel ring).</summary>
+    private Sprite BuildRing()
+    {
+        const int tw = 128, th = 32;
+        ringTexture = new Texture2D(tw, th, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[tw * th];
+        for (int y = 0; y < th; y++)
+        {
+            for (int x = 0; x < tw; x++)
+            {
+                float u = ((x + 0.5f) / tw - 0.5f) * 2f, v = ((y + 0.5f) / th - 0.5f) * 2f;
+                float d = Mathf.Abs(Mathf.Sqrt(u * u + v * v) - 0.82f); // distance from the ellipse line
+                float core = Mathf.Clamp01(1f - d / 0.06f);
+                float glow = Mathf.Clamp01(1f - d / 0.22f) * 0.45f;
+                float a = Mathf.Clamp01(core + glow);
+                px[y * tw + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        }
+        ringTexture.SetPixels32(px);
+        ringTexture.Apply(false, false);
+        ringSprite = Sprite.Create(ringTexture, new Rect(0, 0, tw, th), new Vector2(0.5f, 0.5f), 100f);
+        return ringSprite;
+    }
+
+    /// <summary>A soft four-point star-ish dot.</summary>
+    private Sprite BuildDot()
+    {
+        const int s = 32;
+        dotTexture = new Texture2D(s, s, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[s * s];
+        for (int y = 0; y < s; y++)
+        {
+            for (int x = 0; x < s; x++)
+            {
+                float u = ((x + 0.5f) / s - 0.5f) * 2f, v = ((y + 0.5f) / s - 0.5f) * 2f;
+                float round = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
+                float cross = Mathf.Clamp01(1f - Mathf.Min(Mathf.Abs(u), Mathf.Abs(v)) * 6f) * Mathf.Clamp01(1f - Mathf.Max(Mathf.Abs(u), Mathf.Abs(v)));
+                float a = Mathf.Clamp01(round * round + cross);
+                px[y * s + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        }
+        dotTexture.SetPixels32(px);
+        dotTexture.Apply(false, false);
+        dotSprite = Sprite.Create(dotTexture, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 100f);
+        return dotSprite;
     }
 }

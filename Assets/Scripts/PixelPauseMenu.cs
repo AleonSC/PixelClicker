@@ -750,7 +750,6 @@ public class PixelPauseMenu : MonoBehaviour
         BuildSettingsPanel();
         if (showStats) entries.Add(new MenuEntry { label = statsText, color = menuButtonColor, action = () => ShowView(statsPanel) });
         if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
-        if (PixelDevTools.Available) entries.Add(new MenuEntry { label = PixelDevTools.ButtonText, color = menuButtonColor, action = PixelDevTools.OpenPanel });
         BuildChangelogPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", howToPlayText, howToPlayResource, emptyHowToPlayText);
