@@ -57,6 +57,17 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("Show a live counter above each black hole (pixels swallowed / goal).")]
     [SerializeField] private bool showHoleCounter = true;
 
+    [Min(0.2f)]
+    [Tooltip("Seconds the counter stays visible after a pixel is consumed or the mouse leaves the hole, before it fades away.")]
+    [SerializeField] private float counterVisibleSeconds = 3f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the counter takes to fade in / out.")]
+    [SerializeField] private float counterFadeSeconds = 0.6f;
+
+    [Tooltip("Show the counter while the mouse is over the hole.")]
+    [SerializeField] private bool counterShowOnHover = true;
+
     [Min(1f)]
     [Tooltip("Size of the counter text above a black hole.")]
     [SerializeField] private float counterTextSize = 4f;
@@ -351,6 +362,8 @@ public class PixelBlackholeMinigame : PixelMinigame
         }
         double shownCount = -1d;
         float punch = 0f;
+        float counterAlpha = 0f;           // starts hidden: it shows when a pixel goes in or the mouse is over the hole
+        float lastActivity = -999f;
 
         onHoleOpened?.Invoke();
         ShowFirstHoleHint();
@@ -380,7 +393,7 @@ public class PixelBlackholeMinigame : PixelMinigame
             {
                 if (singularityCount != shownCount)
                 {
-                    if (shownCount >= 0d) punch = 1f; // a pixel went in: the counter jumps
+                    if (shownCount >= 0d) { punch = 1f; lastActivity = t; } // a pixel went in: the counter jumps and shows
                     shownCount = singularityCount;
                     counter.text = ThresholdReached
                         ? string.Format(counterReachedFormat, PixelClicker.FormatNumber(singularityCount))
@@ -389,6 +402,14 @@ public class PixelBlackholeMinigame : PixelMinigame
                 punch = Mathf.MoveTowards(punch, 0f, Time.deltaTime * 4f);
 
                 Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+
+                // Visible for a few seconds after activity (a pixel consumed, or the mouse over the hole), then it fades away.
+                if (counterShowOnHover && cam != null && size > 0.3f && MouseOverHole(cam, center, currentRadius)) lastActivity = t;
+                float wanted = t - lastActivity < counterVisibleSeconds ? 1f : 0f;
+                counterAlpha = Mathf.MoveTowards(counterAlpha, wanted, Time.deltaTime / counterFadeSeconds);
+                counter.color = new Color(1f, 1f, 1f, counterAlpha);
+                counter.outlineColor = new Color32(0, 0, 0, (byte)Mathf.RoundToInt(255f * counterAlpha));
+                counter.gameObject.SetActive(counterAlpha > 0.001f);
                 counter.transform.localScale = Vector3.one * (size * (1f + punch * 0.35f));
                 counter.transform.position = center + Vector3.up * (0.9f + radius * 0.15f);
                 if (cam != null)
@@ -405,6 +426,16 @@ public class PixelBlackholeMinigame : PixelMinigame
         OldPixelDespawn.Frozen = false;
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         holeActive = false;
+    }
+
+    /// <summary>Is the mouse pointer over the hole (its on-screen size, with a little slack)?</summary>
+    private static bool MouseOverHole(Camera cam, Vector3 center, float worldRadius)
+    {
+        Vector3 c = cam.WorldToScreenPoint(center);
+        if (c.z <= 0f) return false;
+        Vector3 edge = cam.WorldToScreenPoint(center + cam.transform.right * worldRadius);
+        float screenRadius = Mathf.Max(40f, Vector2.Distance(c, edge) * 1.15f);
+        return Vector2.Distance(PixelInput.PointerPosition(), c) <= screenRadius;
     }
 
     /// <summary>Spins a flat disc around the world up axis (the disc itself is rotated 90 degrees to lie flat).</summary>
