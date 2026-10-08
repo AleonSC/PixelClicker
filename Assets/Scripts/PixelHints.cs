@@ -166,6 +166,8 @@ public class PixelHints : MonoBehaviour
             case "bank_suck": return "Pixel stored in the Bank!";
             case "bank_spit": return "Spat out a stored pixel!";
             case "bank_full": return "The Bank is full!";
+            case "timeslow": return "You unlocked Time Slow! (press S)";
+            case "timestop_slow": return "Time slowed!";
             case "timestop_first": return "Time stopped!";
             case "timestop_empty": return "Time Stop ran out of energy!";
             default: return "";
@@ -207,6 +209,8 @@ public class PixelHints : MonoBehaviour
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
+        H("timeslow", "Time Slow unlocked! Press {key:TimeSlow} to slow time and again to return to normal. It uses the same energy meter as Time Stop, but drains it more slowly. Meteor pixels crawl while time is slow - grab one with Pixel Grabbing and put it where you like."),
+        H("timestop_slow", "Time is slowed! Everything crawls - even meteor pixels, which you can now grab. The Time Stop meter drains slowly while it lasts; press {key:TimeSlow} to go back to normal speed."),
         H("timestop_first", "Time is stopped! Everything freezes, but you can keep clicking the cube. The meter at the top drains while time is stopped and refills once it runs again; press T to resume."),
         H("timestop_empty", "The Time Stop meter ran out, so time started again. It refills quickly while time runs - wait until it is a little full before stopping time again."),
         H("ultra", "Ultra pixel earned! Spend Ultra pixels in the shop's Upgrades > Pixel sub-tab to boost a pixel type's payout."),

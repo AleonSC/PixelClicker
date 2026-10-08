@@ -193,6 +193,7 @@ public class PixelTitleScreen : MonoBehaviour
         if (Showing || returning) return;
         for (int i = 0; i < 10 && PixelWindows.CloseTopmost(); i++) { } // close shop / inventory / log first
         returning = true;
+        PixelTimeStop.EndAll(); // no frozen / slowed time on the title screen
         PixelCameraIntro intro = PixelFind.First<PixelCameraIntro>();
         if (intro != null && intro.PlayReverse(FinishReturn)) return;
         FinishReturn();

@@ -65,3 +65,5 @@
 [2026-10-08 15:47 UTC] Smoother meteor trails (curved taper, eased fade, rounded ends), and the old meteor pixel now shoots off in a random direction on the top half of the screen.
 [2026-10-08 15:52 UTC] Meteor pixels now sometimes knock a star out of the sky that falls beside the cube; click it to collect stardust, which unlocks the new Solar Pixel in the shop.
 [2026-10-08 15:59 UTC] The progress bars (ghosts caught, singularity, stardust, meteor chunks, next pixel unlock...) moved from the shop to a new Goals tab in the Log.
+[2026-10-08 16:09 UTC] New 'Event Horizon' achievement for feeding a Singularity pixel to a black hole.
+[2026-10-08 16:09 UTC] New Time Slow upgrade (needs Time Stop): press S to slow time on the shared meter; slowed meteor pixels can be grabbed with Pixel Grabbing and dropped on pads.

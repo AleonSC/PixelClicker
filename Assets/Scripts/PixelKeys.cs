@@ -13,6 +13,7 @@ public enum PixelAction
     RotateLeft = 2,
     RotateRight = 3,
     EventLog = 4,
+    TimeSlow = 5,
 }
 
 /// <summary>
@@ -29,6 +30,7 @@ public static class PixelKeys
         KeyCode.Q,        // RotateLeft
         KeyCode.E,        // RotateRight
         KeyCode.Return,   // EventLog
+        KeyCode.S,        // TimeSlow
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";

@@ -473,10 +473,21 @@ public class PixelBlackholeMinigame : PixelMinigame
             if (dx * dx + dz * dz > currentRadius * currentRadius) continue;
             if (p.y < center.y - 0.5f || p.y > center.y + captureHeight) continue;
 
+            OldPixelInfo swallowedInfo = body.GetComponent<OldPixelInfo>();
+            int swallowedTier = swallowedInfo != null ? swallowedInfo.tierIndex : -1;
             if (clicker.ReleaseOldPixel(body, creditSwallowedPixels))
+            {
+                PixelSwallowed?.Invoke(swallowedTier);
                 StartCoroutine(SpiralIn(body, center, currentRadius, fullRadius));
+            }
         }
     }
+
+    /// <summary>Raised with the tier index of every old pixel a black hole swallows (the stats / achievements listen).</summary>
+    public static event System.Action<int> PixelSwallowed;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetHoleStatics() { PixelSwallowed = null; }
 
     private static Material spiralTrailMaterial;
     private static Sprite softSprite;

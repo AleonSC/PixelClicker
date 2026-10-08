@@ -14,7 +14,7 @@ Clicks are limited to about 14 per second.
 # The Shop
 The Shop button appears once you have unlocked the Black pixel. It has four tabs:
 <b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
-<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop, the Pixel Bank and its storage upgrades. The "Pixel" sub-tab spends Ultra pixels on payout boosts.
+<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Pixel" sub-tab spends Ultra pixels on payout boosts.
 <b>Consumables</b> - potions and utilities (see below).
 <b>Minigames</b> - events that appear on their own once bought.
 Things you can't buy yet show in grey with what they need.
@@ -40,7 +40,7 @@ Switch any of them off in the Toggles window.
 
 # Upgrades Worth Knowing
 <b>Pixel Grabbing</b> - click and drag old pixels, then let go to throw them.
-<b>Time Stop</b> - press T to freeze everything, including timers. It drains an energy meter (shown only while it is in use); time resumes when you press T again or the meter runs out, and the meter refills right away. You can still click the cube while time is stopped - the old pixels pile up and burst out when time resumes.
+<b>Time Stop</b> - press T to freeze everything, including timers. It drains an energy meter (shown only while it is in use); time resumes when you press T again or the meter runs out, and the meter refills right away. You can still click the cube while time is stopped - the old pixels pile up and burst out when time resumes. The Time Slow upgrade lets you slow time instead (press S): it drains the same meter more slowly, and meteor pixels crawl enough to be grabbed with Pixel Grabbing.
 <b>Combo Meter</b> - quick clicks build a bonus multiplier.
 <b>Crafting</b> - combine two items to make potions and more.
 <b>Pixel Bank</b> - store old pixels and spit them back out. Press B for the hose. The nozzle normally points along the hose, but a quick flick of the mouse aims it the way you moved, so you can shoot in any direction. Click to suck up one pixel; hold the right button to suck up every old pixel of the selected type in a ring around the nozzle (with nothing selected, it takes the type of the pixel nearest the nozzle). Bank Storage upgrades raise how much it holds (they cost glass, vacuum pixels and bomb parts).

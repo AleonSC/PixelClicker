@@ -152,6 +152,7 @@ public class PixelGrab : MonoBehaviour
         {
             Rigidbody body = hit.rigidbody;
             if (body == null || !IsOldPixel(body)) continue;
+            if (clicker.IsFlyingPixel(body) && !PixelTimeStop.IsSlowed) continue; // a flying meteor can only be caught while time is slowed
 
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null && despawn.IsDespawning) continue; // already vanishing
@@ -187,6 +188,7 @@ public class PixelGrab : MonoBehaviour
 
     private void Grab(Rigidbody body, OldPixelDespawn despawn, Ray ray)
     {
+        clicker.LandFlyingPixel(body); // a caught meteor becomes an ordinary old pixel (solid, falls when let go)
         held = body;
         heldDespawn = despawn;
         if (heldDespawn != null) heldDespawn.Held = true; // frozen lifetime while held
@@ -215,8 +217,10 @@ public class PixelGrab : MonoBehaviour
         if (!dragPlane.Raycast(ray, out float enter)) return;
         Vector3 target = ray.GetPoint(enter) + grabOffset;
 
-        Vector3 velocity = (target - held.position) * followSharpness;
-        if (velocity.magnitude > maxFollowSpeed) velocity = velocity.normalized * maxFollowSpeed;
+        // While time is slowed, velocities are per slowed second: scale so the pixel still follows the mouse at normal speed.
+        float slow = PixelTimeStop.SlowFactor;
+        Vector3 velocity = (target - held.position) * followSharpness / slow;
+        if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
         SetVelocity(held, velocity);
         held.angularVelocity *= 1f - spinDamping;
     }
@@ -225,7 +229,7 @@ public class PixelGrab : MonoBehaviour
     {
         if (held == null) return;
 
-        Vector3 v = GetVelocity(held) * throwStrength;
+        Vector3 v = GetVelocity(held) * throwStrength * PixelTimeStop.SlowFactor; // back to what the mouse did
         if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
         SetVelocity(held, v);
 

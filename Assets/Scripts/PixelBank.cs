@@ -630,7 +630,7 @@ public class PixelBank : MonoBehaviour
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) continue;
+            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.IsFlyingPixel(body)) continue;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null && despawn.IsDespawning) continue;
 
@@ -760,7 +760,7 @@ public class PixelBank : MonoBehaviour
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null || info.tierIndex != areaTier || clicker.Tiers[info.tierIndex].flyAway) continue;
+            if (info == null || info.tierIndex != areaTier || clicker.IsFlyingPixel(body)) continue;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null && despawn.IsDespawning) continue;
 

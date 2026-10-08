@@ -158,6 +158,9 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack lets the player stop time with the T key.")]
         public bool unlocksTimeStop = false;
 
+        [Tooltip("Buying this unlocks Time Slow (press S to slow time; uses the Time Stop meter). Needs the Time Stop pack.")]
+        public bool unlocksTimeSlow = false;
+
         [Tooltip("Buying this pack unlocks the Pixel Bank (the Bank tab, the hose and the B key).")]
         public bool unlocksBank = false;
 
@@ -904,6 +907,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksCrafting && crafting != null && !purchased) crafting.Deactivate();
         if (pack.unlocksGrabbing && grab != null && !purchased) grab.Deactivate();
         if (pack.unlocksTimeStop && timeStop != null && !purchased) timeStop.Deactivate();
+        if (pack.unlocksTimeSlow && timeStop != null && !purchased) timeStop.DeactivateSlow();
         if (pack.unlocksBank && bank != null && !purchased) bank.Deactivate();
         if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
@@ -1098,6 +1102,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksCrafting && crafting != null) crafting.Activate();
         if (pack.unlocksGrabbing && grab != null) grab.Activate();
         if (pack.unlocksTimeStop && timeStop != null) timeStop.Activate();
+        if (pack.unlocksTimeSlow && timeStop != null) timeStop.ActivateSlow();
         if (pack.unlocksBank && bank != null) bank.Activate();
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
     }
@@ -1235,6 +1240,7 @@ public partial class PixelShop : MonoBehaviour
             if (pack.unlocksCrafting) PixelHints.Trigger("crafting");
             if (pack.unlocksGrabbing) PixelHints.Trigger("grab");
             if (pack.unlocksTimeStop) PixelHints.Trigger("timestop");
+            if (pack.unlocksTimeSlow) PixelHints.Trigger("timeslow");
             if (pack.unlocksBank) PixelHints.Trigger("bank");
             if (pack.rewardTiers != null)
                 foreach (PixelClicker.PixelTier reward in pack.rewardTiers)

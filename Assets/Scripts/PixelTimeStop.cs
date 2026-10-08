@@ -22,11 +22,34 @@ public class PixelTimeStop : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         IsStopped = false;
+        IsSlowed = false;
     }
 
     [Header("State")]
     [Tooltip("Is Time Stop available? (The shop turns this on when the Time Stop upgrade is bought. Tick it to test.)")]
     [SerializeField] private bool timeStopActive = false;
+
+    [Header("Time Slow (upgrade of Time Stop)")]
+    [Tooltip("Is Time Slow available? (The shop turns this on when the Time Slow upgrade is bought. Tick it to test.)")]
+    [SerializeField] private bool timeSlowOwned = false;
+
+    [Range(0.03f, 0.9f)]
+    [Tooltip("The speed of time while slowed (1 = normal). Lower = slower; meteor pixels crawl enough to be grabbed.")]
+    [SerializeField] private float slowTimeScale = 0.15f;
+
+    [Range(0.05f, 1f)]
+    [Tooltip("How fast slowing time drains the shared energy meter compared with stopping time (1 = the same).")]
+    [SerializeField] private float slowDrainFactor = 0.4f;
+
+    [Tooltip("Text shown under the meter while time is slowed.")]
+    [SerializeField] private string slowedText = "Time slowed  (press {key:TimeSlow})";
+
+    [Range(0f, 1f)]
+    [Tooltip("How strong the haze is while time is slowed (1 = as strong as when stopped).")]
+    [SerializeField] private float slowHazeStrength = 0.4f;
+
+    [Tooltip("Id of the looping sound played while time is slowed (set its clip in PixelAudio's Sounds list).")]
+    [SerializeField] private string slowLoopSoundId = "time_slow_loop";
 
     [Header("Energy")]
     [Min(0.5f)]
@@ -103,12 +126,28 @@ public class PixelTimeStop : MonoBehaviour
     /// <summary>True while time is stopped (read by the cube, which keeps taking clicks and animating during it).</summary>
     public static bool IsStopped { get; private set; }
 
+    /// <summary>True while time is slowed (Time Slow upgrade, S key).</summary>
+    public static bool IsSlowed { get; private set; }
+
+    /// <summary>1 normally; the current time scale while slowed (>0). Used to keep mouse-driven things (grabbing) feeling normal.</summary>
+    public static float SlowFactor => IsSlowed ? Mathf.Max(0.02f, Time.timeScale) : 1f;
+
+    /// <summary>Ends Time Stop and Time Slow at once (e.g. before going back to the main menu).</summary>
+    public static void EndAll()
+    {
+        PixelTimeStop ts = PixelFind.First<PixelTimeStop>();
+        if (ts == null) return;
+        ts.SetStopped(false);
+        ts.SetSlowed(false);
+    }
+
     private PixelClicker clicker;
     private GameObject canvasRoot;
     private RectTransform fillRect;
     private Image fillImage;
     private TMP_Text statusLabel;
-    private bool stopped;
+    private bool stopped, slowed;
+    private float baseFixedDelta = 0.02f;
     private float energy = 1f;       // 0..1
     private float fullTimer;          // counts down once the meter is full
     private float timeScaleBefore = 1f;
@@ -126,7 +165,7 @@ public class PixelTimeStop : MonoBehaviour
         set
         {
             userDisabled = value;
-            if (userDisabled) SetStopped(false);
+            if (userDisabled) { SetStopped(false); SetSlowed(false); }
         }
     }
 
@@ -134,6 +173,19 @@ public class PixelTimeStop : MonoBehaviour
 
     /// <summary>Is time stopped right now?</summary>
     public bool Stopped => stopped;
+
+    /// <summary>Is time slowed right now?</summary>
+    public bool Slowed => slowed;
+
+    /// <summary>Called by the shop when the Time Slow upgrade is bought.</summary>
+    public void ActivateSlow() => timeSlowOwned = true;
+
+    /// <summary>Called by the shop (e.g. when a save without the upgrade is loaded).</summary>
+    public void DeactivateSlow()
+    {
+        timeSlowOwned = false;
+        SetSlowed(false);
+    }
 
     /// <summary>The meter, 0 (empty) to 1 (full).</summary>
     public float Energy => energy;
@@ -148,15 +200,23 @@ public class PixelTimeStop : MonoBehaviour
     {
         timeStopActive = false;
         SetStopped(false);
+        SetSlowed(false);
         if (canvasRoot != null) canvasRoot.SetActive(false);
     }
 
-    private void Awake() => clicker = PixelFind.First<PixelClicker>();
+    private void Awake()
+    {
+        clicker = PixelFind.First<PixelClicker>();
+        baseFixedDelta = Time.fixedDeltaTime;
+    }
 
     private void OnDestroy()
     {
         SetStopped(false);
+        SetSlowed(false);
         IsStopped = false;
+        IsSlowed = false;
+        PixelAudio.StopLoop(slowLoopSoundId);
         if (canvasRoot != null) Destroy(canvasRoot);
         if (hazeRoot != null) Destroy(hazeRoot);
         if (hazeTexture != null) Destroy(hazeTexture);
@@ -168,6 +228,7 @@ public class PixelTimeStop : MonoBehaviour
         if (!Working)
         {
             if (stopped) SetStopped(false);
+            if (slowed) SetSlowed(false);
             if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false);
             return;
         }
@@ -177,9 +238,24 @@ public class PixelTimeStop : MonoBehaviour
         if (!paused && StopKeyPressed())
         {
             if (stopped) SetStopped(false);
-            else if (energy >= minStartFraction) SetStopped(true);
+            else if (energy >= minStartFraction)
+            {
+                if (slowed) SetSlowed(false); // stopping replaces slowing
+                SetStopped(true);
+            }
             else PixelAudio.Play("time_denied");
         }
+
+        if (!paused && timeSlowOwned && !stopped && PixelKeys.Pressed(PixelAction.TimeSlow))
+        {
+            if (slowed) SetSlowed(false);
+            else if (energy >= minStartFraction) SetSlowed(true);
+            else PixelAudio.Play("time_denied");
+        }
+
+        // Something else (the pause menu closing...) put the time scale back: keep time slowed.
+        if (slowed && !paused && !PixelPauseMenu.GameStopped && !PixelTitleScreen.Showing && !Mathf.Approximately(Time.timeScale, slowTimeScale))
+            Time.timeScale = slowTimeScale;
 
         // The pause menu restores its own saved time scale when it closes; put the freeze back if that happened.
         if (stopped && !PixelPauseMenu.GameStopped && Time.timeScale != 0f)
@@ -192,13 +268,14 @@ public class PixelTimeStop : MonoBehaviour
         if (!paused)
         {
             float dt = Time.unscaledDeltaTime;
-            if (stopped)
+            if (stopped || slowed)
             {
-                energy -= dt / maxStopSeconds;
+                energy -= dt / maxStopSeconds * (stopped ? 1f : slowDrainFactor);
                 if (energy <= 0f)
                 {
                     energy = 0f;
                     SetStopped(false); // out of energy: time starts again by itself
+                    SetSlowed(false);
                     PixelHints.Trigger("timestop_empty");
                 }
             }
@@ -238,6 +315,30 @@ public class PixelTimeStop : MonoBehaviour
         else PixelAudio.StopLoop(loopSoundId);
     }
 
+    private void SetSlowed(bool value)
+    {
+        if (value == slowed) return;
+        slowed = value;
+        IsSlowed = value;
+
+        if (slowed)
+        {
+            Time.timeScale = slowTimeScale;
+            Time.fixedDeltaTime = baseFixedDelta * slowTimeScale; // physics keeps its real-time smoothness while slowed
+        }
+        else
+        {
+            Time.fixedDeltaTime = baseFixedDelta;
+            if (!PixelPauseMenu.GameStopped && !stopped && !PixelTitleScreen.Showing) Time.timeScale = 1f;
+        }
+
+        if (!slowed && energy >= 1f) fullTimer = hideDelaySeconds;
+        PixelAudio.Play(slowed ? "time_slow" : "time_slow_end");
+        if (slowed) PixelHints.Trigger("timestop_slow");
+        if (slowed) PixelAudio.StartLoop(slowLoopSoundId);
+        else PixelAudio.StopLoop(slowLoopSoundId);
+    }
+
     private bool StopKeyPressed()
     {
         return PixelKeys.Pressed(PixelAction.TimeStop); // rebindable in Settings
@@ -249,7 +350,7 @@ public class PixelTimeStop : MonoBehaviour
 
     private void UpdateHaze()
     {
-        float target = showHaze && stopped ? 1f : 0f;
+        float target = !showHaze ? 0f : stopped ? 1f : slowed ? slowHazeStrength : 0f;
         if (hazeRoot == null)
         {
             if (target <= 0f) return;
@@ -303,7 +404,7 @@ public class PixelTimeStop : MonoBehaviour
     private void UpdateMeter()
     {
         // Shown while time is stopped, while it refills, and for a moment after it is full.
-        bool visible = stopped || energy < 1f || fullTimer > 0f;
+        bool visible = stopped || slowed || energy < 1f || fullTimer > 0f;
         if (!visible)
         {
             if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false);
@@ -316,7 +417,8 @@ public class PixelTimeStop : MonoBehaviour
         fillRect.anchorMax = new Vector2(Mathf.Clamp01(energy), 1f);
         fillImage.color = energy <= lowFraction ? meterLowColor : meterColor;
 
-        PixelUIKit.SetText(statusLabel, stopped ? stoppedText : energy < minStartFraction ? rechargingText : "");
+        PixelUIKit.SetText(statusLabel, stopped ? PixelKeys.Replace(stoppedText) : slowed ? PixelKeys.Replace(slowedText)
+                           : energy < minStartFraction ? rechargingText : "");
     }
 
     private void EnsureMeter()

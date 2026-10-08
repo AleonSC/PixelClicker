@@ -468,6 +468,7 @@ public class PixelAchievements : MonoBehaviour
         PixelConsumables consumables = PixelFind.First<PixelConsumables>();
         PixelStats stats = PixelFind.First<PixelStats>();
         if (consumables == null || stats == null) return;
+        RegisterFeedAchievements(stats);
 
         // The potions that can be bought (not the craft-only combos).
         List<string> potionNames = new List<string>();
@@ -516,6 +517,22 @@ public class PixelAchievements : MonoBehaviour
             }
             return used;
         });
+    }
+
+    // ------------------------------------------------------------------
+    // (continued above: usage achievements)
+
+    private void RegisterFeedAchievements(PixelStats stats)
+    {
+        Register(new Achievement
+        {
+            id = "feed_singularity",
+            title = "Event Horizon",
+            description = "Feed a Singularity pixel to a black hole.",
+            tiers = new double[0],
+            target = 1,
+            iconColor = new Color(0.55f, 0.2f, 0.9f, 1f),
+        }, () => stats.SingularitiesFed);
     }
 
     // ------------------------------------------------------------------

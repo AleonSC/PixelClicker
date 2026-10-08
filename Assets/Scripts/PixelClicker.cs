@@ -1398,7 +1398,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
     private int CopyCap => PixelTimeStop.IsStopped ? timeStopStockpileMax : maxFallingCopies;
 
-    private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
+    private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
 
     private void AnimatePixel()
     {
@@ -2143,7 +2143,9 @@ public class PixelClicker : MonoBehaviour
         if (fly)
         {
             // Meteor-style: no gravity, no collisions, one straight direction (camera-relative), with a trail.
-            box.enabled = false;
+            // The collider stays as a trigger so a slowed-down meteor can still be picked up (see LandFlyingPixel).
+            box.isTrigger = true;
+            copy.AddComponent<OldPixelFlight>();
             Camera fc = targetCamera != null ? targetCamera : Camera.main;
             Vector2 d = tiers[tierIndex].flyDirection;
             if (tiers[tierIndex].flyRandomDirection)
@@ -2318,6 +2320,50 @@ public class PixelClicker : MonoBehaviour
             if (styled.wobble) MakeWobbleVisual(go, styled);
         }
         return go;
+    }
+
+    /// <summary>True while an old pixel is still streaking away in a straight line (a meteor pixel nobody has caught).</summary>
+    public bool IsFlyingPixel(Rigidbody body)
+    {
+        if (body == null) return false;
+        OldPixelFlight flight = body.GetComponent<OldPixelFlight>();
+        return flight != null && flight.Flying;
+    }
+
+    /// <summary>
+    /// A flying meteor pixel that was grabbed (Pixel Grabbing + Time Slow) becomes an ordinary old pixel: solid, affected by
+    /// gravity, kept inside the view, and given a normal lifetime.
+    /// </summary>
+    public void LandFlyingPixel(Rigidbody body)
+    {
+        if (!IsFlyingPixel(body)) return;
+        body.GetComponent<OldPixelFlight>().Flying = false;
+
+        BoxCollider box = body.GetComponent<BoxCollider>();
+        if (box != null)
+        {
+            box.isTrigger = false;
+            box.sharedMaterial = SharedOldPixelPhysicsMaterial();
+            if (!collideWithLivePixel && pixelTransform != null)
+                foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
+                    Physics.IgnoreCollision(box, live);
+        }
+
+        body.collisionDetectionMode = collisionDetection;
+#if UNITY_6000_0_OR_NEWER
+        body.linearDamping = fallingCopyDrag;
+        body.angularDamping = fallingCopyAngularDrag;
+#else
+        body.drag = fallingCopyDrag;
+        body.angularDrag = fallingCopyAngularDrag;
+#endif
+        if (gravityScale > 0f && body.GetComponent<ScaledGravity>() == null)
+            body.gameObject.AddComponent<ScaledGravity>().scale = gravityScale;
+        if (body.GetComponent<OldPixelImpact>() == null)
+            body.gameObject.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
+
+        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+        if (despawn != null) despawn.AddLifetime(fallingCopyLifetime);
     }
 
     private void PlayClickEffects(PixelTier tier)
@@ -2527,6 +2573,12 @@ public class OldPixelPopIn : MonoBehaviour
 /// Ends an old pixel's life: after its lifetime (or when Begin is called) it swells slightly for a split second,
 /// then shrinks very quickly to nothing and is destroyed.
 /// </summary>
+/// <summary>Marks a meteor-style old pixel that is still flying away in a straight line (cleared when it is caught).</summary>
+public class OldPixelFlight : MonoBehaviour
+{
+    public bool Flying = true;
+}
+
 public class OldPixelDespawn : MonoBehaviour
 {
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]

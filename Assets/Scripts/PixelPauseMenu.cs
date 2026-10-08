@@ -230,8 +230,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetKeysText = "Reset keys to default";
     [SerializeField] private string pressAKeyText = "Press a key...";
 
-    [Tooltip("Names of the rebindable actions, in the order of PixelAction (Time Stop, Hose, Turn left, Turn right, Event log).")]
-    [SerializeField] private string[] keyActionLabels = { "Time Stop", "Pixel Bank hose", "Turn left (fan / sorter)", "Turn right (fan / sorter)", "Event log" };
+    [Tooltip("Names of the rebindable actions, in the order of PixelAction (Time Stop, Hose, Turn left, Turn right, Event log, Time slow).")]
+    [SerializeField] private string[] keyActionLabels = { "Time Stop", "Pixel Bank hose", "Turn left (fan / sorter)", "Turn right (fan / sorter)", "Event log", "Time slow" };
 
     [Tooltip("Label of the cube rotation tick box (accessibility).")]
     [SerializeField] private string rotationLabel = "Cube rotation";
@@ -1691,7 +1691,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int index = i;
-            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : ((PixelAction)i).ToString();
+            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : ((PixelAction)i).ToString();
             AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
             Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.85f);
             RectTransform br = b.GetComponent<RectTransform>();

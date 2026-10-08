@@ -502,7 +502,7 @@ public class PixelPadMinigame : PixelMinigame
             if (body == null || body.isKinematic) continue;
 
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null || (info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length && clicker.Tiers[info.tierIndex].flyAway)) continue;
+            if (info == null || clicker.IsFlyingPixel(body)) continue;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null && despawn.Held) continue; // the player is carrying it
 
@@ -675,7 +675,7 @@ public class PixelPadMinigame : PixelMinigame
         for (int i = list.Count - 1; i >= 0; i--)
         {
             Rigidbody body = list[i];
-            if (body == null) continue;
+            if (body == null || clicker.IsFlyingPixel(body)) continue; // a meteor must be caught (grabbed while time is slowed) first
 
             Vector3 local = pad.InverseTransformPoint(body.position);
             if (Mathf.Abs(local.x) > half || Mathf.Abs(local.z) > half || local.y < -0.3f || local.y > captureHeight) continue;

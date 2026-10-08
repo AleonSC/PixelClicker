@@ -487,6 +487,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Time Slow upgrade (Upgrades tab): the S key slows time; needs the Time Stop pack.</summary>
+    private static ShopPack CreateTimeSlowPack(int requiresTimeStopIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Time Slow",
+            tab = ShopTab.Upgrades,
+            description = "Press S to slow time down (it shares the Time Stop energy meter). Fast things, like meteor pixels, slow to a crawl - slow enough to grab with Pixel Grabbing.",
+            requirements = Needs(requiresTimeStopIndex),
+            costs = AllSix(800),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksTimeSlow = true,
+        };
+    }
+
     /// <summary>Default Combo Meter upgrade: quick clicks build a multiplier; each level raises its maximum.</summary>
     private static ShopPack CreateComboPack()
     {
@@ -613,6 +628,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateGrabbingPack() },
         new DefaultPack { isThis = p => p.unlocksTimeStop,
                           requires = null, create = i => CreateTimeStopPack() },
+        new DefaultPack { isThis = p => p.unlocksTimeSlow,
+                          requires = p => p.unlocksTimeStop, create = CreateTimeSlowPack },
         new DefaultPack { isThis = p => p.unlocksBank,
                           requires = null, create = i => CreateBankPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.BankCapacity,

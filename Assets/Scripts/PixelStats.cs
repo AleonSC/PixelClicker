@@ -50,6 +50,9 @@ public class PixelStats : MonoBehaviour
     [Tooltip("Sorters you placed.")]
     [SerializeField] private long sortersUsed;
 
+    [Tooltip("Singularity pixels you fed to a black hole.")]
+    [SerializeField] private long singularitiesFed;
+
     [Tooltip("Highest combo you reached.")]
     [SerializeField] private int highestCombo;
 
@@ -69,6 +72,7 @@ public class PixelStats : MonoBehaviour
     public long FansUsed => fansUsed;
     public long VacuumDevicesUsed => vacuumDevicesUsed;
     public long SortersUsed => sortersUsed;
+    public long SingularitiesFed => singularitiesFed;
     public int HighestCombo => highestCombo;
 
     /// <summary>How many of each potion you drank (name, count), in the order first used.</summary>
@@ -91,7 +95,7 @@ public class PixelStats : MonoBehaviour
     [Serializable]
     public class ExtraData
     {
-        public long ghostsClicked, meteorsClicked, meteorsSpawned, blackHolesSpawned, fansUsed, vacuumDevicesUsed, sortersUsed;
+        public long ghostsClicked, meteorsClicked, meteorsSpawned, blackHolesSpawned, fansUsed, vacuumDevicesUsed, sortersUsed, singularitiesFed;
         public int highestCombo;
         public string[] potionNames;
         public long[] potionCounts;
@@ -115,6 +119,7 @@ public class PixelStats : MonoBehaviour
         clicker.CurrencySpent += OnCurrencySpent;
 
         PixelMinigame.Happened += OnMinigame;
+        PixelBlackholeMinigame.PixelSwallowed += OnSwallowed;
         PixelConsumables.PotionDrunk += OnPotionDrunk;
         PixelConsumables.DevicePlaced += OnDevicePlaced;
         PixelCombo.ComboReached += OnCombo;
@@ -123,6 +128,7 @@ public class PixelStats : MonoBehaviour
     private void OnDestroy()
     {
         PixelMinigame.Happened -= OnMinigame;
+        PixelBlackholeMinigame.PixelSwallowed -= OnSwallowed;
         PixelConsumables.PotionDrunk -= OnPotionDrunk;
         PixelConsumables.DevicePlaced -= OnDevicePlaced;
         PixelCombo.ComboReached -= OnCombo;
@@ -161,6 +167,11 @@ public class PixelStats : MonoBehaviour
         }
     }
 
+    private void OnSwallowed(int tierIndex)
+    {
+        if (clicker != null && clicker.IsValidTierIndex(tierIndex) && clicker.Tiers[tierIndex].type == PixelClicker.PixelType.Singularity) singularitiesFed++;
+    }
+
     private void OnPotionDrunk(string potionName)
     {
         int i = potionsUsed.FindIndex(p => p.Key == potionName);
@@ -186,7 +197,7 @@ public class PixelStats : MonoBehaviour
         ExtraData d = new ExtraData
         {
             ghostsClicked = ghostsClicked, meteorsClicked = meteorsClicked, meteorsSpawned = meteorsSpawned,
-            blackHolesSpawned = blackHolesSpawned, fansUsed = fansUsed, vacuumDevicesUsed = vacuumDevicesUsed, sortersUsed = sortersUsed,
+            blackHolesSpawned = blackHolesSpawned, fansUsed = fansUsed, vacuumDevicesUsed = vacuumDevicesUsed, sortersUsed = sortersUsed, singularitiesFed = singularitiesFed,
             highestCombo = highestCombo,
             potionNames = new string[potionsUsed.Count],
             potionCounts = new long[potionsUsed.Count],
@@ -205,7 +216,7 @@ public class PixelStats : MonoBehaviour
         potionsUsed.Clear();
         if (d == null)
         {
-            ghostsClicked = meteorsClicked = meteorsSpawned = blackHolesSpawned = fansUsed = vacuumDevicesUsed = sortersUsed = 0;
+            ghostsClicked = meteorsClicked = meteorsSpawned = blackHolesSpawned = fansUsed = vacuumDevicesUsed = sortersUsed = singularitiesFed = 0;
             highestCombo = 0;
             return;
         }
@@ -216,6 +227,7 @@ public class PixelStats : MonoBehaviour
         fansUsed = Math.Max(0L, d.fansUsed);
         vacuumDevicesUsed = Math.Max(0L, d.vacuumDevicesUsed);
         sortersUsed = Math.Max(0L, d.sortersUsed);
+        singularitiesFed = Math.Max(0L, d.singularitiesFed);
         highestCombo = Math.Max(0, d.highestCombo);
         if (d.potionNames == null || d.potionCounts == null) return;
         for (int i = 0; i < d.potionNames.Length && i < d.potionCounts.Length; i++)
