@@ -703,7 +703,23 @@ public class PixelClicker : MonoBehaviour
             audioSource.playOnAwake = false;
         }
 
-        if (pixelRenderer != null) defaultMaterial = pixelRenderer.sharedMaterial;
+        if (pixelRenderer != null)
+        {
+            // A deleted / missing material shows as pink: build a plain one so the game still works.
+            Material current = pixelRenderer.sharedMaterial;
+            if (current == null || current.shader == null || !current.shader.isSupported || current.shader.name == "Hidden/InternalErrorShader")
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) shader = Shader.Find("Standard");
+                if (shader != null)
+                {
+                    Debug.LogWarning("PixelClicker: the pixel had no working material - created a temporary one. " +
+                                     "Assign a real Lit material to the Pixel (and its prefab) to fix this properly.", this);
+                    pixelRenderer.sharedMaterial = new Material(shader) { name = "Pixel (generated)" };
+                }
+            }
+            defaultMaterial = pixelRenderer.sharedMaterial;
+        }
 
         baseScale = pixelTransform.localScale;
         basePosition = pixelTransform.position;
