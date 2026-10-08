@@ -9,6 +9,12 @@ using System.Collections.Generic;
 /// </summary>
 public static class PixelWindows
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        entries.Clear();
+    }
+
     private class Entry
     {
         public object owner;

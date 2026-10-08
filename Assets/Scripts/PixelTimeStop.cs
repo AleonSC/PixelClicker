@@ -18,6 +18,12 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelTimeStop : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        IsStopped = false;
+    }
+
     [Header("State")]
     [Tooltip("Is Time Stop available? (The shop turns this on when the Time Stop upgrade is bought. Tick it to test.)")]
     [SerializeField] private bool timeStopActive = false;
@@ -318,9 +324,7 @@ public class PixelTimeStop : MonoBehaviour
         fillRect.anchorMax = new Vector2(Mathf.Clamp01(energy), 1f);
         fillImage.color = energy <= lowFraction ? meterLowColor : meterColor;
 
-        if (stopped) statusLabel.text = stoppedText;
-        else if (energy < minStartFraction) statusLabel.text = rechargingText;
-        else statusLabel.text = "";
+        PixelUIKit.SetText(statusLabel, stopped ? stoppedText : energy < minStartFraction ? rechargingText : "");
     }
 
     private void EnsureMeter()

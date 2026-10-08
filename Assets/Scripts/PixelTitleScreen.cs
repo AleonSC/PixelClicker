@@ -14,6 +14,12 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelTitleScreen : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        Showing = false;
+    }
+
     [Header("Screen")]
     [Tooltip("Show the start screen when the game launches.")]
     [SerializeField] private bool showTitleScreen = true;

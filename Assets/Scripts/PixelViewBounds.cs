@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -56,6 +57,12 @@ public class PixelViewBounds : MonoBehaviour
     private readonly Plane[] planes = new Plane[5];
     private readonly bool[] used = new bool[5];
 
+    // Planes only change when the camera or the bars do; infos are looked up once per old pixel.
+    private readonly Dictionary<Rigidbody, OldPixelInfo> infoCache = new Dictionary<Rigidbody, OldPixelInfo>();
+    private Vector3 planesPosition, planesForward;
+    private float planesFov = -1f, planesAspect, planesBars = -1f;
+    private int planesWidth, planesHeight;
+
     private void Awake()
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
@@ -66,21 +73,41 @@ public class PixelViewBounds : MonoBehaviour
         }
     }
 
+    private void OnValidate() { planesFov = -1f; } // settings changed in the Inspector: rebuild the planes
+
     private void FixedUpdate()
     {
         if (!boundsActive) return;
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return;
-        BuildPlanes(cam);
+        float barNow = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        Transform ct = cam.transform;
+        if (planesFov < 0f || ct.position != planesPosition || ct.forward != planesForward || cam.fieldOfView != planesFov ||
+            cam.aspect != planesAspect || Screen.width != planesWidth || Screen.height != planesHeight || barNow != planesBars)
+        {
+            BuildPlanes(cam);
+            planesPosition = ct.position;
+            planesForward = ct.forward;
+            planesFov = cam.fieldOfView;
+            planesAspect = cam.aspect;
+            planesWidth = Screen.width;
+            planesHeight = Screen.height;
+            planesBars = barNow;
+        }
 
         var pixels = clicker.OldPixels;
+        if (infoCache.Count > pixels.Count + 64) infoCache.Clear(); // drop entries of destroyed pixels
         for (int i = 0; i < pixels.Count; i++)
         {
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
 
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (!infoCache.TryGetValue(body, out OldPixelInfo info))
+            {
+                info = body.GetComponent<OldPixelInfo>();
+                infoCache[body] = info;
+            }
             if (info != null && info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length && clicker.Tiers[info.tierIndex].flyAway) continue;
 
             Vector3 position = body.position;

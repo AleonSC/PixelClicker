@@ -22,6 +22,16 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class PixelClicker : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        ExternalClickBlock = false;
+        InfiniteResources = false;
+        OldPixelLanded = null;
+        UltraGained = null;
+        abbreviateCache = -1;
+    }
+
     // ------------------------------------------------------------------
     // Types
     // ------------------------------------------------------------------
@@ -1169,6 +1179,7 @@ public class PixelClicker : MonoBehaviour
     private void OnDestroy()
     {
         if (hitbox != null) Destroy(hitbox.gameObject);
+        ExternalClickBlock = false;
     }
 
     /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
@@ -1494,6 +1505,67 @@ public class PixelClicker : MonoBehaviour
         return mat;
     }
 
+#if UNITY_6000_0_OR_NEWER
+    private PhysicsMaterial oldPixelPhysics;
+#else
+    private PhysicMaterial oldPixelPhysics;
+#endif
+    private float oldPixelPhysicsBounce = -1f, oldPixelPhysicsFriction = -1f;
+    private readonly System.Collections.Generic.Dictionary<int, Material> trailMaterials = new System.Collections.Generic.Dictionary<int, Material>();
+    private readonly System.Collections.Generic.Dictionary<int, Color> trailMaterialColors = new System.Collections.Generic.Dictionary<int, Color>();
+
+    /// <summary>One physics material shared by every old pixel (rebuilt when bounciness / friction change).</summary>
+#if UNITY_6000_0_OR_NEWER
+    private PhysicsMaterial SharedOldPixelPhysicsMaterial()
+    {
+        if (oldPixelPhysics == null || oldPixelPhysicsBounce != bounciness || oldPixelPhysicsFriction != friction)
+        {
+            oldPixelPhysics = new PhysicsMaterial("OldPixel")
+            {
+                bounciness = bounciness,
+                dynamicFriction = friction,
+                staticFriction = friction,
+                bounceCombine = PhysicsMaterialCombine.Maximum,
+                frictionCombine = PhysicsMaterialCombine.Average
+            };
+            oldPixelPhysicsBounce = bounciness;
+            oldPixelPhysicsFriction = friction;
+        }
+        return oldPixelPhysics;
+    }
+#else
+    private PhysicMaterial SharedOldPixelPhysicsMaterial()
+    {
+        if (oldPixelPhysics == null || oldPixelPhysicsBounce != bounciness || oldPixelPhysicsFriction != friction)
+        {
+            oldPixelPhysics = new PhysicMaterial("OldPixel")
+            {
+                bounciness = bounciness,
+                dynamicFriction = friction,
+                staticFriction = friction,
+                bounceCombine = PhysicMaterialCombine.Maximum,
+                frictionCombine = PhysicMaterialCombine.Average
+            };
+            oldPixelPhysicsBounce = bounciness;
+            oldPixelPhysicsFriction = friction;
+        }
+        return oldPixelPhysics;
+    }
+#endif
+
+    /// <summary>One trail material per pixel type, shared by all of its fly-away copies.</summary>
+    private Material TrailMaterialFor(int tierIndex, Color tierColor)
+    {
+        if (trailMaterials.TryGetValue(tierIndex, out Material cached) && cached != null &&
+            trailMaterialColors[tierIndex] == tierColor)
+            return cached;
+
+        Material mat = CreateVisualMaterial(new Color(tierColor.r, tierColor.g, tierColor.b, 0.6f), true);
+        trailMaterials[tierIndex] = mat;
+        trailMaterialColors[tierIndex] = tierColor;
+        return mat;
+    }
+
     /// <summary>Pulls one old pixel into the cube while shrinking it, then removes it.</summary>
     private IEnumerator SuckRoutine(Rigidbody body, Transform target = null)
     {
@@ -1613,25 +1685,7 @@ public class PixelClicker : MonoBehaviour
 
         // Collider with a physics material so bounce/friction are tweakable.
         BoxCollider box = copy.AddComponent<BoxCollider>();
-#if UNITY_6000_0_OR_NEWER
-        box.sharedMaterial = new PhysicsMaterial("OldPixel")
-        {
-            bounciness = bounciness,
-            dynamicFriction = friction,
-            staticFriction = friction,
-            bounceCombine = PhysicsMaterialCombine.Maximum,
-            frictionCombine = PhysicsMaterialCombine.Average
-        };
-#else
-        box.sharedMaterial = new PhysicMaterial("OldPixel")
-        {
-            bounciness = bounciness,
-            dynamicFriction = friction,
-            staticFriction = friction,
-            bounceCombine = PhysicMaterialCombine.Maximum,
-            frictionCombine = PhysicMaterialCombine.Average
-        };
-#endif
+        box.sharedMaterial = SharedOldPixelPhysicsMaterial();
 
         // Keep the old pixel from colliding with / bumping the live one if requested.
         if (!collideWithLivePixel)
@@ -1681,7 +1735,7 @@ public class PixelClicker : MonoBehaviour
                 trail.startWidth = copy.transform.lossyScale.x;
                 trail.endWidth = 0f;
                 Color tc = tiers[tierIndex].color;
-                trail.sharedMaterial = CreateVisualMaterial(new Color(tc.r, tc.g, tc.b, 0.6f), true);
+                trail.sharedMaterial = TrailMaterialFor(tierIndex, tc);
                 trail.startColor = new Color(tc.r, tc.g, tc.b, 0.8f);
                 trail.endColor = new Color(tc.r, tc.g, tc.b, 0f);
             }
@@ -1963,6 +2017,12 @@ public class OldPixelPopIn : MonoBehaviour
 /// </summary>
 public class OldPixelDespawn : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        Frozen = false;
+    }
+
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
     private bool despawning;
 

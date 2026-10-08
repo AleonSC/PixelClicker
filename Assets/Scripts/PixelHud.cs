@@ -148,7 +148,7 @@ public class PixelHud : MonoBehaviour
 
         Canvas owner = button.GetComponentInParent<Canvas>();
         if (owner != null)
-            Debug.Log("PixelHud: docked '" + button.name + "' (canvas sorting order " + owner.sortingOrder + ", bars " +
+            PixelDebug.Info("PixelHud: docked '" + button.name + "' (canvas sorting order " + owner.sortingOrder + ", bars " +
                       Mathf.Min(barsSortingOrder, -1) + ").", this);
 
         // A button anchored at the vertical middle (anchor.y = 0.5) docks to the left / right edge instead of the top / bottom.

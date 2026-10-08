@@ -38,6 +38,12 @@ public static class PixelUIKit
         return root;
     }
 
+    /// <summary>Sets a text only when it changed (skips the TMP rebuild for identical strings).</summary>
+    public static void SetText(TMP_Text label, string text)
+    {
+        if (label != null && label.text != text) label.text = text;
+    }
+
     /// <summary>A TextMeshPro UI text that doesn't catch clicks. A null font = the TMP default.</summary>
     public static TMP_Text CreateText(TMP_FontAsset font, Transform parent, string objectName, string text, float size,
                                       TextAlignmentOptions alignment, FontStyles style, Color color)

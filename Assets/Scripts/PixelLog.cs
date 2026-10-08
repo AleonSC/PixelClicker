@@ -35,6 +35,10 @@ public class PixelLog : MonoBehaviour
     // Button
     // ------------------------------------------------------------------
 
+    [Header("Performance")]
+    [Tooltip("Seconds between refreshes of the open Log window (opening and tab changes refresh at once).")]
+    [SerializeField] private float refreshSeconds = 0.2f;
+
     [Header("Log Button")]
     [Tooltip("Corner the Log button sits in.")]
     [SerializeField] private ButtonCorner buttonCorner = ButtonCorner.BottomLeft;
@@ -398,8 +402,15 @@ public class PixelLog : MonoBehaviour
     {
         if (!built) return;
         TickDeltas();
-        if (panelObject.activeSelf) Refresh();
+        if (!panelObject.activeSelf) { panelWasOpen = false; return; }
+        if (panelWasOpen && Time.unscaledTime < nextRefreshTime) return;
+        panelWasOpen = true;
+        nextRefreshTime = Time.unscaledTime + refreshSeconds;
+        Refresh();
     }
+
+    private bool panelWasOpen;
+    private float nextRefreshTime;
 
     /// <summary>Shows (and adds up) "+X" next to a pixel's row for each click's payout.</summary>
     private void OnPixelCollected(int tierIndex, double amount, bool automatic)
@@ -944,14 +955,14 @@ public class PixelLog : MonoBehaviour
             int tierCount = achievements.GetTierCount(a);
             string tierText = tierCount > 1
                 ? string.Format(achievementTierFormat, Math.Min(achievements.GetEarnedTiers(a) + 1, tierCount), tierCount) : "";
-            row.title.text = achievements.GetTitle(a);
-            row.description.text = achievements.GetDescription(a) + tierText;
+            PixelUIKit.SetText(row.title, achievements.GetTitle(a));
+            PixelUIKit.SetText(row.description, achievements.GetDescription(a) + tierText);
             row.title.color = unlocked ? achievementUnlockedColor : new Color(textColor.r * dim, textColor.g * dim, textColor.b * dim, textColor.a);
 
             double currentTarget = achievements.GetCurrentTarget(a);
-            row.progress.text = unlocked
+            PixelUIKit.SetText(row.progress, unlocked
                 ? achievementUnlockedText
-                : string.Format(achievementProgressFormat, FormatAmount(Math.Min(achievements.GetProgress(a), currentTarget)), FormatAmount(currentTarget));
+                : string.Format(achievementProgressFormat, FormatAmount(Math.Min(achievements.GetProgress(a), currentTarget)), FormatAmount(currentTarget)));
             row.progress.color = unlocked ? achievementUnlockedColor : amountColor;
 
             Color icon = achievements.GetIconColor(a);
@@ -966,7 +977,7 @@ public class PixelLog : MonoBehaviour
 
         achievementsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));
         noAchievementsLabel.gameObject.SetActive(count == 0);
-        achievementSummary.text = string.Format(achievementSummaryFormat, achievements != null ? achievements.EarnedTierTotal : 0, achievements != null ? achievements.TierTotal : 0);
+        PixelUIKit.SetText(achievementSummary, string.Format(achievementSummaryFormat, achievements != null ? achievements.EarnedTierTotal : 0, achievements != null ? achievements.TierTotal : 0));
 
         float summaryHeight = rowFontSize * 1.3f;
         panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + summaryHeight + 6f + achievementsViewHeight + panelPadding);
@@ -999,8 +1010,8 @@ public class PixelLog : MonoBehaviour
             if (!visible) continue;
 
             PixelClicker.PixelTier tier = tiers[i];
-            row.name.text = tier.displayName;
-            row.amount.text = FormatAmount(tier.totalCollected);
+            PixelUIKit.SetText(row.name, tier.displayName);
+            PixelUIKit.SetText(row.amount, FormatAmount(tier.totalCollected));
             if (row.swatch != null) row.swatch.color = tier.UIColor;
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
@@ -1019,8 +1030,8 @@ public class PixelLog : MonoBehaviour
         {
             dividerRect.anchoredPosition = new Vector2(0f, -y);
             y += 8f;
-            totalRow.name.text = overallTotalLabel;
-            totalRow.amount.text = FormatAmount(overall);
+            PixelUIKit.SetText(totalRow.name, overallTotalLabel);
+            PixelUIKit.SetText(totalRow.amount, FormatAmount(overall));
             totalRow.rect.anchoredPosition = new Vector2(0f, -y);
             y += rowHeight;
         }

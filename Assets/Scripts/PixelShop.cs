@@ -22,6 +22,12 @@ using UnityEngine.UI;
 [RequireComponent(typeof(PixelAutoClicker))]
 public partial class PixelShop : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        hidePurchasedCache = -1;
+    }
+
     public enum ButtonCorner { TopLeft, TopRight, BottomLeft, BottomRight }
 
     // ------------------------------------------------------------------
@@ -534,6 +540,13 @@ public partial class PixelShop : MonoBehaviour
     // Canvas
     // ------------------------------------------------------------------
 
+    [Header("Performance")]
+    [Tooltip("Seconds between re-applying the effects of purchased packs (a safety net for packs ticked in the Inspector; normal buying applies at once).")]
+    [SerializeField] private float reapplyIntervalSeconds = 0.5f;
+
+    [Tooltip("Seconds between row refreshes while the shop is open (buying and tab changes refresh at once).")]
+    [SerializeField] private float rowRefreshSeconds = 0.25f;
+
     [Header("Canvas")]
     [Tooltip("Sorting order of the shop canvas.")]
     [SerializeField] private int sortingOrder = 150;
@@ -618,7 +631,7 @@ public partial class PixelShop : MonoBehaviour
             {
                 int tierIndex = clicker.EnsureTier(reward);
                 if (reward.startingAmount > 0)
-                    Debug.Log("PixelShop: " + reward.displayName + " starts at " + clicker.Tiers[tierIndex].count + ".", this);
+                    PixelDebug.Info("PixelShop: " + reward.displayName + " starts at " + clicker.Tiers[tierIndex].count + ".", this);
             }
         }
     }
@@ -745,13 +758,15 @@ public partial class PixelShop : MonoBehaviour
         PixelWindows.Register(this, 40, () => subPanelObject != null && subPanelObject.activeSelf, CloseUpgradesWindow);
         PixelWindows.Register(this, 30, () => panelObject != null && panelObject.activeSelf, () => panelObject.SetActive(false));
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         // Diagnostic: where each pack is listed and what it is waiting for.
         StringBuilder log = new StringBuilder("PixelShop: " + packs.Length + " packs.");
         for (int i = 0; i < packs.Length; i++)
             log.Append("\n  [").Append(i).Append("] ").Append(packs[i].displayName)
                .Append(" -> ").Append(TabOf(packs[i]))
                .Append(IsPackRequirementMet(i) ? "" : "  (hidden until \"" + RequirementName(packs[i]) + "\" is bought)");
-        Debug.Log(log.ToString(), this);
+        PixelDebug.Info(log.ToString(), this);
+#endif
     }
 
     private void OnDestroy()
@@ -760,9 +775,15 @@ public partial class PixelShop : MonoBehaviour
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
+    private float nextReapplyTime;
+    private float nextRowRefreshTime;
+
     private void Update()
     {
         // Packs ticked as "Purchased" in the Inspector (before or during Play) take effect too.
+        // Re-applying purchased packs is only a safety net (buying applies at once), so it runs on a timer.
+        bool reapply = Time.unscaledTime >= nextReapplyTime;
+        if (reapply) nextReapplyTime = Time.unscaledTime + reapplyIntervalSeconds;
         foreach (ShopPack pack in packs)
         {
             if (IsLeveled(pack))
@@ -770,7 +791,7 @@ public partial class PixelShop : MonoBehaviour
                 // Levels typed into the Inspector (or bought) set the auto clicker's values.
                 if (pack.level != pack.appliedLevel) ApplyUpgrade(pack);
             }
-            else if (pack.purchased)
+            else if (reapply && pack.purchased)
             {
                 ApplyPackEffects(pack);
             }
@@ -787,7 +808,11 @@ public partial class PixelShop : MonoBehaviour
         if (!visible && panelObject.activeSelf) panelObject.SetActive(false);
         if (!panelObject.activeSelf && subPanelObject.activeSelf) CloseUpgradesWindow();
 
-        if (panelObject.activeSelf) RefreshRows();
+        if (panelObject.activeSelf && Time.unscaledTime >= nextRowRefreshTime)
+        {
+            nextRowRefreshTime = Time.unscaledTime + rowRefreshSeconds;
+            RefreshRows();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -985,7 +1010,7 @@ public partial class PixelShop : MonoBehaviour
         foreach (PackCost cost in total) SpendCost(cost);
 
         consumables.AddItem(itemIndex, count);
-        Debug.Log("PixelShop: bought " + count + " x " + consumables.ItemName(itemIndex) + " - you now own " +
+        PixelDebug.Info("PixelShop: bought " + count + " x " + consumables.ItemName(itemIndex) + " - you now own " +
                   consumables.ItemOwned(itemIndex) + ".", this);
         PlayPurchaseSound();
         RefreshRows();

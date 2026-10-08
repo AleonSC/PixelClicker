@@ -675,7 +675,7 @@ public partial class PixelShop
 
         // The upgrades window only makes sense while its pack is owned.
         if (openParent >= 0 && !HasPack(openParent)) CloseUpgradesWindow();
-        if (openParent >= 0) subTitle.text = string.Format(upgradesWindowTitle, packs[openParent].displayName);
+        if (openParent >= 0) PixelUIKit.SetText(subTitle, string.Format(upgradesWindowTitle, packs[openParent].displayName));
 
         // Trackers: first things on the Minigames tab, once their minigame is in play.
         foreach (var pair in trackers)
@@ -734,19 +734,19 @@ public partial class PixelShop
                 visibleCount++;
             }
 
-            row.nameLabel.text = BuildNameText(pack);
-            row.descLabel.text = ResolveDescription(pack);
+            PixelUIKit.SetText(row.nameLabel, BuildNameText(pack));
+            PixelUIKit.SetText(row.descLabel, ResolveDescription(pack));
 
             bool canBuy = !owned && requirementMet && CanAfford(i);
 
-            if (owned) row.costLabel.text = "";
-            else if (!requirementMet) row.costLabel.text = RequirementText(i);
-            else row.costLabel.text = BuildCostText(CurrentCosts(pack));
+            if (owned) PixelUIKit.SetText(row.costLabel, "");
+            else if (!requirementMet) PixelUIKit.SetText(row.costLabel, RequirementText(i));
+            else PixelUIKit.SetText(row.costLabel, BuildCostText(CurrentCosts(pack)));
 
             row.buyButton.interactable = canBuy;
-            if (owned) row.buyLabel.text = leveled ? maxedText : ownedText;
-            else if (!requirementMet) row.buyLabel.text = lockedText;
-            else row.buyLabel.text = leveled ? upgradeText : buyText;
+            if (owned) PixelUIKit.SetText(row.buyLabel, leveled ? maxedText : ownedText);
+            else if (!requirementMet) PixelUIKit.SetText(row.buyLabel, lockedText);
+            else PixelUIKit.SetText(row.buyLabel, leveled ? upgradeText : buyText);
             row.buyImage.color = canBuy ? buyColor : disabledColor;
 
             // Arrow to the upgrades window: only once the pack is owned.

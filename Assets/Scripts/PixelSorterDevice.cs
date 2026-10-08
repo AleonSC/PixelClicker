@@ -13,6 +13,12 @@ using static PixelInput;
 /// </summary>
 public class PixelSorterDevice : PixelPlacedDevice
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        Current = null;
+    }
+
     /// <summary>The sorter that is currently working (null = none). <see cref="PixelClicker"/> asks it where to send each pixel.</summary>
     public static PixelSorterDevice Current { get; private set; }
 

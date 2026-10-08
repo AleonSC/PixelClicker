@@ -10,6 +10,12 @@ using UnityEngine;
 /// </summary>
 public abstract class PixelPlacedDevice : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        all.Clear();
+    }
+
     private static readonly List<PixelPlacedDevice> all = new List<PixelPlacedDevice>();
 
     /// <summary>Every placed device that exists right now.</summary>

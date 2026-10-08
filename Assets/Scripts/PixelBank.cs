@@ -25,6 +25,12 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class PixelBank : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        HoseOn = false;
+    }
+
     // ------------------------------------------------------------------
     // Settings
     // ------------------------------------------------------------------

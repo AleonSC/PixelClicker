@@ -19,6 +19,13 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class PixelPauseMenu : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        IsPaused = false;
+        GameStopped = false;
+    }
+
     public enum PauseKey { Escape, P, Tab, Backspace, None }
 
     public enum ButtonAnchor { TopLeft, TopCenter, TopRight, BottomLeft, BottomCenter, BottomRight }
@@ -563,8 +570,14 @@ public class PixelPauseMenu : MonoBehaviour
         {
             SetPaused(!IsPaused);
         }
-        if (statsPanel != null && statsPanel.activeSelf) RefreshStats();
+        if (statsPanel != null && statsPanel.activeSelf && Time.unscaledTime >= nextStatsRefresh)
+        {
+            nextStatsRefresh = Time.unscaledTime + 0.25f;
+            RefreshStats();
+        }
     }
+
+    private float nextStatsRefresh;
 
     private void OnDestroy()
     {

@@ -18,6 +18,12 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelCrafting : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        Crafted = null;
+    }
+
     public enum ItemKind { Pixel = 0, Potion = 1 }
     public enum ResultKind { Potion = 0, Device = 1, Combo = 2 }
 

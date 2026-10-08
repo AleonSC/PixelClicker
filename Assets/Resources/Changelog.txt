@@ -1,0 +1,1 @@
+[2026-10-08 10:18 UTC] Performance pass: shop, inventory, log and stats refresh less often, old pixels share one physics material, and debug messages only appear in the editor.

@@ -10,6 +10,15 @@ using UnityEngine.UI;
 /// </summary>
 public static class PixelHold
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        ownerCaller = null;
+        ownerTarget = null;
+        held = 0f;
+        meter = null;
+    }
+
     private static object ownerCaller;
     private static object ownerTarget;
     private static float held;

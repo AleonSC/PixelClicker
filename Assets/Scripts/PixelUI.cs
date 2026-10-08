@@ -43,6 +43,10 @@ public class PixelUI : MonoBehaviour
     // Automatic mode
     // ------------------------------------------------------------------
 
+    [Header("Performance")]
+    [Tooltip("Seconds between refreshes of the open Inventory box (opening, tab changes and purchases refresh at once).")]
+    [SerializeField] private float refreshSeconds = 0.2f;
+
     [Header("Automatic Mode")]
     [Tooltip("Build a canvas + one text per tier at startup when 'Tier Labels' is empty.")]
     [SerializeField] private bool autoCreateLabels = true;
@@ -543,9 +547,15 @@ public class PixelUI : MonoBehaviour
         UpdateTooltip();
         UpdateActiveHud();
         UpdateGuide();
-        if (autoMode && !boxObject.activeSelf) return; // closed box: nothing to update
+        if (autoMode && !boxObject.activeSelf) { boxWasOpen = false; return; } // closed box: nothing to update
+        if (boxWasOpen && Time.unscaledTime < nextRefreshTime) return;
+        boxWasOpen = true;
+        nextRefreshTime = Time.unscaledTime + refreshSeconds;
         Refresh();
     }
+
+    private bool boxWasOpen;
+    private float nextRefreshTime;
 
     // ------------------------------------------------------------------
     // Popups
@@ -961,7 +971,7 @@ public class PixelUI : MonoBehaviour
         BuildConsumableList(anchor);
         PixelWindows.Register(this, 10, () => boxObject != null && boxObject.activeSelf, () => boxObject.SetActive(false));
         inventoryInstance = this;
-        Debug.Log("PixelUI: created the Inventory box with " + count + " currency lines.", this);
+        PixelDebug.Info("PixelUI: created the Inventory box with " + count + " currency lines.", this);
     }
 
     // ------------------------------------------------------------------
@@ -974,8 +984,8 @@ public class PixelUI : MonoBehaviour
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         if (autoMode)
         {
-            if (buttonLabel != null) buttonLabel.text = inventoryButtonText;
-            if (titleLabel != null) titleLabel.text = inventoryTitle;
+            if (buttonLabel != null) PixelUIKit.SetText(buttonLabel, inventoryButtonText);
+            if (titleLabel != null) PixelUIKit.SetText(titleLabel, inventoryTitle);
         }
         if (autoMode) UpdateSubTabs();
         bool showCurrency = !autoMode || inventoryTab == 0;
@@ -993,7 +1003,7 @@ public class PixelUI : MonoBehaviour
             if (!visible) continue;
 
             string amount = (tier.unlocked || holding) ? FormatAmount(tier.count) : lockedText;
-            label.text = string.Format(lineFormat, tier.displayName, amount);
+            PixelUIKit.SetText(label, string.Format(lineFormat, tier.displayName, amount));
 
             if (!tier.unlocked && !holding) label.color = lockedColor;
             else label.color = colorTextByTier ? tier.UIColor : textColor;
@@ -1235,7 +1245,7 @@ public class PixelUI : MonoBehaviour
             row.SetActive(false);
         }
 
-        Debug.Log("PixelUI: inventory knows " + count + " potion kinds (PixelConsumables on '" +
+        PixelDebug.Info("PixelUI: inventory knows " + count + " potion kinds (PixelConsumables on '" +
                   (consumables != null ? consumables.gameObject.name : "none") + "').", this);
     }
 

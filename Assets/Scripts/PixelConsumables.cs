@@ -25,6 +25,13 @@ using static PixelInput;
 /// </summary>
 public class PixelConsumables : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        PotionDrunk = null;
+        DevicePlaced = null;
+    }
+
     /// <summary>One kind of potion.</summary>
     [Serializable]
     public class Potion

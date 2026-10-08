@@ -47,7 +47,7 @@ Offline progress only covers the auto clicker; `PixelLog` has its own number for
 - Scene reload (Restart) does **not** reset statics. Check any `static` state when adding systems (see 4.4).
 - The Unity `rect` of a freshly created UI element is not valid until the canvas updates; compute sizes from `Screen`/canvas scale instead (event log bug).
 
-## 4. Optimization review (nothing below has been changed yet)
+## 4. Optimization review (done 2026-10-08: #1-6, 9, 10, 11, 14, 22, 24, 27; untested in Unity. #7, #8 and the rest are still open)
 
 Method: read the Update/FixedUpdate loops of every script (39 per-frame methods), the old-pixel spawn path, the UI refresh paths, and grepped for allocations, Find calls, duplicated helpers and statics. No profiler data exists - the user has not reported performance problems. Effort: S < 1 h, M = a few hours, L = a day. Risk = chance of breaking behaviour.
 

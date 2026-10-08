@@ -12,6 +12,12 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelCombo : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        ComboReached = null;
+    }
+
     [Header("References")]
     [Tooltip("The PixelClicker whose clicks build the combo. Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;
@@ -197,6 +203,10 @@ public class PixelCombo : MonoBehaviour
         Apply();
     }
 
+    private int shownCombo = -1;
+    private double shownMultiplier = -1d;
+    private bool shownAtMax;
+
     private void Apply()
     {
         if (canvasRoot == null) return;
@@ -205,7 +215,14 @@ public class PixelCombo : MonoBehaviour
         if (!visible) return;
 
         bool atMax = Multiplier >= maxMultiplier - 0.0001f && combo > 0;
-        label.text = string.Format(atMax ? maxFormat : meterFormat, combo, Multiplier.ToString("0.##"));
+        double multiplierNow = Multiplier;
+        if (combo != shownCombo || multiplierNow != shownMultiplier || atMax != shownAtMax)
+        {
+            shownCombo = combo;
+            shownMultiplier = multiplierNow;
+            shownAtMax = atMax;
+            label.text = string.Format(atMax ? maxFormat : meterFormat, combo, multiplierNow.ToString("0.##"));
+        }
         label.color = atMax ? maxColor : textColor;
         label.rectTransform.localScale = Vector3.one * (1f + popScale * pop);
 

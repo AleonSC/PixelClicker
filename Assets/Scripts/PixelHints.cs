@@ -312,10 +312,18 @@ public class PixelHints : MonoBehaviour
         catch (Exception) { /* no PlayerPrefs: it may show again next session */ }
     }
 
+#if UNITY_EDITOR
+    private readonly HashSet<string> warnedIds = new HashSet<string>();
+#endif
+
     private void Enqueue(string id)
     {
         if (!hintsEnabled || string.IsNullOrEmpty(id) || Seen(id)) return;
         Hint hint = hints != null ? hints.Find(h => h != null && h.id == id) : null;
+#if UNITY_EDITOR
+        if (hint == null && warnedIds.Add(id))
+            Debug.LogWarning("PixelHints: Trigger(\"" + id + "\") has no matching hint in the list (typo, or add a Hint with this id).", this);
+#endif
         if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
         MarkSeen(id);
         string full = hint.text;

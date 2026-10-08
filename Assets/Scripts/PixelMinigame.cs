@@ -15,6 +15,13 @@ using UnityEngine;
 /// </summary>
 public abstract class PixelMinigame : MonoBehaviour
 {
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
+    {
+        Happened = null;
+        registry.Clear();
+    }
+
     private static readonly List<PixelMinigame> registry = new List<PixelMinigame>();
 
     /// <summary>Every minigame currently in the scene.</summary>
