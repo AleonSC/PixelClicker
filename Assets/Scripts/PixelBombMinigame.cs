@@ -120,7 +120,7 @@ public class PixelBombMinigame : PixelMinigame
     [SerializeField] private float wireClickMultiplier = 3.5f;
 
     [Min(0.1f)]
-    [Tooltip("How far apart the wires hang, as a fraction of the bomb's width.")]
+    [Tooltip("How far apart the wires lie on the bomb (fraction of the bomb's radius).")]
     [SerializeField] private float wireSpacing = 0.3f;
 
     [Tooltip("Small hint shown above the bomb. Leave empty to hide it.")]
@@ -334,63 +334,86 @@ public class PixelBombMinigame : PixelMinigame
         Vector2 xr = Random.value < 0.5f ? leftSideX : rightSideX;
         float vx = Random.Range(Mathf.Min(xr.x, xr.y), Mathf.Max(xr.x, xr.y));
         float vy = Random.Range(Mathf.Min(heightRange.x, heightRange.y), Mathf.Max(heightRange.x, heightRange.y));
+
+        // Keep the whole bomb (and the hint above it) inside the view.
+        float R = bombSize * 0.6f; // radius of the round bomb
+        float viewHeight = 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float viewWidth = viewHeight * cam.aspect;
+        float halfW = (R * 1.25f) / viewWidth, halfDown = (R * 1.3f) / viewHeight, halfUp = (R * 1.3f + bombSize * 0.5f) / viewHeight;
+        vx = Mathf.Clamp(vx, 0.04f + halfW, 0.96f - halfW);
+        vy = Mathf.Clamp(vy, 0.12f + halfDown, 0.88f - halfUp);
         Vector3 position = cam.ViewportToWorldPoint(new Vector3(vx, vy, depth));
 
         GameObject root = new GameObject("Bomb");
         root.transform.position = position;
         root.transform.rotation = cam.transform.rotation; // faces the camera
 
-        // Casing.
-        float bw = bombSize * 1.5f, bh = bombSize * 0.9f, bd = bombSize * 0.35f;
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        body.name = "Casing";
-        Destroy(body.GetComponent<Collider>());
-        body.transform.SetParent(root.transform, false);
-        body.transform.localScale = new Vector3(bw, bh, bd);
+        // The casing: two halves of a round metal bomb that meet at a vertical seam. The wires hold them together.
         Material bodyMat = MakeMaterial(casingColor, casingGlow);
-        if (bodyMat != null) body.GetComponent<Renderer>().sharedMaterial = bodyMat;
+        if (bodyMat != null)
+        {
+            if (bodyMat.HasProperty("_Metallic")) bodyMat.SetFloat("_Metallic", 0.75f);
+            if (bodyMat.HasProperty("_Smoothness")) bodyMat.SetFloat("_Smoothness", 0.6f);
+            if (bodyMat.HasProperty("_Glossiness")) bodyMat.SetFloat("_Glossiness", 0.6f);
+        }
+        GameObject leftHalf = MakeHalf("Left Half", root.transform, R, false, bodyMat);
+        GameObject rightHalf = MakeHalf("Right Half", root.transform, R, true, bodyMat);
 
+        // A metal cap and a fuse on top, with a glowing spark at its tip (they belong to the left half).
+        Material capMat = MakeMaterial(new Color(casingColor.r * 0.55f, casingColor.g * 0.55f, casingColor.b * 0.55f, 1f), 0f);
+        GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        cap.name = "Fuse Cap";
+        Destroy(cap.GetComponent<Collider>());
+        cap.transform.SetParent(leftHalf.transform, false);
+        cap.transform.localPosition = new Vector3(-R * 0.18f, R * 0.98f, 0f);
+        cap.transform.localScale = new Vector3(R * 0.34f, R * 0.12f, R * 0.34f);
+        if (capMat != null) cap.GetComponent<Renderer>().sharedMaterial = capMat;
+        GameObject fuse = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        fuse.name = "Fuse";
+        Destroy(fuse.GetComponent<Collider>());
+        fuse.transform.SetParent(leftHalf.transform, false);
+        fuse.transform.localPosition = new Vector3(-R * 0.3f, R * 1.22f, 0f);
+        fuse.transform.localRotation = Quaternion.Euler(0f, 0f, 28f);
+        fuse.transform.localScale = new Vector3(R * 0.07f, R * 0.2f, R * 0.07f);
+        Material fuseMat = MakeMaterial(new Color(0.25f, 0.2f, 0.15f, 1f), 0f);
+        if (fuseMat != null) fuse.GetComponent<Renderer>().sharedMaterial = fuseMat;
+        GameObject spark = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        spark.name = "Fuse Spark";
+        Destroy(spark.GetComponent<Collider>());
+        spark.transform.SetParent(leftHalf.transform, false);
+        spark.transform.localPosition = new Vector3(-R * 0.4f, R * 1.4f, 0f);
+        spark.transform.localScale = Vector3.one * R * 0.16f;
+        Material sparkMat = MakeMaterial(new Color(1f, 0.7f, 0.2f, 1f), 2.5f);
+        if (sparkMat != null) spark.GetComponent<Renderer>().sharedMaterial = sparkMat;
+
+        // Timer on the front, near the top.
+        float timerY = R * 0.66f;
         TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, timerColor,
-                                     new Vector3(0f, 0f, -(bd * 0.5f + 0.02f)), bw);
+                                     new Vector3(0f, timerY, -(Mathf.Sqrt(Mathf.Max(0.01f, R * R - timerY * timerY)) + 0.04f)), R * 1.8f);
+        TextMeshPro hint = null;
+        Vector3 hintLocal = new Vector3(0f, R * 1.55f + bombSize * 0.15f, -R * 0.3f);
         if (!string.IsNullOrEmpty(hintText))
-            MakeText(root.transform, "Hint", hintText, hintTextSize, new Color(1f, 1f, 1f, 0.9f),
-                     new Vector3(0f, bh * 0.5f + bombSize * 0.2f, -(bd * 0.5f)), bombSize * 8f);
+            hint = MakeText(root.transform, "Hint", hintText, hintTextSize, new Color(1f, 1f, 1f, 0.9f), hintLocal, bombSize * 8f);
 
-        // Three wires hanging from the bottom: red, green, blue.
+        // Three wires run across the front, over the seam, from one half to the other: red, green, blue.
         Color[] colors = { redWireColor, greenWireColor, blueWireColor };
-        float wireLength = bombSize * 1.1f;
-        float spacing = bw * wireSpacing;
-        GameObject[] wires = new GameObject[3];
-        BoxCollider[] hitboxes = new BoxCollider[3];
+        float spacing = R * wireSpacing;
+        float centreY = -R * 0.05f;
+        Collider[][] hitboxes = new Collider[3][];
         bool[] cut = new bool[3];
         for (int i = 0; i < 3; i++)
         {
-            GameObject wire = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            wire.name = "Wire " + i;
-            Destroy(wire.GetComponent<Collider>());
-            wire.transform.SetParent(root.transform, false);
-            wire.transform.localScale = new Vector3(wireThickness, wireLength, wireThickness);
-            wire.transform.localPosition = new Vector3((i - 1) * spacing, -(bh * 0.5f + wireLength * 0.5f), 0f);
-            Material wm = MakeMaterial(colors[i], 0.35f);
-            if (wm != null) wire.GetComponent<Renderer>().sharedMaterial = wm;
+            float y = centreY + (1 - i) * spacing; // red on top, blue at the bottom
+            Material wm = MakeMaterial(colors[i], 0.45f);
+            BuildWire("Wire " + i, y, R, wm, leftHalf.transform, rightHalf.transform, root.transform, out hitboxes[i]);
 
-            // A separate, fatter trigger so thin wires are easy to click.
-            GameObject hit = new GameObject("Hitbox " + i);
-            hit.transform.SetParent(root.transform, false);
-            hit.transform.localPosition = wire.transform.localPosition;
-            BoxCollider box = hit.AddComponent<BoxCollider>();
-            box.isTrigger = true;
-            box.size = new Vector3(wireThickness * wireClickMultiplier, wireLength, wireThickness * wireClickMultiplier);
-
-            wires[i] = wire;
-            hitboxes[i] = box;
-
-            // Colour-blind support (Settings): a letter under each wire.
+            // Colour-blind support (Settings): a letter beside each wire.
             if (PixelDisplaySettings.ColorBlind)
             {
                 string[] letters = { "R", "G", "B" };
-                MakeText(root.transform, "Wire Letter " + letters[i], letters[i], hintTextSize * 1.6f, Color.white,
-                         new Vector3(wire.transform.localPosition.x, -(bh * 0.5f + wireLength) - bombSize * 0.22f, -0.02f), bombSize);
+                float ring = Mathf.Sqrt(Mathf.Max(0.01f, R * R - y * y));
+                MakeText(root.transform, "Wire Letter " + letters[i], letters[i], hintTextSize * 1.4f, Color.white,
+                         new Vector3(ring * 0.78f, y, -ring * 0.62f), bombSize);
             }
         }
 
@@ -412,6 +435,8 @@ public class PixelBombMinigame : PixelMinigame
             timer.text = string.Format(timerFormat, Mathf.Max(0f, left));
             timer.color = warning && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? timerWarningColor
                         : warning ? Color.Lerp(timerColor, timerWarningColor, 0.5f) : timerColor;
+            spark.transform.localScale = Vector3.one * R * (0.16f + 0.05f * Mathf.Sin(Time.time * 22f));
+            if (hint != null) hint.transform.position = PixelUIKit.KeepOnScreen(cam, hint, root.transform.TransformPoint(hintLocal)); // never off screen
             int whole = Mathf.CeilToInt(Mathf.Max(0f, left));
             if (whole != lastWhole)
             {
@@ -425,18 +450,25 @@ public class PixelBombMinigame : PixelMinigame
                 Ray ray = cam.ScreenPointToRay(PointerPosition());
                 float best = float.MaxValue;
                 for (int i = 0; i < 3; i++)
-                    if (!cut[i] && hitboxes[i].Raycast(ray, out RaycastHit info, 1000f) && info.distance < best)
-                    {
-                        best = info.distance;
-                        chosen = i;
-                    }
+                    foreach (Collider hb in hitboxes[i])
+                        if (!cut[i] && hb.Raycast(ray, out RaycastHit info, 1000f) && info.distance < best)
+                        {
+                            best = info.distance;
+                            chosen = i;
+                        }
             }
             yield return null;
         }
 
         // Result.
         bool defused = chosen >= 0 && chosen == CorrectWire();
-        if (chosen >= 0) StartCoroutine(SeverWire(wires[chosen], root.transform));
+        // Cutting a wire lets go of the two halves: they split apart (violently if it was the wrong one).
+        if (chosen >= 0)
+        {
+            leftHalf.transform.SetParent(null, true);
+            rightHalf.transform.SetParent(null, true);
+            StartCoroutine(SplitApart(leftHalf.transform, rightHalf.transform, cam, !(chosen == CorrectWire())));
+        }
 
         if (defused)
         {
@@ -461,29 +493,164 @@ public class PixelBombMinigame : PixelMinigame
         bombActive = false;
     }
 
-    /// <summary>The cut wire falls away from the bomb.</summary>
-    private IEnumerator SeverWire(GameObject wire, Transform bomb)
+    /// <summary>The two halves of the bomb swing apart and fall away.</summary>
+    private IEnumerator SplitApart(Transform left, Transform right, Camera cam, bool violent)
     {
-        if (wire == null) yield break;
-        // Detach the wire so it can fall; the bomb keeps a short stub.
-        Vector3 pos = wire.transform.position;
-        Quaternion rot = wire.transform.rotation;
-        Vector3 scale = wire.transform.lossyScale;
-        GameObject stub = Instantiate(wire, bomb);
-        stub.transform.localScale = new Vector3(scale.x / bomb.lossyScale.x, scale.y * 0.2f / bomb.lossyScale.y, scale.z / bomb.lossyScale.z);
-        stub.transform.position = pos + wire.transform.up * (scale.y * 0.4f);
-
-        wire.transform.SetParent(null, true);
         float t = 0f;
-        Vector3 spin = Random.onUnitSphere * 180f;
-        while (t < 0.9f && wire != null)
+        float duration = violent ? 0.7f : 1.1f;
+        float speed = violent ? 7f : 2.6f;
+        Vector3 leftDir = (-cam.transform.right + cam.transform.up * (violent ? 0.7f : 0.25f)).normalized;
+        Vector3 rightDir = (cam.transform.right + cam.transform.up * (violent ? 0.7f : 0.25f)).normalized;
+        Vector3 spinAxis = cam.transform.forward;
+        Vector3 leftScale = left != null ? left.localScale : Vector3.one, rightScale = right != null ? right.localScale : Vector3.one;
+
+        while (t < duration)
         {
             t += Time.deltaTime;
-            wire.transform.position += Vector3.down * (t * 6f * Time.deltaTime);
-            wire.transform.Rotate(spin * Time.deltaTime, Space.Self);
+            float k = Mathf.Clamp01(t / duration);
+            float fall = t * t * 5f;
+            if (left != null)
+            {
+                left.position += (leftDir * speed - Vector3.up * fall) * Time.deltaTime;
+                left.Rotate(spinAxis, (violent ? 260f : 70f) * Time.deltaTime, Space.World);
+                if (k > 0.7f) left.localScale = leftScale * (1f - (k - 0.7f) / 0.3f);
+            }
+            if (right != null)
+            {
+                right.position += (rightDir * speed - Vector3.up * fall) * Time.deltaTime;
+                right.Rotate(spinAxis, -(violent ? 260f : 70f) * Time.deltaTime, Space.World);
+                if (k > 0.7f) right.localScale = rightScale * (1f - (k - 0.7f) / 0.3f);
+            }
             yield return null;
         }
-        if (wire != null) Destroy(wire);
+        if (left != null) Destroy(left.gameObject);
+        if (right != null) Destroy(right.gameObject);
+    }
+
+    /// <summary>One half of the round casing, with a flat face at the seam. 'right' = the half on the +x side.</summary>
+    private GameObject MakeHalf(string objectName, Transform parent, float radius, bool right, Material material)
+    {
+        GameObject go = new GameObject(objectName, typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.SetParent(parent, false);
+        go.GetComponent<MeshFilter>().sharedMesh = HalfSphereMesh(radius, right);
+        if (material != null) go.GetComponent<MeshRenderer>().sharedMaterial = material;
+        return go;
+    }
+
+    /// <summary>A half sphere (x >= 0 for the right half, x <= 0 for the left) closed with a flat disc at the seam.</summary>
+    private static Mesh HalfSphereMesh(float radius, bool right)
+    {
+        const int lat = 16, lon = 16, ring = 32;
+        var vertices = new System.Collections.Generic.List<Vector3>();
+        var normals = new System.Collections.Generic.List<Vector3>();
+        var triangles = new System.Collections.Generic.List<int>();
+
+        // The curved surface.
+        for (int i = 0; i <= lat; i++)
+        {
+            float theta = Mathf.PI * i / lat;           // 0 = top, PI = bottom
+            for (int j = 0; j <= lon; j++)
+            {
+                float psi = Mathf.PI * j / lon;          // 0..PI around the vertical axis
+                float side = right ? 1f : -1f;
+                // x = side * r * sin(psi), z = -r * cos(psi): the front of the bomb faces -z (toward the camera).
+                Vector3 p = new Vector3(side * radius * Mathf.Sin(theta) * Mathf.Sin(psi), radius * Mathf.Cos(theta),
+                                        -radius * Mathf.Sin(theta) * Mathf.Cos(psi));
+                vertices.Add(p);
+                normals.Add(p.normalized);
+            }
+        }
+        int curvedCount = vertices.Count;
+        for (int i = 0; i < lat; i++)
+        {
+            for (int j = 0; j < lon; j++)
+            {
+                int a = i * (lon + 1) + j, b = a + 1, c = a + lon + 1, d = c + 1;
+                AddOutward(vertices, normals, triangles, a, c, b);
+                AddOutward(vertices, normals, triangles, b, c, d);
+            }
+        }
+
+        // The flat face at the seam (faces the other half).
+        Vector3 faceNormal = right ? Vector3.left : Vector3.right;
+        int centre = vertices.Count;
+        vertices.Add(Vector3.zero); normals.Add(faceNormal);
+        for (int k = 0; k < ring; k++)
+        {
+            float a = Mathf.PI * 2f * k / ring;
+            vertices.Add(new Vector3(0f, Mathf.Cos(a) * radius, Mathf.Sin(a) * radius));
+            normals.Add(faceNormal);
+        }
+        for (int k = 0; k < ring; k++)
+        {
+            int p1 = centre + 1 + k, p2 = centre + 1 + (k + 1) % ring;
+            // Wind it so it faces along faceNormal.
+            Vector3 n = Vector3.Cross(vertices[p1] - vertices[centre], vertices[p2] - vertices[centre]);
+            if (Vector3.Dot(n, faceNormal) >= 0f) { triangles.Add(centre); triangles.Add(p1); triangles.Add(p2); }
+            else { triangles.Add(centre); triangles.Add(p2); triangles.Add(p1); }
+        }
+
+        Mesh mesh = new Mesh { name = right ? "BombRight" : "BombLeft" };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>Adds a triangle wound so that it faces the same way as its vertex normals (so no face is ever inside out).</summary>
+    private static void AddOutward(System.Collections.Generic.List<Vector3> v, System.Collections.Generic.List<Vector3> n,
+                                   System.Collections.Generic.List<int> tris, int a, int b, int c)
+    {
+        Vector3 face = Vector3.Cross(v[b] - v[a], v[c] - v[a]);
+        if (face.sqrMagnitude < 1e-10f) return; // a degenerate triangle at the poles
+        Vector3 avg = n[a] + n[b] + n[c];
+        if (Vector3.Dot(face, avg) >= 0f) { tris.Add(a); tris.Add(b); tris.Add(c); }
+        else { tris.Add(a); tris.Add(c); tris.Add(b); }
+    }
+
+    /// <summary>
+    /// A wire lying on the front of the bomb at height 'y', crossing the seam: its left piece belongs to the left half and its
+    /// right piece to the right half (so a cut shows both pieces going away with their halves). Also makes the click colliders.
+    /// </summary>
+    private void BuildWire(string objectName, float y, float radius, Material material, Transform leftParent, Transform rightParent,
+                           Transform hitParent, out Collider[] colliders)
+    {
+        float ring = Mathf.Sqrt(Mathf.Max(0.01f, radius * radius - y * y)) + wireThickness * 0.35f; // just above the surface
+        const int steps = 10;
+        const float reach = 1.05f; // radians either side of the front
+
+        Vector3[] leftPoints = new Vector3[steps + 1], rightPoints = new Vector3[steps + 1];
+        for (int k = 0; k <= steps; k++)
+        {
+            float t = reach * k / steps;
+            rightPoints[k] = new Vector3(ring * Mathf.Sin(t), y, -ring * Mathf.Cos(t));   // from the seam round to the right
+            leftPoints[k] = new Vector3(-ring * Mathf.Sin(t), y, -ring * Mathf.Cos(t));   // from the seam round to the left
+        }
+
+        foreach (var (points, parent) in new[] { (leftPoints, leftParent), (rightPoints, rightParent) })
+        {
+            GameObject piece = new GameObject(objectName + " Piece", typeof(MeshFilter), typeof(MeshRenderer));
+            piece.transform.SetParent(parent, false);
+            piece.GetComponent<MeshFilter>().sharedMesh = PixelTube.Build(points, wireThickness * 0.5f, 8, null);
+            if (material != null) piece.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
+
+        // Click colliders: a row of fat invisible spheres along the wire (they sway with the bomb, not with the halves).
+        GameObject hit = new GameObject(objectName + " Hitbox");
+        hit.transform.SetParent(hitParent, false);
+        float hitRadius = wireThickness * wireClickMultiplier * 0.5f;
+        var list = new System.Collections.Generic.List<Collider>();
+        for (int k = -steps; k <= steps; k += 2)
+        {
+            Vector3 p = k >= 0 ? rightPoints[k] : leftPoints[-k];
+            SphereCollider sc = hit.AddComponent<SphereCollider>();
+            sc.isTrigger = true;
+            sc.center = p;
+            sc.radius = hitRadius;
+            list.Add(sc);
+        }
+        colliders = list.ToArray();
     }
 
     private void Explode(Vector3 position, Camera cam)
@@ -555,8 +722,8 @@ public class PixelBombMinigame : PixelMinigame
         {
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.position = start + cam.transform.up * (bombSize * 0.8f + k * 1.5f) - cam.transform.forward * 0.5f;
             go.transform.rotation = cam.transform.rotation;
+            go.transform.position = PixelUIKit.KeepOnScreen(cam, text, start + cam.transform.up * (bombSize * 0.8f + k * 1.5f) - cam.transform.forward * 0.5f);
             Color c = color;
             c.a *= 1f - k * k;
             text.color = c;

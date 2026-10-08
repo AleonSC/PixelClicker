@@ -37,3 +37,4 @@
 [2026-10-08 13:59 UTC] Reworked how the black hole swallows pixels: they ease into a spiral, speed up as they fall in, stretch into curved streaks, darken, leave a purple trail and vanish with a small flash.
 [2026-10-08 14:02 UTC] Removed the harmless "no matching hint" warning for the black hole (it has its own first-time tip).
 [2026-10-08 14:05 UTC] Fixed the dead zone: old pixels right next to the clicker pixel can be grabbed now.
+[2026-10-08 14:12 UTC] New bomb: a round metal bomb in two halves with a fuse, the three wires run across its front, and cutting one splits the bomb in two; the black hole counter and bomb text now always stay in view.

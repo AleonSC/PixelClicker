@@ -381,9 +381,13 @@ public class PixelBlackholeMinigame : PixelMinigame
                 punch = Mathf.MoveTowards(punch, 0f, Time.deltaTime * 4f);
 
                 Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-                counter.transform.position = center + Vector3.up * (0.9f + radius * 0.15f);
-                if (cam != null) counter.transform.rotation = cam.transform.rotation;
                 counter.transform.localScale = Vector3.one * (size * (1f + punch * 0.35f));
+                counter.transform.position = center + Vector3.up * (0.9f + radius * 0.15f);
+                if (cam != null)
+                {
+                    counter.transform.rotation = cam.transform.rotation;
+                    counter.transform.position = PixelUIKit.KeepOnScreen(cam, counter, counter.transform.position); // never off screen
+                }
             }
 
             yield return null;

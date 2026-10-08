@@ -39,6 +39,29 @@ public static class PixelUIKit
         return root;
     }
 
+    /// <summary>
+    /// Moves a 3D text so all of it stays inside the camera's view (its whole width and height, with a margin as a fraction of
+    /// the screen), clear of the black bars. Returns the adjusted world position.
+    /// </summary>
+    public static Vector3 KeepOnScreen(Camera cam, TextMeshPro text, Vector3 position, float margin = 0.03f)
+    {
+        if (cam == null || text == null) return position;
+        Vector3 v = cam.WorldToViewportPoint(position);
+        if (v.z <= 0.01f) return position;
+
+        float viewHeight = 2f * v.z * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float viewWidth = viewHeight * cam.aspect;
+        text.ForceMeshUpdate();
+        float halfW = Mathf.Min(0.45f, text.preferredWidth * 0.5f * text.transform.lossyScale.x / Mathf.Max(0.01f, viewWidth));
+        float halfH = Mathf.Min(0.45f, text.preferredHeight * 0.5f * text.transform.lossyScale.y / Mathf.Max(0.01f, viewHeight));
+
+        float bars = PixelHud.Instance != null
+            ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
+        float x = Mathf.Clamp(v.x, margin + halfW, 1f - margin - halfW);
+        float y = Mathf.Clamp(v.y, bars + margin + halfH, 1f - bars - margin - halfH);
+        return cam.ViewportToWorldPoint(new Vector3(x, y, v.z));
+    }
+
     /// <summary>Sets a text only when it changed (skips the TMP rebuild for identical strings).</summary>
     public static void SetText(TMP_Text label, string text)
     {
