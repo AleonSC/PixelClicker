@@ -346,9 +346,9 @@ public partial class PixelShop
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
         // "Nothing here yet" message for empty tabs.
-        empty = CreateText(scrollGo.transform, "Empty", emptyTabText, descriptionFontSize + 6f,
-                                TextAlignmentOptions.Center, FontStyles.Italic);
-        empty.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
+        empty = CreateText(scrollGo.transform, "Empty", emptyTabText, descriptionFontSize + 8f,
+                                TextAlignmentOptions.Center, FontStyles.Bold);
+        empty.color = emptyTabColor;
         RectTransform er = empty.rectTransform;
         er.anchorMin = Vector2.zero;
         er.anchorMax = Vector2.one;

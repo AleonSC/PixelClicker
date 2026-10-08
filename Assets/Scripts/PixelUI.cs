@@ -169,6 +169,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("One potion line. {0} = name, {1} = amount owned.")]
     [SerializeField] private string consumableLineFormat = "{0}   x{1}";
 
+    [Tooltip("Colour of the \"No potions / devices yet\" message in the Consumables tab (bright, so it is easy to read).")]
+    [SerializeField] private Color emptyMessageColor = new Color(0.92f, 0.94f, 1f, 1f);
+
     [Tooltip("Shown when you own no potions.")]
     [SerializeField] private string noConsumablesText = "No potions yet.";
 
@@ -1233,8 +1236,8 @@ public class PixelUI : MonoBehaviour
         consumableAlign = align;
         BuildPotionRows();
 
-        noConsumablesLabel = MakeText(ListParent, "No Consumables", noConsumablesText, fontSize * 0.9f, align,
-                                      FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        noConsumablesLabel = MakeText(ListParent, "No Consumables", noConsumablesText, fontSize, align,
+                                      FontStyles.Bold, emptyMessageColor);
         PlaceLine(noConsumablesLabel.rectTransform);
         noConsumablesLabel.gameObject.SetActive(false);
 

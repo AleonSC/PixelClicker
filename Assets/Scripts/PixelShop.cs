@@ -346,6 +346,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Text shown when a tab has nothing to list yet.")]
     [SerializeField] private string emptyTabText = "Nothing here yet.";
 
+    [Tooltip("Colour of that message (bright, so it is easy to read).")]
+    [SerializeField] private Color emptyTabColor = new Color(0.92f, 0.94f, 1f, 1f);
+
     [Tooltip("Height of the tab buttons.")]
     [SerializeField] private float tabHeight = 70f;
 

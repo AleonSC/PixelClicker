@@ -30,3 +30,4 @@
 [2026-10-08 12:55 UTC] Singularity gravity wells now drag nearby old pixels at a constant speed (even across the floor) and keep working while the singularity pixel is carried with Pixel Grabbing.
 [2026-10-08 13:36 UTC] Gravity well settings (pull speed, grip, radius, ring) now update live while the game is running.
 [2026-10-08 13:37 UTC] The combo meter always sits above the bottom black bar.
+[2026-10-08 13:43 UTC] The "No potions / devices yet" and "Nothing here yet" messages are now bright, bold and easier to read.
