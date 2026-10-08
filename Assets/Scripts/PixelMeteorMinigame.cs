@@ -105,6 +105,28 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("Width of the tail where it leaves the meteor, as a fraction of the meteor's size. It tapers to a point.")]
     [SerializeField] private float tailWidth = 0.8f;
 
+    [Range(0f, 0.5f)]
+    [Tooltip("How lumpy and craggy the rock is (0 = a smooth ball).")]
+    [SerializeField] private float lumpiness = 0.28f;
+
+    [Tooltip("Draw glowing lava cracks across the rock.")]
+    [SerializeField] private bool lavaCracks = true;
+
+    [Range(0f, 200f)]
+    [Tooltip("Glowing embers shed behind the meteor, per second (0 = none).")]
+    [SerializeField] private float embersPerSecond = 45f;
+
+    [Range(0f, 1f)]
+    [Tooltip("Strength of the soft fiery glow around the meteor (0 = none).")]
+    [SerializeField] private float haloOpacity = 0.4f;
+
+    [Min(1f)]
+    [Tooltip("Size of that glow as a multiple of the meteor's size.")]
+    [SerializeField] private float haloSize = 2.6f;
+
+    [Tooltip("A thin white-hot core inside the fiery tail.")]
+    [SerializeField] private bool hotCoreTail = true;
+
     [Tooltip("Add a real light to the meteor so it lights up the scene as it passes.")]
     [SerializeField] private bool castLight = true;
 
@@ -254,12 +276,26 @@ public class PixelMeteorMinigame : PixelMinigame
         SphereCollider hit = rock.GetComponent<SphereCollider>();
         hit.isTrigger = true; // never pushes old pixels around
         hit.radius = 0.5f * clickSizeMultiplier;
+        Mesh lumpy = BuildLumpyRock(rock.GetComponent<MeshFilter>().sharedMesh);
+        if (lumpy != null) rock.GetComponent<MeshFilter>().sharedMesh = lumpy;
 
-        Material rockMat = clicker.CreateVisualMaterial(rockColor, false);
+        // Dark rock with glowing lava cracks (the cracks are the emission).
+        Material rockMat = clicker.CreateVisualMaterial(lavaCracks ? Color.white : rockColor, false);
         if (rockMat != null)
         {
+            if (lavaCracks)
+            {
+                EnsureRockTextures();
+                rockMat.SetTexture("_BaseMap", rockAlbedo);
+                rockMat.SetTexture("_MainTex", rockAlbedo);
+                rockMat.SetTexture("_EmissionMap", rockEmission);
+                rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 1.6f);
+            }
+            else rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 0.35f);
             rockMat.EnableKeyword("_EMISSION");
-            rockMat.SetColor("_EmissionColor", flameColor * glowIntensity * 0.35f);
+            if (rockMat.HasProperty("_Smoothness")) rockMat.SetFloat("_Smoothness", 0.15f);
+            if (rockMat.HasProperty("_Glossiness")) rockMat.SetFloat("_Glossiness", 0.15f);
+            if (rockMat.HasProperty("_Metallic")) rockMat.SetFloat("_Metallic", 0f);
             rock.GetComponent<Renderer>().sharedMaterial = rockMat;
         }
         else
@@ -281,6 +317,41 @@ public class PixelMeteorMinigame : PixelMinigame
             new[] { new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.4f), 0f), new GradientColorKey(flameColor, 0.35f), new GradientColorKey(new Color(flameColor.r * 0.6f, 0.1f, 0.05f), 1f) },
             new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.45f, 0.4f), new GradientAlphaKey(0f, 1f) });
         trail.colorGradient = gradient;
+
+        // A thin white-hot core inside the tail.
+        if (hotCoreTail)
+        {
+            GameObject coreGo = new GameObject("Core Trail");
+            coreGo.transform.SetParent(root.transform, false);
+            TrailRenderer core = coreGo.AddComponent<TrailRenderer>();
+            core.time = tailSeconds * 0.55f;
+            core.startWidth = meteorSize * tailWidth * 0.32f;
+            core.endWidth = 0f;
+            core.minVertexDistance = 0.05f;
+            core.alignment = LineAlignment.View;
+            core.sharedMaterial = trail.sharedMaterial;
+            Gradient coreGradient = new Gradient();
+            coreGradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.6f), 1f) },
+                new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0f, 1f) });
+            core.colorGradient = coreGradient;
+        }
+
+        // Soft fiery glow around the rock (a camera-facing sprite).
+        SpriteRenderer halo = null;
+        if (haloOpacity > 0f)
+        {
+            if (haloSprite == null) haloSprite = BuildSoftSprite();
+            GameObject haloGo = new GameObject("Halo");
+            haloGo.transform.SetParent(root.transform, false);
+            haloGo.transform.localScale = Vector3.one * meteorSize * haloSize;
+            halo = haloGo.AddComponent<SpriteRenderer>();
+            halo.sprite = haloSprite;
+            halo.sortingOrder = -1;
+        }
+
+        // Embers drifting off the meteor (world space, so they stay behind as it moves on).
+        if (embersPerSecond > 0f) BuildEmbers(root.transform);
 
         Light glow = null;
         if (castLight)
@@ -310,6 +381,18 @@ public class PixelMeteorMinigame : PixelMinigame
             root.transform.position = Path(k);
             rock.transform.rotation = spin * Quaternion.AngleAxis(t * tumbleDegrees, spinAxis);
 
+            // Heat flicker: the halo faces the camera and breathes, the light flickers.
+            float flicker = 0.85f + 0.15f * Mathf.Sin(t * 9f) * Mathf.Sin(t * 5.3f + 1f);
+            if (halo != null)
+            {
+                halo.transform.rotation = cam.transform.rotation;
+                halo.transform.position = root.transform.position + cam.transform.forward * (meteorSize * 0.6f); // just behind the rock
+                Color hc = Color.Lerp(flameColor, Color.white, 0.15f);
+                hc.a = haloOpacity * flicker;
+                halo.color = hc;
+            }
+            if (glow != null) glow.intensity = glowIntensity * 2f * flicker;
+
             punch = Mathf.Max(0f, punch - Time.deltaTime / 0.15f);
             rock.transform.localScale = baseScale * (1f - punchAmount * punch);
 
@@ -327,8 +410,153 @@ public class PixelMeteorMinigame : PixelMinigame
         }
 
         Destroy(root);
+        if (rockMat != null) Destroy(rockMat);
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         meteorActive = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Runtime-built visuals: lumpy rock mesh, lava texture, soft glow sprite, embers
+    // ------------------------------------------------------------------
+
+    private static Texture2D rockAlbedo, rockEmission;
+    private static Sprite haloSprite;
+
+    /// <summary>A copy of a sphere mesh with its surface pushed in and out by noise (craggy lumps).</summary>
+    private Mesh BuildLumpyRock(Mesh sphere)
+    {
+        if (sphere == null || lumpiness <= 0f) return null;
+        Vector3[] v = sphere.vertices;
+        Vector3[] n = sphere.normals;
+        float seed = Random.value * 100f;
+        for (int i = 0; i < v.Length; i++)
+        {
+            Vector3 p = n[i] * 2.2f + new Vector3(seed, seed * 0.7f, seed * 1.3f);
+            // Three noise planes make a cheap 3D noise; a finer layer adds small chips.
+            float big = (Mathf.PerlinNoise(p.x, p.y) + Mathf.PerlinNoise(p.y, p.z) + Mathf.PerlinNoise(p.z, p.x)) / 3f - 0.5f;
+            float small = (Mathf.PerlinNoise(p.x * 3.1f, p.z * 3.1f) + Mathf.PerlinNoise(p.y * 3.1f, p.x * 3.1f)) * 0.5f - 0.5f;
+            v[i] = n[i] * (0.5f * (1f + (big * 1.6f + small * 0.5f) * lumpiness * 2f));
+        }
+        Mesh mesh = new Mesh { name = "LumpyRock" };
+        mesh.vertices = v;
+        mesh.uv = sphere.uv;
+        mesh.triangles = sphere.triangles;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>Dark cracked rock (albedo) and the glowing cracks alone (emission), drawn once and shared.</summary>
+    private static void EnsureRockTextures()
+    {
+        if (rockAlbedo != null && rockEmission != null) return;
+
+        const int size = 192, cells = 34;
+        System.Random rnd = new System.Random(4242);
+        Vector2[] sites = new Vector2[cells];
+        for (int i = 0; i < cells; i++) sites[i] = new Vector2((float)rnd.NextDouble(), (float)rnd.NextDouble());
+
+        Color32[] albedo = new Color32[size * size], emission = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Vector2 uv = new Vector2((x + 0.5f) / size, (y + 0.5f) / size);
+                // Distance to the nearest and second nearest site (wrapping around the edges): the gap between them is a crack.
+                float d1 = 9f, d2 = 9f;
+                for (int s = 0; s < cells; s++)
+                {
+                    float dx = Mathf.Abs(uv.x - sites[s].x), dy = Mathf.Abs(uv.y - sites[s].y);
+                    if (dx > 0.5f) dx = 1f - dx;
+                    if (dy > 0.5f) dy = 1f - dy;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+                }
+                float edge = d2 - d1;
+                float crack = Mathf.Clamp01(1f - edge / 0.022f);
+                crack *= 0.55f + 0.45f * Mathf.PerlinNoise(uv.x * 9f, uv.y * 9f); // uneven brightness along the crack
+
+                float grain = Mathf.PerlinNoise(uv.x * 14f, uv.y * 14f) * 0.6f + Mathf.PerlinNoise(uv.x * 40f, uv.y * 40f) * 0.4f;
+                float rock = 0.10f + grain * 0.16f;
+                albedo[y * size + x] = new Color(rock * 1.15f, rock * 0.85f, rock * 0.7f, 1f);
+                emission[y * size + x] = new Color(crack, crack * 0.55f, crack * 0.15f, 1f);
+            }
+        }
+
+        rockAlbedo = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, name = "MeteorRock" };
+        rockAlbedo.SetPixels32(albedo);
+        rockAlbedo.Apply(true, false);
+        rockEmission = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, name = "MeteorLava" };
+        rockEmission.SetPixels32(emission);
+        rockEmission.Apply(true, false);
+    }
+
+    /// <summary>A white soft round blob (tinted by the sprite colour).</summary>
+    private static Sprite BuildSoftSprite()
+    {
+        const int s = 64;
+        Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "MeteorSoft" };
+        Color32[] px = new Color32[s * s];
+        for (int y = 0; y < s; y++)
+            for (int x = 0; x < s; x++)
+            {
+                float u = ((x + 0.5f) / s - 0.5f) * 2f, v = ((y + 0.5f) / s - 0.5f) * 2f;
+                float a = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
+                a *= a;
+                px[y * s + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        tex.SetPixels32(px);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 64f);
+    }
+
+    /// <summary>Glowing sparks that stream off the rock and fade from yellow to red.</summary>
+    private void BuildEmbers(Transform parent)
+    {
+        GameObject go = new GameObject("Embers");
+        go.transform.SetParent(parent, false);
+        ParticleSystem system = go.AddComponent<ParticleSystem>();
+        system.Stop();
+
+        var main = system.main;
+        main.loop = true;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.9f, 2.0f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.9f);
+        main.startSize = new ParticleSystem.MinMaxCurve(meteorSize * 0.03f, meteorSize * 0.09f);
+        main.startColor = new ParticleSystem.MinMaxGradient(Color.Lerp(flameColor, Color.white, 0.5f), flameColor);
+        main.maxParticles = 300;
+
+        var emission = system.emission;
+        emission.rateOverTime = embersPerSecond;
+
+        var shape = system.shape;
+        shape.shapeType = ParticleSystemShapeType.Sphere;
+        shape.radius = meteorSize * 0.42f;
+
+        var color = system.colorOverLifetime;
+        color.enabled = true;
+        Gradient fade = new Gradient();
+        fade.SetKeys(
+            new[] { new GradientColorKey(new Color(1f, 0.9f, 0.5f), 0f), new GradientColorKey(flameColor, 0.4f), new GradientColorKey(new Color(0.6f, 0.1f, 0.05f), 1f) },
+            new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.7f, 0.5f), new GradientAlphaKey(0f, 1f) });
+        color.color = new ParticleSystem.MinMaxGradient(fade);
+
+        var size = system.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.1f)));
+
+        ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
+        Shader shader = Shader.Find("Sprites/Default");
+        if (shader != null)
+        {
+            if (haloSprite == null) haloSprite = BuildSoftSprite();
+            Material m = new Material(shader) { mainTexture = haloSprite.texture };
+            renderer.sharedMaterial = m;
+        }
+        renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        system.Play();
     }
 
     private void CollectChunk(Vector3 point, Camera cam)
