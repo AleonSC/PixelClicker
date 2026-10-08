@@ -219,6 +219,29 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How far the light reaches.")]
     [SerializeField] private float glowLightRange = 6f;
 
+    [Header("Bright Falling Pixels (light trail)")]
+    [Tooltip("Pixel types whose old (falling) pixels get a light trail and extra glow. They should also have Glow ticked on their tier.")]
+    [SerializeField] private PixelType[] brightOldPixelTypes = { PixelType.Luminescent };
+
+    [Tooltip("Leave a fading light trail behind these pixels as they fall.")]
+    [SerializeField] private bool lightTrail = true;
+
+    [Min(0.05f)]
+    [Tooltip("How long the light trail lasts (seconds).")]
+    [SerializeField] private float lightTrailSeconds = 0.5f;
+
+    [Min(0.05f)]
+    [Tooltip("Width of the trail, as a fraction of the old pixel's size.")]
+    [SerializeField] private float lightTrailWidth = 0.7f;
+
+    [Min(0.1f)]
+    [Tooltip("Brightness of the trail colour (1 = the tier colour, higher = lighter, towards white).")]
+    [SerializeField] private float lightTrailBrightness = 1.6f;
+
+    [Min(1f)]
+    [Tooltip("Extra glow on these old pixels: multiplies the tier's Glow Intensity (1 = no extra).")]
+    [SerializeField] private float oldPixelGlowBoost = 2.5f;
+
     [Header("Tough Pixels (Clicks To Collect > 1)")]
     [Range(0f, 0.6f)]
     [Tooltip("How much the pixel squashes when it is hit but not yet collected. 0 = no reaction.")]
@@ -1566,6 +1589,50 @@ public class PixelClicker : MonoBehaviour
         return mat;
     }
 
+    private bool IsBrightOldPixel(int tierIndex)
+    {
+        if (!IsValidTier(tierIndex) || brightOldPixelTypes == null) return false;
+        PixelTier t = tiers[tierIndex];
+        if (!t.glow) return false;
+        for (int i = 0; i < brightOldPixelTypes.Length; i++)
+            if (brightOldPixelTypes[i] == t.type) return true;
+        return false;
+    }
+
+    private Material lightTrailMaterial;
+
+    /// <summary>A glowing, fading trail behind a falling old pixel (colours come from the trail's gradient).</summary>
+    private void AddLightTrail(GameObject copy, Color tierColor)
+    {
+        if (lightTrailMaterial == null)
+        {
+            // Sprites/Default uses the trail's vertex colours in every render pipeline; fall back to a tinted copy of the pixel material.
+            Shader shader = Shader.Find("Sprites/Default");
+            lightTrailMaterial = shader != null ? new Material(shader) { name = "LightTrail" }
+                                                : CreateVisualMaterial(Color.white, true);
+        }
+
+        Color hot = Color.Lerp(tierColor, Color.white, Mathf.Clamp01((lightTrailBrightness - 1f) * 0.5f));
+        hot = new Color(Mathf.Clamp01(hot.r * Mathf.Min(lightTrailBrightness, 1.5f)), Mathf.Clamp01(hot.g * Mathf.Min(lightTrailBrightness, 1.5f)),
+                        Mathf.Clamp01(hot.b * Mathf.Min(lightTrailBrightness, 1.5f)), 1f);
+
+        TrailRenderer trail = copy.AddComponent<TrailRenderer>();
+        trail.sharedMaterial = lightTrailMaterial;
+        trail.time = lightTrailSeconds;
+        trail.minVertexDistance = 0.04f;
+        trail.alignment = LineAlignment.View;
+        trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        trail.receiveShadows = false;
+        trail.widthMultiplier = copy.transform.lossyScale.x * lightTrailWidth;
+        trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0f));
+
+        Gradient g = new Gradient();
+        g.SetKeys(
+            new[] { new GradientColorKey(hot, 0f), new GradientColorKey(tierColor, 1f) },
+            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0f, 1f) });
+        trail.colorGradient = g;
+    }
+
     /// <summary>Pulls one old pixel into the cube while shrinking it, then removes it.</summary>
     private IEnumerator SuckRoutine(Rigidbody body, Transform target = null)
     {
@@ -1680,6 +1747,13 @@ public class PixelClicker : MonoBehaviour
                 mr.sharedMaterial = pixelRenderer.sharedMaterial;
                 pixelRenderer.GetPropertyBlock(block);
             }
+            if (!flyType && IsBrightOldPixel(tierIndex))
+            {
+                // Extra bright falling pixel: stronger emission than the cube had.
+                PixelTier look = tiers[tierIndex];
+                Color baseGlow = new Color(look.color.r, look.color.g, look.color.b, 1f);
+                block.SetColor("_EmissionColor", baseGlow * (Mathf.Max(look.glowIntensity, 1f) * oldPixelGlowBoost));
+            }
             mr.SetPropertyBlock(block);
         }
 
@@ -1744,6 +1818,7 @@ public class PixelClicker : MonoBehaviour
             copy.AddComponent<ScaledGravity>().scale = gravityScale;
 
         if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
+        if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
 
         if (fly)
         {
