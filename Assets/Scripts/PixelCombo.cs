@@ -315,6 +315,8 @@ public class PixelCombo : MonoBehaviour
         bool hidden = combo <= 0 && hideAfterSeconds > 0f && idleSeconds >= hideAfterSeconds;
         float targetAlpha = combo > 0 ? 1f : hidden ? 0f : idleAlpha;
         group.alpha = targetAlpha > group.alpha ? targetAlpha : Mathf.MoveTowards(group.alpha, targetAlpha, Time.unscaledDeltaTime / fadeSeconds);
+        // Always sit just above the bottom black bar (it may not have existed yet when the meter was built, or its size may change).
+        boxBasePosition = new Vector2(horizontalOffset, meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f));
         UpdateEffects();
     }
 
