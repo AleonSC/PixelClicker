@@ -274,7 +274,12 @@ public class PixelHints : MonoBehaviour
 
     private void OnMinigame(PixelMinigame game, PixelMinigame.MinigameEvent what)
     {
-        if (what == PixelMinigame.MinigameEvent.Spawned && game != null) Trigger("minigame_" + game.Id);
+        if (what == PixelMinigame.MinigameEvent.Spawned && game != null)
+        {
+            // Some minigames (the black hole) show their own first-time tip instead of one from the list: no warning for those.
+            string id = "minigame_" + game.Id;
+            if (hints != null && hints.Exists(h => h != null && h.id == id)) Trigger(id);
+        }
     }
 
     // ------------------------------------------------------------------
