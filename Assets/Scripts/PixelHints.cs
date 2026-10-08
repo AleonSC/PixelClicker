@@ -139,6 +139,7 @@ public class PixelHints : MonoBehaviour
             case "bank": return "You unlocked the Pixel Bank!";
             case "minigame_ghost": return "A ghost appeared!";
             case "minigame_meteor": return "A meteor appeared!";
+            case "minigame_stardust": return "A star fell from the sky!";
             case "minigame_bomb": return "A bomb appeared!";
             case "minigame_pad": return "An Ultra Pad appeared!";
             case "potion": return "You drank a potion!";
@@ -173,6 +174,7 @@ public class PixelHints : MonoBehaviour
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
+        H("minigame_stardust", "A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new."),
         H("event_log", "This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log."),
         H("crafting", "Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion."),
         H("grab", "Pixel Grabbing unlocked! Hold the left mouse button on an old pixel to pick it up, then let go to throw it."),

@@ -284,6 +284,33 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Solar Pixel pack (Pixels tab): needs the Meteor Pixel pack AND enough stardust.</summary>
+    private static ShopPack CreateSolarPixelPack(int requiresMeteorPixelIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Solar Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the blazing Solar pixel, forged from stardust. Meteor pixels sometimes knock a star out of the sky - collect them.",
+            requirements = Needs(requiresMeteorPixelIndex, "stardust"),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Meteor, amount = 50 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 200 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Solar, displayName = "Solar Pixels",
+                    color = new Color(1f, 0.82f, 0.2f, 1f), glow = true, glowIntensity = 3f,
+                    amountPerClick = 25, spawnWeight = 0.2f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -572,6 +599,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Obsidian), create = CreateMeteorStrikePack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Meteor),
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Solar),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),

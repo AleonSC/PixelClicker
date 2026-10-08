@@ -30,6 +30,7 @@ public class PixelClicker : MonoBehaviour
         InfiniteResources = false;
         OldPixelLanded = null;
         UltraGained = null;
+        FlyAwayLaunched = null;
         abbreviateCache = -1;
     }
 
@@ -53,6 +54,7 @@ public class PixelClicker : MonoBehaviour
         Singularity = 10,
         Ghost = 11,
         Meteor = 12,
+        Solar = 13,
     }
 
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
@@ -677,6 +679,9 @@ public class PixelClicker : MonoBehaviour
 
     /// <summary>Raised whenever Ultra pixels are given (first-time tips).</summary>
     public static event System.Action UltraGained;
+
+    /// <summary>Raised with the world position when a fly-away (meteor) old pixel shoots off. The stardust minigame listens.</summary>
+    public static event System.Action<Vector3> FlyAwayLaunched;
 
     internal static void RaiseOldPixelLanded(float intensity) => OldPixelLanded?.Invoke(intensity);
 
@@ -2160,6 +2165,7 @@ public class PixelClicker : MonoBehaviour
             rb.angularDrag = 0f;
 #endif
             rb.AddForce(dir.normalized * tiers[tierIndex].flySpeed, ForceMode.VelocityChange);
+            FlyAwayLaunched?.Invoke(copy.transform.position);
             rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
                          ForceMode.VelocityChange);
 
