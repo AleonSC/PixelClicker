@@ -177,6 +177,9 @@ public class PixelCombo : MonoBehaviour
     private Image barFill;
     private RectTransform barFillRect;
 
+    /// <summary>How far above the bottom of the screen the top of the meter is (canvas units); tips use it to sit just above the meter.</summary>
+    public float MeterTopOffset => meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f) + meterSize.y + 40f;
+
     /// <summary>Is the Combo Meter bought?</summary>
     public bool Active => comboActive;
 

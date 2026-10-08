@@ -33,3 +33,4 @@
 [2026-10-08 13:43 UTC] The "No potions / devices yet" and "Nothing here yet" messages are now bright, bold and easier to read.
 [2026-10-08 13:46 UTC] The tip boxes that appear when a minigame first happens (ghost, meteor, black hole, bomb, pad) are now much smaller.
 [2026-10-08 13:53 UTC] The first black hole tip no longer says how to push pixels in, so players can work out their own ways.
+[2026-10-08 13:56 UTC] The first-combo tip now appears at the bottom, just above the combo meter.

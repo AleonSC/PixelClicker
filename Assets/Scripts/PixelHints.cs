@@ -706,7 +706,8 @@ public class PixelHints : MonoBehaviour
 
         Hint next = queue.Dequeue();
         // The tips for something that just happened in a minigame are small; the rest are shop-sized.
-        PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && next.id.StartsWith("minigame_"));
+        PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && next.id.StartsWith("minigame_"),
+                         aboveCombo: next.id == "combo"); // the first combo tip sits just above the combo meter
         wasShowing = true;
     }
 }

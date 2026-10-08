@@ -21,10 +21,11 @@ public static class PixelNotice
     /// <summary>Shows a message. 'seconds' = 0 keeps it until the player closes it.</summary>
     /// <summary>'compact' = the small text-sized box at the top of the screen (tutorial tips next to the buttons), even if a fixed size is set.</summary>
     /// <summary>'small' = a much smaller box (narrow, small text and button) at the top of the screen: for quick "this just happened" tips.</summary>
-    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false)
+    /// <summary>'aboveCombo' = a small box at the bottom of the screen, just above the combo meter.</summary>
+    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo, aboveCombo); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -85,7 +86,7 @@ public class PixelNoticeBox : MonoBehaviour
         okLabel = ok.GetComponentInChildren<TMP_Text>();
     }
 
-    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false)
+    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
         if (canvasRoot == null) Build();
@@ -113,9 +114,20 @@ public class PixelNoticeBox : MonoBehaviour
         {
             float textHeight = Mathf.Ceil(label.GetPreferredValues(message, width - (small ? 36f : 60f), 0f).y);
             float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-            boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 1f);
             boxRect.sizeDelta = new Vector2(width, textHeight + (small ? 84f : 130f));
-            boxRect.anchoredPosition = new Vector2(0f, -(bar + 24f));
+            if (aboveCombo)
+            {
+                // At the bottom, just above the combo meter.
+                PixelCombo combo = PixelFind.First<PixelCombo>();
+                float above = combo != null ? combo.MeterTopOffset : bar + 140f;
+                boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 0f);
+                boxRect.anchoredPosition = new Vector2(0f, above);
+            }
+            else
+            {
+                boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 1f);
+                boxRect.anchoredPosition = new Vector2(0f, -(bar + 24f));
+            }
         }
 
         canvasRoot.SetActive(true);
