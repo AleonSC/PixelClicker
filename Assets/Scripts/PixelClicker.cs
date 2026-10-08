@@ -219,6 +219,36 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How far the light reaches.")]
     [SerializeField] private float glowLightRange = 6f;
 
+    [Header("Pixel Looks (per pixel type)")]
+    [Tooltip("Turn the per-type looks below on or off (colour/finish, neon outline, dark matter, glass shatter).")]
+    [SerializeField] private bool useLooks = true;
+
+    [Tooltip("Extra look of each pixel type: finish, outline, dark-matter core, shatter. A type not listed here looks as its tier says.")]
+    [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
+
+    [Min(0f)]
+    [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
+    [SerializeField] private float shatterMinSpeed = 2f;
+
+    [Range(3, 40)]
+    [Tooltip("How many shards a shattering pixel breaks into.")]
+    [SerializeField] private int shardCount = 12;
+
+    [Min(0f)]
+    [Tooltip("How fast the shards fly apart.")]
+    [SerializeField] private float shardSpeed = 3.5f;
+
+    [Min(0.1f)]
+    [Tooltip("Seconds a shard stays before it shrinks away.")]
+    [SerializeField] private float shardLifeSeconds = 1.4f;
+
+    [Range(0.05f, 1f)]
+    [Tooltip("Size of a shard compared to the pixel.")]
+    [SerializeField] private float shardSize = 0.4f;
+
+    [Tooltip("Sound id played when a pixel shatters (give it clips in PixelAudio).")]
+    [SerializeField] private string shatterSoundId = "glass_shatter";
+
     [Header("Bright Falling Pixels (light trail)")]
     [Tooltip("Pixel types whose old (falling) pixels get a light trail and extra glow. They should also have Glow ticked on their tier.")]
     [SerializeField] private PixelType[] brightOldPixelTypes = { PixelType.Luminescent };
@@ -1260,6 +1290,54 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+    private PixelLook activeLook;          // the look of the tier the cube currently shows
+    private GameObject liveExtras;         // outline / dark-matter core on the live cube
+    private PixelType liveExtrasType;
+    private bool liveExtrasBuilt;
+
+    /// <summary>The look of a tier, or null (looks off / none defined).</summary>
+    private PixelLook LookOf(PixelTier tier) => useLooks && tier != null ? PixelLooks.Find(looks, tier.type) : null;
+
+    /// <summary>The colour the 3D pixel is drawn in: the look's colour (alpha scaled) or the tier's own.</summary>
+    private static Color RenderColor(PixelTier tier, PixelLook look)
+    {
+        Color c = look != null && look.useColor ? look.color : tier.color;
+        if (look != null) c.a *= look.alpha;
+        return c;
+    }
+
+    /// <summary>Metallic / glossiness from a look onto a property block.</summary>
+    private static void ApplyLookSurface(MaterialPropertyBlock block, PixelLook look)
+    {
+        if (look == null) return;
+        if (look.metallic >= 0f) block.SetFloat("_Metallic", look.metallic);
+        if (look.smoothness >= 0f)
+        {
+            block.SetFloat("_Smoothness", look.smoothness);
+            block.SetFloat("_Glossiness", look.smoothness);
+        }
+    }
+
+    /// <summary>Adds / removes the outline and core on the live cube to match the tier's look.</summary>
+    private void UpdateLiveExtras(PixelTier tier, PixelLook look)
+    {
+        bool wanted = look != null && look.HasExtras && pixelRenderer != null;
+        if (!wanted)
+        {
+            if (liveExtras != null) Destroy(liveExtras);
+            liveExtras = null;
+            liveExtrasBuilt = false;
+            return;
+        }
+        if (liveExtrasBuilt && liveExtras != null && liveExtrasType == tier.type) return;
+
+        if (liveExtras != null) Destroy(liveExtras);
+        MeshFilter mf = pixelRenderer.GetComponent<MeshFilter>();
+        liveExtras = mf != null ? PixelLooks.AddExtras(pixelRenderer.transform, mf.sharedMesh, look, tier.color, defaultMaterial) : null;
+        liveExtrasType = tier.type;
+        liveExtrasBuilt = true;
+    }
+
     private void ApplyPixelColor(Color color, bool remember = true)
     {
         if (remember) currentColor = color;
@@ -1269,12 +1347,20 @@ public class PixelClicker : MonoBehaviour
         // Also set the built-in name so either pipeline works if the property name is left default.
         propertyBlock.SetColor("_Color", color);
 
+        ApplyLookSurface(propertyBlock, activeLook);
+
         // Glowing tiers: emission follows the colour (and breathes). Black emission = off for everything else.
         if (activeGlow > 0f)
         {
             float breath = 1f + glowBreathAmount * Mathf.Sin(Time.time * glowBreathSpeed * Mathf.PI * 2f);
-            Color emission = new Color(color.r, color.g, color.b, 1f) * (activeGlow * breath);
+            float scale = activeLook != null ? activeLook.glowScale : 1f;
+            Color emission = new Color(color.r, color.g, color.b, 1f) * (activeGlow * breath * scale);
             propertyBlock.SetColor("_EmissionColor", emission);
+        }
+        else if (activeLook != null && activeLook.emission > 0f)
+        {
+            // Plain self-lighting from the look (so e.g. white pixels stand out).
+            propertyBlock.SetColor("_EmissionColor", new Color(color.r, color.g, color.b, 1f) * activeLook.emission);
         }
         else
         {
@@ -1288,14 +1374,16 @@ public class PixelClicker : MonoBehaviour
     {
         Material wanted = defaultMaterial;
         if (tier.materialOverride != null) wanted = tier.materialOverride;
-        else if (tier.translucent && defaultMaterial != null)
+        else if ((tier.translucent || (LookOf(tier) != null && LookOf(tier).forceTranslucent)) && defaultMaterial != null)
         {
             if (transparentMaterial == null) transparentMaterial = BuildTransparentMaterial(defaultMaterial);
             wanted = transparentMaterial;
         }
 
         // Glowing tiers need a copy of the material with emission switched on.
-        if (tier.glow && tier.materialOverride == null && wanted != null) wanted = GetGlowMaterial(wanted);
+        PixelLook styled = LookOf(tier);
+        bool selfLit = tier.glow || (styled != null && styled.emission > 0f);
+        if (selfLit && tier.materialOverride == null && wanted != null) wanted = GetGlowMaterial(wanted);
         return wanted;
     }
 
@@ -1309,8 +1397,10 @@ public class PixelClicker : MonoBehaviour
         }
 
         activeGlow = tier.glow ? tier.glowIntensity : 0f;
+        activeLook = LookOf(tier);
         UpdateGlowLight(tier);
-        ApplyPixelColor(tier.color);
+        UpdateLiveExtras(tier, activeLook);
+        ApplyPixelColor(RenderColor(tier, activeLook));
     }
 
     /// <summary>Copies a material and switches it to alpha blending (Standard or URP Lit/Unlit).</summary>
@@ -1735,12 +1825,18 @@ public class PixelClicker : MonoBehaviour
             {
                 // A stored pixel looks like its own type, not like whatever the cube currently shows.
                 PixelTier look = tiers[tierIndex];
+                PixelLook styled = LookOf(look);
+                Color drawColor = RenderColor(look, styled);
                 Material m = MaterialForTier(look);
                 mr.sharedMaterial = m != null ? m : pixelRenderer.sharedMaterial;
-                block.SetColor(colorPropertyId, look.color);
-                block.SetColor("_Color", look.color);
+                block.SetColor(colorPropertyId, drawColor);
+                block.SetColor("_Color", drawColor);
+                ApplyLookSurface(block, styled);
+                float glowMul = styled != null ? styled.glowScale : 1f;
                 block.SetColor("_EmissionColor", look.glow
-                    ? new Color(look.color.r, look.color.g, look.color.b, 1f) * look.glowIntensity : Color.black);
+                    ? new Color(look.color.r, look.color.g, look.color.b, 1f) * (look.glowIntensity * glowMul)
+                    : styled != null && styled.emission > 0f
+                        ? new Color(drawColor.r, drawColor.g, drawColor.b, 1f) * styled.emission : Color.black);
             }
             else
             {
@@ -1818,6 +1914,17 @@ public class PixelClicker : MonoBehaviour
             copy.AddComponent<ScaledGravity>().scale = gravityScale;
 
         if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
+        if (!fly && IsValidTier(tierIndex) && srcFilter != null)
+        {
+            // Look extras: neon outline / dark-matter core, and shattering for glass.
+            PixelLook styled = LookOf(tiers[tierIndex]);
+            if (styled != null)
+            {
+                PixelLooks.AddExtras(copy.transform, srcFilter.sharedMesh, styled, tiers[tierIndex].color, defaultMaterial);
+                if (styled.shatter)
+                    copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
+            }
+        }
         if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
 
         if (fly)

@@ -6,3 +6,4 @@
 [2026-10-08 10:40 UTC] Tip boxes (the "Got it" boxes after purchases) are now the same size as the shop and centred on screen.
 [2026-10-08 10:45 UTC] The Bank and Toggles side tabs now only slide out when the mouse is right at the screen edge, so scrolling the event log no longer triggers them.
 [2026-10-08 10:47 UTC] Falling Luminescent pixels now leave a light trail and glow much brighter.
+[2026-10-08 10:54 UTC] New pixel looks: white/gray/black are clearly different, red/green/blue get neon outlines, singularity is a box of dark matter, glass is more see-through and shatters on the ground.

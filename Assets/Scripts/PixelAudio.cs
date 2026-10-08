@@ -173,6 +173,7 @@ public class PixelAudio : MonoBehaviour
         {
             Make("click", 0.02f, 0.92f, 1.08f),
             Make("pixel_land", 0.02f, 0.88f, 1.12f),
+            Make("glass_shatter", 0.04f, 0.9f, 1.1f),
             Make("auto_click", 0.06f, 0.92f, 1.08f),
             Make("hit", 0.03f, 0.92f, 1.08f),
             Make("vacuum", 0.2f),
