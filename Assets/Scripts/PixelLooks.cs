@@ -81,10 +81,7 @@ public static class PixelLooks
         {
             // White, gray and black keep their plain tier look (no entry).
 
-            // RGB: neon outline in their own colour.
-            new PixelLook { type = PixelClicker.PixelType.Red, outline = true },
-            new PixelLook { type = PixelClicker.PixelType.Green, outline = true },
-            new PixelLook { type = PixelClicker.PixelType.Blue, outline = true },
+            // Red, green and blue keep their plain flat colours (no entry).
 
             // Glass: very see-through, a faint edge so it can still be seen, shatters on the ground.
             new PixelLook { type = PixelClicker.PixelType.Glass, alpha = 0.4f, smoothness = 1f, metallic = 0f,

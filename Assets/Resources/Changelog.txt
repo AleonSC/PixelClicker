@@ -11,3 +11,4 @@
 [2026-10-08 11:09 UTC] Dev tools: new on-screen spawn selector tick box to spawn only one chosen pixel, the Monochrome pack or the RGB pack.
 [2026-10-08 11:13 UTC] If the pixel's material is missing (pink cube), the game now builds a temporary one instead of staying pink.
 [2026-10-08 11:17 UTC] White, gray and black pixels are back to their plain original looks.
+[2026-10-08 11:23 UTC] Red, green and blue pixels are back to flat colours with no neon outline.
