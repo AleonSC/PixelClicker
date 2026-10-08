@@ -38,3 +38,4 @@
 [2026-10-08 14:02 UTC] Removed the harmless "no matching hint" warning for the black hole (it has its own first-time tip).
 [2026-10-08 14:05 UTC] Fixed the dead zone: old pixels right next to the clicker pixel can be grabbed now.
 [2026-10-08 14:12 UTC] New bomb: a round metal bomb in two halves with a fuse, the three wires run across its front, and cutting one splits the bomb in two; the black hole counter and bomb text now always stay in view.
+[2026-10-08 14:16 UTC] The bomb is a rectangle again with three wires straight across its top; cutting a wire now only snaps that wire in two.
