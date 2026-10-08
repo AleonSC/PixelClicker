@@ -591,25 +591,37 @@ public class OldPixelGravityWell : MonoBehaviour
     private float startScale;
     private static Sprite ringSprite;
 
-    public void Setup(PixelClicker owner, float pullRadius, float dragSpeed, float gripPerSecond, float ringOpacity, Color ringColour)
+    private PixelLook look; // read every frame, so changing the values in the Inspector while playing takes effect at once
+
+    public void Setup(PixelClicker owner, PixelLook source)
     {
         clicker = owner;
-        radius = pullRadius;
-        pullSpeed = dragSpeed;
-        grip = gripPerSecond;
+        look = source;
+        ReadSettings();
         startScale = Mathf.Max(0.0001f, transform.lossyScale.x);
 
-        if (ringOpacity > 0f)
-        {
-            if (ringSprite == null) ringSprite = BuildRingSprite();
-            ring = new GameObject("Gravity Ring");
-            ringRenderer = ring.AddComponent<SpriteRenderer>();
-            ringRenderer.sprite = ringSprite;
-            ringRenderer.sortingOrder = -2;
-            Color c = ringColour;
-            c.a = ringOpacity;
-            ringRenderer.color = c;
-        }
+        if (ringSprite == null) ringSprite = BuildRingSprite();
+        ring = new GameObject("Gravity Ring");
+        ringRenderer = ring.AddComponent<SpriteRenderer>();
+        ringRenderer.sprite = ringSprite;
+        ringRenderer.sortingOrder = -2;
+        ApplyRingColour();
+    }
+
+    private void ReadSettings()
+    {
+        if (look == null) return;
+        radius = look.wellRadius;
+        pullSpeed = look.wellPullSpeed;
+        grip = look.wellGrip;
+    }
+
+    private void ApplyRingColour()
+    {
+        if (ringRenderer == null || look == null) return;
+        Color c = look.wellRingColor;
+        c.a = look.wellRingOpacity;
+        ringRenderer.color = c;
     }
 
     private static Vector3 VelocityOf(Rigidbody rb)
@@ -632,6 +644,7 @@ public class OldPixelGravityWell : MonoBehaviour
 
     private void FixedUpdate()
     {
+        ReadSettings();
         if (clicker == null || pullSpeed <= 0f) return;
         // The well keeps working while the player carries it (Pixel Grabbing); it only stops once it is shrinking away.
         if (transform.lossyScale.x < startScale * 0.9f) return;
@@ -662,6 +675,7 @@ public class OldPixelGravityWell : MonoBehaviour
     private void LateUpdate()
     {
         if (ring == null) return;
+        ApplyRingColour();
         Camera cam = Camera.main;
         float shrink = Mathf.Clamp01(transform.lossyScale.x / startScale);
         ring.transform.position = transform.position;
