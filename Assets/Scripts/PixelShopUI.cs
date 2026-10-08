@@ -682,7 +682,7 @@ public partial class PixelShop
         foreach (var pair in trackers)
         {
             PixelMinigame m = pair.Key;
-            bool show = showMinigameTrackers && currentTab == ShopTab.Minigames && m != null &&
+            bool show = showMinigameTrackersInShop && currentTab == ShopTab.Minigames && m != null &&
                         (m.Running || m.TrackerCount > 0d);
             PlaceTracker(pair.Value, show, m != null ? m.TrackerCount : 0d, m != null ? m.TrackerGoal : 1d,
                          ref y, ref visibleCount);

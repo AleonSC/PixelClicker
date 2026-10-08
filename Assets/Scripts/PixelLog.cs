@@ -90,6 +90,22 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Colour of the other tab.")]
     [SerializeField] private Color tabInactiveColor = new Color(0.22f, 0.22f, 0.28f, 1f);
 
+    [Tooltip("Label of the third Log tab: progress bars for things like Ghosts Caught, the Singularity count, Stardust and the next pixel unlock.")]
+    [SerializeField] private string goalsTabText = "Goals";
+
+    [Tooltip("Text when the Goals tab has nothing to show yet.")]
+    [SerializeField] private string noGoalsText = "No goals yet.";
+
+    [Tooltip("Title of the 'next pixel unlock' goal. {0} = the pixel's name.")]
+    [SerializeField] private string nextPixelGoalFormat = "Unlock {0}";
+
+    [Tooltip("Description of the 'next pixel unlock' goal. {0} = the pixel that has to be collected.")]
+    [SerializeField] private string nextPixelGoalDescription = "Collect {0} pixels.";
+
+    [Min(40f)]
+    [Tooltip("Height of a goal row.")]
+    [SerializeField] private float goalRowHeight = 100f;
+
     [Header("Pixels Tab")]
     [Min(200f)]
     [Tooltip("Tallest the Pixels list can get (canvas units). A longer list scrolls (mouse wheel or the scroll bar).")]
@@ -297,10 +313,11 @@ public class PixelLog : MonoBehaviour
         public int groupIndex;
     }
 
-    private int currentTab; // 0 = Pixels, 1 = Achievements
+    private int currentTab; // 0 = Pixels, 1 = Achievements, 2 = Goals
     private Image[] tabImages;
-    private GameObject achievementsGroup;
-    private RectTransform achievementsContent;
+    private GameObject achievementsGroup, goalsGroup;
+    private RectTransform achievementsContent, goalsContent;
+    private TMP_Text noGoalsLabel;
     private TMP_Text achievementSummary;
     private TMP_Text noAchievementsLabel;
     private System.Collections.Generic.List<AchievementRow> achievementRows = new System.Collections.Generic.List<AchievementRow>();
@@ -522,6 +539,7 @@ public class PixelLog : MonoBehaviour
 
         BuildTabs();
         BuildAchievementsGroup();
+        BuildGoalsGroup();
 
         // The Pixels tab's rows live in a scroll view under the tabs.
         pixelsScroll = PixelUIKit.CreateScrollView(panelObject.transform, "Pixels List", scrollbarHandleColor, 12f,
@@ -563,10 +581,12 @@ public class PixelLog : MonoBehaviour
 
     private void BuildTabs()
     {
-        string[] names = { pixelsTabText, achievementsTabText };
+        string[] names = { pixelsTabText, achievementsTabText, goalsTabText };
         tabImages = new Image[names.Length];
 
-        float tabWidth = (panelWidth - panelPadding * 2f - 8f) * 0.5f;
+        const float gap = 8f;
+        float tabWidth = (panelWidth - panelPadding * 2f - gap * (names.Length - 1)) / names.Length;
+        float startX = -(tabWidth + gap) * (names.Length - 1) * 0.5f;
         for (int i = 0; i < names.Length; i++)
         {
             Button tab = CreateButton(panelObject.transform, "Tab " + names[i], names[i],
@@ -580,7 +600,7 @@ public class PixelLog : MonoBehaviour
 
             RectTransform rt = tab.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2((i == 0 ? -1f : 1f) * (tabWidth * 0.5f + 4f), -headerHeight);
+            rt.anchoredPosition = new Vector2(startX + i * (tabWidth + gap), -headerHeight);
 
             int captured = i;
             tab.onClick.AddListener(() => { currentTab = captured; Refresh(); });
@@ -590,28 +610,46 @@ public class PixelLog : MonoBehaviour
     /// <summary>Summary line + scrolling list of achievements (shown only on the Achievements tab).</summary>
     private void BuildAchievementsGroup()
     {
-        achievementsGroup = new GameObject("Achievements", typeof(RectTransform));
-        achievementsGroup.transform.SetParent(panelObject.transform, false);
-        RectTransform gr = achievementsGroup.GetComponent<RectTransform>();
+        BuildScrollGroup("Achievements", noAchievementsText, true, out achievementsGroup, out achievementsContent,
+                         out achievementSummary, out noAchievementsLabel);
+    }
+
+    /// <summary>The scrolling list of the Goals tab (progress bars for trackers and the next pixel unlock).</summary>
+    private void BuildGoalsGroup()
+    {
+        BuildScrollGroup("Goals", noGoalsText, false, out goalsGroup, out goalsContent, out TMP_Text unusedSummary, out noGoalsLabel);
+    }
+
+    /// <summary>A panel-sized group with an optional summary line and a scroll view + scroll bar (a tab's content).</summary>
+    private void BuildScrollGroup(string groupName, string emptyMessage, bool withSummary, out GameObject group,
+                                  out RectTransform contentRect, out TMP_Text summary, out TMP_Text empty)
+    {
+        group = new GameObject(groupName, typeof(RectTransform));
+        group.transform.SetParent(panelObject.transform, false);
+        RectTransform gr = group.GetComponent<RectTransform>();
         gr.anchorMin = Vector2.zero;
         gr.anchorMax = Vector2.one;
         gr.offsetMin = gr.offsetMax = Vector2.zero;
 
         float summaryHeight = rowFontSize * 1.3f;
-        achievementSummary = CreateText(achievementsGroup.transform, "Summary", "", rowFontSize * 0.85f,
-                                        TextAlignmentOptions.MidlineLeft, FontStyles.Bold, amountColor);
-        RectTransform sr = achievementSummary.rectTransform;
-        sr.anchorMin = new Vector2(0f, 1f);
-        sr.anchorMax = new Vector2(1f, 1f);
-        sr.pivot = new Vector2(0.5f, 1f);
-        sr.sizeDelta = new Vector2(-panelPadding * 2f, summaryHeight);
-        sr.anchoredPosition = new Vector2(0f, -ContentTop);
+        summary = null;
+        if (withSummary)
+        {
+            summary = CreateText(group.transform, "Summary", "", rowFontSize * 0.85f,
+                                 TextAlignmentOptions.MidlineLeft, FontStyles.Bold, amountColor);
+            RectTransform sr = summary.rectTransform;
+            sr.anchorMin = new Vector2(0f, 1f);
+            sr.anchorMax = new Vector2(1f, 1f);
+            sr.pivot = new Vector2(0.5f, 1f);
+            sr.sizeDelta = new Vector2(-panelPadding * 2f, summaryHeight);
+            sr.anchoredPosition = new Vector2(0f, -ContentTop);
+        }
 
-        float viewTop = ContentTop + summaryHeight + 6f;
+        float viewTop = withSummary ? ContentTop + summaryHeight + 6f : ContentTop;
 
         // Scroll view (also the viewport; the transparent image lets empty space take wheel/drag input).
         GameObject view = new GameObject("List", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
-        view.transform.SetParent(achievementsGroup.transform, false);
+        view.transform.SetParent(group.transform, false);
         view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         RectTransform vr = view.GetComponent<RectTransform>();
         vr.anchorMin = new Vector2(0f, 1f);
@@ -620,18 +658,18 @@ public class PixelLog : MonoBehaviour
         vr.sizeDelta = new Vector2(-(panelPadding * 2f + scrollbarWidth + 8f), achievementsViewHeight);
         vr.anchoredPosition = new Vector2(-(scrollbarWidth + 8f) * 0.5f, -viewTop);
 
-        GameObject content = new GameObject("Content", typeof(RectTransform));
-        content.transform.SetParent(view.transform, false);
-        achievementsContent = content.GetComponent<RectTransform>();
-        achievementsContent.anchorMin = new Vector2(0f, 1f);
-        achievementsContent.anchorMax = new Vector2(1f, 1f);
-        achievementsContent.pivot = new Vector2(0.5f, 1f);
-        achievementsContent.sizeDelta = Vector2.zero;
-        achievementsContent.anchoredPosition = Vector2.zero;
+        GameObject contentGo = new GameObject("Content", typeof(RectTransform));
+        contentGo.transform.SetParent(view.transform, false);
+        contentRect = contentGo.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.sizeDelta = Vector2.zero;
+        contentRect.anchoredPosition = Vector2.zero;
 
         // Scrollbar
         GameObject barGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
-        barGo.transform.SetParent(achievementsGroup.transform, false);
+        barGo.transform.SetParent(group.transform, false);
         barGo.GetComponent<Image>().color = scrollbarTrackColor;
         RectTransform br = barGo.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
@@ -652,7 +690,7 @@ public class PixelLog : MonoBehaviour
 
         ScrollRect scroll = view.GetComponent<ScrollRect>();
         scroll.gameObject.AddComponent<PixelScrollSound>();
-        scroll.content = achievementsContent;
+        scroll.content = contentRect;
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.movementType = ScrollRect.MovementType.Clamped;
@@ -660,16 +698,16 @@ public class PixelLog : MonoBehaviour
         scroll.verticalScrollbar = scrollbar;
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
-        noAchievementsLabel = CreateText(view.transform, "Empty", noAchievementsText, rowFontSize,
+        empty = CreateText(view.transform, "Empty", emptyMessage, rowFontSize,
                                          TextAlignmentOptions.Center, FontStyles.Italic,
                                          new Color(textColor.r, textColor.g, textColor.b, 0.6f));
-        RectTransform er = noAchievementsLabel.rectTransform;
+        RectTransform er = empty.rectTransform;
         er.anchorMin = Vector2.zero;
         er.anchorMax = Vector2.one;
         er.offsetMin = er.offsetMax = Vector2.zero;
-        noAchievementsLabel.gameObject.SetActive(false);
+        empty.gameObject.SetActive(false);
 
-        achievementsGroup.SetActive(false);
+        group.SetActive(false);
     }
 
     private AchievementRow BuildAchievementRow(int index)
@@ -859,11 +897,13 @@ public class PixelLog : MonoBehaviour
             tabImages[i].color = i == currentTab ? tabActiveColor : tabInactiveColor;
 
         bool pixelsTab = currentTab == 0;
-        achievementsGroup.SetActive(!pixelsTab);
+        achievementsGroup.SetActive(currentTab == 1);
+        goalsGroup.SetActive(currentTab == 2);
         pixelsViewport.gameObject.SetActive(pixelsTab);
 
         if (pixelsTab) RefreshPixelsTab();
-        else RefreshAchievementsTab();
+        else if (currentTab == 1) RefreshAchievementsTab();
+        else RefreshGoalsTab();
     }
 
     /// <summary>Hides the Pixels tab's rows, divider, total and empty text.</summary>
@@ -920,6 +960,151 @@ public class PixelLog : MonoBehaviour
         PixelClicker.PixelType type = achievements.GetPixelType(achievementGroups[groupIndex][0]);
         PlayerPrefs.SetInt(ModePrefKey + (int)type, ShowsClicks(type) ? 0 : 1);
         Refresh();
+    }
+
+    private class GoalRow
+    {
+        public RectTransform rect;
+        public TMP_Text title, description, progress;
+        public Image barFill;
+        public RectTransform barFillRect;
+    }
+
+    private readonly List<GoalRow> goalRows = new List<GoalRow>();
+
+    private GoalRow BuildGoalRow(int index)
+    {
+        GoalRow row = new GoalRow();
+        GameObject go = new GameObject("Goal " + index, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(goalsContent, false);
+        go.GetComponent<Image>().color = achievementRowColor;
+        go.GetComponent<Image>().raycastTarget = false;
+        row.rect = go.GetComponent<RectTransform>();
+        row.rect.anchorMin = new Vector2(0f, 1f);
+        row.rect.anchorMax = new Vector2(1f, 1f);
+        row.rect.pivot = new Vector2(0.5f, 1f);
+        row.rect.sizeDelta = new Vector2(0f, goalRowHeight);
+
+        const float left = 16f;
+        row.title = CreateText(go.transform, "Title", "", rowFontSize * 0.9f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
+        row.title.enableAutoSizing = true;
+        row.title.fontSizeMax = rowFontSize * 0.9f;
+        row.title.fontSizeMin = 14f;
+        RectTransform tr = row.title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 0.58f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.offsetMin = new Vector2(left, 0f);
+        tr.offsetMax = new Vector2(-170f, -4f);
+
+        row.progress = CreateText(go.transform, "Progress", "", rowFontSize * 0.75f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, amountColor);
+        row.progress.enableAutoSizing = true;
+        row.progress.fontSizeMax = rowFontSize * 0.75f;
+        row.progress.fontSizeMin = 12f;
+        RectTransform pr = row.progress.rectTransform;
+        pr.anchorMin = new Vector2(1f, 0.58f);
+        pr.anchorMax = new Vector2(1f, 1f);
+        pr.pivot = new Vector2(1f, 0.5f);
+        pr.sizeDelta = new Vector2(160f, 0f);
+        pr.anchoredPosition = new Vector2(-10f, -2f);
+
+        row.description = CreateText(go.transform, "Description", "", rowFontSize * 0.64f, TextAlignmentOptions.MidlineLeft,
+                                     FontStyles.Normal, new Color(textColor.r, textColor.g, textColor.b, 0.7f));
+        row.description.enableAutoSizing = true;
+        row.description.fontSizeMax = rowFontSize * 0.64f;
+        row.description.fontSizeMin = 11f;
+        RectTransform dr = row.description.rectTransform;
+        dr.anchorMin = new Vector2(0f, 0.28f);
+        dr.anchorMax = new Vector2(1f, 0.58f);
+        dr.offsetMin = new Vector2(left, 0f);
+        dr.offsetMax = new Vector2(-12f, 0f);
+
+        GameObject back = new GameObject("Bar", typeof(RectTransform), typeof(Image));
+        back.transform.SetParent(go.transform, false);
+        back.GetComponent<Image>().color = achievementBarBackColor;
+        back.GetComponent<Image>().raycastTarget = false;
+        RectTransform br = back.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0f, 0.07f);
+        br.anchorMax = new Vector2(1f, 0.21f);
+        br.offsetMin = new Vector2(left, 0f);
+        br.offsetMax = new Vector2(-12f, 0f);
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fill.transform.SetParent(back.transform, false);
+        row.barFill = fill.GetComponent<Image>();
+        row.barFill.raycastTarget = false;
+        row.barFillRect = fill.GetComponent<RectTransform>();
+        row.barFillRect.anchorMin = Vector2.zero;
+        row.barFillRect.anchorMax = new Vector2(0f, 1f);
+        row.barFillRect.offsetMin = row.barFillRect.offsetMax = Vector2.zero;
+        return row;
+    }
+
+    private struct Goal
+    {
+        public string title, description;
+        public double count, goal;
+    }
+
+    /// <summary>The progress bars: the next pixel unlock, then every minigame tracker that is in play (ghosts caught, singularity, stardust...).</summary>
+    private List<Goal> CollectGoals()
+    {
+        List<Goal> goals = new List<Goal>();
+
+        PixelClicker.PixelTier[] tiers = clicker.Tiers;
+        for (int i = 1; i < tiers.Length; i++)
+        {
+            PixelClicker.PixelTier t = tiers[i];
+            if (t.unlocked || t.unlockMode != PixelClicker.TierUnlockMode.PreviousTierThreshold || t.unlockThreshold <= 0d) continue;
+            goals.Add(new Goal
+            {
+                title = string.Format(nextPixelGoalFormat, t.displayName),
+                description = string.Format(nextPixelGoalDescription, tiers[i - 1].displayName),
+                count = tiers[i - 1].totalCollected,
+                goal = t.unlockThreshold,
+            });
+            break; // only the next one
+        }
+
+        foreach (PixelMinigame m in PixelMinigame.All)
+        {
+            if (m == null || !m.HasTracker || !(m.Running || m.TrackerCount > 0d)) continue;
+            goals.Add(new Goal { title = m.TrackerTitle, description = m.TrackerDescription, count = m.TrackerCount, goal = Math.Max(1d, m.TrackerGoal) });
+        }
+        return goals;
+    }
+
+    private void RefreshGoalsTab()
+    {
+        HidePixelsTab();
+
+        List<Goal> goals = CollectGoals();
+        while (goalRows.Count < goals.Count) goalRows.Add(BuildGoalRow(goalRows.Count));
+
+        float y = 0f;
+        for (int i = 0; i < goalRows.Count; i++)
+        {
+            GoalRow row = goalRows[i];
+            bool visible = i < goals.Count;
+            row.rect.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            Goal g = goals[i];
+            bool done = g.count >= g.goal;
+            PixelUIKit.SetText(row.title, g.title);
+            PixelUIKit.SetText(row.description, g.description);
+            PixelUIKit.SetText(row.progress, done ? achievementUnlockedText : string.Format(achievementProgressFormat, FormatAmount(g.count), FormatAmount(g.goal)));
+            row.title.color = done ? achievementUnlockedColor : textColor;
+            row.progress.color = done ? achievementUnlockedColor : amountColor;
+            row.barFill.color = done ? achievementUnlockedColor : achievementBarColor;
+            row.barFillRect.anchorMax = new Vector2(Mathf.Clamp01((float)(g.count / g.goal)), 1f);
+
+            row.rect.anchoredPosition = new Vector2(0f, -y);
+            y += goalRowHeight + achievementSpacing;
+        }
+
+        goalsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));
+        noGoalsLabel.gameObject.SetActive(goals.Count == 0);
+        panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + achievementsViewHeight + panelPadding);
     }
 
     private void RefreshAchievementsTab()
