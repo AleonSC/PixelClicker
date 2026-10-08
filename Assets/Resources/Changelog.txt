@@ -1,2 +1,3 @@
 [2026-10-08 10:18 UTC] Performance pass: shop, inventory, log and stats refresh less often, old pixels share one physics material, and debug messages only appear in the editor.
 [2026-10-08 10:27 UTC] The event log is now plain text with no background (a setting on PixelHints brings the background back).
+[2026-10-08 10:29 UTC] The combo meter now fades away after a few seconds without clicking the pixel and returns on the next click.

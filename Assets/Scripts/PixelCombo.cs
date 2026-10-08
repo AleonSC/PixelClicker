@@ -87,6 +87,14 @@ public class PixelCombo : MonoBehaviour
     [SerializeField] private float idleAlpha = 0.45f;
 
     [Min(0f)]
+    [Tooltip("Seconds without clicking the pixel before the meter fades away completely (0 = never hides). It shows again on the next click.")]
+    [SerializeField] private float hideAfterSeconds = 5f;
+
+    [Min(0.01f)]
+    [Tooltip("Seconds the meter takes to fade away.")]
+    [SerializeField] private float fadeSeconds = 1f;
+
+    [Min(0f)]
     [Tooltip("How much the text pops each time the combo grows (0 = no pop).")]
     [SerializeField] private float popScale = 0.2f;
 
@@ -173,10 +181,17 @@ public class PixelCombo : MonoBehaviour
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
-    private void OnCollected(int tierIndex, double amount, bool automatic) => AddClick(automatic);
+    private float idleSeconds; // time since the player last clicked the pixel (fades the meter out)
+
+    private void OnCollected(int tierIndex, double amount, bool automatic)
+    {
+        if (!automatic) idleSeconds = 0f;
+        AddClick(automatic);
+    }
 
     private void OnHit(int tierIndex, int hits, int needed, bool automatic)
     {
+        if (!automatic) idleSeconds = 0f;
         if (hitsCount) AddClick(automatic);
     }
 
@@ -200,6 +215,7 @@ public class PixelCombo : MonoBehaviour
             if (timeLeft <= 0f) combo = 0;
         }
         pop = Mathf.MoveTowards(pop, 0f, Time.deltaTime * 6f);
+        idleSeconds += Time.deltaTime;
         Apply();
     }
 
@@ -229,7 +245,11 @@ public class PixelCombo : MonoBehaviour
         float fill = combo > 0 ? Mathf.Clamp01(timeLeft / comboWindowSeconds) : 0f;
         barFillRect.anchorMax = new Vector2(fill, 1f);
         barFill.color = atMax ? maxColor : barColor;
-        group.alpha = combo > 0 ? 1f : idleAlpha;
+
+        // Fully visible while a combo runs, dimmed when idle, then faded out after a while without clicks.
+        bool hidden = combo <= 0 && hideAfterSeconds > 0f && idleSeconds >= hideAfterSeconds;
+        float targetAlpha = combo > 0 ? 1f : hidden ? 0f : idleAlpha;
+        group.alpha = targetAlpha > group.alpha ? targetAlpha : Mathf.MoveTowards(group.alpha, targetAlpha, Time.unscaledDeltaTime / fadeSeconds);
     }
 
     private void BuildMeter()
