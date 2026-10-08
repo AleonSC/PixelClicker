@@ -215,6 +215,13 @@ public class PixelBlackholeMinigame : PixelMinigame
     private bool holeActive;
 
     public override bool Busy => holeActive;
+
+    protected override void OnDespawned()
+    {
+        holeActive = false;
+        OldPixelDespawn.Frozen = false; // time dilation ends with the hole
+        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+    }
     private Texture2D outerTexture, innerTexture;
     private Material outerMaterial, innerMaterial;
     private bool thresholdAnnounced;
@@ -321,6 +328,7 @@ public class PixelBlackholeMinigame : PixelMinigame
 
         // Two counter-rotating swirl discs.
         GameObject root = new GameObject("Black Hole");
+        Track(root);
         root.transform.position = center;
         Transform outer = BuildSwirl(root.transform, "Outer Swirl", outerMaterial, 0f);
         Transform inner = BuildSwirl(root.transform, "Inner Swirl", innerMaterial, 0.01f);
@@ -459,6 +467,8 @@ public class PixelBlackholeMinigame : PixelMinigame
             if (shader != null) spiralTrailMaterial = new Material(shader) { name = "HoleTrail" };
         }
         GameObject trailGo = new GameObject("Spiral Trail");
+        Track(trailGo);
+        Track(body.gameObject);
         trailGo.transform.SetParent(t, false);
         TrailRenderer trail = trailGo.AddComponent<TrailRenderer>();
         trail.time = 0.45f;
@@ -563,6 +573,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     {
         if (softSprite == null) softSprite = BuildSoftSprite();
         GameObject go = new GameObject("Hole Flash");
+        Track(go);
         SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
         sr.sprite = softSprite;
         sr.sortingOrder = 5;

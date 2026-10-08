@@ -197,6 +197,12 @@ public class PixelBombMinigame : PixelMinigame
 
     public override bool Busy => bombActive;
 
+    protected override void OnDespawned()
+    {
+        bombActive = false;
+        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+    }
+
     public override string Id => "bomb";
     public override string DisplayName => "Bomb Defusal";
     public override bool Running => running;
@@ -345,6 +351,7 @@ public class PixelBombMinigame : PixelMinigame
         Vector3 position = cam.ViewportToWorldPoint(new Vector3(vx, vy, depth));
 
         GameObject root = new GameObject("Bomb");
+        Track(root);
         root.transform.position = position;
         root.transform.rotation = cam.transform.rotation; // faces the camera
 
@@ -566,6 +573,7 @@ public class PixelBombMinigame : PixelMinigame
         }
 
         GameObject lightGo = new GameObject("Explosion Light");
+        Track(lightGo);
         lightGo.transform.position = position;
         Light light = lightGo.AddComponent<Light>();
         light.type = LightType.Point;
@@ -597,6 +605,7 @@ public class PixelBombMinigame : PixelMinigame
     private IEnumerator RisingMessage(Vector3 start, Camera cam, string message, Color color)
     {
         GameObject go = new GameObject("Bomb Message");
+        Track(go);
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
         text.fontSize = messageFontSize;

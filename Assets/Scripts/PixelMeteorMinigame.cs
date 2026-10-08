@@ -177,6 +177,12 @@ public class PixelMeteorMinigame : PixelMinigame
     private bool meteorActive;
 
     public override bool Busy => meteorActive;
+
+    protected override void OnDespawned()
+    {
+        meteorActive = false;
+        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+    }
     private bool thresholdAnnounced;
     private AudioSource audioSource;
 
@@ -270,6 +276,7 @@ public class PixelMeteorMinigame : PixelMinigame
         
         // ---- Build it: lumpy rock, glowing heat, fiery tail, light.
         GameObject root = new GameObject("Meteor");
+        Track(root);
         GameObject rock = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         rock.name = "Rock";
         rock.transform.SetParent(root.transform, false);
@@ -588,6 +595,7 @@ public class PixelMeteorMinigame : PixelMinigame
     private IEnumerator PopupRoutine(Vector3 start, Camera cam, string message)
     {
         GameObject go = new GameObject("Chunk Popup");
+        Track(go);
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
         text.fontSize = popupTextSize;

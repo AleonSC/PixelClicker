@@ -129,6 +129,12 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Width of the on-screen minigame Spawn button (canvas units).")]
     [SerializeField] private float spawnButtonWidth = 130f;
 
+    [Tooltip("Width of the on-screen minigame Despawn button next to it (canvas units).")]
+    [SerializeField] private float despawnButtonWidth = 150f;
+
+    [Tooltip("Text of the Despawn button (removes the selected minigame's current round).")]
+    [SerializeField] private string despawnText = "Despawn";
+
     [Header("Docked button (bottom of the screen)")]
     [Tooltip("Text of the glowing slide-out button at the bottom of the screen that opens the dev tools.")]
     [SerializeField] private string dockButtonText = "Dev Tools";
@@ -560,7 +566,7 @@ public class PixelDevTools : MonoBehaviour
         selectorRoot.transform.SetParent(transform, false);
 
         const float gap = 10f;
-        float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth;
+        float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth + gap + despawnButtonWidth;
         float x = -total * 0.5f;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         float top = -(bar + 12f);
@@ -583,6 +589,13 @@ public class PixelDevTools : MonoBehaviour
                                                buttonColor, textColor, fontSize);
         PlaceTop(spawn.GetComponent<RectTransform>(), x, top, btnSize);
         spawn.onClick.AddListener(SpawnSelected);
+        x += spawnButtonWidth + gap;
+
+        Vector2 despawnSize = new Vector2(despawnButtonWidth, selectorSize.y);
+        Button despawn = PixelUIKit.CreateButton(font, selectorRoot.transform, "Despawn Button", despawnText, despawnSize,
+                                                 buttonColor, textColor, fontSize);
+        PlaceTop(despawn.GetComponent<RectTransform>(), x, top, despawnSize);
+        despawn.onClick.AddListener(DespawnSelected);
     }
 
     private static void PlaceTop(RectTransform rt, float x, float y, Vector2 size)
@@ -645,6 +658,13 @@ public class PixelDevTools : MonoBehaviour
         if (selectorMinigameDropdown == null || selectorMinigameDropdown.value < 0 || selectorMinigameDropdown.value >= dropdownMinigames.Count) return;
         PixelMinigame game = dropdownMinigames[selectorMinigameDropdown.value];
         if (game != null) game.SpawnNow();
+    }
+
+    private void DespawnSelected()
+    {
+        if (selectorMinigameDropdown == null || selectorMinigameDropdown.value < 0 || selectorMinigameDropdown.value >= dropdownMinigames.Count) return;
+        PixelMinigame game = dropdownMinigames[selectorMinigameDropdown.value];
+        if (game != null) game.DespawnNow();
     }
 
     // ------------------------------------------------------------------

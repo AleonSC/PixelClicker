@@ -210,6 +210,12 @@ public class PixelGhostMinigame : PixelMinigame
     private bool ghostActive;
 
     public override bool Busy => ghostActive;
+
+    protected override void OnDespawned()
+    {
+        ghostActive = false;
+        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+    }
     private Material ghostMaterial;
     private AudioSource audioSource;
 
@@ -312,6 +318,7 @@ public class PixelGhostMinigame : PixelMinigame
         box.isTrigger = true; // never pushes old pixels around
         box.size = Vector3.one * clickSizeMultiplier;
 
+        Track(ghost);
         Renderer rend = ghost.GetComponent<Renderer>();
         Color c = ghostColor;
         c.a = ghostOpacity;
@@ -327,6 +334,7 @@ public class PixelGhostMinigame : PixelMinigame
         // The potion the ghost carries (the buff you get when it shatters): a glass cube with the pixel cube inside.
         int potion = consumables != null ? consumables.PickRandomBuff() : -1;
         GameObject potionVisual = potion >= 0 ? BuildPotion(ghost.transform, potion) : null;
+        Track(potionVisual);
 
         // Distance along the camera's forward axis: a bit in front of the cube.
         float depth = 10f;
@@ -452,6 +460,7 @@ public class PixelGhostMinigame : PixelMinigame
     private IEnumerator CaughtMessage(Vector3 start, Camera cam, string message)
     {
         GameObject go = new GameObject("Ghost Message");
+        Track(go);
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
         text.fontSize = caughtTextSize;
@@ -558,6 +567,7 @@ public class PixelGhostMinigame : PixelMinigame
             bool isPixel = i % 3 == 0; // a few shards are the pixel inside
             Renderer source = isPixel ? pixel : glass;
             GameObject shard = new GameObject("PotionShard");
+            Track(shard);
             shard.transform.position = point + Random.insideUnitSphere * baseSize * 0.3f;
             shard.transform.rotation = Random.rotation;
             float s = baseSize * shardSize * (isPixel ? 0.5f : 1f);

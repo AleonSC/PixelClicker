@@ -64,6 +64,28 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Triggers one round of the minigame right now (dev tools / testing). Default: nothing.</summary>
     public virtual void SpawnNow() { }
 
+    private readonly System.Collections.Generic.List<GameObject> tracked = new System.Collections.Generic.List<GameObject>();
+
+    /// <summary>Subclasses call this for everything they put in the scene, so <see cref="DespawnNow"/> can remove it.</summary>
+    protected void Track(GameObject go)
+    {
+        if (go == null) return;
+        tracked.RemoveAll(g => g == null);
+        tracked.Add(go);
+    }
+
+    /// <summary>Removes whatever this minigame currently has on screen and stops its round (dev tools). The timer for the next one restarts.</summary>
+    public void DespawnNow()
+    {
+        StopAllCoroutines();
+        foreach (GameObject go in tracked) if (go != null) Destroy(go);
+        tracked.Clear();
+        OnDespawned();
+    }
+
+    /// <summary>Reset the 'something is on screen' state (busy flag, next-spawn timer, effects) after <see cref="DespawnNow"/>.</summary>
+    protected virtual void OnDespawned() { }
+
     /// <summary>The player switched this (bought) minigame off in the shop. Saved. The shop won't start it while this is true.</summary>
     public bool UserDisabled { get; set; }
 

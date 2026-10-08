@@ -149,6 +149,14 @@ public class PixelPadMinigame : PixelMinigame
 
     public override bool Busy => padActive;
 
+    protected override void OnDespawned()
+    {
+        padActive = false;
+        padPulling = false;
+        padRoot = null;
+        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+    }
+
     public override string Id => "pad";
     public override string DisplayName => "Ultra Pad";
     public override bool Running => running;
@@ -481,6 +489,7 @@ public class PixelPadMinigame : PixelMinigame
         Color colour = tier.UIColor;
 
         GameObject root = new GameObject("Ultra Pad");
+        Track(root);
         root.transform.position = point;
 
         GameObject frame = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -644,6 +653,7 @@ public class PixelPadMinigame : PixelMinigame
     private IEnumerator RisingMessage(Vector3 start, Camera cam, string message, Color color, float sizeScale)
     {
         GameObject go = new GameObject("Pad Message");
+        Track(go);
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
         text.fontSize = messageFontSize * sizeScale;
