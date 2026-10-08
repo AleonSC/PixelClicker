@@ -147,6 +147,8 @@ public class PixelPadMinigame : PixelMinigame
     private float spawnTimer;
     private bool padActive;
 
+    public override bool Busy => padActive;
+
     public override string Id => "pad";
     public override string DisplayName => "Ultra Pad";
     public override bool Running => running;
@@ -188,7 +190,11 @@ public class PixelPadMinigame : PixelMinigame
     {
         if (!running || padActive) return;
         spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f) StartCoroutine(PadRoutine());
+        if (spawnTimer <= 0f)
+        {
+            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(PadRoutine());
+            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
+        }
     }
 
     public override void Activate()

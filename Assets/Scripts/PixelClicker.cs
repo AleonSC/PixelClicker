@@ -703,6 +703,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelHints>() == null) gameObject.AddComponent<PixelHints>(); // first-time tips
         if (PixelFind.First<PixelCrashLog>() == null) gameObject.AddComponent<PixelCrashLog>(); // writes error / crash reports
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
+        if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (pixelTransform == null) pixelTransform = transform;
         if (pixelRenderer == null) pixelRenderer = pixelTransform.GetComponentInChildren<Renderer>();
         if (targetCamera == null) targetCamera = Camera.main;

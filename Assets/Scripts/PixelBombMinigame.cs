@@ -195,6 +195,8 @@ public class PixelBombMinigame : PixelMinigame
     private float spawnTimer;
     private bool bombActive;
 
+    public override bool Busy => bombActive;
+
     public override string Id => "bomb";
     public override string DisplayName => "Bomb Defusal";
     public override bool Running => running;
@@ -245,7 +247,11 @@ public class PixelBombMinigame : PixelMinigame
     {
         if (!running || bombActive) return;
         spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f) StartCoroutine(BombRoutine());
+        if (spawnTimer <= 0f)
+        {
+            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(BombRoutine());
+            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
+        }
     }
 
     public override void Activate()

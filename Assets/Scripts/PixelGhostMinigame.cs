@@ -120,7 +120,11 @@ public class PixelGhostMinigame : PixelMinigame
     [SerializeField] private string caughtFormat = "Ghost buff: {0}!";
 
     [Tooltip("Text size of that message (3D text: about 10 per world unit).")]
-    [SerializeField] private float caughtFontSize = 5f;
+    [SerializeField] private float caughtTextSize = 2f;
+
+    [Range(0f, 0.3f)]
+    [Tooltip("How far from the edge of the screen the message stays (fraction of the screen), so it is never cut off.")]
+    [SerializeField] private float caughtScreenMargin = 0.04f;
 
     [Tooltip("Colour of that message.")]
     [SerializeField] private Color caughtColor = Color.white;
@@ -169,6 +173,8 @@ public class PixelGhostMinigame : PixelMinigame
 
     private float spawnTimer;
     private bool ghostActive;
+
+    public override bool Busy => ghostActive;
     private Material ghostMaterial;
     private AudioSource audioSource;
 
@@ -226,7 +232,11 @@ public class PixelGhostMinigame : PixelMinigame
         if (!running || ghostActive) return;
 
         spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f) StartCoroutine(GhostRoutine());
+        if (spawnTimer <= 0f)
+        {
+            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(GhostRoutine());
+            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
+        }
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>
@@ -370,13 +380,33 @@ public class PixelGhostMinigame : PixelMinigame
         onGhostCaught?.Invoke(potion);
     }
 
+    /// <summary>Moves a 3D text so all of it stays inside the camera's view (the whole text width, not just its centre).</summary>
+    private static Vector3 KeepOnScreen(Camera cam, TextMeshPro text, Vector3 position, float margin)
+    {
+        Vector3 v = cam.WorldToViewportPoint(position);
+        if (v.z <= 0.01f) return position;
+
+        // How big the view is at that distance, to turn the text's size into screen fractions.
+        float viewHeight = 2f * v.z * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float viewWidth = viewHeight * cam.aspect;
+        text.ForceMeshUpdate();
+        float halfW = Mathf.Min(0.5f, text.preferredWidth * 0.5f / Mathf.Max(0.01f, viewWidth));
+        float halfH = Mathf.Min(0.5f, text.preferredHeight * 0.5f / Mathf.Max(0.01f, viewHeight));
+
+        // Stay clear of the black bars too.
+        float bars = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
+        float x = Mathf.Clamp(v.x, margin + halfW, 1f - margin - halfW);
+        float y = Mathf.Clamp(v.y, bars + margin + halfH, 1f - bars - margin - halfH);
+        return cam.ViewportToWorldPoint(new Vector3(x, y, v.z));
+    }
+
     /// <summary>Text that rises from where the ghost was and fades away.</summary>
     private IEnumerator CaughtMessage(Vector3 start, Camera cam, string message)
     {
         GameObject go = new GameObject("Ghost Message");
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
-        text.fontSize = caughtFontSize;
+        text.fontSize = caughtTextSize;
         text.fontStyle = FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
         if (clicker.UIFont != null) text.font = clicker.UIFont;
@@ -387,7 +417,7 @@ public class PixelGhostMinigame : PixelMinigame
         {
             t += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(t / caughtSeconds);
-            go.transform.position = start + cam.transform.up * (k * 1.2f);
+            go.transform.position = KeepOnScreen(cam, text, start + cam.transform.up * (k * 1.2f), caughtScreenMargin);
             go.transform.rotation = cam.transform.rotation;
             Color col = caughtColor;
             col.a *= 1f - k * k;

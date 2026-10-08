@@ -121,7 +121,11 @@ public class PixelMeteorMinigame : PixelMinigame
     [SerializeField] private string popupFormat = "+{0} chunk";
 
     [Tooltip("Size of that text (3D text: about 10 per world unit).")]
-    [SerializeField] private float popupFontSize = 5f;
+    [SerializeField] private float popupTextSize = 1.6f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How see-through the message is (1 = solid, 0.7 = slightly transparent).")]
+    [SerializeField] private float popupOpacity = 0.7f;
 
     [Tooltip("Colour of that text.")]
     [SerializeField] private Color popupColor = new Color(1f, 0.8f, 0.4f, 1f);
@@ -149,6 +153,8 @@ public class PixelMeteorMinigame : PixelMinigame
 
     private float spawnTimer;
     private bool meteorActive;
+
+    public override bool Busy => meteorActive;
     private bool thresholdAnnounced;
     private AudioSource audioSource;
 
@@ -191,7 +197,11 @@ public class PixelMeteorMinigame : PixelMinigame
         if (!running || meteorActive) return;
 
         spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f) StartCoroutine(MeteorRoutine());
+        if (spawnTimer <= 0f)
+        {
+            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(MeteorRoutine());
+            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
+        }
     }
 
     public override void Activate()
@@ -352,7 +362,7 @@ public class PixelMeteorMinigame : PixelMinigame
         GameObject go = new GameObject("Chunk Popup");
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
-        text.fontSize = popupFontSize;
+        text.fontSize = popupTextSize;
         text.fontStyle = FontStyles.Bold;
         text.alignment = TextAlignmentOptions.Center;
         if (clicker.UIFont != null) text.font = clicker.UIFont;
@@ -366,7 +376,7 @@ public class PixelMeteorMinigame : PixelMinigame
             go.transform.position = start + cam.transform.up * (k * 1.2f) - cam.transform.forward * 0.5f; // a little toward the camera
             go.transform.rotation = cam.transform.rotation;
             Color c = popupColor;
-            c.a *= 1f - k * k;
+            c.a *= popupOpacity * (1f - k * k);
             text.color = c;
             yield return null;
         }

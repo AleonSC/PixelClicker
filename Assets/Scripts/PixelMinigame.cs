@@ -58,6 +58,9 @@ public abstract class PixelMinigame : MonoBehaviour
     /// <summary>Name shown in menus (e.g. the dev tools). Defaults to the id.</summary>
     public virtual string DisplayName => Id;
 
+    /// <summary>True while this minigame has something on screen (a ghost, a meteor, a hole...). Used to limit how many run at once.</summary>
+    public virtual bool Busy => false;
+
     /// <summary>Triggers one round of the minigame right now (dev tools / testing). Default: nothing.</summary>
     public virtual void SpawnNow() { }
 

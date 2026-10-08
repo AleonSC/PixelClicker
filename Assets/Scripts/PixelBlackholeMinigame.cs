@@ -213,6 +213,8 @@ public class PixelBlackholeMinigame : PixelMinigame
 
     private float spawnTimer;
     private bool holeActive;
+
+    public override bool Busy => holeActive;
     private Texture2D outerTexture, innerTexture;
     private Material outerMaterial, innerMaterial;
     private bool thresholdAnnounced;
@@ -264,7 +266,11 @@ public class PixelBlackholeMinigame : PixelMinigame
         if (!running || holeActive) return;
 
         spawnTimer -= Time.deltaTime;
-        if (spawnTimer <= 0f) StartCoroutine(HoleRoutine());
+        if (spawnTimer <= 0f)
+        {
+            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(HoleRoutine());
+            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
+        }
     }
 
     /// <summary>Starts the minigame (the shop calls this when it is bought). Safe to call more than once.</summary>
