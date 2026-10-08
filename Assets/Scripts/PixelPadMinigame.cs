@@ -103,12 +103,12 @@ public class PixelPadMinigame : PixelMinigame
     [SerializeField] private string labelText = "{0}\n<size=70%>{1}s</size>";
 
     [Min(0.3f)]
-    [Tooltip("Size of that text (3D text: about 10 per world unit).")]
+    [Tooltip("Size of that text (3D text: about 10 per world unit). It is written flat on the pad.")]
     [SerializeField] private float labelTextSize = 2f;
 
-    [Min(0f)]
-    [Tooltip("How far above the floating pixel the text sits (world units).")]
-    [SerializeField] private float labelGap = 0.35f;
+    [Range(0f, 0.95f)]
+    [Tooltip("Where the text sits on the pad: 0 = the middle, 1 = the pad's far edge (the top of it on screen).")]
+    [SerializeField] private float labelInset = 0.58f;
 
     [Header("Feedback")]
     [Tooltip("Text when a correct pixel is taken.")]
@@ -292,14 +292,12 @@ public class PixelPadMinigame : PixelMinigame
         const float margin = 0.02f;
         float reach = padSize * 0.5f + (showArrows ? arrowTravel + arrowLength * 0.6f : 0.1f);
 
-        Vector3 labelPos = point + Vector3.up * (modelLift + modelEdge * 0.5f + labelGap + 0.3f);
 
         Vector3[] checks =
         {
             point + new Vector3(reach, 0f, reach), point + new Vector3(-reach, 0f, reach),
             point + new Vector3(reach, 0f, -reach), point + new Vector3(-reach, 0f, -reach),
             point + Vector3.up * (modelLift + modelEdge),
-            labelPos + cam.transform.up * 0.8f, labelPos + cam.transform.right * 1.0f, labelPos - cam.transform.right * 1.0f,
         };
         float cut = 0f;
         foreach (Vector3 w in checks)
@@ -591,8 +589,12 @@ public class PixelPadMinigame : PixelMinigame
         label.rectTransform.sizeDelta = new Vector2(padSize * 4f, 0.8f);
 
         // The text floats above the pixel preview, facing the camera.
-        labelGo.transform.position = point + Vector3.up * (modelLift + modelEdge * 0.5f + labelGap + 0.3f); // above the floating pixel
-        labelGo.transform.rotation = cam.transform.rotation;
+        // The text is written flat on the pad, near its far (top-on-screen) edge, upright for the camera, the timer centred underneath.
+        Vector3 far = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
+        if (far.sqrMagnitude < 0.0001f) far = Vector3.forward;
+        far = Mathf.Abs(far.x) > Mathf.Abs(far.z) ? new Vector3(Mathf.Sign(far.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(far.z)); // parallel to the pad's edges
+        labelGo.transform.position = point + far * (padSize * 0.5f * labelInset) + Vector3.up * 0.09f;
+        labelGo.transform.rotation = Quaternion.LookRotation(Vector3.down, far);
 
         // Grow in.
         float t = 0f;
@@ -602,7 +604,6 @@ public class PixelPadMinigame : PixelMinigame
             animTime += Time.deltaTime;
             visual.Animate(animTime);
             root.transform.localScale = new Vector3(1f, 1f, 1f) * Mathf.SmoothStep(0f, 1f, t / 0.35f);
-            labelGo.transform.rotation = cam.transform.rotation;
             yield return null;
         }
         root.transform.localScale = Vector3.one;
@@ -617,7 +618,6 @@ public class PixelPadMinigame : PixelMinigame
             animTime += Time.deltaTime;
             visual.Animate(animTime);
             label.text = string.Format(labelText, tier.displayName.ToUpperInvariant(), Mathf.CeilToInt(Mathf.Max(0f, left)));
-            labelGo.transform.rotation = cam.transform.rotation;
             TakePixels(root.transform, target, cam);
             yield return null;
         }
