@@ -3,3 +3,4 @@
 [2026-10-08 10:29 UTC] The combo meter now fades away after a few seconds without clicking the pixel and returns on the next click.
 [2026-10-08 10:31 UTC] The combo meter now glows at 100 combo, shakes at 500 and catches fire at 1000.
 [2026-10-08 10:35 UTC] Fixed the event log scrolling the wrong way (scrolling up now shows older events).
+[2026-10-08 10:40 UTC] Tip boxes (the "Got it" boxes after purchases) are now the same size as the shop and centred on screen.

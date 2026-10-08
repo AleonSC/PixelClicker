@@ -13,6 +13,7 @@ public static class PixelNotice
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         box = null;
+        FixedSize = Vector2.zero;
     }
 
     private static PixelNoticeBox box;
@@ -23,6 +24,9 @@ public static class PixelNotice
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
         box.Open(message, seconds, onClosed);
     }
+
+    /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
+    public static Vector2 FixedSize { get; set; }
 
     /// <summary>Is a tip box on screen right now?</summary>
     public static bool IsShowing => box != null && box.IsOpen;
@@ -81,10 +85,22 @@ public class PixelNoticeBox : MonoBehaviour
         if (canvasRoot == null) Build();
 
         label.text = message;
-        float textHeight = Mathf.Ceil(label.GetPreferredValues(message, Width - 60f, 0f).y);
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        boxRect.sizeDelta = new Vector2(Width, textHeight + 130f);
-        boxRect.anchoredPosition = new Vector2(0f, -(bar + 24f));
+        Vector2 fixedSize = PixelNotice.FixedSize;
+        if (fixedSize.x > 0f && fixedSize.y > 0f)
+        {
+            // Same size as the shop, centred on screen.
+            boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 0.5f);
+            boxRect.sizeDelta = fixedSize;
+            boxRect.anchoredPosition = Vector2.zero;
+        }
+        else
+        {
+            float textHeight = Mathf.Ceil(label.GetPreferredValues(message, Width - 60f, 0f).y);
+            float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+            boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 1f);
+            boxRect.sizeDelta = new Vector2(Width, textHeight + 130f);
+            boxRect.anchoredPosition = new Vector2(0f, -(bar + 24f));
+        }
 
         canvasRoot.SetActive(true);
         timed = seconds > 0f;

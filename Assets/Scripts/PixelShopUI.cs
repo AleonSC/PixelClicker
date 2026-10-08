@@ -98,6 +98,7 @@ public partial class PixelShop
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
         panelRect.anchoredPosition = Vector2.zero;
+        PixelNotice.FixedSize = tipBoxMatchesShop ? new Vector2(panelWidth, panelHeight) : Vector2.zero;
         panelObject.GetComponent<Image>().color = panelColor;
 
         // Title

@@ -306,6 +306,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Total height of the panel. Lists taller than the space available scroll.")]
     [SerializeField] private float panelHeight = 880f;
 
+    [Tooltip("Make the tip boxes (the \"Got it\" boxes shown after purchases and for first-time tips) the same size as the shop panel, centred on screen. Off = they size to their text at the top of the screen.")]
+    [SerializeField] private bool tipBoxMatchesShop = true;
+
     [Tooltip("Height of each pack row.")]
     [SerializeField] private float rowHeight = 230f;
 
