@@ -131,8 +131,14 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Instead of dropping and bouncing, the old pixel of this tier flies away in a straight line like a meteor.")]
         public bool flyAway = false;
 
-        [Tooltip("Screen direction a fly-away pixel leaves in (x = right, y = up).")]
+        [Tooltip("Screen direction a fly-away pixel leaves in (x = right, y = up). Used when 'Fly Random Direction' is off.")]
         public Vector2 flyDirection = new Vector2(1f, 0.6f);
+
+        [Tooltip("Each fly-away pixel shoots off in a random direction inside 'Fly Angle Range' instead of the fixed direction.")]
+        public bool flyRandomDirection = true;
+
+        [Tooltip("Random direction range in degrees on the screen: 0 = right, 90 = straight up, 180 = left. 10 to 170 = anywhere in the top half.")]
+        public Vector2 flyAngleRange = new Vector2(10f, 170f);
 
         [Min(0f)]
         [Tooltip("Speed of a fly-away pixel (world units per second).")]
@@ -2135,6 +2141,12 @@ public class PixelClicker : MonoBehaviour
             box.enabled = false;
             Camera fc = targetCamera != null ? targetCamera : Camera.main;
             Vector2 d = tiers[tierIndex].flyDirection;
+            if (tiers[tierIndex].flyRandomDirection)
+            {
+                Vector2 range = tiers[tierIndex].flyAngleRange;
+                float angle = UnityEngine.Random.Range(Mathf.Min(range.x, range.y), Mathf.Max(range.x, range.y)) * Mathf.Deg2Rad;
+                d = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)); // always on the upper half of the screen
+            }
             if (d.sqrMagnitude < 0.0001f) d = Vector2.right;
             d.Normalize();
             Vector3 dir = fc != null ? fc.transform.right * d.x + fc.transform.up * d.y : new Vector3(d.x, d.y, 0f);
@@ -2159,8 +2171,18 @@ public class PixelClicker : MonoBehaviour
                 trail.endWidth = 0f;
                 Color tc = tiers[tierIndex].color;
                 trail.sharedMaterial = TrailMaterialFor(tierIndex, tc);
-                trail.startColor = new Color(tc.r, tc.g, tc.b, 0.8f);
-                trail.endColor = new Color(tc.r, tc.g, tc.b, 0f);
+                // Smooth: a gently curved taper, an eased fade, rounded ends, and many short segments.
+                trail.alignment = LineAlignment.View;
+                trail.minVertexDistance = 0.02f;
+                trail.numCapVertices = 6;
+                trail.numCornerVertices = 4;
+                trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.6f), new Keyframe(0.35f, 0.62f), new Keyframe(1f, 0f, -1.2f, 0f));
+                Gradient fade = new Gradient();
+                fade.SetKeys(
+                    new[] { new GradientColorKey(Color.Lerp(tc, Color.white, 0.25f), 0f), new GradientColorKey(tc, 0.4f), new GradientColorKey(tc, 1f) },
+                    new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.5f, 0.35f), new GradientAlphaKey(0.18f, 0.7f), new GradientAlphaKey(0f, 1f) });
+                trail.colorGradient = fade;
             }
         }
         else if (gravityScale > 0f)

@@ -315,14 +315,18 @@ public class PixelMeteorMinigame : PixelMinigame
         trail.time = tailSeconds;
         trail.startWidth = meteorSize * tailWidth;
         trail.endWidth = 0f;
-        trail.minVertexDistance = 0.05f;
+        trail.minVertexDistance = 0.015f; // many short segments = a smooth curve
+        trail.numCapVertices = 8;
+        trail.numCornerVertices = 6;
+        trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f)); // gently curved taper
         trail.alignment = LineAlignment.View;
         Shader trailShader = Shader.Find("Sprites/Default");
         trail.sharedMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);
         Gradient gradient = new Gradient();
         gradient.SetKeys(
             new[] { new GradientColorKey(Color.Lerp(flameColor, Color.white, 0.4f), 0f), new GradientColorKey(flameColor, 0.35f), new GradientColorKey(new Color(flameColor.r * 0.6f, 0.1f, 0.05f), 1f) },
-            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.45f, 0.4f), new GradientAlphaKey(0f, 1f) });
+            new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.6f, 0.2f), new GradientAlphaKey(0.3f, 0.5f), new GradientAlphaKey(0.1f, 0.8f), new GradientAlphaKey(0f, 1f) }); // eased fade
         trail.colorGradient = gradient;
 
         // A thin white-hot core inside the tail.
@@ -334,7 +338,11 @@ public class PixelMeteorMinigame : PixelMinigame
             core.time = tailSeconds * 0.55f;
             core.startWidth = meteorSize * tailWidth * 0.32f;
             core.endWidth = 0f;
-            core.minVertexDistance = 0.05f;
+            core.minVertexDistance = 0.015f;
+            core.numCapVertices = 8;
+            core.numCornerVertices = 6;
+            core.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            core.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f));
             core.alignment = LineAlignment.View;
             core.sharedMaterial = trail.sharedMaterial;
             Gradient coreGradient = new Gradient();
