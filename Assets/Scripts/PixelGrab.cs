@@ -37,6 +37,14 @@ public class PixelGrab : MonoBehaviour
 
     [Header("Letting Go")]
     [Range(0f, 2f)]
+    [Min(0f)]
+    [Tooltip("Letting go of a fragile pixel (glass) slower than this (world units per second) sets it down gently: it won't shatter when it lands, it settles, and it lasts longer.")]
+    [SerializeField] private float gentleReleaseSpeed = 3f;
+
+    [Min(0f)]
+    [Tooltip("Seconds added to a fragile pixel's despawn timer when you set it down gently.")]
+    [SerializeField] private float gentleLifetimeBonus = 12f;
+
     [Tooltip("How much of the mouse's speed a pixel keeps when you let go (0 = it just drops, 1 = a natural throw).")]
     [SerializeField] private float throwStrength = 1f;
 
@@ -178,8 +186,13 @@ public class PixelGrab : MonoBehaviour
         dragPlane = new Plane(-cam.transform.forward, body.position);
         grabOffset = dragPlane.Raycast(ray, out float enter) ? body.position - ray.GetPoint(enter) : Vector3.zero;
 
+        heldShatter = body.GetComponent<OldPixelShatter>();
+        if (heldShatter != null) heldShatter.Grabbed(); // can't break while carried
+
         PixelAudio.Play("grab");
     }
+
+    private OldPixelShatter heldShatter;
 
     private void FixedUpdate()
     {
@@ -203,6 +216,9 @@ public class PixelGrab : MonoBehaviour
         Vector3 v = GetVelocity(held) * throwStrength;
         if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
         SetVelocity(held, v);
+
+        if (heldShatter != null) heldShatter.Released(v.magnitude <= gentleReleaseSpeed, gentleLifetimeBonus);
+        heldShatter = null;
 
         if (heldGravity != null) heldGravity.enabled = true;
         if (heldDespawn != null) heldDespawn.Held = false;

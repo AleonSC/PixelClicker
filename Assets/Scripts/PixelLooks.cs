@@ -644,6 +644,27 @@ public class OldPixelShatter : MonoBehaviour
     private int shardCount;
     private string soundId;
     private bool done;
+    private bool held;          // the player is carrying it (Pixel Grabbing): it can't break
+    private bool gentle;        // let go softly: its next landing is a soft set-down, not a break
+    private float gentleBonus;  // seconds added to its despawn timer on that soft landing
+
+    /// <summary>The player picked it up: it can't shatter while carried.</summary>
+    public void Grabbed()
+    {
+        held = true;
+        gentle = false;
+    }
+
+    /// <summary>
+    /// The player let go. If that was gentle (slow), its next landing is a soft set-down: it doesn't break, loses most of its
+    /// speed, and its despawn timer is extended by 'lifetimeBonus' seconds.
+    /// </summary>
+    public void Released(bool gentleRelease, float lifetimeBonus)
+    {
+        held = false;
+        gentle = gentleRelease;
+        gentleBonus = lifetimeBonus;
+    }
 
     public void Setup(PixelClicker owner, float minImpactSpeed, int shards, float speed, float life, float size, string sound)
     {
@@ -658,9 +679,29 @@ public class OldPixelShatter : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (done || clicker == null) return;
-        if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
+        if (done || clicker == null || held) return;
         if (collision.collider.GetComponent<OldPixelShard>() != null) return;
+
+        if (gentle)
+        {
+            // Set down gently: it settles (any surface, including other pixels) and lives longer.
+            gentle = false;
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+#if UNITY_6000_0_OR_NEWER
+                rb.linearVelocity *= 0.2f;
+#else
+                rb.velocity *= 0.2f;
+#endif
+                rb.angularVelocity *= 0.3f;
+            }
+            OldPixelDespawn despawn = GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.AddLifetime(gentleBonus);
+            return;
+        }
+
+        if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
         if (collision.relativeVelocity.magnitude < minSpeed) return;
 
         ContactPoint contact = collision.GetContact(0);

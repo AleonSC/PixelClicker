@@ -2430,6 +2430,12 @@ public class OldPixelDespawn : MonoBehaviour
     /// <summary>While true, no old pixel's lifetime counts down (a black hole is open: time dilation). Pixels already vanishing finish.</summary>
     public static bool Frozen { get; set; }
 
+    /// <summary>Gives the pixel more time before it starts to vanish (no effect once it is vanishing or if it never expires).</summary>
+    public void AddLifetime(float seconds)
+    {
+        if (!despawning && lifetime > 0f) lifetime += seconds;
+    }
+
     /// <summary>True once it has started swelling and shrinking away.</summary>
     public bool IsDespawning => despawning;
     private Vector3 baseScale;
