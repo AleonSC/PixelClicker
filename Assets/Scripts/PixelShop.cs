@@ -668,7 +668,7 @@ public partial class PixelShop : MonoBehaviour
         return changed;
     }
 
-    [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5)
+    [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2)
 
     /// <summary>Brings packs saved by older versions up to date (renames, tab, minigame ids). Returns true if anything changed.</summary>
     private bool MigrateOldPackData()
@@ -686,6 +686,20 @@ public partial class PixelShop : MonoBehaviour
                         reward.amountPerClick = 7d;
             }
             packDataVersion = 1;
+            renamed = true;
+        }
+
+        // Singularity pixels are rarer now (spawn weight 0.2 -> 0.08); only the old default is changed, not a value you typed.
+        if (packDataVersion < 2)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack.rewardTiers == null) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    if (reward.type == PixelClicker.PixelType.Singularity && Mathf.Approximately(reward.spawnWeight, 0.2f))
+                        reward.spawnWeight = 0.08f;
+            }
+            packDataVersion = 2;
             renamed = true;
         }
 

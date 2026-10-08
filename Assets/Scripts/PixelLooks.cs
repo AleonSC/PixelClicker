@@ -139,6 +139,25 @@ public class PixelLook
     [Tooltip("Size of the colour-blind shape as a fraction of the cube's width.")]
     public float colorBlindRadius = 0.28f;
 
+    [Header("Gravity well (old pixels of this type pull others in)")]
+    [Tooltip("An old pixel of this type slowly pulls other old pixels towards it, inside a radius shown by a very faint ring.")]
+    public bool gravityWell = false;
+
+    [Min(0.5f)]
+    [Tooltip("How far the pull reaches (world units).")]
+    public float wellRadius = 3.5f;
+
+    [Min(0f)]
+    [Tooltip("How strong the pull is at the centre (acceleration; normal gravity is about 9.8). It fades towards the edge of the ring.")]
+    public float wellStrength = 4f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How visible the ring is (0 = invisible). Keep it very faint.")]
+    public float wellRingOpacity = 0.16f;
+
+    [Tooltip("Colour of the ring.")]
+    public Color wellRingColor = Color.black;
+
     [Header("Special")]
     [Tooltip("A swirling dark-matter core inside the cube (best with 'Force Translucent' and a dark, see-through colour).")]
     public bool darkMatter = false;
@@ -192,7 +211,7 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Singularity, useColor = true, color = new Color(0.07f, 0.02f, 0.14f, 0.5f),
                             forceTranslucent = true, smoothness = 0.95f, metallic = 0f, glowScale = 0.3f,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 0.25f, 1f, 1f),
-                            outlineThickness = 0.04f, darkMatter = true },
+                            outlineThickness = 0.04f, darkMatter = true, gravityWell = true },
         };
     }
 
@@ -552,6 +571,99 @@ public static class PixelLooks
             tri.Add(start + q[0]); tri.Add(start + q[1]); tri.Add(start + q[2]);
             tri.Add(start + q[0]); tri.Add(start + q[2]); tri.Add(start + q[3]);
         }
+    }
+}
+
+/// <summary>
+/// An old pixel that slowly pulls the other old pixels within a radius towards itself (singularity). A very faint ring
+/// (a camera-facing sprite) shows how far the pull reaches. The ring follows the pixel and shrinks with it when it despawns.
+/// </summary>
+public class OldPixelGravityWell : MonoBehaviour
+{
+    private PixelClicker clicker;
+    private float radius, strength;
+    private GameObject ring;
+    private SpriteRenderer ringRenderer;
+    private float startScale;
+    private static Sprite ringSprite;
+
+    public void Setup(PixelClicker owner, float pullRadius, float pullStrength, float ringOpacity, Color ringColour)
+    {
+        clicker = owner;
+        radius = pullRadius;
+        strength = pullStrength;
+        startScale = Mathf.Max(0.0001f, transform.lossyScale.x);
+
+        if (ringOpacity > 0f)
+        {
+            if (ringSprite == null) ringSprite = BuildRingSprite();
+            ring = new GameObject("Gravity Ring");
+            ringRenderer = ring.AddComponent<SpriteRenderer>();
+            ringRenderer.sprite = ringSprite;
+            ringRenderer.sortingOrder = -2;
+            Color c = ringColour;
+            c.a = ringOpacity;
+            ringRenderer.color = c;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (clicker == null || strength <= 0f) return;
+        // Only pulls while the well still has its full size (not while it is shrinking away).
+        if (transform.lossyScale.x < startScale * 0.9f) return;
+
+        var list = clicker.OldPixels;
+        Vector3 centre = transform.position;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rigidbody other = list[i];
+            if (other == null || other.gameObject == gameObject || other.isKinematic) continue;
+            OldPixelDespawn despawn = other.GetComponent<OldPixelDespawn>();
+            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue; // carried by the player / vanishing
+
+            Vector3 to = centre - other.position;
+            float distance = to.magnitude;
+            if (distance > radius || distance < 0.05f) continue;
+
+            float falloff = 1f - distance / radius; // strongest in the middle, nothing at the edge
+            other.AddForce(to / distance * (strength * falloff), ForceMode.Acceleration);
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (ring == null) return;
+        Camera cam = Camera.main;
+        float shrink = Mathf.Clamp01(transform.lossyScale.x / startScale);
+        ring.transform.position = transform.position;
+        if (cam != null) ring.transform.rotation = cam.transform.rotation;
+        ring.transform.localScale = Vector3.one * (radius * 2f * shrink);
+    }
+
+    private void OnDestroy()
+    {
+        if (ring != null) Destroy(ring);
+    }
+
+    /// <summary>A thin round ring with a soft edge (white; tinted by the sprite colour).</summary>
+    private static Sprite BuildRingSprite()
+    {
+        const int s = 128;
+        Texture2D tex = new Texture2D(s, s, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "GravityRing" };
+        Color32[] px = new Color32[s * s];
+        for (int y = 0; y < s; y++)
+            for (int x = 0; x < s; x++)
+            {
+                float u = ((x + 0.5f) / s - 0.5f) * 2f, v = ((y + 0.5f) / s - 0.5f) * 2f;
+                float d = Mathf.Abs(Mathf.Sqrt(u * u + v * v) - 0.94f);          // distance from the ring line
+                float a = Mathf.Clamp01(1f - d / 0.035f);                          // the line
+                a = Mathf.Max(a, Mathf.Clamp01(1f - d / 0.12f) * 0.25f);           // a soft glow beside it
+                px[y * s + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        tex.SetPixels32(px);
+        tex.Apply(true, false);
+        return Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 128f);
     }
 }
 

@@ -228,7 +228,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -774,6 +774,13 @@ public class PixelClicker : MonoBehaviour
             }
             looks = list7.ToArray();
             looksVersion = 7;
+        }
+        if (looksVersion < 8)
+        {
+            // Singularity pixels now pull other old pixels towards them: switch that on in lists saved before it existed.
+            PixelLook singularityLook = PixelLooks.Find(looks, PixelType.Singularity);
+            if (singularityLook != null && !singularityLook.gravityWell) singularityLook.gravityWell = true;
+            looksVersion = 8;
         }
 
         if (pixelRenderer != null)
@@ -2167,6 +2174,8 @@ public class PixelClicker : MonoBehaviour
             {
                 PixelLooks.AddExtras(copy.transform, srcFilter.sharedMesh, styled, tiers[tierIndex].color, defaultMaterial);
                 if (styled.wobble) MakeWobbleVisual(copy, styled);
+                if (styled.gravityWell)
+                    copy.AddComponent<OldPixelGravityWell>().Setup(this, styled.wellRadius, styled.wellStrength, styled.wellRingOpacity, styled.wellRingColor);
                 if (styled.floatAway)
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.shatter)

@@ -323,7 +323,7 @@ public partial class PixelShop
                 {
                     type = PixelClicker.PixelType.Singularity, displayName = "Singularity Pixels",
                     color = new Color(0.25f, 0.05f, 0.4f, 1f), glow = true, glowIntensity = 2f,
-                    amountPerClick = 25, clicksToCollect = 3, spawnWeight = 0.2f,
+                    amountPerClick = 25, clicksToCollect = 3, spawnWeight = 0.08f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
