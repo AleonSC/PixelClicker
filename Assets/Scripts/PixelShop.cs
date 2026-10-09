@@ -1109,6 +1109,48 @@ public partial class PixelShop : MonoBehaviour
         if (m != null) m.TrySpendTracker(cost.amount);
     }
 
+    /// <summary>True once the Shop button is showing (its required pixel is unlocked).</summary>
+    public bool ShopAvailable => clicker != null && (alwaysShowButton || clicker.IsUnlocked(requiredTier));
+
+    /// <summary>
+    /// Progress towards buying the pack that unlocks 'rewardType' (e.g. Red = the RGB Pack), for the Log's Goals tab:
+    /// 'have' / 'need' add up every price line (each line counts at most its own price), 'costText' lists the price.
+    /// False if there is no such pack or it is already bought.
+    /// </summary>
+    public bool TryGetBuyGoal(PixelClicker.PixelType rewardType, out string packName, out string costText, out double have, out double need)
+    {
+        packName = costText = "";
+        have = need = 0d;
+        if (clicker == null || packs == null) return false;
+        for (int i = 0; i < packs.Length; i++)
+        {
+            ShopPack pack = packs[i];
+            if (pack.rewardTiers == null || !Array.Exists(pack.rewardTiers, r => r.type == rewardType)) continue;
+            if (IsPurchased(i)) return false;
+            packName = pack.displayName;
+            PackCost[] costs = CurrentCosts(pack);
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            if (costs != null)
+            {
+                foreach (PackCost cost in costs)
+                {
+                    double held = string.IsNullOrEmpty(cost.minigameCurrency)
+                        ? clicker.GetCount(cost.type)
+                        : (PixelMinigame.Find(cost.minigameCurrency)?.SpendableCount ?? 0d);
+                    if (PixelClicker.InfiniteResources) held = cost.amount;
+                    have += Math.Min(Math.Max(0d, held), cost.amount);
+                    need += cost.amount;
+                    if (sb.Length > 0) sb.Append(", ");
+                    sb.Append(PixelClicker.FormatNumberShort(cost.amount)).Append(' ').Append(CostName(cost));
+                }
+            }
+            costText = sb.ToString();
+            if (need <= 0d) need = 1d;
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Name of what a price line is paid in (a pixel's name, or the minigame counter's title).</summary>
     private string CostName(PackCost cost)
     {

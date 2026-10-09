@@ -136,6 +136,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
     public int StyleCount => styles.Count;
     public int Current => current;
     public bool HasFloor => floorRenderer != null;
+    /// <summary>The floor being restyled (null if none was found). Used by the horizon fog.</summary>
+    public Renderer FloorRenderer => floorRenderer;
     public string StyleName(int i) => i >= 0 && i < styles.Count ? styles[i].name : "";
     public bool Usable => HasFloor && styles.Count > 0;
     public Rect PreviewRect => new Rect(0f, 0f, 1f, 1f);

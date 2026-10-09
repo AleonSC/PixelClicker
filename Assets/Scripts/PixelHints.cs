@@ -107,10 +107,11 @@ public class PixelHints : MonoBehaviour
     [SerializeField] private string introLogText = "This is your Log. It lists every pixel type you have unlocked with its lifetime total, and its second tab tracks your achievements. Open it any time with the Log button at the bottom left.";
 
     [TextArea(2, 5)]
-    [Tooltip("Tip shown with the Inventory open.")]
     [Tooltip("Third new-game intro tip (after the Log and Inventory ones): how you earn currency. Empty = the built-in text. The tier guide (\"Click X more...\") appears once this box is closed.")]
     [SerializeField] private string introEarnText = "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn.";
 
+    [TextArea(2, 5)]
+    [Tooltip("Tip shown with the Inventory open.")]
     [SerializeField] private string introInventoryText = "This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.";
 
     [Tooltip("Add the built-in tips that are missing from the list below.")]

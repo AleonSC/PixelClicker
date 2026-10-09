@@ -102,6 +102,12 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Description of the 'next pixel unlock' goal. {0} = the pixel that has to be collected.")]
     [SerializeField] private string nextPixelGoalDescription = "Collect {0} pixels.";
 
+    [Tooltip("Goals tab: title of the 'buy the RGB Pack' goal shown once the Shop appears ({0} = the pack's name).")]
+    [SerializeField] private string buyRgbGoalFormat = "Purchase the {0}";
+
+    [Tooltip("Goals tab: description of the 'buy the RGB Pack' goal ({0} = its price).")]
+    [SerializeField] private string buyRgbGoalDescription = "Open the Shop and buy it ({0}).";
+
     [Min(40f)]
     [Tooltip("Height of a goal row.")]
     [SerializeField] private float goalRowHeight = 100f;
@@ -1064,6 +1070,8 @@ public class PixelLog : MonoBehaviour
         return row;
     }
 
+    private PixelShop goalShop;
+
     private struct Goal
     {
         public string title, description;
@@ -1088,6 +1096,21 @@ public class PixelLog : MonoBehaviour
                 goal = t.unlockThreshold,
             });
             break; // only the next one
+        }
+
+        // Intro step: once the Shop appears, buying the RGB Pack is the next thing to do (the bar fills as its price is saved up).
+        if (goalShop == null) goalShop = PixelFind.First<PixelShop>();
+        PixelShop shop = goalShop;
+        if (shop != null && shop.ShopAvailable &&
+            shop.TryGetBuyGoal(PixelClicker.PixelType.Red, out string packName, out string costText, out double have, out double need))
+        {
+            goals.Add(new Goal
+            {
+                title = string.Format(buyRgbGoalFormat, packName),
+                description = string.Format(buyRgbGoalDescription, costText),
+                count = have,
+                goal = need,
+            });
         }
 
         foreach (PixelMinigame m in PixelMinigame.All)
