@@ -304,6 +304,19 @@ public class PixelSnakeMinigame : PixelMinigame
             if (cutMax.x - cutMin.x > unit * 3f && cutMax.y - cutMin.y > unit * 3f) { arenaMin = cutMin; arenaMax = cutMax; }
         }
 
+        // Pixels the area was cut away from (pressed against the view's edge, or hanging in the air after a Time Stop burst) are moved
+        // onto the floor inside the area, so every pixel can be reached and eaten.
+        float inset = Mathf.Min(unit * 0.5f, (arenaMax.x - arenaMin.x) * 0.25f, (arenaMax.y - arenaMin.y) * 0.25f);
+        foreach (Piece p in targets)
+        {
+            Vector3 at = p.body.position;
+            Vector3 fixedAt = new Vector3(Mathf.Clamp(at.x, arenaMin.x + inset, arenaMax.x - inset), groundY,
+                                          Mathf.Clamp(at.z, arenaMin.y + inset, arenaMax.y - inset));
+            if ((fixedAt - at).sqrMagnitude < 0.0001f) continue;
+            p.body.position = fixedAt;
+            p.body.transform.position = fixedAt;
+        }
+
         // Floor directions as the camera sees them.
         Vector3 forward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
         if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;
