@@ -690,6 +690,22 @@ public class PixelHints : MonoBehaviour
     }
 
     private bool introChecked, freshAtStart = true;
+    private bool introRunning;
+    private float introIdle;
+
+    /// <summary>True from the start of a new game until the intro tips (Log, Inventory) have been closed: the "Click 100 more..." guide stays hidden meanwhile.</summary>
+    public static bool IntroHoldsGuide => instance != null && instance.IntroHoldsGuideNow;
+
+    private bool IntroHoldsGuideNow
+    {
+        get
+        {
+            if (introRunning) return true;
+            if (introChecked) return false;
+            if (!showIntro || !hintsEnabled || !TipsEnabled) return false;
+            return forceIntro || (freshAtStart && !Seen("intro_log"));
+        }
+    }
 
     private static bool AnyCollected()
     {
@@ -720,6 +736,8 @@ public class PixelHints : MonoBehaviour
         bool replay = forceIntro;
         forceIntro = false;
 
+        introRunning = true;
+        introIdle = 0f;
         PixelLog.SetLogOpen(true);
         PixelNotice.Show(introLogText, 0f, compact: true, beside: PixelLog.WindowRect, besideBottom: true, onClosed: () =>
         {
@@ -728,6 +746,7 @@ public class PixelHints : MonoBehaviour
             PixelNotice.Show(introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect, onClosed: () =>
             {
                 PixelUI.SetInventoryOpen(false);
+                introRunning = false; // the tier guide may show now
                 MarkSeen("intro_log"); // only counts once the player has been through both tips
                 if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
             });
@@ -757,6 +776,12 @@ public class PixelHints : MonoBehaviour
         windowWasOpen = windowOpen;
         UpdateOverlay();
         bool showing = PixelNotice.IsShowing;
+        if (introRunning)
+        {
+            // Safety: if the intro tips were replaced by another tip, don't hide the guide forever.
+            introIdle = showing ? 0f : introIdle + Time.unscaledDeltaTime;
+            if (introIdle > 2f) introRunning = false;
+        }
         if (wasShowing && !showing) waitTimer = Mathf.Max(waitTimer, 0.3f); // short gap between queued tips
         wasShowing = showing;
 

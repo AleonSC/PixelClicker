@@ -131,3 +131,4 @@
 [2026-10-09 13:49 UTC] Ultra Pads and Black Holes can no longer spawn overlapping each other, and no other minigame (or star) spawns while Snake, Sorting Race or Breakout is running.
 [2026-10-09 13:48 UTC] Added 12 more floor styles: Honeycomb, Bricks, Circuit Board, Sand Dunes, Ocean, Snow, Tartan, Tread Plate, Hologram, Crystal, Matrix Rain and Hazard Stripes.
 [2026-10-09 13:57 UTC] The intro "Got it" boxes now sit right beside the window they explain (the Log tip next to the Log, the Inventory tip to the right of the Inventory) instead of overlapping or floating far away.
+[2026-10-09 14:03 UTC] Removed the yellow "Ultra Pixels" line from the Inventory (the hover tooltip shows it); the "Click X more pixels" tier guide now stays hidden until the intro tips have been closed.

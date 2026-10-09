@@ -14,7 +14,7 @@ Clicks are limited to about 14 per second.
 # The Shop
 The Shop button appears once you have unlocked the Black pixel. It has four tabs:
 <b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
-<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Features" sub-tab holds the feature unlocks. Ultra pixels are a rare second currency (shown at the bottom of your Inventory); Snake, Breakout, Sorting Race and Black Holes can reward them too.
+<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Features" sub-tab holds the feature unlocks. Ultra pixels are a rare second currency (hover a pixel in your Inventory to see its Ultra count); Snake, Breakout, Sorting Race and Black Holes can reward them too.
 <b>Consumables</b> - potions and utilities (see below).
 <b>Minigames</b> - events that appear on their own once bought.
 Things you can't buy yet show in grey with what they need.
