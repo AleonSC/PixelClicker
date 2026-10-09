@@ -214,3 +214,4 @@
 [2026-10-09 21:59 UTC] Added the seven Dragon Cubes (glassy orange cubes with 1-7 dark orange small cubes inside) as extremely rare random pixels with no requirements; gather all seven to summon a cube dragon and make a wish (Fortune, Golden Hour, Ultra Blessing, Potion Stock or A New Friend).
 [2026-10-09 22:01 UTC] Added a Dev Tools button that gives the next Dragon Cube you still need.
 [2026-10-09 22:11 UTC] Fixed the orange glow of the dragon summon button staying on screen after the wish.
+[2026-10-09 22:17 UTC] Electric pixel arcs now stay attached to the same neighbour (sticky links), draw as clearer straighter bolts, and show a spark where they connect to a pixel or device.

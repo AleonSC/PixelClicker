@@ -49,11 +49,19 @@ public class PixelElectricLinks : MonoBehaviour
 
     [Min(0.02f)]
     [Tooltip("Seconds between redraws of the arcs (the bolts jump around each time).")]
-    [SerializeField] private float redrawInterval = 0.05f;
+    [SerializeField] private float redrawInterval = 0.07f;
 
     [Min(0f)]
-    [Tooltip("How far an arc wanders off a straight line, as a fraction of its length.")]
-    [SerializeField] private float wander = 0.12f;
+    [Tooltip("How far an arc wanders off a straight line, as a fraction of its length. Small = a clear line from one pixel to the next.")]
+    [SerializeField] private float arcWander = 0.05f;
+
+    [Min(0f)]
+    [Tooltip("Size of the bright spark burst where an arc attaches to a pixel or device, in main-pixel widths (0 = none).")]
+    [SerializeField] private float endSparkSize = 0.45f;
+
+    [Range(0.1f, 1f)]
+    [Tooltip("How strongly a link keeps its old partner while it is still in reach: lower = stickier, so arcs stay connected to the same neighbour instead of flipping around.")]
+    [SerializeField] private float stickiness = 0.4f;
 
     private class Link
     {
@@ -139,6 +147,7 @@ public class PixelElectricLinks : MonoBehaviour
         foreach (Rigidbody body in clicker.OldPixels)
             if (IsElectric(body, out _) && !clicker.IsFlyingPixel(body)) scratch.Add(body);
 
+        Dictionary<Rigidbody, Link> previous = new Dictionary<Rigidbody, Link>(links); // last scan's partners: kept while still in reach
         links.Clear();
         if (scratch.Count == 0) { PruneCredits(); return; }
 
@@ -158,9 +167,11 @@ public class PixelElectricLinks : MonoBehaviour
             for (int i = 0; i < unlinked.Count; i++)
             {
                 Vector3 p = unlinked[i].position;
+                previous.TryGetValue(unlinked[i], out Link old);
                 foreach (PixelPlacedDevice d in devices)
                 {
                     float dist = (DeviceAnchor(d) - p).sqrMagnitude;
+                    if (old != null && old.parentDevice == d) dist *= stickiness;
                     if (dist < best)
                     {
                         best = dist; bestIndex = i;
@@ -170,6 +181,7 @@ public class PixelElectricLinks : MonoBehaviour
                 foreach (KeyValuePair<Rigidbody, Link> kv in links)
                 {
                     float dist = (kv.Key.position - p).sqrMagnitude;
+                    if (old != null && old.parentBody == kv.Key) dist *= stickiness;
                     if (dist < best)
                     {
                         best = dist; bestIndex = i;
@@ -200,11 +212,15 @@ public class PixelElectricLinks : MonoBehaviour
                 int bestIndex = -1, bestParent = -1;
                 float best = rangeSqr;
                 for (int i = 0; i < unlinked.Count; i++)
+                {
+                    previous.TryGetValue(unlinked[i], out Link old);
                     for (int c = 0; c < chain.Count; c++)
                     {
                         float dist = (chain[c].position - unlinked[i].position).sqrMagnitude;
+                        if (old != null && old.parentBody == chain[c]) dist *= stickiness;
                         if (dist < best) { best = dist; bestIndex = i; bestParent = c; }
                     }
+                }
                 if (bestIndex < 0) break;
                 Rigidbody joiner = unlinked[bestIndex];
                 links[joiner] = new Link { body = joiner, parentBody = chain[bestParent], parentPoint = chain[bestParent].position };
@@ -251,6 +267,17 @@ public class PixelElectricLinks : MonoBehaviour
         Redraw();
     }
 
+    /// <summary>A little burst of short bright lines where an arc attaches, so the connection reads clearly.</summary>
+    private void Spark(Vector3 at, float size, float unit)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 end = at + Random.onUnitSphere * (size * Random.Range(0.5f, 1f));
+            PixelBolts.Ribbon(builder, at, end, unit * 0.05f, new Color(coreColor.r, coreColor.g, coreColor.b, Random.Range(0.6f, 1f)));
+        }
+        PixelBolts.Ribbon(builder, at - Vector3.up * (size * 0.18f), at + Vector3.up * (size * 0.18f), unit * 0.22f, new Color(glowColor.r, glowColor.g, glowColor.b, 0.5f));
+    }
+
     private void Redraw()
     {
         if (links.Count == 0)
@@ -285,7 +312,12 @@ public class PixelElectricLinks : MonoBehaviour
                        : link.parentDevice != null ? DeviceAnchor(link.parentDevice) : link.parentPoint;
             float length = Vector3.Distance(from, to);
             int segments = Mathf.Clamp(Mathf.CeilToInt(length / (unit * 0.6f)), 3, 9);
-            PixelBolts.Jagged(builder, from, to, segments, length * wander, unit * 0.045f, unit * 0.14f, true, coreColor, glowColor);
+            PixelBolts.Jagged(builder, from, to, segments, length * arcWander, unit * 0.06f, unit * 0.2f, true, coreColor, glowColor);
+            if (endSparkSize > 0f)
+            {
+                Spark(from, unit * endSparkSize, unit);
+                Spark(to, unit * endSparkSize, unit);
+            }
             if (first) { bounds = new Bounds(from, Vector3.zero); first = false; }
             bounds.Encapsulate(from);
             bounds.Encapsulate(to);
