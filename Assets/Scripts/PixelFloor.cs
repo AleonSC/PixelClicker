@@ -24,7 +24,19 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Lava,         // dark crust with glowing cracks
         Space,        // stars and faint nebula clouds
         Ice,          // pale glossy ice with white cracks
-        Disco         // light-up tiles that change colour to a beat
+        Disco,        // light-up tiles that change colour to a beat
+        Honeycomb,    // golden hexagon cells
+        Bricks,       // pixel-art brick wall laid flat
+        CircuitBoard, // green board with copper traces, pads and chips
+        SandDunes,    // wind ripples in sand
+        Ocean,        // deep water with moving light patterns (caustics)
+        Snow,         // soft drifts with sparkles
+        Tartan,       // woven plaid cloth
+        TreadPlate,   // shiny metal floor with raised diamonds
+        Hologram,     // rainbow shimmer with scan lines
+        Crystal,      // glowing faceted gems
+        MatrixRain,   // falling green code
+        Hazard        // yellow / black warning stripes
     }
 
     [Serializable]
@@ -57,6 +69,10 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         [Range(0f, 1f)]
         [Tooltip("How shiny the floor is.")]
         public float smoothness = 0.2f;
+
+        [Range(0f, 1f)]
+        [Tooltip("How metallic the floor looks (0 = not at all).")]
+        public float metallic = 0f;
 
         [Tooltip("Glow strength (the texture lights itself). 0 = no glow.")]
         public float glow = 0f;
@@ -249,7 +265,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         SetTexture(m, "_BumpMap", null);
         SetTexture(m, "_MetallicGlossMap", null);
         SetTexture(m, "_OcclusionMap", null);
-        SetFloat(m, "_Metallic", 0f);
+        SetFloat(m, "_Metallic", style.metallic);
         SetFloat(m, "_Smoothness", style.smoothness);
         SetFloat(m, "_Glossiness", style.smoothness);
 
@@ -520,8 +536,221 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 c.a = 1f;
                 return c;
             }
+
+            case FloorPattern.Honeycomb:
+            {
+                HexCells(u, v, cells, s.seed, out float f1, out float f2, out int id);
+                float edge = (f2 - f1) * cells;                         // 0 at the cell walls
+                float wall = Mathf.Clamp01(1f - edge / 0.12f);
+                float depth = Mathf.Clamp01(f1 * cells * 1.6f);          // darker towards each cell's middle (deep honey)
+                Color honey = Color.Lerp(s.colorA, s.colorB, depth * 0.7f + HashId(id, s.seed) * 0.2f);
+                honey = Color.Lerp(honey, Color.white, Mathf.Clamp01(0.35f - f1 * cells) * 0.5f); // glossy highlight
+                return Color.Lerp(honey, s.colorC, wall);
+            }
+
+            case FloorPattern.Bricks:
+            {
+                int rows = cells;
+                float gy = v * rows;
+                int row = Mathf.FloorToInt(gy);
+                float gx = u * rows * 0.5f + ((row & 1) == 0 ? 0f : 0.5f);  // bricks are twice as long as tall
+                int col = Mathf.FloorToInt(gx);
+                float bu = Frac(gx), bv = Frac(gy);
+                float mortarU = 1.5f / n * rows * 0.5f, mortarV = 1.5f / n * rows;
+                if (bu < mortarU || bv < mortarV) return s.colorC * (0.9f + 0.2f * Hash(x, y, s.seed));
+                float tone = 0.8f + 0.35f * Hash(col, row, s.seed);
+                Color c = Color.Lerp(s.colorA, s.colorB, Hash(col * 3, row * 5, s.seed + 1)) * tone;
+                c *= 0.88f + 0.24f * Hash(x, y, s.seed + 2);             // speckle
+                if (bv > 1f - mortarV * 1.5f) c = Color.Lerp(c, Color.white, 0.12f); // lit top edge
+                return c;
+            }
+
+            case FloorPattern.CircuitBoard:
+            {
+                float gx = u * cells - 0.5f, gy = v * cells - 0.5f;      // pads sit on whole numbers
+                float w = 0.09f;
+                Color c = s.colorA * (0.85f + 0.25f * Fbm(u, v, 8, 3, s.seed));
+                int r = Mathf.RoundToInt(gy), cx = Mathf.FloorToInt(gx);
+                int q = Mathf.RoundToInt(gx), cy = Mathf.FloorToInt(gy);
+                bool trace = (Mathf.Abs(gy - r) < w && Seg(cx, r, cells, s.seed)) ||
+                             (Mathf.Abs(gx - q) < w && Seg(q, cy, cells, s.seed + 50));
+                // Pads on joints that have a trace.
+                float pd = Vector2.Distance(new Vector2(gx, gy), new Vector2(q, r));
+                bool joint = Seg(q, r, cells, s.seed) || Seg(q - 1, r, cells, s.seed) || Seg(q, r, cells, s.seed + 50) || Seg(q, r - 1, cells, s.seed + 50);
+                if (trace) c = s.colorB * (0.85f + 0.15f * Hash(x, y, s.seed));
+                if (joint && pd < 0.22f) c = pd < 0.1f ? s.colorA * 0.4f : s.colorB * 1.1f; // ring pad with a hole
+                // A chip now and then, on top of everything.
+                int chipX = Mathf.FloorToInt(gx + 0.5f), chipY = Mathf.FloorToInt(gy + 0.5f);
+                if (Hash(Wrap(chipX, cells), Wrap(chipY, cells), s.seed + 9) > 0.86f)
+                {
+                    float lu = gx + 0.5f - chipX, lv = gy + 0.5f - chipY;
+                    if (lu > 0.18f && lu < 0.82f && lv > 0.25f && lv < 0.75f) c = s.colorC * (0.9f + 0.2f * Hash(x, y, s.seed + 3));
+                    else if (lu > 0.22f && lu < 0.78f && (lv > 0.18f && lv < 0.25f || lv > 0.75f && lv < 0.82f) && Frac(lu * 10f) < 0.5f)
+                        c = new Color(0.8f, 0.8f, 0.82f); // pins
+                }
+                return c;
+            }
+
+            case FloorPattern.SandDunes:
+            {
+                float warp = Fbm(u, v, 3, 3, s.seed) * 2.5f;
+                float t = Frac(v * cells + warp + Mathf.Sin(u * Mathf.PI * 2f * 2f) * 0.3f);
+                float ripple = t < 0.7f ? t / 0.7f : (1f - t) / 0.3f;    // gentle slope up, steep slope down
+                Color c = Color.Lerp(s.colorB, s.colorA, ripple);
+                c *= 0.92f + 0.16f * Hash(x, y, s.seed);                 // grains
+                if (Hash(x, y, s.seed + 7) > 0.995f) c = Color.Lerp(c, s.colorC, 0.7f);
+                return c;
+            }
+
+            case FloorPattern.Ocean:
+            {
+                Voronoi(u, v, cells, s.seed, out float f1, out float f2, out _);
+                Voronoi(u + 0.31f, v + 0.17f, cells * 2, s.seed + 4, out float g1, out float g2, out _);
+                float caustic = Mathf.Pow(Mathf.Clamp01(1f - (f2 - f1) * cells / 0.25f), 2f)
+                              + Mathf.Pow(Mathf.Clamp01(1f - (g2 - g1) * cells * 2 / 0.25f), 2f) * 0.6f;
+                float deep = Fbm(u, v, 3, 4, s.seed);
+                Color c = Color.Lerp(s.colorA, s.colorB, deep * 0.7f);
+                return Color.Lerp(c, s.colorC, Mathf.Clamp01(caustic) * 0.75f);
+            }
+
+            case FloorPattern.Snow:
+            {
+                float drift = Fbm(u, v, 3, 5, s.seed);
+                Color c = Color.Lerp(s.colorB, s.colorA, Mathf.Clamp01(drift * 1.3f - 0.05f));
+                float h = Hash(x, y, s.seed);
+                if (h > 0.992f) c = s.colorC;                             // sparkles
+                else if (h > 0.97f) c = Color.Lerp(c, s.colorC, 0.4f);
+                return c;
+            }
+
+            case FloorPattern.Tartan:
+            {
+                // Thread colour along each axis, then a twill weave picks warp or weft per texel.
+                Color warp = TartanThread(s, Frac(u * cells));
+                Color weft = TartanThread(s, Frac(v * cells));
+                bool showWarp = ((x + y) / 2 & 1) == 0;
+                Color c = showWarp ? warp : weft;
+                return c * (0.9f + 0.1f * Hash(x, y, s.seed));
+            }
+
+            case FloorPattern.TreadPlate:
+            {
+                float brushed = Fbm(u, v, 2, 64, 3, s.seed);             // fine streaks along one direction
+                Color c = s.colorA * (0.85f + 0.25f * brushed);
+                float cu = Frac(u * cells) - 0.5f, cv = Frac(v * cells) - 0.5f;
+                int parity = (Mathf.FloorToInt(u * cells) + Mathf.FloorToInt(v * cells)) & 1;
+                float k = 0.7071f;
+                float a = parity == 0 ? (cu + cv) * k : (cu - cv) * k;   // along the diamond
+                float b = parity == 0 ? (cu - cv) * k : (cu + cv) * k;   // across it
+                float d = (a / 0.33f) * (a / 0.33f) + (b / 0.09f) * (b / 0.09f);
+                if (d < 1f)
+                {
+                    float shade = Mathf.Clamp01(0.5f - b / 0.09f * 0.5f);  // lit on one side, shadowed on the other
+                    c = Color.Lerp(s.colorB, s.colorC, shade);
+                }
+                else if (d < 1.4f) c *= 0.75f;                            // small shadow ring
+                return c;
+            }
+
+            case FloorPattern.Hologram:
+            {
+                float hue = Frac(u + v + Fbm(u, v, 2, 3, s.seed) * 0.25f);
+                Color c = Color.HSVToRGB(hue, 0.55f, 1f);
+                c = Color.Lerp(s.colorA, c, 0.8f);
+                if ((y % 4) == 0) c *= 0.55f;                               // scan lines
+                float grid = Mathf.Min(Frac(u * cells), Frac(v * cells));
+                if (grid < 1.2f / n * cells) c = Color.Lerp(c, s.colorC, 0.6f);
+                return c;
+            }
+
+            case FloorPattern.Crystal:
+            {
+                Voronoi(u, v, cells, s.seed, out float f1, out float f2, out int id);
+                float edge = (f2 - f1) * cells;
+                float facet = Mathf.Clamp01(1f - f1 * cells * 1.2f);      // brighter towards each gem's point
+                Color gem = Color.Lerp(s.colorA, s.colorB, HashId(id, s.seed));
+                gem *= 0.45f + 0.8f * facet * (0.7f + 0.3f * HashId(id, s.seed + 3));
+                float rim = Mathf.Clamp01(1f - edge / 0.05f);
+                return Color.Lerp(gem, s.colorC, rim * 0.8f);
+            }
+
+            case FloorPattern.MatrixRain:
+            {
+                int cols = cells;
+                int glyph = Mathf.Max(4, n / cols);
+                int col = x / glyph, row = y / glyph;
+                int gx = x % glyph, gy = y % glyph;
+                // Each column has its own trail: brightest at the head, fading upward.
+                float head = Hash(col, 0, s.seed);
+                float trail = Frac(head - v * 1.0f + Hash(col, 1, s.seed) * 0.3f);
+                trail = Mathf.Pow(1f - trail, 2.5f);
+                bool lit = gx >= 1 && gx < glyph - 2 && gy >= 1 && gy < glyph - 1 &&
+                           Hash(col * 97 + gx, row * 53 + gy, s.seed + 5) > 0.45f;
+                Color c = s.colorA;
+                if (lit)
+                {
+                    float b = trail * (0.6f + 0.4f * Hash(col, row, s.seed + 6));
+                    c = Color.Lerp(s.colorA, s.colorB, b);
+                    if (trail > 0.9f) c = Color.Lerp(c, s.colorC, 0.7f);  // white-hot head
+                }
+                return c;
+            }
+
+            case FloorPattern.Hazard:
+            {
+                bool stripe = Frac((u + v) * cells) < 0.5f;
+                Color c = stripe ? s.colorA : s.colorB;
+                float wear = Fbm(u, v, 6, 4, s.seed);
+                if (wear > 0.68f) c = Color.Lerp(c, s.colorC, (wear - 0.68f) * 3f);   // scuffed paint
+                c *= 0.9f + 0.15f * Hash(x, y, s.seed);
+                return c;
+            }
         }
         return s.colorA;
+    }
+
+    private static int Wrap(int i, int m) => ((i % m) + m) % m;
+
+    /// <summary>Circuit board: is there a trace from joint (i, j) to the next joint along? (wraps, so it tiles)</summary>
+    private static bool Seg(int i, int j, int cells, int seed) => Hash(Wrap(i, cells), Wrap(j, cells), seed) > 0.55f;
+
+    /// <summary>Tartan: the thread colour at position t (0..1) across one repeat.</summary>
+    private static Color TartanThread(FloorStyle s, float t)
+    {
+        if (t < 0.38f) return s.colorA;
+        if (t < 0.46f) return s.colorB;
+        if (t < 0.5f) return s.colorC;
+        if (t < 0.54f) return s.colorB;
+        if (t < 0.7f) return s.colorA * 0.75f;
+        if (t < 0.74f) return Color.Lerp(s.colorC, Color.white, 0.5f);
+        return s.colorB * 0.8f;
+    }
+
+    /// <summary>Hexagon-like cells: nearest point on a staggered grid (odd rows shifted half a cell). Tiles for even 'cells'.</summary>
+    private static void HexCells(float u, float v, int cells, int seed, out float f1, out float f2, out int id)
+    {
+        cells = Mathf.Max(2, cells + (cells & 1));
+        float x = Frac(u) * cells, y = Frac(v) * cells * 0.866f;
+        int rows = cells;
+        int cy = Mathf.FloorToInt(y / 0.866f);
+        f1 = f2 = 99f;
+        id = 0;
+        for (int oy = -1; oy <= 1; oy++)
+        {
+            int gy = cy + oy;
+            float shift = (Wrap(gy, rows) & 1) == 0 ? 0f : 0.5f;
+            int cx = Mathf.FloorToInt(x - shift);
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int gx = cx + ox;
+                float px = gx + 0.5f + shift, py = (gy + 0.5f) * 0.866f;
+                float d = Mathf.Sqrt((px - x) * (px - x) + (py - y) * (py - y));
+                if (d < f1) { f2 = f1; f1 = d; id = Wrap(gy, rows) * cells + Wrap(gx, cells); }
+                else if (d < f2) f2 = d;
+            }
+        }
+        f1 /= cells;
+        f2 /= cells;
     }
 
     private static void AddStars(Color[] px, int n, FloorStyle s, System.Random rng)
@@ -670,5 +899,54 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                              64, true, 6f, 4, 0.8f, 1.3f);
         disco.beatSeconds = 0.5f;
         yield return disco;
+
+        FloorStyle honey = S("Honeycomb", FloorPattern.Honeycomb, new Color(1f, 0.72f, 0.15f), new Color(0.72f, 0.35f, 0.02f),
+                             new Color(0.35f, 0.2f, 0.05f), 256, false, 5f, 6, 0.85f, 0.25f);
+        yield return honey;
+
+        yield return S("Bricks", FloorPattern.Bricks, new Color(0.62f, 0.24f, 0.17f), new Color(0.5f, 0.2f, 0.15f),
+                       new Color(0.62f, 0.6f, 0.55f), 64, true, 4f, 8, 0.1f);
+
+        FloorStyle circuit = S("Circuit Board", FloorPattern.CircuitBoard, new Color(0.04f, 0.3f, 0.14f), new Color(0.95f, 0.7f, 0.25f),
+                               new Color(0.06f, 0.06f, 0.07f), 256, false, 6f, 8, 0.55f, 0.35f);
+        circuit.pulseSpeed = 0.25f; circuit.pulseAmount = 0.5f;
+        yield return circuit;
+
+        yield return S("Sand Dunes", FloorPattern.SandDunes, new Color(0.93f, 0.8f, 0.55f), new Color(0.75f, 0.58f, 0.35f),
+                       Color.white, 128, false, 6f, 7, 0.1f);
+
+        FloorStyle ocean = S("Ocean", FloorPattern.Ocean, new Color(0.02f, 0.18f, 0.35f), new Color(0.05f, 0.4f, 0.55f),
+                             new Color(0.6f, 0.95f, 1f), 256, false, 7f, 5, 0.95f, 0.35f);
+        ocean.scrollSpeed = new Vector2(0.03f, 0.018f);
+        yield return ocean;
+
+        yield return S("Snow", FloorPattern.Snow, new Color(0.97f, 0.98f, 1f), new Color(0.74f, 0.8f, 0.9f),
+                       Color.white, 128, false, 6f, 1, 0.75f);
+
+        yield return S("Tartan", FloorPattern.Tartan, new Color(0.55f, 0.06f, 0.08f), new Color(0.05f, 0.12f, 0.3f),
+                       new Color(0.95f, 0.8f, 0.2f), 128, true, 4f, 2, 0.05f);
+
+        FloorStyle tread = S("Tread Plate", FloorPattern.TreadPlate, new Color(0.55f, 0.57f, 0.6f), new Color(0.35f, 0.36f, 0.4f),
+                             new Color(0.92f, 0.93f, 0.95f), 256, false, 4f, 6, 0.7f);
+        tread.metallic = 0.85f;
+        yield return tread;
+
+        FloorStyle holo = S("Hologram", FloorPattern.Hologram, new Color(0.6f, 0.7f, 0.9f), Color.white,
+                            Color.white, 128, false, 6f, 4, 0.9f, 0.9f);
+        holo.scrollSpeed = new Vector2(0.06f, 0.03f); holo.pulseSpeed = 0.6f; holo.pulseAmount = 0.3f;
+        yield return holo;
+
+        FloorStyle crystal = S("Crystal", FloorPattern.Crystal, new Color(0.55f, 0.2f, 0.85f), new Color(0.2f, 0.55f, 0.95f),
+                               new Color(0.95f, 0.85f, 1f), 256, false, 5f, 6, 0.95f, 0.7f);
+        crystal.pulseSpeed = 0.3f; crystal.pulseAmount = 0.4f;
+        yield return crystal;
+
+        FloorStyle matrix = S("Matrix Rain", FloorPattern.MatrixRain, new Color(0.0f, 0.03f, 0.0f), new Color(0.15f, 1f, 0.35f),
+                              new Color(0.85f, 1f, 0.9f), 128, true, 6f, 16, 0.5f, 1.3f);
+        matrix.scrollSpeed = new Vector2(0f, 0.25f);
+        yield return matrix;
+
+        yield return S("Hazard Stripes", FloorPattern.Hazard, new Color(0.98f, 0.8f, 0.05f), new Color(0.08f, 0.08f, 0.08f),
+                       new Color(0.45f, 0.42f, 0.38f), 128, false, 4f, 4, 0.3f);
     }
 }
