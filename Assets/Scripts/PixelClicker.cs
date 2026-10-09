@@ -2188,6 +2188,10 @@ public class PixelClicker : MonoBehaviour
         return true;
     }
 
+    /// <summary>The sound id of a pixel type's own bounce ("pixel_bounce_electric"), or null for an invalid tier. PixelAudio falls back to the plain landing sound if no such sound has clips.</summary>
+    private string BounceSoundId(int tierIndex) =>
+        IsValidTier(tierIndex) ? "pixel_bounce_" + tiers[tierIndex].type.ToString().ToLowerInvariant() : null;
+
     /// <summary>The cube's normal size in world units (not counting pulsing / materializing). Used to size things around it.</summary>
     public float PixelBaseSize
     {
@@ -2597,7 +2601,7 @@ public class PixelClicker : MonoBehaviour
         else if (gravityScale > 0f)
             copy.AddComponent<ScaledGravity>().scale = gravityScale * (custom ? oldLook.gravityMultiplier : 1f);
 
-        if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
+        if (!fly) copy.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown, BounceSoundId(tierIndex));
         if (!fly && IsValidTier(tierIndex) && srcFilter != null)
         {
             // Look extras: neon outline / dark-matter core, and shattering for glass.
@@ -2774,7 +2778,8 @@ public class PixelClicker : MonoBehaviour
         if (gravityScale > 0f && body.GetComponent<ScaledGravity>() == null)
             body.gameObject.AddComponent<ScaledGravity>().scale = gravityScale;
         if (body.GetComponent<OldPixelImpact>() == null)
-            body.gameObject.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown);
+            body.gameObject.AddComponent<OldPixelImpact>().Setup(landMinSpeed, landFullVolumeSpeed, landCooldown,
+                BounceSoundId(body.GetComponent<OldPixelInfo>() != null ? body.GetComponent<OldPixelInfo>().tierIndex : -1));
 
         OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
         if (despawn != null) despawn.AddLifetime(fallingCopyLifetime);
@@ -2953,9 +2958,11 @@ public class ScaledGravity : MonoBehaviour
 public class OldPixelImpact : MonoBehaviour
 {
     private float minSpeed = 1.5f, fullSpeed = 8f, cooldown = 0.12f, lastTime = -99f;
+    private string soundId; // a sound just for this pixel type's bounce (e.g. "pixel_bounce_electric"); plain landing sound when it has none
 
-    public void Setup(float min, float full, float gap)
+    public void Setup(float min, float full, float gap, string ownSoundId = null)
     {
+        soundId = ownSoundId;
         minSpeed = min;
         fullSpeed = Mathf.Max(0.1f, full);
         cooldown = gap;
@@ -2970,7 +2977,9 @@ public class OldPixelImpact : MonoBehaviour
         if (speed < minSpeed) return;
 
         lastTime = Time.time;
-        PixelClicker.RaiseOldPixelLanded(Mathf.Clamp01(speed / fullSpeed));
+        float intensity = Mathf.Clamp01(speed / fullSpeed);
+        if (!string.IsNullOrEmpty(soundId) && PixelAudio.Has(soundId)) PixelAudio.PlayScaled(soundId, Mathf.Lerp(0.3f, 1f, intensity));
+        else PixelClicker.RaiseOldPixelLanded(intensity);
     }
 }
 

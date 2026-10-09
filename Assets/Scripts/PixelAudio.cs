@@ -187,6 +187,7 @@ public class PixelAudio : MonoBehaviour
         {
             Make("click", 0.02f, 0.92f, 1.08f),
             Make("pixel_land", 0.02f, 0.88f, 1.12f),
+            Make("pixel_bounce_electric", 0.05f, 0.9f, 1.15f),
             Make("glass_shatter", 0.04f, 0.9f, 1.1f),
             Make("auto_click", 0.06f, 0.92f, 1.08f),
             Make("hit", 0.03f, 0.92f, 1.08f),
@@ -231,6 +232,34 @@ public class PixelAudio : MonoBehaviour
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
             list.Add(Make("pixel_" + type.ToString().ToLowerInvariant(), 0.03f, 0.92f, 1.08f));
         return list;
+    }
+
+    /// <summary>
+    /// Sounds that ship without audio files get a clip synthesized in code (only while their clip list is empty, so putting your own
+    /// clips in the Inspector replaces them): the Electric pixel's bounce is a short crackling zap.
+    /// </summary>
+    private void FillSynthesizedClips()
+    {
+        if (sounds == null) return;
+        foreach (Sound s in sounds)
+        {
+            if (s == null || s.id != "pixel_bounce_electric") continue;
+            if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
+            s.clips = new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
+        }
+    }
+
+    /// <summary>True if a sound with this id exists and has at least one clip.</summary>
+    public static bool Has(string id)
+    {
+        return instance != null && !string.IsNullOrEmpty(id) && instance.byId.TryGetValue(id, out Sound s)
+               && s.clips != null && s.clips.Length > 0 && s.clips[0] != null;
+    }
+
+    /// <summary>Plays a sound by id with its volume scaled (e.g. by how hard something hit).</summary>
+    public static void PlayScaled(string id, float volumeMultiplier)
+    {
+        if (instance != null) instance.PlaySound(id, 1f, volumeMultiplier);
     }
 
     private bool EnsureDefaultSounds()
@@ -282,6 +311,7 @@ public class PixelAudio : MonoBehaviour
         if (PlayerPrefs.HasKey(PrefMuted)) muted = PlayerPrefs.GetInt(PrefMuted) != 0;
 
         EnsureDefaultSounds();
+        FillSynthesizedClips();
         RebuildLookup();
 
         voices = new AudioSource[Mathf.Max(1, maxVoices)];
@@ -558,5 +588,50 @@ public class PixelAudio : MonoBehaviour
     private void OnMinigame(PixelMinigame game, PixelMinigame.MinigameEvent what)
     {
         PlaySound(game.Id + (what == PixelMinigame.MinigameEvent.Clicked ? "_click" : "_spawn"), 1f);
+    }
+}
+
+
+/// <summary>Tiny sound synthesizer: makes AudioClips in code for sounds that have no audio file yet.</summary>
+public static class PixelSynth
+{
+    /// <summary>A short electric zap: a buzzing chirp falling in pitch under a burst of crackle, with a fast decay.</summary>
+    public static AudioClip Zap(int seed)
+    {
+        const int rate = 44100;
+        float length = 0.3f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(seed * 7919);
+
+        float phase = 0f, crackle = 0f;
+        float startHz = 1100f + seed * 140f, endHz = 160f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)n;
+            float sec = i / (float)rate;
+            float env = Mathf.Exp(-sec * 13f);
+
+            // Buzz: a sawtooth chirp, a little ragged.
+            float hz = Mathf.Lerp(startHz, endHz, Mathf.Pow(t, 0.45f)) * (1f + ((float)rng.NextDouble() - 0.5f) * 0.04f);
+            phase += hz / rate;
+            phase -= Mathf.Floor(phase);
+            float saw = phase * 2f - 1f;
+
+            // Crackle: random sparks that are held for a few samples.
+            if (rng.NextDouble() < 0.035 * (1f - t)) crackle = ((float)rng.NextDouble() * 2f - 1f);
+            crackle *= 0.9f;
+
+            float noise = ((float)rng.NextDouble() * 2f - 1f) * Mathf.Exp(-sec * 40f); // the initial snap
+            data[i] = (saw * 0.35f + crackle * 0.9f + noise * 0.8f) * env;
+        }
+
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
+
+        AudioClip clip = AudioClip.Create("Zap " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
     }
 }
