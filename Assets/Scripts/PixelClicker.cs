@@ -291,6 +291,10 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Added to the shell's strength (about 0.75 for a Glow Intensity of 2.5: the pixel's faces turn almost flat and bright, like emission). 0 = the default look; negative = more shaded, positive = brighter.")]
     [SerializeField] private float glowShellExtra = 0f;
 
+    [Range(-0.3f, 1f)]
+    [Tooltip("Added to how far above 1.0 (HDR) the shell's colour goes, per point of the pixel's Glow Intensity (base 0.35). This is what makes Bloom light the pixel up: higher = brighter / whiter, lower = a plain tint. Tick 'Glow Shell In Editor' to tune it in Play mode.")]
+    [SerializeField] private float glowShellBrightnessExtra = 0f;
+
     [Tooltip("Also draw the shell in the Editor. Off by default: in the Editor the real emission already works, and the shell is meant for built games where it can be missing.")]
     [SerializeField] private bool glowShellInEditor = false;
 
@@ -1564,9 +1568,9 @@ public class PixelClicker : MonoBehaviour
         Mathf.Clamp((glowShellAlpha + 0.1f * tier.glowIntensity) * extra, 0.25f, 0.92f);
 
     /// <summary>How far above 1.0 the shell's colour goes (so Bloom lights it up like emission): grows with the pixel's glow intensity.</summary>
-    private static float GlowShellHdr(PixelTier tier) => Mathf.Max(1f, 1f + tier.glowIntensity * 0.22f);
+    private float GlowShellHdr(PixelTier tier) => Mathf.Max(1f, 1f + tier.glowIntensity * Mathf.Max(0f, 0.35f + glowShellBrightnessExtra));
 
-    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.3f);
+    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.35f);
 
     private void UpdateGlowShell(PixelTier tier, PixelLook look)
     {
