@@ -47,6 +47,14 @@ public static class PixelWindows
             if (e.owner != keep && e.priority < 100 && IsOpen(e)) e.close();
     }
 
+    /// <summary>True if any window other than the ones registered by 'except' is open (device placing, dev tools and the title screen don't count).</summary>
+    public static bool AnyOpenExcept(object except)
+    {
+        foreach (Entry e in entries)
+            if (e.owner != except && e.priority < 100 && IsOpen(e)) return true;
+        return false;
+    }
+
     /// <summary>True if any registered window is open.</summary>
     public static bool AnyOpen()
     {

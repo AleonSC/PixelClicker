@@ -181,15 +181,9 @@ public class PixelPadMinigame : PixelMinigame
     public override double TrackerGoal => ultraGoal;
     public override string RequirementFormat => requirementFormat;
 
-    /// <summary>True when the inventory should show Ultra counts in its tooltips (the minigame is bought or you own some).</summary>
-    public static bool UltraVisible
-    {
-        get
-        {
-            PixelPadMinigame pad = Find("pad") as PixelPadMinigame;
-            return pad != null && (pad.running || (pad.clicker != null && pad.clicker.UltraEarned > 0));
-        }
-    }
+    /// <summary>True when the inventory should show Ultra counts in its tooltips. Ultra pixels now come from every minigame and
+    /// the Inventory always lists them, so this is always on (even on a new game).</summary>
+    public static bool UltraVisible => true;
 
     protected override void Awake()
     {

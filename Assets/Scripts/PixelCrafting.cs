@@ -430,6 +430,8 @@ public class PixelCrafting : MonoBehaviour
         if (!craftingActive && windowObject.activeSelf) windowObject.SetActive(false);
     }
 
+    private bool otherWindowWasOpen;
+
     private void Update()
     {
         if (!built) return;
@@ -438,6 +440,9 @@ public class PixelCrafting : MonoBehaviour
             statusTimer -= Time.unscaledDeltaTime;
             if (statusTimer <= 0f) statusLabel.text = "";
         }
+        bool othersOpen = PixelWindows.AnyOpenExcept(this);
+        if (windowObject.activeSelf && othersOpen && !otherWindowWasOpen) Close(); // opening any other window closes Crafting
+        otherWindowWasOpen = othersOpen;
         if (!windowObject.activeSelf) return;
 
         refreshTimer -= Time.unscaledDeltaTime;
