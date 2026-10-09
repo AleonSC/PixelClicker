@@ -102,6 +102,29 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the unlock-everything button.")]
     [SerializeField] private string unlockAllText = "Unlock all shop items";
 
+    [Tooltip("Text of the button that sets every pixel count to 0 (inventory, Log and Bank) but keeps unlocks.")]
+    [SerializeField] private string resetCountsText = "Reset all counts to 0";
+
+    [Tooltip("Text the reset button shows after the first click (click again within a few seconds to confirm).")]
+    [SerializeField] private string resetConfirmText = "Click again to erase all counts";
+
+    [Header("Auto-hide (fades when not used, comes back on hover)")]
+    [Min(0.2f)]
+    [Tooltip("Seconds the on-screen spawn selector stays visible without being touched before it fades away.")]
+    [SerializeField] private float selectorHideSeconds = 2.5f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the spawn selector takes to fade out / in.")]
+    [SerializeField] private float selectorFadeSeconds = 0.35f;
+
+    [Min(0.2f)]
+    [Tooltip("Seconds the Dev Tools button stays visible without being touched before it fades away (a bit longer than the selector).")]
+    [SerializeField] private float dockHideSeconds = 6f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the Dev Tools button takes to fade out / in.")]
+    [SerializeField] private float dockFadeSeconds = 0.7f;
+
     [Tooltip("Label of the clear-old-pixels tick box.")]
     [SerializeField] private string clearToggleText = "Press Q to clear old pixels";
 
@@ -311,7 +334,13 @@ public class PixelDevTools : MonoBehaviour
         button.onClick.AddListener(Open);
 
         PixelDevButtonFx fx = dockRoot.AddComponent<PixelDevButtonFx>();
-        fx.Setup(rt, rt.GetComponent<PixelDockedButton>(), divineColor, dockGlowSize, dockSparkles);
+        PixelDockedButton docked = rt.GetComponent<PixelDockedButton>();
+        fx.Setup(rt, docked, divineColor, dockGlowSize, dockSparkles);
+
+        // Fades away when it hasn't been used for a while; the mouse near its spot (or an open panel) brings it back.
+        PixelFadeOnIdle fade = dockRoot.AddComponent<PixelFadeOnIdle>();
+        fade.Setup(dockRoot.AddComponent<CanvasGroup>(), dockHideSeconds > 0f ? dockHideSeconds : 6f,
+                   dockFadeSeconds > 0f ? dockFadeSeconds : 0.7f, () => IsOpen || (docked != null && docked.PointerNear()));
     }
 
     private void OnDestroy()
@@ -477,6 +506,14 @@ public class PixelDevTools : MonoBehaviour
         unlock.onClick.AddListener(UnlockAll);
         y += rowHeight + 24f;
 
+        // Row: reset every pixel count (inventory, Log, Bank) but keep the unlocks - needs a second click to confirm
+        resetButton = PixelUIKit.CreateButton(font, box.transform, "Reset Counts Button", resetCountsText,
+                                              new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(resetButton.GetComponent<RectTransform>(), 40f, y, inner);
+        resetLabel = resetButton.GetComponentInChildren<TMP_Text>();
+        resetButton.onClick.AddListener(ResetCountsClicked);
+        y += rowHeight + 24f;
+
         // Row: the crash / error report folder (it used to be in the pause menu)
         if (PixelCrashLog.Available)
         {
@@ -535,7 +572,29 @@ public class PixelDevTools : MonoBehaviour
     // On-screen spawn selector
     // ------------------------------------------------------------------
 
+    private Button resetButton;
+    private TMP_Text resetLabel;
+    private float resetConfirmUntil;
+
+    private void ResetCountsClicked()
+    {
+        if (clicker == null) return;
+        if (Time.unscaledTime > resetConfirmUntil)
+        {
+            resetConfirmUntil = Time.unscaledTime + 4f; // first click: ask again
+            if (resetLabel != null) resetLabel.text = resetConfirmText;
+            return;
+        }
+
+        resetConfirmUntil = 0f;
+        clicker.ResetAllCounts();
+        PixelBank bank = PixelFind.First<PixelBank>();
+        if (bank != null) bank.SetState(null); // the stored pixels too
+        if (resetLabel != null) resetLabel.text = resetCountsText;
+    }
+
     private GameObject selectorRoot;
+    private RectTransform selectorHover;
     private TMP_Dropdown selectorDropdown;
     private readonly List<PixelClicker.PixelType[]> selectorChoices = new List<PixelClicker.PixelType[]>();
 
@@ -564,6 +623,7 @@ public class PixelDevTools : MonoBehaviour
     {
         selectorRoot = PixelUIKit.CreateCanvas("PixelDevTools Spawn Selector", 145, referenceResolution, true);
         selectorRoot.transform.SetParent(transform, false);
+        selectorRoot.AddComponent<CanvasGroup>();
 
         const float gap = 10f;
         float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth + gap + despawnButtonWidth;
@@ -590,12 +650,35 @@ public class PixelDevTools : MonoBehaviour
         PlaceTop(spawn.GetComponent<RectTransform>(), x, top, btnSize);
         spawn.onClick.AddListener(SpawnSelected);
         x += spawnButtonWidth + gap;
+        float rowRight = x + despawnButtonWidth;
 
         Vector2 despawnSize = new Vector2(despawnButtonWidth, selectorSize.y);
         Button despawn = PixelUIKit.CreateButton(font, selectorRoot.transform, "Despawn Button", despawnText, despawnSize,
                                                  buttonColor, textColor, fontSize);
         PlaceTop(despawn.GetComponent<RectTransform>(), x, top, despawnSize);
         despawn.onClick.AddListener(DespawnSelected);
+
+        // An invisible area around the whole row: the mouse over it keeps the row (or brings it back) visible.
+        GameObject hoverGo = new GameObject("Hover Area", typeof(RectTransform));
+        hoverGo.transform.SetParent(selectorRoot.transform, false);
+        selectorHover = hoverGo.GetComponent<RectTransform>();
+        float left = -total * 0.5f - 30f, width = rowRight + total * 0.5f + 60f;
+        selectorHover.anchorMin = selectorHover.anchorMax = new Vector2(0.5f, 1f);
+        selectorHover.pivot = new Vector2(0f, 1f);
+        selectorHover.sizeDelta = new Vector2(width, selectorSize.y + 50f);
+        selectorHover.anchoredPosition = new Vector2(left, top + 20f);
+
+        PixelFadeOnIdle fade = selectorRoot.AddComponent<PixelFadeOnIdle>();
+        fade.Setup(selectorRoot.GetComponent<CanvasGroup>(), selectorHideSeconds > 0f ? selectorHideSeconds : 2.5f,
+                   selectorFadeSeconds > 0f ? selectorFadeSeconds : 0.35f, SelectorActive);
+    }
+
+    /// <summary>The selector counts as 'in use' while the mouse is over it, a drop-down is open or a button is held.</summary>
+    private bool SelectorActive()
+    {
+        if (selectorDropdown != null && selectorDropdown.IsExpanded) return true;
+        if (selectorMinigameDropdown != null && selectorMinigameDropdown.IsExpanded) return true;
+        return selectorHover != null && RectTransformUtility.RectangleContainsScreenPoint(selectorHover, PixelInput.PointerPosition(), null);
     }
 
     private static void PlaceTop(RectTransform rt, float x, float y, Vector2 size)
@@ -1029,5 +1112,39 @@ public class PixelDevButtonFx : MonoBehaviour
         dotTexture.Apply(false, false);
         dotSprite = Sprite.Create(dotTexture, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 100f);
         return dotSprite;
+    }
+}
+
+/// <summary>
+/// Fades a CanvasGroup out when nothing has used it for a while, and back in as soon as 'inUse' says so (the mouse is over it...).
+/// While it is faded out it can't be clicked, so invisible buttons never catch a click by accident.
+/// </summary>
+public class PixelFadeOnIdle : MonoBehaviour
+{
+    private CanvasGroup group;
+    private float hideAfter, fadeSeconds, lastUse;
+    private System.Func<bool> inUse;
+
+    public void Setup(CanvasGroup canvasGroup, float hideAfterSeconds, float fadeDuration, System.Func<bool> isInUse)
+    {
+        group = canvasGroup;
+        hideAfter = hideAfterSeconds;
+        fadeSeconds = Mathf.Max(0.05f, fadeDuration);
+        inUse = isInUse;
+        lastUse = Time.unscaledTime;
+        group.alpha = 1f;
+    }
+
+    private void OnEnable() => lastUse = Time.unscaledTime;
+
+    private void Update()
+    {
+        if (group == null) return;
+        if (inUse != null && inUse()) lastUse = Time.unscaledTime;
+        float target = Time.unscaledTime - lastUse < hideAfter ? 1f : 0f;
+        group.alpha = Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / fadeSeconds);
+        bool usable = group.alpha > 0.3f;
+        group.interactable = usable;
+        group.blocksRaycasts = usable;
     }
 }

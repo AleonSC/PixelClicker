@@ -1896,6 +1896,21 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Removes every old pixel lying around (no payout). Used by the dev tools.</summary>
+    /// <summary>
+    /// Dev tools: sets every pixel count to 0 - the inventory amount, the lifetime total shown in the Log and the click count -
+    /// but keeps what is unlocked (pixel types, shop packs, Ultra pixels and boosts, earned achievements).
+    /// </summary>
+    public void ResetAllCounts()
+    {
+        foreach (PixelTier t in tiers)
+        {
+            t.count = 0d;
+            t.totalCollected = 0d;
+            t.timesCollected = 0L;
+        }
+        NotifyChanged();
+    }
+
     public void ClearOldPixels()
     {
         for (int i = 0; i < oldPixels.Count; i++)
