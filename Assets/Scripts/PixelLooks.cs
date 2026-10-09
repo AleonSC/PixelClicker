@@ -765,7 +765,15 @@ public class OldPixelGravityWell : MonoBehaviour
         for (int i = 0; i < list.Count; i++)
         {
             Rigidbody other = list[i];
-            if (other == null || other.gameObject == gameObject || other.isKinematic) continue;
+            if (other == null || other.gameObject == gameObject) continue;
+            if (clicker.IsFlyingPixel(other))
+            {
+                // A streaking meteor pixel that comes inside the ring is captured: it stops flying and gets dragged in.
+                if ((centre - other.position).sqrMagnitude > radius * radius) continue;
+                clicker.LandFlyingPixel(other);
+                SetVelocityOf(other, VelocityOf(other) * 0.2f);
+            }
+            if (other.isKinematic) continue;
             OldPixelDespawn despawn = other.GetComponent<OldPixelDespawn>();
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue; // carried by the player / vanishing
 
