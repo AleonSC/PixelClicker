@@ -91,6 +91,50 @@ public class PixelStats : MonoBehaviour
 
     private readonly List<KeyValuePair<string, long>> potionsUsed = new List<KeyValuePair<string, long>>();
 
+    // ------------------------------------------------------------------
+    // Generic counters: any script records a stat with PixelStats.Count("key") / Best / Fastest, no wiring needed.
+    // They are saved with the game (ExtraData.counterKeys / counterValues) and listed by GetLines().
+    // ------------------------------------------------------------------
+
+    private static PixelStats instance;
+
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { instance = null; }
+
+    private readonly Dictionary<string, double> counters = new Dictionary<string, double>();
+
+    /// <summary>Adds to a counter (does nothing when there is no PixelStats).</summary>
+    public static void Count(string key, double amount = 1d)
+    {
+        if (instance == null || amount <= 0d) return;
+        instance.counters.TryGetValue(key, out double now);
+        instance.counters[key] = now + amount;
+    }
+
+    /// <summary>Keeps the highest value ever given for a counter.</summary>
+    public static void Best(string key, double value)
+    {
+        if (instance == null) return;
+        instance.counters.TryGetValue(key, out double now);
+        if (value > now) instance.counters[key] = value;
+    }
+
+    /// <summary>Keeps the lowest value ever given for a counter (0 = never set).</summary>
+    public static void Fastest(string key, double value)
+    {
+        if (instance == null || value <= 0d) return;
+        instance.counters.TryGetValue(key, out double now);
+        if (now <= 0d || value < now) instance.counters[key] = value;
+    }
+
+    /// <summary>A counter's value (0 when never recorded).</summary>
+    public double Counter(string key) => counters.TryGetValue(key, out double v) ? v : 0d;
+
+    private double gainedTotal, sessionSeconds, sampleTimer;
+    private readonly Queue<double> gainedSamples = new Queue<double>();
+    private bool sessionCounted, wasStopped, wasSlowed;
+    private float sessionCountTimer;
+
     /// <summary>The extra stats in a form the save file can store.</summary>
     [Serializable]
     public class ExtraData
@@ -99,6 +143,8 @@ public class PixelStats : MonoBehaviour
         public int highestCombo;
         public string[] potionNames;
         public long[] potionCounts;
+        public string[] counterKeys;
+        public double[] counterValues;
     }
 
     private void Start()
@@ -117,6 +163,10 @@ public class PixelStats : MonoBehaviour
         clicker.PixelCollected += OnPixelCollected;
         clicker.PixelHit += OnPixelHit;
         clicker.CurrencySpent += OnCurrencySpent;
+        clicker.CurrencyGained += OnCurrencyGained;
+        clicker.PixelsVacuumed += OnPixelsVacuumed;
+        instance = this;
+        PixelCrafting.Crafted += OnCrafted;
 
         PixelMinigame.Happened += OnMinigame;
         PixelBlackholeMinigame.PixelSwallowed += OnSwallowed;
@@ -127,6 +177,8 @@ public class PixelStats : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (instance == this) instance = null;
+        PixelCrafting.Crafted -= OnCrafted;
         PixelMinigame.Happened -= OnMinigame;
         PixelBlackholeMinigame.PixelSwallowed -= OnSwallowed;
         PixelConsumables.PotionDrunk -= OnPotionDrunk;
@@ -136,13 +188,50 @@ public class PixelStats : MonoBehaviour
         clicker.PixelCollected -= OnPixelCollected;
         clicker.PixelHit -= OnPixelHit;
         clicker.CurrencySpent -= OnCurrencySpent;
+        clicker.CurrencyGained -= OnCurrencyGained;
+        clicker.PixelsVacuumed -= OnPixelsVacuumed;
     }
 
     private void Update()
     {
         if (!countTimeWhilePaused && PixelPauseMenu.GameStopped) return;
-        playSeconds += Time.unscaledDeltaTime;
+        float dt = Time.unscaledDeltaTime;
+        playSeconds += dt;
+        sessionSeconds += dt;
+        Best("session.longest", sessionSeconds);
+
+        // A session counts once it has run a few seconds (a loaded save restores the count first and then adds this one).
+        if (!sessionCounted)
+        {
+            sessionCountTimer += dt;
+            if (sessionCountTimer >= 3f) { Count("sessions"); sessionCounted = true; }
+        }
+
+        // Earn rate: pixels gained over the last minute, sampled once a second; the best one is kept.
+        if (!PixelTitleScreen.Showing)
+        {
+            sampleTimer += dt;
+            while (sampleTimer >= 1d)
+            {
+                sampleTimer -= 1d;
+                gainedSamples.Enqueue(gainedTotal);
+                if (gainedSamples.Count > 61) gainedSamples.Dequeue();
+                if (gainedSamples.Count > 60) Best("rate.best", gainedTotal - gainedSamples.Peek());
+            }
+        }
+
+        // Time Stop / Time Slow: how long and how often.
+        if (PixelTimeStop.IsStopped) { Count("timestop.seconds", dt); if (!wasStopped) Count("timestop.uses"); }
+        if (PixelTimeStop.IsSlowed) { Count("timeslow.seconds", dt); if (!wasSlowed) Count("timeslow.uses"); }
+        wasStopped = PixelTimeStop.IsStopped;
+        wasSlowed = PixelTimeStop.IsSlowed;
     }
+
+    private void OnCurrencyGained(int tier, double amount) => gainedTotal += amount;
+
+    private void OnPixelsVacuumed(int tier, double total, int count) => Count("old.vacuumed", count);
+
+    private void OnCrafted() => Count("crafts");
 
     private void OnPixelCollected(int tier, double amount, bool automatic) => CountClick(automatic);
 
@@ -169,6 +258,7 @@ public class PixelStats : MonoBehaviour
 
     private void OnSwallowed(int tierIndex)
     {
+        Count("holes.fed");
         if (clicker != null && clicker.IsValidTierIndex(tierIndex) && clicker.Tiers[tierIndex].type == PixelClicker.PixelType.Singularity) singularitiesFed++;
     }
 
@@ -201,7 +291,11 @@ public class PixelStats : MonoBehaviour
             highestCombo = highestCombo,
             potionNames = new string[potionsUsed.Count],
             potionCounts = new long[potionsUsed.Count],
+            counterKeys = new string[counters.Count],
+            counterValues = new double[counters.Count],
         };
+        int ci = 0;
+        foreach (KeyValuePair<string, double> c in counters) { d.counterKeys[ci] = c.Key; d.counterValues[ci] = c.Value; ci++; }
         for (int i = 0; i < potionsUsed.Count; i++)
         {
             d.potionNames[i] = potionsUsed[i].Key;
@@ -214,6 +308,11 @@ public class PixelStats : MonoBehaviour
     public void SetExtra(ExtraData d)
     {
         potionsUsed.Clear();
+        counters.Clear();
+        if (d != null && d.counterKeys != null && d.counterValues != null)
+            for (int i = 0; i < d.counterKeys.Length && i < d.counterValues.Length; i++)
+                counters[d.counterKeys[i]] = Math.Max(0d, d.counterValues[i]);
+        if (!sessionCounted) { Count("sessions"); sessionCounted = true; } // this launch is one more session
         if (d == null)
         {
             ghostsClicked = meteorsClicked = meteorsSpawned = blackHolesSpawned = fansUsed = vacuumDevicesUsed = sortersUsed = singularitiesFed = 0;
@@ -257,5 +356,145 @@ public class PixelStats : MonoBehaviour
         if (h > 0) return h + "h " + m + "m " + s + "s";
         if (m > 0) return m + "m " + s + "s";
         return s + "s";
+    }
+
+    // ------------------------------------------------------------------
+    // The list shown on the Stats screen
+    // ------------------------------------------------------------------
+
+    /// <summary>One row of the Stats screen: a heading (no value) or a label with its value.</summary>
+    public struct Line
+    {
+        public string label, value;
+        public bool header;
+    }
+
+    /// <summary>Every stat row in order. 'number' formats counts the way the player chose (abbreviated or not).</summary>
+    public List<Line> GetLines(Func<double, string> number)
+    {
+        List<Line> lines = new List<Line>();
+        void Head(string text) => lines.Add(new Line { label = text, header = true });
+        void Row(string label, string value) => lines.Add(new Line { label = label, value = value });
+        void Num(string label, double value) => Row(label, number(value));
+        void Cnt(string label, string key) => Num(label, Counter(key));
+        // A minigame's rows appear once it is running or has something recorded.
+        bool Seen(string id, params string[] keys)
+        {
+            PixelMinigame g = PixelMinigame.Find(id);
+            if (g != null && g.Running) return true;
+            foreach (string k in keys) if (Counter(k) > 0d) return true;
+            return false;
+        }
+
+        Head("General");
+        Num("Total clicks", TotalClicks);
+        Num("   Your clicks", manualClicks);
+        Num("   Auto clicker", autoClicks);
+        Row("Time played", FormatTime(playSeconds));
+        Row("Longest session", FormatTime(Counter("session.longest")));
+        Num("Sessions played", Counter("sessions"));
+        PixelAchievements ach = PixelFind.First<PixelAchievements>();
+        if (ach != null && ach.TierTotal > 0) Row("Achievements", ach.EarnedTierTotal + " / " + ach.TierTotal);
+
+        Head("Pixels");
+        double earned = 0d, rarestWeight = double.MaxValue;
+        string rarest = null;
+        int highestValue = 0, valueLevels = 0;
+        if (clicker != null)
+        {
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            {
+                earned += t.totalCollected;
+                highestValue = Math.Max(highestValue, t.valueLevel);
+                valueLevels += t.valueLevel;
+                if (t.totalCollected > 0d && t.spawnWeight > 0f && t.spawnWeight < rarestWeight) { rarestWeight = t.spawnWeight; rarest = t.displayName; }
+            }
+        }
+        Num("Pixels earned", earned);
+        if (clicker != null)
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                if (t.totalCollected > 0d) Num("   " + t.displayName, t.totalCollected);
+        Num("Pixels spent", pixelsSpent);
+        double best = Counter("rate.best");
+        Row("Best earn rate", best > 0d ? number(best) + " / min" : "-");
+        Row("Rarest pixel collected", rarest ?? "-");
+        Num("Value upgrade levels bought", valueLevels);
+        Num("Highest Value level", highestValue);
+        Cnt("Shop purchases", "shop.purchases");
+        Cnt("Consumables bought", "shop.items");
+
+        Head("Old pixels");
+        Cnt("Vacuumed up", "old.vacuumed");
+        Cnt("Stored in the bank", "old.banked");
+        Cnt("Grabbed", "old.grabbed");
+        Cnt("Shattered (glass)", "old.shattered");
+        Cnt("Items crafted", "crafts");
+        Num("Potions used", TotalPotionsUsed);
+        Num("Fans placed", fansUsed);
+        Num("Vacuum devices placed", vacuumDevicesUsed);
+        Num("Sorters placed", sortersUsed);
+
+        Head("Combo and time");
+        Num("Highest combo", highestCombo);
+        Num("Highest combo tier", Counter("combo.tier"));
+        if (Counter("timestop.uses") > 0d || Counter("timeslow.uses") > 0d)
+        {
+            Row("Time stopped", FormatTime(Counter("timestop.seconds")));
+            Cnt("   Times used", "timestop.uses");
+            Row("Time slowed", FormatTime(Counter("timeslow.seconds")));
+            Cnt("   Times used", "timeslow.uses");
+        }
+
+        Head("Minigames");
+        double ultra = clicker != null ? clicker.UltraEarned : 0d;
+        Num("Ultra pixels earned", ultra);
+        string[] ultraIds = { "pad", "snake", "sort", "breakout", "blackhole" };
+        string[] ultraNames = { "Ultra Pad", "Snake", "Sorting Race", "Breakout", "Black Hole" };
+        for (int i = 0; i < ultraIds.Length; i++)
+            if (Counter("ultra." + ultraIds[i]) > 0d) Num("   from " + ultraNames[i], Counter("ultra." + ultraIds[i]));
+        if (Seen("ghost", "ghost.kept") || ghostsClicked > 0)
+        {
+            Num("Ghosts clicked", ghostsClicked);
+            Cnt("   Potions kept in the backpack", "ghost.kept");
+        }
+        if (Seen("meteor") || meteorsSpawned > 0)
+        {
+            Num("Meteors spawned", meteorsSpawned);
+            Num("Meteors clicked", meteorsClicked);
+        }
+        PixelMinigame stardust = PixelMinigame.Find("stardust");
+        if (stardust != null && stardust.TrackerCount > 0d) Num("Stardust collected", stardust.TrackerCount);
+        if (Seen("blackhole", "holes.fed") || blackHolesSpawned > 0)
+        {
+            Num("Black holes opened", blackHolesSpawned);
+            Cnt("   Pixels fed to them", "holes.fed");
+            Num("   Singularities fed", singularitiesFed);
+        }
+        if (Seen("snake", "snake.win", "snake.loss"))
+        {
+            Cnt("Snake rounds won", "snake.win");
+            Cnt("Snake rounds lost", "snake.loss");
+            Num("Longest snake", Counter("snake.length"));
+        }
+        if (Seen("sort", "sort.win", "sort.loss"))
+        {
+            Cnt("Sorting races won", "sort.win");
+            Cnt("Sorting races lost", "sort.loss");
+            double fastest = Counter("sort.fastest");
+            Row("Fastest sorting race", fastest > 0d ? FormatTime(fastest) : "-");
+        }
+        if (Seen("breakout", "breakout.win", "breakout.loss"))
+        {
+            Cnt("Breakout games won", "breakout.win");
+            Cnt("Breakout games lost", "breakout.loss");
+        }
+        PixelMinigame bomb = PixelMinigame.Find("bomb");
+        if (Seen("bomb", "bomb.defused", "bomb.exploded"))
+        {
+            Cnt("Bombs defused", "bomb.defused");
+            Cnt("Bombs exploded", "bomb.exploded");
+            if (bomb != null) Num("Bomb parts earned", bomb.TrackerCount);
+        }
+        return lines;
     }
 }

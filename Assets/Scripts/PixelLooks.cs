@@ -1050,6 +1050,7 @@ public class OldPixelShatter : MonoBehaviour
 
     private void Shatter(Vector3 point, Vector3 normal)
     {
+        PixelStats.Count("old.shattered");
         done = true;
         Rigidbody body = GetComponent<Rigidbody>();
         if (body != null) clicker.ReleaseOldPixel(body, false);

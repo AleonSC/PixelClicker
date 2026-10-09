@@ -588,6 +588,8 @@ public class PixelSnakeMinigame : PixelMinigame
     /// <summary>Ends the round. 'win' pays out; otherwise the pixels drop and everything goes back to normal.</summary>
     private void EndRound(bool win, string message)
     {
+        PixelStats.Count(win ? "snake.win" : "snake.loss");
+        PixelStats.Best("snake.length", bodyPieces.Count);
         activeRound = false;
         Active = false;
         TakeoverActive = false;

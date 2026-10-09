@@ -628,6 +628,7 @@ public class PixelBreakoutMinigame : PixelMinigame
 
     private void EndRound(bool win, string message)
     {
+        PixelStats.Count(win ? "breakout.win" : "breakout.loss");
         activeRound = false;
         Active = false;
         TakeoverActive = false;

@@ -1181,6 +1181,7 @@ public partial class PixelShop : MonoBehaviour
         foreach (PackCost cost in total) SpendCost(cost);
 
         consumables.AddItem(itemIndex, count);
+        PixelStats.Count("shop.items", count);
         PixelDebug.Info("PixelShop: bought " + count + " x " + consumables.ItemName(itemIndex) + " - you now own " +
                   consumables.ItemOwned(itemIndex) + ".", this);
         PlayPurchaseSound();
@@ -1427,6 +1428,7 @@ public partial class PixelShop : MonoBehaviour
     /// <summary>The bottom-left event line for a purchase; clicking it (or Enter) shows the pack's name and description.</summary>
     private void AnnouncePurchase(ShopPack pack, string line)
     {
+        PixelStats.Count("shop.purchases");
         string info = "<b>" + pack.displayName + "</b>\n" + ResolveDescription(pack);
         PixelHints.Announce(line, info);
     }

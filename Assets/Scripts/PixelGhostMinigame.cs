@@ -669,6 +669,7 @@ public class PixelGhostMinigame : PixelMinigame
     private IEnumerator KeepPotion(GameObject potionObject, int potion)
     {
         consumables.AddKept(potion);
+        PixelStats.Count("ghost.kept");
         PixelAudio.Play("purchase");
         PixelHints.Announce(string.Format(keptFormat, consumables.PotionName(potion)));
 

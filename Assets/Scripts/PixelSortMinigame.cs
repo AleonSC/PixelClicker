@@ -564,6 +564,8 @@ public class PixelSortMinigame : PixelMinigame
 
     private void EndRound(bool win, string message)
     {
+        PixelStats.Count(win ? "sort.win" : "sort.loss");
+        if (win) PixelStats.Fastest("sort.fastest", baseSeconds + secondsPerPixel * Mathf.Max(1, pieces.Count) - timeLeft);
         activeRound = false;
         arranging = false;
         TakeoverActive = false;
