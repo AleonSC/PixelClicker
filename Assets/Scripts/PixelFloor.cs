@@ -50,7 +50,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         CloudSea,        // fluffy clouds seen from above (scrolls)
         Kaleidoscope,    // mirrored, colour-shifting kaleidoscope (animated)
         PacMan,          // maze with a chomping Pac-Man, pellets and ghosts (animated)
-        RoadRacer        // 8-bit top-down road: a car weaving through traffic as the road scrolls by (animated)
+        RoadRacer,       // 8-bit top-down road: a car weaving through traffic as the road scrolls by (animated)
+        Fighter          // 8-bit side-view fight: two fighters trade punches and kicks, health bars, K.O. (animated)
     }
 
     [Serializable]
@@ -577,6 +578,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         else px = new Color[n * n];
         int cells = Mathf.Max(1, s.cells);
         shadeTime = time;
+        if (s.pattern == FloorPattern.Fighter) PrepareFighter(time, s.seed); // works out the fight once per frame
 
         for (int y = 0; y < n; y++)
         {
@@ -1129,6 +1131,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 return Color.Lerp(s.colorA, c, Mathf.Clamp01(1.1f - r * 0.4f));
             }
 
+            case FloorPattern.Fighter:
+                return ShadeFighter(s, u, v);
+
             case FloorPattern.RoadRacer:
                 return ShadeRoadRacer(s, u, v);
 
@@ -1418,6 +1423,220 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             case 'Y': c = new Color(0.95f, 0.95f, 0.95f); return true;
             case 'L': c = new Color(1f, 0.85f, 0.2f); return true;
         }
+        return false;
+    }
+
+    // ------------------------------------------------------------------
+    // 8-bit fighter: side view of a stage where two fighters trade blows until one is knocked out, then a new round
+    // ------------------------------------------------------------------
+
+    private const float FightBeat = 0.55f;   // seconds per exchange
+    private const int FightGround = 22;      // virtual pixel row of the stage floor
+    private enum FPose { Idle, Punch, Kick, Hit, Down, Victory }
+
+    // The fight at the frame being drawn (worked out once per frame by PrepareFighter).
+    private static readonly float[] fX = new float[2];
+    private static readonly float[] fHp = new float[2];
+    private static readonly FPose[] fPose = new FPose[2];
+    private static float fBob;
+    private static bool fKo, fSpark;
+    private static Vector2 fSparkPos;
+
+    private static void PrepareFighter(float time, int seed)
+    {
+        float cycle = Mathf.Repeat(time, 900f);
+        int beatIndex = Mathf.FloorToInt(cycle / FightBeat);
+        float phase = cycle / FightBeat - beatIndex;
+        fBob = Mathf.Repeat(time, 0.8f) < 0.4f ? 0f : -1f;
+
+        // Replay the exchanges so far: who hit whom, health, knock-outs and new rounds.
+        float hp0 = 100f, hp1 = 100f;
+        int round = 0, koLeft = 0, loser = -1;
+        for (int i = 0; i < beatIndex; i++)
+        {
+            if (koLeft > 0)
+            {
+                if (--koLeft == 0) { hp0 = hp1 = 100f; round++; loser = -1; }
+                continue;
+            }
+            int attacker = Hash(i, round, seed) > 0.5f ? 0 : 1;
+            bool blocked = Hash(i, round + 90, seed) < 0.25f;
+            float dmg = 9f + Hash(i, round + 50, seed) * 9f;
+            if (blocked) continue;
+            if (attacker == 0) hp1 -= dmg; else hp0 -= dmg;
+            if (hp0 <= 0f || hp1 <= 0f) { koLeft = 5; loser = hp0 <= 0f ? 0 : 1; }
+        }
+
+        fX[0] = -12f; fX[1] = 12f;
+        fPose[0] = fPose[1] = FPose.Idle;
+        fSpark = false;
+        fKo = koLeft > 0;
+        if (fKo)
+        {
+            fPose[loser] = FPose.Down;
+            fPose[1 - loser] = FPose.Victory;
+            fHp[0] = Mathf.Max(0f, hp0); fHp[1] = Mathf.Max(0f, hp1);
+            return;
+        }
+
+        int att = Hash(beatIndex, round, seed) > 0.5f ? 0 : 1, def = 1 - att;
+        bool block = Hash(beatIndex, round + 90, seed) < 0.25f;
+        bool kick = Hash(beatIndex, round + 20, seed) > 0.5f;
+        float dir = att == 0 ? 1f : -1f;
+        if (phase > 0.2f && phase < 0.62f)
+        {
+            fPose[att] = kick ? FPose.Kick : FPose.Punch;
+            fX[att] += dir * 2f;                                   // step in
+        }
+        if (!block && phase > 0.35f)
+        {
+            float dmg = 9f + Hash(beatIndex, round + 50, seed) * 9f;
+            if (def == 0) hp0 -= dmg; else hp1 -= dmg;
+            if (phase < 0.75f) fPose[def] = FPose.Hit;
+            fX[def] += dir * 3f * Mathf.Clamp01(1f - (phase - 0.35f) / 0.5f);   // knocked back
+            if (phase < 0.5f)
+            {
+                fSpark = true;
+                fSparkPos = new Vector2(fX[att] + dir * 10f, FightGround + (kick ? 13f : 18f));
+            }
+        }
+        fHp[0] = Mathf.Max(0f, hp0); fHp[1] = Mathf.Max(0f, hp1);
+    }
+
+    private static Color ShadeFighter(FloorStyle s, float u, float v)
+    {
+        const float P = 96f;
+        float aspect = Mathf.Max(0.4f, shadeAspect);
+        float halfW = aspect * P * 0.5f;
+        int px = Mathf.FloorToInt((u - 0.5f) * aspect * P);
+        int py = Mathf.FloorToInt(v * P);
+
+        // HUD: health bars and the K.O. sign.
+        if (py >= 82 && py <= 87)
+        {
+            float barLen = Mathf.Max(10f, halfW - 10f);
+            for (int f = 0; f < 2; f++)
+            {
+                float inner = f == 0 ? -6f : 6f, outer = f == 0 ? -6f - barLen : 6f + barLen;
+                float lo = Mathf.Min(inner, outer), hi = Mathf.Max(inner, outer);
+                if (px < lo - 1 || px > hi + 1) continue;
+                if (py == 82 || py == 87 || px < lo || px > hi) return new Color(0.05f, 0.05f, 0.05f);   // border
+                float filledTo = outer + (inner - outer) * (fHp[f] / 100f);                              // drains towards the outside
+                bool full = f == 0 ? px <= filledTo : px >= filledTo;
+                return full ? new Color(1f, 0.85f, 0.1f) : new Color(0.75f, 0.1f, 0.1f);
+            }
+        }
+        if (fKo && Mathf.Repeat(shadeTime, 0.5f) < 0.35f && KoText(px, py - 70)) return new Color(1f, 0.2f, 0.15f);
+
+        // Hit spark.
+        if (fSpark)
+        {
+            float dx = px + 0.5f - fSparkPos.x, dy = py + 0.5f - fSparkPos.y;
+            float d = Mathf.Abs(dx) + Mathf.Abs(dy);
+            if (d < 2.5f) return Color.white;
+            if ((Mathf.Abs(dx) < 0.6f || Mathf.Abs(dy) < 0.6f || Mathf.Abs(Mathf.Abs(dx) - Mathf.Abs(dy)) < 0.6f) && d < 6f)
+                return new Color(1f, 0.9f, 0.3f);
+        }
+
+        // Fighters (left one faces right, right one faces left).
+        for (int f = 0; f < 2; f++)
+        {
+            float facing = f == 0 ? 1f : -1f;
+            float lx = (px + 0.5f - fX[f]) * facing;
+            float ly = py + 0.5f - FightGround - (fPose[f] == FPose.Idle ? fBob : 0f);
+            if (Mathf.Abs(lx) > 28f || ly < -1f || ly > 30f) continue; // wide enough for a fighter lying down
+            Color gi = f == 0 ? s.colorA : s.colorB;
+            Color band = f == 0 ? new Color(0.9f, 0.1f, 0.1f) : new Color(1f, 0.85f, 0.1f);
+            if (FighterPixel(lx, ly, fPose[f], gi, band, out Color c)) return c;
+        }
+
+        // Stage.
+        if (py < FightGround)
+        {
+            if (py == FightGround - 1) return Color.Lerp(s.colorC, Color.white, 0.25f);
+            int row = (FightGround - 1 - py) / 5;
+            int seam = Mathf.FloorToInt((px + row * 7) / 14f);
+            if ((FightGround - 1 - py) % 5 == 0) return s.colorC * 0.6f;                       // plank edge
+            if (Wrap(px + row * 7, 14) == 0) return s.colorC * 0.7f;                          // plank end
+            return s.colorC * (0.85f + 0.2f * Hash(seam, row, 3));
+        }
+
+        // Mountains and sunset sky.
+        float x = px;
+        float far = 40f + 7f * Mathf.Sin(x * 0.07f) + 4f * Mathf.Sin(x * 0.19f + 1f);
+        float near = 31f + 5f * Mathf.Sin(x * 0.11f + 2f) + 3f * Mathf.Sin(x * 0.29f);
+        if (py < near) return new Color(0.2f, 0.1f, 0.25f);
+        if (py < far) return new Color(0.38f, 0.2f, 0.4f);
+        float sx = px - halfW * 0.45f, sy = py - 58f;
+        if (sx * sx + sy * sy < 81f && !(sy < 0f && Wrap(py, 3) == 0)) return new Color(1f, 0.85f, 0.35f);   // striped sun
+        float k = Mathf.Clamp01((py - far) / (P - far));
+        float band8 = Mathf.Floor(k * 6f) / 6f;
+        if (((px + py) & 1) == 0 && k * 6f - Mathf.Floor(k * 6f) > 0.5f) band8 += 1f / 6f;          // 8-bit dither between bands
+        return Color.Lerp(new Color(1f, 0.55f, 0.3f), new Color(0.25f, 0.15f, 0.45f), Mathf.Clamp01(band8));
+    }
+
+    /// <summary>One fighter, in its own coordinates: x forward, y up from its feet.</summary>
+    private static bool FighterPixel(float x, float y, FPose pose, Color gi, Color band, out Color c)
+    {
+        c = Color.clear;
+        if (pose == FPose.Down) { float sxp = y - 1f; y = -x; x = sxp; }   // lying flat on its back
+        Color skin = new Color(0.95f, 0.75f, 0.55f), hair = new Color(0.12f, 0.08f, 0.05f);
+        Color giBack = gi * 0.75f; giBack.a = 1f;
+
+        Vector2 hand1, hand2, foot1, foot2;   // 1 = front limb, 2 = back limb
+        float lean = 0f;
+        switch (pose)
+        {
+            case FPose.Punch: hand1 = new Vector2(12f, 18f); hand2 = new Vector2(1f, 15f); foot1 = new Vector2(6f, 0f); foot2 = new Vector2(-5f, 0f); break;
+            case FPose.Kick: hand1 = new Vector2(4f, 20f); hand2 = new Vector2(-3f, 16f); foot1 = new Vector2(12f, 13f); foot2 = new Vector2(-3f, 0f); lean = -2f; break;
+            case FPose.Hit: hand1 = new Vector2(-2f, 23f); hand2 = new Vector2(-6f, 20f); foot1 = new Vector2(3f, 0f); foot2 = new Vector2(-5f, 0f); lean = -3f; break;
+            case FPose.Victory: hand1 = new Vector2(3f, 29f); hand2 = new Vector2(-3f, 29f); foot1 = new Vector2(3f, 0f); foot2 = new Vector2(-3f, 0f); break;
+            default: hand1 = new Vector2(6f, 19f); hand2 = new Vector2(3f, 16f); foot1 = new Vector2(4f, 0f); foot2 = new Vector2(-4f, 0f); break;
+        }
+        // Upper body leans (hips stay put).
+        float ux = x - (y > 11f ? lean * (y - 11f) / 12f : 0f);
+        Vector2 p = new Vector2(x, y), pu = new Vector2(ux, y);
+        Vector2 shoulder1 = new Vector2(1f, 18f), shoulder2 = new Vector2(-2f, 18f);
+        Vector2 hip1 = new Vector2(1f, 11f), hip2 = new Vector2(-2f, 11f);
+        hand1.x += lean; hand2.x += lean;
+
+        // Back limbs first (darker), then body and head, then front limbs.
+        if (SegDist(pu, shoulder2, hand2 - new Vector2(lean, 0f)) < 1.2f) { c = skin * 0.85f; c.a = 1f; return true; }
+        if (SegDist(p, hip2, foot2) < 1.4f) { c = (p - foot2).magnitude < 1.5f ? skin * 0.85f : giBack; c.a = 1f; return true; }
+        if (pu.x >= -3f && pu.x <= 2.99f && y >= 11f && y < 20f) { c = Mathf.FloorToInt(y) == 12 ? new Color(0.08f, 0.08f, 0.08f) : gi; return true; }
+        if (pu.x >= -3f && pu.x <= 2.99f && y >= 20f && y < 26f)
+        {
+            int hy = Mathf.FloorToInt(y), hx = Mathf.FloorToInt(pu.x);
+            if (hy >= 24) c = hair;
+            else if (hy == 23) c = band;
+            else if (hy == 22 && hx == 1) c = new Color(0.05f, 0.05f, 0.05f);
+            else c = skin;
+            return true;
+        }
+        if (SegDist(p, hip1, foot1) < 1.4f) { c = (p - foot1).magnitude < 1.5f ? skin : gi; return true; }
+        if ((pu - (hand1 - new Vector2(lean, 0f))).magnitude < 1.8f) { c = band; return true; }       // glove
+        if (SegDist(pu, shoulder1, hand1 - new Vector2(lean, 0f)) < 1.2f) { c = skin; return true; }
+        return false;
+    }
+
+    private static float SegDist(Vector2 p, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / Mathf.Max(1e-4f, ab.sqrMagnitude));
+        return (p - (a + ab * t)).magnitude;
+    }
+
+    // "K.O." in a 3x5 pixel font, doubled, centred on (0, 0) of the given coordinates.
+    private static readonly string[] KoGlyphs = { "#.#", "#.#", "##.", "#.#", "#.#",   "###", "#.#", "#.#", "#.#", "###" };
+    private static bool KoText(int x, int y)
+    {
+        const int scale = 2;
+        int gx = (x + 8) / scale, gy = 4 - y / scale;
+        if (x + 8 < 0 || y < 0 || gy < 0 || gy > 4) return false;
+        if (gx >= 0 && gx < 3) return KoGlyphs[gy][gx] == '#';                  // K
+        if (gx == 3) return gy == 4;                                           // dot
+        if (gx >= 4 && gx < 7) return KoGlyphs[5 + gy][gx - 4] == '#';         // O
+        if (gx == 7) return gy == 4;                                           // dot
         return false;
     }
 
@@ -1783,5 +2002,10 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                              new Color(0.92f, 0.1f, 0.1f), 256, true, 8f, 1, 0.3f);
         racer.animateFps = 24f; racer.fitToView = true;
         yield return racer;
+
+        FloorStyle fight = S("8-Bit Fighter", FloorPattern.Fighter, new Color(0.95f, 0.95f, 0.92f), new Color(0.2f, 0.35f, 0.9f),
+                             new Color(0.55f, 0.35f, 0.18f), 256, true, 8f, 1, 0.3f);
+        fight.animateFps = 20f; fight.fitToView = true;
+        yield return fight;
     }
 }
