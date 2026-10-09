@@ -289,6 +289,37 @@ public class PixelDevTools : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    private Toggle clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, godToggle;
+
+    /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
+    public static void ReloadFromPrefs()
+    {
+        if (instance != null) instance.ApplyLoadedSettings();
+    }
+
+    private void ApplyLoadedSettings()
+    {
+        LoadSettings();
+        PixelClicker.InfiniteResources = infiniteResources;
+        OldPixelDespawn.DevNoDespawn = disableDespawn;
+        if (clearToggle != null) clearToggle.SetIsOnWithoutNotify(clearKeyEnabled);
+        if (infiniteToggle != null) infiniteToggle.SetIsOnWithoutNotify(infiniteResources);
+        if (selectorToggle != null) selectorToggle.SetIsOnWithoutNotify(spawnSelectorEnabled);
+        if (noDespawnToggle != null) noDespawnToggle.SetIsOnWithoutNotify(disableDespawn);
+        if (godToggle != null) godToggle.SetIsOnWithoutNotify(godMode);
+        if (amountField != null) amountField.SetTextWithoutNotify(defaultAmount);
+        if (pixelDropdown != null && pixelDropdown.options.Count > 0)
+        {
+            pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("PixelIndex", 0), 0, pixelDropdown.options.Count - 1));
+            pixelDropdown.RefreshShownValue();
+        }
+        if (clicker == null) return; // the panel isn't built yet: Start applies everything
+        if (selectorDropdown != null) selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelPixel", 0), 0, Mathf.Max(0, selectorDropdown.options.Count - 1)));
+        if (selectorMinigameDropdown != null) selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelMinigame", 0), 0, Mathf.Max(0, selectorMinigameDropdown.options.Count - 1)));
+        SetSelector(spawnSelectorEnabled);
+        SetGodMode(godMode);
+    }
+
     private void LoadSettings()
     {
         clearKeyEnabled = GetBool("ClearKey", clearKeyEnabled);
@@ -525,20 +556,20 @@ public class PixelDevTools : MonoBehaviour
         }
 
         // Row: tick box for the clear key
-        BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
+        clearToggle = BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for infinite resources
-        BuildToggleRow(box.transform, infiniteToggleText, y, inner, infiniteResources,
+        infiniteToggle = BuildToggleRow(box.transform, infiniteToggleText, y, inner, infiniteResources,
                        on => { infiniteResources = on; PixelClicker.InfiniteResources = on; SetBool("Infinite", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for the on-screen spawn selector
-        BuildToggleRow(box.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
+        selectorToggle = BuildToggleRow(box.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
         y += rowHeight + 24f;
 
         // Row: tick box to stop old pixels despawning
-        BuildToggleRow(box.transform, noDespawnToggleText, y, inner, disableDespawn, on =>
+        noDespawnToggle = BuildToggleRow(box.transform, noDespawnToggleText, y, inner, disableDespawn, on =>
         {
             disableDespawn = on;
             OldPixelDespawn.DevNoDespawn = on;
@@ -547,7 +578,7 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for god pixel mode
-        BuildToggleRow(box.transform, godToggleText, y, inner, godMode, SetGodMode);
+        godToggle = BuildToggleRow(box.transform, godToggleText, y, inner, godMode, SetGodMode);
         y += rowHeight + 24f;
 
         // Close
@@ -887,7 +918,7 @@ public class PixelDevTools : MonoBehaviour
         rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    private void BuildToggleRow(Transform parent, string label, float y, float width, bool initial, System.Action<bool> onChange)
+    private Toggle BuildToggleRow(Transform parent, string label, float y, float width, bool initial, System.Action<bool> onChange)
     {
         TMP_Text text = PixelUIKit.CreateText(font, parent, label + " Label", label, fontSize,
                                               TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
@@ -918,6 +949,7 @@ public class PixelDevTools : MonoBehaviour
         toggle.isOn = initial;
         toggle.onValueChanged.AddListener(on => onChange(on));
         toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
+        return toggle;
     }
 }
 

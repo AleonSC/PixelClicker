@@ -51,6 +51,14 @@ public static class PixelKeys
 
     public static int Count => Defaults.Length;
 
+    /// <summary>A save file with its own settings was loaded: read every binding again.</summary>
+    public static void ReloadFromPrefs()
+    {
+        current = null;
+        Load();
+        Changed?.Invoke();
+    }
+
     private static void Load()
     {
         if (current != null) return;

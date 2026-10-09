@@ -671,6 +671,15 @@ public class PixelClicker : MonoBehaviour
         set { allowRotation = value; PlayerPrefs.SetInt(PrefRotation, value ? 1 : 0); }
     }
 
+    /// <summary>Reads the rotation / pulsing / background / abbreviate settings from PlayerPrefs again (a save file with its own settings was loaded).</summary>
+    public void ReloadSettingsFromPrefs()
+    {
+        allowRotation = PlayerPrefs.GetInt(PrefRotation, 1) != 0;
+        allowPulsing = PlayerPrefs.GetInt(PrefPulsing, 1) != 0;
+        if (PlayerPrefs.HasKey(PrefBackground)) Application.runInBackground = PlayerPrefs.GetInt(PrefBackground) != 0;
+        abbreviateCache = -1;
+    }
+
     /// <summary>Player setting: keep the game running while its window is not in focus (alt-tabbed). Remembered between sessions.</summary>
     public bool RunInBackground
     {
@@ -1972,6 +1981,76 @@ public class PixelClicker : MonoBehaviour
         oldPixels.Clear();
     }
 
+    /// <summary>One old pixel as stored in a save file.</summary>
+    [System.Serializable]
+    public class OldPixelState
+    {
+        public int tier;
+        public double amount;
+        public Vector3 position;
+        public Quaternion rotation = Quaternion.identity;
+        public Vector3 velocity;
+        public Vector3 angularVelocity;
+        public float remaining = -1f;
+    }
+
+    /// <summary>The old pixels lying around, for the save file (not the ones streaking away or already vanishing).</summary>
+    public System.Collections.Generic.List<OldPixelState> GetOldPixelStates()
+    {
+        var list = new System.Collections.Generic.List<OldPixelState>();
+        for (int i = 0; i < oldPixels.Count; i++)
+        {
+            Rigidbody rb = oldPixels[i];
+            if (rb == null || IsFlyingPixel(rb)) continue;
+            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            if (info == null) continue;
+            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            if (d != null && d.IsDespawning) continue;
+            list.Add(new OldPixelState
+            {
+                tier = info.tierIndex,
+                amount = info.amount,
+                position = rb.position,
+                rotation = rb.rotation,
+#if UNITY_6000_0_OR_NEWER
+                velocity = rb.isKinematic ? Vector3.zero : rb.linearVelocity,
+#else
+                velocity = rb.isKinematic ? Vector3.zero : rb.velocity,
+#endif
+                angularVelocity = rb.isKinematic ? Vector3.zero : rb.angularVelocity,
+                remaining = d != null ? d.Remaining : -1f,
+            });
+        }
+        return list;
+    }
+
+    /// <summary>Loading a save: replaces the old pixels lying around with the saved ones, where they were and how fast they moved.</summary>
+    public void RestoreOldPixels(System.Collections.Generic.IEnumerable<OldPixelState> states)
+    {
+        ClearOldPixels();
+        if (states == null) return;
+        foreach (OldPixelState s in states)
+        {
+            if (s == null || !IsValidTier(s.tier) || tiers[s.tier].flyAway) continue;
+            int before = oldPixels.Count;
+            SpawnStoredPixel(s.tier, s.amount, s.position, s.velocity);
+            if (oldPixels.Count <= before) continue;
+            Rigidbody rb = oldPixels[oldPixels.Count - 1];
+            if (rb == null) continue;
+            rb.position = s.position;
+            rb.rotation = s.rotation;
+            rb.transform.SetPositionAndRotation(s.position, s.rotation);
+#if UNITY_6000_0_OR_NEWER
+            rb.linearVelocity = s.velocity;
+#else
+            rb.velocity = s.velocity;
+#endif
+            rb.angularVelocity = s.angularVelocity;
+            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            if (d != null) d.SetRemaining(s.remaining);
+        }
+    }
+
     /// <summary>The old pixels currently lying around (read-only). Used by the vacuum device.</summary>
     public System.Collections.Generic.IReadOnlyList<Rigidbody> OldPixels => oldPixels;
 
@@ -2863,10 +2942,24 @@ public class OldPixelDespawn : MonoBehaviour
         if (!despawning && lifetime > 0f) lifetime += seconds;
     }
 
-    /// <summary>Replaces the lifetime (seconds until it starts to vanish; the time already lived still counts).</summary>
+    /// <summary>Replaces the lifetime (seconds until it starts to vanish; the time already lived still counts). Ignored once a saved remaining time was restored.</summary>
     public void SetLifetime(float seconds)
     {
-        if (!despawning && seconds > 0f) lifetime = seconds;
+        if (!despawning && !restoredRemaining && seconds > 0f) lifetime = seconds;
+    }
+
+    private bool restoredRemaining;
+
+    /// <summary>Seconds left before it starts to vanish (-1 = it never expires).</summary>
+    public float Remaining => lifetime > 0f ? Mathf.Max(0f, lifetime - age) : -1f;
+
+    /// <summary>Loading a save: the pixel has this many seconds left (-1 = never expires).</summary>
+    public void SetRemaining(float seconds)
+    {
+        if (despawning) return;
+        restoredRemaining = true;
+        age = 0f;
+        lifetime = seconds >= 0f ? Mathf.Max(0.5f, seconds) : 0f;
     }
 
     /// <summary>Stops the lifetime counting down for a moment (called every physics step by a gravity well that has it in range).</summary>

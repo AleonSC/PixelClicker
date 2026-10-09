@@ -117,6 +117,20 @@ public class PixelAudio : MonoBehaviour
     private const string PrefMusic = "PixelAudio.Music";
     private const string PrefMuted = "PixelAudio.Muted";
 
+    private float defaultMaster, defaultEffects, defaultMusic;
+    private bool defaultMuted;
+
+    /// <summary>A save file with its own settings was loaded: read the volumes again (missing ones go back to the Inspector values).</summary>
+    public static void ReloadFromPrefs()
+    {
+        if (instance == null) return;
+        instance.masterVolume = PlayerPrefs.HasKey(PrefMaster) ? PlayerPrefs.GetFloat(PrefMaster) : instance.defaultMaster;
+        instance.effectsVolume = PlayerPrefs.HasKey(PrefEffects) ? PlayerPrefs.GetFloat(PrefEffects) : instance.defaultEffects;
+        instance.musicVolume = PlayerPrefs.HasKey(PrefMusic) ? PlayerPrefs.GetFloat(PrefMusic) : instance.defaultMusic;
+        instance.muted = PlayerPrefs.HasKey(PrefMuted) ? PlayerPrefs.GetInt(PrefMuted) != 0 : instance.defaultMuted;
+        instance.ApplyMusicVolume();
+    }
+
     private static PixelAudio instance;
     private readonly Dictionary<string, Sound> byId = new Dictionary<string, Sound>();
     private AudioSource[] voices;
@@ -257,6 +271,8 @@ public class PixelAudio : MonoBehaviour
             return;
         }
         instance = this;
+
+        defaultMaster = masterVolume; defaultEffects = effectsVolume; defaultMusic = musicVolume; defaultMuted = muted;
 
         // The player's saved choices win over the Inspector's first-run values.
         if (PlayerPrefs.HasKey(PrefMaster)) masterVolume = PlayerPrefs.GetFloat(PrefMaster);

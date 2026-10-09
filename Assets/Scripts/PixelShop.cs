@@ -918,6 +918,9 @@ public partial class PixelShop : MonoBehaviour
     private const string PrefHidePurchased = "PixelClicker.Setting.HidePurchased";
     private static int hidePurchasedCache = -1; // -1 = not read yet
 
+    /// <summary>A save file with its own settings was loaded: read "hide purchased" again.</summary>
+    public static void ReloadSettingsFromPrefs() { hidePurchasedCache = -1; }
+
     /// <summary>Player setting: hide shop items that are already bought (or maxed out). Remembered between sessions.</summary>
     public static bool HidePurchased
     {

@@ -155,6 +155,14 @@ public static class PixelDisplaySettings
     // Colour-blind marks
     // ------------------------------------------------------------------
 
+    /// <summary>A save file with its own settings was loaded: read the colour-blind setting again.</summary>
+    public static void ReloadFromPrefs()
+    {
+        int before = colorBlind;
+        colorBlind = -1;
+        if ((ColorBlind ? 1 : 0) != before) ColorBlindChanged?.Invoke();
+    }
+
     /// <summary>Raised when the colour-blind setting changes.</summary>
     public static event System.Action ColorBlindChanged;
 

@@ -484,6 +484,12 @@ public class PixelPauseMenu : MonoBehaviour
     public static bool GameStopped { get; private set; }
 
     private const string PrefPauseStops = "PixelClicker.Setting.PauseStopsGame";
+
+    /// <summary>Reads the "pause stops the game" setting again (a save file with its own settings was loaded).</summary>
+    public void ReloadSettingsFromPrefs()
+    {
+        pauseStopsGame = PlayerPrefs.GetInt(PrefPauseStops, 1) != 0;
+    }
     private bool pauseStopsGame = true;
 
     private GameObject canvasRoot;
@@ -547,7 +553,7 @@ public class PixelPauseMenu : MonoBehaviour
         }
         if (clicker != null && clicker.UIFont != null) font = clicker.UIFont; // one shared font
 
-        pauseStopsGame = PlayerPrefs.GetInt(PrefPauseStops, 1) != 0;
+        ReloadSettingsFromPrefs();
 
         if (saveGame == null)
         {

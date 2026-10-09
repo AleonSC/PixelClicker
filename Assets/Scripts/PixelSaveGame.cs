@@ -106,6 +106,8 @@ public class PixelSaveGame : MonoBehaviour
         public bool comboDisabled;
         public string[] eventTexts;
         public string[] eventFulls;
+        public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
+        public PixelSettingsSync.Entry[] settings;       // the settings / dev tool choices of this save file
         public float autoClickerInterval;
         public int autoClickerClicks;
     }
@@ -494,6 +496,9 @@ public class PixelSaveGame : MonoBehaviour
             PixelCombo comboMeter = PixelFind.First<PixelCombo>();
             if (comboMeter != null) data.comboDisabled = comboMeter.UserDisabled;
             PixelHints.ExportHistory(out data.eventTexts, out data.eventFulls);
+            // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
+            if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
+            data.settings = PixelSettingsSync.Collect();
 
             // Write to a temp file first so a crash mid-write can't destroy the old save.
             string path = FilePath;
@@ -572,6 +577,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelCombo comboMeterLoad = PixelFind.First<PixelCombo>();
             if (comboMeterLoad != null) comboMeterLoad.UserDisabled = data.comboDisabled;
             PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
+            PixelSettingsSync.Apply(data.settings);
 
             // Potions.
             if (consumables != null)
@@ -630,6 +636,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             clicker.FinishLoad();
+            if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
             if (bank != null) bank.SetState(data.bank);
 
