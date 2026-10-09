@@ -198,3 +198,4 @@
 [2026-10-09 20:57 UTC] The docked buttons (Log, Shop, Crafting, Inventory, Toggles, Bank, Hose) now show their text in capital letters.
 [2026-10-09 21:01 UTC] The shop upgrades-window arrow is now a drawn right-pointing triangle like the drop-down arrows.
 [2026-10-09 21:06 UTC] Added the Electric pixel (a see-through cube held together by crackling, re-rolling lightning bolts) as a very cheap test pack in the shop: 10 White Pixels.
+[2026-10-09 21:10 UTC] Added the Tinkerer visitor minigame (25 White Pixels in the Minigames tab): a tinkerer slides in from the right, time stops, and they offer every device at 80% off - accept to shop or reject to send them away.

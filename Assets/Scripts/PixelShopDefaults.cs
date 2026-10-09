@@ -379,6 +379,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Tinkerer pack (Minigames tab): a very cheap visitor who sells every device at a discount. No requirements.</summary>
+    private static ShopPack CreateTinkererPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Tinkerer",
+            tab = ShopTab.Minigames,
+            description = "Now and then a travelling Tinkerer drops by, stops time and offers every device at a big discount.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 25 } },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "tinkerer",
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -704,6 +719,8 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Solar),
                           requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
+        new DefaultPack { isThis = p => Unlocks(p, "tinkerer"),
+                          requires = null, create = i => CreateTinkererPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
                           requires = null, create = i => CreateElectricPixelPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
