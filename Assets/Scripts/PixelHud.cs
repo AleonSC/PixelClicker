@@ -152,6 +152,7 @@ public class PixelHud : MonoBehaviour
             label.enableAutoSizing = true;
             label.fontSizeMax = buttonFontSize;
             label.fontSizeMin = 12f;
+            PixelUIKit.Caps(label); // every docked button (Inventory, Shop, Log, Crafting, Toggles, Bank, Hose...) reads in capitals
         }
 
         Canvas owner = button.GetComponentInParent<Canvas>();
