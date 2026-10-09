@@ -72,3 +72,4 @@
 [2026-10-09 04:03 UTC] Glow no longer depends on shader variants that builds strip: glowing pixels get a thin unlit coloured shell and the meteor rock gets its lava cracks as an unlit overlay.
 [2026-10-09 04:13 UTC] The shader keep-alive script no longer makes (pink) Standard-shader materials in a URP project.
 [2026-10-09 04:16 UTC] Added a rendering report (graphics device, render pipeline, shaders found, glow setup) written next to the crash reports at start and on F10, to track down the missing glow in builds.
+[2026-10-09 04:18 UTC] Fixed trails, glow shells and other effects missing in built games: the unlit Sprites/Default shader is now kept in the build and looked up through PixelShaders.

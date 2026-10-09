@@ -224,7 +224,7 @@ public class PixelStardustMinigame : PixelMinigame
     private Material StarMaterial()
     {
         if (starMaterial != null) return starMaterial;
-        Shader shader = Shader.Find("Sprites/Default"); // unlit, double sided, vertex colours, in every pipeline
+        Shader shader = PixelShaders.SpriteDefault(); // unlit, double sided, vertex colours, in every pipeline
         starMaterial = shader != null ? new Material(shader) : clicker.CreateVisualMaterial(starColor, false);
         return starMaterial;
     }

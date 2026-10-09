@@ -2027,7 +2027,7 @@ public class PixelClicker : MonoBehaviour
         if (lightTrailMaterial == null)
         {
             // Sprites/Default uses the trail's vertex colours in every render pipeline; fall back to a tinted copy of the pixel material.
-            Shader shader = Shader.Find("Sprites/Default");
+            Shader shader = PixelShaders.SpriteDefault();
             lightTrailMaterial = shader != null ? new Material(shader) { name = "LightTrail" }
                                                 : CreateVisualMaterial(Color.white, true);
         }

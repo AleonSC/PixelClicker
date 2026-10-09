@@ -506,7 +506,7 @@ public class PixelBlackholeMinigame : PixelMinigame
         // A trail that stays behind when the pixel is gone.
         if (spiralTrailMaterial == null)
         {
-            Shader shader = Shader.Find("Sprites/Default");
+            Shader shader = PixelShaders.SpriteDefault();
             if (shader != null) spiralTrailMaterial = new Material(shader) { name = "HoleTrail" };
         }
         GameObject trailGo = new GameObject("Spiral Trail");

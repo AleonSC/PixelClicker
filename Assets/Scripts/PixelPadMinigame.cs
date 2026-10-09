@@ -407,7 +407,7 @@ public class PixelPadMinigame : PixelMinigame
     private Material ArrowMaterial(Color colour)
     {
         if (arrowMaterial != null) return arrowMaterial;
-        Shader shader = Shader.Find("Sprites/Default"); // unlit, alpha blended, vertex colour * _Color in every pipeline
+        Shader shader = PixelShaders.SpriteDefault(); // unlit, alpha blended, vertex colour * _Color in every pipeline
         arrowMaterial = shader != null ? new Material(shader) : clicker.CreateVisualMaterial(colour, true);
         return arrowMaterial;
     }

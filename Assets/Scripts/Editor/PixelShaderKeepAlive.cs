@@ -86,7 +86,24 @@ public static class PixelShaderKeepAlive
         {
             AssetDatabase.StopAssetEditing();
         }
+        any |= MakeSpriteMaterial(force);
         if (any) AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>A material that uses Sprites/Default, so that shader is included in builds (PixelShaders.SpriteDefault falls back to it).</summary>
+    private static bool MakeSpriteMaterial(bool force)
+    {
+        string path = Folder + "/Sprites_Default.mat";
+        bool exists = AssetDatabase.LoadAssetAtPath<Material>(path) != null;
+        if (exists && !force) return false;
+        Shader shader = Shader.Find("Sprites/Default");
+        if (shader == null) return false;
+
+        if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
+        if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets/Resources", "PixelShaderKeep");
+        if (exists) AssetDatabase.DeleteAsset(path);
+        AssetDatabase.CreateAsset(new Material(shader) { name = "Sprites_Default" }, path);
+        return true;
     }
 
     private static bool Make(string name, Shader shader, bool emission, bool transparent, bool force)

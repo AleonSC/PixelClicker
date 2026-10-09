@@ -325,7 +325,7 @@ public class PixelMeteorMinigame : PixelMinigame
         trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f, 0f, -0.5f), new Keyframe(0.3f, 0.66f), new Keyframe(1f, 0f, -1.3f, 0f)); // gently curved taper
         trail.alignment = LineAlignment.View;
-        Shader trailShader = Shader.Find("Sprites/Default");
+        Shader trailShader = PixelShaders.SpriteDefault();
         trail.sharedMaterial = trailShader != null ? new Material(trailShader) : clicker.CreateVisualMaterial(flameColor, true);
         Gradient gradient = new Gradient();
         gradient.SetKeys(
@@ -571,7 +571,7 @@ public class PixelMeteorMinigame : PixelMinigame
         size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.1f)));
 
         ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
-        Shader shader = Shader.Find("Sprites/Default");
+        Shader shader = PixelShaders.SpriteDefault();
         if (shader != null)
         {
             if (haloSprite == null) haloSprite = BuildSoftSprite();

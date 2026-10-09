@@ -397,7 +397,7 @@ public static class PixelLooks
     {
         if (neonMaterial != null) return neonMaterial;
         // Sprites/Default is unlit and uses vertex colours in every render pipeline.
-        Shader shader = Shader.Find("Sprites/Default");
+        Shader shader = PixelShaders.SpriteDefault();
         if (shader == null) shader = Shader.Find("Unlit/Color");
         if (shader == null) shader = Shader.Find("Universal Render Pipeline/Unlit");
         if (shader == null) return null;
