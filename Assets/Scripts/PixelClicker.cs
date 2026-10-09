@@ -311,7 +311,11 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Also draw the shell in the Editor. Off by default: in the Editor the real emission already works, and the shell is meant for built games where it can be missing.")]
     [SerializeField] private bool glowShellInEditor = false;
 
+    [Tooltip("Tick to hide the soft round halo around glowing pixels (the shell and the real emission are not affected).")]
+    [SerializeField] private bool hideGlowHalo = false;
+
     private bool glowShell => !disableGlowShell && (!Application.isEditor || glowShellInEditor);
+    private bool glowHalo => !hideGlowHalo;
     private float glowShellAlpha => 0.5f + glowShellExtra;
 
     [Header("Tough Pixels (Clicks To Collect > 1)")]
@@ -1494,15 +1498,17 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Makes the glow shell and halo breathe like the real emission does (same speed and amount, a little stronger so it reads).</summary>
     private void AnimateGlowShell(float time)
     {
-        if (liveShellRenderer == null) return;
+        if (liveShellRenderer == null && liveHaloRenderer == null) return;
         if (shellBlock == null) shellBlock = new MaterialPropertyBlock();
-        float breath = GlowBreath(activeGlowType, time, 1.5f);
-        breath = Mathf.Max(0.3f, breath);
+        float breath = Mathf.Max(0.3f, GlowBreath(activeGlowType, time, 1.5f));
 
-        liveShellRenderer.GetPropertyBlock(shellBlock); // keeps what is already on it (textures)
-        shellBlock.SetColor("_Color", new Color(liveShellColor.r * liveShellHdr * breath, liveShellColor.g * liveShellHdr * breath,
-                                                liveShellColor.b * liveShellHdr * breath, Mathf.Clamp01(liveShellAlpha * Mathf.Lerp(1f, breath, 0.5f))));
-        liveShellRenderer.SetPropertyBlock(shellBlock);
+        if (liveShellRenderer != null)
+        {
+            liveShellRenderer.GetPropertyBlock(shellBlock); // keeps what is already on it (textures)
+            shellBlock.SetColor("_Color", new Color(liveShellColor.r * liveShellHdr * breath, liveShellColor.g * liveShellHdr * breath,
+                                                    liveShellColor.b * liveShellHdr * breath, Mathf.Clamp01(liveShellAlpha * Mathf.Lerp(1f, breath, 0.5f))));
+            liveShellRenderer.SetPropertyBlock(shellBlock);
+        }
 
         if (liveHaloRenderer != null)
         {
@@ -1513,60 +1519,6 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
-    private PixelLook activeLook;          // the look of the tier the cube currently shows
-    private GameObject liveExtras;         // outline / dark-matter core on the live cube
-    private PixelType liveExtrasType;
-    private bool liveExtrasBuilt;
-
-    /// <summary>True if old pixels of this tier pass through the screen edges (ghosts), see PixelLook.ignoreViewBounds.</summary>
-    public bool IgnoresViewBounds(int tierIndex)
-    {
-        PixelLook look = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
-        return look != null && look.ignoreViewBounds;
-    }
-
-    /// <summary>The look of a tier, or null (looks off / none defined).</summary>
-    private PixelLook LookOf(PixelTier tier) => useLooks && tier != null ? PixelLooks.Find(looks, tier.type) : null;
-
-    /// <summary>The colour the 3D pixel is drawn in: the look's colour (alpha scaled) or the tier's own.</summary>
-    private static Color RenderColor(PixelTier tier, PixelLook look)
-    {
-        Color c = look != null && look.useColor ? look.color : tier.color;
-        if (look != null) c.a *= look.alpha;
-        return c;
-    }
-
-    /// <summary>Puts a look's streak / crack texture on a property block (level = how damaged, 0..max).</summary>
-    private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
-    {
-        if (look == null || !look.HasSurfaceTexture) return;
-        Texture2D tex = PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max);
-        block.SetTexture("_BaseMap", tex);
-        block.SetTexture("_MainTex", tex);
-    }
-
-    /// <summary>A hit on a tough pixel: cracks spread over the live cube (level 0 = undamaged, max = about to break).</summary>
-    private void SetLiveDamage(PixelTier tier, int level)
-    {
-        if (pixelRenderer == null || activeLook == null || !activeLook.damageCracks) return;
-        pixelRenderer.GetPropertyBlock(propertyBlock);
-        ApplyLookTexture(propertyBlock, activeLook, level, tier.clicksToCollect);
-        pixelRenderer.SetPropertyBlock(propertyBlock);
-    }
-
-    /// <summary>Metallic / glossiness from a look onto a property block.</summary>
-    private static void ApplyLookSurface(MaterialPropertyBlock block, PixelLook look)
-    {
-        if (look == null) return;
-        if (look.metallic >= 0f) block.SetFloat("_Metallic", look.metallic);
-        if (look.smoothness >= 0f)
-        {
-            block.SetFloat("_Smoothness", look.smoothness);
-            block.SetFloat("_Glossiness", look.smoothness);
-        }
-    }
-
-    /// <summary>Adds / removes the outline and core on the live cube to match the tier's look.</summary>
     /// <summary>A text report about how glow is set up (materials, shaders, keywords, shell) for the rendering report file.</summary>
     public string DebugGlowReport()
     {
@@ -1594,13 +1546,18 @@ public class PixelClicker : MonoBehaviour
         return sb.ToString();
     }
 
-    private GameObject liveGlowShell;
+    private GameObject liveGlowShell, liveGlowHalo;
     private PixelType liveGlowShellType = (PixelType)(-1);
 
     /// <summary>Does this tier get the build-proof glow shell (glowing or emissive, and not see-through)?</summary>
-    private bool WantsGlowShell(PixelTier tier, PixelLook look)
+    private bool WantsGlowShell(PixelTier tier, PixelLook look) => glowShell && glowShellAlpha > 0f && IsGlowingSolid(tier, look);
+
+    /// <summary>Does this tier get the soft glow halo (glowing or emissive, not see-through, and the halo is not hidden)?</summary>
+    private bool WantsGlowHalo(PixelTier tier, PixelLook look) => glowHalo && IsGlowingSolid(tier, look);
+
+    private static bool IsGlowingSolid(PixelTier tier, PixelLook look)
     {
-        if (!glowShell || glowShellAlpha <= 0f || tier == null) return false;
+        if (tier == null) return false;
         bool glowing = tier.glow || (look != null && look.emission > 0f);
         bool seeThrough = tier.translucent || (look != null && look.forceTranslucent);
         return glowing && !seeThrough;
@@ -1617,24 +1574,28 @@ public class PixelClicker : MonoBehaviour
     private void UpdateGlowShell(PixelTier tier, PixelLook look)
     {
         MeshFilter mf = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
-        if (!WantsGlowShell(tier, look) || mf == null)
+        bool shell = mf != null && WantsGlowShell(tier, look);
+        bool halo = pixelRenderer != null && mf != null && WantsGlowHalo(tier, look);
+        if (!shell && !halo)
         {
             if (liveGlowShell != null) Destroy(liveGlowShell);
-            liveGlowShell = null;
+            if (liveGlowHalo != null) Destroy(liveGlowHalo);
+            liveGlowShell = liveGlowHalo = null;
             liveShellRenderer = liveHaloRenderer = null;
             return;
         }
-        if (liveGlowShell != null && liveGlowShellType == tier.type) return;
+        if (liveGlowShellType == tier.type && (liveGlowShell != null) == shell && (liveGlowHalo != null) == halo) return;
 
         if (liveGlowShell != null) Destroy(liveGlowShell);
+        if (liveGlowHalo != null) Destroy(liveGlowHalo);
         liveShellColor = GlowShellColor(tier);
         liveShellAlpha = GlowShellAlpha(tier);
         liveShellHdr = GlowShellHdr(tier);
-        liveGlowShell = PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, liveShellColor, liveShellAlpha, halo: true, hdr: liveShellHdr);
+        liveGlowShell = shell ? PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, liveShellColor, liveShellAlpha, hdr: liveShellHdr) : null;
+        liveGlowHalo = halo ? PixelLooks.AddGlowHalo(pixelRenderer.transform, liveShellColor, liveShellAlpha, liveShellHdr) : null;
         liveGlowShellType = tier.type;
         liveShellRenderer = liveGlowShell != null ? liveGlowShell.GetComponent<MeshRenderer>() : null;
-        Transform halo = liveGlowShell != null ? liveGlowShell.transform.Find("Glow Halo") : null;
-        liveHaloRenderer = halo != null ? halo.GetComponent<MeshRenderer>() : null;
+        liveHaloRenderer = liveGlowHalo != null ? liveGlowHalo.GetComponent<MeshRenderer>() : null;
     }
 
     private void UpdateLiveExtras(PixelTier tier, PixelLook look)
@@ -2346,11 +2307,17 @@ public class PixelClicker : MonoBehaviour
             }
         }
         if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
-        if (srcFilter != null && IsValidTier(tierIndex) && WantsGlowShell(tiers[tierIndex], LookOf(tiers[tierIndex])))
-            PixelLooks.AddGlowShell(copy.transform, srcFilter.sharedMesh, GlowShellColor(tiers[tierIndex]),
-                                    GlowShellAlpha(tiers[tierIndex], IsBrightOldPixel(tierIndex) ? 1.3f : 1f), halo: true,
-                                    hdr: GlowShellHdr(tiers[tierIndex]) * (IsBrightOldPixel(tierIndex) ? Mathf.Max(1f, oldPixelGlowBoost * 0.7f) : 1f),
-                                    haloBoost: IsBrightOldPixel(tierIndex) ? 2.4f : 1f); // bright old pixels (Luminescent) glow much harder, like their boosted emission
+        if (srcFilter != null && IsValidTier(tierIndex))
+        {
+            PixelTier glowTier = tiers[tierIndex];
+            PixelLook glowLook = LookOf(glowTier);
+            bool bright = IsBrightOldPixel(tierIndex); // bright old pixels (Luminescent) glow much harder, like their boosted emission
+            float hdr = GlowShellHdr(glowTier) * (bright ? Mathf.Max(1f, oldPixelGlowBoost * 0.7f) : 1f);
+            if (WantsGlowShell(glowTier, glowLook))
+                PixelLooks.AddGlowShell(copy.transform, srcFilter.sharedMesh, GlowShellColor(glowTier), GlowShellAlpha(glowTier, bright ? 1.3f : 1f), hdr: hdr);
+            if (WantsGlowHalo(glowTier, glowLook))
+                PixelLooks.AddGlowHalo(copy.transform, GlowShellColor(glowTier), GlowShellAlpha(glowTier, bright ? 1.3f : 1f), hdr, bright ? 2.4f : 1f);
+        }
 
         if (fly)
         {
@@ -2456,7 +2423,8 @@ public class PixelClicker : MonoBehaviour
             PixelLooks.AddExtras(go.transform, srcFilter.sharedMesh, styled, tier.color, defaultMaterial);
             if (styled.wobble) MakeWobbleVisual(go, styled);
         }
-        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, srcFilter.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), halo: true, hdr: GlowShellHdr(tier));
+        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, srcFilter.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), hdr: GlowShellHdr(tier));
+        if (WantsGlowHalo(tier, styled)) PixelLooks.AddGlowHalo(go.transform, GlowShellColor(tier), GlowShellAlpha(tier), GlowShellHdr(tier));
         return go;
     }
 

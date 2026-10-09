@@ -426,7 +426,7 @@ public static class PixelLooks
     /// material uses it, so this keeps glowing pixels visibly luminous in a built game. Returns the new object (a child of 'parent').
     /// 'texture' (optional) is drawn instead of a flat colour (alpha of the texture = how much shows), e.g. lava cracks.
     /// </summary>
-    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null, bool halo = false, float hdr = 1f, float haloBoost = 1f)
+    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null, float hdr = 1f)
     {
         Material material = OverlayMaterial();
         if (material == null || mesh == null || parent == null) return null;
@@ -447,7 +447,6 @@ public static class PixelLooks
         block.SetColor("_Color", new Color(colour.r * hdr, colour.g * hdr, colour.b * hdr, Mathf.Clamp01(alpha)));
         if (texture != null) block.SetTexture("_MainTex", texture);
         mr.SetPropertyBlock(block);
-        if (halo) AddGlowHalo(go.transform, colour, alpha, hdr, haloBoost);
         return go;
     }
 
@@ -459,10 +458,10 @@ public static class PixelLooks
     /// needs no post-processing and no shader keywords). The pixel's own faces hide the middle of it, so only the halo around
     /// the silhouette shows.
     /// </summary>
-    private static void AddGlowHalo(Transform parent, Color colour, float alpha, float hdr, float boost = 1f)
+    public static GameObject AddGlowHalo(Transform parent, Color colour, float alpha, float hdr, float boost = 1f)
     {
         Material material = OverlayMaterial();
-        if (material == null) return;
+        if (material == null || parent == null) return null;
 
         if (haloMesh == null)
         {
@@ -502,6 +501,7 @@ public static class PixelLooks
         block.SetColor("_Color", new Color(colour.r * hdr * 0.7f, colour.g * hdr * 0.7f, colour.b * hdr * 0.7f, Mathf.Clamp01(alpha * 0.3f * boost)));
         block.SetTexture("_MainTex", haloTexture);
         mr.SetPropertyBlock(block);
+        return go;
     }
 
     private static Material CoreMaterial(Material baseMaterial)
