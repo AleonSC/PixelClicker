@@ -26,12 +26,13 @@ public static class PixelNotice
     /// <summary>'small' = a much smaller box (narrow, small text and button) at the top of the screen: for quick "this just happened" tips.</summary>
     /// <summary>'nearLog' = a small box at the bottom left, next to the event log.</summary>
     /// <summary>'aboveCombo' = a small box at the bottom of the screen, just above the combo meter.</summary>
+    /// <summary>'nearScreen' = the box follows a point on screen (pixels; null = nowhere), sitting beside it, e.g. next to the ghost. 'freezeTime' = Time.timeScale is 0 until the box is closed.</summary>
     /// <summary>'beside' = a window (Inventory, Log): the box sits right next to it, to its right, never overlapping it. 'besideBottom' aligns the bottoms (for a window at the bottom of the screen), else the tops.</summary>
     public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                            RectTransform beside = null, bool besideBottom = false)
+                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -103,9 +104,11 @@ public class PixelNoticeBox : MonoBehaviour
     private const float BesideWidth = 640f;
 
     public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                     RectTransform beside = null, bool besideBottom = false)
+                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
+        Unfreeze();
+        followPoint = nearScreen;
         if (canvasRoot == null) Build();
 
         // The small box: narrow, small text, small button.
@@ -198,7 +201,44 @@ public class PixelNoticeBox : MonoBehaviour
         canvasRoot.SetActive(true);
         timed = seconds > 0f;
         timer = seconds;
+        if (followPoint != null) PlaceNearPoint();
+        if (freezeTime && Time.timeScale > 0f)
+        {
+            savedTimeScale = Time.timeScale;
+            Time.timeScale = 0f;
+            froze = true;
+        }
     }
+
+    private System.Func<Vector2?> followPoint;
+    private bool froze;
+    private float savedTimeScale = 1f;
+
+    private void Unfreeze()
+    {
+        if (!froze) return;
+        froze = false;
+        if (Time.timeScale <= 0f) Time.timeScale = savedTimeScale;
+    }
+
+    /// <summary>Puts the box beside the followed screen point (right of it, or left near the screen's right edge), kept on screen.</summary>
+    private void PlaceNearPoint()
+    {
+        Vector2? point = followPoint != null ? followPoint() : null;
+        if (!point.HasValue) return;
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        float toUnits = canvasRect.rect.width / Mathf.Max(1f, Screen.width);
+        Vector2 p = point.Value * toUnits;
+        float w = boxRect.sizeDelta.x, h = boxRect.sizeDelta.y;
+        float gap = 90f; // clear of the ghost itself
+        bool right = p.x + gap + w <= canvasRect.rect.width - 10f;
+        boxRect.anchorMin = boxRect.anchorMax = Vector2.zero;
+        boxRect.pivot = new Vector2(right ? 0f : 1f, 0.5f);
+        float y = Mathf.Clamp(p.y, h * 0.5f + 10f, canvasRect.rect.height - h * 0.5f - 10f);
+        boxRect.anchoredPosition = new Vector2(right ? p.x + gap : p.x - gap, y);
+    }
+
+    private void OnDestroy() { Unfreeze(); }
 
     public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf;
 
@@ -208,6 +248,7 @@ public class PixelNoticeBox : MonoBehaviour
     {
         bool wasOpen = canvasRoot != null && canvasRoot.activeSelf;
         if (canvasRoot != null) canvasRoot.SetActive(false);
+        Unfreeze();
         System.Action callback = closedCallback;
         closedCallback = null;
         if (wasOpen) callback?.Invoke();
@@ -215,6 +256,7 @@ public class PixelNoticeBox : MonoBehaviour
 
     private void Update()
     {
+        if (followPoint != null && canvasRoot != null && canvasRoot.activeSelf) PlaceNearPoint();
         if (!timed || canvasRoot == null || !canvasRoot.activeSelf) return;
         timer -= Time.unscaledDeltaTime;
         if (timer <= 0f) Close();

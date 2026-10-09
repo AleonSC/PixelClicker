@@ -848,6 +848,14 @@ public class PixelHints : MonoBehaviour
 
         Hint next = queue.Dequeue();
         // The tips for something that just happened in a minigame are small; the rest are shop-sized.
+        // The first ghost tip appears beside the ghost and stops time until it is closed.
+        PixelGhostMinigame ghostGame = next.id == "minigame_ghost" ? PixelMinigame.Find("ghost") as PixelGhostMinigame : null;
+        if (ghostGame != null && ghostGame.GhostScreenPosition().HasValue)
+        {
+            PixelNotice.Show(next.text, 0f, small: true, nearScreen: ghostGame.GhostScreenPosition, freezeTime: true);
+            wasShowing = true;
+            return;
+        }
         PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && (next.id.StartsWith("minigame_") || next.id.StartsWith("timestop_") || next.id.StartsWith("bank_")),
                          aboveCombo: next.id == "combo", nearLog: next.id == "event_log"); // the first combo tip sits just above the combo meter
         wasShowing = true;

@@ -381,6 +381,18 @@ public class PixelGhostMinigame : PixelMinigame
     // The ghost
     // ------------------------------------------------------------------
 
+    private Transform ghostTransform;
+
+    /// <summary>Where the ghost is on screen (pixels), or null when none is out. The first-time tip box follows it.</summary>
+    public Vector2? GhostScreenPosition()
+    {
+        if (!ghostActive || ghostTransform == null) return null;
+        Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return null;
+        Vector3 sp = cam.WorldToScreenPoint(ghostTransform.position);
+        return sp.z > 0f ? new Vector2(sp.x, sp.y) : (Vector2?)null;
+    }
+
     private IEnumerator GhostRoutine()
     {
         ghostActive = true;
@@ -401,6 +413,7 @@ public class PixelGhostMinigame : PixelMinigame
         box.size = Vector3.one * clickSizeMultiplier;
 
         Track(ghost);
+        ghostTransform = ghost.transform;
         Renderer rend = ghost.GetComponent<Renderer>();
         Color c = ghostColor;
         c.a = ghostOpacity;

@@ -151,6 +151,9 @@ public class PixelToggles : MonoBehaviour
     private float hintTimer;
     private static PixelToggles instance;
     private TMP_Dropdown groupDropdown;
+    private GameObject[] groupTabs;
+    private Image[] groupImages;
+    private bool besideShop; // true while the window is docked next to the open shop: drop-down instead of tabs
     private ScrollRect scroll;
     private RectTransform content;
     private GameObject bar;
@@ -320,6 +323,10 @@ public class PixelToggles : MonoBehaviour
     private void Refresh()
     {
         if (groupDropdown != null && groupDropdown.value != (int)current) groupDropdown.SetValueWithoutNotify((int)current);
+        if (groupImages != null)
+            for (int i = 0; i < groupImages.Length; i++)
+                groupImages[i].color = i == (int)current ? groupActiveColor : groupColor;
+        ApplyGroupControl();
 
         List<Entry> entries = Collect(current);
         while (rows.Count < entries.Count) rows.Add(BuildRow());
@@ -466,6 +473,39 @@ public class PixelToggles : MonoBehaviour
             content.anchoredPosition = Vector2.zero;
             Refresh();
         });
+
+        // The same choice as tab buttons: used while the window stands alone (the drop-down is for beside the shop).
+        groupImages = new Image[GroupCount];
+        groupTabs = new GameObject[GroupCount];
+        for (int i = 0; i < GroupCount; i++)
+        {
+            Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + groupLabels[i], groupLabels[i], Vector2.zero, groupColor,
+                                               textColor, fontSize);
+            groupTabs[i] = b.gameObject;
+            groupImages[i] = b.GetComponent<Image>();
+            TMP_Text groupLabel = b.GetComponentInChildren<TMP_Text>();
+            if (groupLabel != null) // four buttons share the width: shrink a long name to fit instead of breaking it
+            {
+                groupLabel.enableAutoSizing = true;
+                groupLabel.fontSizeMax = fontSize;
+                groupLabel.fontSizeMin = 12f;
+                groupLabel.margin = new Vector4(4f, 0f, 4f, 0f);
+            }
+            RectTransform br = b.GetComponent<RectTransform>();
+            br.anchorMin = new Vector2(i / (float)GroupCount, 1f);
+            br.anchorMax = new Vector2((i + 1) / (float)GroupCount, 1f);
+            br.pivot = new Vector2(0.5f, 1f);
+            br.offsetMin = new Vector2(i == 0 ? 20f : 4f, -(y + 60f));
+            br.offsetMax = new Vector2(i == GroupCount - 1 ? -20f : -4f, -y);
+
+            int captured = i;
+            b.onClick.AddListener(() =>
+            {
+                current = (Group)captured;
+                content.anchoredPosition = Vector2.zero;
+                Refresh();
+            });
+        }
         y += 60f + 16f;
 
         // --- The list of switches.
@@ -566,8 +606,10 @@ public class PixelToggles : MonoBehaviour
         {
             wr.sizeDelta = windowSize;
             wr.anchoredPosition = new Vector2(-inset, 0f);
+            SetBesideShop(false);
             return;
         }
+        SetBesideShop(true);
         Vector3[] c = new Vector3[4];
         shopRect.GetWorldCorners(c); // screen pixels (overlay canvas)
         float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
@@ -578,6 +620,22 @@ public class PixelToggles : MonoBehaviour
         float rightEdgeFromScreenRight = (Screen.width - shopRight) / scale - gap - width; // flush against the shop, mirroring the currency panel
         wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
         wr.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdgeFromScreenRight), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+    }
+
+    private void SetBesideShop(bool value)
+    {
+        if (besideShop == value) return;
+        besideShop = value;
+        ApplyGroupControl();
+    }
+
+    /// <summary>Drop-down while docked beside the shop (narrow), tab buttons when the window stands alone.</summary>
+    private void ApplyGroupControl()
+    {
+        if (groupDropdown != null && groupDropdown.gameObject.activeSelf != besideShop) groupDropdown.gameObject.SetActive(besideShop);
+        if (groupTabs != null)
+            foreach (GameObject tab in groupTabs)
+                if (tab != null && tab.activeSelf == besideShop) tab.SetActive(!besideShop);
     }
 
     private PixelDockedButton dock;
