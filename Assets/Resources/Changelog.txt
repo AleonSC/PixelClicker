@@ -209,3 +209,4 @@
 [2026-10-09 21:42 UTC] The Electric pixel can now be switched on and off in the Toggles window (Pixels tab).
 [2026-10-09 21:43 UTC] The Electric pixel is now a full part of the game: a real shop price (2M Obsidian + 400K Luminescent, needs the Luminescent pack), rarer spawns, and it is explained in How to Play (potions, crafting, pets, achievements and stats already cover it automatically).
 [2026-10-09 21:43 UTC] Fixed a compile error in the Electric pack migration.
+[2026-10-09 21:48 UTC] The Electric pixel is now an early unlock: it needs the Auto Clicker pack, costs 8K each of Red/Green/Blue, is a rarer spawn, and is listed just before the Vacuum pixel in the shop.

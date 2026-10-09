@@ -356,19 +356,23 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Electric Pixel pack (Pixels tab): needs the Luminescent pack. Pays a random 1-15 per harvest (8 on average).</summary>
-    private static ShopPack CreateElectricPixelPack(int requiresLuminescentIndex)
+    /// <summary>
+    /// Default Electric Pixel pack (Pixels tab): an early unlock (before Vacuum) that needs the Auto Clicker pack, since it boosts
+    /// the auto clicker. Pays a random 1-15 per harvest (8 on average) but is a fairly rare spawn, so it is a slight income boost.
+    /// </summary>
+    private static ShopPack CreateElectricPixelPack(int requiresAutoClickerIndex)
     {
         return new ShopPack
         {
             displayName = "Electric Pixel",
             tab = ShopTab.Pixels,
             description = "Adds the Electric pixel: a cube held together by crackling lightning. Pays a random amount every harvest, overcharges the auto clicker when clicked and arcs to nearby devices to keep them running.",
-            requirements = Needs(requiresLuminescentIndex),
+            requirements = Needs(requiresAutoClickerIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 2000000 },
-                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 400000 },
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 8000 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 8000 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 8000 },
             },
             rewardTiers = new[]
             {
@@ -377,7 +381,7 @@ public partial class PixelShop
                     type = PixelClicker.PixelType.Electric, displayName = "Electric Pixels",
                     color = new Color(0.4f, 0.85f, 1f, 1f), glow = true, glowIntensity = 3.5f,
                     amountPerClick = 8, randomPayout = true, payoutMin = 1, payoutMax = 15, // 1-15 every harvest (8 = the average)
-                    spawnWeight = 0.35f,
+                    spawnWeight = 0.15f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
@@ -715,6 +719,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateAutoClickerPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Glass),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
+                          requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Vacuum),
                           requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateVacuumPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerInterval,
@@ -743,8 +749,6 @@ public partial class PixelShop
                           requires = null, create = i => CreateWizardPack() },
         new DefaultPack { isThis = p => Unlocks(p, "tinkerer"),
                           requires = null, create = i => CreateTinkererPack() },
-        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
-                          requires = p => Rewards(p, PixelClicker.PixelType.Luminescent), create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),

@@ -751,7 +751,29 @@ public partial class PixelShop : MonoBehaviour
         return changed;
     }
 
-    [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement
+    [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)
+
+    /// <summary>Moves the pack at 'from' to position 'to' in the list and renumbers every pack requirement that refers to a pack index.</summary>
+    private void MovePack(int from, int to)
+    {
+        if (packs == null || from == to || from < 0 || to < 0 || from >= packs.Length || to >= packs.Length) return;
+        int[] map = new int[packs.Length]; // old index -> new index
+        System.Collections.Generic.List<int> order = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < packs.Length; i++) order.Add(i);
+        order.RemoveAt(from);
+        order.Insert(to, from);
+        for (int newIndex = 0; newIndex < order.Count; newIndex++) map[order[newIndex]] = newIndex;
+
+        ShopPack[] moved = new ShopPack[packs.Length];
+        for (int newIndex = 0; newIndex < order.Count; newIndex++) moved[newIndex] = packs[order[newIndex]];
+        foreach (ShopPack pack in moved)
+        {
+            if (pack == null || pack.requirements == null) continue;
+            foreach (PackRequirement r in pack.requirements)
+                if (r.kind == RequirementKind.Pack && r.packIndex >= 0 && r.packIndex < map.Length) r.packIndex = map[r.packIndex];
+        }
+        packs = moved;
+    }
 
     /// <summary>Brings packs saved by older versions up to date (renames, tab, minigame ids). Returns true if anything changed.</summary>
     private bool MigrateOldPackData()
@@ -857,6 +879,33 @@ public partial class PixelShop : MonoBehaviour
                 }
             }
             packDataVersion = 4;
+            renamed = true;
+        }
+
+        // The Electric pixel is an EARLY unlock (a slight boost to the auto clicker): cheaper, needs the Auto Clicker pack, rarer,
+        // and sits in the list just before the Vacuum pixel. Only the previous default values are replaced.
+        if (packDataVersion < 5)
+        {
+            int autoIndex = Array.FindIndex(packs, p => p != null && p.unlocksAutoClicker);
+            int electricIndex = Array.FindIndex(packs, p => Rewards(p, PixelClicker.PixelType.Electric));
+            if (electricIndex >= 0)
+            {
+                ShopPack pack = packs[electricIndex];
+                bool previousCost = pack.costs != null && pack.costs.Length == 2 && pack.costs[0].type == PixelClicker.PixelType.Obsidian && pack.costs[0].amount == 2000000d;
+                if (previousCost)
+                {
+                    ShopPack fresh = CreateElectricPixelPack(autoIndex);
+                    pack.costs = fresh.costs;
+                    pack.requirements = fresh.requirements;
+                    foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                        if (reward.type == PixelClicker.PixelType.Electric && Mathf.Approximately(reward.spawnWeight, 0.35f)) reward.spawnWeight = 0.15f;
+                }
+
+                // Move it to just before the Vacuum pack (requirements refer to packs by index, so they are renumbered).
+                int vacuumIndex = Array.FindIndex(packs, p => Rewards(p, PixelClicker.PixelType.Vacuum));
+                if (vacuumIndex >= 0 && electricIndex > vacuumIndex) MovePack(electricIndex, vacuumIndex);
+            }
+            packDataVersion = 5;
             renamed = true;
         }
 
