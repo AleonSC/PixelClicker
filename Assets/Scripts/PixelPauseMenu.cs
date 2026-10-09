@@ -168,6 +168,25 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Colour of the overwrite warning text and button.")]
     [SerializeField] private Color overwriteWarningColor = new Color(0.9f, 0.35f, 0.3f, 1f);
 
+    [Header("Save / Load result window")]
+    [Tooltip("Colour of the window that fills the Save / Load menu after saving or loading.")]
+    [SerializeField] private Color resultColor = new Color(0.16f, 0.36f, 0.78f, 1f);
+
+    [Tooltip("Button on the result window.")]
+    [SerializeField] private string resultButtonText = "Got it";
+
+    [Tooltip("Result text after a save. {0} = the slot number.")]
+    [SerializeField] private string savedResultFormat = "Saved to slot {0}";
+
+    [Tooltip("Result text when saving failed.")]
+    [SerializeField] private string saveFailedResultText = "Save failed";
+
+    [Tooltip("Result text after a load. {0} = the slot number.")]
+    [SerializeField] private string loadedResultFormat = "Loaded slot {0}";
+
+    [Tooltip("Result text when loading failed.")]
+    [SerializeField] private string loadFailedResultText = "Load failed";
+
     [Tooltip("Save button text.")]
     [SerializeField] private string saveText = "Save";
 
@@ -610,7 +629,8 @@ public class PixelPauseMenu : MonoBehaviour
             else if (IsPaused)
             {
                 // Inside Stats / Settings, Escape steps back; from the main view it resumes.
-                if (overwriteOverlay != null && overwriteOverlay.activeSelf) overwriteOverlay.SetActive(false);
+                if (resultOverlay != null && resultOverlay.activeSelf) resultOverlay.SetActive(false);
+                else if (overwriteOverlay != null && overwriteOverlay.activeSelf) overwriteOverlay.SetActive(false);
                 else if (mainPanel != null && !mainPanel.activeSelf) ShowView(mainPanel);
                 else SetPaused(false);
             }
@@ -1132,8 +1152,10 @@ public class PixelPauseMenu : MonoBehaviour
         y += menuButtonSize.y + 14f;
 
         BuildOverwriteOverlay(saveLoadPanel.transform);
+        BuildResultOverlay(saveLoadPanel.transform);
         FinishSectionPanel(saveLoadPanel, y);
         overwriteOverlay.transform.SetAsLastSibling(); // above the Back button too
+        resultOverlay.transform.SetAsLastSibling();
     }
 
     /// <summary>The "this slot already has a save" warning: a dimmed box over the window with Overwrite / Cancel.</summary>
@@ -1193,8 +1215,9 @@ public class PixelPauseMenu : MonoBehaviour
         confirm.onClick.AddListener(() =>
         {
             overwriteOverlay.SetActive(false);
-            saveGame.SaveToSlot(selectedSlot);
+            bool saved = saveGame.SaveToSlot(selectedSlot, false);
             RefreshSlots();
+            ShowResult(saved ? string.Format(savedResultFormat, selectedSlot) : saveFailedResultText);
         });
         cancel.onClick.AddListener(() => overwriteOverlay.SetActive(false));
 
@@ -1202,11 +1225,48 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     private TMP_Text overwriteTitleLabel;
+    private GameObject resultOverlay;
+    private TMP_Text resultLabel;
+
+    /// <summary>A blue window the size of the Save / Load menu that says what happened ("Saved to slot 2") with a Got it button.</summary>
+    private void BuildResultOverlay(Transform parent)
+    {
+        resultOverlay = new GameObject("Result Window", typeof(RectTransform), typeof(Image));
+        resultOverlay.transform.SetParent(parent, false);
+        resultOverlay.GetComponent<Image>().color = resultColor; // opaque: covers the whole menu and blocks the clicks behind it
+        PixelUIKit.Stretch(resultOverlay.GetComponent<RectTransform>());
+
+        resultLabel = MakeText(resultOverlay.transform, "Message", "", titleFontSize, FontStyles.Bold);
+        resultLabel.alignment = TextAlignmentOptions.Center;
+        resultLabel.enableAutoSizing = true;
+        resultLabel.fontSizeMax = titleFontSize;
+        resultLabel.fontSizeMin = 18f;
+        RectTransform lr = resultLabel.rectTransform;
+        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one; lr.pivot = new Vector2(0.5f, 0.5f);
+        lr.offsetMin = new Vector2(40f, 24f + menuButtonSize.y + 30f);
+        lr.offsetMax = new Vector2(-40f, -40f);
+
+        Button ok = MakeButton(resultOverlay.transform, "Got It", resultButtonText, menuButtonSize, menuButtonColor, menuButtonFontSize);
+        RectTransform or = ok.GetComponent<RectTransform>();
+        or.anchorMin = or.anchorMax = or.pivot = new Vector2(0.5f, 0f);
+        or.anchoredPosition = new Vector2(0f, 24f);
+        ok.onClick.AddListener(() => resultOverlay.SetActive(false));
+        resultOverlay.SetActive(false);
+    }
+
+    private void ShowResult(string text)
+    {
+        if (resultOverlay == null) return;
+        resultLabel.text = text;
+        resultOverlay.SetActive(true);
+        resultOverlay.transform.SetAsLastSibling();
+    }
 
     private void OpenSaveLoad()
     {
         selectedSlot = saveGame != null ? saveGame.CurrentSlot : 1;
         if (overwriteOverlay != null) overwriteOverlay.SetActive(false);
+        if (resultOverlay != null) resultOverlay.SetActive(false);
         RefreshSlots();
     }
 
@@ -1238,8 +1298,9 @@ public class PixelPauseMenu : MonoBehaviour
         if (saveGame == null) return;
         if (!saveGame.SlotHasSave(selectedSlot))
         {
-            saveGame.SaveToSlot(selectedSlot);
+            bool saved = saveGame.SaveToSlot(selectedSlot, false);
             RefreshSlots();
+            ShowResult(saved ? string.Format(savedResultFormat, selectedSlot) : saveFailedResultText);
             return;
         }
 
@@ -1253,8 +1314,9 @@ public class PixelPauseMenu : MonoBehaviour
     private void OnSlotLoad()
     {
         if (saveGame == null) return;
-        saveGame.LoadSlot(selectedSlot);
+        bool loaded = saveGame.LoadSlot(selectedSlot, false);
         RefreshSlots();
+        ShowResult(loaded ? string.Format(loadedResultFormat, selectedSlot) : loadFailedResultText);
     }
 
     /// <summary>"This deletes everything" screen: the player has to HOLD the red button to confirm.</summary>

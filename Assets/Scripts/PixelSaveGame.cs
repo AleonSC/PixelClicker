@@ -279,22 +279,22 @@ public class PixelSaveGame : MonoBehaviour
     }
 
     /// <summary>Saves into this slot (it becomes the current slot). The Save / Load window asks before overwriting.</summary>
-    public bool SaveToSlot(int slot)
+    public bool SaveToSlot(int slot, bool message = true)
     {
         CurrentSlot = slot;
-        return Save(true);
+        return Save(message);
     }
 
     /// <summary>Loads this slot (it becomes the current slot).</summary>
-    public bool LoadSlot(int slot)
+    public bool LoadSlot(int slot, bool message = true)
     {
         if (!SlotHasSave(slot))
         {
-            ShowMessage("That slot is empty");
+            if (message) ShowMessage("That slot is empty");
             return false;
         }
         CurrentSlot = slot;
-        return Load(true);
+        return Load(message);
     }
 
     // ------------------------------------------------------------------
