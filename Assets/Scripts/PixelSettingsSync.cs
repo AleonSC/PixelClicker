@@ -46,7 +46,7 @@ public static class PixelSettingsSync
         // Key bindings.
         foreach (string name in Enum.GetNames(typeof(PixelAction))) known.Add(new Known("PixelClicker.Key." + name, 0));
         // Dev tools.
-        foreach (string k in new[] { "ClearKey", "Infinite", "Selector", "NoDespawn", "God", "PixelIndex", "SelPixel", "SelMinigame", "GodChoice" })
+        foreach (string k in new[] { "ClearKey", "Infinite", "Selector", "NoDespawn", "God", "PixelIndex", "SelPixel", "SelMinigame", "GodChoice", "ClickCount" })
             known.Add(new Known("PixelClicker.Dev." + k, 0));
         known.Add(new Known("PixelClicker.Dev.Amount", 2));
         return known;

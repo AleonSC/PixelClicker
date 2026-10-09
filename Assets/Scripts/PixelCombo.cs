@@ -350,7 +350,7 @@ public class PixelCombo : MonoBehaviour
     private void AddClick(bool automatic)
     {
         if (!Working || (automatic && !autoClicksCount)) return;
-        combo++;
+        combo += Mathf.Max(1, PixelClicker.DevClickCount);
         ComboReached?.Invoke(combo);
         timeLeft = comboWindowSeconds;
         pop = 1f;

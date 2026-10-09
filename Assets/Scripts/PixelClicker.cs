@@ -28,6 +28,7 @@ public class PixelClicker : MonoBehaviour
         ExternalClickBlock = false;
         GodMode = false;
         InfiniteResources = false;
+        DevClickCount = 1;
         OldPixelLanded = null;
         UltraGained = null;
         FlyAwayLaunched = null;
@@ -1018,17 +1019,22 @@ public class PixelClicker : MonoBehaviour
     /// <summary>A click made by automation (the auto clicker). Same as <see cref="Collect"/>, but flagged as automatic.</summary>
     public void AutoCollect() => CollectInternal(true);
 
+    /// <summary>Dev tools: how many clicks one click counts as (1 = normal). Multiplies payouts, tough-pixel hits and the combo.</summary>
+    public static int DevClickCount = 1;
+
     private void CollectInternal(bool automatic)
     {
         if (blockClicksWhileSpawning && isSpawning) return;
+        int clickCount = Mathf.Max(1, DevClickCount);
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
 
         // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
+        int breaks = 1; // pixels broken by this click (more than 1 only with the dev click count)
         if (tier.clicksToCollect > 1)
         {
-            hitsOnCurrentPixel++;
+            hitsOnCurrentPixel += clickCount;
             if (hitsOnCurrentPixel < tier.clicksToCollect)
             {
                 hitPunchTimer = hitPunchDuration;
@@ -1044,10 +1050,19 @@ public class PixelClicker : MonoBehaviour
             SetLiveDamage(tier, tier.clicksToCollect); // the pieces that fall away are fully cracked
             PixelFinalHit?.Invoke(tierIndex, tier.clicksToCollect, automatic);
         }
-        hitsOnCurrentPixel = 0;
+        if (tier.clicksToCollect > 1)
+        {
+            breaks = hitsOnCurrentPixel / tier.clicksToCollect;
+            hitsOnCurrentPixel %= tier.clicksToCollect;
+        }
+        else
+        {
+            breaks = clickCount;
+            hitsOnCurrentPixel = 0;
+        }
 
-        double amount = tier.amountPerClick * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
-        tier.timesCollected++;
+        double amount = tier.amountPerClick * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus) * breaks;
+        tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 

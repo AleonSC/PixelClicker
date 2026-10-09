@@ -195,8 +195,8 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Sorting order of the docked button's canvas (it must be below the dev panel, 700).")]
     [SerializeField] private int dockSortingOrder = 135;
 
-    [Tooltip("Label of the close button.")]
-    [SerializeField] private string closeText = "Close";
+    [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
+    [SerializeField] private string clickCountText = "Clicks per click";
 
     [Header("Look")]
     [Tooltip("Panel size (canvas units). It grows if the rows need more room.")]
@@ -278,6 +278,7 @@ public class PixelDevTools : MonoBehaviour
         PixelClicker.InfiniteResources = infiniteResources;
         OldPixelDespawn.DevNoDespawn = disableDespawn;
         PixelClicker.GodMode = godMode;
+        PixelClicker.DevClickCount = clickCount;
     }
 
     // ------------------------------------------------------------------
@@ -305,6 +306,8 @@ public class PixelDevTools : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    private int clickCount = 1;
+    private TMP_InputField clickCountField;
     private Toggle clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
@@ -318,6 +321,8 @@ public class PixelDevTools : MonoBehaviour
         LoadSettings();
         PixelClicker.InfiniteResources = infiniteResources;
         OldPixelDespawn.DevNoDespawn = disableDespawn;
+        PixelClicker.DevClickCount = clickCount;
+        if (clickCountField != null) clickCountField.SetTextWithoutNotify(clickCount.ToString());
         if (clearToggle != null) clearToggle.SetIsOnWithoutNotify(clearKeyEnabled);
         if (infiniteToggle != null) infiniteToggle.SetIsOnWithoutNotify(infiniteResources);
         if (selectorToggle != null) selectorToggle.SetIsOnWithoutNotify(spawnSelectorEnabled);
@@ -343,6 +348,7 @@ public class PixelDevTools : MonoBehaviour
         spawnSelectorEnabled = GetBool("Selector", spawnSelectorEnabled);
         disableDespawn = GetBool("NoDespawn", disableDespawn);
         godMode = GetBool("God", godMode);
+        clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
         if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
     }
 
@@ -398,6 +404,7 @@ public class PixelDevTools : MonoBehaviour
         {
             instance = null;
             PixelClicker.InfiniteResources = false;
+            PixelClicker.DevClickCount = 1;
         }
         if (canvasRoot != null) Destroy(canvasRoot);
         if (selectorRoot != null) Destroy(selectorRoot);
@@ -504,16 +511,9 @@ public class PixelDevTools : MonoBehaviour
         todoViewRect = todoScroll.GetComponent<RectTransform>();
         todoViewRect.anchorMin = Vector2.zero;
         todoViewRect.anchorMax = Vector2.one;
-        todoViewRect.offsetMin = new Vector2(40f, 30f + rowHeight + 16f);
+        todoViewRect.offsetMin = new Vector2(40f, 30f);
         todoViewRect.offsetMax = new Vector2(-40f, -top);
 
-        Button close = PixelUIKit.CreateButton(font, todoView.transform, "Todo Close Button", closeText,
-                                               new Vector2(inner, rowHeight), new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
-        RectTransform cr = close.GetComponent<RectTransform>();
-        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
-        cr.sizeDelta = new Vector2(inner, rowHeight);
-        cr.anchoredPosition = new Vector2(0f, 30f);
-        close.onClick.AddListener(Close);
         todoView.SetActive(false);
     }
 
@@ -615,6 +615,16 @@ public class PixelDevTools : MonoBehaviour
         tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
         tr.anchoredPosition = new Vector2(0f, -24f);
 
+        // Close "X" at the top right of the panel.
+        float xSize = titleFontSize * 1.6f;
+        Button closeX = PixelUIKit.CreateButton(font, box.transform, "Close Button", "X", new Vector2(xSize, xSize),
+                                                new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
+        RectTransform cxr = closeX.GetComponent<RectTransform>();
+        cxr.anchorMin = cxr.anchorMax = cxr.pivot = new Vector2(1f, 1f);
+        cxr.sizeDelta = new Vector2(xSize, xSize);
+        cxr.anchoredPosition = new Vector2(-20f, -20f);
+        closeX.onClick.AddListener(Close);
+
         float y = 24f + titleFontSize * 1.6f + 16f;
         float inner = panelSize.x - 80f; // usable width (40 px each side)
 
@@ -658,7 +668,7 @@ public class PixelDevTools : MonoBehaviour
         RectTransform scrollRect = toolsScroll.GetComponent<RectTransform>();
         scrollRect.anchorMin = Vector2.zero;
         scrollRect.anchorMax = Vector2.one;
-        scrollRect.offsetMin = new Vector2(0f, 30f + rowHeight + 16f);
+        scrollRect.offsetMin = new Vector2(0f, 30f);
         scrollRect.offsetMax = new Vector2(0f, -scrollTop);
         y = 0f; // rows below are placed from the top of the scrolling content
 
@@ -721,21 +731,30 @@ public class PixelDevTools : MonoBehaviour
         godToggle = BuildToggleRow(content, godToggleText, y, inner, godMode, SetGodMode);
         y += rowHeight + 24f;
 
-        // Close (fixed at the bottom of the Tools view)
-        Button close = PixelUIKit.CreateButton(font, tools.transform, "Close Button", closeText,
-                                               new Vector2(inner, rowHeight), new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
-        RectTransform closeRect = close.GetComponent<RectTransform>();
-        closeRect.anchorMin = closeRect.anchorMax = closeRect.pivot = new Vector2(0.5f, 0f);
-        closeRect.sizeDelta = new Vector2(inner, rowHeight);
-        closeRect.anchoredPosition = new Vector2(0f, 30f);
-        close.onClick.AddListener(Close);
+        // Row: how many clicks one click counts as (payouts, tough-pixel hits and the combo all scale with it)
+        TMP_Text clickLabel = PixelUIKit.CreateText(font, content, "Click Count Label", clickCountText, fontSize,
+                                                    TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+        Place(clickLabel.rectTransform, 40f, y, inner * 0.6f - 10f);
+        clickCountField = PixelUIKit.CreateInputField(font, content, "Click Count Field", new Vector2(inner * 0.4f, rowHeight),
+                                                      boxColor, textColor, fontSize, "1");
+        clickCountField.contentType = TMP_InputField.ContentType.IntegerNumber;
+        clickCountField.SetTextWithoutNotify(clickCount.ToString());
+        clickCountField.onValueChanged.AddListener(text =>
+        {
+            int.TryParse(text.Trim(), out int parsed);
+            clickCount = Mathf.Clamp(parsed, 1, 1000000); // empty / invalid / 0 = a normal click
+            PixelClicker.DevClickCount = clickCount;
+            SetInt("ClickCount", clickCount);
+        });
+        Place(clickCountField.GetComponent<RectTransform>(), 40f + inner * 0.6f, y, inner * 0.4f);
+        y += rowHeight + 24f;
 
         // A fixed, smaller window: the rows scroll (mouse wheel / bar) when they don't fit.
         float limit = panelHeightLimit > 200f ? panelHeightLimit : 760f;
-        float wanted = scrollTop + y + 30f + rowHeight + 16f + 12f;
+        float wanted = scrollTop + y + 30f + 12f;
         float boxHeight = Mathf.Min(wanted, limit);
         boxRect.sizeDelta = new Vector2(panelSize.x, boxHeight);
-        PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, y, boxHeight - scrollTop - 30f - rowHeight - 16f);
+        PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, y, boxHeight - scrollTop - 30f);
 
         BuildTodoView(box.transform, tabsBottom, inner);
         toolsTab.onClick.AddListener(() => SetTab(0));
