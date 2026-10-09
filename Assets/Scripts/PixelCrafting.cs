@@ -489,6 +489,7 @@ public class PixelCrafting : MonoBehaviour
         float y = 20f;
 
         TMP_Text title = MakeLabel(windowObject.transform, "Title", windowTitle, titleFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
@@ -741,6 +742,7 @@ public class PixelCrafting : MonoBehaviour
 
         float titleH = titleFontSize * 1.4f;
         TMP_Text title = MakeLabel(bookObject.transform, "Title", bookTitle, titleFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);

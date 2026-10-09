@@ -436,6 +436,7 @@ public class PixelToggles : MonoBehaviour
         float y = 16f;
         TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
                                                TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        PixelUIKit.Caps(title);
         OneLine(title, titleFontSize, 14f);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
@@ -481,6 +482,7 @@ public class PixelToggles : MonoBehaviour
         {
             Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + groupLabels[i], groupLabels[i], Vector2.zero, groupColor,
                                                textColor, fontSize);
+            PixelUIKit.Caps(b);
             groupTabs[i] = b.gameObject;
             groupImages[i] = b.GetComponent<Image>();
             TMP_Text groupLabel = b.GetComponentInChildren<TMP_Text>();

@@ -617,6 +617,7 @@ public class PixelLog : MonoBehaviour
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
                                     TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
@@ -686,6 +687,7 @@ public class PixelLog : MonoBehaviour
         {
             Button tab = CreateButton(panelObject.transform, "Tab " + names[i], names[i],
                                       new Vector2(tabWidth, tabHeight), tabInactiveColor, tabTextColor, tabFontSize);
+            PixelUIKit.Caps(tab);
             tabImages[i] = tab.GetComponent<Image>();
 
             TMP_Text label = tab.GetComponentInChildren<TMP_Text>();

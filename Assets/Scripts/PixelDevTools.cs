@@ -638,6 +638,7 @@ public class PixelDevTools : MonoBehaviour
 
         TMP_Text t = PixelUIKit.CreateText(font, box.transform, "Title", title, titleFontSize,
                                            TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        PixelUIKit.Caps(t);
         RectTransform tr = t.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
@@ -660,9 +661,11 @@ public class PixelDevTools : MonoBehaviour
         float tabW = (inner - 10f) * 0.5f;
         Button toolsTab = PixelUIKit.CreateButton(font, box.transform, "Tools Tab", toolsTabText, new Vector2(tabW, rowHeight),
                                                   boxColor, textColor, fontSize);
+        PixelUIKit.Caps(toolsTab);
         Place(toolsTab.GetComponent<RectTransform>(), 40f, y, tabW);
         Button todoTab = PixelUIKit.CreateButton(font, box.transform, "Todo Tab", todoTabText, new Vector2(tabW, rowHeight),
                                                  boxColor, textColor, fontSize);
+        PixelUIKit.Caps(todoTab);
         Place(todoTab.GetComponent<RectTransform>(), 40f + tabW + 10f, y, tabW);
         toolsTabImage = toolsTab.GetComponent<Image>();
         todoTabImage = todoTab.GetComponent<Image>();

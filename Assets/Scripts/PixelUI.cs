@@ -963,6 +963,7 @@ public class PixelUI : MonoBehaviour
             float closeSpace = closeButtonSize > 0f ? closeButtonSize + panelPadding : 0f;
             titleLabel = MakeText(boxObject.transform, "Title", inventoryTitle, headerTitleSize,
                                   TextAlignmentOptions.Center, FontStyles.Bold, headerTextColor);
+            PixelUIKit.Caps(titleLabel);
             titleLabel.enableAutoSizing = true; // never clipped or wrapped, whatever the box width
             titleLabel.fontSizeMax = headerTitleSize;
             titleLabel.fontSizeMin = Mathf.Min(12f, headerTitleSize);
@@ -1208,6 +1209,7 @@ public class PixelUI : MonoBehaviour
             Button tab = MakeButton(boxObject.transform, "Tab " + names[i], names[i],
                                     new Vector2(tabWidth, subTabHeight), subTabInactiveColor, subTabTextColor,
                                     subTabFontSize > 0f ? subTabFontSize : 28f);
+            PixelUIKit.Caps(tab);
             subTabImages[i] = tab.GetComponent<Image>();
 
             RectTransform rt = tab.GetComponent<RectTransform>();
@@ -1221,7 +1223,9 @@ public class PixelUI : MonoBehaviour
             label.alignment = TextAlignmentOptions.Center;
             label.enableAutoSizing = true; // three tabs share the width
             label.fontSizeMax = subTabFontSize > 0f ? subTabFontSize : 28f;
-            label.fontSizeMin = 12f;
+            label.fontSizeMin = 8f;
+            label.margin = new Vector4(8f, 0f, 8f, 0f); // keeps "CONSUMABLES" off the button's edges
+            label.overflowMode = TextOverflowModes.Overflow;
 
             int captured = i;
             tab.onClick.AddListener(() =>

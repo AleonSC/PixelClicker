@@ -990,6 +990,7 @@ public class PixelBank : MonoBehaviour
         float y = 16f;
         TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
                                                TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);

@@ -60,6 +60,7 @@ public partial class PixelShop
 
         TMP_Text title = CreateText(currencyPanel.transform, "Title", string.IsNullOrEmpty(currencyTitle) ? "Currency" : currencyTitle,
                                     titleFontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);

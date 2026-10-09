@@ -107,6 +107,7 @@ public partial class PixelShop
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
                                     TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
@@ -166,6 +167,7 @@ public partial class PixelShop
         {
             Button b = CreateButton(go.transform, "Sub Tab " + names[i], names[i], Vector2.zero, tabInactiveColor, textColor,
                                     tabFontSize, out TMP_Text subLabel, out subTabImages[i]);
+            PixelUIKit.Caps(b);
             subLabel.enableAutoSizing = true;
             subLabel.fontSizeMax = tabFontSize;
             subLabel.fontSizeMin = Mathf.Min(14f, tabFontSize);
@@ -272,6 +274,7 @@ public partial class PixelShop
         {
             Button tabButton = CreateButton(bar.transform, "Tab " + names[i], names[i], Vector2.zero,
                                             tabInactiveColor, textColor, tabFontSize, out TMP_Text tabLabel, out tabImages[i]);
+            PixelUIKit.Caps(tabButton);
             // Four tabs share the width, so long names shrink to fit instead of overflowing.
             tabLabel.enableAutoSizing = true;
             tabLabel.fontSizeMax = tabFontSize;
@@ -374,6 +377,7 @@ public partial class PixelShop
 
         subTitle = CreateText(subPanelObject.transform, "Title", "", titleFontSize,
                               TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.Caps(subTitle);
         RectTransform tr = subTitle.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);

@@ -106,6 +106,18 @@ public static class PixelUIKit
         return go.GetComponent<Button>();
     }
 
+    /// <summary>Shows a label in capitals (a style, so the text itself and later changes stay as written).</summary>
+    public static void Caps(TMP_Text label)
+    {
+        if (label != null) label.fontStyle |= FontStyles.UpperCase;
+    }
+
+    /// <summary>Shows a button's label in capitals.</summary>
+    public static void Caps(Button button)
+    {
+        if (button != null) Caps(button.GetComponentInChildren<TMP_Text>(true));
+    }
+
     private static Sprite closeCross;
 
     /// <summary>A white, smooth-edged cross (drawn once in code) for close buttons.</summary>

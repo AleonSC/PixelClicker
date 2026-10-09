@@ -824,6 +824,7 @@ public class PixelPauseMenu : MonoBehaviour
         panelRect.anchoredPosition = Vector2.zero;
 
         TMP_Text title = MakeText(panel.transform, "Title", menuTitle, titleFontSize, FontStyles.Bold);
+        PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
@@ -921,6 +922,7 @@ public class PixelPauseMenu : MonoBehaviour
         rect.anchoredPosition = Vector2.zero;
 
         TMP_Text t = MakeText(panel.transform, "Title", title, titleFontSize, FontStyles.Bold);
+        PixelUIKit.Caps(t);
         RectTransform tr = t.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);

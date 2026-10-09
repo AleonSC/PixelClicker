@@ -194,3 +194,4 @@
 [2026-10-09 20:44 UTC] Toggles window uses a drop-down only while docked beside the shop (tab buttons otherwise); the first Ghost Hunt tip now appears next to the ghost and freezes time until Got it is pressed.
 [2026-10-09 20:46 UTC] Drop-down arrows are now a drawn downward triangle instead of a V letter.
 [2026-10-09 20:52 UTC] Close (X) buttons now show a drawn cross graphic instead of the letter X.
+[2026-10-09 20:56 UTC] All window headers and tab labels are now shown in capital letters, and the Inventory tabs shrink the text so CONSUMABLES fits.
