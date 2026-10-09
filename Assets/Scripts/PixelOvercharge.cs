@@ -26,6 +26,9 @@ public class PixelOvercharge : MonoBehaviour
     [Tooltip("How long the burst lasts (seconds): the clicks are spread evenly over it.")]
     [SerializeField] private float burstSeconds = 0.6f;
 
+    [Tooltip("Do the auto clicker's own clicks on an Electric pixel overcharge too? (The burst's clicks never do, so it can't chain by itself.)")]
+    [SerializeField] private bool triggerOnAutoClicks = true;
+
     [Tooltip("Does the burst need the Auto Clicker to be bought?")]
     [SerializeField] private bool needsAutoClicker = true;
 
@@ -92,7 +95,7 @@ public class PixelOvercharge : MonoBehaviour
 
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
-        if (!enableOvercharge || automatic || bursting || clicker == null) return;
+        if (!enableOvercharge || (automatic && !triggerOnAutoClicks) || bursting || clicker == null) return;
         if (!clicker.IsValidTierIndex(tierIndex) || clicker.Tiers[tierIndex].type != PixelClicker.PixelType.Electric) return;
 
         if (needsAutoClicker)
