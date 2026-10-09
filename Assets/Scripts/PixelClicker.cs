@@ -1481,9 +1481,16 @@ public class PixelClicker : MonoBehaviour
         // Starting Amount raises Count if it's higher.
         if (copy.count < copy.startingAmount) copy.count = copy.startingAmount;
 
-        List<PixelTier> list = new List<PixelTier>(tiers) { copy };
+        // The Dragon Cubes always stay at the END of the list, so shop tiers added later still follow the normal tiers
+        // (the tier guide and the unlock chain rely on that order).
+        List<PixelTier> list = new List<PixelTier>(tiers);
+        int insertAt = list.Count;
+        if (!copy.rareDrop)
+            for (int i = 0; i < list.Count; i++)
+                if (list[i].rareDrop) { insertAt = i; break; }
+        list.Insert(insertAt, copy);
         tiers = list.ToArray();
-        return tiers.Length - 1;
+        return insertAt;
     }
 
     private int[] devSpawnTiers; // dev tools: only these tiers spawn (locked ones too); null = normal spawning

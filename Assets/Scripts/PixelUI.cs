@@ -1534,9 +1534,11 @@ public class PixelUI : MonoBehaviour
             return string.Format(guideFormat, FormatAmount(remaining), tiers[i - 1].type);
         }
 
-        // All guided tiers are unlocked: the next one is sold in the shop.
-        if (stages < tiers.Length && !tiers[stages].unlocked &&
-            tiers[stages].unlockMode == PixelClicker.TierUnlockMode.ShopOnly)
+        // All guided tiers are unlocked: the next one is sold in the shop (rare drops like the Dragon Cubes don't count).
+        int next = stages;
+        while (next < tiers.Length && tiers[next].rareDrop) next++;
+        if (next < tiers.Length && !tiers[next].unlocked &&
+            tiers[next].unlockMode == PixelClicker.TierUnlockMode.ShopOnly)
             return shopGuideText;
 
         return null;

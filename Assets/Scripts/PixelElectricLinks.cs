@@ -166,83 +166,84 @@ public class PixelElectricLinks : MonoBehaviour
         float range = linkRange * Mathf.Max(0.1f, clicker.PixelBaseSize);
         float rangeSqr = range * range;
 
-        // Grow the network outwards from the devices: each step links the unlinked pixel that is closest to the network.
+        // Daisy chains: from each device a chain runs pixel to pixel (every pixel links to the nearest unlinked one in reach, then that
+        // one to the next...), and a new chain starts from the device while more pixels are in reach.
         List<Rigidbody> unlinked = new List<Rigidbody>(scratch);
-        while (devices.Count > 0 && unlinked.Count > 0 && links.Count < maxLinks)
+        foreach (PixelPlacedDevice device in devices)
         {
-            int bestIndex = -1;
-            float best = rangeSqr;
-            Link bestLink = null;
-            for (int i = 0; i < unlinked.Count; i++)
+            while (unlinked.Count > 0 && links.Count < maxLinks)
             {
-                Vector3 p = unlinked[i].position;
-                previous.TryGetValue(unlinked[i], out Link old);
-                foreach (PixelPlacedDevice d in devices)
+                int index = NearestUnlinked(DeviceAnchor(device), null, device, unlinked, previous, rangeSqr);
+                if (index < 0) break;
+                Rigidbody tail = Attach(unlinked, index, null, device, device);
+                while (links.Count < maxLinks)
                 {
-                    float dist = (DeviceAnchor(d) - p).sqrMagnitude;
-                    if (old != null && old.parentDevice == d) dist *= stickiness;
-                    if (dist < best)
-                    {
-                        best = dist; bestIndex = i;
-                        bestLink = new Link { body = unlinked[i], device = d, parentDevice = d, parentPoint = DeviceAnchor(d) };
-                    }
+                    index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
+                    if (index < 0) break;
+                    tail = Attach(unlinked, index, tail, null, device);
                 }
-                foreach (KeyValuePair<Rigidbody, Link> kv in links)
-                {
-                    float dist = (kv.Key.position - p).sqrMagnitude;
-                    if (old != null && old.parentBody == kv.Key) dist *= stickiness;
-                    if (dist < best)
-                    {
-                        best = dist; bestIndex = i;
-                        bestLink = new Link { body = unlinked[i], device = kv.Value.device, parentBody = kv.Key, parentPoint = kv.Key.position };
-                    }
-                }
-            }
-            if (bestIndex < 0) break;
-            links[bestLink.body] = bestLink;
-            unlinked.RemoveAt(bestIndex);
-
-            if (credited.Add(bestLink.body) && secondsPerPixel > 0f && bestLink.device != null)
-            {
-                bestLink.device.AddSeconds(secondsPerPixel); // +1 s for every electric pixel that links up
-                PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f);
             }
         }
 
-        // Electric pixels out of reach of any device still arc to each other in chains of their own.
+        // Electric pixels out of reach of any device still daisy-chain to each other: a chain grows from both of its ends.
         List<Rigidbody> chainSeeds = new List<Rigidbody>();
         while (unlinked.Count > 0 && links.Count < maxLinks)
         {
-            Rigidbody seed = unlinked[0];
+            Rigidbody seed = unlinked[0], head = seed, tail = seed;
             unlinked.RemoveAt(0);
-            List<Rigidbody> chain = new List<Rigidbody> { seed };
+            int length = 1;
             while (links.Count < maxLinks)
             {
-                int bestIndex = -1, bestParent = -1;
-                float best = rangeSqr;
-                for (int i = 0; i < unlinked.Count; i++)
-                {
-                    previous.TryGetValue(unlinked[i], out Link old);
-                    for (int c = 0; c < chain.Count; c++)
-                    {
-                        float dist = (chain[c].position - unlinked[i].position).sqrMagnitude;
-                        if (old != null && old.parentBody == chain[c]) dist *= stickiness;
-                        if (dist < best) { best = dist; bestIndex = i; bestParent = c; }
-                    }
-                }
-                if (bestIndex < 0) break;
-                Rigidbody joiner = unlinked[bestIndex];
-                links[joiner] = new Link { body = joiner, parentBody = chain[bestParent], parentPoint = chain[bestParent].position };
-                chain.Add(joiner);
-                unlinked.RemoveAt(bestIndex);
+                int tailIndex = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
+                int headIndex = head == tail ? -1 : NearestUnlinked(head.position, head, null, unlinked, previous, rangeSqr);
+                if (tailIndex < 0 && headIndex < 0) break;
+                bool useHead = headIndex >= 0 && (tailIndex < 0 ||
+                    (unlinked[headIndex].position - head.position).sqrMagnitude < (unlinked[tailIndex].position - tail.position).sqrMagnitude);
+                if (useHead) head = Attach(unlinked, headIndex, head, null, null);
+                else tail = Attach(unlinked, tailIndex, tail, null, null);
+                length++;
             }
-            if (chain.Count >= 2) chainSeeds.Add(seed); // a lone pixel is not a chain
+            if (length >= 2) chainSeeds.Add(seed); // a lone pixel is not a chain
         }
 
         // Everything that is part of a chain (linked to a device or to another Electric pixel) gets extra despawn time, once.
         foreach (KeyValuePair<Rigidbody, Link> kv in links) GiveChainLife(kv.Key);
         foreach (Rigidbody seed in chainSeeds) GiveChainLife(seed);
         PruneCredits();
+    }
+
+    /// <summary>The nearest unlinked pixel to 'from' within reach (a pixel keeps its old partner while that is still in reach), or -1.</summary>
+    private int NearestUnlinked(Vector3 from, Rigidbody fromBody, PixelPlacedDevice fromDevice, List<Rigidbody> unlinked,
+                                Dictionary<Rigidbody, Link> previous, float rangeSqr)
+    {
+        int best = -1;
+        float bestDist = rangeSqr;
+        for (int i = 0; i < unlinked.Count; i++)
+        {
+            float dist = (unlinked[i].position - from).sqrMagnitude;
+            if (previous.TryGetValue(unlinked[i], out Link old) && old != null &&
+                ((fromBody != null && old.parentBody == fromBody) || (fromDevice != null && old.parentDevice == fromDevice)))
+                dist *= stickiness;
+            if (dist < bestDist) { bestDist = dist; best = i; }
+        }
+        return best;
+    }
+
+    /// <summary>Links unlinked[index] to its partner (a pixel or a device) as the next link of a chain, pays the device its second, and returns the pixel.</summary>
+    private Rigidbody Attach(List<Rigidbody> unlinked, int index, Rigidbody parentBody, PixelPlacedDevice parentDevice, PixelPlacedDevice rootDevice)
+    {
+        Rigidbody body = unlinked[index];
+        unlinked.RemoveAt(index);
+        PixelPlacedDevice root = rootDevice;
+        Vector3 point = parentBody != null ? parentBody.position : parentDevice != null ? DeviceAnchor(parentDevice) : body.position;
+        links[body] = new Link { body = body, device = root, parentBody = parentBody, parentDevice = parentDevice, parentPoint = point };
+
+        if (root != null && credited.Add(body) && secondsPerPixel > 0f)
+        {
+            root.AddSeconds(secondsPerPixel); // +1 s for every electric pixel that links up
+            PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f);
+        }
+        return body;
     }
 
     private void GiveChainLife(Rigidbody body)
