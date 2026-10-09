@@ -2807,6 +2807,20 @@ public class OldPixelDespawn : MonoBehaviour
         if (!despawning && lifetime > 0f) lifetime += seconds;
     }
 
+    /// <summary>Replaces the lifetime (seconds until it starts to vanish; the time already lived still counts).</summary>
+    public void SetLifetime(float seconds)
+    {
+        if (!despawning && seconds > 0f) lifetime = seconds;
+    }
+
+    /// <summary>Stops the lifetime counting down for a moment (called every physics step by a gravity well that has it in range).</summary>
+    public void KeepAlive()
+    {
+        keepUntil = Time.time + 0.25f;
+    }
+
+    private float keepUntil;
+
     /// <summary>True once it has started swelling and shrinking away.</summary>
     public bool IsDespawning => despawning;
     private Vector3 baseScale;
@@ -2837,7 +2851,7 @@ public class OldPixelDespawn : MonoBehaviour
     {
         if (!despawning)
         {
-            if (Held || Frozen || DevNoDespawn || HoldAll) return;
+            if (Held || Frozen || DevNoDespawn || HoldAll || Time.time < keepUntil) return;
             age += Time.deltaTime;
             if (lifetime > 0f && age >= lifetime) Begin();
             return;

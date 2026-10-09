@@ -148,6 +148,10 @@ public class PixelLook
     public float wellRadius = 3.5f;
 
     [Min(0f)]
+    [Tooltip("Seconds the gravity-well pixel itself lasts before it vanishes (0 = 300, i.e. 5 minutes). Other old pixels inside its pull radius don't age while it is working.")]
+    public float wellLifetime = 300f;
+
+    [Min(0f)]
     [Tooltip("How fast nearby old pixels are dragged towards it (world units per second). The drag is constant inside the ring and overcomes the floor's friction.")]
     public float wellPullSpeed = 1.6f;
 
@@ -707,6 +711,13 @@ public class OldPixelGravityWell : MonoBehaviour
         ApplyRingColour();
     }
 
+    private void Start()
+    {
+        // The well pixel lives much longer than a normal old pixel.
+        OldPixelDespawn own = GetComponent<OldPixelDespawn>();
+        if (own != null) own.SetLifetime(look != null && look.wellLifetime > 0f ? look.wellLifetime : 300f);
+    }
+
     private void ReadSettings()
     {
         if (look == null) return;
@@ -760,7 +771,9 @@ public class OldPixelGravityWell : MonoBehaviour
 
             Vector3 to = centre - other.position;
             float distance = to.magnitude;
-            if (distance > radius || distance < 0.08f) continue;
+            if (distance > radius) continue;
+            if (despawn != null) despawn.KeepAlive(); // inside the pull radius: it doesn't age while the well works
+            if (distance < 0.08f) continue;
 
             // A constant drag: whatever the pixel is doing (even sitting on the floor against its friction), its speed towards
             // the well is brought up to the drag speed. Speed it already has towards the well is kept.
