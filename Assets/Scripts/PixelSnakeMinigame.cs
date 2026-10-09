@@ -286,6 +286,24 @@ public class PixelSnakeMinigame : PixelMinigame
         arenaMin = min - new Vector2(margin, margin);
         arenaMax = max + new Vector2(margin, margin);
 
+        // Safeguard: the snake never leaves the screen. Cut the area down to the part of the floor that is in view.
+        Plane floor = new Plane(Vector3.up, new Vector3(0f, groundY, 0f));
+        Vector2 viewMin = new Vector2(float.MaxValue, float.MaxValue), viewMax = new Vector2(float.MinValue, float.MinValue);
+        bool viewOk = true;
+        foreach (Vector2 corner in new[] { new Vector2(0.07f, 0.2f), new Vector2(0.93f, 0.2f), new Vector2(0.07f, 0.78f), new Vector2(0.93f, 0.78f) })
+        {
+            Ray ray = cam.ViewportPointToRay(new Vector3(corner.x, corner.y, 0f));
+            if (!floor.Raycast(ray, out float enter)) { viewOk = false; break; }
+            Vector3 hit = ray.GetPoint(enter);
+            viewMin = Vector2.Min(viewMin, new Vector2(hit.x, hit.z));
+            viewMax = Vector2.Max(viewMax, new Vector2(hit.x, hit.z));
+        }
+        if (viewOk)
+        {
+            Vector2 cutMin = Vector2.Max(arenaMin, viewMin), cutMax = Vector2.Min(arenaMax, viewMax);
+            if (cutMax.x - cutMin.x > unit * 3f && cutMax.y - cutMin.y > unit * 3f) { arenaMin = cutMin; arenaMax = cutMax; }
+        }
+
         // Floor directions as the camera sees them.
         Vector3 forward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
         if (forward.sqrMagnitude < 0.0001f) forward = Vector3.forward;

@@ -1476,7 +1476,8 @@ public class PixelClicker : MonoBehaviour
         Vector3 liveBase = baseScale;
         if (activeLook != null && activeLook.wobble && allowPulsing)
             liveBase = Vector3.Scale(baseScale, PixelWobble.Scale(time, activeLook.wobbleAmount, activeLook.wobbleSpeed, 0f));
-        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount));
+        cubeShrinkCurrent = Mathf.MoveTowards(cubeShrinkCurrent, cubeShrinkTarget, Time.unscaledDeltaTime / Mathf.Max(0.05f, cubeShrinkSeconds));
+        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount) * cubeShrinkCurrent);
 
         if (pulseEnabled && allowPulsing && pulseBrightness)
         {
@@ -1527,6 +1528,18 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+
+    private float cubeShrinkCurrent = 1f, cubeShrinkTarget = 1f, cubeShrinkSeconds = 0.5f;
+
+    /// <summary>
+    /// Smoothly shrinks the clickable cube to 'scale' times its size (1 = normal) over 'seconds'. Minigames that need the screen
+    /// (the Sorting Race) use it so the cube doesn't cover their pieces, then call it again with 1 to bring it back.
+    /// </summary>
+    public void SetCubeShrink(float scale, float seconds = 0.5f)
+    {
+        cubeShrinkTarget = Mathf.Clamp(scale, 0.02f, 1f);
+        cubeShrinkSeconds = seconds;
+    }
 
     private PixelLook activeLook;          // the look of the tier the cube currently shows
     private GameObject liveExtras;         // outline / dark-matter core on the live cube

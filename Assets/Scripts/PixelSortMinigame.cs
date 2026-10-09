@@ -91,6 +91,14 @@ public class PixelSortMinigame : PixelMinigame
     [Tooltip("The selected pixel grows by this much and hops a little.")]
     [SerializeField] private float selectedScale = 1.3f;
 
+    [Range(0.05f, 1f)]
+    [Tooltip("During a race the cube shrinks to this fraction of its size so it doesn't cover the grid, then grows back afterwards (1 = don't shrink it).")]
+    [SerializeField] private float cubeShrinkScale = 0.2f;
+
+    [Range(0.2f, 1f)]
+    [Tooltip("Safeguard: the grid is never wider than this fraction of the screen width (and about 0.6 times that tall); it packs the pixels closer instead.")]
+    [SerializeField] private float maxScreenFraction = 0.6f;
+
     [Min(10f)]
     [Tooltip("A pixel can be clicked within this many pixels of its centre (at 1080p screen height).")]
     [SerializeField] private float clickRadiusPixels = 70f;
@@ -308,6 +316,7 @@ public class PixelSortMinigame : PixelMinigame
             p.tf.rotation = Quaternion.identity;
         }
 
+        if (cubeShrinkScale < 0.999f) clicker.SetCubeShrink(cubeShrinkScale, 0.5f); // the cube steps out of the way
         selected = -1;
         arranging = true;
         arrangeT = 0f;
@@ -344,13 +353,18 @@ public class PixelSortMinigame : PixelMinigame
             int rows = Mathf.CeilToInt(count / (float)cols);
             slots = new Vector3[count];
             bool fits = true;
+            Vector2 lo = new Vector2(float.MaxValue, float.MaxValue), hi = new Vector2(float.MinValue, float.MinValue);
             for (int i = 0; i < count; i++)
             {
                 int r = i / cols, c = i % cols;
                 slots[i] = centre + right * ((c - (cols - 1) * 0.5f) * step) + forward * (((rows - 1) * 0.5f - r) * step);
                 Vector3 v = cam.WorldToViewportPoint(slots[i]);
                 if (v.z <= 0f || v.x < 0.06f || v.x > 0.94f || v.y < 0.2f || v.y > 0.85f) fits = false;
+                lo = Vector2.Min(lo, new Vector2(v.x, v.y));
+                hi = Vector2.Max(hi, new Vector2(v.x, v.y));
             }
+            // Never take over more than a fraction of the screen.
+            if (hi.x - lo.x > maxScreenFraction || hi.y - lo.y > maxScreenFraction * 0.6f) fits = false;
             if (fits) return;
             step *= 0.88f; // too wide for the screen: pack them closer
         }
@@ -475,6 +489,7 @@ public class PixelSortMinigame : PixelMinigame
         activeRound = false;
         arranging = false;
         TakeoverActive = false;
+        clicker.SetCubeShrink(1f, 0.6f); // the cube grows back
         OldPixelDespawn.HoldAll = false;
         if (setBlock) { PixelClicker.ExternalClickBlock = PixelBank.HoseOn; setBlock = false; }
 
