@@ -541,11 +541,11 @@ public class PixelConsumables : MonoBehaviour
                     devices[devices.Length - 1] = CreateDefaultSorter();
                     added = true;
                 }
-                foreach (KeyValuePair<DeviceKind, Func<Device>> extra in new[]
+                foreach (System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>> extra in new[]
                 {
-                    new KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
-                    new KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
-                    new KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
                 })
                 {
                     DeviceKind wanted = extra.Key;
