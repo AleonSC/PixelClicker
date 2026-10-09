@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles Assets/Scripts against Unity's engine DLLs to catch compile errors without Unity.
+       Run ./check.sh rather than building this directly. CheckVariant picks the #if defines. -->
+  <PropertyGroup>
+    <AssemblyName>PixelClicker.Check</AssemblyName>
+    <CheckVariant Condition="'$(CheckVariant)' == ''">Editor</CheckVariant>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).build/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(CheckVariant)/</IntermediateOutputPath>
+    <OutputPath>$(BaseOutputPath)$(CheckVariant)/</OutputPath>
+    <UnityDefines>UNITY_2021_3_OR_NEWER;UNITY_STANDALONE;UNITY_64</UnityDefines>
+  </PropertyGroup>
+  <!-- Editor play mode with the old Input Manager. -->
+  <PropertyGroup Condition="'$(CheckVariant)' == 'Editor'">
+    <DefineConstants>$(UnityDefines);UNITY_EDITOR;ENABLE_LEGACY_INPUT_MANAGER</DefineConstants>
+  </PropertyGroup>
+  <!-- Player build with only the new Input System. -->
+  <PropertyGroup Condition="'$(CheckVariant)' == 'PlayerInputSystem'">
+    <DefineConstants>$(UnityDefines);ENABLE_INPUT_SYSTEM</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Scripts/**/*.cs" />
+    <ProjectReference Include="Stubs/Stubs.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(CheckVariant)' == 'Editor'">
+    <Reference Include="UnityEditor" HintPath="$(PkgUnity3D_SDK)/lib/UnityEditor.dll" Private="false" />
+    <!-- UnityEditor.dll refers to the old single UnityEngine assembly; this facade forwards to the modules. -->
+    <Reference Include="UnityEngine" HintPath="$(PkgUnityEngine_Modules)/lib/netstandard2.0/UnityEngine.dll" Private="false" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Hand-written stand-ins for the Unity packages that are not on NuGet
+       (uGUI, EventSystems, TextMeshPro, Input System). Only the members the game uses. -->
+  <PropertyGroup>
+    <AssemblyName>PixelClicker.Stubs</AssemblyName>
+    <DefineConstants>UNITY_EDITOR</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>

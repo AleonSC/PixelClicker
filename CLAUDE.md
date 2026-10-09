@@ -1,6 +1,6 @@
 # Pixel Clicker – project notes
 
-3D incremental clicker in Unity (C#, TextMeshPro). All code lives in `Assets/Scripts/`. Everything UI is built at runtime (no prefabs/scene UI required). Nothing has been compiled or run by Claude – the user tests in Unity.
+3D incremental clicker in Unity (C#, TextMeshPro). All code lives in `Assets/Scripts/`. Everything UI is built at runtime (no prefabs/scene UI required). Claude cannot run the game – the user tests in Unity. **Before every commit, run `tools/CompileCheck/check.sh`** (compiles `Assets/Scripts` against Unity 2021.3 engine DLLs + hand-written uGUI/TMP/Input System stubs, in an Editor and a Player+Input System variant; see `tools/CompileCheck/README.md`). Only push when it passes. Unity-6-only `#if` branches are not checked; a false error on a uGUI/TMP member means the stub lacks it - add it to `tools/CompileCheck/Stubs/` only if it really exists in Unity.
 
 ## Core architecture
 

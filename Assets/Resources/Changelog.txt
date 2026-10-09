@@ -44,3 +44,4 @@
 [2026-10-07 12:52 UTC] Restart now returns to the Play screen like a fresh launch, and the Log/Inventory intro tips begin a split second after the game comes into focus.
 [2026-10-07 12:56 UTC] Noted the agreed next plan (optimization review, then handoff document) in CLAUDE.md.
 [2026-10-07 12:56 UTC] Noted in CLAUDE.md that the changelog needs clearing after the latest build.
+[2026-10-09 12:01 UTC] Added a compile check so script errors can be caught before the project is opened in Unity (developer tool, no change to the game).
