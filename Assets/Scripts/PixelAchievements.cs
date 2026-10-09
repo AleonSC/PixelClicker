@@ -104,6 +104,9 @@ public class PixelAchievements : MonoBehaviour
     [Tooltip("Add the two usage achievements: drink every kind of potion once, and place every kind of device once.")]
     [SerializeField] private bool addUsageAchievements = true;
 
+    [Tooltip("Add one achievement per pet type (earned by finding that pixel's pet).")]
+    [SerializeField] private bool addPetAchievements = true;
+
     [Tooltip("Add a tiered 'Collect' achievement for any pixel type that has none (e.g. when a new pixel type is added to the game).")]
     [SerializeField] private bool addDefaultAchievements = true;
 
@@ -351,6 +354,7 @@ public class PixelAchievements : MonoBehaviour
             ResetAll();
         }
         RegisterUsageAchievements();
+        RegisterPetAchievements();
         BuildPopup();
         Evaluate(true); // anything already earned (e.g. typed-in totals) is granted quietly
     }
@@ -521,6 +525,26 @@ public class PixelAchievements : MonoBehaviour
 
     // ------------------------------------------------------------------
     // (continued above: usage achievements)
+
+    /// <summary>One achievement per pet type: "{Pixel} Pet" is earned by finding that pixel's pet (PixelPets).</summary>
+    private void RegisterPetAchievements()
+    {
+        if (!addPetAchievements || clicker == null) return;
+        foreach (PixelClicker.PixelTier tier in clicker.Tiers)
+        {
+            PixelClicker.PixelType type = tier.type;
+            Register(new Achievement
+            {
+                id = "pet_" + type,
+                title = tier.displayName + " Pet",
+                description = "Find the " + tier.displayName + " Pet. Clicking a pixel very rarely gives you its pet.",
+                pixelType = type,
+                tiers = new double[0],
+                target = 1,
+                iconColor = new Color(tier.color.r, tier.color.g, tier.color.b, 1f),
+            }, () => PixelPets.Instance != null && PixelPets.Instance.IsOwned(type) ? 1d : 0d);
+        }
+    }
 
     private void RegisterFeedAchievements(PixelStats stats)
     {

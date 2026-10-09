@@ -158,3 +158,4 @@
 [2026-10-09 16:34 UTC] The Pac-Man floor's mazes now join up seamlessly: no dark gaps between them, and tunnels on all four sides lead into the neighbouring mazes.
 [2026-10-09 16:40 UTC] Pets now show in the Stats screen (a Pets section), and the Vacuum Pet sucks up nearby old pixels for no payout, only a stat and a small growing number above it.
 [2026-10-09 16:57 UTC] Glass old pixels are back to how they were; instead the Glass Pet now randomly shatters while moving and its shards fly back together to reform it.
+[2026-10-09 18:11 UTC] Added an achievement for each type of pet, earned by finding that pixel's pet.
