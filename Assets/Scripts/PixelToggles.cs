@@ -150,7 +150,7 @@ public class PixelToggles : MonoBehaviour
     private TMP_Text emptyLabel;
     private float hintTimer;
     private static PixelToggles instance;
-    private Image[] groupImages;
+    private TMP_Dropdown groupDropdown;
     private ScrollRect scroll;
     private RectTransform content;
     private GameObject bar;
@@ -319,8 +319,7 @@ public class PixelToggles : MonoBehaviour
 
     private void Refresh()
     {
-        for (int i = 0; i < groupImages.Length; i++)
-            groupImages[i].color = i == (int)current ? groupActiveColor : groupColor;
+        if (groupDropdown != null && groupDropdown.value != (int)current) groupDropdown.SetValueWithoutNotify((int)current);
 
         List<Entry> entries = Collect(current);
         while (rows.Count < entries.Count) rows.Add(BuildRow());
@@ -445,37 +444,27 @@ public class PixelToggles : MonoBehaviour
         close.onClick.AddListener(Close);
         y += titleFontSize * 1.4f + 14f;
 
-        // --- The three group buttons.
-        groupImages = new Image[GroupCount];
+        // --- The group drop-down (Pixels / Upgrades / Minigames / Pets).
+        List<string> groupLabels = new List<string>();
         for (int i = 0; i < GroupCount; i++)
+            groupLabels.Add(groupNames != null && i < groupNames.Length && !string.IsNullOrEmpty(groupNames[i]) ? groupNames[i] : ((Group)i).ToString());
+        groupDropdown = PixelUIKit.CreateDropdown(font, windowObject.transform, "Group Dropdown", new Vector2(0f, 60f), groupColor,
+                                                  new Color(groupColor.r * 0.8f, groupColor.g * 0.8f, groupColor.b * 0.8f, 1f), textColor, fontSize);
+        groupDropdown.ClearOptions();
+        groupDropdown.AddOptions(groupLabels);
+        groupDropdown.SetValueWithoutNotify((int)current);
+        RectTransform gr = groupDropdown.GetComponent<RectTransform>();
+        gr.anchorMin = new Vector2(0f, 1f);
+        gr.anchorMax = new Vector2(1f, 1f);
+        gr.pivot = new Vector2(0.5f, 1f);
+        gr.offsetMin = new Vector2(20f, -(y + 60f));
+        gr.offsetMax = new Vector2(-20f, -y);
+        groupDropdown.onValueChanged.AddListener(value =>
         {
-            string name = groupNames != null && i < groupNames.Length && !string.IsNullOrEmpty(groupNames[i]) ? groupNames[i] : ((Group)i).ToString();
-            Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + name, name, Vector2.zero, groupColor,
-                                               textColor, fontSize);
-            groupImages[i] = b.GetComponent<Image>();
-            TMP_Text groupLabel = b.GetComponentInChildren<TMP_Text>();
-            if (groupLabel != null) // four buttons share the width: shrink a long name to fit instead of breaking it
-            {
-                groupLabel.enableAutoSizing = true;
-                groupLabel.fontSizeMax = fontSize;
-                groupLabel.fontSizeMin = 12f;
-                groupLabel.margin = new Vector4(4f, 0f, 4f, 0f);
-            }
-            RectTransform br = b.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(i / (float)GroupCount, 1f);
-            br.anchorMax = new Vector2((i + 1) / (float)GroupCount, 1f);
-            br.pivot = new Vector2(0.5f, 1f);
-            br.offsetMin = new Vector2(i == 0 ? 20f : 4f, -(y + 60f));
-            br.offsetMax = new Vector2(i == GroupCount - 1 ? -20f : -4f, -y);
-
-            int captured = i;
-            b.onClick.AddListener(() =>
-            {
-                current = (Group)captured;
-                content.anchoredPosition = Vector2.zero;
-                Refresh();
-            });
-        }
+            current = (Group)value;
+            content.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
         y += 60f + 16f;
 
         // --- The list of switches.
@@ -567,9 +556,12 @@ public class PixelToggles : MonoBehaviour
         shopRect.GetWorldCorners(c); // screen pixels (overlay canvas)
         float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
         float width = (Screen.width - shopRight) / scale - gapToShop - inset;
-        width = Mathf.Max(minWidthBesideShop, width);
+        // Same width as the Currency panel on the shop's other side, mirrored (same gap).
+        if (shopRef != null) width = shopRef.CurrencyPanelWidth;
+        float gap = shopRef != null ? shopRef.CurrencyPanelGap : gapToShop;
+        float rightEdgeFromScreenRight = (Screen.width - shopRight) / scale - gap - width; // flush against the shop, mirroring the currency panel
         wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
-        wr.anchoredPosition = new Vector2(-inset, ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+        wr.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdgeFromScreenRight), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
     }
 
     private PixelDockedButton dock;

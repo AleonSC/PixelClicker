@@ -608,6 +608,12 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Gap between the currency panel and the shop window.")]
     [SerializeField] private float currencyPanelGap = 10f;
 
+    /// <summary>Width of the currency panel (the Toggles window copies it).</summary>
+    public float CurrencyPanelWidth => currencyPanelWidth > 40f ? currencyPanelWidth : 380f;
+
+    /// <summary>Gap between the shop and its currency panel.</summary>
+    public float CurrencyPanelGap => Mathf.Max(0f, currencyPanelGap);
+
     [Tooltip("Height of each currency row. 0 = 84.")]
     [SerializeField] private float currencyRowHeight = 84f;
 

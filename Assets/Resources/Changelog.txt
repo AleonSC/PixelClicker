@@ -184,3 +184,4 @@
 [2026-10-09 20:03 UTC] Old pixels are no longer squeezed into the tiny close-up view during the camera intro, which made them jump around after loading.
 [2026-10-09 20:06 UTC] The Toggles button now disappears while its window is open (the window takes the button's spot on the right edge) and slowly fades back in, already tucked away, when it closes.
 [2026-10-09 20:08 UTC] With the shop open, the Toggles window is as tall as the shop and fills the space between it and the screen edge instead of overlapping it.
+[2026-10-09 20:12 UTC] The Toggles window's Pixels / Upgrades / Minigames / Pets tabs are now a drop-down, and beside the shop the window is as wide as the Currency panel.
