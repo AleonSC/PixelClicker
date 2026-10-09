@@ -429,6 +429,7 @@ public class PixelToggles : MonoBehaviour
         float y = 16f;
         TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
                                                TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        OneLine(title, titleFontSize, 14f);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
@@ -478,11 +479,12 @@ public class PixelToggles : MonoBehaviour
         TMP_Text empty = PixelUIKit.CreateText(font, windowObject.transform, "Empty", emptyText.ToUpperInvariant(), fontSize * 0.9f,
                                                TextAlignmentOptions.Center, FontStyles.Bold,
                                                new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        OneLine(empty, fontSize * 0.9f, 8f);
         RectTransform er = empty.rectTransform; // capitals, centred over the whole list area
         er.anchorMin = Vector2.zero;
         er.anchorMax = Vector2.one;
-        er.offsetMin = new Vector2(40f, 14f);
-        er.offsetMax = new Vector2(-40f, -y);
+        er.offsetMin = new Vector2(14f, 14f);
+        er.offsetMax = new Vector2(-14f, -y);
         emptyObject = empty.gameObject;
         emptyLabel = empty;
 
@@ -528,6 +530,20 @@ public class PixelToggles : MonoBehaviour
     }
 
     private void Close() => windowObject.SetActive(false);
+
+    /// <summary>Keeps a text on one line, shrinking it to fit the width.</summary>
+    private static void OneLine(TMP_Text t, float maxSize, float minSize)
+    {
+        t.enableAutoSizing = true;
+        t.fontSizeMax = maxSize;
+        t.fontSizeMin = minSize;
+        t.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        t.enableWordWrapping = false;
+#endif
+    }
 
     private PixelShop shopRef;
     [Tooltip("Smallest width the window shrinks to when it is squeezed in beside the open shop.")]
