@@ -546,13 +546,20 @@ public class PixelPets : MonoBehaviour
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return null;
         Ray ray = cam.ScreenPointToRay(PointerPosition());
+
+        // Where the cursor meets the clickable cube: a pet behind it (wandering under it) must not steal the click.
+        float cubeDistance = float.PositiveInfinity;
+        if (clicker.PixelTransform != null)
+            foreach (RaycastHit h in Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Collide))
+                if (h.transform.IsChildOf(clicker.PixelTransform) && h.distance < cubeDistance) cubeDistance = h.distance;
+
         Pet best = null;
         float bestDistance = float.PositiveInfinity;
         foreach (Pet p in pets)
         {
             if (p.body == null || !p.body.activeInHierarchy) continue;
             Collider c = p.body.GetComponent<Collider>();
-            if (c != null && c.Raycast(ray, out RaycastHit hit, 1000f) && hit.distance < bestDistance)
+            if (c != null && c.Raycast(ray, out RaycastHit hit, 1000f) && hit.distance < bestDistance && hit.distance < cubeDistance)
             {
                 best = p;
                 bestDistance = hit.distance;

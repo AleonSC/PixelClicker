@@ -162,3 +162,4 @@
 [2026-10-09 18:23 UTC] Closing the shop now re-opens the Inventory (or Log) that was open before the shop was opened.
 [2026-10-09 18:27 UTC] Fixed the pet found popup's text overlapping its button (taller box, text shrinks to fit).
 [2026-10-09 18:28 UTC] An active pet now makes its pixel type spawn twice as often.
+[2026-10-09 18:33 UTC] Pets that wander behind the clickable pixel no longer steal its clicks: the cube wins whenever it is in front of the pet.
