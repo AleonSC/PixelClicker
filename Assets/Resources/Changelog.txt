@@ -133,3 +133,4 @@
 [2026-10-09 13:57 UTC] The intro "Got it" boxes now sit right beside the window they explain (the Log tip next to the Log, the Inventory tip to the right of the Inventory) instead of overlapping or floating far away.
 [2026-10-09 14:03 UTC] Removed the yellow "Ultra Pixels" line from the Inventory (the hover tooltip shows it); the "Click X more pixels" tier guide now stays hidden until the intro tips have been closed.
 [2026-10-09 14:04 UTC] Added horizon fog: the floor now fades into the sky's horizon colour towards its far edge instead of cutting off, with a Horizon fog switch in Settings > Display.
+[2026-10-09 14:41 UTC] The Log's Goals tab now shows 'Purchase the RGB Pack' once the Shop appears, with a bar that fills as you save up its price, until you buy it.
