@@ -841,7 +841,7 @@ public partial class PixelShop : MonoBehaviour
         // Only the old test values are replaced, not anything you typed.
         if (packDataVersion < 4)
         {
-            int luminescentIndex = packs.FindIndex(p => Rewards(p, PixelClicker.PixelType.Luminescent));
+            int luminescentIndex = Array.FindIndex(packs, p => Rewards(p, PixelClicker.PixelType.Luminescent));
             foreach (ShopPack pack in packs)
             {
                 if (!Rewards(pack, PixelClicker.PixelType.Electric)) continue;

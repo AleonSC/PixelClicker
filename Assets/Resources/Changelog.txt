@@ -208,3 +208,4 @@
 [2026-10-09 21:40 UTC] Overcharge now also triggers from the auto clicker clicking an Electric pixel (the burst itself cannot trigger another).
 [2026-10-09 21:42 UTC] The Electric pixel can now be switched on and off in the Toggles window (Pixels tab).
 [2026-10-09 21:43 UTC] The Electric pixel is now a full part of the game: a real shop price (2M Obsidian + 400K Luminescent, needs the Luminescent pack), rarer spawns, and it is explained in How to Play (potions, crafting, pets, achievements and stats already cover it automatically).
+[2026-10-09 21:43 UTC] Fixed a compile error in the Electric pack migration.
