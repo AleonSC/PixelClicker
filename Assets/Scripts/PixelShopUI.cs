@@ -545,6 +545,7 @@ public partial class PixelShop
         {
             row.arrowButton = CreateButton(rowGo.transform, "Upgrades Arrow", upgradesArrowText, upgradesArrowSize,
                                            upgradesArrowColor, textColor, buyFontSize, out _, out _);
+            PixelUIKit.UseRightTriangle(row.arrowButton.gameObject, row.arrowButton.GetComponentInChildren<TMP_Text>(true), textColor, upgradesArrowSize);
             RectTransform ar = row.arrowButton.GetComponent<RectTransform>();
             ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0.5f);
             ar.anchoredPosition = new Vector2(-(20f + buyButtonSize.x + 10f), 0f);

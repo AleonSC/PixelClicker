@@ -149,6 +149,24 @@ public static class PixelUIKit
         return closeCross;
     }
 
+    /// <summary>Swaps a button's text for a drawn triangle pointing right (the down triangle turned a quarter), tinted with 'color'.</summary>
+    public static void UseRightTriangle(GameObject button, TMP_Text label, Color color, Vector2 buttonSize)
+    {
+        if (label != null) label.gameObject.SetActive(false);
+        GameObject g = new GameObject("Triangle", typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(button.transform, false);
+        Image im = g.GetComponent<Image>();
+        im.sprite = DownTriangleSprite();
+        im.color = color;
+        im.raycastTarget = false;
+        RectTransform r = g.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+        float s = Mathf.Min(buttonSize.x, buttonSize.y) * 0.42f;
+        r.sizeDelta = new Vector2(s, s * 0.7f);
+        r.localRotation = Quaternion.Euler(0f, 0f, 90f); // down -> right
+        r.anchoredPosition = Vector2.zero;
+    }
+
     /// <summary>Swaps a close button's "X" letter for the drawn cross, tinted with the label colour.</summary>
     public static void UseCloseGlyph(GameObject button, TMP_Text label, Color color, Vector2 buttonSize)
     {
