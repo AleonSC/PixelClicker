@@ -41,6 +41,12 @@ public class PixelCrafting : MonoBehaviour
         [Tooltip("How many it costs.")]
         public int amount = 1;
 
+        /// <summary>Runtime only: a scaled amount that replaces <see cref="amount"/> (see PixelCrafting's price settings). -1 = none.</summary>
+        [NonSerialized] public double amountOverride = -1d;
+
+        /// <summary>What this ingredient costs right now.</summary>
+        public double Amount => amountOverride >= 0d ? amountOverride : amount;
+
         public Ingredient() { }
 
         public Ingredient(ItemKind kind, PixelClicker.PixelType type, int amount)
@@ -113,6 +119,14 @@ public class PixelCrafting : MonoBehaviour
     [Min(1)]
     [Tooltip("Amount of Glass pixels needed by the built-in potion recipes.")]
     [SerializeField] private int defaultGlassCost = 20;
+
+    [Header("Prices")]
+    [Tooltip("Recipe costs follow the shop: a potion recipe's own pixel costs 'Craft Potion Price Fraction' of that potion's current shop price, and every other pixel ingredient is multiplied by that pixel's Value multiplier. Off = the typed amounts, always.")]
+    [SerializeField] private bool recipesFollowShopPrices = true;
+
+    [Min(0f)]
+    [Tooltip("Share of a potion's current shop price that its crafting recipe costs in the potion's own pixel (0.75 = 75%; the other ingredient, usually Glass, comes on top).")]
+    [SerializeField] private float craftPotionPriceFraction = 0.75f;
 
     [Header("Combo Potions")]
     [Tooltip("Allow combo potions: a potion plus a pixel that can't be toggled (White, Gray, Black, Red, Green, Blue, Glass, Luminescent) makes a potion that spawns BOTH pixel types. Combo potions can only be made here, never bought.")]
@@ -885,9 +899,51 @@ public class PixelCrafting : MonoBehaviour
         foreach (Recipe r in recipes)
         {
             if (r == null) continue;
-            if ((Matches(r.a, x) && Matches(r.b, y)) || (Matches(r.a, y) && Matches(r.b, x))) return r;
+            if ((Matches(r.a, x) && Matches(r.b, y)) || (Matches(r.a, y) && Matches(r.b, x))) return ScaleRecipe(r);
         }
-        return comboCraftingEnabled ? FindComboRecipe(x, y) : null;
+        return comboCraftingEnabled ? ScaleRecipe(FindComboRecipe(x, y)) : null;
+    }
+
+    /// <summary>
+    /// A copy of the recipe with today's prices (see <see cref="recipesFollowShopPrices"/>): the potion's own pixel costs a share
+    /// of its shop price (for a combo potion: the second pixel, priced like that pixel's potion), other pixels scale with Value.
+    /// </summary>
+    private Recipe ScaleRecipe(Recipe r)
+    {
+        if (r == null || !recipesFollowShopPrices || clicker == null || consumables == null) return r;
+
+        bool isPotion = r.resultKind == ResultKind.Potion;
+        bool isCombo = r.resultKind == ResultKind.Combo;
+        PixelClicker.PixelType priced = isCombo ? r.resultSecond : r.resultPotion;
+        bool pricedDone = false;
+
+        Ingredient Scale(Ingredient ing)
+        {
+            Ingredient copy = new Ingredient(ing.kind, ing.type, ing.amount);
+            if (ing.kind != ItemKind.Pixel) return copy;
+            if ((isPotion || isCombo) && !pricedDone && ing.type == priced)
+            {
+                pricedDone = true; // only the first one (the Glass potion uses Glass twice; the second is the "glass" part)
+                copy.amountOverride = Math.Max(1d, Math.Ceiling(consumables.PotionShopPrice(priced) * craftPotionPriceFraction));
+            }
+            else
+            {
+                copy.amountOverride = Math.Ceiling(ing.amount * clicker.ValueMultiplier(clicker.IndexOf(ing.type)));
+            }
+            return copy;
+        }
+
+        return new Recipe
+        {
+            label = r.label,
+            a = Scale(r.a),
+            b = Scale(r.b),
+            resultKind = r.resultKind,
+            resultPotion = r.resultPotion,
+            resultSecond = r.resultSecond,
+            resultDevice = r.resultDevice,
+            resultAmount = r.resultAmount,
+        };
     }
 
     /// <summary>
@@ -926,8 +982,8 @@ public class PixelCrafting : MonoBehaviour
     private bool CanAfford(Recipe r)
     {
         Item ia = new Item(r.a.kind, r.a.type), ib = new Item(r.b.kind, r.b.type);
-        if (SameIngredient(r.a, r.b)) return Have(ia) >= r.a.amount + r.b.amount;
-        return Have(ia) >= r.a.amount && Have(ib) >= r.b.amount;
+        if (SameIngredient(r.a, r.b)) return Have(ia) >= r.a.Amount + r.b.Amount;
+        return Have(ia) >= r.a.Amount && Have(ib) >= r.b.Amount;
     }
 
     private string NeedLine(Ingredient ing, double have, double need)
@@ -974,9 +1030,9 @@ public class PixelCrafting : MonoBehaviour
                 StringBuilder sb = new StringBuilder();
                 sb.Append(string.Format(makesFormat, consumables.ItemName(result), r.resultAmount)).Append('\n');
                 if (SameIngredient(r.a, r.b))
-                    sb.Append(NeedLine(r.a, Have(ia), r.a.amount + r.b.amount));
+                    sb.Append(NeedLine(r.a, Have(ia), r.a.Amount + r.b.Amount));
                 else
-                    sb.Append(NeedLine(r.a, Have(ia), r.a.amount)).Append('\n').Append(NeedLine(r.b, Have(ib), r.b.amount));
+                    sb.Append(NeedLine(r.a, Have(ia), r.a.Amount)).Append('\n').Append(NeedLine(r.b, Have(ib), r.b.Amount));
                 recipeText.text = sb.ToString();
                 canCraft = CanAfford(r);
             }
@@ -1005,9 +1061,9 @@ public class PixelCrafting : MonoBehaviour
 
     private bool Spend(Ingredient ing)
     {
-        if (ing.kind == ItemKind.Pixel) return clicker.TrySpend(ing.type, ing.amount);
+        if (ing.kind == ItemKind.Pixel) return clicker.TrySpend(ing.type, ing.Amount);
         int p = FindPotion(ing.type);
-        return p >= 0 && consumables.TryRemoveItem(p, ing.amount);
+        return p >= 0 && consumables.TryRemoveItem(p, (int)ing.Amount);
     }
 
     private void PlaySound()

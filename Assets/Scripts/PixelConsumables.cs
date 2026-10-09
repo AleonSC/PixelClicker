@@ -226,6 +226,21 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
     [SerializeField] private bool pricesScaleWithValue = true;
 
+    [Tooltip("Potion prices are worked out from what the potion is expected to make (its duration x your clicks per second x that pixel's payout, Value and Ultra included) divided by 'Potion Target Return', paid in that pixel. The typed potion costs above are then ignored. Off = the typed costs (scaled by Value if that is on).")]
+    [SerializeField] private bool potionPriceFromOutput = true;
+
+    [Min(1f)]
+    [Tooltip("How many times its price a potion should pay back (3 = a potion makes about 3x what it cost). Same for every potion, early or late, so chaining stays worthwhile but none is a jackpot.")]
+    [SerializeField] private float potionTargetReturn = 3f;
+
+    [Min(0f)]
+    [Tooltip("Manual clicks per second assumed when pricing potions (added to the auto clicker's rate). Higher = pricier potions for players who don't click much.")]
+    [SerializeField] private float assumedManualClicksPerSecond = 4f;
+
+    [Min(0f)]
+    [Tooltip("A potion never costs less than this.")]
+    [SerializeField] private double potionMinPrice = 10;
+
     [Header("Placing Devices")]
     [Tooltip("Layers the mouse can place a device on (the floor).")]
     [SerializeField] private LayerMask placementLayers = ~0;
@@ -759,9 +774,74 @@ public class PixelConsumables : MonoBehaviour
 
     public int ItemOwned(int item) => IsDevice(item) ? devices[item - potions.Length].owned : potions[item].owned;
 
-    /// <summary>What one of an item costs right now (the typed prices, scaled by each pixel's Value multiplier when that is on).</summary>
+    private PixelAutoClicker autoClicker;
+
+    /// <summary>Clicks per second used for potion prices: the auto clicker's rate (once bought) plus the assumed manual rate.</summary>
+    public double ExpectedClicksPerSecond()
+    {
+        if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
+        // Running = bought (even if switched off in Toggles), so switching it off can't make potions cheaper.
+        double auto = autoClicker != null && autoClicker.Running && autoClicker.Interval > 0f
+            ? autoClicker.ClicksPerTick / (double)autoClicker.Interval
+            : 0d;
+        return auto + assumedManualClicksPerSecond;
+    }
+
+    /// <summary>
+    /// What a potion of this pixel type is expected to make over 'seconds': clicks x payout per click (Value, Ultra and
+    /// multi-click included; tough pixels pay once per several clicks). A Vacuum potion also counts the old pixels its
+    /// every-Nth-click vacuum re-collects.
+    /// </summary>
+    public double ExpectedPotionOutput(PixelClicker.PixelType type, float seconds)
+    {
+        if (clicker == null) return 0d;
+        int t = clicker.IndexOf(type);
+        if (t < 0) return 0d;
+
+        PixelClicker.PixelTier tier = clicker.Tiers[t];
+        double cps = ExpectedClicksPerSecond();
+        double perClick = tier.amountPerClick * clicker.PayoutMultiplier(t) * clicker.ClickMultiplier / System.Math.Max(1, tier.clicksToCollect);
+        double output = seconds * cps * perClick;
+        if (tier.vacuum)
+        {
+            double onFloor = System.Math.Min(clicker.OldPixelCap, cps * clicker.FallingCopyLifetime);
+            output *= 1d + onFloor / clicker.PotionVacuumEvery;
+        }
+        return output;
+    }
+
+    /// <summary>Price (in its own pixel) of a potion of this type lasting 'seconds', from its expected output.</summary>
+    public double PotionPriceFromOutput(PixelClicker.PixelType type, float seconds) =>
+        System.Math.Max(potionMinPrice, System.Math.Ceiling(ExpectedPotionOutput(type, seconds) / System.Math.Max(1f, potionTargetReturn)));
+
+    /// <summary>Current shop price of the (buyable) potion of a pixel type, in that pixel. Used by Crafting.</summary>
+    public double PotionShopPrice(PixelClicker.PixelType type)
+    {
+        for (int i = 0; i < potions.Length; i++)
+        {
+            Potion p = potions[i];
+            if (p == null || p.craftOnly || p.type != type) continue;
+            PixelShop.PackCost[] costs = ItemCosts(i);
+            if (costs != null)
+                foreach (PixelShop.PackCost c in costs)
+                    if (c != null && string.IsNullOrEmpty(c.minigameCurrency) && c.type == type) return c.amount;
+            break;
+        }
+        return PotionPriceFromOutput(type, 30f);
+    }
+
+    /// <summary>
+    /// What one of an item costs right now. Potions: from their expected output (see <see cref="potionPriceFromOutput"/>).
+    /// Devices (and potions with that off): the typed prices, scaled by each pixel's Value multiplier when that is on.
+    /// </summary>
     public PixelShop.PackCost[] ItemCosts(int item)
     {
+        if (!IsDevice(item) && potionPriceFromOutput && clicker != null && !potions[item].craftOnly)
+        {
+            Potion p = potions[item];
+            return new[] { new PixelShop.PackCost { type = p.type, amount = PotionPriceFromOutput(p.type, p.durationSeconds) } };
+        }
+
         PixelShop.PackCost[] baseCosts = IsDevice(item) ? devices[item - potions.Length].costs : potions[item].costs;
         if (!pricesScaleWithValue || clicker == null || baseCosts == null) return baseCosts;
 
