@@ -44,7 +44,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Craters,         // battle-scarred rocky ground full of craters
         GravityRoom,     // metal training-room panels with a glowing ring
         PowerArena,      // floating hex stone plates with glowing seams
-        EnergyWisps      // swirling wisps of destructive energy
+        EnergyWisps,     // swirling wisps of destructive energy
+        CardBack         // trading-card backs: brown frame, swirling vortex, dark oval in the middle
     }
 
     [Serializable]
@@ -861,6 +862,45 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 return Color.Lerp(stone, s.colorC, glow);
             }
 
+            case FloorPattern.CardBack:
+            {
+                // One card per tile, standing upright in the middle with a dark gap around it.
+                float px = u - 0.5f, py = v - 0.5f;
+                const float hw = 0.32f, hh = 0.46f, corner = 0.025f;
+                float qx = Mathf.Abs(px) - (hw - corner), qy = Mathf.Abs(py) - (hh - corner);
+                float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f))
+                              + Mathf.Min(Mathf.Max(qx, qy), 0f) - corner;               // < 0 inside the rounded card
+                if (outside > 0f) return s.colorC * (0.9f + 0.15f * Fbm(u, v, 8, 3, s.seed));
+                float inset = -outside;                                                // distance in from the card's edge
+
+                // Frame: dark brown border with a thin gold line inside it.
+                const float border = 0.04f;
+                if (inset < border)
+                {
+                    Color frame = s.colorB * (0.75f + 0.35f * (inset / border));
+                    return frame * (0.92f + 0.12f * Hash(x, y, s.seed));
+                }
+                if (inset < border + 0.006f) return Color.Lerp(s.colorA, Color.white, 0.25f);
+
+                // The vortex: spiral arms around the centre (squashed to the card's shape).
+                float ex = px / hw, ey = py / hh;
+                float r = Mathf.Sqrt(ex * ex + ey * ey);
+                float ang = Mathf.Atan2(ey, ex);
+                float spiral = Mathf.Sin(ang * 3f + Mathf.Log(Mathf.Max(r, 0.02f)) * 7f + Fbm(u, v, 6, 3, s.seed) * 2.5f);
+                float arms = Mathf.SmoothStep(0f, 1f, spiral * 0.5f + 0.5f);
+                Color dark = s.colorB * 0.55f;
+                Color c = Color.Lerp(dark, s.colorA, arms * (0.55f + 0.45f * Mathf.Clamp01(1.2f - r)));
+                c = Color.Lerp(c, Color.Lerp(s.colorA, new Color(1f, 0.92f, 0.6f), 0.4f), Mathf.Clamp01(0.45f - r) * 1.6f); // bright core
+                c *= Mathf.Lerp(1f, 0.55f, Mathf.Clamp01((r - 0.6f) * 1.4f));            // darker towards the frame
+
+                // Dark oval in the middle with a glowing rim.
+                float ox = px / 0.11f, oy = py / 0.075f;
+                float o = Mathf.Sqrt(ox * ox + oy * oy);
+                if (o < 1f) return Color.Lerp(new Color(0.03f, 0.02f, 0.02f), new Color(0.12f, 0.06f, 0.03f), o * o);
+                if (o < 1.25f) c = Color.Lerp(c, Color.Lerp(s.colorA, Color.white, 0.35f), (1.25f - o) / 0.25f * 0.8f);
+                return c;
+            }
+
             case FloorPattern.EnergyWisps:
             {
                 // Domain-warped noise: swirling wisps.
@@ -1175,5 +1215,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                              new Color(1f, 0.7f, 1f), 256, false, 7f, 1, 0.6f, 1.2f);
         hakai.scrollSpeed = new Vector2(0.02f, 0.035f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f;
         yield return hakai;
+
+        // ---- Yu-Gi-Oh themed ----
+        yield return S("Yu-Gi-Oh Card Back", FloorPattern.CardBack, new Color(0.95f, 0.55f, 0.15f), new Color(0.35f, 0.17f, 0.06f),
+                       new Color(0.06f, 0.04f, 0.03f), 512, false, 4f, 1, 0.55f);
     }
 }
