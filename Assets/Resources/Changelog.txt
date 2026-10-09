@@ -90,3 +90,4 @@
 [2026-10-09 10:16 UTC] Dev tools: the on-screen spawn selector and the Dev Tools button now fade away when unused (selector quickly, button a bit later) and return on hover, and a new 'Reset all counts to 0' button clears pixel counts in the inventory, Log and Bank but keeps unlocks.
 [2026-10-09 10:29 UTC] New Sorting Race minigame (Minigames tab): some old pixels freeze in a jumbled grid, you swap pairs by clicking to group each type before the timer ends for a bonus payout; Snake and the race can never run at the same time.
 [2026-10-09 10:33 UTC] Sorting Race: the cube now shrinks out of the way during a race and grows back, the grid is capped to a fraction of the screen, and the Snake area is kept inside the view.
+[2026-10-09 10:40 UTC] Sorting Race: the old pixels that are not part of the race now shrink away during it and grow back when it ends.

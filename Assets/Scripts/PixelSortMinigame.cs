@@ -91,6 +91,13 @@ public class PixelSortMinigame : PixelMinigame
     [Tooltip("The selected pixel grows by this much and hops a little.")]
     [SerializeField] private float selectedScale = 1.3f;
 
+    [Tooltip("The old pixels that are not in the race shrink away while it runs and grow back afterwards.")]
+    [SerializeField] private bool shrinkOthers = true;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the other old pixels take to shrink away / grow back.")]
+    [SerializeField] private float bystanderSeconds = 0.6f;
+
     [Range(0.05f, 1f)]
     [Tooltip("During a race the cube shrinks to this fraction of its size so it doesn't cover the grid, then grows back afterwards (1 = don't shrink it).")]
     [SerializeField] private float cubeShrinkScale = 0.2f;
@@ -190,6 +197,9 @@ public class PixelSortMinigame : PixelMinigame
     {
         base.OnDestroy();
         if (activeRound) EndRound(false, null);
+        activeRound = false;
+        bystanderFactor = 1f;
+        UpdateBystanders(); // put the other old pixels back at once
     }
 
     protected override void OnDespawned()
@@ -204,8 +214,61 @@ public class PixelSortMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
+    // The old pixels that are not part of the race shrink away while it runs and grow back afterwards.
+    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
+    private readonly List<Bystander> bystanders = new List<Bystander>();
+    private float bystanderFactor = 1f;
+
+    private void ShrinkBystanders(HashSet<Rigidbody> inRace)
+    {
+        bystanders.Clear();
+        var all = clicker.OldPixels;
+        for (int i = 0; i < all.Count; i++)
+        {
+            Rigidbody rb = all[i];
+            if (rb == null || inRace.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
+            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            if (d != null && (d.IsDespawning || d.Held)) continue;
+            bystanders.Add(new Bystander
+            {
+                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
+                colliders = rb.GetComponents<Collider>(),
+                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
+            });
+        }
+        foreach (Bystander b in bystanders)
+        {
+            SetVelocities(b.body, Vector3.zero);
+            b.body.isKinematic = true;
+            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
+            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
+        }
+    }
+
+    private void UpdateBystanders()
+    {
+        if (bystanders.Count == 0) return;
+        float target = activeRound ? 0f : 1f;
+        bystanderFactor = Mathf.MoveTowards(bystanderFactor, target, Time.unscaledDeltaTime / Mathf.Max(0.05f, bystanderSeconds));
+        bool done = !activeRound && bystanderFactor >= 1f;
+        for (int i = bystanders.Count - 1; i >= 0; i--)
+        {
+            Bystander b = bystanders[i];
+            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
+            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
+            if (done)
+            {
+                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
+                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
+                b.body.isKinematic = false;
+            }
+        }
+        if (done) bystanders.Clear();
+    }
+
     private void Update()
     {
+        UpdateBystanders();
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
@@ -292,6 +355,10 @@ public class PixelSortMinigame : PixelMinigame
             p.body.isKinematic = true;
             foreach (Behaviour b in p.paused) if (b != null) b.enabled = false;
         }
+
+        HashSet<Rigidbody> inRace = new HashSet<Rigidbody>();
+        foreach (Piece p in pieces) inRace.Add(p.body);
+        if (shrinkOthers) { ShrinkBystanders(inRace); bystanderFactor = 1f; }
 
         BuildSlots(centroid);
 
