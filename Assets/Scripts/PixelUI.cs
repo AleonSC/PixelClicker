@@ -144,6 +144,12 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Label of the tab that lists your potions.")]
     [SerializeField] private string consumablesTabText = "Consumables";
 
+    [Tooltip("Label of the Inventory's third tab (materials from minigames: stardust, meteor chunks, bomb parts, ectoplasm).")]
+    [SerializeField] private string materialsTabText = "Materials";
+
+    [Tooltip("Shown (in capitals, centred) in the Materials tab while you hold none.")]
+    [SerializeField] private string noMaterialsText = "No materials yet.";
+
     [Tooltip("Height of the two tab buttons inside the box.")]
     [SerializeField] private float subTabHeight = 56f;
 
@@ -434,7 +440,9 @@ public class PixelUI : MonoBehaviour
     private TMP_Text buttonLabel;
     private bool built;
     private RectTransform popupCanvasRect;
-    private int inventoryTab; // 0 = Currency, 1 = Consumables
+    private int inventoryTab; // 0 = Currency, 1 = Consumables, 2 = Materials
+    private readonly System.Collections.Generic.List<TMP_Text> materialLabels = new System.Collections.Generic.List<TMP_Text>();
+    private TMP_Text noMaterialsLabel;
     private int consumableSubTab; // inside Consumables: 0 = Potions, 1 = Devices
     private TMP_Dropdown categoryDropdown;
     private Image[] subTabImages;
@@ -1095,6 +1103,9 @@ public class PixelUI : MonoBehaviour
                 y = RefreshConsumables(0f);
             }
             else HideConsumableWidgets();
+
+            if (inventoryTab == 2) y = RefreshMaterials(0f);
+            else HideMaterialWidgets();
         }
 
         // Box height follows the number of visible lines.
@@ -1185,11 +1196,11 @@ public class PixelUI : MonoBehaviour
 
     private void BuildInventoryTabs(Vector2 anchor)
     {
-        string[] names = { currencyTabText, consumablesTabText };
+        string[] names = { currencyTabText, consumablesTabText, materialsTabText };
         subTabImages = new Image[names.Length];
 
         float innerWidth = panelWidth - panelPadding * 2f;
-        float tabWidth = (innerWidth - 8f) * 0.5f;
+        float tabWidth = (innerWidth - 8f * (names.Length - 1)) / names.Length;
         float tabTop = headerHeight + (showHeader ? 0f : panelPadding * 0.5f);
 
         for (int i = 0; i < names.Length; i++)
@@ -1202,12 +1213,15 @@ public class PixelUI : MonoBehaviour
             RectTransform rt = tab.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.sizeDelta = new Vector2(tabWidth, subTabHeight);
-            rt.anchoredPosition = new Vector2((i == 0 ? -1f : 1f) * (tabWidth * 0.5f + 4f), -tabTop);
+            rt.anchoredPosition = new Vector2((i - (names.Length - 1) * 0.5f) * (tabWidth + 8f), -tabTop);
 
             TMP_Text label = tab.GetComponentInChildren<TMP_Text>();
             label.text = names[i];
             label.color = subTabTextColor;
             label.alignment = TextAlignmentOptions.Center;
+            label.enableAutoSizing = true; // three tabs share the width
+            label.fontSizeMax = subTabFontSize > 0f ? subTabFontSize : 28f;
+            label.fontSizeMin = 12f;
 
             int captured = i;
             tab.onClick.AddListener(() =>
@@ -1327,6 +1341,51 @@ public class PixelUI : MonoBehaviour
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
         rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
+    }
+
+    /// <summary>Lays out the Materials tab: one line per minigame material you hold.</summary>
+    private float RefreshMaterials(float top)
+    {
+        float y = top;
+        int shown = 0;
+        foreach (PixelMinigame m in PixelMinigame.All)
+        {
+            if (m == null || string.IsNullOrEmpty(m.MaterialName) || m.MaterialAmount <= 0d) continue;
+            while (materialLabels.Count <= shown)
+            {
+                TMP_Text made = MakeText(ListParent, "Material " + materialLabels.Count, "", fontSize, consumableAlign, FontStyles.Normal, textColor);
+                PlaceLine(made.rectTransform);
+                materialLabels.Add(made);
+            }
+            TMP_Text label = materialLabels[shown];
+            label.gameObject.SetActive(true);
+            label.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            PixelUIKit.SetText(label, string.Format(lineFormat, m.MaterialName, FormatAmount(m.MaterialAmount)));
+            label.color = colorTextByTier ? m.MaterialColor : textColor;
+            y += LinePitch;
+            shown++;
+        }
+        for (int i = shown; i < materialLabels.Count; i++) materialLabels[i].gameObject.SetActive(false);
+
+        if (noMaterialsLabel == null)
+        {
+            noMaterialsLabel = MakeText(ListParent, "No Materials", noMaterialsText.ToUpperInvariant(), fontSize,
+                                        TextAlignmentOptions.Center, FontStyles.Bold, emptyMessageColor);
+            PlaceLine(noMaterialsLabel.rectTransform);
+        }
+        noMaterialsLabel.gameObject.SetActive(shown == 0);
+        if (shown == 0)
+        {
+            noMaterialsLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            y += LinePitch;
+        }
+        return y;
+    }
+
+    private void HideMaterialWidgets()
+    {
+        foreach (TMP_Text label in materialLabels) if (label != null && label.gameObject.activeSelf) label.gameObject.SetActive(false);
+        if (noMaterialsLabel != null && noMaterialsLabel.gameObject.activeSelf) noMaterialsLabel.gameObject.SetActive(false);
     }
 
     /// <summary>Hides everything that belongs to the Consumables tab.</summary>

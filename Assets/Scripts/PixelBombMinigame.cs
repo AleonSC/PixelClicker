@@ -213,6 +213,9 @@ public class PixelBombMinigame : PixelMinigame
     public override string TrackerDescription => trackerDescription;
     public override double TrackerCount => bombPartsEarned;
     public override double SpendableCount => bombParts;
+    public override string MaterialName => "Bomb Parts";
+    public override double MaterialAmount => bombParts;
+    public override Color MaterialColor => new Color(0.75f, 0.78f, 0.85f, 1f);
     public override double ExtraValue => bombParts;
     public override void SetExtraValue(double value)
     {

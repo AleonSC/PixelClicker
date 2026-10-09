@@ -295,6 +295,23 @@ public class PixelGhostMinigame : PixelMinigame
     public override string RequirementFormat => requirementFormat;
     public override void SetTrackerCount(double value) => ghostsCaught = System.Math.Max(0d, value);
 
+    // --- Ectoplasm: a crafting material every caught ghost leaves behind (no use yet; saved through ExtraValue) ---
+    [Header("Ectoplasm")]
+    [Tooltip("Fewest ectoplasm a caught ghost leaves.")]
+    [SerializeField] private int ectoplasmMin = 1;
+
+    [Tooltip("Most ectoplasm a caught ghost leaves.")]
+    [SerializeField] private int ectoplasmMax = 4;
+
+    [Tooltip("Ectoplasm held (a minigame material, shown in the Inventory's Materials tab).")]
+    [SerializeField] private double ectoplasm = 0;
+
+    public override string MaterialName => "Ectoplasm";
+    public override double MaterialAmount => ectoplasm;
+    public override Color MaterialColor => new Color(0.55f, 1f, 0.8f, 1f);
+    public override double ExtraValue => ectoplasm;
+    public override void SetExtraValue(double value) => ectoplasm = System.Math.Max(0d, value);
+
     /// <summary>Ghosts caught so far.</summary>
     public double GhostsCaught => ghostsCaught;
 
@@ -479,6 +496,14 @@ public class PixelGhostMinigame : PixelMinigame
     {
         bool reachedBefore = ThresholdReached;
         ghostsCaught += 1d;
+        int lo = Mathf.Max(0, ectoplasmMin), hi = Mathf.Max(lo, ectoplasmMax);
+        int dropped = UnityEngine.Random.Range(lo, hi + 1);
+        if (dropped > 0)
+        {
+            ectoplasm += dropped;
+            PixelStats.Count("ghost.ectoplasm", dropped);
+            PixelHints.Announce("+" + dropped + " Ectoplasm");
+        }
         Report(MinigameEvent.Clicked);
         if (!reachedBefore && ThresholdReached) onThresholdReached?.Invoke();
 

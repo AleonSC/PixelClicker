@@ -187,6 +187,15 @@ public abstract class PixelMinigame : MonoBehaviour
         return true;
     }
 
+    /// <summary>Name of the crafting material this minigame hands out (shown in the Inventory's Materials tab), or null for none.</summary>
+    public virtual string MaterialName => null;
+
+    /// <summary>How much of that material the player holds.</summary>
+    public virtual double MaterialAmount => 0d;
+
+    /// <summary>Colour of the material's line in the Materials tab.</summary>
+    public virtual Color MaterialColor => Color.white;
+
     /// <summary>A second saved number, for minigames whose goal counter and spendable amount differ (the bomb's parts held). Default none.</summary>
     public virtual double ExtraValue => 0d;
 

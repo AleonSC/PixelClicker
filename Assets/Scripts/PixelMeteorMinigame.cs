@@ -204,6 +204,10 @@ public class PixelMeteorMinigame : PixelMinigame
     public override double TrackerGoal => chunkGoal;
     public override string RequirementFormat => requirementFormat;
 
+    public override string MaterialName => "Meteor Chunks";
+    public override double MaterialAmount => chunks;
+    public override Color MaterialColor => new Color(1f, 0.55f, 0.25f, 1f);
+
     public override void SetTrackerCount(double value)
     {
         chunks = System.Math.Max(0d, value);

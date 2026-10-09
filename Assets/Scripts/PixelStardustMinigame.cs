@@ -145,6 +145,9 @@ public class PixelStardustMinigame : PixelMinigame
     public override double TrackerGoal => stardustGoal;
     public override string RequirementFormat => requirementFormat;
     public override void SetTrackerCount(double value) => stardust = System.Math.Max(0d, value);
+    public override string MaterialName => "Stardust";
+    public override double MaterialAmount => stardust;
+    public override Color MaterialColor => new Color(1f, 0.92f, 0.45f, 1f);
 
     protected override void Awake()
     {
