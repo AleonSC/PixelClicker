@@ -614,8 +614,11 @@ public class PixelCrafting : MonoBehaviour
 
         wr.sizeDelta = new Vector2(windowWidth, y);
 
+        BuildBookButton();
+        BuildBook();
+
         windowObject.SetActive(false);
-        PixelWindows.Register(this, 25, () => windowObject != null && windowObject.activeSelf, Close);
+        PixelWindows.Register(this, 25, () => windowObject != null && windowObject.activeSelf, () => { if (BookOpen) CloseBook(); else Close(); }); // Escape closes the recipe book first
     }
 
     // ------------------------------------------------------------------
@@ -636,8 +639,202 @@ public class PixelCrafting : MonoBehaviour
         Refresh();
     }
 
+    // ------------------------------------------------------------------
+    // Recipe book
+    // ------------------------------------------------------------------
+
+    [Header("Recipe Book")]
+    [Tooltip("Title of the recipe book window.")]
+    [SerializeField] private string bookTitle = "Recipe Book";
+
+    [Tooltip("Shown instead of a recipe you haven't made yet.")]
+    [SerializeField] private string unknownText = "???";
+
+    [Tooltip("Height of one recipe line in the book.")]
+    [SerializeField] private float bookRowHeight = 84f;
+
+    private GameObject bookObject;
+    private RectTransform bookContent;
+    private GameObject bookBar;
+    private ScrollRect bookScroll;
+    private readonly List<GameObject> bookRows = new List<GameObject>();
+
+    private bool BookOpen => bookObject != null && bookObject.activeSelf;
+
+    /// <summary>Stat counter that remembers a recipe was made (saved with the other stats).</summary>
+    private static string RecipeKey(Recipe r) =>
+        "recipe." + (int)r.resultKind + "." + (int)r.resultPotion + "." + (int)r.resultSecond + "." + (int)r.resultDevice;
+
+    private bool RecipeKnown(Recipe r)
+    {
+        if (PixelStats.Total(RecipeKey(r)) > 0d) return true;
+        int result = ResultIndex(r);
+        return result >= 0 && consumables != null && consumables.ItemOwned(result) > 0; // older saves: owning the result counts
+    }
+
+    /// <summary>Every recipe in the game: the Recipes list plus every automatic combo potion.</summary>
+    private List<Recipe> AllRecipes()
+    {
+        List<Recipe> list = new List<Recipe>();
+        foreach (Recipe r in recipes) if (r != null) list.Add(r);
+        if (comboCraftingEnabled)
+            foreach (PixelClicker.PixelTier potionTier in clicker.Tiers)
+            {
+                if (FindPotion(potionTier.type) < 0) continue;
+                foreach (PixelClicker.PixelTier pixelTier in clicker.Tiers)
+                {
+                    Recipe combo = FindComboRecipe(new Item(ItemKind.Potion, potionTier.type), new Item(ItemKind.Pixel, pixelTier.type));
+                    if (combo != null) list.Add(combo);
+                }
+            }
+        return list;
+    }
+
+    private string ResultName(Recipe r)
+    {
+        int result = ResultIndex(r);
+        string name = result >= 0 && consumables != null ? consumables.ItemName(result) : r.label;
+        return r.resultAmount > 1 ? name + " x" + r.resultAmount : name;
+    }
+
+    private string IngredientText(Ingredient ing) =>
+        ItemName(new Item(ing.kind, ing.type)) + " x" + PixelClicker.FormatNumber(ing.Amount);
+
+    /// <summary>A small hand-drawn book (cover, pages, spine) on a button, top-left of the crafting window.</summary>
+    private void BuildBookButton()
+    {
+        Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Book Button", "", new Vector2(70f, 70f),
+                                           new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 20f);
+        RectTransform r = b.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
+        r.anchoredPosition = new Vector2(20f, -14f);
+        b.onClick.AddListener(OpenBook);
+
+        Image Part(string name, Color color, Vector2 size, Vector2 pos)
+        {
+            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(b.transform, false);
+            Image im = g.GetComponent<Image>();
+            im.color = color;
+            im.raycastTarget = false;
+            RectTransform pr = g.GetComponent<RectTransform>();
+            pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+            pr.sizeDelta = size;
+            pr.anchoredPosition = pos;
+            return im;
+        }
+        Part("Cover", new Color(0.62f, 0.32f, 0.16f, 1f), new Vector2(42f, 50f), Vector2.zero);
+        Part("Pages", new Color(0.95f, 0.92f, 0.8f, 1f), new Vector2(34f, 42f), new Vector2(2f, 0f));
+        Part("Spine", new Color(0.4f, 0.2f, 0.1f, 1f), new Vector2(7f, 50f), new Vector2(-17f, 0f));
+        Part("Line 1", new Color(0.5f, 0.45f, 0.35f, 1f), new Vector2(22f, 3f), new Vector2(4f, 10f));
+        Part("Line 2", new Color(0.5f, 0.45f, 0.35f, 1f), new Vector2(22f, 3f), new Vector2(4f, 2f));
+        Part("Line 3", new Color(0.5f, 0.45f, 0.35f, 1f), new Vector2(22f, 3f), new Vector2(4f, -6f));
+    }
+
+    private void BuildBook()
+    {
+        bookObject = new GameObject("Recipe Book", typeof(RectTransform), typeof(Image));
+        bookObject.transform.SetParent(canvasRoot.transform, false);
+        bookObject.GetComponent<Image>().color = panelColor;
+        RectTransform wr = bookObject.GetComponent<RectTransform>();
+        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
+
+        float titleH = titleFontSize * 1.4f;
+        TMP_Text title = MakeLabel(bookObject.transform, "Title", bookTitle, titleFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(-200f, titleH);
+        tr.anchoredPosition = new Vector2(0f, -20f);
+
+        Button close = PixelUIKit.CreateButton(font, bookObject.transform, "Close", "X", new Vector2(70f, 70f),
+                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+        cr.anchoredPosition = new Vector2(-20f, -14f);
+        close.onClick.AddListener(CloseBook);
+
+        bookScroll = PixelUIKit.CreateScrollView(bookObject.transform, "Recipe List", scrollbarColor, 12f, bookRowHeight * 0.6f,
+                                                 out bookContent, out bookBar);
+        RectTransform vr = bookScroll.GetComponent<RectTransform>();
+        vr.anchorMin = Vector2.zero;
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = new Vector2(30f, 20f);
+        vr.offsetMax = new Vector2(-30f, -(20f + titleH + 20f));
+
+        bookObject.SetActive(false);
+    }
+
+    private void OpenBook()
+    {
+        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        RectTransform br = bookObject.GetComponent<RectTransform>();
+        br.sizeDelta = wr.sizeDelta; // same size and place as the crafting window
+        br.anchoredPosition = wr.anchoredPosition;
+        bookObject.transform.SetAsLastSibling();
+        RebuildBook();
+        bookObject.SetActive(true);
+        PixelAudio.Play("ui_click");
+    }
+
+    private void CloseBook()
+    {
+        if (bookObject != null) bookObject.SetActive(false);
+    }
+
+    private void RebuildBook()
+    {
+        foreach (GameObject old in bookRows) if (old != null) Destroy(old);
+        bookRows.Clear();
+
+        List<Recipe> all = AllRecipes();
+        float y = 0f;
+        foreach (Recipe raw in all)
+        {
+            bool known = RecipeKnown(raw);
+            Recipe r = known ? ScaleRecipe(raw) : raw;
+
+            GameObject row = new GameObject("Recipe", typeof(RectTransform), typeof(Image));
+            row.transform.SetParent(bookContent, false);
+            row.GetComponent<Image>().color = cellColor;
+            row.GetComponent<Image>().raycastTarget = false;
+            RectTransform rr = row.GetComponent<RectTransform>();
+            rr.anchorMin = new Vector2(0f, 1f);
+            rr.anchorMax = new Vector2(1f, 1f);
+            rr.pivot = new Vector2(0.5f, 1f);
+            rr.sizeDelta = new Vector2(-24f, bookRowHeight - 8f);
+            rr.anchoredPosition = new Vector2(0f, -y);
+
+            string text = known
+                ? IngredientText(r.a) + "  +  " + IngredientText(r.b) + "  =  <b>" + ResultName(r) + "</b>"
+                : unknownText + "  +  " + unknownText + "  =  " + unknownText;
+            TMP_Text label = MakeLabel(row.transform, "Text", text, fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Normal);
+            label.richText = true;
+            label.enableAutoSizing = true;
+            label.fontSizeMax = fontSize * 0.8f;
+            label.fontSizeMin = 10f;
+#if UNITY_2023_1_OR_NEWER
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            label.enableWordWrapping = false;
+#endif
+            label.color = known ? textColor : new Color(textColor.r, textColor.g, textColor.b, 0.45f);
+            RectTransform lr = label.rectTransform;
+            lr.anchorMin = Vector2.zero;
+            lr.anchorMax = Vector2.one;
+            lr.offsetMin = new Vector2(14f, 4f);
+            lr.offsetMax = new Vector2(-14f, -4f);
+
+            bookRows.Add(row);
+            y += bookRowHeight;
+        }
+        PixelUIKit.UpdateScrollView(bookScroll, bookBar, Mathf.Max(0f, y - 8f), bookScroll.GetComponent<RectTransform>().rect.height);
+    }
+
     private void Close()
     {
+        if (BookOpen) CloseBook();
         if (dragGhost != null) Destroy(dragGhost);
         windowObject.SetActive(false);
     }
@@ -1092,6 +1289,7 @@ public class PixelCrafting : MonoBehaviour
 
         if (!Spend(r.a) || !Spend(r.b)) return;
         consumables.AddItem(result, r.resultAmount);
+        PixelStats.Count(RecipeKey(r)); // the recipe goes into the recipe book
 
         statusLabel.text = string.Format(craftedFormat, consumables.ItemName(result), r.resultAmount);
         statusTimer = 2.5f;

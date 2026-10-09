@@ -188,3 +188,4 @@
 [2026-10-09 20:16 UTC] Toggles window: the title and the 'Nothing to toggle here yet' texts now shrink to fit on one line.
 [2026-10-09 20:19 UTC] Scroll bars in the Currency window, the Toggles window and every other code-built list now hide whenever the content fits.
 [2026-10-09 20:23 UTC] The Crafting window now fits between the black bars, and its item cells show the name above the spinning item and the amount below it.
+[2026-10-09 20:32 UTC] Added a book button to the Crafting window that opens a Recipe Book listing every recipe: made ones are shown, unknown ones are hidden as ???.
