@@ -38,6 +38,12 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("Chunks gained by each click on the meteor.")]
     [SerializeField] private double chunksPerClick = 1;
 
+    [Min(0f)]
+    [Tooltip("Shortest time (seconds) between two clicks that give chunks. Clicks in between still make the meteor flinch but give nothing, so spam-clicking one meteor can't finish the goal. 0 = no limit.")]
+    [SerializeField] private float chunkClickCooldown = 0.35f;
+
+    private float lastChunkTime = float.NegativeInfinity;
+
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Meteor Chunks";
 
@@ -309,7 +315,11 @@ public class PixelMeteorMinigame : PixelMinigame
                 if (hit.Raycast(ray, out RaycastHit info, 1000f))
                 {
                     punch = 1f;
-                    CollectChunk(info.point, cam);
+                    if (Time.time - lastChunkTime >= chunkClickCooldown)
+                    {
+                        lastChunkTime = Time.time;
+                        CollectChunk(info.point, cam);
+                    }
                 }
             }
 

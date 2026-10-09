@@ -46,3 +46,7 @@
 [2026-10-07 12:56 UTC] Noted in CLAUDE.md that the changelog needs clearing after the latest build.
 [2026-10-09 11:13 UTC] Gray and Black now unlock at 100 by default, and tier unlocks count the pixels you currently hold instead of your lifetime total.
 [2026-10-09 11:15 UTC] Undid the held-pixels unlock rule: Gray and Black unlock from lifetime totals again (still 100 each), while shop purchases keep spending held pixels.
+[2026-10-09 11:25 UTC] Added Value upgrades (Shop > Upgrades > Value): spend a pixel's own currency to raise its payout, with rising prices, a doubling every 25 levels, and Shift-click to buy as many as you can afford.
+[2026-10-09 11:25 UTC] Potion and device prices now rise with the Value level of the pixels they cost.
+[2026-10-09 11:25 UTC] Big numbers now use longer suffixes (Qa, Qi, Sx and beyond) instead of stopping at T.
+[2026-10-09 11:25 UTC] Meteor chunks can only be collected about three times a second, so one meteor can no longer finish the Meteor Pixel goal.

@@ -144,7 +144,7 @@ public class PixelOfflineProgress : MonoBehaviour
         {
             if (gains[i] < 1d) continue;
             clicker.AddCurrency(i, gains[i]);
-            double perPixel = Math.Max(1e-9, clicker.Tiers[i].amountPerClick * clicker.UltraMultiplier(i) * clicker.ClickMultiplier);
+            double perPixel = Math.Max(1e-9, clicker.Tiers[i].amountPerClick * clicker.PayoutMultiplier(i) * clicker.ClickMultiplier);
             clicker.AddTimesCollected(i, (long)Math.Round(gains[i] / perPixel));
             any = true;
         }
@@ -192,7 +192,7 @@ public class PixelOfflineProgress : MonoBehaviour
 
         double[] gains = new double[tiers.Length];
         for (int i = 0; i < tiers.Length; i++)
-            gains[i] = Math.Floor(pixels * chance[i] * tiers[i].amountPerClick * clicker.UltraMultiplier(i) * clicker.ClickMultiplier);
+            gains[i] = Math.Floor(pixels * chance[i] * tiers[i].amountPerClick * clicker.PayoutMultiplier(i) * clicker.ClickMultiplier);
         return gains;
     }
 
