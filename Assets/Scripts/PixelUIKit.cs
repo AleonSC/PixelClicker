@@ -296,6 +296,9 @@ public static class PixelUIKit
         scroll.verticalScrollbar = bar;
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
         barObject.SetActive(false);
+        PixelScrollBarAutoHide hide = scroll.gameObject.AddComponent<PixelScrollBarAutoHide>();
+        hide.scroll = scroll;
+        hide.bar = barObject;
         return scroll;
     }
 
@@ -364,5 +367,22 @@ public static class PixelUIKit
         slider.maxValue = 1f;
         slider.wholeNumbers = false;
         return slider;
+    }
+}
+
+
+/// <summary>Shows a code-built scroll view's bar only while its content is taller than the view (checked every frame, so a resized window can't leave a useless bar behind).</summary>
+public class PixelScrollBarAutoHide : MonoBehaviour
+{
+    public ScrollRect scroll;
+    public GameObject bar;
+
+    private void LateUpdate()
+    {
+        if (scroll == null || bar == null || scroll.content == null) return;
+        RectTransform view = scroll.viewport != null ? scroll.viewport : (RectTransform)scroll.transform;
+        bool needed = scroll.content.rect.height > view.rect.height + 0.5f;
+        if (bar.activeSelf != needed) bar.SetActive(needed);
+        if (!needed && scroll.content.anchoredPosition.y != 0f) scroll.content.anchoredPosition = Vector2.zero;
     }
 }
