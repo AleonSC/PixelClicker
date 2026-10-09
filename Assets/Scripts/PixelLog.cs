@@ -401,6 +401,7 @@ public class PixelLog : MonoBehaviour
         {
             log.Refresh();
             PixelUI.SetInventoryOpen(false);
+            PixelShop.CloseShopWindow();
         }
     }
 
