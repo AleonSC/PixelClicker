@@ -750,6 +750,38 @@ public partial class PixelShop : MonoBehaviour
     {
         bool renamed = false;
 
+        // The short-lived Pong pack (replaced by Breakout) may still be saved in the scene's pack list: take it out, and fix the
+        // pack numbers the other packs' requirements point at.
+        if (packs != null)
+        {
+            for (int i = packs.Length - 1; i >= 0; i--)
+            {
+                ShopPack pack = packs[i];
+                bool pong = pack != null && (string.Equals(pack.displayName, "Pong", StringComparison.OrdinalIgnoreCase)
+                                             || string.Equals(pack.unlocksMinigame, "pong", StringComparison.OrdinalIgnoreCase));
+                if (!pong) continue;
+                System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
+                kept.RemoveAt(i);
+                packs = kept.ToArray();
+                foreach (ShopPack other in packs)
+                {
+                    if (other == null || other.requirements == null) continue;
+                    System.Collections.Generic.List<PackRequirement> reqs = new System.Collections.Generic.List<PackRequirement>();
+                    foreach (PackRequirement r in other.requirements)
+                    {
+                        if (r.kind == RequirementKind.Pack)
+                        {
+                            if (r.packIndex == i) continue;          // it needed Pong: drop that requirement
+                            if (r.packIndex > i) r.packIndex--;      // the packs after it moved up one
+                        }
+                        reqs.Add(r);
+                    }
+                    other.requirements = reqs.ToArray();
+                }
+                renamed = true;
+            }
+        }
+
         // Obsidian now pays +7 per 5 clicks (it was +5); only changes the old default, not a value you typed.
         if (packDataVersion < 1)
         {
