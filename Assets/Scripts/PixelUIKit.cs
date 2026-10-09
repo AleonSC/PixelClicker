@@ -114,6 +114,38 @@ public static class PixelUIKit
     }
 
     /// <summary>A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>.</summary>
+    private static Sprite downTriangle;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { downTriangle = null; }
+
+    /// <summary>A white, smooth-edged downward triangle (drawn once in code) for drop-down arrows.</summary>
+    private static Sprite DownTriangleSprite()
+    {
+        if (downTriangle != null) return downTriangle;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Down Triangle", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                // Apex at the bottom centre, top edge across the full width; 4x4 supersampling for the edges.
+                float cover = 0f;
+                for (int sy = 0; sy < 4; sy++)
+                    for (int sx = 0; sx < 4; sx++)
+                    {
+                        float u = (x + (sx + 0.5f) / 4f) / n, v = (y + (sy + 0.5f) / 4f) / n; // v = 0 at the bottom
+                        if (Mathf.Abs(u - 0.5f) <= 0.5f * v) cover += 1f / 16f;
+                    }
+                px[y * n + x] = new Color(1f, 1f, 1f, cover);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        downTriangle = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        downTriangle.name = "Down Triangle";
+        return downTriangle;
+    }
+
     public static TMP_Dropdown CreateDropdown(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
                                               Color boxColor, Color listColor, Color textColor, float fontSize)
     {
@@ -133,11 +165,19 @@ public static class PixelUIKit
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
         lr.offsetMin = new Vector2(14f, 2f); lr.offsetMax = new Vector2(-size.y, -2f);
 
-        TMP_Text arrow = CreateText(font, root.transform, "Arrow", "v", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        // Down arrow: a drawn triangle (not a letter), tinted with the text colour.
+        GameObject arrowGo = new GameObject("Arrow", typeof(RectTransform), typeof(Image));
+        arrowGo.transform.SetParent(root.transform, false);
+        Image arrow = arrowGo.GetComponent<Image>();
+        arrow.sprite = DownTriangleSprite();
+        arrow.color = textColor;
+        arrow.raycastTarget = false;
         RectTransform ar = arrow.rectTransform;
-        ar.anchorMin = new Vector2(1f, 0f); ar.anchorMax = Vector2.one;
-        ar.pivot = new Vector2(1f, 0.5f);
-        ar.sizeDelta = new Vector2(size.y, 0f); ar.anchoredPosition = Vector2.zero;
+        float arrowSize = Mathf.Max(8f, size.y * 0.32f);
+        ar.anchorMin = ar.anchorMax = new Vector2(1f, 0.5f);
+        ar.pivot = new Vector2(0.5f, 0.5f);
+        ar.sizeDelta = new Vector2(arrowSize, arrowSize * 0.7f);
+        ar.anchoredPosition = new Vector2(-size.y * 0.5f, 0f);
 
         // Template (the popup list), hidden until opened.
         GameObject template = new GameObject("Template", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
