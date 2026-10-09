@@ -80,3 +80,4 @@
 [2026-10-09 04:40 UTC] Toned down the glow halo and shell in builds (smaller, softer halo, less blown-out pixels).
 [2026-10-09 04:42 UTC] Build glow shell brightness raised to a middle value and made tunable (Glow Shell Brightness Extra; tick Glow Shell In Editor to preview it in Play mode).
 [2026-10-09 04:45 UTC] The build glow shell and halo now breathe like the Editor's emission does.
+[2026-10-09 04:48 UTC] Fixed the 'CreateImpl ... MonoBehaviour constructor' error from PixelClicker (a property block was created in a field initializer).

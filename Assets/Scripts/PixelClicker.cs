@@ -1476,12 +1476,13 @@ public class PixelClicker : MonoBehaviour
     private MeshRenderer liveShellRenderer, liveHaloRenderer;
     private Color liveShellColor;
     private float liveShellAlpha, liveShellHdr;
-    private readonly MaterialPropertyBlock shellBlock = new MaterialPropertyBlock();
+    private MaterialPropertyBlock shellBlock; // created on first use (native objects can't be made in a field initializer)
 
     /// <summary>Makes the glow shell and halo breathe like the real emission does (same speed and amount, a little stronger so it reads).</summary>
     private void AnimateGlowShell(float time)
     {
         if (liveShellRenderer == null) return;
+        if (shellBlock == null) shellBlock = new MaterialPropertyBlock();
         float breath = 1f + (glowBreathAmount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f)) * 1.5f;
         breath = Mathf.Max(0.3f, breath);
 
