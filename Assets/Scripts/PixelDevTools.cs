@@ -202,6 +202,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Panel size (canvas units). It grows if the rows need more room.")]
     [SerializeField] private Vector2 panelSize = new Vector2(900f, 700f);
 
+    [Tooltip("The panel is never taller than this (canvas units); the rows scroll when they don't fit (mouse wheel). 0 = 760.")]
+    [SerializeField] private float panelHeightLimit = 760f;
+
     [Tooltip("Height of each row.")]
     [SerializeField] private float rowHeight = 64f;
 
@@ -648,23 +651,34 @@ public class PixelDevTools : MonoBehaviour
         Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, btnW);
         add.onClick.AddListener(AddSelected);
         y += rowHeight + 16f;
+        float scrollTop = y; // the pixel row above stays fixed (a drop-down can't live inside a scroll list); the rest scrolls
+
+        ScrollRect toolsScroll = PixelUIKit.CreateScrollView(tools.transform, "Tools Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 16f, 60f,
+                                                             out RectTransform content, out GameObject toolsBar);
+        RectTransform scrollRect = toolsScroll.GetComponent<RectTransform>();
+        scrollRect.anchorMin = Vector2.zero;
+        scrollRect.anchorMax = Vector2.one;
+        scrollRect.offsetMin = new Vector2(0f, 30f + rowHeight + 16f);
+        scrollRect.offsetMax = new Vector2(0f, -scrollTop);
+        y = 0f; // rows below are placed from the top of the scrolling content
+
 
         // Row: skip intro
-        Button skip = PixelUIKit.CreateButton(font, tools.transform, "Skip Intro Button", skipIntroText,
+        Button skip = PixelUIKit.CreateButton(font, content, "Skip Intro Button", skipIntroText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
         skip.onClick.AddListener(SkipIntro);
         y += rowHeight + 24f;
 
         // Row: unlock all
-        Button unlock = PixelUIKit.CreateButton(font, tools.transform, "Unlock All Button", unlockAllText,
+        Button unlock = PixelUIKit.CreateButton(font, content, "Unlock All Button", unlockAllText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(unlock.GetComponent<RectTransform>(), 40f, y, inner);
         unlock.onClick.AddListener(UnlockAll);
         y += rowHeight + 24f;
 
         // Row: reset every pixel count (inventory, Log, Bank) but keep the unlocks - needs a second click to confirm
-        resetButton = PixelUIKit.CreateButton(font, tools.transform, "Reset Counts Button", resetCountsText,
+        resetButton = PixelUIKit.CreateButton(font, content, "Reset Counts Button", resetCountsText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(resetButton.GetComponent<RectTransform>(), 40f, y, inner);
         resetLabel = resetButton.GetComponentInChildren<TMP_Text>();
@@ -674,7 +688,7 @@ public class PixelDevTools : MonoBehaviour
         // Row: the crash / error report folder (it used to be in the pause menu)
         if (PixelCrashLog.Available)
         {
-            Button report = PixelUIKit.CreateButton(font, tools.transform, "Report Folder Button", reportFolderText,
+            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", reportFolderText,
                                                     new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
             Place(report.GetComponent<RectTransform>(), 40f, y, inner);
             report.onClick.AddListener(PixelCrashLog.OpenFolder);
@@ -682,20 +696,20 @@ public class PixelDevTools : MonoBehaviour
         }
 
         // Row: tick box for the clear key
-        clearToggle = BuildToggleRow(tools.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
+        clearToggle = BuildToggleRow(content, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for infinite resources
-        infiniteToggle = BuildToggleRow(tools.transform, infiniteToggleText, y, inner, infiniteResources,
+        infiniteToggle = BuildToggleRow(content, infiniteToggleText, y, inner, infiniteResources,
                        on => { infiniteResources = on; PixelClicker.InfiniteResources = on; SetBool("Infinite", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for the on-screen spawn selector
-        selectorToggle = BuildToggleRow(tools.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
+        selectorToggle = BuildToggleRow(content, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
         y += rowHeight + 24f;
 
         // Row: tick box to stop old pixels despawning
-        noDespawnToggle = BuildToggleRow(tools.transform, noDespawnToggleText, y, inner, disableDespawn, on =>
+        noDespawnToggle = BuildToggleRow(content, noDespawnToggleText, y, inner, disableDespawn, on =>
         {
             disableDespawn = on;
             OldPixelDespawn.DevNoDespawn = on;
@@ -704,17 +718,24 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for god pixel mode
-        godToggle = BuildToggleRow(tools.transform, godToggleText, y, inner, godMode, SetGodMode);
+        godToggle = BuildToggleRow(content, godToggleText, y, inner, godMode, SetGodMode);
         y += rowHeight + 24f;
 
-        // Close
+        // Close (fixed at the bottom of the Tools view)
         Button close = PixelUIKit.CreateButton(font, tools.transform, "Close Button", closeText,
                                                new Vector2(inner, rowHeight), new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
-        Place(close.GetComponent<RectTransform>(), 40f, y, inner);
+        RectTransform closeRect = close.GetComponent<RectTransform>();
+        closeRect.anchorMin = closeRect.anchorMax = closeRect.pivot = new Vector2(0.5f, 0f);
+        closeRect.sizeDelta = new Vector2(inner, rowHeight);
+        closeRect.anchoredPosition = new Vector2(0f, 30f);
         close.onClick.AddListener(Close);
-        y += rowHeight + 30f;
 
-        boxRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
+        // A fixed, smaller window: the rows scroll (mouse wheel / bar) when they don't fit.
+        float limit = panelHeightLimit > 200f ? panelHeightLimit : 760f;
+        float wanted = scrollTop + y + 30f + rowHeight + 16f + 12f;
+        float boxHeight = Mathf.Min(wanted, limit);
+        boxRect.sizeDelta = new Vector2(panelSize.x, boxHeight);
+        PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, y, boxHeight - scrollTop - 30f - rowHeight - 16f);
 
         BuildTodoView(box.transform, tabsBottom, inner);
         toolsTab.onClick.AddListener(() => SetTab(0));

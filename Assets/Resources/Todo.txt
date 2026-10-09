@@ -2,3 +2,6 @@
 // Claude adds items here when the user says so (or after asking), instead of building them straight away.
 # Ideas
 [ ] Condensed pixels: convert pixels into condensed versions and stack THOSE once the numbers get too high (a friend's idea).
+[ ] Merchants or other visitors: characters that turn up now and then (sell / trade / ask for things).
+[ ] Alchemy: a deeper crafting / transmutation system for pixels and potions.
+[ ] Ultra pixel use: decide what Ultra pixels are spent on (ideas: lucky clicks, spawn control, permanent upgrades that survive prestige, small extra cost on the rarest pixels).

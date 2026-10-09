@@ -126,3 +126,4 @@
 [2026-10-09 13:15 UTC] Added a Floor style option in Settings (Display) with 10 new floor looks (Neon Grid, Retro Checker, Pixel Grass, Wood Planks, Cobblestone, Marble, Lava, Deep Space, Ice, Disco) plus Classic.
 [2026-10-09 13:30 UTC] Dev Tools has a new To-Do tab (a list read from Todo.txt); first item: condensed pixels that stack when numbers get too high.
 [2026-10-09 13:27 UTC] Added 9 new skies (Clear Day, Sunset, Starry Night, Nebula, Aurora, Synthwave, Pixel Clouds, Storm with lightning, Alien World) with a Sky option in Settings, plus quick floor and sky pickers right and left of the title screen's Play button.
+[2026-10-09 13:39 UTC] Dev Tools window is smaller and its rows scroll (mouse wheel); added Merchants/visitors, Alchemy and Ultra pixel use to the to-do list.
