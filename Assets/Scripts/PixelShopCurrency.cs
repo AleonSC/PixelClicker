@@ -18,6 +18,13 @@ public partial class PixelShop
         public Image background;
     }
 
+    /// <summary>Closes the shop window (the Inventory and Log call this when they open: the windows never show together).</summary>
+    public static void CloseShopWindow()
+    {
+        PixelShop shop = PixelFind.First<PixelShop>();
+        if (shop != null && shop.panelObject != null && shop.panelObject.activeSelf) shop.panelObject.SetActive(false);
+    }
+
     private GameObject currencyPanel;
     private RectTransform currencyContent;
     private ScrollRect currencyScroll;
