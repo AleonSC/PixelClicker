@@ -447,7 +447,7 @@ public class PixelLog : MonoBehaviour
         Row row = rows[tierIndex];
         if (row == null || row.delta == null) return;
 
-        row.gainSum = row.deltaTimer > 0f && row.gainSum > 0d ? row.gainSum + amount : amount;
+        row.gainSum = row.deltaTimer > 0f && row.gainSum > 0d ? row.gainSum + 1d : 1d; // +1 per click, whatever the payout multiplier
         row.delta.text = string.Format(deltaFormat, FormatAmount(row.gainSum));
         row.deltaTimer = deltaDuration;
         row.delta.gameObject.SetActive(true);
@@ -456,18 +456,7 @@ public class PixelLog : MonoBehaviour
     /// <summary>Starts a "+X" indicator next to every entry that the Vacuum just paid.</summary>
     private void OnVacuumBreakdown(double[] perTier)
     {
-        if (!showVacuumDeltas || rows == null) return;
-
-        for (int i = 0; i < perTier.Length && i < rows.Length; i++)
-        {
-            Row row = rows[i];
-            if (perTier[i] <= 0d || row == null || row.delta == null) continue;
-
-            row.delta.text = string.Format(deltaFormat, FormatAmount(perTier[i]));
-            row.gainSum = 0d; // the vacuum total replaces the click sum
-            row.deltaTimer = deltaDuration;
-            row.delta.gameObject.SetActive(true);
-        }
+        // The Pixels tab counts clicks and a Vacuum payout is not a click, so there is nothing to show here (showVacuumDeltas is unused).
     }
 
     /// <summary>Fades and lifts active indicators, then hides them.</summary>
@@ -1244,14 +1233,15 @@ public class PixelLog : MonoBehaviour
 
             PixelClicker.PixelTier tier = tiers[i];
             PixelUIKit.SetText(row.name, tier.displayName);
-            PixelUIKit.SetText(row.amount, FormatAmount(tier.totalCollected));
+            // The Pixels tab counts CLICKS (pixels collected), not currency: multipliers only affect what the Inventory holds.
+            PixelUIKit.SetText(row.amount, FormatAmount(tier.timesCollected));
             FitAmount(row);
             if (row.swatch != null) row.swatch.color = tier.UIColor;
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
             y += rowHeight;
             visibleCount++;
-            overall += tier.totalCollected;
+            overall += tier.timesCollected;
         }
 
         emptyLabel.gameObject.SetActive(visibleCount == 0);
