@@ -1287,9 +1287,7 @@ public partial class PixelShop : MonoBehaviour
             bought++;
         if (bought > 0)
         {
-            PlayPurchaseSound();
-            string line = "Value upgrade: " + clicker.Tiers[tierIndex].displayName + " level " + clicker.Tiers[tierIndex].valueLevel + "!";
-            PixelHints.Announce(line, line);
+            PlayPurchaseSound(); // no event-log line: Value upgrades are bought so often that it was spam
         }
         return bought;
     }

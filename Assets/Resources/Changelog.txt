@@ -135,3 +135,4 @@
 [2026-10-09 14:48 UTC] The new-game intro has a third "Got it" box after the Inventory one (clicking is the main way to earn; upgrades, minigames and old pixel management open other ways); the "Click X more" goal text appears after it.
 [2026-10-09 14:04 UTC] Added horizon fog: the floor now fades into the sky's horizon colour towards its far edge instead of cutting off, with a Horizon fog switch in Settings > Display.
 [2026-10-09 14:41 UTC] The Log's Goals tab now shows 'Purchase the RGB Pack' once the Shop appears, with a bar that fills as you save up its price, until you buy it.
+[2026-10-09 15:00 UTC] Value upgrades no longer post a line in the event log (too spammy).
