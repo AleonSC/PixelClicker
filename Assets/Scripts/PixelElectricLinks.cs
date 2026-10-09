@@ -2,11 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Electric old pixels link up to your placed devices (vacuum device, fan, sorter...). Every Electric pixel lying around arcs
-/// to the nearest device (or to a nearer already-linked Electric pixel, so they form chains) within <see cref="linkRangePixels"/>.
-/// Each pixel that links up adds <see cref="secondsPerPixel"/> seconds to its device (once per pixel), and a linked pixel doesn't
-/// age while it is linked. When the device runs out (or is removed) every pixel linked to it ends too. The arcs are drawn as
-/// crackling bolts. Added by PixelClicker.Awake.
+/// Electric old pixels link up. Every Electric pixel lying around arcs to the nearest placed device (vacuum device, fan, sorter...)
+/// or to a nearer already-linked Electric pixel, so they form chains, within <see cref="linkRangePixels"/>. Electric pixels that
+/// are not near a device still arc to each other in chains of their own. Every pixel that is part of a chain gets
+/// <see cref="chainLifeSeconds"/> extra seconds before it despawns (once per pixel), which helps players gather electricity.
+/// Pixels linked to a device also add <see cref="secondsPerPixel"/> seconds to it (once per pixel) and don't age while linked;
+/// when the device runs out (or is removed) every pixel linked to it ends too. The arcs are drawn as crackling bolts.
+/// Added by PixelClicker.Awake.
 /// </summary>
 public class PixelElectricLinks : MonoBehaviour
 {
@@ -25,6 +27,10 @@ public class PixelElectricLinks : MonoBehaviour
     [Min(0f)]
     [Tooltip("Seconds added to a device for every Electric pixel that links to it (each pixel counts once).")]
     [SerializeField] private float secondsPerPixel = 1f;
+
+    [Min(0f)]
+    [Tooltip("Seconds added to an Electric pixel's despawn timer when it becomes part of a chain of Electric pixels (once per pixel). Chains need no device.")]
+    [SerializeField] private float chainLifeSeconds = 10f;
 
     [Min(0.02f)]
     [Tooltip("How often (seconds) the links are recalculated.")]
@@ -59,7 +65,8 @@ public class PixelElectricLinks : MonoBehaviour
     }
 
     private readonly Dictionary<Rigidbody, Link> links = new Dictionary<Rigidbody, Link>();
-    private readonly HashSet<Rigidbody> credited = new HashSet<Rigidbody>();
+    private readonly HashSet<Rigidbody> credited = new HashSet<Rigidbody>();      // already added their second to a device
+    private readonly HashSet<Rigidbody> lifeCredited = new HashSet<Rigidbody>();  // already got the chain's extra despawn time
     private readonly HashSet<PixelPlacedDevice> watched = new HashSet<PixelPlacedDevice>();
     private readonly List<Rigidbody> scratch = new List<Rigidbody>();
     private float scanTimer, redrawTimer;
@@ -88,10 +95,10 @@ public class PixelElectricLinks : MonoBehaviour
             Scan();
         }
 
-        // Linked pixels don't age; the arcs follow them as they move.
+        // Pixels linked to a device don't age while linked (chains without a device only get the extra time).
         foreach (KeyValuePair<Rigidbody, Link> kv in links)
         {
-            if (kv.Key == null) continue;
+            if (kv.Key == null || kv.Value.device == null) continue;
             OldPixelDespawn d = kv.Key.GetComponent<OldPixelDespawn>();
             if (d != null) d.KeepAlive();
         }
@@ -133,7 +140,7 @@ public class PixelElectricLinks : MonoBehaviour
             if (IsElectric(body, out _) && !clicker.IsFlyingPixel(body)) scratch.Add(body);
 
         links.Clear();
-        if (devices.Count == 0 || scratch.Count == 0) { PruneCredits(); return; }
+        if (scratch.Count == 0) { PruneCredits(); return; }
 
         foreach (PixelPlacedDevice d in devices)
             if (watched.Add(d)) d.Ended += OnDeviceEnded;
@@ -143,7 +150,7 @@ public class PixelElectricLinks : MonoBehaviour
 
         // Grow the network outwards from the devices: each step links the unlinked pixel that is closest to the network.
         List<Rigidbody> unlinked = new List<Rigidbody>(scratch);
-        while (unlinked.Count > 0 && links.Count < maxLinks)
+        while (devices.Count > 0 && unlinked.Count > 0 && links.Count < maxLinks)
         {
             int bestIndex = -1;
             float best = rangeSqr;
@@ -180,13 +187,51 @@ public class PixelElectricLinks : MonoBehaviour
                 PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f);
             }
         }
+
+        // Electric pixels out of reach of any device still arc to each other in chains of their own.
+        List<Rigidbody> chainSeeds = new List<Rigidbody>();
+        while (unlinked.Count > 0 && links.Count < maxLinks)
+        {
+            Rigidbody seed = unlinked[0];
+            unlinked.RemoveAt(0);
+            List<Rigidbody> chain = new List<Rigidbody> { seed };
+            while (links.Count < maxLinks)
+            {
+                int bestIndex = -1, bestParent = -1;
+                float best = rangeSqr;
+                for (int i = 0; i < unlinked.Count; i++)
+                    for (int c = 0; c < chain.Count; c++)
+                    {
+                        float dist = (chain[c].position - unlinked[i].position).sqrMagnitude;
+                        if (dist < best) { best = dist; bestIndex = i; bestParent = c; }
+                    }
+                if (bestIndex < 0) break;
+                Rigidbody joiner = unlinked[bestIndex];
+                links[joiner] = new Link { body = joiner, parentBody = chain[bestParent], parentPoint = chain[bestParent].position };
+                chain.Add(joiner);
+                unlinked.RemoveAt(bestIndex);
+            }
+            if (chain.Count >= 2) chainSeeds.Add(seed); // a lone pixel is not a chain
+        }
+
+        // Everything that is part of a chain (linked to a device or to another Electric pixel) gets extra despawn time, once.
+        foreach (KeyValuePair<Rigidbody, Link> kv in links) GiveChainLife(kv.Key);
+        foreach (Rigidbody seed in chainSeeds) GiveChainLife(seed);
         PruneCredits();
+    }
+
+    private void GiveChainLife(Rigidbody body)
+    {
+        if (body == null || chainLifeSeconds <= 0f || !lifeCredited.Add(body)) return;
+        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        if (d != null) d.AddLifetime(chainLifeSeconds);
     }
 
     /// <summary>Forgets credits of pixels that no longer exist.</summary>
     private void PruneCredits()
     {
         credited.RemoveWhere(b => b == null);
+        lifeCredited.RemoveWhere(b => b == null);
         watched.RemoveWhere(d => d == null);
     }
 
