@@ -497,7 +497,7 @@ public static class PixelLooks
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
         MaterialPropertyBlock block = new MaterialPropertyBlock();
-        block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha * 1.6f)));
+        block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha * 0.7f)));
         block.SetTexture("_MainTex", haloTexture);
         mr.SetPropertyBlock(block);
     }

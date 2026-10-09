@@ -287,12 +287,15 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Tick to turn the glow shell off. Glowing pixels normally get a thin unlit coloured shell on top of the normal glow: emission turned on from code can be stripped from built games, and the shell keeps glowing pixels luminous there.")]
     [SerializeField] private bool disableGlowShell = false;
 
-    [Range(-0.3f, 0.7f)]
-    [Tooltip("Added to the shell's base strength (0.3, which also scales with each pixel's Glow Intensity). 0 = the default look; negative = fainter, positive = stronger.")]
+    [Range(-0.4f, 0.4f)]
+    [Tooltip("Added to the shell's strength (about 0.75 for a Glow Intensity of 2.5: the pixel's faces turn almost flat and bright, like emission). 0 = the default look; negative = more shaded, positive = brighter.")]
     [SerializeField] private float glowShellExtra = 0f;
 
-    private bool glowShell => !disableGlowShell;
-    private float glowShellAlpha => Mathf.Max(0f, 0.3f + glowShellExtra);
+    [Tooltip("Also draw the shell in the Editor. Off by default: in the Editor the real emission already works, and the shell is meant for built games where it can be missing.")]
+    [SerializeField] private bool glowShellInEditor = false;
+
+    private bool glowShell => !disableGlowShell && (!Application.isEditor || glowShellInEditor);
+    private float glowShellAlpha => 0.5f + glowShellExtra;
 
     [Header("Tough Pixels (Clicks To Collect > 1)")]
     [Range(0f, 0.6f)]
@@ -1522,7 +1525,7 @@ public class PixelClicker : MonoBehaviour
     public string DebugGlowReport()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.AppendLine("glowShell=" + glowShell + "  glowShellAlpha=" + glowShellAlpha + "  useLooks=" + useLooks + "  looks=" + (looks != null ? looks.Length : 0));
+        sb.AppendLine("glowShell=" + glowShell + " (inEditor=" + glowShellInEditor + ")  glowShellAlpha=" + glowShellAlpha + "  useLooks=" + useLooks + "  looks=" + (looks != null ? looks.Length : 0));
         Material dm = defaultMaterial;
         sb.AppendLine("defaultMaterial=" + (dm != null ? dm.name + "  shader=" + (dm.shader != null ? dm.shader.name : "null") +
                       "  emissionKeyword=" + dm.IsKeywordEnabled("_EMISSION") + "  hasEmissionColor=" + dm.HasProperty("_EmissionColor") : "null"));
@@ -1558,9 +1561,9 @@ public class PixelClicker : MonoBehaviour
     }
 
     private float GlowShellAlpha(PixelTier tier, float extra = 1f) =>
-        Mathf.Clamp(glowShellAlpha * Mathf.Max(0.5f, tier.glowIntensity) * 0.5f * extra, 0.12f, 0.55f);
+        Mathf.Clamp((glowShellAlpha + 0.1f * tier.glowIntensity) * extra, 0.25f, 0.92f);
 
-    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.3f);
+    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.5f);
 
     private void UpdateGlowShell(PixelTier tier, PixelLook look)
     {

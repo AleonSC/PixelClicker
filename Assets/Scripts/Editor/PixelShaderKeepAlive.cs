@@ -87,7 +87,61 @@ public static class PixelShaderKeepAlive
             AssetDatabase.StopAssetEditing();
         }
         any |= MakeSpriteMaterial(force);
+        any |= MakeProjectCopies(force);
         if (any) AssetDatabase.SaveAssets();
+    }
+
+    /// <summary>
+    /// Copies of the project's own URP / Standard materials (the pixel material, ...) with emission switched on, plus a transparent
+    /// copy. A shader variant is only kept when some material uses exactly that combination of keywords, and the game's glow
+    /// materials are copies of the pixel material, so the keep-alive copies must start from the real material too.
+    /// </summary>
+    private static bool MakeProjectCopies(bool force)
+    {
+        bool any = false;
+        int made = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Material", new[] { "Assets" }))
+        {
+            string source = AssetDatabase.GUIDToAssetPath(guid);
+            if (source.StartsWith(Folder)) continue;
+            Material original = AssetDatabase.LoadAssetAtPath<Material>(source);
+            if (original == null || original.shader == null) continue;
+            string shaderName = original.shader.name;
+            if (!shaderName.StartsWith("Universal Render Pipeline/") || shaderName.Contains("Particles") || shaderName.Contains("Unlit")) continue;
+            if (made++ >= 10) break; // a project with hundreds of materials doesn't need hundreds of copies
+
+            string safe = original.name.Replace(" ", "").Replace("/", "_");
+            any |= MakeCopy("Project_" + safe + "_Emission", original, true, false, force);
+            any |= MakeCopy("Project_" + safe + "_TransparentEmission", original, true, true, force);
+        }
+        return any;
+    }
+
+    private static bool MakeCopy(string name, Material original, bool emission, bool transparent, bool force)
+    {
+        string path = Folder + "/" + name + ".mat";
+        bool exists = AssetDatabase.LoadAssetAtPath<Material>(path) != null;
+        if (exists && !force) return false;
+
+        if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
+        if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets/Resources", "PixelShaderKeep");
+        if (exists) AssetDatabase.DeleteAsset(path);
+
+        Material m = new Material(original) { name = name };
+        if (emission)
+        {
+            m.EnableKeyword("_EMISSION");
+            if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", Color.white);
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+        }
+        if (transparent && m.HasProperty("_Surface"))
+        {
+            m.SetFloat("_Surface", 1f);
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        }
+        AssetDatabase.CreateAsset(m, path);
+        return true;
     }
 
     /// <summary>A material that uses Sprites/Default, so that shader is included in builds (PixelShaders.SpriteDefault falls back to it).</summary>
