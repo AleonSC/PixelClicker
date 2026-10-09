@@ -95,6 +95,17 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Currency gained per click on this tier.")]
         public double amountPerClick = 1;
 
+        [Tooltip("Pay a random whole amount between 'Payout Min' and 'Payout Max' (before multipliers) every time a pixel of this tier is harvested, instead of a fixed amount. 'Amount Per Click' should then be the average (used for price and offline estimates).")]
+        public bool randomPayout = false;
+
+        [Min(1)]
+        [Tooltip("Smallest random payout.")]
+        public int payoutMin = 1;
+
+        [Min(1)]
+        [Tooltip("Largest random payout.")]
+        public int payoutMax = 15;
+
         [Min(1)]
         [Tooltip("How many clicks it takes to collect one pixel of this tier. Only the last click pays out (the pixel is just hit before that).")]
         public int clicksToCollect = 1;
@@ -1075,7 +1086,19 @@ public class PixelClicker : MonoBehaviour
             hitsOnCurrentPixel = 0;
         }
 
-        double amount = tier.amountPerClick * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus) * breaks;
+        double basePayout = tier.amountPerClick * breaks;
+        if (tier.randomPayout)
+        {
+            // A fresh random amount for every pixel harvested (a big dev click count uses the average instead of rolling thousands of times).
+            int lo = Mathf.Min(tier.payoutMin, tier.payoutMax), hi = Mathf.Max(tier.payoutMin, tier.payoutMax);
+            if (breaks > 50) basePayout = (lo + hi) * 0.5d * breaks;
+            else
+            {
+                basePayout = 0d;
+                for (int roll = 0; roll < breaks; roll++) basePayout += UnityEngine.Random.Range(lo, hi + 1);
+            }
+        }
+        double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
