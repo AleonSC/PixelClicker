@@ -359,6 +359,7 @@ public class PixelCombo : MonoBehaviour
     {
         if (!Working || (automatic && !autoClicksCount)) return;
         combo += Mathf.Max(1, PixelClicker.DevClickCount);
+        PixelStats.Best("combo.tier", Tier);
         ComboReached?.Invoke(combo);
         timeLeft = comboWindowSeconds;
         pop = 1f;

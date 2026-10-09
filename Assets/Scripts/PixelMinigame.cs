@@ -132,6 +132,7 @@ public abstract class PixelMinigame : MonoBehaviour
         if (ultraRoundCount >= (cap > 0 ? cap : defaultCap)) return false;
         if (!clicker.RollUltra(tier, (chance > 0f ? chance : defaultChance) * chanceMultiplier)) return false;
         ultraRoundCount++;
+        PixelStats.Count("ultra." + Id);
         PixelHints.Announce("Ultra " + clicker.Tiers[tier].displayName + " pixel gained!");
         if (at.HasValue) PixelUltraFx.Play(clicker, tier, at.Value);
         return true;

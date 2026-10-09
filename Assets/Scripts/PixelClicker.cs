@@ -2118,6 +2118,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (body == null || !oldPixels.Remove(body)) return false;
 
+        PixelStats.Count("old.vacuumed");
         OldPixelInfo info = body.GetComponent<OldPixelInfo>();
         if (info != null && IsValidTier(info.tierIndex))
         {

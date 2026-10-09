@@ -463,6 +463,7 @@ public class PixelBombMinigame : PixelMinigame
             int parts = Random.Range(Mathf.Min(partsMin, partsMax), Mathf.Max(partsMin, partsMax) + 1);
             bombParts += parts;
             bombPartsEarned += parts;
+            PixelStats.Count("bomb.defused");
             Report(MinigameEvent.Clicked);
             onDefused?.Invoke();
             timer.text = "OK";
@@ -474,6 +475,7 @@ public class PixelBombMinigame : PixelMinigame
         else
         {
             Destroy(root);
+            PixelStats.Count("bomb.exploded");
             Explode(position, cam);
         }
 

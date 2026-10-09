@@ -891,6 +891,7 @@ public class PixelBank : MonoBehaviour
     private IEnumerator FlyIntoNozzle(Rigidbody body)
     {
         if (body == null) yield break;
+        PixelStats.Count("old.banked");
         foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
         body.isKinematic = true;
         OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();

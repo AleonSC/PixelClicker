@@ -692,6 +692,7 @@ public class PixelPadMinigame : PixelMinigame
                 if (Random.value < ultraChance)
                 {
                     clicker.AddUltra(target, 1);
+                    PixelStats.Count("ultra.pad");
                     onUltraGained?.Invoke();
                     PixelAudio.Play("pad_ultra");
                     PixelUltraFx.Play(clicker, target, at, text: false, sound: false); // its own rising text and sound already play

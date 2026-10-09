@@ -191,6 +191,7 @@ public class PixelGrab : MonoBehaviour
 
     private void Grab(Rigidbody body, OldPixelDespawn despawn, Ray ray)
     {
+        PixelStats.Count("old.grabbed");
         clicker.LandFlyingPixel(body); // a caught meteor becomes an ordinary old pixel (solid, falls when let go)
         held = body;
         heldDespawn = despawn;

@@ -287,48 +287,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Colour of a volume slider's handle.")]
     [SerializeField] private Color sliderHandleColor = Color.white;
 
-    [Tooltip("Label of the total clicks stat.")]
-    [SerializeField] private string totalClicksLabel = "Total clicks";
-
-    [Tooltip("Label of the manual clicks line.")]
-    [SerializeField] private string manualClicksLabel = "   Your clicks";
-
-    [Tooltip("Label of the auto clicks line.")]
-    [SerializeField] private string autoClicksLabel = "   Auto clicker";
-
-    [Tooltip("Label of the time played stat.")]
-    [SerializeField] private string timePlayedLabel = "Time played";
-
-    [Tooltip("Label of the pixels spent stat.")]
-    [SerializeField] private string pixelsSpentLabel = "Pixels spent";
-
-    [Tooltip("Label of the ghosts clicked stat.")]
-    [SerializeField] private string ghostsClickedLabel = "Ghosts clicked";
-
-    [Tooltip("Label of the meteors clicked stat.")]
-    [SerializeField] private string meteorsClickedLabel = "Meteors clicked";
-
-    [Tooltip("Label of the meteors spawned stat.")]
-    [SerializeField] private string meteorsSpawnedLabel = "Meteors spawned";
-
-    [Tooltip("Label of the black holes spawned stat.")]
-    [SerializeField] private string blackHolesSpawnedLabel = "Black holes spawned";
-
-    [Tooltip("Label of the fans used stat.")]
-    [SerializeField] private string fansUsedLabel = "Fans used";
-
-    [Tooltip("Label of the vacuum devices used stat.")]
-    [SerializeField] private string vacuumsUsedLabel = "Vacuum devices used";
-
-    [Tooltip("Label of the sorters used stat.")]
-    [SerializeField] private string sortersUsedLabel = "Sorters used";
-
-    [Tooltip("Label of the highest combo stat.")]
-    [SerializeField] private string highestComboLabel = "Highest combo";
-
-    [Tooltip("Label of the potions stat (total potions drunk).")]
-    [SerializeField] private string potionsUsedLabel = "Potions used";
-
     [Min(100f)]
     [Tooltip("Height of the scrolling stats list (canvas units). More stats than fit scroll.")]
     [SerializeField] private float statsViewHeight = 480f;
@@ -538,11 +496,11 @@ public class PixelPauseMenu : MonoBehaviour
         public UnityEngine.Events.UnityAction action;
         public bool fullRow; // spans the whole row (Resume, Quit)
     }
-    private TMP_Text totalClicksValue, manualClicksValue, autoClicksValue, timePlayedValue, pixelsSpentValue;
-    private TMP_Text ghostsValue, meteorsClickedValue, meteorsSpawnedValue, blackHolesValue, fansValue, vacuumsValue, sortersValue, comboValue;
     private ScrollRect statsScroll;
     private GameObject statsBar;
-    private TMP_Text potionsValue;
+    private RectTransform statsContent;
+    private readonly List<TMP_Text> statValueTexts = new List<TMP_Text>();
+    private string statsSignature = "";
     private RectTransform statsPanelRect, statsRestartRect, statsBackRect;
     private float statsContentHeight, statsListTop;
     private GameObject keysPanel;
@@ -1075,22 +1033,8 @@ public class PixelPauseMenu : MonoBehaviour
         vr.sizeDelta = new Vector2(0f, statsViewHeight);
         vr.anchoredPosition = new Vector2(0f, -y);
 
-        float cy = 0f;
-        totalClicksValue = AddStatRow(content, totalClicksLabel, ref cy);
-        manualClicksValue = AddStatRow(content, manualClicksLabel, ref cy);
-        autoClicksValue = AddStatRow(content, autoClicksLabel, ref cy);
-        timePlayedValue = AddStatRow(content, timePlayedLabel, ref cy);
-        pixelsSpentValue = AddStatRow(content, pixelsSpentLabel, ref cy);
-        ghostsValue = AddStatRow(content, ghostsClickedLabel, ref cy);
-        meteorsClickedValue = AddStatRow(content, meteorsClickedLabel, ref cy);
-        meteorsSpawnedValue = AddStatRow(content, meteorsSpawnedLabel, ref cy);
-        blackHolesValue = AddStatRow(content, blackHolesSpawnedLabel, ref cy);
-        fansValue = AddStatRow(content, fansUsedLabel, ref cy);
-        vacuumsValue = AddStatRow(content, vacuumsUsedLabel, ref cy);
-        sortersValue = AddStatRow(content, sortersUsedLabel, ref cy);
-        comboValue = AddStatRow(content, highestComboLabel, ref cy);
-        potionsValue = AddStatRow(content, potionsUsedLabel, ref cy);
-        statsContentHeight = cy;
+        statsContent = content;
+        RebuildStatRows(); // the rows come from PixelStats.GetLines (they change as pixels unlock and minigames start)
 
         // Restart lives here now (it opens the hold-to-confirm screen).
         if (showRestart)
@@ -1845,24 +1789,51 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void RefreshStats()
     {
-        if (stats == null) return;
-        totalClicksValue.text = FormatCount(stats.TotalClicks);
-        manualClicksValue.text = FormatCount(stats.ManualClicks);
-        autoClicksValue.text = FormatCount(stats.AutoClicks);
-        timePlayedValue.text = PixelStats.FormatTime(stats.PlaySeconds);
-        pixelsSpentValue.text = FormatCount(stats.PixelsSpent);
-        ghostsValue.text = FormatCount(stats.GhostsClicked);
-        meteorsClickedValue.text = FormatCount(stats.MeteorsClicked);
-        meteorsSpawnedValue.text = FormatCount(stats.MeteorsSpawned);
-        blackHolesValue.text = FormatCount(stats.BlackHolesSpawned);
-        fansValue.text = FormatCount(stats.FansUsed);
-        vacuumsValue.text = FormatCount(stats.VacuumDevicesUsed);
-        sortersValue.text = FormatCount(stats.SortersUsed);
-        comboValue.text = FormatCount(stats.HighestCombo);
-        PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
+        if (stats == null || statsContent == null) return;
+        List<PixelStats.Line> lines = stats.GetLines(FormatCount);
 
-        potionsValue.text = FormatCount(stats.TotalPotionsUsed);
+        // Rows are rebuilt only when the list of rows itself changed (a new pixel type, a minigame that started...).
+        string signature = lines.Count.ToString();
+        foreach (PixelStats.Line l in lines) signature += "|" + (l.header ? "#" : "") + l.label;
+        if (signature != statsSignature)
+        {
+            statsSignature = signature;
+            RebuildStatRows(lines);
+        }
+        else
+        {
+            int v = 0;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].header) continue;
+                if (v < statValueTexts.Count) statValueTexts[v++].text = lines[i].value;
+            }
+        }
         PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
+    }
+
+    private void RebuildStatRows(List<PixelStats.Line> lines = null)
+    {
+        if (statsContent == null) return;
+        for (int i = statsContent.childCount - 1; i >= 0; i--) Destroy(statsContent.GetChild(i).gameObject);
+        statValueTexts.Clear();
+        if (lines == null && stats != null) lines = stats.GetLines(FormatCount);
+
+        float cy = 0f;
+        if (lines != null)
+        {
+            foreach (PixelStats.Line line in lines)
+            {
+                if (line.header) AddHeaderRow(statsContent, line.label, ref cy);
+                else
+                {
+                    TMP_Text value = AddStatRow(statsContent, line.label, ref cy);
+                    value.text = line.value;
+                    statValueTexts.Add(value);
+                }
+            }
+        }
+        statsContentHeight = cy;
     }
 
     /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>
