@@ -146,3 +146,4 @@
 [2026-10-09 15:58 UTC] Dev tools: the Close button is now an X at the top right, and a new 'Clicks per click' input makes one click count as N clicks for payouts, tough pixels and the combo.
 [2026-10-09 16:04 UTC] Combo meter effects now wind down smoothly when the combo breaks: the shaking slows, the glow and flames fade, the hair drops and the meter flashes white before fading out.
 [2026-10-09 16:02 UTC] Added 13 Dragon Ball themed floor styles: Tournament Stage, Dragon Radar, Dragon Balls, Planet Namek, Super Saiyan Aura, Battle Crater, Gravity Room, Time Chamber, Tournament of Power, Ultra Instinct Aura, Super Saiyan Blue Aura, Super Saiyan God Aura and Destruction Energy.
+[2026-10-09 16:16 UTC] The event log's lines now fade out gradually from halfway up the box towards the top.
