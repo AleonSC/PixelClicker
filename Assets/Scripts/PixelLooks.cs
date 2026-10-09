@@ -779,11 +779,21 @@ public class OldPixelGravityWell : MonoBehaviour
                 if (sqr > reach * reach) continue;
                 if (sqr > radius * radius)
                 {
+                    // Never dips below the floor: a trigger-collider pixel has nothing to stop it, so keep it at or above the well's height.
+                    if (other.position.y < centre.y)
+                    {
+                        Vector3 p = other.position;
+                        p.y = centre.y;
+                        other.position = p;
+                        Vector3 low = VelocityOf(other);
+                        if (low.y < 0f) { low.y = 0f; SetVelocityOf(other, low); }
+                    }
                     Vector3 fv = VelocityOf(other);
                     float fs = fv.magnitude;
                     if (fs > 0.01f)
                     {
                         Vector3 steered = Vector3.RotateTowards(fv.normalized, (centre - other.position).normalized, 5f * Time.fixedDeltaTime, 0f);
+                        if (steered.y < 0f && other.position.y <= centre.y + 0.3f) steered.y = 0f; // skim along the floor, not into it
                         SetVelocityOf(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
                     }
                     OldPixelDespawn fd = other.GetComponent<OldPixelDespawn>();

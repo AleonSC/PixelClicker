@@ -110,3 +110,4 @@
 [2026-10-09 11:40 UTC] Snake, Sorting Race, Breakout, Time Slow, Old Pixel Capacity and the Solar Pixel now use the new shop price ladder too.
 [2026-10-09 11:49 UTC] Huge pixel counts no longer wrap or overlap in the Inventory and Log: the text shrinks to fit on one line (normal-sized numbers look exactly as before).
 [2026-10-09 11:56 UTC] Singularity pixels now bend flying meteor pixels towards them from up to 4x their pull radius (they fly up and away, so the ring alone never caught them), then capture them inside the ring.
+[2026-10-09 11:58 UTC] Meteor pixels steered by a Singularity pixel can no longer dip below the floor on a wide arc.
