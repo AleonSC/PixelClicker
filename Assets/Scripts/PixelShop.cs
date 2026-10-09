@@ -240,6 +240,11 @@ public partial class PixelShop : MonoBehaviour
              "Turn this off if you deleted a built-in pack on purpose.")]
     [SerializeField] private bool addDefaultPacks = true;
 
+    [Tooltip("EDITOR BUTTON: tick this to put every built-in pack's prices (and upgrade level costs/values) back to the defaults in PixelShopDefaults.cs. " +
+             "It unticks itself. Use it after a balance change, because prices already saved in the scene don't follow the code. " +
+             "Your own packs, names, descriptions and requirements are not touched. Same as right-click the component > Reset Built-in Pack Prices.")]
+    [SerializeField] private bool resetBuiltInPricesNow = false;
+
     [Tooltip("Level display for upgrade packs. {0} = current level, {1} = max level.")]
     [SerializeField] private string levelFormat = "Level {0}/{1}";
 
@@ -516,6 +521,38 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Highest boost level a pixel type can reach. 0 = no limit.")]
     [SerializeField] private int ultraMaxLevel = 20;
 
+    [Header("Value Upgrades (spend a pixel type's own currency)")]
+    [Tooltip("Text of the sub-tab that lists the Value upgrades (inside the Upgrades tab).")]
+    [SerializeField] private string valueSubTabText = "Value";
+
+    [Tooltip("Name of a Value row. {0} = pixel name.")]
+    [SerializeField] private string valueRowNameFormat = "{0} Value";
+
+    [Tooltip("Description of a Value row. {0} = pixel name, {1} = Value multiplier now, {2} = after the next level.")]
+    [SerializeField] private string valueRowDescFormat = "Each {0} click pays x{1}  →  x{2}   (Shift-click: buy as many as you can)";
+
+    [Tooltip("Cost line of a Value row. {0} = cost, {1} = pixel name, {2} = how many you have.")]
+    [SerializeField] private string valueCostFormat = "Cost: {0} {1}   (you have {2})";
+
+    [Tooltip("Text of a Value row's button.")]
+    [SerializeField] private string valueButtonText = "Upgrade";
+
+    [Min(0f)]
+    [Tooltip("Cost of a pixel type's first Value level, per point of that pixel's base payout (25 = a pixel that pays 1 costs 25, one that pays 8 costs 200). Spawn chance is ignored on purpose: rarer pixels earn less, so their Value climbs more slowly.")]
+    [SerializeField] private double valueBaseCost = 25;
+
+    [Min(1f)]
+    [Tooltip("Each Value level costs this many times the one before (1.15 = +15% per level). This is what makes later levels slow.")]
+    [SerializeField] private double valueCostGrowth = 1.15;
+
+    [Min(0)]
+    [Tooltip("Highest Value level a pixel type can reach. 0 = no limit.")]
+    [SerializeField] private int valueMaxLevel = 0;
+
+    [Min(1)]
+    [Tooltip("Shift-click on a Value button buys up to this many levels at once.")]
+    [SerializeField] private int valueMaxBulk = 1000;
+
     [Tooltip("Colour of a cost you can afford.")]
     [SerializeField] private Color affordableColor = new Color(0.45f, 1f, 0.5f, 1f);
 
@@ -768,6 +805,15 @@ public partial class PixelShop : MonoBehaviour
         {
             if (this == null || Application.isPlaying) return;
             if (EnsureDefaultPacks()) UnityEditor.EditorUtility.SetDirty(this);
+
+            if (resetBuiltInPricesNow)
+            {
+                UnityEditor.Undo.RecordObject(this, "Reset Built-in Pack Prices");
+                resetBuiltInPricesNow = false;
+                int count = ResetBuiltInPackPrices();
+                UnityEditor.EditorUtility.SetDirty(this);
+                Debug.Log("PixelShop: reset the prices of " + count + " built-in packs to their defaults.", this);
+            }
 
             // Make sure the helper components exist in the scene, so their settings are editable in the Inspector.
             EditorEnsureComponent<PixelConsumables>();
@@ -1144,6 +1190,35 @@ public partial class PixelShop : MonoBehaviour
             PixelHints.Trigger("upgrade_ultra");
         }
         return ok;
+    }
+
+    /// <summary>Currency (of the pixel type itself) the next Value level of a pixel type costs.</summary>
+    public double ValueUpgradeCost(int tierIndex)
+    {
+        if (!clicker.IsValidTierIndex(tierIndex)) return 0d;
+        PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
+        // Scaled by the pixel's payout per collect but NOT by how often it spawns, so rarer pixels are deliberately slower to upgrade.
+        return Math.Ceiling(valueBaseCost * Math.Max(1d, tier.amountPerClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
+    }
+
+    /// <summary>True when a pixel type has reached its highest Value level.</summary>
+    public bool ValueUpgradeMaxed(int tierIndex) =>
+        valueMaxLevel > 0 && clicker.IsValidTierIndex(tierIndex) && clicker.Tiers[tierIndex].valueLevel >= valueMaxLevel;
+
+    /// <summary>Buys one Value level (or, with Shift held, as many as you can afford). Returns how many were bought.</summary>
+    public int TryBuyValueUpgrade(int tierIndex, bool bulk)
+    {
+        int bought = 0;
+        int limit = bulk ? Mathf.Max(1, valueMaxBulk) : 1;
+        while (bought < limit && !ValueUpgradeMaxed(tierIndex) && clicker.TryBuyValueLevel(tierIndex, ValueUpgradeCost(tierIndex)))
+            bought++;
+        if (bought > 0)
+        {
+            PlayPurchaseSound();
+            string line = "Value upgrade: " + clicker.Tiers[tierIndex].displayName + " level " + clicker.Tiers[tierIndex].valueLevel + "!";
+            PixelHints.Announce(line, line);
+        }
+        return bought;
     }
 
     /// <summary>Starts a minigame unless the player switched it off.</summary>
