@@ -157,6 +157,18 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the tick box that keeps the game running while you are alt-tabbed.")]
     [SerializeField] private string runInBackgroundLabel = "Run when alt-tabbed";
 
+    [Tooltip("Label of the floor style picker (arrows step through the styles of the Pixel Floor component).")]
+    [SerializeField] private string floorStyleLabel = "Floor style";
+
+    [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
+    [SerializeField] private string noFloorText = "No floor found";
+
+    [Tooltip("Colour of the floor style picker's arrow buttons.")]
+    [SerializeField] private Color floorArrowColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+
+    [Tooltip("Tallest the Settings list may be before it scrolls (it also never goes past the black bars when Fit Between Bars is on).")]
+    [SerializeField] private float settingsViewHeight = 760f;
+
     [Tooltip("Label of the master volume slider.")]
     [SerializeField] private string masterVolumeLabel = "Master volume";
 
@@ -455,6 +467,11 @@ public class PixelPauseMenu : MonoBehaviour
     private bool potionsOpen;
     private string shownPotionsText;
     private Toggle rotationToggle, pulsingToggle, abbreviateToggle, hidePurchasedToggle, backgroundToggle, pauseStopsToggle;
+    private TMP_Text floorNameText;
+    private RawImage floorSwatch;
+    private ScrollRect settingsScroll;
+    private GameObject settingsBar;
+    private float settingsContentHeight, settingsFitHeight;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -784,6 +801,11 @@ public class PixelPauseMenu : MonoBehaviour
             hidePurchasedToggle.SetIsOnWithoutNotify(PixelShop.HidePurchased);
             backgroundToggle.SetIsOnWithoutNotify(clicker.RunInBackground);
             pauseStopsToggle.SetIsOnWithoutNotify(pauseStopsGame);
+        }
+        if (view == settingsPanel)
+        {
+            RefreshFloorRow();
+            PixelUIKit.UpdateScrollView(settingsScroll, settingsBar, settingsContentHeight, settingsFitHeight);
         }
         if (view == settingsPanel && PixelAudio.Instance != null && masterSlider != null)
         {
@@ -1201,18 +1223,26 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void BuildSettingsPanel()
     {
-        settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float y);
-        rotationToggle = AddToggleRow(settingsPanel.transform, rotationLabel, clicker == null || clicker.AllowRotation,
+        settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float top);
+
+        // The rows scroll when there are more than fit between the black bars.
+        settingsScroll = PixelUIKit.CreateScrollView(settingsPanel.transform, "Settings List", scrollbarColor, 12f, rowHeight,
+                                                     out RectTransform content, out settingsBar);
+        Transform list = content;
+        float y = 0f;
+
+        rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
-        pulsingToggle = AddToggleRow(settingsPanel.transform, pulsingLabel, clicker == null || clicker.AllowPulsing,
+        pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
-        abbreviateToggle = AddToggleRow(settingsPanel.transform, abbreviateLabel, PixelClicker.AbbreviateNumbers,
+        AddFloorRow(list, ref y);
+        abbreviateToggle = AddToggleRow(list, abbreviateLabel, PixelClicker.AbbreviateNumbers,
                                         on => PixelClicker.AbbreviateNumbers = on, ref y);
-        hidePurchasedToggle = AddToggleRow(settingsPanel.transform, hidePurchasedLabel, PixelShop.HidePurchased,
+        hidePurchasedToggle = AddToggleRow(list, hidePurchasedLabel, PixelShop.HidePurchased,
                                            on => PixelShop.HidePurchased = on, ref y);
-        backgroundToggle = AddToggleRow(settingsPanel.transform, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
+        backgroundToggle = AddToggleRow(list, runInBackgroundLabel, clicker != null && clicker.RunInBackground,
                                         on => { if (clicker != null) clicker.RunInBackground = on; }, ref y);
-        pauseStopsToggle = AddToggleRow(settingsPanel.transform, pauseStopsLabel, pauseStopsGame, on =>
+        pauseStopsToggle = AddToggleRow(list, pauseStopsLabel, pauseStopsGame, on =>
         {
             pauseStopsGame = on;
             PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
@@ -1223,12 +1253,88 @@ public class PixelPauseMenu : MonoBehaviour
         PixelAudio audio = PixelFind.First<PixelAudio>();
         if (audio != null)
         {
-            masterSlider = AddSliderRow(settingsPanel.transform, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
-            effectsSlider = AddSliderRow(settingsPanel.transform, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
-            musicSlider = AddSliderRow(settingsPanel.transform, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
-            muteToggle = AddToggleRow(settingsPanel.transform, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
+            masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
+            effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
+            musicSlider = AddSliderRow(list, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
+            muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
         }
-        FinishSectionPanel(settingsPanel, y);
+
+        settingsContentHeight = y;
+        settingsFitHeight = FitViewHeight(Mathf.Min(settingsViewHeight, settingsContentHeight), top);
+        RectTransform vr = settingsScroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(0f, settingsFitHeight);
+        vr.anchoredPosition = new Vector2(0f, -top);
+        PixelUIKit.UpdateScrollView(settingsScroll, settingsBar, settingsContentHeight, settingsFitHeight);
+
+        FinishSectionPanel(settingsPanel, top + settingsFitHeight);
+    }
+
+    /// <summary>"Floor style" row: a picture of the style, its name, and arrows to step through the styles.</summary>
+    private void AddFloorRow(Transform parent, ref float y)
+    {
+        TMP_Text label = AddRowLabel(parent, floorStyleLabel, y, out RectTransform row);
+        label.rectTransform.anchorMax = new Vector2(0.42f, 1f);
+
+        GameObject picker = new GameObject("Floor Picker", typeof(RectTransform));
+        picker.transform.SetParent(row, false);
+        RectTransform pr = picker.GetComponent<RectTransform>();
+        pr.anchorMin = new Vector2(0.42f, 0f);
+        pr.anchorMax = Vector2.one;
+        pr.offsetMin = pr.offsetMax = Vector2.zero;
+
+        float arrow = tickBoxSize;
+        Button left = MakeButton(picker.transform, "Previous Floor", "<", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
+        RectTransform lr = left.GetComponent<RectTransform>();
+        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 0.5f);
+        lr.anchoredPosition = Vector2.zero;
+        left.onClick.AddListener(() => StepFloor(-1));
+
+        Button right = MakeButton(picker.transform, "Next Floor", ">", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
+        RectTransform rr = right.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
+        rr.anchoredPosition = Vector2.zero;
+        right.onClick.AddListener(() => StepFloor(1));
+
+        GameObject swatch = new GameObject("Floor Preview", typeof(RectTransform), typeof(RawImage));
+        swatch.transform.SetParent(picker.transform, false);
+        floorSwatch = swatch.GetComponent<RawImage>();
+        floorSwatch.raycastTarget = false;
+        RectTransform sr = swatch.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
+        sr.sizeDelta = new Vector2(arrow, arrow);
+        sr.anchoredPosition = new Vector2(arrow + 8f, 0f);
+
+        floorNameText = MakeText(picker.transform, "Floor Name", "", rowFontSize, FontStyles.Bold);
+        floorNameText.color = statValueColor;
+        floorNameText.enableAutoSizing = true;
+        floorNameText.fontSizeMax = rowFontSize;
+        floorNameText.fontSizeMin = 14f;
+        RectTransform nr = floorNameText.rectTransform;
+        nr.anchorMin = Vector2.zero;
+        nr.anchorMax = Vector2.one;
+        nr.offsetMin = new Vector2(arrow * 2f + 14f, 0f);
+        nr.offsetMax = new Vector2(-arrow - 6f, 0f);
+
+        y += rowHeight + 6f;
+    }
+
+    private void StepFloor(int direction)
+    {
+        if (PixelFloor.Instance != null && PixelFloor.Instance.HasFloor) PixelFloor.Instance.Step(direction);
+        RefreshFloorRow();
+    }
+
+    private void RefreshFloorRow()
+    {
+        if (floorNameText == null) return;
+        PixelFloor floor = PixelFloor.Instance;
+        bool usable = floor != null && floor.HasFloor && floor.StyleCount > 0;
+        floorNameText.text = usable ? floor.StyleName(floor.Current) : noFloorText;
+        floorSwatch.texture = usable ? floor.PreviewTexture(floor.Current) : null;
+        floorSwatch.color = usable ? floor.PreviewColor(floor.Current) : new Color(1f, 1f, 1f, 0.15f);
     }
 
     private string FormatCount(double value)
