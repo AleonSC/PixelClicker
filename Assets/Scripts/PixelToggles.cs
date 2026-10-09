@@ -339,7 +339,7 @@ public class PixelToggles : MonoBehaviour
         }
 
         emptyObject.SetActive(entries.Count == 0);
-        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = current == Group.Pets ? noPetsText : emptyText;
+        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = (current == Group.Pets ? noPetsText : emptyText).ToUpperInvariant();
         float contentHeight = entries.Count * (rowHeight + 8f);
         float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
@@ -484,15 +484,14 @@ public class PixelToggles : MonoBehaviour
         vr.offsetMin = new Vector2(14f, 14f);
         vr.offsetMax = new Vector2(-14f, -y);
 
-        TMP_Text empty = PixelUIKit.CreateText(font, windowObject.transform, "Empty", emptyText, fontSize * 0.9f,
-                                               TextAlignmentOptions.Top, FontStyles.Italic,
+        TMP_Text empty = PixelUIKit.CreateText(font, windowObject.transform, "Empty", emptyText.ToUpperInvariant(), fontSize * 0.9f,
+                                               TextAlignmentOptions.Center, FontStyles.Bold,
                                                new Color(textColor.r, textColor.g, textColor.b, 0.6f));
-        RectTransform er = empty.rectTransform;
-        er.anchorMin = new Vector2(0f, 1f);
-        er.anchorMax = new Vector2(1f, 1f);
-        er.pivot = new Vector2(0.5f, 1f);
-        er.sizeDelta = new Vector2(-40f, fontSize * 1.6f);
-        er.anchoredPosition = new Vector2(0f, -(y + 10f));
+        RectTransform er = empty.rectTransform; // capitals, centred over the whole list area
+        er.anchorMin = Vector2.zero;
+        er.anchorMax = Vector2.one;
+        er.offsetMin = new Vector2(40f, 14f);
+        er.offsetMax = new Vector2(-40f, -y);
         emptyObject = empty.gameObject;
         emptyLabel = empty;
 
