@@ -610,7 +610,7 @@ public class PixelSnakeMinigame : PixelMinigame
             {
                 payout += p.amount * rewardMultiplier;
                 clicker.AddCurrency(p.tier, p.amount * rewardMultiplier);
-                UltraRoll(clicker, p.tier, ultraChance, 0.04f, ultraMaxPerRound, 3, disableUltra);
+                UltraRoll(clicker, p.tier, ultraChance, 0.04f, ultraMaxPerRound, 3, disableUltra, 1f, p.body.position);
                 if (p.despawn != null) p.despawn.Begin(); // the eaten pixels shrink away
             }
             else
@@ -627,6 +627,7 @@ public class PixelSnakeMinigame : PixelMinigame
             clicker.AddUltra(luckyTier, 1);
             ultraRoundCount++;
             PixelHints.Announce("Ultra " + clicker.Tiers[luckyTier].displayName + " pixel gained!");
+            PixelUltraFx.Play(clicker, luckyTier, bodyPieces[bodyPieces.Count - 1].body.position);
         }
 
         targets.Clear();
