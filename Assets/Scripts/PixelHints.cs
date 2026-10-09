@@ -108,6 +108,9 @@ public class PixelHints : MonoBehaviour
 
     [TextArea(2, 5)]
     [Tooltip("Tip shown with the Inventory open.")]
+    [Tooltip("Third new-game intro tip (after the Log and Inventory ones): how you earn currency. Empty = the built-in text. The tier guide (\"Click X more...\") appears once this box is closed.")]
+    [SerializeField] private string introEarnText = "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn.";
+
     [SerializeField] private string introInventoryText = "This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.";
 
     [Tooltip("Add the built-in tips that are missing from the list below.")]
@@ -746,9 +749,16 @@ public class PixelHints : MonoBehaviour
             PixelNotice.Show(introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect, onClosed: () =>
             {
                 PixelUI.SetInventoryOpen(false);
-                introRunning = false; // the tier guide may show now
-                MarkSeen("intro_log"); // only counts once the player has been through both tips
-                if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
+                // Third tip: how currency is earned. The tier guide ("Click X more...") shows once it is closed.
+                string earn = string.IsNullOrEmpty(introEarnText)
+                    ? "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn."
+                    : introEarnText;
+                PixelNotice.Show(earn, 0f, compact: true, onClosed: () =>
+                {
+                    introRunning = false; // the tier guide may show now
+                    MarkSeen("intro_log"); // only counts once the player has been through all the tips
+                    if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
+                });
             });
         });
     }
