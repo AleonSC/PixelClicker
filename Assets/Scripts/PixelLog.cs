@@ -448,6 +448,15 @@ public class PixelLog : MonoBehaviour
             cam.farClipPlane = 30f;
             cam.allowHDR = false;
             cam.targetTexture = rt;
+            // The studio is far from the scene's lights' reach in practice (dark icons), so it brings its own short-range light.
+            GameObject lightGo = new GameObject("Icon Light");
+            lightGo.transform.SetParent(studio.transform, false);
+            lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
+            Light icoLight = lightGo.AddComponent<Light>();
+            icoLight.type = LightType.Point;
+            icoLight.range = 25f;
+            icoLight.intensity = 6f;
+            icoLight.shadows = LightShadows.None;
             camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
             camGo.transform.LookAt(studio.transform.position);
             cam.Render();
@@ -1251,7 +1260,7 @@ public class PixelLog : MonoBehaviour
             Texture skinTex = SkinIcon(achievements.GetSkinTier(a));
             row.skin.gameObject.SetActive(skinTex != null);
             row.icon.gameObject.SetActive(skinTex == null);
-            if (skinTex != null) { row.skin.texture = skinTex; row.skin.color = new Color(dim, dim, dim, 1f); }
+            if (skinTex != null) { row.skin.texture = skinTex; float skinDim = Mathf.Lerp(1f, dim, 0.35f); row.skin.color = new Color(skinDim, skinDim, skinDim, 1f); }
 
             row.barFill.color = unlocked ? achievementUnlockedColor : achievementBarColor;
             row.barFillRect.anchorMax = new Vector2(unlocked ? 1f : achievements.GetFraction(a), 1f);
