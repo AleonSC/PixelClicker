@@ -284,12 +284,15 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float oldPixelGlowBoost = 2.5f;
 
     [Header("Glow Shell (works in builds)")]
-    [Tooltip("Glowing pixels get a thin unlit coloured shell on top of the normal glow. Emission turned on from code can be stripped from built games (no saved material uses it), and this keeps glowing pixels luminous there.")]
-    [SerializeField] private bool glowShell = true;
+    [Tooltip("Tick to turn the glow shell off. Glowing pixels normally get a thin unlit coloured shell on top of the normal glow: emission turned on from code can be stripped from built games, and the shell keeps glowing pixels luminous there.")]
+    [SerializeField] private bool disableGlowShell = false;
 
-    [Range(0f, 1f)]
-    [Tooltip("How strongly the shell tints the pixel (it scales with the pixel's Glow Intensity). 0 = off.")]
-    [SerializeField] private float glowShellAlpha = 0.3f;
+    [Range(-0.3f, 0.7f)]
+    [Tooltip("Added to the shell's base strength (0.3, which also scales with each pixel's Glow Intensity). 0 = the default look; negative = fainter, positive = stronger.")]
+    [SerializeField] private float glowShellExtra = 0f;
+
+    private bool glowShell => !disableGlowShell;
+    private float glowShellAlpha => Mathf.Max(0f, 0.3f + glowShellExtra);
 
     [Header("Tough Pixels (Clicks To Collect > 1)")]
     [Range(0f, 0.6f)]
