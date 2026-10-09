@@ -193,7 +193,40 @@ public class PixelOfflineProgress : MonoBehaviour
         double[] gains = new double[tiers.Length];
         for (int i = 0; i < tiers.Length; i++)
             gains[i] = Math.Floor(pixels * chance[i] * tiers[i].amountPerClick * clicker.PayoutMultiplier(i) * clicker.ClickMultiplier);
+
+        // Rare drops (Dragon Cubes) are rolled with real dice, not averaged: each pixel that would have spawned had its
+        // spawn-weight chance, so the number found is a random (Poisson) count with that expectation.
+        if (clicker.RandomizesSpawnTier)
+        {
+            double normalWeight = 0d, rareWeight = 0d;
+            for (int i = 0; i < tiers.Length; i++)
+            {
+                if (tiers[i].rareDrop) rareWeight += Math.Max(0f, tiers[i].spawnWeight);
+                else if (tiers[i].unlocked) normalWeight += Math.Max(0f, tiers[i].spawnWeight);
+            }
+            double total = normalWeight + rareWeight;
+            if (total > 0d)
+                for (int i = 0; i < tiers.Length; i++)
+                    if (tiers[i].rareDrop && tiers[i].spawnWeight > 0f)
+                        gains[i] = RollPoisson(pixels * tiers[i].spawnWeight / total);
+        }
         return gains;
+    }
+
+    /// <summary>A random whole number with the given average (Knuth for small averages, a normal approximation for big ones).</summary>
+    private static double RollPoisson(double lambda)
+    {
+        if (lambda <= 0d) return 0d;
+        if (lambda > 30d)
+        {
+            double u1 = 1d - UnityEngine.Random.value, u2 = UnityEngine.Random.value;
+            double normal = Math.Sqrt(-2d * Math.Log(u1)) * Math.Cos(2d * Math.PI * u2);
+            return Math.Max(0d, Math.Round(lambda + Math.Sqrt(lambda) * normal));
+        }
+        double limit = Math.Exp(-lambda), product = UnityEngine.Random.value;
+        int count = 0;
+        while (product > limit && count < 1000) { count++; product *= UnityEngine.Random.value; }
+        return count;
     }
 
     // ------------------------------------------------------------------

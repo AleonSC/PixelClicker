@@ -220,3 +220,4 @@
 [2026-10-09 22:38 UTC] The event log now shows only the newest entry when something happens; the full list appears only when you open the log yourself (Enter by default).
 [2026-10-09 22:41 UTC] Fixed the Electric pixel arcs being drawn rotated and offset (they were attached to the spinning cube, so they did not line up with the pixels they join).
 [2026-10-09 22:52 UTC] Added the Charge Booster (lasts a number of auto clicks, eats linked Electric pixels as charge, click when full for a super charge) and the Lightning Rod (lasts a number of strikes, turns nearby old pixels into Electric pixels) as placeable devices.
+[2026-10-09 23:21 UTC] Offline progress can now find Dragon Cubes: the auto clicks made while you were away roll real dice at each cube's spawn-weight chance.
