@@ -124,9 +124,10 @@ public class PixelTinkererMinigame : PixelMinigame
         spawnTimer = firstVisitDelay;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         Unfreeze();
+        base.OnDestroy();
     }
 
     private void Update()

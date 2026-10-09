@@ -1198,7 +1198,7 @@ public class PixelLookLightning : MonoBehaviour
         mesh.MarkDynamic();
         GetComponent<MeshFilter>().sharedMesh = mesh;
         Rebuild();
-        timer = Random.Range(0.02f, 0.08f);
+        timer = UnityEngine.Random.Range(0.02f, 0.08f);
     }
 
     private void OnEnable() { active++; }
@@ -1209,7 +1209,7 @@ public class PixelLookLightning : MonoBehaviour
     {
         timer -= Time.unscaledDeltaTime;
         if (timer > 0f) return;
-        timer = active <= 6 ? Random.Range(0.04f, 0.09f) : Random.Range(0.1f, 0.18f);
+        timer = active <= 6 ? UnityEngine.Random.Range(0.04f, 0.09f) : UnityEngine.Random.Range(0.1f, 0.18f);
         Rebuild();
     }
 
@@ -1234,7 +1234,7 @@ public class PixelLookLightning : MonoBehaviour
             }
 
         // A few arcs through the inside, from one point on the surface to another.
-        int arcs = rich ? Random.Range(3, 6) : Random.Range(1, 3);
+        int arcs = rich ? UnityEngine.Random.Range(3, 6) : UnityEngine.Random.Range(1, 3);
         for (int i = 0; i < arcs; i++)
             Bolt(RandomSurfacePoint(), RandomSurfacePoint(), segs + 2, jitter * 1.6f, coreW * 0.8f, glowW * 0.8f, rich);
 
@@ -1247,9 +1247,9 @@ public class PixelLookLightning : MonoBehaviour
 
     private Vector3 RandomSurfacePoint()
     {
-        Vector3 p = new Vector3(Random.value - 0.5f, Random.value - 0.5f, Random.value - 0.5f);
-        int axis = Random.Range(0, 3);
-        p[axis] = Random.value < 0.5f ? -0.5f : 0.5f;
+        Vector3 p = new Vector3(UnityEngine.Random.value - 0.5f, UnityEngine.Random.value - 0.5f, UnityEngine.Random.value - 0.5f);
+        int axis = UnityEngine.Random.Range(0, 3);
+        p[axis] = UnityEngine.Random.value < 0.5f ? -0.5f : 0.5f;
         return p;
     }
 
@@ -1263,9 +1263,9 @@ public class PixelLookLightning : MonoBehaviour
             if (s < segments)
             {
                 float fade = Mathf.Sin(t * Mathf.PI);
-                p += new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * (wander * fade);
+                p += new Vector3(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f)) * (wander * fade);
             }
-            float flicker = Random.Range(0.55f, 1f);
+            float flicker = UnityEngine.Random.Range(0.55f, 1f);
             if (withGlow) Ribbon(prev, p, glowWidth, new Color(glow.r, glow.g, glow.b, 0.22f * flicker));
             Ribbon(prev, p, coreWidth, new Color(core.r, core.g, core.b, flicker));
             prev = p;
