@@ -1469,6 +1469,34 @@ public class PixelClicker : MonoBehaviour
             float breath = 1f + glowBreathAmount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f);
             glowLight.intensity = glowLightIntensity * activeGlow * breath;
         }
+
+        AnimateGlowShell(time);
+    }
+
+    private MeshRenderer liveShellRenderer, liveHaloRenderer;
+    private Color liveShellColor;
+    private float liveShellAlpha, liveShellHdr;
+    private readonly MaterialPropertyBlock shellBlock = new MaterialPropertyBlock();
+
+    /// <summary>Makes the glow shell and halo breathe like the real emission does (same speed and amount, a little stronger so it reads).</summary>
+    private void AnimateGlowShell(float time)
+    {
+        if (liveShellRenderer == null) return;
+        float breath = 1f + (glowBreathAmount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f)) * 1.5f;
+        breath = Mathf.Max(0.3f, breath);
+
+        liveShellRenderer.GetPropertyBlock(shellBlock); // keeps what is already on it (textures)
+        shellBlock.SetColor("_Color", new Color(liveShellColor.r * liveShellHdr * breath, liveShellColor.g * liveShellHdr * breath,
+                                                liveShellColor.b * liveShellHdr * breath, Mathf.Clamp01(liveShellAlpha * Mathf.Lerp(1f, breath, 0.5f))));
+        liveShellRenderer.SetPropertyBlock(shellBlock);
+
+        if (liveHaloRenderer != null)
+        {
+            liveHaloRenderer.GetPropertyBlock(shellBlock);
+            shellBlock.SetColor("_Color", new Color(liveShellColor.r * liveShellHdr * 0.7f * breath, liveShellColor.g * liveShellHdr * 0.7f * breath,
+                                                    liveShellColor.b * liveShellHdr * 0.7f * breath, Mathf.Clamp01(liveShellAlpha * 0.3f * breath)));
+            liveHaloRenderer.SetPropertyBlock(shellBlock);
+        }
     }
 
     private PixelLook activeLook;          // the look of the tier the cube currently shows
@@ -1579,13 +1607,20 @@ public class PixelClicker : MonoBehaviour
         {
             if (liveGlowShell != null) Destroy(liveGlowShell);
             liveGlowShell = null;
+            liveShellRenderer = liveHaloRenderer = null;
             return;
         }
         if (liveGlowShell != null && liveGlowShellType == tier.type) return;
 
         if (liveGlowShell != null) Destroy(liveGlowShell);
-        liveGlowShell = PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), halo: true, hdr: GlowShellHdr(tier));
+        liveShellColor = GlowShellColor(tier);
+        liveShellAlpha = GlowShellAlpha(tier);
+        liveShellHdr = GlowShellHdr(tier);
+        liveGlowShell = PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, liveShellColor, liveShellAlpha, halo: true, hdr: liveShellHdr);
         liveGlowShellType = tier.type;
+        liveShellRenderer = liveGlowShell != null ? liveGlowShell.GetComponent<MeshRenderer>() : null;
+        Transform halo = liveGlowShell != null ? liveGlowShell.transform.Find("Glow Halo") : null;
+        liveHaloRenderer = halo != null ? halo.GetComponent<MeshRenderer>() : null;
     }
 
     private void UpdateLiveExtras(PixelTier tier, PixelLook look)
