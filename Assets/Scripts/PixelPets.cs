@@ -105,6 +105,30 @@ public class PixelPets : MonoBehaviour
     [Tooltip("How fast the Ghost pet drifts (world units per second).")]
     [SerializeField] private float ghostSpeed = 1.2f;
 
+    [Header("Vacuum pet")]
+    [Min(0.5f)]
+    [Tooltip("How far the Vacuum Pet reaches for old pixels, in pixel-widths.")]
+    [SerializeField] private float vacuumRadius = 2.5f;
+
+    [Min(0.02f)]
+    [Tooltip("Seconds between the old pixels it sucks up (one at a time).")]
+    [SerializeField] private float vacuumInterval = 0.15f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds an old pixel takes to fly into the Vacuum Pet while shrinking.")]
+    [SerializeField] private float vacuumFlySeconds = 0.25f;
+
+    [Min(0.1f)]
+    [Tooltip("Size of the number above the Vacuum Pet (how many old pixels it has sucked up in total).")]
+    [SerializeField] private float counterTextSize = 3f;
+
+    [Min(0f)]
+    [Tooltip("How far above the Vacuum Pet its number floats, in pixel-widths.")]
+    [SerializeField] private float counterHeight = 1f;
+
+    [Tooltip("Colour of the number above the Vacuum Pet.")]
+    [SerializeField] private Color counterColor = new Color(1f, 1f, 1f, 0.9f);
+
     [Header("Popup")]
     [Tooltip("Popup title.")]
     [SerializeField] private string popupTitle = "Pet Found!";
@@ -151,6 +175,10 @@ public class PixelPets : MonoBehaviour
         public GameObject body;
         public float hopTimer;
         public bool ghost;       // the Ghost pet only hovers
+        public float suckTimer;       // Vacuum Pet
+        public GameObject counterGo;  // Vacuum Pet's floating number
+        public TextMeshPro counterText;
+        public double shownCount = -1d;
         public Vector3 target;   // where a hovering pet is drifting to
         public float targetTimer, phase;
     }
@@ -213,7 +241,7 @@ public class PixelPets : MonoBehaviour
     {
         if (Instance == this) Instance = null;
         if (PopupOpen) ClosePopup();
-        foreach (Pet p in pets) if (p.body != null) Destroy(p.body);
+        foreach (Pet p in pets) { if (p.body != null) Destroy(p.body); DestroyCounter(p); }
         if (popupRoot != null) Destroy(popupRoot);
     }
 
@@ -355,7 +383,7 @@ public class PixelPets : MonoBehaviour
     {
         bool want = !p.off;
         if (want && p.body == null) Spawn(p);
-        else if (!want && p.body != null) { Destroy(p.body); p.body = null; }
+        else if (!want && p.body != null) { Destroy(p.body); p.body = null; DestroyCounter(p); }
     }
 
     private void Spawn(Pet p)
@@ -407,6 +435,7 @@ public class PixelPets : MonoBehaviour
             box.isTrigger = true;
             p.targetTimer = 0f;
         }
+        if (p.type == PixelClicker.PixelType.Vacuum) BuildCounter(p, size);
         p.body = go;
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
     }
@@ -424,6 +453,7 @@ public class PixelPets : MonoBehaviour
             if (hide) continue;
             if (p.ghost) RoamGhost(p, p == hovered || p == held);
             else Roam(p, p == hovered || p == held);
+            if (p.type == PixelClicker.PixelType.Vacuum) SuckAround(p);
         }
     }
 
@@ -657,6 +687,104 @@ public class PixelPets : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
+    // The Vacuum Pet: sucks up old pixels near it. They pay nothing: they only count for the stat and the number above it.
+    // ------------------------------------------------------------------
+
+    private void BuildCounter(Pet p, float size)
+    {
+        p.counterGo = new GameObject("Vacuum Pet Counter");
+        p.counterGo.transform.localScale = Vector3.one * size;
+        p.counterText = p.counterGo.AddComponent<TextMeshPro>();
+        p.counterText.fontSize = counterTextSize;
+        p.counterText.fontStyle = FontStyles.Bold;
+        p.counterText.alignment = TextAlignmentOptions.Center;
+        p.counterText.color = counterColor;
+        p.counterText.rectTransform.sizeDelta = new Vector2(8f, 2f);
+        if (font != null) p.counterText.font = font;
+        p.shownCount = -1d;
+        p.counterGo.SetActive(false);
+    }
+
+    private static void DestroyCounter(Pet p)
+    {
+        if (p.counterGo != null) Destroy(p.counterGo);
+        p.counterGo = null;
+        p.counterText = null;
+    }
+
+    private void SuckAround(Pet p)
+    {
+        Rigidbody pet = p.body.GetComponent<Rigidbody>();
+        if (pet == null || clicker == null) return;
+        p.suckTimer -= Time.deltaTime;
+        if (p.suckTimer > 0f) return;
+        p.suckTimer = vacuumInterval;
+
+        float reach = vacuumRadius * clicker.PixelBaseSize;
+        Rigidbody nearest = null;
+        float best = reach * reach;
+        System.Collections.Generic.IReadOnlyList<Rigidbody> list = clicker.OldPixels;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rigidbody b = list[i];
+            if (b == null || b.isKinematic) continue;
+            OldPixelDespawn d = b.GetComponent<OldPixelDespawn>();
+            if (d != null && (d.IsDespawning || d.Held)) continue; // vanishing or in someone's hand
+            if (clicker.IsFlyingPixel(b)) continue;
+            float sq = (b.position - pet.position).sqrMagnitude;
+            if (sq < best) { best = sq; nearest = b; }
+        }
+        if (nearest == null || !clicker.ReleaseOldPixel(nearest, false)) return; // false: no payout
+        PixelStats.Count("pet.vacuum");
+        StartCoroutine(FlyIntoPet(nearest, pet.transform));
+    }
+
+    private System.Collections.IEnumerator FlyIntoPet(Rigidbody body, Transform target)
+    {
+        if (body == null) yield break;
+        foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
+        body.isKinematic = true;
+        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+        if (despawn != null) despawn.Held = true;
+
+        Transform t = body.transform;
+        Vector3 startScale = t.localScale;
+        Vector3 start = t.position;
+        float elapsed = 0f;
+        while (elapsed < vacuumFlySeconds && t != null)
+        {
+            elapsed += Time.deltaTime;
+            float k = Mathf.Clamp01(elapsed / vacuumFlySeconds);
+            Vector3 to = target != null ? target.position : start;
+            t.position = Vector3.Lerp(start, to, k * k);
+            t.localScale = startScale * Mathf.Lerp(1f, 0.05f, k * k);
+            yield return null;
+        }
+        if (t != null) Destroy(t.gameObject);
+    }
+
+    private void LateUpdate()
+    {
+        Camera cam = clicker != null ? (clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main) : null;
+        foreach (Pet p in pets)
+        {
+            if (p.counterGo == null) continue;
+            double count = PixelStats.Total("pet.vacuum");
+            bool show = p.body != null && p.body.activeSelf && count > 0d && cam != null;
+            if (p.counterGo.activeSelf != show) p.counterGo.SetActive(show);
+            if (!show) continue;
+            if (count != p.shownCount)
+            {
+                p.shownCount = count;
+                p.counterText.text = PixelClicker.FormatNumber(count);
+            }
+            float size = clicker.PixelBaseSize;
+            p.counterGo.transform.position = p.body.transform.position + Vector3.up * (size * (0.5f + counterHeight));
+            p.counterGo.transform.rotation = cam.transform.rotation;
+        }
+    }
+
+    // ------------------------------------------------------------------
     // Saving
     // ------------------------------------------------------------------
 
@@ -671,7 +799,7 @@ public class PixelPets : MonoBehaviour
     /// <summary>Restores the pets from a save (null = none).</summary>
     public void Import(string[] list)
     {
-        foreach (Pet p in pets) if (p.body != null) Destroy(p.body);
+        foreach (Pet p in pets) { if (p.body != null) Destroy(p.body); DestroyCounter(p); }
         pets.Clear();
         waiting.Clear();
         if (list == null) return;

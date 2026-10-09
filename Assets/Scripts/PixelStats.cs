@@ -127,6 +127,9 @@ public class PixelStats : MonoBehaviour
         if (now <= 0d || value < now) instance.counters[key] = value;
     }
 
+    /// <summary>A counter's value by key, from anywhere (0 when there is no PixelStats or nothing recorded).</summary>
+    public static double Total(string key) => instance != null ? instance.Counter(key) : 0d;
+
     /// <summary>A counter's value (0 when never recorded).</summary>
     public double Counter(string key) => counters.TryGetValue(key, out double v) ? v : 0d;
 
@@ -422,8 +425,7 @@ public class PixelStats : MonoBehaviour
         Num("Highest Value level", highestValue);
         Cnt("Shop purchases", "shop.purchases");
         Cnt("Consumables bought", "shop.items");
-        if (PixelPets.Instance != null && (PixelPets.Instance.OwnedCount > 0 || Counter("pets.found") > 0d))
-            Row("Pets found", PixelPets.Instance.OwnedCount + " / " + (clicker != null ? clicker.Tiers.Length : 0));
+
 
         Head("Old pixels");
         Cnt("Vacuumed up", "old.vacuumed");
@@ -445,6 +447,17 @@ public class PixelStats : MonoBehaviour
             Cnt("   Times used", "timestop.uses");
             Row("Time slowed", FormatTime(Counter("timeslow.seconds")));
             Cnt("   Times used", "timeslow.uses");
+        }
+
+        PixelPets petSystem = PixelPets.Instance;
+        if (petSystem != null && clicker != null)
+        {
+            Head("Pets");
+            Row("Pets found", petSystem.OwnedCount + " / " + clicker.Tiers.Length);
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                Row("   " + (petSystem.IsOwned(t.type) ? t.displayName + " Pet" : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
+            if (petSystem.IsOwned(PixelClicker.PixelType.Vacuum) || Counter("pet.vacuum") > 0d)
+                Cnt("Old pixels sucked by the Vacuum Pet", "pet.vacuum");
         }
 
         Head("Minigames");
