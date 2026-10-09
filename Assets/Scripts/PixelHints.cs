@@ -80,8 +80,8 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Width of the event log box (canvas units). Its height runs from above the bottom black bar up to the top black bar.")]
     [SerializeField] private float logWidth = 420f;
 
-    [Tooltip("Sorting order of the event log's canvas. Low, so the Inventory, Log, Shop and other windows draw over it.")]
-    [SerializeField] private int logSortingOrder = 20;
+    [Tooltip("Sorting order of the event log's canvas. Kept below every other window (Inventory, Log, Shop, Crafting, Bank...). Renamed so scenes saved with an older, higher value pick up the new default.")]
+    [SerializeField] private int eventLogSortingOrder = 5;
 
     [Tooltip("Background colour of each line (used when Show Log Background is on).")]
     [SerializeField] private Color overlayRowColor = new Color(0.1f, 0.18f, 0.28f, 0.8f);
@@ -509,7 +509,7 @@ public class PixelHints : MonoBehaviour
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         overlayFont = clicker != null ? clicker.UIFont : null;
         PixelUIKit.EnsureEventSystem();
-        overlayRoot = PixelUIKit.CreateCanvas("Pixel Event Log", logSortingOrder, new Vector2(1920f, 1080f), true);
+        overlayRoot = PixelUIKit.CreateCanvas("Pixel Event Log", eventLogSortingOrder, new Vector2(1920f, 1080f), true);
         overlayRoot.transform.SetParent(transform, false);
         overlayGroup = overlayRoot.AddComponent<CanvasGroup>();
 
