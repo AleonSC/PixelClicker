@@ -44,7 +44,12 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Craters,         // battle-scarred rocky ground full of craters
         GravityRoom,     // metal training-room panels with a glowing ring
         PowerArena,      // floating hex stone plates with glowing seams
-        EnergyWisps      // swirling wisps of destructive energy
+        EnergyWisps,     // swirling wisps of destructive energy
+        CardBack,        // trading-card back: brown frame, swirling vortex, dark oval in the middle
+        Liquid,          // flowing liquid (animated)
+        CloudSea,        // fluffy clouds seen from above (scrolls)
+        Kaleidoscope,    // mirrored, colour-shifting kaleidoscope (animated)
+        PacMan           // maze with a chomping Pac-Man, pellets and ghosts (animated)
     }
 
     [Serializable]
@@ -103,6 +108,15 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         [Tooltip("Disco only: seconds between colour changes.")]
         public float beatSeconds = 0.5f;
+
+        [Tooltip("One copy of the pattern covers the whole floor (no tiling). Tile World Size is ignored.")]
+        public bool stretchToFloor = false;
+
+        [Tooltip("Animated patterns (Liquid, Kaleidoscope, Pac-Man): how many times per second the pattern is redrawn. 0 = still. Higher = smoother but costs more.")]
+        public float animateFps = 0f;
+
+        [Tooltip("Animated patterns: how fast the animation plays (1 = normal).")]
+        public float animSpeed = 1f;
     }
 
     [Header("Floor")]
@@ -140,6 +154,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
     private Vector2 baseTiling = Vector2.one;
     private Vector2 offset;
     private float pulseClock;
+    private float animTimer, animClock;
 
     public int StyleCount => styles.Count;
     public int Current => current;
@@ -295,7 +310,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         // Tile by world size so the pattern has the same scale on any floor.
         Vector3 size = floorRenderer.bounds.size;
         float tile = Mathf.Max(0.1f, style.tileWorldSize);
-        baseTiling = new Vector2(Mathf.Max(1f, size.x / tile), Mathf.Max(1f, size.z / tile));
+        baseTiling = style.stretchToFloor ? Vector2.one : new Vector2(Mathf.Max(1f, size.x / tile), Mathf.Max(1f, size.z / tile));
+        animTimer = animClock = 0f;
         SetTiling(m, baseTiling, offset);
 
         Material[] mats = new Material[Mathf.Max(1, originalMaterials != null ? originalMaterials.Length : 1)];
@@ -330,6 +346,17 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             pulseClock += dt;
             float wave = 0.5f + 0.5f * Mathf.Sin(pulseClock * style.pulseSpeed * Mathf.PI * 2f);
             activeMaterial.SetColor("_EmissionColor", Color.white * style.glow * (1f - style.pulseAmount * wave));
+        }
+
+        if (style.animateFps > 0f && dt > 0f && activeTexture != null)
+        {
+            animClock += dt * style.animSpeed;
+            animTimer += dt;
+            if (animTimer >= 1f / style.animateFps)
+            {
+                animTimer = 0f;
+                Fill(activeTexture, style, animClock, true);
+            }
         }
 
         if (style.pattern == FloorPattern.Disco && dt > 0f)
@@ -386,15 +413,35 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false)
         {
             name = "Floor " + s.name,
-            wrapMode = TextureWrapMode.Repeat,
+            wrapMode = s.stretchToFloor ? TextureWrapMode.Clamp : TextureWrapMode.Repeat,
             filterMode = s.pixelated ? FilterMode.Point : FilterMode.Bilinear,
             anisoLevel = 4
         };
         if (s.pattern == FloorPattern.Disco) { DrawDisco(tex, s, step); return tex; }
+        Fill(tex, s, 0f, false);
+        return tex;
+    }
 
-        Color[] px = new Color[n * n];
+    // Animation time read by the animated patterns while a texture is being drawn.
+    private static float shadeTime;
+    private static Color[] fillBuffer; // reused by animated floors so redrawing doesn't allocate every frame
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { fillBuffer = null; pacPath = null; pacPathIndex = null; shadeTime = 0f; }
+
+    /// <summary>Draws the pattern into 'tex' at animation time 'time' (0 for still patterns). 'reuse' = keep the pixel buffer for the next frame.</summary>
+    private static void Fill(Texture2D tex, FloorStyle s, float time, bool reuse)
+    {
+        int n = tex.width;
+        Color[] px;
+        if (reuse)
+        {
+            if (fillBuffer == null || fillBuffer.Length != n * n) fillBuffer = new Color[n * n];
+            px = fillBuffer;
+        }
+        else px = new Color[n * n];
         int cells = Mathf.Max(1, s.cells);
-        System.Random rng = new System.Random(s.seed);
+        shadeTime = time;
 
         for (int y = 0; y < n; y++)
         {
@@ -408,12 +455,12 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         }
 
         // Scattered extras that are easier to place than to shade per texel.
+        System.Random rng = new System.Random(s.seed);
         if (s.pattern == FloorPattern.Space) AddStars(px, n, s, rng);
         if (s.pattern == FloorPattern.PixelGrass) AddFlowers(px, n, s, rng);
 
         tex.SetPixels(px);
         tex.Apply(false);
-        return tex;
     }
 
     private static Color Shade(FloorStyle s, float u, float v, int x, int y, int n, int cells)
@@ -861,6 +908,95 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 return Color.Lerp(stone, s.colorC, glow);
             }
 
+            case FloorPattern.CardBack:
+            {
+                // One card per tile, standing upright in the middle with a dark gap around it.
+                float px = u - 0.5f, py = v - 0.5f;
+                float hw = s.stretchToFloor ? 0.49f : 0.32f, hh = s.stretchToFloor ? 0.49f : 0.46f;
+                const float corner = 0.025f;
+                float qx = Mathf.Abs(px) - (hw - corner), qy = Mathf.Abs(py) - (hh - corner);
+                float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f))
+                              + Mathf.Min(Mathf.Max(qx, qy), 0f) - corner;               // < 0 inside the rounded card
+                if (outside > 0f) return s.colorC * (0.9f + 0.15f * Fbm(u, v, 8, 3, s.seed));
+                float inset = -outside;                                                // distance in from the card's edge
+
+                // Frame: dark brown border with a thin gold line inside it.
+                float border = s.stretchToFloor ? 0.03f : 0.04f;
+                if (inset < border)
+                {
+                    Color frame = s.colorB * (0.75f + 0.35f * (inset / border));
+                    return frame * (0.92f + 0.12f * Hash(x, y, s.seed));
+                }
+                if (inset < border + (s.stretchToFloor ? 0.004f : 0.006f)) return Color.Lerp(s.colorA, Color.white, 0.25f);
+
+                // The vortex: spiral arms around the centre (squashed to the card's shape).
+                float ex = px / hw, ey = py / hh;
+                float r = Mathf.Sqrt(ex * ex + ey * ey);
+                float ang = Mathf.Atan2(ey, ex);
+                float spiral = Mathf.Sin(ang * 3f + Mathf.Log(Mathf.Max(r, 0.02f)) * 7f + Fbm(u, v, 6, 3, s.seed) * 2.5f);
+                float arms = Mathf.SmoothStep(0f, 1f, spiral * 0.5f + 0.5f);
+                Color dark = s.colorB * 0.55f;
+                Color c = Color.Lerp(dark, s.colorA, arms * (0.55f + 0.45f * Mathf.Clamp01(1.2f - r)));
+                c = Color.Lerp(c, Color.Lerp(s.colorA, new Color(1f, 0.92f, 0.6f), 0.4f), Mathf.Clamp01(0.45f - r) * 1.6f); // bright core
+                c *= Mathf.Lerp(1f, 0.55f, Mathf.Clamp01((r - 0.6f) * 1.4f));            // darker towards the frame
+
+                // Dark oval in the middle with a glowing rim.
+                float ox = px / (hw * 0.34f), oy = py / (hh * 0.16f);
+                float o = Mathf.Sqrt(ox * ox + oy * oy);
+                if (o < 1f) return Color.Lerp(new Color(0.03f, 0.02f, 0.02f), new Color(0.12f, 0.06f, 0.03f), o * o);
+                if (o < 1.25f) c = Color.Lerp(c, Color.Lerp(s.colorA, Color.white, 0.35f), (1.25f - o) / 0.25f * 0.8f);
+                return c;
+            }
+
+            case FloorPattern.Liquid:
+            {
+                // Two layers of warped waves drifting against each other; bright ridges where they meet.
+                float t = shadeTime;
+                float w1 = Fbm(u + t * 0.03f, v - t * 0.02f, 3, 3, s.seed);
+                float w2 = Fbm(u - t * 0.025f + w1 * 0.4f, v + t * 0.035f + w1 * 0.4f, 3, 3, s.seed + 1);
+                float a = Mathf.Sin((u * cells + w2 * 3f) * Mathf.PI * 2f + t * 1.4f);
+                float b = Mathf.Sin((v * cells - w1 * 3f) * Mathf.PI * 2f - t * 1.1f);
+                float k = Mathf.Clamp01(0.5f + 0.25f * (a + b));
+                Color c = Color.Lerp(s.colorA, s.colorB, k);
+                float ridge = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(a - b) * 1.6f), 6f);  // thin shiny streaks
+                return Color.Lerp(c, s.colorC, ridge * 0.8f);
+            }
+
+            case FloorPattern.CloudSea:
+            {
+                float d = Fbm(u, v, 3, 5, s.seed);
+                float d2 = Fbm(u + 0.02f, v - 0.025f, 3, 5, s.seed);                    // a step towards the light
+                float cloud = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((d - 0.42f) * 4f));
+                float lit = Mathf.Clamp01(0.6f + (d - d2) * 6f);
+                Color puff = Color.Lerp(s.colorB, s.colorC, lit);
+                Color c = s.colorA * (0.9f + 0.15f * Fbm(u, v, 6, 3, s.seed + 3));      // sky / sea far below
+                c = Color.Lerp(c, s.colorA * 0.75f, Mathf.Clamp01((d2 - 0.42f) * 4f) * (1f - cloud) * 0.6f); // cloud shadows
+                return Color.Lerp(c, puff, cloud);
+            }
+
+            case FloorPattern.Kaleidoscope:
+            {
+                float t = shadeTime;
+                float px = u - 0.5f, py = v - 0.5f;
+                float r = Mathf.Sqrt(px * px + py * py);
+                float seg = Mathf.PI * 2f / Mathf.Max(3, cells);
+                float ang = Mathf.Atan2(py, px) + t * 0.15f;
+                float a = ang - Mathf.Floor(ang / seg) * seg;
+                if (a > seg * 0.5f) a = seg - a;                                        // mirror each slice
+                float fx = r * Mathf.Cos(a), fy = r * Mathf.Sin(a);
+                float val = Mathf.Sin(fx * 18f + t) + Mathf.Sin(fy * 26f - t * 1.3f)
+                          + Mathf.Sin((fx + fy) * 14f + t * 0.7f) + Mathf.Sin(r * 30f - t * 2f);
+                float hue = Frac(val * 0.12f + t * 0.05f + r * 0.6f);
+                float bright = 0.55f + 0.45f * Mathf.Sin(val * 2.2f);
+                Color c = Color.HSVToRGB(hue, 0.8f, Mathf.Clamp01(bright));
+                float lines = Mathf.Abs(Mathf.Sin(val * 3f));
+                if (lines < 0.08f) c = Color.Lerp(c, s.colorC, 0.7f);                  // thin outlines between shapes
+                return Color.Lerp(s.colorA, c, Mathf.Clamp01(1.1f - r * 0.4f));
+            }
+
+            case FloorPattern.PacMan:
+                return ShadePacMan(s, u, v);
+
             case FloorPattern.EnergyWisps:
             {
                 // Domain-warped noise: swirling wisps.
@@ -876,6 +1012,165 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             }
         }
         return s.colorA;
+    }
+
+    // ------------------------------------------------------------------
+    // Pac-Man floor: a maze, pellets that get eaten as Pac-Man passes, and four ghosts chasing him round a loop
+    // ------------------------------------------------------------------
+
+    private static readonly string[] PacMaze =
+    {
+        "###################",
+        "#o.......#.......o#",
+        "#.##.###.#.###.##.#",
+        "#.................#",
+        "#.##.#.#####.#.##.#",
+        "#....#...#...#....#",
+        "####.###.#.###.####",
+        "####.#.......#.####",
+        "####.#.##-##.#.####",
+        "......  #   #......",
+        "####.#.#####.#.####",
+        "####.#.......#.####",
+        "####.#.#####.#.####",
+        "#........#........#",
+        "#.##.###.#.###.##.#",
+        "#o.#...........#.o#",
+        "##.#.#.#####.#.#.##",
+        "#....#...#...#....#",
+        "#.######.#.######.#",
+        "#.................#",
+        "###################",
+    };
+
+    // Corners of the loop Pac-Man runs (column, row; rows counted from the top). Every step between them is open.
+    private static readonly Vector2Int[] PacWaypoints =
+    {
+        new Vector2Int(1, 3), new Vector2Int(4, 3), new Vector2Int(4, 13), new Vector2Int(1, 13), new Vector2Int(1, 15),
+        new Vector2Int(2, 15), new Vector2Int(2, 17), new Vector2Int(1, 17), new Vector2Int(1, 19), new Vector2Int(17, 19),
+        new Vector2Int(17, 17), new Vector2Int(16, 17), new Vector2Int(16, 15), new Vector2Int(17, 15), new Vector2Int(17, 13),
+        new Vector2Int(14, 13), new Vector2Int(14, 3), new Vector2Int(17, 3), new Vector2Int(17, 1), new Vector2Int(10, 1),
+        new Vector2Int(10, 3), new Vector2Int(8, 3), new Vector2Int(8, 1), new Vector2Int(1, 1),
+    };
+
+    private static List<Vector2Int> pacPath;
+    private static int[] pacPathIndex; // per maze cell: where it is on the loop (-1 = not on it)
+
+    private static readonly Color[] GhostColors =
+    {
+        new Color(1f, 0.1f, 0.1f), new Color(1f, 0.6f, 0.85f), new Color(0.2f, 1f, 1f), new Color(1f, 0.65f, 0.2f),
+    };
+
+    private static void BuildPacPath()
+    {
+        if (pacPath != null) return;
+        int w = PacMaze[0].Length, h = PacMaze.Length;
+        pacPath = new List<Vector2Int>();
+        pacPathIndex = new int[w * h];
+        for (int i = 0; i < pacPathIndex.Length; i++) pacPathIndex[i] = -1;
+        for (int i = 0; i < PacWaypoints.Length; i++)
+        {
+            Vector2Int a = PacWaypoints[i], b = PacWaypoints[(i + 1) % PacWaypoints.Length];
+            Vector2Int step = new Vector2Int(Math.Sign(b.x - a.x), Math.Sign(b.y - a.y));
+            for (Vector2Int c = a; c != b; c += step)
+            {
+                if (pacPathIndex[c.y * w + c.x] < 0) pacPathIndex[c.y * w + c.x] = pacPath.Count;
+                pacPath.Add(c);
+            }
+        }
+    }
+
+    /// <summary>Position (cell units, centre of the cell) and heading at 'progress' cells along the loop.</summary>
+    private static Vector2 PacAt(float progress, out Vector2 dir)
+    {
+        int count = pacPath.Count;
+        progress = Mathf.Repeat(progress, count);
+        int i = Mathf.FloorToInt(progress);
+        Vector2Int a = pacPath[i], b = pacPath[(i + 1) % count];
+        dir = new Vector2(b.x - a.x, b.y - a.y);
+        float f = progress - i;
+        return new Vector2(a.x + 0.5f + dir.x * f, a.y + 0.5f + dir.y * f);
+    }
+
+    private static bool PacWall(int c, int r)
+    {
+        if (r < 0 || r >= PacMaze.Length || c < 0 || c >= PacMaze[0].Length) return false;
+        return PacMaze[r][c] == '#';
+    }
+
+    private static Color ShadePacMan(FloorStyle s, float u, float v)
+    {
+        BuildPacPath();
+        int w = PacMaze[0].Length, h = PacMaze.Length;
+        float t = shadeTime;
+        // The maze fills the height of the texture and is centred across it; rows run from the top.
+        float gx = u * h - (h - w) * 0.5f, gy = (1f - v) * h;
+        if (gx < 0f || gx >= w) return s.colorC;
+        int ci = Mathf.Clamp(Mathf.FloorToInt(gx), 0, w - 1), ri = Mathf.Clamp(Mathf.FloorToInt(gy), 0, h - 1);
+        float lx = gx - ci, ly = gy - ri;
+        char cell = PacMaze[ri][ci];
+
+        // Characters first (they are drawn over everything).
+        const float speed = 5f;                         // cells per second
+        float progress = t * speed;
+        Vector2 here = new Vector2(gx, gy);
+
+        for (int g = 0; g < GhostColors.Length; g++)
+        {
+            Vector2 gp = PacAt(progress - 5f - g * 4f, out Vector2 gd);
+            Vector2 d = here - gp;
+            if (Mathf.Abs(d.x) > 0.5f || Mathf.Abs(d.y) > 0.5f) continue;
+            const float R = 0.42f;
+            bool body = d.y < 0f ? d.magnitude < R : (Mathf.Abs(d.x) < R && d.y < R);
+            // Wavy skirt along the bottom.
+            if (body && d.y > R - 0.12f && Mathf.Sin((d.x + t * 0.8f) * 30f) > 0f) body = false;
+            if (!body) continue;
+            for (int e = -1; e <= 1; e += 2)
+            {
+                Vector2 eye = d - new Vector2(e * 0.15f, -0.08f);
+                if ((eye - gd * 0.05f).magnitude < 0.05f) return new Color(0.1f, 0.2f, 0.9f);  // pupil looks where it goes
+                if (eye.magnitude < 0.11f) return Color.white;
+            }
+            return GhostColors[g];
+        }
+
+        Vector2 pp = PacAt(progress, out Vector2 pd);
+        Vector2 pdl = here - pp;
+        if (pdl.magnitude < 0.45f)
+        {
+            float mouth = 0.75f * Mathf.Abs(Mathf.Sin(t * 12f));          // half-angle of the open mouth (radians)
+            float facing = Vector2.Angle(pdl, pd) * Mathf.Deg2Rad;
+            if (pdl.magnitude < 0.06f || facing > mouth) return new Color(1f, 0.93f, 0.1f);
+        }
+
+        // Maze.
+        if (cell == '#')
+        {
+            // A blue line along each side that faces a corridor.
+            const float lo = 0.12f, hi = 0.24f;
+            bool line =
+                (!PacWall(ci - 1, ri) && ci > 0 && lx >= lo && lx <= hi) ||
+                (!PacWall(ci + 1, ri) && ci < w - 1 && lx <= 1f - lo && lx >= 1f - hi) ||
+                (!PacWall(ci, ri - 1) && ri > 0 && ly >= lo && ly <= hi) ||
+                (!PacWall(ci, ri + 1) && ri < h - 1 && ly <= 1f - lo && ly >= 1f - hi);
+            return line ? s.colorA : s.colorC;
+        }
+        if (cell == '-') return Mathf.Abs(ly - 0.5f) < 0.08f ? new Color(1f, 0.7f, 0.85f) : s.colorC;
+
+        // Pellets: hidden once Pac-Man has passed them this lap.
+        if (cell == '.' || cell == 'o')
+        {
+            int at = pacPathIndex[ri * w + ci];
+            float lap = Mathf.Repeat(progress, pacPath.Count);
+            bool eaten = at >= 0 && at <= lap;
+            if (!eaten)
+            {
+                float dd = new Vector2(lx - 0.5f, ly - 0.5f).magnitude;
+                if (cell == '.' && dd < 0.11f) return s.colorB;
+                if (cell == 'o' && dd < 0.3f && Frac(t * 2f) < 0.6f) return s.colorB;  // blinking power pellet
+            }
+        }
+        return s.colorC;
     }
 
     private static int Wrap(int i, int m) => ((i % m) + m) % m;
@@ -1017,6 +1312,10 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private void EnsureDefaultStyles()
     {
+        // The card back used to be tiled; it is now one big card over the whole floor.
+        FloorStyle oldCard = styles.Find(st => st != null && st.pattern == FloorPattern.CardBack && !st.stretchToFloor && st.name == "Yu-Gi-Oh Card Back");
+        if (oldCard != null) { oldCard.stretchToFloor = true; oldCard.resolution = Mathf.Max(oldCard.resolution, 1024); }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -1175,5 +1474,32 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                              new Color(1f, 0.7f, 1f), 256, false, 7f, 1, 0.6f, 1.2f);
         hakai.scrollSpeed = new Vector2(0.02f, 0.035f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f;
         yield return hakai;
+
+        // ---- Yu-Gi-Oh themed ----
+        FloorStyle card = S("Yu-Gi-Oh Card Back", FloorPattern.CardBack, new Color(0.95f, 0.55f, 0.15f), new Color(0.35f, 0.17f, 0.06f),
+                            new Color(0.06f, 0.04f, 0.03f), 1024, false, 4f, 1, 0.55f);
+        card.stretchToFloor = true;
+        yield return card;
+
+        // ---- Animated ----
+        FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
+                              new Color(0.85f, 1f, 1f), 128, false, 6f, 2, 0.95f, 0.25f);
+        liquid.animateFps = 15f;
+        yield return liquid;
+
+        FloorStyle clouds = S("Moving Clouds", FloorPattern.CloudSea, new Color(0.35f, 0.6f, 0.9f), new Color(0.72f, 0.78f, 0.88f),
+                              Color.white, 256, false, 10f, 1, 0.2f);
+        clouds.scrollSpeed = new Vector2(0.015f, 0.006f);
+        yield return clouds;
+
+        FloorStyle kaleido = S("Kaleidoscope", FloorPattern.Kaleidoscope, new Color(0.02f, 0.02f, 0.05f), Color.white,
+                               new Color(0.05f, 0.05f, 0.08f), 256, false, 6f, 8, 0.7f, 0.6f);
+        kaleido.stretchToFloor = true; kaleido.animateFps = 15f;
+        yield return kaleido;
+
+        FloorStyle pac = S("Pac-Man", FloorPattern.PacMan, new Color(0.15f, 0.25f, 1f), new Color(1f, 0.8f, 0.65f),
+                           Color.black, 256, true, 6f, 1, 0.4f, 0.8f);
+        pac.stretchToFloor = true; pac.animateFps = 20f;
+        yield return pac;
     }
 }

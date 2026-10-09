@@ -89,6 +89,17 @@ public class PixelHints : MonoBehaviour
     [Tooltip("Pixels the box scrolls per mouse-wheel notch.")]
     [SerializeField] private float overlayScrollSpeed = 70f;
 
+    [Tooltip("Lines in the upper part of the event log slowly fade out towards the top of the box.")]
+    [SerializeField] private bool fadeUpperLines = true;
+
+    [Range(0f, 1f)]
+    [Tooltip("Where the fade begins, as a fraction of the box's height from the bottom (0.5 = halfway up).")]
+    [SerializeField] private float fadeStartFraction = 0.5f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How visible a line is at the very top of the box (0 = gone).")]
+    [SerializeField] private float fadeTopAlpha = 0f;
+
     [Min(1)]
     [Tooltip("How many events the log keeps (saved with the save file).")]
     [SerializeField] private int historyMax = 100;
@@ -445,6 +456,8 @@ public class PixelHints : MonoBehaviour
     private RectTransform boxRect, listRect, handleRect;
     private TMP_FontAsset overlayFont;
     private float contentHeight, viewHeight;
+    private readonly List<RectTransform> rowRects = new List<RectTransform>();
+    private readonly List<CanvasGroup> rowGroups = new List<CanvasGroup>();
 
     /// <summary>
     /// Adds a short line to the event log at the bottom left ("You unlocked the Auto Clicker!") and shows the box.
@@ -563,6 +576,8 @@ public class PixelHints : MonoBehaviour
         rowsDirty = false;
         if (listRect == null) return;
         for (int i = listRect.childCount - 1; i >= 0; i--) Destroy(listRect.GetChild(i).gameObject);
+        rowRects.Clear();
+        rowGroups.Clear();
 
         float width = logWidth - 40f;
         float y = 8f;
@@ -571,8 +586,10 @@ public class PixelHints : MonoBehaviour
             Entry entry = history[i];
                         string text = entry.text;
 
-            GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button));
+            GameObject row = new GameObject("Row", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
             row.transform.SetParent(listRect, false);
+            rowRects.Add(row.GetComponent<RectTransform>());
+            rowGroups.Add(row.GetComponent<CanvasGroup>());
             row.GetComponent<Image>().color = showLogBackground ? overlayRowColor : Color.clear; // clear still takes clicks
             RectTransform rr = row.GetComponent<RectTransform>();
             rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 0f);
@@ -620,6 +637,29 @@ public class PixelHints : MonoBehaviour
             float handleH = Mathf.Max(30f, viewHeight * viewHeight / contentHeight);
             handleRect.sizeDelta = new Vector2(6f, handleH);
             handleRect.anchoredPosition = new Vector2(-3f, (viewHeight - handleH) * (scrollOffset / max));
+        }
+        UpdateRowFade();
+    }
+
+    /// <summary>Fades each line by how high it sits in the box: full below the start fraction, fading out towards the top.</summary>
+    private void UpdateRowFade()
+    {
+        float start = viewHeight * fadeStartFraction;
+        float span = Mathf.Max(1f, viewHeight - start);
+        for (int i = 0; i < rowRects.Count; i++)
+        {
+            RectTransform r = rowRects[i];
+            CanvasGroup g = rowGroups[i];
+            if (r == null || g == null) continue;
+            float alpha = 1f;
+            if (fadeUpperLines && viewHeight > 1f)
+            {
+                float centre = r.anchoredPosition.y + r.sizeDelta.y * 0.5f - scrollOffset; // height above the box's bottom
+                float t = Mathf.Clamp01((centre - start) / span);
+                alpha = Mathf.Lerp(1f, fadeTopAlpha, Mathf.SmoothStep(0f, 1f, t));
+            }
+            g.alpha = alpha;
+            g.blocksRaycasts = alpha > 0.15f; // nearly invisible lines don't catch clicks
         }
     }
 
