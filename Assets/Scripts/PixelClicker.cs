@@ -2747,6 +2747,7 @@ public class OldPixelDespawn : MonoBehaviour
     {
         Frozen = false;
         DevNoDespawn = false;
+        HoldAll = false;
     }
 
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
@@ -2757,6 +2758,9 @@ public class OldPixelDespawn : MonoBehaviour
 
     /// <summary>While true, no old pixel's lifetime counts down (a black hole is open: time dilation). Pixels already vanishing finish.</summary>
     public static bool Frozen { get; set; }
+
+    /// <summary>While true no old pixel's lifetime counts down (the Snake minigame holds every pixel in place). Unlike Frozen it is owned by one minigame.</summary>
+    public static bool HoldAll { get; set; }
 
     /// <summary>Dev tools: old pixels never expire on their own while true.</summary>
     public static bool DevNoDespawn { get; set; }
@@ -2797,7 +2801,7 @@ public class OldPixelDespawn : MonoBehaviour
     {
         if (!despawning)
         {
-            if (Held || Frozen || DevNoDespawn) return;
+            if (Held || Frozen || DevNoDespawn || HoldAll) return;
             age += Time.deltaTime;
             if (lifetime > 0f && age >= lifetime) Begin();
             return;

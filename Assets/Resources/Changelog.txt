@@ -85,3 +85,4 @@
 [2026-10-09 08:25 UTC] The glow halo is now separate from the glow shell and can be hidden with a tick box (Hide Glow Halo) on PixelClicker.
 [2026-10-09 08:30 UTC] The Obsidian click sound now ramps up in volume with each hit and reaches the set volume on the breaking click.
 [2026-10-09 08:34 UTC] Fixed a compile error (ApplyLookTexture missing): restored the look helper methods that an edit had accidentally removed from PixelClicker.
+[2026-10-09 10:04 UTC] New Snake minigame (Minigames tab): the old pixels freeze, you steer a snake with the arrow keys to eat them all without biting yourself, for 10x their worth.

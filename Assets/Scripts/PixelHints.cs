@@ -140,6 +140,7 @@ public class PixelHints : MonoBehaviour
             case "minigame_ghost": return "A ghost appeared!";
             case "minigame_meteor": return "A meteor appeared!";
             case "minigame_stardust": return "A star fell from the sky!";
+            case "minigame_snake": return "Snake time!";
             case "minigame_bomb": return "A bomb appeared!";
             case "minigame_pad": return "An Ultra Pad appeared!";
             case "potion": return "You drank a potion!";
@@ -176,6 +177,7 @@ public class PixelHints : MonoBehaviour
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
+        H("minigame_snake", "Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),
         H("minigame_stardust", "A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new."),
         H("event_log", "This is the Event Log. It records what happens in the game, like unlocks. Scroll it with the mouse wheel, click a line to read its full tip, and press {key:EventLog} to show or hide it. You can switch it off in Settings > Interface > Event log."),
         H("crafting", "Crafting unlocked! Open the Crafting button at the bottom right, drag two items into the boxes and press Craft. A pixel + Glass makes that pixel's potion."),

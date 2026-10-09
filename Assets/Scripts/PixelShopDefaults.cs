@@ -284,6 +284,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Snake pack (Minigames tab): switches on the snake minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateSnakePack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Snake",
+            tab = ShopTab.Minigames,
+            description = "Now and then every old pixel stops despawning and freezes. Steer a snake with the arrow keys and eat them all without biting yourself for 10x their worth.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(500),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "snake",
+        };
+    }
+
     /// <summary>Default Solar Pixel pack (Pixels tab): needs the Meteor Pixel pack AND enough stardust.</summary>
     private static ShopPack CreateSolarPixelPack(int requiresMeteorPixelIndex)
     {
@@ -620,6 +635,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
+        new DefaultPack { isThis = p => Unlocks(p, "snake"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSnakePack },
         new DefaultPack { isThis = p => Unlocks(p, "bomb"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBombPack },
         new DefaultPack { isThis = p => p.unlocksCrafting,

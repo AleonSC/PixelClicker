@@ -127,7 +127,7 @@ public class PixelGrab : MonoBehaviour
             return;
         }
 
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelClicker.GodMode || !LeftPressed() || PointerOverUI()) return;
+        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelSnakeMinigame.Active || PixelClicker.GodMode || !LeftPressed() || PointerOverUI()) return;
         TryGrab();
     }
 
