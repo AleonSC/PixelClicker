@@ -136,3 +136,4 @@
 [2026-10-09 14:04 UTC] Added horizon fog: the floor now fades into the sky's horizon colour towards its far edge instead of cutting off, with a Horizon fog switch in Settings > Display.
 [2026-10-09 14:41 UTC] The Log's Goals tab now shows 'Purchase the RGB Pack' once the Shop appears, with a bar that fills as you save up its price, until you buy it.
 [2026-10-09 15:00 UTC] Value upgrades no longer post a line in the event log (too spammy).
+[2026-10-09 15:04 UTC] Added a shop tutorial: when the Shop button first unlocks, small Got it boxes beside the shop describe the currency list and each tab / section while opening it (Replay tutorial plays it again).

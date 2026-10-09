@@ -371,6 +371,7 @@ public class PixelHints : MonoBehaviour
                 foreach (Hint h in instance.hints)
                     if (h != null && !string.IsNullOrEmpty(h.id)) PlayerPrefs.DeleteKey(PrefPrefix + h.id);
             PlayerPrefs.DeleteKey(PrefPrefix + "intro_log");
+            PlayerPrefs.DeleteKey(PrefPrefix + "shop_tutorial");
             PlayerPrefs.DeleteKey(PrefPrefix + "BlackHole");
             PlayerPrefs.Save();
         }
@@ -382,6 +383,12 @@ public class PixelHints : MonoBehaviour
     {
         if (instance != null) instance.Enqueue(id);
     }
+
+    /// <summary>Has the tip / tutorial with this id been shown already? (Other tutorials use this.)</summary>
+    public static bool IsTipSeen(string id) => Seen(id);
+
+    /// <summary>Remembers that the tip / tutorial with this id was shown.</summary>
+    public static void SetTipSeen(string id) => MarkSeen(id);
 
     private static bool Seen(string id)
     {

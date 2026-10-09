@@ -99,7 +99,7 @@ public class PixelNoticeBox : MonoBehaviour
 
         // The small box: narrow, small text, small button.
         bool besideWindow = beside != null && beside.gameObject.activeInHierarchy;
-        float width = besideWindow ? BesideWidth : small ? SmallWidth : Width;
+        float width = besideWindow ? (small ? 440f : BesideWidth) : small ? SmallWidth : Width;
         float textSize = small ? 22f : 30f;
         label.fontSize = textSize;
         label.rectTransform.offsetMin = small ? new Vector2(18f, 62f) : new Vector2(30f, 90f);

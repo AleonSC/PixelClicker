@@ -442,6 +442,19 @@ public partial class PixelShop
     }
 
     /// <summary>Switches to a tab and scrolls back to the top.</summary>
+    /// <summary>The shop window's rectangle (used to place tutorial boxes next to it).</summary>
+    public RectTransform PanelRect => panelRect;
+
+    /// <summary>Shop tutorial: opens the shop on a tab (and, for Upgrades, a sub-tab: 0 = Features, 1 = Value).</summary>
+    public void TutorialOpen(ShopTab tab, int subTab)
+    {
+        if (panelObject == null || !builtOk) return;
+        if (!panelObject.activeSelf) panelObject.SetActive(true);
+        upgradesSubTab = Mathf.Clamp(subTab, 0, 1);
+        SelectTab(tab);
+        RefreshCurrency();
+    }
+
     public void SelectTab(ShopTab tab)
     {
         if (tab == ShopTab.Automatic) tab = ShopTab.Pixels;
