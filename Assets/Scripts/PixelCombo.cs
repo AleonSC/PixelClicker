@@ -139,6 +139,14 @@ public class PixelCombo : MonoBehaviour
     [Tooltip("How far the meter tilts while shaking at tier 1-3 (degrees).")]
     [SerializeField] private float shakeTilt = 1f;
 
+    [Min(0.05f)]
+    [Tooltip("When the combo breaks, how long the effects take to wind down (seconds): the shaking slows, the glow and flames fade, the hair drops and the meter flashes white.")]
+    [SerializeField] private float breakSeconds = 1f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How bright the white flash is when a combo with effects breaks.")]
+    [SerializeField] private float breakFlashStrength = 0.85f;
+
     [Min(1f)]
     [Tooltip("At tier 4 and 5 the shake and tilt are multiplied by this.")]
     [SerializeField] private float violentShakeFactor = 4f;
@@ -508,6 +516,11 @@ public class PixelCombo : MonoBehaviour
     private float burstAge = -1f, repeatTimer;
     private int lastTier;
 
+    // winding down after the combo breaks
+    private Image breakFlashImage;
+    private float breakTimer, breakFlash;
+    private int lastLiveTier, decayTier;
+
     private void BuildEffects()
     {
         // Glow: a soft-edged halo texture the size of the meter plus the glow reach, drawn behind the meter.
@@ -542,6 +555,14 @@ public class PixelCombo : MonoBehaviour
         flashImage = NewEffectImage("Flash", canvasRoot.transform, glowSprite, new Vector2(0.5f, 0.5f), new Vector2(w, h));
         flashRect = flashImage.rectTransform;
         flashImage.gameObject.SetActive(false);
+
+        // White flash over the meter itself when a combo with effects breaks.
+        GameObject bf = new GameObject("Break Flash", typeof(RectTransform), typeof(Image));
+        bf.transform.SetParent(boxRect, false);
+        PixelUIKit.Stretch(bf.GetComponent<RectTransform>());
+        breakFlashImage = bf.GetComponent<Image>();
+        breakFlashImage.color = new Color(1f, 1f, 1f, 0f);
+        breakFlashImage.raycastTarget = false;
 
         // Soft round sprite shared by the flames and the explosion sparks.
         const int fs = 32;
@@ -721,16 +742,40 @@ public class PixelCombo : MonoBehaviour
     private void UpdateEffects()
     {
         if (glowImage == null) return;
-        int tier = effectsEnabled && combo > 0 ? Tier : 0;
+        int liveTier = effectsEnabled && combo > 0 ? Tier : 0;
         bool paused = PixelPauseMenu.IsPaused;
         float t = Time.unscaledTime;
         float dt = paused ? 0f : Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+
+        // The combo just broke: wind the effects down instead of cutting them off.
+        if (liveTier > 0) { breakTimer = 0f; decayTier = liveTier; }
+        else if (lastLiveTier > 0 && effectsEnabled)
+        {
+            breakTimer = breakSeconds;
+            breakFlash = 1f;
+        }
+        lastLiveTier = liveTier;
+
+        int tier = liveTier;
+        bool breaking = false;
+        float k = 1f; // intensity: 1 while the combo runs, falls to 0 as the effects wind down
+        if (liveTier == 0 && breakTimer > 0f)
+        {
+            breakTimer -= dt;
+            breaking = true;
+            tier = breakTimer > 0f ? decayTier : 0;
+            k = Mathf.Clamp01(breakTimer / Mathf.Max(0.05f, breakSeconds));
+        }
         bool shakeOn = tier >= 1, violent = tier >= 4;
+
+        // The white flash.
+        breakFlash = Mathf.MoveTowards(breakFlash, 0f, dt / 0.35f);
+        breakFlashImage.color = new Color(1f, 1f, 1f, breakFlash * breakFlashStrength);
 
         // Shake the meter (every effect follows it). Violent from tier 4.
         Vector2 offset = Vector2.zero;
         float tilt = 0f;
-        float factor = violent ? violentShakeFactor : 1f;
+        float factor = (violent ? violentShakeFactor : 1f) * k * k; // the shake slows gradually as k falls
         if (shakeOn && !paused)
         {
             offset = new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * (shakeAmount * factor);
@@ -752,21 +797,21 @@ public class PixelCombo : MonoBehaviour
         {
             float pulse = glowPulseSpeed > 0f ? 0.7f + 0.3f * Mathf.Sin(t * glowPulseSpeed) : 1f;
             Color c = glowColor;
-            c.a = glowColor.a * glowMaxAlpha * pulse;
+            c.a = glowColor.a * glowMaxAlpha * pulse * k;
             glowImage.color = c;
             glowRect.anchoredPosition = centre;
             glowRect.localRotation = Quaternion.Euler(0f, 0f, tilt);
         }
 
-        UpdateFlames(tier >= 2, offset, dt);
-        UpdateHair(tier >= 5, offset, dt, t);
-        UpdateLightning(tier >= 4, centre, dt);
-        UpdateExplosion(tier, centre, dt);
-        lastTier = tier;
+        UpdateFlames(tier >= 2, offset, dt, k);
+        UpdateHair(tier >= 5, offset, dt, t, breaking);
+        UpdateLightning(tier >= 4 && !breaking, centre, dt);
+        UpdateExplosion(liveTier, centre, dt);
+        lastTier = liveTier;
     }
 
     // Tier 2: a yellow flame aura rising around the meter.
-    private void UpdateFlames(bool on, Vector2 offset, float dt)
+    private void UpdateFlames(bool on, Vector2 offset, float dt, float intensity)
     {
         if (on != fireWasOn)
         {
@@ -793,13 +838,13 @@ public class PixelCombo : MonoBehaviour
             fr.sizeDelta = new Vector2(size, size);
 
             Color c = Color.Lerp(auraStartColor, auraEndColor, k);
-            c.a *= Mathf.Clamp01(1f - k) * 0.9f;
+            c.a *= Mathf.Clamp01(1f - k) * 0.9f * intensity;
             flameImages[i].color = c;
         }
     }
 
     // Tier 5: golden super-saiyan hair standing up from the top edge.
-    private void UpdateHair(bool on, Vector2 offset, float dt, float t)
+    private void UpdateHair(bool on, Vector2 offset, float dt, float t, bool breaking)
     {
         if (on != hairWasOn)
         {
@@ -813,7 +858,7 @@ public class PixelCombo : MonoBehaviour
         }
         if (!on) return;
 
-        hairGrow = Mathf.MoveTowards(hairGrow, 1f, dt * 3f);
+        hairGrow = Mathf.MoveTowards(hairGrow, breaking ? 0f : 1f, dt * (breaking ? 6f : 3f)); // the hair drops fast when the combo breaks
         Vector2 top = boxBasePosition + offset + new Vector2(0f, meterSize.y - 8f);
         Color inner = Color.Lerp(hairColor, Color.white, 0.6f);
         for (int i = 0; i < hairOuter.Length; i++)
