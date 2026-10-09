@@ -198,6 +198,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the button that gives a pet of the pixel type chosen in the drop-down at the top (All pixels = every pet, quietly).")]
     [SerializeField] private string givePetText = "Give pet (selected pixel)";
 
+    [Tooltip("Label of the button that gives every pet at once (quietly, no popups).")]
+    [SerializeField] private string giveAllPetsText = "Give all pets";
+
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
 
@@ -579,6 +582,14 @@ public class PixelDevTools : MonoBehaviour
         if (panel != null) panel.SetActive(false);
     }
 
+    /// <summary>Gives a pet of every pixel type, quietly (no popups).</summary>
+    private void GiveAllPets()
+    {
+        PixelPets pets = PixelPets.Instance;
+        if (pets == null || clicker == null) return;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false);
+    }
+
     /// <summary>Gives the pet of the pixel selected in the top drop-down (a popup), or every pet quietly for "All pixels".</summary>
     private void GivePet()
     {
@@ -702,6 +713,13 @@ public class PixelDevTools : MonoBehaviour
                                                  new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(givePet.GetComponent<RectTransform>(), 40f, y, inner);
         givePet.onClick.AddListener(GivePet);
+        y += rowHeight + 24f;
+
+        // Row: give every pet
+        Button giveAllPets = PixelUIKit.CreateButton(font, content, "Give All Pets Button", giveAllPetsText,
+                                                     new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(giveAllPets.GetComponent<RectTransform>(), 40f, y, inner);
+        giveAllPets.onClick.AddListener(GiveAllPets);
         y += rowHeight + 24f;
 
         // Row: unlock all

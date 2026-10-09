@@ -153,3 +153,4 @@
 [2026-10-09 16:24 UTC] The Yu-Gi-Oh Card Back floor is now one big card over the whole floor, and new floors were added: Liquid Flow, Moving Clouds, Kaleidoscope and an animated Pac-Man maze.
 [2026-10-09 16:32 UTC] Toggles window: the four tab buttons now shrink their text to fit, so Minigames is no longer cramped.
 [2026-10-09 16:28 UTC] Zoomed out the newest floors: the card back is now one card about 8 units across in the middle of the floor, and Liquid Flow, Moving Clouds, Kaleidoscope and Pac-Man repeat at a smaller size.
+[2026-10-09 16:32 UTC] Dev tools: added a Give all pets button.
