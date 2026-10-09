@@ -56,6 +56,7 @@ public class PixelClicker : MonoBehaviour
         Ghost = 11,
         Meteor = 12,
         Solar = 13,
+        Electric = 14,
     }
 
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
@@ -253,7 +254,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -879,6 +880,18 @@ public class PixelClicker : MonoBehaviour
             PixelLook singularityLook = PixelLooks.Find(looks, PixelType.Singularity);
             if (singularityLook != null && !singularityLook.gravityWell) singularityLook.gravityWell = true;
             looksVersion = 8;
+        }
+        if (looksVersion < 9)
+        {
+            // The Electric look (a cube of crackling lightning) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Electric) == null)
+            {
+                PixelLook electricLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Electric);
+                System.Collections.Generic.List<PixelLook> extended = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (electricLook != null) extended.Add(electricLook);
+                looks = extended.ToArray();
+            }
+            looksVersion = 9;
         }
 
         if (pixelRenderer != null)

@@ -174,11 +174,24 @@ public class PixelLook
     [Tooltip("A swirling dark-matter core inside the cube (best with 'Force Translucent' and a dark, see-through colour).")]
     public bool darkMatter = false;
 
+    [Tooltip("A cube made of lightning: jagged bolts crackle along all 12 edges and arc through the inside, re-rolled many times a second (best with a dark, very see-through colour and glow).")]
+    public bool lightning = false;
+
+    [Tooltip("Colour of the bright centre of each bolt.")]
+    public Color lightningCoreColor = new Color(0.92f, 1f, 1f, 1f);
+
+    [Tooltip("Colour of the softer glow around each bolt.")]
+    public Color lightningGlowColor = new Color(0.25f, 0.7f, 1f, 1f);
+
+    [Min(0f)]
+    [Tooltip("How far the bolts wander from a straight line, as a fraction of the cube's size.")]
+    public float lightningJitter = 0.09f;
+
     [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => outline || darkMatter || lightning || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks;
@@ -218,6 +231,10 @@ public static class PixelLooks
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
                             metallic = 1f, smoothness = 0.95f, streakTexture = true, damageCracks = true },
+
+            // Electric: a faint dark-blue glass box held together by crackling lightning.
+            new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
+                            forceTranslucent = true, smoothness = 0.9f, metallic = 0f, emission = 0.6f, lightning = true },
 
             // Singularity: a box of dark matter.
             new PixelLook { type = PixelClicker.PixelType.Singularity, useColor = true, color = new Color(0.07f, 0.02f, 0.14f, 0.5f),
@@ -383,6 +400,19 @@ public static class PixelLooks
             kr.sharedMaterial = OverlayMaterial();
             kr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             kr.receiveShadows = false;
+        }
+
+        if (look.lightning)
+        {
+            GameObject bolts = new GameObject("Lightning", typeof(MeshFilter), typeof(MeshRenderer));
+            bolts.transform.SetParent(root.transform, false);
+            bolts.transform.localPosition = centre;
+            bolts.layer = root.layer;
+            MeshRenderer lr = bolts.GetComponent<MeshRenderer>();
+            lr.sharedMaterial = OverlayMaterial(); // unlit vertex colours, drawn after the (see-through) body
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            bolts.AddComponent<PixelLookLightning>().Setup(size, look.lightningCoreColor, look.lightningGlowColor, look.lightningJitter);
         }
 
         if (look.darkMatter && baseMaterial != null)
@@ -1133,5 +1163,134 @@ public class PixelFaceCamera : MonoBehaviour
     {
         if (cam == null) cam = Camera.main;
         if (cam != null) transform.rotation = cam.transform.rotation;
+    }
+}
+
+
+/// <summary>
+/// The Electric pixel's lightning: a mesh of jagged bolts along the 12 edges plus a few arcs through the inside, rebuilt a
+/// dozen times a second so it crackles. Every bolt is two crossed ribbons (so it reads from any angle) in two passes: a wide
+/// soft glow and a thin bright core. With many electric pixels around, the bolts get simpler to keep things light.
+/// </summary>
+public class PixelLookLightning : MonoBehaviour
+{
+    private Vector3 size = Vector3.one;
+    private Color core = Color.white, glow = Color.cyan;
+    private float jitter = 0.09f;
+    private Mesh mesh;
+    private float timer;
+    private static int active; // how many are alive: more of them = simpler bolts
+
+    private readonly System.Collections.Generic.List<Vector3> verts = new System.Collections.Generic.List<Vector3>();
+    private readonly System.Collections.Generic.List<Color> colors = new System.Collections.Generic.List<Color>();
+    private readonly System.Collections.Generic.List<int> tris = new System.Collections.Generic.List<int>();
+
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { active = 0; }
+
+    public void Setup(Vector3 cubeSize, Color coreColor, Color glowColor, float jitterFraction)
+    {
+        size = cubeSize;
+        core = coreColor;
+        glow = glowColor;
+        jitter = jitterFraction;
+        mesh = new Mesh { name = "Lightning" };
+        mesh.MarkDynamic();
+        GetComponent<MeshFilter>().sharedMesh = mesh;
+        Rebuild();
+        timer = Random.Range(0.02f, 0.08f);
+    }
+
+    private void OnEnable() { active++; }
+    private void OnDisable() { active = Mathf.Max(0, active - 1); }
+    private void OnDestroy() { if (mesh != null) Destroy(mesh); }
+
+    private void Update()
+    {
+        timer -= Time.unscaledDeltaTime;
+        if (timer > 0f) return;
+        timer = active <= 6 ? Random.Range(0.04f, 0.09f) : Random.Range(0.1f, 0.18f);
+        Rebuild();
+    }
+
+    private Vector3 Corner(int i) => new Vector3((i & 1) == 0 ? -0.5f : 0.5f, (i & 2) == 0 ? -0.5f : 0.5f, (i & 4) == 0 ? -0.5f : 0.5f);
+
+    private void Rebuild()
+    {
+        if (mesh == null) return;
+        verts.Clear(); colors.Clear(); tris.Clear();
+        bool rich = active <= 6;
+        int segs = rich ? 6 : 3;
+        float unit = Mathf.Min(size.x, Mathf.Min(size.y, size.z));
+        float coreW = unit * 0.035f, glowW = unit * 0.11f;
+
+        // The 12 edges: corner pairs that differ in exactly one bit.
+        for (int a = 0; a < 8; a++)
+            for (int bit = 1; bit <= 4; bit <<= 1)
+            {
+                int b = a ^ bit;
+                if (b < a) continue;
+                Bolt(Corner(a), Corner(b), segs, jitter, coreW, glowW, rich);
+            }
+
+        // A few arcs through the inside, from one point on the surface to another.
+        int arcs = rich ? Random.Range(3, 6) : Random.Range(1, 3);
+        for (int i = 0; i < arcs; i++)
+            Bolt(RandomSurfacePoint(), RandomSurfacePoint(), segs + 2, jitter * 1.6f, coreW * 0.8f, glowW * 0.8f, rich);
+
+        mesh.Clear();
+        mesh.SetVertices(verts);
+        mesh.SetColors(colors);
+        mesh.SetTriangles(tris, 0);
+        mesh.bounds = new Bounds(Vector3.zero, size * 1.3f);
+    }
+
+    private Vector3 RandomSurfacePoint()
+    {
+        Vector3 p = new Vector3(Random.value - 0.5f, Random.value - 0.5f, Random.value - 0.5f);
+        int axis = Random.Range(0, 3);
+        p[axis] = Random.value < 0.5f ? -0.5f : 0.5f;
+        return p;
+    }
+
+    private void Bolt(Vector3 a, Vector3 b, int segments, float wander, float coreWidth, float glowWidth, bool withGlow)
+    {
+        Vector3 prev = a;
+        for (int s = 1; s <= segments; s++)
+        {
+            float t = s / (float)segments;
+            Vector3 p = Vector3.Lerp(a, b, t);
+            if (s < segments)
+            {
+                float fade = Mathf.Sin(t * Mathf.PI);
+                p += new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * (wander * fade);
+            }
+            float flicker = Random.Range(0.55f, 1f);
+            if (withGlow) Ribbon(prev, p, glowWidth, new Color(glow.r, glow.g, glow.b, 0.22f * flicker));
+            Ribbon(prev, p, coreWidth, new Color(core.r, core.g, core.b, flicker));
+            prev = p;
+        }
+    }
+
+    /// <summary>Two crossed flat strips from 'a' to 'b' (unit-cube space, scaled by the cube's size here).</summary>
+    private void Ribbon(Vector3 a, Vector3 b, float width, Color colour)
+    {
+        Vector3 pa = Vector3.Scale(a, size), pb = Vector3.Scale(b, size);
+        Vector3 dir = pb - pa;
+        if (dir.sqrMagnitude < 1e-8f) return;
+        dir.Normalize();
+        Vector3 side1 = Vector3.Cross(dir, Mathf.Abs(dir.y) < 0.9f ? Vector3.up : Vector3.right).normalized * (width * 0.5f);
+        Vector3 side2 = Vector3.Cross(dir, side1).normalized * (width * 0.5f);
+        AddQuad(pa, pb, side1, colour);
+        AddQuad(pa, pb, side2, colour);
+    }
+
+    private void AddQuad(Vector3 pa, Vector3 pb, Vector3 side, Color colour)
+    {
+        int i = verts.Count;
+        verts.Add(pa - side); verts.Add(pa + side); verts.Add(pb + side); verts.Add(pb - side);
+        for (int k = 0; k < 4; k++) colors.Add(colour);
+        tris.Add(i); tris.Add(i + 1); tris.Add(i + 2);
+        tris.Add(i); tris.Add(i + 2); tris.Add(i + 3);
     }
 }

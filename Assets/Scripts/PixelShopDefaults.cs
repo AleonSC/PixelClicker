@@ -356,6 +356,29 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Electric Pixel pack (Pixels tab): a very cheap test pack, no requirements.</summary>
+    private static ShopPack CreateElectricPixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Electric Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Electric pixel: a cube held together by crackling lightning. (Test pack.)",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Electric, displayName = "Electric Pixels",
+                    color = new Color(0.4f, 0.85f, 1f, 1f), glow = true, glowIntensity = 3.5f,
+                    amountPerClick = 10, spawnWeight = 0.5f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -681,6 +704,8 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Solar),
                           requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
+                          requires = null, create = i => CreateElectricPixelPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
