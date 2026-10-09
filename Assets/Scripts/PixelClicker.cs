@@ -1564,9 +1564,9 @@ public class PixelClicker : MonoBehaviour
         Mathf.Clamp((glowShellAlpha + 0.1f * tier.glowIntensity) * extra, 0.25f, 0.92f);
 
     /// <summary>How far above 1.0 the shell's colour goes (so Bloom lights it up like emission): grows with the pixel's glow intensity.</summary>
-    private static float GlowShellHdr(PixelTier tier) => Mathf.Max(1f, tier.glowIntensity * 1.1f);
+    private static float GlowShellHdr(PixelTier tier) => Mathf.Max(1f, 1f + tier.glowIntensity * 0.22f);
 
-    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.5f);
+    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.3f);
 
     private void UpdateGlowShell(PixelTier tier, PixelLook look)
     {

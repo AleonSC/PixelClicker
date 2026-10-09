@@ -77,3 +77,4 @@
 [2026-10-09 04:31 UTC] Glowing pixels now also get a soft camera-facing halo (drawn without post-processing or shader keywords) so they look luminous in builds.
 [2026-10-09 04:35 UTC] Glowing pixels in builds now get a strong bright shell (matching the Editor's glowing look; Editor unchanged), and the shader keep-alive script also copies the project's own pixel material with emission on.
 [2026-10-09 04:38 UTC] The build glow shell and halo now use HDR colours so Bloom lights them up like the Editor's emission.
+[2026-10-09 04:40 UTC] Toned down the glow halo and shell in builds (smaller, softer halo, less blown-out pixels).

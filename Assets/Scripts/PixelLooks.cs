@@ -474,7 +474,7 @@ public static class PixelLooks
         }
         if (haloTexture == null)
         {
-            const int n = 64;
+            const int n = 128;
             haloTexture = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "GlowHalo" };
             Color32[] px = new Color32[n * n];
             for (int y = 0; y < n; y++)
@@ -482,7 +482,7 @@ public static class PixelLooks
                 {
                     float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
                     float r = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
-                    float a = Mathf.Pow(1f - r, 2.2f);
+                    float a = Mathf.Pow(1f - r, 2.8f);
                     px[y * n + x] = new Color(1f, 1f, 1f, a);
                 }
             haloTexture.SetPixels32(px);
@@ -491,7 +491,7 @@ public static class PixelLooks
 
         GameObject go = new GameObject("Glow Halo", typeof(MeshFilter), typeof(MeshRenderer), typeof(PixelFaceCamera));
         go.transform.SetParent(parent, false);
-        go.transform.localScale = Vector3.one * 2.6f;
+        go.transform.localScale = Vector3.one * 1.9f;
         go.layer = parent.gameObject.layer;
         go.GetComponent<MeshFilter>().sharedMesh = haloMesh;
         MeshRenderer mr = go.GetComponent<MeshRenderer>();
@@ -499,7 +499,7 @@ public static class PixelLooks
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
         MaterialPropertyBlock block = new MaterialPropertyBlock();
-        block.SetColor("_Color", new Color(colour.r * hdr, colour.g * hdr, colour.b * hdr, Mathf.Clamp01(alpha * 0.7f)));
+        block.SetColor("_Color", new Color(colour.r * hdr * 0.7f, colour.g * hdr * 0.7f, colour.b * hdr * 0.7f, Mathf.Clamp01(alpha * 0.3f)));
         block.SetTexture("_MainTex", haloTexture);
         mr.SetPropertyBlock(block);
     }
