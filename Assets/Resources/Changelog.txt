@@ -123,3 +123,4 @@
 [2026-10-09 13:05 UTC] Ultra pixels can now drop from Snake, Breakout, Sorting Race and Black Holes (shared roll, per-round caps); the shop's Upgrades tab now has just Features and Value (the Ultra 'Pixel' page is gone); the Inventory always shows an Ultra Pixels line; Crafting closes every other window and the event log fades out when any window opens.
 [2026-10-09 12:44 UTC] You can now hold at most 10 of each potion; the shop and crafting say when a potion is full, and older saves with more are cut down to 10.
 [2026-10-09 13:15 UTC] The Inventory's per-pixel Ultra tooltips now work from the very start of a game, and opening any other window closes Crafting.
+[2026-10-09 13:15 UTC] Added a Floor style option in Settings (Display) with 10 new floor looks (Neon Grid, Retro Checker, Pixel Grass, Wood Planks, Cobblestone, Marble, Lava, Deep Space, Ice, Disco) plus Classic.

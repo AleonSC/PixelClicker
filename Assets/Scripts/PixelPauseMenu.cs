@@ -251,6 +251,15 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the tick box that keeps the game running while you are alt-tabbed.")]
     [SerializeField] private string runInBackgroundLabel = "Run when alt-tabbed";
 
+    [Tooltip("Label of the floor style picker (arrows step through the styles of the Pixel Floor component).")]
+    [SerializeField] private string floorStyleLabel = "Floor style";
+
+    [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
+    [SerializeField] private string noFloorText = "No floor found";
+
+    [Tooltip("Colour of the floor style picker's arrow buttons.")]
+    [SerializeField] private Color floorArrowColor = new Color(0.25f, 0.25f, 0.3f, 1f);
+
     [Tooltip("Label of the master volume slider.")]
     [SerializeField] private string masterVolumeLabel = "Master volume";
 
@@ -543,6 +552,8 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject slotBar;
     private int selectedSlot = 1;
     private Toggle rotationToggle, pulsingToggle, abbreviateToggle, hidePurchasedToggle, backgroundToggle, pauseStopsToggle;
+    private TMP_Text floorNameText;
+    private RawImage floorSwatch;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -1566,6 +1577,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         // ---- Display ----
         AddHeaderRow(list, headerDisplay, ref y);
+        AddFloorRow(list, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
@@ -1748,6 +1760,72 @@ public class PixelPauseMenu : MonoBehaviour
             RefreshKeyLabels();
         }
         return true; // nothing else (like Escape closing the menu) reacts while waiting
+    }
+
+    /// <summary>"Floor style" row: a picture of the style, its name, and arrows to step through the styles.</summary>
+    private void AddFloorRow(Transform parent, ref float y)
+    {
+        TMP_Text label = AddRowLabel(parent, floorStyleLabel, y, out RectTransform row);
+        label.rectTransform.anchorMax = new Vector2(0.42f, 1f);
+
+        GameObject picker = new GameObject("Floor Picker", typeof(RectTransform));
+        picker.transform.SetParent(row, false);
+        RectTransform pr = picker.GetComponent<RectTransform>();
+        pr.anchorMin = new Vector2(0.42f, 0f);
+        pr.anchorMax = Vector2.one;
+        pr.offsetMin = pr.offsetMax = Vector2.zero;
+
+        float arrow = tickBoxSize;
+        Button left = MakeButton(picker.transform, "Previous Floor", "<", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
+        RectTransform lr = left.GetComponent<RectTransform>();
+        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 0.5f);
+        lr.anchoredPosition = Vector2.zero;
+        left.onClick.AddListener(() => StepFloor(-1));
+
+        Button right = MakeButton(picker.transform, "Next Floor", ">", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
+        RectTransform rr = right.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
+        rr.anchoredPosition = Vector2.zero;
+        right.onClick.AddListener(() => StepFloor(1));
+
+        GameObject swatch = new GameObject("Floor Preview", typeof(RectTransform), typeof(RawImage));
+        swatch.transform.SetParent(picker.transform, false);
+        floorSwatch = swatch.GetComponent<RawImage>();
+        floorSwatch.raycastTarget = false;
+        RectTransform sr = swatch.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
+        sr.sizeDelta = new Vector2(arrow, arrow);
+        sr.anchoredPosition = new Vector2(arrow + 8f, 0f);
+
+        floorNameText = MakeText(picker.transform, "Floor Name", "", rowFontSize, FontStyles.Bold);
+        floorNameText.color = statValueColor;
+        floorNameText.enableAutoSizing = true;
+        floorNameText.fontSizeMax = rowFontSize;
+        floorNameText.fontSizeMin = 14f;
+        RectTransform nr = floorNameText.rectTransform;
+        nr.anchorMin = Vector2.zero;
+        nr.anchorMax = Vector2.one;
+        nr.offsetMin = new Vector2(arrow * 2f + 14f, 0f);
+        nr.offsetMax = new Vector2(-arrow - 6f, 0f);
+
+        settingsRefreshers.Add(RefreshFloorRow);
+        y += rowHeight + 6f;
+    }
+
+    private void StepFloor(int direction)
+    {
+        if (PixelFloor.Instance != null && PixelFloor.Instance.HasFloor) PixelFloor.Instance.Step(direction);
+        RefreshFloorRow();
+    }
+
+    private void RefreshFloorRow()
+    {
+        if (floorNameText == null) return;
+        PixelFloor floor = PixelFloor.Instance;
+        bool usable = floor != null && floor.HasFloor && floor.StyleCount > 0;
+        floorNameText.text = usable ? floor.StyleName(floor.Current) : noFloorText;
+        floorSwatch.texture = usable ? floor.PreviewTexture(floor.Current) : null;
+        floorSwatch.color = usable ? floor.PreviewColor(floor.Current) : new Color(1f, 1f, 1f, 0.15f);
     }
 
     private string FormatCount(double value)
