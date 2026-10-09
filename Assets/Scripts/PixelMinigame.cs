@@ -20,6 +20,7 @@ public abstract class PixelMinigame : MonoBehaviour
     {
         Happened = null;
         TakeoverActive = false;
+        claims.Clear();
         registry.Clear();
     }
 
@@ -91,6 +92,30 @@ public abstract class PixelMinigame : MonoBehaviour
         foreach (GameObject go in tracked) if (go != null) Destroy(go);
         tracked.Clear();
         OnDespawned();
+    }
+
+    // Floor areas that a minigame's thing (a black hole, an Ultra Pad) occupies, so two of them never spawn on top of each other.
+    private class AreaClaim { public object owner; public Vector3 centre; public float radius; public System.Func<bool> active; }
+    private static readonly System.Collections.Generic.List<AreaClaim> claims = new System.Collections.Generic.List<AreaClaim>();
+
+    /// <summary>Reserves a round floor area for 'owner' for as long as 'active' returns true (replaces the owner's earlier claim).</summary>
+    protected static void ClaimArea(object owner, Vector3 centre, float radius, System.Func<bool> active)
+    {
+        claims.RemoveAll(c => c.owner == owner);
+        claims.Add(new AreaClaim { owner = owner, centre = centre, radius = radius, active = active });
+    }
+
+    /// <summary>Is this round floor area clear of every other minigame's claimed area? (Measured on the floor, ignoring height.)</summary>
+    protected static bool AreaFree(object self, Vector3 centre, float radius)
+    {
+        foreach (AreaClaim c in claims)
+        {
+            if (c.owner == self || c.active == null || !c.active()) continue;
+            float dx = c.centre.x - centre.x, dz = c.centre.z - centre.z;
+            float sum = c.radius + radius;
+            if (dx * dx + dz * dz < sum * sum) return false;
+        }
+        return true;
     }
 
     /// <summary>Ultra pixels this minigame has given in the current round (reset by the minigame when a round starts).</summary>

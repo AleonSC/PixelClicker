@@ -336,7 +336,8 @@ public class PixelBlackholeMinigame : PixelMinigame
         ultraRoundCount = 0;
         Report(MinigameEvent.Spawned);
 
-        if (!TryPickSpot(out Vector3 center))
+        float radius = Random.Range(Mathf.Min(minRadius, maxRadius), Mathf.Max(minRadius, maxRadius));
+        if (!TryPickSpot(out Vector3 center, radius))
         {
             // Nowhere to put it right now: try again soon.
             spawnTimer = 5f;
@@ -345,8 +346,8 @@ public class PixelBlackholeMinigame : PixelMinigame
         }
 
         EnsureAssets();
-        float radius = Random.Range(Mathf.Min(minRadius, maxRadius), Mathf.Max(minRadius, maxRadius));
         center.y += heightAboveFloor;
+        ClaimArea(this, center, radius, () => holeActive);
 
         // Two counter-rotating swirl discs.
         GameObject root = new GameObject("Black Hole");
@@ -705,19 +706,21 @@ public class PixelBlackholeMinigame : PixelMinigame
     // Picking a spot on the floor
     // ------------------------------------------------------------------
 
-    private bool TryPickSpot(out Vector3 point)
+    private bool TryPickSpot(out Vector3 point, float holeRadius)
     {
         point = Vector3.zero;
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return false;
 
-        for (int attempt = 0; attempt < 12; attempt++)
+        for (int attempt = 0; attempt < 24; attempt++)
         {
             Vector3 viewport = new Vector3(
                 Random.Range(Mathf.Min(screenAreaMin.x, screenAreaMax.x), Mathf.Max(screenAreaMin.x, screenAreaMax.x)),
                 Random.Range(Mathf.Min(screenAreaMin.y, screenAreaMax.y), Mathf.Max(screenAreaMin.y, screenAreaMax.y)), 0f);
             Ray ray = cam.ViewportPointToRay(viewport);
 
+            Vector3 candidate = Vector3.zero;
+            bool ok = false;
             RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, floorLayers, QueryTriggerInteraction.Ignore);
             System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             foreach (RaycastHit hit in hits)
@@ -725,16 +728,20 @@ public class PixelBlackholeMinigame : PixelMinigame
                 if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
                 if (clicker.PixelTransform != null && hit.transform.IsChildOf(clicker.PixelTransform)) continue;
                 if (hit.normal.y < 0.5f) continue;
-                point = hit.point;
-                return true;
+                candidate = hit.point;
+                ok = true;
+                break;
             }
-
-            Plane floor = new Plane(Vector3.up, new Vector3(0f, fallbackFloorY, 0f));
-            if (floor.Raycast(ray, out float enter))
+            if (!ok)
             {
-                point = ray.GetPoint(enter);
-                return true;
+                Plane floor = new Plane(Vector3.up, new Vector3(0f, fallbackFloorY, 0f));
+                if (floor.Raycast(ray, out float enter)) { candidate = ray.GetPoint(enter); ok = true; }
             }
+            if (!ok) continue;
+            if (!AreaFree(this, candidate, holeRadius + 0.3f)) continue; // would overlap an Ultra Pad: try another spot
+
+            point = candidate;
+            return true;
         }
         return false;
     }

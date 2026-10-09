@@ -239,6 +239,9 @@ public class PixelPadMinigame : PixelMinigame
         return candidates.Count > 0 ? candidates[Random.Range(0, candidates.Count)] : -1;
     }
 
+    /// <summary>How far from its centre the pad's footprint (with the arrows around it) reaches on the floor.</summary>
+    private float PadReach => padSize * 0.5f + (showArrows ? arrowTravel + arrowLength * 0.6f : 0.1f);
+
     private bool TryPickSpot(Camera cam, out Vector3 point)
     {
         point = Vector3.zero;
@@ -280,6 +283,7 @@ public class PixelPadMinigame : PixelMinigame
                 if (floor.Raycast(ray, out float enter)) { candidate = ray.GetPoint(enter); ok = true; }
             }
             if (!ok) continue;
+            if (!AreaFree(this, candidate, PadReach)) continue; // would overlap a black hole: try another spot
 
             float cut = CutOff(cam, candidate);
             if (cut < bestCut) { bestCut = cut; bestPoint = candidate; found = true; }
@@ -524,6 +528,7 @@ public class PixelPadMinigame : PixelMinigame
             yield break;
         }
 
+        ClaimArea(this, point, PadReach, () => padActive);
         onPadAppeared?.Invoke();
         Report(MinigameEvent.Spawned);
 

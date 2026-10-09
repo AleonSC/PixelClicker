@@ -51,9 +51,9 @@ public class PixelMinigameLimits : MonoBehaviour
             if (instance == null) return true;
         }
         if (Time.time - PixelTitleScreen.PlayTime < instance.quietSecondsAfterPlay) return false; // a calm start
-        if (self != null && self.Takeover)
-            foreach (PixelMinigame m in PixelMinigame.All)
-                if (m != null && m != self && m.Takeover && m.Busy) return false; // one takeover round at a time
+        // While a takeover round (Snake, Sorting Race, Breakout) is running, nothing else spawns.
+        foreach (PixelMinigame m in PixelMinigame.All)
+            if (m != null && m != self && m.Takeover && m.Busy) return false;
         if (!instance.limitAtOnce) return true;
 
         int busy = 0;

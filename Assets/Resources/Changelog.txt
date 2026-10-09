@@ -128,3 +128,4 @@
 [2026-10-09 13:27 UTC] Added 9 new skies (Clear Day, Sunset, Starry Night, Nebula, Aurora, Synthwave, Pixel Clouds, Storm with lightning, Alien World) with a Sky option in Settings, plus quick floor and sky pickers right and left of the title screen's Play button.
 [2026-10-09 13:39 UTC] Dev Tools window is smaller and its rows scroll (mouse wheel); added Merchants/visitors, Alchemy and Ultra pixel use to the to-do list.
 [2026-10-09 13:46 UTC] Gaining an Ultra pixel now shows a rising gold "+1 Ultra" text and a sparkle burst where the pixel was, plus a new ultra_gain sound slot.
+[2026-10-09 13:49 UTC] Ultra Pads and Black Holes can no longer spawn overlapping each other, and no other minigame (or star) spawns while Snake, Sorting Race or Breakout is running.

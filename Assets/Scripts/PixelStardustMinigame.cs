@@ -165,6 +165,7 @@ public class PixelStardustMinigame : PixelMinigame
     private void OnMeteorLaunched(Vector3 position)
     {
         if (clicker == null || !Running || UserDisabled) return;
+        if (PixelMinigame.TakeoverActive) return; // nothing new spawns during Snake, Sorting Race or Breakout
         if (stars.Count + pending >= maxStars) return;
         if (Random.value >= starChance) return;
         pending++;
