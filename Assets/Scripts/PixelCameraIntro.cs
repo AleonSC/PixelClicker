@@ -110,8 +110,11 @@ public class PixelCameraIntro : MonoBehaviour
     /// <summary>True while the opening zoom-out runs on a brand-new game: the cube can't be clicked yet.</summary>
     public static bool ClicksLocked { get; private set; }
 
+    /// <summary>True while the camera is in the close-up or moving between it and the normal view (the view-bounds planes are wrong then).</summary>
+    public static bool Moving { get; private set; }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { ClicksLocked = false; }
+    private static void ResetStatics() { ClicksLocked = false; Moving = false; }
 
     private bool fresh = true;
 
@@ -131,6 +134,7 @@ public class PixelCameraIntro : MonoBehaviour
 
     private void LateUpdate()
     {
+        Moving = reversing || !done;
         if (reversing)
         {
             reverseTime += Time.unscaledDeltaTime;
@@ -150,6 +154,7 @@ public class PixelCameraIntro : MonoBehaviour
             return;
         }
         if (done && canReverse && PixelTitleScreen.Showing) { done = false; moved = 0f; waited = 0f; }
+        Moving = !done;
         if (done) { ClicksLocked = false; return; }
         if (!prepared) Prepare();
         if (done) return;
@@ -199,6 +204,7 @@ public class PixelCameraIntro : MonoBehaviour
     private void Finish()
     {
         ClicksLocked = false;
+        Moving = false;
         cam.transform.SetPositionAndRotation(finalPosition, finalRotation);
         cam.fieldOfView = finalFov;
         if (cam.orthographic) cam.orthographicSize = finalOrtho;
@@ -208,6 +214,7 @@ public class PixelCameraIntro : MonoBehaviour
     private void OnDestroy()
     {
         ClicksLocked = false;
+        Moving = false;
         // Never leave the camera stuck mid-move.
         if (cam != null && !done && prepared) Finish();
     }

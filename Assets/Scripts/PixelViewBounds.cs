@@ -78,6 +78,7 @@ public class PixelViewBounds : MonoBehaviour
     private void FixedUpdate()
     {
         if (!boundsActive) return;
+        if (PixelCameraIntro.Moving) return; // the close-up view is tiny: don't squeeze loaded / resting pixels into it
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return;
