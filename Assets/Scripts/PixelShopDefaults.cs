@@ -85,10 +85,10 @@ public partial class PixelShop
             requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 25000 },
-                new PackCost { type = PixelClicker.PixelType.Red,   amount = 50000 },
-                new PackCost { type = PixelClicker.PixelType.Green, amount = 50000 },
-                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 50000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 17500 },
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 35000 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 35000 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 35000 },
             },
             rewardTiers = new[]
             {
@@ -113,8 +113,8 @@ public partial class PixelShop
             requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Black, amount = 150000 },
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 75000 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 100000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 50000 },
             },
             rewardTiers = new[]
             {
@@ -140,8 +140,8 @@ public partial class PixelShop
             requirements = Needs(requiresObsidianIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 250000 },
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 1000000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 175000 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 700000 },
             },
             rewardTiers = new[]
             {
@@ -167,8 +167,8 @@ public partial class PixelShop
             requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Black, amount = 50000 },
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 25000 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 35000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 17500 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "ghost",
@@ -186,8 +186,8 @@ public partial class PixelShop
             requirements = Needs(requiresGhostHuntIndex, "ghost"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Glass,        amount = 2000000 },
-                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 6000000 },
+                new PackCost { type = PixelClicker.PixelType.Glass,        amount = 1400000 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 4000000 },
             },
             rewardTiers = new[]
             {
@@ -213,9 +213,9 @@ public partial class PixelShop
             requirements = Needs(requiresRgbIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Red,   amount = 50000 },
-                new PackCost { type = PixelClicker.PixelType.Green, amount = 50000 },
-                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 50000 },
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 35000 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 35000 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 35000 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "bomb",
@@ -231,7 +231,7 @@ public partial class PixelShop
             tab = ShopTab.Minigames,
             description = "A coloured pad appears on the ground. Get old pixels of that colour onto it for a chance at Ultra pixels - but wrong pixels cost you currency.",
             requirements = Needs(requiresRgbIndex),
-            costs = AllSix(250000),
+            costs = AllSix(175000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "pad",
         };
@@ -248,8 +248,8 @@ public partial class PixelShop
             requirements = Needs(requiresObsidianIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Black, amount = 2500000 },
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 5000000 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 1750000 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 3500000 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "meteor",
@@ -267,8 +267,8 @@ public partial class PixelShop
             requirements = Needs(requiresMeteorIndex, "meteor"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 6000000 },
-                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 800000 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 4000000 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 550000 },
             },
             rewardTiers = new[]
             {
@@ -293,7 +293,7 @@ public partial class PixelShop
             tab = ShopTab.Minigames,
             description = "Now and then some old pixels freeze in a jumbled grid. Click two pixels to swap them and group each type together before the timer runs out for a bonus payout.",
             requirements = Needs(requiresRgbIndex),
-            costs = AllSix(100000),
+            costs = AllSix(70000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "sort",
         };
@@ -308,7 +308,7 @@ public partial class PixelShop
             tab = ShopTab.Minigames,
             description = "Now and then (with 30+ old pixels on screen) the old pixels become a wall of bricks. Bounce the ball with your paddle and break them: each one pays 10x its worth.",
             requirements = Needs(requiresRgbIndex),
-            costs = AllSix(250000),
+            costs = AllSix(175000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "breakout",
         };
@@ -323,7 +323,7 @@ public partial class PixelShop
             tab = ShopTab.Minigames,
             description = "Now and then every old pixel stops despawning and freezes. Steer a snake with the arrow keys and eat them all without biting yourself for 10x their worth.",
             requirements = Needs(requiresRgbIndex),
-            costs = AllSix(50000),
+            costs = AllSix(35000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "snake",
         };
@@ -340,8 +340,8 @@ public partial class PixelShop
             requirements = Needs(requiresMeteorPixelIndex, "stardust"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Meteor, amount = 1000000 },
-                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 10000000 },
+                new PackCost { type = PixelClicker.PixelType.Meteor, amount = 700000 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 7000000 },
             },
             rewardTiers = new[]
             {
@@ -367,8 +367,8 @@ public partial class PixelShop
             requirements = Needs(requiresVacuumIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Black,  amount = 500000 },
-                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 100000 },
+                new PackCost { type = PixelClicker.PixelType.Black,  amount = 350000 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 70000 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "blackhole",
@@ -386,8 +386,8 @@ public partial class PixelShop
             requirements = Needs(requiresBlackholeIndex, "blackhole"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 4000000 },
-                new PackCost { type = PixelClicker.PixelType.Vacuum,   amount = 400000 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 2800000 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum,   amount = 280000 },
             },
             rewardTiers = new[]
             {
