@@ -213,6 +213,19 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How much the glow breathes in and out. 0 = steady glow.")]
     [SerializeField] private float glowBreathAmount = 0.3f;
 
+    [Tooltip("Tick to let the Luminescent pixel's glow breathe like the others. Off (default) = it stays at its maximum glow.")]
+    [SerializeField] private bool luminescentPulses = false;
+
+    private PixelType activeGlowType;
+
+    /// <summary>The glow breathing factor (around 1): a sine wave, except the Luminescent pixel which holds its maximum.</summary>
+    private float GlowBreath(PixelType type, float time, float amountScale = 1f)
+    {
+        float amount = glowBreathAmount * amountScale;
+        if (type == PixelType.Luminescent && !luminescentPulses) return 1f + amount; // steady at the peak
+        return 1f + amount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f);
+    }
+
     [Min(0f)]
     [Tooltip("Speed of the glow breathing (cycles per second).")]
     [SerializeField] private float glowBreathSpeed = 0.8f;
@@ -1466,7 +1479,7 @@ public class PixelClicker : MonoBehaviour
 
         if (glowLight != null && glowLight.enabled)
         {
-            float breath = 1f + glowBreathAmount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f);
+            float breath = GlowBreath(activeGlowType, time);
             glowLight.intensity = glowLightIntensity * activeGlow * breath;
         }
 
@@ -1483,7 +1496,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (liveShellRenderer == null) return;
         if (shellBlock == null) shellBlock = new MaterialPropertyBlock();
-        float breath = 1f + (glowBreathAmount * Mathf.Sin(time * glowBreathSpeed * Mathf.PI * 2f)) * 1.5f;
+        float breath = GlowBreath(activeGlowType, time, 1.5f);
         breath = Mathf.Max(0.3f, breath);
 
         liveShellRenderer.GetPropertyBlock(shellBlock); // keeps what is already on it (textures)
@@ -1657,7 +1670,7 @@ public class PixelClicker : MonoBehaviour
         // Glowing tiers: emission follows the colour (and breathes). Black emission = off for everything else.
         if (activeGlow > 0f)
         {
-            float breath = 1f + glowBreathAmount * Mathf.Sin(Time.time * glowBreathSpeed * Mathf.PI * 2f);
+            float breath = GlowBreath(activeGlowType, Time.time);
             float scale = activeLook != null ? activeLook.glowScale : 1f;
             Color emission = new Color(color.r, color.g, color.b, 1f) * (activeGlow * breath * scale);
             propertyBlock.SetColor("_EmissionColor", emission);
@@ -1702,6 +1715,7 @@ public class PixelClicker : MonoBehaviour
         }
 
         activeGlow = tier.glow ? tier.glowIntensity : 0f;
+        activeGlowType = tier.type;
         activeLook = LookOf(tier);
         UpdateGlowLight(tier);
         UpdateLiveExtras(tier, activeLook);
@@ -2334,7 +2348,9 @@ public class PixelClicker : MonoBehaviour
         if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
         if (srcFilter != null && IsValidTier(tierIndex) && WantsGlowShell(tiers[tierIndex], LookOf(tiers[tierIndex])))
             PixelLooks.AddGlowShell(copy.transform, srcFilter.sharedMesh, GlowShellColor(tiers[tierIndex]),
-                                    GlowShellAlpha(tiers[tierIndex], IsBrightOldPixel(tierIndex) ? 1.3f : 1f), halo: true, hdr: GlowShellHdr(tiers[tierIndex]));
+                                    GlowShellAlpha(tiers[tierIndex], IsBrightOldPixel(tierIndex) ? 1.3f : 1f), halo: true,
+                                    hdr: GlowShellHdr(tiers[tierIndex]) * (IsBrightOldPixel(tierIndex) ? Mathf.Max(1f, oldPixelGlowBoost * 0.7f) : 1f),
+                                    haloBoost: IsBrightOldPixel(tierIndex) ? 2.4f : 1f); // bright old pixels (Luminescent) glow much harder, like their boosted emission
 
         if (fly)
         {
