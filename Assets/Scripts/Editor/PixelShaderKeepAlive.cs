@@ -58,11 +58,21 @@ public static class PixelShaderKeepAlive
         if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) return;
 
         bool any = false;
+        bool urp = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
         AssetDatabase.StartAssetEditing(); // one batch instead of many separate imports
         try
         {
         foreach (string shaderName in ShaderNames)
         {
+            // The built-in Standard shader is pink in a URP project and is never used there: leave it out (and remove old copies).
+            bool standard = shaderName == "Standard";
+            if (standard && urp)
+            {
+                foreach (string suffix in new[] { "_Emission", "_Transparent", "_TransparentEmission" })
+                    if (AssetDatabase.LoadAssetAtPath<Material>(Folder + "/Standard" + suffix + ".mat") != null)
+                        { AssetDatabase.DeleteAsset(Folder + "/Standard" + suffix + ".mat"); any = true; }
+                continue;
+            }
             Shader shader = Shader.Find(shaderName);
             if (shader == null) continue;
 
