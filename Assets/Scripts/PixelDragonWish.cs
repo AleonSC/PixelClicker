@@ -99,6 +99,7 @@ public class PixelDragonWish : MonoBehaviour
                      && !PixelMinigame.TakeoverActive && Time.timeScale > 0f;
         if (ready) EnsureButton();
         if (buttonObject != null && buttonObject.activeSelf != ready) buttonObject.SetActive(ready);
+        if (buttonGlow != null && buttonGlow.gameObject.activeSelf != ready) buttonGlow.gameObject.SetActive(ready); // the orange glow behind the button goes with it
         if (ready && buttonRect != null)
         {
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 3.2f);
@@ -162,6 +163,7 @@ public class PixelDragonWish : MonoBehaviour
     {
         busy = true;
         if (buttonObject != null) buttonObject.SetActive(false);
+        if (buttonGlow != null) buttonGlow.gameObject.SetActive(false);
 
         // The seven cubes are used up.
         for (int s = 0; s < 7; s++)
