@@ -84,7 +84,7 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("How many clicks it takes to collect one pixel of this tier. Only the last click pays out (the pixel is just hit before that).")]
         public int clicksToCollect = 1;
 
-        [Tooltip("How many pixels of the PREVIOUS tier the player must HOLD (current inventory count, not lifetime total) to unlock this tier. Ignored if 'Unlocked At Start' is on.")]
+        [Tooltip("Lifetime amount of the PREVIOUS tier needed to unlock this tier (total collected, spending does not lower it). Ignored if 'Unlocked At Start' is on.")]
         public double unlockThreshold = 100;
 
         [Tooltip("Tier is available from the very beginning.")]
@@ -141,7 +141,7 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Current spendable amount.")]
         public double count;
 
-        [Tooltip("Total ever collected (never decreases when spending). Used for achievements and stats; unlocks use the current count instead.")]
+        [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds, achievements and stats.")]
         public double totalCollected;
 
         [Tooltip("Runtime: how many times the player has spent Ultra pixels to boost this pixel type's payout (saved). See the shop's Upgrades > Pixel tab.")]
@@ -960,14 +960,14 @@ public class PixelClicker : MonoBehaviour
         NotifyChanged();
     }
 
-    /// <summary>Unlock tier N once the player holds at least N's threshold of tier N-1 (current count, not lifetime total).</summary>
+    /// <summary>Unlock tier N once tier N-1's lifetime total reaches N's threshold.</summary>
     private void CheckUnlocks()
     {
         for (int i = 1; i < tiers.Length; i++)
         {
             if (tiers[i].unlocked) continue;
             if (tiers[i].unlockMode == TierUnlockMode.ShopOnly) continue;
-            if (tiers[i - 1].count >= tiers[i].unlockThreshold)
+            if (tiers[i - 1].totalCollected >= tiers[i].unlockThreshold)
             {
                 tiers[i].unlocked = true;
                 PlaySound(unlockSound);

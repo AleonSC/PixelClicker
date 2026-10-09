@@ -1386,7 +1386,7 @@ public class PixelUI : MonoBehaviour
         {
             if (tiers[i].unlocked || tiers[i].unlockMode == PixelClicker.TierUnlockMode.ShopOnly) continue;
 
-            double remaining = Math.Ceiling(Math.Max(0d, tiers[i].unlockThreshold - tiers[i - 1].count));
+            double remaining = Math.Ceiling(Math.Max(0d, tiers[i].unlockThreshold - tiers[i - 1].totalCollected));
             return string.Format(guideFormat, FormatAmount(remaining), tiers[i - 1].type);
         }
 
