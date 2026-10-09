@@ -426,7 +426,7 @@ public static class PixelLooks
     /// material uses it, so this keeps glowing pixels visibly luminous in a built game. Returns the new object (a child of 'parent').
     /// 'texture' (optional) is drawn instead of a flat colour (alpha of the texture = how much shows), e.g. lava cracks.
     /// </summary>
-    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null, bool halo = false)
+    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null, bool halo = false, float hdr = 1f)
     {
         Material material = OverlayMaterial();
         if (material == null || mesh == null || parent == null) return null;
@@ -442,10 +442,12 @@ public static class PixelLooks
         mr.receiveShadows = false;
 
         MaterialPropertyBlock block = new MaterialPropertyBlock();
-        block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha)));
+        // 'hdr' > 1 pushes the colour above 1.0 (HDR): that is what makes the post-processing Bloom light the pixel up, exactly as
+        // the emission does in the Editor (the colour is unlit, so it goes straight to the screen buffer).
+        block.SetColor("_Color", new Color(colour.r * hdr, colour.g * hdr, colour.b * hdr, Mathf.Clamp01(alpha)));
         if (texture != null) block.SetTexture("_MainTex", texture);
         mr.SetPropertyBlock(block);
-        if (halo) AddGlowHalo(go.transform, colour, alpha);
+        if (halo) AddGlowHalo(go.transform, colour, alpha, hdr);
         return go;
     }
 
@@ -457,7 +459,7 @@ public static class PixelLooks
     /// needs no post-processing and no shader keywords). The pixel's own faces hide the middle of it, so only the halo around
     /// the silhouette shows.
     /// </summary>
-    private static void AddGlowHalo(Transform parent, Color colour, float alpha)
+    private static void AddGlowHalo(Transform parent, Color colour, float alpha, float hdr)
     {
         Material material = OverlayMaterial();
         if (material == null) return;
@@ -497,7 +499,7 @@ public static class PixelLooks
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows = false;
         MaterialPropertyBlock block = new MaterialPropertyBlock();
-        block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha * 0.7f)));
+        block.SetColor("_Color", new Color(colour.r * hdr, colour.g * hdr, colour.b * hdr, Mathf.Clamp01(alpha * 0.7f)));
         block.SetTexture("_MainTex", haloTexture);
         mr.SetPropertyBlock(block);
     }

@@ -1563,6 +1563,9 @@ public class PixelClicker : MonoBehaviour
     private float GlowShellAlpha(PixelTier tier, float extra = 1f) =>
         Mathf.Clamp((glowShellAlpha + 0.1f * tier.glowIntensity) * extra, 0.25f, 0.92f);
 
+    /// <summary>How far above 1.0 the shell's colour goes (so Bloom lights it up like emission): grows with the pixel's glow intensity.</summary>
+    private static float GlowShellHdr(PixelTier tier) => Mathf.Max(1f, tier.glowIntensity * 1.1f);
+
     private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.5f);
 
     private void UpdateGlowShell(PixelTier tier, PixelLook look)
@@ -1577,7 +1580,7 @@ public class PixelClicker : MonoBehaviour
         if (liveGlowShell != null && liveGlowShellType == tier.type) return;
 
         if (liveGlowShell != null) Destroy(liveGlowShell);
-        liveGlowShell = PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), halo: true);
+        liveGlowShell = PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), halo: true, hdr: GlowShellHdr(tier));
         liveGlowShellType = tier.type;
     }
 
@@ -2291,7 +2294,7 @@ public class PixelClicker : MonoBehaviour
         if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
         if (srcFilter != null && IsValidTier(tierIndex) && WantsGlowShell(tiers[tierIndex], LookOf(tiers[tierIndex])))
             PixelLooks.AddGlowShell(copy.transform, srcFilter.sharedMesh, GlowShellColor(tiers[tierIndex]),
-                                    GlowShellAlpha(tiers[tierIndex], IsBrightOldPixel(tierIndex) ? 1.3f : 1f), halo: true);
+                                    GlowShellAlpha(tiers[tierIndex], IsBrightOldPixel(tierIndex) ? 1.3f : 1f), halo: true, hdr: GlowShellHdr(tiers[tierIndex]));
 
         if (fly)
         {
@@ -2397,7 +2400,7 @@ public class PixelClicker : MonoBehaviour
             PixelLooks.AddExtras(go.transform, srcFilter.sharedMesh, styled, tier.color, defaultMaterial);
             if (styled.wobble) MakeWobbleVisual(go, styled);
         }
-        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, srcFilter.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), halo: true);
+        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, srcFilter.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), halo: true, hdr: GlowShellHdr(tier));
         return go;
     }
 
