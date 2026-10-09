@@ -31,7 +31,7 @@ Right-click a device (Vacuum Device, Fan, Sorter) to place it. The Vacuum Device
 Hold the right mouse button on a placed device to remove it, or on the "Active:" line at the top to cancel a potion. There is no refund.
 
 # Minigames
-<b>Ghost Hunt</b> - a faint cube floats by. Click it for a free potion.
+<b>Ghost Hunt</b> - a faint cube floats by. Click it for a free potion. With Pixel Grabbing you can also catch the falling potion and drop it on the backpack icon to keep it - kept potions can take you past the usual potion limit.
 <b>Black Hole</b> - a swirling hole opens on the floor and swallows old pixels. While it is open, old pixels stop vanishing. A counter above it shows how many pixels you have fed it out of the 250 needed to unlock the Singularity Pixel. Push old pixels toward it with the fan, Pixel Grabbing or the hose.
 <b>Bomb Defusal</b> - a bomb appears. Cut the wire of the colour you own the most of (Red, Green or Blue) before the timer runs out. A wrong wire or running out of time clears your old pixels. Defusing earns bomb parts.
 <b>Ultra Pad</b> - a coloured pad appears on one side of the cube. Throw or drop old pixels of that colour onto it for a chance at an Ultra version (the other minigames give a smaller chance for the pixels they use). Pixels of any other colour cost you some of that currency.

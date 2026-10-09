@@ -53,6 +53,7 @@ public class PixelSaveGame : MonoBehaviour
         public int type;
         public int owned;
         public int second; // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
+        public int bonus;  // extra storage from potions kept in the ghost backpack
     }
 
     [Serializable]
@@ -462,6 +463,7 @@ public class PixelSaveGame : MonoBehaviour
                     {
                         type = (int)consumables.Get(i).type,
                         owned = consumables.Get(i).owned,
+                        bonus = consumables.Get(i).bonusCap,
                         second = consumables.Get(i).craftOnly ? (int)consumables.Get(i).secondType + 1 : 0,
                     };
             }
@@ -609,7 +611,8 @@ public class PixelSaveGame : MonoBehaviour
                     int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
                     PotionSave saved = data.potions != null
                         ? Array.Find(data.potions, p => p.type == (int)potion.type && p.second == second) : null;
-                    consumables.Get(i).owned = saved != null ? consumables.ClampHeld(saved.owned) : 0;
+                    consumables.Get(i).bonusCap = saved != null ? Mathf.Max(0, saved.bonus) : 0;
+                    consumables.Get(i).owned = saved != null ? consumables.ClampHeld(i, saved.owned) : 0;
                 }
             }
 

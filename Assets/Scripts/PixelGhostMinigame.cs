@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
@@ -126,6 +127,36 @@ public class PixelGhostMinigame : PixelMinigame
     [Min(0.2f)]
     [Tooltip("The dropped potion shatters when it lands, or after this many seconds if it never lands.")]
     [SerializeField] private float dropMaxSeconds = 3f;
+
+    [Header("Backpack (needs Pixel Grabbing)")]
+    [Tooltip("With Pixel Grabbing bought, the falling potion can be grabbed and dropped on a backpack icon to keep it in your inventory.")]
+    [SerializeField] private bool allowBackpack = true;
+
+    [Min(0f)]
+    [Tooltip("Air drag on the falling potion while it can be grabbed (higher = falls slower, easier to catch).")]
+    [SerializeField] private float grabFallDrag = 2.5f;
+
+    [Min(0.05f)]
+    [Tooltip("How close the mouse must be to the potion (world units) to grab it.")]
+    [SerializeField] private float potionGrabRadius = 0.45f;
+
+    [Min(1f)]
+    [Tooltip("How tightly the grabbed potion follows the mouse.")]
+    [SerializeField] private float potionFollowSharpness = 20f;
+
+    [Min(10f)]
+    [Tooltip("Size of the backpack icon (canvas units).")]
+    [SerializeField] private float backpackSize = 130f;
+
+    [Tooltip("Distance of the backpack icon from the right edge and from the bottom black bar (canvas units).")]
+    [SerializeField] private Vector2 backpackMargin = new Vector2(40f, 40f);
+
+    [Range(0f, 1f)]
+    [Tooltip("How see-through the backpack icon is while the potion falls / is held.")]
+    [SerializeField] private float backpackAlpha = 0.5f;
+
+    [Tooltip("Text announced in the event log when a potion is kept. {0} = potion name.")]
+    [SerializeField] private string keptFormat = "Kept a {0} from the ghost";
 
     [Range(4, 40)]
     [Tooltip("Glass shards when the potion shatters.")]
@@ -526,9 +557,13 @@ public class PixelGhostMinigame : PixelMinigame
         return root;
     }
 
-    /// <summary>The potion falls from where the ghost was and shatters on landing (or after dropMaxSeconds), then the buff starts.</summary>
+    /// <summary>
+    /// The potion falls from where the ghost was and shatters on landing (or after dropMaxSeconds), then the buff starts.
+    /// With Pixel Grabbing you can catch it in mid-air and drop it on the backpack icon to keep it instead.
+    /// </summary>
     private IEnumerator DropPotion(GameObject potionObject, int potion, Camera cam)
     {
+        Track(potionObject);
         Vector3 size = potionObject.transform.lossyScale;
         potionObject.transform.localScale = size; // now free of the ghost's squash
         BoxCollider box = potionObject.AddComponent<BoxCollider>();
@@ -539,11 +574,80 @@ public class PixelGhostMinigame : PixelMinigame
         rb.AddTorque(Random.onUnitSphere * 2f, ForceMode.VelocityChange);
         GhostPotionImpact impact = potionObject.AddComponent<GhostPotionImpact>();
 
-        float t = 0f;
-        while (t < dropMaxSeconds && !impact.Hit)
+        PixelGrab grab = allowBackpack ? PixelFind.First<PixelGrab>() : null;
+        bool canGrab = grab != null && grab.CanGrab && consumables != null;
+        if (canGrab)
         {
-            t += Time.deltaTime;
+#if UNITY_6000_0_OR_NEWER
+            rb.linearDamping = grabFallDrag;
+#else
+            rb.drag = grabFallDrag;
+#endif
+            SetBackpackShown(true);
+        }
+
+        bool held = false, kept = false;
+        Plane plane = default;
+        Vector3 offset = Vector3.zero, velocity = Vector3.zero, lastPos = rb.position;
+        float t = 0f;
+        while (!impact.Hit && (held || t < dropMaxSeconds))
+        {
+            if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused)
+            {
+                if (!held)
+                {
+                    t += Time.deltaTime;
+                    if (canGrab && LeftPressed() && !PointerOverUI() && PointerNear(cam, rb.position, potionGrabRadius))
+                    {
+                        held = true;
+                        plane = new Plane(-cam.transform.forward, rb.position);
+                        Ray r = cam.ScreenPointToRay(PointerPosition());
+                        offset = plane.Raycast(r, out float e) ? rb.position - r.GetPoint(e) : Vector3.zero;
+                        rb.isKinematic = true;
+                        lastPos = rb.position;
+                        PixelAudio.Play("grab");
+                    }
+                }
+                if (held)
+                {
+                    bool over = PointerOverBackpack();
+                    SetBackpackHighlight(over);
+                    if (!LeftHeld())
+                    {
+                        held = false;
+                        SetBackpackHighlight(false);
+                        if (over) { kept = true; break; }
+                        rb.isKinematic = false; // let go: it carries on falling with the throw
+#if UNITY_6000_0_OR_NEWER
+                        rb.linearVelocity = velocity;
+#else
+                        rb.velocity = velocity;
+#endif
+                        PixelAudio.Play("drop");
+                    }
+                    else
+                    {
+                        Ray ray = cam.ScreenPointToRay(PointerPosition());
+                        if (plane.Raycast(ray, out float enter))
+                        {
+                            Vector3 target = ray.GetPoint(enter) + offset;
+                            Vector3 next = Vector3.Lerp(rb.position, target, 1f - Mathf.Exp(-potionFollowSharpness * Time.deltaTime));
+                            potionObject.transform.position = next;
+                            velocity = Vector3.Lerp(velocity, (next - lastPos) / Mathf.Max(0.0001f, Time.deltaTime), 0.5f);
+                            lastPos = next;
+                        }
+                    }
+                }
+            }
             yield return null;
+        }
+
+        SetBackpackShown(false);
+
+        if (kept)
+        {
+            yield return KeepPotion(potionObject, potion);
+            yield break;
         }
 
         Vector3 point = potionObject.transform.position;
@@ -551,6 +655,148 @@ public class PixelGhostMinigame : PixelMinigame
         ShatterPotion(potionObject, potion, point, normal);
 
         if (consumables != null) consumables.ApplyBuff(potion, buffDurationMultiplier);
+    }
+
+    private static bool PointerNear(Camera cam, Vector3 worldPoint, float radius)
+    {
+        Ray ray = cam.ScreenPointToRay(PointerPosition());
+        Vector3 to = worldPoint - ray.origin;
+        if (Vector3.Dot(to, ray.direction) <= 0f) return false;
+        return Vector3.Cross(ray.direction, to).magnitude <= radius;
+    }
+
+    /// <summary>The potion shrinks into the backpack and is added to the inventory (past the normal limit if needed).</summary>
+    private IEnumerator KeepPotion(GameObject potionObject, int potion)
+    {
+        consumables.AddKept(potion);
+        PixelAudio.Play("purchase");
+        PixelHints.Announce(string.Format(keptFormat, consumables.PotionName(potion)));
+
+        Rigidbody rb = potionObject.GetComponent<Rigidbody>();
+        if (rb != null) Destroy(rb);
+        Collider col = potionObject.GetComponent<Collider>();
+        if (col != null) Destroy(col);
+
+        Vector3 from = potionObject.transform.localScale;
+        float t = 0f;
+        const float seconds = 0.25f;
+        while (t < seconds && potionObject != null)
+        {
+            t += Time.unscaledDeltaTime;
+            potionObject.transform.localScale = from * Mathf.Clamp01(1f - t / seconds);
+            yield return null;
+        }
+        if (potionObject != null) Destroy(potionObject);
+    }
+
+    // ------------------------------------------------------------------
+    // Backpack icon (a semi-transparent pixel-art backpack at the bottom right)
+    // ------------------------------------------------------------------
+
+    private GameObject backpackCanvas;
+    private RectTransform backpackRect;
+    private Image backpackImage;
+    private CanvasGroup backpackGroup;
+    private Sprite backpackSprite;
+    private bool backpackOver;
+
+    private static readonly string[] BackpackRows =
+    {
+        ".....OOOOOOOO.....",
+        "....O........O....",
+        "....O........O....",
+        "...OOOOOOOOOOOO...",
+        "..OBBBBBBBBBBBBO..",
+        "..OBBBBBBBBBBBBO..",
+        "..OFFFFFFFFFFFFO..",
+        "..OFFFFFFFFFFFFO..",
+        "..OOOOOOOOOOOOOO..",
+        "..OBBBBBBBBBBBBO..",
+        "..OBBOOOOOOOOBBO..",
+        "..OBBOPPPPPPOBBO..",
+        "..OBBOPPPPPPOBBO..",
+        "..OBBOPPPPPPOBBO..",
+        "..OBBOOOOOOOOBBO..",
+        "..OBBBBBBBBBBBBO..",
+        "..OBBBBBBBBBBBBO..",
+        "..OOOOOOOOOOOOOO..",
+    };
+
+    private Sprite BuildBackpackSprite()
+    {
+        int h = BackpackRows.Length, w = BackpackRows[0].Length;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        Color32 clear = new Color32(0, 0, 0, 0);
+        Color32 outline = new Color32(30, 24, 20, 255), body = new Color32(200, 140, 60, 255),
+                flap = new Color32(165, 105, 45, 255), pocket = new Color32(230, 175, 95, 255);
+        for (int y = 0; y < h; y++)
+        {
+            string row = BackpackRows[h - 1 - y]; // texture rows run bottom to top
+            for (int x = 0; x < w; x++)
+            {
+                char c = row[x];
+                tex.SetPixel(x, y, c == 'O' ? outline : c == 'B' ? body : c == 'F' ? flap : c == 'P' ? pocket : clear);
+            }
+        }
+        tex.Apply(false, false);
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private void EnsureBackpack()
+    {
+        if (backpackCanvas != null) return;
+        backpackCanvas = PixelUIKit.CreateCanvas("Ghost Backpack Canvas", 95, new Vector2(1920f, 1080f), false);
+        Track(backpackCanvas);
+        backpackGroup = backpackCanvas.AddComponent<CanvasGroup>();
+        backpackGroup.blocksRaycasts = false;
+        backpackGroup.interactable = false;
+
+        if (backpackSprite == null) backpackSprite = BuildBackpackSprite();
+        GameObject go = new GameObject("Backpack", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(backpackCanvas.transform, false);
+        backpackImage = go.GetComponent<Image>();
+        backpackImage.sprite = backpackSprite;
+        backpackImage.preserveAspect = true;
+        backpackImage.raycastTarget = false;
+        backpackRect = go.GetComponent<RectTransform>();
+        backpackRect.anchorMin = backpackRect.anchorMax = backpackRect.pivot = new Vector2(1f, 0f);
+        backpackRect.sizeDelta = new Vector2(backpackSize, backpackSize);
+        backpackCanvas.SetActive(false);
+    }
+
+    private void SetBackpackShown(bool shown)
+    {
+        if (shown)
+        {
+            EnsureBackpack();
+            float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+            backpackRect.anchoredPosition = new Vector2(-backpackMargin.x, bar + backpackMargin.y);
+            backpackOver = false;
+            backpackCanvas.SetActive(true);
+            StartCoroutine(PulseBackpack());
+        }
+        else if (backpackCanvas != null) backpackCanvas.SetActive(false);
+    }
+
+    private void SetBackpackHighlight(bool over) => backpackOver = over;
+
+    private bool PointerOverBackpack()
+    {
+        if (backpackRect == null || backpackCanvas == null || !backpackCanvas.activeSelf) return false;
+        return RectTransformUtility.RectangleContainsScreenPoint(backpackRect, PointerPosition(), null);
+    }
+
+    private IEnumerator PulseBackpack()
+    {
+        while (backpackCanvas != null && backpackCanvas.activeSelf)
+        {
+            float pulse = 0.8f + 0.2f * Mathf.Sin(Time.unscaledTime * 5f);
+            Color c = Color.white;
+            c.a = backpackOver ? 1f : backpackAlpha * pulse;
+            backpackImage.color = c;
+            backpackRect.localScale = Vector3.one * (backpackOver ? 1.2f : 1f);
+            yield return null;
+        }
     }
 
     private void ShatterPotion(GameObject potionObject, int potion, Vector3 point, Vector3 normal)

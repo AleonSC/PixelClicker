@@ -57,6 +57,10 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("How many of this potion you own. You can type a starting amount here for testing.")]
         public int owned = 0;
 
+        [Min(0)]
+        [Tooltip("Runtime: extra storage for this potion on top of the normal limit. Grows when you keep a ghost's potion in the backpack while already full, and stays: the potion can be bought back up to the higher limit. Saved.")]
+        public int bonusCap = 0;
+
         [Tooltip("Runtime: a combo potion (made by crafting). It makes its pixel type AND the second type appear, is never sold in the shop, and is created automatically.")]
         public bool craftOnly = false;
 
@@ -661,20 +665,38 @@ public class PixelConsumables : MonoBehaviour
     public void Add(int index, int amount = 1)
     {
         if (index < 0 || index >= potions.Length || amount <= 0) return;
-        potions[index].owned = ClampHeld(potions[index].owned + amount);
+        potions[index].owned = ClampHeld(index, potions[index].owned + amount);
+    }
+
+    /// <summary>
+    /// A potion kept from the ghost minigame (grabbed and dropped in the backpack). It always fits: when the potion is already
+    /// at its limit the limit for that potion grows by one (and stays), so a full stock can go past the normal cap.
+    /// </summary>
+    public void AddKept(int index)
+    {
+        if (index < 0 || index >= potions.Length) return;
+        if (maxPotionsHeld > 0 && potions[index].owned >= ItemCapacity(index)) potions[index].bonusCap++;
+        potions[index].owned++;
+    }
+
+    /// <summary>The most of an item you can hold right now (the normal limit plus a potion's kept-potion bonus; devices: no limit).</summary>
+    public int ItemCapacity(int item)
+    {
+        if (IsDevice(item) || maxPotionsHeld <= 0) return int.MaxValue;
+        return maxPotionsHeld + Mathf.Max(0, potions[item].bonusCap);
     }
 
     /// <summary>The most of each potion you can hold (0 = no limit).</summary>
     public int MaxPotionsHeld => maxPotionsHeld;
 
     /// <summary>A potion count cut down to the limit (used when loading a save).</summary>
-    public int ClampHeld(int owned) => maxPotionsHeld > 0 ? Mathf.Clamp(owned, 0, maxPotionsHeld) : Mathf.Max(0, owned);
+    public int ClampHeld(int index, int owned) => maxPotionsHeld > 0 ? Mathf.Clamp(owned, 0, ItemCapacity(index)) : Mathf.Max(0, owned);
 
     /// <summary>How many more of an item you can hold right now (devices: no limit).</summary>
     public int ItemRoom(int item)
     {
         if (IsDevice(item) || maxPotionsHeld <= 0) return int.MaxValue;
-        return Mathf.Max(0, maxPotionsHeld - potions[item].owned);
+        return Mathf.Max(0, ItemCapacity(item) - potions[item].owned);
     }
 
     /// <summary>

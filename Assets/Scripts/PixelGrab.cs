@@ -78,6 +78,9 @@ public class PixelGrab : MonoBehaviour
 
     private bool Working => grabbingActive && !userDisabled;
 
+    /// <summary>Is grabbing bought and switched on? (The ghost minigame lets you grab its falling potion only then.)</summary>
+    public bool CanGrab => Working;
+
     /// <summary>Called by the shop when the upgrade is bought.</summary>
     public void Activate()
     {
