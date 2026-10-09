@@ -201,6 +201,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the button that gives every pet at once (quietly, no popups).")]
     [SerializeField] private string giveAllPetsText = "Give all pets";
 
+    [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
+    [SerializeField] private string giveDragonCubeText = "Give a Dragon Cube (next one needed)";
+
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
 
@@ -604,6 +607,19 @@ public class PixelDevTools : MonoBehaviour
         if (selected < clicker.Tiers.Length) pets.Award(clicker.Tiers[selected].type);
     }
 
+    /// <summary>Gives the lowest-numbered Dragon Cube you don't hold yet (nothing once you hold all seven).</summary>
+    private void GiveDragonCube()
+    {
+        if (clicker == null) return;
+        for (int s = 0; s < 7; s++)
+        {
+            int index = clicker.IndexOf((PixelClicker.PixelType)((int)PixelClicker.PixelType.DragonCube1 + s));
+            if (index < 0 || clicker.Tiers[index].count >= 1d) continue;
+            clicker.AddCurrency(index, 1d);
+            return;
+        }
+    }
+
     private void FillDropdowns()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
@@ -723,6 +739,13 @@ public class PixelDevTools : MonoBehaviour
                                                      new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(giveAllPets.GetComponent<RectTransform>(), 40f, y, inner);
         giveAllPets.onClick.AddListener(GiveAllPets);
+        y += rowHeight + 24f;
+
+        // Row: give the next Dragon Cube still needed
+        Button giveDragon = PixelUIKit.CreateButton(font, content, "Give Dragon Cube Button", giveDragonCubeText,
+                                                    new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(giveDragon.GetComponent<RectTransform>(), 40f, y, inner);
+        giveDragon.onClick.AddListener(GiveDragonCube);
         y += rowHeight + 24f;
 
         // Row: unlock all
