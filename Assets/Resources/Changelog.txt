@@ -161,3 +161,4 @@
 [2026-10-09 18:11 UTC] Added an achievement for each type of pet, earned by finding that pixel's pet.
 [2026-10-09 18:23 UTC] Closing the shop now re-opens the Inventory (or Log) that was open before the shop was opened.
 [2026-10-09 18:27 UTC] Fixed the pet found popup's text overlapping its button (taller box, text shrinks to fit).
+[2026-10-09 18:28 UTC] An active pet now makes its pixel type spawn twice as often.

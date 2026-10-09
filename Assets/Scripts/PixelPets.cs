@@ -40,6 +40,10 @@ public class PixelPets : MonoBehaviour
     [Tooltip("Auto clicker clicks roll at this fraction of the normal chance (1 = the same, 0 = never).")]
     [SerializeField] private float autoClickChanceFactor = 0.5f;
 
+    [Min(1f)]
+    [Tooltip("While a pet is out (found and switched on), its pixel type spawns this many times more often (its spawn weight is multiplied by this). 1 = no effect.")]
+    [SerializeField] private float spawnWeightMultiplier = 2f;
+
     [Header("Roaming")]
     [Min(0.1f)]
     [Tooltip("Mass of a pet (heavier pets shove old pixels around more).")]
@@ -225,6 +229,10 @@ public class PixelPets : MonoBehaviour
     private readonly Queue<PixelClicker.PixelType> waiting = new Queue<PixelClicker.PixelType>();
     private GameObject popupRoot;
     private float savedTimeScale = 1f;
+
+    /// <summary>The factor a pixel type's spawn weight is multiplied by: the pet's bonus while that pet is active, else 1.</summary>
+    public static float SpawnMultiplier(PixelClicker.PixelType type)
+        => Instance != null && Instance.IsOn(type) ? Mathf.Max(1f, Instance.spawnWeightMultiplier) : 1f;
 
     /// <summary>How many pets you have.</summary>
     public int OwnedCount => pets.Count;

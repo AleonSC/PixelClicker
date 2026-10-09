@@ -1446,6 +1446,9 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Weighted random pick among unlocked tiers (or the forced tier while a potion is active).</summary>
+    /// <summary>A tier's spawn weight, multiplied while its pet is active (PixelPets).</summary>
+    private float SpawnWeightOf(int i) => Mathf.Max(0f, tiers[i].spawnWeight) * PixelPets.SpawnMultiplier(tiers[i].type);
+
     private int PickSpawnTier()
     {
         if (devSpawnTiers != null) return devSpawnTiers[UnityEngine.Random.Range(0, devSpawnTiers.Length)];
@@ -1459,7 +1462,7 @@ public class PixelClicker : MonoBehaviour
 
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn) total += Mathf.Max(0f, tiers[i].spawnWeight);
+            if (tiers[i].CanSpawn) total += SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
@@ -1467,7 +1470,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             if (!tiers[i].CanSpawn) continue;
-            roll -= Mathf.Max(0f, tiers[i].spawnWeight);
+            roll -= SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }
         return GetHighestUnlockedIndex();
