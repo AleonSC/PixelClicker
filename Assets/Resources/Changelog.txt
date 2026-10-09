@@ -115,3 +115,4 @@
 [2026-10-09 12:10 UTC] Snake: pixels pressed against the screen edge or hanging in the air (e.g. after a Time Stop burst) are now moved onto the floor inside the snake's area so they can all be eaten.
 [2026-10-09 12:17 UTC] Snake: old pixels that are not part of the round (over the pixel limit) now shrink away during it and grow back after, so every visible pixel can be eaten.
 [2026-10-09 12:20 UTC] The Time Stop / Time Slow start sounds are now cut off when time resumes instead of playing on.
+[2026-10-09 12:39 UTC] Shop: opening it closes the Inventory and Log; a currency panel on the shop's left side lists your pixels as spinning cubes with always-abbreviated amounts (hover a number for the name and full amount); all shop numbers are abbreviated from 1K up regardless of the setting.

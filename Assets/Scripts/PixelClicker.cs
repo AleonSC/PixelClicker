@@ -2796,6 +2796,15 @@ public class PixelClicker : MonoBehaviour
         return list.ToArray();
     }
 
+    /// <summary>Always-abbreviated number formatting (1.2K, 3.4M ... from 1K up), whatever the "Abbreviate numbers" setting says. Used by the shop.</summary>
+    public static string FormatNumberShort(double value)
+    {
+        if (value < 999.995) return value.ToString("0.##");
+        int s = 0;
+        while (value >= 999.995 && s < NumberSuffixes.Length - 1) { value /= 1000; s++; }
+        return value.ToString("0.##") + NumberSuffixes[s];
+    }
+
     /// <summary>Number formatting: compact (1.2K, 3.4M ...) or full with separators (1,200), depending on <see cref="AbbreviateNumbers"/>.</summary>
     public static string FormatNumber(double value)
     {

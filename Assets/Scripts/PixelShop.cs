@@ -595,6 +595,28 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Seconds between row refreshes while the shop is open (buying and tab changes refresh at once).")]
     [SerializeField] private float rowRefreshSeconds = 0.25f;
 
+    [Header("Currency Panel")]
+    [Tooltip("Hide the currency panel that sits on the left side of the shop window.")]
+    [SerializeField] private bool hideCurrencyPanel = false;
+
+    [Tooltip("Width of the currency panel (canvas units). 0 = 380.")]
+    [SerializeField] private float currencyPanelWidth = 380f;
+
+    [Tooltip("Gap between the currency panel and the shop window.")]
+    [SerializeField] private float currencyPanelGap = 10f;
+
+    [Tooltip("Height of each currency row. 0 = 84.")]
+    [SerializeField] private float currencyRowHeight = 84f;
+
+    [Tooltip("Size of the spinning pixel cube in each row. 0 = 60.")]
+    [SerializeField] private float currencyIconSize = 60f;
+
+    [Tooltip("Text size of the amounts (it shrinks for very long numbers). 0 = 34.")]
+    [SerializeField] private float currencyFontSize = 34f;
+
+    [Tooltip("Title at the top of the currency panel.")]
+    [SerializeField] private string currencyTitle = "Currency";
+
     [Header("Canvas")]
     [Tooltip("Sorting order of the shop canvas.")]
     [SerializeField] private int sortingOrder = 150;
@@ -907,7 +929,9 @@ public partial class PixelShop : MonoBehaviour
         {
             nextRowRefreshTime = Time.unscaledTime + rowRefreshSeconds;
             RefreshRows();
+            RefreshCurrency();
         }
+        UpdateCurrencyAndWindows();
     }
 
     // ------------------------------------------------------------------
@@ -1043,8 +1067,8 @@ public partial class PixelShop : MonoBehaviour
             {
                 PixelMinigame minigame = PixelMinigame.Find(r.minigameId);
                 if (minigame == null) return "";
-                return string.Format(minigame.RequirementFormat, PixelClicker.FormatNumber(minigame.TrackerCount),
-                                     PixelClicker.FormatNumber(minigame.TrackerGoal));
+                return string.Format(minigame.RequirementFormat, PixelClicker.FormatNumberShort(minigame.TrackerCount),
+                                     PixelClicker.FormatNumberShort(minigame.TrackerGoal));
             }
         }
         return "";

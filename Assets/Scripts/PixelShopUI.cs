@@ -124,6 +124,7 @@ public partial class PixelShop
         BuildScrollArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f,
                         out contentRect, out scrollRect, out emptyLabel);
         BuildUpgradesWindow(parent);
+        BuildCurrencyPanel(panelObject.transform);
 
         // Pack rows live inside the scrolling content.
         rows = new PackRow[packs.Length];
@@ -634,8 +635,8 @@ public partial class PixelShop
         visibleCount++;
 
         t.value.text = count >= goal
-            ? string.Format(trackerReachedFormat, PixelClicker.FormatNumber(count))
-            : string.Format(trackerFormat, PixelClicker.FormatNumber(count), PixelClicker.FormatNumber(goal));
+            ? string.Format(trackerReachedFormat, PixelClicker.FormatNumberShort(count))
+            : string.Format(trackerFormat, PixelClicker.FormatNumberShort(count), PixelClicker.FormatNumberShort(goal));
         t.fill.anchorMax = new Vector2(goal > 0d ? Mathf.Clamp01((float)(count / goal)) : 1f, 1f);
     }
 
@@ -802,12 +803,12 @@ public partial class PixelShop
 
             row.nameLabel.text = string.Format(valueRowNameFormat, tier.displayName) + "   <size=65%><color=#" +
                                  ColorUtility.ToHtmlStringRGB(levelColor) + ">" + string.Format(ultraLevelFormat, tier.valueLevel) + "</color></size>";
-            row.descLabel.text = string.Format(valueRowDescFormat, tier.displayName, PixelClicker.FormatNumber(now),
-                                               PixelClicker.FormatNumber(maxed ? now : next));
+            row.descLabel.text = string.Format(valueRowDescFormat, tier.displayName, PixelClicker.FormatNumberShort(now),
+                                               PixelClicker.FormatNumberShort(maxed ? now : next));
 
             bool enough = PixelClicker.InfiniteResources || tier.count >= cost;
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
-                                 string.Format(valueCostFormat, PixelClicker.FormatNumber(cost), tier.displayName, PixelClicker.FormatNumber(tier.count)) + "</color>";
+                                 string.Format(valueCostFormat, PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.count)) + "</color>";
 
             bool canBuy = !maxed && enough;
             row.buyButton.interactable = canBuy;
@@ -840,7 +841,7 @@ public partial class PixelShop
 
             bool enough = PixelClicker.InfiniteResources || tier.ultraCount >= cost;
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
-                                 string.Format(ultraCostFormat, PixelClicker.FormatNumber(cost), tier.displayName, PixelClicker.FormatNumber(tier.ultraCount)) + "</color>";
+                                 string.Format(ultraCostFormat, PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.ultraCount)) + "</color>";
 
             bool canBuy = !maxed && enough;
             row.buyButton.interactable = canBuy;
@@ -920,7 +921,7 @@ public partial class PixelShop
             string name = CostName(cost);
             bool enough = CanAffordCost(cost);
 
-            string part = string.Format(costEntryFormat, PixelClicker.FormatNumber(cost.amount), name);
+            string part = string.Format(costEntryFormat, PixelClicker.FormatNumberShort(cost.amount), name);
             sb.Append("<color=#")
               .Append(ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor))
               .Append('>').Append(part).Append("</color>");
