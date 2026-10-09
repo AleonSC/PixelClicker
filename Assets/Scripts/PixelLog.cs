@@ -311,6 +311,7 @@ public class PixelLog : MonoBehaviour
         public RectTransform rect;
         public PixelCubeIcon icon;
         public RawImage skin;
+        public int skinTier = -1;
         public TMP_Text title;
         public TMP_Text description;
         public TMP_Text progress;
@@ -417,60 +418,97 @@ public class PixelLog : MonoBehaviour
         }
     }
 
-    private readonly Dictionary<int, RenderTexture> skinIcons = new Dictionary<int, RenderTexture>();
+    private class SkinStudio
+    {
+        public RenderTexture rt;
+        public Camera cam;
+        public Transform model;
+        public GameObject root;
+    }
 
-    /// <summary>Picture of a pixel type with its real look (material, glow, extras), rendered once and cached. Null if it can't be made.</summary>
+    private readonly Dictionary<int, SkinStudio> skinStudios = new Dictionary<int, SkinStudio>();
+    private readonly HashSet<int> skinRenderedThisFrame = new HashSet<int>();
+    private const float SkinStudioHeight = -3500f;
+
+    /// <summary>Live picture of a pixel type with its real look (material, glow, extras). Each type has its own far-away studio; null if it can't be made.</summary>
     private Texture SkinIcon(int tier)
     {
         if (tier < 0 || clicker == null) return null;
-        RenderTexture rt;
-        if (skinIcons.TryGetValue(tier, out rt) && rt != null) return rt;
-        skinIcons.Remove(tier);
+        SkinStudio st;
+        if (skinStudios.TryGetValue(tier, out st) && st.rt != null) return st.rt;
+        skinStudios.Remove(tier);
 
-        GameObject studio = new GameObject("Achievement Icon Studio");
-        studio.transform.position = new Vector3(0f, -3500f, 0f);
-        try
+        GameObject studio = new GameObject("Achievement Icon Studio " + tier);
+        studio.transform.position = new Vector3(tier * 60f, SkinStudioHeight, 0f); // apart from the other types' studios
+        GameObject model = clicker.CreateDisplayPixel(tier, studio.transform, 1f);
+        if (model == null) { Destroy(studio); return null; }
+        model.transform.localPosition = Vector3.zero;
+
+        st = new SkinStudio { root = studio, model = model.transform };
+        st.rt = new RenderTexture(160, 160, 24, RenderTextureFormat.ARGB32) { name = "Achievement Icon " + tier };
+        GameObject camGo = new GameObject("Icon Camera");
+        camGo.transform.SetParent(studio.transform, false);
+        st.cam = camGo.AddComponent<Camera>();
+        st.cam.enabled = false;
+        st.cam.clearFlags = CameraClearFlags.SolidColor;
+        st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+        st.cam.fieldOfView = 30f;
+        st.cam.nearClipPlane = 0.1f;
+        st.cam.farClipPlane = 30f;
+        st.cam.allowHDR = false;
+        st.cam.targetTexture = st.rt;
+        camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
+        camGo.transform.LookAt(studio.transform.position);
+
+        GameObject lightGo = new GameObject("Icon Light");
+        lightGo.transform.SetParent(studio.transform, false);
+        lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
+        Light icoLight = lightGo.AddComponent<Light>();
+        icoLight.type = LightType.Point;
+        icoLight.range = 25f;
+        icoLight.intensity = 6f;
+        icoLight.shadows = LightShadows.None;
+
+        skinStudios[tier] = st;
+        RenderSkin(st);
+        return st.rt;
+    }
+
+    private void RenderSkin(SkinStudio st)
+    {
+        st.model.localRotation = Quaternion.Euler(24f, Time.unscaledTime * achievementIconSpin, 0f);
+        st.cam.Render();
+    }
+
+    /// <summary>Re-renders (turning) the pictures of the pixel types whose achievement rows are in view.</summary>
+    private void SpinVisibleSkins()
+    {
+        if (achievementRows.Count == 0 || achievementsContent == null) return;
+        RectTransform viewport = achievementsContent.parent as RectTransform;
+        if (viewport == null) return;
+        Vector3[] vc = new Vector3[4], rc = new Vector3[4];
+        viewport.GetWorldCorners(vc);
+        skinRenderedThisFrame.Clear();
+        for (int i = 0; i < achievementRows.Count; i++)
         {
-            GameObject model = clicker.CreateDisplayPixel(tier, studio.transform, 1f);
-            if (model == null) return null;
-            model.transform.localPosition = Vector3.zero;
-            model.transform.localRotation = Quaternion.Euler(24f, 38f, 0f);
-
-            rt = new RenderTexture(160, 160, 24, RenderTextureFormat.ARGB32) { name = "Achievement Icon " + tier };
-            GameObject camGo = new GameObject("Icon Camera");
-            camGo.transform.SetParent(studio.transform, false);
-            Camera cam = camGo.AddComponent<Camera>();
-            cam.enabled = false;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            cam.fieldOfView = 30f;
-            cam.nearClipPlane = 0.1f;
-            cam.farClipPlane = 30f;
-            cam.allowHDR = false;
-            cam.targetTexture = rt;
-            // The studio is far from the scene's lights' reach in practice (dark icons), so it brings its own short-range light.
-            GameObject lightGo = new GameObject("Icon Light");
-            lightGo.transform.SetParent(studio.transform, false);
-            lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
-            Light icoLight = lightGo.AddComponent<Light>();
-            icoLight.type = LightType.Point;
-            icoLight.range = 25f;
-            icoLight.intensity = 6f;
-            icoLight.shadows = LightShadows.None;
-            camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
-            camGo.transform.LookAt(studio.transform.position);
-            cam.Render();
-            cam.targetTexture = null;
-            skinIcons[tier] = rt;
-            return rt;
+            AchievementRow row = achievementRows[i];
+            if (row.skin == null || !row.skin.gameObject.activeInHierarchy || row.skinTier < 0) continue;
+            row.rect.GetWorldCorners(rc);
+            if (rc[2].y < vc[0].y || rc[0].y > vc[2].y) continue; // scrolled out of view
+            SkinStudio st;
+            if (!skinStudios.TryGetValue(row.skinTier, out st) || st.rt == null) continue;
+            if (skinRenderedThisFrame.Add(row.skinTier)) RenderSkin(st);
         }
-        finally { Destroy(studio); }
     }
 
     private void OnDestroy()
     {
-        foreach (KeyValuePair<int, RenderTexture> kv in skinIcons) if (kv.Value != null) kv.Value.Release();
-        skinIcons.Clear();
+        foreach (KeyValuePair<int, SkinStudio> kv in skinStudios)
+        {
+            if (kv.Value.rt != null) kv.Value.rt.Release();
+            if (kv.Value.root != null) Destroy(kv.Value.root);
+        }
+        skinStudios.Clear();
         if (logInstance == this) logInstance = null;
         PixelWindows.Unregister(this);
         if (clicker != null)
@@ -486,6 +524,7 @@ public class PixelLog : MonoBehaviour
         if (!built) return;
         TickDeltas();
         if (!panelObject.activeSelf) { panelWasOpen = false; return; }
+        if (currentTab == 1) SpinVisibleSkins();
         if (panelWasOpen && Time.unscaledTime < nextRefreshTime) return;
         panelWasOpen = true;
         nextRefreshTime = Time.unscaledTime + refreshSeconds;
@@ -1257,7 +1296,8 @@ public class PixelLog : MonoBehaviour
 
             Color icon = achievements.GetIconColor(a);
             row.icon.color = new Color(icon.r * dim, icon.g * dim, icon.b * dim, icon.a);
-            Texture skinTex = SkinIcon(achievements.GetSkinTier(a));
+            row.skinTier = achievements.GetSkinTier(a);
+            Texture skinTex = SkinIcon(row.skinTier);
             row.skin.gameObject.SetActive(skinTex != null);
             row.icon.gameObject.SetActive(skinTex == null);
             if (skinTex != null) { row.skin.texture = skinTex; float skinDim = Mathf.Lerp(1f, dim, 0.35f); row.skin.color = new Color(skinDim, skinDim, skinDim, 1f); }
