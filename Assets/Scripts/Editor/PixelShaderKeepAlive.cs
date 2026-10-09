@@ -24,9 +24,30 @@ public static class PixelShaderKeepAlive
         "Standard",
     };
 
+    private static double readyAt;
+
     static PixelShaderKeepAlive()
     {
-        EditorApplication.delayCall += () => Ensure(false);
+        // Don't touch the asset database while Unity is still compiling or importing (that gives the red
+        // "TransientArtifactProvider ... transient artifacts are getting updated" error). Wait until the Editor is idle.
+        readyAt = EditorApplication.timeSinceStartup + 3.0;
+        EditorApplication.update += WaitUntilIdle;
+    }
+
+    private static void WaitUntilIdle()
+    {
+        if (EditorApplication.timeSinceStartup < readyAt) return;
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode)
+        {
+            readyAt = EditorApplication.timeSinceStartup + 2.0;
+            return;
+        }
+
+        EditorApplication.update -= WaitUntilIdle;
+        if (SessionState.GetBool("PixelShaderKeepAlive.Done", false)) return; // once per Editor session
+        SessionState.SetBool("PixelShaderKeepAlive.Done", true);
+        try { Ensure(false); }
+        catch (System.Exception e) { Debug.LogWarning("PixelShaderKeepAlive: could not create the materials (" + e.Message + "). Use Pixel Clicker > Rebuild Shader Keep-Alive Materials."); }
     }
 
     [MenuItem("Pixel Clicker/Rebuild Shader Keep-Alive Materials")]
@@ -37,6 +58,9 @@ public static class PixelShaderKeepAlive
         if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) return;
 
         bool any = false;
+        AssetDatabase.StartAssetEditing(); // one batch instead of many separate imports
+        try
+        {
         foreach (string shaderName in ShaderNames)
         {
             Shader shader = Shader.Find(shaderName);
@@ -46,6 +70,11 @@ public static class PixelShaderKeepAlive
             any |= Make(tag + "_Emission", shader, true, false, force);
             any |= Make(tag + "_Transparent", shader, false, true, force);
             any |= Make(tag + "_TransparentEmission", shader, true, true, force);
+        }
+        }
+        finally
+        {
+            AssetDatabase.StopAssetEditing();
         }
         if (any) AssetDatabase.SaveAssets();
     }
