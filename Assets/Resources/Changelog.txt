@@ -91,4 +91,5 @@
 [2026-10-09 10:29 UTC] New Sorting Race minigame (Minigames tab): some old pixels freeze in a jumbled grid, you swap pairs by clicking to group each type before the timer ends for a bonus payout; Snake and the race can never run at the same time.
 [2026-10-09 10:33 UTC] Sorting Race: the cube now shrinks out of the way during a race and grows back, the grid is capped to a fraction of the screen, and the Snake area is kept inside the view.
 [2026-10-09 10:40 UTC] Sorting Race: the old pixels that are not part of the race now shrink away during it and grow back when it ends.
-[2026-10-09 10:44 UTC] Snake now makes the clickable cube disappear during a round; added the Pong minigame (shop Minigames tab) - beat the computer for a big payout.
+[2026-10-09 10:44  UTC] Snake now makes the clickable cube disappear during a round.
+[2026-10-09 10:49 UTC] Added the Breakout minigame (shop Minigames tab): bounce a pixel off your paddle and break every brick for a big payout (replaces the short-lived Pong).

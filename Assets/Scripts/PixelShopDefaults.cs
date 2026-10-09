@@ -299,18 +299,18 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Pong pack (Minigames tab): switches on the pong minigame. Needs the RGB pack first.</summary>
-    private static ShopPack CreatePongPack(int requiresRgbIndex)
+    /// <summary>Default Breakout pack (Minigames tab): switches on the breakout minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateBreakoutPack(int requiresRgbIndex)
     {
         return new ShopPack
         {
-            displayName = "Pong",
+            displayName = "Breakout",
             tab = ShopTab.Minigames,
-            description = "Now and then a Pong court appears and the cube steps aside. Beat the computer to the winning score for a big payout.",
+            description = "Now and then a wall of bricks appears and the cube steps aside. Bounce the ball with your paddle and break every brick for a big payout.",
             requirements = Needs(requiresRgbIndex),
             costs = AllSix(500),
             rewardTiers = new PixelClicker.PixelTier[0],
-            unlocksMinigame = "pong",
+            unlocksMinigame = "breakout",
         };
     }
 
@@ -685,8 +685,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
-        new DefaultPack { isThis = p => Unlocks(p, "pong"),
-                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePongPack },
+        new DefaultPack { isThis = p => Unlocks(p, "breakout"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBreakoutPack },
         new DefaultPack { isThis = p => Unlocks(p, "sort"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSortPack },
         new DefaultPack { isThis = p => Unlocks(p, "snake"),

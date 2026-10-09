@@ -7,15 +7,15 @@ using UnityEngine.InputSystem;
 using static PixelInput;
 
 /// <summary>
-/// Pong minigame for Pixel Clicker.
+/// Breakout minigame for Pixel Clicker.
 ///
-/// Every so often (once bought in the shop's Minigames tab) a Pong court appears in front of the screen and the cube steps out of
-/// the way. Move your paddle (left) with the mouse or the Up / Down arrows; the ball is a spinning pixel taken from the ones lying
-/// around. First to the winning score takes it: you are paid a multiple of that pixel's worth. Lose, or run out of time, and
-/// nothing is lost. The court is drawn in a plane facing the camera, so it works at any camera angle. Add this to any GameObject
+/// Every so often (once bought in the shop's Minigames tab) a wall of coloured bricks appears in front of the screen and the cube
+/// steps out of the way. Move the paddle along the bottom with the mouse (or Left / Right arrows) to bounce a spinning pixel into
+/// the bricks. Break every brick before you run out of balls and you are paid a multiple of that pixel's worth. Lose all your
+/// balls, or run out of time, and nothing is lost. The court is drawn in a plane facing the camera. Add this to any GameObject
 /// (PixelShop adds it automatically if it is missing).
 /// </summary>
-public class PixelPongMinigame : PixelMinigame
+public class PixelBreakoutMinigame : PixelMinigame
 {
     [Header("References")]
     [Tooltip("The PixelClicker (camera, old pixels, payouts). Found automatically if left empty.")]
@@ -25,7 +25,7 @@ public class PixelPongMinigame : PixelMinigame
     [Tooltip("Run from the start without buying it in the shop (for testing).")]
     [SerializeField] private bool startRunning = false;
 
-    [Tooltip("Is the minigame running? (The shop turns this on when Pong is bought.)")]
+    [Tooltip("Is the minigame running? (The shop turns this on when Breakout is bought.)")]
     [SerializeField] private bool running = false;
 
     [Header("When it starts")]
@@ -47,15 +47,15 @@ public class PixelPongMinigame : PixelMinigame
 
     [Header("Rules")]
     [Min(1)]
-    [Tooltip("First to this many points wins.")]
-    [SerializeField] private int pointsToWin = 5;
+    [Tooltip("Balls you get. Missing the ball costs one.")]
+    [SerializeField] private int lives = 3;
 
     [Min(10f)]
     [Tooltip("Seconds before the game is called off.")]
     [SerializeField] private float timeLimit = 150f;
 
     [Min(1f)]
-    [Tooltip("A win pays the ball pixel's worth times this.")]
+    [Tooltip("Clearing every brick pays the ball pixel's worth times this.")]
     [SerializeField] private float rewardMultiplier = 20f;
 
     [Tooltip("Hide the clickable cube while playing (it grows back afterwards).")]
@@ -64,60 +64,59 @@ public class PixelPongMinigame : PixelMinigame
     [Header("Court")]
     [Range(0.3f, 0.9f)]
     [Tooltip("Court width as a fraction of the screen width.")]
-    [SerializeField] private float courtWidth = 0.6f;
+    [SerializeField] private float courtWidth = 0.5f;
 
-    [Range(0.2f, 0.7f)]
+    [Range(0.2f, 0.8f)]
     [Tooltip("Court height as a fraction of the screen height.")]
-    [SerializeField] private float courtHeight = 0.48f;
+    [SerializeField] private float courtHeight = 0.6f;
 
-    [Range(0.4f, 0.9f)]
+    [Range(0.3f, 0.9f)]
     [Tooltip("Where the court's centre sits vertically on the screen (0 = bottom, 1 = top).")]
-    [SerializeField] private float courtCentreY = 0.52f;
+    [SerializeField] private float courtCentreY = 0.5f;
 
     [Range(0.2f, 0.9f)]
     [Tooltip("How far in front of the camera the court floats, as a fraction of the distance to the cube (it must be in front of the old pixels).")]
     [SerializeField] private float depthFraction = 0.6f;
 
+    [Min(3)]
+    [SerializeField] private int brickColumns = 9;
+
+    [Min(1)]
+    [SerializeField] private int brickRows = 5;
+
     [Header("Play")]
-    [Range(0.05f, 0.5f)]
-    [Tooltip("Paddle height as a fraction of the court height.")]
-    [SerializeField] private float paddleHeight = 0.24f;
+    [Range(0.05f, 0.6f)]
+    [Tooltip("Paddle width as a fraction of the court width.")]
+    [SerializeField] private float paddleWidth = 0.2f;
 
     [Range(0.2f, 3f)]
     [Tooltip("Starting ball speed (court heights per second).")]
-    [SerializeField] private float ballSpeed = 0.9f;
+    [SerializeField] private float ballSpeed = 0.8f;
 
     [Min(0f)]
-    [Tooltip("The ball gets this much faster (court heights per second) on every paddle hit.")]
-    [SerializeField] private float speedUpPerHit = 0.06f;
+    [Tooltip("The ball gets this much faster (court heights per second) on every brick it breaks.")]
+    [SerializeField] private float speedUpPerBrick = 0.012f;
 
     [Range(0.2f, 3f)]
     [Tooltip("Top ball speed (court heights per second).")]
-    [SerializeField] private float maxBallSpeed = 2f;
-
-    [Range(0.1f, 3f)]
-    [Tooltip("How fast the computer's paddle can move (court heights per second). Lower is easier.")]
-    [SerializeField] private float aiSpeed = 0.7f;
-
-    [Range(0f, 1f)]
-    [Tooltip("How sloppy the computer is: it aims off by up to this fraction of half a paddle.")]
-    [SerializeField] private float aiError = 0.6f;
+    [SerializeField] private float maxBallSpeed = 1.6f;
 
     [Range(0.02f, 0.2f)]
     [Tooltip("Ball size as a fraction of the court height.")]
-    [SerializeField] private float ballSize = 0.07f;
+    [SerializeField] private float ballSize = 0.06f;
 
-    [Range(20f, 80f)]
-    [Tooltip("Steepest angle (degrees) a paddle can send the ball off at.")]
-    [SerializeField] private float maxBounceAngle = 55f;
+    [Range(20f, 75f)]
+    [Tooltip("Steepest angle (degrees) off straight up the paddle can send the ball.")]
+    [SerializeField] private float maxBounceAngle = 60f;
 
     [Min(0f)]
     [Tooltip("Pause before each serve (seconds).")]
     [SerializeField] private float serveDelay = 1f;
 
     [Header("Look")]
-    [SerializeField] private Color playerColor = new Color(0.4f, 0.9f, 1f, 1f);
-    [SerializeField] private Color aiColor = new Color(1f, 0.55f, 0.4f, 1f);
+    [SerializeField] private Color paddleColor = new Color(0.4f, 0.9f, 1f, 1f);
+    [Tooltip("Brick colours, one per row (repeats if there are more rows). Empty = the colours of your unlocked pixel types.")]
+    [SerializeField] private Color[] brickColors = new Color[0];
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.55f);
     [SerializeField] private Color backColor = new Color(0f, 0f, 0f, 0.55f);
 
@@ -125,11 +124,11 @@ public class PixelPongMinigame : PixelMinigame
     [Tooltip("Size of the score text.")]
     [SerializeField] private int statusFontSize = 34;
 
-    [Tooltip("Score line. {0} = your points, {1} = the computer's, {2} = points to win, {3} = seconds left.")]
-    [SerializeField] private string statusFormat = "PONG   {0} - {1}   first to {2}   {3}s";
+    [Tooltip("Status line. {0} = bricks left, {1} = balls left, {2} = seconds left.")]
+    [SerializeField] private string statusFormat = "BREAKOUT   bricks {0}   balls {1}   {2}s";
 
-    [SerializeField] private string winFormat = "You win!";
-    [SerializeField] private string loseText = "The computer wins";
+    [SerializeField] private string winFormat = "Cleared!";
+    [SerializeField] private string loseText = "Out of balls";
     [SerializeField] private string timeoutText = "Time's up";
 
     [Min(10f)]
@@ -138,26 +137,30 @@ public class PixelPongMinigame : PixelMinigame
     [Min(0.5f)]
     [SerializeField] private float messageSeconds = 2.2f;
 
+    private class Brick { public Transform tf; public int row; public bool alive; public Vector2 pos; }
+
     private float spawnTimer, timeLeft, serveTimer;
     private bool activeRound, setBlock;
     private Camera cam;
     private GameObject root, uiRoot;
-    private Transform playerPad, aiPad, ball, ballModel;
+    private Transform paddle, ball, ballModel;
     private TMP_Text statusLabel;
-    private float halfW, halfH, padHalf, padW, ballR, speed;
-    private float playerY, aiY, aiAim;
+    private float halfW, halfH, padHalfW, padH, ballR, speed, padY;
+    private float padX;
     private Vector2 ballPos, ballVel;
-    private int playerScore, aiScore, ballTier;
+    private int ballsLeft, bricksLeft, ballTier;
     private double ballAmount;
     private Material flat;
+    private readonly System.Collections.Generic.List<Brick> bricks = new System.Collections.Generic.List<Brick>();
+    private Vector2 brickSize;
 
     public static bool Active { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetPongStatics() { Active = false; }
+    private static void ResetBreakoutStatics() { Active = false; }
 
-    public override string Id => "pong";
-    public override string DisplayName => "Pong";
+    public override string Id => "breakout";
+    public override string DisplayName => "Breakout";
     public override bool Running => running;
     public override bool Busy => activeRound;
     public override bool Takeover => true;
@@ -181,7 +184,7 @@ public class PixelPongMinigame : PixelMinigame
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {
-            Debug.LogError("PixelPongMinigame: no PixelClicker found in the scene.", this);
+            Debug.LogError("PixelBreakoutMinigame: no PixelClicker found in the scene.", this);
             enabled = false;
             return;
         }
@@ -201,7 +204,7 @@ public class PixelPongMinigame : PixelMinigame
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
     }
 
-    [ContextMenu("Start A Pong Game Now")]
+    [ContextMenu("Start A Breakout Game Now")]
     public override void SpawnNow()
     {
         if (Application.isPlaying && !activeRound) TryStart(true);
@@ -255,15 +258,15 @@ public class PixelPongMinigame : PixelMinigame
         halfH = Vector3.Dot(top - centre, cam.transform.up);
         if (halfW <= 0.01f || halfH <= 0.01f) return false;
 
-        root = new GameObject("Pong Court");
+        root = new GameObject("Breakout Court");
         Track(root);
         root.transform.SetPositionAndRotation(centre, cam.transform.rotation);
         BuildCourt();
 
-        playerScore = aiScore = 0;
-        playerY = aiY = 0f;
+        ballsLeft = lives;
+        padX = 0f;
         timeLeft = timeLimit;
-        Serve(Random.value < 0.5f ? 1 : -1);
+        Serve();
         BuildUi();
 
         if (hideCube) clicker.SetCubeShrink(0.02f, 0.5f);
@@ -273,7 +276,7 @@ public class PixelPongMinigame : PixelMinigame
         TakeoverActive = true;
         if (!PixelClicker.ExternalClickBlock) { PixelClicker.ExternalClickBlock = true; setBlock = true; }
         Report(MinigameEvent.Spawned);
-        PixelAudio.Play("pong_start");
+        PixelAudio.Play("breakout_start");
         return true;
     }
 
@@ -305,24 +308,49 @@ public class PixelPongMinigame : PixelMinigame
         return g.transform;
     }
 
+    private Color RowColour(int row)
+    {
+        if (brickColors != null && brickColors.Length > 0) return brickColors[row % brickColors.Length];
+        var tiers = clicker.Tiers;
+        int n = 0;
+        for (int i = 0; i < tiers.Length; i++) if (tiers[i].unlocked) n++;
+        if (n == 0) return Color.white;
+        int want = row % n;
+        for (int i = 0; i < tiers.Length; i++)
+            if (tiers[i].unlocked && want-- == 0) return tiers[i].color;
+        return Color.white;
+    }
+
     private void BuildCourt()
     {
         float line = halfH * 0.03f;
-        padHalf = halfH * paddleHeight;
-        padW = halfH * 0.06f;
+        padHalfW = halfW * paddleWidth;
+        padH = halfH * 0.05f;
+        padY = -halfH + padH * 3f;
         ballR = halfH * ballSize * 0.5f;
 
         Block("Back", Vector2.zero, new Vector2(halfW * 2f, halfH * 2f), backColor, 0.05f);
         Block("Top", new Vector2(0f, halfH), new Vector2(halfW * 2f, line), lineColor, 0f);
-        Block("Bottom", new Vector2(0f, -halfH), new Vector2(halfW * 2f, line), lineColor, 0f);
-        int dashes = 9;
-        for (int i = 0; i < dashes; i++)
+        Block("Left", new Vector2(-halfW, 0f), new Vector2(line, halfH * 2f), lineColor, 0f);
+        Block("Right", new Vector2(halfW, 0f), new Vector2(line, halfH * 2f), lineColor, 0f);
+        paddle = Block("Paddle", new Vector2(0f, padY), new Vector2(padHalfW * 2f, padH), paddleColor, -0.02f);
+
+        // The wall of bricks across the top.
+        bricks.Clear();
+        float gap = halfW * 0.02f;
+        float areaW = halfW * 2f * 0.94f;
+        brickSize = new Vector2(areaW / brickColumns - gap, halfH * 0.5f / brickRows - gap);
+        for (int r = 0; r < brickRows; r++)
         {
-            float y = Mathf.Lerp(-halfH * 0.9f, halfH * 0.9f, i / (float)(dashes - 1));
-            Block("Dash", new Vector2(0f, y), new Vector2(line, halfH * 0.1f), lineColor, 0f);
+            Color c = RowColour(r);
+            for (int col = 0; col < brickColumns; col++)
+            {
+                Vector2 p = new Vector2(-areaW * 0.5f + (col + 0.5f) * (areaW / brickColumns), halfH * 0.88f - (r + 0.5f) * (halfH * 0.5f / brickRows));
+                Transform t = Block("Brick", p, brickSize, c, 0f);
+                bricks.Add(new Brick { tf = t, row = r, alive = true, pos = p });
+            }
         }
-        playerPad = Block("Player", new Vector2(-halfW + padW * 2f, 0f), new Vector2(padW, padHalf * 2f), playerColor, -0.02f);
-        aiPad = Block("Computer", new Vector2(halfW - padW * 2f, 0f), new Vector2(padW, padHalf * 2f), aiColor, -0.02f);
+        bricksLeft = bricks.Count;
 
         GameObject b = new GameObject("Ball");
         b.transform.SetParent(root.transform, false);
@@ -336,14 +364,13 @@ public class PixelPongMinigame : PixelMinigame
         }
     }
 
-    private void Serve(int direction)
+    private void Serve()
     {
-        speed = ballSpeed;
-        ballPos = Vector2.zero;
+        speed = Mathf.Max(speed, ballSpeed);
+        ballPos = new Vector2(padX, padY + padH * 0.5f + ballR);
         float angle = Random.Range(-25f, 25f) * Mathf.Deg2Rad;
-        ballVel = new Vector2(Mathf.Cos(angle) * direction, Mathf.Sin(angle)) * (speed * halfH * 2f);
+        ballVel = new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * (speed * halfH * 2f);
         serveTimer = serveDelay;
-        aiAim = Random.Range(-1f, 1f) * aiError * padHalf;
     }
 
     // ------------------------------------------------------------------
@@ -355,24 +382,23 @@ public class PixelPongMinigame : PixelMinigame
         timeLeft -= dt;
         if (timeLeft <= 0f) { EndRound(false, timeoutText); return; }
 
-        // Player: mouse position projected onto the court plane, or the arrow keys.
+        // Paddle: the mouse position projected onto the court plane, or the arrow keys.
         float key = ReadKeys();
-        if (Mathf.Abs(key) > 0.01f) playerY += key * halfH * 2f * 0.9f * dt;
+        if (Mathf.Abs(key) > 0.01f) padX += key * halfW * 2f * 0.8f * dt;
         else if (cam != null && !PointerOverUI())
         {
             Ray ray = cam.ScreenPointToRay(PointerPosition());
             Plane plane = new Plane(-cam.transform.forward, root.transform.position);
             if (plane.Raycast(ray, out float enter))
-                playerY = root.transform.InverseTransformPoint(ray.GetPoint(enter)).y;
+                padX = root.transform.InverseTransformPoint(ray.GetPoint(enter)).x;
         }
-        playerY = Mathf.Clamp(playerY, -halfH + padHalf, halfH - padHalf);
+        padX = Mathf.Clamp(padX, -halfW + padHalfW, halfW - padHalfW);
 
-        // Computer: chases the ball (only when it comes its way), limited speed.
-        float aiTarget = ballVel.x > 0f ? ballPos.y + aiAim : 0f;
-        aiY = Mathf.MoveTowards(aiY, aiTarget, aiSpeed * halfH * 2f * dt);
-        aiY = Mathf.Clamp(aiY, -halfH + padHalf, halfH - padHalf);
-
-        if (serveTimer > 0f) serveTimer -= dt;
+        if (serveTimer > 0f)
+        {
+            serveTimer -= dt;
+            ballPos = new Vector2(padX, padY + padH * 0.5f + ballR); // rides on the paddle until the serve
+        }
         else MoveBall(dt);
 
         Place();
@@ -383,51 +409,59 @@ public class PixelPongMinigame : PixelMinigame
     {
         ballPos += ballVel * dt;
 
-        // Walls.
+        // Walls and ceiling.
+        if (ballPos.x > halfW - ballR) { ballPos.x = halfW - ballR; ballVel.x = -Mathf.Abs(ballVel.x); }
+        else if (ballPos.x < -halfW + ballR) { ballPos.x = -halfW + ballR; ballVel.x = Mathf.Abs(ballVel.x); }
         if (ballPos.y > halfH - ballR) { ballPos.y = halfH - ballR; ballVel.y = -Mathf.Abs(ballVel.y); }
-        else if (ballPos.y < -halfH + ballR) { ballPos.y = -halfH + ballR; ballVel.y = Mathf.Abs(ballVel.y); }
 
-        // Paddles.
-        float playerX = -halfW + padW * 2f, aiX = halfW - padW * 2f;
-        if (ballVel.x < 0f && ballPos.x - ballR <= playerX + padW * 0.5f && ballPos.x >= playerX - padW)
+        // Paddle.
+        if (ballVel.y < 0f && ballPos.y - ballR <= padY + padH * 0.5f && ballPos.y > padY - padH)
         {
-            if (Mathf.Abs(ballPos.y - playerY) <= padHalf + ballR) Bounce(playerX + padW * 0.5f + ballR, playerY, 1);
+            if (Mathf.Abs(ballPos.x - padX) <= padHalfW + ballR)
+            {
+                float k = Mathf.Clamp((ballPos.x - padX) / padHalfW, -1f, 1f);
+                float angle = k * maxBounceAngle * Mathf.Deg2Rad;
+                float v = speed * halfH * 2f;
+                ballVel = new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * v;
+                ballPos.y = padY + padH * 0.5f + ballR;
+                PixelAudio.Play("breakout_hit");
+            }
         }
-        else if (ballVel.x > 0f && ballPos.x + ballR >= aiX - padW * 0.5f && ballPos.x <= aiX + padW)
+
+        // Bricks: the first one the ball overlaps breaks and reflects it.
+        for (int i = 0; i < bricks.Count; i++)
         {
-            if (Mathf.Abs(ballPos.y - aiY) <= padHalf + ballR) Bounce(aiX - padW * 0.5f - ballR, aiY, -1);
+            Brick b = bricks[i];
+            if (!b.alive) continue;
+            float dx = ballPos.x - b.pos.x, dy = ballPos.y - b.pos.y;
+            float ox = brickSize.x * 0.5f + ballR - Mathf.Abs(dx);
+            float oy = brickSize.y * 0.5f + ballR - Mathf.Abs(dy);
+            if (ox <= 0f || oy <= 0f) continue;
+            if (ox < oy) ballVel.x = Mathf.Abs(ballVel.x) * Mathf.Sign(dx);
+            else ballVel.y = Mathf.Abs(ballVel.y) * Mathf.Sign(dy);
+            b.alive = false;
+            if (b.tf != null) b.tf.gameObject.SetActive(false);
+            bricksLeft--;
+            speed = Mathf.Min(maxBallSpeed, speed + speedUpPerBrick);
+            ballVel = ballVel.normalized * (speed * halfH * 2f);
+            PixelAudio.Play("breakout_brick");
+            if (bricksLeft <= 0) { EndRound(true, null); return; }
+            break;
         }
 
-        // Scoring.
-        if (ballPos.x < -halfW - ballR) Score(false);
-        else if (ballPos.x > halfW + ballR) Score(true);
-    }
-
-    private void Bounce(float x, float padY, int direction)
-    {
-        float k = Mathf.Clamp((ballPos.y - padY) / padHalf, -1f, 1f);
-        float angle = k * maxBounceAngle * Mathf.Deg2Rad;
-        speed = Mathf.Min(maxBallSpeed, speed + speedUpPerHit);
-        float v = speed * halfH * 2f;
-        ballVel = new Vector2(Mathf.Cos(angle) * direction, Mathf.Sin(angle)) * v;
-        ballPos.x = x;
-        aiAim = Random.Range(-1f, 1f) * aiError * padHalf;
-        PixelAudio.Play("pong_hit");
-    }
-
-    private void Score(bool player)
-    {
-        if (player) playerScore++; else aiScore++;
-        PixelAudio.Play("pong_score");
-        if (playerScore >= pointsToWin) { EndRound(true, null); return; }
-        if (aiScore >= pointsToWin) { EndRound(false, loseText); return; }
-        Serve(player ? -1 : 1); // the one who lost the point... gets it served at them
+        // Missed.
+        if (ballPos.y < -halfH - ballR)
+        {
+            ballsLeft--;
+            PixelAudio.Play("breakout_miss");
+            if (ballsLeft <= 0) { EndRound(false, loseText); return; }
+            Serve();
+        }
     }
 
     private void Place()
     {
-        if (playerPad != null) playerPad.localPosition = new Vector3(playerPad.localPosition.x, playerY, playerPad.localPosition.z);
-        if (aiPad != null) aiPad.localPosition = new Vector3(aiPad.localPosition.x, aiY, aiPad.localPosition.z);
+        if (paddle != null) paddle.localPosition = new Vector3(padX, padY, paddle.localPosition.z);
         if (ball != null) ball.localPosition = new Vector3(ballPos.x, ballPos.y, -0.03f);
         if (ballModel != null) ballModel.localRotation = Quaternion.Euler(Time.unscaledTime * 40f, Time.unscaledTime * 70f, 0f);
     }
@@ -435,7 +469,7 @@ public class PixelPongMinigame : PixelMinigame
     private void UpdateStatus()
     {
         if (statusLabel == null) return;
-        PixelUIKit.SetText(statusLabel, string.Format(statusFormat, playerScore, aiScore, pointsToWin, Mathf.CeilToInt(Mathf.Max(0f, timeLeft))));
+        PixelUIKit.SetText(statusLabel, string.Format(statusFormat, bricksLeft, ballsLeft, Mathf.CeilToInt(Mathf.Max(0f, timeLeft))));
     }
 
     private static float ReadKeys()
@@ -443,9 +477,9 @@ public class PixelPongMinigame : PixelMinigame
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         Keyboard kb = Keyboard.current;
         if (kb == null) return 0f;
-        return (kb.upArrow.isPressed ? 1f : 0f) - (kb.downArrow.isPressed ? 1f : 0f);
+        return (kb.rightArrow.isPressed ? 1f : 0f) - (kb.leftArrow.isPressed ? 1f : 0f);
 #else
-        return (Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
+        return (Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
 #endif
     }
 
@@ -467,7 +501,8 @@ public class PixelPongMinigame : PixelMinigame
         double payout = ballAmount * rewardMultiplier;
         if (root != null) Destroy(root);
         root = null;
-        playerPad = aiPad = ball = ballModel = null;
+        paddle = ball = ballModel = null;
+        bricks.Clear();
         if (uiRoot != null) Destroy(uiRoot);
         uiRoot = null;
         statusLabel = null;
@@ -477,12 +512,12 @@ public class PixelPongMinigame : PixelMinigame
         {
             clicker.AddCurrency(ballTier, payout);
             Report(MinigameEvent.Clicked);
-            PixelAudio.Play("pong_win");
+            PixelAudio.Play("breakout_win");
             ShowMessage(at, rot, winFormat + "\n+" + PixelClicker.FormatNumber(payout));
         }
         else if (!string.IsNullOrEmpty(message))
         {
-            PixelAudio.Play("pong_lose");
+            PixelAudio.Play("breakout_lose");
             ShowMessage(at, rot, message);
         }
     }
@@ -494,7 +529,7 @@ public class PixelPongMinigame : PixelMinigame
 
     private IEnumerator MessageRoutine(Vector3 start, Quaternion rot, string message)
     {
-        GameObject go = new GameObject("Pong Message");
+        GameObject go = new GameObject("Breakout Message");
         Track(go);
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;
@@ -521,7 +556,7 @@ public class PixelPongMinigame : PixelMinigame
 
     private void BuildUi()
     {
-        uiRoot = PixelUIKit.CreateCanvas("Pong UI", 125, new Vector2(1920f, 1080f), true);
+        uiRoot = PixelUIKit.CreateCanvas("Breakout UI", 125, new Vector2(1920f, 1080f), true);
         uiRoot.transform.SetParent(transform, false);
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         statusLabel = PixelUIKit.CreateText(clicker.UIFont, uiRoot.transform, "Status", "", statusFontSize, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);

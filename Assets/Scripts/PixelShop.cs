@@ -612,7 +612,7 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelStardustMinigame>();
         EnsureMinigame<PixelSnakeMinigame>();
         EnsureMinigame<PixelSortMinigame>();
-        EnsureMinigame<PixelPongMinigame>();
+        EnsureMinigame<PixelBreakoutMinigame>();
 
         if (grab == null) grab = PixelFind.First<PixelGrab>();
         if (grab == null) grab = gameObject.AddComponent<PixelGrab>();
@@ -784,7 +784,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelStardustMinigame>();
             EditorEnsureComponent<PixelSnakeMinigame>();
             EditorEnsureComponent<PixelSortMinigame>();
-            EditorEnsureComponent<PixelPongMinigame>();
+            EditorEnsureComponent<PixelBreakoutMinigame>();
         };
     }
 
