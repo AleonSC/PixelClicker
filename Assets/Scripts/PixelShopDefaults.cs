@@ -418,6 +418,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Pixel Entrepreneur pack (Minigames tab): a cheap visitor who offers random pixel-for-pixel deals. No requirements.</summary>
+    private static ShopPack CreateEntrepreneurPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Pixel Entrepreneur",
+            tab = ShopTab.Minigames,
+            description = "Now and then a Pixel Entrepreneur drops by, stops time and offers random pixel-for-pixel deals. Some are bargains, some are not.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 75 } },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "entrepreneur",
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -747,6 +762,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
         new DefaultPack { isThis = p => Unlocks(p, "wizard"),
                           requires = null, create = i => CreateWizardPack() },
+        new DefaultPack { isThis = p => Unlocks(p, "entrepreneur"),
+                          requires = null, create = i => CreateEntrepreneurPack() },
         new DefaultPack { isThis = p => Unlocks(p, "tinkerer"),
                           requires = null, create = i => CreateTinkererPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,

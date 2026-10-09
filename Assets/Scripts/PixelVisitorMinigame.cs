@@ -118,8 +118,25 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private bool dialogOpen;
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
 
+    /// <summary>One pixel-for-pixel deal (a visitor that trades instead of selling items): you pay 'pay' of tier 'payTier' and get 'get' of tier 'getTier'.</summary>
+    protected class Trade
+    {
+        public int payTier, getTier;
+        public double pay, get;
+        public bool done;
+    }
+
+    /// <summary>Visitors that trade pixels return their offers here when they arrive (null = a normal wares visitor).</summary>
+    protected virtual List<Trade> RollTrades() => null;
+
+    /// <summary>Label of a trade's button.</summary>
+    protected virtual string TradeText => "Trade";
+
+    private List<Trade> trades;
+
     private class WareRow
     {
+        public Trade trade;
         public int item;
         public RectTransform rect;
         public TMP_Text name, cost, owned, buyLabel;
@@ -335,10 +352,35 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         RefreshWares();
     }
 
+    private void DoTrade(Trade t)
+    {
+        if (t == null || t.done || !clicker.CanAfford(clicker.Tiers[t.payTier].type, t.pay)) return;
+        if (!clicker.TrySpend(t.payTier, t.pay)) return;
+        clicker.AddCurrency(t.getTier, t.get);
+        t.done = true;
+        PixelStats.Count(Id + ".bought");
+        PixelAudio.Play("purchase");
+        RefreshWares();
+    }
+
+    private void RefreshTradeRow(WareRow row)
+    {
+        Trade t = row.trade;
+        string payName = clicker.Tiers[t.payTier].displayName;
+        bool afford = clicker.CanAfford(clicker.Tiers[t.payTier].type, t.pay);
+        Color col = afford ? new Color(0.55f, 1f, 0.6f) : new Color(1f, 0.45f, 0.45f);
+        PixelUIKit.SetText(row.cost, "Pay <color=#" + ColorUtility.ToHtmlStringRGB(col) + ">" + PixelClicker.FormatNumberShort(t.pay) + " " + payName + "</color>");
+        PixelUIKit.SetText(row.owned, "You have " + PixelClicker.FormatNumberShort(clicker.GetCount(clicker.Tiers[t.payTier].type)));
+        row.buy.interactable = !t.done && afford;
+        PixelUIKit.SetText(row.buyLabel, t.done ? "Sold" : TradeText);
+        row.buyImage.color = t.done || !afford ? new Color(0.3f, 0.3f, 0.35f, 1f) : new Color(0.2f, 0.55f, 0.3f, 1f);
+    }
+
     private void RefreshWares()
     {
         foreach (WareRow row in rows)
         {
+            if (row.trade != null) { RefreshTradeRow(row); continue; }
             int item = row.item;
             PixelShop.PackCost[] price = PriceOf(item);
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -433,9 +475,12 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
         // --- Wares window.
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        List<int> wares = Wares();
+        trades = RollTrades();
+        bool tradeMode = trades != null;
+        List<int> wares = tradeMode ? new List<int>() : Wares();
+        int rowCount = tradeMode ? trades.Count : wares.Count;
         float rowH = 104f;
-        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + wares.Count * (rowH + 8f) + 110f);
+        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + rowCount * (rowH + 8f) + 110f);
         waresPanel = Panel("Wares", new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f);
         TMP_Text wt = PixelUIKit.CreateText(Font, waresPanel, "Title", Pick(waresTitle, DefaultWaresTitle), 50f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
         PixelUIKit.Caps(wt);
@@ -454,9 +499,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
         rows.Clear();
         float y = 0f;
-        foreach (int item in wares)
+        for (int n = 0; n < rowCount; n++)
         {
-            WareRow row = new WareRow { item = item };
+            int item = tradeMode ? -1 : wares[n];
+            Trade trade = tradeMode ? trades[n] : null;
+            WareRow row = new WareRow { item = item, trade = trade };
             GameObject go = new GameObject("Ware", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(waresContent, false);
             go.GetComponent<Image>().color = new Color(0.16f, 0.16f, 0.2f, 1f);
@@ -468,7 +515,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             row.rect.sizeDelta = new Vector2(-20f, rowH);
             row.rect.anchoredPosition = new Vector2(0f, -y);
 
-            row.name = PixelUIKit.CreateText(Font, go.transform, "Name", consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
+            row.name = PixelUIKit.CreateText(Font, go.transform, "Name", tradeMode ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
             row.name.enableAutoSizing = true; row.name.fontSizeMax = 32f; row.name.fontSizeMin = 14f;
             Anchor(row.name.rectTransform, 0f, 0.55f, 1f, 1f, new Vector2(16f, 0f), new Vector2(-190f, -6f));
 
@@ -487,7 +534,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
             br.anchoredPosition = new Vector2(-14f, 0f);
             int captured = item;
-            row.buy.onClick.AddListener(() => Buy(captured));
+            Trade capturedTrade = trade;
+            row.buy.onClick.AddListener(() => { if (capturedTrade != null) DoTrade(capturedTrade); else Buy(captured); });
             rows.Add(row);
             y += rowH + 8f;
         }
@@ -499,6 +547,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         done.onClick.AddListener(() => waresDone = true);
         waresPanel.gameObject.SetActive(false);
     }
+
+    private string TradeGetText(Trade t) =>
+        "Get " + PixelClicker.FormatNumberShort(t.get) + " " + clicker.Tiers[t.getTier].displayName;
 
     private RectTransform Panel(string name, Vector2 size, float rightOffset)
     {
