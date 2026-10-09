@@ -148,6 +148,10 @@ public class PixelLook
     public float wellRadius = 3.5f;
 
     [Min(0f)]
+    [Tooltip("How far (in pull radii) a streaking meteor pixel is bent towards the well. Inside the ring it is captured. 0 = 4.")]
+    public float wellFlyReach = 4f;
+
+    [Min(0f)]
     [Tooltip("Seconds the gravity-well pixel itself lasts before it vanishes (0 = 300, i.e. 5 minutes). Other old pixels inside its pull radius don't age while it is working.")]
     public float wellLifetime = 300f;
 
@@ -768,8 +772,24 @@ public class OldPixelGravityWell : MonoBehaviour
             if (other == null || other.gameObject == gameObject) continue;
             if (clicker.IsFlyingPixel(other))
             {
-                // A streaking meteor pixel that comes inside the ring is captured: it stops flying and gets dragged in.
-                if ((centre - other.position).sqrMagnitude > radius * radius) continue;
+                // A streaking meteor pixel is bent towards the well from far beyond the ring (it flies up and away from the floor,
+                // so it would never come near otherwise) and slowed; once inside the ring it is captured and dragged in.
+                float reach = radius * (look != null && look.wellFlyReach > 0f ? look.wellFlyReach : 4f);
+                float sqr = (centre - other.position).sqrMagnitude;
+                if (sqr > reach * reach) continue;
+                if (sqr > radius * radius)
+                {
+                    Vector3 fv = VelocityOf(other);
+                    float fs = fv.magnitude;
+                    if (fs > 0.01f)
+                    {
+                        Vector3 steered = Vector3.RotateTowards(fv.normalized, (centre - other.position).normalized, 5f * Time.fixedDeltaTime, 0f);
+                        SetVelocityOf(other, steered * (fs * Mathf.Clamp01(1f - 1.2f * Time.fixedDeltaTime)));
+                    }
+                    OldPixelDespawn fd = other.GetComponent<OldPixelDespawn>();
+                    if (fd != null) fd.KeepAlive();
+                    continue;
+                }
                 clicker.LandFlyingPixel(other);
                 SetVelocityOf(other, VelocityOf(other) * 0.2f);
             }
