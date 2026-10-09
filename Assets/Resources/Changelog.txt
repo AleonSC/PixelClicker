@@ -187,3 +187,4 @@
 [2026-10-09 20:12 UTC] The Toggles window's Pixels / Upgrades / Minigames / Pets tabs are now a drop-down, and beside the shop the window is as wide as the Currency panel.
 [2026-10-09 20:16 UTC] Toggles window: the title and the 'Nothing to toggle here yet' texts now shrink to fit on one line.
 [2026-10-09 20:19 UTC] Scroll bars in the Currency window, the Toggles window and every other code-built list now hide whenever the content fits.
+[2026-10-09 20:23 UTC] The Crafting window now fits between the black bars, and its item cells show the name above the spinning item and the amount below it.

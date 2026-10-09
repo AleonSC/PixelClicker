@@ -311,6 +311,9 @@ public class PixelCrafting : MonoBehaviour
     private GameObject windowObject;
     private readonly Slot[] slots = new Slot[2];
     private readonly List<Cell> cells = new List<Cell>();
+    private float listTopY;
+    private float CellHeight => cellSize * 1.3f; // name above, spinning item, amount below
+    private float fittedHeight = -1f;
     private ScrollRect listScroll;
     private GameObject listBar;
     private RectTransform listContent;
@@ -597,6 +600,7 @@ public class PixelCrafting : MonoBehaviour
         vr.pivot = new Vector2(0.5f, 1f);
         vr.sizeDelta = new Vector2(-60f, listHeight);
         vr.anchoredPosition = new Vector2(0f, -y);
+        listTopY = y;
 
         emptyLabel = MakeLabel(listContent, "Empty", emptyItemsText, fontSize * 0.9f, TextAlignmentOptions.Center, FontStyles.Italic);
         emptyLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
@@ -812,8 +816,30 @@ public class PixelCrafting : MonoBehaviour
         return p >= 0 ? consumables.ItemOwned(p) : 0;
     }
 
+    /// <summary>Sizes the window to the space between the black bars; the item list takes whatever height is left.</summary>
+    private void FitWindow()
+    {
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float height = Mathf.Max(400f, canvasRect.rect.height - bars * 2f - 16f);
+        if (Mathf.Approximately(height, fittedHeight)) return;
+        fittedHeight = height;
+
+        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        wr.sizeDelta = new Vector2(windowWidth, height);
+        wr.anchoredPosition = Vector2.zero; // the bars are the same height top and bottom, so centred is between them
+
+        RectTransform vr = listScroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 0f);
+        vr.anchorMax = new Vector2(1f, 1f);
+        vr.pivot = new Vector2(0.5f, 1f);
+        vr.offsetMin = new Vector2(30f, 20f);
+        vr.offsetMax = new Vector2(-30f, -listTopY);
+    }
+
     private void RefreshList()
     {
+        FitWindow();
         List<Item> items = new List<Item>();
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
             if (Math.Floor(t.count) >= 1d) items.Add(new Item(ItemKind.Pixel, t.type));
@@ -846,13 +872,13 @@ public class PixelCrafting : MonoBehaviour
             cell.count.text = PixelClicker.FormatNumber(Shown(item)); // the real amount (Infinite resources only affects what can be spent)
 
             int col = i % columns, row = i / columns;
-            cell.rect.anchoredPosition = new Vector2(col * (cellSize + cellGap), -row * (cellSize + cellGap));
+            cell.rect.anchoredPosition = new Vector2(col * (cellSize + cellGap), -row * (CellHeight + cellGap));
         }
 
         int rows = Mathf.CeilToInt(items.Count / (float)columns);
-        float contentHeight = items.Count > 0 ? rows * (cellSize + cellGap) : fontSize * 1.5f;
+        float contentHeight = items.Count > 0 ? rows * (CellHeight + cellGap) : fontSize * 1.5f;
         emptyLabel.gameObject.SetActive(items.Count == 0);
-        PixelUIKit.UpdateScrollView(listScroll, listBar, contentHeight, listHeight);
+        PixelUIKit.UpdateScrollView(listScroll, listBar, contentHeight, listScroll.GetComponent<RectTransform>().rect.height);
     }
 
     private Cell BuildCell()
@@ -863,31 +889,35 @@ public class PixelCrafting : MonoBehaviour
         go.GetComponent<Image>().color = cellColor;
         cell.rect = go.GetComponent<RectTransform>();
         cell.rect.anchorMin = cell.rect.anchorMax = cell.rect.pivot = new Vector2(0f, 1f);
-        cell.rect.sizeDelta = new Vector2(cellSize, cellSize);
+        cell.rect.sizeDelta = new Vector2(cellSize, CellHeight);
 
         cell.iconHost = new GameObject("Icon Host", typeof(RectTransform));
         cell.iconHost.transform.SetParent(go.transform, false);
         RectTransform ir = cell.iconHost.GetComponent<RectTransform>();
-        ir.anchorMin = new Vector2(0f, 0.25f);
-        ir.anchorMax = Vector2.one;
+        ir.anchorMin = new Vector2(0f, 0.22f);
+        ir.anchorMax = new Vector2(1f, 0.78f);
         ir.offsetMin = ir.offsetMax = Vector2.zero;
 
-        cell.count = MakeLabel(go.transform, "Count", "", fontSize * 0.7f, TextAlignmentOptions.TopRight, FontStyles.Bold);
-        RectTransform cr = cell.count.rectTransform;
-        cr.anchorMin = new Vector2(0.3f, 0.7f);
-        cr.anchorMax = Vector2.one;
-        cr.offsetMin = Vector2.zero;
-        cr.offsetMax = new Vector2(-6f, -4f);
-
+        // Name on top, amount underneath: neither overlaps the spinning item.
         cell.nameLabel = MakeLabel(go.transform, "Name", "", fontSize * 0.5f, TextAlignmentOptions.Center, FontStyles.Normal);
         cell.nameLabel.enableAutoSizing = true;
         cell.nameLabel.fontSizeMax = fontSize * 0.5f;
         cell.nameLabel.fontSizeMin = 9f;
         RectTransform nr = cell.nameLabel.rectTransform;
-        nr.anchorMin = Vector2.zero;
-        nr.anchorMax = new Vector2(1f, 0.25f);
-        nr.offsetMin = new Vector2(4f, 2f);
-        nr.offsetMax = new Vector2(-4f, 0f);
+        nr.anchorMin = new Vector2(0f, 0.78f);
+        nr.anchorMax = Vector2.one;
+        nr.offsetMin = new Vector2(4f, 0f);
+        nr.offsetMax = new Vector2(-4f, -2f);
+
+        cell.count = MakeLabel(go.transform, "Count", "", fontSize * 0.7f, TextAlignmentOptions.Center, FontStyles.Bold);
+        cell.count.enableAutoSizing = true;
+        cell.count.fontSizeMax = fontSize * 0.7f;
+        cell.count.fontSizeMin = 9f;
+        RectTransform cr = cell.count.rectTransform;
+        cr.anchorMin = Vector2.zero;
+        cr.anchorMax = new Vector2(1f, 0.22f);
+        cr.offsetMin = new Vector2(4f, 2f);
+        cr.offsetMax = new Vector2(-4f, 0f);
 
         PixelCraftDrag drag = go.GetComponent<PixelCraftDrag>();
         drag.onBegin = e => BeginDrag(cell.item, e);
