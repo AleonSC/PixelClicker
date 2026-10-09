@@ -102,7 +102,56 @@ public static class PixelUIKit
         TMP_Text text = CreateText(font, go.transform, "Label", label, labelSize, TextAlignmentOptions.Center,
                                    FontStyles.Bold, labelColor);
         Stretch(text.rectTransform);
+        if (label == "X") UseCloseGlyph(go, text, labelColor, size); // close buttons draw a cross instead of the letter
         return go.GetComponent<Button>();
+    }
+
+    private static Sprite closeCross;
+
+    /// <summary>A white, smooth-edged cross (drawn once in code) for close buttons.</summary>
+    private static Sprite CloseCrossSprite()
+    {
+        if (closeCross != null) return closeCross;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Close Cross", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        const float half = 0.075f; // half thickness of each bar (in 0..1 units, measured across the bar)
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cover = 0f;
+                for (int sy = 0; sy < 4; sy++)
+                    for (int sx = 0; sx < 4; sx++)
+                    {
+                        float u = (x + (sx + 0.5f) / 4f) / n, v = (y + (sy + 0.5f) / 4f) / n;
+                        bool inside = u >= 0.08f && u <= 0.92f && v >= 0.08f && v <= 0.92f;
+                        float d1 = Mathf.Abs(u - v) * 0.70711f, d2 = Mathf.Abs(u + v - 1f) * 0.70711f; // distance to the two diagonals
+                        if (inside && (d1 <= half || d2 <= half)) cover += 1f / 16f;
+                    }
+                px[y * n + x] = new Color(1f, 1f, 1f, cover);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        closeCross = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        closeCross.name = "Close Cross";
+        return closeCross;
+    }
+
+    /// <summary>Swaps a close button's "X" letter for the drawn cross, tinted with the label colour.</summary>
+    public static void UseCloseGlyph(GameObject button, TMP_Text label, Color color, Vector2 buttonSize)
+    {
+        if (label != null) label.gameObject.SetActive(false);
+        GameObject g = new GameObject("Cross", typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(button.transform, false);
+        Image im = g.GetComponent<Image>();
+        im.sprite = CloseCrossSprite();
+        im.color = color;
+        im.raycastTarget = false;
+        RectTransform r = g.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+        float s = Mathf.Min(buttonSize.x, buttonSize.y) * 0.42f;
+        r.sizeDelta = new Vector2(s, s);
+        r.anchoredPosition = Vector2.zero;
     }
 
     /// <summary>Makes a rect fill its parent.</summary>
@@ -113,11 +162,10 @@ public static class PixelUIKit
         rt.offsetMin = rt.offsetMax = Vector2.zero;
     }
 
-    /// <summary>A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>.</summary>
     private static Sprite downTriangle;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { downTriangle = null; }
+    private static void ResetStatics() { downTriangle = null; closeCross = null; }
 
     /// <summary>A white, smooth-edged downward triangle (drawn once in code) for drop-down arrows.</summary>
     private static Sprite DownTriangleSprite()
@@ -146,6 +194,7 @@ public static class PixelUIKit
         return downTriangle;
     }
 
+    /// <summary>A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>.</summary>
     public static TMP_Dropdown CreateDropdown(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
                                               Color boxColor, Color listColor, Color textColor, float fontSize)
     {

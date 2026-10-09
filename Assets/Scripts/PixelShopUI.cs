@@ -670,6 +670,7 @@ public partial class PixelShop
         lr.anchorMin = Vector2.zero;
         lr.anchorMax = Vector2.one;
         lr.offsetMin = lr.offsetMax = Vector2.zero;
+        if (label == "X") PixelUIKit.UseCloseGlyph(go, labelText, labelColor, size); // close buttons draw a cross
 
         return button;
     }
