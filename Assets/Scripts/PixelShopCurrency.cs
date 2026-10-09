@@ -36,6 +36,7 @@ public partial class PixelShop
     private RectTransform currencyCanvasRect;
     private int currencyHover = -1;
     private bool shopWasOpen;
+    private bool reopenInventory, reopenLog; // which windows the shop closed when it opened, to bring back when it closes
 
     private float CurrencyWidth => currencyPanelWidth > 40f ? currencyPanelWidth : 380f;
     private float CurrencyRowHeight => currencyRowHeight > 20f ? currencyRowHeight : 84f;
@@ -184,9 +185,23 @@ public partial class PixelShop
         if (open && !shopWasOpen)
         {
             // The shop replaces the Inventory and Log windows (its currency panel shows what they would).
+            reopenInventory = PixelUI.InventoryOpen;
+            reopenLog = PixelLog.LogOpen;
             PixelUI.SetInventoryOpen(false);
             PixelLog.SetLogOpen(false);
             RefreshCurrency();
+        }
+        if (!open && shopWasOpen)
+        {
+            // The shop closed: bring back the window it replaced, unless the player opened something else meanwhile
+            // (opening the Inventory / Log / Crafting is what closed it).
+            bool inventory = reopenInventory, log = reopenLog;
+            reopenInventory = reopenLog = false;
+            if (!PixelWindows.AnyOpenExcept(this) && !PixelUI.InventoryOpen && !PixelLog.LogOpen)
+            {
+                if (inventory) PixelUI.SetInventoryOpen(true);
+                else if (log) PixelLog.SetLogOpen(true);
+            }
         }
         shopWasOpen = open;
 

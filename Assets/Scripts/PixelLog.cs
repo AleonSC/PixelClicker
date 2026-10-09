@@ -401,6 +401,8 @@ public class PixelLog : MonoBehaviour
     /// <summary>The Log window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
     public static RectTransform WindowRect => logInstance != null && logInstance.panelObject != null ? logInstance.panelObject.GetComponent<RectTransform>() : null;
 
+    public static bool LogOpen => logInstance != null && logInstance.panelObject != null && logInstance.panelObject.activeSelf;
+
     public static void SetLogOpen(bool open)
     {
         PixelLog log = logInstance;
