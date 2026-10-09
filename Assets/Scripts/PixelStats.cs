@@ -455,7 +455,7 @@ public class PixelStats : MonoBehaviour
             Head("Pets");
             Row("Pets found", petSystem.OwnedCount + " / " + clicker.Tiers.Length);
             foreach (PixelClicker.PixelTier t in clicker.Tiers)
-                Row("   " + (petSystem.IsOwned(t.type) ? t.displayName + " Pet" : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
+                Row("   " + (petSystem.IsOwned(t.type) ? petSystem.NameOf(t.type) : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
             if (petSystem.IsOwned(PixelClicker.PixelType.Vacuum) || Counter("pet.vacuum") > 0d)
                 Cnt("Old pixels sucked by the Vacuum Pet", "pet.vacuum");
         }

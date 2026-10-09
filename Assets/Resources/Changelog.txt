@@ -164,3 +164,4 @@
 [2026-10-09 18:28 UTC] An active pet now makes its pixel type spawn twice as often.
 [2026-10-09 18:33 UTC] Pets that wander behind the clickable pixel no longer steal its clicks: the cube wins whenever it is in front of the pet.
 [2026-10-09 18:35 UTC] Saving or loading from the Save / Load menu now shows a blue Got it window the size of the menu instead of the small centred message.
+[2026-10-09 18:42 UTC] Hovering a pet now shows a name tag with a pencil that opens a customization window: rename the pet and spin it in a 3D view while arrows switch between generated outfits (hats, glasses, scarves, capes, wings...).

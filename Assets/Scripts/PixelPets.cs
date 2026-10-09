@@ -11,7 +11,7 @@ using static PixelInput;
 ///
 /// Added by PixelClicker.Awake.
 /// </summary>
-public class PixelPets : MonoBehaviour
+public partial class PixelPets : MonoBehaviour
 {
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -212,6 +212,8 @@ public class PixelPets : MonoBehaviour
     {
         public PixelClicker.PixelType type;
         public bool off;
+        public string customName;     // the player's name for the pet ("" = the default)
+        public int outfit;            // which outfit it wears (0 = none)
         public GameObject body;
         public float hopTimer;
         public bool ghost;       // the Ghost pet only hovers
@@ -258,7 +260,7 @@ public class PixelPets : MonoBehaviour
     public List<KeyValuePair<PixelClicker.PixelType, string>> Owned()
     {
         List<KeyValuePair<PixelClicker.PixelType, string>> list = new List<KeyValuePair<PixelClicker.PixelType, string>>();
-        foreach (Pet p in pets) list.Add(new KeyValuePair<PixelClicker.PixelType, string>(p.type, PetName(p.type)));
+        foreach (Pet p in pets) list.Add(new KeyValuePair<PixelClicker.PixelType, string>(p.type, NameOf(p)));
         return list;
     }
 
@@ -286,6 +288,7 @@ public class PixelPets : MonoBehaviour
     private void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        CleanupCustomize();
         if (PopupOpen) ClosePopup();
         foreach (Pet p in pets) { if (p.body != null) Destroy(p.body); DestroyCounter(p); }
         if (popupRoot != null) Destroy(popupRoot);
@@ -486,11 +489,13 @@ public class PixelPets : MonoBehaviour
         }
         if (p.type == PixelClicker.PixelType.Vacuum) BuildCounter(p, size);
         p.body = go;
+        ApplyOutfit(p);
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
     }
 
     private void Update()
     {
+        if (customizing) UpdateCustomize();
         if (PopupOpen || Time.timeScale <= 0f) return;
         bool hide = PixelMinigame.TakeoverActive; // Snake, Sorting Race and Breakout have the floor to themselves
         if (hide && held != null) EndHold(false);
@@ -500,8 +505,9 @@ public class PixelPets : MonoBehaviour
             if (p.body == null) continue;
             if (p.body.activeSelf == hide) p.body.SetActive(!hide);
             if (hide) continue;
-            if (p.ghost) RoamGhost(p, p == hovered || p == held);
-            else Roam(p, p == hovered || p == held);
+            bool stopped = p == hovered || p == held || (p == tagPet && TagVisible); // a pet whose name tag is up stands still too
+            if (p.ghost) RoamGhost(p, stopped);
+            else Roam(p, stopped);
             if (p.type == PixelClicker.PixelType.Vacuum) SuckAround(p);
             else if (p.type == PixelClicker.PixelType.Glass && p != held) MaybeBreak(p);
         }
@@ -534,7 +540,8 @@ public class PixelPets : MonoBehaviour
             if (hovered != null && LeftPressed()) BeginHold(hovered);
         }
 
-        HoveringPet = hovered != null || held != null;
+        UpdateTag(allowed);
+        HoveringPet = hovered != null || held != null || (tagPet != null && TagVisible);
         if (HoveringPet && !blockingClicks) { blockingClicks = true; PixelClicker.ExternalClickBlock = true; }
         else if (!HoveringPet && blockingClicks) { blockingClicks = false; PixelClicker.ExternalClickBlock = PixelBank.HoseOn; }
     }
@@ -921,7 +928,7 @@ public class PixelPets : MonoBehaviour
     public string[] Export()
     {
         string[] list = new string[pets.Count];
-        for (int i = 0; i < list.Length; i++) list[i] = (int)pets[i].type + ":" + (pets[i].off ? 1 : 0);
+        for (int i = 0; i < list.Length; i++) list[i] = (int)pets[i].type + ":" + (pets[i].off ? 1 : 0) + ":" + pets[i].outfit + ":" + System.Uri.EscapeDataString(pets[i].customName ?? "");
         return list;
     }
 
@@ -939,7 +946,10 @@ public class PixelPets : MonoBehaviour
             if (parts.Length < 1 || !int.TryParse(parts[0], out int t) || !System.Enum.IsDefined(typeof(PixelClicker.PixelType), t)) continue;
             PixelClicker.PixelType type = (PixelClicker.PixelType)t;
             if (IsOwned(type)) continue;
-            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
+            int outfit = 0;
+            if (parts.Length > 2) int.TryParse(parts[2], out outfit);
+            string customName = parts.Length > 3 ? System.Uri.UnescapeDataString(parts[3]) : "";
+            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", outfit = Mathf.Max(0, outfit), customName = customName, hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
             pets.Add(p);
             Refresh(p);
         }
