@@ -117,6 +117,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         [Tooltip("Animated patterns: how fast the animation plays (1 = normal).")]
         public float animSpeed = 1f;
+
+        [Tooltip("Width / height of one copy of the pattern on the floor (1 = square). Tile World Size is its height.")]
+        public float tileAspect = 1f;
     }
 
     [Header("Floor")]
@@ -315,7 +318,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Vector3 size = floorRenderer.bounds.size;
         float tile = Mathf.Max(0.1f, style.tileWorldSize);
         // Tile by world size so every pattern has the same scale on any floor, centred on the floor's middle.
-        baseTiling = new Vector2(Mathf.Max(0.02f, size.x / tile), Mathf.Max(0.02f, size.z / tile));
+        float aspect = style.tileAspect > 0.01f ? style.tileAspect : 1f;
+        baseTiling = new Vector2(Mathf.Max(0.02f, size.x / (tile * aspect)), Mathf.Max(0.02f, size.z / tile));
         baseOffset = new Vector2(0.5f - Frac(0.5f * baseTiling.x), 0.5f - Frac(0.5f * baseTiling.y));
         animTimer = animClock = 0f;
         SetTiling(m, baseTiling, baseOffset + offset);
@@ -1026,8 +1030,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private static readonly string[] PacMaze =
     {
-        "###################",
-        "#o.......#.......o#",
+        "######### #########",
+        "#o...............o#",
         "#.##.###.#.###.##.#",
         "#.................#",
         "#.##.#.#####.#.##.#",
@@ -1046,7 +1050,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         "#....#...#...#....#",
         "#.######.#.######.#",
         "#.................#",
-        "###################",
+        "######### #########",
     };
 
     // Corners of the loop Pac-Man runs (column, row; rows counted from the top). Every step between them is open.
@@ -1100,8 +1104,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private static bool PacWall(int c, int r)
     {
-        if (r < 0 || r >= PacMaze.Length || c < 0 || c >= PacMaze[0].Length) return false;
-        return PacMaze[r][c] == '#';
+        int w = PacMaze[0].Length, h = PacMaze.Length;
+        return PacMaze[Wrap(r, h)][Wrap(c, w)] == '#'; // wraps: the maze repeats across the floor
     }
 
     private static Color ShadePacMan(FloorStyle s, float u, float v)
@@ -1109,9 +1113,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         BuildPacPath();
         int w = PacMaze[0].Length, h = PacMaze.Length;
         float t = shadeTime;
-        // The maze fills the height of the texture and is centred across it; rows run from the top.
-        float gx = u * h - (h - w) * 0.5f, gy = (1f - v) * h;
-        if (gx < 0f || gx >= w) return s.colorC;
+        // The maze fills the texture (the style's tileAspect makes its cells square on the floor); rows run from the top.
+        // Its edges line up with the next copy, so the tunnels on all four sides lead into the neighbouring mazes.
+        float gx = u * w, gy = (1f - v) * h;
         int ci = Mathf.Clamp(Mathf.FloorToInt(gx), 0, w - 1), ri = Mathf.Clamp(Mathf.FloorToInt(gy), 0, h - 1);
         float lx = gx - ci, ly = gy - ri;
         char cell = PacMaze[ri][ci];
@@ -1155,10 +1159,10 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             // A blue line along each side that faces a corridor.
             const float lo = 0.12f, hi = 0.24f;
             bool line =
-                (!PacWall(ci - 1, ri) && ci > 0 && lx >= lo && lx <= hi) ||
-                (!PacWall(ci + 1, ri) && ci < w - 1 && lx <= 1f - lo && lx >= 1f - hi) ||
-                (!PacWall(ci, ri - 1) && ri > 0 && ly >= lo && ly <= hi) ||
-                (!PacWall(ci, ri + 1) && ri < h - 1 && ly <= 1f - lo && ly >= 1f - hi);
+                (!PacWall(ci - 1, ri) && lx >= lo && lx <= hi) ||
+                (!PacWall(ci + 1, ri) && lx <= 1f - lo && lx >= 1f - hi) ||
+                (!PacWall(ci, ri - 1) && ly >= lo && ly <= hi) ||
+                (!PacWall(ci, ri + 1) && ly <= 1f - lo && ly >= 1f - hi);
             return line ? s.colorA : s.colorC;
         }
         if (cell == '-') return Mathf.Abs(ly - 0.5f) < 0.08f ? new Color(1f, 0.7f, 0.85f) : s.colorC;
@@ -1334,6 +1338,13 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 }
             }
             defaultsVersion = 1;
+        }
+        // Pac-Man mazes now fill their tile and join up with their neighbours.
+        if (defaultsVersion < 2)
+        {
+            foreach (FloorStyle st in styles)
+                if (st != null && st.name == "Pac-Man") st.tileAspect = 19f / 21f;
+            defaultsVersion = 2;
         }
 
         foreach (FloorStyle def in DefaultStyles())
@@ -1519,7 +1530,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         FloorStyle pac = S("Pac-Man", FloorPattern.PacMan, new Color(0.15f, 0.25f, 1f), new Color(1f, 0.8f, 0.65f),
                            Color.black, 256, true, 8f, 1, 0.4f, 0.8f);
-        pac.animateFps = 20f;
+        pac.animateFps = 20f; pac.tileAspect = 19f / 21f;
         yield return pac;
     }
 }

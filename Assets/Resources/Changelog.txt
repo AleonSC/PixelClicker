@@ -155,3 +155,4 @@
 [2026-10-09 16:28 UTC] Zoomed out the newest floors: the card back is now one card about 8 units across in the middle of the floor, and Liquid Flow, Moving Clouds, Kaleidoscope and Pac-Man repeat at a smaller size.
 [2026-10-09 16:32 UTC] Dev tools: added a Give all pets button.
 [2026-10-09 16:36 UTC] Pets can now be picked up and thrown with the mouse and stop moving while hovered; the Ghost pet only hovers instead of rolling.
+[2026-10-09 16:34 UTC] The Pac-Man floor's mazes now join up seamlessly: no dark gaps between them, and tunnels on all four sides lead into the neighbouring mazes.
