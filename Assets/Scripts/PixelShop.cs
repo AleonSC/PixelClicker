@@ -469,6 +469,12 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Text of the Buy button. {0} = how many.")]
     [SerializeField] private string buyCountFormat = "Buy x{0}";
 
+    [Tooltip("Button text on a purchase card when you already hold the most of that potion you can.")]
+    [SerializeField] private string potionFullText = "Full";
+
+    [Tooltip("Cost line on a purchase card when that potion is full. {0} = the most you can hold, {1} = how many you hold.")]
+    [SerializeField] private string potionFullFormat = "You can hold {0} of each potion (you have {1}). Drink one to buy more.";
+
     [Tooltip("Shown on a card that has no items.")]
     [SerializeField] private string noItemsText = "Nothing to buy here.";
 
@@ -1123,6 +1129,7 @@ public partial class PixelShop : MonoBehaviour
     {
         if (consumables == null || itemIndex < 0 || itemIndex >= consumables.ItemCount || count < 1) return false;
         if (consumables.ItemCraftOnly(itemIndex) || ItemLocked(itemIndex)) return false;
+        if (count > consumables.ItemRoom(itemIndex)) return false; // potions are capped per type
 
         PackCost[] total = ScaleCosts(consumables.ItemCosts(itemIndex), count);
         if (!CanAffordCosts(total)) return false;

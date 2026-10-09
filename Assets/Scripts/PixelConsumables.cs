@@ -215,6 +215,10 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("Add a potion for any pixel type that has none (e.g. when this component was added before a type existed).")]
     [SerializeField] private bool addDefaultPotions = true;
 
+    [Min(0)]
+    [Tooltip("The most of each potion you can hold (crafted combo potions too). Stops stockpiling cheap potions early and drinking them after big upgrades. 0 = no limit. Devices are not limited.")]
+    [SerializeField] private int maxPotionsHeld = 10;
+
     [Header("Devices")]
     [Tooltip("Placeable devices. A Vacuum Device is created for you; edit its price, radius and duration here.")]
     [SerializeField] private Device[] devices = CreateDefaultDevices();
@@ -653,11 +657,24 @@ public class PixelConsumables : MonoBehaviour
     // Inventory
     // ------------------------------------------------------------------
 
-    /// <summary>Gives the player potions (e.g. from a purchase).</summary>
+    /// <summary>Gives the player potions (e.g. from a purchase), never beyond <see cref="maxPotionsHeld"/>.</summary>
     public void Add(int index, int amount = 1)
     {
         if (index < 0 || index >= potions.Length || amount <= 0) return;
-        potions[index].owned += amount;
+        potions[index].owned = ClampHeld(potions[index].owned + amount);
+    }
+
+    /// <summary>The most of each potion you can hold (0 = no limit).</summary>
+    public int MaxPotionsHeld => maxPotionsHeld;
+
+    /// <summary>A potion count cut down to the limit (used when loading a save).</summary>
+    public int ClampHeld(int owned) => maxPotionsHeld > 0 ? Mathf.Clamp(owned, 0, maxPotionsHeld) : Mathf.Max(0, owned);
+
+    /// <summary>How many more of an item you can hold right now (devices: no limit).</summary>
+    public int ItemRoom(int item)
+    {
+        if (IsDevice(item) || maxPotionsHeld <= 0) return int.MaxValue;
+        return Mathf.Max(0, maxPotionsHeld - potions[item].owned);
     }
 
     /// <summary>

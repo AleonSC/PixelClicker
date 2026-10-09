@@ -165,6 +165,9 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Shown when the recipe's result doesn't exist (e.g. no potion of that type in the Consumables list).")]
     [SerializeField] private string unavailableText = "That item isn't available.";
 
+    [Tooltip("Shown under the recipe when you already hold the most of that potion you can.")]
+    [SerializeField] private string potionFullText = "You can't hold any more of this potion - drink one first.";
+
     [Tooltip("Heading of the list of what you own.")]
     [SerializeField] private string itemsHeading = "Your items (drag into the boxes)";
 
@@ -1034,8 +1037,10 @@ public class PixelCrafting : MonoBehaviour
                     sb.Append(NeedLine(r.a, Have(ia), r.a.Amount + r.b.Amount));
                 else
                     sb.Append(NeedLine(r.a, Have(ia), r.a.Amount)).Append('\n').Append(NeedLine(r.b, Have(ib), r.b.Amount));
+                bool full = consumables.ItemRoom(result) < r.resultAmount;
+                if (full) sb.Append('\n').Append("<color=#" + ColorUtility.ToHtmlStringRGB(shortColor) + ">" + potionFullText + "</color>");
                 recipeText.text = sb.ToString();
-                canCraft = CanAfford(r);
+                canCraft = !full && CanAfford(r);
             }
         }
 
@@ -1048,7 +1053,7 @@ public class PixelCrafting : MonoBehaviour
         Recipe r = currentRecipe;
         if (r == null || !CanAfford(r)) return;
         int result = ResultIndex(r);
-        if (result < 0) return;
+        if (result < 0 || consumables.ItemRoom(result) < r.resultAmount) return;
 
         if (!Spend(r.a) || !Spend(r.b)) return;
         consumables.AddItem(result, r.resultAmount);

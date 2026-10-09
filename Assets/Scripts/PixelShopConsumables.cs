@@ -217,6 +217,23 @@ public partial class PixelShop
 
         card.description.text = consumables.ItemDescription(item);
 
+        // Potions are capped per type: never offer more than there is room for.
+        int room = consumables.ItemRoom(item);
+        if (room > 0 && card.count > room)
+        {
+            card.count = room;
+            if (!card.countField.isFocused) card.countField.SetTextWithoutNotify(card.count.ToString());
+        }
+        if (room <= 0 && !ItemLocked(item))
+        {
+            card.cost.text = "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" +
+                             string.Format(potionFullFormat, consumables.MaxPotionsHeld, consumables.ItemOwned(item)) + "</color>";
+            card.buy.interactable = false;
+            card.buyLabel.text = potionFullText;
+            card.buyImage.color = disabledColor;
+            return;
+        }
+
         bool locked = ItemLocked(item);
         PackCost[] total = ScaleCosts(consumables.ItemCosts(item), card.count);
         bool canBuy = !locked && CanAffordCosts(total);
