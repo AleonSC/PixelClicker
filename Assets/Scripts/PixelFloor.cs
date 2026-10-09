@@ -120,6 +120,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         [Tooltip("Width / height of one copy of the pattern on the floor (1 = square). Tile World Size is its height.")]
         public float tileAspect = 1f;
+
+        [Tooltip("Fit ONE copy of the pattern to the part of the floor the camera sees (between the black bars), following the camera as it moves. Tile World Size is ignored.")]
+        public bool fitToView = false;
     }
 
     [Header("Floor")]
@@ -162,6 +165,14 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
     private Vector2 offset;
     private float pulseClock;
     private float animTimer, animClock;
+
+    // Fit-to-view: an affine map from the floor mesh's local points to its UVs (from one of its triangles).
+    private bool uvMapReady;
+    private Vector3 uvP0, uvE1, uvE2;
+    private Vector2 uvT0, uvD1, uvD2;
+    private Vector3 lastFitCamPos;
+    private Quaternion lastFitCamRot;
+    private float lastFitAspect;
 
     public int StyleCount => styles.Count;
     public int Current => current;
@@ -210,6 +221,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             return;
         }
         originalMaterials = floorRenderer.sharedMaterials;
+        BuildUvMap();
 
         string saved = PlayerPrefs.GetString(PrefStyle, defaultStyle);
         int index = styles.FindIndex(s => s.name == saved);
@@ -322,6 +334,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         baseTiling = new Vector2(Mathf.Max(0.02f, size.x / (tile * aspect)), Mathf.Max(0.02f, size.z / tile));
         baseOffset = new Vector2(0.5f - Frac(0.5f * baseTiling.x), 0.5f - Frac(0.5f * baseTiling.y));
         animTimer = animClock = 0f;
+        if (style.fitToView) FitToView(true);
         SetTiling(m, baseTiling, baseOffset + offset);
 
         Material[] mats = new Material[Mathf.Max(1, originalMaterials != null ? originalMaterials.Length : 1)];
@@ -343,13 +356,16 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         FloorStyle style = styles[current];
         float dt = PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime; // keeps moving on the title screen, freezes in Time Stop
 
+        bool tilingDirty = false;
+        if (style.fitToView && FitToView(false)) tilingDirty = true;
         if (style.scrollSpeed != Vector2.zero)
         {
             offset += style.scrollSpeed * dt;
             offset.x -= Mathf.Floor(offset.x);
             offset.y -= Mathf.Floor(offset.y);
-            SetTiling(activeMaterial, baseTiling, baseOffset + offset);
+            tilingDirty = true;
         }
+        if (tilingDirty) SetTiling(activeMaterial, baseTiling, baseOffset + offset);
 
         if (style.glow > 0f && style.pulseSpeed > 0f && activeMaterial.HasProperty("_EmissionColor"))
         {
@@ -379,6 +395,104 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 DrawDisco(activeTexture, style, beatStep);
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Fit to view: one copy of the pattern exactly covers what the camera sees of the floor
+    // ------------------------------------------------------------------
+
+    /// <summary>Reads one triangle of the floor mesh so any point on the floor can be turned into its UV.</summary>
+    private void BuildUvMap()
+    {
+        uvMapReady = false;
+        MeshFilter mf = floorRenderer != null ? floorRenderer.GetComponent<MeshFilter>() : null;
+        Mesh mesh = mf != null ? mf.sharedMesh : null;
+        if (mesh == null) return;
+        try
+        {
+            Vector3[] verts = mesh.vertices;
+            Vector2[] uvs = mesh.uv;
+            int[] tris = mesh.triangles;
+            if (verts.Length == 0 || uvs.Length != verts.Length || tris.Length < 3) return;
+            for (int t = 0; t + 2 < tris.Length; t += 3)
+            {
+                Vector3 a = verts[tris[t]], b = verts[tris[t + 1]], c = verts[tris[t + 2]];
+                if (Vector3.Cross(b - a, c - a).sqrMagnitude < 1e-10f) continue; // skip degenerate triangles
+                uvP0 = a; uvE1 = b - a; uvE2 = c - a;
+                uvT0 = uvs[tris[t]]; uvD1 = uvs[tris[t + 1]] - uvT0; uvD2 = uvs[tris[t + 2]] - uvT0;
+                uvMapReady = true;
+                return;
+            }
+        }
+        catch (Exception) { /* mesh not readable: fall back to the bounds below */ }
+    }
+
+    /// <summary>The floor mesh's UV at a world point on the floor.</summary>
+    private Vector2 WorldToFloorUv(Vector3 world)
+    {
+        Vector3 p = floorRenderer.transform.InverseTransformPoint(world);
+        if (uvMapReady)
+        {
+            Vector3 d = p - uvP0;
+            float a11 = Vector3.Dot(uvE1, uvE1), a12 = Vector3.Dot(uvE1, uvE2), a22 = Vector3.Dot(uvE2, uvE2);
+            float b1 = Vector3.Dot(d, uvE1), b2 = Vector3.Dot(d, uvE2);
+            float det = a11 * a22 - a12 * a12;
+            if (Mathf.Abs(det) > 1e-12f)
+            {
+                float x = (b1 * a22 - b2 * a12) / det, y = (a11 * b2 - a12 * b1) / det;
+                return uvT0 + uvD1 * x + uvD2 * y;
+            }
+        }
+        // Fallback: a flat floor mapped corner to corner along its local X and Z.
+        Bounds lb = floorRenderer.GetComponent<MeshFilter>() != null && floorRenderer.GetComponent<MeshFilter>().sharedMesh != null
+            ? floorRenderer.GetComponent<MeshFilter>().sharedMesh.bounds : new Bounds(Vector3.zero, Vector3.one * 10f);
+        return new Vector2((p.x - lb.min.x) / Mathf.Max(1e-4f, lb.size.x), (p.z - lb.min.z) / Mathf.Max(1e-4f, lb.size.z));
+    }
+
+    /// <summary>
+    /// Works out the floor's UVs at the bottom-left, bottom-right and top-left of the view (inside the black bars) and
+    /// sets the tiling so one copy of the texture spans them. Returns true when the tiling changed.
+    /// </summary>
+    private bool FitToView(bool force)
+    {
+        Camera cam = Camera.main;
+        if (cam == null || floorRenderer == null) return false;
+        Transform ct = cam.transform;
+        if (!force && ct.position == lastFitCamPos && ct.rotation == lastFitCamRot && Mathf.Approximately(cam.aspect, lastFitAspect)) return false;
+
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight / 1080f : 0f;
+        Plane floor = new Plane(floorRenderer.transform.up.sqrMagnitude > 0f ? floorRenderer.transform.up : Vector3.up,
+                                new Vector3(0f, floorRenderer.bounds.max.y, 0f));
+        if (!TryFloorPoint(cam, floor, new Vector2(0f, bar), out Vector3 bl) ||
+            !TryFloorPoint(cam, floor, new Vector2(1f, bar), out Vector3 br) ||
+            !TryFloorPoint(cam, floor, new Vector2(0f, 1f - bar), out Vector3 tl))
+            return false; // the view doesn't reach the floor everywhere yet (e.g. camera intro): keep the last fit
+
+        lastFitCamPos = ct.position;
+        lastFitCamRot = ct.rotation;
+        lastFitAspect = cam.aspect;
+
+        Vector2 uvBL = WorldToFloorUv(bl), uvBR = WorldToFloorUv(br), uvTL = WorldToFloorUv(tl);
+        // Texture coordinate = uv * tiling + offset: 0 at the bottom-left corner of the view, 1 at the right / top edge.
+        Vector2 across = uvBR - uvBL, up = uvTL - uvBL;
+        bool swapped = Mathf.Abs(across.y) > Mathf.Abs(across.x); // camera turned 90 degrees to the floor's UVs
+        float du = swapped ? up.x : across.x, dv = swapped ? across.y : up.y;
+        if (Mathf.Abs(du) < 1e-5f || Mathf.Abs(dv) < 1e-5f) return false;
+        baseTiling = new Vector2(1f / du, 1f / dv);
+        baseOffset = new Vector2(-uvBL.x * baseTiling.x, -uvBL.y * baseTiling.y);
+        return true;
+    }
+
+    private static bool TryFloorPoint(Camera cam, Plane floor, Vector2 viewport, out Vector3 point)
+    {
+        Ray ray = cam.ViewportPointToRay(new Vector3(viewport.x, viewport.y, 0f));
+        if (floor.Raycast(ray, out float enter) && enter > 0f && enter < cam.farClipPlane * 4f)
+        {
+            point = ray.GetPoint(enter);
+            return true;
+        }
+        point = Vector3.zero;
+        return false;
     }
 
     // ------------------------------------------------------------------
@@ -1346,6 +1460,14 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 if (st != null && st.name == "Pac-Man") st.tileAspect = 19f / 21f;
             defaultsVersion = 2;
         }
+        // These four now fit one copy to the camera's view of the floor.
+        if (defaultsVersion < 3)
+        {
+            foreach (FloorStyle st in styles)
+                if (st != null && (st.name == "Yu-Gi-Oh Card Back" || st.name == "Moving Clouds" || st.name == "Kaleidoscope" || st.name == "Pac-Man"))
+                    st.fitToView = true;
+            defaultsVersion = 3;
+        }
 
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
@@ -1509,7 +1631,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         // ---- Yu-Gi-Oh themed ----
         FloorStyle card = S("Yu-Gi-Oh Card Back", FloorPattern.CardBack, new Color(0.95f, 0.55f, 0.15f), new Color(0.35f, 0.17f, 0.06f),
                             new Color(0.06f, 0.04f, 0.03f), 1024, false, 8f, 1, 0.55f);
-        card.stretchToFloor = true;
+        card.stretchToFloor = true; card.fitToView = true;
         yield return card;
 
         // ---- Animated ----
@@ -1520,17 +1642,17 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         FloorStyle clouds = S("Moving Clouds", FloorPattern.CloudSea, new Color(0.35f, 0.6f, 0.9f), new Color(0.72f, 0.78f, 0.88f),
                               Color.white, 256, false, 5f, 1, 0.2f);
-        clouds.scrollSpeed = new Vector2(0.015f, 0.006f);
+        clouds.scrollSpeed = new Vector2(0.015f, 0.006f); clouds.fitToView = true;
         yield return clouds;
 
         FloorStyle kaleido = S("Kaleidoscope", FloorPattern.Kaleidoscope, new Color(0.02f, 0.02f, 0.05f), Color.white,
                                new Color(0.05f, 0.05f, 0.08f), 256, false, 8f, 8, 0.7f, 0.6f);
-        kaleido.animateFps = 15f;
+        kaleido.animateFps = 15f; kaleido.fitToView = true;
         yield return kaleido;
 
         FloorStyle pac = S("Pac-Man", FloorPattern.PacMan, new Color(0.15f, 0.25f, 1f), new Color(1f, 0.8f, 0.65f),
                            Color.black, 256, true, 8f, 1, 0.4f, 0.8f);
-        pac.animateFps = 20f; pac.tileAspect = 19f / 21f;
+        pac.animateFps = 20f; pac.tileAspect = 19f / 21f; pac.fitToView = true;
         yield return pac;
     }
 }
