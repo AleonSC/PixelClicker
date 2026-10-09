@@ -984,6 +984,17 @@ public class PixelUI : MonoBehaviour
             rt.pivot = new Vector2(0.5f, 1f);
             rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
 
+            // Huge numbers shrink the line to fit on one row instead of wrapping onto the next one.
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMax = fontSize;
+            tmp.fontSizeMin = Mathf.Max(8f, fontSize * 0.3f);
+            tmp.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            tmp.enableWordWrapping = false;
+#endif
+
             if (outlineWidth > 0f)
             {
                 tmp.outlineColor = outlineColor;

@@ -108,3 +108,4 @@
 [2026-10-09 11:35 UTC] Rarer pixels are now deliberately slower to upgrade: Value prices follow each pixel's payout but not how often it spawns.
 [2026-10-09 11:35 UTC] Re-priced the Glass, Vacuum, Obsidian and Luminescent costs in the shop to match how rarely those pixels spawn.
 [2026-10-09 11:40 UTC] Snake, Sorting Race, Breakout, Time Slow, Old Pixel Capacity and the Solar Pixel now use the new shop price ladder too.
+[2026-10-09 11:49 UTC] Huge pixel counts no longer wrap or overlap in the Inventory and Log: the text shrinks to fit on one line (normal-sized numbers look exactly as before).

@@ -294,6 +294,7 @@ public class PixelLog : MonoBehaviour
         public TMP_Text name;
         public TMP_Text amount;
         public Image swatch;
+        public float nameLeft;
         public TMP_Text delta;
         public float deltaTimer;
         public double gainSum;
@@ -853,7 +854,17 @@ public class PixelLog : MonoBehaviour
         nr.anchorMin = Vector2.zero;
         nr.anchorMax = Vector2.one;
         nr.offsetMin = new Vector2(nameLeft, 0f);
-        nr.offsetMax = new Vector2(-200f, 0f);
+        nr.offsetMax = Vector2.zero;
+        row.name.enableAutoSizing = true;
+        row.name.fontSizeMax = rowFontSize;
+        row.name.fontSizeMin = Mathf.Max(8f, rowFontSize * 0.5f);
+        row.name.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+            row.name.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            row.name.enableWordWrapping = false;
+#endif
+        row.nameLeft = nameLeft;
 
         row.amount = CreateText(go.transform, "Amount", "", rowFontSize, TextAlignmentOptions.MidlineRight,
                                 FontStyles.Bold, amountColor);
@@ -862,6 +873,16 @@ public class PixelLog : MonoBehaviour
         ar.anchorMax = Vector2.one;
         ar.offsetMin = new Vector2(nameLeft + 100f, 0f);
         ar.offsetMax = Vector2.zero;
+        // Big numbers shrink to fit the space next to the name instead of wrapping or running over it.
+        row.amount.enableAutoSizing = true;
+        row.amount.fontSizeMax = rowFontSize;
+        row.amount.fontSizeMin = Mathf.Max(8f, rowFontSize * 0.3f);
+        row.amount.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+            row.amount.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            row.amount.enableWordWrapping = false;
+#endif
 
         if (!isTotal)
         {
@@ -1197,6 +1218,7 @@ public class PixelLog : MonoBehaviour
             PixelClicker.PixelTier tier = tiers[i];
             PixelUIKit.SetText(row.name, tier.displayName);
             PixelUIKit.SetText(row.amount, FormatAmount(tier.totalCollected));
+            FitAmount(row);
             if (row.swatch != null) row.swatch.color = tier.UIColor;
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
@@ -1217,6 +1239,7 @@ public class PixelLog : MonoBehaviour
             y += 8f;
             PixelUIKit.SetText(totalRow.name, overallTotalLabel);
             PixelUIKit.SetText(totalRow.amount, FormatAmount(overall));
+            FitAmount(totalRow);
             totalRow.rect.anchoredPosition = new Vector2(0f, -y);
             y += rowHeight;
         }
@@ -1226,6 +1249,14 @@ public class PixelLog : MonoBehaviour
         pixelsViewport.offsetMin = new Vector2(0f, panelPadding);
         pixelsViewport.offsetMax = new Vector2(0f, -ContentTop);
         PixelUIKit.UpdateScrollView(pixelsScroll, pixelsBar, y, viewHeight);
+    }
+
+    /// <summary>The amount box starts right after the name's text, so a long number can never run over the name.</summary>
+    private static void FitAmount(Row row)
+    {
+        if (row.name == null || row.amount == null) return;
+        float nameWidth = row.name.preferredWidth;
+        row.amount.rectTransform.offsetMin = new Vector2(row.nameLeft + nameWidth + 12f, 0f);
     }
 
     private string FormatAmount(double value)
