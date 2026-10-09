@@ -257,6 +257,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the sky picker (arrows step through the skies of the Pixel Skybox component).")]
     [SerializeField] private string skyStyleLabel = "Sky";
 
+    [Tooltip("Label of the tick box that softens the floor's far edge with fog.")]
+    [SerializeField] private string horizonFogLabel = "Horizon fog";
+
     [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
     [SerializeField] private string noFloorText = "No floor found";
 
@@ -1580,6 +1583,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddHeaderRow(list, headerDisplay, ref y);
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
+        AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,

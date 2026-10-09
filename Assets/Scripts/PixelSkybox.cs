@@ -312,6 +312,21 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
         return tex;
     }
 
+    /// <summary>
+    /// The colour of the current sky at the horizon (for the horizon fog). False for the Classic sky (the scene's own),
+    /// whose horizon colour isn't known.
+    /// </summary>
+    public bool TryGetHorizonColor(out Color color)
+    {
+        color = Color.clear;
+        if (current < 0 || current >= styles.Count || styles[current].pattern == SkyPattern.Classic) return false;
+        if (activeMaterial == null || RenderSettings.skybox != activeMaterial) return false; // the sky fell back to a plain colour
+        SkyStyle s = styles[current];
+        color = s.horizonColor * Mathf.Max(0f, s.exposure);
+        color.a = 1f;
+        return true;
+    }
+
     public Color PreviewColor(int index)
     {
         if (index >= 0 && index < styles.Count && styles[index].pattern == SkyPattern.Classic)

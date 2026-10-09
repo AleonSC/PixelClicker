@@ -36,7 +36,7 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
@@ -107,5 +107,6 @@ public static class PixelSettingsSync
         if (menu != null) menu.ReloadSettingsFromPrefs();
         PixelHints.RefreshLog();
         PixelDevTools.ReloadFromPrefs();
+        PixelHorizonFog.ReloadFromPrefs();
     }
 }
