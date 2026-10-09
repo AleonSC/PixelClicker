@@ -497,9 +497,13 @@ public class PixelAudio : MonoBehaviour
     private void OnHit(int tierIndex, int hits, int needed, bool automatic)
     {
         PlaySound("hit", 1f);
-        // Tough pixels (Obsidian) also play their own pixel sound on every hit, not only on the breaking click.
+        // Tough pixels (Obsidian) also play their own pixel sound on every hit, not only on the breaking click. It ramps up: each
+        // hit is louder than the one before, and the breaking click (OnCollected) plays at the full volume set in the Sounds list.
         if (clicker != null && tierIndex >= 0 && tierIndex < clicker.Tiers.Length)
-            PlaySound("pixel_" + clicker.Tiers[tierIndex].type.ToString().ToLowerInvariant(), 1f);
+        {
+            float ramp = Mathf.Clamp01(hits / (float)Mathf.Max(1, needed));
+            PlaySound("pixel_" + clicker.Tiers[tierIndex].type.ToString().ToLowerInvariant(), 1f, Mathf.Max(0.1f, ramp * ramp));
+        }
     }
 
     private void OnVacuumed(int tierIndex, double total, int count) => PlaySound("vacuum", 1f);

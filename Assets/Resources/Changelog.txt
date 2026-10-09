@@ -83,3 +83,4 @@
 [2026-10-09 04:48 UTC] Fixed the 'CreateImpl ... MonoBehaviour constructor' error from PixelClicker (a property block was created in a field initializer).
 [2026-10-09 04:52 UTC] The Luminescent pixel now holds its maximum glow instead of pulsing (tick Luminescent Pulses to undo), and bright falling old pixels get a much stronger glow and halo in builds.
 [2026-10-09 08:25 UTC] The glow halo is now separate from the glow shell and can be hidden with a tick box (Hide Glow Halo) on PixelClicker.
+[2026-10-09 08:30 UTC] The Obsidian click sound now ramps up in volume with each hit and reaches the set volume on the breaking click.
