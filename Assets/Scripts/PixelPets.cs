@@ -938,21 +938,33 @@ public partial class PixelPets : MonoBehaviour
         foreach (Pet p in pets) { if (p.body != null) Destroy(p.body); DestroyCounter(p); }
         pets.Clear();
         waiting.Clear();
-        if (list == null) return;
+        if (list == null)
+        {
+            PixelDebug.Info("PixelPets: the save has no pet list (older save), so no pets were loaded.", this);
+            return;
+        }
         foreach (string entry in list)
         {
             if (string.IsNullOrEmpty(entry)) continue;
             string[] parts = entry.Split(':');
-            if (parts.Length < 1 || !int.TryParse(parts[0], out int t) || !System.Enum.IsDefined(typeof(PixelClicker.PixelType), t)) continue;
+            if (parts.Length < 1 || !int.TryParse(parts[0], out int t) || !System.Enum.IsDefined(typeof(PixelClicker.PixelType), t))
+            {
+                PixelDebug.Info("PixelPets: skipped an unreadable pet entry: '" + entry + "'.", this);
+                continue;
+            }
             PixelClicker.PixelType type = (PixelClicker.PixelType)t;
             if (IsOwned(type)) continue;
             int outfit = 0;
             if (parts.Length > 2) int.TryParse(parts[2], out outfit);
-            string customName = parts.Length > 3 ? System.Uri.UnescapeDataString(parts[3]) : "";
-            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", outfit = Mathf.Max(0, outfit), customName = customName, hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
-            pets.Add(p);
-            Refresh(p);
+            string customName = "";
+            try { customName = parts.Length > 3 ? System.Uri.UnescapeDataString(parts[3]) : ""; } catch (System.Exception) { }
+            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", outfit = Mathf.Max(0, outfit), customName = customName,
+                              hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
+            pets.Add(p); // it is in the list before anything that could fail, so a problem building its body never loses the pet itself
+            try { Refresh(p); }
+            catch (System.Exception e) { Debug.LogError("PixelPets: the " + type + " pet was loaded but its body could not be built: " + e.Message, this); }
         }
+        PixelDebug.Info("PixelPets: loaded " + pets.Count + " pet(s) from the save.", this);
     }
 }
 
