@@ -42,8 +42,12 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private float maxInterval = 300f;
 
     [Min(1)]
-    [Tooltip("A game only starts when at least this many old pixels are lying around (one of them lends its type to the ball).")]
-    [SerializeField] private int minPixels = 3;
+    [Tooltip("A game only starts when at least this many old pixels are lying around: they become the bricks.")]
+    [SerializeField] private int minPixels = 30;
+
+    [Min(5)]
+    [Tooltip("At most this many old pixels become bricks. The rest are removed until the game is over.")]
+    [SerializeField] private int maxBricks = 45;
 
     [Header("Rules")]
     [Min(1)]
@@ -55,8 +59,8 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private float timeLimit = 150f;
 
     [Min(1f)]
-    [Tooltip("Clearing every brick pays the ball pixel's worth times this.")]
-    [SerializeField] private float rewardMultiplier = 20f;
+    [Tooltip("Every brick you break pays that pixel's worth times this.")]
+    [SerializeField] private float brickMultiplier = 10f;
 
     [Tooltip("Hide the clickable cube while playing (it grows back afterwards).")]
     [SerializeField] private bool hideCube = true;
@@ -79,10 +83,20 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private float depthFraction = 0.6f;
 
     [Min(3)]
+    [Tooltip("Bricks per row (more columns are used if the wall would get too tall).")]
     [SerializeField] private int brickColumns = 9;
 
-    [Min(1)]
-    [SerializeField] private int brickRows = 5;
+    [Range(0.3f, 0.8f)]
+    [Tooltip("The wall never takes more than this fraction of the court height.")]
+    [SerializeField] private float wallHeightFraction = 0.55f;
+
+    [Min(0.1f)]
+    [Tooltip("Seconds the pixels take to glide into the wall.")]
+    [SerializeField] private float slideSeconds = 0.8f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the pixels that are not bricks take to shrink away / grow back.")]
+    [SerializeField] private float bystanderSeconds = 0.6f;
 
     [Header("Play")]
     [Range(0.05f, 0.6f)]
@@ -115,8 +129,6 @@ public class PixelBreakoutMinigame : PixelMinigame
 
     [Header("Look")]
     [SerializeField] private Color paddleColor = new Color(0.4f, 0.9f, 1f, 1f);
-    [Tooltip("Brick colours, one per row (repeats if there are more rows). Empty = the colours of your unlocked pixel types.")]
-    [SerializeField] private Color[] brickColors = new Color[0];
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.55f);
     [SerializeField] private Color backColor = new Color(0f, 0f, 0f, 0.55f);
 
@@ -137,7 +149,19 @@ public class PixelBreakoutMinigame : PixelMinigame
     [Min(0.5f)]
     [SerializeField] private float messageSeconds = 2.2f;
 
-    private class Brick { public Transform tf; public int row; public bool alive; public Vector2 pos; }
+    private class Brick
+    {
+        public Rigidbody body; public Transform tf; public int tier; public double amount; public OldPixelDespawn despawn;
+        public Collider[] colliders; public Behaviour[] paused;
+        public Vector3 startPos, endPos, startScale, endScale; public Quaternion startRot, endRot;
+        public Vector2 pos; public bool alive;
+    }
+
+    private class Bystander { public Rigidbody body; public Transform tf; public Vector3 baseScale; public Collider[] colliders; public Behaviour[] paused; }
+    private readonly System.Collections.Generic.List<Bystander> bystanders = new System.Collections.Generic.List<Bystander>();
+    private float bystanderFactor = 1f, slideT;
+    private double earned;
+    private float serveDelayExtra;
 
     private float spawnTimer, timeLeft, serveTimer;
     private bool activeRound, setBlock;
@@ -149,7 +173,6 @@ public class PixelBreakoutMinigame : PixelMinigame
     private float padX;
     private Vector2 ballPos, ballVel;
     private int ballsLeft, bricksLeft, ballTier;
-    private double ballAmount;
     private Material flat;
     private readonly System.Collections.Generic.List<Brick> bricks = new System.Collections.Generic.List<Brick>();
     private Vector2 brickSize;
@@ -196,6 +219,8 @@ public class PixelBreakoutMinigame : PixelMinigame
     {
         base.OnDestroy();
         if (activeRound) EndRound(false, null);
+        bystanderFactor = 1f;
+        UpdateBystanders();
     }
 
     protected override void OnDespawned()
@@ -210,8 +235,67 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (Application.isPlaying && !activeRound) TryStart(true);
     }
 
+    private void ShrinkBystanders(System.Collections.Generic.HashSet<Rigidbody> inWall)
+    {
+        bystanders.Clear();
+        bystanderFactor = 1f;
+        var all = clicker.OldPixels;
+        for (int i = 0; i < all.Count; i++)
+        {
+            Rigidbody rb = all[i];
+            if (rb == null || inWall.Contains(rb) || clicker.IsFlyingPixel(rb)) continue;
+            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            if (d != null && (d.IsDespawning || d.Held)) continue;
+            bystanders.Add(new Bystander
+            {
+                body = rb, tf = rb.transform, baseScale = rb.transform.localScale,
+                colliders = rb.GetComponents<Collider>(),
+                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
+            });
+        }
+        foreach (Bystander b in bystanders)
+        {
+            SetVelocities(b.body, Vector3.zero);
+            b.body.isKinematic = true;
+            foreach (Collider c in b.colliders) if (c != null) c.enabled = false;
+            foreach (Behaviour x in b.paused) if (x != null) x.enabled = false;
+        }
+    }
+
+    private void UpdateBystanders()
+    {
+        if (bystanders.Count == 0) return;
+        bystanderFactor = Mathf.MoveTowards(bystanderFactor, activeRound ? 0f : 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, bystanderSeconds));
+        bool done = !activeRound && bystanderFactor >= 1f;
+        for (int i = bystanders.Count - 1; i >= 0; i--)
+        {
+            Bystander b = bystanders[i];
+            if (b.body == null || b.tf == null) { bystanders.RemoveAt(i); continue; }
+            b.tf.localScale = b.baseScale * Mathf.Max(0.001f, bystanderFactor);
+            if (done)
+            {
+                foreach (Collider c in b.colliders) if (c != null) c.enabled = true;
+                foreach (Behaviour x in b.paused) if (x != null) x.enabled = true;
+                b.body.isKinematic = false;
+            }
+        }
+        if (done) bystanders.Clear();
+    }
+
+    private static void SetVelocities(Rigidbody rb, Vector3 v)
+    {
+        if (rb == null || rb.isKinematic) return;
+#if UNITY_6000_0_OR_NEWER
+        rb.linearVelocity = v;
+#else
+        rb.velocity = v;
+#endif
+        rb.angularVelocity = Vector3.zero;
+    }
+
     private void Update()
     {
+        UpdateBystanders();
         if (activeRound) { Tick(Time.deltaTime); return; }
         if (!running) return;
 
@@ -230,22 +314,32 @@ public class PixelBreakoutMinigame : PixelMinigame
         cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return false;
 
-        // One of the old pixels lends the ball its type and worth.
+        // The old pixels lying around become the bricks.
         var all = clicker.OldPixels;
-        int count = 0;
-        OldPixelInfo pick = null;
+        var candidates = new System.Collections.Generic.List<Brick>();
         for (int i = 0; i < all.Count; i++)
         {
             Rigidbody rb = all[i];
-            if (rb == null || clicker.IsFlyingPixel(rb)) continue;
+            if (rb == null || rb.isKinematic || clicker.IsFlyingPixel(rb)) continue;
             OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
             if (info == null) continue;
-            count++;
-            if (pick == null || Random.value < 1f / count) pick = info;
+            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            if (d != null && (d.IsDespawning || d.Held)) continue;
+            candidates.Add(new Brick
+            {
+                body = rb, tf = rb.transform, tier = info.tierIndex, amount = info.amount, despawn = d,
+                colliders = rb.GetComponents<Collider>(),
+                paused = new Behaviour[] { rb.GetComponent<OldPixelGravityWell>(), rb.GetComponent<OldPixelFloat>() },
+            });
         }
-        if (pick == null || count < (dev ? 1 : minPixels)) return false;
-        ballTier = pick.tierIndex;
-        ballAmount = pick.amount;
+        if (candidates.Count < (dev ? 6 : minPixels)) return false;
+        for (int i = candidates.Count - 1; i > 0; i--) { int j = Random.Range(0, i + 1); var t = candidates[i]; candidates[i] = candidates[j]; candidates[j] = t; }
+        int use = Mathf.Min(maxBricks, candidates.Count);
+        bricks.Clear();
+        for (int i = 0; i < use; i++) bricks.Add(candidates[i]);
+        var inWall = new System.Collections.Generic.HashSet<Rigidbody>();
+        foreach (Brick br in bricks) inWall.Add(br.body);
+        ballTier = bricks[Random.Range(0, bricks.Count)].tier;
 
         // The court floats in a plane facing the camera, in front of the old pixels.
         Transform target = clicker.PixelTransform;
@@ -263,14 +357,26 @@ public class PixelBreakoutMinigame : PixelMinigame
         root.transform.SetPositionAndRotation(centre, cam.transform.rotation);
         BuildCourt();
 
+        OldPixelDespawn.HoldAll = true;
+        foreach (Brick br in bricks)
+        {
+            SetVelocities(br.body, Vector3.zero);
+            br.body.isKinematic = true;
+            foreach (Collider c in br.colliders) if (c != null) c.enabled = false;
+            foreach (Behaviour x in br.paused) if (x != null) x.enabled = false;
+        }
+        ShrinkBystanders(inWall);
+        slideT = 0f;
+        earned = 0d;
+
         ballsLeft = lives;
+        speed = 0f;
         padX = 0f;
         timeLeft = timeLimit;
         Serve();
         BuildUi();
 
         if (hideCube) clicker.SetCubeShrink(0.02f, 0.5f);
-        OldPixelDespawn.HoldAll = true;
         activeRound = true;
         Active = true;
         TakeoverActive = true;
@@ -308,19 +414,6 @@ public class PixelBreakoutMinigame : PixelMinigame
         return g.transform;
     }
 
-    private Color RowColour(int row)
-    {
-        if (brickColors != null && brickColors.Length > 0) return brickColors[row % brickColors.Length];
-        var tiers = clicker.Tiers;
-        int n = 0;
-        for (int i = 0; i < tiers.Length; i++) if (tiers[i].unlocked) n++;
-        if (n == 0) return Color.white;
-        int want = row % n;
-        for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].unlocked && want-- == 0) return tiers[i].color;
-        return Color.white;
-    }
-
     private void BuildCourt()
     {
         float line = halfH * 0.03f;
@@ -335,22 +428,37 @@ public class PixelBreakoutMinigame : PixelMinigame
         Block("Right", new Vector2(halfW, 0f), new Vector2(line, halfH * 2f), lineColor, 0f);
         paddle = Block("Paddle", new Vector2(0f, padY), new Vector2(padHalfW * 2f, padH), paddleColor, -0.02f);
 
-        // The wall of bricks across the top.
-        bricks.Clear();
-        float gap = halfW * 0.02f;
+        // The wall: the old pixels themselves, glided into rows across the top and scaled to fit.
+        int n = bricks.Count;
+        int cols = Mathf.Max(3, brickColumns);
         float areaW = halfW * 2f * 0.94f;
-        brickSize = new Vector2(areaW / brickColumns - gap, halfH * 0.5f / brickRows - gap);
-        for (int r = 0; r < brickRows; r++)
+        float maxWallH = halfH * 2f * wallHeightFraction;
+        int rows = Mathf.CeilToInt(n / (float)cols);
+        while (rows * (areaW / cols) > maxWallH && cols < n) { cols++; rows = Mathf.CeilToInt(n / (float)cols); }
+        float pitch = Mathf.Min(areaW / cols, maxWallH / rows);
+        float edge = pitch * 0.88f;
+        brickSize = new Vector2(edge, edge);
+        float top0 = halfH * 0.92f;
+        for (int i = 0; i < n; i++)
         {
-            Color c = RowColour(r);
-            for (int col = 0; col < brickColumns; col++)
+            int r = i / cols, c = i % cols;
+            int inRow = Mathf.Min(cols, n - r * cols);
+            Vector2 p = new Vector2((c - (inRow - 1) * 0.5f) * pitch, top0 - (r + 0.5f) * pitch);
+            Brick br = bricks[i];
+            br.pos = p;
+            br.alive = true;
+            br.startPos = br.tf.position; br.startRot = br.tf.rotation; br.startScale = br.tf.localScale;
+            br.endPos = root.transform.TransformPoint(new Vector3(p.x, p.y, edge * 0.5f));
+            br.endRot = root.transform.rotation * Quaternion.Euler(0f, 0f, 0f);
+            br.endScale = br.startScale;
+            MeshFilter mf = br.tf.GetComponentInChildren<MeshFilter>();
+            if (mf != null && mf.sharedMesh != null)
             {
-                Vector2 p = new Vector2(-areaW * 0.5f + (col + 0.5f) * (areaW / brickColumns), halfH * 0.88f - (r + 0.5f) * (halfH * 0.5f / brickRows));
-                Transform t = Block("Brick", p, brickSize, c, 0f);
-                bricks.Add(new Brick { tf = t, row = r, alive = true, pos = p });
+                float current = mf.sharedMesh.bounds.size.x * mf.transform.lossyScale.x;
+                if (current > 0.0001f) br.endScale = br.startScale * (edge / current);
             }
         }
-        bricksLeft = bricks.Count;
+        bricksLeft = n;
 
         GameObject b = new GameObject("Ball");
         b.transform.SetParent(root.transform, false);
@@ -366,11 +474,13 @@ public class PixelBreakoutMinigame : PixelMinigame
 
     private void Serve()
     {
+        if (speed <= 0f) serveDelayExtra = slideSeconds;
         speed = Mathf.Max(speed, ballSpeed);
         ballPos = new Vector2(padX, padY + padH * 0.5f + ballR);
         float angle = Random.Range(-25f, 25f) * Mathf.Deg2Rad;
         ballVel = new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * (speed * halfH * 2f);
-        serveTimer = serveDelay;
+        serveTimer = serveDelay + serveDelayExtra;
+        serveDelayExtra = 0f;
     }
 
     // ------------------------------------------------------------------
@@ -393,6 +503,19 @@ public class PixelBreakoutMinigame : PixelMinigame
                 padX = root.transform.InverseTransformPoint(ray.GetPoint(enter)).x;
         }
         padX = Mathf.Clamp(padX, -halfW + padHalfW, halfW - padHalfW);
+
+        if (slideT < 1f)
+        {
+            slideT = Mathf.Min(1f, slideT + dt / Mathf.Max(0.05f, slideSeconds));
+            float e = Mathf.SmoothStep(0f, 1f, slideT);
+            foreach (Brick br in bricks)
+            {
+                if (!br.alive || br.tf == null) continue;
+                br.tf.position = Vector3.Lerp(br.startPos, br.endPos, e);
+                br.tf.rotation = Quaternion.Slerp(br.startRot, br.endRot, e);
+                br.tf.localScale = Vector3.Lerp(br.startScale, br.endScale, e);
+            }
+        }
 
         if (serveTimer > 0f)
         {
@@ -436,11 +559,15 @@ public class PixelBreakoutMinigame : PixelMinigame
             float dx = ballPos.x - b.pos.x, dy = ballPos.y - b.pos.y;
             float ox = brickSize.x * 0.5f + ballR - Mathf.Abs(dx);
             float oy = brickSize.y * 0.5f + ballR - Mathf.Abs(dy);
+            if (slideT < 1f) break;
             if (ox <= 0f || oy <= 0f) continue;
             if (ox < oy) ballVel.x = Mathf.Abs(ballVel.x) * Mathf.Sign(dx);
             else ballVel.y = Mathf.Abs(ballVel.y) * Mathf.Sign(dy);
             b.alive = false;
-            if (b.tf != null) b.tf.gameObject.SetActive(false);
+            double pay = b.amount * brickMultiplier;
+            earned += pay;
+            clicker.AddCurrency(b.tier, pay);
+            if (b.despawn != null) b.despawn.Begin(); // the broken pixel shrinks away
             bricksLeft--;
             speed = Mathf.Min(maxBallSpeed, speed + speedUpPerBrick);
             ballVel = ballVel.normalized * (speed * halfH * 2f);
@@ -498,7 +625,19 @@ public class PixelBreakoutMinigame : PixelMinigame
 
         Vector3 at = root != null ? root.transform.position : Vector3.zero;
         Quaternion rot = root != null ? root.transform.rotation : Quaternion.identity;
-        double payout = ballAmount * rewardMultiplier;
+        double payout = earned;
+        // Bricks that survived go back where they were and drop; broken ones are already shrinking away.
+        foreach (Brick br in bricks)
+        {
+            if (br.body == null || !br.alive) continue;
+            br.tf.position = br.startPos; br.tf.rotation = br.startRot; br.tf.localScale = br.startScale;
+            foreach (Collider c in br.colliders) if (c != null) c.enabled = true;
+            foreach (Behaviour x in br.paused) if (x != null) x.enabled = true;
+            br.body.isKinematic = false;
+            SetVelocities(br.body, Vector3.zero);
+            if (br.despawn != null) br.despawn.AddLifetime(3f);
+        }
+        // Broken bricks: let go of physics only once they are gone (their despawn handles it).
         if (root != null) Destroy(root);
         root = null;
         paddle = ball = ballModel = null;
@@ -510,15 +649,14 @@ public class PixelBreakoutMinigame : PixelMinigame
 
         if (win)
         {
-            clicker.AddCurrency(ballTier, payout);
             Report(MinigameEvent.Clicked);
             PixelAudio.Play("breakout_win");
-            ShowMessage(at, rot, winFormat + "\n+" + PixelClicker.FormatNumber(payout));
+            ShowMessage(at, rot, winFormat + "\n+" + PixelClicker.FormatNumber(payout) + " earned");
         }
         else if (!string.IsNullOrEmpty(message))
         {
             PixelAudio.Play("breakout_lose");
-            ShowMessage(at, rot, message);
+            ShowMessage(at, rot, message + (payout > 0d ? "\n+" + PixelClicker.FormatNumber(payout) + " earned" : ""));
         }
     }
 

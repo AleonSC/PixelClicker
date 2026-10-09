@@ -306,7 +306,7 @@ public partial class PixelShop
         {
             displayName = "Breakout",
             tab = ShopTab.Minigames,
-            description = "Now and then a wall of bricks appears and the cube steps aside. Bounce the ball with your paddle and break every brick for a big payout.",
+            description = "Now and then (with 30+ old pixels on screen) the old pixels become a wall of bricks. Bounce the ball with your paddle and break them: each one pays 10x its worth.",
             requirements = Needs(requiresRgbIndex),
             costs = AllSix(500),
             rewardTiers = new PixelClicker.PixelTier[0],

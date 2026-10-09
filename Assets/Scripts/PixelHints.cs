@@ -180,7 +180,7 @@ public class PixelHints : MonoBehaviour
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
-        H("minigame_breakout", "Breakout! A wall of bricks appeared and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the pixel into the bricks. Break them all before you run out of balls for a big payout; losing costs nothing."),
+        H("minigame_breakout", "Breakout! The old pixels on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop."),
         H("minigame_sort", "Sorting race! Some old pixels froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra."),
         H("minigame_snake", "Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),
         H("minigame_stardust", "A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new."),
