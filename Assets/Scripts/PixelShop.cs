@@ -229,6 +229,11 @@ public partial class PixelShop : MonoBehaviour
              "Turn this off if you deleted a built-in pack on purpose.")]
     [SerializeField] private bool addDefaultPacks = true;
 
+    [Tooltip("EDITOR BUTTON: tick this to put every built-in pack's prices (and upgrade level costs/values) back to the defaults in PixelShopDefaults.cs. " +
+             "It unticks itself. Use it after a balance change, because prices already saved in the scene don't follow the code. " +
+             "Your own packs, names, descriptions and requirements are not touched. Same as right-click the component > Reset Built-in Pack Prices.")]
+    [SerializeField] private bool resetBuiltInPricesNow = false;
+
     [Tooltip("Level display for upgrade packs. {0} = current level, {1} = max level.")]
     [SerializeField] private string levelFormat = "Level {0}/{1}";
 
@@ -516,7 +521,7 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private string valueButtonText = "Upgrade";
 
     [Min(0f)]
-    [Tooltip("Cost of a pixel type's first Value level, per point of that pixel's base payout (25 = a pixel that pays 1 costs 25, one that pays 8 costs 200).")]
+    [Tooltip("Cost of a pixel type's first Value level, per point of that pixel's base payout per click (25 = a pixel that pays 1 costs 25, one that pays 8 costs 200; a pixel that pays 5 over 5 clicks counts as 1).")]
     [SerializeField] private double valueBaseCost = 25;
 
     [Min(1f)]
@@ -742,6 +747,15 @@ public partial class PixelShop : MonoBehaviour
         {
             if (this == null || Application.isPlaying) return;
             if (EnsureDefaultPacks()) UnityEditor.EditorUtility.SetDirty(this);
+
+            if (resetBuiltInPricesNow)
+            {
+                UnityEditor.Undo.RecordObject(this, "Reset Built-in Pack Prices");
+                resetBuiltInPricesNow = false;
+                int count = ResetBuiltInPackPrices();
+                UnityEditor.EditorUtility.SetDirty(this);
+                Debug.Log("PixelShop: reset the prices of " + count + " built-in packs to their defaults.", this);
+            }
 
             // Make sure the helper components exist in the scene, so their settings are editable in the Inspector.
             EditorEnsureComponent<PixelConsumables>();
@@ -1102,7 +1116,9 @@ public partial class PixelShop : MonoBehaviour
     {
         if (!clicker.IsValidTierIndex(tierIndex)) return 0d;
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        return Math.Ceiling(valueBaseCost * Math.Max(1d, tier.amountPerClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
+        // Scaled by what one click of this pixel is worth, so tough pixels (several clicks per payout) aren't overpriced.
+        double perClick = tier.amountPerClick / Math.Max(1, tier.clicksToCollect);
+        return Math.Ceiling(valueBaseCost * Math.Max(1d, perClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
     }
 
     /// <summary>True when a pixel type has reached its highest Value level.</summary>

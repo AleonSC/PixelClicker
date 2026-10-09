@@ -50,3 +50,7 @@
 [2026-10-09 11:25 UTC] Potion and device prices now rise with the Value level of the pixels they cost.
 [2026-10-09 11:25 UTC] Big numbers now use longer suffixes (Qa, Qi, Sx and beyond) instead of stopping at T.
 [2026-10-09 11:25 UTC] Meteor chunks can only be collected about three times a second, so one meteor can no longer finish the Meteor Pixel goal.
+[2026-10-09 11:30 UTC] New shop price ladder: packs and upgrade levels now cost thousands to millions so they keep pace with Value upgrades (the RGB Pack still costs 100 of each).
+[2026-10-09 11:30 UTC] Added a "Reset Built-in Pack Prices" button to the Shop component in Unity, which puts the built-in packs back to their default prices.
+[2026-10-09 11:30 UTC] The Meteor Pixel now needs 1000 meteor chunks.
+[2026-10-09 11:30 UTC] Value upgrades for tough pixels (like Obsidian) are now priced by what one click is worth, so they are no longer overpriced.
