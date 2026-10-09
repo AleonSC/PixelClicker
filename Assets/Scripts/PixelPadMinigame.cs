@@ -689,6 +689,7 @@ public class PixelPadMinigame : PixelMinigame
                     clicker.AddUltra(target, 1);
                     onUltraGained?.Invoke();
                     PixelAudio.Play("pad_ultra");
+                    PixelUltraFx.Play(clicker, target, at, text: false, sound: false); // its own rising text and sound already play
                     StartCoroutine(RisingMessage(at, cam, string.Format(ultraFormat, clicker.Tiers[target].displayName), ultraColor, 1.4f));
                 }
                 else

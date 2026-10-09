@@ -101,13 +101,14 @@ public abstract class PixelMinigame : MonoBehaviour
     /// Ultra pixel, up to 'cap' per round ('defaultCap' when 0). Announces the gain in the event log. Returns true if one was given.
     /// </summary>
     protected bool UltraRoll(PixelClicker clicker, int tier, float chance, float defaultChance, int cap, int defaultCap,
-                             bool disabled, float chanceMultiplier = 1f)
+                             bool disabled, float chanceMultiplier = 1f, Vector3? at = null)
     {
         if (disabled || clicker == null || !clicker.IsValidTierIndex(tier)) return false;
         if (ultraRoundCount >= (cap > 0 ? cap : defaultCap)) return false;
         if (!clicker.RollUltra(tier, (chance > 0f ? chance : defaultChance) * chanceMultiplier)) return false;
         ultraRoundCount++;
         PixelHints.Announce("Ultra " + clicker.Tiers[tier].displayName + " pixel gained!");
+        if (at.HasValue) PixelUltraFx.Play(clicker, tier, at.Value);
         return true;
     }
 
