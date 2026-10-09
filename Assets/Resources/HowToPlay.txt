@@ -14,7 +14,7 @@ Clicks are limited to about 14 per second.
 # The Shop
 The Shop button appears once you have unlocked the Black pixel. It has four tabs:
 <b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
-<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Pixel" sub-tab spends Ultra pixels on payout boosts.
+<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Pixel" sub-tab spends Ultra pixels on payout boosts.
 <b>Consumables</b> - potions and utilities (see below).
 <b>Minigames</b> - events that appear on their own once bought.
 Things you can't buy yet show in grey with what they need.
@@ -26,7 +26,7 @@ Things you can't buy yet show in grey with what they need.
 <b>Singularity</b>, <b>Ghost</b> and <b>Meteor</b> - rare pixels you earn by playing their minigames.
 
 # Potions and Devices
-Open the inventory's Consumables tab (it has Potions and Devices sub-tabs). Right-click a potion to drink it: for a while only that pixel type spawns.
+Open the inventory's Consumables tab (it has Potions and Devices sub-tabs). Right-click a potion to drink it: for a while only that pixel type spawns. Potion and device prices rise along with the Value level of the pixels they cost.
 Right-click a device (Vacuum Device, Fan, Sorter) to place it. The Vacuum Device pulls in old pixels and collects them again. The Fan blows old pixels along the floor. The Sorter wraps around the cube and spits every pixel you collect out of an aimable pipe.
 Hold the right mouse button on a placed device to remove it, or on the "Active:" line at the top to cancel a potion. There is no refund.
 

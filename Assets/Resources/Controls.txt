@@ -46,6 +46,9 @@ Click buttons 1-3 on the Sorter | Change how hard it spits
 Click a wire (Bomb) | Cut it
 Click the ghost or meteor | Collect the reward
 
+# Shop
+Shift-click a Value upgrade | Buy as many levels as you can afford
+
 # Crafting
 Click or drag an item | Put it in a box
 Right-click a box | Empty it

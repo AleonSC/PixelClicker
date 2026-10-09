@@ -80,6 +80,16 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True while either Shift key is held down.</summary>
+    public static bool ShiftHeld()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Keyboard.current != null && (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
+#else
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+#endif
+    }
+
     /// <summary>True while the mouse is over a UI element (so clicks on UI don't also hit the game).</summary>
     public static bool PointerOverUI() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }

@@ -222,6 +222,10 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("Add the default Vacuum Device if the list has none (e.g. when this component was added before devices existed).")]
     [SerializeField] private bool addDefaultDevices = true;
 
+    [Header("Prices")]
+    [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
+    [SerializeField] private bool pricesScaleWithValue = true;
+
     [Header("Placing Devices")]
     [Tooltip("Layers the mouse can place a device on (the floor).")]
     [SerializeField] private LayerMask placementLayers = ~0;
@@ -755,7 +759,22 @@ public class PixelConsumables : MonoBehaviour
 
     public int ItemOwned(int item) => IsDevice(item) ? devices[item - potions.Length].owned : potions[item].owned;
 
-    public PixelShop.PackCost[] ItemCosts(int item) => IsDevice(item) ? devices[item - potions.Length].costs : potions[item].costs;
+    /// <summary>What one of an item costs right now (the typed prices, scaled by each pixel's Value multiplier when that is on).</summary>
+    public PixelShop.PackCost[] ItemCosts(int item)
+    {
+        PixelShop.PackCost[] baseCosts = IsDevice(item) ? devices[item - potions.Length].costs : potions[item].costs;
+        if (!pricesScaleWithValue || clicker == null || baseCosts == null) return baseCosts;
+
+        PixelShop.PackCost[] scaled = new PixelShop.PackCost[baseCosts.Length];
+        for (int i = 0; i < baseCosts.Length; i++)
+        {
+            PixelShop.PackCost c = baseCosts[i];
+            if (c == null) continue;
+            double factor = string.IsNullOrEmpty(c.minigameCurrency) ? clicker.ValueMultiplier(clicker.IndexOf(c.type)) : 1d;
+            scaled[i] = new PixelShop.PackCost { type = c.type, amount = System.Math.Ceiling(c.amount * factor), minigameCurrency = c.minigameCurrency };
+        }
+        return scaled;
+    }
 
     /// <summary>The pixel type that must be unlocked before the item is listed in the shop.</summary>
     public PixelClicker.PixelType ItemRequiredType(int item) =>

@@ -29,7 +29,7 @@ public class PixelMeteorMinigame : PixelMinigame
     [Header("Meteor Chunks (goal)")]
     [Min(1)]
     [Tooltip("Chunks you need in total before the Meteor Pixel can be bought. The count keeps going afterwards.")]
-    [SerializeField] private double chunkThreshold = 100;
+    [SerializeField] private double chunkGoal = 1000;
 
     [Tooltip("Runtime: chunks collected so far (saved with the game). You can type a number to test the unlock.")]
     [SerializeField] private double chunks = 0;
@@ -37,6 +37,12 @@ public class PixelMeteorMinigame : PixelMinigame
     [Min(1)]
     [Tooltip("Chunks gained by each click on the meteor.")]
     [SerializeField] private double chunksPerClick = 1;
+
+    [Min(0f)]
+    [Tooltip("Shortest time (seconds) between two clicks that give chunks. Clicks in between still make the meteor flinch but give nothing, so spam-clicking one meteor can't finish the goal. 0 = no limit.")]
+    [SerializeField] private float chunkClickCooldown = 0.35f;
+
+    private float lastChunkTime = float.NegativeInfinity;
 
     [Tooltip("Title of this minigame's tracker row in the shop.")]
     [SerializeField] private string trackerTitle = "Meteor Chunks";
@@ -195,13 +201,13 @@ public class PixelMeteorMinigame : PixelMinigame
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
     public override double TrackerCount => chunks;
-    public override double TrackerGoal => chunkThreshold;
+    public override double TrackerGoal => chunkGoal;
     public override string RequirementFormat => requirementFormat;
 
     public override void SetTrackerCount(double value)
     {
         chunks = System.Math.Max(0d, value);
-        thresholdAnnounced = chunks >= chunkThreshold;
+        thresholdAnnounced = chunks >= chunkGoal;
     }
 
     protected override void Awake()
@@ -217,7 +223,7 @@ public class PixelMeteorMinigame : PixelMinigame
 
         if (startRunning) running = true;
         spawnTimer = firstMeteorDelay;
-        thresholdAnnounced = chunks >= chunkThreshold;
+        thresholdAnnounced = chunks >= chunkGoal;
     }
 
     private void Update()
@@ -421,7 +427,11 @@ public class PixelMeteorMinigame : PixelMinigame
                 if (hit.Raycast(ray, out RaycastHit info, 1000f))
                 {
                     punch = 1f;
-                    CollectChunk(info.point, cam);
+                    if (Time.time - lastChunkTime >= chunkClickCooldown)
+                    {
+                        lastChunkTime = Time.time;
+                        CollectChunk(info.point, cam);
+                    }
                 }
             }
 
@@ -584,11 +594,11 @@ public class PixelMeteorMinigame : PixelMinigame
 
     private void CollectChunk(Vector3 point, Camera cam)
     {
-        bool reachedBefore = chunks >= chunkThreshold;
+        bool reachedBefore = chunks >= chunkGoal;
         chunks += chunksPerClick;
         Report(MinigameEvent.Clicked);
         onChunkCollected?.Invoke();
-        if (!reachedBefore && chunks >= chunkThreshold && !thresholdAnnounced)
+        if (!reachedBefore && chunks >= chunkGoal && !thresholdAnnounced)
         {
             thresholdAnnounced = true;
             onThresholdReached?.Invoke();

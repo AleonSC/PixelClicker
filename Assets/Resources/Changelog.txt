@@ -96,3 +96,14 @@
 [2026-10-09 11:13 UTC] Breakout now turns the old pixels on screen into the bricks (needs 30+, the rest shrink away until it ends) and every brick you break pays 10x that pixel's worth.
 [2026-10-09 11:17 UTC] Singularity pixels now last 5 minutes, and old pixels inside their pull radius stop ageing while they work.
 [2026-10-09 11:31 UTC] Singularity pixels now capture flying meteor pixels that enter their ring.
+[2026-10-09 11:15 UTC] Gray and Black now unlock at 100 lifetime pixels by default.
+[2026-10-09 11:25 UTC] Added Value upgrades (Shop > Upgrades > Value): spend a pixel's own currency to raise its payout, with rising prices, a doubling every 25 levels, and Shift-click to buy as many as you can afford.
+[2026-10-09 11:25 UTC] Potion and device prices now rise with the Value level of the pixels they cost.
+[2026-10-09 11:25 UTC] Big numbers now use longer suffixes (Qa, Qi, Sx and beyond) instead of stopping at T.
+[2026-10-09 11:25 UTC] Meteor chunks can only be collected about three times a second, so one meteor can no longer finish the Meteor Pixel goal.
+[2026-10-09 11:30 UTC] New shop price ladder: packs and upgrade levels now cost thousands to millions so they keep pace with Value upgrades (the RGB Pack still costs 100 of each).
+[2026-10-09 11:30 UTC] Added a "Reset Built-in Pack Prices" button to the Shop component in Unity, which puts the built-in packs back to their default prices.
+[2026-10-09 11:30 UTC] The Meteor Pixel now needs 1000 meteor chunks.
+[2026-10-09 11:35 UTC] Rarer pixels are now deliberately slower to upgrade: Value prices follow each pixel's payout but not how often it spawns.
+[2026-10-09 11:35 UTC] Re-priced the Glass, Vacuum, Obsidian and Luminescent costs in the shop to match how rarely those pixels spawn.
+[2026-10-09 11:40 UTC] Snake, Sorting Race, Breakout, Time Slow, Old Pixel Capacity and the Solar Pixel now use the new shop price ladder too.

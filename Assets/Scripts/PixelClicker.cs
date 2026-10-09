@@ -97,8 +97,8 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("How many clicks it takes to collect one pixel of this tier. Only the last click pays out (the pixel is just hit before that).")]
         public int clicksToCollect = 1;
 
-        [Tooltip("Lifetime amount of the PREVIOUS tier needed to unlock this tier. Ignored if 'Unlocked At Start' is on.")]
-        public double unlockThreshold = 10;
+        [Tooltip("Lifetime amount of the PREVIOUS tier needed to unlock this tier (total collected, spending does not lower it). Ignored if 'Unlocked At Start' is on.")]
+        public double unlockThreshold = 100;
 
         [Tooltip("Tier is available from the very beginning.")]
         public bool unlockedAtStart = false;
@@ -160,11 +160,14 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Current spendable amount.")]
         public double count;
 
-        [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds.")]
+        [Tooltip("Total ever collected (never decreases when spending). Used for unlock thresholds, achievements and stats.")]
         public double totalCollected;
 
         [Tooltip("Runtime: how many times the player has spent Ultra pixels to boost this pixel type's payout (saved). See the shop's Upgrades > Pixel tab.")]
         public int ultraLevel;
+
+        [Tooltip("Runtime: Value upgrade level of this pixel type, bought with its own currency (saved). Raises its payout. See the shop's Upgrades > Value tab.")]
+        public int valueLevel;
 
         [Tooltip("How many Ultra versions of this pixel type you own (from the Ultra Pad minigame; saved). They will be used for upgrades later.")]
         public long ultraCount;
@@ -359,9 +362,9 @@ public class PixelClicker : MonoBehaviour
         new PixelTier { type = PixelType.White, displayName = "White Pixels", color = Color.white,
                         amountPerClick = 1, unlockedAtStart = true, unlockThreshold = 0 },
         new PixelTier { type = PixelType.Gray,  displayName = "Gray Pixels",  color = new Color(0.5f, 0.5f, 0.5f),
-                        amountPerClick = 1, unlockThreshold = 10 },
+                        amountPerClick = 1, unlockThreshold = 100 },
         new PixelTier { type = PixelType.Black, displayName = "Black Pixels", color = Color.black,
-                        amountPerClick = 1, unlockThreshold = 10 },
+                        amountPerClick = 1, unlockThreshold = 100 },
     };
 
     [Tooltip("Each new pixel spawns as a random UNLOCKED tier (weighted by each tier's Spawn Weight). Clicking it gives that tier's currency. Overrides the two settings below.")]
@@ -424,6 +427,19 @@ public class PixelClicker : MonoBehaviour
     [Min(0f)]
     [Tooltip("Each Ultra boost level adds this much to a pixel type's payout multiplier (0.25 = +25% of its normal payout per level).")]
     [SerializeField] private float ultraBonusPerLevel = 0.25f;
+
+    [Header("Value Upgrades")]
+    [Min(0f)]
+    [Tooltip("Each Value level adds this much to a pixel type's payout multiplier (1 = +100% of its base payout per level, so level 3 pays x4).")]
+    [SerializeField] private float valueBonusPerLevel = 1f;
+
+    [Min(0)]
+    [Tooltip("Every this many Value levels the payout is also multiplied by 'Value Milestone Multiplier' (25 = at levels 25, 50, 75...). 0 = no milestones.")]
+    [SerializeField] private int valueMilestoneEvery = 25;
+
+    [Min(1f)]
+    [Tooltip("Extra payout multiplier for each Value milestone reached (2 = doubles at every milestone).")]
+    [SerializeField] private float valueMilestoneMultiplier = 2f;
 
     [Header("Old Pixel Landing Sound")]
     [Min(0f)]
@@ -1005,7 +1021,7 @@ public class PixelClicker : MonoBehaviour
         }
         hitsOnCurrentPixel = 0;
 
-        double amount = tier.amountPerClick * UltraMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
+        double amount = tier.amountPerClick * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
         tier.timesCollected++;
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
@@ -1073,6 +1089,30 @@ public class PixelClicker : MonoBehaviour
     public double UltraMultiplier(int tierIndex) =>
         IsValidTier(tierIndex) ? 1d + tiers[tierIndex].ultraLevel * (double)ultraBonusPerLevel : 1d;
 
+    /// <summary>Payout multiplier of a pixel type at a given Value level (1 at level 0).</summary>
+    public double ValueMultiplierAt(int level)
+    {
+        level = System.Math.Max(0, level);
+        double m = 1d + level * (double)valueBonusPerLevel;
+        if (valueMilestoneEvery > 0) m *= System.Math.Pow(valueMilestoneMultiplier, level / valueMilestoneEvery);
+        return m;
+    }
+
+    /// <summary>A pixel type's payout multiplier from its Value upgrade level (1 = no upgrade).</summary>
+    public double ValueMultiplier(int tierIndex) => IsValidTier(tierIndex) ? ValueMultiplierAt(tiers[tierIndex].valueLevel) : 1d;
+
+    /// <summary>Everything that scales a pixel type's payout per collect: Ultra boosts x Value upgrades.</summary>
+    public double PayoutMultiplier(int tierIndex) => UltraMultiplier(tierIndex) * ValueMultiplier(tierIndex);
+
+    /// <summary>Spends a pixel type's own currency to raise its Value level by one. Returns false if you can't afford it.</summary>
+    public bool TryBuyValueLevel(int tierIndex, double cost)
+    {
+        if (!IsValidTier(tierIndex) || !TrySpend(tierIndex, cost)) return false;
+        tiers[tierIndex].valueLevel++;
+        NotifyChanged();
+        return true;
+    }
+
     /// <summary>Spends Ultra pixels to raise a pixel type's boost level by one. Returns false if you don't have enough.</summary>
     public bool TryBuyUltraBoost(int tierIndex, long cost)
     {
@@ -1138,7 +1178,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Replaces one tier's saved numbers (used by PixelSaveGame). Tiers unlocked at start stay unlocked.</summary>
-    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, long ultraCount = 0, int ultraLevel = 0)
+    public void LoadTierState(PixelType type, double count, double totalCollected, bool unlocked, bool spawnDisabled = false, long timesCollected = 0, long ultraCount = 0, int ultraLevel = 0, int valueLevel = 0)
     {
         int index = IndexOf(type);
         if (index < 0) return;
@@ -1151,6 +1191,7 @@ public class PixelClicker : MonoBehaviour
         tier.timesCollected = System.Math.Max(0L, timesCollected);
         tier.ultraCount = System.Math.Max(0L, ultraCount);
         tier.ultraLevel = System.Math.Max(0, ultraLevel);
+        tier.valueLevel = System.Math.Max(0, valueLevel);
     }
 
     /// <summary>Adds to a tier's "times collected" (used for offline progress, which pays without clicking).</summary>
@@ -2660,15 +2701,30 @@ public class PixelClicker : MonoBehaviour
         set { abbreviateCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefAbbreviate, abbreviateCache); }
     }
 
+    // Short-scale suffixes, one per factor of 1000: K, M, B, T, Qa, Qi, Sx, Sp, Oc, No, then Dc (1e33), UDc, DDc ...
+    // up to UCe (1e306), which covers the whole range of a double.
+    private static readonly string[] NumberSuffixes = BuildNumberSuffixes();
+
+    private static string[] BuildNumberSuffixes()
+    {
+        var list = new List<string> { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No" };
+        string[] units = { "", "U", "D", "T", "Qa", "Qi", "Sx", "Sp", "O", "N" };
+        string[] tens = { "Dc", "Vg", "Tg", "Qag", "Qig", "Sxg", "Spg", "Ocg", "Nog", "Ce" };
+        // 10^33 (Dc) .. 10^303 (Ce): unit prefix + tens name, e.g. UDc = 10^36, DVg = 10^69.
+        for (int t = 0; t < tens.Length && list.Count < 103; t++)
+            for (int u = 0; u < units.Length && list.Count < 103; u++)
+                list.Add(units[u] + tens[t]);
+        return list.ToArray();
+    }
+
     /// <summary>Number formatting: compact (1.2K, 3.4M ...) or full with separators (1,200), depending on <see cref="AbbreviateNumbers"/>.</summary>
     public static string FormatNumber(double value)
     {
         if (!AbbreviateNumbers) return value.ToString("#,0.##");
         if (value < 999.995) return value.ToString("0.##"); // small amounts keep their decimals (e.g. 6.25)
-        string[] suffix = { "", "K", "M", "B", "T" };
         int s = 0;
-        while (value >= 1000 && s < suffix.Length - 1) { value /= 1000; s++; }
-        return value.ToString("0.##") + suffix[s];
+        while (value >= 999.995 && s < NumberSuffixes.Length - 1) { value /= 1000; s++; }
+        return value.ToString("0.##") + NumberSuffixes[s];
     }
 
     // ------------------------------------------------------------------

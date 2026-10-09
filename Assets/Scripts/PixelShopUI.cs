@@ -41,9 +41,10 @@ public partial class PixelShop
     private TMP_Text subTitle;
     private int openParent = -1;
     private PackRow[] ultraRows;           // one boost row per pixel type (Upgrades > Pixel sub-tab)
+    private PackRow[] valueRows;           // one Value upgrade row per pixel type (Upgrades > Value sub-tab)
     private RectTransform subTabRow;       // the "Upgrades | Pixel" buttons at the top of the Upgrades tab
     private Image[] subTabImages;
-    private int upgradesSubTab;            // 0 = normal upgrades, 1 = Pixel boosts
+    private int upgradesSubTab;            // 0 = normal upgrades, 1 = Value upgrades, 2 = Pixel (Ultra) boosts
     private GameObject canvasRoot;
     private GameObject shopButtonObject;
     private GameObject panelObject;
@@ -155,9 +156,10 @@ public partial class PixelShop
         subTabRow.pivot = new Vector2(0.5f, 1f);
         subTabRow.sizeDelta = new Vector2(0f, subTabHeight);
 
-        string[] names = { upgradesSubTabText, pixelSubTabText };
-        subTabImages = new Image[2];
-        for (int i = 0; i < 2; i++)
+        string[] names = { upgradesSubTabText, valueSubTabText, pixelSubTabText };
+        int n = names.Length;
+        subTabImages = new Image[n];
+        for (int i = 0; i < n; i++)
         {
             Button b = CreateButton(go.transform, "Sub Tab " + names[i], names[i], Vector2.zero, tabInactiveColor, textColor,
                                     tabFontSize, out TMP_Text subLabel, out subTabImages[i]);
@@ -167,11 +169,11 @@ public partial class PixelShop
             subLabel.rectTransform.offsetMin = new Vector2(tabTextPadding, 4f);
             subLabel.rectTransform.offsetMax = new Vector2(-tabTextPadding, -4f);
             RectTransform rt = b.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(i * 0.5f, 0f);
-            rt.anchorMax = new Vector2((i + 1) * 0.5f, 1f);
+            rt.anchorMin = new Vector2((float)i / n, 0f);
+            rt.anchorMax = new Vector2((float)(i + 1) / n, 1f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.offsetMin = new Vector2(i == 0 ? 0f : tabSpacing * 0.5f, 0f);
-            rt.offsetMax = new Vector2(i == 1 ? 0f : -tabSpacing * 0.5f, 0f);
+            rt.offsetMax = new Vector2(i == n - 1 ? 0f : -tabSpacing * 0.5f, 0f);
 
             int captured = i;
             b.onClick.AddListener(() =>
@@ -245,6 +247,24 @@ public partial class PixelShop
             bigger[i] = row;
         }
         ultraRows = bigger;
+    }
+
+    /// <summary>Makes sure there is a Value row for every pixel type (the shop can add pixel types after the UI was built).</summary>
+    private void EnsureValueRows()
+    {
+        int count = clicker.Tiers.Length;
+        if (valueRows != null && valueRows.Length >= count) return;
+
+        PackRow[] bigger = new PackRow[count];
+        if (valueRows != null) System.Array.Copy(valueRows, bigger, valueRows.Length);
+        for (int i = valueRows != null ? valueRows.Length : 0; i < count; i++)
+        {
+            PackRow row = BuildPlainRow(contentRect, "Value " + i);
+            int captured = i;
+            row.buyButton.onClick.AddListener(() => { TryBuyValueUpgrade(captured, PixelInput.ShiftHeld()); RefreshRows(); });
+            bigger[i] = row;
+        }
+        valueRows = bigger;
     }
 
     private void BuildTabs(Transform parent)
@@ -761,13 +781,47 @@ public partial class PixelShop
         // Consumables tab: the two purchase cards replace the scrolling list.
         if (consumables != null) RefreshConsumablesTab(currentTab == ShopTab.Consumables);
 
+        // Upgrades > Value: one row per unlocked pixel type, paid for with that pixel's own currency.
+        EnsureValueRows();
+        for (int t = 0; t < valueRows.Length && t < clicker.Tiers.Length; t++)
+        {
+            PackRow row = valueRows[t];
+            PixelClicker.PixelTier tier = clicker.Tiers[t];
+            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked && !(HidePurchased && ValueUpgradeMaxed(t));
+            row.rect.gameObject.SetActive(visible);
+            if (!visible) continue;
+
+            row.rect.anchoredPosition = new Vector2(0f, -y);
+            y += rowHeight + rowSpacing;
+            visibleCount++;
+
+            bool maxed = ValueUpgradeMaxed(t);
+            double cost = ValueUpgradeCost(t);
+            double now = clicker.ValueMultiplierAt(tier.valueLevel);
+            double next = clicker.ValueMultiplierAt(tier.valueLevel + 1);
+
+            row.nameLabel.text = string.Format(valueRowNameFormat, tier.displayName) + "   <size=65%><color=#" +
+                                 ColorUtility.ToHtmlStringRGB(levelColor) + ">" + string.Format(ultraLevelFormat, tier.valueLevel) + "</color></size>";
+            row.descLabel.text = string.Format(valueRowDescFormat, tier.displayName, PixelClicker.FormatNumber(now),
+                                               PixelClicker.FormatNumber(maxed ? now : next));
+
+            bool enough = PixelClicker.InfiniteResources || tier.count >= cost;
+            row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
+                                 string.Format(valueCostFormat, PixelClicker.FormatNumber(cost), tier.displayName, PixelClicker.FormatNumber(tier.count)) + "</color>";
+
+            bool canBuy = !maxed && enough;
+            row.buyButton.interactable = canBuy;
+            row.buyLabel.text = maxed ? maxedText : valueButtonText;
+            row.buyImage.color = canBuy ? buyColor : disabledColor;
+        }
+
         // Upgrades > Pixel: one boost row per unlocked pixel type, paid for with Ultra pixels.
         EnsureUltraRows();
         for (int t = 0; t < ultraRows.Length && t < clicker.Tiers.Length; t++)
         {
             PackRow row = ultraRows[t];
             PixelClicker.PixelTier tier = clicker.Tiers[t];
-            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked && !(HidePurchased && UltraBoostMaxed(t));
+            bool visible = onUpgrades && upgradesSubTab == 2 && tier.unlocked && !(HidePurchased && UltraBoostMaxed(t));
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
