@@ -67,3 +67,4 @@
 [2026-10-08 15:59 UTC] The progress bars (ghosts caught, singularity, stardust, meteor chunks, next pixel unlock...) moved from the shop to a new Goals tab in the Log.
 [2026-10-08 16:09 UTC] New 'Event Horizon' achievement for feeding a Singularity pixel to a black hole.
 [2026-10-08 16:09 UTC] New Time Slow upgrade (needs Time Stop): press S to slow time on the shared meter; slowed meteor pixels can be grabbed with Pixel Grabbing and dropped on pads.
+[2026-10-09 03:49 UTC] Build fixes: an Editor script keeps the glow / transparency shader variants in builds (luminescent, meteor lava, solar and bomb / pad glow), and Vacuum's face circles are drawn after the pixel so they stay fully black.

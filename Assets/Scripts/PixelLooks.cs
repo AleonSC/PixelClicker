@@ -359,7 +359,7 @@ public static class PixelLooks
             circles.layer = root.layer;
             circles.GetComponent<MeshFilter>().sharedMesh = CircleMesh(size, look.faceCircleRadius, look.faceCircleColor);
             MeshRenderer cr = circles.GetComponent<MeshRenderer>();
-            cr.sharedMaterial = NeonMaterial();
+            cr.sharedMaterial = OverlayMaterial(); // drawn after the (translucent) pixel, so the circles stay solid black
             cr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             cr.receiveShadows = false;
         }
@@ -372,7 +372,7 @@ public static class PixelLooks
             marks.layer = root.layer;
             marks.GetComponent<MeshFilter>().sharedMesh = CircleMesh(size, look.colorBlindRadius, look.colorBlindColor, look.colorBlindSides, look.colorBlindRotation);
             MeshRenderer kr = marks.GetComponent<MeshRenderer>();
-            kr.sharedMaterial = NeonMaterial();
+            kr.sharedMaterial = OverlayMaterial();
             kr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             kr.receiveShadows = false;
         }
@@ -403,6 +403,21 @@ public static class PixelLooks
         if (shader == null) return null;
         neonMaterial = new Material(shader) { name = "NeonEdges" };
         return neonMaterial;
+    }
+
+    private static Material overlayMaterial;
+
+    /// <summary>
+    /// The unlit vertex-colour material for flat marks lying on a face (Vacuum's black circles, colour-blind shapes). It is
+    /// drawn after the pixel itself (a higher render queue), so a translucent pixel can't be blended over the marks and tint them.
+    /// </summary>
+    private static Material OverlayMaterial()
+    {
+        if (overlayMaterial != null) return overlayMaterial;
+        Material source = NeonMaterial();
+        if (source == null) return null;
+        overlayMaterial = new Material(source) { name = "FaceMarks", renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 50 };
+        return overlayMaterial;
     }
 
     private static Material CoreMaterial(Material baseMaterial)
