@@ -36,6 +36,7 @@ Hold the right mouse button on a placed device to remove it, or on the "Active:"
 <b>Bomb Defusal</b> - a bomb appears. Cut the wire of the colour you own the most of (Red, Green or Blue) before the timer runs out. A wrong wire or running out of time clears your old pixels. Defusing earns bomb parts.
 <b>Ultra Pad</b> - a coloured pad appears on one side of the cube. Throw or drop old pixels of that colour onto it for a chance at an Ultra version. Pixels of any other colour cost you some of that currency.
 <b>Meteor Strike</b> - a meteor drifts by. Click it for meteor chunks.
+<b>Sorting Race</b> - now and then some old pixels freeze in a jumbled grid. Click one pixel and then another to swap them, and get every type together in one unbroken group before the timer ends. The faster you finish, the bigger the payout; if time runs out they just drop.
 <b>Snake</b> - now and then every old pixel freezes and stops despawning. Steer the snake head with the arrow keys (or the on-screen arrows): each pixel it touches joins its tail. Eat them all without biting yourself for 10x their worth; bite yourself or run out of time and they just drop.
 Switch any of them off in the Toggles window.
 

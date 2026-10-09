@@ -170,6 +170,7 @@ public class PixelSnakeMinigame : PixelMinigame
     public override string DisplayName => "Snake";
     public override bool Running => running;
     public override bool Busy => activeRound;
+    public override bool Takeover => true;
 
     public override void Activate()
     {
@@ -332,6 +333,7 @@ public class PixelSnakeMinigame : PixelMinigame
         BuildUi();
         activeRound = true;
         Active = true;
+        TakeoverActive = true;
         if (!PixelClicker.ExternalClickBlock) { PixelClicker.ExternalClickBlock = true; setBlock = true; } // no cube clicks during the round
         Report(MinigameEvent.Spawned);
         PixelAudio.Play("snake_start");
@@ -483,6 +485,7 @@ public class PixelSnakeMinigame : PixelMinigame
     {
         activeRound = false;
         Active = false;
+        TakeoverActive = false;
         OldPixelDespawn.HoldAll = false;
         if (setBlock) { PixelClicker.ExternalClickBlock = PixelBank.HoseOn; setBlock = false; }
 

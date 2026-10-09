@@ -19,6 +19,7 @@ public abstract class PixelMinigame : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         Happened = null;
+        TakeoverActive = false;
         registry.Clear();
     }
 
@@ -60,6 +61,15 @@ public abstract class PixelMinigame : MonoBehaviour
 
     /// <summary>True while this minigame has something on screen (a ghost, a meteor, a hole...). Used to limit how many run at once.</summary>
     public virtual bool Busy => false;
+
+    /// <summary>
+    /// True for minigames that take over every old pixel on the floor (Snake, Sorting Race). Only one such round runs at a time,
+    /// and while it does cube clicks and Pixel Grabbing are off.
+    /// </summary>
+    public virtual bool Takeover => false;
+
+    /// <summary>True while any takeover minigame has a round going. Takeover minigames set it when their round starts / ends.</summary>
+    public static bool TakeoverActive { get; protected set; }
 
     /// <summary>Triggers one round of the minigame right now (dev tools / testing). Default: nothing.</summary>
     public virtual void SpawnNow() { }

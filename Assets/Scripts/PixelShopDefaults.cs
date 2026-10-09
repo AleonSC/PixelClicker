@@ -284,6 +284,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Sorting Race pack (Minigames tab): switches on the sorting minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateSortPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Sorting Race",
+            tab = ShopTab.Minigames,
+            description = "Now and then some old pixels freeze in a jumbled grid. Click two pixels to swap them and group each type together before the timer runs out for a bonus payout.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(500),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "sort",
+        };
+    }
+
     /// <summary>Default Snake pack (Minigames tab): switches on the snake minigame. Needs the RGB pack first.</summary>
     private static ShopPack CreateSnakePack(int requiresRgbIndex)
     {
@@ -655,6 +670,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
+        new DefaultPack { isThis = p => Unlocks(p, "sort"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSortPack },
         new DefaultPack { isThis = p => Unlocks(p, "snake"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSnakePack },
         new DefaultPack { isThis = p => Unlocks(p, "bomb"),

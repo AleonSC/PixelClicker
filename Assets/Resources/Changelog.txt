@@ -88,3 +88,4 @@
 [2026-10-09 10:04 UTC] New Snake minigame (Minigames tab): the old pixels freeze, you steer a snake with the arrow keys to eat them all without biting yourself, for 10x their worth.
 [2026-10-09 10:10 UTC] The old pixel cap is now 50, and a new Old Pixel Capacity upgrade in the shop (5 levels: 75, 100, 150, 200, 300) raises it.
 [2026-10-09 10:16 UTC] Dev tools: the on-screen spawn selector and the Dev Tools button now fade away when unused (selector quickly, button a bit later) and return on hover, and a new 'Reset all counts to 0' button clears pixel counts in the inventory, Log and Bank but keeps unlocks.
+[2026-10-09 10:29 UTC] New Sorting Race minigame (Minigames tab): some old pixels freeze in a jumbled grid, you swap pairs by clicking to group each type before the timer ends for a bonus payout; Snake and the race can never run at the same time.
