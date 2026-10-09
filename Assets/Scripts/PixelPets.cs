@@ -44,6 +44,10 @@ public partial class PixelPets : MonoBehaviour
     [Tooltip("While a pet is out (found and switched on), its pixel type spawns this many times more often (its spawn weight is multiplied by this). 1 = no effect.")]
     [SerializeField] private float spawnWeightMultiplier = 2f;
 
+    [Min(1f)]
+    [Tooltip("While a pet is out (owned and switched on), old pixels of its pixel type last this many times longer before they despawn (2 = half as fast).")]
+    [SerializeField] private float despawnSlowFactor = 2f;
+
     [Header("Pet Treat")]
     [Min(1f)]
     [Tooltip("How long a Pet Treat lasts (seconds of game time). Using another one restarts the timer.")]
@@ -259,6 +263,13 @@ public partial class PixelPets : MonoBehaviour
         float extra = Mathf.Max(1f, Instance.spawnWeightMultiplier) - 1f;
         if (TreatActive) extra *= Instance.treatExtraFactor; // a Pet Treat doubles the extra chance
         return 1f + extra;
+    }
+
+    /// <summary>How fast old pixels of this type age: 1 normally, 1 / despawnSlowFactor (0.5) while that pixel's pet is out.</summary>
+    public static float DespawnRate(PixelClicker.PixelType type)
+    {
+        if (Instance == null || !Instance.IsOn(type)) return 1f;
+        return 1f / Mathf.Max(1f, Instance.despawnSlowFactor);
     }
 
     private float treatTimer;

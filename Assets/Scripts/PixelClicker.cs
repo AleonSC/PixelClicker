@@ -1676,6 +1676,9 @@ public class PixelClicker : MonoBehaviour
     /// Smoothly shrinks the clickable cube to 'scale' times its size (1 = normal) over 'seconds'. Minigames that need the screen
     /// (the Sorting Race) use it so the cube doesn't cover their pieces, then call it again with 1 to bring it back.
     /// </summary>
+    /// <summary>True while an event has shrunk the cube away (a takeover minigame): the auto clicker pauses.</summary>
+    public bool CubeHidden => cubeShrinkTarget < 0.5f;
+
     public void SetCubeShrink(float scale, float seconds = 0.5f)
     {
         cubeShrinkTarget = Mathf.Clamp(scale, 0.02f, 1f);
@@ -3045,10 +3048,24 @@ public class OldPixelDespawn : MonoBehaviour
         Frozen = false;
         DevNoDespawn = false;
         HoldAll = false;
+        rateOwner = null;
     }
 
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
     private bool despawning;
+    private float ageRate = 1f, rateRefresh;
+    private OldPixelInfo rateInfo;
+    private static PixelClicker rateOwner;
+
+    /// <summary>How fast this pixel ages: slower while the pet of its pixel type is out (see PixelPets.DespawnRate).</summary>
+    private float CurrentAgeRate()
+    {
+        if (rateInfo == null) rateInfo = GetComponent<OldPixelInfo>();
+        if (rateInfo == null) return 1f;
+        if (rateOwner == null) rateOwner = PixelFind.First<PixelClicker>();
+        if (rateOwner == null || !rateOwner.IsValidTierIndex(rateInfo.tierIndex)) return 1f;
+        return PixelPets.DespawnRate(rateOwner.Tiers[rateInfo.tierIndex].type);
+    }
 
     /// <summary>True while the player holds this pixel (its lifetime is frozen).</summary>
     public bool Held { get; set; }
@@ -3127,7 +3144,9 @@ public class OldPixelDespawn : MonoBehaviour
         if (!despawning)
         {
             if (Held || Frozen || DevNoDespawn || HoldAll || Time.time < keepUntil) return;
-            age += Time.deltaTime;
+            rateRefresh -= Time.deltaTime;
+            if (rateRefresh <= 0f) { rateRefresh = 0.5f; ageRate = CurrentAgeRate(); }
+            age += Time.deltaTime * ageRate;
             if (lifetime > 0f && age >= lifetime) Begin();
             return;
         }

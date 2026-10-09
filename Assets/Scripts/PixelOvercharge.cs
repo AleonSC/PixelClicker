@@ -116,6 +116,7 @@ public class PixelOvercharge : MonoBehaviour
         {
             yield return new WaitForSeconds(gap);
             if (clicker == null) break;
+            if (clicker.CubeHidden || PixelMinigame.TakeoverActive) continue; // the cube is hidden by an event: no clicks
             clicker.AutoCollect();
         }
         bursting = false;
