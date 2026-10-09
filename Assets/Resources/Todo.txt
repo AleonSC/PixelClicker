@@ -6,3 +6,4 @@
 [ ] Alchemy: a deeper crafting / transmutation system for pixels and potions.
 [ ] Ultra pixel use: decide what Ultra pixels are spent on (ideas: lucky clicks, spawn control, permanent upgrades that survive prestige, small extra cost on the rarest pixels).
 [ ] Find a use for Ectoplasm (the Ghost minigame's material) - e.g. a crafting ingredient, potion booster or pet item
+[ ] Make minigame materials buyable with the pixels related to that minigame (e.g. stardust / meteor chunks / bomb parts / ectoplasm for their matching pixel types)

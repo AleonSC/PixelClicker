@@ -190,3 +190,4 @@
 [2026-10-09 20:23 UTC] The Crafting window now fits between the black bars, and its item cells show the name above the spinning item and the amount below it.
 [2026-10-09 20:32 UTC] Added a book button to the Crafting window that opens a Recipe Book listing every recipe: made ones are shown, unknown ones are hidden as ???.
 [2026-10-09 20:39 UTC] Added a Materials tab to the Inventory (stardust, meteor chunks, bomb parts, ectoplasm); caught ghosts now leave 1-4 ectoplasm; added finding a use for ectoplasm to the to-do.
+[2026-10-09 20:41 UTC] Added to the to-do: make minigame materials buyable with the pixels related to that minigame.
