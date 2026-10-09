@@ -356,16 +356,20 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Electric Pixel pack (Pixels tab): a very cheap test pack, no requirements.</summary>
-    private static ShopPack CreateElectricPixelPack()
+    /// <summary>Default Electric Pixel pack (Pixels tab): needs the Luminescent pack. Pays a random 1-15 per harvest (8 on average).</summary>
+    private static ShopPack CreateElectricPixelPack(int requiresLuminescentIndex)
     {
         return new ShopPack
         {
             displayName = "Electric Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Electric pixel: a cube held together by crackling lightning. (Test pack.)",
-            requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            description = "Adds the Electric pixel: a cube held together by crackling lightning. Pays a random amount every harvest, overcharges the auto clicker when clicked and arcs to nearby devices to keep them running.",
+            requirements = Needs(requiresLuminescentIndex),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 2000000 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 400000 },
+            },
             rewardTiers = new[]
             {
                 new PixelClicker.PixelTier
@@ -373,7 +377,7 @@ public partial class PixelShop
                     type = PixelClicker.PixelType.Electric, displayName = "Electric Pixels",
                     color = new Color(0.4f, 0.85f, 1f, 1f), glow = true, glowIntensity = 3.5f,
                     amountPerClick = 8, randomPayout = true, payoutMin = 1, payoutMax = 15, // 1-15 every harvest (8 = the average)
-                    spawnWeight = 0.5f,
+                    spawnWeight = 0.35f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
@@ -740,7 +744,7 @@ public partial class PixelShop
         new DefaultPack { isThis = p => Unlocks(p, "tinkerer"),
                           requires = null, create = i => CreateTinkererPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
-                          requires = null, create = i => CreateElectricPixelPack() },
+                          requires = p => Rewards(p, PixelClicker.PixelType.Luminescent), create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
