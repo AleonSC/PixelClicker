@@ -90,6 +90,7 @@ public class PixelElectricLinks : MonoBehaviour
     private void OnDestroy()
     {
         if (boltMesh != null) Destroy(boltMesh);
+        if (boltObject != null) Destroy(boltObject);
     }
 
     private void Update()
@@ -298,7 +299,9 @@ public class PixelElectricLinks : MonoBehaviour
         if (boltObject == null)
         {
             boltObject = new GameObject("Electric Links", typeof(MeshFilter), typeof(MeshRenderer));
-            boltObject.transform.SetParent(transform, false);
+            // NOT parented: this component sits on the cube's object, which spins, pulses and moves - the arcs are in world space.
+            boltObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            boltObject.transform.localScale = Vector3.one;
             boltMesh = new Mesh { name = "Electric Links" };
             boltMesh.MarkDynamic();
             boltObject.GetComponent<MeshFilter>().sharedMesh = boltMesh;
