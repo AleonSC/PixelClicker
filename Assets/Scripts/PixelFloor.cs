@@ -36,7 +36,15 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Hologram,     // rainbow shimmer with scan lines
         Crystal,      // glowing faceted gems
         MatrixRain,   // falling green code
-        Hazard        // yellow / black warning stripes
+        Hazard,          // yellow / black warning stripes
+        TournamentTiles, // big pale stone arena tiles with grout and the odd crack
+        DragonRadar,     // green radar screen with glowing orange blips
+        DragonBalls,     // rows of glossy orange balls with red stars (1-7)
+        KiAura,          // rising flame-like energy (colour set per style)
+        Craters,         // battle-scarred rocky ground full of craters
+        GravityRoom,     // metal training-room panels with a glowing ring
+        PowerArena,      // floating hex stone plates with glowing seams
+        EnergyWisps      // swirling wisps of destructive energy
     }
 
     [Serializable]
@@ -707,6 +715,165 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 c *= 0.9f + 0.15f * Hash(x, y, s.seed);
                 return c;
             }
+            case FloorPattern.TournamentTiles:
+            {
+                float gx = u * cells, gy = v * cells;
+                int tx = Mathf.FloorToInt(gx), ty = Mathf.FloorToInt(gy);
+                float lu = Frac(gx), lv = Frac(gy);
+                float grout = 1.5f / n * cells;
+                if (lu < grout || lv < grout) return s.colorC * (0.85f + 0.3f * Hash(x, y, s.seed));
+                float tone = 0.88f + 0.2f * Hash(tx, ty, s.seed);
+                Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 6, 4, s.seed) * 0.6f) * tone;
+                c *= 0.93f + 0.12f * Hash(x, y, s.seed + 1);            // grain
+                if (lu > 1f - grout * 1.5f || lv > 1f - grout * 1.5f) c *= 0.85f;  // shaded edge
+                else if (lu < grout * 2.5f || lv < grout * 2.5f) c = Color.Lerp(c, Color.white, 0.1f); // lit edge
+                // Cracks in some tiles.
+                if (Hash(Wrap(tx, cells), Wrap(ty, cells), s.seed + 3) > 0.62f)
+                {
+                    Voronoi(u, v, cells * 3, s.seed + 5, out float f1, out float f2, out _);
+                    if ((f2 - f1) * cells * 3 < 0.04f) c = Color.Lerp(c, s.colorC, 0.75f);
+                }
+                return c;
+            }
+
+            case FloorPattern.DragonRadar:
+            {
+                Color c = s.colorA * (0.9f + 0.15f * Fbm(u, v, 4, 2, s.seed));
+                float cu = Frac(u * cells), cv = Frac(v * cells);
+                float line = Mathf.Min(Mathf.Min(cu, 1f - cu), Mathf.Min(cv, 1f - cv)) * n / cells;
+                c = Color.Lerp(c, s.colorB, Mathf.Clamp01(1.3f - line) * 0.8f);
+                if ((y % 3) == 0) c *= 0.85f;                              // screen lines
+                // Seven blips at fixed random spots (wrapping, so the texture tiles).
+                for (int i = 0; i < 7; i++)
+                {
+                    float px = Hash(i, 1, s.seed), py = Hash(i, 2, s.seed);
+                    float dx = Mathf.Abs(u - px); dx = Mathf.Min(dx, 1f - dx);
+                    float dy = Mathf.Abs(v - py); dy = Mathf.Min(dy, 1f - dy);
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) * n;           // in texels
+                    if (d < 3.2f) c = Color.Lerp(s.colorC, new Color(1f, 0.95f, 0.6f), Mathf.Clamp01(1.5f - d));
+                    else if (d < 9f) c = Color.Lerp(c, s.colorC, (1f - (d - 3.2f) / 5.8f) * 0.45f); // glow
+                }
+                return c;
+            }
+
+            case FloorPattern.DragonBalls:
+            {
+                // Staggered rows of balls; each ball has 1-7 stars.
+                float gy = v * cells;
+                int row = Mathf.FloorToInt(gy);
+                float gx = u * cells + ((row & 1) == 0 ? 0f : 0.5f);
+                int col = Mathf.FloorToInt(gx);
+                float lx = Frac(gx) - 0.5f, ly = Frac(gy) - 0.5f;
+                float r = Mathf.Sqrt(lx * lx + ly * ly);
+                const float R = 0.42f;
+                Color bg = s.colorC * (0.85f + 0.2f * Fbm(u, v, 4, 3, s.seed));
+                if (r > R) return r < R + 0.05f ? bg * 0.6f : bg;          // soft shadow ring
+                float nx = lx / R, ny = ly / R, nz = Mathf.Sqrt(Mathf.Max(0f, 1f - nx * nx - ny * ny));
+                float light = Mathf.Clamp01(nx * -0.45f + ny * 0.55f + nz * 0.7f);
+                Color c = Color.Lerp(s.colorB, s.colorA, light);
+                // Stars.
+                int count = 1 + (int)(Hash(Wrap(col, cells), Wrap(row, cells), s.seed) * 6.999f);
+                float sr = count == 1 ? 0.13f : 0.065f;
+                for (int i = 0; i < count; i++)
+                {
+                    float ax = 0f, ay = 0f;
+                    if (count > 1 && !(count == 7 && i == 6))
+                    {
+                        int ring = count == 7 ? 6 : count;
+                        float ang = i * Mathf.PI * 2f / ring + 0.3f;
+                        ax = Mathf.Cos(ang) * 0.19f; ay = Mathf.Sin(ang) * 0.19f;
+                    }
+                    float sx = lx - ax, sy = ly - ay;
+                    float sd = Mathf.Sqrt(sx * sx + sy * sy);
+                    float th = Mathf.Atan2(sy, sx);
+                    float edge = sr * (0.5f + 0.5f * Mathf.Pow(Mathf.Abs(Mathf.Cos(2.5f * (th - Mathf.PI * 0.5f))), 3f));
+                    if (sd < edge) c = new Color(0.85f, 0.08f, 0.05f);
+                }
+                // Glossy highlight.
+                float hx = lx + 0.14f, hy = ly - 0.16f;
+                float h = Mathf.Clamp01(1f - Mathf.Sqrt(hx * hx + hy * hy) / 0.1f);
+                return Color.Lerp(c, Color.white, h * 0.85f);
+            }
+
+            case FloorPattern.KiAura:
+            {
+                // Tall streaks (stretched noise) that scroll upward like flames.
+                float warp = Fbm(u, v, 3, 3, s.seed) * 0.15f;
+                float flame = Fbm(u + warp, v, 10, 2, 4, s.seed + 1);
+                float flicker = Fbm(u, v, 4, 4, 3, s.seed + 2);
+                float k = Mathf.Clamp01((flame * 0.75f + flicker * 0.35f - 0.35f) * 2f);
+                k = k * k;
+                Color c = Color.Lerp(s.colorA, s.colorB, Mathf.Clamp01(k * 1.6f));
+                c = Color.Lerp(c, s.colorC, Mathf.Clamp01(k * 2.2f - 1.1f));
+                if (Hash(x, y, s.seed + 9) > 0.996f) c = s.colorC;            // sparks
+                return c;
+            }
+
+            case FloorPattern.Craters:
+            {
+                Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 5, 5, s.seed));
+                c *= 0.9f + 0.2f * Hash(x, y, s.seed);
+                Voronoi(u, v, cells, s.seed + 1, out float f1, out _, out int id);
+                if (HashId(id, s.seed) > 0.3f)
+                {
+                    float d = f1 * cells;
+                    float r = 0.18f + 0.22f * HashId(id, s.seed + 2);
+                    if (d < r)
+                    {
+                        float depth = 1f - d / r;
+                        c = Color.Lerp(c, s.colorC, 0.25f + depth * 0.55f);        // darker bowl
+                    }
+                    else if (d < r * 1.3f) c = Color.Lerp(c, Color.white, 0.18f * (1f - (d - r) / (r * 0.3f))); // raised rim
+                }
+                return c;
+            }
+
+            case FloorPattern.GravityRoom:
+            {
+                float pu = Frac(u * cells), pv = Frac(v * cells);
+                float seam = 1.2f / n * cells;
+                Color c = s.colorA * (0.88f + 0.15f * Fbm(u, v, 2, 48, 2, s.seed));   // brushed metal
+                if (pu < seam || pv < seam) c = s.colorB * 0.6f;
+                else if (pu < seam * 2f || pv < seam * 2f) c *= 1.12f;
+                // Rivets in the panel corners.
+                float rx = Mathf.Min(pu, 1f - pu), ry = Mathf.Min(pv, 1f - pv);
+                if (Mathf.Abs(rx - 0.08f) < 0.025f && Mathf.Abs(ry - 0.08f) < 0.025f) c = s.colorB;
+                // Glowing ring and markings around the middle of the texture.
+                float dx = u - 0.5f, dy = v - 0.5f;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float ring = Mathf.Abs(d - 0.36f);
+                if (ring < 0.012f) c = s.colorC;
+                else if (ring < 0.03f) c = Color.Lerp(c, s.colorC, (1f - (ring - 0.012f) / 0.018f) * 0.5f);
+                if (Mathf.Abs(d - 0.3f) < 0.004f) c = s.colorB * 0.5f;
+                float ang = Mathf.Atan2(dy, dx) / (Mathf.PI * 2f) * 16f;
+                if (d > 0.4f && d < 0.44f && Frac(ang) < 0.25f) c = Color.Lerp(c, s.colorC, 0.7f);
+                return c;
+            }
+
+            case FloorPattern.PowerArena:
+            {
+                HexCells(u, v, cells, s.seed, out float f1, out float f2, out int id);
+                float edge = (f2 - f1) * cells;
+                Color stone = Color.Lerp(s.colorA, s.colorB, HashId(id, s.seed) * 0.6f + Fbm(u, v, 6, 3, s.seed) * 0.4f);
+                stone *= 0.9f + 0.15f * Hash(x, y, s.seed);
+                stone *= 0.85f + 0.25f * Mathf.Clamp01(edge * 3f);         // plates slope down to the seams
+                float glow = Mathf.Clamp01(1f - edge / 0.07f);
+                return Color.Lerp(stone, s.colorC, glow);
+            }
+
+            case FloorPattern.EnergyWisps:
+            {
+                // Domain-warped noise: swirling wisps.
+                float q = Fbm(u, v, 3, 4, s.seed);
+                float r = Fbm(u + q * 0.6f, v + q * 0.6f, 3, 4, s.seed + 1);
+                float w = Fbm(u + r * 0.8f, v - r * 0.8f, 4, 4, s.seed + 2);
+                float k = Mathf.Clamp01((w - 0.45f) * 2.5f);
+                k = k * k * (3f - 2f * k);
+                Color c = Color.Lerp(s.colorA, s.colorB, k);
+                c = Color.Lerp(c, s.colorC, Mathf.Clamp01(k * k * 1.6f - 0.5f));
+                if (Hash(x, y, s.seed + 4) > 0.997f) c = s.colorC;           // sparks
+                return c;
+            }
         }
         return s.colorA;
     }
@@ -950,5 +1117,63 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         yield return S("Hazard Stripes", FloorPattern.Hazard, new Color(0.98f, 0.8f, 0.05f), new Color(0.08f, 0.08f, 0.08f),
                        new Color(0.45f, 0.42f, 0.38f), 128, false, 4f, 4, 0.3f);
+
+        // ---- Dragon Ball themed ----
+        yield return S("Tournament Stage", FloorPattern.TournamentTiles, new Color(0.86f, 0.84f, 0.78f), new Color(0.72f, 0.7f, 0.64f),
+                       new Color(0.3f, 0.28f, 0.26f), 256, false, 6f, 4, 0.25f);
+
+        FloorStyle radar = S("Dragon Radar", FloorPattern.DragonRadar, new Color(0.04f, 0.2f, 0.08f), new Color(0.3f, 0.8f, 0.35f),
+                             new Color(1f, 0.55f, 0.05f), 256, false, 8f, 8, 0.7f, 0.9f);
+        radar.pulseSpeed = 0.8f; radar.pulseAmount = 0.45f;
+        yield return radar;
+
+        yield return S("Dragon Balls", FloorPattern.DragonBalls, new Color(1f, 0.72f, 0.2f), new Color(0.8f, 0.35f, 0.02f),
+                       new Color(0.1f, 0.12f, 0.25f), 256, false, 5f, 4, 0.85f);
+
+        // ---- Dragon Ball Z themed ----
+        yield return S("Planet Namek", FloorPattern.PixelGrass, new Color(0.15f, 0.55f, 0.45f), new Color(0.3f, 0.72f, 0.55f),
+                       new Color(0.95f, 0.85f, 0.3f), 48, true, 4f, 1, 0.05f);
+
+        FloorStyle ssj = S("Super Saiyan Aura", FloorPattern.KiAura, new Color(0.35f, 0.18f, 0.0f), new Color(1f, 0.78f, 0.1f),
+                           new Color(1f, 1f, 0.85f), 256, false, 6f, 1, 0.6f, 1.3f);
+        ssj.scrollSpeed = new Vector2(0f, 0.35f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f;
+        yield return ssj;
+
+        yield return S("Battle Crater", FloorPattern.Craters, new Color(0.62f, 0.5f, 0.36f), new Color(0.48f, 0.38f, 0.27f),
+                       new Color(0.2f, 0.15f, 0.1f), 256, false, 8f, 5, 0.1f);
+
+        FloorStyle gravity = S("Gravity Room", FloorPattern.GravityRoom, new Color(0.62f, 0.64f, 0.68f), new Color(0.25f, 0.26f, 0.3f),
+                               new Color(1f, 0.15f, 0.1f), 256, false, 10f, 4, 0.75f, 0.35f);
+        gravity.metallic = 0.7f; gravity.pulseSpeed = 0.6f; gravity.pulseAmount = 0.5f;
+        yield return gravity;
+
+        yield return S("Time Chamber", FloorPattern.Checker, new Color(0.98f, 0.98f, 0.97f), new Color(0.93f, 0.93f, 0.92f),
+                       Color.white, 64, false, 6f, 2, 0.9f);
+
+        // ---- Dragon Ball Super themed ----
+        FloorStyle top = S("Tournament of Power", FloorPattern.PowerArena, new Color(0.62f, 0.66f, 0.74f), new Color(0.42f, 0.45f, 0.55f),
+                           new Color(0.4f, 0.85f, 1f), 256, false, 6f, 6, 0.45f, 0.45f);
+        top.pulseSpeed = 0.4f; top.pulseAmount = 0.4f;
+        yield return top;
+
+        FloorStyle ui = S("Ultra Instinct Aura", FloorPattern.KiAura, new Color(0.12f, 0.14f, 0.25f), new Color(0.65f, 0.75f, 1f),
+                          new Color(1f, 1f, 1f), 256, false, 6f, 1, 0.8f, 1.2f);
+        ui.scrollSpeed = new Vector2(0f, 0.25f); ui.pulseSpeed = 0.7f; ui.pulseAmount = 0.35f; ui.seed = 91;
+        yield return ui;
+
+        FloorStyle blue = S("Super Saiyan Blue Aura", FloorPattern.KiAura, new Color(0.0f, 0.12f, 0.3f), new Color(0.1f, 0.7f, 1f),
+                            new Color(0.85f, 1f, 1f), 256, false, 6f, 1, 0.7f, 1.3f);
+        blue.scrollSpeed = new Vector2(0f, 0.35f); blue.pulseSpeed = 1.2f; blue.pulseAmount = 0.3f; blue.seed = 57;
+        yield return blue;
+
+        FloorStyle god = S("Super Saiyan God Aura", FloorPattern.KiAura, new Color(0.3f, 0.02f, 0.05f), new Color(1f, 0.25f, 0.3f),
+                           new Color(1f, 0.85f, 0.75f), 256, false, 6f, 1, 0.6f, 1.3f);
+        god.scrollSpeed = new Vector2(0f, 0.3f); god.pulseSpeed = 1f; god.pulseAmount = 0.3f; god.seed = 73;
+        yield return god;
+
+        FloorStyle hakai = S("Destruction Energy", FloorPattern.EnergyWisps, new Color(0.04f, 0.0f, 0.08f), new Color(0.55f, 0.1f, 0.85f),
+                             new Color(1f, 0.7f, 1f), 256, false, 7f, 1, 0.6f, 1.2f);
+        hakai.scrollSpeed = new Vector2(0.02f, 0.035f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f;
+        yield return hakai;
     }
 }
