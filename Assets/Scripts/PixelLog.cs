@@ -452,7 +452,8 @@ public class PixelLog : MonoBehaviour
         st.cam.enabled = false;
         st.cam.clearFlags = CameraClearFlags.SolidColor;
         st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
-        st.cam.fieldOfView = 30f;
+        st.cam.orthographic = true;
+        st.cam.orthographicSize = 0.805f; // a face edge fills ~62% of the picture, like the plain cube icon
         st.cam.nearClipPlane = 0.1f;
         st.cam.farClipPlane = 30f;
         st.cam.allowHDR = false;
@@ -476,7 +477,7 @@ public class PixelLog : MonoBehaviour
 
     private void RenderSkin(SkinStudio st)
     {
-        st.model.localRotation = Quaternion.Euler(24f, Time.unscaledTime * achievementIconSpin, 0f);
+        st.model.localRotation = Quaternion.Euler(25f, 0f, 0f) * Quaternion.Euler(0f, Time.unscaledTime * achievementIconSpin, 0f); // same pose as PixelCubeIcon
         st.cam.Render();
     }
 
