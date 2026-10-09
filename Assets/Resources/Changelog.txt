@@ -157,4 +157,3 @@
 [2026-10-09 16:36 UTC] Pets can now be picked up and thrown with the mouse and stop moving while hovered; the Ghost pet only hovers instead of rolling.
 [2026-10-09 16:34 UTC] The Pac-Man floor's mazes now join up seamlessly: no dark gaps between them, and tunnels on all four sides lead into the neighbouring mazes.
 [2026-10-09 16:40 UTC] Pets now show in the Stats screen (a Pets section), and the Vacuum Pet sucks up nearby old pixels for no payout, only a stat and a small growing number above it.
-[2026-10-09 16:52 UTC] Glass pixels now shatter randomly from their movement (and sometimes on landing), and the shards then fly back together so the pixel reforms instead of disappearing.

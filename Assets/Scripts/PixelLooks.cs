@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -175,7 +174,7 @@ public class PixelLook
     [Tooltip("A swirling dark-matter core inside the cube (best with 'Force Translucent' and a dark, see-through colour).")]
     public bool darkMatter = false;
 
-    [Tooltip("Old pixels of this type shatter into shards (when they land hard, or randomly while moving) and then the shards reverse back together into the pixel.")]
+    [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
@@ -982,7 +981,7 @@ public class OldPixelShatter : MonoBehaviour
     private float minSpeed, shardSpeed, shardLife, shardSize;
     private int shardCount;
     private string soundId;
-    private bool done;       // shattered right now (shards are out)
+    private bool done;
     private bool held;          // the player is carrying it (Pixel Grabbing): it can't break
     private bool gentle;        // let go softly: its next landing is a soft set-down, not a break
     private float gentleBonus;  // seconds added to its despawn timer on that soft landing
@@ -1016,37 +1015,10 @@ public class OldPixelShatter : MonoBehaviour
         soundId = sound;
     }
 
-    private float impactChance = 1f, movementChance, movementSpeed = 3f, cooldown = 3f, reformSeconds = 0.6f, nextAllowed;
-
-    /// <summary>How the glass breaks and reforms: landing chance, random break chance per second while moving, cooldown, fly-back time.</summary>
-    public void ConfigureReform(float landingChance, float movementChancePerSecond, float movementFullSpeed, float cooldownSeconds, float flyBackSeconds)
-    {
-        impactChance = landingChance;
-        movementChance = movementChancePerSecond;
-        movementSpeed = Mathf.Max(0.1f, movementFullSpeed);
-        cooldown = cooldownSeconds;
-        reformSeconds = Mathf.Max(0.05f, flyBackSeconds);
-    }
-
-    private void FixedUpdate()
-    {
-        if (clicker == null || held || done || gentle || movementChance <= 0f || Time.time < nextAllowed) return;
-        Rigidbody rb = GetComponent<Rigidbody>();
-        if (rb == null || rb.isKinematic) return;
-#if UNITY_6000_0_OR_NEWER
-        float speed = rb.linearVelocity.magnitude;
-#else
-        float speed = rb.velocity.magnitude;
-#endif
-        if (speed < 0.6f) return; // lying still: nothing to break it
-        float k = Mathf.Min(speed / movementSpeed, 2f);
-        if (UnityEngine.Random.value < movementChance * k * Time.fixedDeltaTime) Shatter(transform.position, Vector3.up);
-    }
-
     private void OnCollisionEnter(Collision collision)
     {
-        if (done || clicker == null || held || Time.time < nextAllowed) return;
-        if (collision.collider.GetComponent<OldPixelShard>() != null || collision.collider.GetComponent<OldPixelReformShard>() != null) return;
+        if (done || clicker == null || held) return;
+        if (collision.collider.GetComponent<OldPixelShard>() != null) return;
 
         if (gentle)
         {
@@ -1072,135 +1044,59 @@ public class OldPixelShatter : MonoBehaviour
 
         ContactPoint contact = collision.GetContact(0);
         if (Vector3.Dot(contact.normal, Vector3.up) < 0.4f) return; // only the ground, not a wall or the cube
-        if (UnityEngine.Random.value > impactChance) return;
 
         Shatter(contact.point, contact.normal);
     }
 
-    /// <summary>
-    /// The pixel breaks into shards that fly about and then reverse back together. The pixel itself stays where it is
-    /// (invisible, still solid), so nothing is lost: it keeps its payout and can still be vacuumed, grabbed or banked.
-    /// </summary>
     private void Shatter(Vector3 point, Vector3 normal)
     {
         PixelStats.Count("old.shattered");
         done = true;
+        Rigidbody body = GetComponent<Rigidbody>();
+        if (body != null) clicker.ReleaseOldPixel(body, false);
 
         if (!string.IsNullOrEmpty(soundId)) PixelAudio.Play(soundId);
 
         MeshFilter mf = GetComponent<MeshFilter>();
         MeshRenderer mr = GetComponent<MeshRenderer>();
-        if (mf == null || mr == null) { done = false; return; }
-
-        // Hide the pixel (and its glow / outline children) while the shards are out.
-        Renderer[] renderers = GetComponentsInChildren<Renderer>();
-        bool[] wasOn = new bool[renderers.Length];
-        for (int i = 0; i < renderers.Length; i++) { wasOn[i] = renderers[i].enabled; renderers[i].enabled = false; }
-
-        MaterialPropertyBlock block = new MaterialPropertyBlock();
-        mr.GetPropertyBlock(block);
-        Vector3 scale = transform.lossyScale;
-        float baseSize = Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z));
-
-        List<OldPixelReformShard> shards = new List<OldPixelReformShard>();
-        for (int i = 0; i < shardCount; i++)
+        if (mf != null && mr != null)
         {
-            GameObject shard = new GameObject("GlassShard");
-            shard.layer = gameObject.layer;
-            shard.transform.position = transform.position + UnityEngine.Random.insideUnitSphere * baseSize * 0.35f;
-            shard.transform.rotation = UnityEngine.Random.rotation;
-            // Flat slivers of different sizes.
-            shard.transform.localScale = new Vector3(
-                baseSize * shardSize * UnityEngine.Random.Range(0.6f, 1.2f),
-                baseSize * shardSize * UnityEngine.Random.Range(0.12f, 0.3f),
-                baseSize * shardSize * UnityEngine.Random.Range(0.5f, 1f));
+            MaterialPropertyBlock block = new MaterialPropertyBlock();
+            mr.GetPropertyBlock(block);
+            Vector3 scale = transform.lossyScale;
+            float baseSize = Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z));
 
-            shard.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
-            MeshRenderer smr = shard.AddComponent<MeshRenderer>();
-            smr.sharedMaterial = mr.sharedMaterial;
-            smr.SetPropertyBlock(block);
-            smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            for (int i = 0; i < shardCount; i++)
+            {
+                GameObject shard = new GameObject("GlassShard");
+                shard.layer = gameObject.layer;
+                shard.transform.position = transform.position + UnityEngine.Random.insideUnitSphere * baseSize * 0.35f;
+                shard.transform.rotation = UnityEngine.Random.rotation;
+                // Flat slivers of different sizes.
+                shard.transform.localScale = new Vector3(
+                    baseSize * shardSize * UnityEngine.Random.Range(0.6f, 1.2f),
+                    baseSize * shardSize * UnityEngine.Random.Range(0.12f, 0.3f),
+                    baseSize * shardSize * UnityEngine.Random.Range(0.5f, 1f));
 
-            shard.AddComponent<BoxCollider>();
-            Rigidbody rb = shard.AddComponent<Rigidbody>();
-            rb.mass = 0.05f;
-            Vector3 push = normal * shardSpeed * UnityEngine.Random.Range(0.4f, 1f)
-                         + UnityEngine.Random.onUnitSphere * shardSpeed * 0.7f;
-            push.y = Mathf.Abs(push.y);
-            rb.AddForce(push, ForceMode.VelocityChange);
-            rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(5f, 15f), ForceMode.VelocityChange);
+                shard.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                MeshRenderer smr = shard.AddComponent<MeshRenderer>();
+                smr.sharedMaterial = mr.sharedMaterial;
+                smr.SetPropertyBlock(block);
+                smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
-            OldPixelReformShard reform = shard.AddComponent<OldPixelReformShard>();
-            reform.Setup(transform);
-            shards.Add(reform);
+                shard.AddComponent<BoxCollider>();
+                Rigidbody rb = shard.AddComponent<Rigidbody>();
+                rb.mass = 0.05f;
+                Vector3 push = normal * shardSpeed * UnityEngine.Random.Range(0.4f, 1f)
+                             + UnityEngine.Random.onUnitSphere * shardSpeed * 0.7f;
+                push.y = Mathf.Abs(push.y);
+                rb.AddForce(push, ForceMode.VelocityChange);
+                rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(5f, 15f), ForceMode.VelocityChange);
+
+                shard.AddComponent<OldPixelShard>().Setup(shardLife * UnityEngine.Random.Range(0.7f, 1.2f));
+            }
         }
-        StartCoroutine(Reform(shards, renderers, wasOn));
-    }
-
-    private IEnumerator Reform(List<OldPixelReformShard> shards, Renderer[] renderers, bool[] wasOn)
-    {
-        yield return new WaitForSeconds(Mathf.Max(0.1f, shardLife));
-        if (!string.IsNullOrEmpty(soundId)) PixelAudio.Play(soundId + "_reform");
-        foreach (OldPixelReformShard shard in shards) if (shard != null) shard.FlyBack(reformSeconds);
-        yield return new WaitForSeconds(reformSeconds);
-
-        foreach (OldPixelReformShard shard in shards) if (shard != null) Destroy(shard.gameObject);
-        for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].enabled = wasOn[i];
-        nextAllowed = Time.time + cooldown;
-        done = false;
-    }
-}
-
-/// <summary>
-/// A shard of a glass pixel that is in the middle of shattering: it flies about with physics, then (FlyBack) is pulled back
-/// into the pixel along a smooth path, turning and shrinking into it. If the pixel disappears meanwhile, the shard shrinks away.
-/// </summary>
-public class OldPixelReformShard : MonoBehaviour
-{
-    private Transform target;
-    private bool returning;
-    private float seconds = 0.6f, age, orphanAge;
-    private Vector3 startPos, startScale;
-    private Quaternion startRot;
-
-    public void Setup(Transform pixel)
-    {
-        target = pixel;
-        startScale = transform.localScale;
-    }
-
-    public void FlyBack(float flySeconds)
-    {
-        returning = true;
-        seconds = Mathf.Max(0.05f, flySeconds);
-        age = 0f;
-        startPos = transform.position;
-        startRot = transform.rotation;
-        Rigidbody rb = GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = true;
-        Collider c = GetComponent<Collider>();
-        if (c != null) c.enabled = false;
-    }
-
-    private void Update()
-    {
-        if (target == null)
-        {
-            // The pixel is gone (vacuumed, despawned): the shard just shrinks away.
-            orphanAge += Time.deltaTime;
-            float s = 1f - orphanAge / 0.3f;
-            if (s <= 0f) { Destroy(gameObject); return; }
-            transform.localScale = startScale * s;
-            return;
-        }
-        if (!returning) return;
-
-        age += Time.deltaTime;
-        float k = Mathf.Clamp01(age / seconds);
-        float e = k * k * (3f - 2f * k); // smooth in and out
-        transform.position = Vector3.Lerp(startPos, target.position, e);
-        transform.rotation = Quaternion.Slerp(startRot, target.rotation, e);
-        transform.localScale = Vector3.Lerp(startScale, startScale * 0.35f, e);
+        Destroy(gameObject);
     }
 }
 

@@ -267,28 +267,8 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float shardSpeed = 3.5f;
 
     [Min(0.1f)]
-    [Tooltip("Seconds the shards fly about before they reverse back together into the pixel.")]
+    [Tooltip("Seconds a shard stays before it shrinks away.")]
     [SerializeField] private float shardLifeSeconds = 1.4f;
-
-    [Range(0f, 1f)]
-    [Tooltip("Chance that a hard landing on the ground shatters a glass pixel (it always reforms afterwards).")]
-    [SerializeField] private float shatterImpactChance = 0.6f;
-
-    [Min(0f)]
-    [Tooltip("Random shattering from movement: chance per second of breaking while moving at 'Shatter Movement Speed' (faster = more likely). 0 = only landings break it.")]
-    [SerializeField] private float shatterMovementChance = 0.15f;
-
-    [Min(0.1f)]
-    [Tooltip("The speed (world units per second) at which the movement chance above applies in full.")]
-    [SerializeField] private float shatterMovementSpeed = 3f;
-
-    [Min(0f)]
-    [Tooltip("Seconds after a glass pixel has reformed before it can shatter again.")]
-    [SerializeField] private float shatterCooldown = 3f;
-
-    [Min(0.05f)]
-    [Tooltip("Seconds the shards take to fly back together.")]
-    [SerializeField] private float reformSeconds = 0.6f;
 
     [Range(0.05f, 1f)]
     [Tooltip("Size of a shard compared to the pixel.")]
@@ -2592,11 +2572,7 @@ public class PixelClicker : MonoBehaviour
                 if (styled.floatAway)
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.shatter)
-                {
-                    OldPixelShatter glass = copy.AddComponent<OldPixelShatter>();
-                    glass.Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
-                    glass.ConfigureReform(shatterImpactChance, shatterMovementChance, shatterMovementSpeed, shatterCooldown, reformSeconds);
-                }
+                    copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
             }
         }
         if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
