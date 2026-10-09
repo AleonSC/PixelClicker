@@ -117,6 +117,34 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("Colour of the Quit button.")]
     [SerializeField] private Color quitColor = new Color(0.45f, 0.18f, 0.18f, 0.9f);
 
+    [Header("Floor and Sky Pickers")]
+    [Tooltip("Show the small floor picker (right of Play) and sky picker (left of Play): a picture of the look with arrows either side. A quick version of the Settings rows.")]
+    [SerializeField] private bool showLookPickers = true;
+
+    [Tooltip("Size of the picture in each picker.")]
+    [SerializeField] private float lookIconSize = 96f;
+
+    [Tooltip("Width of the picker arrows (they are as tall as the picture).")]
+    [SerializeField] private float lookArrowWidth = 40f;
+
+    [Tooltip("Space between the Play / Load / Settings buttons and each picker.")]
+    [SerializeField] private float lookGap = 40f;
+
+    [Tooltip("Font size of the look's name under the picture (0 = no name).")]
+    [SerializeField] private float lookNameFontSize = 22f;
+
+    [Tooltip("Colour of the picker arrows.")]
+    [SerializeField] private Color lookArrowColor = new Color(0.25f, 0.3f, 0.4f, 1f);
+
+    [Tooltip("Colour of the thin frame around each picture.")]
+    [SerializeField] private Color lookFrameColor = new Color(1f, 1f, 1f, 0.8f);
+
+    [Tooltip("Small caption above the floor picker (empty = none).")]
+    [SerializeField] private string floorPickerCaption = "Floor";
+
+    [Tooltip("Small caption above the sky picker (empty = none).")]
+    [SerializeField] private string skyPickerCaption = "Sky";
+
     [Header("Animation")]
     [Min(0.05f)]
     [Tooltip("Seconds the buttons take to shrink to nothing.")]
@@ -163,6 +191,17 @@ public class PixelTitleScreen : MonoBehaviour
     private readonly List<RectTransform> shrinkRects = new List<RectTransform>();
     private readonly List<Button> buttons = new List<Button>();
     private Button playButton;
+
+    /// <summary>One of the small floor / sky pickers beside Play.</summary>
+    private class LookPicker
+    {
+        public System.Func<IPixelLookSource> source;
+        public RawImage icon;
+        public TMP_Text name;
+        public int shownIndex = -2;
+        public bool shownUsable;
+    }
+    private readonly List<LookPicker> lookPickers = new List<LookPicker>();
     private RenderTexture liveTexture;
     private readonly List<RenderTexture> chain = new List<RenderTexture>();
     private readonly List<int> chainDivisors = new List<int>();
@@ -272,6 +311,8 @@ public class PixelTitleScreen : MonoBehaviour
         canvas.sortingOrder = menuOpen ? 400 : sortingOrder;
         if (foreground != null && foreground.activeSelf == menuOpen) foreground.SetActive(!menuOpen);
 
+        if (!menuOpen) foreach (LookPicker p in lookPickers) RefreshPicker(p, false);
+
         if (logoRect != null && !playing)
             logoRect.anchoredPosition = new Vector2(0f, -logoTopMargin + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
     }
@@ -373,9 +414,119 @@ public class PixelTitleScreen : MonoBehaviour
         MakeButton(font, "Load Button", loadText, smallSize, smallButtonColor, smallFontSize, centre, new Vector2(-smallX, smallY), OnLoad);
         MakeButton(font, "Settings Button", settingsText, smallSize, smallButtonColor, smallFontSize, centre, new Vector2(smallX, smallY), OnSettings);
 
+        // Quick floor / sky pickers either side of the button group.
+        if (showLookPickers)
+        {
+            float pickerWidth = lookArrowWidth * 2f + lookIconSize + 16f;
+            float pickerX = buttonSize.x * 0.5f + lookGap + pickerWidth * 0.5f;
+            BuildLookPicker(font, "Sky Picker", skyPickerCaption, () => PixelSkybox.Instance, new Vector2(-pickerX, 0f));
+            BuildLookPicker(font, "Floor Picker", floorPickerCaption, () => PixelFloor.Instance, new Vector2(pickerX, 0f));
+        }
+
         if (showQuit)
             MakeButton(font, "Quit Button", quitText, quitSize, quitColor, quitFontSize, new Vector2(0.5f, 0f),
                        new Vector2(0f, quitSize.y * 0.5f + 12f), OnQuit);
+    }
+
+    /// <summary>A picture of the current look with an arrow either side (and its name under it).</summary>
+    private void BuildLookPicker(TMP_FontAsset font, string objectName, string caption, System.Func<IPixelLookSource> source, Vector2 position)
+    {
+        float width = lookArrowWidth * 2f + lookIconSize + 16f;
+        GameObject root = new GameObject(objectName, typeof(RectTransform));
+        root.transform.SetParent(foreground.transform, false);
+        RectTransform rr = root.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 0.5f);
+        rr.sizeDelta = new Vector2(width, lookIconSize);
+        rr.anchoredPosition = position;
+        shrinkRects.Add(rr);
+
+        LookPicker picker = new LookPicker { source = source };
+
+        // Frame, then the picture inside it.
+        GameObject frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
+        frame.transform.SetParent(root.transform, false);
+        Image frameImage = frame.GetComponent<Image>();
+        frameImage.color = lookFrameColor;
+        frameImage.raycastTarget = false;
+        RectTransform fr = frame.GetComponent<RectTransform>();
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0.5f, 0.5f);
+        fr.sizeDelta = new Vector2(lookIconSize, lookIconSize);
+
+        GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
+        iconGo.transform.SetParent(frame.transform, false);
+        picker.icon = iconGo.GetComponent<RawImage>();
+        picker.icon.raycastTarget = false;
+        RectTransform ir = iconGo.GetComponent<RectTransform>();
+        ir.anchorMin = Vector2.zero;
+        ir.anchorMax = Vector2.one;
+        ir.offsetMin = new Vector2(3f, 3f);
+        ir.offsetMax = new Vector2(-3f, -3f);
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            int direction = side;
+            Button arrow = PixelUIKit.CreateButton(font, root.transform, side < 0 ? "Previous" : "Next", side < 0 ? "<" : ">",
+                                                   new Vector2(lookArrowWidth, lookIconSize), lookArrowColor, buttonTextColor, smallFontSize);
+            RectTransform ar = arrow.GetComponent<RectTransform>();
+            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(side < 0 ? 0f : 1f, 0.5f);
+            ar.anchoredPosition = Vector2.zero;
+            arrow.onClick.AddListener(() =>
+            {
+                if (playing) return;
+                IPixelLookSource look = picker.source();
+                if (look != null && look.Usable) look.Step(direction);
+                RefreshPicker(picker, true);
+            });
+            buttons.Add(arrow);
+        }
+
+        if (!string.IsNullOrEmpty(caption))
+        {
+            TMP_Text cap = PixelUIKit.CreateText(font, root.transform, "Caption", caption, Mathf.Max(14f, lookNameFontSize * 0.9f),
+                                                 TextAlignmentOptions.Bottom, FontStyles.Bold, new Color(1f, 1f, 1f, 0.7f));
+            RectTransform cr = cap.rectTransform;
+            cr.anchorMin = new Vector2(0f, 1f);
+            cr.anchorMax = new Vector2(1f, 1f);
+            cr.pivot = new Vector2(0.5f, 0f);
+            cr.sizeDelta = new Vector2(0f, lookNameFontSize * 1.4f);
+            cr.anchoredPosition = new Vector2(0f, 2f);
+            cap.raycastTarget = false;
+        }
+
+        if (lookNameFontSize > 0f)
+        {
+            picker.name = PixelUIKit.CreateText(font, root.transform, "Name", "", lookNameFontSize, TextAlignmentOptions.Top,
+                                                FontStyles.Normal, buttonTextColor);
+            RectTransform nr = picker.name.rectTransform;
+            nr.anchorMin = new Vector2(0f, 0f);
+            nr.anchorMax = new Vector2(1f, 0f);
+            nr.pivot = new Vector2(0.5f, 1f);
+            nr.sizeDelta = new Vector2(40f, lookNameFontSize * 1.4f);
+            nr.anchoredPosition = new Vector2(0f, -4f);
+            picker.name.raycastTarget = false;
+            picker.name.enableAutoSizing = true;
+            picker.name.fontSizeMax = lookNameFontSize;
+            picker.name.fontSizeMin = 12f;
+        }
+
+        lookPickers.Add(picker);
+        RefreshPicker(picker, true);
+    }
+
+    /// <summary>Updates a picker's picture and name when the look changed (from here, Settings, or the look waking up).</summary>
+    private static void RefreshPicker(LookPicker p, bool force)
+    {
+        IPixelLookSource look = p.source();
+        bool usable = look != null && look.Usable;
+        int index = usable ? look.Current : -1;
+        if (!force && index == p.shownIndex && usable == p.shownUsable) return;
+        p.shownIndex = index;
+        p.shownUsable = usable;
+
+        p.icon.texture = usable ? look.PreviewTexture(index) : null;
+        p.icon.color = usable ? look.PreviewColor(index) : new Color(1f, 1f, 1f, 0.15f);
+        p.icon.uvRect = usable ? look.PreviewRect : new Rect(0f, 0f, 1f, 1f);
+        if (p.name != null) p.name.text = usable ? look.StyleName(index) : "";
     }
 
     private RawImage MakeRaw(string objectName)

@@ -254,10 +254,13 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the floor style picker (arrows step through the styles of the Pixel Floor component).")]
     [SerializeField] private string floorStyleLabel = "Floor style";
 
+    [Tooltip("Label of the sky picker (arrows step through the skies of the Pixel Skybox component).")]
+    [SerializeField] private string skyStyleLabel = "Sky";
+
     [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
     [SerializeField] private string noFloorText = "No floor found";
 
-    [Tooltip("Colour of the floor style picker's arrow buttons.")]
+    [Tooltip("Colour of the floor style and sky pickers' arrow buttons.")]
     [SerializeField] private Color floorArrowColor = new Color(0.25f, 0.25f, 0.3f, 1f);
 
     [Tooltip("Label of the master volume slider.")]
@@ -552,8 +555,6 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject slotBar;
     private int selectedSlot = 1;
     private Toggle rotationToggle, pulsingToggle, abbreviateToggle, hidePurchasedToggle, backgroundToggle, pauseStopsToggle;
-    private TMP_Text floorNameText;
-    private RawImage floorSwatch;
     private float previousTimeScale = 1f;
 
     private void Start()
@@ -1577,7 +1578,8 @@ public class PixelPauseMenu : MonoBehaviour
 
         // ---- Display ----
         AddHeaderRow(list, headerDisplay, ref y);
-        AddFloorRow(list, ref y);
+        AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y);
+        AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
@@ -1762,13 +1764,16 @@ public class PixelPauseMenu : MonoBehaviour
         return true; // nothing else (like Escape closing the menu) reacts while waiting
     }
 
-    /// <summary>"Floor style" row: a picture of the style, its name, and arrows to step through the styles.</summary>
-    private void AddFloorRow(Transform parent, ref float y)
+    /// <summary>
+    /// A "pick a look" row (floor style, sky): a picture of the current look, its name, and arrows to step through
+    /// the looks. 'source' is asked again each time, so it works even if the look component wakes up later.
+    /// </summary>
+    private void AddLookRow(Transform parent, string labelText, System.Func<IPixelLookSource> source, ref float y)
     {
-        TMP_Text label = AddRowLabel(parent, floorStyleLabel, y, out RectTransform row);
+        TMP_Text label = AddRowLabel(parent, labelText, y, out RectTransform row);
         label.rectTransform.anchorMax = new Vector2(0.42f, 1f);
 
-        GameObject picker = new GameObject("Floor Picker", typeof(RectTransform));
+        GameObject picker = new GameObject(labelText + " Picker", typeof(RectTransform));
         picker.transform.SetParent(row, false);
         RectTransform pr = picker.GetComponent<RectTransform>();
         pr.anchorMin = new Vector2(0.42f, 0f);
@@ -1776,56 +1781,56 @@ public class PixelPauseMenu : MonoBehaviour
         pr.offsetMin = pr.offsetMax = Vector2.zero;
 
         float arrow = tickBoxSize;
-        Button left = MakeButton(picker.transform, "Previous Floor", "<", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
-        RectTransform lr = left.GetComponent<RectTransform>();
-        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 0.5f);
-        lr.anchoredPosition = Vector2.zero;
-        left.onClick.AddListener(() => StepFloor(-1));
-
-        Button right = MakeButton(picker.transform, "Next Floor", ">", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
-        RectTransform rr = right.GetComponent<RectTransform>();
-        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
-        rr.anchoredPosition = Vector2.zero;
-        right.onClick.AddListener(() => StepFloor(1));
-
-        GameObject swatch = new GameObject("Floor Preview", typeof(RectTransform), typeof(RawImage));
-        swatch.transform.SetParent(picker.transform, false);
-        floorSwatch = swatch.GetComponent<RawImage>();
-        floorSwatch.raycastTarget = false;
-        RectTransform sr = swatch.GetComponent<RectTransform>();
+        GameObject swatchGo = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
+        swatchGo.transform.SetParent(picker.transform, false);
+        RawImage swatch = swatchGo.GetComponent<RawImage>();
+        swatch.raycastTarget = false;
+        RectTransform sr = swatchGo.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
         sr.sizeDelta = new Vector2(arrow, arrow);
         sr.anchoredPosition = new Vector2(arrow + 8f, 0f);
 
-        floorNameText = MakeText(picker.transform, "Floor Name", "", rowFontSize, FontStyles.Bold);
-        floorNameText.color = statValueColor;
-        floorNameText.enableAutoSizing = true;
-        floorNameText.fontSizeMax = rowFontSize;
-        floorNameText.fontSizeMin = 14f;
-        RectTransform nr = floorNameText.rectTransform;
+        TMP_Text nameText = MakeText(picker.transform, "Name", "", rowFontSize, FontStyles.Bold);
+        nameText.color = statValueColor;
+        nameText.enableAutoSizing = true;
+        nameText.fontSizeMax = rowFontSize;
+        nameText.fontSizeMin = 14f;
+        RectTransform nr = nameText.rectTransform;
         nr.anchorMin = Vector2.zero;
         nr.anchorMax = Vector2.one;
         nr.offsetMin = new Vector2(arrow * 2f + 14f, 0f);
         nr.offsetMax = new Vector2(-arrow - 6f, 0f);
 
-        settingsRefreshers.Add(RefreshFloorRow);
+        System.Action refresh = () =>
+        {
+            IPixelLookSource look = source();
+            bool usable = look != null && look.Usable;
+            nameText.text = usable ? look.StyleName(look.Current) : noFloorText;
+            swatch.texture = usable ? look.PreviewTexture(look.Current) : null;
+            swatch.color = usable ? look.PreviewColor(look.Current) : new Color(1f, 1f, 1f, 0.15f);
+            swatch.uvRect = usable ? look.PreviewRect : new Rect(0f, 0f, 1f, 1f);
+        };
+        System.Action<int> step = direction =>
+        {
+            IPixelLookSource look = source();
+            if (look != null && look.Usable) look.Step(direction);
+            refresh();
+        };
+
+        Button left = MakeButton(picker.transform, "Previous", "<", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
+        RectTransform lr = left.GetComponent<RectTransform>();
+        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 0.5f);
+        lr.anchoredPosition = Vector2.zero;
+        left.onClick.AddListener(() => step(-1));
+
+        Button right = MakeButton(picker.transform, "Next", ">", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
+        RectTransform rr = right.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
+        rr.anchoredPosition = Vector2.zero;
+        right.onClick.AddListener(() => step(1));
+
+        settingsRefreshers.Add(refresh);
         y += rowHeight + 6f;
-    }
-
-    private void StepFloor(int direction)
-    {
-        if (PixelFloor.Instance != null && PixelFloor.Instance.HasFloor) PixelFloor.Instance.Step(direction);
-        RefreshFloorRow();
-    }
-
-    private void RefreshFloorRow()
-    {
-        if (floorNameText == null) return;
-        PixelFloor floor = PixelFloor.Instance;
-        bool usable = floor != null && floor.HasFloor && floor.StyleCount > 0;
-        floorNameText.text = usable ? floor.StyleName(floor.Current) : noFloorText;
-        floorSwatch.texture = usable ? floor.PreviewTexture(floor.Current) : null;
-        floorSwatch.color = usable ? floor.PreviewColor(floor.Current) : new Color(1f, 1f, 1f, 0.15f);
     }
 
     private string FormatCount(double value)
