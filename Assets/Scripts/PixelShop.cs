@@ -485,11 +485,8 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private int maxPerPurchase = 999;
 
     [Header("Pixel Upgrades (spend Ultra pixels)")]
-    [Tooltip("Text of the sub-tab that lists the normal upgrades (inside the Upgrades tab).")]
-    [SerializeField] private string upgradesSubTabText = "Upgrades";
-
-    [Tooltip("Text of the sub-tab that lists the Ultra pixel boosts (inside the Upgrades tab).")]
-    [SerializeField] private string pixelSubTabText = "Pixel";
+    [Tooltip("Text of the sub-tab that lists the feature unlocks and their upgrades (inside the Upgrades tab). Renamed from 'Upgrades'.")]
+    [SerializeField] private string featuresSubTabText = "Features";
 
     [Tooltip("Height of the two sub-tab buttons.")]
     [SerializeField] private float subTabHeight = 56f;

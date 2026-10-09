@@ -323,6 +323,14 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Text shown as the amount of a locked tier (only when 'Show Locked Tiers' is on).")]
     [SerializeField] private string lockedText = "???";
 
+    [Tooltip("The Ultra pixel line at the bottom of the Currency tab (always shown, even at 0). {0} = how many Ultra pixels you hold.")]
+    [SerializeField] private string ultraLineFormat = "Ultra Pixels: {0}";
+
+    [Tooltip("Colour of the Ultra pixel line.")]
+    [SerializeField] private Color ultraLineColor = new Color(1f, 0.82f, 0.3f, 1f);
+
+    private TMP_Text ultraLabel;
+
     [Tooltip("Text colour for locked tiers.")]
     [SerializeField] private Color lockedColor = new Color(1f, 1f, 1f, 0.35f);
 
@@ -1023,6 +1031,30 @@ public class PixelUI : MonoBehaviour
             deltaLabels[i] = delta;
         }
 
+        // The Ultra pixel line: always listed, even at 0.
+        ultraLabel = MakeText(ListParent, "Ultra Pixels", "", fontSize,
+                              anchor.x > 0.5f ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft,
+                              FontStyles.Normal, textColor);
+        RectTransform ur = ultraLabel.rectTransform;
+        ur.anchorMin = new Vector2(0f, 1f);
+        ur.anchorMax = new Vector2(1f, 1f);
+        ur.pivot = new Vector2(0.5f, 1f);
+        ur.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
+        if (outlineWidth > 0f)
+        {
+            ultraLabel.outlineColor = outlineColor;
+            ultraLabel.outlineWidth = outlineWidth;
+        }
+        ultraLabel.enableAutoSizing = true;
+        ultraLabel.fontSizeMax = fontSize;
+        ultraLabel.fontSizeMin = Mathf.Max(8f, fontSize * 0.3f);
+        ultraLabel.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        ultraLabel.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        ultraLabel.enableWordWrapping = false;
+#endif
+
         boxObject.SetActive(startOpen);
         BuildConsumableList(anchor);
         PixelWindows.Register(this, 10, () => boxObject != null && boxObject.activeSelf, () => boxObject.SetActive(false));
@@ -1067,6 +1099,21 @@ public class PixelUI : MonoBehaviour
             if (autoMode)
             {
                 label.rectTransform.anchoredPosition = new Vector2(0f, -y);
+                y += LinePitch;
+            }
+        }
+
+        if (ultraLabel != null)
+        {
+            bool showUltra = autoMode && showCurrency;
+            if (ultraLabel.gameObject.activeSelf != showUltra) ultraLabel.gameObject.SetActive(showUltra);
+            if (showUltra)
+            {
+                Color uc = ultraLineColor.a > 0.01f ? ultraLineColor : new Color(1f, 0.82f, 0.3f, 1f);
+                ultraLabel.color = uc;
+                PixelUIKit.SetText(ultraLabel, string.Format(string.IsNullOrEmpty(ultraLineFormat) ? "Ultra Pixels: {0}" : ultraLineFormat,
+                                                             FormatAmount(clicker.TotalUltra)));
+                ultraLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
                 y += LinePitch;
             }
         }

@@ -212,6 +212,16 @@ public class PixelBlackholeMinigame : PixelMinigame
     [Tooltip("The hole floats this far above the floor so it doesn't flicker against it.")]
     [SerializeField] private float heightAboveFloor = 0.03f;
 
+    [Header("Ultra Pixels")]
+    [Tooltip("Chance that each pixel a black hole swallows gives one Ultra pixel of its type. 0 = 0.01.")]
+    [SerializeField] private float ultraChance = 0.01f;
+
+    [Tooltip("Most Ultra pixels one round can give. 0 = 2.")]
+    [SerializeField] private int ultraMaxPerRound = 2;
+
+    [Tooltip("Turn Ultra pixel rewards from this minigame off.")]
+    [SerializeField] private bool disableUltra = false;
+
     [Header("Events")]
     [Tooltip("Fired when a black hole opens.")]
     public UnityEvent onHoleOpened;
@@ -323,6 +333,7 @@ public class PixelBlackholeMinigame : PixelMinigame
     private IEnumerator HoleRoutine()
     {
         holeActive = true;
+        ultraRoundCount = 0;
         Report(MinigameEvent.Spawned);
 
         if (!TryPickSpot(out Vector3 center))
@@ -478,6 +489,7 @@ public class PixelBlackholeMinigame : PixelMinigame
             if (clicker.ReleaseOldPixel(body, creditSwallowedPixels))
             {
                 PixelSwallowed?.Invoke(swallowedTier);
+                UltraRoll(clicker, swallowedTier, ultraChance, 0.01f, ultraMaxPerRound, 2, disableUltra);
                 StartCoroutine(SpiralIn(body, center, currentRadius, fullRadius));
             }
         }

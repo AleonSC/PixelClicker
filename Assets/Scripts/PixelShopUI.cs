@@ -40,11 +40,10 @@ public partial class PixelShop
     private TMP_Text subEmptyLabel;
     private TMP_Text subTitle;
     private int openParent = -1;
-    private PackRow[] ultraRows;           // one boost row per pixel type (Upgrades > Pixel sub-tab)
     private PackRow[] valueRows;           // one Value upgrade row per pixel type (Upgrades > Value sub-tab)
     private RectTransform subTabRow;       // the "Upgrades | Pixel" buttons at the top of the Upgrades tab
     private Image[] subTabImages;
-    private int upgradesSubTab;            // 0 = normal upgrades, 1 = Value upgrades, 2 = Pixel (Ultra) boosts
+    private int upgradesSubTab;            // 0 = Features (the packs), 1 = Value upgrades
     private GameObject canvasRoot;
     private GameObject shopButtonObject;
     private GameObject panelObject;
@@ -157,7 +156,7 @@ public partial class PixelShop
         subTabRow.pivot = new Vector2(0.5f, 1f);
         subTabRow.sizeDelta = new Vector2(0f, subTabHeight);
 
-        string[] names = { upgradesSubTabText, valueSubTabText, pixelSubTabText };
+        string[] names = { featuresSubTabText, valueSubTabText };
         int n = names.Length;
         subTabImages = new Image[n];
         for (int i = 0; i < n; i++)
@@ -230,24 +229,6 @@ public partial class PixelShop
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.anchoredPosition = new Vector2(-20f, 0f);
         return row;
-    }
-
-    /// <summary>Makes sure there is a boost row for every pixel type (the shop can add pixel types after the UI was built).</summary>
-    private void EnsureUltraRows()
-    {
-        int count = clicker.Tiers.Length;
-        if (ultraRows != null && ultraRows.Length >= count) return;
-
-        PackRow[] bigger = new PackRow[count];
-        if (ultraRows != null) System.Array.Copy(ultraRows, bigger, ultraRows.Length);
-        for (int i = ultraRows != null ? ultraRows.Length : 0; i < count; i++)
-        {
-            PackRow row = BuildPlainRow(contentRect, "Boost " + i);
-            int captured = i;
-            row.buyButton.onClick.AddListener(() => { TryBuyUltraBoost(captured); RefreshRows(); });
-            bigger[i] = row;
-        }
-        ultraRows = bigger;
     }
 
     /// <summary>Makes sure there is a Value row for every pixel type (the shop can add pixel types after the UI was built).</summary>
@@ -813,39 +794,6 @@ public partial class PixelShop
             bool canBuy = !maxed && enough;
             row.buyButton.interactable = canBuy;
             row.buyLabel.text = maxed ? maxedText : valueButtonText;
-            row.buyImage.color = canBuy ? buyColor : disabledColor;
-        }
-
-        // Upgrades > Pixel: one boost row per unlocked pixel type, paid for with Ultra pixels.
-        EnsureUltraRows();
-        for (int t = 0; t < ultraRows.Length && t < clicker.Tiers.Length; t++)
-        {
-            PackRow row = ultraRows[t];
-            PixelClicker.PixelTier tier = clicker.Tiers[t];
-            bool visible = onUpgrades && upgradesSubTab == 2 && tier.unlocked && !(HidePurchased && UltraBoostMaxed(t));
-            row.rect.gameObject.SetActive(visible);
-            if (!visible) continue;
-
-            row.rect.anchoredPosition = new Vector2(0f, -y);
-            y += rowHeight + rowSpacing;
-            visibleCount++;
-
-            bool maxed = UltraBoostMaxed(t);
-            long cost = UltraBoostCost(t);
-            double now = clicker.UltraMultiplier(t);
-            double next = now + clicker.UltraBonusPerLevel;
-
-            row.nameLabel.text = string.Format(ultraRowNameFormat, tier.displayName) + "   <size=65%><color=#" +
-                                 ColorUtility.ToHtmlStringRGB(levelColor) + ">" + string.Format(ultraLevelFormat, tier.ultraLevel) + "</color></size>";
-            row.descLabel.text = string.Format(ultraRowDescFormat, tier.displayName, now.ToString("0.##"), maxed ? now.ToString("0.##") : next.ToString("0.##"));
-
-            bool enough = PixelClicker.InfiniteResources || tier.ultraCount >= cost;
-            row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
-                                 string.Format(ultraCostFormat, PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.ultraCount)) + "</color>";
-
-            bool canBuy = !maxed && enough;
-            row.buyButton.interactable = canBuy;
-            row.buyLabel.text = maxed ? maxedText : ultraButtonText;
             row.buyImage.color = canBuy ? buyColor : disabledColor;
         }
 

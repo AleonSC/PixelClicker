@@ -49,6 +49,16 @@ public class PixelSortMinigame : PixelMinigame
     [Tooltip("Most pixels in one race (the rest keep ageing normally). Types are mixed evenly.")]
     [SerializeField] private int maxPixels = 16;
 
+    [Header("Ultra Pixels")]
+    [Tooltip("Chance that each pixel in a won race (more likely the faster you finish) gives one Ultra pixel of its type. 0 = 0.06.")]
+    [SerializeField] private float ultraChance = 0.06f;
+
+    [Tooltip("Most Ultra pixels one round can give. 0 = 3.")]
+    [SerializeField] private int ultraMaxPerRound = 3;
+
+    [Tooltip("Turn Ultra pixel rewards from this minigame off.")]
+    [SerializeField] private bool disableUltra = false;
+
     [Header("Rules")]
     [Min(5f)]
     [Tooltip("Seconds of the race: this plus 'Seconds Per Pixel' for every pixel in it.")]
@@ -392,6 +402,7 @@ public class PixelSortMinigame : PixelMinigame
         TakeoverActive = true;
         if (!PixelClicker.ExternalClickBlock) { PixelClicker.ExternalClickBlock = true; setBlock = true; }
         BuildUi();
+        ultraRoundCount = 0;
         Report(MinigameEvent.Spawned);
         PixelAudio.Play("sort_start");
         return true;
@@ -577,6 +588,7 @@ public class PixelSortMinigame : PixelMinigame
                 double pay = p.amount * multiplier;
                 payout += pay;
                 clicker.AddCurrency(p.tier, pay);
+                UltraRoll(clicker, p.tier, ultraChance, 0.06f, ultraMaxPerRound, 3, disableUltra, 1f + fraction);
                 if (p.despawn != null) p.despawn.Begin(); // the sorted pixels shrink away
             }
             else

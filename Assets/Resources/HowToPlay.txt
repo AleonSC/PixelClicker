@@ -14,7 +14,7 @@ Clicks are limited to about 14 per second.
 # The Shop
 The Shop button appears once you have unlocked the Black pixel. It has four tabs:
 <b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
-<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Pixel" sub-tab spends Ultra pixels on payout boosts.
+<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Features" sub-tab holds the feature unlocks. Ultra pixels are a rare second currency (shown at the bottom of your Inventory); Snake, Breakout, Sorting Race and Black Holes can reward them too.
 <b>Consumables</b> - potions and utilities (see below).
 <b>Minigames</b> - events that appear on their own once bought.
 Things you can't buy yet show in grey with what they need.
@@ -34,7 +34,7 @@ Hold the right mouse button on a placed device to remove it, or on the "Active:"
 <b>Ghost Hunt</b> - a faint cube floats by. Click it for a free potion.
 <b>Black Hole</b> - a swirling hole opens on the floor and swallows old pixels. While it is open, old pixels stop vanishing. A counter above it shows how many pixels you have fed it out of the 250 needed to unlock the Singularity Pixel. Push old pixels toward it with the fan, Pixel Grabbing or the hose.
 <b>Bomb Defusal</b> - a bomb appears. Cut the wire of the colour you own the most of (Red, Green or Blue) before the timer runs out. A wrong wire or running out of time clears your old pixels. Defusing earns bomb parts.
-<b>Ultra Pad</b> - a coloured pad appears on one side of the cube. Throw or drop old pixels of that colour onto it for a chance at an Ultra version. Pixels of any other colour cost you some of that currency.
+<b>Ultra Pad</b> - a coloured pad appears on one side of the cube. Throw or drop old pixels of that colour onto it for a chance at an Ultra version (the other minigames give a smaller chance for the pixels they use). Pixels of any other colour cost you some of that currency.
 <b>Meteor Strike</b> - a meteor drifts by. Click it for meteor chunks.
 <b>Sorting Race</b> - now and then some old pixels freeze in a jumbled grid. Click one pixel and then another to swap them, and get every type together in one unbroken group before the timer ends. The faster you finish, the bigger the payout; if time runs out they just drop.
 <b>Snake</b> - now and then every old pixel freezes and stops despawning. Steer the snake head with the arrow keys (or the on-screen arrows): each pixel it touches joins its tail. Eat them all without biting yourself for 10x their worth; bite yourself or run out of time and they just drop.

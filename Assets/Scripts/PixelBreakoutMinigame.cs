@@ -127,6 +127,16 @@ public class PixelBreakoutMinigame : PixelMinigame
     [Tooltip("Pause before each serve (seconds).")]
     [SerializeField] private float serveDelay = 1f;
 
+    [Header("Ultra Pixels")]
+    [Tooltip("Chance that each brick you break gives one Ultra pixel of its type. 0 = 0.03.")]
+    [SerializeField] private float ultraChance = 0.03f;
+
+    [Tooltip("Most Ultra pixels one round can give. 0 = 3.")]
+    [SerializeField] private int ultraMaxPerRound = 3;
+
+    [Tooltip("Turn Ultra pixel rewards from this minigame off.")]
+    [SerializeField] private bool disableUltra = false;
+
     [Header("Look")]
     [SerializeField] private Color paddleColor = new Color(0.4f, 0.9f, 1f, 1f);
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.55f);
@@ -381,6 +391,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         Active = true;
         TakeoverActive = true;
         if (!PixelClicker.ExternalClickBlock) { PixelClicker.ExternalClickBlock = true; setBlock = true; }
+        ultraRoundCount = 0;
         Report(MinigameEvent.Spawned);
         PixelAudio.Play("breakout_start");
         return true;
@@ -567,6 +578,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             double pay = b.amount * brickMultiplier;
             earned += pay;
             clicker.AddCurrency(b.tier, pay);
+            UltraRoll(clicker, b.tier, ultraChance, 0.03f, ultraMaxPerRound, 3, disableUltra);
             if (b.despawn != null) b.despawn.Begin(); // the broken pixel shrinks away
             bricksLeft--;
             speed = Mathf.Min(maxBallSpeed, speed + speedUpPerBrick);

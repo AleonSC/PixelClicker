@@ -95,6 +95,19 @@ public class PixelSnakeMinigame : PixelMinigame
     [Tooltip("The playing area is the area the pixels lie on plus this margin on every side (pixel widths).")]
     [SerializeField] private float arenaMargin = 4f;
 
+    [Header("Ultra Pixels")]
+    [Tooltip("Chance that each pixel you eat in a won round gives one Ultra pixel of its type. 0 = 0.04.")]
+    [SerializeField] private float ultraChance = 0.04f;
+
+    [Tooltip("Most Ultra pixels one round can give. 0 = 3.")]
+    [SerializeField] private int ultraMaxPerRound = 3;
+
+    [Tooltip("Turn Ultra pixel rewards from this minigame off.")]
+    [SerializeField] private bool disableUltra = false;
+
+    [Tooltip("A won round always gives at least one Ultra pixel (of a random eaten type).")]
+    [SerializeField] private bool guaranteeUltraOnWin = true;
+
     [Header("Look")]
     [Tooltip("Colour of the snake's head.")]
     [SerializeField] private Color headColor = new Color(0.3f, 0.95f, 0.4f, 1f);
@@ -426,6 +439,7 @@ public class PixelSnakeMinigame : PixelMinigame
         TakeoverActive = true;
         clicker.SetCubeShrink(0.02f, 0.5f); // the clickable cube disappears for the round
         if (!PixelClicker.ExternalClickBlock) { PixelClicker.ExternalClickBlock = true; setBlock = true; } // no cube clicks during the round
+        ultraRoundCount = 0;
         Report(MinigameEvent.Spawned);
         PixelAudio.Play("snake_start");
         return true;
@@ -596,6 +610,7 @@ public class PixelSnakeMinigame : PixelMinigame
             {
                 payout += p.amount * rewardMultiplier;
                 clicker.AddCurrency(p.tier, p.amount * rewardMultiplier);
+                UltraRoll(clicker, p.tier, ultraChance, 0.04f, ultraMaxPerRound, 3, disableUltra);
                 if (p.despawn != null) p.despawn.Begin(); // the eaten pixels shrink away
             }
             else
@@ -604,6 +619,14 @@ public class PixelSnakeMinigame : PixelMinigame
                 SetVelocities(p.body, Vector3.zero);
                 if (p.despawn != null) p.despawn.AddLifetime(3f);
             }
+        }
+
+        if (win && guaranteeUltraOnWin && !disableUltra && ultraRoundCount == 0 && bodyPieces.Count > 0)
+        {
+            int luckyTier = bodyPieces[Random.Range(0, bodyPieces.Count)].tier;
+            clicker.AddUltra(luckyTier, 1);
+            ultraRoundCount++;
+            PixelHints.Announce("Ultra " + clicker.Tiers[luckyTier].displayName + " pixel gained!");
         }
 
         targets.Clear();

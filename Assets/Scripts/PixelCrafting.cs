@@ -618,6 +618,7 @@ public class PixelCrafting : MonoBehaviour
 
     private void Open()
     {
+        PixelWindows.CloseAllExcept(this); // Crafting replaces every other window
         windowObject.SetActive(true);
         refreshTimer = 0f;
         Refresh();

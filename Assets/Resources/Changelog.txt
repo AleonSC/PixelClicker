@@ -120,3 +120,4 @@
 [2026-10-09 12:32 UTC] During a Vacuum potion only every 10th Vacuum pixel vacuums the floor.
 [2026-10-09 12:32 UTC] Crafting recipes now follow shop prices: a potion costs 75% of its shop price in its own pixel plus Glass, and other ingredients rise with Value.
 [2026-10-09 12:44 UTC] Opening the Inventory or the Log now closes the shop (the three windows never show together).
+[2026-10-09 13:05 UTC] Ultra pixels can now drop from Snake, Breakout, Sorting Race and Black Holes (shared roll, per-round caps); the shop's Upgrades tab now has just Features and Value (the Ultra 'Pixel' page is gone); the Inventory always shows an Ultra Pixels line; Crafting closes every other window and the event log fades out when any window opens.

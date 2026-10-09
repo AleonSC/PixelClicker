@@ -37,6 +37,16 @@ public static class PixelWindows
         entries.RemoveAll(e => e.owner == owner);
     }
 
+    /// <summary>
+    /// Closes every open window except the ones registered by 'keep' (used by windows that open on their own, like Crafting).
+    /// Windows with a priority of 100 or more (placing a device, dev tools, the title screen) are left alone.
+    /// </summary>
+    public static void CloseAllExcept(object keep)
+    {
+        foreach (Entry e in entries.ToArray())
+            if (e.owner != keep && e.priority < 100 && IsOpen(e)) e.close();
+    }
+
     /// <summary>True if any registered window is open.</summary>
     public static bool AnyOpen()
     {

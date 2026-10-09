@@ -746,9 +746,15 @@ public class PixelHints : MonoBehaviour
         wasShowing = true;
     }
 
+    private bool windowWasOpen;
+
     private void Update()
     {
         TryStartIntro();
+        // The event log steps aside the moment any window opens.
+        bool windowOpen = PixelWindows.AnyOpen();
+        if (windowOpen && !windowWasOpen && overlayRoot != null && overlayRoot.activeSelf) FadeNow();
+        windowWasOpen = windowOpen;
         UpdateOverlay();
         bool showing = PixelNotice.IsShowing;
         if (wasShowing && !showing) waitTimer = Mathf.Max(waitTimer, 0.3f); // short gap between queued tips

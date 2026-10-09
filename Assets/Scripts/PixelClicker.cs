@@ -1091,6 +1091,14 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Restores the lifetime Ultra count when loading a save (never below what you currently hold).</summary>
     public void SetUltraEarned(long value) => ultraEarned = System.Math.Max(System.Math.Max(0L, value), TotalUltra);
 
+    /// <summary>The shared Ultra roll used by the minigames: a 'chance' (0..1) of giving one Ultra pixel of this type. Returns true if it did.</summary>
+    public bool RollUltra(int tierIndex, float chance)
+    {
+        if (!IsValidTier(tierIndex) || chance <= 0f || UnityEngine.Random.value >= chance) return false;
+        AddUltra(tierIndex, 1);
+        return true;
+    }
+
     /// <summary>Gives Ultra versions of a pixel type.</summary>
     public void AddUltra(int tierIndex, long amount)
     {
