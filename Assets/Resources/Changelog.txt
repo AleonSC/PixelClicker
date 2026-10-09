@@ -169,3 +169,4 @@
 [2026-10-09 18:58 UTC] Lowered the prices of the Vacuum pixel, Ghost Hunt and every pixel / minigame pack after them by about 30% (use Reset Built-in Pack Prices to apply it to an existing scene).
 [2026-10-09 18:57 UTC] The Yu-Gi-Oh Card Back, Moving Clouds, Kaleidoscope and Pac-Man floors now fit one copy exactly to the screen, following the camera.
 [2026-10-09 19:11 UTC] The Inventory's "No potions yet" / "No devices yet" message is now all capitals and centred in the window.
+[2026-10-09 19:05 UTC] Added an 8-Bit Road Racer floor: a retro top-down road scrolls by while a red car weaves past traffic, with striped kerbs and trees on the grass.

@@ -49,7 +49,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Liquid,          // flowing liquid (animated)
         CloudSea,        // fluffy clouds seen from above (scrolls)
         Kaleidoscope,    // mirrored, colour-shifting kaleidoscope (animated)
-        PacMan           // maze with a chomping Pac-Man, pellets and ghosts (animated)
+        PacMan,          // maze with a chomping Pac-Man, pellets and ghosts (animated)
+        RoadRacer        // 8-bit top-down road: a car weaving through traffic as the road scrolls by (animated)
     }
 
     [Serializable]
@@ -299,6 +300,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         }
         if (source == null) return;
 
+        shadeAspect = style.fitToView ? viewAspect : 1f;
         activeTexture = BuildTexture(style, 0);
         activeMaterial = new Material(source) { name = "Floor (" + style.name + ")" };
         Material m = activeMaterial;
@@ -381,6 +383,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             if (animTimer >= 1f / style.animateFps)
             {
                 animTimer = 0f;
+                shadeAspect = style.fitToView ? viewAspect : 1f;
                 Fill(activeTexture, style, animClock, true);
             }
         }
@@ -480,6 +483,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         if (Mathf.Abs(du) < 1e-5f || Mathf.Abs(dv) < 1e-5f) return false;
         baseTiling = new Vector2(1f / du, 1f / dv);
         baseOffset = new Vector2(-uvBL.x * baseTiling.x, -uvBL.y * baseTiling.y);
+        float viewHeight = (tl - bl).magnitude;
+        if (viewHeight > 1e-4f) viewAspect = (br - bl).magnitude / viewHeight;
         return true;
     }
 
@@ -508,7 +513,10 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 ? originalMaterials[0].mainTexture : null;
         if (!previews.TryGetValue(index, out Texture2D tex) || tex == null)
         {
+            float keepAspect = shadeAspect;
+            shadeAspect = 1f; // square menu icon
             tex = BuildTexture(styles[index], 0);
+            shadeAspect = keepAspect;
             previews[index] = tex;
         }
         return tex;
@@ -548,10 +556,13 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
     // Animation time read by the animated patterns while a texture is being drawn.
     private static float shadeTime;
+    // Width / height of the area one copy of the texture covers (set from the fitted view) so pixel-art patterns can keep square pixels.
+    private static float shadeAspect = 1f;
+    private float viewAspect = 16f / 9f;
     private static Color[] fillBuffer; // reused by animated floors so redrawing doesn't allocate every frame
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { fillBuffer = null; pacPath = null; pacPathIndex = null; shadeTime = 0f; }
+    private static void ResetStatics() { fillBuffer = null; pacPath = null; pacPathIndex = null; shadeTime = 0f; shadeAspect = 1f; }
 
     /// <summary>Draws the pattern into 'tex' at animation time 'time' (0 for still patterns). 'reuse' = keep the pixel buffer for the next frame.</summary>
     private static void Fill(Texture2D tex, FloorStyle s, float time, bool reuse)
@@ -1118,6 +1129,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 return Color.Lerp(s.colorA, c, Mathf.Clamp01(1.1f - r * 0.4f));
             }
 
+            case FloorPattern.RoadRacer:
+                return ShadeRoadRacer(s, u, v);
+
             case FloorPattern.PacMan:
                 return ShadePacMan(s, u, v);
 
@@ -1295,6 +1309,116 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             }
         }
         return s.colorC;
+    }
+
+    // ------------------------------------------------------------------
+    // 8-bit road racer: the road scrolls down the screen while a car weaves along it, overtaking traffic
+    // ------------------------------------------------------------------
+
+    // Top-down car sprite, front at the top. R = body, W = windows, K = tyres, Y = racing stripe, L = tail lights.
+    private static readonly string[] CarSprite =
+    {
+        "..RRRR..",
+        ".RRRRRR.",
+        "KRWWWWRK",
+        "KRWWWWRK",
+        ".RRRRRR.",
+        ".RRYYRR.",
+        ".RRYYRR.",
+        ".RRYYRR.",
+        ".RRRRRR.",
+        "KRRRRRRK",
+        "KRWWWWRK",
+        ".RRRRRR.",
+        ".LRRRRL.",
+    };
+
+    private static readonly Color[] TrafficColors =
+    {
+        new Color(0.15f, 0.35f, 0.95f), new Color(0.98f, 0.85f, 0.1f), new Color(0.2f, 0.8f, 0.3f), new Color(0.7f, 0.25f, 0.9f),
+    };
+
+    private static Color ShadeRoadRacer(FloorStyle s, float u, float v)
+    {
+        const float P = 96f;            // virtual pixels from the bottom to the top of the picture
+        const float speed = 70f;        // road scroll, virtual pixels per second
+        float t = shadeTime;
+        float aspect = Mathf.Max(0.2f, shadeAspect);
+        // Square virtual pixels whatever the picture's shape: x counted from the middle, y from the bottom.
+        int px = Mathf.FloorToInt((u - 0.5f) * aspect * P);
+        int py = Mathf.FloorToInt(v * P);
+        float scroll = t * speed;
+        int wy = py + Mathf.FloorToInt(scroll);   // road position under this pixel ("world" y)
+
+        const int roadHalf = 22, kerb = 3;
+        int ax = Mathf.Abs(px);
+
+        // Cars first.
+        // Player: middle lane, weaving gently, near the bottom.
+        int carX = Mathf.RoundToInt(Mathf.Sin(t * 0.9f) * 3f + Mathf.Sin(t * 2.3f) * 1f);
+        if (CarPixel(px - (carX - 4), (18 + 12) - py, s.colorC, out Color car)) return car;
+        // Traffic in the side lanes, slower than the player, so they slide down the screen and get overtaken.
+        for (int i = 0; i < TrafficColors.Length; i++)
+        {
+            int lane = (i % 2 == 0) ? -15 : 15;
+            float rel = 22f + 9f * Hash(i, 3, s.seed) ;            // how much slower than the player (px/s)
+            float span = P + 40f;
+            float y = Mathf.Repeat(Hash(i, 5, s.seed) * span - t * rel, span) - 20f;
+            int ty = Mathf.RoundToInt(y);
+            if (CarPixel(px - (lane - 4), (ty + 12) - py, TrafficColors[i], out Color other)) return other;
+        }
+
+        // Road.
+        if (ax <= roadHalf)
+        {
+            // Dashed lane lines between the three lanes.
+            if ((px == -8 || px == 7) && Wrap(wy, 12) < 6) return new Color(0.95f, 0.95f, 0.9f);
+            // Edge lines.
+            if (ax == roadHalf) return new Color(0.95f, 0.95f, 0.9f);
+            float grain = Hash(px, wy, s.seed) > 0.93f ? 0.9f : 1f;    // a few darker specks in the tarmac
+            return s.colorB * grain;
+        }
+        // Red / white kerbs.
+        if (ax <= roadHalf + kerb) return Wrap(wy, 8) < 4 ? new Color(0.9f, 0.12f, 0.1f) : new Color(0.95f, 0.95f, 0.95f);
+
+        // Grass with darker bands and trees.
+        Color grass = Wrap(wy, 16) < 8 ? s.colorA : s.colorA * 0.85f;
+        if (ax > roadHalf + kerb + 3)
+        {
+            int cx = Mathf.FloorToInt(px / 12f), cy = Mathf.FloorToInt(wy / 12f);
+            for (int oy = -1; oy <= 1; oy++)
+                for (int ox = -1; ox <= 1; ox++)
+                {
+                    int gx = cx + ox, gy = cy + oy;
+                    if (Hash(gx, gy, s.seed + 7) < 0.72f) continue;
+                    float tx = gx * 12 + 3 + Hash(gx, gy, s.seed + 8) * 6f, tyy = gy * 12 + 3 + Hash(gx, gy, s.seed + 9) * 6f;
+                    if (Mathf.Abs(tx) < roadHalf + kerb + 6) continue;          // keep trees off the road
+                    float dx = px + 0.5f - tx, dy = wy + 0.5f - tyy;
+                    float d = dx * dx + dy * dy;
+                    if (d < 20f)
+                    {
+                        if (d > 14f) return new Color(0.05f, 0.25f, 0.05f);   // dark outline
+                        return (dx < -0.5f && dy > 0.5f) ? new Color(0.35f, 0.75f, 0.3f) : new Color(0.1f, 0.45f, 0.12f); // highlight
+                    }
+                }
+        }
+        return grass;
+    }
+
+    /// <summary>The car sprite's colour at (column, row from the front), with 'body' as its paint; false if empty there.</summary>
+    private static bool CarPixel(int col, int row, Color body, out Color c)
+    {
+        c = Color.clear;
+        if (row < 0 || row >= CarSprite.Length || col < 0 || col >= CarSprite[0].Length) return false;
+        switch (CarSprite[row][col])
+        {
+            case 'R': c = body; return true;
+            case 'W': c = new Color(0.55f, 0.85f, 1f); return true;
+            case 'K': c = new Color(0.05f, 0.05f, 0.05f); return true;
+            case 'Y': c = new Color(0.95f, 0.95f, 0.95f); return true;
+            case 'L': c = new Color(1f, 0.85f, 0.2f); return true;
+        }
+        return false;
     }
 
     private static int Wrap(int i, int m) => ((i % m) + m) % m;
@@ -1654,5 +1778,10 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                            Color.black, 256, true, 8f, 1, 0.4f, 0.8f);
         pac.animateFps = 20f; pac.tileAspect = 19f / 21f; pac.fitToView = true;
         yield return pac;
+
+        FloorStyle racer = S("8-Bit Road Racer", FloorPattern.RoadRacer, new Color(0.22f, 0.62f, 0.18f), new Color(0.33f, 0.33f, 0.36f),
+                             new Color(0.92f, 0.1f, 0.1f), 256, true, 8f, 1, 0.3f);
+        racer.animateFps = 24f; racer.fitToView = true;
+        yield return racer;
     }
 }
