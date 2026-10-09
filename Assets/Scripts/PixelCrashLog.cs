@@ -143,6 +143,42 @@ public class PixelCrashLog : MonoBehaviour
         if (!enableReports) return;
         RefreshSnapshot();
         if (previousCrashed && showCrashNotice) ShowNotice();
+        WriteRenderingReport();
+    }
+
+    /// <summary>
+    /// Writes rendering_report.txt next to the crash reports: graphics device, render pipeline, quality levels, which shaders can be
+    /// found in this build, and how glow is set up. Written at start and again whenever F10 is pressed (so it can show the state with
+    /// a glowing pixel on screen). Testers send it together with the crash reports.
+    /// </summary>
+    private void WriteRenderingReport()
+    {
+        try
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            sb.AppendLine("Rendering report " + Stamp() + "  (press F10 in the game to rewrite it)");
+            sb.AppendLine("Unity " + Application.unityVersion + "  platform=" + Application.platform + "  dev build=" + Debug.isDebugBuild);
+            sb.AppendLine("GPU=" + SystemInfo.graphicsDeviceName + "  api=" + SystemInfo.graphicsDeviceType + "  shader level=" + SystemInfo.graphicsShaderLevel);
+            sb.AppendLine("GraphicsSettings.currentRenderPipeline=" + (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null ? UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.name : "none (built-in)"));
+            sb.AppendLine("QualitySettings.renderPipeline=" + (QualitySettings.renderPipeline != null ? QualitySettings.renderPipeline.name : "none"));
+            string[] names = QualitySettings.names;
+            sb.AppendLine("quality level=" + QualitySettings.GetQualityLevel() + " (" + (names.Length > 0 ? names[Mathf.Clamp(QualitySettings.GetQualityLevel(), 0, names.Length - 1)] : "?") + ")  levels=" + string.Join(", ", names));
+            foreach (string shaderName in new[] { "Sprites/Default", "Universal Render Pipeline/Lit", "Universal Render Pipeline/Simple Lit", "Universal Render Pipeline/Unlit", "Standard" })
+                sb.AppendLine("Shader.Find(\"" + shaderName + "\") = " + (Shader.Find(shaderName) != null ? "found" : "NOT FOUND"));
+            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            if (clicker != null) sb.Append(clicker.DebugGlowReport());
+            File.WriteAllText(Path.Combine(folder, "rendering_report.txt"), sb.ToString());
+        }
+        catch (Exception e) { Debug.LogWarning("PixelCrashLog: couldn't write the rendering report (" + e.Message + ")."); }
+    }
+
+    private static bool ReportKeyPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.f10Key.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.F10);
+#endif
     }
 
     private void OnDestroy()
@@ -180,6 +216,7 @@ public class PixelCrashLog : MonoBehaviour
     private void Update()
     {
         if (!enableReports) return;
+        if (ReportKeyPressed()) WriteRenderingReport();
 
         // The game-state summary is rebuilt on the main thread now and then; errors from any thread just reuse it.
         snapshotTimer -= Time.unscaledDeltaTime;

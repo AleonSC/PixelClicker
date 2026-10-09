@@ -1515,6 +1515,33 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Adds / removes the outline and core on the live cube to match the tier's look.</summary>
+    /// <summary>A text report about how glow is set up (materials, shaders, keywords, shell) for the rendering report file.</summary>
+    public string DebugGlowReport()
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.AppendLine("glowShell=" + glowShell + "  glowShellAlpha=" + glowShellAlpha + "  useLooks=" + useLooks + "  looks=" + (looks != null ? looks.Length : 0));
+        Material dm = defaultMaterial;
+        sb.AppendLine("defaultMaterial=" + (dm != null ? dm.name + "  shader=" + (dm.shader != null ? dm.shader.name : "null") +
+                      "  emissionKeyword=" + dm.IsKeywordEnabled("_EMISSION") + "  hasEmissionColor=" + dm.HasProperty("_EmissionColor") : "null"));
+        if (pixelRenderer != null)
+        {
+            Material cm = pixelRenderer.sharedMaterial;
+            sb.AppendLine("live cube material=" + (cm != null ? cm.name + "  shader=" + (cm.shader != null ? cm.shader.name : "null") +
+                          "  emissionKeyword=" + cm.IsKeywordEnabled("_EMISSION") + "  supported=" + (cm.shader != null && cm.shader.isSupported) : "null"));
+            sb.AppendLine("live glow shell object=" + (liveGlowShell != null ? "yes (active=" + liveGlowShell.activeInHierarchy + ")" : "no") +
+                          "  clicking type=" + (tiers != null && currentTierIndex >= 0 && currentTierIndex < tiers.Length ? tiers[currentTierIndex].type.ToString() : "?"));
+        }
+        if (tiers != null)
+            foreach (PixelTier t in tiers)
+            {
+                PixelLook l = LookOf(t);
+                sb.AppendLine("tier " + t.type + ": unlocked=" + t.unlocked + " glow=" + t.glow + " glowIntensity=" + t.glowIntensity +
+                              " translucent=" + t.translucent + " lookEmission=" + (l != null ? l.emission.ToString() : "-") +
+                              " wantsShell=" + WantsGlowShell(t, l));
+            }
+        return sb.ToString();
+    }
+
     private GameObject liveGlowShell;
     private PixelType liveGlowShellType = (PixelType)(-1);
 
