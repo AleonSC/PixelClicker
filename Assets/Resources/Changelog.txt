@@ -182,3 +182,4 @@
 [2026-10-09 19:55 UTC] Fixed achievement icons showing stacked wrong models: each pixel type now has its own studio and its real model spins in 3D.
 [2026-10-09 19:57 UTC] Achievement skin icons now match the plain cube icons in size and tilt.
 [2026-10-09 20:03 UTC] Old pixels are no longer squeezed into the tiny close-up view during the camera intro, which made them jump around after loading.
+[2026-10-09 20:06 UTC] The Toggles button now disappears while its window is open (the window takes the button's spot on the right edge) and slowly fades back in, already tucked away, when it closes.

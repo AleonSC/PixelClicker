@@ -192,6 +192,9 @@ public class PixelDockedButton : MonoBehaviour
     private float sideOffsetY;
     private float sideOffsetX; // a narrower side button is centred under a full-width one
 
+    /// <summary>While true the button is snapped to its hidden position and stays there (even with the mouse near).</summary>
+    public bool ForceHidden { get; set; }
+
     /// <summary>How far out the button is (0 = hidden, 1 = fully shown).</summary>
     public float SlideAmount => slide;
 
@@ -211,6 +214,7 @@ public class PixelDockedButton : MonoBehaviour
     {
         if (hud == null) return;
 
+        if (ForceHidden) { slide = 0f; Apply(); return; }
         float target = !hud.SlideButtons || (keepOut != null && keepOut()) || PointerNear() ? 1f : 0f;
         slide = Mathf.MoveTowards(slide, target, Time.unscaledDeltaTime / hud.SlideSeconds);
         Apply();

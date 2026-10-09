@@ -415,6 +415,8 @@ public class PixelToggles : MonoBehaviour
                  () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)); // stays out while its hint is showing
         open.onClick.AddListener(Toggle);
         openObject = open.gameObject;
+        dock = openObject.GetComponent<PixelDockedButton>();
+        buttonGroup = openObject.AddComponent<CanvasGroup>();
 
         // --- The window, just left of the button.
         windowObject = new GameObject("Toggles Window", typeof(RectTransform), typeof(Image));
@@ -423,7 +425,7 @@ public class PixelToggles : MonoBehaviour
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 0.5f);
         wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(-(hud.ButtonSize.x + gapToButton + hud.SideMargin * 0.35f), 0f);
+        wr.anchoredPosition = new Vector2(-(hud.SideMargin * 0.35f), 0f); // takes the spot the button slides out to
 
         float y = 16f;
         TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
@@ -537,4 +539,19 @@ public class PixelToggles : MonoBehaviour
     }
 
     private void Close() => windowObject.SetActive(false);
+
+    private PixelDockedButton dock;
+    private CanvasGroup buttonGroup;
+    [Tooltip("Seconds the Toggles button takes to fade back in (already tucked away) after its window closes.")]
+    [SerializeField] private float buttonFadeSeconds = 1.2f;
+
+    private void LateUpdate()
+    {
+        if (buttonGroup == null || windowObject == null) return;
+        bool open = windowObject.activeSelf;
+        if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f; // tucked away while the window is up and as the fade starts
+        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
+        buttonGroup.blocksRaycasts = true;
+        buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
+    }
 }
