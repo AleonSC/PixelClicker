@@ -160,3 +160,4 @@
 [2026-10-09 16:57 UTC] Glass old pixels are back to how they were; instead the Glass Pet now randomly shatters while moving and its shards fly back together to reform it.
 [2026-10-09 18:11 UTC] Added an achievement for each type of pet, earned by finding that pixel's pet.
 [2026-10-09 18:23 UTC] Closing the shop now re-opens the Inventory (or Log) that was open before the shop was opened.
+[2026-10-09 18:27 UTC] Fixed the pet found popup's text overlapping its button (taller box, text shrinks to fit).

@@ -358,7 +358,7 @@ public class PixelPets : MonoBehaviour
         box.GetComponent<Image>().color = panelColor;
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(760f, 560f);
+        br.sizeDelta = new Vector2(760f, 660f);
 
         TMP_Text title = PixelUIKit.CreateText(font, box.transform, "Title", popupTitle, 64f, TextAlignmentOptions.Center,
                                                FontStyles.Bold, titleColor);
@@ -384,8 +384,11 @@ public class PixelPets : MonoBehaviour
                                                  TextAlignmentOptions.Top, FontStyles.Normal, Color.white);
         RectTransform mr = message.rectTransform;
         mr.anchorMin = new Vector2(0f, 1f); mr.anchorMax = new Vector2(1f, 1f); mr.pivot = new Vector2(0.5f, 1f);
-        mr.sizeDelta = new Vector2(-80f, 150f);
-        mr.anchoredPosition = new Vector2(0f, -330f);
+        mr.sizeDelta = new Vector2(-80f, 190f);
+        mr.anchoredPosition = new Vector2(0f, -320f);
+        message.enableAutoSizing = true; // a long text shrinks to stay clear of the button
+        message.fontSizeMax = 32f;
+        message.fontSizeMin = 18f;
 
         Button ok = PixelUIKit.CreateButton(font, box.transform, "Button", popupButton, new Vector2(300f, 76f), buttonColor, Color.white, 36f);
         RectTransform or = ok.GetComponent<RectTransform>();
