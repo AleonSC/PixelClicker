@@ -142,6 +142,7 @@ public class PixelHints : MonoBehaviour
             case "minigame_stardust": return "A star fell from the sky!";
             case "minigame_snake": return "Snake time!";
             case "minigame_sort": return "Sorting race!";
+            case "minigame_pong": return "Pong time!";
             case "minigame_bomb": return "A bomb appeared!";
             case "minigame_pad": return "An Ultra Pad appeared!";
             case "potion": return "You drank a potion!";
@@ -179,6 +180,7 @@ public class PixelHints : MonoBehaviour
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
+        H("minigame_pong", "Pong! A court appeared and the cube stepped aside. Move your paddle (left) with the mouse or the Up / Down arrows and beat the computer to the winning score. Winning pays a big multiple of the ball pixel's worth; losing costs nothing."),
         H("minigame_sort", "Sorting race! Some old pixels froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra."),
         H("minigame_snake", "Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),
         H("minigame_stardust", "A meteor pixel knocked a star out of the sky! Click it to collect stardust before it fades. Enough stardust unlocks something new."),

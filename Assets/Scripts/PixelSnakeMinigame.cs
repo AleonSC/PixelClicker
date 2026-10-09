@@ -352,6 +352,7 @@ public class PixelSnakeMinigame : PixelMinigame
         activeRound = true;
         Active = true;
         TakeoverActive = true;
+        clicker.SetCubeShrink(0.02f, 0.5f); // the clickable cube disappears for the round
         if (!PixelClicker.ExternalClickBlock) { PixelClicker.ExternalClickBlock = true; setBlock = true; } // no cube clicks during the round
         Report(MinigameEvent.Spawned);
         PixelAudio.Play("snake_start");
@@ -504,6 +505,7 @@ public class PixelSnakeMinigame : PixelMinigame
         activeRound = false;
         Active = false;
         TakeoverActive = false;
+        clicker.SetCubeShrink(1f, 0.6f); // and comes back
         OldPixelDespawn.HoldAll = false;
         if (setBlock) { PixelClicker.ExternalClickBlock = PixelBank.HoseOn; setBlock = false; }
 
