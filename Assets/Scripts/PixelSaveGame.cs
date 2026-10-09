@@ -185,6 +185,21 @@ public class PixelSaveGame : MonoBehaviour
     [Tooltip("Message text colour.")]
     [SerializeField] private Color messageColor = Color.white;
 
+    [Tooltip("Autosave note: text size (bottom-right corner, just above the black bar).")]
+    [SerializeField] private float autoSaveNoteFontSize = 22f;
+
+    [Tooltip("Autosave note: colour (its alpha is the brightest the pulse gets).")]
+    [SerializeField] private Color autoSaveNoteColor = new Color(1f, 1f, 1f, 0.55f);
+
+    [Tooltip("Autosave note: pulses per second.")]
+    [SerializeField] private float autoSaveNotePulseSpeed = 1.6f;
+
+    [Tooltip("Autosave note: the faintest the pulse gets, as a fraction of its brightest.")]
+    [SerializeField] private float autoSaveNoteMinAlpha = 0.25f;
+
+    [Tooltip("Autosave note: distance from the right edge and from the black bar (canvas units).")]
+    [SerializeField] private Vector2 autoSaveNoteMargin = new Vector2(24f, 10f);
+
     [Tooltip("Distance of the message from the bottom of the screen (canvas units).")]
     [SerializeField] private float messageBottomMargin = 140f;
 
@@ -203,6 +218,9 @@ public class PixelSaveGame : MonoBehaviour
 
     private GameObject canvasRoot;
     private TMP_Text messageLabel;
+    private TMP_Text autoNoteLabel;
+    private Coroutine autoNoteRoutine;
+    private bool autoSaveCall;
     private Coroutine messageRoutine;
     private float autoSaveTimer;
     private bool suppressSaving;
@@ -338,7 +356,9 @@ public class PixelSaveGame : MonoBehaviour
         if (autoSaveTimer >= interval)
         {
             autoSaveTimer = 0f;
+            autoSaveCall = true;
             Save(AutoSaveMessageNow);
+            autoSaveCall = false;
         }
     }
 
@@ -508,7 +528,7 @@ public class PixelSaveGame : MonoBehaviour
             File.Move(temp, path);
 
             if (logToConsole) Debug.Log("PixelSaveGame: saved (slot " + CurrentSlot + ").", this);
-            if (showMessage) ShowMessage("Saved to slot " + CurrentSlot);
+            if (showMessage) { if (autoSaveCall) ShowAutoNote(); else ShowMessage("Saved to slot " + CurrentSlot); }
             return true;
         }
         catch (Exception e)
@@ -714,6 +734,52 @@ public class PixelSaveGame : MonoBehaviour
         rt.sizeDelta = new Vector2(900f, messageFontSize * 1.5f);
         rt.anchoredPosition = new Vector2(0f, messageBottomMargin);
         go.SetActive(false);
+
+        GameObject noteGo = new GameObject("Autosave Note", typeof(RectTransform));
+        noteGo.transform.SetParent(canvasRoot.transform, false);
+        TextMeshProUGUI note = noteGo.AddComponent<TextMeshProUGUI>();
+        note.fontSize = autoSaveNoteFontSize;
+        note.alignment = TextAlignmentOptions.BottomRight;
+        note.color = autoSaveNoteColor;
+        note.raycastTarget = false;
+        note.text = "Autosaving...";
+        if (font != null) note.font = font;
+        autoNoteLabel = note;
+        RectTransform nrt = note.rectTransform;
+        nrt.anchorMin = nrt.anchorMax = nrt.pivot = new Vector2(1f, 0f);
+        nrt.sizeDelta = new Vector2(400f, autoSaveNoteFontSize * 1.5f);
+        noteGo.SetActive(false);
+    }
+
+    private void ShowAutoNote()
+    {
+        if (!showMessages || autoNoteLabel == null) return;
+        if (autoNoteRoutine != null) StopCoroutine(autoNoteRoutine);
+        autoNoteRoutine = StartCoroutine(AutoNoteRoutine());
+    }
+
+    private IEnumerator AutoNoteRoutine()
+    {
+        PixelHud hud = PixelHud.Instance;
+        float bar = hud != null ? hud.BarHeight : 0f;
+        autoNoteLabel.rectTransform.anchoredPosition = new Vector2(-autoSaveNoteMargin.x, bar + autoSaveNoteMargin.y);
+        autoNoteLabel.gameObject.SetActive(true);
+
+        // Unscaled time: it also pulses while the game is paused or time is stopped.
+        float t = 0f;
+        float total = Mathf.Max(0.5f, messageSeconds);
+        while (t < total)
+        {
+            t += Time.unscaledDeltaTime;
+            float wave = 0.5f + 0.5f * Mathf.Sin(t * autoSaveNotePulseSpeed * Mathf.PI * 2f);
+            float fade = Mathf.Clamp01((total - t) / Mathf.Max(0.01f, total * 0.3f));
+            Color c = autoSaveNoteColor;
+            c.a = autoSaveNoteColor.a * Mathf.Lerp(Mathf.Clamp01(autoSaveNoteMinAlpha), 1f, wave) * fade;
+            autoNoteLabel.color = c;
+            yield return null;
+        }
+        autoNoteLabel.gameObject.SetActive(false);
+        autoNoteRoutine = null;
     }
 
     private void ShowMessage(string text)
