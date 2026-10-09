@@ -1,0 +1,4 @@
+// Dev Tools > To-Do tab. One item per line: "[ ] text" = open, "[x] text" = done, "# Heading", "//" = hidden note.
+// Claude adds items here when the user says so (or after asking), instead of building them straight away.
+# Ideas
+[ ] Condensed pixels: convert pixels into condensed versions and stack THOSE once the numbers get too high (a friend's idea).

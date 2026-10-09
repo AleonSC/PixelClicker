@@ -78,6 +78,19 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Title of the dev tools panel (also the text of the pause menu button).")]
     [SerializeField] private string title = "Dev Tools";
 
+    [Header("To-Do tab")]
+    [Tooltip("Name of the text file in Assets/Resources (without .txt) shown in the To-Do tab. One item per line: '[ ] text' = open, '[x] text' = done, '# Heading', '//' = hidden note.")]
+    [SerializeField] private string todoResource = "Todo";
+
+    [Tooltip("Label of the Tools tab.")]
+    [SerializeField] private string toolsTabText = "Tools";
+
+    [Tooltip("Label of the To-Do tab.")]
+    [SerializeField] private string todoTabText = "To-Do";
+
+    [Tooltip("Colour of finished to-do items.")]
+    [SerializeField] private Color todoDoneColor = new Color(0.45f, 0.8f, 0.5f, 1f);
+
     [Tooltip("Label of the add-pixels button.")]
     [SerializeField] private string addText = "Add";
 
@@ -460,6 +473,101 @@ public class PixelDevTools : MonoBehaviour
         panel.SetActive(true);
     }
 
+    private GameObject toolsView, todoView;
+    private Image toolsTabImage, todoTabImage;
+    private RectTransform todoContent;
+    private ScrollRect todoScroll;
+    private GameObject todoBar;
+    private RectTransform todoViewRect;
+
+    private void SetTab(int tab)
+    {
+        if (toolsView != null) toolsView.SetActive(tab == 0);
+        if (todoView != null) todoView.SetActive(tab == 1);
+        if (toolsTabImage != null) toolsTabImage.color = tab == 0 ? buttonColor : boxColor;
+        if (todoTabImage != null) todoTabImage.color = tab == 1 ? buttonColor : boxColor;
+        if (tab == 1) RebuildTodo();
+    }
+
+    /// <summary>The To-Do tab: a scrolling list of the lines in Resources/Todo.txt, plus a Close button.</summary>
+    private void BuildTodoView(Transform box, float top, float inner)
+    {
+        todoView = new GameObject("Todo View", typeof(RectTransform));
+        todoView.transform.SetParent(box, false);
+        PixelUIKit.Stretch(todoView.GetComponent<RectTransform>());
+
+        todoScroll = PixelUIKit.CreateScrollView(todoView.transform, "Todo Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 16f, 60f,
+                                                 out todoContent, out todoBar);
+        todoViewRect = todoScroll.GetComponent<RectTransform>();
+        todoViewRect.anchorMin = Vector2.zero;
+        todoViewRect.anchorMax = Vector2.one;
+        todoViewRect.offsetMin = new Vector2(40f, 30f + rowHeight + 16f);
+        todoViewRect.offsetMax = new Vector2(-40f, -top);
+
+        Button close = PixelUIKit.CreateButton(font, todoView.transform, "Todo Close Button", closeText,
+                                               new Vector2(inner, rowHeight), new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
+        cr.sizeDelta = new Vector2(inner, rowHeight);
+        cr.anchoredPosition = new Vector2(0f, 30f);
+        close.onClick.AddListener(Close);
+        todoView.SetActive(false);
+    }
+
+    private readonly List<GameObject> todoLines = new List<GameObject>();
+
+    private void RebuildTodo()
+    {
+        if (todoContent == null) return;
+        foreach (GameObject g in todoLines) if (g != null) Destroy(g);
+        todoLines.Clear();
+
+        TextAsset asset = Resources.Load<TextAsset>(todoResource);
+        string[] lines = asset != null ? asset.text.Split('\n') : new string[0];
+        float width = Mathf.Max(100f, todoViewRect.rect.width - 40f);
+        float y = 0f;
+        float size = fontSize * 0.85f;
+        int count = 0;
+        foreach (string raw in lines)
+        {
+            string line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith("//")) continue;
+
+            bool heading = line.StartsWith("#");
+            bool done = line.StartsWith("[x]") || line.StartsWith("[X]");
+            string text = heading ? line.TrimStart('#', ' ') : done ? "[x] " + line.Substring(3).Trim()
+                        : line.StartsWith("[ ]") ? "[ ] " + line.Substring(3).Trim() : line;
+
+            TMP_Text label = PixelUIKit.CreateText(font, todoContent, "Todo Line", text, heading ? size * 1.15f : size,
+                                                   TextAlignmentOptions.TopLeft, heading ? FontStyles.Bold : FontStyles.Normal,
+                                                   done ? todoDoneColor : textColor);
+            label.raycastTarget = false;
+            RectTransform rt = label.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            float height = label.GetPreferredValues(text, width, 0f).y;
+            rt.sizeDelta = new Vector2(width, height);
+            rt.anchoredPosition = new Vector2(0f, -y);
+            y += height + 14f;
+            todoLines.Add(label.gameObject);
+            count++;
+        }
+
+        if (count == 0)
+        {
+            TMP_Text empty = PixelUIKit.CreateText(font, todoContent, "Todo Empty", "Nothing on the to-do list yet.", size,
+                                                   TextAlignmentOptions.TopLeft, FontStyles.Italic, textColor);
+            RectTransform er = empty.rectTransform;
+            er.anchorMin = er.anchorMax = er.pivot = new Vector2(0f, 1f);
+            er.sizeDelta = new Vector2(width, size * 1.5f);
+            er.anchoredPosition = Vector2.zero;
+            todoLines.Add(empty.gameObject);
+            y = size * 1.5f;
+        }
+        PixelUIKit.UpdateScrollView(todoScroll, todoBar, y, todoViewRect.rect.height);
+    }
+
     private void Close()
     {
         if (panel != null) panel.SetActive(false);
@@ -507,38 +615,56 @@ public class PixelDevTools : MonoBehaviour
         float y = 24f + titleFontSize * 1.6f + 16f;
         float inner = panelSize.x - 80f; // usable width (40 px each side)
 
+        // Tabs: Tools (everything below) | To-Do (a list read from Resources/Todo.txt).
+        float tabW = (inner - 10f) * 0.5f;
+        Button toolsTab = PixelUIKit.CreateButton(font, box.transform, "Tools Tab", toolsTabText, new Vector2(tabW, rowHeight),
+                                                  boxColor, textColor, fontSize);
+        Place(toolsTab.GetComponent<RectTransform>(), 40f, y, tabW);
+        Button todoTab = PixelUIKit.CreateButton(font, box.transform, "Todo Tab", todoTabText, new Vector2(tabW, rowHeight),
+                                                 boxColor, textColor, fontSize);
+        Place(todoTab.GetComponent<RectTransform>(), 40f + tabW + 10f, y, tabW);
+        toolsTabImage = toolsTab.GetComponent<Image>();
+        todoTabImage = todoTab.GetComponent<Image>();
+        float tabsBottom = y + rowHeight + 16f;
+        y = tabsBottom;
+
+        GameObject tools = new GameObject("Tools View", typeof(RectTransform));
+        tools.transform.SetParent(box.transform, false);
+        PixelUIKit.Stretch(tools.GetComponent<RectTransform>());
+        toolsView = tools;
+
         // Row: pixel dropdown | amount field | Add
         float dropW = inner * 0.42f, fieldW = inner * 0.30f, btnW = inner - dropW - fieldW - 20f;
-        pixelDropdown = PixelUIKit.CreateDropdown(font, box.transform, "Pixel Dropdown", new Vector2(dropW, rowHeight),
+        pixelDropdown = PixelUIKit.CreateDropdown(font, tools.transform, "Pixel Dropdown", new Vector2(dropW, rowHeight),
                                                   boxColor, listColor, textColor, fontSize);
         Place(pixelDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
-        amountField = PixelUIKit.CreateInputField(font, box.transform, "Amount Field", new Vector2(fieldW, rowHeight),
+        amountField = PixelUIKit.CreateInputField(font, tools.transform, "Amount Field", new Vector2(fieldW, rowHeight),
                                                   boxColor, textColor, fontSize, "amount");
         amountField.text = defaultAmount;
         amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
         Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
-        Button add = PixelUIKit.CreateButton(font, box.transform, "Add Button", addText, new Vector2(btnW, rowHeight),
+        Button add = PixelUIKit.CreateButton(font, tools.transform, "Add Button", addText, new Vector2(btnW, rowHeight),
                                              buttonColor, textColor, fontSize);
         Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, btnW);
         add.onClick.AddListener(AddSelected);
         y += rowHeight + 16f;
 
         // Row: skip intro
-        Button skip = PixelUIKit.CreateButton(font, box.transform, "Skip Intro Button", skipIntroText,
+        Button skip = PixelUIKit.CreateButton(font, tools.transform, "Skip Intro Button", skipIntroText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
         skip.onClick.AddListener(SkipIntro);
         y += rowHeight + 24f;
 
         // Row: unlock all
-        Button unlock = PixelUIKit.CreateButton(font, box.transform, "Unlock All Button", unlockAllText,
+        Button unlock = PixelUIKit.CreateButton(font, tools.transform, "Unlock All Button", unlockAllText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(unlock.GetComponent<RectTransform>(), 40f, y, inner);
         unlock.onClick.AddListener(UnlockAll);
         y += rowHeight + 24f;
 
         // Row: reset every pixel count (inventory, Log, Bank) but keep the unlocks - needs a second click to confirm
-        resetButton = PixelUIKit.CreateButton(font, box.transform, "Reset Counts Button", resetCountsText,
+        resetButton = PixelUIKit.CreateButton(font, tools.transform, "Reset Counts Button", resetCountsText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(resetButton.GetComponent<RectTransform>(), 40f, y, inner);
         resetLabel = resetButton.GetComponentInChildren<TMP_Text>();
@@ -548,7 +674,7 @@ public class PixelDevTools : MonoBehaviour
         // Row: the crash / error report folder (it used to be in the pause menu)
         if (PixelCrashLog.Available)
         {
-            Button report = PixelUIKit.CreateButton(font, box.transform, "Report Folder Button", reportFolderText,
+            Button report = PixelUIKit.CreateButton(font, tools.transform, "Report Folder Button", reportFolderText,
                                                     new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
             Place(report.GetComponent<RectTransform>(), 40f, y, inner);
             report.onClick.AddListener(PixelCrashLog.OpenFolder);
@@ -556,20 +682,20 @@ public class PixelDevTools : MonoBehaviour
         }
 
         // Row: tick box for the clear key
-        clearToggle = BuildToggleRow(box.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
+        clearToggle = BuildToggleRow(tools.transform, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for infinite resources
-        infiniteToggle = BuildToggleRow(box.transform, infiniteToggleText, y, inner, infiniteResources,
+        infiniteToggle = BuildToggleRow(tools.transform, infiniteToggleText, y, inner, infiniteResources,
                        on => { infiniteResources = on; PixelClicker.InfiniteResources = on; SetBool("Infinite", on); });
         y += rowHeight + 24f;
 
         // Row: tick box for the on-screen spawn selector
-        selectorToggle = BuildToggleRow(box.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
+        selectorToggle = BuildToggleRow(tools.transform, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
         y += rowHeight + 24f;
 
         // Row: tick box to stop old pixels despawning
-        noDespawnToggle = BuildToggleRow(box.transform, noDespawnToggleText, y, inner, disableDespawn, on =>
+        noDespawnToggle = BuildToggleRow(tools.transform, noDespawnToggleText, y, inner, disableDespawn, on =>
         {
             disableDespawn = on;
             OldPixelDespawn.DevNoDespawn = on;
@@ -578,17 +704,22 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for god pixel mode
-        godToggle = BuildToggleRow(box.transform, godToggleText, y, inner, godMode, SetGodMode);
+        godToggle = BuildToggleRow(tools.transform, godToggleText, y, inner, godMode, SetGodMode);
         y += rowHeight + 24f;
 
         // Close
-        Button close = PixelUIKit.CreateButton(font, box.transform, "Close Button", closeText,
+        Button close = PixelUIKit.CreateButton(font, tools.transform, "Close Button", closeText,
                                                new Vector2(inner, rowHeight), new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
         Place(close.GetComponent<RectTransform>(), 40f, y, inner);
         close.onClick.AddListener(Close);
         y += rowHeight + 30f;
 
         boxRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
+
+        BuildTodoView(box.transform, tabsBottom, inner);
+        toolsTab.onClick.AddListener(() => SetTab(0));
+        todoTab.onClick.AddListener(() => SetTab(1));
+        SetTab(0);
 
         FillDropdowns();
         pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("PixelIndex", 0), 0, pixelDropdown.options.Count - 1));
