@@ -99,6 +99,9 @@ public partial class PixelShop
         panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
         panelRect.anchoredPosition = Vector2.zero;
         PixelNotice.FixedSize = tipBoxMatchesShop ? new Vector2(panelWidth, panelHeight) : Vector2.zero;
+        PixelNotice.SideAnchor = tipBoxMatchesShop && !hideCurrencyPanel ? panelRect : null; // tip boxes sit right of the shop
+        PixelNotice.SideWidth = CurrencyWidth;
+        PixelNotice.SideGap = currencyPanelGap;
         panelObject.GetComponent<Image>().color = panelColor;
 
         // Title

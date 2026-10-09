@@ -138,3 +138,4 @@
 [2026-10-09 15:00 UTC] Value upgrades no longer post a line in the event log (too spammy).
 [2026-10-09 15:04 UTC] Added a shop tutorial: when the Shop button first unlocks, small Got it boxes beside the shop describe the currency list and each tab / section while opening it (Replay tutorial plays it again).
 [2026-10-09 15:05 UTC] The Log's Pixels tab now counts clicks per pixel type (and its +N indicators show +1 per click) instead of multiplied currency totals; multipliers only affect the Inventory.
+[2026-10-09 15:13 UTC] The big unlock / purchase "Got it" boxes now sit to the right of the shop, as tall as the shop and as wide as the currency panel, instead of covering the shop.

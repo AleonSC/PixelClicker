@@ -14,6 +14,9 @@ public static class PixelNotice
     {
         box = null;
         FixedSize = Vector2.zero;
+        SideAnchor = null;
+        SideWidth = 0f;
+        SideGap = 0f;
     }
 
     private static PixelNoticeBox box;
@@ -33,6 +36,14 @@ public static class PixelNotice
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
     public static Vector2 FixedSize { get; set; }
+
+    /// <summary>
+    /// With FixedSize set and the shop open, tip boxes sit to the RIGHT of this window (the shop panel): FixedSize.y tall (the shop's
+    /// height), SideWidth wide, SideGap away from it - the mirror of the shop's currency panel on the left.
+    /// </summary>
+    public static RectTransform SideAnchor { get; set; }
+    public static float SideWidth { get; set; }
+    public static float SideGap { get; set; }
 
     /// <summary>Is a tip box on screen right now?</summary>
     public static bool IsShowing => box != null && box.IsOpen;
@@ -133,6 +144,23 @@ public class PixelNoticeBox : MonoBehaviour
                 boxRect.pivot = new Vector2(0f, 1f);
                 boxRect.anchoredPosition = new Vector2(x, corners[2].y * toUnits);
             }
+        }
+        else if (fixedSize.x > 0f && fixedSize.y > 0f && PixelNotice.SideAnchor != null && PixelNotice.SideAnchor.gameObject.activeInHierarchy && PixelNotice.SideWidth > 40f)
+        {
+            // To the right of the shop, filling the same height as the shop (and its currency panel on the other side).
+            Canvas.ForceUpdateCanvases();
+            Vector3[] shopCorners = new Vector3[4];
+            PixelNotice.SideAnchor.GetWorldCorners(shopCorners);
+            RectTransform canvasRect2 = canvasRoot.GetComponent<RectTransform>();
+            float toUnits2 = canvasRect2.rect.width / Mathf.Max(1f, Screen.width);
+            float sideWidth = PixelNotice.SideWidth;
+            float shopHeight = (shopCorners[2].y - shopCorners[0].y) * toUnits2;
+            float sx = shopCorners[2].x * toUnits2 + Mathf.Max(0f, PixelNotice.SideGap);
+            sx = Mathf.Min(sx, canvasRect2.rect.width - sideWidth - 10f);
+            boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
+            boxRect.pivot = new Vector2(0f, 0f);
+            boxRect.sizeDelta = new Vector2(sideWidth, shopHeight);
+            boxRect.anchoredPosition = new Vector2(sx, shopCorners[0].y * toUnits2);
         }
         else if (fixedSize.x > 0f && fixedSize.y > 0f)
         {
