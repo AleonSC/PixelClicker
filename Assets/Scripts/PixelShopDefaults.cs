@@ -394,6 +394,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Wizard pack (Minigames tab): a cheap visitor who sells potions at a discount. No requirements.</summary>
+    private static ShopPack CreateWizardPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Wizard",
+            tab = ShopTab.Minigames,
+            description = "Now and then a travelling Wizard drops by, stops time and sells potions at a big discount.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 50 } },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "wizard",
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -719,6 +734,8 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Solar),
                           requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
+        new DefaultPack { isThis = p => Unlocks(p, "wizard"),
+                          requires = null, create = i => CreateWizardPack() },
         new DefaultPack { isThis = p => Unlocks(p, "tinkerer"),
                           requires = null, create = i => CreateTinkererPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
