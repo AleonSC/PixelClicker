@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Electric old pixels link up. Every Electric pixel lying around arcs to the nearest placed device (vacuum device, fan, sorter...)
-/// or to a nearer already-linked Electric pixel, so they form chains, within <see cref="linkRangePixels"/>. Electric pixels that
+/// or to a nearer already-linked Electric pixel, so they form chains, within <see cref="linkRange"/>. Electric pixels that
 /// are not near a device still arc to each other in chains of their own. Every pixel that is part of a chain gets
 /// <see cref="chainLifeSeconds"/> extra seconds before it despawns (once per pixel), which helps players gather electricity.
 /// Pixels linked to a device also add <see cref="secondsPerPixel"/> seconds to it (once per pixel) and don't age while linked;
@@ -22,7 +22,7 @@ public class PixelElectricLinks : MonoBehaviour
 
     [Min(0.5f)]
     [Tooltip("How far (in main-pixel widths) an Electric pixel reaches to link to a device or another linked Electric pixel.")]
-    [SerializeField] private float linkRangePixels = 7f;
+    [SerializeField] private float linkRange = 3f;
 
     [Min(0f)]
     [Tooltip("Seconds added to a device for every Electric pixel that links to it (each pixel counts once).")]
@@ -144,8 +144,17 @@ public class PixelElectricLinks : MonoBehaviour
 
         // Electric old pixels lying around (not flying away, not vanishing).
         scratch.Clear();
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         foreach (Rigidbody body in clicker.OldPixels)
-            if (IsElectric(body, out _) && !clicker.IsFlyingPixel(body)) scratch.Add(body);
+        {
+            if (!IsElectric(body, out _) || clicker.IsFlyingPixel(body)) continue;
+            if (cam != null)
+            {
+                Vector3 v = cam.WorldToViewportPoint(body.position); // only pixels in view link up, so no arcs run off the screen
+                if (v.z <= 0f || v.x < 0f || v.x > 1f || v.y < 0f || v.y > 1f) continue;
+            }
+            scratch.Add(body);
+        }
 
         Dictionary<Rigidbody, Link> previous = new Dictionary<Rigidbody, Link>(links); // last scan's partners: kept while still in reach
         links.Clear();
@@ -154,7 +163,7 @@ public class PixelElectricLinks : MonoBehaviour
         foreach (PixelPlacedDevice d in devices)
             if (watched.Add(d)) d.Ended += OnDeviceEnded;
 
-        float range = linkRangePixels * Mathf.Max(0.1f, clicker.PixelBaseSize);
+        float range = linkRange * Mathf.Max(0.1f, clicker.PixelBaseSize);
         float rangeSqr = range * range;
 
         // Grow the network outwards from the devices: each step links the unlinked pixel that is closest to the network.
@@ -311,12 +320,13 @@ public class PixelElectricLinks : MonoBehaviour
             Vector3 to = link.parentBody != null ? link.parentBody.position
                        : link.parentDevice != null ? DeviceAnchor(link.parentDevice) : link.parentPoint;
             float length = Vector3.Distance(from, to);
-            int segments = Mathf.Clamp(Mathf.CeilToInt(length / (unit * 0.6f)), 3, 9);
-            PixelBolts.Jagged(builder, from, to, segments, length * arcWander, unit * 0.06f, unit * 0.2f, true, coreColor, glowColor);
+            int segments = Mathf.Clamp(Mathf.CeilToInt(length / (unit * 0.25f)), 3, 8);
+            float pixelSize = Mathf.Max(0.05f, kv.Key.transform.lossyScale.x); // the arcs are as thick as the old pixels they join, not the big cube
+            PixelBolts.Jagged(builder, from, to, segments, length * arcWander, pixelSize * 0.09f, pixelSize * 0.3f, true, coreColor, glowColor);
             if (endSparkSize > 0f)
             {
-                Spark(from, unit * endSparkSize, unit);
-                Spark(to, unit * endSparkSize, unit);
+                Spark(from, pixelSize * endSparkSize * 1.6f, pixelSize);
+                Spark(to, pixelSize * endSparkSize * 1.6f, pixelSize);
             }
             if (first) { bounds = new Bounds(from, Vector3.zero); first = false; }
             bounds.Encapsulate(from);

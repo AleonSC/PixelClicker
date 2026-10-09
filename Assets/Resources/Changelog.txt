@@ -215,3 +215,4 @@
 [2026-10-09 22:01 UTC] Added a Dev Tools button that gives the next Dragon Cube you still need.
 [2026-10-09 22:11 UTC] Fixed the orange glow of the dragon summon button staying on screen after the wish.
 [2026-10-09 22:17 UTC] Electric pixel arcs now stay attached to the same neighbour (sticky links), draw as clearer straighter bolts, and show a spark where they connect to a pixel or device.
+[2026-10-09 22:33 UTC] Electric pixel arcs are now shorter-range (only between nearby pixels that are on screen) and as thin as the old pixels they join, instead of long thick lines running across and off the screen.
