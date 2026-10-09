@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static PixelInput;
 
 /// <summary>
 /// Pets. Every click on a pixel has a very small chance to give you a "pet" version of that pixel type (one pet per type).
@@ -17,6 +18,7 @@ public class PixelPets : MonoBehaviour
     {
         Instance = null;
         PopupOpen = false;
+        HoveringPet = false;
     }
 
     [Header("References")]
@@ -74,6 +76,35 @@ public class PixelPets : MonoBehaviour
     [Tooltip("Fastest a pet may move sideways (world units per second).")]
     [SerializeField] private float maxSpeed = 7f;
 
+    [Min(0f)]
+    [Tooltip("How quickly a pet comes to a stop while the mouse is over it (higher = stops at once).")]
+    [SerializeField] private float hoverStopDamping = 12f;
+
+    [Header("Picking up and throwing")]
+    [Min(1f)]
+    [Tooltip("How tightly a held pet follows the mouse.")]
+    [SerializeField] private float followSharpness = 18f;
+
+    [Min(1f)]
+    [Tooltip("Fastest a held pet moves (world units per second).")]
+    [SerializeField] private float maxFollowSpeed = 40f;
+
+    [Tooltip("How much of the mouse's speed a pet keeps when you let go (0 = it just drops).")]
+    [SerializeField] private float throwStrength = 1f;
+
+    [Min(0f)]
+    [Tooltip("Fastest a thrown pet can leave your hand (world units per second).")]
+    [SerializeField] private float maxThrowSpeed = 25f;
+
+    [Header("Ghost pet")]
+    [Min(0f)]
+    [Tooltip("How high the Ghost pet hovers above the floor, in pixel-widths.")]
+    [SerializeField] private float ghostHoverHeight = 1.6f;
+
+    [Min(0f)]
+    [Tooltip("How fast the Ghost pet drifts (world units per second).")]
+    [SerializeField] private float ghostSpeed = 1.2f;
+
     [Header("Popup")]
     [Tooltip("Popup title.")]
     [SerializeField] private string popupTitle = "Pet Found!";
@@ -119,6 +150,9 @@ public class PixelPets : MonoBehaviour
         public bool off;
         public GameObject body;
         public float hopTimer;
+        public bool ghost;       // the Ghost pet only hovers
+        public Vector3 target;   // where a hovering pet is drifting to
+        public float targetTimer, phase;
     }
 
     private readonly List<Pet> pets = new List<Pet>();
@@ -169,6 +203,9 @@ public class PixelPets : MonoBehaviour
 
     private void OnDisable()
     {
+        if (held != null) EndHold(false);
+        if (blockingClicks) { blockingClicks = false; PixelClicker.ExternalClickBlock = PixelBank.HoseOn; }
+        HoveringPet = false;
         if (clicker != null) clicker.PixelCollected -= OnCollected;
     }
 
@@ -209,7 +246,7 @@ public class PixelPets : MonoBehaviour
 
     private void AddPet(PixelClicker.PixelType type, bool off)
     {
-        Pet p = new Pet { type = type, off = off, hopTimer = Random.Range(0.3f, 1f) };
+        Pet p = new Pet { type = type, off = off, hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
         pets.Add(p);
         PixelStats.Count("pets.found");
         Refresh(p);
@@ -364,6 +401,12 @@ public class PixelPets : MonoBehaviour
         rb.angularDrag = 0.3f;
         rb.drag = 0.05f;
 #endif
+        if (p.ghost)
+        {
+            rb.useGravity = false;     // the Ghost pet hovers: no gravity, and its collider is a trigger so it never shoves anything
+            box.isTrigger = true;
+            p.targetTimer = 0f;
+        }
         p.body = go;
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
     }
@@ -372,19 +415,146 @@ public class PixelPets : MonoBehaviour
     {
         if (PopupOpen || Time.timeScale <= 0f) return;
         bool hide = PixelMinigame.TakeoverActive; // Snake, Sorting Race and Breakout have the floor to themselves
+        if (hide && held != null) EndHold(false);
+        UpdatePointer(hide);
         foreach (Pet p in pets)
         {
             if (p.body == null) continue;
             if (p.body.activeSelf == hide) p.body.SetActive(!hide);
             if (hide) continue;
-            Roam(p);
+            if (p.ghost) RoamGhost(p, p == hovered || p == held);
+            else Roam(p, p == hovered || p == held);
         }
     }
 
-    private void Roam(Pet p)
+    // ------------------------------------------------------------------
+    // The mouse: hovering a pet stops it, clicking picks it up, letting go throws it
+    // ------------------------------------------------------------------
+
+    private Pet hovered, held;
+    private Plane dragPlane;
+    private Vector3 dragOffset;
+    private Camera dragCamera;
+    private bool blockingClicks;
+
+    /// <summary>True while the mouse is over a pet or holding one (Pixel Grabbing and the cube leave the click alone).</summary>
+    public static bool HoveringPet { get; private set; }
+
+    private void UpdatePointer(bool hide)
+    {
+        bool allowed = !hide && !PixelPauseMenu.IsPaused && !PixelBank.HoseOn && !PixelClicker.GodMode && !PixelPlacingBlocked();
+        if (held != null)
+        {
+            if (!LeftHeld() || !allowed) EndHold(true);
+            hovered = held;
+        }
+        else
+        {
+            hovered = allowed && !PointerOverUI() ? PetUnderPointer() : null;
+            if (hovered != null && LeftPressed()) BeginHold(hovered);
+        }
+
+        HoveringPet = hovered != null || held != null;
+        if (HoveringPet && !blockingClicks) { blockingClicks = true; PixelClicker.ExternalClickBlock = true; }
+        else if (!HoveringPet && blockingClicks) { blockingClicks = false; PixelClicker.ExternalClickBlock = PixelBank.HoseOn; }
+    }
+
+    private static bool PixelPlacingBlocked() => PixelMinigame.TakeoverActive;
+
+    private Pet PetUnderPointer()
+    {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return null;
+        Ray ray = cam.ScreenPointToRay(PointerPosition());
+        Pet best = null;
+        float bestDistance = float.PositiveInfinity;
+        foreach (Pet p in pets)
+        {
+            if (p.body == null || !p.body.activeInHierarchy) continue;
+            Collider c = p.body.GetComponent<Collider>();
+            if (c != null && c.Raycast(ray, out RaycastHit hit, 1000f) && hit.distance < bestDistance)
+            {
+                best = p;
+                bestDistance = hit.distance;
+            }
+        }
+        return best;
+    }
+
+    private void BeginHold(Pet p)
+    {
+        Rigidbody rb = p.body.GetComponent<Rigidbody>();
+        dragCamera = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (rb == null || dragCamera == null) return;
+        held = p;
+        rb.useGravity = false;
+        dragPlane = new Plane(-dragCamera.transform.forward, rb.position);
+        Ray ray = dragCamera.ScreenPointToRay(PointerPosition());
+        dragOffset = dragPlane.Raycast(ray, out float enter) ? rb.position - ray.GetPoint(enter) : Vector3.zero;
+        PixelAudio.Play("grab");
+    }
+
+    private void EndHold(bool throwIt)
+    {
+        Pet p = held;
+        held = null;
+        if (p == null || p.body == null) return;
+        Rigidbody rb = p.body.GetComponent<Rigidbody>();
+        if (rb == null) return;
+        rb.useGravity = !p.ghost;
+        if (throwIt)
+        {
+            Vector3 v = GetVelocity(rb) * throwStrength * PixelTimeStop.SlowFactor; // back to what the mouse did
+            if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
+            SetVelocity(rb, v);
+            PixelAudio.Play("drop");
+        }
+        p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
+    }
+
+    private void FixedUpdate()
+    {
+        if (held == null || held.body == null || dragCamera == null) return;
+        Rigidbody rb = held.body.GetComponent<Rigidbody>();
+        if (rb == null) return;
+        Ray ray = dragCamera.ScreenPointToRay(PointerPosition());
+        if (!dragPlane.Raycast(ray, out float enter)) return;
+        Vector3 target = ray.GetPoint(enter) + dragOffset;
+
+        float slow = PixelTimeStop.SlowFactor; // velocities are per slowed second while time is slowed
+        Vector3 velocity = (target - rb.position) * followSharpness / slow;
+        if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
+        SetVelocity(rb, velocity);
+        rb.angularVelocity *= 0.9f;
+    }
+
+    private static Vector3 GetVelocity(Rigidbody rb)
+    {
+#if UNITY_6000_0_OR_NEWER
+        return rb.linearVelocity;
+#else
+        return rb.velocity;
+#endif
+    }
+
+    private static void SetVelocity(Rigidbody rb, Vector3 v)
+    {
+#if UNITY_6000_0_OR_NEWER
+        rb.linearVelocity = v;
+#else
+        rb.velocity = v;
+#endif
+    }
+
+    // ------------------------------------------------------------------
+    // Roaming
+    // ------------------------------------------------------------------
+
+    private void Roam(Pet p, bool stopped)
     {
         Rigidbody rb = p.body.GetComponent<Rigidbody>();
         if (rb == null || clicker.PixelTransform == null) return;
+        if (held == p) return; // being carried
         float size = clicker.PixelBaseSize;
         Vector3 pos = rb.position;
         Vector3 cube = clicker.PixelTransform.position;
@@ -393,29 +563,28 @@ public class PixelPets : MonoBehaviour
         if (pos.y < cube.y - 25f)
         {
             rb.position = cube + Vector3.up * size * 3f;
-#if UNITY_6000_0_OR_NEWER
-            rb.linearVelocity = Vector3.zero;
-#else
-            rb.velocity = Vector3.zero;
-#endif
+            SetVelocity(rb, Vector3.zero);
+            return;
+        }
+
+        Vector3 v = GetVelocity(rb);
+
+        // The mouse is over it: it settles down and stands still (gravity still works).
+        if (stopped)
+        {
+            float k = Mathf.Exp(-hoverStopDamping * Time.deltaTime);
+            SetVelocity(rb, new Vector3(v.x * k, v.y, v.z * k));
+            rb.angularVelocity *= k;
+            p.hopTimer = Mathf.Max(p.hopTimer, 0.4f);
             return;
         }
 
         // Cap the sideways speed.
-#if UNITY_6000_0_OR_NEWER
-        Vector3 v = rb.linearVelocity;
-#else
-        Vector3 v = rb.velocity;
-#endif
         Vector2 flat = new Vector2(v.x, v.z);
         if (flat.magnitude > maxSpeed)
         {
             flat = flat.normalized * maxSpeed;
-#if UNITY_6000_0_OR_NEWER
-            rb.linearVelocity = new Vector3(flat.x, v.y, flat.y);
-#else
-            rb.velocity = new Vector3(flat.x, v.y, flat.y);
-#endif
+            SetVelocity(rb, new Vector3(flat.x, v.y, flat.y));
         }
 
         p.hopTimer -= Time.deltaTime;
@@ -430,20 +599,61 @@ public class PixelPets : MonoBehaviour
         // Too far from the cube, or about to leave the screen: head back.
         Vector3 toCube = cube - pos;
         toCube.y = 0f;
-        bool outside = false;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        if (cam != null)
-        {
-            Vector3 vp = cam.WorldToViewportPoint(pos);
-            float bars = PixelHud.Instance != null
-                ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
-            outside = vp.z <= 0f || vp.x < 0.08f || vp.x > 0.92f || vp.y < bars + 0.06f || vp.y > 0.94f;
-        }
+        bool outside = OutsideView(pos);
         if (toCube.magnitude > roamRadius * size || outside)
             dir = toCube.sqrMagnitude > 0.0001f ? Vector3.Slerp(dir, toCube.normalized, outside ? 0.95f : 0.7f).normalized : dir;
 
         rb.AddForce(dir * (rb.mass * rollSpeed) + Vector3.up * (rb.mass * hopSpeed), ForceMode.Impulse);
         rb.AddTorque(Vector3.Cross(Vector3.up, dir) * spinSpeed, ForceMode.VelocityChange);
+    }
+
+    private bool OutsideView(Vector3 pos)
+    {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return false;
+        Vector3 vp = cam.WorldToViewportPoint(pos);
+        float bars = PixelHud.Instance != null
+            ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
+        return vp.z <= 0f || vp.x < 0.08f || vp.x > 0.92f || vp.y < bars + 0.06f || vp.y > 0.94f;
+    }
+
+    // The Ghost pet never touches the ground: it hovers, drifts and bobs around the floor.
+    private void RoamGhost(Pet p, bool stopped)
+    {
+        Rigidbody rb = p.body.GetComponent<Rigidbody>();
+        if (rb == null || clicker.PixelTransform == null) return;
+        if (held == p) return;
+        float size = clicker.PixelBaseSize;
+        Vector3 pos = rb.position;
+        Vector3 cube = clicker.PixelTransform.position;
+        Vector3 v = GetVelocity(rb);
+
+        if (stopped)
+        {
+            float k = Mathf.Exp(-hoverStopDamping * Time.deltaTime);
+            SetVelocity(rb, v * k);
+            rb.angularVelocity *= k;
+            return;
+        }
+
+        p.targetTimer -= Time.deltaTime;
+        if (p.targetTimer <= 0f || (p.target - pos).magnitude < size * 0.4f || OutsideView(pos))
+        {
+            p.targetTimer = Random.Range(3f, 6f);
+            Vector2 c = Random.insideUnitCircle * roamRadius * size * 0.8f;
+            Vector3 spot = new Vector3(cube.x + c.x, cube.y + 12f, cube.z + c.y);
+            float floorY = cube.y - size; // fall back to just under the cube when nothing is below
+            if (Physics.Raycast(spot, Vector3.down, out RaycastHit hit, 60f, ~0, QueryTriggerInteraction.Ignore)) floorY = hit.point.y;
+            spot.y = floorY + size * (ghostHoverHeight + Random.Range(0f, 0.8f));
+            p.target = spot;
+        }
+
+        Vector3 to = p.target - pos;
+        Vector3 desired = to.normalized * Mathf.Min(ghostSpeed, to.magnitude * 1.2f);
+        desired.y += Mathf.Sin(Time.time * 2f + p.phase) * 0.25f; // bobbing
+        SetVelocity(rb, Vector3.Lerp(v, desired, 1f - Mathf.Exp(-2f * Time.deltaTime))); // a throw fades into the drift
+        rb.angularVelocity = Vector3.Lerp(rb.angularVelocity, new Vector3(Mathf.Sin(Time.time + p.phase) * 0.3f, 0.4f, Mathf.Cos(Time.time * 0.7f + p.phase) * 0.3f),
+                                          1f - Mathf.Exp(-1.5f * Time.deltaTime));
     }
 
     // ------------------------------------------------------------------
@@ -472,7 +682,7 @@ public class PixelPets : MonoBehaviour
             if (parts.Length < 1 || !int.TryParse(parts[0], out int t) || !System.Enum.IsDefined(typeof(PixelClicker.PixelType), t)) continue;
             PixelClicker.PixelType type = (PixelClicker.PixelType)t;
             if (IsOwned(type)) continue;
-            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", hopTimer = Random.Range(0.3f, 1f) };
+            Pet p = new Pet { type = type, off = parts.Length > 1 && parts[1] == "1", hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
             pets.Add(p);
             Refresh(p);
         }

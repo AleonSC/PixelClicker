@@ -61,4 +61,4 @@ The game saves by itself and when you quit. You can also Save and Load from the 
 The game writes error and crash reports to text files. If it crashes or misbehaves, open Pause > Report Folder and send the newest .txt file to the developer. If the game closed unexpectedly last time, a box tells you so when you start it.
 
 # Pets
-Very rarely, clicking a pixel gives you a pet: a pixel-sized cube of that type that roams the floor by itself, hopping and rolling around. You can only have one pet per pixel type, and each can be switched on or off in the Toggles window under Pets.
+Very rarely, clicking a pixel gives you a pet: a pixel-sized cube of that type that roams the floor by itself, hopping and rolling around. You can only have one pet per pixel type, and each can be switched on or off in the Toggles window under Pets. Hover a pet to make it stand still, or click and drag it to pick it up and throw it. The Ghost pet floats instead of rolling.

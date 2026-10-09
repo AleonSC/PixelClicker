@@ -130,7 +130,7 @@ public class PixelGrab : MonoBehaviour
             return;
         }
 
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelMinigame.TakeoverActive || PixelClicker.GodMode || !LeftPressed() || PointerOverUI()) return;
+        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelMinigame.TakeoverActive || PixelClicker.GodMode || PixelPets.HoveringPet || !LeftPressed() || PointerOverUI()) return;
         TryGrab();
     }
 
