@@ -593,6 +593,7 @@ public class PixelUI : MonoBehaviour
     private TMP_Text tooltipLabel;
     private RectTransform tooltipRect;
     private int tooltipTier = -1;
+    private string tooltipCustomText;
 
     [Header("Ultra Tooltip")]
     [Tooltip("Tooltip shown when hovering a pixel's entry. {0} = pixel name, {1} = how many Ultra versions you own.")]
@@ -638,17 +639,23 @@ public class PixelUI : MonoBehaviour
         tooltipTier = tierIndex;
     }
 
-    private void HideTooltip() => tooltipTier = -1;
+    private void HideTooltip() { tooltipTier = -1; tooltipCustomText = null; }
+
+    private void ShowItemTooltip(int item)
+    {
+        tooltipCustomText = consumables != null && consumables.IsDevice(item) ? deviceHint : potionHint;
+    }
 
     private void UpdateTooltip()
     {
         if (tooltipRoot == null) return;
-        bool show = tooltipTier >= 0 && tooltipTier < clicker.Tiers.Length && PixelPadMinigame.UltraVisible;
+        bool custom = !string.IsNullOrEmpty(tooltipCustomText);
+        bool show = custom || (tooltipTier >= 0 && tooltipTier < clicker.Tiers.Length && PixelPadMinigame.UltraVisible);
         if (tooltipRoot.activeSelf != show) tooltipRoot.SetActive(show);
         if (!show) return;
 
-        PixelClicker.PixelTier tier = clicker.Tiers[tooltipTier];
-        string text = string.Format(ultraTooltipFormat, tier.displayName, FormatAmount(tier.ultraCount));
+        string text = custom ? tooltipCustomText
+            : string.Format(ultraTooltipFormat, clicker.Tiers[tooltipTier].displayName, FormatAmount(clicker.Tiers[tooltipTier].ultraCount));
         tooltipLabel.text = text;
         tooltipLabel.ForceMeshUpdate();
         float measured = tooltipLabel.preferredWidth;
@@ -1293,6 +1300,9 @@ public class PixelUI : MonoBehaviour
             click.highlight = image;
             click.hoverColor = potionHoverColor;
             int captured = i;
+            PixelHoverTip itemTip = row.AddComponent<PixelHoverTip>();
+            itemTip.onEnter = () => ShowItemTooltip(captured);
+            itemTip.onExit = HideTooltip;
             click.onRightClick = () => { if (consumables != null && consumables.TryUseItem(captured)) Refresh(); };
 
             TMP_Text label = MakeText(row.transform, "Label", "", fontSize, align, FontStyles.Normal, textColor);
@@ -1344,7 +1354,7 @@ public class PixelUI : MonoBehaviour
             for (int i = 0; i < consumables.ItemCount && !anyOwned; i++)
                 anyOwned = consumables.ItemOwned(i) > 0 && consumables.IsDevice(i) == onDevices;
         hintLabel.text = onDevices ? deviceHint : potionHint;
-        bool showHint = anyOwned && !string.IsNullOrEmpty(hintLabel.text);
+        bool showHint = false; // the hint is now a hover tooltip on each item
         hintLabel.gameObject.SetActive(showHint);
         if (showHint)
         {
