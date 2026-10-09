@@ -176,6 +176,12 @@ public class PixelElectricLinks : MonoBehaviour
             {
                 int index = NearestUnlinked(DeviceAnchor(device), null, device, unlinked, previous, rangeSqr);
                 if (index < 0) break;
+                if (device is PixelChargeBooster booster)
+                {
+                    // A booster eats the pixel: it gives its charge and is dissipated (no chain through it).
+                    if (!ConsumeForBooster(booster, unlinked, index)) break;
+                    continue;
+                }
                 Rigidbody tail = Attach(unlinked, index, null, device, device);
                 while (links.Count < maxLinks)
                 {
@@ -245,6 +251,18 @@ public class PixelElectricLinks : MonoBehaviour
             PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f);
         }
         return body;
+    }
+
+    /// <summary>Feeds unlinked[index] to a Charge Booster as charge and dissipates it. False when the booster can take no more.</summary>
+    private bool ConsumeForBooster(PixelChargeBooster booster, List<Rigidbody> unlinked, int index)
+    {
+        Rigidbody body = unlinked[index];
+        if (!booster.AddCharge(1f)) return false;
+        unlinked.RemoveAt(index);
+        links.Remove(body);
+        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        if (d != null) d.Begin();
+        return true;
     }
 
     private void GiveChainLife(Rigidbody body)

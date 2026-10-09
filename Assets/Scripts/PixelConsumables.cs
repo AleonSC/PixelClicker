@@ -83,6 +83,10 @@ public class PixelConsumables : MonoBehaviour
         GhostBait = 4,
         /// <summary>Not placed: right-click in the inventory to make your pets hyper and glowing for a while.</summary>
         PetTreat = 5,
+        /// <summary>Placed: lasts a number of auto-clicker clicks; linked Electric pixels fill its meter, then a click starts a super charge.</summary>
+        ChargeBooster = 6,
+        /// <summary>Placed: lasts a number of lightning strikes; each strike turns the old pixels around it into Electric pixels.</summary>
+        LightningRod = 7,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -212,6 +216,27 @@ public class PixelConsumables : MonoBehaviour
         [Min(0.1f)]
         [Tooltip("Height of the cylinder (world units).")]
         public float bodyHeight = 1f;
+
+        [Header("Electric devices (Charge Booster / Lightning Rod)")]
+        [Min(1)]
+        [Tooltip("How many uses it lasts instead of a time: auto-clicker clicks for the Charge Booster, lightning strikes for the Lightning Rod.")]
+        public int uses = 100;
+
+        [Min(1f)]
+        [Tooltip("Charge Booster: how many Electric pixels fill its meter.")]
+        public float chargeCapacity = 10f;
+
+        [Min(0.5f)]
+        [Tooltip("Charge Booster: seconds the super charge lasts.")]
+        public float superChargeSeconds = 6f;
+
+        [Min(1f)]
+        [Tooltip("Charge Booster: extra auto-clicker clicks per second during the super charge (they don't use up the booster).")]
+        public float superClicksPerSecond = 12f;
+
+        [Min(0.2f)]
+        [Tooltip("Lightning Rod: seconds between strikes (a strike only happens when there are pixels in range to convert).")]
+        public float strikeSeconds = 3f;
 
         [Min(0)]
         [Tooltip("How many of this device you own. You can type a starting amount here for testing.")]
@@ -489,10 +514,55 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultChargeBooster()
+    {
+        return new Device
+        {
+            kind = DeviceKind.ChargeBooster,
+            displayName = "Charge Booster",
+            description = "Place it. Electric pixels that link to it fill its meter and are used up. When the meter is full, click it for a few seconds of super-charged auto clicking. Dissolves after 100 auto clicks.",
+            requiredType = PixelClicker.PixelType.Electric,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Electric, amount = 200 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 100 },
+            },
+            uses = 100, chargeCapacity = 10f, superChargeSeconds = 6f, superClicksPerSecond = 12f,
+            radius = 3f,
+            color = new Color(1f, 0.9f, 0.3f, 1f),
+            bodyDiameter = 0.8f,
+            bodyHeight = 0.8f,
+            placingMessage = "Click the floor to place the {0}  (right-click to cancel)",
+        };
+    }
+
+    private static Device CreateDefaultLightningRod()
+    {
+        return new Device
+        {
+            kind = DeviceKind.LightningRod,
+            displayName = "Lightning Rod",
+            description = "Place it. Every few seconds lightning strikes it and turns every old pixel around it into an Electric pixel. Dissolves after 8 strikes.",
+            requiredType = PixelClicker.PixelType.Electric,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Electric, amount = 300 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Obsidian, amount = 50 },
+            },
+            uses = 8, strikeSeconds = 3f,
+            radius = 5f,
+            color = new Color(0.6f, 0.75f, 1f, 1f),
+            bodyDiameter = 0.12f,
+            bodyHeight = 2.5f,
+            placingMessage = "Click the floor to place the {0}  (right-click to cancel)",
+        };
+    }
+
     private static Device[] CreateDefaultDevices() => new[]
     {
         CreateDefaultDevice(), CreateDefaultFan(), CreateDefaultSorter(),
         CreateDefaultComboFuel(), CreateDefaultGhostBait(), CreateDefaultPetTreat(),
+        CreateDefaultChargeBooster(), CreateDefaultLightningRod(),
     };
 
     private static Potion[] CreateDefaultPotions()
@@ -545,6 +615,8 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ChargeBooster, CreateDefaultChargeBooster),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1230,7 +1302,7 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         d.owned = Mathf.Max(0, d.owned - 1);
 
-        SpawnDevice(index, point, placingYaw, d.durationSeconds, 0f, 0f, -1);
+        SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? d.uses : d.durationSeconds, 0f, 0f, -1);
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -1273,6 +1345,25 @@ public class PixelConsumables : MonoBehaviour
             sorter.Init(clicker, cam, parts, d, timer, timerFormat, duration, aim, bend, force, shrinkSeconds);
             result = sorter;
         }
+        else if (UsesKind(d.kind))
+        {
+            GameObject root = BuildDeviceObject(d, false, out _, out TextMeshPro timer);
+            root.transform.position = point;
+            int uses = Mathf.Max(1, Mathf.RoundToInt(duration));
+            if (d.kind == DeviceKind.ChargeBooster)
+            {
+                PixelChargeBooster booster = root.AddComponent<PixelChargeBooster>();
+                booster.Init(clicker, cam, timer, timerFormat, uses, shrinkSeconds, d, d.bodyHeight);
+                booster.SetCharge(aim); // a saved booster keeps its charge (stored in the 'aim' slot)
+                result = booster;
+            }
+            else
+            {
+                PixelLightningRod rod = root.AddComponent<PixelLightningRod>();
+                rod.Init(clicker, cam, timer, timerFormat, uses, shrinkSeconds, d, d.bodyHeight, 0f);
+                result = rod;
+            }
+        }
         else
         {
             GameObject root = BuildDeviceObject(d, false, out Transform suckPoint, out TextMeshPro timer);
@@ -1291,6 +1382,9 @@ public class PixelConsumables : MonoBehaviour
     // ------------------------------------------------------------------
     // Saving: the running potion and the devices standing in the world
     // ------------------------------------------------------------------
+
+    /// <summary>Devices that last a number of uses (clicks, strikes) instead of a time.</summary>
+    private static bool UsesKind(DeviceKind kind) => kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod;
 
     /// <summary>A placed device as the save system stores it.</summary>
     [Serializable]
@@ -1319,6 +1413,7 @@ public class PixelConsumables : MonoBehaviour
                 yaw = placed.transform.eulerAngles.y,
                 remaining = placed.Remaining,
             };
+            if (placed is PixelChargeBooster booster) state.aim = booster.Charge;
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
