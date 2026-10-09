@@ -154,6 +154,7 @@ public class PixelHints : MonoBehaviour
             case "upgrade_clicks": return "Auto Clicker upgraded: more clicks per tick!";
             case "upgrade_combo": return "Combo Meter upgraded!";
             case "upgrade_bank": return "Bank Storage upgraded!";
+            case "upgrade_cap": return "Old Pixel Capacity upgraded!";
             case "upgrade_ultra": return "Ultra boost bought!";
             case "pixel_Glass": return "You unlocked Glass Pixels!";
             case "pixel_Vacuum": return "You unlocked Vacuum Pixels!";
@@ -197,6 +198,7 @@ public class PixelHints : MonoBehaviour
         H("upgrade_interval", "The auto clicker now clicks faster. Each level shortens the time between its clicks."),
         H("upgrade_clicks", "Multi-Click upgraded! The auto clicker now makes more clicks every time it ticks."),
         H("upgrade_combo", "Combo Meter upgraded! Quick manual clicks build a bonus on your payouts; each level raises the highest bonus you can reach."),
+        H("upgrade_cap", "Old Pixel Capacity upgraded! More old pixels can lie around at once before the oldest ones are cleared away."),
         H("upgrade_bank", "Bank Storage upgraded! The Pixel Bank can now hold more stored pixels."),
         H("upgrade_ultra", "Ultra boost bought! That pixel type now pays more for every click. You can keep boosting it with more Ultra pixels."),
         H("pixel_Glass", "Glass Pixels unlocked! They are see-through, and you can combine one with another pixel in Crafting to make a potion."),

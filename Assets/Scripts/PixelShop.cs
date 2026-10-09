@@ -60,6 +60,8 @@ public partial class PixelShop : MonoBehaviour
         ComboMeter = 3,
         /// <summary>Each level sets how many pixels the Pixel Bank can hold to the level's Value.</summary>
         BankCapacity = 4,
+        /// <summary>Each level sets how many old pixels may lie around at once to the level's Value.</summary>
+        OldPixelCap = 5,
     }
 
     /// <summary>The shop tabs. 'Automatic' picks Pixels or Upgrades from what the pack does.</summary>
@@ -904,7 +906,7 @@ public partial class PixelShop : MonoBehaviour
         pack.purchased = purchased;
         pack.level = IsLeveled(pack) ? Mathf.Clamp(level, 0, pack.levels.Length) : 0;
         pack.appliedLevel = pack.level;
-        if (pack.upgradeEffect == UpgradeEffect.ComboMeter || pack.upgradeEffect == UpgradeEffect.BankCapacity) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
+        if (pack.upgradeEffect == UpgradeEffect.ComboMeter || pack.upgradeEffect == UpgradeEffect.BankCapacity || pack.upgradeEffect == UpgradeEffect.OldPixelCap) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
 
         if (pack.unlocksCrafting && crafting != null && !purchased) crafting.Deactivate();
         if (pack.unlocksGrabbing && grab != null && !purchased) grab.Deactivate();
@@ -1078,6 +1080,11 @@ public partial class PixelShop : MonoBehaviour
             if (bank != null) bank.SetCapacityOverride(pack.level > 0 ? Mathf.RoundToInt(pack.levels[pack.level - 1].value) : 0);
             return;
         }
+        if (pack.upgradeEffect == UpgradeEffect.OldPixelCap)
+        {
+            if (clicker != null) clicker.SetOldPixelCap(pack.level > 0 ? Mathf.RoundToInt(pack.levels[pack.level - 1].value) : 0);
+            return;
+        }
         if (pack.level <= 0 || autoClicker == null) return;
 
         float value = pack.levels[pack.level - 1].value;
@@ -1231,6 +1238,7 @@ public partial class PixelShop : MonoBehaviour
                 case UpgradeEffect.AutoClickerClicks: PixelHints.Trigger("upgrade_clicks"); break;
                 case UpgradeEffect.ComboMeter: PixelHints.Trigger("upgrade_combo"); break;
                 case UpgradeEffect.BankCapacity: PixelHints.Trigger("upgrade_bank"); break;
+                case UpgradeEffect.OldPixelCap: PixelHints.Trigger("upgrade_cap"); break;
             }
         }
         else

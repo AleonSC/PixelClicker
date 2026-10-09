@@ -478,6 +478,26 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Old Pixel Capacity upgrade (Upgrades tab, 5 levels): raises how many old pixels may lie around at once (base 50).</summary>
+    private static ShopPack CreateOldPixelCapPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Old Pixel Capacity",
+            tab = ShopTab.Upgrades,
+            description = "How many old pixels can lie around at once: {current}  →  {next}",
+            upgradeEffect = UpgradeEffect.OldPixelCap,
+            levels = new[]
+            {
+                new PackLevel { value = 75f,  costs = AllSix(250) },
+                new PackLevel { value = 100f, costs = AllSix(700) },
+                new PackLevel { value = 150f, costs = AllSix(2000) },
+                new PackLevel { value = 200f, costs = AllSix(6000) },
+                new PackLevel { value = 300f, costs = AllSix(20000) },
+            }
+        };
+    }
+
     private static PackCost[] BankStorageCost(double glass, double vacuum, double bombParts)
     {
         return new[]
@@ -649,6 +669,8 @@ public partial class PixelShop
                           requires = p => p.unlocksTimeStop, create = CreateTimeSlowPack },
         new DefaultPack { isThis = p => p.unlocksBank,
                           requires = null, create = i => CreateBankPack() },
+        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.OldPixelCap,
+                          requires = null, create = i => CreateOldPixelCapPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.BankCapacity,
                           requires = p => p.unlocksBank, create = CreateBankStoragePack },
     };

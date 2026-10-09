@@ -834,6 +834,8 @@ public partial class PixelShop
                 current = pack.level > 0 ? pack.levels[pack.level - 1].value : 1f;
             else if (pack.upgradeEffect == UpgradeEffect.BankCapacity)
                 current = bank != null ? bank.Capacity : 0f;
+            else if (pack.upgradeEffect == UpgradeEffect.OldPixelCap)
+                current = clicker != null ? clicker.OldPixelCap : 0f;
             else if (autoClicker != null)
                 current = pack.upgradeEffect == UpgradeEffect.AutoClickerClicks ? autoClicker.ClicksPerTick : autoClicker.Interval;
 

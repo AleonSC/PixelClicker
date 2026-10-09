@@ -482,8 +482,16 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Random angle (degrees) a fly-away pixel's direction may deviate.")]
     [SerializeField] private float flySpreadDegrees = 6f;
 
-    [Tooltip("Max old pixels kept in the scene. The oldest is destroyed first. 0 = no cap.")]
-    [SerializeField] private int maxFallingCopies = 30;
+    [Tooltip("Max old pixels kept in the scene (before any Old Pixel Capacity upgrade). The oldest is destroyed first. 0 = no cap.")]
+    [SerializeField] private int baseOldPixelCap = 50;
+
+    private int oldPixelCapOverride; // set by the shop's Old Pixel Capacity upgrade (0 = none bought)
+
+    /// <summary>The cap in use: the shop upgrade's value when one is bought, otherwise the Inspector value.</summary>
+    public int OldPixelCap => oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap;
+
+    /// <summary>Called by the shop's Old Pixel Capacity upgrade (0 = back to the Inspector value).</summary>
+    public void SetOldPixelCap(int value) => oldPixelCapOverride = Mathf.Max(0, value);
 
     [Tooltip("Max old pixels kept while Time Stop is on (the stockpile that bursts out when time resumes). 0 = no cap.")]
     [SerializeField] private int timeStopStockpileMax = 150;
@@ -1431,7 +1439,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
-    private int CopyCap => PixelTimeStop.IsStopped ? timeStopStockpileMax : maxFallingCopies;
+    private int CopyCap => PixelTimeStop.IsStopped ? (timeStopStockpileMax <= 0 ? 0 : Mathf.Max(timeStopStockpileMax, OldPixelCap)) : OldPixelCap;
 
     private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
 
@@ -2646,7 +2654,7 @@ public class PixelClicker : MonoBehaviour
             activeTierIndex = Mathf.Clamp(activeTierIndex, 0, tiers.Length - 1);
         materializeDuration = Mathf.Max(0f, materializeDuration);
         fallingCopyLifetime = Mathf.Max(0f, fallingCopyLifetime);
-        maxFallingCopies = Mathf.Max(0, maxFallingCopies);
+        baseOldPixelCap = Mathf.Max(0, baseOldPixelCap);
     }
 #endif
 }
