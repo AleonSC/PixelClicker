@@ -206,3 +206,4 @@
 [2026-10-09 21:37 UTC] Electric pixel abilities: clicking one overcharges the auto clicker with a burst of clicks (electricity circles the cube, OVERCHARGE! pops up), and Electric old pixels arc to the nearest device, adding 1 second per linked pixel and ending with the device.
 [2026-10-09 21:38 UTC] The auto clicker (and overcharge bursts) now pause while an event hides the cube, and having a pet out makes old pixels of its type despawn twice as slowly.
 [2026-10-09 21:40 UTC] Overcharge now also triggers from the auto clicker clicking an Electric pixel (the burst itself cannot trigger another).
+[2026-10-09 21:42 UTC] The Electric pixel can now be switched on and off in the Toggles window (Pixels tab).
