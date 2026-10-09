@@ -151,3 +151,4 @@
 [2026-10-09 16:16 UTC] The event log's lines now fade out gradually from halfway up the box towards the top.
 [2026-10-09 16:19 UTC] Added a Yu-Gi-Oh Card Back floor style: tiled card backs with a brown frame, a swirling orange vortex and a dark oval in the middle.
 [2026-10-09 16:24 UTC] The Yu-Gi-Oh Card Back floor is now one big card over the whole floor, and new floors were added: Liquid Flow, Moving Clouds, Kaleidoscope and an animated Pac-Man maze.
+[2026-10-09 16:28 UTC] Zoomed out the newest floors: the card back is now one card about 8 units across in the middle of the floor, and Liquid Flow, Moving Clouds, Kaleidoscope and Pac-Man repeat at a smaller size.
