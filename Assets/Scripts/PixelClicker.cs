@@ -798,6 +798,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (PixelFind.First<PixelCameraIntro>() == null) gameObject.AddComponent<PixelCameraIntro>();       // start close up, then zoom out
         if (PixelFind.First<PixelFloor>() == null) gameObject.AddComponent<PixelFloor>(); // floor styles (Settings)
+        if (PixelFind.First<PixelSkybox>() == null) gameObject.AddComponent<PixelSkybox>(); // skybox styles (Settings, title screen)
         if (pixelTransform == null) pixelTransform = transform;
         if (pixelRenderer == null) pixelRenderer = pixelTransform.GetComponentInChildren<Renderer>();
         if (targetCamera == null) targetCamera = Camera.main;

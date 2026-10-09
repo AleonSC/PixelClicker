@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using static PixelNoise;
 
 /// <summary>
 /// Floor styles: swaps the look of the scene's floor for one of several textures drawn in code at runtime (no art
@@ -9,7 +10,7 @@ using UnityEngine;
 /// the cube, else an object called Floor / Ground / Plane. Some styles move (scroll, pulse, disco tiles).
 /// Added by PixelClicker.Awake if missing.
 /// </summary>
-public class PixelFloor : MonoBehaviour
+public class PixelFloor : MonoBehaviour, IPixelLookSource
 {
     public enum FloorPattern
     {
@@ -114,11 +115,14 @@ public class PixelFloor : MonoBehaviour
     private int beatStep;
     private Vector2 baseTiling = Vector2.one;
     private Vector2 offset;
+    private float pulseClock;
 
     public int StyleCount => styles.Count;
     public int Current => current;
     public bool HasFloor => floorRenderer != null;
     public string StyleName(int i) => i >= 0 && i < styles.Count ? styles[i].name : "";
+    public bool Usable => HasFloor && styles.Count > 0;
+    public Rect PreviewRect => new Rect(0f, 0f, 1f, 1f);
 
     private void Awake()
     {
@@ -285,7 +289,7 @@ public class PixelFloor : MonoBehaviour
     {
         if (activeMaterial == null || current < 0 || current >= styles.Count) return;
         FloorStyle style = styles[current];
-        float dt = Time.deltaTime; // stops with the game (pause, Time Stop)
+        float dt = PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime; // keeps moving on the title screen, freezes in Time Stop
 
         if (style.scrollSpeed != Vector2.zero)
         {
@@ -297,7 +301,8 @@ public class PixelFloor : MonoBehaviour
 
         if (style.glow > 0f && style.pulseSpeed > 0f && activeMaterial.HasProperty("_EmissionColor"))
         {
-            float wave = 0.5f + 0.5f * Mathf.Sin(Time.time * style.pulseSpeed * Mathf.PI * 2f);
+            pulseClock += dt;
+            float wave = 0.5f + 0.5f * Mathf.Sin(pulseClock * style.pulseSpeed * Mathf.PI * 2f);
             activeMaterial.SetColor("_EmissionColor", Color.white * style.glow * (1f - style.pulseAmount * wave));
         }
 
@@ -581,79 +586,6 @@ public class PixelFloor : MonoBehaviour
         }
         tex.SetPixels32(px);
         tex.Apply(false);
-    }
-
-    // ------------------------------------------------------------------
-    // Noise helpers (all tile seamlessly)
-    // ------------------------------------------------------------------
-
-    private static float Frac(float f) => f - Mathf.Floor(f);
-
-    private static float Hash(int x, int y, int seed)
-    {
-        unchecked
-        {
-            uint h = (uint)(x * 374761393 + y * 668265263 + seed * 1442695041);
-            h = (h ^ (h >> 13)) * 1274126177u;
-            h ^= h >> 16;
-            return (h & 0xFFFFFF) / 16777215f;
-        }
-    }
-
-    private static float HashId(int id, int seed) => Hash(id, id * 7 + 3, seed);
-
-    /// <summary>Value noise on a lattice of 'period' cells that wraps around (tileable).</summary>
-    private static float TileNoise(float u, float v, int period, int seed)
-    {
-        float x = Frac(u) * period, y = Frac(v) * period;
-        int x0 = Mathf.FloorToInt(x), y0 = Mathf.FloorToInt(y);
-        float fx = x - x0, fy = y - y0;
-        int x1 = (x0 + 1) % period, y1 = (y0 + 1) % period;
-        x0 %= period; y0 %= period;
-        fx = fx * fx * (3f - 2f * fx);
-        fy = fy * fy * (3f - 2f * fy);
-        float a = Mathf.Lerp(Hash(x0, y0, seed), Hash(x1, y0, seed), fx);
-        float b = Mathf.Lerp(Hash(x0, y1, seed), Hash(x1, y1, seed), fx);
-        return Mathf.Lerp(a, b, fy);
-    }
-
-    /// <summary>Layered tileable noise, 0..1.</summary>
-    private static float Fbm(float u, float v, int basePeriod, int octaves, int seed)
-    {
-        float sum = 0f, amp = 0.5f, norm = 0f;
-        int period = Mathf.Max(1, basePeriod);
-        for (int i = 0; i < octaves; i++)
-        {
-            sum += TileNoise(u, v, period, seed + i * 101) * amp;
-            norm += amp;
-            amp *= 0.5f;
-            period *= 2;
-        }
-        return sum / norm;
-    }
-
-    /// <summary>Tileable cell noise: distance to the nearest (f1) and second-nearest (f2) cell point, in texture units.</summary>
-    private static void Voronoi(float u, float v, int cells, int seed, out float f1, out float f2, out int id)
-    {
-        float x = Frac(u) * cells, y = Frac(v) * cells;
-        int cx = Mathf.FloorToInt(x), cy = Mathf.FloorToInt(y);
-        f1 = f2 = 99f;
-        id = 0;
-        for (int oy = -1; oy <= 1; oy++)
-        {
-            for (int ox = -1; ox <= 1; ox++)
-            {
-                int gx = cx + ox, gy = cy + oy;
-                int wx = ((gx % cells) + cells) % cells, wy = ((gy % cells) + cells) % cells;
-                float px = gx + 0.15f + 0.7f * Hash(wx, wy, seed);
-                float py = gy + 0.15f + 0.7f * Hash(wx, wy, seed + 77);
-                float d = Mathf.Sqrt((px - x) * (px - x) + (py - y) * (py - y));
-                if (d < f1) { f2 = f1; f1 = d; id = wy * cells + wx; }
-                else if (d < f2) f2 = d;
-            }
-        }
-        f1 /= cells;
-        f2 /= cells;
     }
 
     private static void Blend(Color[] px, int n, int x, int y, Color c, float k)
