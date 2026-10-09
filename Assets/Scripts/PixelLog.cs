@@ -700,8 +700,8 @@ public class PixelLog : MonoBehaviour
         scroll.verticalScrollbar = scrollbar;
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
-        empty = CreateText(view.transform, "Empty", emptyMessage, rowFontSize,
-                                         TextAlignmentOptions.Center, FontStyles.Italic,
+        empty = CreateText(view.transform, "Empty", emptyMessage.ToUpperInvariant(), rowFontSize, // capitals, centred in the window
+                                         TextAlignmentOptions.Center, FontStyles.Bold,
                                          new Color(textColor.r, textColor.g, textColor.b, 0.6f));
         RectTransform er = empty.rectTransform;
         er.anchorMin = Vector2.zero;

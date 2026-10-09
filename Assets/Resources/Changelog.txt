@@ -170,3 +170,4 @@
 [2026-10-09 18:57 UTC] The Yu-Gi-Oh Card Back, Moving Clouds, Kaleidoscope and Pac-Man floors now fit one copy exactly to the screen, following the camera.
 [2026-10-09 19:11 UTC] The Inventory's "No potions yet" / "No devices yet" message is now all capitals and centred in the window.
 [2026-10-09 19:05 UTC] Added an 8-Bit Road Racer floor: a retro top-down road scrolls by while a red car weaves past traffic, with striped kerbs and trees on the grass.
+[2026-10-09 19:15 UTC] The Log's empty messages ("No goals yet" and "No achievements") are now bold capitals centred in the window, like the Inventory's.
