@@ -540,6 +540,38 @@ public class PixelToggles : MonoBehaviour
 
     private void Close() => windowObject.SetActive(false);
 
+    private PixelShop shopRef;
+    [Tooltip("Smallest width the window shrinks to when it is squeezed in beside the open shop.")]
+    [SerializeField] private float minWidthBesideShop = 420f;
+    [Tooltip("Gap between the shop window and this window when both are open.")]
+    [SerializeField] private float gapToShop = 8f;
+
+    /// <summary>With the shop open the window is as tall as it and fills the space between it and the screen's right edge.</summary>
+    private void FitBesideShop()
+    {
+        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        if (shopRef == null) shopRef = PixelFind.First<PixelShop>();
+        RectTransform shopRect = shopRef != null ? shopRef.PanelRect : null;
+        Canvas canvas = windowObject.GetComponentInParent<Canvas>();
+        float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
+        PixelHud hud = PixelHud.Instance;
+        float inset = hud != null ? hud.SideMargin * 0.35f : 0f;
+
+        if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
+        {
+            wr.sizeDelta = windowSize;
+            wr.anchoredPosition = new Vector2(-inset, 0f);
+            return;
+        }
+        Vector3[] c = new Vector3[4];
+        shopRect.GetWorldCorners(c); // screen pixels (overlay canvas)
+        float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
+        float width = (Screen.width - shopRight) / scale - gapToShop - inset;
+        width = Mathf.Max(minWidthBesideShop, width);
+        wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
+        wr.anchoredPosition = new Vector2(-inset, ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+    }
+
     private PixelDockedButton dock;
     private CanvasGroup buttonGroup;
     [Tooltip("Seconds the Toggles button takes to fade back in (already tucked away) after its window closes.")]
@@ -549,6 +581,7 @@ public class PixelToggles : MonoBehaviour
     {
         if (buttonGroup == null || windowObject == null) return;
         bool open = windowObject.activeSelf;
+        if (open) FitBesideShop();
         if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f; // tucked away while the window is up and as the fade starts
         if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
         buttonGroup.blocksRaycasts = true;
