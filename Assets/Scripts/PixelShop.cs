@@ -521,7 +521,7 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private string valueButtonText = "Upgrade";
 
     [Min(0f)]
-    [Tooltip("Cost of a pixel type's first Value level, per point of that pixel's base payout per click (25 = a pixel that pays 1 costs 25, one that pays 8 costs 200; a pixel that pays 5 over 5 clicks counts as 1).")]
+    [Tooltip("Cost of a pixel type's first Value level, per point of that pixel's base payout (25 = a pixel that pays 1 costs 25, one that pays 8 costs 200). Spawn chance is ignored on purpose: rarer pixels earn less, so their Value climbs more slowly.")]
     [SerializeField] private double valueBaseCost = 25;
 
     [Min(1f)]
@@ -1116,9 +1116,8 @@ public partial class PixelShop : MonoBehaviour
     {
         if (!clicker.IsValidTierIndex(tierIndex)) return 0d;
         PixelClicker.PixelTier tier = clicker.Tiers[tierIndex];
-        // Scaled by what one click of this pixel is worth, so tough pixels (several clicks per payout) aren't overpriced.
-        double perClick = tier.amountPerClick / Math.Max(1, tier.clicksToCollect);
-        return Math.Ceiling(valueBaseCost * Math.Max(1d, perClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
+        // Scaled by the pixel's payout per collect but NOT by how often it spawns, so rarer pixels are deliberately slower to upgrade.
+        return Math.Ceiling(valueBaseCost * Math.Max(1d, tier.amountPerClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
     }
 
     /// <summary>True when a pixel type has reached its highest Value level.</summary>

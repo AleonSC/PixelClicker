@@ -85,7 +85,7 @@ public partial class PixelShop
             requirements = Needs(requiresGlassIndex),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 5000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 25000 },
                 new PackCost { type = PixelClicker.PixelType.Red,   amount = 50000 },
                 new PackCost { type = PixelClicker.PixelType.Green, amount = 50000 },
                 new PackCost { type = PixelClicker.PixelType.Blue,  amount = 50000 },
@@ -114,7 +114,7 @@ public partial class PixelShop
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 150000 },
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 20000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 75000 },
             },
             rewardTiers = new[]
             {
@@ -141,7 +141,7 @@ public partial class PixelShop
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Glass, amount = 250000 },
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 5000 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 1000000 },
             },
             rewardTiers = new[]
             {
@@ -168,7 +168,7 @@ public partial class PixelShop
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 50000 },
-                new PackCost { type = PixelClicker.PixelType.Glass, amount = 5000 },
+                new PackCost { type = PixelClicker.PixelType.Glass, amount = 25000 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "ghost",
@@ -186,8 +186,8 @@ public partial class PixelShop
             requirements = Needs(requiresGhostHuntIndex, "ghost"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Glass,        amount = 5000000 },
-                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 100000 },
+                new PackCost { type = PixelClicker.PixelType.Glass,        amount = 2000000 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 6000000 },
             },
             rewardTiers = new[]
             {
@@ -249,7 +249,7 @@ public partial class PixelShop
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black, amount = 2500000 },
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 25000 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 5000000 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "meteor",
@@ -267,8 +267,8 @@ public partial class PixelShop
             requirements = Needs(requiresMeteorIndex, "meteor"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 2500000 },
-                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 500000 },
+                new PackCost { type = PixelClicker.PixelType.Luminescent, amount = 6000000 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 800000 },
             },
             rewardTiers = new[]
             {
@@ -296,7 +296,7 @@ public partial class PixelShop
             costs = new[]
             {
                 new PackCost { type = PixelClicker.PixelType.Black,  amount = 500000 },
-                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 10000 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum, amount = 100000 },
             },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksMinigame = "blackhole",
@@ -314,8 +314,8 @@ public partial class PixelShop
             requirements = Needs(requiresBlackholeIndex, "blackhole"),
             costs = new[]
             {
-                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 1000000 },
-                new PackCost { type = PixelClicker.PixelType.Vacuum,   amount = 250000 },
+                new PackCost { type = PixelClicker.PixelType.Obsidian, amount = 4000000 },
+                new PackCost { type = PixelClicker.PixelType.Vacuum,   amount = 400000 },
             },
             rewardTiers = new[]
             {
@@ -427,11 +427,11 @@ public partial class PixelShop
             upgradeEffect = UpgradeEffect.BankCapacity,
             levels = new[]
             {
-                new PackLevel { value = 100f, costs = BankStorageCost(2500, 500, 4) },
-                new PackLevel { value = 160f, costs = BankStorageCost(25000, 5000, 8) },
-                new PackLevel { value = 250f, costs = BankStorageCost(250000, 50000, 14) },
-                new PackLevel { value = 400f, costs = BankStorageCost(1000000, 250000, 22) },
-                new PackLevel { value = 600f, costs = BankStorageCost(5000000, 1000000, 32) },
+                new PackLevel { value = 100f, costs = BankStorageCost(2500, 1000, 4) },
+                new PackLevel { value = 160f, costs = BankStorageCost(25000, 10000, 8) },
+                new PackLevel { value = 250f, costs = BankStorageCost(250000, 100000, 14) },
+                new PackLevel { value = 400f, costs = BankStorageCost(1000000, 400000, 22) },
+                new PackLevel { value = 600f, costs = BankStorageCost(5000000, 2000000, 32) },
             }
         };
     }

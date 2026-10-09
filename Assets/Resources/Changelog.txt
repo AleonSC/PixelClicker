@@ -54,3 +54,5 @@
 [2026-10-09 11:30 UTC] Added a "Reset Built-in Pack Prices" button to the Shop component in Unity, which puts the built-in packs back to their default prices.
 [2026-10-09 11:30 UTC] The Meteor Pixel now needs 1000 meteor chunks.
 [2026-10-09 11:30 UTC] Value upgrades for tough pixels (like Obsidian) are now priced by what one click is worth, so they are no longer overpriced.
+[2026-10-09 11:35 UTC] Rarer pixels are now deliberately slower to upgrade: Value prices follow each pixel's payout again (Obsidian is no longer cheaper to upgrade than White).
+[2026-10-09 11:35 UTC] Re-priced the Glass, Vacuum, Obsidian and Luminescent costs in the shop to match how rarely those pixels spawn.
