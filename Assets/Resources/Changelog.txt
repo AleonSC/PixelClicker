@@ -44,3 +44,4 @@
 [2026-10-07 12:52 UTC] Restart now returns to the Play screen like a fresh launch, and the Log/Inventory intro tips begin a split second after the game comes into focus.
 [2026-10-07 12:56 UTC] Noted the agreed next plan (optimization review, then handoff document) in CLAUDE.md.
 [2026-10-07 12:56 UTC] Noted in CLAUDE.md that the changelog needs clearing after the latest build.
+[2026-10-09 11:13 UTC] Gray and Black now unlock at 100 by default, and tier unlocks count the pixels you currently hold instead of your lifetime total.

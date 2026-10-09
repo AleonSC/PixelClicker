@@ -4,7 +4,7 @@
 // A blank line leaves a gap. Long lines wrap by themselves. Simple tags like <b>bold</b> and <i>italic</i> work.
 
 # The Goal
-Click the cube to collect pixels. Every pixel type is its own currency. Collect enough of one type and the next, better type unlocks. Spend your pixels in the Shop to unlock new pixel types, upgrades, potions, devices and minigames.
+Click the cube to collect pixels. Every pixel type is its own currency. Hold enough of one type in your inventory and the next, better type unlocks (spent pixels do not count). Spend your pixels in the Shop to unlock new pixel types, upgrades, potions, devices and minigames.
 
 # Collecting
 Each click pays out the pixel the cube is showing. A smaller copy of that pixel then falls to the floor: an "old pixel". Old pixels vanish after a few seconds, but a lot of the game is about doing something useful with them before they do.
