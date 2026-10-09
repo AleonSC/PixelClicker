@@ -420,6 +420,34 @@ public static class PixelLooks
         return overlayMaterial;
     }
 
+    /// <summary>
+    /// A glow that does not depend on shader keywords: a slightly larger copy of the mesh drawn on top with the unlit
+    /// Sprites/Default shader (alpha-blended colour). Emission switched on from code is stripped from builds when no saved
+    /// material uses it, so this keeps glowing pixels visibly luminous in a built game. Returns the new object (a child of 'parent').
+    /// 'texture' (optional) is drawn instead of a flat colour (alpha of the texture = how much shows), e.g. lava cracks.
+    /// </summary>
+    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null)
+    {
+        Material material = OverlayMaterial();
+        if (material == null || mesh == null || parent == null) return null;
+
+        GameObject go = new GameObject("Glow Shell", typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.SetParent(parent, false);
+        go.transform.localScale = Vector3.one * scale;
+        go.layer = parent.gameObject.layer;
+        go.GetComponent<MeshFilter>().sharedMesh = mesh;
+        MeshRenderer mr = go.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = material;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
+
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha)));
+        if (texture != null) block.SetTexture("_MainTex", texture);
+        mr.SetPropertyBlock(block);
+        return go;
+    }
+
     private static Material CoreMaterial(Material baseMaterial)
     {
         if (coreMaterial != null) return coreMaterial;

@@ -304,6 +304,10 @@ public class PixelMeteorMinigame : PixelMinigame
             if (rockMat.HasProperty("_Glossiness")) rockMat.SetFloat("_Glossiness", 0.15f);
             if (rockMat.HasProperty("_Metallic")) rockMat.SetFloat("_Metallic", 0f);
             rock.GetComponent<Renderer>().sharedMaterial = rockMat;
+
+            // The lava cracks again as an unlit overlay: emission switched on from code is stripped from builds, this is not.
+            if (lavaCracks)
+                PixelLooks.AddGlowShell(rock.transform, rock.GetComponent<MeshFilter>().sharedMesh, Color.white, 0.95f, 1.004f, rockLavaOverlay);
         }
         else
         {
@@ -434,7 +438,7 @@ public class PixelMeteorMinigame : PixelMinigame
     // Runtime-built visuals: lumpy rock mesh, lava texture, soft glow sprite, embers
     // ------------------------------------------------------------------
 
-    private static Texture2D rockAlbedo, rockEmission;
+    private static Texture2D rockAlbedo, rockEmission, rockLavaOverlay;
     private static Sprite haloSprite;
 
     /// <summary>A copy of a sphere mesh with its surface pushed in and out by noise (craggy lumps).</summary>
@@ -464,14 +468,14 @@ public class PixelMeteorMinigame : PixelMinigame
     /// <summary>Dark cracked rock (albedo) and the glowing cracks alone (emission), drawn once and shared.</summary>
     private static void EnsureRockTextures()
     {
-        if (rockAlbedo != null && rockEmission != null) return;
+        if (rockAlbedo != null && rockEmission != null && rockLavaOverlay != null) return;
 
         const int size = 192, cells = 34;
         System.Random rnd = new System.Random(4242);
         Vector2[] sites = new Vector2[cells];
         for (int i = 0; i < cells; i++) sites[i] = new Vector2((float)rnd.NextDouble(), (float)rnd.NextDouble());
 
-        Color32[] albedo = new Color32[size * size], emission = new Color32[size * size];
+        Color32[] albedo = new Color32[size * size], emission = new Color32[size * size], overlay = new Color32[size * size];
         for (int y = 0; y < size; y++)
         {
             for (int x = 0; x < size; x++)
@@ -495,6 +499,7 @@ public class PixelMeteorMinigame : PixelMinigame
                 float rock = 0.10f + grain * 0.16f;
                 albedo[y * size + x] = new Color(rock * 1.15f, rock * 0.85f, rock * 0.7f, 1f);
                 emission[y * size + x] = new Color(crack, crack * 0.55f, crack * 0.15f, 1f);
+                overlay[y * size + x] = new Color(1f, 0.55f + crack * 0.25f, 0.15f, Mathf.Clamp01(crack * 1.15f)); // the cracks as a colour + alpha picture
             }
         }
 
@@ -504,6 +509,9 @@ public class PixelMeteorMinigame : PixelMinigame
         rockEmission = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, name = "MeteorLava" };
         rockEmission.SetPixels32(emission);
         rockEmission.Apply(true, false);
+        rockLavaOverlay = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, name = "MeteorLavaOverlay" };
+        rockLavaOverlay.SetPixels32(overlay);
+        rockLavaOverlay.Apply(true, false);
     }
 
     /// <summary>A white soft round blob (tinted by the sprite colour).</summary>

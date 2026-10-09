@@ -283,6 +283,14 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Extra glow on these old pixels: multiplies the tier's Glow Intensity (1 = no extra).")]
     [SerializeField] private float oldPixelGlowBoost = 2.5f;
 
+    [Header("Glow Shell (works in builds)")]
+    [Tooltip("Glowing pixels get a thin unlit coloured shell on top of the normal glow. Emission turned on from code can be stripped from built games (no saved material uses it), and this keeps glowing pixels luminous there.")]
+    [SerializeField] private bool glowShell = true;
+
+    [Range(0f, 1f)]
+    [Tooltip("How strongly the shell tints the pixel (it scales with the pixel's Glow Intensity). 0 = off.")]
+    [SerializeField] private float glowShellAlpha = 0.3f;
+
     [Header("Tough Pixels (Clicks To Collect > 1)")]
     [Range(0f, 0.6f)]
     [Tooltip("How much the pixel squashes when it is hit but not yet collected. 0 = no reaction.")]
@@ -1507,6 +1515,39 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Adds / removes the outline and core on the live cube to match the tier's look.</summary>
+    private GameObject liveGlowShell;
+    private PixelType liveGlowShellType = (PixelType)(-1);
+
+    /// <summary>Does this tier get the build-proof glow shell (glowing or emissive, and not see-through)?</summary>
+    private bool WantsGlowShell(PixelTier tier, PixelLook look)
+    {
+        if (!glowShell || glowShellAlpha <= 0f || tier == null) return false;
+        bool glowing = tier.glow || (look != null && look.emission > 0f);
+        bool seeThrough = tier.translucent || (look != null && look.forceTranslucent);
+        return glowing && !seeThrough;
+    }
+
+    private float GlowShellAlpha(PixelTier tier, float extra = 1f) =>
+        Mathf.Clamp(glowShellAlpha * Mathf.Max(0.5f, tier.glowIntensity) * 0.5f * extra, 0.12f, 0.55f);
+
+    private Color GlowShellColor(PixelTier tier) => Color.Lerp(tier.color, Color.white, 0.2f);
+
+    private void UpdateGlowShell(PixelTier tier, PixelLook look)
+    {
+        MeshFilter mf = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
+        if (!WantsGlowShell(tier, look) || mf == null)
+        {
+            if (liveGlowShell != null) Destroy(liveGlowShell);
+            liveGlowShell = null;
+            return;
+        }
+        if (liveGlowShell != null && liveGlowShellType == tier.type) return;
+
+        if (liveGlowShell != null) Destroy(liveGlowShell);
+        liveGlowShell = PixelLooks.AddGlowShell(pixelRenderer.transform, mf.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier));
+        liveGlowShellType = tier.type;
+    }
+
     private void UpdateLiveExtras(PixelTier tier, PixelLook look)
     {
         bool wanted = look != null && look.HasExtras && pixelRenderer != null;
@@ -1588,6 +1629,7 @@ public class PixelClicker : MonoBehaviour
         activeLook = LookOf(tier);
         UpdateGlowLight(tier);
         UpdateLiveExtras(tier, activeLook);
+        UpdateGlowShell(tier, activeLook);
         if (pixelRenderer != null)
         {
             // Start from a clean block so nothing (texture, glossiness) is left over from the previous pixel type.
@@ -2214,6 +2256,9 @@ public class PixelClicker : MonoBehaviour
             }
         }
         if (!fly && lightTrail && IsBrightOldPixel(tierIndex)) AddLightTrail(copy, tiers[tierIndex].color);
+        if (srcFilter != null && IsValidTier(tierIndex) && WantsGlowShell(tiers[tierIndex], LookOf(tiers[tierIndex])))
+            PixelLooks.AddGlowShell(copy.transform, srcFilter.sharedMesh, GlowShellColor(tiers[tierIndex]),
+                                    GlowShellAlpha(tiers[tierIndex], IsBrightOldPixel(tierIndex) ? 1.3f : 1f));
 
         if (fly)
         {
@@ -2319,6 +2364,7 @@ public class PixelClicker : MonoBehaviour
             PixelLooks.AddExtras(go.transform, srcFilter.sharedMesh, styled, tier.color, defaultMaterial);
             if (styled.wobble) MakeWobbleVisual(go, styled);
         }
+        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, srcFilter.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier));
         return go;
     }
 

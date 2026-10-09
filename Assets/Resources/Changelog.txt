@@ -69,3 +69,4 @@
 [2026-10-08 16:09 UTC] New Time Slow upgrade (needs Time Stop): press S to slow time on the shared meter; slowed meteor pixels can be grabbed with Pixel Grabbing and dropped on pads.
 [2026-10-09 03:49 UTC] Build fixes: an Editor script keeps the glow / transparency shader variants in builds (luminescent, meteor lava, solar and bomb / pad glow), and Vacuum's face circles are drawn after the pixel so they stay fully black.
 [2026-10-09 03:57 UTC] Fixed the 'transient artifacts' Editor error: the shader keep-alive script now waits until the Editor is idle and creates its materials in one batch.
+[2026-10-09 04:03 UTC] Glow no longer depends on shader variants that builds strip: glowing pixels get a thin unlit coloured shell and the meteor rock gets its lava cracks as an unlit overlay.
