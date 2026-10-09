@@ -109,7 +109,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         [Tooltip("Disco only: seconds between colour changes.")]
         public float beatSeconds = 0.5f;
 
-        [Tooltip("One copy of the pattern covers the whole floor (no tiling). Tile World Size is ignored.")]
+        [Tooltip("Show ONE copy of the pattern (Tile World Size across, centred on the floor) instead of repeating it; the rest of the floor shows the pattern's edge colour.")]
         public bool stretchToFloor = false;
 
         [Tooltip("Animated patterns (Liquid, Kaleidoscope, Pac-Man): how many times per second the pattern is redrawn. 0 = still. Higher = smoother but costs more.")]
@@ -129,6 +129,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
     [Header("Styles")]
     [Tooltip("Add the built-in styles that are missing from the list (by name).")]
     [SerializeField] private bool addDefaultStyles = true;
+
+    [Tooltip("Which round of built-in style fixes this list has had (set automatically; lower it to apply them again).")]
+    [SerializeField] private int defaultsVersion = 0;
 
     [Tooltip("The styles you can pick in Settings, in order. The first Classic entry restores the floor's own look.")]
     [SerializeField] private List<FloorStyle> styles = new List<FloorStyle>();
@@ -152,6 +155,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
     private float beatTimer;
     private int beatStep;
     private Vector2 baseTiling = Vector2.one;
+    private Vector2 baseOffset;
     private Vector2 offset;
     private float pulseClock;
     private float animTimer, animClock;
@@ -310,9 +314,11 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         // Tile by world size so the pattern has the same scale on any floor.
         Vector3 size = floorRenderer.bounds.size;
         float tile = Mathf.Max(0.1f, style.tileWorldSize);
-        baseTiling = style.stretchToFloor ? Vector2.one : new Vector2(Mathf.Max(1f, size.x / tile), Mathf.Max(1f, size.z / tile));
+        // Tile by world size so every pattern has the same scale on any floor, centred on the floor's middle.
+        baseTiling = new Vector2(Mathf.Max(0.02f, size.x / tile), Mathf.Max(0.02f, size.z / tile));
+        baseOffset = new Vector2(0.5f - Frac(0.5f * baseTiling.x), 0.5f - Frac(0.5f * baseTiling.y));
         animTimer = animClock = 0f;
-        SetTiling(m, baseTiling, offset);
+        SetTiling(m, baseTiling, baseOffset + offset);
 
         Material[] mats = new Material[Mathf.Max(1, originalMaterials != null ? originalMaterials.Length : 1)];
         for (int i = 0; i < mats.Length; i++) mats[i] = m;
@@ -338,7 +344,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             offset += style.scrollSpeed * dt;
             offset.x -= Mathf.Floor(offset.x);
             offset.y -= Mathf.Floor(offset.y);
-            SetTiling(activeMaterial, baseTiling, offset);
+            SetTiling(activeMaterial, baseTiling, baseOffset + offset);
         }
 
         if (style.glow > 0f && style.pulseSpeed > 0f && activeMaterial.HasProperty("_EmissionColor"))
@@ -1312,9 +1318,23 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private void EnsureDefaultStyles()
     {
-        // The card back used to be tiled; it is now one big card over the whole floor.
-        FloorStyle oldCard = styles.Find(st => st != null && st.pattern == FloorPattern.CardBack && !st.stretchToFloor && st.name == "Yu-Gi-Oh Card Back");
-        if (oldCard != null) { oldCard.stretchToFloor = true; oldCard.resolution = Mathf.Max(oldCard.resolution, 1024); }
+        // Sizes changed after these styles first shipped (they looked too zoomed in): bring saved copies up to date once.
+        if (defaultsVersion < 1)
+        {
+            foreach (FloorStyle st in styles)
+            {
+                if (st == null) continue;
+                switch (st.name)
+                {
+                    case "Yu-Gi-Oh Card Back": st.stretchToFloor = true; st.tileWorldSize = 8f; st.resolution = Mathf.Max(st.resolution, 1024); break;
+                    case "Liquid Flow": st.tileWorldSize = 3f; break;
+                    case "Moving Clouds": st.tileWorldSize = 5f; break;
+                    case "Kaleidoscope": st.stretchToFloor = false; st.tileWorldSize = 8f; break;
+                    case "Pac-Man": st.stretchToFloor = false; st.tileWorldSize = 8f; break;
+                }
+            }
+            defaultsVersion = 1;
+        }
 
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
@@ -1477,29 +1497,29 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
         // ---- Yu-Gi-Oh themed ----
         FloorStyle card = S("Yu-Gi-Oh Card Back", FloorPattern.CardBack, new Color(0.95f, 0.55f, 0.15f), new Color(0.35f, 0.17f, 0.06f),
-                            new Color(0.06f, 0.04f, 0.03f), 1024, false, 4f, 1, 0.55f);
+                            new Color(0.06f, 0.04f, 0.03f), 1024, false, 8f, 1, 0.55f);
         card.stretchToFloor = true;
         yield return card;
 
         // ---- Animated ----
         FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
-                              new Color(0.85f, 1f, 1f), 128, false, 6f, 2, 0.95f, 0.25f);
+                              new Color(0.85f, 1f, 1f), 128, false, 3f, 2, 0.95f, 0.25f);
         liquid.animateFps = 15f;
         yield return liquid;
 
         FloorStyle clouds = S("Moving Clouds", FloorPattern.CloudSea, new Color(0.35f, 0.6f, 0.9f), new Color(0.72f, 0.78f, 0.88f),
-                              Color.white, 256, false, 10f, 1, 0.2f);
+                              Color.white, 256, false, 5f, 1, 0.2f);
         clouds.scrollSpeed = new Vector2(0.015f, 0.006f);
         yield return clouds;
 
         FloorStyle kaleido = S("Kaleidoscope", FloorPattern.Kaleidoscope, new Color(0.02f, 0.02f, 0.05f), Color.white,
-                               new Color(0.05f, 0.05f, 0.08f), 256, false, 6f, 8, 0.7f, 0.6f);
-        kaleido.stretchToFloor = true; kaleido.animateFps = 15f;
+                               new Color(0.05f, 0.05f, 0.08f), 256, false, 8f, 8, 0.7f, 0.6f);
+        kaleido.animateFps = 15f;
         yield return kaleido;
 
         FloorStyle pac = S("Pac-Man", FloorPattern.PacMan, new Color(0.15f, 0.25f, 1f), new Color(1f, 0.8f, 0.65f),
-                           Color.black, 256, true, 6f, 1, 0.4f, 0.8f);
-        pac.stretchToFloor = true; pac.animateFps = 20f;
+                           Color.black, 256, true, 8f, 1, 0.4f, 0.8f);
+        pac.animateFps = 20f;
         yield return pac;
     }
 }
