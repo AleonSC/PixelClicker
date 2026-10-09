@@ -1253,8 +1253,8 @@ public class PixelUI : MonoBehaviour
         consumableAlign = align;
         BuildPotionRows();
 
-        noConsumablesLabel = MakeText(ListParent, "No Consumables", noConsumablesText, fontSize, align,
-                                      FontStyles.Bold, emptyMessageColor);
+        noConsumablesLabel = MakeText(ListParent, "No Consumables", noConsumablesText.ToUpperInvariant(), fontSize,
+                                      TextAlignmentOptions.Center, FontStyles.Bold, emptyMessageColor); // capitals, centred in the window
         PlaceLine(noConsumablesLabel.rectTransform);
         noConsumablesLabel.gameObject.SetActive(false);
 
@@ -1387,7 +1387,7 @@ public class PixelUI : MonoBehaviour
         noConsumablesLabel.gameObject.SetActive(shown == 0);
         if (shown == 0)
         {
-            noConsumablesLabel.text = onDevices ? noDevicesText : noConsumablesText;
+            noConsumablesLabel.text = (onDevices ? noDevicesText : noConsumablesText).ToUpperInvariant();
             noConsumablesLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
             y += LinePitch;
         }
