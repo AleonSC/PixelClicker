@@ -595,6 +595,15 @@ public class PixelAchievements : MonoBehaviour
         return number >= 1 && number < numerals.Length ? numerals[number] : number.ToString();
     }
 
+    /// <summary>Tier index whose real look the achievement's icon should show, or -1 (no pixel type: use the plain cube).</summary>
+    public int GetSkinTier(int index)
+    {
+        Achievement a = achievements[index];
+        bool perPixel = a.kind == Kind.CollectPixelType || a.kind == Kind.ClickPixelType
+                        || (a.id != null && a.id.StartsWith("pet_"));
+        return perPixel ? clicker.IndexOf(a.pixelType) : -1;
+    }
+
     /// <summary>Colour of the achievement's cube icon (the pixel's colour for pixel-type achievements).</summary>
     public Color GetIconColor(int index)
     {

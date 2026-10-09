@@ -310,6 +310,7 @@ public class PixelLog : MonoBehaviour
     {
         public RectTransform rect;
         public PixelCubeIcon icon;
+        public RawImage skin;
         public TMP_Text title;
         public TMP_Text description;
         public TMP_Text progress;
@@ -416,8 +417,51 @@ public class PixelLog : MonoBehaviour
         }
     }
 
+    private readonly Dictionary<int, RenderTexture> skinIcons = new Dictionary<int, RenderTexture>();
+
+    /// <summary>Picture of a pixel type with its real look (material, glow, extras), rendered once and cached. Null if it can't be made.</summary>
+    private Texture SkinIcon(int tier)
+    {
+        if (tier < 0 || clicker == null) return null;
+        RenderTexture rt;
+        if (skinIcons.TryGetValue(tier, out rt) && rt != null) return rt;
+        skinIcons.Remove(tier);
+
+        GameObject studio = new GameObject("Achievement Icon Studio");
+        studio.transform.position = new Vector3(0f, -3500f, 0f);
+        try
+        {
+            GameObject model = clicker.CreateDisplayPixel(tier, studio.transform, 1f);
+            if (model == null) return null;
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.Euler(24f, 38f, 0f);
+
+            rt = new RenderTexture(160, 160, 24, RenderTextureFormat.ARGB32) { name = "Achievement Icon " + tier };
+            GameObject camGo = new GameObject("Icon Camera");
+            camGo.transform.SetParent(studio.transform, false);
+            Camera cam = camGo.AddComponent<Camera>();
+            cam.enabled = false;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            cam.fieldOfView = 30f;
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 30f;
+            cam.allowHDR = false;
+            cam.targetTexture = rt;
+            camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
+            camGo.transform.LookAt(studio.transform.position);
+            cam.Render();
+            cam.targetTexture = null;
+            skinIcons[tier] = rt;
+            return rt;
+        }
+        finally { Destroy(studio); }
+    }
+
     private void OnDestroy()
     {
+        foreach (KeyValuePair<int, RenderTexture> kv in skinIcons) if (kv.Value != null) kv.Value.Release();
+        skinIcons.Clear();
         if (logInstance == this) logInstance = null;
         PixelWindows.Unregister(this);
         if (clicker != null)
@@ -736,6 +780,17 @@ public class PixelLog : MonoBehaviour
         ir.sizeDelta = new Vector2(achievementIconSize, achievementIconSize);
         ir.anchoredPosition = new Vector2(10f, 0f);
 
+        // Real pixel look (rendered once per pixel type); shown instead of the plain cube when available.
+        GameObject skinGo = new GameObject("Skin", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        skinGo.transform.SetParent(go.transform, false);
+        row.skin = skinGo.GetComponent<RawImage>();
+        row.skin.raycastTarget = false;
+        RectTransform sr = row.skin.rectTransform;
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
+        sr.sizeDelta = new Vector2(achievementIconSize, achievementIconSize);
+        sr.anchoredPosition = new Vector2(10f, 0f);
+        skinGo.SetActive(false);
+
         float left = achievementIconSize + 24f;
 
         row.title = CreateText(go.transform, "Title", "", rowFontSize * 0.9f, TextAlignmentOptions.MidlineLeft,
@@ -770,7 +825,7 @@ public class PixelLog : MonoBehaviour
         dr.anchorMin = new Vector2(0f, 0.28f);
         dr.anchorMax = new Vector2(1f, 0.58f);
         dr.offsetMin = new Vector2(left, 0f);
-        dr.offsetMax = new Vector2(-170f, 0f);
+        dr.offsetMax = new Vector2(-250f, 0f);
 
         // Small tag showing which of the pixel's two achievements this slot shows (click the row to switch).
         row.modeTag = CreateText(go.transform, "Mode", "", rowFontSize * 0.6f, TextAlignmentOptions.MidlineRight,
@@ -779,8 +834,10 @@ public class PixelLog : MonoBehaviour
         mr.anchorMin = new Vector2(1f, 0.28f);
         mr.anchorMax = new Vector2(1f, 0.58f);
         mr.pivot = new Vector2(1f, 0.5f);
-        mr.sizeDelta = new Vector2(160f, 0f);
+        mr.sizeDelta = new Vector2(240f, 0f);
         mr.anchoredPosition = new Vector2(-10f, 0f);
+        row.modeTag.textWrappingMode = TextWrappingModes.NoWrap;
+        row.modeTag.overflowMode = TextOverflowModes.Overflow;
 
         // Clicking the row switches between "value collected" and "times clicked".
         Button click = go.AddComponent<Button>();
@@ -1191,6 +1248,10 @@ public class PixelLog : MonoBehaviour
 
             Color icon = achievements.GetIconColor(a);
             row.icon.color = new Color(icon.r * dim, icon.g * dim, icon.b * dim, icon.a);
+            Texture skinTex = SkinIcon(achievements.GetSkinTier(a));
+            row.skin.gameObject.SetActive(skinTex != null);
+            row.icon.gameObject.SetActive(skinTex == null);
+            if (skinTex != null) { row.skin.texture = skinTex; row.skin.color = new Color(dim, dim, dim, 1f); }
 
             row.barFill.color = unlocked ? achievementUnlockedColor : achievementBarColor;
             row.barFillRect.anchorMax = new Vector2(unlocked ? 1f : achievements.GetFraction(a), 1f);
