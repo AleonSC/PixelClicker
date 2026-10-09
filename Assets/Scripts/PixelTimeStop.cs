@@ -309,6 +309,7 @@ public class PixelTimeStop : MonoBehaviour
         }
 
         if (!stopped && energy >= 1f) fullTimer = hideDelaySeconds;
+        if (!stopped) PixelAudio.Stop("time_stop"); // the freeze sound must not play on after time resumes
         PixelAudio.Play(stopped ? "time_stop" : "time_resume");
         if (stopped) PixelHints.Trigger("timestop_first");
         if (stopped) PixelAudio.StartLoop(loopSoundId);
@@ -333,6 +334,7 @@ public class PixelTimeStop : MonoBehaviour
         }
 
         if (!slowed && energy >= 1f) fullTimer = hideDelaySeconds;
+        if (!slowed) PixelAudio.Stop("time_slow");
         PixelAudio.Play(slowed ? "time_slow" : "time_slow_end");
         if (slowed) PixelHints.Trigger("timestop_slow");
         if (slowed) PixelAudio.StartLoop(slowLoopSoundId);

@@ -439,6 +439,16 @@ public class PixelAudio : MonoBehaviour
         if (instance != null) instance.PlaySound(id, pitchMultiplier);
     }
 
+    /// <summary>Cuts off every voice that is currently playing this sound (e.g. the Time Stop sound when time resumes).</summary>
+    public static void Stop(string id)
+    {
+        if (instance == null || instance.voices == null) return;
+        for (int i = 0; i < instance.voices.Length; i++)
+            if (instance.voiceIds[i] == id && instance.voices[i] != null && instance.voices[i].isPlaying) instance.voices[i].Stop();
+    }
+
+    private string[] voiceIds;
+
     private void PlaySound(string id, float pitchMultiplier, float volumeMultiplier = 1f)
     {
         if (muted || voices == null || !byId.TryGetValue(id, out Sound s)) return;
@@ -455,7 +465,9 @@ public class PixelAudio : MonoBehaviour
         AudioClip clip = s.clips[pick];
         if (clip == null) return;
 
+        if (voiceIds == null || voiceIds.Length != voices.Length) voiceIds = new string[voices.Length];
         AudioSource voice = voices[nextVoice];
+        voiceIds[nextVoice] = id;
         nextVoice = (nextVoice + 1) % voices.Length;
         voice.clip = clip;
         voice.volume = s.volume * effectsVolume * masterVolume * volumeMultiplier;
