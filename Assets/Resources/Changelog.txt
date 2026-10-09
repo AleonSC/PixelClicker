@@ -74,3 +74,4 @@
 [2026-10-09 04:16 UTC] Added a rendering report (graphics device, render pipeline, shaders found, glow setup) written next to the crash reports at start and on F10, to track down the missing glow in builds.
 [2026-10-09 04:18 UTC] Fixed trails, glow shells and other effects missing in built games: the unlit Sprites/Default shader is now kept in the build and looked up through PixelShaders.
 [2026-10-09 04:22 UTC] Fixed the glow shell being off on existing scenes (its new settings defaulted to off): it is now on unless disabled.
+[2026-10-09 04:31 UTC] Glowing pixels now also get a soft camera-facing halo (drawn without post-processing or shader keywords) so they look luminous in builds.

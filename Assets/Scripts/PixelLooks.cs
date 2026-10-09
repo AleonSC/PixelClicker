@@ -426,7 +426,7 @@ public static class PixelLooks
     /// material uses it, so this keeps glowing pixels visibly luminous in a built game. Returns the new object (a child of 'parent').
     /// 'texture' (optional) is drawn instead of a flat colour (alpha of the texture = how much shows), e.g. lava cracks.
     /// </summary>
-    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null)
+    public static GameObject AddGlowShell(Transform parent, Mesh mesh, Color colour, float alpha, float scale = 1.012f, Texture texture = null, bool halo = false)
     {
         Material material = OverlayMaterial();
         if (material == null || mesh == null || parent == null) return null;
@@ -445,7 +445,61 @@ public static class PixelLooks
         block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha)));
         if (texture != null) block.SetTexture("_MainTex", texture);
         mr.SetPropertyBlock(block);
+        if (halo) AddGlowHalo(go.transform, colour, alpha);
         return go;
+    }
+
+    private static Mesh haloMesh;
+    private static Texture2D haloTexture;
+
+    /// <summary>
+    /// A soft round camera-facing glow behind the pixel (like bloom, but drawn with the unlit Sprites/Default shader, so it
+    /// needs no post-processing and no shader keywords). The pixel's own faces hide the middle of it, so only the halo around
+    /// the silhouette shows.
+    /// </summary>
+    private static void AddGlowHalo(Transform parent, Color colour, float alpha)
+    {
+        Material material = OverlayMaterial();
+        if (material == null) return;
+
+        if (haloMesh == null)
+        {
+            haloMesh = new Mesh { name = "Glow Halo" };
+            haloMesh.vertices = new[] { new Vector3(-0.5f, -0.5f, 0f), new Vector3(0.5f, -0.5f, 0f), new Vector3(-0.5f, 0.5f, 0f), new Vector3(0.5f, 0.5f, 0f) };
+            haloMesh.uv = new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f) };
+            haloMesh.triangles = new[] { 0, 2, 1, 2, 3, 1, 0, 1, 2, 2, 1, 3 };
+            haloMesh.RecalculateBounds();
+        }
+        if (haloTexture == null)
+        {
+            const int n = 64;
+            haloTexture = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "GlowHalo" };
+            Color32[] px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                    float r = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+                    float a = Mathf.Pow(1f - r, 2.2f);
+                    px[y * n + x] = new Color(1f, 1f, 1f, a);
+                }
+            haloTexture.SetPixels32(px);
+            haloTexture.Apply(false, true);
+        }
+
+        GameObject go = new GameObject("Glow Halo", typeof(MeshFilter), typeof(MeshRenderer), typeof(PixelFaceCamera));
+        go.transform.SetParent(parent, false);
+        go.transform.localScale = Vector3.one * 2.6f;
+        go.layer = parent.gameObject.layer;
+        go.GetComponent<MeshFilter>().sharedMesh = haloMesh;
+        MeshRenderer mr = go.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = material;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows = false;
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        block.SetColor("_Color", new Color(colour.r, colour.g, colour.b, Mathf.Clamp01(alpha * 1.6f)));
+        block.SetTexture("_MainTex", haloTexture);
+        mr.SetPropertyBlock(block);
     }
 
     private static Material CoreMaterial(Material baseMaterial)
@@ -1013,5 +1067,17 @@ public class OldPixelShard : MonoBehaviour
         float k = 1f - (age - life) / ShrinkSeconds;
         if (k <= 0f) { Destroy(gameObject); return; }
         transform.localScale = startScale * k;
+    }
+}
+
+/// <summary>Turns its object to face the camera every frame (the glow halo).</summary>
+public class PixelFaceCamera : MonoBehaviour
+{
+    private Camera cam;
+
+    private void LateUpdate()
+    {
+        if (cam == null) cam = Camera.main;
+        if (cam != null) transform.rotation = cam.transform.rotation;
     }
 }
