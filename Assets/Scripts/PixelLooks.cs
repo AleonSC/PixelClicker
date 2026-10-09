@@ -449,7 +449,7 @@ public static class PixelLooks
     /// The unlit vertex-colour material for flat marks lying on a face (Vacuum's black circles, colour-blind shapes). It is
     /// drawn after the pixel itself (a higher render queue), so a translucent pixel can't be blended over the marks and tint them.
     /// </summary>
-    private static Material OverlayMaterial()
+    internal static Material OverlayMaterial()
     {
         if (overlayMaterial != null) return overlayMaterial;
         Material source = NeonMaterial();

@@ -42,6 +42,15 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     /// <summary>Is the device already shrinking away?</summary>
     public bool IsRemoving => dying;
 
+    /// <summary>Raised once when the device's time is up and it starts shrinking away (also when it is removed by hand).</summary>
+    public event System.Action<PixelPlacedDevice> Ended;
+
+    /// <summary>Adds (or, negative, takes) seconds to the countdown. No effect once the device is shrinking away.</summary>
+    public void AddSeconds(float seconds)
+    {
+        if (!dying) remaining += seconds;
+    }
+
     /// <summary>Removes the device now (it shrinks away like when its time runs out). No refund.</summary>
     public void RemoveNow()
     {
@@ -92,6 +101,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     private IEnumerator ShrinkAway()
     {
         dying = true;
+        Ended?.Invoke(this);
         if (timerText != null) timerText.gameObject.SetActive(false);
 
         Vector3 start = transform.localScale;

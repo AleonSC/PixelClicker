@@ -188,6 +188,7 @@ public class PixelAudio : MonoBehaviour
             Make("click", 0.02f, 0.92f, 1.08f),
             Make("pixel_land", 0.02f, 0.88f, 1.12f),
             Make("pixel_bounce_electric", 0.05f, 0.9f, 1.15f),
+            Make("overcharge", 0.3f, 1f, 1f),
             Make("glass_shatter", 0.04f, 0.9f, 1.1f),
             Make("auto_click", 0.06f, 0.92f, 1.08f),
             Make("hit", 0.03f, 0.92f, 1.08f),
@@ -243,9 +244,9 @@ public class PixelAudio : MonoBehaviour
         if (sounds == null) return;
         foreach (Sound s in sounds)
         {
-            if (s == null || s.id != "pixel_bounce_electric") continue;
+            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge")) continue;
             if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
-            s.clips = new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
+            s.clips = s.id == "overcharge" ? new[] { PixelSynth.Charge() } : new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
         }
     }
 
@@ -631,6 +632,38 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
 
         AudioClip clip = AudioClip.Create("Zap " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A charge-up: a rising buzz with growing crackle that ends in a big snap.</summary>
+    public static AudioClip Charge()
+    {
+        const int rate = 44100;
+        int n = (int)(rate * 0.7f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(4242);
+        float phase = 0f, crackle = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)n;
+            float sec = i / (float)rate;
+            float hz = Mathf.Lerp(180f, 1500f, t * t);
+            phase += hz / rate;
+            phase -= Mathf.Floor(phase);
+            float buzz = (phase * 2f - 1f) * Mathf.Lerp(0.15f, 0.45f, t);
+
+            if (rng.NextDouble() < 0.01 + 0.06 * t) crackle = (float)rng.NextDouble() * 2f - 1f;
+            crackle *= 0.88f;
+
+            float body = (buzz + crackle * Mathf.Lerp(0.2f, 0.9f, t)) * Mathf.Clamp01(sec / 0.05f);
+            float snap = t > 0.78f ? ((float)rng.NextDouble() * 2f - 1f) * Mathf.Exp(-(t - 0.78f) * 45f) : 0f; // the final crack
+            data[i] = body * (t > 0.78f ? Mathf.Exp(-(t - 0.78f) * 18f) : 1f) + snap * 0.9f;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
+        AudioClip clip = AudioClip.Create("Overcharge", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

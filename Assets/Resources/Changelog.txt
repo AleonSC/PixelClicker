@@ -203,3 +203,4 @@
 [2026-10-09 21:16 UTC] Added the Wizard visitor (50 White Pixels in the Minigames tab) who sells potions at 80% off; the Tinkerer and Wizard now share one visitor base script.
 [2026-10-09 21:18 UTC] Electric pixels now pay a random 1-15 every time one is harvested (new Random Payout option on any pixel type).
 [2026-10-09 21:25 UTC] The Electric pixel now makes a crackling zap sound when it bounces (a built-in synthesized sound; any pixel type can get its own bounce sound with a pixel_bounce_<type> entry).
+[2026-10-09 21:37 UTC] Electric pixel abilities: clicking one overcharges the auto clicker with a burst of clicks (electricity circles the cube, OVERCHARGE! pops up), and Electric old pixels arc to the nearest device, adding 1 second per linked pixel and ending with the device.
