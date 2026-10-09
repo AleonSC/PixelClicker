@@ -428,6 +428,19 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Each Ultra boost level adds this much to a pixel type's payout multiplier (0.25 = +25% of its normal payout per level).")]
     [SerializeField] private float ultraBonusPerLevel = 0.25f;
 
+    [Header("Potions")]
+    [Min(1)]
+    [Tooltip("While a potion forces Vacuum pixels to spawn, only every this-many-th Vacuum click actually vacuums the old pixels (the others just pay out). Stops a chained Vacuum potion from re-collecting the whole floor on every click. 1 = every click vacuums.")]
+    [SerializeField] private int potionVacuumEvery = 10;
+
+    private int potionVacuumCounter;
+
+    /// <summary>See <see cref="potionVacuumEvery"/>.</summary>
+    public int PotionVacuumEvery => Mathf.Max(1, potionVacuumEvery);
+
+    /// <summary>Seconds an old pixel lies around before it despawns.</summary>
+    public float FallingCopyLifetime => fallingCopyLifetime;
+
     [Header("Value Upgrades")]
     [Min(0f)]
     [Tooltip("Each Value level adds this much to a pixel type's payout multiplier (1 = +100% of its base payout per level, so level 3 pays x4).")]
@@ -1036,7 +1049,7 @@ public class PixelClicker : MonoBehaviour
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 
         PlayClickEffects(tier);
-        if (tier.vacuum) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
+        if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
         if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
@@ -1393,6 +1406,16 @@ public class PixelClicker : MonoBehaviour
     {
         forcedTierIndex = -1;
         forcedTierIndex2 = -1;
+        potionVacuumCounter = 0;
+    }
+
+    /// <summary>Should this Vacuum click vacuum? Always, unless a potion is forcing this tier - then only every Nth click.</summary>
+    private bool VacuumThisClick(int tierIndex)
+    {
+        bool forcedByPotion = forcedTierIndex >= 0 && (tierIndex == forcedTierIndex || tierIndex == forcedTierIndex2);
+        if (!forcedByPotion || PotionVacuumEvery <= 1) return true;
+        potionVacuumCounter++;
+        return potionVacuumCounter % PotionVacuumEvery == 0;
     }
 
     /// <summary>Weighted random pick among unlocked tiers (or the forced tier while a potion is active).</summary>

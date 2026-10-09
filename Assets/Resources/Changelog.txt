@@ -115,3 +115,6 @@
 [2026-10-09 12:10 UTC] Snake: pixels pressed against the screen edge or hanging in the air (e.g. after a Time Stop burst) are now moved onto the floor inside the snake's area so they can all be eaten.
 [2026-10-09 12:17 UTC] Snake: old pixels that are not part of the round (over the pixel limit) now shrink away during it and grow back after, so every visible pixel can be eaten.
 [2026-10-09 12:20 UTC] The Time Stop / Time Slow start sounds are now cut off when time resumes instead of playing on.
+[2026-10-09 12:32 UTC] Potions are now priced to pay back about 3 times their cost, based on your clicking speed and that pixel's upgrades, so every potion is worth chaining and none is a jackpot.
+[2026-10-09 12:32 UTC] During a Vacuum potion only every 10th Vacuum pixel vacuums the floor.
+[2026-10-09 12:32 UTC] Crafting recipes now follow shop prices: a potion costs 75% of its shop price in its own pixel plus Glass, and other ingredients rise with Value.

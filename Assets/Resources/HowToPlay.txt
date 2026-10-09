@@ -26,7 +26,7 @@ Things you can't buy yet show in grey with what they need.
 <b>Singularity</b>, <b>Ghost</b> and <b>Meteor</b> - rare pixels you earn by playing their minigames.
 
 # Potions and Devices
-Open the inventory's Consumables tab (it has Potions and Devices sub-tabs). Right-click a potion to drink it: for a while only that pixel type spawns. Potion and device prices rise along with the Value level of the pixels they cost.
+Open the inventory's Consumables tab (it has Potions and Devices sub-tabs). Right-click a potion to drink it: for a while only that pixel type spawns. Drink them one after another to keep it going. A potion is priced to pay back about 3 times what it cost, so its price grows with your clicking speed and that pixel's upgrades; crafting a potion costs a bit less in its pixel, plus the Glass. Device prices rise with the Value level of the pixels they cost. During a Vacuum potion only every 10th Vacuum pixel vacuums the floor.
 Right-click a device (Vacuum Device, Fan, Sorter) to place it. The Vacuum Device pulls in old pixels and collects them again. The Fan blows old pixels along the floor. The Sorter wraps around the cube and spits every pixel you collect out of an aimable pipe.
 Hold the right mouse button on a placed device to remove it, or on the "Active:" line at the top to cancel a potion. There is no refund.
 
