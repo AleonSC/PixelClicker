@@ -1519,6 +1519,61 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+
+    private PixelLook activeLook;          // the look of the tier the cube currently shows
+    private GameObject liveExtras;         // outline / dark-matter core on the live cube
+    private PixelType liveExtrasType;
+    private bool liveExtrasBuilt;
+
+    /// <summary>True if old pixels of this tier pass through the screen edges (ghosts), see PixelLook.ignoreViewBounds.</summary>
+    public bool IgnoresViewBounds(int tierIndex)
+    {
+        PixelLook look = IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null;
+        return look != null && look.ignoreViewBounds;
+    }
+
+    /// <summary>The look of a tier, or null (looks off / none defined).</summary>
+    private PixelLook LookOf(PixelTier tier) => useLooks && tier != null ? PixelLooks.Find(looks, tier.type) : null;
+
+    /// <summary>The colour the 3D pixel is drawn in: the look's colour (alpha scaled) or the tier's own.</summary>
+    private static Color RenderColor(PixelTier tier, PixelLook look)
+    {
+        Color c = look != null && look.useColor ? look.color : tier.color;
+        if (look != null) c.a *= look.alpha;
+        return c;
+    }
+
+    /// <summary>Puts a look's streak / crack texture on a property block (level = how damaged, 0..max).</summary>
+    private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
+    {
+        if (look == null || !look.HasSurfaceTexture) return;
+        Texture2D tex = PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max);
+        block.SetTexture("_BaseMap", tex);
+        block.SetTexture("_MainTex", tex);
+    }
+
+    /// <summary>A hit on a tough pixel: cracks spread over the live cube (level 0 = undamaged, max = about to break).</summary>
+    private void SetLiveDamage(PixelTier tier, int level)
+    {
+        if (pixelRenderer == null || activeLook == null || !activeLook.damageCracks) return;
+        pixelRenderer.GetPropertyBlock(propertyBlock);
+        ApplyLookTexture(propertyBlock, activeLook, level, tier.clicksToCollect);
+        pixelRenderer.SetPropertyBlock(propertyBlock);
+    }
+
+    /// <summary>Metallic / glossiness from a look onto a property block.</summary>
+    private static void ApplyLookSurface(MaterialPropertyBlock block, PixelLook look)
+    {
+        if (look == null) return;
+        if (look.metallic >= 0f) block.SetFloat("_Metallic", look.metallic);
+        if (look.smoothness >= 0f)
+        {
+            block.SetFloat("_Smoothness", look.smoothness);
+            block.SetFloat("_Glossiness", look.smoothness);
+        }
+    }
+
+    /// <summary>Adds / removes the outline and core on the live cube to match the tier's look.</summary>
     /// <summary>A text report about how glow is set up (materials, shaders, keywords, shell) for the rendering report file.</summary>
     public string DebugGlowReport()
     {
