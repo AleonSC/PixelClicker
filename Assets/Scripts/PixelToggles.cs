@@ -451,6 +451,14 @@ public class PixelToggles : MonoBehaviour
             Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + name, name, Vector2.zero, groupColor,
                                                textColor, fontSize);
             groupImages[i] = b.GetComponent<Image>();
+            TMP_Text groupLabel = b.GetComponentInChildren<TMP_Text>();
+            if (groupLabel != null) // four buttons share the width: shrink a long name to fit instead of breaking it
+            {
+                groupLabel.enableAutoSizing = true;
+                groupLabel.fontSizeMax = fontSize;
+                groupLabel.fontSizeMin = 12f;
+                groupLabel.margin = new Vector4(4f, 0f, 4f, 0f);
+            }
             RectTransform br = b.GetComponent<RectTransform>();
             br.anchorMin = new Vector2(i / (float)GroupCount, 1f);
             br.anchorMax = new Vector2((i + 1) / (float)GroupCount, 1f);
