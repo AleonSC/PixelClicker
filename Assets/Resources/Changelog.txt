@@ -119,3 +119,4 @@
 [2026-10-09 12:32 UTC] Potions are now priced to pay back about 3 times their cost, based on your clicking speed and that pixel's upgrades, so every potion is worth chaining and none is a jackpot.
 [2026-10-09 12:32 UTC] During a Vacuum potion only every 10th Vacuum pixel vacuums the floor.
 [2026-10-09 12:32 UTC] Crafting recipes now follow shop prices: a potion costs 75% of its shop price in its own pixel plus Glass, and other ingredients rise with Value.
+[2026-10-09 12:44 UTC] You can now hold at most 10 of each potion; the shop and crafting say when a potion is full, and older saves with more are cut down to 10.

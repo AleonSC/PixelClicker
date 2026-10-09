@@ -589,7 +589,7 @@ public class PixelSaveGame : MonoBehaviour
                     int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
                     PotionSave saved = data.potions != null
                         ? Array.Find(data.potions, p => p.type == (int)potion.type && p.second == second) : null;
-                    consumables.Get(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
+                    consumables.Get(i).owned = saved != null ? consumables.ClampHeld(saved.owned) : 0;
                 }
             }
 
