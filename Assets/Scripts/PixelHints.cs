@@ -205,7 +205,7 @@ public class PixelHints : MonoBehaviour
         H("combo", "Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment."),
         H("upgrade_interval", "The auto clicker now clicks faster. Each level shortens the time between its clicks."),
         H("upgrade_clicks", "Multi-Click upgraded! The auto clicker now makes more clicks every time it ticks."),
-        H("upgrade_combo", "Combo Meter upgraded! Quick manual clicks build a bonus on your payouts; each level raises the highest bonus you can reach."),
+        H("upgrade_combo", "Combo Meter upgraded! Quick manual clicks build a combo; reaching a combo milestone boosts your payouts, and each level unlocks a higher milestone with a bigger bonus and a flashier meter."),
         H("upgrade_cap", "Old Pixel Capacity upgraded! More old pixels can lie around at once before the oldest ones are cleared away."),
         H("upgrade_bank", "Bank Storage upgraded! The Pixel Bank can now hold more stored pixels."),
         H("upgrade_ultra", "Ultra boost bought! That pixel type now pays more for every click. You can keep boosting it with more Ultra pixels."),

@@ -567,14 +567,14 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Combo Meter upgrade: quick clicks build a multiplier; each level raises its maximum.</summary>
+    /// <summary>Default Combo Meter upgrade: quick clicks build a combo whose milestones (10 / 50 / 200 / 500 / 1000) give a multiplier; each level unlocks the next tier.</summary>
     private static ShopPack CreateComboPack()
     {
         return new ShopPack
         {
             displayName = "Combo Meter",
             tab = ShopTab.Upgrades,
-            description = "Click fast to build a combo that boosts your clicks. Max multiplier: x{current}  →  x{next}",
+            description = "Click fast to build a combo. Reaching each combo milestone boosts your clicks; every level unlocks a higher tier. Top multiplier: x{current}  →  x{next}",
             upgradeEffect = UpgradeEffect.ComboMeter,
             levels = new[]
             {
