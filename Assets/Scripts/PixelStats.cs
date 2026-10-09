@@ -422,6 +422,8 @@ public class PixelStats : MonoBehaviour
         Num("Highest Value level", highestValue);
         Cnt("Shop purchases", "shop.purchases");
         Cnt("Consumables bought", "shop.items");
+        if (PixelPets.Instance != null && (PixelPets.Instance.OwnedCount > 0 || Counter("pets.found") > 0d))
+            Row("Pets found", PixelPets.Instance.OwnedCount + " / " + (clicker != null ? clicker.Tiers.Length : 0));
 
         Head("Old pixels");
         Cnt("Vacuumed up", "old.vacuumed");

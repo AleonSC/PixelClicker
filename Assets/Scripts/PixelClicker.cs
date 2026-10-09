@@ -797,6 +797,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelCrashLog>() == null) gameObject.AddComponent<PixelCrashLog>(); // writes error / crash reports
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
+        if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
         if (PixelFind.First<PixelCameraIntro>() == null) gameObject.AddComponent<PixelCameraIntro>();       // start close up, then zoom out
         if (PixelFind.First<PixelFloor>() == null) gameObject.AddComponent<PixelFloor>(); // floor styles (Settings)
         if (PixelFind.First<PixelSkybox>() == null) gameObject.AddComponent<PixelSkybox>(); // skybox styles (Settings, title screen)

@@ -195,6 +195,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Sorting order of the docked button's canvas (it must be below the dev panel, 700).")]
     [SerializeField] private int dockSortingOrder = 135;
 
+    [Tooltip("Label of the button that gives a pet of the pixel type chosen in the drop-down at the top (All pixels = every pet, quietly).")]
+    [SerializeField] private string givePetText = "Give pet (selected pixel)";
+
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
 
@@ -576,6 +579,20 @@ public class PixelDevTools : MonoBehaviour
         if (panel != null) panel.SetActive(false);
     }
 
+    /// <summary>Gives the pet of the pixel selected in the top drop-down (a popup), or every pet quietly for "All pixels".</summary>
+    private void GivePet()
+    {
+        PixelPets pets = PixelPets.Instance;
+        if (pets == null || clicker == null || pixelDropdown == null) return;
+        int selected = pixelDropdown.value - 1; // 0 = All pixels
+        if (selected < 0)
+        {
+            foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false);
+            return;
+        }
+        if (selected < clicker.Tiers.Length) pets.Award(clicker.Tiers[selected].type);
+    }
+
     private void FillDropdowns()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
@@ -678,6 +695,13 @@ public class PixelDevTools : MonoBehaviour
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
         skip.onClick.AddListener(SkipIntro);
+        y += rowHeight + 24f;
+
+        // Row: give a pet of the pixel chosen in the drop-down at the top
+        Button givePet = PixelUIKit.CreateButton(font, content, "Give Pet Button", givePetText,
+                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(givePet.GetComponent<RectTransform>(), 40f, y, inner);
+        givePet.onClick.AddListener(GivePet);
         y += rowHeight + 24f;
 
         // Row: unlock all

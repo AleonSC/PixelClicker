@@ -16,7 +16,8 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelToggles : MonoBehaviour
 {
-    private enum Group { Pixels = 0, Upgrades = 1, Minigames = 2 }
+    private enum Group { Pixels = 0, Upgrades = 1, Minigames = 2, Pets = 3 }
+    private const int GroupCount = 4;
 
     [Header("References")]
     [Tooltip("The PixelClicker whose pixels are listed. Found automatically if left empty.")]
@@ -39,8 +40,11 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "Toggleable";
 
-    [Tooltip("Names of the three group buttons: Pixels, Upgrades, Minigames.")]
-    [SerializeField] private string[] groupNames = { "Pixels", "Upgrades", "Minigames" };
+    [Tooltip("Names of the group buttons: Pixels, Upgrades, Minigames, Pets (a missing name uses the default).")]
+    [SerializeField] private string[] groupNames = { "Pixels", "Upgrades", "Minigames", "Pets" };
+
+    [Tooltip("Shown on the Pets tab while you have no pets.")]
+    [SerializeField] private string noPetsText = "No pets yet. Very rarely, clicking a pixel gives you its pet.";
 
     [Tooltip("Shown when a group has nothing to toggle yet.")]
     [SerializeField] private string emptyText = "Nothing to toggle here yet.";
@@ -143,6 +147,7 @@ public class PixelToggles : MonoBehaviour
     }
 
     private GameObject canvasRoot, windowObject, emptyObject, hintObject, openObject;
+    private TMP_Text emptyLabel;
     private float hintTimer;
     private static PixelToggles instance;
     private Image[] groupImages;
@@ -215,7 +220,8 @@ public class PixelToggles : MonoBehaviour
         if (built && openObject != null)
         {
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
-            bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled));
+            bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled))
+                        || (PixelPets.Instance != null && PixelPets.Instance.OwnedCount > 0); // a pet also opens the window
             if (openObject.activeSelf != show) openObject.SetActive(show);
             if (!show && windowObject != null && windowObject.activeSelf) windowObject.SetActive(false);
         }
@@ -280,6 +286,16 @@ public class PixelToggles : MonoBehaviour
             if (ts != null && (ts.Active || ts.UserDisabled))
                 list.Add(new Entry { label = timeStopLabel, on = !ts.UserDisabled, setter = on => ts.UserDisabled = !on });
         }
+        else if (group == Group.Pets)
+        {
+            PixelPets pets = PixelPets.Instance;
+            if (pets != null)
+                foreach (KeyValuePair<PixelClicker.PixelType, string> pet in pets.Owned())
+                {
+                    PixelClicker.PixelType type = pet.Key;
+                    list.Add(new Entry { label = pet.Value, on = pets.IsOn(type), setter = on => pets.SetOn(type, on) });
+                }
+        }
         else
         {
             foreach (PixelMinigame m in PixelMinigame.All)
@@ -323,6 +339,7 @@ public class PixelToggles : MonoBehaviour
         }
 
         emptyObject.SetActive(entries.Count == 0);
+        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = current == Group.Pets ? noPetsText : emptyText;
         float contentHeight = entries.Count * (rowHeight + 8f);
         float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
@@ -427,19 +444,19 @@ public class PixelToggles : MonoBehaviour
         y += titleFontSize * 1.4f + 14f;
 
         // --- The three group buttons.
-        groupImages = new Image[3];
-        for (int i = 0; i < 3; i++)
+        groupImages = new Image[GroupCount];
+        for (int i = 0; i < GroupCount; i++)
         {
-            string name = groupNames != null && i < groupNames.Length ? groupNames[i] : ((Group)i).ToString();
+            string name = groupNames != null && i < groupNames.Length && !string.IsNullOrEmpty(groupNames[i]) ? groupNames[i] : ((Group)i).ToString();
             Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + name, name, Vector2.zero, groupColor,
                                                textColor, fontSize);
             groupImages[i] = b.GetComponent<Image>();
             RectTransform br = b.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(i / 3f, 1f);
-            br.anchorMax = new Vector2((i + 1) / 3f, 1f);
+            br.anchorMin = new Vector2(i / (float)GroupCount, 1f);
+            br.anchorMax = new Vector2((i + 1) / (float)GroupCount, 1f);
             br.pivot = new Vector2(0.5f, 1f);
             br.offsetMin = new Vector2(i == 0 ? 20f : 4f, -(y + 60f));
-            br.offsetMax = new Vector2(i == 2 ? -20f : -4f, -y);
+            br.offsetMax = new Vector2(i == GroupCount - 1 ? -20f : -4f, -y);
 
             int captured = i;
             b.onClick.AddListener(() =>
@@ -469,6 +486,7 @@ public class PixelToggles : MonoBehaviour
         er.sizeDelta = new Vector2(-40f, fontSize * 1.6f);
         er.anchoredPosition = new Vector2(0f, -(y + 10f));
         emptyObject = empty.gameObject;
+        emptyLabel = empty;
 
         // --- The hint box: sits where the window would, next to the slid-out tab.
         hintObject = new GameObject("Toggles Hint", typeof(RectTransform), typeof(Image));

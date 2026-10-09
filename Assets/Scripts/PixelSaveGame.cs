@@ -105,6 +105,7 @@ public class PixelSaveGame : MonoBehaviour
         public bool grabDisabled;
         public bool timeStopDisabled;
         public bool comboDisabled;
+        public string[] pets; // "type:off" per pet (PixelPets)
         public string[] eventTexts;
         public string[] eventFulls;
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
@@ -517,6 +518,8 @@ public class PixelSaveGame : MonoBehaviour
             if (timeStop != null) data.timeStopDisabled = timeStop.UserDisabled;
             PixelCombo comboMeter = PixelFind.First<PixelCombo>();
             if (comboMeter != null) data.comboDisabled = comboMeter.UserDisabled;
+            PixelPets petSystem = PixelFind.First<PixelPets>();
+            if (petSystem != null) data.pets = petSystem.Export();
             PixelHints.ExportHistory(out data.eventTexts, out data.eventFulls);
             // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
@@ -598,6 +601,8 @@ public class PixelSaveGame : MonoBehaviour
             if (timeStop != null) timeStop.UserDisabled = data.timeStopDisabled;
             PixelCombo comboMeterLoad = PixelFind.First<PixelCombo>();
             if (comboMeterLoad != null) comboMeterLoad.UserDisabled = data.comboDisabled;
+            PixelPets petsLoad = PixelFind.First<PixelPets>();
+            if (petsLoad != null) petsLoad.Import(data.pets); // older saves have no pets
             PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
             PixelSettingsSync.Apply(data.settings);
 

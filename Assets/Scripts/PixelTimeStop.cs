@@ -254,7 +254,7 @@ public class PixelTimeStop : MonoBehaviour
         }
 
         // Something else (the pause menu closing...) put the time scale back: keep time slowed.
-        if (slowed && !paused && !PixelPauseMenu.GameStopped && !PixelTitleScreen.Showing && !Mathf.Approximately(Time.timeScale, slowTimeScale))
+        if (slowed && !paused && !PixelPets.PopupOpen && !PixelPauseMenu.GameStopped && !PixelTitleScreen.Showing && !Mathf.Approximately(Time.timeScale, slowTimeScale))
             Time.timeScale = slowTimeScale;
 
         // The pause menu restores its own saved time scale when it closes; put the freeze back if that happened.
