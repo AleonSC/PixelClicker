@@ -392,6 +392,9 @@ public class PixelLog : MonoBehaviour
     private static PixelLog logInstance;
 
     /// <summary>Opens or closes the Log panel. Opening it closes the Inventory (they never show together).</summary>
+    /// <summary>The Log window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
+    public static RectTransform WindowRect => logInstance != null && logInstance.panelObject != null ? logInstance.panelObject.GetComponent<RectTransform>() : null;
+
     public static void SetLogOpen(bool open)
     {
         PixelLog log = logInstance;

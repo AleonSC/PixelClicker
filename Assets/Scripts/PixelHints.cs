@@ -721,11 +721,11 @@ public class PixelHints : MonoBehaviour
         forceIntro = false;
 
         PixelLog.SetLogOpen(true);
-        PixelNotice.Show(introLogText, 0f, compact: true, onClosed: () =>
+        PixelNotice.Show(introLogText, 0f, compact: true, beside: PixelLog.WindowRect, besideBottom: true, onClosed: () =>
         {
             PixelLog.SetLogOpen(false);
             PixelUI.SetInventoryOpen(true);
-            PixelNotice.Show(introInventoryText, 0f, compact: true, onClosed: () =>
+            PixelNotice.Show(introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect, onClosed: () =>
             {
                 PixelUI.SetInventoryOpen(false);
                 MarkSeen("intro_log"); // only counts once the player has been through both tips

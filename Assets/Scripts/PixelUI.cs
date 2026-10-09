@@ -527,6 +527,9 @@ public class PixelUI : MonoBehaviour
     public static bool InventoryOpen => inventoryInstance != null && inventoryInstance.boxObject != null && inventoryInstance.boxObject.activeSelf;
 
     /// <summary>Opens or closes the Inventory box. Opening it closes the Log (they never show together).</summary>
+    /// <summary>The Inventory window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
+    public static RectTransform WindowRect => inventoryInstance != null && inventoryInstance.boxObject != null ? inventoryInstance.boxObject.GetComponent<RectTransform>() : null;
+
     public static void SetInventoryOpen(bool open)
     {
         PixelUI ui = inventoryInstance;

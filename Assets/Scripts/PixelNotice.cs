@@ -23,10 +23,12 @@ public static class PixelNotice
     /// <summary>'small' = a much smaller box (narrow, small text and button) at the top of the screen: for quick "this just happened" tips.</summary>
     /// <summary>'nearLog' = a small box at the bottom left, next to the event log.</summary>
     /// <summary>'aboveCombo' = a small box at the bottom of the screen, just above the combo meter.</summary>
-    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false)
+    /// <summary>'beside' = a window (Inventory, Log): the box sits right next to it, to its right, never overlapping it. 'besideBottom' aligns the bottoms (for a window at the bottom of the screen), else the tops.</summary>
+    public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
+                            RectTransform beside = null, bool besideBottom = false)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -87,13 +89,17 @@ public class PixelNoticeBox : MonoBehaviour
         okLabel = ok.GetComponentInChildren<TMP_Text>();
     }
 
-    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false)
+    private const float BesideWidth = 640f;
+
+    public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
+                     RectTransform beside = null, bool besideBottom = false)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
         if (canvasRoot == null) Build();
 
         // The small box: narrow, small text, small button.
-        float width = small ? SmallWidth : Width;
+        bool besideWindow = beside != null && beside.gameObject.activeInHierarchy;
+        float width = besideWindow ? BesideWidth : small ? SmallWidth : Width;
         float textSize = small ? 22f : 30f;
         label.fontSize = textSize;
         label.rectTransform.offsetMin = small ? new Vector2(18f, 62f) : new Vector2(30f, 90f);
@@ -103,8 +109,32 @@ public class PixelNoticeBox : MonoBehaviour
         if (okLabel != null) okLabel.fontSize = small ? 22f : 30f;
 
         label.text = message;
-        Vector2 fixedSize = compact || small ? Vector2.zero : PixelNotice.FixedSize;
-        if (fixedSize.x > 0f && fixedSize.y > 0f)
+        Vector2 fixedSize = compact || small || besideWindow ? Vector2.zero : PixelNotice.FixedSize;
+        if (besideWindow)
+        {
+            // Right next to the window it explains: its left edge just past the window's right edge, top or bottom aligned.
+            Canvas.ForceUpdateCanvases();
+            Vector3[] corners = new Vector3[4];
+            beside.GetWorldCorners(corners); // overlay canvas: world = screen pixels (0 = bottom-left, 2 = top-right)
+            RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+            float toUnits = canvasRect.rect.width / Mathf.Max(1f, Screen.width);
+            float textHeightB = Mathf.Ceil(label.GetPreferredValues(message, width - 60f, 0f).y);
+            boxRect.sizeDelta = new Vector2(width, textHeightB + 130f);
+            float x = corners[2].x * toUnits + 24f;
+            x = Mathf.Min(x, canvasRect.rect.width - width - 10f); // stays on screen
+            boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
+            if (besideBottom)
+            {
+                boxRect.pivot = new Vector2(0f, 0f);
+                boxRect.anchoredPosition = new Vector2(x, corners[0].y * toUnits);
+            }
+            else
+            {
+                boxRect.pivot = new Vector2(0f, 1f);
+                boxRect.anchoredPosition = new Vector2(x, corners[2].y * toUnits);
+            }
+        }
+        else if (fixedSize.x > 0f && fixedSize.y > 0f)
         {
             // Same size as the shop, centred on screen.
             boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 0.5f);
