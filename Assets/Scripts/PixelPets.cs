@@ -129,6 +129,42 @@ public class PixelPets : MonoBehaviour
     [Tooltip("Colour of the number above the Vacuum Pet.")]
     [SerializeField] private Color counterColor = new Color(1f, 1f, 1f, 0.9f);
 
+    [Header("Glass pet")]
+    [Min(0f)]
+    [Tooltip("Random breaking: the Glass Pet's chance per second of shattering while it moves at 'Glass Break Speed' (faster = likelier). 0 = it never breaks.")]
+    [SerializeField] private float glassBreakChance = 0.12f;
+
+    [Min(0.1f)]
+    [Tooltip("The speed (world units per second) at which the break chance applies in full.")]
+    [SerializeField] private float glassBreakSpeed = 3f;
+
+    [Min(0.1f)]
+    [Tooltip("Seconds the shards fly about before they reverse back together.")]
+    [SerializeField] private float glassHoldSeconds = 1.4f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the shards take to fly back and re-form the pet.")]
+    [SerializeField] private float glassReformSeconds = 0.6f;
+
+    [Min(0f)]
+    [Tooltip("Seconds after re-forming before the Glass Pet can break again.")]
+    [SerializeField] private float glassCooldown = 3f;
+
+    [Range(3, 40)]
+    [Tooltip("How many shards the Glass Pet breaks into.")]
+    [SerializeField] private int glassShards = 14;
+
+    [Min(0f)]
+    [Tooltip("How fast the shards fly apart.")]
+    [SerializeField] private float glassShardSpeed = 3.5f;
+
+    [Range(0.05f, 1f)]
+    [Tooltip("Size of a shard compared to the pet.")]
+    [SerializeField] private float glassShardSize = 0.4f;
+
+    [Tooltip("Sound played when the Glass Pet breaks (give the id clips in PixelAudio; the reform plays the same id + _reform).")]
+    [SerializeField] private string glassSoundId = "glass_shatter";
+
     [Header("Popup")]
     [Tooltip("Popup title.")]
     [SerializeField] private string popupTitle = "Pet Found!";
@@ -175,6 +211,8 @@ public class PixelPets : MonoBehaviour
         public GameObject body;
         public float hopTimer;
         public bool ghost;       // the Ghost pet only hovers
+        public float glassNextBreak;  // Glass Pet: no breaking before this time
+        public bool broken;           // Glass Pet: shards are out right now
         public float suckTimer;       // Vacuum Pet
         public GameObject counterGo;  // Vacuum Pet's floating number
         public TextMeshPro counterText;
@@ -454,6 +492,7 @@ public class PixelPets : MonoBehaviour
             if (p.ghost) RoamGhost(p, p == hovered || p == held);
             else Roam(p, p == hovered || p == held);
             if (p.type == PixelClicker.PixelType.Vacuum) SuckAround(p);
+            else if (p.type == PixelClicker.PixelType.Glass && p != held) MaybeBreak(p);
         }
     }
 
@@ -687,6 +726,78 @@ public class PixelPets : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
+    // The Glass Pet: shatters now and then while it moves, and the shards reverse back together.
+    // ------------------------------------------------------------------
+
+    private void MaybeBreak(Pet p)
+    {
+        if (p.broken || glassBreakChance <= 0f || Time.time < p.glassNextBreak) return;
+        Rigidbody rb = p.body.GetComponent<Rigidbody>();
+        if (rb == null) return;
+        float speed = GetVelocity(rb).magnitude;
+        if (speed < 0.6f) return; // standing still: nothing to break it
+        float k = Mathf.Min(speed / glassBreakSpeed, 2f);
+        if (Random.value < glassBreakChance * k * Time.deltaTime) StartCoroutine(BreakAndReform(p));
+    }
+
+    private System.Collections.IEnumerator BreakAndReform(Pet p)
+    {
+        GameObject body = p.body;
+        MeshRenderer source = body != null ? body.GetComponentInChildren<MeshRenderer>() : null;
+        MeshFilter filter = source != null ? source.GetComponent<MeshFilter>() : null;
+        if (filter == null) yield break;
+        p.broken = true;
+        if (!string.IsNullOrEmpty(glassSoundId)) PixelAudio.Play(glassSoundId);
+
+        // Hide the pet (and its glow children); it stays where it is, invisible and solid.
+        Renderer[] renderers = body.GetComponentsInChildren<Renderer>();
+        bool[] wasOn = new bool[renderers.Length];
+        for (int i = 0; i < renderers.Length; i++) { wasOn[i] = renderers[i].enabled; renderers[i].enabled = false; }
+
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        source.GetPropertyBlock(block);
+        float size = clicker.PixelBaseSize;
+        Vector3 origin = body.transform.position;
+        List<PetReformShard> shards = new List<PetReformShard>();
+        for (int i = 0; i < glassShards; i++)
+        {
+            GameObject shard = new GameObject("PetGlassShard");
+            shard.transform.position = origin + Random.insideUnitSphere * size * 0.35f;
+            shard.transform.rotation = Random.rotation;
+            shard.transform.localScale = new Vector3(
+                size * glassShardSize * Random.Range(0.6f, 1.2f),
+                size * glassShardSize * Random.Range(0.12f, 0.3f),
+                size * glassShardSize * Random.Range(0.5f, 1f));
+            shard.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+            MeshRenderer smr = shard.AddComponent<MeshRenderer>();
+            smr.sharedMaterial = source.sharedMaterial;
+            smr.SetPropertyBlock(block);
+            smr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            shard.AddComponent<BoxCollider>();
+            Rigidbody srb = shard.AddComponent<Rigidbody>();
+            srb.mass = 0.05f;
+            Vector3 push = Random.onUnitSphere * glassShardSpeed;
+            push.y = Mathf.Abs(push.y);
+            srb.AddForce(push, ForceMode.VelocityChange);
+            srb.AddTorque(Random.onUnitSphere * Random.Range(5f, 15f), ForceMode.VelocityChange);
+            PetReformShard reform = shard.AddComponent<PetReformShard>();
+            reform.Setup(body.transform);
+            shards.Add(reform);
+        }
+
+        yield return new WaitForSeconds(glassHoldSeconds);
+        if (!string.IsNullOrEmpty(glassSoundId)) PixelAudio.Play(glassSoundId + "_reform");
+        foreach (PetReformShard shard in shards) if (shard != null) shard.FlyBack(glassReformSeconds);
+        yield return new WaitForSeconds(glassReformSeconds);
+
+        foreach (PetReformShard shard in shards) if (shard != null) Destroy(shard.gameObject);
+        if (body != null) // (the pet may have been switched off meanwhile)
+            for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].enabled = wasOn[i];
+        p.broken = false;
+        p.glassNextBreak = Time.time + glassCooldown;
+    }
+
+    // ------------------------------------------------------------------
     // The Vacuum Pet: sucks up old pixels near it. They pay nothing: they only count for the stat and the number above it.
     // ------------------------------------------------------------------
 
@@ -814,5 +925,57 @@ public class PixelPets : MonoBehaviour
             pets.Add(p);
             Refresh(p);
         }
+    }
+}
+
+/// <summary>
+/// A shard of the Glass Pet: flies about with physics, then (FlyBack) is pulled smoothly back into the pet, turning and
+/// shrinking into it. If the pet disappears meanwhile (switched off), the shard shrinks away.
+/// </summary>
+public class PetReformShard : MonoBehaviour
+{
+    private Transform target;
+    private bool returning;
+    private float seconds = 0.6f, age, orphanAge;
+    private Vector3 startPos, startScale;
+    private Quaternion startRot;
+
+    public void Setup(Transform pet)
+    {
+        target = pet;
+        startScale = transform.localScale;
+    }
+
+    public void FlyBack(float flySeconds)
+    {
+        returning = true;
+        seconds = Mathf.Max(0.05f, flySeconds);
+        age = 0f;
+        startPos = transform.position;
+        startRot = transform.rotation;
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+        Collider c = GetComponent<Collider>();
+        if (c != null) c.enabled = false;
+    }
+
+    private void Update()
+    {
+        if (target == null)
+        {
+            orphanAge += Time.deltaTime;
+            float shrink = 1f - orphanAge / 0.3f;
+            if (shrink <= 0f) { Destroy(gameObject); return; }
+            transform.localScale = startScale * shrink;
+            return;
+        }
+        if (!returning) return;
+
+        age += Time.deltaTime;
+        float k = Mathf.Clamp01(age / seconds);
+        float e = k * k * (3f - 2f * k); // smooth in and out
+        transform.position = Vector3.Lerp(startPos, target.position, e);
+        transform.rotation = Quaternion.Slerp(startRot, target.rotation, e);
+        transform.localScale = Vector3.Lerp(startScale, startScale * 0.35f, e);
     }
 }
