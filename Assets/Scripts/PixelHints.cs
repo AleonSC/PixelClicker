@@ -520,10 +520,14 @@ public class PixelHints : MonoBehaviour
         if (showOverlay) DisplayOverlay();
     }
 
-    private void DisplayOverlay()
+    /// <summary>True while the whole log is showing (the player opened it); false = only the newest entry (a new event just happened).</summary>
+    private bool fullView;
+
+    private void DisplayOverlay(bool showAll = false)
     {
         if (history.Count == 0 || !EventLogEnabled) return;
         if (overlayRoot == null) BuildOverlay();
+        if (fullView != showAll) { fullView = showAll; rowsDirty = true; }
         forceFade = false;
         overlayTimer = overlayVisibleSeconds + overlayFadeSeconds;
         overlayGroup.alpha = 1f;
@@ -585,7 +589,8 @@ public class PixelHints : MonoBehaviour
 
         float width = logWidth - 40f;
         float y = 8f;
-        for (int i = history.Count - 1; i >= 0; i--) // newest at the bottom
+        int oldest = fullView ? 0 : history.Count - 1; // a new event shows only the newest line; the whole list is for when the player opens the log
+        for (int i = history.Count - 1; i >= oldest; i--) // newest at the bottom
         {
             Entry entry = history[i];
                         string text = entry.text;
@@ -706,8 +711,8 @@ public class PixelHints : MonoBehaviour
         }
         if (!typing && ReopenKeyPressed())
         {
-            if (visible) FadeNow();
-            else { scrollOffset = 0f; DisplayOverlay(); }
+            if (visible && fullView) FadeNow();                   // the full log is open: close it
+            else { scrollOffset = 0f; DisplayOverlay(true); }     // closed, or showing just the newest line: open the whole log
             return;
         }
         if (visible && PixelInput.RightPressed()) FadeNow(); // right-click anywhere closes the log
@@ -821,7 +826,7 @@ public class PixelHints : MonoBehaviour
         Hint hint = hints != null ? hints.Find(h => h != null && h.id == "event_log") : null;
         if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
         MarkSeen("event_log"); // so the first pixel unlock doesn't repeat it
-        DisplayOverlay();
+        DisplayOverlay(true);
         overlayTimer = Mathf.Max(overlayTimer, 20f); // keep the log up while the tip is read
         PixelNotice.Show(hint.text, autoCloseSeconds, nearLog: true);
         wasShowing = true;

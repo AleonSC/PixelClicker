@@ -18,7 +18,7 @@ Esc | Pause menu / close the top window
 Arrow keys | Steer the snake during a Snake round (or use the on-screen arrows)
 {key:TimeSlow} | Slow time and back to normal (Time Slow upgrade; shares the Time Stop meter; slowed meteor pixels can be grabbed)
 {key:Hose} | Equip / put away the hose (Pixel Bank)
-{key:EventLog} | Show the event log; press it again (or right-click) to hide it. Left-click a line to reopen its tip, mouse wheel scrolls
+{key:EventLog} | Open the whole event log (a new event only shows its newest line); press it again (or right-click) to hide it. Left-click a line to reopen its tip, mouse wheel scrolls
 {key:RotateLeft} or {key:RotateRight} | Turn a fan or sorter while placing it
 Mouse wheel | Turn a fan or sorter while placing it
 

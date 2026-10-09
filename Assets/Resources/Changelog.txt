@@ -217,3 +217,4 @@
 [2026-10-09 22:17 UTC] Electric pixel arcs now stay attached to the same neighbour (sticky links), draw as clearer straighter bolts, and show a spark where they connect to a pixel or device.
 [2026-10-09 22:33 UTC] Electric pixel arcs are now shorter-range (only between nearby pixels that are on screen) and as thin as the old pixels they join, instead of long thick lines running across and off the screen.
 [2026-10-09 22:37 UTC] Electric pixels now link in daisy chains (pixel to the next pixel, starting from the device), and the "Buy the RGB Pack" guide text now goes away once the RGB pack is owned (the Dragon Cube tiers had pushed the tiers out of order).
+[2026-10-09 22:38 UTC] The event log now shows only the newest entry when something happens; the full list appears only when you open the log yourself (Enter by default).
