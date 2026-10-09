@@ -77,6 +77,12 @@ public class PixelConsumables : MonoBehaviour
         Fan = 1,
         /// <summary>A ring around the cube with a pipe that spits out every collected pixel in a stream.</summary>
         Sorter = 2,
+        /// <summary>Not placed: used automatically when the combo bar would run out (it keeps the combo and refills the bar).</summary>
+        ComboFuel = 3,
+        /// <summary>Not placed: right-click in the inventory to call a wave of slower ghosts sooner.</summary>
+        GhostBait = 4,
+        /// <summary>Not placed: right-click in the inventory to make your pets hyper and glowing for a while.</summary>
+        PetTreat = 5,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -98,6 +104,10 @@ public class PixelConsumables : MonoBehaviour
 
         [Tooltip("Price in the shop. Pick any pixel type and amount; all costs are paid together.")]
         public PixelShop.PackCost[] costs;
+
+        [Min(0)]
+        [Tooltip("The most of this item you can hold at once (0 = no limit). The shop and crafting stop at this number.")]
+        public int maxHeld = 0;
 
         [Min(1f)]
         [Tooltip("How many seconds the device works once placed.")]
@@ -424,7 +434,66 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
-    private static Device[] CreateDefaultDevices() => new[] { CreateDefaultDevice(), CreateDefaultFan(), CreateDefaultSorter() };
+    private static Device CreateDefaultComboFuel()
+    {
+        return new Device
+        {
+            kind = DeviceKind.ComboFuel,
+            displayName = "Combo Fuel",
+            description = "Hold up to 3. When your combo bar would run out, one is used automatically: the combo is kept and the bar slowly refills instead. Click before it is full again to carry on.",
+            requiredType = PixelClicker.PixelType.Red,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Red,   amount = 250 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Green, amount = 250 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Blue,  amount = 250 },
+            },
+            maxHeld = 3,
+            color = new Color(0.35f, 0.8f, 1f, 1f),
+        };
+    }
+
+    private static Device CreateDefaultGhostBait()
+    {
+        return new Device
+        {
+            kind = DeviceKind.GhostBait,
+            displayName = "Ghost Bait",
+            description = "Right-click to use (needs Ghost Hunt). The next ghost appears sooner, and three ghosts float by, slower than usual. You can only hold one.",
+            requiredType = PixelClicker.PixelType.Glass,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Glass, amount = 500 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 500 },
+            },
+            maxHeld = 1,
+            color = new Color(0.8f, 0.85f, 1f, 1f),
+        };
+    }
+
+    private static Device CreateDefaultPetTreat()
+    {
+        return new Device
+        {
+            kind = DeviceKind.PetTreat,
+            displayName = "Pet Treat",
+            description = "Right-click to use. Your pets go hyper and glow for a minute, and the extra spawn chance they give is doubled. Hold up to 5.",
+            requiredType = PixelClicker.PixelType.Black,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 2000 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray,  amount = 1000 },
+            },
+            maxHeld = 5,
+            color = new Color(1f, 0.85f, 0.4f, 1f),
+        };
+    }
+
+    private static Device[] CreateDefaultDevices() => new[]
+    {
+        CreateDefaultDevice(), CreateDefaultFan(), CreateDefaultSorter(),
+        CreateDefaultComboFuel(), CreateDefaultGhostBait(), CreateDefaultPetTreat(),
+    };
 
     private static Potion[] CreateDefaultPotions()
     {
@@ -470,6 +539,19 @@ public class PixelConsumables : MonoBehaviour
                 {
                     Array.Resize(ref devices, devices.Length + 1);
                     devices[devices.Length - 1] = CreateDefaultSorter();
+                    added = true;
+                }
+                foreach (KeyValuePair<DeviceKind, Func<Device>> extra in new[]
+                {
+                    new KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ComboFuel, CreateDefaultComboFuel),
+                    new KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.GhostBait, CreateDefaultGhostBait),
+                    new KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
+                })
+                {
+                    DeviceKind wanted = extra.Key;
+                    if (Array.Exists(devices, d => d != null && d.kind == wanted)) continue;
+                    Array.Resize(ref devices, devices.Length + 1);
+                    devices[devices.Length - 1] = extra.Value();
                     added = true;
                 }
             }
@@ -682,8 +764,20 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The most of an item you can hold right now (the normal limit plus a potion's kept-potion bonus; devices: no limit).</summary>
     public int ItemCapacity(int item)
     {
-        if (IsDevice(item) || maxPotionsHeld <= 0) return int.MaxValue;
+        if (IsDevice(item))
+        {
+            int held = devices[item - potions.Length].maxHeld; // Combo Fuel 3, Ghost Bait 1, Pet Treat 5, placeable devices unlimited
+            return held > 0 ? held : int.MaxValue;
+        }
+        if (maxPotionsHeld <= 0) return int.MaxValue;
         return maxPotionsHeld + Mathf.Max(0, potions[item].bonusCap);
+    }
+
+    /// <summary>A device count cut down to its hold limit (used when loading a save).</summary>
+    public int ClampDeviceHeld(int deviceIndex, int owned)
+    {
+        int cap = ItemCapacity(potions.Length + deviceIndex);
+        return Mathf.Clamp(owned, 0, cap);
     }
 
     /// <summary>The most of each potion you can hold (0 = no limit).</summary>
@@ -695,8 +789,9 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>How many more of an item you can hold right now (devices: no limit).</summary>
     public int ItemRoom(int item)
     {
-        if (IsDevice(item) || maxPotionsHeld <= 0) return int.MaxValue;
-        return Mathf.Max(0, ItemCapacity(item) - potions[item].owned);
+        int cap = ItemCapacity(item);
+        if (cap == int.MaxValue) return int.MaxValue;
+        return Mathf.Max(0, cap - ItemOwned(item));
     }
 
     /// <summary>
@@ -914,7 +1009,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (IsDevice(item))
         {
-            if (amount > 0) devices[item - potions.Length].owned += amount;
+            if (amount > 0) devices[item - potions.Length].owned = ClampDeviceHeld(item - potions.Length, devices[item - potions.Length].owned + amount);
         }
         else
         {
@@ -935,7 +1030,51 @@ public class PixelConsumables : MonoBehaviour
     }
 
     /// <summary>Right-click use: drinks a potion, or starts placing a device.</summary>
-    public bool TryUseItem(int item) => IsDevice(item) ? BeginPlacement(item - potions.Length) : TryConsume(item);
+    public bool TryUseItem(int item)
+    {
+        if (!IsDevice(item)) return TryConsume(item);
+        int index = item - potions.Length;
+        switch (devices[index].kind)
+        {
+            case DeviceKind.ComboFuel:
+                PixelHints.Announce("Combo Fuel is used by itself when your combo bar runs out");
+                return false;
+            case DeviceKind.GhostBait:
+            {
+                PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();
+                if (ghosts == null || !ghosts.UseBait()) { PixelHints.Announce("Ghost Bait needs the Ghost Hunt running"); return false; }
+                devices[index].owned--;
+                PixelStats.Count("bait.used");
+                PixelHints.Announce("Ghost Bait set out");
+                return true;
+            }
+            case DeviceKind.PetTreat:
+            {
+                if (PixelPets.Instance == null || !PixelPets.Instance.TryUseTreat()) { PixelHints.Announce("Pet Treat needs a pet that is out"); return false; }
+                devices[index].owned--;
+                PixelStats.Count("treat.used");
+                PixelHints.Announce("Your pets are hyper!");
+                return true;
+            }
+            default:
+                return BeginPlacement(index);
+        }
+    }
+
+    /// <summary>
+    /// Uses one held item of this kind without the player doing anything (Combo Fuel when the combo bar runs out).
+    /// Returns false when none is held.
+    /// </summary>
+    public bool TryUseAutoItem(DeviceKind kind)
+    {
+        for (int i = 0; i < devices.Length; i++)
+        {
+            if (devices[i] == null || devices[i].kind != kind || devices[i].owned <= 0) continue;
+            devices[i].owned--;
+            return true;
+        }
+        return false;
+    }
 
     // Device access for the save system.
     public int DeviceCount => devices.Length;

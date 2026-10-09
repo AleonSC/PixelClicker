@@ -628,7 +628,7 @@ public class PixelSaveGame : MonoBehaviour
                 {
                     DeviceSave saved = data.devices != null
                         ? Array.Find(data.devices, d => d.name == consumables.GetDevice(i).displayName) : null;
-                    consumables.GetDevice(i).owned = saved != null ? Mathf.Max(0, saved.owned) : 0;
+                    consumables.GetDevice(i).owned = saved != null ? consumables.ClampDeviceHeld(i, saved.owned) : 0;
                 }
             }
 

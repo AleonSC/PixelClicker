@@ -35,6 +35,14 @@ public class PixelCombo : MonoBehaviour
     [Tooltip("The highest tier multiplier the player has unlocked. The shop's upgrade levels set this; it decides how many of the tiers below work.")]
     [SerializeField] private float maxMultiplier = 1.5f;
 
+    [Header("Combo Fuel")]
+    [Min(0.2f)]
+    [Tooltip("When a Combo Fuel saves the combo, the timer bar rebuilds from empty to full over this many seconds.")]
+    [SerializeField] private float fuelRefillSeconds = 3f;
+
+    [Tooltip("Colour of the timer bar while it is refilling from Combo Fuel.")]
+    [SerializeField] private Color fuelBarColor = new Color(0.35f, 0.8f, 1f, 1f);
+
     [Header("Combo Rules")]
     [Min(0.1f)]
     [Tooltip("Seconds you have after a click to click again before the combo breaks.")]
@@ -228,6 +236,8 @@ public class PixelCombo : MonoBehaviour
 
     private int combo;
     private float timeLeft;
+    private bool fueling;                 // Combo Fuel saved the combo: the bar is rebuilding
+    private PixelConsumables fuelSource;
     private float pop;
     private GameObject canvasRoot;
     private CanvasGroup group;
@@ -355,6 +365,13 @@ public class PixelCombo : MonoBehaviour
         if (hitsCount) AddClick(automatic);
     }
 
+    private bool TryUseFuel()
+    {
+        if (!Working) return false;
+        if (fuelSource == null) fuelSource = PixelFind.First<PixelConsumables>();
+        return fuelSource != null && fuelSource.TryUseAutoItem(PixelConsumables.DeviceKind.ComboFuel);
+    }
+
     private void AddClick(bool automatic)
     {
         if (!Working || (automatic && !autoClicksCount)) return;
@@ -362,6 +379,7 @@ public class PixelCombo : MonoBehaviour
         PixelStats.Best("combo.tier", Tier);
         ComboReached?.Invoke(combo);
         timeLeft = comboWindowSeconds;
+        fueling = false; // a click ends the refill: the bar is full again and runs down as usual
         pop = 1f;
     }
 
@@ -372,9 +390,23 @@ public class PixelCombo : MonoBehaviour
 
         if (combo > 0)
         {
-            timeLeft -= Time.deltaTime;
-            if (timeLeft <= 0f) combo = 0;
+            if (fueling)
+            {
+                // Saved by Combo Fuel: the bar rebuilds to the top, then runs down like normal unless you click.
+                timeLeft += Time.deltaTime * comboWindowSeconds / Mathf.Max(0.2f, fuelRefillSeconds);
+                if (timeLeft >= comboWindowSeconds) { timeLeft = comboWindowSeconds; fueling = false; }
+            }
+            else
+            {
+                timeLeft -= Time.deltaTime;
+                if (timeLeft <= 0f)
+                {
+                    if (TryUseFuel()) { fueling = true; timeLeft = 0f; PixelStats.Count("fuel.used"); }
+                    else combo = 0;
+                }
+            }
         }
+        else fueling = false;
         pop = Mathf.MoveTowards(pop, 0f, Time.deltaTime * 6f);
         idleSeconds += Time.deltaTime;
         Apply();
@@ -409,7 +441,7 @@ public class PixelCombo : MonoBehaviour
 
         float fill = combo > 0 ? Mathf.Clamp01(timeLeft / comboWindowSeconds) : 0f;
         barFillRect.anchorMax = new Vector2(fill, 1f);
-        barFill.color = atMax ? maxColor : barColor;
+        barFill.color = fueling ? fuelBarColor : atMax ? maxColor : barColor;
 
         // Fully visible while a combo runs, dimmed when idle, then faded out after a while without clicks.
         bool hidden = combo <= 0 && hideAfterSeconds > 0f && idleSeconds >= hideAfterSeconds;

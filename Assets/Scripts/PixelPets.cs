@@ -44,6 +44,26 @@ public partial class PixelPets : MonoBehaviour
     [Tooltip("While a pet is out (found and switched on), its pixel type spawns this many times more often (its spawn weight is multiplied by this). 1 = no effect.")]
     [SerializeField] private float spawnWeightMultiplier = 2f;
 
+    [Header("Pet Treat")]
+    [Min(1f)]
+    [Tooltip("How long a Pet Treat lasts (seconds of game time). Using another one restarts the timer.")]
+    [SerializeField] private float treatSeconds = 60f;
+
+    [Min(1f)]
+    [Tooltip("While a treat works, the EXTRA spawn chance pets give is multiplied by this (2 = doubled: a x2 pet becomes x3).")]
+    [SerializeField] private float treatExtraFactor = 2f;
+
+    [Min(1f)]
+    [Tooltip("Hyper: pets hop this many times more often and a bit harder while a treat works.")]
+    [SerializeField] private float treatHyperFactor = 2f;
+
+    [Tooltip("Colour of the glow around a pet while a treat works.")]
+    [SerializeField] private Color treatGlowColor = new Color(1f, 0.85f, 0.35f, 1f);
+
+    [Min(0f)]
+    [Tooltip("Brightness of the light a glowing pet gives off.")]
+    [SerializeField] private float treatLightIntensity = 3f;
+
     [Header("Roaming")]
     [Min(0.1f)]
     [Tooltip("Mass of a pet (heavier pets shove old pixels around more).")]
@@ -234,7 +254,54 @@ public partial class PixelPets : MonoBehaviour
 
     /// <summary>The factor a pixel type's spawn weight is multiplied by: the pet's bonus while that pet is active, else 1.</summary>
     public static float SpawnMultiplier(PixelClicker.PixelType type)
-        => Instance != null && Instance.IsOn(type) ? Mathf.Max(1f, Instance.spawnWeightMultiplier) : 1f;
+    {
+        if (Instance == null || !Instance.IsOn(type)) return 1f;
+        float extra = Mathf.Max(1f, Instance.spawnWeightMultiplier) - 1f;
+        if (TreatActive) extra *= Instance.treatExtraFactor; // a Pet Treat doubles the extra chance
+        return 1f + extra;
+    }
+
+    private float treatTimer;
+
+    /// <summary>True while a Pet Treat is working.</summary>
+    public static bool TreatActive => Instance != null && Instance.treatTimer > 0f;
+
+    private float Hyper => treatTimer > 0f ? treatHyperFactor : 1f;
+
+    /// <summary>Pet Treat: pets go hyper and glow for a while. False when no pet is out.</summary>
+    public bool TryUseTreat()
+    {
+        bool anyOut = pets.Exists(p => !p.off && p.body != null);
+        if (!anyOut) return false;
+        treatTimer = treatSeconds;
+        return true;
+    }
+
+    // The glow: a point light and a soft halo on a child object of each pet while a treat works.
+    private void UpdateTreatGlow(Pet p, bool on)
+    {
+        Transform glow = p.body != null ? p.body.transform.Find("Treat Glow") : null;
+        if (!on)
+        {
+            if (glow != null) { glow.SetParent(null); Destroy(glow.gameObject); }
+            return;
+        }
+        float size = clicker.PixelBaseSize;
+        if (glow == null)
+        {
+            GameObject go = new GameObject("Treat Glow");
+            go.transform.SetParent(p.body.transform, false);
+            Light light = go.AddComponent<Light>();
+            light.type = LightType.Point;
+            light.color = treatGlowColor;
+            light.range = size * 5f;
+            light.shadows = LightShadows.None;
+            PixelLooks.AddGlowHalo(go.transform, treatGlowColor, 0.5f, 2f, 1.6f);
+            glow = go.transform;
+        }
+        Light l = glow.GetComponent<Light>();
+        if (l != null) l.intensity = treatLightIntensity * (0.75f + 0.25f * Mathf.Sin(Time.time * 7f));
+    }
 
     /// <summary>How many pets you have.</summary>
     public int OwnedCount => pets.Count;
@@ -497,6 +564,7 @@ public partial class PixelPets : MonoBehaviour
     {
         if (customizing) UpdateCustomize();
         if (PopupOpen || Time.timeScale <= 0f) return;
+        if (treatTimer > 0f) treatTimer -= Time.deltaTime;
         bool hide = PixelMinigame.TakeoverActive; // Snake, Sorting Race and Breakout have the floor to themselves
         if (hide && held != null) EndHold(false);
         UpdatePointer(hide);
@@ -505,6 +573,7 @@ public partial class PixelPets : MonoBehaviour
             if (p.body == null) continue;
             if (p.body.activeSelf == hide) p.body.SetActive(!hide);
             if (hide) continue;
+            UpdateTreatGlow(p, treatTimer > 0f && !p.off);
             bool stopped = p == hovered || p == held || (p == tagPet && TagVisible); // a pet whose name tag is up stands still too
             if (p.ghost) RoamGhost(p, stopped);
             else Roam(p, stopped);
@@ -685,7 +754,7 @@ public partial class PixelPets : MonoBehaviour
         if (p.hopTimer > 0f) return;
         // Only hop from the ground.
         if (!Physics.Raycast(pos, Vector3.down, size * 0.8f, ~0, QueryTriggerInteraction.Ignore)) { p.hopTimer = 0.15f; return; }
-        p.hopTimer = Random.Range(Mathf.Min(hopInterval.x, hopInterval.y), Mathf.Max(hopInterval.x, hopInterval.y));
+        p.hopTimer = Random.Range(Mathf.Min(hopInterval.x, hopInterval.y), Mathf.Max(hopInterval.x, hopInterval.y)) / Hyper;
 
         Vector2 circle = Random.insideUnitCircle.normalized;
         Vector3 dir = new Vector3(circle.x, 0f, circle.y);
@@ -697,8 +766,9 @@ public partial class PixelPets : MonoBehaviour
         if (toCube.magnitude > roamRadius * size || outside)
             dir = toCube.sqrMagnitude > 0.0001f ? Vector3.Slerp(dir, toCube.normalized, outside ? 0.95f : 0.7f).normalized : dir;
 
-        rb.AddForce(dir * (rb.mass * rollSpeed) + Vector3.up * (rb.mass * hopSpeed), ForceMode.Impulse);
-        rb.AddTorque(Vector3.Cross(Vector3.up, dir) * spinSpeed, ForceMode.VelocityChange);
+        float hyperBoost = 1f + (Hyper - 1f) * 0.3f; // a hyper pet hops harder too
+        rb.AddForce(dir * (rb.mass * rollSpeed * hyperBoost) + Vector3.up * (rb.mass * hopSpeed * hyperBoost), ForceMode.Impulse);
+        rb.AddTorque(Vector3.Cross(Vector3.up, dir) * (spinSpeed * hyperBoost), ForceMode.VelocityChange);
     }
 
     private bool OutsideView(Vector3 pos)
@@ -743,7 +813,7 @@ public partial class PixelPets : MonoBehaviour
         }
 
         Vector3 to = p.target - pos;
-        Vector3 desired = to.normalized * Mathf.Min(ghostSpeed, to.magnitude * 1.2f);
+        Vector3 desired = to.normalized * Mathf.Min(ghostSpeed * Hyper, to.magnitude * 1.2f);
         desired.y += Mathf.Sin(Time.time * 2f + p.phase) * 0.25f; // bobbing
         SetVelocity(rb, Vector3.Lerp(v, desired, 1f - Mathf.Exp(-2f * Time.deltaTime))); // a throw fades into the drift
         rb.angularVelocity = Vector3.Lerp(rb.angularVelocity, new Vector3(Mathf.Sin(Time.time + p.phase) * 0.3f, 0.4f, Mathf.Cos(Time.time * 0.7f + p.phase) * 0.3f),

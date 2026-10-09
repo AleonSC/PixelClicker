@@ -239,12 +239,43 @@ public class PixelGhostMinigame : PixelMinigame
 
     private float spawnTimer;
     private bool ghostActive;
+    private int baitGhostsLeft; // ghosts still to come from Ghost Bait
+
+    [Header("Ghost Bait")]
+    [Range(1, 10)]
+    [Tooltip("How many ghosts one Ghost Bait calls.")]
+    [SerializeField] private int baitGhosts = 3;
+
+    [Min(0f)]
+    [Tooltip("Seconds until the first bait ghost appears at the latest.")]
+    [SerializeField] private float baitFirstDelay = 4f;
+
+    [Min(0f)]
+    [Tooltip("Seconds between the bait ghosts.")]
+    [SerializeField] private float baitGap = 3f;
+
+    [Min(1f)]
+    [Tooltip("Bait ghosts cross the screen this many times slower than usual.")]
+    [SerializeField] private float baitSlowFactor = 1.8f;
+
+    /// <summary>
+    /// Ghost Bait: the next ghost appears within a few seconds and a short wave of slower ghosts follows.
+    /// Returns false if the minigame isn't running or a bait wave is already under way.
+    /// </summary>
+    public bool UseBait()
+    {
+        if (!running || baitGhostsLeft > 0) return false;
+        baitGhostsLeft = Mathf.Max(1, baitGhosts);
+        if (!ghostActive) spawnTimer = Mathf.Min(spawnTimer, baitFirstDelay);
+        return true;
+    }
 
     public override bool Busy => ghostActive;
 
     protected override void OnDespawned()
     {
         ghostActive = false;
+        baitGhostsLeft = 0;
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
     }
     private Material ghostMaterial;
@@ -336,6 +367,9 @@ public class PixelGhostMinigame : PixelMinigame
     private IEnumerator GhostRoutine()
     {
         ghostActive = true;
+        bool bait = baitGhostsLeft > 0; // a bait ghost drifts slower
+        if (bait) baitGhostsLeft--;
+        float cross = crossSeconds * (bait ? baitSlowFactor : 1f);
         Report(MinigameEvent.Spawned);
         onGhostAppeared?.Invoke();
 
@@ -382,10 +416,10 @@ public class PixelGhostMinigame : PixelMinigame
 
         float t = 0f;
         bool caught = false;
-        while (t < crossSeconds)
+        while (t < cross)
         {
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / crossSeconds);
+            float k = Mathf.Clamp01(t / cross);
             float time = t + phase;
 
             // Smooth drift plus little hops.
@@ -430,7 +464,8 @@ public class PixelGhostMinigame : PixelMinigame
         if (caught) Catch(lastPos, cam, potionVisual != null ? potion : -2);
         else onGhostMissed?.Invoke();
 
-        spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
+        spawnTimer = baitGhostsLeft > 0 ? baitGap
+                   : Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         ghostActive = false;
     }
 
