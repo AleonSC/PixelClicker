@@ -379,6 +379,7 @@ public partial class PixelPets : MonoBehaviour
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
         if (!petsEnabled || PopupOpen || clicker == null || !clicker.IsValidTierIndex(tierIndex)) return;
+        if (clicker.Tiers[tierIndex].rareDrop) return; // Dragon Cubes have no pets
         PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
         if (IsOwned(type) || waiting.Contains(type)) return;
 

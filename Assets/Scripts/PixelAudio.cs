@@ -189,6 +189,7 @@ public class PixelAudio : MonoBehaviour
             Make("pixel_land", 0.02f, 0.88f, 1.12f),
             Make("pixel_bounce_electric", 0.05f, 0.9f, 1.15f),
             Make("overcharge", 0.3f, 1f, 1f),
+            Make("dragon_summon", 1f, 1f, 1f),
             Make("glass_shatter", 0.04f, 0.9f, 1.1f),
             Make("auto_click", 0.06f, 0.92f, 1.08f),
             Make("hit", 0.03f, 0.92f, 1.08f),
@@ -244,9 +245,11 @@ public class PixelAudio : MonoBehaviour
         if (sounds == null) return;
         foreach (Sound s in sounds)
         {
-            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge")) continue;
+            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon")) continue;
             if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
-            s.clips = s.id == "overcharge" ? new[] { PixelSynth.Charge() } : new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
+            s.clips = s.id == "dragon_summon" ? new[] { PixelSynth.Summon() }
+                    : s.id == "overcharge" ? new[] { PixelSynth.Charge() }
+                    : new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
         }
     }
 
@@ -664,6 +667,49 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
         AudioClip clip = AudioClip.Create("Overcharge", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The dragon summoning: a deep drone that rises with shimmering overtones and crackle, ending in a boom (about 5 seconds).</summary>
+    public static AudioClip Summon()
+    {
+        const int rate = 22050;
+        float length = 5.2f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(777);
+        float p1 = 0f, p2 = 0f, p3 = 0f, crackle = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float t = sec / length;
+            float rise = t * t;
+            float f = Mathf.Lerp(55f, 420f, rise);
+            p1 += f / rate; p2 += f * 1.5f / rate; p3 += f * 2.01f / rate;
+            float drone = Mathf.Sin(p1 * 6.2832f) * 0.5f + Mathf.Sin(p2 * 6.2832f) * 0.25f * rise + Mathf.Sin(p3 * 6.2832f) * 0.18f * rise;
+            drone *= 1f + 0.25f * Mathf.Sin(sec * Mathf.Lerp(4f, 22f, rise) * 6.2832f); // tremolo that speeds up
+
+            if (rng.NextDouble() < 0.002 + 0.03 * rise) crackle = (float)rng.NextDouble() * 2f - 1f;
+            crackle *= 0.9f;
+
+            float env = Mathf.Clamp01(sec / 0.4f) * Mathf.Lerp(0.3f, 1f, rise);
+            float value = drone * env + crackle * 0.5f * rise;
+
+            // The boom when the cubes burst together.
+            float boomT = sec - 3.9f;
+            if (boomT > 0f)
+            {
+                float boom = Mathf.Sin(boomT * 6.2832f * Mathf.Lerp(90f, 30f, Mathf.Clamp01(boomT * 2f))) * Mathf.Exp(-boomT * 3.5f);
+                float hiss = ((float)rng.NextDouble() * 2f - 1f) * Mathf.Exp(-boomT * 7f);
+                value = value * Mathf.Exp(-boomT * 4f) + boom * 1.1f + hiss * 0.6f;
+            }
+            data[i] = value;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
+        AudioClip clip = AudioClip.Create("Dragon Summon", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

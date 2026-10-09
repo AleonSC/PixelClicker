@@ -211,3 +211,4 @@
 [2026-10-09 21:43 UTC] Fixed a compile error in the Electric pack migration.
 [2026-10-09 21:48 UTC] The Electric pixel is now an early unlock: it needs the Auto Clicker pack, costs 8K each of Red/Green/Blue, is a rarer spawn, and is listed just before the Vacuum pixel in the shop.
 [2026-10-09 21:51 UTC] Electric old pixels now arc to each other in chains even without a device; every pixel that joins a chain gets 10 extra seconds before it despawns.
+[2026-10-09 21:59 UTC] Added the seven Dragon Cubes (glassy orange cubes with 1-7 dark orange small cubes inside) as extremely rare random pixels with no requirements; gather all seven to summon a cube dragon and make a wish (Fortune, Golden Hour, Ultra Blessing, Potion Stock or A New Friend).

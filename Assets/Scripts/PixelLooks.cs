@@ -187,11 +187,18 @@ public class PixelLook
     [Tooltip("How far the bolts wander from a straight line, as a fraction of the cube's size.")]
     public float lightningJitter = 0.09f;
 
+    [Range(0, 7)]
+    [Tooltip("Dragon Cubes: how many small cubes (1-7) float inside the cube, laid out like the stars on a dragon ball. 0 = none.")]
+    public int starCubes = 0;
+
+    [Tooltip("Colour of the small cubes inside a Dragon Cube.")]
+    public Color starColor = new Color(0.55f, 0.18f, 0.02f, 1f);
+
     [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter || lightning || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => outline || darkMatter || lightning || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks;
@@ -236,11 +243,32 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
                             forceTranslucent = true, smoothness = 0.9f, metallic = 0f, emission = 0.6f, lightning = true },
 
+            // Dragon Cubes 1-7: glassy orange cubes with 1-7 dark orange small cubes inside, like dragon balls.
+            DragonCubeLook(PixelClicker.PixelType.DragonCube1, 1),
+            DragonCubeLook(PixelClicker.PixelType.DragonCube2, 2),
+            DragonCubeLook(PixelClicker.PixelType.DragonCube3, 3),
+            DragonCubeLook(PixelClicker.PixelType.DragonCube4, 4),
+            DragonCubeLook(PixelClicker.PixelType.DragonCube5, 5),
+            DragonCubeLook(PixelClicker.PixelType.DragonCube6, 6),
+            DragonCubeLook(PixelClicker.PixelType.DragonCube7, 7),
+
             // Singularity: a box of dark matter.
             new PixelLook { type = PixelClicker.PixelType.Singularity, useColor = true, color = new Color(0.07f, 0.02f, 0.14f, 0.5f),
                             forceTranslucent = true, smoothness = 0.95f, metallic = 0f, glowScale = 0.3f,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 0.25f, 1f, 1f),
                             outlineThickness = 0.04f, darkMatter = true, gravityWell = true },
+        };
+    }
+
+    private static PixelLook DragonCubeLook(PixelClicker.PixelType type, int stars)
+    {
+        return new PixelLook
+        {
+            type = type, useColor = true, color = new Color(1f, 0.58f, 0.1f, 0.5f),
+            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.45f,
+            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.82f, 0.45f, 1f),
+            outlineThickness = 0.025f, outlineStrength = 0.7f,
+            starCubes = stars, starColor = new Color(0.55f, 0.18f, 0.02f, 1f),
         };
     }
 
@@ -402,6 +430,19 @@ public static class PixelLooks
             kr.receiveShadows = false;
         }
 
+        if (look.starCubes > 0)
+        {
+            GameObject stars = new GameObject("Dragon Stars", typeof(MeshFilter), typeof(MeshRenderer));
+            stars.transform.SetParent(root.transform, false);
+            stars.transform.localPosition = centre;
+            stars.layer = root.layer;
+            stars.GetComponent<MeshFilter>().sharedMesh = StarCubesMesh(size, look.starCubes, look.starColor);
+            MeshRenderer sr = stars.GetComponent<MeshRenderer>();
+            sr.sharedMaterial = OverlayMaterial(); // unlit vertex colours, drawn after the see-through body so they show through it
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            sr.receiveShadows = false;
+        }
+
         if (look.lightning)
         {
             GameObject bolts = new GameObject("Lightning", typeof(MeshFilter), typeof(MeshRenderer));
@@ -429,6 +470,72 @@ public static class PixelLooks
             core.AddComponent<PixelLookSpin>().Setup(new Vector3(35f, 55f, 20f), 0.1f, 1.6f);
         }
         return root;
+    }
+
+    private static readonly Dictionary<int, Mesh> starMeshes = new Dictionary<int, Mesh>();
+
+    /// <summary>
+    /// 1-7 small cubes inside a cube, laid out like the stars of a dragon ball (1 centre; 2 pair; 3 triangle; 4 square; 5 square +
+    /// centre; 6 two columns; 7 hexagon + centre), flat-shaded with vertex colours. Cached per size / count / colour.
+    /// </summary>
+    private static Mesh StarCubesMesh(Vector3 size, int count, Color colour)
+    {
+        count = Mathf.Clamp(count, 1, 7);
+        int key = count * 100003 + Mathf.RoundToInt(size.x * 1000f) + Mathf.RoundToInt(colour.r * 255f) * 7 + Mathf.RoundToInt(colour.g * 255f) * 13;
+        if (starMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
+
+        Vector2[] spots;
+        switch (count)
+        {
+            case 1: spots = new[] { Vector2.zero }; break;
+            case 2: spots = new[] { new Vector2(-0.17f, 0f), new Vector2(0.17f, 0f) }; break;
+            case 3: spots = new[] { new Vector2(0f, 0.17f), new Vector2(-0.18f, -0.12f), new Vector2(0.18f, -0.12f) }; break;
+            case 4: spots = new[] { new Vector2(-0.16f, 0.16f), new Vector2(0.16f, 0.16f), new Vector2(-0.16f, -0.16f), new Vector2(0.16f, -0.16f) }; break;
+            case 5: spots = new[] { new Vector2(-0.2f, 0.2f), new Vector2(0.2f, 0.2f), Vector2.zero, new Vector2(-0.2f, -0.2f), new Vector2(0.2f, -0.2f) }; break;
+            case 6: spots = new[] { new Vector2(-0.16f, 0.22f), new Vector2(0.16f, 0.22f), new Vector2(-0.16f, 0f), new Vector2(0.16f, 0f), new Vector2(-0.16f, -0.22f), new Vector2(0.16f, -0.22f) }; break;
+            default:
+                spots = new Vector2[7];
+                spots[0] = Vector2.zero;
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * Mathf.PI / 3f;
+                    spots[i + 1] = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 0.22f;
+                }
+                break;
+        }
+
+        float unit = Mathf.Min(size.x, Mathf.Min(size.y, size.z));
+        float half = unit * (count >= 5 ? 0.075f : 0.09f); // half the edge of a small cube
+        List<Vector3> v = new List<Vector3>();
+        List<Color> c = new List<Color>();
+        List<int> t = new List<int>();
+        Vector3[] normals = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+        float[] shade = { 1f, 0.5f, 0.72f, 0.78f, 0.9f, 0.62f };
+
+        foreach (Vector2 s in spots)
+        {
+            Vector3 centre = new Vector3(s.x * size.x, s.y * size.y, 0f);
+            for (int f = 0; f < 6; f++)
+            {
+                Vector3 n = normals[f];
+                Vector3 u = Mathf.Abs(n.y) > 0.5f ? Vector3.right : Vector3.up;
+                Vector3 w = Vector3.Cross(n, u);
+                int b = v.Count;
+                v.Add(centre + (n + u + w) * half); v.Add(centre + (n + u - w) * half);
+                v.Add(centre + (n - u - w) * half); v.Add(centre + (n - u + w) * half);
+                Color shaded = new Color(colour.r * shade[f], colour.g * shade[f], colour.b * shade[f], colour.a);
+                for (int k = 0; k < 4; k++) c.Add(shaded);
+                t.Add(b); t.Add(b + 1); t.Add(b + 2);
+                t.Add(b); t.Add(b + 2); t.Add(b + 3);
+            }
+        }
+        Mesh mesh = new Mesh { name = "Dragon Stars " + count };
+        mesh.SetVertices(v);
+        mesh.SetColors(c);
+        mesh.SetTriangles(t, 0);
+        mesh.RecalculateBounds();
+        starMeshes[key] = mesh;
+        return mesh;
     }
 
     private static Material NeonMaterial()

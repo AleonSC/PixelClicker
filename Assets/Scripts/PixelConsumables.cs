@@ -497,11 +497,10 @@ public class PixelConsumables : MonoBehaviour
 
     private static Potion[] CreateDefaultPotions()
     {
-        Array values = Enum.GetValues(typeof(PixelClicker.PixelType));
-        Potion[] list = new Potion[values.Length];
-        for (int i = 0; i < values.Length; i++)
-            list[i] = CreateDefaultPotion((PixelClicker.PixelType)values.GetValue(i));
-        return list;
+        System.Collections.Generic.List<Potion> list = new System.Collections.Generic.List<Potion>();
+        foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
+            if (!PixelClicker.IsDragonCube(type)) list.Add(CreateDefaultPotion(type)); // no potions for the Dragon Cubes
+        return list.ToArray();
     }
 
     /// <summary>Adds a potion for every pixel type that doesn't have one. Returns true if anything was added.</summary>
@@ -562,6 +561,7 @@ public class PixelConsumables : MonoBehaviour
 
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
+            if (PixelClicker.IsDragonCube(type)) continue;
             if (Array.Exists(potions, p => p != null && p.type == type)) continue;
             Array.Resize(ref potions, potions.Length + 1);
             potions[potions.Length - 1] = CreateDefaultPotion(type);

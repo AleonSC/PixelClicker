@@ -1075,7 +1075,7 @@ public class PixelUI : MonoBehaviour
 
             PixelClicker.PixelTier tier = tiers[i];
             bool holding = tier.count > 0d; // e.g. a Starting Amount on a tier that is still locked
-            bool visible = (tier.unlocked || holding || showLockedTiers) && showCurrency;
+            bool visible = (tier.unlocked || holding || (showLockedTiers && !tier.rareDrop)) && showCurrency;
             if (label.gameObject.activeSelf != visible) label.gameObject.SetActive(visible);
             if (!visible) continue;
 

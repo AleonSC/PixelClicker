@@ -33,6 +33,7 @@ public class PixelClicker : MonoBehaviour
         UltraGained = null;
         FlyAwayLaunched = null;
         abbreviateCache = -1;
+        WishMultiplier = 1f;
     }
 
     // ------------------------------------------------------------------
@@ -57,7 +58,23 @@ public class PixelClicker : MonoBehaviour
         Meteor = 12,
         Solar = 13,
         Electric = 14,
+        DragonCube1 = 15,
+        DragonCube2 = 16,
+        DragonCube3 = 17,
+        DragonCube4 = 18,
+        DragonCube5 = 19,
+        DragonCube6 = 20,
+        DragonCube7 = 21,
     }
+
+    /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
+    public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
+
+    /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
+    public static int DragonCubeStars(PixelType type) => IsDragonCube(type) ? (int)type - (int)PixelType.DragonCube1 + 1 : 0;
+
+    /// <summary>Extra payout multiplier from outside effects (a dragon wish's Golden Hour); 1 normally.</summary>
+    public static float WishMultiplier = 1f;
 
     /// <summary>Can the player switch this pixel's spawning off (tick box in the inventory)?</summary>
     public enum SpawnSwitch
@@ -191,6 +208,9 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Has this tier been unlocked?")]
         public bool unlocked;
 
+        [Tooltip("A rare drop: spawns even though it was never 'unlocked', stays out of the unlock chain, the Value upgrades, potions, pets and achievements, and only shows in the inventory once you hold one (the seven Dragon Cubes).")]
+        public bool rareDrop = false;
+
         [Tooltip("Runtime: the player switched this pixel's spawning off (saved).")]
         public bool spawnDisabled;
 
@@ -211,7 +231,7 @@ public class PixelClicker : MonoBehaviour
         }
 
         /// <summary>Can this pixel spawn right now (unlocked and not switched off)?</summary>
-        public bool CanSpawn => unlocked && !(spawnDisabled && CanSwitchOff);
+        public bool CanSpawn => (unlocked || rareDrop) && !(spawnDisabled && CanSwitchOff);
 
         /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
         public Color UIColor => new Color(color.r, color.g, color.b, 1f);
@@ -223,6 +243,14 @@ public class PixelClicker : MonoBehaviour
     // ------------------------------------------------------------------
     // Inspector fields
     // ------------------------------------------------------------------
+
+    [Header("Dragon Cubes")]
+    [Tooltip("Turn the seven Dragon Cubes off entirely (they are extremely rare random pixels; gathering all seven lets you summon the cube dragon for a wish).")]
+    [SerializeField] private bool disableDragonCubes = false;
+
+    [Min(0f)]
+    [Tooltip("Spawn weight of EACH Dragon Cube in the random pixel spawns (a normal pixel is 1; 0 = the default 0.0001, i.e. about 1 in 70,000 pixels each).")]
+    [SerializeField] private float dragonCubeSpawnWeight = 0f;
 
     [Header("Glow (tiers with Glow ticked)")]
     [Range(0f, 1f)]
@@ -265,7 +293,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -810,6 +838,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
+        if (PixelFind.First<PixelDragonWish>() == null) gameObject.AddComponent<PixelDragonWish>(); // the Dragon Cube wish (all seven cubes)
         if (PixelFind.First<PixelOvercharge>() == null) gameObject.AddComponent<PixelOvercharge>(); // clicking an Electric pixel overcharges the auto clicker
         if (PixelFind.First<PixelElectricLinks>() == null) gameObject.AddComponent<PixelElectricLinks>(); // Electric old pixels arc to nearby devices
         if (PixelFind.First<PixelCameraIntro>() == null) gameObject.AddComponent<PixelCameraIntro>();       // start close up, then zoom out
@@ -906,6 +935,20 @@ public class PixelClicker : MonoBehaviour
             }
             looksVersion = 9;
         }
+        if (looksVersion < 10)
+        {
+            // The seven Dragon Cube looks (glassy orange with 1-7 small cubes inside) are new: add any that are missing.
+            System.Collections.Generic.List<PixelLook> list10 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            for (int s = 0; s < 7; s++)
+            {
+                PixelType t = (PixelType)((int)PixelType.DragonCube1 + s);
+                if (PixelLooks.Find(list10.ToArray(), t) != null) continue;
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), t);
+                if (def != null) list10.Add(def);
+            }
+            looks = list10.ToArray();
+            looksVersion = 10;
+        }
 
         if (pixelRenderer != null)
         {
@@ -951,6 +994,32 @@ public class PixelClicker : MonoBehaviour
             if (tiers[i].unlockedAtStart) tiers[i].unlocked = true;
             // Keep any Count typed into the Inspector; Starting Amount raises it if it's higher.
             if (tiers[i].count < tiers[i].startingAmount) tiers[i].count = tiers[i].startingAmount;
+        }
+
+        EnsureDragonCubes();
+    }
+
+    /// <summary>The seven Dragon Cube tiers: orange, 1 payout each, an extremely low spawn weight and no requirements (rare drops).</summary>
+    private void EnsureDragonCubes()
+    {
+        if (disableDragonCubes) return;
+        float weight = dragonCubeSpawnWeight > 0f ? dragonCubeSpawnWeight : 0.0001f;
+        for (int stars = 1; stars <= 7; stars++)
+        {
+            PixelType type = (PixelType)((int)PixelType.DragonCube1 + stars - 1);
+            if (IndexOf(type) >= 0) continue;
+            EnsureTier(new PixelTier
+            {
+                type = type,
+                displayName = "Dragon Cube (" + stars + ")",
+                color = new Color(1f, 0.62f, 0.12f, 0.6f),
+                amountPerClick = 1,
+                spawnWeight = weight,
+                rareDrop = true,
+                translucent = true,
+                spawnSwitch = SpawnSwitch.AlwaysOn,
+                unlockMode = TierUnlockMode.ShopOnly,
+            });
         }
     }
 
@@ -1121,12 +1190,36 @@ public class PixelClicker : MonoBehaviour
     {
         if (!IsValidTier(tierIndex) || amount <= 0) return;
 
+        bool firstOfRareDrop = tiers[tierIndex].rareDrop && tiers[tierIndex].totalCollected <= 0d;
         tiers[tierIndex].count += amount;
         tiers[tierIndex].totalCollected += amount;
         CurrencyGained?.Invoke(tierIndex, amount);
+        if (firstOfRareDrop) AnnounceDragonCube(tierIndex);
 
         CheckUnlocks();
         NotifyChanged();
+    }
+
+    /// <summary>The first time each Dragon Cube turns up: a log line (and a tip the very first time), plus a note when all seven are held.</summary>
+    private void AnnounceDragonCube(int tierIndex)
+    {
+        PixelHints.Announce("You found a " + tiers[tierIndex].displayName + "!");
+        PixelHints.Trigger("dragon_first");
+        if (HasAllDragonCubes) PixelHints.Announce("You hold all seven Dragon Cubes! Summon the dragon.");
+    }
+
+    /// <summary>Does the player hold at least one of each of the seven Dragon Cubes?</summary>
+    public bool HasAllDragonCubes
+    {
+        get
+        {
+            for (int s = 0; s < 7; s++)
+            {
+                int index = IndexOf((PixelType)((int)PixelType.DragonCube1 + s));
+                if (index < 0 || tiers[index].count < 1d) return false;
+            }
+            return true;
+        }
     }
 
     /// <summary>Takes up to 'amount' off a tier's currency (never below zero) without counting it as spending. Returns how much was taken.</summary>
@@ -1189,7 +1282,7 @@ public class PixelClicker : MonoBehaviour
     public double ValueMultiplier(int tierIndex) => IsValidTier(tierIndex) ? ValueMultiplierAt(tiers[tierIndex].valueLevel) : 1d;
 
     /// <summary>Everything that scales a pixel type's payout per collect: Ultra boosts x Value upgrades.</summary>
-    public double PayoutMultiplier(int tierIndex) => UltraMultiplier(tierIndex) * ValueMultiplier(tierIndex);
+    public double PayoutMultiplier(int tierIndex) => UltraMultiplier(tierIndex) * ValueMultiplier(tierIndex) * WishMultiplier;
 
     /// <summary>Spends a pixel type's own currency to raise its Value level by one. Returns false if you can't afford it.</summary>
     public bool TryBuyValueLevel(int tierIndex, double cost)
@@ -1518,7 +1611,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (randomizeSpawnTier && devSpawnTiers != null && IsValidTier(currentTierIndex)) return currentTierIndex; // dev tools: even locked tiers
         if (randomizeSpawnTier)
-            return IsValidTier(currentTierIndex) && tiers[currentTierIndex].unlocked
+            return IsValidTier(currentTierIndex) && (tiers[currentTierIndex].unlocked || tiers[currentTierIndex].rareDrop)
                 ? currentTierIndex
                 : GetHighestUnlockedIndex();
 

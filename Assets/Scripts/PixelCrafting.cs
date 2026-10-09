@@ -348,6 +348,7 @@ public class PixelCrafting : MonoBehaviour
         List<Recipe> list = new List<Recipe>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
+            if (PixelClicker.IsDragonCube(type)) continue;
             list.Add(new Recipe
             {
                 label = type + " Potion",
@@ -367,6 +368,7 @@ public class PixelCrafting : MonoBehaviour
         bool changed = false;
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
+            if (PixelClicker.IsDragonCube(type)) continue;
             if (recipes.Exists(r => r != null && r.resultKind == ResultKind.Potion && r.resultPotion == type)) continue;
             recipes.Add(new Recipe
             {
@@ -1041,7 +1043,7 @@ public class PixelCrafting : MonoBehaviour
         FitWindow();
         List<Item> items = new List<Item>();
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (Math.Floor(t.count) >= 1d) items.Add(new Item(ItemKind.Pixel, t.type));
+            if (Math.Floor(t.count) >= 1d && !t.rareDrop) items.Add(new Item(ItemKind.Pixel, t.type)); // Dragon Cubes are for the wish, not crafting
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount && !consumables.IsDevice(i); i++)
                 if (consumables.ItemOwned(i) > 0)
@@ -1195,7 +1197,7 @@ public class PixelCrafting : MonoBehaviour
         else if (y.kind == ItemKind.Potion && !y.combo && x.kind == ItemKind.Pixel) { potion = y; pixel = x; }
         else return null;
 
-        if (potion.type == pixel.type) return null;
+        if (potion.type == pixel.type || PixelClicker.IsDragonCube(pixel.type)) return null;
         int tier = clicker.IndexOf(pixel.type);
         if (tier < 0 || clicker.Tiers[tier].CanSwitchOff) return null; // only pixels that can't be toggled
 

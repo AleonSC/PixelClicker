@@ -181,6 +181,7 @@ public class PixelHints : MonoBehaviour
             case "pixel_Ghost": return "You unlocked Ghost Pixels!";
             case "pixel_Meteor": return "You unlocked Meteor Pixels!";
             case "pixel_Electric": return "You unlocked Electric Pixels!";
+            case "dragon_first": return "You found a Dragon Cube!";
             case "pixel_Red": return "You unlocked Red, Green and Blue Pixels!";
             case "bank_hose": return "Hose equipped!";
             case "bank_suck": return "Pixel stored in the Bank!";
@@ -228,6 +229,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Singularity", "Singularity Pixels unlocked! A very rare pixel born from the black holes you fed."),
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Electric", "Electric Pixels unlocked! A cube held together by crackling lightning."),
+        H("dragon_first", "A Dragon Cube! There are seven of them, each with a different number of small cubes inside, and they turn up extremely rarely among the pixels. Gather all seven and a button will appear to summon the cube dragon and make a wish."),
         H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),
         H("pixel_Red", "The RGB Pack unlocked Red, Green and Blue pixels! They pay the same as the black, gray and white ones, but you need them to unlock Glass pixels and more."),
         H("bank_hose", "The hose is out! Scroll the mouse wheel to pick a stored pixel type. Left-click spits one out, right-click sucks up the nearest old pixel, and holding right-click sucks up everything of that type around the nozzle."),
