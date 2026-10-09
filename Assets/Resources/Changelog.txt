@@ -140,3 +140,4 @@
 [2026-10-09 15:05 UTC] The Log's Pixels tab now counts clicks per pixel type (and its +N indicators show +1 per click) instead of multiplied currency totals; multipliers only affect the Inventory.
 [2026-10-09 15:13 UTC] The big unlock / purchase "Got it" boxes now sit to the right of the shop, as tall as the shop and as wide as the currency panel, instead of covering the shop.
 [2026-10-09 15:25 UTC] The autosave message is now a small, faint, pulsing "Autosaving..." note in the bottom-right corner just above the black bar.
+[2026-10-09 15:36 UTC] Old pixels restored from a save no longer pop in: they appear at full size, solid, and the ones that were lying still stay frozen in place.

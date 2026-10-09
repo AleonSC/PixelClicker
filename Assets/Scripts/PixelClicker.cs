@@ -2074,12 +2074,19 @@ public class PixelClicker : MonoBehaviour
             rb.position = s.position;
             rb.rotation = s.rotation;
             rb.transform.SetPositionAndRotation(s.position, s.rotation);
+            // No pop-in for loaded pixels: full size and solid straight away (the tiny / ghost phase made them fall through each other).
+            OldPixelPopIn pop = rb.GetComponent<OldPixelPopIn>();
+            if (pop != null) pop.Finish();
+            // Pixels that were lying still stay frozen where they were; ones that were moving carry on.
+            bool resting = s.velocity.sqrMagnitude < 0.25f * 0.25f;
+            Vector3 vel = resting ? Vector3.zero : s.velocity;
 #if UNITY_6000_0_OR_NEWER
-            rb.linearVelocity = s.velocity;
+            rb.linearVelocity = vel;
 #else
-            rb.velocity = s.velocity;
+            rb.velocity = vel;
 #endif
-            rb.angularVelocity = s.angularVelocity;
+            rb.angularVelocity = resting ? Vector3.zero : s.angularVelocity;
+            if (resting) rb.Sleep();
             OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
             if (d != null) d.SetRemaining(s.remaining);
         }
@@ -2929,6 +2936,15 @@ public class OldPixelPopIn : MonoBehaviour
         ghostSeconds = noCollision;
         if (body != null && ghostSeconds > 0f) body.isTrigger = true; // a trigger doesn't collide (keeps ignore-collision settings)
         transform.localScale = fullScale * (growSeconds > 0f ? startScale : 1f);
+    }
+
+    /// <summary>Skips the pop-in: full size and solid right now (used for pixels restored from a save).</summary>
+    public void Finish()
+    {
+        enabled = false;
+        transform.localScale = fullScale;
+        if (body != null) body.isTrigger = false;
+        Destroy(this);
     }
 
     private void Update()
