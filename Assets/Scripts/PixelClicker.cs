@@ -2542,7 +2542,11 @@ public class PixelClicker : MonoBehaviour
     // The tier of each pixel the last vacuum click sucked up, waiting for the old Vacuum pixel that drops in the same click.
     private readonly System.Collections.Generic.List<int> vacuumContents = new System.Collections.Generic.List<int>();
 
-    public void Vacuum(int vacuumTierIndex)
+    /// <summary>
+    /// Vacuum effect. By default every old pixel swirls into the cube; a 'target' (e.g. a Vacuum pixel spat out of the Pixel Bank hose)
+    /// makes them swirl into that instead, and 'exclude' keeps that pixel itself out of the suction.
+    /// </summary>
+    public void Vacuum(int vacuumTierIndex, Transform target = null, Rigidbody exclude = null)
     {
         double total = 0d;
         int count = 0;
@@ -2552,7 +2556,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < oldPixels.Count; i++)
         {
             Rigidbody body = oldPixels[i];
-            if (body == null) continue;
+            if (body == null || body == exclude) continue;
 
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
             if (info != null && IsValidTier(info.tierIndex))
@@ -2564,10 +2568,11 @@ public class PixelClicker : MonoBehaviour
                 if (!hideVacuumContents) vacuumContents.Add(info.tierIndex);
             }
 
-            StartCoroutine(SuckRoutine(body));
+            StartCoroutine(SuckRoutine(body, target));
         }
 
         oldPixels.Clear();
+        if (exclude != null) oldPixels.Add(exclude); // the pixel that is doing the sucking stays an old pixel
 
         if (logVacuum && count > 0)
         {
