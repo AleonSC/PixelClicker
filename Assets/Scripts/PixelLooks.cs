@@ -256,10 +256,8 @@ public static class PixelLooks
             // The basic pixels: a subtle drawn surface and a thin bevelled rim (a slightly lighter edge line) so they read as solid objects.
             new PixelLook { type = PixelClicker.PixelType.White, metallic = 0f, smoothness = 0.35f, basicSurface = PixelLook.BasicSurface.Grain,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = -0.3f, outlineStrength = 0.55f },
-            new PixelLook { type = PixelClicker.PixelType.Gray, metallic = 0.65f, smoothness = 0.55f, basicSurface = PixelLook.BasicSurface.Brushed,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = -0.4f, outlineStrength = 0.6f },
-            new PixelLook { type = PixelClicker.PixelType.Black, metallic = 0.15f, smoothness = 0.85f, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.3f, outlineStrength = 0.6f },
+            new PixelLook { type = PixelClicker.PixelType.Gray, metallic = 0.65f, smoothness = 0.55f, basicSurface = PixelLook.BasicSurface.Brushed, },
+            new PixelLook { type = PixelClicker.PixelType.Black, metallic = 0.15f, smoothness = 0.85f, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen, },
 
             // Red, green and blue: a faint pixel-art mosaic and a lighter rim in their own colour; with the colour-blind setting on they also get a shape on every face.
             new PixelLook { type = PixelClicker.PixelType.Red, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic, },
@@ -284,7 +282,7 @@ public static class PixelLooks
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
                             metallic = 1f, smoothness = 0.95f, streakTexture = true, damageCracks = true,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = 0.45f, outlineStrength = 0.8f },
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.55f, outlineStrength = 0.9f },
 
             // Electric: a faint dark-blue glass box held together by crackling lightning.
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),

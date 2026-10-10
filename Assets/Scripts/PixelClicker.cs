@@ -298,7 +298,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1260,6 +1260,23 @@ public class PixelClicker : MonoBehaviour
                 gray.outlineStrength = grayDef.outlineStrength;
             }
             looksVersion = 23;
+        }
+        if (looksVersion < 24)
+        {
+            // Black and Gray lose their rim; Obsidian's rim turns darker (only where it is still the shaded bevel default).
+            foreach (PixelType basic in new[] { PixelType.Gray, PixelType.Black })
+            {
+                PixelLook saved = PixelLooks.Find(looks, basic);
+                if (saved != null && saved.outline && saved.outlineBevel) saved.outline = false;
+            }
+            PixelLook obsidian = PixelLooks.Find(looks, PixelType.Obsidian);
+            PixelLook obsidianDef = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Obsidian);
+            if (obsidian != null && obsidianDef != null && obsidian.outline && obsidian.outlineBevel && Mathf.Abs(obsidian.outlineShade - 0.45f) < 0.001f)
+            {
+                obsidian.outlineShade = obsidianDef.outlineShade;
+                obsidian.outlineStrength = obsidianDef.outlineStrength;
+            }
+            looksVersion = 24;
         }
 
         if (pixelRenderer != null)
