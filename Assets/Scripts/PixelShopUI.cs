@@ -880,11 +880,12 @@ public partial class PixelShop
     }
 
     /// <summary>"Cost: 100 White Pixels  100 Gray Pixels ..." with each part green/red by affordability.</summary>
-    private string BuildCostText(PackCost[] costs)
+    private string BuildCostText(PackCost[] costs, bool capsPrefix = false)
     {
-        if (costs == null || costs.Length == 0) return costPrefix + "Free";
+        string prefix = capsPrefix ? costPrefix.ToUpperInvariant() : costPrefix;
+        if (costs == null || costs.Length == 0) return prefix + "Free";
 
-        StringBuilder sb = new StringBuilder(costPrefix);
+        StringBuilder sb = new StringBuilder(prefix);
         for (int i = 0; i < costs.Length; i++)
         {
             PackCost cost = costs[i];

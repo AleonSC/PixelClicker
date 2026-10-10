@@ -253,3 +253,4 @@
 [2026-10-10 07:02 UTC] Five or more old Solar pixels touching each other now last indefinitely.
 [2026-10-10 07:04 UTC] Added seeds (one per pixel type, cheap for common pixels and dearer for rare ones): a Seeds card plus a spare card in the shop's Consumables tab, a Seeds category in the Inventory (plant by clicking the floor), and the Farmer visitor who sells them.
 [2026-10-10 07:04 UTC] Ticked the Farmer to-do.
+[2026-10-10 07:12 UTC] Consumables shop cards: capital titles and COST label, item descriptions moved into an orange '!' box with a hover tooltip.

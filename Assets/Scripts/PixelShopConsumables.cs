@@ -19,7 +19,8 @@ public partial class PixelShop
         public bool blank;     // a spare card with nothing on it yet
         public RectTransform rect;
         public TMP_Dropdown dropdown;
-        public TMP_Text description, cost, buyLabel;
+        public TMP_Text cost, buyLabel;
+        public string tipText = "";   // the item's description, shown as a tooltip over the orange '!' box
         public TMP_InputField countField;
         public Button minus, plus, buy;
         public Image buyImage;
@@ -29,6 +30,7 @@ public partial class PixelShop
     }
 
     private PurchaseCard potionCard, utilityCard, seedCard, spareCard;
+    private PurchaseCard hoverCard; // the card whose '!' box the mouse is over
     private GameObject consumablesArea;
 
     // ------------------------------------------------------------------
@@ -79,44 +81,51 @@ public partial class PixelShop
         heading.enableAutoSizing = true;
         heading.fontSizeMax = nameFontSize * 1.1f;
         heading.fontSizeMin = 14f;
-        PlaceTopLeft(heading.rectTransform, 14f, y, inner, 38f);
-        y += 38f + 4f;
+        PixelUIKit.Caps(heading); // every title is shown in capitals
+        PlaceTopLeft(heading.rectTransform, 14f, y, inner, 44f);
+        y += 44f + 6f;
 
-        card.dropdown = PixelUIKit.CreateDropdown(font, go.transform, "Item Dropdown", new Vector2(inner, 50f), tabInactiveColor,
+        card.dropdown = PixelUIKit.CreateDropdown(font, go.transform, "Item Dropdown", new Vector2(inner, 58f), tabInactiveColor,
                                                   new Color(0.12f, 0.12f, 0.16f, 1f), textColor, buyFontSize * 0.85f);
-        PlaceTopLeft(card.dropdown.GetComponent<RectTransform>(), 14f, y, inner, 50f);
+        PlaceTopLeft(card.dropdown.GetComponent<RectTransform>(), 14f, y, inner, 58f);
         card.dropdown.onValueChanged.AddListener(_ => RefreshRows());
-        y += 50f + 6f;
+        y += 58f + 8f;
 
-        card.description = CreateText(go.transform, "Description", "", descriptionFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
-        card.description.color = new Color(textColor.r, textColor.g, textColor.b, 0.8f);
-        card.description.enableAutoSizing = true;
-        card.description.fontSizeMax = descriptionFontSize;
-        card.description.fontSizeMin = Mathf.Min(11f, descriptionFontSize);
-        PlaceTopLeft(card.description.rectTransform, 14f, y, inner, 58f);
-        y += 58f + 2f;
+        // An orange box with an exclamation mark: hover it to read the item's description.
+        float infoSize = 44f;
+        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
+        info.transform.SetParent(go.transform, false);
+        info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
+        PlaceTopLeft(info.GetComponent<RectTransform>(), 14f, y + 7f, infoSize, infoSize);
+        TMP_Text mark = CreateText(info.transform, "Mark", "!", buyFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        mark.color = Color.white;
+        mark.raycastTarget = false;
+        PixelUIKit.Stretch(mark.rectTransform);
+        PixelHoverTip infoTip = info.AddComponent<PixelHoverTip>();
+        infoTip.onEnter = () => hoverCard = card;
+        infoTip.onExit = () => { if (hoverCard == card) hoverCard = null; };
 
-        card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
+        card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         card.cost.richText = true;
         card.cost.enableAutoSizing = true;
         card.cost.fontSizeMax = costFontSize;
         card.cost.fontSizeMin = Mathf.Min(12f, costFontSize);
-        PlaceTopLeft(card.cost.rectTransform, 14f, y, inner, 44f);
-        y += 44f + 4f;
+        PlaceTopLeft(card.cost.rectTransform, 14f + infoSize + 10f, y, inner - infoSize - 10f, 58f);
+        y += 58f + 8f;
 
         // How many: [-] [ 1 ] [+]
         float cx = 14f;
         card.minus = CreateButton(go.transform, "Minus", "-", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
-        PlaceTopLeft(card.minus.GetComponent<RectTransform>(), cx, y, 48f, 46f);
+        PlaceTopLeft(card.minus.GetComponent<RectTransform>(), cx, y, 52f, 56f);
         card.minus.onClick.AddListener(() => ChangeCount(card, -1));
-        cx += 48f + 8f;
+        cx += 52f + 8f;
 
-        card.countField = PixelUIKit.CreateInputField(font, go.transform, "Count", new Vector2(120f, 46f), tabInactiveColor,
+        card.countField = PixelUIKit.CreateInputField(font, go.transform, "Count", new Vector2(120f, 56f), tabInactiveColor,
                                                       textColor, buyFontSize, "1");
         card.countField.contentType = TMP_InputField.ContentType.IntegerNumber;
         card.countField.text = "1";
         card.countField.textComponent.alignment = TextAlignmentOptions.Center;
-        PlaceTopLeft(card.countField.GetComponent<RectTransform>(), cx, y, 120f, 46f);
+        PlaceTopLeft(card.countField.GetComponent<RectTransform>(), cx, y, 120f, 56f);
         card.countField.onValueChanged.AddListener(s =>
         {
             card.count = int.TryParse(s, out int n) ? Mathf.Clamp(n, 1, maxPerPurchase) : 1; // live, so the cost updates while typing
@@ -126,12 +135,12 @@ public partial class PixelShop
         cx += 120f + 8f;
 
         card.plus = CreateButton(go.transform, "Plus", "+", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
-        PlaceTopLeft(card.plus.GetComponent<RectTransform>(), cx, y, 48f, 46f);
+        PlaceTopLeft(card.plus.GetComponent<RectTransform>(), cx, y, 52f, 56f);
         card.plus.onClick.AddListener(() => ChangeCount(card, +1));
-        y += 46f + 6f;
+        y += 56f + 8f;
 
         card.buy = CreateButton(go.transform, "Buy", "", Vector2.zero, buyColor, textColor, buyFontSize, out card.buyLabel, out card.buyImage);
-        PlaceTopLeft(card.buy.GetComponent<RectTransform>(), 14f, y, inner, 50f);
+        PlaceTopLeft(card.buy.GetComponent<RectTransform>(), 14f, y, inner, 60f);
         card.buy.onClick.AddListener(() => BuySelected(card));
         return card;
     }
@@ -218,7 +227,7 @@ public partial class PixelShop
 
         if (!has)
         {
-            card.description.text = noItemsText;
+            card.tipText = noItemsText;
             card.cost.text = "";
             card.buy.interactable = false;
             card.buyLabel.text = lockedText;
@@ -226,7 +235,7 @@ public partial class PixelShop
             return;
         }
 
-        card.description.text = consumables.ItemDescription(item);
+        card.tipText = consumables.ItemDescription(item);
 
         // Potions are capped per type: never offer more than there is room for.
         int room = consumables.ItemRoom(item);
@@ -255,7 +264,7 @@ public partial class PixelShop
             string need = t >= 0 ? clicker.Tiers[t].displayName : consumables.ItemRequiredType(item).ToString();
             card.cost.text = "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(lockedRequirementFormat, need) + "</color>";
         }
-        else card.cost.text = BuildCostText(total);
+        else card.cost.text = BuildCostText(total, true);
 
         card.buy.interactable = canBuy;
         card.buyLabel.text = locked ? lockedText : string.Format(buyCountFormat, card.count);

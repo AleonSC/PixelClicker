@@ -207,14 +207,38 @@ public partial class PixelShop
         shopWasOpen = open;
 
         if (currencyTipRect == null) return;
-        bool show = open && currencyHover >= 0 && currencyHover < clicker.Tiers.Length && currencyPanel != null;
+        bool cardTip = open && hoverCard != null && !string.IsNullOrEmpty(hoverCard.tipText);
+        bool show = cardTip || (open && currencyHover >= 0 && currencyHover < clicker.Tiers.Length && currencyPanel != null);
         if (currencyTipRect.gameObject.activeSelf != show) currencyTipRect.gameObject.SetActive(show);
         if (!show) return;
 
-        PixelClicker.PixelTier tier = clicker.Tiers[currencyHover];
-        PixelUIKit.SetText(currencyTipText, tier.displayName + "\n" + tier.count.ToString("#,0.##"));
-        Vector2 size = currencyTipText.GetPreferredValues() + new Vector2(28f, 20f);
-        currencyTipText.rectTransform.sizeDelta = size - new Vector2(28f, 20f);
+        // A purchase card's '!' box shows the item's description (wrapped); the currency list shows name + amount on one line each.
+        Vector2 size;
+        if (cardTip)
+        {
+            const float wrapWidth = 460f;
+#if UNITY_2023_1_OR_NEWER
+            currencyTipText.textWrappingMode = TextWrappingModes.Normal;
+#else
+            currencyTipText.enableWordWrapping = true;
+#endif
+            PixelUIKit.SetText(currencyTipText, hoverCard.tipText);
+            Vector2 pref = currencyTipText.GetPreferredValues(hoverCard.tipText, wrapWidth, 0f);
+            currencyTipText.rectTransform.sizeDelta = new Vector2(wrapWidth, pref.y);
+            size = new Vector2(wrapWidth, pref.y) + new Vector2(28f, 20f);
+        }
+        else
+        {
+#if UNITY_2023_1_OR_NEWER
+            currencyTipText.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            currencyTipText.enableWordWrapping = false;
+#endif
+            PixelClicker.PixelTier tier = clicker.Tiers[currencyHover];
+            PixelUIKit.SetText(currencyTipText, tier.displayName + "\n" + tier.count.ToString("#,0.##"));
+            size = currencyTipText.GetPreferredValues() + new Vector2(28f, 20f);
+            currencyTipText.rectTransform.sizeDelta = size - new Vector2(28f, 20f);
+        }
         currencyTipRect.sizeDelta = size;
 
         Vector2 local;
