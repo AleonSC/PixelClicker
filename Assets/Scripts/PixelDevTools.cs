@@ -94,8 +94,11 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Colour of finished to-do items.")]
     [SerializeField] private Color todoDoneColor = new Color(0.45f, 0.8f, 0.5f, 1f);
 
-    [Tooltip("Label of the add-pixels button.")]
-    [SerializeField] private string addText = "Add";
+    [Tooltip("Tooltip of the green plus button next to the amount field.")]
+    [SerializeField] private string addTipText = "Add this amount of the selected pixel (All pixels = every type), plus the same number of Ultra pixels";
+
+    [Tooltip("Tooltip of the yellow paw button next to the plus button.")]
+    [SerializeField] private string petTipText = "Give the pet of the selected pixel (All pixels = every pet, quietly, switched off)";
 
     [Tooltip("First entry of the pixel drop-down: adds the amount to every pixel type.")]
     [SerializeField] private string allPixelsText = "All pixels";
@@ -107,16 +110,19 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string noLimitToggleText = "Disable old pixel limit";
 
     [Tooltip("Label of the god-pixel-mode tick box.")]
-    [SerializeField] private string godToggleText = "God pixel mode (scroll = pick, left = spawn, right = destroy)";
+    [SerializeField] private string godModeLabel = "God Pixel Mode";
+
+    [Tooltip("Tooltip of the god-pixel-mode row (shown while the mouse is over it).")]
+    [SerializeField] private string godTipText = "Scroll = pick a pixel, left click = spawn it, right click = destroy old pixels near the cursor";
 
     [Tooltip("Label of the minigame spawn button.")]
     [SerializeField] private string spawnText = "Spawn";
 
-    [Tooltip("Label of the skip-intro button.")]
-    [SerializeField] private string skipIntroText = "Skip intro (Gray, Black, RGB, Auto Clicker)";
+    [Tooltip("Label of the skip-intro button (it unlocks Gray, Black, the RGB pack and the Auto Clicker).")]
+    [SerializeField] private string skipIntroLabel = "Skip intro";
 
-    [Tooltip("Label of the button that opens the folder with the crash / error reports (for sending to the developer).")]
-    [SerializeField] private string reportFolderText = "Open report folder";
+    [Tooltip("Tooltip of the file button at the top left that opens the folder with the crash / error reports (for sending to the developer).")]
+    [SerializeField] private string reportTipText = "Open the crash / error report folder";
 
     [Tooltip("Label of the unlock-everything button.")]
     [SerializeField] private string unlockAllText = "Unlock all shop items";
@@ -201,14 +207,11 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Sorting order of the docked button's canvas (it must be below the dev panel, 700).")]
     [SerializeField] private int dockSortingOrder = 135;
 
-    [Tooltip("Label of the button that gives a pet of the pixel type chosen in the drop-down at the top (All pixels = every pet, quietly).")]
-    [SerializeField] private string givePetText = "Give pet (selected pixel)";
-
-    [Tooltip("Label of the button that gives every pet at once (quietly, no popups).")]
-    [SerializeField] private string giveAllPetsText = "Give all pets";
-
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
-    [SerializeField] private string giveDragonCubeText = "Give a Dragon Cube (next one needed)";
+    [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
+
+    [Tooltip("Turn off the fancy look of the dev window (rounded, bevelled, glowing edge) and use the plain flat panel again.")]
+    [SerializeField] private bool plainWindow = false;
 
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
@@ -597,13 +600,6 @@ public class PixelDevTools : MonoBehaviour
     }
 
     /// <summary>Gives a pet of every pixel type, quietly (no popups).</summary>
-    private void GiveAllPets()
-    {
-        PixelPets pets = PixelPets.Instance;
-        if (pets == null || clicker == null) return;
-        foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false, true);   // switched off, so they can be turned on one by one in Toggles > Pets
-    }
-
     /// <summary>Gives the pet of the pixel selected in the top drop-down (a popup), or every pet quietly for "All pixels".</summary>
     private void GivePet()
     {
@@ -658,7 +654,14 @@ public class PixelDevTools : MonoBehaviour
 
         GameObject box = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         box.transform.SetParent(dim.transform, false);
-        box.GetComponent<Image>().color = panelColor;
+        Image boxImage = box.GetComponent<Image>();
+        if (plainWindow) boxImage.color = panelColor;
+        else
+        {
+            boxImage.sprite = DevIcons.WindowSprite(panelColor);   // rounded, bevelled, glowing edge; the colour is baked into the sprite
+            boxImage.type = Image.Type.Sliced;
+            boxImage.color = new Color(1f, 1f, 1f, panelColor.a);
+        }
         RectTransform boxRect = box.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 0.5f);
         boxRect.anchoredPosition = Vector2.zero;
@@ -680,6 +683,19 @@ public class PixelDevTools : MonoBehaviour
         cxr.sizeDelta = new Vector2(xSize, xSize);
         cxr.anchoredPosition = new Vector2(-20f, -20f);
         closeX.onClick.AddListener(Close);
+
+        BuildTipBox();
+
+        // A file button at the top left opens the crash / error report folder.
+        if (PixelCrashLog.Available)
+        {
+            Button report = IconButton(box.transform, "Report Folder Button", DevIcons.FileSprite(), new Color(0.3f, 0.4f, 0.55f, 1f), xSize);
+            RectTransform rr = report.GetComponent<RectTransform>();
+            rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 1f);
+            rr.anchoredPosition = new Vector2(20f, -20f);
+            report.onClick.AddListener(PixelCrashLog.OpenFolder);
+            AddTip(report.gameObject, reportTipText);
+        }
 
         float y = 24f + titleFontSize * 1.6f + 16f;
         float inner = panelSize.x - 80f; // usable width (40 px each side)
@@ -705,7 +721,7 @@ public class PixelDevTools : MonoBehaviour
         toolsView = tools;
 
         // Row: pixel dropdown | amount field | Add
-        float dropW = inner * 0.42f, fieldW = inner * 0.30f, btnW = inner - dropW - fieldW - 20f;
+        float fieldW = inner * 0.30f, dropW = inner - fieldW - rowHeight * 2f - 30f;
         pixelDropdown = PixelUIKit.CreateDropdown(font, tools.transform, "Pixel Dropdown", new Vector2(dropW, rowHeight),
                                                   boxColor, listColor, textColor, fontSize);
         Place(pixelDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
@@ -714,10 +730,14 @@ public class PixelDevTools : MonoBehaviour
         amountField.text = defaultAmount;
         amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
         Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
-        Button add = PixelUIKit.CreateButton(font, tools.transform, "Add Button", addText, new Vector2(btnW, rowHeight),
-                                             buttonColor, textColor, fontSize);
-        Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, btnW);
+        Button add = IconButton(tools.transform, "Add Button", DevIcons.PlusSprite(), new Color(0.3f, 0.78f, 0.38f, 1f), rowHeight);
+        Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, rowHeight);
         add.onClick.AddListener(AddSelected);
+        AddTip(add.gameObject, addTipText);
+        Button pet = IconButton(tools.transform, "Give Pet Button", DevIcons.PawSprite(), new Color(0.97f, 0.82f, 0.22f, 1f), rowHeight);
+        Place(pet.GetComponent<RectTransform>(), 40f + dropW + fieldW + 30f + rowHeight, y, rowHeight);
+        pet.onClick.AddListener(GivePet);
+        AddTip(pet.gameObject, petTipText);
         y += rowHeight + 16f;
         float scrollTop = y; // the pixel row above stays fixed (a drop-down can't live inside a scroll list); the rest scrolls
 
@@ -732,28 +752,14 @@ public class PixelDevTools : MonoBehaviour
 
 
         // Row: skip intro
-        Button skip = PixelUIKit.CreateButton(font, content, "Skip Intro Button", skipIntroText,
+        Button skip = PixelUIKit.CreateButton(font, content, "Skip Intro Button", skipIntroLabel,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
         skip.onClick.AddListener(SkipIntro);
         y += rowHeight + 24f;
 
-        // Row: give a pet of the pixel chosen in the drop-down at the top
-        Button givePet = PixelUIKit.CreateButton(font, content, "Give Pet Button", givePetText,
-                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(givePet.GetComponent<RectTransform>(), 40f, y, inner);
-        givePet.onClick.AddListener(GivePet);
-        y += rowHeight + 24f;
-
-        // Row: give every pet
-        Button giveAllPets = PixelUIKit.CreateButton(font, content, "Give All Pets Button", giveAllPetsText,
-                                                     new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(giveAllPets.GetComponent<RectTransform>(), 40f, y, inner);
-        giveAllPets.onClick.AddListener(GiveAllPets);
-        y += rowHeight + 24f;
-
         // Row: give the next Dragon Cube still needed
-        Button giveDragon = PixelUIKit.CreateButton(font, content, "Give Dragon Cube Button", giveDragonCubeText,
+        Button giveDragon = PixelUIKit.CreateButton(font, content, "Give Dragon Cube Button", giveNextDragonCubeLabel,
                                                     new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(giveDragon.GetComponent<RectTransform>(), 40f, y, inner);
         giveDragon.onClick.AddListener(GiveDragonCube);
@@ -773,16 +779,6 @@ public class PixelDevTools : MonoBehaviour
         resetLabel = resetButton.GetComponentInChildren<TMP_Text>();
         resetButton.onClick.AddListener(ResetCountsClicked);
         y += rowHeight + 24f;
-
-        // Row: the crash / error report folder (it used to be in the pause menu)
-        if (PixelCrashLog.Available)
-        {
-            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", reportFolderText,
-                                                    new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-            Place(report.GetComponent<RectTransform>(), 40f, y, inner);
-            report.onClick.AddListener(PixelCrashLog.OpenFolder);
-            y += rowHeight + 24f;
-        }
 
         // Row: tick box for the clear key
         clearToggle = BuildToggleRow(content, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
@@ -816,7 +812,7 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Row: tick box for god pixel mode
-        godToggle = BuildToggleRow(content, godToggleText, y, inner, godMode, SetGodMode);
+        godToggle = BuildToggleRow(content, godModeLabel, y, inner, godMode, SetGodMode, godTipText);
         y += rowHeight + 24f;
 
         // Row: how many clicks one click counts as (payouts, tough-pixel hits and the combo all scale with it)
@@ -1186,7 +1182,7 @@ public class PixelDevTools : MonoBehaviour
         rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    private Toggle BuildToggleRow(Transform parent, string label, float y, float width, bool initial, System.Action<bool> onChange)
+    private Toggle BuildToggleRow(Transform parent, string label, float y, float width, bool initial, System.Action<bool> onChange, string tip = null)
     {
         TMP_Text text = PixelUIKit.CreateText(font, parent, label + " Label", label, fontSize,
                                               TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
@@ -1217,7 +1213,70 @@ public class PixelDevTools : MonoBehaviour
         toggle.isOn = initial;
         toggle.onValueChanged.AddListener(on => onChange(on));
         toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
+        if (!string.IsNullOrEmpty(tip)) { AddTip(text.gameObject, tip); AddTip(boxGo, tip); }
         return toggle;
+    }
+
+    // ------------------------------------------------------------------
+    // Icon buttons + hover tooltips
+    // ------------------------------------------------------------------
+
+    /// <summary>A square button with a picture on it (the picture is drawn in code).</summary>
+    private Button IconButton(Transform parent, string name, Sprite icon, Color color, float size)
+    {
+        Button b = PixelUIKit.CreateButton(font, parent, name, "", new Vector2(size, size), color, textColor, fontSize);
+        GameObject go = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(b.transform, false);
+        Image img = go.GetComponent<Image>();
+        img.sprite = icon;
+        img.preserveAspect = true;
+        img.raycastTarget = false;
+        RectTransform r = go.GetComponent<RectTransform>();
+        PixelUIKit.Stretch(r);
+        r.offsetMin = new Vector2(size * 0.14f, size * 0.14f);
+        r.offsetMax = new Vector2(-size * 0.14f, -size * 0.14f);
+        return b;
+    }
+
+    private RectTransform tipRect;
+    private TMP_Text tipLabel;
+    private RectTransform tipCanvasRect;
+
+    private void BuildTipBox()
+    {
+        tipCanvasRect = canvasRoot.GetComponent<RectTransform>();
+        GameObject go = new GameObject("Tooltip", typeof(RectTransform), typeof(Image), typeof(PixelDevTip));
+        go.transform.SetParent(canvasRoot.transform, false);
+        go.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 0.96f);
+        go.GetComponent<Image>().raycastTarget = false;
+        tipRect = go.GetComponent<RectTransform>();
+        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+        tipRect.pivot = new Vector2(0f, 1f);
+        tipLabel = PixelUIKit.CreateText(font, go.transform, "Text", "", fontSize * 0.8f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
+        tipLabel.raycastTarget = false;
+        RectTransform lr = tipLabel.rectTransform;
+        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+        lr.offsetMin = new Vector2(12f, 8f); lr.offsetMax = new Vector2(-12f, -8f);
+        go.GetComponent<PixelDevTip>().canvasRect = tipCanvasRect;
+        go.GetComponent<PixelDevTip>().rect = tipRect;
+        go.SetActive(false);
+    }
+
+    /// <summary>Shows 'text' in a small box next to the mouse while it is over 'target'.</summary>
+    private void AddTip(GameObject target, string text)
+    {
+        if (target == null || tipRect == null || string.IsNullOrEmpty(text)) return;
+        PixelHoverTip hover = target.GetComponent<PixelHoverTip>();
+        if (hover == null) hover = target.AddComponent<PixelHoverTip>();
+        hover.onEnter = () =>
+        {
+            tipLabel.text = text;
+            Vector2 pref = tipLabel.GetPreferredValues(text, 560f, 0f);
+            tipRect.sizeDelta = new Vector2(Mathf.Min(560f, pref.x) + 24f, pref.y + 16f);
+            tipRect.gameObject.SetActive(true);
+            tipRect.SetAsLastSibling();
+        };
+        hover.onExit = () => { if (tipRect != null) tipRect.gameObject.SetActive(false); };
     }
 }
 
@@ -1446,5 +1505,145 @@ public class PixelFadeOnIdle : MonoBehaviour
         bool usable = group.alpha > 0.3f;
         group.interactable = usable;
         group.blocksRaycasts = usable;
+    }
+}
+
+/// <summary>Keeps the dev tools' tooltip box next to the mouse while it is shown.</summary>
+public class PixelDevTip : MonoBehaviour
+{
+    public RectTransform canvasRect, rect;
+
+    private void LateUpdate()
+    {
+        if (canvasRect == null || rect == null) return;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
+        bool rightHalf = local.x > 0f;
+        rect.pivot = new Vector2(rightHalf ? 1f : 0f, local.y < -canvasRect.rect.height * 0.3f ? 0f : 1f);   // flips so it never leaves the screen
+        rect.anchoredPosition = local + new Vector2(rightHalf ? -14f : 14f, rect.pivot.y > 0.5f ? -22f : 22f);
+    }
+}
+
+/// <summary>Pictures for the dev tools, drawn in code: a plus, a paw print and a file, plus the window's rounded glowing frame.</summary>
+public static class DevIcons
+{
+    private static Sprite plus, paw, file;
+    private static Sprite window;
+    private static Color windowColor;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { plus = paw = file = window = null; }
+
+    private const int N = 64;
+
+    private static float Cover(float d) { return Mathf.Clamp01(0.5f - d); }   // anti-aliased edge from a signed distance in pixels
+
+    private static float Ellipse(float x, float y, float cx, float cy, float rx, float ry)
+    {
+        float dx = (x - cx) / rx, dy = (y - cy) / ry;
+        return (Mathf.Sqrt(dx * dx + dy * dy) - 1f) * Mathf.Min(rx, ry);
+    }
+
+    private static float Box(float x, float y, float cx, float cy, float hx, float hy)
+    {
+        float dx = Mathf.Abs(x - cx) - hx, dy = Mathf.Abs(y - cy) - hy;
+        return Mathf.Sqrt(Mathf.Max(dx, 0f) * Mathf.Max(dx, 0f) + Mathf.Max(dy, 0f) * Mathf.Max(dy, 0f)) + Mathf.Min(Mathf.Max(dx, dy), 0f);
+    }
+
+    private static Sprite Make(System.Func<float, float, Color> shade, string name)
+    {
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { name = name, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[N * N];
+        for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) px[y * N + x] = shade(x, y);
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    /// <summary>A bold black plus.</summary>
+    public static Sprite PlusSprite()
+    {
+        if (plus == null)
+            plus = Make((x, y) =>
+            {
+                float d = Mathf.Min(Box(x, y, 31.5f, 31.5f, 24f, 6.5f), Box(x, y, 31.5f, 31.5f, 6.5f, 24f)) - 2f;
+                return new Color(0.04f, 0.04f, 0.04f, Cover(d));
+            }, "Plus");
+        return plus;
+    }
+
+    /// <summary>A dark paw print: a big pad and four toes.</summary>
+    public static Sprite PawSprite()
+    {
+        if (paw == null)
+            paw = Make((x, y) =>
+            {
+                float d = Ellipse(x, y, 32f, 21f, 17f, 13.5f);
+                d = Mathf.Min(d, Ellipse(x, y, 11f, 38f, 6.5f, 8.5f));
+                d = Mathf.Min(d, Ellipse(x, y, 24f, 50f, 6.5f, 8.5f));
+                d = Mathf.Min(d, Ellipse(x, y, 40f, 50f, 6.5f, 8.5f));
+                d = Mathf.Min(d, Ellipse(x, y, 53f, 38f, 6.5f, 8.5f));
+                return new Color(0.2f, 0.12f, 0.04f, Cover(d));
+            }, "Paw");
+        return paw;
+    }
+
+    /// <summary>A sheet of paper with a folded corner and a few lines of text.</summary>
+    public static Sprite FileSprite()
+    {
+        if (file == null)
+            file = Make((x, y) =>
+            {
+                // The page: x 13..51, y 4..60, top right corner folded (cut off along a diagonal).
+                float page = Box(x, y, 32f, 32f, 19f, 28f);
+                float cut = (x + y) - (51f + 60f - 14f);   // > 0 beyond the diagonal at the top right
+                float d = Mathf.Max(page, cut * 0.7071f);
+                if (d > 0.5f)
+                {
+                    // The fold: a small triangle under the cut.
+                    float fold = Mathf.Max(Mathf.Max(Box(x, y, 44f, 53f, 7f, 7f), -cut * 0.7071f), 0f);
+                    return new Color(0.75f, 0.78f, 0.85f, Cover(fold - 0f) * (cut > 0f ? 1f : 0f));
+                }
+                float edge = Mathf.Clamp01(-d / 2.2f);                       // dark outline
+                Color body = Color.Lerp(new Color(0.12f, 0.14f, 0.2f), new Color(0.96f, 0.97f, 1f), edge);
+                bool line = (Mathf.Abs(y - 20f) < 1.8f || Mathf.Abs(y - 29f) < 1.8f || Mathf.Abs(y - 38f) < 1.8f) && x > 20f && x < 44f;
+                if (line) body = new Color(0.45f, 0.5f, 0.62f);
+                body.a = Cover(d);
+                return body;
+            }, "File");
+        return file;
+    }
+
+    /// <summary>
+    /// The window frame: a rounded 9-slice with the given body colour baked in (a soft vertical gradient), a dark inner line and a bright
+    /// neon-ish outer edge, so the dev window looks like a lit panel instead of a flat rectangle.
+    /// </summary>
+    public static Sprite WindowSprite(Color body)
+    {
+        if (window != null && windowColor == body) return window;
+        const int n = 64;
+        const float r = 18f;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Dev Window", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f;
+        Color edge = Color.Lerp(body, new Color(0.45f, 0.85f, 1f, 1f), 0.8f);   // the glowing rim
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float qx = Mathf.Max(Mathf.Abs(x - c) - (c - r), 0f), qy = Mathf.Max(Mathf.Abs(y - c) - (c - r), 0f);
+                float d = Mathf.Sqrt(qx * qx + qy * qy) - r;
+                float depth = -d;
+                float t = y / (float)(n - 1);
+                Color col = Color.Lerp(body * 0.8f, body * 1.25f, t);                    // lighter towards the top
+                col.a = 1f;
+                if (depth < 2f) col = Color.Lerp(edge, col, Mathf.Clamp01(depth - 0.2f) * 0.0f + Mathf.Clamp01((depth - 1.2f) / 0.8f));   // the bright rim
+                else if (depth < 4.5f) col = Color.Lerp(col, edge, 0.35f * (1f - (depth - 2f) / 2.5f));                                  // its glow bleeding inward
+                col.a = Cover(d);
+                px[y * n + x] = col;
+            }
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+        window = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(26, 26, 26, 26));
+        windowColor = body;
+        return window;
     }
 }
