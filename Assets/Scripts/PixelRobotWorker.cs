@@ -150,10 +150,11 @@ public class PixelRobotWorker : MonoBehaviour
     private void Update()
     {
         if (clicker == null || consumables == null) return;
-        bool show = Active && !PixelTitleScreen.Showing && !PixelMinigame.TakeoverActive;
+        bool show = Active && !PixelTitleScreen.Showing && !PixelMinigame.TakeoverActive && !PixelCameraIntro.Moving;
         if (!show)
         {
             Hovering = false;
+            if (PixelCameraIntro.Moving) { hasHome = false; nextSpotTime = 0f; }   // the camera is swinging about: he reappears at his station once it settles
             if (root != null && root.activeSelf) root.SetActive(false);
             if (stationRoot != null && stationRoot.gameObject.activeSelf) stationRoot.gameObject.SetActive(false);
             if (bubbleCanvas != null && bubbleCanvas.activeSelf) bubbleCanvas.SetActive(false);
