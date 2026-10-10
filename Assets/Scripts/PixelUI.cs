@@ -191,6 +191,12 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Shown on the Devices sub-tab when you own no devices.")]
     [SerializeField] private string noDevicesText = "No devices yet.";
 
+    [Tooltip("Shown on the Seeds category when you own none.")]
+    [SerializeField] private string noSeedsText = "No seeds yet.";
+
+    [Tooltip("Hover hint on a seed.")]
+    [SerializeField] private string seedHint = "Right-click a seed, then click the floor to plant it";
+
     [Tooltip("Hint at the top of the Potions list.")]
     [SerializeField] private string potionHint = "Right-click a potion to drink it";
 
@@ -651,7 +657,7 @@ public class PixelUI : MonoBehaviour
 
     private void ShowItemTooltip(int item)
     {
-        tooltipCustomText = consumables != null && consumables.IsDevice(item) ? deviceHint : potionHint;
+        tooltipCustomText = consumables != null && consumables.IsSeedItem(item) ? seedHint : consumables != null && consumables.IsDevice(item) ? deviceHint : potionHint;
     }
 
     private void UpdateTooltip()
@@ -1248,6 +1254,7 @@ public class PixelUI : MonoBehaviour
         dr.anchoredPosition = new Vector2(0f, -(tabTop + subTabHeight + subTabGap));
         categoryDropdown.options.Clear();
         foreach (string category in consumableCategories) categoryDropdown.options.Add(new TMP_Dropdown.OptionData(category));
+        if (categoryDropdown.options.Count < 3) categoryDropdown.options.Add(new TMP_Dropdown.OptionData("Seeds")); // a scene saved before seeds existed has only two names
         categoryDropdown.SetValueWithoutNotify(0);
         categoryDropdown.RefreshShownValue();
         categoryDropdown.onValueChanged.AddListener(value =>
@@ -1392,6 +1399,14 @@ public class PixelUI : MonoBehaviour
         if (noMaterialsLabel != null && noMaterialsLabel.gameObject.activeSelf) noMaterialsLabel.gameObject.SetActive(false);
     }
 
+    /// <summary>Does this item belong to the chosen Consumables category (Potions / Devices / Seeds)?</summary>
+    private bool InConsumableCategory(int item, bool onDevices, bool onSeeds)
+    {
+        bool seed = consumables.IsSeedItem(item);
+        if (onSeeds) return seed;
+        return !seed && consumables.IsDevice(item) == onDevices;
+    }
+
     /// <summary>Hides everything that belongs to the Consumables tab.</summary>
     private void HideConsumableWidgets()
     {
@@ -1410,13 +1425,14 @@ public class PixelUI : MonoBehaviour
         float y = top;
 
         bool onDevices = consumableSubTab == 1;
+        bool onSeeds = consumableSubTab == 2;
 
         // The hint comes first, so it is always in view.
         bool anyOwned = false;
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount && !anyOwned; i++)
-                anyOwned = consumables.ItemOwned(i) > 0 && consumables.IsDevice(i) == onDevices;
-        hintLabel.text = onDevices ? deviceHint : potionHint;
+                anyOwned = consumables.ItemOwned(i) > 0 && InConsumableCategory(i, onDevices, onSeeds);
+        hintLabel.text = onSeeds ? seedHint : onDevices ? deviceHint : potionHint;
         bool showHint = false; // the hint is now a hover tooltip on each item
         hintLabel.gameObject.SetActive(showHint);
         if (showHint)
@@ -1426,7 +1442,7 @@ public class PixelUI : MonoBehaviour
             y += hintFontSize * 1.5f + 6f;
         }
 
-        bool active = consumables != null && consumables.IsActive && !onDevices;
+        bool active = consumables != null && consumables.IsActive && !onDevices && !onSeeds;
         activeLabel.gameObject.SetActive(active);
         if (active)
         {
@@ -1444,7 +1460,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int owned = consumables.ItemOwned(i);
-            bool visible = owned > 0 && consumables.IsDevice(i) == onDevices; // this sub-tab's kind only
+            bool visible = owned > 0 && InConsumableCategory(i, onDevices, onSeeds); // this sub-tab's kind only
             if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
             if (!visible) continue;
 
@@ -1460,7 +1476,7 @@ public class PixelUI : MonoBehaviour
         noConsumablesLabel.gameObject.SetActive(shown == 0);
         if (shown == 0)
         {
-            noConsumablesLabel.text = (onDevices ? noDevicesText : noConsumablesText).ToUpperInvariant();
+            noConsumablesLabel.text = (onSeeds ? noSeedsText : onDevices ? noDevicesText : noConsumablesText).ToUpperInvariant();
             noConsumablesLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
             y += LinePitch;
         }

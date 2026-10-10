@@ -478,9 +478,12 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Shown on a card that has no items.")]
     [SerializeField] private string noItemsText = "Nothing to buy here.";
 
-    [Min(200f)]
-    [Tooltip("Height of each purchase card (canvas units).")]
-    [SerializeField] private float cardHeight = 440f;
+    [Min(150f)]
+    [Tooltip("Height of each purchase card (canvas units). There are two rows of cards (Potions / Utilities, then Seeds / spare), so this is roughly half the shop's height.")]
+    [SerializeField] private float cardRowHeight = 322f;
+
+    [Tooltip("Title of the Seeds purchase card.")]
+    [SerializeField] private string seedsCardTitle = "Seeds";
 
     [Min(0f)]
     [Tooltip("Gap between the two cards.")]
@@ -683,6 +686,7 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelBreakoutMinigame>();
         EnsureMinigame<PixelTinkererMinigame>();
         EnsureMinigame<PixelWizardMinigame>();
+        EnsureMinigame<PixelFarmerMinigame>();
         EnsureMinigame<PixelEntrepreneurMinigame>();
         if (PixelFind.First<PixelShopTutorial>() == null) gameObject.AddComponent<PixelShopTutorial>();
 
@@ -1058,6 +1062,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelBreakoutMinigame>();
             EditorEnsureComponent<PixelTinkererMinigame>();
             EditorEnsureComponent<PixelWizardMinigame>();
+            EditorEnsureComponent<PixelFarmerMinigame>();
             EditorEnsureComponent<PixelEntrepreneurMinigame>();
             EditorEnsureComponent<PixelShopTutorial>();
         };

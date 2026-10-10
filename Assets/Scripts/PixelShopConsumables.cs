@@ -15,6 +15,8 @@ public partial class PixelShop
     private class PurchaseCard
     {
         public bool utilities;
+        public bool seeds;     // the Seeds card: lists only seed items
+        public bool blank;     // a spare card with nothing on it yet
         public RectTransform rect;
         public TMP_Dropdown dropdown;
         public TMP_Text description, cost, buyLabel;
@@ -26,7 +28,7 @@ public partial class PixelShop
         public int count = 1;
     }
 
-    private PurchaseCard potionCard, utilityCard;
+    private PurchaseCard potionCard, utilityCard, seedCard, spareCard;
     private GameObject consumablesArea;
 
     // ------------------------------------------------------------------
@@ -44,8 +46,11 @@ public partial class PixelShop
         ar.offsetMax = new Vector2(-panelPadding, -top);
 
         float width = (panelWidth - panelPadding * 2f - cardGap) * 0.5f;
-        potionCard = BuildCard(consumablesArea.transform, false, potionsCardTitle, 0f, width);
-        utilityCard = BuildCard(consumablesArea.transform, true, utilitiesCardTitle, width + cardGap, width);
+        potionCard = BuildCard(consumablesArea.transform, false, potionsCardTitle, 0f, width, 0f);
+        utilityCard = BuildCard(consumablesArea.transform, true, utilitiesCardTitle, width + cardGap, width, 0f);
+        float row2 = cardRowHeight + cardGap;
+        seedCard = BuildCard(consumablesArea.transform, false, seedsCardTitle, 0f, width, row2, seeds: true);
+        spareCard = BuildCard(consumablesArea.transform, false, "", width + cardGap, width, row2, blank: true);
         consumablesArea.SetActive(false);
     }
 
@@ -56,58 +61,62 @@ public partial class PixelShop
         rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    private PurchaseCard BuildCard(Transform parent, bool utilities, string title, float x, float width)
+    private PurchaseCard BuildCard(Transform parent, bool utilities, string title, float x, float width, float top, bool seeds = false, bool blank = false)
     {
-        PurchaseCard card = new PurchaseCard { utilities = utilities };
+        PurchaseCard card = new PurchaseCard { utilities = utilities, seeds = seeds, blank = blank };
 
-        GameObject go = new GameObject(utilities ? "Utilities Card" : "Potions Card", typeof(RectTransform), typeof(Image));
+        GameObject go = new GameObject(blank ? "Spare Card" : seeds ? "Seeds Card" : utilities ? "Utilities Card" : "Potions Card", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
         go.GetComponent<Image>().color = rowColor;
         card.rect = go.GetComponent<RectTransform>();
-        PlaceTopLeft(card.rect, x, 0f, width, cardHeight);
+        PlaceTopLeft(card.rect, x, top, width, cardRowHeight);
+        if (blank) return card; // nothing on it yet
 
         float inner = width - 28f;
-        float y = 12f;
+        float y = 8f;
 
         TMP_Text heading = CreateText(go.transform, "Title", title, nameFontSize * 1.1f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        PlaceTopLeft(heading.rectTransform, 14f, y, inner, 46f);
-        y += 46f + 8f;
+        heading.enableAutoSizing = true;
+        heading.fontSizeMax = nameFontSize * 1.1f;
+        heading.fontSizeMin = 14f;
+        PlaceTopLeft(heading.rectTransform, 14f, y, inner, 38f);
+        y += 38f + 4f;
 
-        card.dropdown = PixelUIKit.CreateDropdown(font, go.transform, "Item Dropdown", new Vector2(inner, 60f), tabInactiveColor,
-                                                  new Color(0.12f, 0.12f, 0.16f, 1f), textColor, buyFontSize * 0.9f);
-        PlaceTopLeft(card.dropdown.GetComponent<RectTransform>(), 14f, y, inner, 60f);
+        card.dropdown = PixelUIKit.CreateDropdown(font, go.transform, "Item Dropdown", new Vector2(inner, 50f), tabInactiveColor,
+                                                  new Color(0.12f, 0.12f, 0.16f, 1f), textColor, buyFontSize * 0.85f);
+        PlaceTopLeft(card.dropdown.GetComponent<RectTransform>(), 14f, y, inner, 50f);
         card.dropdown.onValueChanged.AddListener(_ => RefreshRows());
-        y += 60f + 10f;
+        y += 50f + 6f;
 
         card.description = CreateText(go.transform, "Description", "", descriptionFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
         card.description.color = new Color(textColor.r, textColor.g, textColor.b, 0.8f);
         card.description.enableAutoSizing = true;
         card.description.fontSizeMax = descriptionFontSize;
-        card.description.fontSizeMin = Mathf.Min(12f, descriptionFontSize);
-        PlaceTopLeft(card.description.rectTransform, 14f, y, inner, 84f);
-        y += 84f + 6f;
+        card.description.fontSizeMin = Mathf.Min(11f, descriptionFontSize);
+        PlaceTopLeft(card.description.rectTransform, 14f, y, inner, 58f);
+        y += 58f + 2f;
 
         card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.TopLeft, FontStyles.Normal);
         card.cost.richText = true;
         card.cost.enableAutoSizing = true;
         card.cost.fontSizeMax = costFontSize;
-        card.cost.fontSizeMin = Mathf.Min(14f, costFontSize);
-        PlaceTopLeft(card.cost.rectTransform, 14f, y, inner, 62f);
-        y += 62f + 8f;
+        card.cost.fontSizeMin = Mathf.Min(12f, costFontSize);
+        PlaceTopLeft(card.cost.rectTransform, 14f, y, inner, 44f);
+        y += 44f + 4f;
 
         // How many: [-] [ 1 ] [+]
         float cx = 14f;
         card.minus = CreateButton(go.transform, "Minus", "-", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
-        PlaceTopLeft(card.minus.GetComponent<RectTransform>(), cx, y, 56f, 56f);
+        PlaceTopLeft(card.minus.GetComponent<RectTransform>(), cx, y, 48f, 46f);
         card.minus.onClick.AddListener(() => ChangeCount(card, -1));
-        cx += 56f + 8f;
+        cx += 48f + 8f;
 
-        card.countField = PixelUIKit.CreateInputField(font, go.transform, "Count", new Vector2(120f, 56f), tabInactiveColor,
+        card.countField = PixelUIKit.CreateInputField(font, go.transform, "Count", new Vector2(120f, 46f), tabInactiveColor,
                                                       textColor, buyFontSize, "1");
         card.countField.contentType = TMP_InputField.ContentType.IntegerNumber;
         card.countField.text = "1";
         card.countField.textComponent.alignment = TextAlignmentOptions.Center;
-        PlaceTopLeft(card.countField.GetComponent<RectTransform>(), cx, y, 120f, 56f);
+        PlaceTopLeft(card.countField.GetComponent<RectTransform>(), cx, y, 120f, 46f);
         card.countField.onValueChanged.AddListener(s =>
         {
             card.count = int.TryParse(s, out int n) ? Mathf.Clamp(n, 1, maxPerPurchase) : 1; // live, so the cost updates while typing
@@ -117,12 +126,12 @@ public partial class PixelShop
         cx += 120f + 8f;
 
         card.plus = CreateButton(go.transform, "Plus", "+", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
-        PlaceTopLeft(card.plus.GetComponent<RectTransform>(), cx, y, 56f, 56f);
+        PlaceTopLeft(card.plus.GetComponent<RectTransform>(), cx, y, 48f, 46f);
         card.plus.onClick.AddListener(() => ChangeCount(card, +1));
-        y += 56f + 10f;
+        y += 46f + 6f;
 
         card.buy = CreateButton(go.transform, "Buy", "", Vector2.zero, buyColor, textColor, buyFontSize, out card.buyLabel, out card.buyImage);
-        PlaceTopLeft(card.buy.GetComponent<RectTransform>(), 14f, y, inner, 64f);
+        PlaceTopLeft(card.buy.GetComponent<RectTransform>(), 14f, y, inner, 50f);
         card.buy.onClick.AddListener(() => BuySelected(card));
         return card;
     }
@@ -169,7 +178,9 @@ public partial class PixelShop
         for (int i = 0; i < consumables.ItemCount; i++)
         {
             if (consumables.ItemCraftOnly(i)) continue;             // combo potions can only be crafted
-            if (consumables.IsDevice(i) == card.utilities) list.Add(i);
+            bool seedItem = consumables.IsSeedItem(i);
+            if (card.seeds) { if (seedItem) list.Add(i); }          // the Seeds card: seeds only
+            else if (!seedItem && consumables.IsDevice(i) == card.utilities) list.Add(i);
         }
 
         // Rebuild the drop-down's entries only when something changed, keeping the selection.
@@ -267,5 +278,6 @@ public partial class PixelShop
 
         RefreshCard(potionCard);
         RefreshCard(utilityCard);
+        RefreshCard(seedCard);
     }
 }

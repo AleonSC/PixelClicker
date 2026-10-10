@@ -73,4 +73,5 @@ Lightning Rod | Place it: lightning strikes it every few seconds and turns the o
 
 # Cubby and the vendors
 Cubby | A suspicious cube who greets you at the start, shows you the shop once you have money, and gives you a gift pack.
-Vendors | The Wizard, Tinkerer and Pixel Entrepreneur drop by as you progress. Switch any of them off in the Toggles menu (Minigames).
+Seeds | Buy seeds in the shop's Consumables tab (or from the Farmer). Right-click a seed in the Inventory (Consumables > Seeds), then click the floor to plant it: it grows that pixel type. Rare pixels cost more seeds.
+Vendors | The Wizard, Tinkerer, Farmer (seeds) and Pixel Entrepreneur drop by as you progress. Switch any of them off in the Toggles menu (Minigames).

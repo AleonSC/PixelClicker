@@ -77,6 +77,11 @@ public class SeedSprout : MonoBehaviour
         sunRay = SunRayFx.Create(transform, unit * sproutScale * 4f, unit * sproutScale * 1.1f, Vector3.zero);
     }
 
+    private int forceTier = -1;
+
+    /// <summary>A planted seed of a known pixel type: the sprout grows exactly that type (-1 = a random one as usual).</summary>
+    public void ForceTier(int tierIndex) => forceTier = tierIndex;
+
     private float ghostLeft;
 
     /// <summary>Keeps the collider a trigger (no collisions) for this many seconds after the sprout is born, so a burst of sprouts doesn't jam.</summary>
@@ -211,7 +216,7 @@ public class SeedSprout : MonoBehaviour
         if (dirt != null) mr.sharedMaterial = dirt; else mr.material.color = new Color(0.36f, 0.23f, 0.12f, 1f);
         mound = m.transform;
 
-        tier = clicker.RandomSeedPixelTier();
+        tier = forceTier >= 0 ? forceTier : clicker.RandomSeedPixelTier();
         if (tier < 0) { stage = Stage.Shrinking; stageTime = 0f; return; }
         amount = clicker.RollOldPixelAmount(tier);
         pixel = clicker.CreateDisplayPixel(tier, transform, unit);

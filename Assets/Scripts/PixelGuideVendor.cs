@@ -86,6 +86,10 @@ public class PixelGuideVendor : MonoBehaviour
     [Tooltip("The Pixel Entrepreneur starts visiting once this many pixel types are unlocked.")]
     [SerializeField] private int entrepreneurAtTiers = 8;
 
+    [Min(1)]
+    [Tooltip("The Farmer (sells seeds) starts visiting once this many pixel types are unlocked.")]
+    [SerializeField] private int farmerAtTiers = 5;
+
     [Min(1f)]
     [Tooltip("Seconds until a newly started Tinkerer / Entrepreneur makes their first visit (random between this and twice this).")]
     [SerializeField] private float otherFirstVisitSeconds = 60f;
@@ -204,6 +208,7 @@ public class PixelGuideVendor : MonoBehaviour
     {
         TryStart("wizard", true, Random.Range(wizardFirstVisitMin, wizardFirstVisitMax));
         TryStart("tinkerer", UnlockedTypes() >= tinkererAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
+        TryStart("farmer", UnlockedTypes() >= farmerAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
         TryStart("entrepreneur", UnlockedTypes() >= entrepreneurAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
     }
 

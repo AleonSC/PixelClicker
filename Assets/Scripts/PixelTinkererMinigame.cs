@@ -26,7 +26,7 @@ public class PixelTinkererMinigame : PixelVisitorMinigame
     public override string Id => "tinkerer";
     public override string DisplayName => "Tinkerer";
 
-    protected override bool IsWare(int item) => consumables != null && consumables.IsDevice(item);
+    protected override bool IsWare(int item) => consumables != null && consumables.IsDevice(item) && !consumables.IsSeedItem(item);
     protected override string DefaultName => "Tinkerer";
     protected override string DefaultGreeting => "Well hello there! I'm the Tinkerer. I've got gadgets for every occasion, and for you I'll knock {0}% off every one. Interested?";
     protected override string DefaultWaresTitle => "Tinkerer's Wares";

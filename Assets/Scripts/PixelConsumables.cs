@@ -87,6 +87,8 @@ public class PixelConsumables : MonoBehaviour
         ChargeBooster = 6,
         /// <summary>Placed: lasts a number of lightning strikes; each strike turns the old pixels around it into Electric pixels.</summary>
         LightningRod = 7,
+        /// <summary>Not a device: a seed of one pixel type. Right-click in the inventory, then click the floor to plant it; it grows that pixel type.</summary>
+        Seed = 8,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -217,6 +219,10 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("Height of the cylinder (world units).")]
         public float bodyHeight = 1f;
 
+        [Header("Seed only")]
+        [Tooltip("Seed: the pixel type the planted seed grows into. (The price is worked out from this pixel's payout and rarity, in that pixel.)")]
+        public PixelClicker.PixelType seedType = PixelClicker.PixelType.White;
+
         [Header("Electric devices (Charge Booster / Lightning Rod)")]
         [Min(1)]
         [Tooltip("How many uses it lasts instead of a time: auto-clicker clicks for the Charge Booster, lightning strikes for the Lightning Rod.")]
@@ -283,6 +289,22 @@ public class PixelConsumables : MonoBehaviour
     [Min(0f)]
     [Tooltip("A potion never costs less than this.")]
     [SerializeField] private double potionMinPrice = 10;
+
+    [Min(0f)]
+    [Tooltip("Seed prices: a seed costs this many times its pixel's payout per harvest (x the pixel's Value multiplier), paid in that same pixel. The typed seed costs are ignored.")]
+    [SerializeField] private float seedPriceFactor = 3f;
+
+    [Min(0f)]
+    [Tooltip("Rarer pixels cost more seeds: the price is also multiplied by (1 / spawn weight) to this power (0 = no rarity scaling).")]
+    [SerializeField] private float seedRarityPricePower = 0.5f;
+
+    [Min(1)]
+    [Tooltip("A seed never costs less than this.")]
+    [SerializeField] private double seedMinPrice = 3;
+
+    [Min(1)]
+    [Tooltip("The most of each seed you can hold (so seeds are plentiful).")]
+    [SerializeField] private int seedMaxHeld = 200;
 
     [Header("Placing Devices")]
     [Tooltip("Layers the mouse can place a device on (the floor).")]
@@ -558,6 +580,26 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    /// <summary>True for the pixel types that have a seed: not rare drops, not fly-away types (they never land) and not the Seed pixel itself.</summary>
+    private static bool HasSeed(PixelClicker.PixelType type) =>
+        !PixelClicker.IsDragonCube(type) && type != PixelClicker.PixelType.Seed && type != PixelClicker.PixelType.Meteor;
+
+    private Device CreateDefaultSeed(PixelClicker.PixelType type)
+    {
+        return new Device
+        {
+            kind = DeviceKind.Seed,
+            seedType = type,
+            displayName = type + " Seed",
+            description = "Right-click it in the inventory, then click the floor to plant it. It sprouts and grows one " + type + " pixel.",
+            requiredType = type,
+            costs = new PixelShop.PackCost[0],
+            maxHeld = seedMaxHeld,
+            color = new Color(0.45f, 0.85f, 0.35f, 1f),
+            placingMessage = "Click the floor to plant a {0}  (right-click to stop)",
+        };
+    }
+
     private static Device[] CreateDefaultDevices() => new[]
     {
         CreateDefaultDevice(), CreateDefaultFan(), CreateDefaultSorter(),
@@ -625,6 +667,19 @@ public class PixelConsumables : MonoBehaviour
                     devices[devices.Length - 1] = extra.Value();
                     added = true;
                 }
+            }
+        }
+
+        if (addDefaultDevices && devices != null)
+        {
+            // One seed per pixel type that can be grown (appended at the end so placed-device indexes stay valid).
+            foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
+            {
+                if (!HasSeed(type)) continue;
+                if (Array.Exists(devices, d => d != null && d.kind == DeviceKind.Seed && d.seedType == type)) continue;
+                Array.Resize(ref devices, devices.Length + 1);
+                devices[devices.Length - 1] = CreateDefaultSeed(type);
+                added = true;
             }
         }
 
@@ -1042,6 +1097,17 @@ public class PixelConsumables : MonoBehaviour
     /// </summary>
     public PixelShop.PackCost[] ItemCosts(int item)
     {
+        if (IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed && clicker != null)
+        {
+            int t = clicker.IndexOf(devices[item - potions.Length].seedType);
+            if (t < 0) return new PixelShop.PackCost[0];
+            PixelClicker.PixelTier tier = clicker.Tiers[t];
+            double rarity = seedRarityPricePower > 0f ? System.Math.Pow(1d / System.Math.Max(0.02d, tier.spawnWeight), seedRarityPricePower) : 1d;
+            rarity = System.Math.Max(1d, rarity);
+            double price = tier.amountPerClick * seedPriceFactor * rarity * (pricesScaleWithValue ? clicker.ValueMultiplier(t) : 1d);
+            return new[] { new PixelShop.PackCost { type = tier.type, amount = System.Math.Max(seedMinPrice, System.Math.Ceiling(price)) } };
+        }
+
         if (!IsDevice(item) && potionPriceFromOutput && clicker != null && !potions[item].craftOnly)
         {
             Potion p = potions[item];
@@ -1092,6 +1158,12 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The kind of device an item index refers to (items past the potions are devices).</summary>
     public DeviceKind DeviceKindOf(int item) => devices[item - potions.Length].kind;
 
+    /// <summary>True for a seed item (a "device" of kind Seed: planted, not placed).</summary>
+    public bool IsSeedItem(int item) => IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed;
+
+    /// <summary>The pixel type a seed item grows.</summary>
+    public PixelClicker.PixelType SeedTypeOf(int item) => devices[item - potions.Length].seedType;
+
     /// <summary>Takes items out of the inventory (crafting). Returns false if you don't have that many.</summary>
     public bool TryRemoveItem(int item, int amount)
     {
@@ -1128,7 +1200,7 @@ public class PixelConsumables : MonoBehaviour
                 PixelHints.Announce("Your pets are hyper!");
                 return true;
             }
-            default:
+            default: // placeable devices, and seeds (planted with a click on the floor)
                 return BeginPlacement(index);
         }
     }
@@ -1197,6 +1269,12 @@ public class PixelConsumables : MonoBehaviour
             previewSorter.Apply(placingYaw, 0f, false, devices[deviceIndex].sorterDefaultForce);
             preview = previewSorter.Root;
         }
+        else if (devices[deviceIndex].kind == DeviceKind.Seed)
+        {
+            preview = new GameObject("Seed Preview");
+            PixelLooks.CreateSproutObject(preview.transform, clicker.SeedSproutWorldSize);
+            preview.SetActive(false);
+        }
         else
         {
             preview = devices[deviceIndex].kind == DeviceKind.Fan
@@ -1251,8 +1329,31 @@ public class PixelConsumables : MonoBehaviour
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
         }
 
+        if (devices[placingIndex].kind == DeviceKind.Seed)
+        {
+            if (LeftPressed() && hasPoint && !PointerOverUI()) PlantSeed(point);
+            else if (RightPressed()) CancelPlacement();
+            return;
+        }
+
         if (LeftPressed() && hasPoint && !PointerOverUI()) PlaceDevice(point);
         else if (RightPressed()) CancelPlacement();
+    }
+
+    /// <summary>Plants the seed being held at 'point'; keeps planting while more seeds of that kind are left.</summary>
+    private void PlantSeed(Vector3 point)
+    {
+        Device d = devices[placingIndex];
+        int tier = clicker.IndexOf(d.seedType);
+        if (d.owned <= 0 || tier < 0) { EndPlacement(); return; }
+        if (!clicker.PlantSeedSproutAt(point, tier))
+        {
+            PixelHints.Announce("Too many sprouts already - wait for some to finish growing");
+            return;
+        }
+        d.owned = Mathf.Max(0, d.owned - 1);
+        PixelStats.Count("seeds.planted");
+        if (d.owned <= 0) EndPlacement();
     }
 
     /// <summary>

@@ -1922,6 +1922,9 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+    /// <summary>How big a Seed sprout is drawn, in world units (an old pixel's width x the sprout scale).</summary>
+    public float SeedSproutWorldSize => OldPixelWorldSize * seedSproutScale;
+
     /// <summary>The edge length of an old pixel in world units.</summary>
     public float OldPixelWorldSize => PixelBaseSize * oldPixelScale;
 
@@ -2004,7 +2007,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Plants a Seed sprout straight into the floor at 'position' (it grows a random pixel like any other). False when too many sprouts exist. Used by the Seed pet.</summary>
-    public bool PlantSeedSproutAt(Vector3 position)
+    public bool PlantSeedSproutAt(Vector3 position, int growTier = -1)
     {
         if (SeedSprout.Count >= seedMaxSprouts) return false;
         GameObject go = new GameObject("Seed Sprout");
@@ -2012,6 +2015,7 @@ public class PixelClicker : MonoBehaviour
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
         SeedSprout sprout = go.AddComponent<SeedSprout>();
         sprout.Setup(this, OldPixelWorldSize, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
+        sprout.ForceTier(growTier);
         sprout.PlantNow();
         return true;
     }

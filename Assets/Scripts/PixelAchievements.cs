@@ -502,7 +502,7 @@ public class PixelAchievements : MonoBehaviour
         // The kinds of device that exist.
         List<PixelConsumables.DeviceKind> kinds = new List<PixelConsumables.DeviceKind>();
         for (int i = 0; i < consumables.DeviceCount; i++)
-            if (!kinds.Contains(consumables.GetDevice(i).kind)) kinds.Add(consumables.GetDevice(i).kind);
+            if (consumables.GetDevice(i).kind != PixelConsumables.DeviceKind.Seed && !kinds.Contains(consumables.GetDevice(i).kind)) kinds.Add(consumables.GetDevice(i).kind);
 
         Register(new Achievement
         {

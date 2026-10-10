@@ -140,6 +140,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     protected virtual int StockMin => 0;
     /// <summary>Most of each ware in stock (0 = unlimited).</summary>
     protected virtual int StockMax => 0;
+    /// <summary>How many of this ware he has this visit (default: random between <see cref="StockMin"/> and <see cref="StockMax"/>).</summary>
+    protected virtual int StockFor(int item) => Random.Range(Mathf.Max(1, StockMin), Mathf.Max(StockMin, StockMax) + 1);
 
     private readonly Dictionary<int, int> stock = new Dictionary<int, int>(); // ware -> how many are left this visit (only when the stock is limited)
 
@@ -499,7 +501,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (!tradeMode && OfferedWares > 0)
             while (wares.Count > OfferedWares) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
         if (!tradeMode && StockMax > 0)
-            foreach (int w in wares) stock[w] = Random.Range(Mathf.Max(1, StockMin), Mathf.Max(StockMin, StockMax) + 1);
+            foreach (int w in wares) stock[w] = StockFor(w);
         int rowCount = tradeMode ? trades.Count : wares.Count;
         float rowH = 104f;
         float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + rowCount * (rowH + 8f) + 110f);
