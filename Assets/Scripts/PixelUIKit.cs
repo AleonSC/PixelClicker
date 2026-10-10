@@ -492,6 +492,7 @@ public static class PixelUIKit
         root.GetComponent<RectTransform>().sizeDelta = size;
         Image rootImage = root.GetComponent<Image>();
         rootImage.color = boxColor;
+        StyleButton(rootImage);   // the closed box looks like a button (bevelled, rounded)
 
         TMP_Text label = CreateText(font, root.transform, "Label", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
         label.richText = true;
@@ -521,6 +522,7 @@ public static class PixelUIKit
         GameObject template = new GameObject("Template", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
         template.transform.SetParent(root.transform, false);
         template.GetComponent<Image>().color = listColor;
+        StyleBox(template.GetComponent<Image>());   // the opened list: a rounded, softly shaded panel
         RectTransform tr = template.GetComponent<RectTransform>();
         tr.anchorMin = new Vector2(0f, 0f); tr.anchorMax = new Vector2(1f, 0f);
         tr.pivot = new Vector2(0.5f, 1f);
@@ -530,6 +532,8 @@ public static class PixelUIKit
         GameObject viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
         viewport.transform.SetParent(template.transform, false);
         Stretch(viewport.GetComponent<RectTransform>());
+        viewport.GetComponent<RectTransform>().offsetMin = new Vector2(5f, 5f);    // room for the rounded corners
+        viewport.GetComponent<RectTransform>().offsetMax = new Vector2(-5f, -5f);
 
         GameObject content = new GameObject("Content", typeof(RectTransform));
         content.transform.SetParent(viewport.transform, false);
@@ -547,14 +551,20 @@ public static class PixelUIKit
         GameObject itemBg = new GameObject("Item Background", typeof(RectTransform), typeof(Image));
         itemBg.transform.SetParent(item.transform, false);
         Stretch(itemBg.GetComponent<RectTransform>());
+        itemBg.GetComponent<RectTransform>().offsetMin = new Vector2(2f, 2f);
+        itemBg.GetComponent<RectTransform>().offsetMax = new Vector2(-2f, -2f);
         Image itemBgImage = itemBg.GetComponent<Image>();
         itemBgImage.color = new Color(listColor.r + 0.08f, listColor.g + 0.08f, listColor.b + 0.08f, 1f);
+        StyleBox(itemBgImage);   // each entry is its own rounded chip
 
         GameObject check = new GameObject("Item Checkmark", typeof(RectTransform), typeof(Image));
         check.transform.SetParent(item.transform, false);
         Image checkImage = check.GetComponent<Image>();
         checkImage.color = new Color(1f, 1f, 1f, 0.18f);
         Stretch(check.GetComponent<RectTransform>());
+        check.GetComponent<RectTransform>().offsetMin = new Vector2(2f, 2f);
+        check.GetComponent<RectTransform>().offsetMax = new Vector2(-2f, -2f);
+        StyleBox(checkImage);
 
         TMP_Text itemLabel = CreateText(font, item.transform, "Item Label", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
         itemLabel.richText = true;
