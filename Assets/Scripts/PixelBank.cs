@@ -732,7 +732,7 @@ public class PixelBank : MonoBehaviour
             areaTimer -= Time.unscaledDeltaTime;
             while (areaTimer <= 0f && areaActive)
             {
-                areaTimer += 1f / Mathf.Max(0.5f, areaRate);
+                areaTimer += 1f / Mathf.Max(0.5f, areaRate * (PixelClicker.InfiniteResources ? 10f : 1f)); // infinite resources: area suction is ten times faster
                 Rigidbody target = FindAreaTarget(cam);
                 if (target == null) { areaTimer = 0.05f; break; }
                 if (!TakeIntoBank(target))
@@ -836,8 +836,11 @@ public class PixelBank : MonoBehaviour
 
         int tier = selected;
         double amount = values[tier] / counts[tier];
-        counts[tier]--;
-        values[tier] = counts[tier] > 0 ? Math.Max(0d, values[tier] - amount) : 0d;
+        if (!PixelClicker.InfiniteResources) // dev tools "Infinite resources": the bank never runs out of what it holds
+        {
+            counts[tier]--;
+            values[tier] = counts[tier] > 0 ? Math.Max(0d, values[tier] - amount) : 0d;
+        }
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         Quaternion wobble = Quaternion.AngleAxis(UnityEngine.Random.Range(-spitSpread, spitSpread), cam.transform.forward);
@@ -864,7 +867,7 @@ public class PixelBank : MonoBehaviour
     /// <summary>Stores one old pixel (it flies into the nozzle). Returns false, and says so, if the bank is full.</summary>
     private bool TakeIntoBank(Rigidbody body)
     {
-        if (Total >= Capacity)
+        if (!PixelClicker.InfiniteResources && Total >= Capacity) // infinite resources: the bank never fills up
         {
             fullTimer = 0.9f;
             flashMessage = fullText;
@@ -1067,7 +1070,7 @@ public class PixelBank : MonoBehaviour
 
     private void RefreshWindow()
     {
-        capacityLabel.text = string.Format(capacityFormat, PixelClicker.FormatNumber(Total), PixelClicker.FormatNumber(Capacity));
+        capacityLabel.text = string.Format(capacityFormat, PixelClicker.FormatNumber(Total), PixelClicker.InfiniteResources ? "Infinite" : PixelClicker.FormatNumber(Capacity));
 
         // One row per unlocked pixel type that can be stored.
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
