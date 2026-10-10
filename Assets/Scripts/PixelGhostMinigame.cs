@@ -800,7 +800,7 @@ public class PixelGhostMinigame : PixelMinigame
         "..OOOOOOOOOOOOOO..",
     };
 
-    private Sprite BuildBackpackSprite()
+    public static Sprite BuildBackpackSprite()
     {
         int h = BackpackRows.Length, w = BackpackRows[0].Length;
         Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };

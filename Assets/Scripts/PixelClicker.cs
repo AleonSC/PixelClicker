@@ -998,6 +998,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
+        if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
         if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors
         if (PixelFind.First<PixelDragonWish>() == null) gameObject.AddComponent<PixelDragonWish>(); // the Dragon Cube wish (all seven cubes)
@@ -1565,6 +1566,7 @@ public class PixelClicker : MonoBehaviour
         double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
+        if (IsDragonCube(tier.type) && amount > 0d) PixelDragonFind.Play(tierIndex, pixelTransform.position);   // the "you found one" show
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 
         // A Mirror pixel also counts as a click on the last other pixel type collected: it pays that click's amount again.
@@ -1631,6 +1633,14 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
             if (tiers[i].rareDrop && IsDragonCube(tiers[i].type) && tiers[i].count < 1d) missing.Add(i);
         return missing.Count == 0 ? -1 : missing[UnityEngine.Random.Range(0, missing.Count)];
+    }
+
+    /// <summary>Any one of the seven Dragon Cube tiers at random (-1 if they don't exist). Used by the Dragon Seed under Infinite resources.</summary>
+    public int PickAnyDragonCube()
+    {
+        System.Collections.Generic.List<int> all = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < tiers.Length; i++) if (tiers[i].rareDrop && IsDragonCube(tiers[i].type)) all.Add(i);
+        return all.Count == 0 ? -1 : all[UnityEngine.Random.Range(0, all.Count)];
     }
 
     /// <summary>Does the player hold at least one of each of the seven Dragon Cubes?</summary>

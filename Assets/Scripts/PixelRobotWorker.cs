@@ -6,10 +6,12 @@ using UnityEngine.UI;
 using static PixelInput;
 
 /// <summary>
-/// Robot Worker (shop upgrade <c>unlocksRobot</c>, Upgrades tab): a little block-built robot stands off to the side of the screen.
+/// Robot Worker (shop upgrade <c>unlocksRobot</c>, Upgrades tab): a little block-built robot lives on the left of the screen, next to
+/// his charging station, with a speech bubble above him (a robot face) so you can always find him.
 /// Click him and he asks which consumable to use; pick one (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod) and place its
-/// "ghost" where you want it (the same placing as by hand - nothing is used up yet). From then on, every time that device runs out
-/// he puts a fresh one on the ghost, as long as you have one to spare. Click him again to change the job or clear it.
+/// "ghost" where you want it (the same placing as by hand - nothing is used up yet). From then on he WALKS to the ghost and, every time
+/// that device runs out, puts a fresh one on it as long as you have one to spare. When you have none left he walks back to the
+/// charging station. Click him (or his bubble) again to change the job or clear it.
 /// </summary>
 public class PixelRobotWorker : MonoBehaviour
 {
@@ -17,11 +19,23 @@ public class PixelRobotWorker : MonoBehaviour
     [Tooltip("Turn the Robot Worker off completely.")]
     [SerializeField] private bool disableRobot = false;
 
-    [Tooltip("Where he stands: a point on the screen as a fraction of its width (0 = left, 1 = right). He stands on the floor under it.")]
-    [SerializeField] private float screenX = 0.9f;
+    [Tooltip("Where his charging station is: a point on the screen as a fraction of its width (0 = left, 1 = right). It sits on the floor under it.")]
+    [SerializeField] private float screenX = 0.1f;
 
-    [Tooltip("Where he stands: a point on the screen as a fraction of its height (0 = bottom, 1 = top).")]
+    [Tooltip("Where his charging station is: a point on the screen as a fraction of its height (0 = bottom, 1 = top).")]
     [SerializeField] private float screenY = 0.3f;
+
+    [Tooltip("How fast he walks, in main-pixel widths per second.")]
+    [SerializeField] private float walkSpeed = 3.5f;
+
+    [Tooltip("How far from the ghost he stands while working, in main-pixel widths (on the side facing the station).")]
+    [SerializeField] private float standDistance = 1.6f;
+
+    [Tooltip("Size of the speech bubble with his face (canvas units).")]
+    [SerializeField] private float bubbleSize = 96f;
+
+    [Tooltip("Turn off the bubble over his head.")]
+    [SerializeField] private bool hideBubble = false;
 
     [Tooltip("His height as a multiple of the main pixel's edge.")]
     [SerializeField] private float robotScale = 0.6f;
@@ -69,10 +83,18 @@ public class PixelRobotWorker : MonoBehaviour
     private Renderer antennaLight, chestLight;
     private BoxCollider box;
     private TextMeshPro label;
-    private Vector3 targetPos;
-    private bool hasTarget;
+    private Transform legLeft, legRight, stationRoot;
+    private Renderer stationLight;
+    private Vector3 homePos;
+    private bool hasHome;
     private float nextSpotTime;
-    private bool hovering;
+    private bool hovering, walking;
+
+    // The bubble with his face.
+    private GameObject bubbleCanvas;
+    private Canvas bubbleCanvasComponent;
+    private RectTransform bubbleRect;
+    private Sprite bubbleSprite;
 
     // The window.
     private GameObject windowRoot;
@@ -96,6 +118,8 @@ public class PixelRobotWorker : MonoBehaviour
         active = false;
         Hovering = false;
         if (root != null) root.SetActive(false);
+        if (stationRoot != null) stationRoot.gameObject.SetActive(false);
+        if (bubbleCanvas != null) bubbleCanvas.SetActive(false);
         if (ghost != null) ghost.SetActive(false);
         CloseWindow();
     }
@@ -112,6 +136,8 @@ public class PixelRobotWorker : MonoBehaviour
         PixelWindows.Unregister(this);
         Hovering = false;
         if (root != null) Destroy(root);
+        if (stationRoot != null) Destroy(stationRoot.gameObject);
+        if (bubbleCanvas != null) Destroy(bubbleCanvas);
         if (ghost != null) Destroy(ghost);
         if (windowRoot != null) Destroy(windowRoot);
     }
@@ -128,45 +154,111 @@ public class PixelRobotWorker : MonoBehaviour
         {
             Hovering = false;
             if (root != null && root.activeSelf) root.SetActive(false);
+            if (stationRoot != null && stationRoot.gameObject.activeSelf) stationRoot.gameObject.SetActive(false);
+            if (bubbleCanvas != null && bubbleCanvas.activeSelf) bubbleCanvas.SetActive(false);
             if (ghost != null && ghost.activeSelf) ghost.SetActive(false);
             return;
         }
 
         if (root == null) BuildRobot();
         if (!root.activeSelf) root.SetActive(true);
+        if (!stationRoot.gameObject.activeSelf) stationRoot.gameObject.SetActive(true);
 
-        UpdatePosition();
+        UpdateMovement();
         UpdateHoverAndClick();
         UpdateJob();
         Animate();
+        UpdateBubble();
     }
 
     private Camera Cam => clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
 
-    private void UpdatePosition()
+    private float UnitScale => clicker.PixelBaseSize * robotScale / 2.5f;
+
+    /// <summary>The floor spot where he stands next to the ghost: on the side facing his station (a sorter's ring is round the cube, so further out).</summary>
+    private Vector3 PostSpot()
+    {
+        PixelConsumables.Device d = consumables.GetDevice(jobDevice);
+        bool sorter = d.kind == PixelConsumables.DeviceKind.Sorter;
+        Vector3 anchor = jobPos;
+        float extra = 0f;
+        if (sorter && clicker.PixelTransform != null)
+        {
+            anchor = new Vector3(clicker.PixelTransform.position.x, homePos.y, clicker.PixelTransform.position.z);
+            extra = 1.8f;
+        }
+        Vector3 away = homePos - anchor; away.y = 0f;
+        away = away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.left;
+        Vector3 spot = anchor + away * (standDistance + extra) * clicker.PixelBaseSize;
+        spot.y = homePos.y;
+        return spot;
+    }
+
+    private bool HasJob => jobDevice >= 0 && jobDevice < consumables.DeviceCount;
+
+    private bool AtPost()
+    {
+        if (!HasJob || !hasHome) return false;
+        Vector3 d = PostSpot() - root.transform.position; d.y = 0f;
+        return d.magnitude < 0.15f * clicker.PixelBaseSize;
+    }
+
+    /// <summary>Where he wants to be: at the ghost while there is work (or a device running there and he is already standing by), else at the charging station.</summary>
+    private Vector3 WantedSpot()
+    {
+        if (HasJob)
+        {
+            bool stock = consumables.DeviceOwned(jobDevice) > 0;
+            if (stock || (occupied && AtPost())) return PostSpot();
+        }
+        return homePos;
+    }
+
+    private void UpdateMovement()
     {
         if (Time.unscaledTime >= nextSpotTime)
         {
             nextSpotTime = Time.unscaledTime + 0.5f;
             if (consumables.TryGetFloorPoint(new Vector2(Screen.width * screenX, Screen.height * screenY), out Vector3 p))
             {
-                targetPos = p;
-                if (!hasTarget) root.transform.position = p;
-                hasTarget = true;
+                homePos = p;
+                if (!hasHome) { hasHome = true; root.transform.position = p; }
             }
         }
-        if (!hasTarget) return;
-        root.transform.position = Vector3.Lerp(root.transform.position, targetPos, 1f - Mathf.Exp(-6f * Time.unscaledDeltaTime));
+        if (!hasHome) return;
 
-        // Face the camera, turned a little towards the cube.
+        stationRoot.position = homePos;
+        float unit = UnitScale;
+        stationRoot.localScale = Vector3.one * unit;
+
         Camera cam = Cam;
-        if (cam == null) return;
-        Vector3 toCam = cam.transform.position - root.transform.position; toCam.y = 0f;
-        Vector3 toCube = clicker.PixelTransform != null ? clicker.PixelTransform.position - root.transform.position : toCam; toCube.y = 0f;
-        if (toCam.sqrMagnitude < 0.0001f) return;
-        Vector3 dir = toCube.sqrMagnitude > 0.0001f ? Vector3.Slerp(toCam.normalized, toCube.normalized, 0.3f) : toCam.normalized;
-        root.transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);   // the model's front is -Z, so it points at the camera
-        root.transform.localScale = Vector3.one * (clicker.PixelBaseSize * robotScale / 2.5f) * (hovering ? 1.06f : 1f);
+        Vector3 toCam = cam != null ? cam.transform.position - root.transform.position : Vector3.back; toCam.y = 0f;
+        if (toCam.sqrMagnitude < 0.0001f) toCam = Vector3.back;
+        stationRoot.rotation = Quaternion.LookRotation(-toCam.normalized, Vector3.up);
+
+        // Walk.
+        Vector3 target = WantedSpot();
+        Vector3 flat = target - root.transform.position; flat.y = 0f;
+        float dist = flat.magnitude;
+        walking = dist > 0.04f * clicker.PixelBaseSize;
+        Vector3 faceDir;
+        if (walking)
+        {
+            float step = walkSpeed * clicker.PixelBaseSize * Time.deltaTime;
+            Vector3 pos = root.transform.position + flat.normalized * Mathf.Min(step, dist);
+            pos.y = Mathf.Lerp(pos.y, target.y, 0.2f);
+            root.transform.position = pos;
+            faceDir = flat.normalized;
+        }
+        else
+        {
+            // Standing: face the camera, turned a little towards the cube.
+            Vector3 toCube = clicker.PixelTransform != null ? clicker.PixelTransform.position - root.transform.position : toCam; toCube.y = 0f;
+            faceDir = toCube.sqrMagnitude > 0.0001f ? Vector3.Slerp(toCam.normalized, toCube.normalized, 0.3f) : toCam.normalized;
+        }
+        Quaternion want = Quaternion.LookRotation(-faceDir, Vector3.up);   // the model's front is -Z
+        root.transform.rotation = Quaternion.Slerp(root.transform.rotation, want, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
+        root.transform.localScale = Vector3.one * unit * (hovering ? 1.06f : 1f);
     }
 
     private void UpdateHoverAndClick()
@@ -186,11 +278,11 @@ public class PixelRobotWorker : MonoBehaviour
 
     private void UpdateJob()
     {
-        if (jobDevice < 0 || jobDevice >= consumables.DeviceCount)
+        if (!HasJob)
         {
             if (ghost != null) ghost.SetActive(false);
             waitT = 0f;
-            SetLabel(hovering ? changeJobText : clickMeText, true);
+            SetLabel(hovering ? clickMeText : "", hovering);
             return;
         }
 
@@ -207,11 +299,13 @@ public class PixelRobotWorker : MonoBehaviour
         if (!stock)
         {
             waitT = 0f;
-            SetLabel(string.Format(outOfFormat, d.displayName), true, new Color(1f, 0.4f, 0.35f, 1f));
+            SetLabel(string.Format(outOfFormat, d.displayName), !walking, new Color(1f, 0.4f, 0.35f, 1f));
             return;
         }
 
         SetLabel(hovering ? changeJobText : "", hovering);
+        if (!AtPost()) { waitT = 0f; return; }   // still walking over
+
         workT = 0.25f;
         waitT += Time.deltaTime;
         if (waitT >= placeDelay)
@@ -289,10 +383,13 @@ public class PixelRobotWorker : MonoBehaviour
         bodyPivot = Pivot(root.transform, "Body", Vector3.zero);
         Transform b = bodyPivot;
 
-        Prim(PrimitiveType.Cube, b, "Foot L", new Vector3(-0.22f, 0.07f, -0.05f), new Vector3(0.34f, 0.14f, 0.5f), darkColor);
-        Prim(PrimitiveType.Cube, b, "Foot R", new Vector3(0.22f, 0.07f, -0.05f), new Vector3(0.34f, 0.14f, 0.5f), darkColor);
-        Prim(PrimitiveType.Cube, b, "Leg L", new Vector3(-0.22f, 0.4f, 0f), new Vector3(0.26f, 0.55f, 0.26f), bodyColor * 0.8f);
-        Prim(PrimitiveType.Cube, b, "Leg R", new Vector3(0.22f, 0.4f, 0f), new Vector3(0.26f, 0.55f, 0.26f), bodyColor * 0.8f);
+        legLeft = Pivot(b, "Leg L", new Vector3(-0.22f, 0.68f, 0f));
+        legRight = Pivot(b, "Leg R", new Vector3(0.22f, 0.68f, 0f));
+        foreach (Transform leg in new[] { legLeft, legRight })
+        {
+            Prim(PrimitiveType.Cube, leg, "Leg", new Vector3(0f, -0.28f, 0f), new Vector3(0.26f, 0.55f, 0.26f), bodyColor * 0.8f);
+            Prim(PrimitiveType.Cube, leg, "Foot", new Vector3(0f, -0.61f, -0.05f), new Vector3(0.34f, 0.14f, 0.5f), darkColor);
+        }
         Prim(PrimitiveType.Cube, b, "Torso", new Vector3(0f, 1.05f, 0f), new Vector3(0.95f, 0.8f, 0.62f), bodyColor);
         Prim(PrimitiveType.Cube, b, "Belt", new Vector3(0f, 0.68f, 0f), new Vector3(1f, 0.12f, 0.66f), accentColor);
         Prim(PrimitiveType.Cube, b, "Panel", new Vector3(0f, 1.1f, -0.32f), new Vector3(0.55f, 0.4f, 0.04f), darkColor);
@@ -335,6 +432,105 @@ public class PixelRobotWorker : MonoBehaviour
 #endif
         if (clicker.UIFont != null) label.font = clicker.UIFont;
         lg.SetActive(false);
+
+        BuildStation();
+        BuildBubble();
+    }
+
+    /// <summary>His charging station: a dark pad with a glowing frame and a charger post with a cord (a separate object that stays put).</summary>
+    private void BuildStation()
+    {
+        stationRoot = new GameObject("Robot Charging Station").transform;
+        Transform t = stationRoot;
+        Prim(PrimitiveType.Cube, t, "Pad", new Vector3(0f, 0.04f, 0f), new Vector3(2.1f, 0.08f, 2.1f), darkColor);
+        Color glow = eyeColor * 0.9f;
+        Prim(PrimitiveType.Cube, t, "Edge F", new Vector3(0f, 0.09f, -1.0f), new Vector3(2.0f, 0.05f, 0.08f), glow);
+        Prim(PrimitiveType.Cube, t, "Edge B", new Vector3(0f, 0.09f, 1.0f), new Vector3(2.0f, 0.05f, 0.08f), glow);
+        Prim(PrimitiveType.Cube, t, "Edge L", new Vector3(-1.0f, 0.09f, 0f), new Vector3(0.08f, 0.05f, 2.0f), glow);
+        Prim(PrimitiveType.Cube, t, "Edge R", new Vector3(1.0f, 0.09f, 0f), new Vector3(0.08f, 0.05f, 2.0f), glow);
+        Prim(PrimitiveType.Cube, t, "Post", new Vector3(0f, 0.8f, 0.85f), new Vector3(0.45f, 1.5f, 0.3f), bodyColor * 0.7f);
+        Prim(PrimitiveType.Cube, t, "Cap", new Vector3(0f, 1.6f, 0.85f), new Vector3(0.55f, 0.14f, 0.4f), accentColor);
+        stationLight = Prim(PrimitiveType.Sphere, t, "Lamp", new Vector3(0f, 1.25f, 0.68f), Vector3.one * 0.18f, eyeColor).GetComponent<Renderer>();
+        Prim(PrimitiveType.Cube, t, "Cable", new Vector3(0f, 0.12f, 0.35f), new Vector3(0.08f, 0.05f, 0.9f), darkColor);
+        Prim(PrimitiveType.Cube, t, "Plug", new Vector3(0f, 0.13f, -0.06f), new Vector3(0.22f, 0.1f, 0.2f), accentColor);
+    }
+
+    /// <summary>The speech bubble with a robot face that floats over him (a button: click it like him).</summary>
+    private void BuildBubble()
+    {
+        if (hideBubble) return;
+        bubbleCanvas = PixelUIKit.CreateCanvas("Robot Bubble", 280, new Vector2(1920f, 1080f), true);
+        bubbleCanvasComponent = bubbleCanvas.GetComponent<Canvas>();
+        if (bubbleSprite == null) bubbleSprite = BuildBubbleSprite();
+        GameObject go = new GameObject("Bubble", typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(bubbleCanvas.transform, false);
+        Image img = go.GetComponent<Image>();
+        img.sprite = bubbleSprite;
+        img.preserveAspect = true;
+        go.GetComponent<Button>().targetGraphic = img;
+        go.GetComponent<Button>().onClick.AddListener(() => { if (!consumables.IsPlacing && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) OpenWindow(); });
+        bubbleRect = go.GetComponent<RectTransform>();
+        bubbleRect.anchorMin = bubbleRect.anchorMax = Vector2.zero;
+        bubbleRect.pivot = new Vector2(0.5f, 0f);
+        bubbleRect.sizeDelta = new Vector2(bubbleSize * 48f / 56f, bubbleSize);
+    }
+
+    /// <summary>A round speech bubble with a pointer at the bottom and a pixel-art robot head in it (drawn in code).</summary>
+    private Sprite BuildBubbleSprite()
+    {
+        const int w = 48, h = 56;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        Color32 clear = new Color32(0, 0, 0, 0), border = new Color32(25, 28, 40, 255), fill = new Color32(225, 238, 250, 255);
+        Color32 head = bodyColor, dark = darkColor, eye = eyeColor, orange = accentColor;
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) tex.SetPixel(x, y, clear);
+        float cx = 23.5f, cy = 33f, r = 22.5f;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float d = Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
+                if (d <= r) tex.SetPixel(x, y, d > r - 2.2f ? border : fill);
+            }
+        // The pointer: a small triangle under the circle, tipped at the bottom row.
+        for (int row = 1; row <= 12; row++)
+        {
+            int half = Mathf.Clamp((row - 1) / 2, 0, 5);
+            for (int x = 24 - half - 1; x <= 24 + half; x++)
+            {
+                bool edge = x == 24 - half - 1 || x == 24 + half || row == 1;
+                tex.SetPixel(x, row, edge ? border : fill);
+            }
+        }
+        void Fill(int x0, int y0, int x1, int y1, Color32 c) { for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) tex.SetPixel(x, y, c); }
+        Fill(14, 25, 33, 43, head);                         // head
+        Fill(14, 25, 33, 25, dark); Fill(14, 43, 33, 43, dark); Fill(14, 25, 14, 43, dark); Fill(33, 25, 33, 43, dark);
+        Fill(17, 32, 30, 39, dark);                         // visor
+        Fill(19, 34, 22, 37, eye); Fill(25, 34, 28, 37, eye);   // eyes
+        Fill(20, 28, 27, 28, dark);                         // mouth
+        Fill(23, 44, 24, 48, dark); Fill(22, 49, 25, 51, orange);   // antenna
+        tex.Apply(false, false);
+        return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0f), 100f);
+    }
+
+    private void UpdateBubble()
+    {
+        if (bubbleCanvas == null) return;
+        Camera cam = Cam;
+        bool windowOpen = windowRoot != null && windowRoot.activeSelf;
+        if (cam == null || windowOpen) { if (bubbleCanvas.activeSelf) bubbleCanvas.SetActive(false); return; }
+        if (!bubbleCanvas.activeSelf) bubbleCanvas.SetActive(true);
+
+        Vector3 world = root.transform.position + Vector3.up * (3.0f * UnitScale * 1.0f);
+        Vector3 sp = cam.WorldToScreenPoint(world);
+        float scaleFactor = bubbleCanvasComponent.scaleFactor > 0f ? bubbleCanvasComponent.scaleFactor : 1f;
+        Vector2 canvasSize = new Vector2(Screen.width, Screen.height) / scaleFactor;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        Vector2 pos = new Vector2(sp.x, sp.y) / scaleFactor;
+        if (sp.z < 0f) pos = new Vector2(canvasSize.x * 0.5f, bar);   // behind the camera: park it
+        pos.x = Mathf.Clamp(pos.x, bubbleRect.sizeDelta.x * 0.5f, canvasSize.x - bubbleRect.sizeDelta.x * 0.5f);
+        pos.y = Mathf.Clamp(pos.y, bar, canvasSize.y - bar - bubbleRect.sizeDelta.y);
+        pos.y += Mathf.Sin(Time.time * 3f) * 5f;
+        bubbleRect.anchoredPosition = pos;
+        bubbleRect.localScale = Vector3.one * (hovering ? 1.1f : 1f);
     }
 
     private void Animate()
@@ -342,20 +538,29 @@ public class PixelRobotWorker : MonoBehaviour
         if (root == null || bodyPivot == null) return;
         float t = Time.time;
         workT = Mathf.Max(0f, workT - Time.deltaTime);
-        bool working = workT > 0f || waitT > 0f;
+        bool working = !walking && (workT > 0f || waitT > 0f);
+        bool charging = !walking && hasHome && (root.transform.position - homePos).sqrMagnitude < 0.01f * clicker.PixelBaseSize * clicker.PixelBaseSize;
 
-        bodyPivot.localPosition = new Vector3(0f, Mathf.Sin(t * 2f) * 0.03f, 0f);
-        head.localRotation = Quaternion.Euler(Mathf.Sin(t * 1.3f) * 4f, hovering ? Mathf.Sin(t * 5f) * 25f : Mathf.Sin(t * 0.7f) * 18f, 0f);
+        bodyPivot.localPosition = new Vector3(0f, walking ? Mathf.Abs(Mathf.Sin(t * 10f)) * 0.06f : Mathf.Sin(t * 2f) * 0.03f, 0f);
+        head.localRotation = Quaternion.Euler(Mathf.Sin(t * 1.3f) * 4f + (charging && !hovering ? 14f : 0f),
+                                              hovering ? Mathf.Sin(t * 5f) * 25f : (walking || charging) ? 0f : Mathf.Sin(t * 0.7f) * 18f, 0f);
+
+        float legSwing = walking ? Mathf.Sin(t * 10f) * 35f : 0f;
+        legLeft.localRotation = Quaternion.Euler(legSwing, 0f, 0f);
+        legRight.localRotation = Quaternion.Euler(-legSwing, 0f, 0f);
 
         float idle = Mathf.Sin(t * 1.6f) * 7f;
-        leftArm.localRotation = Quaternion.Euler(working ? 80f + Mathf.Sin(t * 12f) * 25f : idle, 0f, 6f);
-        rightArm.localRotation = hovering && !working
+        float armSwing = walking ? Mathf.Sin(t * 10f) * 30f : idle;
+        leftArm.localRotation = Quaternion.Euler(working ? 80f + Mathf.Sin(t * 12f) * 25f : -armSwing, 0f, 6f);
+        rightArm.localRotation = hovering && !working && !walking
             ? Quaternion.Euler(0f, 0f, 150f + Mathf.Sin(t * 8f) * 20f)       // waves hello
-            : Quaternion.Euler(working ? 80f + Mathf.Sin(t * 12f + 2f) * 25f : -idle, 0f, -6f);
+            : Quaternion.Euler(working ? 80f + Mathf.Sin(t * 12f + 2f) * 25f : armSwing, 0f, -6f);
 
-        float pulse = 0.5f + 0.5f * Mathf.Sin(t * (working ? 12f : 3f));
+        float pulse = 0.5f + 0.5f * Mathf.Sin(t * (working ? 12f : walking ? 6f : 3f));
         SetRendererColor(antennaLight, Color.Lerp(accentColor * 0.5f, Color.white, pulse));
-        SetRendererColor(chestLight, Color.Lerp(eyeColor * 0.5f, eyeColor, working ? pulse : 1f));
+        SetRendererColor(chestLight, Color.Lerp(eyeColor * 0.5f, eyeColor, (working || walking) ? pulse : 1f));
+        // The station lamp glows steadily while he charges, and blinks idly when he is away.
+        SetRendererColor(stationLight, charging ? Color.Lerp(eyeColor, Color.white, 0.5f + 0.5f * Mathf.Sin(t * 2.5f)) : eyeColor * (0.35f + 0.25f * Mathf.Sin(t * 1.5f)));
     }
 
     private static void SetRendererColor(Renderer r, Color c)

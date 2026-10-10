@@ -1754,6 +1754,7 @@ public class PixelConsumables : MonoBehaviour
         if (PixelClicker.IsDragonCube(d.seedType))
         {
             tier = clicker.PickMissingDragonCube(); // a Dragon Cube you don't hold
+            if (tier < 0 && Inf) tier = clicker.PickAnyDragonCube();   // infinite resources (testing): any of the seven, even one you hold
             if (tier < 0)
             {
                 PixelHints.Announce("You already hold all seven Dragon Cubes - the Dragon Seed has nothing left to grow");

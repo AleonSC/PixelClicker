@@ -234,6 +234,8 @@ public class PixelAudio : MonoBehaviour
             Make("seed_plant", 0.05f, 0.9f, 1.1f),
             Make("water_splash", 0.05f, 0.9f, 1.1f),
             Make("fire_burst", 0.1f, 0.92f, 1.08f),
+            Make("dragon_find", 0.1f, 1f, 1f),
+            Make("dragon_stash", 0.1f, 1f, 1f),
             Make("fire_crackle", 0.15f, 0.85f, 1.15f),
             Make("ore_chip", 0.04f, 0.8f, 1.3f),
             Make("ore_gleam", 0.3f, 0.95f, 1.05f),
@@ -273,6 +275,8 @@ public class PixelAudio : MonoBehaviour
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
             case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
             case "water_splash": return new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) };
+            case "dragon_find": return new[] { PixelSynth.DragonFind() };
+            case "dragon_stash": return new[] { PixelSynth.DragonStash() };
             case "fire_burst": return new[] { PixelSynth.FireBurst(1), PixelSynth.FireBurst(2), PixelSynth.FireBurst(3) };
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
@@ -838,6 +842,62 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
         AudioClip clip = AudioClip.Create("Dragon Summon", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A Dragon Cube turns up: a swelling whoosh, then a sparkling rising arpeggio of bell tones (about 3 seconds).</summary>
+    public static AudioClip DragonFind()
+    {
+        const int rate = 22050;
+        float length = 3.2f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(4242);
+        float lp = 0f;
+        float[] notes = { 392f, 493.9f, 587.3f, 784f, 987.8f, 1174.7f, 1568f };
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.08f;
+            float whoosh = lp * 2.2f * Mathf.Sin(Mathf.Clamp01(sec / 0.7f) * Mathf.PI) * (sec < 0.7f ? 1f : 0f);
+            float v = whoosh;
+            for (int k = 0; k < notes.Length; k++)
+            {
+                float start = 0.55f + k * 0.22f;
+                float t = sec - start;
+                if (t < 0f) continue;
+                float env = Mathf.Exp(-t * 2.6f) * Mathf.Clamp01(t / 0.01f);
+                v += (Mathf.Sin(t * notes[k] * 6.2832f) + 0.35f * Mathf.Sin(t * notes[k] * 2.01f * 6.2832f)) * env * 0.28f;
+            }
+            data[i] = v;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("DragonFind", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The Dragon Cube drops into the backpack: a soft thump with a quick glittering chime.</summary>
+    public static AudioClip DragonStash()
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.9f);
+        float[] data = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float thump = Mathf.Sin(sec * 90f * 6.2832f) * Mathf.Exp(-sec * 12f);
+            float chime = (Mathf.Sin(sec * 1568f * 6.2832f) + Mathf.Sin(sec * 2093f * 6.2832f) * 0.6f) * Mathf.Exp(-sec * 5f) * 0.4f * Mathf.Clamp01((sec - 0.03f) / 0.01f);
+            data[i] = thump + chime;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("DragonStash", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }
