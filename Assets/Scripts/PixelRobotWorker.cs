@@ -31,6 +31,9 @@ public class PixelRobotWorker : MonoBehaviour
     [Tooltip("How far from the ghost he stands while working, in main-pixel widths (on the side facing the station).")]
     [SerializeField] private float standDistance = 1.6f;
 
+    [Tooltip("Snap his charging station to the corner where four floor tiles meet. Off = it stays at the same spot on screen whichever floor style is picked (floor styles have different tile grids, so snapping moved him).")]
+    [SerializeField] private bool snapHomeToTiles = false;
+
     [Tooltip("Size of the speech bubble with his face (canvas units).")]
     [SerializeField] private float bubbleSize = 96f;
 
@@ -267,7 +270,7 @@ public class PixelRobotWorker : MonoBehaviour
             nextSpotTime = Time.unscaledTime + 0.5f;
             if (consumables.TryGetFloorPoint(new Vector2(Screen.width * screenX, Screen.height * screenY), out Vector3 p))
             {
-                if (PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(p, out Vector3 cell, out float cs)) { p = cell + CornerOffset(cs); cellSize = cs; }   // lined up with the corner where four floor tiles meet (bottom right of that tile)
+                if (PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(p, out Vector3 cell, out float cs)) { if (snapHomeToTiles) p = cell + CornerOffset(cs); cellSize = cs; }   // his size follows the tiles; his spot only snaps to a tile corner if asked (floor styles have different grids, which moved him)
                 else cellSize = 0f;
                 homePos = p;
                 if (!hasHome) { hasHome = true; root.transform.position = p; }
