@@ -29,7 +29,7 @@ public class PixelRobotWorker : MonoBehaviour
     [SerializeField] private float walkSpeed = 3.5f;
 
     [Tooltip("How far from the ghost he stands while working, in main-pixel widths (on the side facing the station).")]
-    [SerializeField] private float standDistance = 1.6f;
+    [SerializeField] private float standDistance = 2.2f;
 
     [Tooltip("Snap his charging station to the corner where four floor tiles meet. Off = it stays at the same spot on screen whichever floor style is picked (floor styles have different tile grids, so snapping moved him).")]
     [SerializeField] private bool snapHomeToTiles = false;
@@ -40,8 +40,8 @@ public class PixelRobotWorker : MonoBehaviour
     [Tooltip("Turn off the bubble over his head.")]
     [SerializeField] private bool hideBubble = false;
 
-    [Tooltip("His height as a multiple of the main pixel's edge.")]
-    [SerializeField] private float robotScale = 0.6f;
+    [Tooltip("His size, as a multiple of the main pixel: 2.5 makes him about one and a half cubes wide. Fixed - it does not change with the floor style.")]
+    [SerializeField] private float robotScale = 2.5f;
 
     [Tooltip("Seconds he spends 'working' before a new device appears on the ghost.")]
     [SerializeField] private float placeDelay = 1.2f;
@@ -193,7 +193,7 @@ public class PixelRobotWorker : MonoBehaviour
     private Camera Cam => clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
 
     /// <summary>One model unit in world units: he is as wide as a floor tile when the floor has a grid, else a size relative to the main pixel.</summary>
-    private float UnitScale => cellSize > 0f ? cellSize / 1.5f : clicker.PixelBaseSize * robotScale / 2.5f;
+    private float UnitScale => clicker.PixelBaseSize * robotScale / 2.5f;   // a fixed size: it does not depend on the floor style
 
     /// <summary>The floor spot where he stands next to the ghost: on the side facing his station (a sorter's ring is round the cube, so further out).</summary>
     private Vector3 PostSpot()
@@ -209,8 +209,7 @@ public class PixelRobotWorker : MonoBehaviour
         }
         Vector3 away = homePos - anchor; away.y = 0f;
         away = away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.left;
-        Vector3 spot = cellSize > 0f ? anchor + away * (cellSize + extra * clicker.PixelBaseSize)   // always the neighbouring tile
-                                      : anchor + away * (standDistance + extra) * clicker.PixelBaseSize;
+        Vector3 spot = anchor + away * (standDistance + extra) * clicker.PixelBaseSize;   // the same distance on every floor style
         spot.y = homePos.y;
         if (snapHomeToTiles && cellSize > 0f && PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(spot, out Vector3 snapped, out _))
         {
@@ -237,8 +236,6 @@ public class PixelRobotWorker : MonoBehaviour
     {
         return Mathf.Abs(v.x) > Mathf.Abs(v.z) ? new Vector3(Mathf.Sign(v.x), 0f, 0f) : new Vector3(0f, 0f, v.z < 0f ? -1f : 1f);
     }
-
-    private static float unitToPad(float cell, float unit) => cell > 0f ? (cell / 2.1f) / unit : 1f;
 
     private bool HasJob => jobDevice >= 0 && jobDevice < consumables.DeviceCount;
 
@@ -283,7 +280,7 @@ public class PixelRobotWorker : MonoBehaviour
 
         stationRoot.position = homePos;
         float unit = UnitScale;
-        stationRoot.localScale = Vector3.one * (smoothUnit > 0f ? smoothUnit * unitToPad(cellSize, unit) : unit);   // the pad is about one tile
+        stationRoot.localScale = Vector3.one * (unit * (1.5f / 2.1f));   // the pad is as wide as he is
 
         Camera cam = Cam;
         Vector3 toCam = cam != null ? cam.transform.position - root.transform.position : Vector3.back; toCam.y = 0f;
@@ -321,9 +318,7 @@ public class PixelRobotWorker : MonoBehaviour
         }
         Quaternion want = Quaternion.LookRotation(-faceDir, Vector3.up);   // the model's front is -Z
         root.transform.rotation = Quaternion.Slerp(root.transform.rotation, want, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
-        // His size eases to the tile size instead of jumping when the floor style (and so the tile) changes.
-        smoothUnit = smoothUnit <= 0f ? unit : Mathf.Lerp(smoothUnit, unit, 1f - Mathf.Exp(-6f * Time.unscaledDeltaTime));
-        root.transform.localScale = Vector3.one * smoothUnit * (hovering ? 1.06f : 1f);
+        root.transform.localScale = Vector3.one * unit * (hovering ? 1.06f : 1f);
     }
 
     private void UpdateHoverAndClick()
@@ -446,7 +441,7 @@ public class PixelRobotWorker : MonoBehaviour
 
         // Close enough: scoop it up and store it.
         Vector3 d = bankTarget.position - root.transform.position; d.y = 0f;
-        float reach = Mathf.Max(clicker.PixelBaseSize * 0.9f, cellSize * 0.6f);
+        float reach = clicker.PixelBaseSize * 0.9f;
         if (d.magnitude > reach) return;
         workT = 0.35f;
         Vector3 hand = root.transform.position + Vector3.up * (1.2f * UnitScale);
