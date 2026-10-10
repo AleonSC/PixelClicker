@@ -66,10 +66,10 @@ public static class PixelBarGlow
         return img;
     }
 
-    /// <summary>The colour of one edge: hue = (time x speed + offset), vivid.</summary>
-    public static Color EdgeColor(float time, float speed, float offset, float saturation)
+    /// <summary>The colour of one edge: hue = (the player's chosen hue + time x speed + offset), vivid. Speed 0 = a fixed colour.</summary>
+    public static Color EdgeColor(float baseHue, float time, float speed, float offset, float saturation)
     {
-        return Color.HSVToRGB(Mathf.Repeat(time * speed + offset, 1f), Mathf.Clamp01(saturation), 1f);
+        return Color.HSVToRGB(Mathf.Repeat(baseHue + time * speed + offset, 1f), Mathf.Clamp01(saturation), 1f);
     }
 
     /// <summary>Colours the three images of one edge (outer glow, inner glow, line) with 'c' at overall strength 'a'.</summary>

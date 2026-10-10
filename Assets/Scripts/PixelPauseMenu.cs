@@ -285,6 +285,18 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings tick box for the rounded, glowing window frames (takes effect for windows built after the next start).")]
     [SerializeField] private string fancyWindowsLabel = "Fancy windows (next start)";
 
+    [Tooltip("Label of the Settings slider that picks the colour (hue) of the neon bar glow.")]
+    [SerializeField] private string glowHueLabel = "Bar glow colour";
+
+    [Tooltip("Label of the Settings tick box that lets the neon bar glow slowly change colour by itself.")]
+    [SerializeField] private string glowCycleLabel = "Cycle glow colour";
+
+    [Tooltip("Label of the Settings tick box that switches on your own window colour.")]
+    [SerializeField] private string uiColorLabel = "Custom UI colour";
+
+    [Tooltip("Label of the Settings slider that picks the hue of the windows.")]
+    [SerializeField] private string uiHueLabel = "UI colour";
+
     [Tooltip("Label of the Settings tick box for the neon glow along the black bars.")]
     [SerializeField] private string barGlowLabel = "Neon bar glow";
 
@@ -1605,6 +1617,10 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
         AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
         AddSettingToggle(list, barGlowLabel, () => PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
+        AddSliderRow(list, glowHueLabel, PixelHud.GlowHue, v => PixelHud.GlowHue = v, ref y);
+        AddSettingToggle(list, glowCycleLabel, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on, ref y);
+        AddSettingToggle(list, uiColorLabel, () => PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
+        AddSliderRow(list, uiHueLabel, PixelUIKit.UiHue, v => PixelUIKit.UiHue = v, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,

@@ -156,10 +156,44 @@ public class PixelHud : MonoBehaviour
         }
     }
 
-    public static void ReloadGlowFromPrefs() { barGlowCache = -1; }
+    private const string PrefGlowHue = "PixelClicker.Setting.GlowHue", PrefGlowCycle = "PixelClicker.Setting.GlowCycle";
+    private static float glowHueCache = -1f;
+    private static int glowCycleCache = -1;
+
+    /// <summary>The player's chosen hue (0 - 1) of the neon bar glow. With Cycle on, the colour drifts on from it.</summary>
+    public static float GlowHue
+    {
+        get
+        {
+            if (glowHueCache < 0f) glowHueCache = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefGlowHue, 0f));
+            return glowHueCache;
+        }
+        set
+        {
+            glowHueCache = Mathf.Clamp01(value);
+            PlayerPrefs.SetFloat(PrefGlowHue, glowHueCache);
+        }
+    }
+
+    /// <summary>Does the glow colour slowly change by itself (on by default) or stay at the chosen hue?</summary>
+    public static bool GlowCycle
+    {
+        get
+        {
+            if (glowCycleCache < 0) glowCycleCache = PlayerPrefs.GetInt(PrefGlowCycle, 1);
+            return glowCycleCache != 0;
+        }
+        set
+        {
+            glowCycleCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefGlowCycle, glowCycleCache);
+        }
+    }
+
+    public static void ReloadGlowFromPrefs() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetGlowStatics() { barGlowCache = -1; }
+    private static void ResetGlowStatics() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; }
 
     private void Update()
     {
@@ -171,7 +205,7 @@ public class PixelHud : MonoBehaviour
             if (g[0].gameObject.activeSelf != on) { g[0].gameObject.SetActive(on); g[1].gameObject.SetActive(on); g[2].gameObject.SetActive(on); }
             if (!on) continue;
             float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);
-            Color c = PixelBarGlow.EdgeColor(Time.unscaledTime, glowColorSpeed, i == 0 ? 0f : glowEdgeOffset, glowSaturation);
+            Color c = PixelBarGlow.EdgeColor(GlowHue, Time.unscaledTime, GlowCycle ? glowColorSpeed : 0f, i == 0 ? 0f : glowEdgeOffset, glowSaturation);
             PixelBarGlow.Colorize(g[0], g[1], g[2], c, Mathf.Clamp01(glowStrength) * shimmer);
         }
     }

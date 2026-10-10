@@ -565,6 +565,14 @@ public class PixelLog : MonoBehaviour
         return "<b>" + head + "</b>\n" + body + "\nProgress: " + FormatAmount(have) + " / " + FormatAmount(target) + tier;
     }
 
+    private string GoalTipText(Goal g)
+    {
+        double have = Math.Min(g.count, g.goal);
+        double percent = g.goal > 0d ? have / g.goal * 100d : 100d;
+        string status = g.count >= g.goal ? "Complete!" : "Still needed: " + FormatAmount(g.goal - g.count);
+        return "<b>" + g.title + "</b>\n" + g.description + "\nProgress: " + FormatAmount(have) + " / " + FormatAmount(g.goal) + " (" + Math.Floor(percent) + "%)\n" + status;
+    }
+
     private string PixelNameOf(PixelClicker.PixelType type)
     {
         int t = clicker != null ? clicker.IndexOf(type) : -1;
@@ -573,7 +581,9 @@ public class PixelLog : MonoBehaviour
 
     private void UpdateAchievementTip()
     {
-        bool show = currentTab == 1 && hoverAchievement >= 0 && achievements != null && hoverAchievement < achievements.Count;
+        bool showAch = currentTab == 1 && hoverAchievement >= 0 && achievements != null && hoverAchievement < achievements.Count;
+        bool showGoal = currentTab == 2 && hoverGoal >= 0 && hoverGoal < shownGoals.Count;
+        bool show = showAch || showGoal;
         if (!show) { if (tipRoot != null && tipRoot.activeSelf) tipRoot.SetActive(false); return; }
 
         if (tipRoot == null)
@@ -594,7 +604,7 @@ public class PixelLog : MonoBehaviour
         if (!tipRoot.activeSelf) tipRoot.SetActive(true);
         tipRoot.transform.SetAsLastSibling();
 
-        string text = AchievementTipText(hoverAchievement);
+        string text = showGoal ? GoalTipText(shownGoals[hoverGoal]) : AchievementTipText(hoverAchievement);
         const float width = 620f;
         tipLabel.text = text;
         float h = Mathf.Ceil(tipLabel.GetPreferredValues(text, width - 32f, 0f).y) + 28f;
@@ -1165,66 +1175,124 @@ public class PixelLog : MonoBehaviour
     private class GoalRow
     {
         public RectTransform rect;
-        public TMP_Text title, description, progress;
-        public Image barFill;
+        public TMP_Text title, progress, percent;
+        public Image barFill, ringFill;
         public RectTransform barFillRect;
+        public int goalIndex;
     }
 
     private readonly List<GoalRow> goalRows = new List<GoalRow>();
+    private readonly List<Goal> shownGoals = new List<Goal>();
+    private int hoverGoal = -1;
+    private static Sprite ringSprite;
 
+    /// <summary>A thin white ring (drawn once in code), used for the round progress dial on a goal; tinted and filled radially.</summary>
+    private static Sprite RingSprite()
+    {
+        if (ringSprite != null) return ringSprite;
+        const int n = 96;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Goal Ring", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f, outer = n * 0.5f - 1f, inner = outer * 0.76f;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c));
+                float a = Mathf.Clamp01(outer - d + 0.5f) * Mathf.Clamp01(d - inner + 0.5f);
+                px[y * n + x] = new Color(1f, 1f, 1f, a);
+            }
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+        ringSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        return ringSprite;
+    }
+
+    /// <summary>
+    /// One goal per row, laid out like an achievement badge: a framed box with a round progress dial (and its percentage) on the left,
+    /// the title big and bold, and a wide bar with the count in the middle. The explanation and exact numbers show on hover.
+    /// </summary>
     private GoalRow BuildGoalRow(int index)
     {
-        GoalRow row = new GoalRow();
+        GoalRow row = new GoalRow { goalIndex = index };
         GameObject go = new GameObject("Goal " + index, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(goalsContent, false);
         go.GetComponent<Image>().color = achievementRowColor;
-        go.GetComponent<Image>().raycastTarget = false;
         row.rect = go.GetComponent<RectTransform>();
         row.rect.anchorMin = new Vector2(0f, 1f);
         row.rect.anchorMax = new Vector2(1f, 1f);
         row.rect.pivot = new Vector2(0.5f, 1f);
         row.rect.sizeDelta = new Vector2(0f, goalRowHeight);
 
-        const float left = 16f;
-        row.title = CreateText(go.transform, "Title", "", rowFontSize * 0.9f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
+        // The framed dial box.
+        float boxSize = goalRowHeight - 24f;
+        GameObject frame = new GameObject("Dial Frame", typeof(RectTransform), typeof(Image));
+        frame.transform.SetParent(go.transform, false);
+        frame.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.6f);
+        frame.GetComponent<Image>().raycastTarget = false;
+        RectTransform fr = frame.GetComponent<RectTransform>();
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0f, 0.5f);
+        fr.sizeDelta = new Vector2(boxSize, boxSize);
+        fr.anchoredPosition = new Vector2(10f, 0f);
+        GameObject inner = new GameObject("Inner", typeof(RectTransform), typeof(Image));
+        inner.transform.SetParent(frame.transform, false);
+        inner.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 1f);
+        inner.GetComponent<Image>().raycastTarget = false;
+        RectTransform inr = inner.GetComponent<RectTransform>();
+        inr.anchorMin = Vector2.zero; inr.anchorMax = Vector2.one;
+        inr.offsetMin = new Vector2(3f, 3f); inr.offsetMax = new Vector2(-3f, -3f);
+
+        GameObject ringBack = new GameObject("Ring Back", typeof(RectTransform), typeof(Image));
+        ringBack.transform.SetParent(inner.transform, false);
+        Image rb = ringBack.GetComponent<Image>();
+        rb.sprite = RingSprite();
+        rb.color = achievementBarBackColor;
+        rb.raycastTarget = false;
+        RectTransform rbr = ringBack.GetComponent<RectTransform>();
+        rbr.anchorMin = Vector2.zero; rbr.anchorMax = Vector2.one;
+        rbr.offsetMin = new Vector2(5f, 5f); rbr.offsetMax = new Vector2(-5f, -5f);
+
+        GameObject ringFill = new GameObject("Ring Fill", typeof(RectTransform), typeof(Image));
+        ringFill.transform.SetParent(inner.transform, false);
+        row.ringFill = ringFill.GetComponent<Image>();
+        row.ringFill.sprite = RingSprite();
+        row.ringFill.type = Image.Type.Filled;
+        row.ringFill.fillMethod = Image.FillMethod.Radial360;
+        row.ringFill.fillOrigin = (int)Image.Origin360.Top;
+        row.ringFill.fillClockwise = true;
+        row.ringFill.raycastTarget = false;
+        RectTransform rfr = ringFill.GetComponent<RectTransform>();
+        rfr.anchorMin = Vector2.zero; rfr.anchorMax = Vector2.one;
+        rfr.offsetMin = new Vector2(5f, 5f); rfr.offsetMax = new Vector2(-5f, -5f);
+
+        row.percent = CreateText(inner.transform, "Percent", "", rowFontSize * 0.7f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        row.percent.enableAutoSizing = true;
+        row.percent.fontSizeMax = rowFontSize * 0.7f;
+        row.percent.fontSizeMin = 10f;
+        row.percent.raycastTarget = false;
+        PixelUIKit.Stretch(row.percent.rectTransform);
+        row.percent.rectTransform.offsetMin = new Vector2(boxSize * 0.24f, 0f);
+        row.percent.rectTransform.offsetMax = new Vector2(-boxSize * 0.24f, 0f);
+
+        float left = 10f + boxSize + 16f;
+
+        row.title = CreateText(go.transform, "Title", "", rowFontSize * 1.0f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         row.title.enableAutoSizing = true;
-        row.title.fontSizeMax = rowFontSize * 0.9f;
+        row.title.fontSizeMax = rowFontSize * 1.0f;
         row.title.fontSizeMin = 14f;
+        row.title.raycastTarget = false;
         RectTransform tr = row.title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 0.58f);
+        tr.anchorMin = new Vector2(0f, 0.5f);
         tr.anchorMax = new Vector2(1f, 1f);
         tr.offsetMin = new Vector2(left, 0f);
-        tr.offsetMax = new Vector2(-170f, -4f);
-
-        row.progress = CreateText(go.transform, "Progress", "", rowFontSize * 0.75f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, amountColor);
-        row.progress.enableAutoSizing = true;
-        row.progress.fontSizeMax = rowFontSize * 0.75f;
-        row.progress.fontSizeMin = 12f;
-        RectTransform pr = row.progress.rectTransform;
-        pr.anchorMin = new Vector2(1f, 0.58f);
-        pr.anchorMax = new Vector2(1f, 1f);
-        pr.pivot = new Vector2(1f, 0.5f);
-        pr.sizeDelta = new Vector2(160f, 0f);
-        pr.anchoredPosition = new Vector2(-10f, -2f);
-
-        row.description = CreateText(go.transform, "Description", "", rowFontSize * 0.64f, TextAlignmentOptions.MidlineLeft,
-                                     FontStyles.Normal, new Color(textColor.r, textColor.g, textColor.b, 0.7f));
-        row.description.enableAutoSizing = true;
-        row.description.fontSizeMax = rowFontSize * 0.64f;
-        row.description.fontSizeMin = 11f;
-        RectTransform dr = row.description.rectTransform;
-        dr.anchorMin = new Vector2(0f, 0.28f);
-        dr.anchorMax = new Vector2(1f, 0.58f);
-        dr.offsetMin = new Vector2(left, 0f);
-        dr.offsetMax = new Vector2(-12f, 0f);
+        tr.offsetMax = new Vector2(-12f, -6f);
 
         GameObject back = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         back.transform.SetParent(go.transform, false);
         back.GetComponent<Image>().color = achievementBarBackColor;
         back.GetComponent<Image>().raycastTarget = false;
         RectTransform br = back.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0f, 0.07f);
-        br.anchorMax = new Vector2(1f, 0.21f);
+        br.anchorMin = new Vector2(0f, 0.12f);
+        br.anchorMax = new Vector2(1f, 0.46f);
         br.offsetMin = new Vector2(left, 0f);
         br.offsetMax = new Vector2(-12f, 0f);
 
@@ -1236,6 +1304,17 @@ public class PixelLog : MonoBehaviour
         row.barFillRect.anchorMin = Vector2.zero;
         row.barFillRect.anchorMax = new Vector2(0f, 1f);
         row.barFillRect.offsetMin = row.barFillRect.offsetMax = Vector2.zero;
+
+        row.progress = CreateText(back.transform, "Progress", "", rowFontSize * 0.72f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        row.progress.enableAutoSizing = true;
+        row.progress.fontSizeMax = rowFontSize * 0.72f;
+        row.progress.fontSizeMin = 10f;
+        row.progress.raycastTarget = false;
+        PixelUIKit.Stretch(row.progress.rectTransform);
+
+        PixelHoverTip tip = go.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => hoverGoal = row.goalIndex;
+        tip.onExit = () => { if (hoverGoal == row.goalIndex) hoverGoal = -1; };
         return row;
     }
 
@@ -1295,6 +1374,8 @@ public class PixelLog : MonoBehaviour
         HidePixelsTab();
 
         List<Goal> goals = CollectGoals();
+        shownGoals.Clear();
+        shownGoals.AddRange(goals);
         while (goalRows.Count < goals.Count) goalRows.Add(BuildGoalRow(goalRows.Count));
 
         float y = 0f;
@@ -1307,13 +1388,17 @@ public class PixelLog : MonoBehaviour
 
             Goal g = goals[i];
             bool done = g.count >= g.goal;
+            float fraction = Mathf.Clamp01((float)(g.count / g.goal));
             PixelUIKit.SetText(row.title, g.title);
-            PixelUIKit.SetText(row.description, g.description);
             PixelUIKit.SetText(row.progress, done ? achievementUnlockedText : string.Format(achievementProgressFormat, FormatAmount(g.count), FormatAmount(g.goal)));
+            PixelUIKit.SetText(row.percent, done ? "100%" : Mathf.FloorToInt(fraction * 100f) + "%");
+            Color accent = done ? achievementUnlockedColor : achievementBarColor;
             row.title.color = done ? achievementUnlockedColor : textColor;
-            row.progress.color = done ? achievementUnlockedColor : amountColor;
-            row.barFill.color = done ? achievementUnlockedColor : achievementBarColor;
-            row.barFillRect.anchorMax = new Vector2(Mathf.Clamp01((float)(g.count / g.goal)), 1f);
+            row.percent.color = done ? achievementUnlockedColor : textColor;
+            row.barFill.color = accent;
+            row.ringFill.color = accent;
+            row.ringFill.fillAmount = fraction;
+            row.barFillRect.anchorMax = new Vector2(fraction, 1f);
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
             y += goalRowHeight + achievementSpacing;

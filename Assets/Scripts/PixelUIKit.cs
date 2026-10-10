@@ -134,8 +134,12 @@ public static class PixelUIKit
     /// a vertical light-to-dark gradient and a bright strip just inside the top edge, so a button reads as a raised key.
     /// </summary>
     private const string PrefFancyWindows = "PixelClicker.Setting.FancyWindows";
-    private static int fancyWindowCache = -1;
+    private const string PrefUiColor = "PixelClicker.Setting.UiColor", PrefUiHue = "PixelClicker.Setting.UiHue";
+    private static int fancyWindowCache = -1, uiColorCache = -1;
+    private static float uiHueCache = -1f;
     private static readonly System.Collections.Generic.Dictionary<Color32, Sprite> windowSprites = new System.Collections.Generic.Dictionary<Color32, Sprite>();
+    private struct WindowEntry { public Image image; public Color color; }
+    private static readonly System.Collections.Generic.List<WindowEntry> windowImages = new System.Collections.Generic.List<WindowEntry>();
 
     /// <summary>Windows get a rounded, bevelled frame with a glowing rim instead of a flat rectangle (Settings > Display, windows built after the next start). On by default.</summary>
     public static bool FancyWindows
@@ -152,26 +156,95 @@ public static class PixelUIKit
         }
     }
 
+    /// <summary>Use the player's own colour for the windows (and their glowing rim) instead of the neutral dark grey. Off by default. Applies to open windows at once.</summary>
+    public static bool UiColorOn
+    {
+        get
+        {
+            if (uiColorCache < 0) uiColorCache = PlayerPrefs.GetInt(PrefUiColor, 0);
+            return uiColorCache != 0;
+        }
+        set
+        {
+            uiColorCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefUiColor, uiColorCache);
+            RefreshWindows();
+        }
+    }
+
+    /// <summary>The hue (0 - 1) of the window colour while UI colour is on.</summary>
+    public static float UiHue
+    {
+        get
+        {
+            if (uiHueCache < 0f) uiHueCache = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefUiHue, 0.6f));
+            return uiHueCache;
+        }
+        set
+        {
+            uiHueCache = Mathf.Round(Mathf.Clamp01(value) * 48f) / 48f;   // in steps, so dragging the slider doesn't build a new frame picture for every pixel of movement
+            PlayerPrefs.SetFloat(PrefUiHue, uiHueCache);
+            if (UiColorOn) RefreshWindows();
+        }
+    }
+
+    public static void ReloadColorFromPrefs()
+    {
+        uiColorCache = -1; uiHueCache = -1f; fancyWindowCache = -1;
+        RefreshWindows();
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetWindowStatics() { fancyWindowCache = -1; windowSprites.Clear(); }
+    private static void ResetWindowStatics() { fancyWindowCache = -1; uiColorCache = -1; uiHueCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
+
+    /// <summary>A window colour with the player's UI hue applied (dark colours stay dark but pick up a clear tint).</summary>
+    public static Color Tinted(Color c)
+    {
+        if (!UiColorOn) return c;
+        Color.RGBToHSV(c, out _, out float s, out float v);
+        Color o = Color.HSVToRGB(UiHue, Mathf.Max(s, 0.55f), Mathf.Min(1f, v * 1.5f + 0.05f));
+        o.a = c.a;
+        return o;
+    }
 
     /// <summary>
-    /// Gives a window's background image its colour: with Fancy windows on, a rounded 9-slice frame (soft vertical gradient, a bright cyan
-    /// rim and a little glow bleeding inward, the colour baked into the sprite) - otherwise a flat colour as before.
+    /// Gives a window's background image its colour: with Fancy windows on, a rounded 9-slice frame (soft vertical gradient, a bright
+    /// rim and a little glow bleeding inward, the colour baked into the sprite) - otherwise a flat colour as before. Remembered, so changing
+    /// the UI colour in Settings recolours every open window at once.
     /// </summary>
     public static void StyleWindow(Image image, Color color)
     {
         if (image == null) return;
-        if (!FancyWindows) { image.color = color; return; }
-        Color32 key = color;
+        windowImages.Add(new WindowEntry { image = image, color = color });
+        ApplyWindow(image, color);
+    }
+
+    private static void ApplyWindow(Image image, Color color)
+    {
+        Color body = Tinted(color);
+        if (!FancyWindows) { image.color = body; return; }
+        Color32 key = body;
         if (!windowSprites.TryGetValue(key, out Sprite sprite) || sprite == null)
         {
-            sprite = BuildWindowSprite(color);
+            sprite = BuildWindowSprite(body);
             windowSprites[key] = sprite;
         }
         image.sprite = sprite;
         image.type = Image.Type.Sliced;
-        image.color = new Color(1f, 1f, 1f, color.a);
+        image.color = new Color(1f, 1f, 1f, body.a);
+    }
+
+    /// <summary>Re-applies the window colour to every window that has been built (after the UI colour changed).</summary>
+    public static void RefreshWindows()
+    {
+        System.Collections.Generic.List<Sprite> old = new System.Collections.Generic.List<Sprite>(windowSprites.Values);
+        windowSprites.Clear();
+        for (int i = windowImages.Count - 1; i >= 0; i--)
+        {
+            if (windowImages[i].image == null) { windowImages.RemoveAt(i); continue; }
+            ApplyWindow(windowImages[i].image, windowImages[i].color);
+        }
+        foreach (Sprite sp in old) if (sp != null) { if (sp.texture != null) Object.Destroy(sp.texture); Object.Destroy(sp); }
     }
 
     private static Sprite BuildWindowSprite(Color body)
@@ -180,7 +253,8 @@ public static class PixelUIKit
         const float r = 18f;
         Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Window Frame", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
         float c = (n - 1) * 0.5f;
-        Color edge = Color.Lerp(body, new Color(0.45f, 0.85f, 1f, 1f), 0.8f);   // the glowing rim
+        Color rim = UiColorOn ? Color.HSVToRGB(UiHue, 0.55f, 1f) : new Color(0.45f, 0.85f, 1f, 1f);
+        Color edge = Color.Lerp(body, rim, 0.8f);   // the glowing rim
         Color[] px = new Color[n * n];
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)

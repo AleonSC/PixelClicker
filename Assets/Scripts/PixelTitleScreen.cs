@@ -345,8 +345,8 @@ public class PixelTitleScreen : MonoBehaviour
         if (!on) return;
         float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);   // a very slight breathing
         float a = Mathf.Clamp01(glowStrength) * glowFade * shimmer;
-        PixelBarGlow.Colorize(glowImages[0], glowImages[1], glowImages[4], PixelBarGlow.EdgeColor(Time.unscaledTime, glowColorSpeed, 0f, glowSaturation), a);
-        PixelBarGlow.Colorize(glowImages[2], glowImages[3], glowImages[5], PixelBarGlow.EdgeColor(Time.unscaledTime, glowColorSpeed, glowEdgeOffset, glowSaturation), a);
+        PixelBarGlow.Colorize(glowImages[0], glowImages[1], glowImages[4], PixelBarGlow.EdgeColor(PixelHud.GlowHue, Time.unscaledTime, PixelHud.GlowCycle ? glowColorSpeed : 0f, 0f, glowSaturation), a);
+        PixelBarGlow.Colorize(glowImages[2], glowImages[3], glowImages[5], PixelBarGlow.EdgeColor(PixelHud.GlowHue, Time.unscaledTime, PixelHud.GlowCycle ? glowColorSpeed : 0f, glowEdgeOffset, glowSaturation), a);
     }
 
     private void Update()
