@@ -133,9 +133,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Added to the name of the slot the game is using right now (autosave goes there).")]
     [SerializeField] private string currentSlotTag = "  (current)";
 
-    [Tooltip("Third line of a slot that has a save. {0} = pixels collected in total.")]
+    [Tooltip("Fourth line of a slot that has a save. {0} = pixels collected in total.")]
     [SerializeField] private string slotPixelsFormat = "{0} pixels";
-    [Tooltip("Fourth line of a slot that has a save. {0} = total time played.")]
+    [Tooltip("Third line of a slot that has a save. {0} = total time played.")]
     [SerializeField] private string slotTimeFormat = "Total time played: {0}";
 
     [Tooltip("Second line of a slot with no save.")]
@@ -1371,7 +1371,7 @@ public class PixelPauseMenu : MonoBehaviour
             int slot = i + 1;
             string name = string.Format(slotNameFormat, slot) + (slot == current ? currentSlotTag : "");
             string detail = saveGame.TryGetSlotInfo(slot, out string savedAt, out double pixels, out double played)
-                ? savedAt + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels)) + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played))
+                ? savedAt + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played)) + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels))
                 : emptySlotText;
             slotLabels[i].text = "<b>" + name + "</b>\n<size=78%>" + detail + "</size>";
             slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;

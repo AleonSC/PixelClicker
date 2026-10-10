@@ -366,3 +366,4 @@
 [2026-10-10 16:47 UTC] Stats screen sections (General, Pixels, ...) can be folded and unfolded by clicking their headings.
 [2026-10-10 16:48 UTC] Controls and How to Play screens are laid out as proper rows (key column + wrapping action column) so long lines no longer overlap.
 [2026-10-10 16:50 UTC] Settings rows that need a restart (UI scale, Camera intro, Fancy buttons / windows) no longer put it in the name: hovering the row shows 'Requires a restart to take effect.'
+[2026-10-10 16:51 UTC] Save slots show total time played above the pixel count.
