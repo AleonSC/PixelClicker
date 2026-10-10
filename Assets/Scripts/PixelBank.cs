@@ -180,9 +180,6 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Size of the count text next to the display.")]
     [SerializeField] private float displayTextSize = 3f;
 
-    [Tooltip("Text next to the display. {0} = pixel name, {1} = how many are stored.")]
-    [SerializeField] private string displayTextFormat = "{0} x{1}";
-
     [Tooltip("Text near the nozzle when nothing is stored.")]
     [SerializeField] private string emptyDisplayText = "Bank empty";
 

@@ -588,8 +588,6 @@ public class PixelToggles : MonoBehaviour
     }
 
     private PixelShop shopRef;
-    [Tooltip("Smallest width the window shrinks to when it is squeezed in beside the open shop.")]
-    [SerializeField] private float minWidthBesideShop = 420f;
     [Tooltip("Gap between the shop window and this window when both are open.")]
     [SerializeField] private float gapToShop = 8f;
 

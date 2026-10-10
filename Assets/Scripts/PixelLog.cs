@@ -242,10 +242,6 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Colour of the amounts on the right.")]
     [SerializeField] private Color amountColor = new Color(1f, 0.92f, 0.5f, 1f);
 
-    [Header("Vacuum Indicator (+X next to each entry)")]
-    [Tooltip("After a Vacuum pixel is clicked, show a '+X' next to each entry that gained currency.")]
-    [SerializeField] private bool showVacuumDeltas = true;
-
     [Tooltip("Indicator text. {0} = amount gained.")]
     [SerializeField] private string deltaFormat = "+{0}";
 
@@ -551,7 +547,7 @@ public class PixelLog : MonoBehaviour
     /// <summary>Starts a "+X" indicator next to every entry that the Vacuum just paid.</summary>
     private void OnVacuumBreakdown(double[] perTier)
     {
-        // The Pixels tab counts clicks and a Vacuum payout is not a click, so there is nothing to show here (showVacuumDeltas is unused).
+        // The Pixels tab counts clicks and a Vacuum payout is not a click, so there is nothing to show here.
     }
 
     /// <summary>Fades and lifts active indicators, then hides them.</summary>

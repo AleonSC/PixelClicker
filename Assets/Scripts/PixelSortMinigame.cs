@@ -163,7 +163,7 @@ public class PixelSortMinigame : PixelMinigame
     private Piece[] order;           // order[slot] = the piece standing in that grid slot
     private Vector3[] slots;
     private bool activeRound, arranging;
-    private float spawnTimer, timeLeft, arrangeT, groundY, unit;
+    private float spawnTimer, timeLeft, groundY, unit;
     private int selected = -1, distinctTypes;
     private Camera cam;
     private GameObject uiRoot;
@@ -396,7 +396,6 @@ public class PixelSortMinigame : PixelMinigame
         if (cubeShrinkScale < 0.999f) clicker.SetCubeShrink(cubeShrinkScale, 0.5f); // the cube steps out of the way
         selected = -1;
         arranging = true;
-        arrangeT = 0f;
         timeLeft = baseSeconds + secondsPerPixel * pieces.Count;
         activeRound = true;
         TakeoverActive = true;

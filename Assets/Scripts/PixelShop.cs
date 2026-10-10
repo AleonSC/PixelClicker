@@ -500,14 +500,6 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Height of the two sub-tab buttons.")]
     [SerializeField] private float subTabHeight = 56f;
 
-    [Tooltip("Name of a boost row. {0} = pixel name.")]
-    [SerializeField] private string ultraRowNameFormat = "{0} Boost";
-
-    [Tooltip("Description of a boost row. {0} = pixel name, {1} = payout multiplier now, {2} = after the next level.")]
-    [SerializeField] private string ultraRowDescFormat = "Each {0} click pays x{1}  →  x{2}";
-
-    [Tooltip("Cost line of a boost row. {0} = Ultra pixels needed, {1} = pixel name, {2} = how many you have.")]
-    [SerializeField] private string ultraCostFormat = "Cost: {0} Ultra {1}   (you have {2})";
 
     [Tooltip("Level shown next to a boost row's name. {0} = the boost level.")]
     [SerializeField] private string ultraLevelFormat = "Level {0}";

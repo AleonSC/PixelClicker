@@ -275,3 +275,4 @@
 [2026-10-10 09:40 UTC] Obsidian and Seed pixels got the flat bevelled rim in a shade of their own colour; the Mirror pixel's shine is now a soft sweeping band of light instead of a white rectangle.
 [2026-10-10 09:46 UTC] The invisible screen-edge borders now use each old pixel's real size and rotation, so pixels touch the edge of the screen exactly instead of poking off it or stopping too far in.
 [2026-10-10 09:47 UTC] The basic pixels now have a material feel: matte White, brushed-metal Gray, glossy Black and slightly glowing glossy Red/Green/Blue (one commit, easy to revert).
+[2026-10-10 09:52 UTC] Removed seven unused fields that caused CS0414 compiler warnings in the Unity console.
