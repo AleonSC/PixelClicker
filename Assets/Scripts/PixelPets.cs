@@ -250,6 +250,7 @@ public partial class PixelPets : MonoBehaviour
         public bool planted;
         public float seedTimer;
         public float wet;           // Seed pet: seconds until it accepts water again (rate limit)
+        public SunRayFx sunRay;     // Seed pet: ray of light while sun soaked
         public float sunLeft, sunBoost; // Seed pet: "sun soaked" seconds left after Solar pixels were near, and the boost it gave
         public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
         public GameObject mound;
@@ -866,6 +867,8 @@ public partial class PixelPets : MonoBehaviour
         float sun = clicker.SolarSeedBoostAt(p.body.transform.position);
         if (sun > 0f) { p.sunBoost = sun; p.sunLeft = clicker.SeedSunSoakSeconds; }
         if (p.sunLeft > 0f) p.sunLeft -= Time.deltaTime; else p.sunBoost = 0f;
+        if (p.sunRay == null && p.sunLeft > 0f) p.sunRay = SunRayFx.Create(p.body.transform, size * 5f, size * 1.8f, Vector3.zero);
+        if (p.sunRay != null) p.sunRay.SetAmount(Mathf.Clamp01(p.sunLeft));
         float growBoost = p.sunBoost; // sun soaked pets sow faster (water gives instant progress instead)
         p.seedTimer -= Time.deltaTime * Hyper * (1f + growBoost);
         if (p.seedTimer > 0f) return;
@@ -946,6 +949,8 @@ public partial class PixelPets : MonoBehaviour
         p.planted = false;
         rb.isKinematic = false;
         if (p.mound != null) { Destroy(p.mound); p.mound = null; }
+        if (p.sunRay != null) { Destroy(p.sunRay.gameObject); p.sunRay = null; }
+        p.sunLeft = 0f;
     }
 
     /// <summary>Plants a seed (a growing sprout) at a random spot around the Seed pet, somewhere on screen.</summary>

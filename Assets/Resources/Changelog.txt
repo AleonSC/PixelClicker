@@ -247,3 +247,4 @@
 [2026-10-10 06:33 UTC] Water pixels now splash on the ground and are used up (watering nearby sprouts and the Seed pet for a while), and Seed sprouts have a 3% chance to grow a Singularity pixel.
 [2026-10-10 06:43 UTC] Pixels from the Sorter now fly in a clean stream with no collision in the air, and only become solid (gently, without shoving each other) when they land on the floor.
 [2026-10-10 06:45 UTC] Water pixels now give seed sprouts / the Seed pet instant growth (rate-limited per target) instead of a wet speed-up; Solar pixels make them sun soaked, a speed-up that lasts a few seconds after the Solar pixel was nearby.
+[2026-10-10 06:47 UTC] Sun soaked seed sprouts and the Seed pet now show a soft ray of sunlight above them.

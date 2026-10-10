@@ -22,6 +22,7 @@ public class SeedSprout : MonoBehaviour
     private Transform visual;      // the sprout mesh
     private Transform mound;       // the dirt mound it grows out of
     private Light glow;            // the soft light that makes it easy to spot
+    private SunRayFx sunRay;       // ray of light shown while sun soaked
     private GameObject pixel;      // the growing pixel (a display model)
     private Stage stage = Stage.Falling;
     private float unit, sproutScale, growSeconds, holdSeconds, age, stageTime, solarTimer, boost;
@@ -72,6 +73,8 @@ public class SeedSprout : MonoBehaviour
         glow.color = GlowGreen;
         glow.range = unit * 6f;
         glow.intensity = 0.8f;
+
+        sunRay = SunRayFx.Create(transform, unit * sproutScale * 4f, unit * sproutScale * 1.1f, Vector3.zero);
     }
 
     private float ghostLeft;
@@ -116,6 +119,7 @@ public class SeedSprout : MonoBehaviour
                 if (sunLeft > 0f) sunLeft -= Time.deltaTime; else solarPart = 0f;
                 if (waterCool > 0f) waterCool -= Time.deltaTime;
                 if (wetFlash > 0f) wetFlash -= Time.deltaTime;
+                if (sunRay != null) sunRay.SetAmount(Mathf.Clamp01(sunLeft)); // ray of light while sun soaked (fades in the last second)
                 boost = solarPart; // sun soaked sprouts grow faster (water gives instant progress instead)
                 stageTime += Time.deltaTime * (1f + boost);
                 float k = Mathf.Clamp01(stageTime / growSeconds);
@@ -133,6 +137,7 @@ public class SeedSprout : MonoBehaviour
             }
 
             case Stage.Holding:
+                if (sunRay != null) sunRay.SetAmount(0f);
             {
                 stageTime += Time.deltaTime;
                 float shake = Mathf.Clamp01(stageTime / Mathf.Max(0.01f, holdSeconds)); // wobbles harder as it is about to pop
@@ -455,5 +460,71 @@ public static class WaterSplashFx
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         r.receiveShadows = false;
         ps.Play();
+    }
+}
+
+/// <summary>
+/// A soft ray of sunlight standing over a sun soaked sprout / Seed pet: two crossed vertical ribbons that fade out towards the top
+/// (unlit vertex colours via <see cref="PixelLooks.OverlayMaterial"/>), shimmering gently. <see cref="SetAmount"/> fades it in / out.
+/// </summary>
+public class SunRayFx : MonoBehaviour
+{
+    private static readonly Color Warm = new Color(1f, 0.9f, 0.45f, 1f);
+
+    private MeshRenderer rend;
+    private MaterialPropertyBlock block;
+    private float alpha, target, maxAlpha = 0.55f, seed;
+
+    /// <summary>Builds a ray 'height' tall and 'width' wide (world units) standing on 'parent'.</summary>
+    public static SunRayFx Create(Transform parent, float height, float width, Vector3 localBase)
+    {
+        GameObject go = new GameObject("Sun Ray");
+        go.transform.SetParent(parent, false);
+        float s = Mathf.Max(0.0001f, parent.lossyScale.y);
+        go.transform.localScale = Vector3.one / s; // keep the size in world units whatever the parent's scale
+        go.transform.localPosition = localBase;
+        SunRayFx fx = go.AddComponent<SunRayFx>();
+        fx.seed = Random.value * 10f;
+
+        Mesh mesh = new Mesh { name = "SunRay" };
+        float hw = width * 0.5f;
+        Vector3[] v = new Vector3[8];
+        Color[] c = new Color[8];
+        Color bottom = new Color(Warm.r, Warm.g, Warm.b, 0.9f), top = new Color(Warm.r, Warm.g, Warm.b, 0f);
+        for (int plane = 0; plane < 2; plane++)
+        {
+            Vector3 axis = plane == 0 ? Vector3.right : Vector3.forward;
+            int o = plane * 4;
+            v[o] = -axis * hw;               c[o] = bottom;
+            v[o + 1] = axis * hw;            c[o + 1] = bottom;
+            v[o + 2] = -axis * hw * 0.55f + Vector3.up * height; c[o + 2] = top;
+            v[o + 3] = axis * hw * 0.55f + Vector3.up * height;  c[o + 3] = top;
+        }
+        mesh.vertices = v;
+        mesh.colors = c;
+        mesh.triangles = new[] { 0, 2, 1, 1, 2, 3, 4, 6, 5, 5, 6, 7 };
+        mesh.RecalculateBounds();
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        fx.rend = go.AddComponent<MeshRenderer>();
+        fx.rend.sharedMaterial = PixelLooks.OverlayMaterial();
+        fx.rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        fx.rend.receiveShadows = false;
+        fx.rend.enabled = false;
+        fx.block = new MaterialPropertyBlock();
+        return fx;
+    }
+
+    /// <summary>0 = off, 1 = fully shining; the ray fades towards it.</summary>
+    public void SetAmount(float amount) => target = Mathf.Clamp01(amount);
+
+    private void Update()
+    {
+        alpha = Mathf.MoveTowards(alpha, target, Time.unscaledDeltaTime * 1.5f);
+        bool show = alpha > 0.01f;
+        if (rend.enabled != show) rend.enabled = show;
+        if (!show) return;
+        float shimmer = 0.8f + 0.2f * Mathf.Sin(Time.unscaledTime * 3f + seed);
+        block.SetColor("_Color", new Color(1f, 1f, 1f, alpha * maxAlpha * shimmer));
+        rend.SetPropertyBlock(block);
     }
 }
