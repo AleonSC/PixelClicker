@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Cubby, the suspicious cube shopkeeper who acts as the game's first guide (added by <see cref="PixelClicker"/>.Awake).
+/// Cubie, the suspicious cube shopkeeper who acts as the game's first guide (added by <see cref="PixelClicker"/>.Awake).
 /// Visit 1 (new game, once the intro tips are done): he slides in from the side, says he'll show you his shop if you can prove you have
 /// money, and leaves; you go and click pixels. Visit 2 (when the Shop button appears): he introduces the shop, gives you a "gift" (a random
 /// assortment of pixels), says more vendors will come as you progress and can be switched off in the Toggles menu, and mentions his friend
@@ -40,7 +40,7 @@ public class PixelGuideVendor : MonoBehaviour
 
     [Header("Texts")]
     [Tooltip("Name shown at the top of his speech box.")]
-    [SerializeField] private string characterName = "Cubby";
+    [SerializeField] private string characterName = "Cubie";
 
     [TextArea(2, 4)]
     [Tooltip("Visit 1, one entry per page. Empty = the built-in lines.")]
@@ -105,7 +105,7 @@ public class PixelGuideVendor : MonoBehaviour
     /// <summary>True while the guide still has to show visit 2 (the shop tutorial waits for it).</summary>
     public static bool Pending => instance != null && !instance.disableGuide && PixelStats.Total(Stage2Key) < 1d;
 
-    /// <summary>Settings > Replay tutorial: Cubby's two visits play again (without a second gift).</summary>
+    /// <summary>Settings > Replay tutorial: Cubie's two visits play again (without a second gift).</summary>
     public static void Replay()
     {
         if (instance == null) return;
@@ -135,6 +135,7 @@ public class PixelGuideVendor : MonoBehaviour
     private void Awake()
     {
         instance = this;
+        if (characterName == "Cubby") characterName = "Cubie"; // a scene saved before the rename
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }
@@ -227,7 +228,7 @@ public class PixelGuideVendor : MonoBehaviour
 
     private string[] DefaultOne => new[]
     {
-        "Psst... over here. The name's Cubby. I run a little shop. A very legitimate little shop.",
+        "Psst... over here. The name's Cubie. I run a little shop. A very legitimate little shop.",
         "But I only let customers in if they can prove they've got money. So go on: click those pixels and collect some. Come and find me when you're loaded.",
     };
 
@@ -386,7 +387,7 @@ public class PixelGuideVendor : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         canvasRoot = PixelUIKit.CreateCanvas("PixelGuide Canvas", 705, new Vector2(1920f, 1080f), true);
 
-        GameObject holder = new GameObject("Cubby", typeof(RectTransform));
+        GameObject holder = new GameObject("Cubie", typeof(RectTransform));
         holder.transform.SetParent(canvasRoot.transform, false);
         characterRect = holder.GetComponent<RectTransform>();
         float scale = characterHeight / 400f;
@@ -443,7 +444,7 @@ public class PixelGuideVendor : MonoBehaviour
         r.offsetMax = offsetMax;
     }
 
-    /// <summary>Cubby: a teal cube with narrowed, sideways-glancing eyes and a crooked smirk.</summary>
+    /// <summary>Cubie: a teal cube with narrowed, sideways-glancing eyes and a crooked smirk.</summary>
     private void DrawCharacter(Transform a)
     {
         Color face = new Color(0.22f, 0.62f, 0.6f), top = new Color(0.45f, 0.82f, 0.78f), side = new Color(0.14f, 0.42f, 0.42f);

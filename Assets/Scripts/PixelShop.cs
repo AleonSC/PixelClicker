@@ -857,7 +857,7 @@ public partial class PixelShop : MonoBehaviour
                 ShopPack pack = packs[i];
                 bool pong = pack != null && (string.Equals(pack.displayName, "Pong", StringComparison.OrdinalIgnoreCase)
                                              || string.Equals(pack.unlocksMinigame, "pong", StringComparison.OrdinalIgnoreCase)
-                                             // The visitors (Wizard, Tinkerer, Pixel Entrepreneur) are no longer bought: Cubby's guide starts them.
+                                             // The visitors (Wizard, Tinkerer, Pixel Entrepreneur) are no longer bought: Cubie's guide starts them.
                                              || string.Equals(pack.unlocksMinigame, "wizard", StringComparison.OrdinalIgnoreCase)
                                              || string.Equals(pack.unlocksMinigame, "tinkerer", StringComparison.OrdinalIgnoreCase)
                                              || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase));

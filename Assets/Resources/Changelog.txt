@@ -258,3 +258,4 @@
 [2026-10-10 07:14 UTC] Dev tools 'Infinite resources' now also gives unlimited consumables (potions, devices, seeds).
 [2026-10-10 07:19 UTC] All shop listings now show their description as a tooltip on an orange '!' box next to the name instead of description text.
 [2026-10-10 07:26 UTC] Fixed the offline 'Welcome back' window popping up when loading a different save: it now waits for the title screen to go away and is dropped if another save is loaded.
+[2026-10-10 07:30 UTC] Renamed the guide character from Cubby to Cubie.

@@ -71,7 +71,7 @@ Very rarely, clicking a pixel gives you a pet: a pixel-sized cube of that type t
 Charge Booster | Place it, let Electric pixels link to it to fill its meter, then click it for a super-charged auto clicker. It dissolves after a number of auto clicks.
 Lightning Rod | Place it: lightning strikes it every few seconds and turns the old pixels around it into Electric pixels. It dissolves after a number of strikes.
 
-# Cubby and the vendors
-Cubby | A suspicious cube who greets you at the start, shows you the shop once you have money, and gives you a gift pack.
+# Cubie and the vendors
+Cubie | A suspicious cube who greets you at the start, shows you the shop once you have money, and gives you a gift pack.
 Seeds | Buy seeds in the shop's Consumables tab (or from the Farmer). Right-click a seed in the Inventory (Consumables > Seeds), then click the floor to plant it: it grows that pixel type. Rare pixels cost more seeds.
 Vendors | The Wizard, Tinkerer, Farmer (seeds) and Pixel Entrepreneur drop by as you progress. Switch any of them off in the Toggles menu (Minigames).
