@@ -167,6 +167,9 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     /// <summary>True once time ran out and the device is shrinking away (it should stop working).</summary>
     protected bool IsDying => dying;
 
+    /// <summary>True once the device has run out and is shrinking away.</summary>
+    public bool IsEnding => dying;
+
     /// <summary>Is the device already shrinking away?</summary>
     public bool IsRemoving => dying;
 

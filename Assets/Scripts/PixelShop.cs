@@ -166,6 +166,9 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack unlocks the Pixel Bank (the Bank tab, the hose and the B key).")]
         public bool unlocksBank = false;
 
+        [Tooltip("Buying this pack gives you the Robot Worker (he keeps a chosen consumable running).")]
+        public bool unlocksRobot = false;
+
         [Tooltip("Id of a minigame that buying this pack switches on (e.g. ghost, blackhole). Empty = none.")]
         public string unlocksMinigame = "";
 
@@ -214,6 +217,9 @@ public partial class PixelShop : MonoBehaviour
 
     [Tooltip("The bank the Pixel Bank upgrade unlocks. Found (or added) automatically if left empty.")]
     [SerializeField] private PixelBank bank;
+
+    [Tooltip("The Robot Worker the Robot Worker upgrade unlocks. Found (or added) automatically if left empty.")]
+    [SerializeField] private PixelRobotWorker robot;
 
     [Tooltip("The combo meter the Combo Meter upgrade controls. Found (or added) automatically if left empty.")]
     [SerializeField] private PixelCombo combo;
@@ -704,6 +710,8 @@ public partial class PixelShop : MonoBehaviour
         if (timeStop == null) timeStop = gameObject.AddComponent<PixelTimeStop>();
         if (bank == null) bank = PixelFind.First<PixelBank>();
         if (bank == null) bank = gameObject.AddComponent<PixelBank>();
+        if (robot == null) robot = PixelFind.First<PixelRobotWorker>();
+        if (robot == null) robot = gameObject.AddComponent<PixelRobotWorker>();
         if (crafting == null) crafting = PixelFind.First<PixelCrafting>();
         if (crafting == null) crafting = gameObject.AddComponent<PixelCrafting>();
         if (combo == null) combo = PixelFind.First<PixelCombo>();
@@ -1237,6 +1245,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksTimeStop && timeStop != null && !purchased) timeStop.Deactivate();
         if (pack.unlocksTimeSlow && timeStop != null && !purchased) timeStop.DeactivateSlow();
         if (pack.unlocksBank && bank != null && !purchased) bank.Deactivate();
+        if (pack.unlocksRobot && robot != null && !purchased) robot.Deactivate();
         if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
 
@@ -1481,6 +1490,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksTimeStop && timeStop != null) timeStop.Activate();
         if (pack.unlocksTimeSlow && timeStop != null) timeStop.ActivateSlow();
         if (pack.unlocksBank && bank != null) bank.Activate();
+        if (pack.unlocksRobot && robot != null) robot.Activate();
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
     }
 
@@ -1647,6 +1657,7 @@ public partial class PixelShop : MonoBehaviour
             if (pack.unlocksTimeStop) PixelHints.Trigger("timestop");
             if (pack.unlocksTimeSlow) PixelHints.Trigger("timeslow");
             if (pack.unlocksBank) PixelHints.Trigger("bank");
+            if (pack.unlocksRobot) PixelHints.Trigger("robot");
             if (pack.rewardTiers != null)
                 foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
                 {

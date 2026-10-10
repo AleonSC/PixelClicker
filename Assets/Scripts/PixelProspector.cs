@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// The Prospector's Pack: six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel). They are tough little rocks that crack as you hit them,
 /// shower chips and, now and then, turn out to be a RICH VEIN that pays big. They have no other integration (no potions, pets, crafting, Value
-/// upgrades or achievements). A switch in the Toggles window ("Prospector mode") makes the ores REPLACE the basic pixels (White, Gray, Black,
-/// Red, Green, Blue and Glass) in what spawns.
+/// upgrades or achievements). A switch in the Toggles window ("Prospector mode") makes the ores REPLACE the RGB pixels (
+/// Red, Green, Blue) in what spawns - the RGB pack or the ores, never both.
 /// </summary>
 public static class PixelProspector
 {
@@ -28,8 +28,8 @@ public static class PixelProspector
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
     public static void ReloadSettingsFromPrefs() { cache = -1; }
 
-    /// <summary>The basic pixels the ores replace: White, Gray, Black, Red, Green, Blue and Glass.</summary>
-    public static bool IsBase(PixelClicker.PixelType type) => type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Glass;
+    /// <summary>The pixels the ores replace: only the RGB pack (Red, Green, Blue) - it is either one or the other.</summary>
+    public static bool IsBase(PixelClicker.PixelType type) => type >= PixelClicker.PixelType.Red && type <= PixelClicker.PixelType.Blue;
 
     /// <summary>Has the player unlocked at least one ore?</summary>
     public static bool AnyOreUnlocked(PixelClicker clicker)

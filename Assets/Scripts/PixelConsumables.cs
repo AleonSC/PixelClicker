@@ -1581,6 +1581,7 @@ public class PixelConsumables : MonoBehaviour
     // ------------------------------------------------------------------
 
     private int placingIndex = -1;
+    private Action<int, Vector3, float, float> robotPicked;   // set while the Robot Worker's owner is choosing a spot (nothing is used up)
     private int placeStartFrame;
     private GameObject preview;
 
@@ -1600,11 +1601,64 @@ public class PixelConsumables : MonoBehaviour
     private int sorterPhase;      // 0 = turning the pipe, 1 = bending it
     private float sorterBend;
 
+    // --- Robot Worker support ---
+
+    /// <summary>The placeable kinds (the ones that stand in the world): the Robot Worker can keep any of these going.</summary>
+    public static bool IsPlaceableKind(DeviceKind kind) =>
+        kind == DeviceKind.Vacuum || kind == DeviceKind.Fan || kind == DeviceKind.Sorter ||
+        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod;
+
+    /// <summary>How many of a device you hold (huge with infinite resources).</summary>
+    public int DeviceOwned(int deviceIndex) => Inf ? 99999 : devices[deviceIndex].owned;
+
+    /// <summary>Starts choosing a spot for the Robot Worker: a ghost follows the mouse like when placing, but nothing is used up. 'picked' gets (device, point, yaw, bend).</summary>
+    public bool BeginRobotPlacement(int deviceIndex, Action<int, Vector3, float, float> picked)
+    {
+        if (picked == null || deviceIndex < 0 || deviceIndex >= devices.Length || !IsPlaceableKind(devices[deviceIndex].kind)) return false;
+        if (!BeginPlacement(deviceIndex, true)) return false;
+        robotPicked = picked;
+        return true;
+    }
+
+    /// <summary>A see-through ghost of a device at a spot (the Robot Worker's job marker). The caller owns it.</summary>
+    public GameObject CreateGhost(int deviceIndex, Vector3 point, float yaw, float bend)
+    {
+        Device d = EffectiveDevice(devices[deviceIndex]);
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (d.kind == DeviceKind.Sorter)
+        {
+            PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, true, previewOpacity);
+            parts.Apply(yaw, bend, true, devices[deviceIndex].sorterDefaultForce);
+            return parts.Root;
+        }
+        GameObject ghost = d.kind == DeviceKind.Fan ? BuildFanObject(d, true, out _, out _) : BuildDeviceObject(d, true, out _, out _);
+        ghost.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+        return ghost;
+    }
+
+    /// <summary>Puts a working device in the world for the Robot Worker (uses one up). Null if you have none.</summary>
+    public PixelPlacedDevice RobotPlace(int deviceIndex, Vector3 point, float yaw, float bend)
+    {
+        if (deviceIndex < 0 || deviceIndex >= devices.Length) return null;
+        Device d = devices[deviceIndex];
+        if (!Inf && d.owned <= 0) return null;
+        Device effective = EffectiveDevice(d);
+        PixelPlacedDevice placed = d.kind == DeviceKind.Sorter
+            ? SpawnDevice(deviceIndex, Vector3.zero, 0f, effective.durationSeconds, yaw, bend, -1)
+            : SpawnDevice(deviceIndex, point, yaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
+        if (placed == null) return null;
+        if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
+        PixelAudio.Play("device_place");
+        return placed;
+    }
+
     /// <summary>Starts placing a device: a cylinder follows the mouse until you click the floor. Returns false if you own none.</summary>
-    public bool BeginPlacement(int deviceIndex)
+    public bool BeginPlacement(int deviceIndex) => BeginPlacement(deviceIndex, false);
+
+    private bool BeginPlacement(int deviceIndex, bool forRobot)
     {
         if (IsPlacing || deviceIndex < 0 || deviceIndex >= devices.Length) return false;
-        if (!Inf && devices[deviceIndex].owned <= 0) return false;
+        if (!forRobot && !Inf && devices[deviceIndex].owned <= 0) return false;
 
         placingIndex = deviceIndex;
         placeStartFrame = Time.frameCount;
@@ -1645,6 +1699,7 @@ public class PixelConsumables : MonoBehaviour
 
     private void EndPlacement()
     {
+        robotPicked = null;
         placeEndFrame = Time.frameCount; // the click that ended placing must not start a removal hold
         placingIndex = -1;
         if (preview != null) Destroy(preview);
@@ -1749,6 +1804,14 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
+        if (robotPicked != null)
+        {
+            Action<int, Vector3, float, float> picked = robotPicked;
+            float yaw = placingYaw, bend = sorterBend;
+            EndPlacement();
+            picked(index, Vector3.zero, yaw, bend);
+            return;
+        }
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
         PixelPlacedDevice placedSorter = SpawnDevice(index, Vector3.zero, 0f, EffectiveDevice(d).durationSeconds, placingYaw, sorterBend, -1);
@@ -1763,6 +1826,14 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
+        if (robotPicked != null)
+        {
+            Action<int, Vector3, float, float> picked = robotPicked;
+            float yaw = placingYaw;
+            EndPlacement();
+            picked(index, point, yaw, 0f);
+            return;
+        }
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
         Device effective = EffectiveDevice(d);
@@ -1926,13 +1997,16 @@ public class PixelConsumables : MonoBehaviour
     }
 
     /// <summary>The floor point under the mouse: the first suitable collider hit, else the fallback plane.</summary>
-    private bool TryGetPlacePoint(out Vector3 point)
+    private bool TryGetPlacePoint(out Vector3 point) => TryGetFloorPoint(PointerPosition(), out point);
+
+    /// <summary>The spot on the floor under a screen position (not on the cube or an old pixel). Also used by the Robot Worker.</summary>
+    public bool TryGetFloorPoint(Vector2 screenPosition, out Vector3 point)
     {
         point = Vector3.zero;
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return false;
 
-        Ray ray = cam.ScreenPointToRay(PointerPosition());
+        Ray ray = cam.ScreenPointToRay(screenPosition);
         RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, placementLayers, QueryTriggerInteraction.Ignore);
         Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 

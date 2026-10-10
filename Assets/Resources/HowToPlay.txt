@@ -78,3 +78,6 @@ Vendors | The Wizard, Tinkerer, Farmer (seeds) and Pixel Entrepreneur drop by as
 
 # First person mode
 First person | Press {key:FirstPerson} to shrink to half the size of an old pixel and run about on the floor. The game keeps running: old pixels still fall and you can shove them. Aim the crosshair at the clicker cube (any distance) and click to click it.
+
+# Robot Worker
+Robot Worker | Buy the Robot Worker upgrade and a robot stands at the side of the screen. Click him, choose a device (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod) and place its ghost like you would the real one. Whenever that device runs out he puts a new one on the ghost, as long as you have one left. Click him again to change or stop the job.

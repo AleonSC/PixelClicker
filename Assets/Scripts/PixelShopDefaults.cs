@@ -475,7 +475,7 @@ public partial class PixelShop
     /// <summary>
     /// Default Prospector's Pack (Pixels tab): very cheap (10 White, no requirements). Six base-metal ore pixels - tough rocks that crack and shed
     /// chips as you hit them, break in a shower of nuggets and are sometimes a glittering RICH VEIN that pays 5x. No other integration; a switch
-    /// in the Toggles window (Prospector mode) makes them replace the basic pixels in what spawns.
+    /// in the Toggles window (Prospector mode) makes them replace the RGB pixels in what spawns.
     /// </summary>
     private static ShopPack CreateProspectorPack()
     {
@@ -488,7 +488,7 @@ public partial class PixelShop
         {
             displayName = "Prospector's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Switch on Prospector mode in the Toggles window to make the ores replace the basic pixels.",
+            description = "Adds six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Switch on Prospector mode in the Toggles window to make the ores replace the RGB pixels (Red, Green, Blue).",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]
@@ -660,6 +660,20 @@ public partial class PixelShop
             costs = AllSix(25000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksBank = true,
+        };
+    }
+
+    /// <summary>Default Robot Worker upgrade (Upgrades tab): a robot that keeps a chosen consumable running.</summary>
+    private static ShopPack CreateRobotPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Robot Worker",
+            tab = ShopTab.Upgrades,
+            description = "A robot stands off to the side. Click him, choose a consumable and place its ghost: every time that device runs out he puts a new one there, as long as you have one to spare.",
+            costs = AllSix(1000000),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksRobot = true,
         };
     }
 
@@ -891,6 +905,8 @@ public partial class PixelShop
                           requires = p => p.unlocksTimeStop, create = CreateTimeSlowPack },
         new DefaultPack { isThis = p => p.unlocksBank,
                           requires = null, create = i => CreateBankPack() },
+        new DefaultPack { isThis = p => p.unlocksRobot,
+                          requires = null, create = i => CreateRobotPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.OldPixelCap,
                           requires = null, create = i => CreateOldPixelCapPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.BankCapacity,

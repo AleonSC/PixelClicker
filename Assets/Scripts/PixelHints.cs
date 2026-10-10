@@ -152,6 +152,7 @@ public class PixelHints : MonoBehaviour
             case "grab": return "You unlocked Pixel Grabbing!";
             case "timestop": return "You unlocked Time Stop! (press T)";
             case "bank": return "You unlocked the Pixel Bank!";
+            case "robot": return "You hired the Robot Worker!";
             case "minigame_ghost": return "A ghost appeared!";
             case "minigame_meteor": return "A meteor appeared!";
             case "minigame_stardust": return "A star fell from the sky!";
@@ -235,7 +236,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Electric", "Electric Pixels unlocked! A cube held together by crackling lightning."),
         H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls."),
-        H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Lead, Zinc and Nickel are tough rocks: hit them a few times to crack them open. A glittering one is a rich vein and pays 5x. Turn on Prospector mode in the Toggles window to make the ores replace the basic pixels."),
+        H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Lead, Zinc and Nickel are tough rocks: hit them a few times to crack them open. A glittering one is a rich vein and pays 5x. Turn on Prospector mode in the Toggles window to make the ores replace the RGB pixels (Red, Green, Blue) while it is on."),
         H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!"),
         H("pixel_Seed", "Seed Pixels unlocked! Old Seed pixels slowly grow bigger and worth more. Vacuum them, hose them up or click a ripe one to harvest."),
         H("pixel_Mirror", "Mirror Pixels unlocked! Clicking one also counts as a click on the last other pixel you collected, so it pays that pixel's amount again."),
@@ -246,6 +247,7 @@ public class PixelHints : MonoBehaviour
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
+        H("robot", "Robot Worker hired! He stands off to the side of the screen. Click him, pick a consumable and place its ghost where you want it: whenever that device runs out, he puts a new one there as long as you have one to spare."),
         H("timeslow", "Time Slow unlocked! Press {key:TimeSlow} to slow time and again to return to normal. It uses the same energy meter as Time Stop, but drains it more slowly. Meteor pixels crawl while time is slow - grab one with Pixel Grabbing and put it where you like."),
         H("timestop_slow", "Time is slowed! Everything crawls - even meteor pixels, which you can now grab. The Time Stop meter drains slowly while it lasts; press {key:TimeSlow} to go back to normal speed."),
         H("timestop_first", "Time is stopped! Everything freezes, but you can keep clicking the cube. The meter at the top drains while time is stopped and refills once it runs again; press T to resume."),
