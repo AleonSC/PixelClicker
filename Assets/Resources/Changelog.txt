@@ -249,3 +249,4 @@
 [2026-10-10 06:45 UTC] Water pixels now give seed sprouts / the Seed pet instant growth (rate-limited per target) instead of a wet speed-up; Solar pixels make them sun soaked, a speed-up that lasts a few seconds after the Solar pixel was nearby.
 [2026-10-10 06:47 UTC] Sun soaked seed sprouts and the Seed pet now show a soft ray of sunlight above them.
 [2026-10-10 06:50 UTC] The Seed pet now sprouts up out of the ground beside the cube instead of dropping from the air.
+[2026-10-10 06:54 UTC] Added 'Farmer visitor that sells pixel seeds' to the to-do list.

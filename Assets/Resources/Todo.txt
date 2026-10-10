@@ -9,3 +9,4 @@
 [ ] Make minigame materials buyable with the pixels related to that minigame (e.g. stardust / meteor chunks / bomb parts / ectoplasm for their matching pixel types)
 [x] Solar pixel makes Seed pixels grow faster (old Solar pixels near a sprout speed it up)
 [x] Rework the Seed pixel's visuals and mechanics (shell, sprout, random grown pixel)
+[ ] Farmer visitor that sells pixel seeds
