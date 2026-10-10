@@ -81,6 +81,7 @@ public class PixelNoticeBox : MonoBehaviour
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
         box.transform.SetParent(canvasRoot.transform, false);
         PixelUIKit.StyleWindow(box.GetComponent<Image>(), new Color(0.1f, 0.22f, 0.32f, 0.97f));
+        box.AddComponent<PixelPop>();   // grows when shown, shrinks when closed
         boxRect = box.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 1f);
 
@@ -199,6 +200,7 @@ public class PixelNoticeBox : MonoBehaviour
         }
 
         canvasRoot.SetActive(true);
+        PixelPop.Show(boxRect.gameObject);   // a box that was still shrinking away grows back for the new tip
         timed = seconds > 0f;
         timer = seconds;
         if (followPoint != null) PlaceNearPoint();
@@ -246,14 +248,14 @@ public class PixelNoticeBox : MonoBehaviour
 
     private void OnDestroy() { Unfreeze(); PixelWindows.Unregister(this); }
 
-    public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf;
+    public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf && PixelPop.IsOpen(boxRect.gameObject);
 
     private System.Action closedCallback;
 
     public void Close()
     {
         bool wasOpen = canvasRoot != null && canvasRoot.activeSelf;
-        if (canvasRoot != null) canvasRoot.SetActive(false);
+        if (canvasRoot != null) PixelPop.Hide(boxRect.gameObject, canvasRoot);
         Unfreeze();
         System.Action callback = closedCallback;
         closedCallback = null;

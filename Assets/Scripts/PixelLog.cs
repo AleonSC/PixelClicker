@@ -364,7 +364,7 @@ public class PixelLog : MonoBehaviour
         built = true;
         Refresh();
         panelObject.SetActive(startOpen);
-        PixelWindows.Register(this, 20, () => panelObject != null && panelObject.activeSelf, () => panelObject.SetActive(false));
+        PixelWindows.Register(this, 20, () => panelObject != null && PixelPop.IsOpen(panelObject), () => PixelPop.Hide(panelObject));
         logInstance = this;
     }
 
@@ -391,13 +391,13 @@ public class PixelLog : MonoBehaviour
     /// <summary>The Log window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
     public static RectTransform WindowRect => logInstance != null && logInstance.panelObject != null ? logInstance.panelObject.GetComponent<RectTransform>() : null;
 
-    public static bool LogOpen => logInstance != null && logInstance.panelObject != null && logInstance.panelObject.activeSelf;
+    public static bool LogOpen => logInstance != null && logInstance.panelObject != null && PixelPop.IsOpen(logInstance.panelObject);
 
     public static void SetLogOpen(bool open)
     {
         PixelLog log = logInstance;
         if (log == null || log.panelObject == null) return;
-        log.panelObject.SetActive(open);
+        if (open) PixelPop.Show(log.panelObject); else PixelPop.Hide(log.panelObject);
         if (open)
         {
             log.Refresh();
@@ -702,10 +702,10 @@ public class PixelLog : MonoBehaviour
         br.anchoredPosition = new Vector2(sx * buttonMargin.x, sy * buttonMargin.y);
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => panelObject != null && panelObject.activeSelf);
-        button.onClick.AddListener(() => SetLogOpen(!panelObject.activeSelf));
+        button.onClick.AddListener(() => SetLogOpen(!PixelPop.IsOpen(panelObject)));
 
         // --- Panel (sits next to the button, growing away from the screen edge)
-        panelObject = new GameObject("Log Panel", typeof(RectTransform), typeof(Image));
+        panelObject = new GameObject("Log Panel", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         panelObject.transform.SetParent(canvasRoot.transform, false);
         PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
         panelRect = panelObject.GetComponent<RectTransform>();
@@ -729,7 +729,7 @@ public class PixelLog : MonoBehaviour
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-        close.onClick.AddListener(() => panelObject.SetActive(false));
+        close.onClick.AddListener(() => PixelPop.Hide(panelObject));
 
         BuildTabs();
         BuildAchievementsGroup();

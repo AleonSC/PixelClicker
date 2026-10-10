@@ -367,3 +367,4 @@
 [2026-10-10 16:48 UTC] Controls and How to Play screens are laid out as proper rows (key column + wrapping action column) so long lines no longer overlap.
 [2026-10-10 16:50 UTC] Settings rows that need a restart (UI scale, Camera intro, Fancy buttons / windows) no longer put it in the name: hovering the row shows 'Requires a restart to take effect.'
 [2026-10-10 16:51 UTC] Save slots show total time played above the pixel count.
+[2026-10-10 16:53 UTC] Inventory, Log and Got-it boxes now grow from small to full size when they open and shrink away when they close.

@@ -522,7 +522,7 @@ public class PixelUI : MonoBehaviour
     private static PixelUI inventoryInstance;
 
     /// <summary>Is the Inventory box open?</summary>
-    public static bool InventoryOpen => inventoryInstance != null && inventoryInstance.boxObject != null && inventoryInstance.boxObject.activeSelf;
+    public static bool InventoryOpen => inventoryInstance != null && inventoryInstance.boxObject != null && PixelPop.IsOpen(inventoryInstance.boxObject);
 
     /// <summary>Opens or closes the Inventory box. Opening it closes the Log (they never show together).</summary>
     /// <summary>The Inventory window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
@@ -532,7 +532,7 @@ public class PixelUI : MonoBehaviour
     {
         PixelUI ui = inventoryInstance;
         if (ui == null || ui.boxObject == null) return;
-        ui.boxObject.SetActive(open);
+        if (open) PixelPop.Show(ui.boxObject); else PixelPop.Hide(ui.boxObject);
         if (open)
         {
             ui.Refresh();
@@ -939,10 +939,10 @@ public class PixelUI : MonoBehaviour
         br.anchoredPosition = new Vector2(sx * margin.x, sy * margin.y);
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => boxObject != null && boxObject.activeSelf); // standard size, slides out near the mouse
-        button.onClick.AddListener(() => SetInventoryOpen(!boxObject.activeSelf));
+        button.onClick.AddListener(() => SetInventoryOpen(!PixelPop.IsOpen(boxObject)));
 
         // --- Box (sits next to the button, growing away from the screen edge)
-        boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image));
+        boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         boxObject.transform.SetParent(autoRoot.transform, false);
         Image bg = boxObject.GetComponent<Image>();
         if (showBackground) PixelUIKit.StyleWindow(bg, new Color(backgroundColor.r, backgroundColor.g, backgroundColor.b, Mathf.Max(backgroundColor.a, 0.95f)));   // nearly solid: the stars must not show through the text
@@ -980,7 +980,7 @@ public class PixelUI : MonoBehaviour
                 RectTransform cr = close.GetComponent<RectTransform>();
                 cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
                 cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-                close.onClick.AddListener(() => boxObject.SetActive(false));
+                close.onClick.AddListener(() => PixelPop.Hide(boxObject));
             }
         }
 
@@ -1046,7 +1046,7 @@ public class PixelUI : MonoBehaviour
 
         boxObject.SetActive(startOpen);
         BuildConsumableList(anchor);
-        PixelWindows.Register(this, 10, () => boxObject != null && boxObject.activeSelf, () => boxObject.SetActive(false));
+        PixelWindows.Register(this, 10, () => boxObject != null && PixelPop.IsOpen(boxObject), () => PixelPop.Hide(boxObject));
         inventoryInstance = this;
         PixelDebug.Info("PixelUI: created the Inventory box with " + count + " currency lines.", this);
     }
