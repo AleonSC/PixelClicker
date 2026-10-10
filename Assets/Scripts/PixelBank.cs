@@ -74,6 +74,14 @@ public class PixelBank : MonoBehaviour
     [Tooltip("How far (world units) the hose carries on up beyond the top of the screen (it hangs from the ceiling), so its shadow doesn't suddenly appear in view. 0 = the coded default (14).")]
     [SerializeField] private float hoseOffscreenExtra = 0f;
 
+    [Min(0f)]
+    [Tooltip("The hose starts to fade out this many world units above the top of the nozzle, so it never gets cut off by the camera. 0 = the coded default (3).")]
+    [SerializeField] private float hoseFadeStart = 0f;
+
+    [Min(0f)]
+    [Tooltip("Over how many world units the hose fades to nothing. 0 = the coded default (4).")]
+    [SerializeField] private float hoseFadeLength = 0f;
+
     [Range(3, 16)]
     [Tooltip("How many sides the round hose has.")]
     [SerializeField] private int hoseSides = 10;
@@ -435,6 +443,7 @@ public class PixelBank : MonoBehaviour
         if (hoseMesh != null) Destroy(hoseMesh);
         if (aimMaterial != null) Destroy(aimMaterial);
         if (dotMaterial != null) Destroy(dotMaterial);
+        if (hoseMaterial != null) Destroy(hoseMaterial);
     }
 
     private void Update()
@@ -504,8 +513,10 @@ public class PixelBank : MonoBehaviour
         GameObject tube = new GameObject("Hose", typeof(MeshFilter), typeof(MeshRenderer));
         tube.transform.SetParent(hoseRoot.transform, false);
         hoseFilter = tube.GetComponent<MeshFilter>();
-        Material hoseMat = clicker.CreateVisualMaterial(hoseColor, false);
-        if (hoseMat != null) tube.GetComponent<MeshRenderer>().sharedMaterial = hoseMat;
+        // The hose is drawn unlit with vertex colours (shaded by hand, see HoseVertexColor) so its top end can fade to nothing instead of being cut off by the camera.
+        hoseMaterial = new Material(PixelShaders.SpriteDefault());
+        tube.GetComponent<MeshRenderer>().sharedMaterial = hoseMaterial;
+        hoseColorOf = HoseVertexColor;
         MeshRenderer hoseRenderer = tube.GetComponent<MeshRenderer>();
         hoseRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;   // the hose casts no shadow
         hoseRenderer.receiveShadows = false;
@@ -698,7 +709,10 @@ public class PixelBank : MonoBehaviour
             float t = i / (float)segments, u = 1f - t;
             hosePoints[i] = u * u * u * start + 3f * u * u * t * control + 3f * u * t * t * endHandle + t * t * t * hoseEnd;
         }
-        hoseMesh = PixelTube.Build(hosePoints, hoseRadius, hoseSides, hoseMesh);
+        fadeBaseY = hoseEnd.y;
+        Light sun = RenderSettings.sun;
+        hoseLightDir = sun != null ? -sun.transform.forward : new Vector3(0.3f, 1f, -0.4f).normalized;
+        hoseMesh = PixelTube.Build(hosePoints, hoseRadius, hoseSides, hoseMesh, hoseColorOf);
         hoseFilter.sharedMesh = hoseMesh;
 
         kick = Mathf.MoveTowards(kick, 0f, dt * 4f);
@@ -712,6 +726,20 @@ public class PixelBank : MonoBehaviour
     }
 
     private Vector3 mouthPosition, mouthDirection;
+
+    private Material hoseMaterial;
+    private System.Func<int, Vector3, Vector3, Color> hoseColorOf;
+    private float fadeBaseY;
+    private Vector3 hoseLightDir = Vector3.up;
+
+    /// <summary>Hose vertex colour: the hose colour shaded by a simple light, fading out towards the top.</summary>
+    private Color HoseVertexColor(int ring, Vector3 position, Vector3 normal)
+    {
+        float light = 0.5f + 0.5f * Mathf.Max(0f, Vector3.Dot(normal, hoseLightDir));
+        float start = hoseFadeStart > 0f ? hoseFadeStart : 3f, length = hoseFadeLength > 0f ? hoseFadeLength : 4f;
+        float alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((position.y - fadeBaseY - start) / length));
+        return new Color(hoseColor.r * light, hoseColor.g * light, hoseColor.b * light, alpha);
+    }
     private float NozzleScale => nozzleScale > 0f ? nozzleScale : 1.6f;
 
     // ------------------------------------------------------------------

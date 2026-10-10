@@ -285,3 +285,4 @@
 [2026-10-10 10:22 UTC] Removed the rims from the Black and Gray pixels and made Obsidian's rim darker.
 [2026-10-10 10:27 UTC] The Pixel Bank hose no longer casts a shadow.
 [2026-10-10 10:28 UTC] The hose nozzle, glass display and count plate are 60% bigger (adjustable with Nozzle Scale).
+[2026-10-10 10:30 UTC] The top of the Pixel Bank hose now fades out so it no longer gets cut off by the camera.

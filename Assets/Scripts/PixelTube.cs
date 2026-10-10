@@ -10,9 +10,11 @@ public static class PixelTube
     private static readonly List<Vector3> vertices = new List<Vector3>();
     private static readonly List<Vector3> normals = new List<Vector3>();
     private static readonly List<int> triangles = new List<int>();
+    private static readonly List<Color> colors = new List<Color>();
 
     /// <summary>Fills (or creates) a mesh with a tube of 'radius' along 'points' (in the mesh's local space).</summary>
-    public static Mesh Build(Vector3[] points, float radius, int sides, Mesh reuse)
+    /// <param name="colorOf">Optional vertex colours: called with (ring index, vertex position, vertex normal); use it with an unlit vertex-colour material to fade the tube out.</param>
+    public static Mesh Build(Vector3[] points, float radius, int sides, Mesh reuse, System.Func<int, Vector3, Vector3, Color> colorOf = null)
     {
         Mesh mesh = reuse != null ? reuse : new Mesh { name = "Tube" };
         mesh.Clear();
@@ -22,6 +24,7 @@ public static class PixelTube
         vertices.Clear();
         normals.Clear();
         triangles.Clear();
+        colors.Clear();
 
         // Rotation-minimising frames along the path, so the tube never twists.
         Vector3 normal = Vector3.zero;
@@ -48,6 +51,7 @@ public static class PixelTube
                 Vector3 dir = normal * Mathf.Cos(a) + binormal * Mathf.Sin(a);
                 vertices.Add(points[i] + dir * radius);
                 normals.Add(dir);
+                if (colorOf != null) colors.Add(colorOf(i, vertices[vertices.Count - 1], dir));
             }
         }
 
@@ -64,6 +68,7 @@ public static class PixelTube
 
         mesh.SetVertices(vertices);
         mesh.SetNormals(normals);
+        if (colorOf != null) mesh.SetColors(colors);
         mesh.SetTriangles(triangles, 0);
         mesh.RecalculateBounds();
         return mesh;
