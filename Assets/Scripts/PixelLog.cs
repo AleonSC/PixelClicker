@@ -686,7 +686,7 @@ public class PixelLog : MonoBehaviour
         // --- Panel (sits next to the button, growing away from the screen edge)
         panelObject = new GameObject("Log Panel", typeof(RectTransform), typeof(Image));
         panelObject.transform.SetParent(canvasRoot.transform, false);
-        panelObject.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
         panelRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * (hud.BandThickness + gapAboveButton)); // the log's own gap beyond the bar

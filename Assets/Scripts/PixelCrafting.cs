@@ -506,7 +506,7 @@ public class PixelCrafting : MonoBehaviour
         // --- Window
         windowObject = new GameObject("Crafting Window", typeof(RectTransform), typeof(Image));
         windowObject.transform.SetParent(canvasRoot.transform, false);
-        windowObject.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
         wr.anchoredPosition = Vector2.zero;
@@ -656,7 +656,7 @@ public class PixelCrafting : MonoBehaviour
     {
         GameObject panel = new GameObject("Materials Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(windowObject.transform, false);
-        panel.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), panelColor);
         materialsRect = panel.GetComponent<RectTransform>();
         materialsRect.anchorMin = new Vector2(0f, 0f);
         materialsRect.anchorMax = new Vector2(0f, 1f);
@@ -823,7 +823,7 @@ public class PixelCrafting : MonoBehaviour
     {
         bookObject = new GameObject("Recipe Book", typeof(RectTransform), typeof(Image));
         bookObject.transform.SetParent(windowObject.transform, false);
-        bookObject.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(bookObject.GetComponent<Image>(), panelColor);
         RectTransform wr = bookObject.GetComponent<RectTransform>();
         wr.anchorMin = new Vector2(1f, 0f);
         wr.anchorMax = new Vector2(1f, 1f);

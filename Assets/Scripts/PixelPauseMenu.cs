@@ -282,6 +282,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings tick box for the bevelled button look (takes effect for windows built after the next start).")]
     [SerializeField] private string fancyButtonsLabel = "Fancy buttons (next start)";
 
+    [Tooltip("Label of the Settings tick box for the rounded, glowing window frames (takes effect for windows built after the next start).")]
+    [SerializeField] private string fancyWindowsLabel = "Fancy windows (next start)";
+
     [Tooltip("Label of the Settings tick box for the neon glow along the black bars.")]
     [SerializeField] private string barGlowLabel = "Neon bar glow";
 
@@ -824,7 +827,7 @@ public class PixelPauseMenu : MonoBehaviour
         GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         mainPanel = panel;
         panel.transform.SetParent(menuRoot.transform, false);
-        panel.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), panelColor);
         RectTransform panelRect = panel.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = panelSize;
@@ -922,7 +925,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         GameObject panel = new GameObject(objectName, typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(menuRoot.transform, false);
-        panel.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), panelColor);
         RectTransform rect = panel.GetComponent<RectTransform>();
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
         rect.sizeDelta = panelSize;
@@ -1177,7 +1180,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
         box.transform.SetParent(overwriteOverlay.transform, false);
-        box.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
         br.sizeDelta = new Vector2(panelSize.x - 30f, 460f);
@@ -1600,6 +1603,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
         AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
+        AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
         AddSettingToggle(list, barGlowLabel, () => PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);

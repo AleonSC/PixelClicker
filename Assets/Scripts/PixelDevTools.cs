@@ -210,9 +210,6 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
     [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
 
-    [Tooltip("Turn off the fancy look of the dev window (rounded, bevelled, glowing edge) and use the plain flat panel again.")]
-    [SerializeField] private bool plainWindow = false;
-
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
 
@@ -654,14 +651,7 @@ public class PixelDevTools : MonoBehaviour
 
         GameObject box = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         box.transform.SetParent(dim.transform, false);
-        Image boxImage = box.GetComponent<Image>();
-        if (plainWindow) boxImage.color = panelColor;
-        else
-        {
-            boxImage.sprite = DevIcons.WindowSprite(panelColor);   // rounded, bevelled, glowing edge; the colour is baked into the sprite
-            boxImage.type = Image.Type.Sliced;
-            boxImage.color = new Color(1f, 1f, 1f, panelColor.a);
-        }
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
         RectTransform boxRect = box.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 0.5f);
         boxRect.anchoredPosition = Vector2.zero;
@@ -1527,11 +1517,9 @@ public class PixelDevTip : MonoBehaviour
 public static class DevIcons
 {
     private static Sprite plus, paw, file;
-    private static Sprite window;
-    private static Color windowColor;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { plus = paw = file = window = null; }
+    private static void ResetStatics() { plus = paw = file = null; }
 
     private const int N = 64;
 
@@ -1611,39 +1599,5 @@ public static class DevIcons
                 return body;
             }, "File");
         return file;
-    }
-
-    /// <summary>
-    /// The window frame: a rounded 9-slice with the given body colour baked in (a soft vertical gradient), a dark inner line and a bright
-    /// neon-ish outer edge, so the dev window looks like a lit panel instead of a flat rectangle.
-    /// </summary>
-    public static Sprite WindowSprite(Color body)
-    {
-        if (window != null && windowColor == body) return window;
-        const int n = 64;
-        const float r = 18f;
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Dev Window", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-        float c = (n - 1) * 0.5f;
-        Color edge = Color.Lerp(body, new Color(0.45f, 0.85f, 1f, 1f), 0.8f);   // the glowing rim
-        Color[] px = new Color[n * n];
-        for (int y = 0; y < n; y++)
-            for (int x = 0; x < n; x++)
-            {
-                float qx = Mathf.Max(Mathf.Abs(x - c) - (c - r), 0f), qy = Mathf.Max(Mathf.Abs(y - c) - (c - r), 0f);
-                float d = Mathf.Sqrt(qx * qx + qy * qy) - r;
-                float depth = -d;
-                float t = y / (float)(n - 1);
-                Color col = Color.Lerp(body * 0.8f, body * 1.25f, t);                    // lighter towards the top
-                col.a = 1f;
-                if (depth < 2f) col = Color.Lerp(edge, col, Mathf.Clamp01(depth - 0.2f) * 0.0f + Mathf.Clamp01((depth - 1.2f) / 0.8f));   // the bright rim
-                else if (depth < 4.5f) col = Color.Lerp(col, edge, 0.35f * (1f - (depth - 2f) / 2.5f));                                  // its glow bleeding inward
-                col.a = Cover(d);
-                px[y * n + x] = col;
-            }
-        tex.SetPixels(px);
-        tex.Apply(false, true);
-        window = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(26, 26, 26, 26));
-        windowColor = body;
-        return window;
     }
 }

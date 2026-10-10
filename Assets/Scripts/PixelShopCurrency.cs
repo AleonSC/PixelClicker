@@ -51,7 +51,7 @@ public partial class PixelShop
 
         currencyPanel = new GameObject("Currency Panel", typeof(RectTransform), typeof(Image));
         currencyPanel.transform.SetParent(shopPanel, false);
-        currencyPanel.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(currencyPanel.GetComponent<Image>(), panelColor);
         RectTransform pr = currencyPanel.GetComponent<RectTransform>();
         pr.anchorMin = pr.anchorMax = new Vector2(0f, 0.5f);
         pr.pivot = new Vector2(1f, 0.5f);

@@ -80,7 +80,7 @@ public class PixelNoticeBox : MonoBehaviour
 
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
         box.transform.SetParent(canvasRoot.transform, false);
-        box.GetComponent<Image>().color = new Color(0.1f, 0.22f, 0.32f, 0.97f);
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), new Color(0.1f, 0.22f, 0.32f, 0.97f));
         boxRect = box.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 1f);
 

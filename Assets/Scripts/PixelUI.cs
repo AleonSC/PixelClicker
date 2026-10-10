@@ -956,7 +956,7 @@ public class PixelUI : MonoBehaviour
         boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image));
         boxObject.transform.SetParent(autoRoot.transform, false);
         Image bg = boxObject.GetComponent<Image>();
-        bg.color = showBackground ? backgroundColor : new Color(0f, 0f, 0f, 0f);
+        if (showBackground) PixelUIKit.StyleWindow(bg, backgroundColor); else bg.color = new Color(0f, 0f, 0f, 0f);
         bg.raycastTarget = true; // clicks on the box shouldn't reach the pixel behind it
 
         boxRect = boxObject.GetComponent<RectTransform>();

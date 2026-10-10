@@ -891,7 +891,7 @@ public class PixelRobotWorker : MonoBehaviour
 
         GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(windowRoot.transform, false);
-        panel.GetComponent<Image>().color = new Color(0.09f, 0.1f, 0.14f, 0.97f);
+        PixelUIKit.StyleWindow(panel.GetComponent<Image>(), new Color(0.09f, 0.1f, 0.14f, 0.97f));
         windowPanel = panel.GetComponent<RectTransform>();
         windowPanel.anchorMin = windowPanel.anchorMax = windowPanel.pivot = new Vector2(0.5f, 0.5f);
         windowPanel.sizeDelta = new Vector2(width, height);

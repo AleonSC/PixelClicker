@@ -680,7 +680,7 @@ public partial class PixelPets
 
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
         box.transform.SetParent(dim.transform, false);
-        box.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
         br.sizeDelta = new Vector2(860f, 940f);

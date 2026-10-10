@@ -1202,7 +1202,7 @@ public class PixelBank : MonoBehaviour
         // The window, just right of the tab.
         windowObject = new GameObject("Bank Window", typeof(RectTransform), typeof(Image));
         windowObject.transform.SetParent(canvasRoot.transform, false);
-        windowObject.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0f, 0.5f);
         wr.sizeDelta = windowSize;

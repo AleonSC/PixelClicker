@@ -109,7 +109,7 @@ public partial class PixelShop
         PixelNotice.SideAnchor = tipBoxMatchesShop && !hideCurrencyPanel ? panelRect : null; // tip boxes sit right of the shop
         PixelNotice.SideWidth = CurrencyWidth;
         PixelNotice.SideGap = currencyPanelGap;
-        panelObject.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
@@ -382,7 +382,7 @@ public partial class PixelShop
         pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
         pr.sizeDelta = new Vector2(panelWidth, panelHeight);
         pr.anchoredPosition = Vector2.zero;
-        subPanelObject.GetComponent<Image>().color = panelColor;
+        PixelUIKit.StyleWindow(subPanelObject.GetComponent<Image>(), panelColor);
 
         subTitle = CreateText(subPanelObject.transform, "Title", "", titleFontSize,
                               TextAlignmentOptions.Center, FontStyles.Bold);

@@ -133,6 +133,74 @@ public static class PixelUIKit
     /// A grey-scale 9-sliced button sprite (drawn once in code; it takes the button's colour as a tint): rounded corners, a dark outline,
     /// a vertical light-to-dark gradient and a bright strip just inside the top edge, so a button reads as a raised key.
     /// </summary>
+    private const string PrefFancyWindows = "PixelClicker.Setting.FancyWindows";
+    private static int fancyWindowCache = -1;
+    private static readonly System.Collections.Generic.Dictionary<Color32, Sprite> windowSprites = new System.Collections.Generic.Dictionary<Color32, Sprite>();
+
+    /// <summary>Windows get a rounded, bevelled frame with a glowing rim instead of a flat rectangle (Settings > Display, windows built after the next start). On by default.</summary>
+    public static bool FancyWindows
+    {
+        get
+        {
+            if (fancyWindowCache < 0) fancyWindowCache = PlayerPrefs.GetInt(PrefFancyWindows, 1);
+            return fancyWindowCache != 0;
+        }
+        set
+        {
+            fancyWindowCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefFancyWindows, fancyWindowCache);
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetWindowStatics() { fancyWindowCache = -1; windowSprites.Clear(); }
+
+    /// <summary>
+    /// Gives a window's background image its colour: with Fancy windows on, a rounded 9-slice frame (soft vertical gradient, a bright cyan
+    /// rim and a little glow bleeding inward, the colour baked into the sprite) - otherwise a flat colour as before.
+    /// </summary>
+    public static void StyleWindow(Image image, Color color)
+    {
+        if (image == null) return;
+        if (!FancyWindows) { image.color = color; return; }
+        Color32 key = color;
+        if (!windowSprites.TryGetValue(key, out Sprite sprite) || sprite == null)
+        {
+            sprite = BuildWindowSprite(color);
+            windowSprites[key] = sprite;
+        }
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
+        image.color = new Color(1f, 1f, 1f, color.a);
+    }
+
+    private static Sprite BuildWindowSprite(Color body)
+    {
+        const int n = 64;
+        const float r = 18f;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Window Frame", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f;
+        Color edge = Color.Lerp(body, new Color(0.45f, 0.85f, 1f, 1f), 0.8f);   // the glowing rim
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float qx = Mathf.Max(Mathf.Abs(x - c) - (c - r), 0f), qy = Mathf.Max(Mathf.Abs(y - c) - (c - r), 0f);
+                float d = Mathf.Sqrt(qx * qx + qy * qy) - r;
+                float depth = -d;
+                float t = y / (float)(n - 1);
+                Color col = Color.Lerp(body * 0.8f, body * 1.25f, t);                    // lighter towards the top
+                col.a = 1f;
+                if (depth < 2f) col = Color.Lerp(edge, col, Mathf.Clamp01((depth - 1.2f) / 0.8f));                  // the bright rim
+                else if (depth < 4.5f) col = Color.Lerp(col, edge, 0.35f * (1f - (depth - 2f) / 2.5f));            // its glow bleeding inward
+                col.a = Mathf.Clamp01(0.5f - d);
+                px[y * n + x] = col;
+            }
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(26, 26, 26, 26));
+    }
+
     /// <summary>Gives a button's background image the bevelled look when Fancy buttons is on (also used by the shop's own button builder).</summary>
     public static void StyleButton(Image image)
     {

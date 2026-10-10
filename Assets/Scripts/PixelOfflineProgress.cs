@@ -299,7 +299,7 @@ public class PixelOfflineProgress : MonoBehaviour
 
         GameObject window = new GameObject("Window", typeof(RectTransform), typeof(Image));
         window.transform.SetParent(dim.transform, false);
-        window.GetComponent<Image>().color = windowColor;
+        PixelUIKit.StyleWindow(window.GetComponent<Image>(), windowColor);
         RectTransform wr = window.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
         wr.sizeDelta = new Vector2(windowWidth, height);
