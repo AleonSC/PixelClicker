@@ -257,17 +257,14 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.White, metallic = 0f, smoothness = 0.35f, basicSurface = PixelLook.BasicSurface.Grain,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = -0.3f, outlineStrength = 0.55f },
             new PixelLook { type = PixelClicker.PixelType.Gray, metallic = 0.65f, smoothness = 0.55f, basicSurface = PixelLook.BasicSurface.Brushed,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = -0.4f, outlineStrength = 0.6f },
             new PixelLook { type = PixelClicker.PixelType.Black, metallic = 0.15f, smoothness = 0.85f, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.3f, outlineStrength = 0.6f },
 
             // Red, green and blue: a faint pixel-art mosaic and a lighter rim in their own colour; with the colour-blind setting on they also get a shape on every face.
-            new PixelLook { type = PixelClicker.PixelType.Red, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.6f, 0.55f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
-            new PixelLook { type = PixelClicker.PixelType.Green, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 1f, 0.65f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
-            new PixelLook { type = PixelClicker.PixelType.Blue, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.75f, 1f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
+            new PixelLook { type = PixelClicker.PixelType.Red, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic, },
+            new PixelLook { type = PixelClicker.PixelType.Green, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic, },
+            new PixelLook { type = PixelClicker.PixelType.Blue, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic, },
 
             // Vacuum: a dark purple see-through block with a black circle on every face.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),

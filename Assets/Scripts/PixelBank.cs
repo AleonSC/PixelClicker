@@ -51,8 +51,9 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private int capacity = 60;
 
     [Header("Hose")]
-    [Tooltip("Where the hose comes in from, as a point on the screen (0 = left edge, 1 = right edge; 0 = bottom, 1 = top). Slightly negative x starts it just off screen.")]
-    [SerializeField] private Vector2 hoseAnchor = new Vector2(-0.03f, 0.3f);
+    [Min(0f)]
+    [Tooltip("How high above the spot it points at the nozzle hangs, in widths of the main pixel. 0 = the coded default (2.5). It is lowered automatically when that would push the nozzle off the top of the screen.")]
+    [SerializeField] private float nozzleHeightCubes = 0f;
 
     [Min(0.01f)]
     [Tooltip("Thickness of the hose (world units).")]
@@ -61,12 +62,8 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Colour of the hose.")]
     [SerializeField] private Color hoseColor = new Color(0.25f, 0.27f, 0.32f, 1f);
 
-    [Range(0f, 1.5f)]
-    [Tooltip("How much the hose sags between its two ends (as a fraction of its length).")]
-    [SerializeField] private float sag = 0.35f;
-
     [Min(0.5f)]
-    [Tooltip("How quickly the hose's middle follows the mouse (low = lazy, swingy hose; high = stiff).")]
+    [Tooltip("How quickly the hose swings after the nozzle (low = lazy, swingy hose; high = stiff).")]
     [SerializeField] private float followSharpness = 6f;
 
     [Range(6, 60)]
@@ -74,7 +71,7 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private int hoseSegments = 28;
 
     [Min(0f)]
-    [Tooltip("How far (world units) the hose carries on beyond the screen edge, so its shadow doesn't suddenly appear in view. 0 = the coded default (14).")]
+    [Tooltip("How far (world units) the hose carries on up beyond the top of the screen (it hangs from the ceiling), so its shadow doesn't suddenly appear in view. 0 = the coded default (14).")]
     [SerializeField] private float hoseOffscreenExtra = 0f;
 
     [Range(3, 16)]
@@ -92,21 +89,21 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Colour of the nozzle.")]
     [SerializeField] private Color nozzleColor = new Color(0.8f, 0.8f, 0.85f, 1f);
 
-    [Header("Aim Line")]
-    [Tooltip("Tick to hide the faint line that shows where a spat-out pixel will land.")]
+    [Header("Laser")]
+    [Tooltip("Tick to hide the red laser beam and dot that show where the nozzle is pointing.")]
     [SerializeField] private bool hideAimLine = false;
 
     [Range(0f, 1f)]
-    [Tooltip("How see-through the aim line starts (it fades towards the landing spot). 0 = the coded default (0.4).")]
+    [Tooltip("How see-through the laser beam is. 0 = the coded default (0.55).")]
     [SerializeField] private float aimLineAlpha = 0f;
 
     [Min(0f)]
-    [Tooltip("Width of the aim line (world units). 0 = the coded default (0.035).")]
+    [Tooltip("Width of the laser beam (world units). 0 = the coded default (0.025).")]
     [SerializeField] private float aimLineWidth = 0f;
 
     [Header("Sucking and Spitting")]
     [Min(0.05f)]
-    [Tooltip("How close (world units) an old pixel has to be to the mouse for a right-click to suck it up.")]
+    [Tooltip("The laser beam is this wide (half of it, as a radius) when it looks for an old pixel to suck up, so a pixel just beside the red dot still counts.")]
     [SerializeField] private float suckRadius = 0.7f;
 
     [Min(0.05f)]
@@ -114,35 +111,8 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private float suckSeconds = 0.3f;
 
     [Min(0f)]
-    [Tooltip("How fast a spat-out pixel leaves the nozzle (world units per second).")]
+    [Tooltip("How fast a spat-out pixel is dropped down the beam (world units per second).")]
     [SerializeField] private float spitSpeed = 7f;
-
-    [Range(0f, 30f)]
-    [Tooltip("Random wobble (degrees) of the direction a pixel is spat out.")]
-    [SerializeField] private float spitSpread = 4f;
-
-    [Header("Nozzle Aim")]
-    [Tooltip("Flick to aim: moving the mouse quickly slides the hose's entry point round the edge of the screen to the side that makes the nozzle point the way you are moving it, so you can shoot in any direction (including back toward the left edge). The nozzle itself never turns on its own: it always points straight away from where the hose comes in. Off = the hose always enters from the left.")]
-    [SerializeField] private bool flickAim = true;
-
-    [Min(0.1f)]
-    [Tooltip("How fast (world units per second) the mouse has to move to count as a flick that aims the nozzle.")]
-    [SerializeField] private float flickMinSpeed = 2.5f;
-
-    [Min(0f)]
-    [Tooltip("How quickly the hose's entry point slides round the screen edge to its new place (higher = snappier, lower = lazier and smoother). 0 = the coded default (4).")]
-    [SerializeField] private float entrySlideSharpness = 0f;
-
-    [Min(0f)]
-    [Tooltip("The fastest the hose's entry point may travel round the screen edge, in screen heights per second. 0 = the coded default (2.5).")]
-    [SerializeField] private float entryMaxSpeed = 0f;
-
-    [Header("Shot Arc (key: Hose arc, default X)")]
-    [Tooltip("Upward lift of each arc setting (0 = flat shot, bigger = a higher lob). X cycles through them while the hose is out; the nozzle tilts and the aim line follows. Empty = the coded defaults (0, 0.7, 1.8).")]
-    [SerializeField] private float[] arcLifts = new float[0];
-
-    [Tooltip("Launch speed multiplier of each arc setting, in the same order as 'Arc Lifts'. Empty / too short = 1.15, 1, 0.9.")]
-    [SerializeField] private float[] arcSpeeds = new float[0];
 
     [Header("Area Suction (hold the right mouse button)")]
     [Min(0.05f)]
@@ -303,16 +273,17 @@ public class PixelBank : MonoBehaviour
     private Vector3[] hosePoints;
     private Vector3 control;
     private bool controlReady;
-    private float nozzleDepth;
     private float kick;           // brief nozzle punch when spitting / sucking
     private float fullTimer;
     private string flashMessage = "";
 
     // Nozzle aim
-    private Vector3 lastTip, tipVelocity;
-    private float entryS, entryWantedS;      // where the hose comes in, as a distance round the screen's edge (see EntryPoint)
-    private bool aimReady;
-    private int arcMode = 1;
+    private Vector3 beamPoint;                 // where the laser beam ends (the red dot)
+    private Rigidbody beamTarget;               // the old pixel the beam is on (what a click sucks up), or null
+    private Vector3 swayTop;                    // where the hose hangs from, high above the nozzle (lags behind it so the hose swings)
+    private bool swayReady;
+    private Material dotMaterial;
+    private static readonly RaycastHit[] beamHits = new RaycastHit[12];
 
     // Area suction
     private bool rightDown, areaActive, areaFinished;
@@ -459,6 +430,7 @@ public class PixelBank : MonoBehaviour
         if (hoseRoot != null) Destroy(hoseRoot);
         if (hoseMesh != null) Destroy(hoseMesh);
         if (aimMaterial != null) Destroy(aimMaterial);
+        if (dotMaterial != null) Destroy(dotMaterial);
     }
 
     private void Update()
@@ -510,7 +482,7 @@ public class PixelBank : MonoBehaviour
         if (!on) StopArea();
         if (hoseRoot != null) hoseRoot.SetActive(on);
         controlReady = false;
-        aimReady = false;
+        swayReady = false;
         PixelAudio.Play("hose_toggle");
         if (on) PixelHints.Trigger("bank_hose");
         RefreshHoseButton();
@@ -546,7 +518,7 @@ public class PixelBank : MonoBehaviour
         displayText.rectTransform.pivot = new Vector2(0f, 0.5f); // the text starts at its position and runs to the right
         if (clicker.UIFont != null) displayText.font = clicker.UIFont;
 
-        // The aim line: a faint line from the nozzle to where a spat pixel lands, with a small ring on the floor there.
+        // The laser: a thin red beam straight down from the nozzle with a red dot where it lands.
         GameObject lineObject = new GameObject("Aim Line", typeof(LineRenderer));
         lineObject.transform.SetParent(hoseRoot.transform, false);
         aimLine = lineObject.GetComponent<LineRenderer>();
@@ -557,12 +529,15 @@ public class PixelBank : MonoBehaviour
         aimLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         aimLine.receiveShadows = false;
         aimLine.positionCount = 0;
-        GameObject marker = new GameObject("Aim Marker", typeof(MeshFilter), typeof(MeshRenderer));
+        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        marker.name = "Laser Dot";
+        Destroy(marker.GetComponent<Collider>());
         marker.transform.SetParent(hoseRoot.transform, false);
-        marker.GetComponent<MeshFilter>().sharedMesh = PixelSorterDevice.BuildRingMesh(0.55f, 1f, 0.02f, 28);
+        dotMaterial = new Material(PixelShaders.SpriteDefault()) { color = new Color(1f, 0.1f, 0.08f, 1f) };
         Renderer markerRenderer = marker.GetComponent<MeshRenderer>();
-        markerRenderer.sharedMaterial = aimMaterial;
+        markerRenderer.sharedMaterial = dotMaterial;
         markerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        markerRenderer.receiveShadows = false;
         aimMarker = marker.transform;
         aimMarker.gameObject.SetActive(false);
 
@@ -657,80 +632,58 @@ public class PixelBank : MonoBehaviour
         if (hoseRoot.activeSelf != shown) hoseRoot.SetActive(shown);
         if (!shown) return;
 
-        if (PixelKeys.Pressed(PixelAction.HoseArc) && !PixelPauseMenu.IsPaused && Time.timeScale > 0f)
-        {
-            arcMode = (arcMode + 1) % ArcCount;
-            flashMessage = "Arc: " + ArcName(arcMode);
-            fullTimer = 1.1f;
-            PixelAudio.Play("bank_select");
-        }
-
-        Ray ray = cam.ScreenPointToRay(PointerPosition());
-        Rigidbody candidate = FindSuckCandidate(ray, out float candidateDepth);
-
-        // The nozzle sits at the depth of the pixel it is over (so the hose reaches the floor), else at the cube's depth.
-        float baseDepth = Mathf.Max(cam.nearClipPlane + 0.5f,
-                                    clicker.PixelTransform != null ? Vector3.Dot(clicker.PixelTransform.position - cam.transform.position, cam.transform.forward) : 8f);
-        float wantedDepth = candidate != null ? candidateDepth : baseDepth;
-        if (nozzleDepth <= 0f) nozzleDepth = wantedDepth;
         float dt = Time.unscaledDeltaTime;
-        nozzleDepth = Mathf.Lerp(nozzleDepth, wantedDepth, 1f - Mathf.Exp(-12f * dt));
+        Ray ray = cam.ScreenPointToRay(PointerPosition());
 
-        float along = nozzleDepth / Mathf.Max(0.1f, Vector3.Dot(ray.direction, cam.transform.forward));
-        Vector3 tip = ray.origin + ray.direction * along;
-        // The hose comes in from a point on the edge of the screen. The nozzle never turns by itself: it points straight away from that entry
-        // point (through the cursor). Flicking the mouse slides the entry point round the screen edge to the side that points the nozzle the
-        // way you flicked, so the hose moves to compensate instead of the nozzle spinning round.
-        float aspect = Mathf.Max(0.1f, (float)Screen.width / Mathf.Max(1, Screen.height));
-        Vector2 tipView = cam.WorldToViewportPoint(tip);
-        Vector2 tipSpace = new Vector2(tipView.x * aspect, tipView.y);
-        if (!aimReady)
+        // Where the mouse points in the world (the first thing its ray hits, ignoring the main cube); the nozzle hangs straight above that spot.
+        Vector3 point;
+        bool found = false;
+        point = ray.origin + ray.direction * 10f;
+        int count = Physics.RaycastNonAlloc(ray, beamHits, 200f, ~0, QueryTriggerInteraction.Ignore);
+        float nearest = float.MaxValue;
+        for (int i = 0; i < count; i++)
         {
-            entryS = entryWantedS = Mathf.Clamp01(hoseAnchor.y);   // starts on the left edge, like the old fixed anchor
-            lastTip = tip; tipVelocity = Vector3.zero; aimReady = true;
+            if (!BlocksBeam(beamHits[i].collider, out _) || beamHits[i].distance >= nearest) continue;
+            nearest = beamHits[i].distance;
+            point = beamHits[i].point;
+            found = true;
         }
-        Vector3 motion = tip - lastTip;
-        motion -= cam.transform.forward * Vector3.Dot(motion, cam.transform.forward); // only movement across the screen
-        tipVelocity = Vector3.Lerp(tipVelocity, motion / Mathf.Max(0.0001f, dt), 1f - Mathf.Exp(-18f * dt));
-        lastTip = tip;
-        if (flickAim && tipVelocity.magnitude > flickMinSpeed)
+        if (!found)
         {
-            Vector2 flick = new Vector2(Vector3.Dot(tipVelocity, cam.transform.right), Vector3.Dot(tipVelocity, cam.transform.up)).normalized;
-            entryWantedS = EdgeDistanceBehind(tipSpace, flick, aspect);
+            float floorY = clicker.PixelTransform != null ? clicker.PixelTransform.position.y - clicker.PixelBaseSize * 0.5f : 0f;
+            if (new Plane(Vector3.up, new Vector3(0f, floorY, 0f)).Raycast(ray, out float enter)) point = ray.GetPoint(enter);
         }
-        float perimeter = 2f * (aspect + 1f);
-        float deltaS = Mathf.Repeat(entryWantedS - entryS + perimeter * 0.5f, perimeter) - perimeter * 0.5f;   // the short way round
-        float slide = deltaS * (1f - Mathf.Exp(-(entrySlideSharpness > 0f ? entrySlideSharpness : 4f) * dt));
-        float maxStep = (entryMaxSpeed > 0f ? entryMaxSpeed : 2.5f) * dt;
-        entryS = Mathf.Repeat(entryS + Mathf.Clamp(slide, -maxStep, maxStep), perimeter);
 
-        Vector2 entry = EntryPoint(entryS, aspect);                            // on the screen's edge, in (aspect x 1) space
-        Vector3 anchor = cam.ViewportToWorldPoint(new Vector3(entry.x / aspect, entry.y, baseDepth));
-        Vector2 outward = entry - new Vector2(aspect, 1f) * 0.5f;
-        if (outward.sqrMagnitude < 0.0001f) outward = Vector2.left;
-        outward.Normalize();
-        // The hose starts far beyond the screen edge, so its shadow never pops into view.
+        // The nozzle hangs straight above that spot, lowered if it would go off the top of the screen.
+        Vector3 up = Vector3.up;
+        float unit = Mathf.Max(0.05f, clicker.PixelBaseSize);
+        float height = (nozzleHeightCubes > 0f ? nozzleHeightCubes : 2.5f) * unit;
+        for (int i = 0; i < 7; i++)
+        {
+            Vector3 view = cam.WorldToViewportPoint(point + up * (height + nozzleLength * 1.3f));
+            if (view.z <= 0f || view.y <= 0.9f) break;
+            height *= 0.75f;
+        }
+        height = Mathf.Max(height, unit * 0.6f);
+        Vector3 tip = point + up * height;   // the nozzle's mouth
+
+        // The laser: straight down from the mouth. What it lands on is where a click sucks from and where a spat pixel is dropped.
+        FindBeam(tip);
+
+        // The hose hangs from far above the top of the screen, arriving straight down into the back of the nozzle. Its top and middle trail
+        // behind the nozzle so it swings when you move the mouse.
+        Vector3 hoseEnd = tip + up * (nozzleLength * 0.93f);
+        float arm = Mathf.Clamp(height * 0.5f, 0.4f, 2.5f);
+        Vector3 endHandle = hoseEnd + up * arm;
         float extra = hoseOffscreenExtra > 0f ? hoseOffscreenExtra : 14f;
-        Vector3 start = anchor + (cam.transform.right * outward.x + cam.transform.up * outward.y) * extra;
-
-        // The hose's middle trails the ends and sags, so it bends and swings as the mouse moves.
-        Vector3 wantedControl = (anchor + tip) * 0.5f - cam.transform.up * ((tip - anchor).magnitude * sag);
+        Vector3 wantedTop = hoseEnd + up * extra;
+        if (!swayReady) { swayTop = wantedTop; swayReady = true; }
+        swayTop = Vector3.Lerp(swayTop, wantedTop, 1f - Mathf.Exp(-followSharpness * 0.5f * dt));
+        Vector3 start = swayTop;
+        Vector3 wantedControl = endHandle + up * (arm * 1.5f);
         if (!controlReady) { control = wantedControl; controlReady = true; }
         control = Vector3.Lerp(control, wantedControl, 1f - Mathf.Exp(-followSharpness * dt));
-
-        // The aim: straight away from the (far-off) hose start through the cursor, lifted by the arc setting. The start is so far away that
-        // the direction changes smoothly even when the cursor is near the edge.
-        Vector3 flat = tip - start;
-        flat -= cam.transform.forward * Vector3.Dot(flat, cam.transform.forward);
-        if (flat.sqrMagnitude < 0.0001f) flat = cam.transform.right;
-        flat.Normalize();
-        Vector3 heading = (flat + Vector3.up * ArcLift(arcMode)).normalized;   // the nozzle, the aim line and the spat-out pixels follow this
-
-        // The hose ends inside the nozzle's swivel ball at its back, and arrives along the nozzle's own axis, so it never pokes through
-        // the nozzle whatever way it is aimed (the end of the curve bends round to meet it).
-        Vector3 hoseEnd = tip - heading * (nozzleLength * 0.93f);
-        float arm = Mathf.Clamp((tip - anchor).magnitude * 0.3f, 0.35f, 2.2f);
-        Vector3 endHandle = hoseEnd - heading * arm;
+        Vector3 heading = Vector3.down;
 
         int segments = hosePoints.Length - 1;
         for (int i = 0; i <= segments; i++)
@@ -745,92 +698,72 @@ public class PixelBank : MonoBehaviour
         PlaceNozzle(cam, tip, heading, 1f + kick * 0.15f);
         mouthPosition = tip + heading * 0.05f;
         mouthDirection = heading;
-        tipPosition = tip;
+        tipPosition = beamPoint;
 
         UpdateDisplay(cam, tip);
-        HandleInput(cam, candidate);
+        HandleInput(cam, beamTarget);
     }
 
     private Vector3 mouthPosition, mouthDirection;
 
     // ------------------------------------------------------------------
-    // Hose entry point round the screen edge, and the shot arc settings
+    // The laser beam: straight down from the nozzle
     // ------------------------------------------------------------------
 
-    private static readonly string[] ArcNames = { "Flat", "Arc", "Lob" };
-    private static readonly float[] DefaultArcLifts = { 0f, 0.7f, 1.8f };
-    private static readonly float[] DefaultArcSpeeds = { 1.15f, 1f, 0.9f };
-
-    private int ArcCount => arcLifts != null && arcLifts.Length > 0 ? arcLifts.Length : DefaultArcLifts.Length;
-    private float ArcLift(int mode) => arcLifts != null && arcLifts.Length > 0 ? arcLifts[Mathf.Clamp(mode, 0, arcLifts.Length - 1)] : DefaultArcLifts[Mathf.Clamp(mode, 0, DefaultArcLifts.Length - 1)];
-    private float ArcSpeed(int mode) => arcSpeeds != null && mode < arcSpeeds.Length ? arcSpeeds[mode] : mode < DefaultArcSpeeds.Length ? DefaultArcSpeeds[mode] : 1f;
-    private string ArcName(int mode) => arcLifts != null && arcLifts.Length > 0 ? (mode == 0 ? "Flat" : mode == arcLifts.Length - 1 ? "Lob" : "Arc " + mode) : ArcNames[Mathf.Clamp(mode, 0, ArcNames.Length - 1)];
-    /// <summary>How fast a spat pixel leaves the nozzle with the current arc setting.</summary>
-    private float ShotSpeed => spitSpeed * ArcSpeed(arcMode);
-
-    /// <summary>A point on the screen's edge (a rectangle 'aspect' wide and 1 high) a distance s round it: up the left edge, along the top, down the right, back along the bottom.</summary>
-    private static Vector2 EntryPoint(float s, float aspect)
+    /// <summary>True when this collider stops the beam (everything except the main cube). 'target' = the old pixel it belongs to if a click could take it.</summary>
+    private bool BlocksBeam(Collider c, out Rigidbody target)
     {
-        float perimeter = 2f * (aspect + 1f);
-        s = Mathf.Repeat(s, perimeter);
-        if (s < 1f) return new Vector2(0f, s);
-        s -= 1f;
-        if (s < aspect) return new Vector2(s, 1f);
-        s -= aspect;
-        if (s < 1f) return new Vector2(aspect, 1f - s);
-        s -= 1f;
-        return new Vector2(aspect - s, 0f);
+        target = null;
+        if (c == null) return false;
+        if (clicker.PixelTransform != null && c.transform.IsChildOf(clicker.PixelTransform)) return false;
+        if (hoseRoot != null && c.transform.IsChildOf(hoseRoot.transform)) return false;
+        Rigidbody body = c.attachedRigidbody;
+        if (body == null) return true;
+        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) return true;
+        if (body.isKinematic || clicker.IsFlyingPixel(body)) return true;
+        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+        if (despawn != null && despawn.IsDespawning) return true;
+        target = body;
+        return true;
     }
 
-    /// <summary>The distance round the screen edge of the point you reach by walking from 'from' backwards, away from 'direction' (where the shot should go).</summary>
-    private static float EdgeDistanceBehind(Vector2 from, Vector2 direction, float aspect)
+    /// <summary>Works out where the beam from 'mouth' ends (<see cref="beamPoint"/>) and which old pixel it is on (<see cref="beamTarget"/>).</summary>
+    private void FindBeam(Vector3 mouth)
     {
-        Vector2 back = -direction;
-        from = new Vector2(Mathf.Clamp(from.x, 0f, aspect), Mathf.Clamp(from.y, 0f, 1f));
-        float t = float.MaxValue;
-        if (back.x > 0.0001f) t = Mathf.Min(t, (aspect - from.x) / back.x); else if (back.x < -0.0001f) t = Mathf.Min(t, -from.x / back.x);
-        if (back.y > 0.0001f) t = Mathf.Min(t, (1f - from.y) / back.y); else if (back.y < -0.0001f) t = Mathf.Min(t, -from.y / back.y);
-        if (t == float.MaxValue) t = 0f;
-        Vector2 p = from + back * t;
-        float perimeter = 2f * (aspect + 1f);
-        // which edge the point lies on (the nearest one)
-        float dl = Mathf.Abs(p.x), dr = Mathf.Abs(aspect - p.x), db = Mathf.Abs(p.y), dt = Mathf.Abs(1f - p.y);
-        float m = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(db, dt));
-        if (m == dl) return Mathf.Clamp(p.y, 0f, 1f);
-        if (m == dt) return 1f + Mathf.Clamp(p.x, 0f, aspect);
-        if (m == dr) return 1f + aspect + (1f - Mathf.Clamp(p.y, 0f, 1f));
-        return Mathf.Repeat(2f + aspect + (aspect - Mathf.Clamp(p.x, 0f, aspect)), perimeter);
-    }
-
-    /// <summary>The nearest suckable old pixel to the mouse ray (within the suck radius), and its depth from the camera.</summary>
-    private Rigidbody FindSuckCandidate(Ray ray, out float depth)
-    {
-        depth = 0f;
-        Rigidbody best = null;
-        float bestDistance = float.MaxValue;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-
-        var pixels = clicker.OldPixels;
-        for (int i = 0; i < pixels.Count; i++)
+        // The exact line straight down: the first thing it touches.
+        beamPoint = mouth + Vector3.down * 40f;
+        float best = float.MaxValue;
+        Rigidbody lineBody = null;
+        int count = Physics.RaycastNonAlloc(mouth, Vector3.down, beamHits, 80f, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
         {
-            Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic) continue;
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-            if (despawn != null && despawn.IsDespawning) continue;
-
-            Vector3 to = body.position - ray.origin;
-            float onRay = Vector3.Dot(to, ray.direction);
-            if (onRay <= 0f) continue;
-            float off = Vector3.Cross(ray.direction, to).magnitude;
-            if (off > suckRadius || off >= bestDistance) continue;
-
-            bestDistance = off;
-            best = body;
-            depth = Vector3.Dot(to, cam.transform.forward) + Vector3.Dot(ray.origin - cam.transform.position, cam.transform.forward);
+            if (!BlocksBeam(beamHits[i].collider, out Rigidbody body) || beamHits[i].distance >= best) continue;
+            best = beamHits[i].distance;
+            beamPoint = beamHits[i].point;
+            lineBody = body;
         }
-        return best;
+
+        // A little forgiving: a pixel the (thicker) beam brushes before it reaches that point counts too, and the dot snaps onto its top.
+        beamTarget = lineBody;
+        if (beamTarget == null)
+        {
+            float radius = Mathf.Max(0.05f, suckRadius * 0.5f);
+            count = Physics.SphereCastNonAlloc(mouth, radius, Vector3.down, beamHits, best == float.MaxValue ? 80f : best + radius, ~0, QueryTriggerInteraction.Ignore);
+            float nearestSphere = float.MaxValue;
+            for (int i = 0; i < count; i++)
+            {
+                if (!BlocksBeam(beamHits[i].collider, out Rigidbody body) || body == null || beamHits[i].distance >= nearestSphere) continue;
+                nearestSphere = beamHits[i].distance;
+                beamTarget = body;
+            }
+            if (beamTarget != null)
+            {
+                Collider c = beamTarget.GetComponent<Collider>();
+                Bounds bounds = c != null ? c.bounds : new Bounds(beamTarget.position, Vector3.one * 0.2f);
+                beamPoint = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+            }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -890,12 +823,11 @@ public class PixelBank : MonoBehaviour
 
         if (!areaActive && !areaFinished && rightHeldTime >= areaHoldSeconds)
         {
-            // The type to take: the selected one, or (if nothing is selected) the type of the old pixel nearest the nozzle.
+            // The type to take: the selected one, or (if nothing is selected) the type of the old pixel under the beam.
             areaTier = selected >= 0 && selected < counts.Length ? selected : -1;
             if (areaTier < 0)
             {
-                Rigidbody nearest = FindSuckCandidate(cam.ScreenPointToRay(PointerPosition()), out _);
-                OldPixelInfo info = nearest != null ? nearest.GetComponent<OldPixelInfo>() : null;
+                OldPixelInfo info = beamTarget != null ? beamTarget.GetComponent<OldPixelInfo>() : null;
                 if (info != null) areaTier = info.tierIndex;
             }
 
@@ -938,8 +870,6 @@ public class PixelBank : MonoBehaviour
     {
         Rigidbody best = null;
         float bestDistance = areaRadius;
-        Vector3 forward = cam.transform.forward;
-
         var pixels = clicker.OldPixels;
         for (int i = 0; i < pixels.Count; i++)
         {
@@ -951,8 +881,8 @@ public class PixelBank : MonoBehaviour
             if (despawn != null && despawn.IsDespawning) continue;
 
             Vector3 to = body.position - tipPosition;
-            float across = (to - forward * Vector3.Dot(to, forward)).magnitude; // distance on the screen plane
-            if (across <= bestDistance) { bestDistance = across; best = body; }
+            float across = new Vector2(to.x, to.z).magnitude; // distance across the floor round the red dot
+            if (across <= bestDistance && Mathf.Abs(to.y) < areaRadius) { bestDistance = across; best = body; }
         }
         return best;
     }
@@ -976,8 +906,8 @@ public class PixelBank : MonoBehaviour
         }
 
         float pulse = areaActive ? 1f + Mathf.Sin(Time.unscaledTime * 12f) * 0.03f : 1f;
-        areaRing.position = tipPosition;
-        areaRing.rotation = cam.transform.rotation;
+        areaRing.position = tipPosition + Vector3.up * 0.03f;
+        areaRing.rotation = Quaternion.Euler(90f, 0f, 0f);   // lies flat on the floor round the red dot
         areaRing.localScale = Vector3.one * (areaRadius * Mathf.Lerp(0.15f, 1f, fraction) * pulse);
     }
 
@@ -1028,10 +958,8 @@ public class PixelBank : MonoBehaviour
             values[tier] = counts[tier] > 0 ? Math.Max(0d, values[tier] - amount) : 0d;
         }
 
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        Quaternion wobble = Quaternion.AngleAxis(UnityEngine.Random.Range(-spitSpread, spitSpread), cam.transform.forward);
-
-        clicker.SpawnStoredPixel(tier, amount, mouthPosition, wobble * mouthDirection * ShotSpeed);
+        // It drops straight down the beam onto the red dot.
+        clicker.SpawnStoredPixel(tier, amount, mouthPosition, mouthDirection * spitSpeed);
 
         // A vacuum pixel works again when it is spat out: every other old pixel swirls into IT (not into the cube) and pays out once more.
         if (clicker.Tiers[tier].vacuum)
@@ -1172,66 +1100,31 @@ public class PixelBank : MonoBehaviour
         UpdateAimLine(hasSelection);
     }
 
-    /// <summary>The faint aim line: the path a spat-out pixel would take (its start speed, gravity and drag) until it hits the ground.</summary>
+    /// <summary>The laser: a thin red beam straight down from the nozzle to the red dot where it lands.</summary>
     private void UpdateAimLine(bool hasSelection)
     {
-        bool show = !hideAimLine && hasSelection && !areaActive && aimLine != null;
         if (aimLine == null) return;
-        if (!show)
+        if (hideAimLine)
         {
             if (aimLine.positionCount != 0) aimLine.positionCount = 0;
             if (aimMarker.gameObject.activeSelf) aimMarker.gameObject.SetActive(false);
             return;
         }
 
-        Vector3 p = mouthPosition;
-        Vector3 v = mouthDirection * ShotSpeed;
-        Vector3 gravity = Physics.gravity * clicker.OldPixelGravityScale;
-        float drag = clicker.OldPixelDrag;
-        const float step = 0.03f;
-        aimPoints.Clear();
-        aimPoints.Add(p);
-        bool landed = false;
-        Vector3 landPoint = p;
-        for (int i = 0; i < 90 && !landed; i++)
-        {
-            v += gravity * step;
-            if (drag > 0f) v /= 1f + drag * step;
-            Vector3 next = p + v * step;
-            Vector3 delta = next - p;
-            float len = delta.magnitude;
-            if (len > 0.0001f)
-            {
-                int n = Physics.RaycastNonAlloc(p, delta / len, aimHits, len, ~0, QueryTriggerInteraction.Ignore);
-                float best = float.MaxValue;
-                for (int h = 0; h < n; h++)
-                {
-                    Collider c = aimHits[h].collider;
-                    if (c == null || c.GetComponentInParent<OldPixelInfo>() != null) continue;           // other old pixels
-                    if (clicker.PixelTransform != null && c.transform.IsChildOf(clicker.PixelTransform)) continue; // the cube
-                    if (aimHits[h].distance < best) { best = aimHits[h].distance; landPoint = aimHits[h].point; landed = true; }
-                }
-            }
-            p = landed ? landPoint : next;
-            aimPoints.Add(p);
-        }
-
-        float alpha = aimLineAlpha > 0f ? aimLineAlpha : 0.4f;
-        float width = aimLineWidth > 0f ? aimLineWidth : 0.035f;
-        aimLine.positionCount = aimPoints.Count;
-        for (int i = 0; i < aimPoints.Count; i++) aimLine.SetPosition(i, aimPoints[i]);
+        float alpha = aimLineAlpha > 0f ? aimLineAlpha : 0.55f;
+        float width = aimLineWidth > 0f ? aimLineWidth : 0.025f;
+        aimLine.positionCount = 2;
+        aimLine.SetPosition(0, mouthPosition);
+        aimLine.SetPosition(1, beamPoint);
         aimLine.widthMultiplier = width;
-        aimLine.startColor = new Color(1f, 1f, 1f, alpha);
-        aimLine.endColor = new Color(1f, 1f, 1f, landed ? alpha * 0.6f : 0f);
+        aimLine.startColor = new Color(1f, 0.15f, 0.1f, alpha);
+        aimLine.endColor = new Color(1f, 0.15f, 0.1f, alpha);
+        aimMaterial.color = Color.white;
 
-        aimMarker.gameObject.SetActive(landed);
-        if (landed)
-        {
-            aimMarker.position = landPoint + Vector3.up * 0.02f;
-            aimMarker.rotation = Quaternion.Euler(90f, 0f, 0f); // lies flat on the ground
-            aimMarker.localScale = Vector3.one * 0.22f;
-            aimMaterial.color = new Color(1f, 1f, 1f, alpha);
-        }
+        float pulse = 1f + 0.12f * Mathf.Sin(Time.unscaledTime * 9f);
+        aimMarker.gameObject.SetActive(true);
+        aimMarker.position = beamPoint;
+        aimMarker.localScale = Vector3.one * (Mathf.Max(0.05f, clicker.PixelBaseSize * 0.16f) * pulse);
     }
 
     // ------------------------------------------------------------------

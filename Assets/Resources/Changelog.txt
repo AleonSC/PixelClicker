@@ -281,3 +281,4 @@
 [2026-10-10 10:04 UTC] The vacuum swirl is gentler: 0.6 turns by default (was 1.5), nearby pixels curve even less, and the tumble is slower.
 [2026-10-10 10:06 UTC] A cracked Seed shell now drops 3 seeds, and each seed has its own despawn timer (45 s) separate from the timer of the pixel it grows.
 [2026-10-10 10:14 UTC] The hose controls are smoother: the nozzle no longer spins round, the hose's entry point slides round the screen edge instead, and pressing X (rebindable) cycles the shot arc Flat / Arc / Lob with the nozzle and aim line following.
+[2026-10-10 10:20 UTC] The hose now hangs from the ceiling and points straight down with a red laser dot: left-click drops a pixel on the dot, right-click sucks up what the dot is on. Also removed the rims from Red/Green/Blue and made Gray's rim darker.

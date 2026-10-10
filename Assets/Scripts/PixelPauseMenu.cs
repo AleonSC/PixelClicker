@@ -1723,7 +1723,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int index = i;
-            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "First person mode" : (PixelAction)i == PixelAction.HoseArc ? "Hose shot arc" : ((PixelAction)i).ToString();
+            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "First person mode" : ((PixelAction)i).ToString();
             AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
             Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.85f);
             RectTransform br = b.GetComponent<RectTransform>();

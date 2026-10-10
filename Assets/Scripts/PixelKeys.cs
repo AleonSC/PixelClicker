@@ -15,7 +15,6 @@ public enum PixelAction
     EventLog = 4,
     TimeSlow = 5,
     FirstPerson = 6,
-    HoseArc = 7,
 }
 
 /// <summary>
@@ -34,7 +33,6 @@ public static class PixelKeys
         KeyCode.Return,   // EventLog
         KeyCode.S,        // TimeSlow
         KeyCode.F,        // FirstPerson
-        KeyCode.X,        // HoseArc
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";
