@@ -1302,44 +1302,46 @@ public class PixelUI : MonoBehaviour
     private TextAlignmentOptions consumableAlign;
 
     /// <summary>(Re)creates one clickable line per potion kind. Lines are only shown while you own that potion.</summary>
+    /// <summary>Makes the inventory row of one consumable the first time it is shown.</summary>
+    private void CreatePotionRow(int i)
+    {
+        TextAlignmentOptions align = consumableAlign;
+        GameObject row = new GameObject("Potion " + i, typeof(RectTransform), typeof(Image), typeof(PotionRowClick));
+        row.transform.SetParent(ListParent, false);
+        Image image = row.GetComponent<Image>();
+        image.color = new Color(1f, 1f, 1f, 0f);
+        image.raycastTarget = true;
+        PlaceLine(row.GetComponent<RectTransform>());
+
+        PotionRowClick click = row.GetComponent<PotionRowClick>();
+        click.highlight = image;
+        click.hoverColor = potionHoverColor;
+        int captured = i;
+        PixelHoverTip itemTip = row.AddComponent<PixelHoverTip>();
+        itemTip.onEnter = () => ShowItemTooltip(captured);
+        itemTip.onExit = HideTooltip;
+        click.onRightClick = () => { if (consumables != null && consumables.TryUseItem(captured)) Refresh(); };
+
+        TMP_Text label = MakeText(row.transform, "Label", "", fontSize, align, FontStyles.Normal, textColor);
+        RectTransform lr = label.rectTransform;
+        lr.anchorMin = Vector2.zero;
+        lr.anchorMax = Vector2.one;
+        lr.offsetMin = lr.offsetMax = Vector2.zero;
+
+        potionLabels[i] = label;
+        potionRowObjects[i] = row;
+        row.SetActive(false);
+    }
+
     private void BuildPotionRows()
     {
         if (potionRowObjects != null)
             foreach (GameObject old in potionRowObjects)
                 if (old != null) Destroy(old);
 
-        TextAlignmentOptions align = consumableAlign;
         int count = consumables != null ? consumables.ItemCount : 0;
         potionLabels = new TMP_Text[count];
-        potionRowObjects = new GameObject[count];
-        for (int i = 0; i < count; i++)
-        {
-            GameObject row = new GameObject("Potion " + i, typeof(RectTransform), typeof(Image), typeof(PotionRowClick));
-            row.transform.SetParent(ListParent, false);
-            Image image = row.GetComponent<Image>();
-            image.color = new Color(1f, 1f, 1f, 0f);
-            image.raycastTarget = true;
-            PlaceLine(row.GetComponent<RectTransform>());
-
-            PotionRowClick click = row.GetComponent<PotionRowClick>();
-            click.highlight = image;
-            click.hoverColor = potionHoverColor;
-            int captured = i;
-            PixelHoverTip itemTip = row.AddComponent<PixelHoverTip>();
-            itemTip.onEnter = () => ShowItemTooltip(captured);
-            itemTip.onExit = HideTooltip;
-            click.onRightClick = () => { if (consumables != null && consumables.TryUseItem(captured)) Refresh(); };
-
-            TMP_Text label = MakeText(row.transform, "Label", "", fontSize, align, FontStyles.Normal, textColor);
-            RectTransform lr = label.rectTransform;
-            lr.anchorMin = Vector2.zero;
-            lr.anchorMax = Vector2.one;
-            lr.offsetMin = lr.offsetMax = Vector2.zero;
-
-            potionLabels[i] = label;
-            potionRowObjects[i] = row;
-            row.SetActive(false);
-        }
+        potionRowObjects = new GameObject[count];   // the rows themselves are made when an item is first held (there are over a thousand combo potions)
 
         PixelDebug.Info("PixelUI: inventory knows " + count + " potion kinds (PixelConsumables on '" +
                   (consumables != null ? consumables.gameObject.name : "none") + "').", this);
@@ -1460,7 +1462,13 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int owned = consumables.ItemOwned(i);
-            bool visible = owned > 0 && InConsumableCategory(i, onDevices, onSeeds); // this sub-tab's kind only
+            // Combo potions only count when really held (Infinite resources would otherwise list over a thousand).
+            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0) && InConsumableCategory(i, onDevices, onSeeds); // this sub-tab's kind only
+            if (potionRowObjects[i] == null)
+            {
+                if (!visible) continue;
+                CreatePotionRow(i);
+            }
             if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
             if (!visible) continue;
 

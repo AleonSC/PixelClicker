@@ -66,6 +66,12 @@ public class PixelConsumables : MonoBehaviour
 
         [Tooltip("Runtime: the second pixel type of a combo potion.")]
         public PixelClicker.PixelType secondType = PixelClicker.PixelType.White;
+
+        [Tooltip("Runtime: a 3-type combo potion (a 2-type combo potion crafted with one more pixel).")]
+        public bool hasThird = false;
+
+        [Tooltip("Runtime: the third pixel type of a 3-type combo potion.")]
+        public PixelClicker.PixelType thirdType = PixelClicker.PixelType.White;
     }
 
     /// <summary>What a placeable device does.</summary>
@@ -765,56 +771,85 @@ public class PixelConsumables : MonoBehaviour
     }
 
     /// <summary>
-    /// Adds a craft-only combo potion for every pair of pixel types where at least one is a pixel that can't be toggled
-    /// (White, Gray, Black, Red, Green, Blue, Glass, Luminescent) - the other can be anything, even Obsidian.
-    /// They exist only at runtime (not in the Inspector list), are never sold, and are saved by their two types.
+    /// Adds the craft-only combo potions: one for every PAIR of pixel types and one for every TRIPLE (a 2-type potion crafted with one more
+    /// pixel). Vacuum is the exception: it can't be part of a combo. They exist only at runtime (not in the Inspector list), are never sold,
+    /// and are saved by their types (only the ones you hold). All of them are made here, once, so item indexes never change afterwards.
     /// </summary>
     private void AppendComboPotions()
     {
         System.Collections.Generic.List<Potion> bases = new System.Collections.Generic.List<Potion>();
-        foreach (Potion p in potions) if (p != null && !p.craftOnly) bases.Add(p);
+        foreach (Potion p in potions) if (p != null && !p.craftOnly && p.type != PixelClicker.PixelType.Vacuum) bases.Add(p);
+        bases.Sort((x, y) => ((int)x.type).CompareTo((int)y.type));
 
         System.Collections.Generic.List<Potion> all = new System.Collections.Generic.List<Potion>(potions);
+        comboLookup.Clear();
+        for (int i = 0; i < potions.Length; i++)
+            if (potions[i] != null && potions[i].craftOnly) comboLookup[ComboMask(potions[i])] = i;
+
         for (int i = 0; i < bases.Count; i++)
         for (int j = i + 1; j < bases.Count; j++)
         {
             Potion a = bases[i], b = bases[j];
-            if (PixelClicker.PixelTier.IsSpecialType(a.type) && PixelClicker.PixelTier.IsSpecialType(b.type)) continue;
-            if (FindComboPotion(a.type, b.type) >= 0) continue;
-
-            bool aFirst = (int)a.type <= (int)b.type;
-            Potion first = aFirst ? a : b, second = aFirst ? b : a;
+            long pairMask = Bit(a.type) | Bit(b.type);
+            if (comboLookup.ContainsKey(pairMask)) continue;
+            comboLookup[pairMask] = all.Count;
             all.Add(new Potion
             {
-                displayName = first.type + " + " + second.type + " Potion",
-                type = first.type,
-                secondType = second.type,
+                displayName = a.type + " + " + b.type + " Potion",
+                type = a.type,
+                secondType = b.type,
                 craftOnly = true,
                 description = "Only {pixel} and {pixel2} pixels appear for {duration} seconds. Made by crafting.",
                 costs = new PixelShop.PackCost[0],
                 durationSeconds = (a.durationSeconds + b.durationSeconds) * 0.5f,
             });
+
+            for (int k = j + 1; k < bases.Count; k++)
+            {
+                Potion c = bases[k];
+                long tripleMask = pairMask | Bit(c.type);
+                if (comboLookup.ContainsKey(tripleMask)) continue;
+                comboLookup[tripleMask] = all.Count;
+                all.Add(new Potion
+                {
+                    displayName = a.type + " + " + b.type + " + " + c.type + " Potion",
+                    type = a.type,
+                    secondType = b.type,
+                    hasThird = true,
+                    thirdType = c.type,
+                    craftOnly = true,
+                    description = "Only {pixel}, {pixel2} and {pixel3} pixels appear for {duration} seconds. Made by crafting.",
+                    costs = new PixelShop.PackCost[0],
+                    durationSeconds = (a.durationSeconds + b.durationSeconds + c.durationSeconds) / 3f,
+                });
+            }
         }
         potions = all.ToArray();
     }
 
-    /// <summary>Index of the combo potion for these two pixel types (either order), or -1.</summary>
+    private readonly System.Collections.Generic.Dictionary<long, int> comboLookup = new System.Collections.Generic.Dictionary<long, int>();
+    private static long Bit(PixelClicker.PixelType type) => 1L << (int)type;
+    private static long ComboMask(Potion p) => Bit(p.type) | Bit(p.secondType) | (p.hasThird ? Bit(p.thirdType) : 0L);
+
+    /// <summary>Index of the 2-type combo potion for these two pixel types (either order), or -1.</summary>
     public int FindComboPotion(PixelClicker.PixelType a, PixelClicker.PixelType b)
-    {
-        for (int i = 0; i < potions.Length; i++)
-        {
-            Potion p = potions[i];
-            if (p == null || !p.craftOnly) continue;
-            if ((p.type == a && p.secondType == b) || (p.type == b && p.secondType == a)) return i;
-        }
-        return -1;
-    }
+        => a != b && comboLookup.TryGetValue(Bit(a) | Bit(b), out int index) ? index : -1;
+
+    /// <summary>Index of the 3-type combo potion for these three pixel types (any order), or -1.</summary>
+    public int FindComboPotion(PixelClicker.PixelType a, PixelClicker.PixelType b, PixelClicker.PixelType c)
+        => a != b && b != c && a != c && comboLookup.TryGetValue(Bit(a) | Bit(b) | Bit(c), out int index) ? index : -1;
 
     /// <summary>True for a combo potion (craft-only, never in the shop).</summary>
     public bool ItemCraftOnly(int item) => !IsDevice(item) && potions[item].craftOnly;
 
     /// <summary>The second pixel type of a combo potion.</summary>
     public PixelClicker.PixelType ItemSecondType(int item) => potions[item].secondType;
+
+    /// <summary>True for a 3-type combo potion.</summary>
+    public bool ItemHasThird(int item) => !IsDevice(item) && potions[item].hasThird;
+
+    /// <summary>The third pixel type of a 3-type combo potion.</summary>
+    public PixelClicker.PixelType ItemThirdType(int item) => potions[item].thirdType;
 
     /// <summary>Seconds of holding the right mouse button needed to remove a device / cancel a potion.</summary>
     public float RemoveHoldSeconds => removeHoldSeconds;
@@ -966,7 +1001,7 @@ public class PixelConsumables : MonoBehaviour
 
         Potion potion = potions[index];
         if ((!Inf && potion.owned <= 0) || !clicker.IsUnlocked(potion.type)) return false;
-        if (potion.craftOnly && !clicker.IsUnlocked(potion.secondType)) return false;
+        if (potion.craftOnly && (!clicker.IsUnlocked(potion.secondType) || (potion.hasThird && !clicker.IsUnlocked(potion.thirdType)))) return false;
 
         if (!Inf) potion.owned--;
         ApplyPotion(index, 1f);
@@ -980,7 +1015,7 @@ public class PixelConsumables : MonoBehaviour
         Potion potion = potions[index];
         activeIndex = index;
         remaining = potion.durationSeconds * durationMultiplier;
-        if (potion.craftOnly) clicker.SetForcedSpawnTiers(potion.type, potion.secondType);
+        if (potion.craftOnly) clicker.SetForcedSpawnTiers(potion.type, potion.secondType, potion.hasThird ? potion.thirdType : (PixelClicker.PixelType?)null);
         else clicker.SetForcedSpawnTier(potion.type);
 
         if (drinkSound != null)
@@ -1595,7 +1630,7 @@ public class PixelConsumables : MonoBehaviour
         Potion potion = potions[index];
         activeIndex = index;
         remaining = secondsLeft;
-        if (potion.craftOnly) clicker.SetForcedSpawnTiers(potion.type, potion.secondType);
+        if (potion.craftOnly) clicker.SetForcedSpawnTiers(potion.type, potion.secondType, potion.hasThird ? potion.thirdType : (PixelClicker.PixelType?)null);
         else clicker.SetForcedSpawnTier(potion.type);
     }
 
@@ -1830,6 +1865,7 @@ public class PixelConsumables : MonoBehaviour
         return (potion.description ?? "")
             .Replace("{pixel}", potion.type.ToString())
             .Replace("{pixel2}", potion.secondType.ToString())
+            .Replace("{pixel3}", potion.thirdType.ToString())
             .Replace("{duration}", potion.durationSeconds.ToString("0.##"));
     }
 }

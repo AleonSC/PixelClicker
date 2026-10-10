@@ -53,6 +53,7 @@ public class PixelSaveGame : MonoBehaviour
         public int type;
         public int owned;
         public int second; // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
+        public int third;  // 0 = a normal or 2-type potion; otherwise (third pixel type + 1) of a 3-type combo potion
         public int bonus;  // extra storage from potions kept in the ghost backpack
     }
 
@@ -97,6 +98,7 @@ public class PixelSaveGame : MonoBehaviour
         public bool hasActivePotion;
         public int activePotionType;
         public int activePotionSecond;   // 0 = a normal potion; otherwise (second pixel type + 1) of a combo potion
+        public int activePotionThird;    // 0 = none; otherwise (third pixel type + 1) of a 3-type combo potion
         public float activePotionRemaining;
         public PixelConsumables.PlacedState[] placedDevices;
         public PixelBank.Entry[] bank;
@@ -458,15 +460,22 @@ public class PixelSaveGame : MonoBehaviour
 
             if (consumables != null)
             {
-                data.potions = new PotionSave[consumables.Count];
-                for (int i = 0; i < data.potions.Length; i++)
-                    data.potions[i] = new PotionSave
+                // Every potion, but of the (many) combo potions only the ones you hold.
+                System.Collections.Generic.List<PotionSave> potionSaves = new System.Collections.Generic.List<PotionSave>();
+                for (int i = 0; i < consumables.Count; i++)
+                {
+                    PixelConsumables.Potion saving = consumables.Get(i);
+                    if (saving.craftOnly && saving.owned <= 0 && saving.bonusCap <= 0) continue;
+                    potionSaves.Add(new PotionSave
                     {
-                        type = (int)consumables.Get(i).type,
-                        owned = consumables.Get(i).owned,
-                        bonus = consumables.Get(i).bonusCap,
-                        second = consumables.Get(i).craftOnly ? (int)consumables.Get(i).secondType + 1 : 0,
-                    };
+                        type = (int)saving.type,
+                        owned = saving.owned,
+                        bonus = saving.bonusCap,
+                        second = saving.craftOnly ? (int)saving.secondType + 1 : 0,
+                        third = saving.craftOnly && saving.hasThird ? (int)saving.thirdType + 1 : 0,
+                    });
+                }
+                data.potions = potionSaves.ToArray();
             }
 
             if (consumables != null)
@@ -486,6 +495,7 @@ public class PixelSaveGame : MonoBehaviour
                 data.hasActivePotion = true;
                 data.activePotionType = (int)running.type;
                 data.activePotionSecond = running.craftOnly ? (int)running.secondType + 1 : 0;
+                data.activePotionThird = running.craftOnly && running.hasThird ? (int)running.thirdType + 1 : 0;
                 data.activePotionRemaining = consumables.Remaining;
             }
             if (consumables != null) data.placedDevices = consumables.GetPlacedDevices().ToArray();
@@ -620,8 +630,9 @@ public class PixelSaveGame : MonoBehaviour
                 {
                     PixelConsumables.Potion potion = consumables.Get(i);
                     int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
+                    int third = potion.craftOnly && potion.hasThird ? (int)potion.thirdType + 1 : 0;
                     PotionSave saved = data.potions != null
-                        ? Array.Find(data.potions, p => p.type == (int)potion.type && p.second == second) : null;
+                        ? Array.Find(data.potions, p => p.type == (int)potion.type && p.second == second && p.third == third) : null;
                     consumables.Get(i).bonusCap = saved != null ? Mathf.Max(0, saved.bonus) : 0;
                     consumables.Get(i).owned = saved != null ? consumables.ClampHeld(i, saved.owned) : 0;
                 }
@@ -687,7 +698,8 @@ public class PixelSaveGame : MonoBehaviour
                     {
                         PixelConsumables.Potion potion = consumables.Get(i);
                         int second = potion.craftOnly ? (int)potion.secondType + 1 : 0;
-                        if ((int)potion.type != data.activePotionType || second != data.activePotionSecond) continue;
+                        int third = potion.craftOnly && potion.hasThird ? (int)potion.thirdType + 1 : 0;
+                        if ((int)potion.type != data.activePotionType || second != data.activePotionSecond || third != data.activePotionThird) continue;
                         consumables.RestoreActive(i, data.activePotionRemaining);
                         break;
                     }

@@ -1918,22 +1918,30 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
-    private int forcedTierIndex2 = -1;
+    private int forcedTierIndex2 = -1, forcedTierIndex3 = -1;
 
     /// <summary>
-    /// Like <see cref="SetForcedSpawnTier"/> but for two pixel types (a combo potion): each new pixel is one of the two,
-    /// 50/50. If only one of them is unlocked, only that one spawns.
+    /// Like <see cref="SetForcedSpawnTier"/> but for two or three pixel types (a combo potion): each new pixel is one of them, evenly.
+    /// Only the unlocked ones count.
     /// </summary>
-    public void SetForcedSpawnTiers(PixelType a, PixelType b)
+    public void SetForcedSpawnTiers(PixelType a, PixelType b, PixelType? c = null)
     {
-        int ia = IndexOf(a), ib = IndexOf(b);
-        bool okA = ia >= 0 && tiers[ia].unlocked, okB = ib >= 0 && tiers[ib].unlocked;
-        if (!okA && !okB) return;
+        int first = -1, second = -1, third = -1;
+        void Take(PixelType type)
+        {
+            int i = IndexOf(type);
+            if (i < 0 || !tiers[i].unlocked || i == first || i == second || i == third) return;
+            if (first < 0) first = i; else if (second < 0) second = i; else third = i;
+        }
+        Take(a); Take(b);
+        if (c.HasValue) Take(c.Value);
+        if (first < 0) return;
 
-        forcedTierIndex = okA ? ia : ib;
-        forcedTierIndex2 = okA && okB ? ib : -1;
+        forcedTierIndex = first;
+        forcedTierIndex2 = second;
+        forcedTierIndex3 = third;
 
-        if (randomizeSpawnTier && currentTierIndex != forcedTierIndex && currentTierIndex != forcedTierIndex2)
+        if (randomizeSpawnTier && currentTierIndex != forcedTierIndex && currentTierIndex != forcedTierIndex2 && currentTierIndex != forcedTierIndex3)
         {
             currentTierIndex = PickSpawnTier();
             Materialize(GetClickTier());
@@ -1945,13 +1953,14 @@ public class PixelClicker : MonoBehaviour
     {
         forcedTierIndex = -1;
         forcedTierIndex2 = -1;
+        forcedTierIndex3 = -1;
         potionVacuumCounter = 0;
     }
 
     /// <summary>Should this Vacuum click vacuum? Always, unless a potion is forcing this tier - then only every Nth click.</summary>
     private bool VacuumThisClick(int tierIndex)
     {
-        bool forcedByPotion = forcedTierIndex >= 0 && (tierIndex == forcedTierIndex || tierIndex == forcedTierIndex2);
+        bool forcedByPotion = forcedTierIndex >= 0 && (tierIndex == forcedTierIndex || tierIndex == forcedTierIndex2 || tierIndex == forcedTierIndex3);
         if (!forcedByPotion || PotionVacuumEvery <= 1) return true;
         potionVacuumCounter++;
         return potionVacuumCounter % PotionVacuumEvery == 0;
@@ -1967,9 +1976,10 @@ public class PixelClicker : MonoBehaviour
 
         if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
         {
-            if (IsValidTier(forcedTierIndex2) && tiers[forcedTierIndex2].unlocked && UnityEngine.Random.value < 0.5f)
-                return forcedTierIndex2;
-            return forcedTierIndex;
+            int pick = forcedTierIndex, count = 1;
+            if (IsValidTier(forcedTierIndex2) && tiers[forcedTierIndex2].unlocked) { count++; if (UnityEngine.Random.value < 1f / count) pick = forcedTierIndex2; }
+            if (IsValidTier(forcedTierIndex3) && tiers[forcedTierIndex3].unlocked) { count++; if (UnityEngine.Random.value < 1f / count) pick = forcedTierIndex3; }
+            return pick;
         }
 
         float total = 0f;

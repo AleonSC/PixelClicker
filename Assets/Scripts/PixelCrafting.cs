@@ -25,7 +25,7 @@ public class PixelCrafting : MonoBehaviour
     }
 
     public enum ItemKind { Pixel = 0, Potion = 1 }
-    public enum ResultKind { Potion = 0, Device = 1, Combo = 2 }
+    public enum ResultKind { Potion = 0, Device = 1, Combo = 2, Triple = 3 }
 
     /// <summary>One ingredient: an amount of a pixel type's currency, or of a potion.</summary>
     [Serializable]
@@ -43,6 +43,12 @@ public class PixelCrafting : MonoBehaviour
 
         /// <summary>Runtime only: a scaled amount that replaces <see cref="amount"/> (see PixelCrafting's price settings). -1 = none.</summary>
         [NonSerialized] public double amountOverride = -1d;
+
+        /// <summary>Runtime only: the ingredient is a combo potion (made of 'type' + 'second' [+ 'third']), not a plain potion.</summary>
+        [NonSerialized] public bool combo;
+        [NonSerialized] public PixelClicker.PixelType second;
+        [NonSerialized] public bool hasThird;
+        [NonSerialized] public PixelClicker.PixelType third;
 
         /// <summary>What this ingredient costs right now.</summary>
         public double Amount => amountOverride >= 0d ? amountOverride : amount;
@@ -78,6 +84,9 @@ public class PixelCrafting : MonoBehaviour
 
         [Tooltip("For a combo potion result: the second pixel type (the first is 'Result Potion'). Combo potions are normally made automatically (see 'Combo Crafting'), so you rarely need this.")]
         public PixelClicker.PixelType resultSecond = PixelClicker.PixelType.White;
+
+        [Tooltip("For a 3-type combo potion result ('Triple'): the extra pixel type (the pair is 'Result Potion' + 'Result Second'). Made automatically, so you rarely need this.")]
+        public PixelClicker.PixelType resultThird = PixelClicker.PixelType.White;
 
         [Tooltip("For a device result: which device.")]
         public PixelConsumables.DeviceKind resultDevice = PixelConsumables.DeviceKind.Vacuum;
@@ -262,18 +271,32 @@ public class PixelCrafting : MonoBehaviour
         public PixelClicker.PixelType type;
         public bool combo;                       // a combo potion (type + second)
         public PixelClicker.PixelType second;
+        public bool hasThird;                    // a 3-type combo potion (type + second + third)
+        public PixelClicker.PixelType third;
 
-        public Item(ItemKind k, PixelClicker.PixelType t, bool isCombo = false, PixelClicker.PixelType secondType = PixelClicker.PixelType.White)
+        public Item(ItemKind k, PixelClicker.PixelType t, bool isCombo = false, PixelClicker.PixelType secondType = PixelClicker.PixelType.White,
+                    bool withThird = false, PixelClicker.PixelType thirdType = PixelClicker.PixelType.White)
         {
             kind = k;
             type = t;
             combo = isCombo;
             second = secondType;
+            hasThird = withThird;
+            third = thirdType;
         }
     }
 
     private static bool SameItem(Item a, Item b) =>
-        a.kind == b.kind && a.type == b.type && a.combo == b.combo && (!a.combo || a.second == b.second);
+        a.kind == b.kind && a.type == b.type && a.combo == b.combo && (!a.combo || (a.second == b.second && a.hasThird == b.hasThird && (!a.hasThird || a.third == b.third)));
+
+    /// <summary>The item an ingredient stands for (a pixel, a plain potion or a combo potion).</summary>
+    private static Item ItemOf(Ingredient ing) => new Item(ing.kind, ing.type, ing.combo, ing.second, ing.hasThird, ing.third);
+
+    /// <summary>An ingredient of this item.</summary>
+    private static Ingredient IngredientOf(Item item, int amount) => new Ingredient(item.kind, item.type, amount)
+    {
+        combo = item.combo, second = item.second, hasThird = item.hasThird, third = item.third,
+    };
 
     private class Slot
     {
@@ -282,6 +305,7 @@ public class PixelCrafting : MonoBehaviour
         public GameObject icon;
         public TMP_Text label;
         public bool has;
+        public bool pinned;                      // filled by auto-fill: stays even if you don't hold the item (so you can see what is missing)
         public Item item;
     }
 
@@ -294,6 +318,8 @@ public class PixelCrafting : MonoBehaviour
         public TMP_Text nameLabel;
         public Item item;
         public bool built;
+        public bool disabled;                    // can't be combined with what is already in a box
+        public CanvasGroup group;
     }
 
     /// <summary>Raised after something was crafted (used by the sound system).</summary>
@@ -314,6 +340,9 @@ public class PixelCrafting : MonoBehaviour
     private RectTransform listContent;
     private TMP_Text recipeText, statusLabel, emptyLabel;
     private Button craftButton;
+    private TMP_Text craftLabel;
+    private int craftAmount = 1;                 // 1, 5 or 0 = as many as possible
+    private readonly Image[] amountImages = new Image[3];
     private Image craftImage;
     private GameObject dragGhost;
     private Item dragItem;
@@ -571,9 +600,27 @@ public class PixelCrafting : MonoBehaviour
         rr.anchoredPosition = new Vector2(0f, -y);
         y += recipeHeight + 8f;
 
+        // Craft x1 / x5 / Max
+        string[] amountNames = { "x1", "x5", "Max" };
+        int[] amountValues = { 1, 5, 0 };
+        float amountWidth = 110f, amountHeight = 54f, amountGap = 10f;
+        for (int q = 0; q < 3; q++)
+        {
+            int value = amountValues[q], index = q;
+            Button qb = PixelUIKit.CreateButton(font, body.transform, "Amount " + amountNames[q], amountNames[q], new Vector2(amountWidth, amountHeight),
+                                                slotColor, textColor, fontSize * 0.85f);
+            amountImages[q] = qb.GetComponent<Image>();
+            RectTransform qr = qb.GetComponent<RectTransform>();
+            qr.anchorMin = qr.anchorMax = qr.pivot = new Vector2(0.5f, 1f);
+            qr.anchoredPosition = new Vector2((index - 1) * (amountWidth + amountGap), -y);
+            qb.onClick.AddListener(() => { craftAmount = value; Refresh(); });
+        }
+        y += amountHeight + 8f;
+
         craftButton = PixelUIKit.CreateButton(font, body.transform, "Craft Button", craftText, new Vector2(320f, 74f),
                                               craftColor, textColor, fontSize * 1.2f);
         craftImage = craftButton.GetComponent<Image>();
+        craftLabel = craftButton.GetComponentInChildren<TMP_Text>();
         RectTransform cbr = craftButton.GetComponent<RectTransform>();
         cbr.anchorMin = cbr.anchorMax = cbr.pivot = new Vector2(0.5f, 1f);
         cbr.anchoredPosition = new Vector2(0f, -y);
@@ -681,34 +728,51 @@ public class PixelCrafting : MonoBehaviour
     private GameObject bookBar;
     private ScrollRect bookScroll;
     private readonly List<GameObject> bookRows = new List<GameObject>();
+    private string bookSearch = "";
+    private TMP_InputField bookSearchField;
 
     private bool BookOpen => bookObject != null && bookObject.activeSelf;
 
-    /// <summary>Stat counter that remembers a recipe was made (saved with the other stats).</summary>
-    private static string RecipeKey(Recipe r) =>
+    /// <summary>Stat counter that remembers a recipe was made (saved with the other stats). Combo recipes are remembered by their types, whichever way round they were crafted.</summary>
+    private static string RecipeKey(Recipe r)
+    {
+        if (r.resultKind == ResultKind.Combo || r.resultKind == ResultKind.Triple)
+        {
+            List<int> types = new List<int> { (int)r.resultPotion, (int)r.resultSecond };
+            if (r.resultKind == ResultKind.Triple) types.Add((int)r.resultThird);
+            types.Sort();
+            return "recipe.c." + string.Join(".", types);
+        }
+        return LegacyRecipeKey(r);
+    }
+
+    private static string LegacyRecipeKey(Recipe r) =>
         "recipe." + (int)r.resultKind + "." + (int)r.resultPotion + "." + (int)r.resultSecond + "." + (int)r.resultDevice;
 
     private bool RecipeKnown(Recipe r)
     {
-        if (PixelStats.Total(RecipeKey(r)) > 0d) return true;
+        if (PixelStats.Total(RecipeKey(r)) > 0d || PixelStats.Total(LegacyRecipeKey(r)) > 0d) return true;
         int result = ResultIndex(r);
         return result >= 0 && consumables != null && consumables.ItemOwned(result) > 0; // older saves: owning the result counts
     }
 
-    /// <summary>Every recipe in the game: the Recipes list plus every automatic combo potion.</summary>
+    /// <summary>
+    /// Every recipe the book lists: the Recipes list, one for every 2-type combo potion, and the 3-type combo potions you have made
+    /// (there are far too many of those to list as ???).
+    /// </summary>
     private List<Recipe> AllRecipes()
     {
         List<Recipe> list = new List<Recipe>();
         foreach (Recipe r in recipes) if (r != null) list.Add(r);
-        if (comboCraftingEnabled)
-            foreach (PixelClicker.PixelTier potionTier in clicker.Tiers)
+        if (comboCraftingEnabled && consumables != null)
+            for (int i = 0; i < consumables.ItemCount && !consumables.IsDevice(i); i++)
             {
-                if (FindPotion(potionTier.type) < 0) continue;
-                foreach (PixelClicker.PixelTier pixelTier in clicker.Tiers)
-                {
-                    Recipe combo = FindComboRecipe(new Item(ItemKind.Potion, potionTier.type), new Item(ItemKind.Pixel, pixelTier.type));
-                    if (combo != null) list.Add(combo);
-                }
+                if (!consumables.ItemCraftOnly(i)) continue;
+                Item potion = new Item(ItemKind.Potion, consumables.ItemRequiredType(i), true, consumables.ItemSecondType(i), consumables.ItemHasThird(i), consumables.ItemThirdType(i));
+                List<Recipe> ways = Decompositions(potion);
+                if (ways.Count == 0) continue;
+                if (potion.hasThird && !RecipeKnown(ways[0])) continue;   // 3-type potions are listed once made
+                list.Add(ways[0]);
             }
         return list;
     }
@@ -721,7 +785,7 @@ public class PixelCrafting : MonoBehaviour
     }
 
     private string IngredientText(Ingredient ing) =>
-        ItemName(new Item(ing.kind, ing.type)) + " x" + PixelClicker.FormatNumber(ing.Amount);
+        ItemName(ItemOf(ing)) + " x" + PixelClicker.FormatNumber(ing.Amount);
 
     /// <summary>A small hand-drawn book (cover, pages, spine) on a button, top-left of the crafting window.</summary>
     private void BuildBookButton()
@@ -784,13 +848,28 @@ public class PixelCrafting : MonoBehaviour
         cr.anchoredPosition = new Vector2(-14f, -14f);
         close.onClick.AddListener(CloseBook);
 
+        // Search box under the title
+        float searchH = 56f;
+        bookSearchField = PixelUIKit.CreateInputField(font, bookObject.transform, "Search", new Vector2(0f, searchH), slotColor, textColor, fontSize * 0.8f, "Search recipes...");
+        RectTransform sr = bookSearchField.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0f, 1f);
+        sr.anchorMax = new Vector2(1f, 1f);
+        sr.pivot = new Vector2(0.5f, 1f);
+        sr.sizeDelta = new Vector2(-40f, searchH);
+        sr.anchoredPosition = new Vector2(0f, -(20f + titleH + 6f));
+        bookSearchField.onValueChanged.AddListener(text =>
+        {
+            bookSearch = (text ?? "").Trim().ToLowerInvariant();
+            if (BookOpen) RebuildBook();
+        });
+
         bookScroll = PixelUIKit.CreateScrollView(bookObject.transform, "Recipe List", scrollbarColor, 12f, BookRowHeight * 0.6f,
                                                  out bookContent, out bookBar);
         RectTransform vr = bookScroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(20f, 20f);
-        vr.offsetMax = new Vector2(-20f, -(20f + titleH));
+        vr.offsetMax = new Vector2(-20f, -(20f + titleH + 6f + searchH + 10f));
 
         bookObject.SetActive(false);
     }
@@ -800,6 +879,8 @@ public class PixelCrafting : MonoBehaviour
     private void OpenBook()
     {
         if (BookOpen) { CloseBook(); return; }
+        if (bookSearchField != null && bookSearchField.text.Length > 0) bookSearchField.SetTextWithoutNotify("");
+        bookSearch = "";
         RebuildBook();
         bookObject.SetActive(true);
         PixelAudio.Play("ui_click");
@@ -821,11 +902,27 @@ public class PixelCrafting : MonoBehaviour
         {
             bool known = RecipeKnown(raw);
             Recipe r = known ? ScaleRecipe(raw) : raw;
+            if (bookSearch.Length > 0)
+            {
+                // Only recipes you know can be searched (the others are ???).
+                if (!known) continue;
+                string haystack = (ResultName(r) + " " + IngredientText(r.a) + " " + IngredientText(r.b)).ToLowerInvariant();
+                if (!haystack.Contains(bookSearch)) continue;
+            }
 
             GameObject row = new GameObject("Recipe", typeof(RectTransform), typeof(Image));
             row.transform.SetParent(bookContent, false);
             row.GetComponent<Image>().color = cellColor;
-            row.GetComponent<Image>().raycastTarget = false;
+            row.GetComponent<Image>().raycastTarget = known;
+            if (known)
+            {
+                // Click a known recipe to put its ingredients in the two boxes.
+                Recipe clicked = r;
+                Button rowButton = row.AddComponent<Button>();   // a Button (not a drag handler) so the list still scrolls when dragged
+                rowButton.transition = Selectable.Transition.None;
+                rowButton.targetGraphic = row.GetComponent<Image>();
+                rowButton.onClick.AddListener(() => FillBoxes(ScaleRecipe(clicked)));
+            }
             RectTransform rr = row.GetComponent<RectTransform>();
             rr.anchorMin = new Vector2(0f, 1f);
             rr.anchorMax = new Vector2(1f, 1f);
@@ -850,6 +947,25 @@ public class PixelCrafting : MonoBehaviour
 
             bookRows.Add(row);
             y += BookRowHeight;
+        }
+        // A line of help at the end of the list (or when nothing matches the search).
+        string note = bookRows.Count == 0 ? "No recipes found." : bookSearch.Length == 0 ? "Click a recipe to fill the boxes. 3-type potions are listed once you have crafted them." : "";
+        if (note.Length > 0)
+        {
+            GameObject noteRow = new GameObject("Note", typeof(RectTransform));
+            noteRow.transform.SetParent(bookContent, false);
+            TMP_Text noteLabel = MakeLabel(noteRow.transform, "Text", note, fontSize * 0.7f, TextAlignmentOptions.Center, FontStyles.Italic);
+            noteLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
+            noteLabel.raycastTarget = false;
+            RectTransform nr = noteRow.GetComponent<RectTransform>();
+            nr.anchorMin = new Vector2(0f, 1f);
+            nr.anchorMax = new Vector2(1f, 1f);
+            nr.pivot = new Vector2(0.5f, 1f);
+            nr.sizeDelta = new Vector2(-24f, fontSize * 2.6f);
+            nr.anchoredPosition = new Vector2(0f, -y);
+            PixelUIKit.Stretch(noteLabel.rectTransform);
+            bookRows.Add(noteRow);
+            y += fontSize * 2.6f;
         }
         PixelUIKit.UpdateScrollView(bookScroll, bookBar, Mathf.Max(0f, y - 8f), bookScroll.GetComponent<RectTransform>().rect.height);
     }
@@ -880,8 +996,16 @@ public class PixelCrafting : MonoBehaviour
             int i = clicker.IndexOf(item.type);
             return i >= 0 ? clicker.Tiers[i].displayName : item.type.ToString();
         }
-        int p = consumables == null ? -1 : item.combo ? consumables.FindComboPotion(item.type, item.second) : FindPotion(item.type);
+        int p = PotionIndexOf(item);
         return p >= 0 ? consumables.ItemName(p) : item.type + " Potion";
+    }
+
+    /// <summary>The consumables index of a potion item (plain, 2-type or 3-type combo), or -1.</summary>
+    private int PotionIndexOf(Item item)
+    {
+        if (consumables == null || item.kind != ItemKind.Potion) return -1;
+        if (!item.combo) return FindPotion(item.type);
+        return item.hasThird ? consumables.FindComboPotion(item.type, item.second, item.third) : consumables.FindComboPotion(item.type, item.second);
     }
 
     private int FindPotion(PixelClicker.PixelType type)
@@ -934,18 +1058,20 @@ public class PixelCrafting : MonoBehaviour
         {
             if (item.combo)
             {
-                // Two small cubes side by side inside the glass.
-                Color c2 = TierColor(item.second);
-                for (int k = 0; k < 2; k++)
+                // Two (or three) small cubes side by side inside the glass.
+                int parts = item.hasThird ? 3 : 2;
+                Color[] colours = { c, TierColor(item.second), TierColor(item.third) };
+                for (int k = 0; k < parts; k++)
                 {
-                    GameObject half = new GameObject("Half " + k, typeof(RectTransform));
+                    GameObject half = new GameObject("Part " + k, typeof(RectTransform));
                     half.transform.SetParent(root.transform, false);
                     RectTransform hr = half.GetComponent<RectTransform>();
-                    hr.anchorMin = new Vector2(k == 0 ? 0.08f : 0.5f, 0f);
-                    hr.anchorMax = new Vector2(k == 0 ? 0.5f : 0.92f, 1f);
+                    float left = 0.08f + (0.84f * k) / parts, right = 0.08f + (0.84f * (k + 1)) / parts;
+                    hr.anchorMin = new Vector2(left, 0f);
+                    hr.anchorMax = new Vector2(right, 1f);
                     hr.offsetMin = hr.offsetMax = Vector2.zero;
-                    Color ck = k == 0 ? c : c2;
-                    MakeCube(half.transform, "Inner", new Color(ck.r, ck.g, ck.b, 1f), 0.8f * potionInnerScale * 1.2f);
+                    Color ck = colours[k];
+                    MakeCube(half.transform, "Inner", new Color(ck.r, ck.g, ck.b, 1f), (parts == 3 ? 0.62f : 0.8f) * potionInnerScale * 1.2f);
                 }
             }
             else
@@ -961,11 +1087,12 @@ public class PixelCrafting : MonoBehaviour
     // The two boxes
     // ------------------------------------------------------------------
 
-    private void SetSlot(int index, Item item)
+    private void SetSlot(int index, Item item, bool pinned = false)
     {
         Slot s = slots[index];
         if (s.icon != null) Destroy(s.icon);
         s.has = true;
+        s.pinned = pinned;
         s.item = item;
         s.icon = BuildIcon(s.iconHost.transform, item, Vector2.zero);
         s.label.text = ItemName(item);
@@ -978,8 +1105,91 @@ public class PixelCrafting : MonoBehaviour
         if (s.icon != null) Destroy(s.icon);
         s.icon = null;
         s.has = false;
+        s.pinned = false;
         s.label.text = "";
         Refresh();
+    }
+
+    /// <summary>A click on a Materials row: a pixel goes into a box; a potion that fits what is already in a box goes into the other box, otherwise it fills BOTH boxes with the ingredients that make it.</summary>
+    private void ClickItem(Item item)
+    {
+        if (item.kind == ItemKind.Potion)
+        {
+            bool oneFilled = slots[0].has != slots[1].has;
+            Item filled = slots[0].has ? slots[0].item : slots[1].item;
+            if (!(oneFilled && FindRecipe(filled, item) != null))
+            {
+                AutoFillFor(item);
+                return;
+            }
+        }
+        QuickPlace(item);
+    }
+
+    private void FillBoxes(Recipe r)
+    {
+        for (int i = 0; i < 2; i++) ClearSlotQuiet(i);
+        SetSlot(0, ItemOf(r.a), true);
+        SetSlot(1, ItemOf(r.b), true);
+        PixelAudio.Play("ui_click");
+    }
+
+    private void ClearSlotQuiet(int index)
+    {
+        Slot s = slots[index];
+        if (s.icon != null) Destroy(s.icon);
+        s.icon = null;
+        s.has = false;
+        s.pinned = false;
+        s.label.text = "";
+    }
+
+    /// <summary>Puts the two ingredients that make this potion into the boxes (the way you can best afford).</summary>
+    private void AutoFillFor(Item potion)
+    {
+        Recipe best = null;
+        int bestScore = -1;
+        foreach (Recipe r in Decompositions(potion))
+        {
+            int score = (Have(ItemOf(r.a)) >= r.a.Amount ? 1 : 0) + (Have(ItemOf(r.b)) >= r.b.Amount ? 1 : 0) + (CanAfford(r) ? 2 : 0);
+            if (score > bestScore) { best = r; bestScore = score; }
+        }
+        if (best != null) FillBoxes(best);
+    }
+
+    /// <summary>Every way to craft this potion (a plain potion: its recipe; a 2-type combo: either potion + the other pixel; a 3-type combo: any pair potion + the last pixel).</summary>
+    private List<Recipe> Decompositions(Item potion)
+    {
+        List<Recipe> list = new List<Recipe>();
+        if (!potion.combo)
+        {
+            foreach (Recipe r in recipes)
+                if (r != null && r.resultKind == ResultKind.Potion && r.resultPotion == potion.type) list.Add(ScaleRecipe(r));
+            return list;
+        }
+        PixelClicker.PixelType[] types = potion.hasThird ? new[] { potion.type, potion.second, potion.third } : new[] { potion.type, potion.second };
+        for (int k = 0; k < types.Length; k++)
+        {
+            PixelClicker.PixelType pixel = types[k];
+            Item rest;
+            if (potion.hasThird)
+            {
+                PixelClicker.PixelType x = types[(k + 1) % 3], y = types[(k + 2) % 3];
+                rest = PairItem(x, y);
+            }
+            else rest = new Item(ItemKind.Potion, types[1 - k]);
+            Recipe r = ScaleRecipe(FindComboRecipe(rest, new Item(ItemKind.Pixel, pixel)));
+            if (r != null) list.Add(r);
+        }
+        return list;
+    }
+
+    /// <summary>The 2-type combo potion item for two pixel types.</summary>
+    private Item PairItem(PixelClicker.PixelType a, PixelClicker.PixelType b)
+    {
+        int index = consumables != null ? consumables.FindComboPotion(a, b) : -1;
+        return index >= 0 ? new Item(ItemKind.Potion, consumables.ItemRequiredType(index), true, consumables.ItemSecondType(index))
+                          : new Item(ItemKind.Potion, a, true, b);
     }
 
     private void QuickPlace(Item item)
@@ -1008,7 +1218,8 @@ public class PixelCrafting : MonoBehaviour
 
     private void EndDrag(PointerEventData e)
     {
-        if (dragGhost != null) Destroy(dragGhost);
+        if (dragGhost == null) return;   // the drag was refused (a greyed-out item)
+        Destroy(dragGhost);
         dragGhost = null;
         for (int i = 0; i < slots.Length; i++)
             if (RectTransformUtility.RectangleContainsScreenPoint(slots[i].rect, e.position, null))
@@ -1031,7 +1242,7 @@ public class PixelCrafting : MonoBehaviour
     private double Have(Item item)
     {
         if (item.kind == ItemKind.Pixel) return PixelClicker.InfiniteResources ? 1e9 : Math.Floor(clicker.GetCount(item.type));
-        int p = item.combo ? consumables.FindComboPotion(item.type, item.second) : FindPotion(item.type);
+        int p = PotionIndexOf(item);
         return p >= 0 ? consumables.ItemOwned(p) : 0;
     }
 
@@ -1064,12 +1275,15 @@ public class PixelCrafting : MonoBehaviour
             if (Math.Floor(t.count) >= 1d && !t.rareDrop) items.Add(new Item(ItemKind.Pixel, t.type)); // Dragon Cubes are for the wish, not crafting
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount && !consumables.IsDevice(i); i++)
-                if (consumables.ItemOwned(i) > 0)
+                if (consumables.ItemCraftOnly(i) ? consumables.Get(i).owned > 0 : consumables.ItemOwned(i) > 0) // combo potions only when really held (Infinite resources would list all of them)
                     items.Add(consumables.ItemCraftOnly(i)
-                        ? new Item(ItemKind.Potion, consumables.ItemRequiredType(i), true, consumables.ItemSecondType(i))
+                        ? new Item(ItemKind.Potion, consumables.ItemRequiredType(i), true, consumables.ItemSecondType(i), consumables.ItemHasThird(i), consumables.ItemThirdType(i))
                         : new Item(ItemKind.Potion, consumables.ItemRequiredType(i)));
 
         while (cells.Count < items.Count) cells.Add(BuildCell());
+
+        bool oneFilled = slots[0].has != slots[1].has;
+        Item filledItem = slots[0].has ? slots[0].item : slots[1].item;
 
         for (int i = 0; i < cells.Count; i++)
         {
@@ -1089,6 +1303,11 @@ public class PixelCrafting : MonoBehaviour
             }
             cell.count.text = PixelClicker.FormatNumber(Shown(item)); // the real amount (Infinite resources only affects what can be spent)
 
+            // With one box filled, only the items that make something with it stay bright.
+            bool compatible = !oneFilled || FindRecipe(filledItem, item) != null;
+            cell.disabled = !compatible;
+            if (cell.group != null) cell.group.alpha = compatible ? 1f : 0.3f;
+
             cell.rect.anchoredPosition = new Vector2(0f, -i * RowHeight);
         }
 
@@ -1103,6 +1322,7 @@ public class PixelCrafting : MonoBehaviour
         GameObject go = new GameObject("Item", typeof(RectTransform), typeof(Image), typeof(PixelCraftDrag));
         go.transform.SetParent(listContent, false);
         go.GetComponent<Image>().color = cellColor;
+        cell.group = go.AddComponent<CanvasGroup>();
         cell.rect = go.GetComponent<RectTransform>();
         cell.rect.anchorMin = new Vector2(0f, 1f);
         cell.rect.anchorMax = new Vector2(1f, 1f);
@@ -1141,10 +1361,14 @@ public class PixelCrafting : MonoBehaviour
         cr.offsetMax = new Vector2(-8f, 0f);
 
         PixelCraftDrag drag = go.GetComponent<PixelCraftDrag>();
-        drag.onBegin = e => BeginDrag(cell.item, e);
+        drag.onBegin = e => { if (!cell.disabled) BeginDrag(cell.item, e); };
         drag.onDrag = Drag;
         drag.onEnd = EndDrag;
-        drag.onClick = e => { if (e.button == PointerEventData.InputButton.Left) QuickPlace(cell.item); };
+        drag.onClick = e =>
+        {
+            if (e.button != PointerEventData.InputButton.Left || cell.disabled) return;
+            ClickItem(cell.item);
+        };
         return cell;
     }
 
@@ -1152,7 +1376,7 @@ public class PixelCrafting : MonoBehaviour
     // Recipes
     // ------------------------------------------------------------------
 
-    private static bool Matches(Ingredient ing, Item item) => !item.combo && ing.kind == item.kind && ing.type == item.type;
+    private static bool Matches(Ingredient ing, Item item) => !item.combo && !ing.combo && ing.kind == item.kind && ing.type == item.type;
 
     private Recipe FindRecipe(Item x, Item y)
     {
@@ -1173,13 +1397,16 @@ public class PixelCrafting : MonoBehaviour
         if (r == null || !recipesFollowShopPrices || clicker == null || consumables == null) return r;
 
         bool isPotion = r.resultKind == ResultKind.Potion;
-        bool isCombo = r.resultKind == ResultKind.Combo;
-        PixelClicker.PixelType priced = isCombo ? r.resultSecond : r.resultPotion;
+        bool isCombo = r.resultKind == ResultKind.Combo || r.resultKind == ResultKind.Triple;
+        PixelClicker.PixelType priced = r.resultKind == ResultKind.Triple ? r.resultThird : isCombo ? r.resultSecond : r.resultPotion;
         bool pricedDone = false;
 
         Ingredient Scale(Ingredient ing)
         {
-            Ingredient copy = new Ingredient(ing.kind, ing.type, ing.amount);
+            Ingredient copy = new Ingredient(ing.kind, ing.type, ing.amount)
+            {
+                combo = ing.combo, second = ing.second, hasThird = ing.hasThird, third = ing.third,
+            };
             if (ing.kind != ItemKind.Pixel) return copy;
             if ((isPotion || isCombo) && !pricedDone && ing.type == priced)
             {
@@ -1201,25 +1428,42 @@ public class PixelCrafting : MonoBehaviour
             resultKind = r.resultKind,
             resultPotion = r.resultPotion,
             resultSecond = r.resultSecond,
+            resultThird = r.resultThird,
             resultDevice = r.resultDevice,
             resultAmount = r.resultAmount,
         };
     }
 
     /// <summary>
-    /// A potion plus a pixel that can't be toggled makes a combo potion for those two pixel types.
-    /// (Built on the fly, so it isn't in the Recipes list.)
+    /// A potion plus ANY pixel makes a 2-type combo potion; a 2-type combo potion plus one more pixel makes a 3-type combo potion.
+    /// Vacuum (and the Dragon Cubes) can't be part of a combo. (Built on the fly, so it isn't in the Recipes list.)
     /// </summary>
     private Recipe FindComboRecipe(Item x, Item y)
     {
         Item potion, pixel;
-        if (x.kind == ItemKind.Potion && !x.combo && y.kind == ItemKind.Pixel) { potion = x; pixel = y; }
-        else if (y.kind == ItemKind.Potion && !y.combo && x.kind == ItemKind.Pixel) { potion = y; pixel = x; }
+        if (x.kind == ItemKind.Potion && y.kind == ItemKind.Pixel) { potion = x; pixel = y; }
+        else if (y.kind == ItemKind.Potion && x.kind == ItemKind.Pixel) { potion = y; pixel = x; }
         else return null;
 
-        if (potion.type == pixel.type || PixelClicker.IsDragonCube(pixel.type)) return null;
-        int tier = clicker.IndexOf(pixel.type);
-        if (tier < 0 || clicker.Tiers[tier].CanSwitchOff) return null; // only pixels that can't be toggled
+        if (potion.hasThird) return null;
+        if (potion.type == pixel.type || (potion.combo && potion.second == pixel.type)) return null;
+        if (PixelClicker.IsDragonCube(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
+        if (clicker.IndexOf(pixel.type) < 0) return null;
+
+        if (potion.combo)
+        {
+            if (potion.second == PixelClicker.PixelType.Vacuum) return null;
+            return new Recipe
+            {
+                label = "Triple Combo Potion",
+                a = IngredientOf(potion, 1),
+                b = new Ingredient(ItemKind.Pixel, pixel.type, comboPixelCost),
+                resultKind = ResultKind.Triple,
+                resultPotion = potion.type,
+                resultSecond = potion.second,
+                resultThird = pixel.type,
+            };
+        }
 
         return new Recipe
         {
@@ -1235,13 +1479,14 @@ public class PixelCrafting : MonoBehaviour
     private int ResultIndex(Recipe r) =>
         r.resultKind == ResultKind.Potion ? FindPotion(r.resultPotion)
         : r.resultKind == ResultKind.Combo ? (consumables != null ? consumables.FindComboPotion(r.resultPotion, r.resultSecond) : -1)
+        : r.resultKind == ResultKind.Triple ? (consumables != null ? consumables.FindComboPotion(r.resultPotion, r.resultSecond, r.resultThird) : -1)
         : FindDevice(r.resultDevice);
 
-    private static bool SameIngredient(Ingredient a, Ingredient b) => a.kind == b.kind && a.type == b.type;
+    private static bool SameIngredient(Ingredient a, Ingredient b) => SameItem(ItemOf(a), ItemOf(b));
 
     private bool CanAfford(Recipe r)
     {
-        Item ia = new Item(r.a.kind, r.a.type), ib = new Item(r.b.kind, r.b.type);
+        Item ia = ItemOf(r.a), ib = ItemOf(r.b);
         if (SameIngredient(r.a, r.b)) return Have(ia) >= r.a.Amount + r.b.Amount;
         return Have(ia) >= r.a.Amount && Have(ib) >= r.b.Amount;
     }
@@ -1250,7 +1495,7 @@ public class PixelCrafting : MonoBehaviour
     {
         Color c = have >= need ? enoughColor : shortColor;
         return "<color=#" + ColorUtility.ToHtmlStringRGB(c) + ">" +
-               string.Format(needFormat, ItemName(new Item(ing.kind, ing.type)), PixelClicker.FormatNumber(have),
+               string.Format(needFormat, ItemName(ItemOf(ing)), PixelClicker.FormatNumber(have),
                              PixelClicker.FormatNumber(need)) + "</color>";
     }
 
@@ -1260,7 +1505,7 @@ public class PixelCrafting : MonoBehaviour
     {
         // An item that's used up leaves its box.
         for (int i = 0; i < slots.Length; i++)
-            if (slots[i].has && Have(slots[i].item) < 1d)
+            if (slots[i].has && !slots[i].pinned && Have(slots[i].item) < 1d)
             {
                 if (slots[i].icon != null) Destroy(slots[i].icon);
                 slots[i].icon = null;
@@ -1272,6 +1517,7 @@ public class PixelCrafting : MonoBehaviour
 
         currentRecipe = null;
         bool canCraft = false;
+        int possibleCrafts = 0;
 
         if (!slots[0].has || !slots[1].has)
         {
@@ -1286,7 +1532,7 @@ public class PixelCrafting : MonoBehaviour
             else
             {
                 currentRecipe = r;
-                Item ia = new Item(r.a.kind, r.a.type), ib = new Item(r.b.kind, r.b.type);
+                Item ia = ItemOf(r.a), ib = ItemOf(r.b);
                 StringBuilder sb = new StringBuilder();
                 sb.Append(string.Format(makesFormat, consumables.ItemName(result), r.resultAmount)).Append('\n');
                 if (SameIngredient(r.a, r.b))
@@ -1297,11 +1543,28 @@ public class PixelCrafting : MonoBehaviour
                 if (full) sb.Append('\n').Append("<color=#" + ColorUtility.ToHtmlStringRGB(shortColor) + ">" + potionFullText + "</color>");
                 recipeText.text = sb.ToString();
                 canCraft = !full && CanAfford(r);
+                if (canCraft) possibleCrafts = MaxCraftable(r, result);
             }
         }
 
         craftButton.interactable = canCraft;
         craftImage.color = canCraft ? craftColor : craftDisabledColor;
+        int times = craftAmount == 0 ? possibleCrafts : Mathf.Min(craftAmount, possibleCrafts);
+        string craftTextNow = canCraft && times > 1 ? craftText + " x" + times : craftText;
+        if (craftLabel != null && craftLabel.text != craftTextNow) craftLabel.text = craftTextNow;
+        for (int q = 0; q < amountImages.Length; q++)
+            if (amountImages[q] != null) amountImages[q].color = (q == 0 && craftAmount == 1) || (q == 1 && craftAmount == 5) || (q == 2 && craftAmount == 0) ? craftColor : slotColor;
+    }
+
+    /// <summary>How many times this recipe can be crafted right now (what you hold and the room for the result; at most 1000).</summary>
+    private int MaxCraftable(Recipe r, int result)
+    {
+        Item ia = ItemOf(r.a), ib = ItemOf(r.b);
+        double n;
+        if (SameIngredient(r.a, r.b)) n = Math.Floor(Have(ia) / Math.Max(1e-9, r.a.Amount + r.b.Amount));
+        else n = Math.Min(Math.Floor(Have(ia) / Math.Max(1e-9, r.a.Amount)), Math.Floor(Have(ib) / Math.Max(1e-9, r.b.Amount)));
+        double room = consumables.ItemRoom(result) / (double)Math.Max(1, r.resultAmount);
+        return (int)Math.Max(0d, Math.Min(Math.Min(n, room), 1000d));
     }
 
     private void Craft()
@@ -1311,11 +1574,20 @@ public class PixelCrafting : MonoBehaviour
         int result = ResultIndex(r);
         if (result < 0 || consumables.ItemRoom(result) < r.resultAmount) return;
 
-        if (!Spend(r.a) || !Spend(r.b)) return;
-        consumables.AddItem(result, r.resultAmount);
-        PixelStats.Count(RecipeKey(r)); // the recipe goes into the recipe book
+        int possible = MaxCraftable(r, result);
+        int times = craftAmount == 0 ? possible : Math.Min(craftAmount, possible);
+        int made = 0;
+        for (int i = 0; i < times; i++)
+        {
+            if (!CanAfford(r) || consumables.ItemRoom(result) < r.resultAmount) break;
+            if (!Spend(r.a) || !Spend(r.b)) break;
+            consumables.AddItem(result, r.resultAmount);
+            made++;
+        }
+        if (made <= 0) return;
+        PixelStats.Count(RecipeKey(r), made); // the recipe goes into the recipe book
 
-        statusLabel.text = string.Format(craftedFormat, consumables.ItemName(result), r.resultAmount);
+        statusLabel.text = string.Format(craftedFormat, consumables.ItemName(result), r.resultAmount * made);
         statusTimer = 2.5f;
         Crafted?.Invoke();
         PlaySound();
@@ -1325,7 +1597,7 @@ public class PixelCrafting : MonoBehaviour
     private bool Spend(Ingredient ing)
     {
         if (ing.kind == ItemKind.Pixel) return clicker.TrySpend(ing.type, ing.Amount);
-        int p = FindPotion(ing.type);
+        int p = PotionIndexOf(ItemOf(ing));
         return p >= 0 && consumables.TryRemoveItem(p, (int)ing.Amount);
     }
 
