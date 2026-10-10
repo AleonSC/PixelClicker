@@ -179,7 +179,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         public Trade trade;
         public int item;
         public RectTransform rect;
-        public TMP_Text name, cost, owned, buyLabel;
+        public TMP_Text name, cost, owned, stockLabel, buyLabel;
         public Button buy;
         public Image buyImage;
     }
@@ -435,7 +435,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         bool afford = clicker.CanAfford(clicker.Tiers[t.payTier].type, t.pay);
         Color col = afford ? new Color(0.55f, 1f, 0.6f) : new Color(1f, 0.45f, 0.45f);
         PixelUIKit.SetText(row.cost, "Pay <color=#" + ColorUtility.ToHtmlStringRGB(col) + ">" + PixelClicker.FormatNumberShort(t.pay) + " " + payName + "</color>");
-        PixelUIKit.SetText(row.owned, "You have " + PixelClicker.FormatNumberShort(clicker.GetCount(clicker.Tiers[t.payTier].type)));
+        PixelUIKit.SetText(row.owned, "You own " + PixelClicker.FormatNumberShort(clicker.GetCount(clicker.Tiers[t.payTier].type)));
+        PixelUIKit.SetText(row.stockLabel, "");
         row.buy.interactable = !t.done && afford;
         PixelUIKit.SetText(row.buyLabel, t.done ? "Sold" : TradeText);
         row.buyImage.color = t.done || !afford ? new Color(0.3f, 0.3f, 0.35f, 1f) : new Color(0.2f, 0.55f, 0.3f, 1f);
@@ -457,11 +458,10 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             }
             PixelUIKit.SetText(row.cost, sb.ToString());
 
-            int cap = consumables.ItemCapacity(item);
-            string ownedText = cap > 0 && cap < 100000 ? "Owned " + PixelConsumables.OwnedText(consumables.ItemOwned(item)) + " / " + cap : "Owned " + PixelConsumables.OwnedText(consumables.ItemOwned(item));
+            // Two separate, simple facts: what the vendor still has (gold, top right) and what you already hold (dim, bottom right).
             bool soldOut = stock.TryGetValue(item, out int stockLeft) && stockLeft < 1;
-            if (stock.ContainsKey(item)) ownedText += "   Stock " + Mathf.Max(0, stockLeft);
-            PixelUIKit.SetText(row.owned, ownedText);
+            PixelUIKit.SetText(row.owned, "You own " + PixelConsumables.OwnedText(consumables.ItemOwned(item)));
+            PixelUIKit.SetText(row.stockLabel, stock.ContainsKey(item) ? (soldOut ? "Sold out" : "Stock " + stockLeft) : "");
 
             bool full = consumables.ItemRoom(item) < 1;
             bool afford = true;
@@ -600,15 +600,20 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
             row.name = PixelUIKit.CreateText(Font, go.transform, "Name", tradeMode ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
             row.name.enableAutoSizing = true; row.name.fontSizeMax = 32f; row.name.fontSizeMin = 14f;
-            Anchor(row.name.rectTransform, 0f, 0.55f, 1f, 1f, new Vector2(16f, 0f), new Vector2(-190f, -6f));
+            Anchor(row.name.rectTransform, 0f, 0.55f, 0.62f, 1f, new Vector2(16f, 0f), new Vector2(0f, -6f));
 
             row.cost = PixelUIKit.CreateText(Font, go.transform, "Cost", "", 24f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, Color.white);
             row.cost.richText = true;
             row.cost.enableAutoSizing = true; row.cost.fontSizeMax = 24f; row.cost.fontSizeMin = 11f;
-            Anchor(row.cost.rectTransform, 0f, 0.05f, 1f, 0.55f, new Vector2(16f, 0f), new Vector2(-190f, 0f));
+            Anchor(row.cost.rectTransform, 0f, 0.05f, 0.62f, 0.55f, new Vector2(16f, 0f), new Vector2(0f, 0f));
 
-            row.owned = PixelUIKit.CreateText(Font, go.transform, "Owned", "", 20f, TextAlignmentOptions.MidlineRight, FontStyles.Normal, new Color(1f, 1f, 1f, 0.6f));
-            Anchor(row.owned.rectTransform, 0.5f, 0.55f, 1f, 1f, new Vector2(0f, 0f), new Vector2(-190f, -6f));
+            row.owned = PixelUIKit.CreateText(Font, go.transform, "Owned", "", 22f, TextAlignmentOptions.MidlineRight, FontStyles.Normal, new Color(1f, 1f, 1f, 0.6f));
+            row.owned.enableAutoSizing = true; row.owned.fontSizeMax = 22f; row.owned.fontSizeMin = 11f;
+            Anchor(row.owned.rectTransform, 0.62f, 0.05f, 1f, 0.55f, new Vector2(0f, 0f), new Vector2(-190f, 0f));
+
+            row.stockLabel = PixelUIKit.CreateText(Font, go.transform, "Stock", "", 24f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.85f, 0.4f));
+            row.stockLabel.enableAutoSizing = true; row.stockLabel.fontSizeMax = 24f; row.stockLabel.fontSizeMin = 11f;
+            Anchor(row.stockLabel.rectTransform, 0.62f, 0.55f, 1f, 1f, new Vector2(0f, 0f), new Vector2(-190f, -6f));
 
             row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", buyText, new Vector2(150f, 70f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 32f);
             row.buyImage = row.buy.GetComponent<Image>();
