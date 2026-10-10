@@ -85,6 +85,7 @@ public partial class PixelShop
             go.transform.SetParent(currencyContent, false);
             row.background = go.GetComponent<Image>();
             row.background.color = rowColor;
+            PixelUIKit.StyleBox(row.background);
             row.background.raycastTarget = false;
             row.rect = go.GetComponent<RectTransform>();
             row.rect.anchorMin = new Vector2(0f, 1f);

@@ -123,6 +123,7 @@ public partial class PixelShop
                 GameObject frame = new GameObject("Picture", typeof(RectTransform), typeof(Image));
                 frame.transform.SetParent(o.row.rect, false);
                 frame.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 1f);
+                PixelUIKit.StyleBox(frame.GetComponent<Image>(), true);
                 frame.GetComponent<Image>().raycastTarget = false;
                 RectTransform fr = frame.GetComponent<RectTransform>();
                 fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0f, 0.5f);

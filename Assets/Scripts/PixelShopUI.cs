@@ -205,6 +205,7 @@ public partial class PixelShop
         GameObject rowGo = new GameObject(objectName, typeof(RectTransform), typeof(Image));
         rowGo.transform.SetParent(parent, false);
         rowGo.GetComponent<Image>().color = rowColor;
+        PixelUIKit.StyleBox(rowGo.GetComponent<Image>());
         RectTransform rr = rowGo.GetComponent<RectTransform>();
         rr.anchorMin = new Vector2(0f, 1f);
         rr.anchorMax = new Vector2(1f, 1f);
@@ -502,6 +503,7 @@ public partial class PixelShop
         GameObject rowGo = new GameObject((potion ? "Potion " : "Pack ") + index, typeof(RectTransform), typeof(Image));
         rowGo.transform.SetParent(parent, false);
         rowGo.GetComponent<Image>().color = rowColor;
+        PixelUIKit.StyleBox(rowGo.GetComponent<Image>());
 
         RectTransform rr = rowGo.GetComponent<RectTransform>();
         rr.anchorMin = new Vector2(0f, 1f);
@@ -590,6 +592,7 @@ public partial class PixelShop
         t.go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
         t.go.transform.SetParent(parent, false);
         t.go.GetComponent<Image>().color = rowColor;
+        PixelUIKit.StyleBox(t.go.GetComponent<Image>());
 
         t.rect = t.go.GetComponent<RectTransform>();
         t.rect.anchorMin = new Vector2(0f, 1f);

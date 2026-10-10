@@ -127,7 +127,7 @@ public static class PixelUIKit
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetButtonStatics() { fancyCache = -1; buttonSprite = null; }
+    private static void ResetButtonStatics() { fancyCache = -1; buttonSprite = null; boxSprite = null; insetSprite = null; }
 
     /// <summary>
     /// A grey-scale 9-sliced button sprite (drawn once in code; it takes the button's colour as a tint): rounded corners, a dark outline,
@@ -273,6 +273,47 @@ public static class PixelUIKit
         tex.SetPixels(px);
         tex.Apply(false, true);
         return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(26, 26, 26, 26));
+    }
+
+    private static Sprite boxSprite, insetSprite;
+
+    /// <summary>
+    /// Gives a list row / card background a softly rounded, gently shaded look with a thin lighter rim (a raised box). With 'inset' the
+    /// shading is reversed (darker at the top, lighter rim at the bottom): a sunken frame, used round the 3D pictures. Follows the Fancy windows setting.
+    /// </summary>
+    public static void StyleBox(Image image, bool inset = false)
+    {
+        if (image == null || !FancyWindows) return;
+        image.sprite = inset ? InsetSprite() : BoxSprite();
+        image.type = Image.Type.Sliced;
+    }
+
+    private static Sprite BoxSprite() { if (boxSprite == null) boxSprite = BuildBoxSprite(false); return boxSprite; }
+    private static Sprite InsetSprite() { if (insetSprite == null) insetSprite = BuildBoxSprite(true); return insetSprite; }
+
+    private static Sprite BuildBoxSprite(bool inset)
+    {
+        const int n = 32;
+        const float r = 8f;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = inset ? "Inset Box" : "Box", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float qx = Mathf.Max(Mathf.Abs(x - c) - (c - r), 0f), qy = Mathf.Max(Mathf.Abs(y - c) - (c - r), 0f);
+                float d = Mathf.Sqrt(qx * qx + qy * qy) - r;
+                float depth = -d;
+                float t = y / (float)(n - 1);                       // 0 bottom, 1 top
+                float shade = inset ? Mathf.Lerp(1.1f, 0.78f, t) : Mathf.Lerp(0.8f, 1.08f, t);
+                if (depth < 1.6f) shade = inset ? Mathf.Lerp(1.5f, 0.5f, t) : Mathf.Lerp(0.55f, 1.55f, t);   // a thin rim: light on the lit side
+                else if (depth < 3.2f) shade *= inset ? 0.9f : 1f;
+                float a = Mathf.Clamp01(0.5f - d);
+                px[y * n + x] = new Color(shade, shade, shade, a);
+            }
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
     }
 
     /// <summary>Gives a button's background image the bevelled look when Fancy buttons is on (also used by the shop's own button builder).</summary>

@@ -69,6 +69,7 @@ public partial class PixelShop
         GameObject go = new GameObject(blank ? "Spare Card" : seeds ? "Seeds Card" : utilities ? "Utilities Card" : "Potions Card", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
         go.GetComponent<Image>().color = rowColor;
+        PixelUIKit.StyleBox(go.GetComponent<Image>());
         card.rect = go.GetComponent<RectTransform>();
         PlaceTopLeft(card.rect, x, top, width, cardRowHeight);
         if (blank) return card; // nothing on it yet

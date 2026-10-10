@@ -64,6 +64,7 @@ public partial class PixelShop
         GameObject frame = new GameObject("Picture", typeof(RectTransform), typeof(Image));
         frame.transform.SetParent(parent, false);
         frame.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 1f);
+        PixelUIKit.StyleBox(frame.GetComponent<Image>(), true);   // a sunken frame
         frame.GetComponent<Image>().raycastTarget = false;
         RectTransform fr = frame.GetComponent<RectTransform>();
         if (middleLeft)
