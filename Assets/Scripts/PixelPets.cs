@@ -237,6 +237,10 @@ public partial class PixelPets : MonoBehaviour
     [Tooltip("How big the Seed pet's sprout is drawn, in main-pixel widths (the sprouts it plants are about a third of this).")]
     [SerializeField] private float seedPetScale = 3f;
 
+    [Min(0.1f)]
+    [Tooltip("Seconds the Seed pet takes to sprout up out of the ground when it appears.")]
+    [SerializeField] private float seedPetRiseSeconds = 1.6f;
+
     [Tooltip("Seconds between seeds the planted Seed pet sows around itself (a random value between the two numbers; hyper pets sow faster).")]
     [SerializeField] private Vector2 seedPetInterval = new Vector2(10f, 20f);
 
@@ -250,6 +254,7 @@ public partial class PixelPets : MonoBehaviour
         public bool planted;
         public float seedTimer;
         public float wet;           // Seed pet: seconds until it accepts water again (rate limit)
+        public float rise = 1f, groundY; // Seed pet: 0..1 while it sprouts up out of the ground (1 = done), and the floor height it grows from
         public SunRayFx sunRay;     // Seed pet: ray of light while sun soaked
         public float sunLeft, sunBoost; // Seed pet: "sun soaked" seconds left after Solar pixels were near, and the boost it gave
         public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
@@ -555,8 +560,16 @@ public partial class PixelPets : MonoBehaviour
 
         float size = clicker.PixelBaseSize;
         GameObject go = new GameObject("Pet " + p.type);
-        go.transform.position = p.planter ? SeedPetSpawnPoint(size)
-                                          : clicker.PixelTransform.position + new Vector3(Random.Range(-2f, 2f), size * 3f, Random.Range(-2f, 2f));
+        Vector3 groundPoint = default;
+        bool sproutUp = false;
+        if (p.planter)
+        {
+            Vector3 drop = SeedPetSpawnPoint(size);
+            sproutUp = FindGround(drop, size, out groundPoint);
+            if (sproutUp) drop = new Vector3(groundPoint.x, groundPoint.y - size * seedPetScale * 0.5f, groundPoint.z); // starts hidden under the floor
+            go.transform.position = drop;
+        }
+        else go.transform.position = clicker.PixelTransform.position + new Vector3(Random.Range(-2f, 2f), size * 3f, Random.Range(-2f, 2f));
         go.transform.rotation = Random.rotation;
 
         GameObject model = p.planter ? PixelLooks.CreateSproutObject(go.transform, size * seedPetScale)   // the Seed pet is a big sprout
@@ -614,6 +627,13 @@ public partial class PixelPets : MonoBehaviour
         if (p.type == PixelClicker.PixelType.Vacuum) BuildCounter(p, size);
         p.body = go;
         ApplyOutfit(p);
+        if (sproutUp)
+        {
+            // Sprouts up out of the ground right away instead of dropping in.
+            p.groundY = groundPoint.y;
+            p.rise = 0f;
+            PlantPet(p, rb, size);
+        }
         p.hopTimer = Random.Range(hopInterval.x, hopInterval.y);
     }
 
@@ -861,6 +881,19 @@ public partial class PixelPets : MonoBehaviour
             return;
         }
 
+        // Still sprouting up out of the ground.
+        if (p.rise < 1f)
+        {
+            p.rise = Mathf.Min(1f, p.rise + Time.deltaTime / Mathf.Max(0.1f, seedPetRiseSeconds));
+            float ease = 1f - (1f - p.rise) * (1f - p.rise);
+            float depth = size * seedPetScale * 0.5f;
+            Vector3 pos = new Vector3(rb.position.x, p.groundY - depth * (1f - ease), rb.position.z);
+            rb.position = pos;
+            p.body.transform.position = pos;
+            if (p.mound != null) p.mound.transform.position = new Vector3(pos.x, p.groundY + size * 0.03f, pos.z); // the dirt mound stays at floor level
+            return;
+        }
+
         // Planted: sow a seed every so often (only while nothing holds or hovers it).
         if (stopped) return;
         if (p.wet > 0f) p.wet -= Time.deltaTime;
@@ -929,7 +962,7 @@ public partial class PixelPets : MonoBehaviour
         p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y) * 0.4f, Mathf.Max(seedPetInterval.x, seedPetInterval.y) * 0.6f); // the first seed comes sooner
         PixelAudio.PlayScaled("pixel_land", 0.7f);
         PixelAudio.Play("seed_plant");
-        SeedDigFx.Play(rb.position + Vector3.up * (size * 0.1f), size, 0.7f);
+        SeedDigFx.Play(new Vector3(rb.position.x, p.rise < 1f ? p.groundY : rb.position.y, rb.position.z) + Vector3.up * (size * 0.1f), size, 0.7f);
 
         if (p.mound != null) Destroy(p.mound);
         GameObject m = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -944,8 +977,26 @@ public partial class PixelPets : MonoBehaviour
         p.mound = m;
     }
 
+    /// <summary>The floor straight below 'from' (not the clicker cube, not old pixels): where the Seed pet sprouts up.</summary>
+    private bool FindGround(Vector3 from, float size, out Vector3 point)
+    {
+        point = default;
+        RaycastHit[] hits = Physics.RaycastAll(from + Vector3.up * size * 4f, Vector3.down, size * 60f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue;
+        bool found = false;
+        foreach (RaycastHit h in hits)
+        {
+            if (h.collider == null || h.normal.y < 0.7f) continue;
+            if (clicker.PixelTransform != null && h.collider.transform.IsChildOf(clicker.PixelTransform)) continue;
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
+            if (h.distance < best) { best = h.distance; point = h.point; found = true; }
+        }
+        return found;
+    }
+
     private void Uproot(Pet p, Rigidbody rb)
     {
+        p.rise = 1f;
         p.planted = false;
         rb.isKinematic = false;
         if (p.mound != null) { Destroy(p.mound); p.mound = null; }

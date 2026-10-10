@@ -248,3 +248,4 @@
 [2026-10-10 06:43 UTC] Pixels from the Sorter now fly in a clean stream with no collision in the air, and only become solid (gently, without shoving each other) when they land on the floor.
 [2026-10-10 06:45 UTC] Water pixels now give seed sprouts / the Seed pet instant growth (rate-limited per target) instead of a wet speed-up; Solar pixels make them sun soaked, a speed-up that lasts a few seconds after the Solar pixel was nearby.
 [2026-10-10 06:47 UTC] Sun soaked seed sprouts and the Seed pet now show a soft ray of sunlight above them.
+[2026-10-10 06:50 UTC] The Seed pet now sprouts up out of the ground beside the cube instead of dropping from the air.
