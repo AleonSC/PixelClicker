@@ -479,6 +479,25 @@ public class PixelLog : MonoBehaviour
         st.cam.Render();
     }
 
+    /// <summary>Re-renders (turning) the pictures on the goal rows that are in view.</summary>
+    private void SpinVisibleGoalSkins()
+    {
+        if (goalRows.Count == 0 || goalsContent == null) return;
+        RectTransform viewport = goalsContent.parent as RectTransform;
+        if (viewport == null) return;
+        Vector3[] vc = new Vector3[4], rc = new Vector3[4];
+        viewport.GetWorldCorners(vc);
+        skinRenderedThisFrame.Clear();
+        foreach (GoalRow row in goalRows)
+        {
+            if (row.skin == null || !row.skin.gameObject.activeInHierarchy || row.skinTier < 0) continue;
+            row.rect.GetWorldCorners(rc);
+            if (rc[2].y < vc[0].y || rc[0].y > vc[2].y) continue;
+            if (!skinStudios.TryGetValue(row.skinTier, out SkinStudio st) || st.rt == null) continue;
+            if (skinRenderedThisFrame.Add(row.skinTier)) RenderSkin(st);
+        }
+    }
+
     /// <summary>Re-renders (turning) the pictures of the pixel types whose achievement rows are in view.</summary>
     private void SpinVisibleSkins()
     {
@@ -524,6 +543,7 @@ public class PixelLog : MonoBehaviour
         TickDeltas();
         if (!panelObject.activeSelf) { panelWasOpen = false; return; }
         if (currentTab == 1) SpinVisibleSkins();
+        else if (currentTab == 2) SpinVisibleGoalSkins();
         UpdateAchievementTip();
         if (panelWasOpen && Time.unscaledTime < nextRefreshTime) return;
         panelWasOpen = true;
@@ -842,8 +862,8 @@ public class PixelLog : MonoBehaviour
         vr.anchorMin = new Vector2(0f, 1f);
         vr.anchorMax = new Vector2(1f, 1f);
         vr.pivot = new Vector2(0.5f, 1f);
-        vr.sizeDelta = new Vector2(-(panelPadding * 2f + scrollbarWidth + 8f), achievementsViewHeight);
-        vr.anchoredPosition = new Vector2(-(scrollbarWidth + 8f) * 0.5f, -viewTop);
+        vr.sizeDelta = new Vector2(-(panelPadding * 2f), achievementsViewHeight);   // exactly as wide as the tab row above: the rows line up with the tabs
+        vr.anchoredPosition = new Vector2(0f, -viewTop);
 
         GameObject contentGo = new GameObject("Content", typeof(RectTransform));
         contentGo.transform.SetParent(view.transform, false);
@@ -860,8 +880,9 @@ public class PixelLog : MonoBehaviour
         barGo.GetComponent<Image>().color = scrollbarTrackColor;
         RectTransform br = barGo.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
-        br.sizeDelta = new Vector2(scrollbarWidth, achievementsViewHeight);
-        br.anchoredPosition = new Vector2(-panelPadding, -viewTop);
+        float barWidth = Mathf.Min(scrollbarWidth, Mathf.Max(6f, panelPadding - 6f));   // the bar sits in the margin beside the rows, not on top of them
+        br.sizeDelta = new Vector2(barWidth, achievementsViewHeight);
+        br.anchoredPosition = new Vector2(-3f, -viewTop);
 
         GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
         handleGo.transform.SetParent(barGo.transform, false);
@@ -1175,40 +1196,20 @@ public class PixelLog : MonoBehaviour
     private class GoalRow
     {
         public RectTransform rect;
-        public TMP_Text title, progress, percent;
-        public Image barFill, ringFill;
+        public TMP_Text title, progress;
+        public Image barFill;
         public RectTransform barFillRect;
+        public PixelCubeIcon icon;
+        public RawImage skin;
+        public int skinTier = -1;
         public int goalIndex;
     }
 
     private readonly List<GoalRow> goalRows = new List<GoalRow>();
     private readonly List<Goal> shownGoals = new List<Goal>();
     private int hoverGoal = -1;
-    private static Sprite ringSprite;
-
-    /// <summary>A thin white ring (drawn once in code), used for the round progress dial on a goal; tinted and filled radially.</summary>
-    private static Sprite RingSprite()
-    {
-        if (ringSprite != null) return ringSprite;
-        const int n = 96;
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Goal Ring", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-        float c = (n - 1) * 0.5f, outer = n * 0.5f - 1f, inner = outer * 0.76f;
-        Color[] px = new Color[n * n];
-        for (int y = 0; y < n; y++)
-            for (int x = 0; x < n; x++)
-            {
-                float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c));
-                float a = Mathf.Clamp01(outer - d + 0.5f) * Mathf.Clamp01(d - inner + 0.5f);
-                px[y * n + x] = new Color(1f, 1f, 1f, a);
-            }
-        tex.SetPixels(px);
-        tex.Apply(false, true);
-        ringSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-        return ringSprite;
-    }
-
     /// <summary>
-    /// One goal per row, laid out like an achievement badge: a framed box with a round progress dial (and its percentage) on the left,
+    /// One goal per row, laid out like an achievement badge: a framed box with a live 3D picture of the goal's item on the left,
     /// the title big and bold, and a wide bar with the count in the middle. The explanation and exact numbers show on hover.
     /// </summary>
     private GoalRow BuildGoalRow(int index)
@@ -1223,9 +1224,9 @@ public class PixelLog : MonoBehaviour
         row.rect.pivot = new Vector2(0.5f, 1f);
         row.rect.sizeDelta = new Vector2(0f, goalRowHeight);
 
-        // The framed dial box.
+        // The framed picture box: a live 3D picture of the item the goal is about (a spinning cube when there is none).
         float boxSize = goalRowHeight - 24f;
-        GameObject frame = new GameObject("Dial Frame", typeof(RectTransform), typeof(Image));
+        GameObject frame = new GameObject("Icon Frame", typeof(RectTransform), typeof(Image));
         frame.transform.SetParent(go.transform, false);
         frame.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.6f);
         frame.GetComponent<Image>().raycastTarget = false;
@@ -1241,37 +1242,25 @@ public class PixelLog : MonoBehaviour
         inr.anchorMin = Vector2.zero; inr.anchorMax = Vector2.one;
         inr.offsetMin = new Vector2(3f, 3f); inr.offsetMax = new Vector2(-3f, -3f);
 
-        GameObject ringBack = new GameObject("Ring Back", typeof(RectTransform), typeof(Image));
-        ringBack.transform.SetParent(inner.transform, false);
-        Image rb = ringBack.GetComponent<Image>();
-        rb.sprite = RingSprite();
-        rb.color = achievementBarBackColor;
-        rb.raycastTarget = false;
-        RectTransform rbr = ringBack.GetComponent<RectTransform>();
-        rbr.anchorMin = Vector2.zero; rbr.anchorMax = Vector2.one;
-        rbr.offsetMin = new Vector2(5f, 5f); rbr.offsetMax = new Vector2(-5f, -5f);
+        float iconSize = boxSize - 12f;
+        GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
+        iconGo.transform.SetParent(inner.transform, false);
+        row.icon = iconGo.AddComponent<PixelCubeIcon>();
+        row.icon.spinDegreesPerSecond = achievementIconSpin;
+        RectTransform icr = row.icon.rectTransform;
+        icr.anchorMin = icr.anchorMax = icr.pivot = new Vector2(0.5f, 0.5f);
+        icr.sizeDelta = new Vector2(iconSize, iconSize);
+        icr.anchoredPosition = Vector2.zero;
 
-        GameObject ringFill = new GameObject("Ring Fill", typeof(RectTransform), typeof(Image));
-        ringFill.transform.SetParent(inner.transform, false);
-        row.ringFill = ringFill.GetComponent<Image>();
-        row.ringFill.sprite = RingSprite();
-        row.ringFill.type = Image.Type.Filled;
-        row.ringFill.fillMethod = Image.FillMethod.Radial360;
-        row.ringFill.fillOrigin = (int)Image.Origin360.Top;
-        row.ringFill.fillClockwise = true;
-        row.ringFill.raycastTarget = false;
-        RectTransform rfr = ringFill.GetComponent<RectTransform>();
-        rfr.anchorMin = Vector2.zero; rfr.anchorMax = Vector2.one;
-        rfr.offsetMin = new Vector2(5f, 5f); rfr.offsetMax = new Vector2(-5f, -5f);
-
-        row.percent = CreateText(inner.transform, "Percent", "", rowFontSize * 0.7f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        row.percent.enableAutoSizing = true;
-        row.percent.fontSizeMax = rowFontSize * 0.7f;
-        row.percent.fontSizeMin = 10f;
-        row.percent.raycastTarget = false;
-        PixelUIKit.Stretch(row.percent.rectTransform);
-        row.percent.rectTransform.offsetMin = new Vector2(boxSize * 0.24f, 0f);
-        row.percent.rectTransform.offsetMax = new Vector2(-boxSize * 0.24f, 0f);
+        GameObject skinGo = new GameObject("Skin", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        skinGo.transform.SetParent(inner.transform, false);
+        row.skin = skinGo.GetComponent<RawImage>();
+        row.skin.raycastTarget = false;
+        RectTransform skr = row.skin.rectTransform;
+        skr.anchorMin = skr.anchorMax = skr.pivot = new Vector2(0.5f, 0.5f);
+        skr.sizeDelta = new Vector2(iconSize, iconSize);
+        skr.anchoredPosition = Vector2.zero;
+        skinGo.SetActive(false);
 
         float left = 10f + boxSize + 16f;
 
@@ -1324,6 +1313,23 @@ public class PixelLog : MonoBehaviour
     {
         public string title, description;
         public double count, goal;
+        public int skinTier;        // tier whose 3D look is the goal's picture (-1 = a spinning cube in 'iconColor')
+        public Color iconColor;
+    }
+
+    /// <summary>The pixel type that stands for a minigame goal (its tracker's item).</summary>
+    private int GoalSkinTier(string minigameId)
+    {
+        PixelClicker.PixelType type;
+        switch (minigameId)
+        {
+            case "ghost": type = PixelClicker.PixelType.Ghost; break;
+            case "blackhole": type = PixelClicker.PixelType.Singularity; break;
+            case "meteor": type = PixelClicker.PixelType.Meteor; break;
+            case "stardust": type = PixelClicker.PixelType.Solar; break;
+            default: return -1;
+        }
+        return clicker.IndexOf(type);
     }
 
     /// <summary>The progress bars: the next pixel unlock, then every minigame tracker that is in play (ghosts caught, singularity, stardust...).</summary>
@@ -1342,6 +1348,8 @@ public class PixelLog : MonoBehaviour
                 description = string.Format(nextPixelGoalDescription, tiers[i - 1].displayName),
                 count = tiers[i - 1].totalCollected,
                 goal = t.unlockThreshold,
+                skinTier = i,
+                iconColor = t.color,
             });
             break; // only the next one
         }
@@ -1358,13 +1366,19 @@ public class PixelLog : MonoBehaviour
                 description = string.Format(buyRgbGoalDescription, costText),
                 count = have,
                 goal = need,
+                skinTier = clicker.IndexOf(PixelClicker.PixelType.Red),
+                iconColor = new Color(1f, 0.3f, 0.3f, 1f),
             });
         }
 
         foreach (PixelMinigame m in PixelMinigame.All)
         {
             if (m == null || !m.HasTracker || !(m.Running || m.TrackerCount > 0d)) continue;
-            goals.Add(new Goal { title = m.TrackerTitle, description = m.TrackerDescription, count = m.TrackerCount, goal = Math.Max(1d, m.TrackerGoal) });
+            goals.Add(new Goal
+            {
+                title = m.TrackerTitle, description = m.TrackerDescription, count = m.TrackerCount, goal = Math.Max(1d, m.TrackerGoal),
+                skinTier = GoalSkinTier(m.Id), iconColor = new Color(1f, 0.85f, 0.3f, 1f),
+            });
         }
         return goals;
     }
@@ -1391,13 +1405,14 @@ public class PixelLog : MonoBehaviour
             float fraction = Mathf.Clamp01((float)(g.count / g.goal));
             PixelUIKit.SetText(row.title, g.title);
             PixelUIKit.SetText(row.progress, done ? achievementUnlockedText : string.Format(achievementProgressFormat, FormatAmount(g.count), FormatAmount(g.goal)));
-            PixelUIKit.SetText(row.percent, done ? "100%" : Mathf.FloorToInt(fraction * 100f) + "%");
             Color accent = done ? achievementUnlockedColor : achievementBarColor;
             row.title.color = done ? achievementUnlockedColor : textColor;
-            row.percent.color = done ? achievementUnlockedColor : textColor;
             row.barFill.color = accent;
-            row.ringFill.color = accent;
-            row.ringFill.fillAmount = fraction;
+            row.skinTier = g.skinTier;
+            Texture skinTex = g.skinTier >= 0 ? SkinIcon(g.skinTier) : null;
+            row.skin.gameObject.SetActive(skinTex != null);
+            row.icon.gameObject.SetActive(skinTex == null);
+            if (skinTex != null) row.skin.texture = skinTex; else row.icon.color = g.iconColor;
             row.barFillRect.anchorMax = new Vector2(fraction, 1f);
 
             row.rect.anchoredPosition = new Vector2(0f, -y);
