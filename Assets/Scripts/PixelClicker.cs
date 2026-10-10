@@ -298,7 +298,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1200,6 +1200,20 @@ public class PixelClicker : MonoBehaviour
                 saved.outlineStrength = def.outlineStrength;
             }
             looksVersion = 20;
+        }
+        if (looksVersion < 21)
+        {
+            // The basic pixels got a material feel (matte White, brushed-metal Gray, glossy Black, slightly glowing glossy RGB): applied where metallic / smoothness / emission were never set.
+            foreach (PixelType basic in new[] { PixelType.White, PixelType.Gray, PixelType.Black, PixelType.Red, PixelType.Green, PixelType.Blue })
+            {
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), basic);
+                PixelLook saved = PixelLooks.Find(looks, basic);
+                if (def == null || saved == null || saved.metallic >= 0f || saved.smoothness >= 0f || saved.emission > 0f) continue;
+                saved.metallic = def.metallic;
+                saved.smoothness = def.smoothness;
+                saved.emission = def.emission;
+            }
+            looksVersion = 21;
         }
 
         if (pixelRenderer != null)
