@@ -1057,6 +1057,9 @@ public class PixelUI : MonoBehaviour
     // Rows: a small coloured swatch, the name in plain light text, and the amount right-aligned in its own column.
     // ------------------------------------------------------------------
 
+    // The row text is always this light colour (the scene's own 'Text Color' may be set to something else from when lines were coloured by tier).
+    private static readonly Color RowTextColor = new Color(0.94f, 0.95f, 0.98f, 1f);
+
     private struct RowParts { public TMP_Text amount; public Image swatch; }
     private readonly Dictionary<TMP_Text, RowParts> rowParts = new Dictionary<TMP_Text, RowParts>();
 
@@ -1070,10 +1073,10 @@ public class PixelUI : MonoBehaviour
 
     private RowParts BuildRowParts(TMP_Text label)
     {
-        float swatchSize = Mathf.Round(LinePitch * 0.5f);
+        float swatchSize = Mathf.Round(LinePitch * 0.8f);   // a clear colour chip
         float deltaSpace = fontSize * 1.5f;   // the "+N" indicator keeps the far right
         label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.margin = new Vector4(swatchSize + 14f, 0f, 150f, 0f);   // the name never runs under the amount
+        label.margin = new Vector4(swatchSize + 18f, 0f, 150f, 0f);   // the name never runs under the amount
 
         GameObject sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
         sw.transform.SetParent(label.transform, false);
@@ -1082,10 +1085,10 @@ public class PixelUI : MonoBehaviour
         RectTransform sr = sw.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
         sr.sizeDelta = new Vector2(swatchSize, swatchSize);
-        sr.anchoredPosition = new Vector2(2f, 0f);
+        sr.anchoredPosition = new Vector2(4f, 0f);
         PixelUIKit.StyleButton(swImage);
 
-        TMP_Text amount = MakeText(label.transform, "Amount", "", fontSize, TextAlignmentOptions.MidlineRight, FontStyles.Bold, textColor);
+        TMP_Text amount = MakeText(label.transform, "Amount", "", fontSize, TextAlignmentOptions.MidlineRight, FontStyles.Bold, RowTextColor);
         amount.raycastTarget = false;
         amount.enableAutoSizing = true;
         amount.fontSizeMax = fontSize;
@@ -1113,7 +1116,7 @@ public class PixelUI : MonoBehaviour
         if (!rowParts.TryGetValue(label, out RowParts parts)) parts = BuildRowParts(label);
         PixelUIKit.SetText(label, name);
         PixelUIKit.SetText(parts.amount, amount);
-        Color text = dim ? lockedColor : textColor;
+        Color text = dim ? lockedColor : RowTextColor;
         label.color = text;
         parts.amount.color = text;
         parts.swatch.color = dim ? new Color(swatch.r, swatch.g, swatch.b, 0.35f) : swatch;
@@ -1532,7 +1535,7 @@ public class PixelUI : MonoBehaviour
 
             int tierIndex = clicker.IndexOf(consumables.ItemRequiredType(i));
             SetRow(potionLabels[i], consumables.ItemName(i), "x" + (owned >= 99999 ? PixelConsumables.OwnedText(owned) : FormatAmount(owned)),
-                   tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : textColor);
+                   tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : RowTextColor);
         }
 
         noConsumablesLabel.gameObject.SetActive(shown == 0);
