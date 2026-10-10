@@ -777,6 +777,9 @@ public class PixelHints : MonoBehaviour
     private float introIdle;
 
     /// <summary>True from the start of a new game until the intro tips (Log, Inventory) have been closed: the "Click 100 more..." guide stays hidden meanwhile.</summary>
+    /// <summary>Are tips waiting to show (or the new-game intro still running)? Vendors don't walk in over them.</summary>
+    public static bool TipsPending => instance != null && (instance.queue.Count > 0 || IntroHoldsGuide);
+
     public static bool IntroHoldsGuide => instance != null && instance.IntroHoldsGuideNow;
 
     private bool IntroHoldsGuideNow

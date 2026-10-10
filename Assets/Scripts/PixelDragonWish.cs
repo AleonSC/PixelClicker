@@ -61,6 +61,11 @@ public class PixelDragonWish : MonoBehaviour
     }
 
     private bool busy;
+    private static PixelDragonWish instance;
+
+    /// <summary>True while the summoning / wish scene plays (vendors don't walk in meanwhile).</summary>
+    public static bool Active => instance != null && instance.busy;
+
     private float savedTimeScale = 1f;
     private bool froze;
     private float goldenLeft;
@@ -74,6 +79,7 @@ public class PixelDragonWish : MonoBehaviour
 
     private void Awake()
     {
+        instance = this;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
     }
 
@@ -81,6 +87,7 @@ public class PixelDragonWish : MonoBehaviour
     {
         Unfreeze();
         PixelClicker.WishMultiplier = 1f;
+        if (instance == this) instance = null;
     }
 
     private void Update()

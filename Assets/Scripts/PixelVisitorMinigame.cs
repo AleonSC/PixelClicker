@@ -32,12 +32,20 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     [SerializeField] private float firstVisitDelay = 150f;
 
     [Min(1f)]
-    [Tooltip("Fewest seconds between visits.")]
-    [SerializeField] private float minInterval = 300f;
+    [Tooltip("Fewest seconds between this vendor's visits (8 minutes).")]
+    [SerializeField] private float visitMinSeconds = 480f;
 
     [Min(1f)]
-    [Tooltip("Most seconds between visits.")]
-    [SerializeField] private float maxInterval = 600f;
+    [Tooltip("Most seconds between this vendor's visits (15 minutes).")]
+    [SerializeField] private float visitMaxSeconds = 900f;
+
+    [Min(0f)]
+    [Tooltip("After ANY vendor leaves, no vendor (this one included) comes for this many seconds, so visits never come back to back.")]
+    [SerializeField] private float sharedCooldownSeconds = 180f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How dark the screen gets while a vendor is here (time is frozen too).")]
+    [SerializeField] private float visitDarkness = 0.6f;
 
     [Header("Offer")]
     [Range(0f, 0.99f)]
@@ -104,6 +112,24 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     private bool visiting;
     private float spawnTimer;
+    private Image dim;
+
+    // Shared by every vendor: nobody comes while another is here or soon after one left.
+    private static float nextAnyVisitTime;
+    private static bool anyVisiting;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetVisitStatics() { nextAnyVisitTime = 0f; anyVisiting = false; }
+
+    /// <summary>Is it a calm moment for a vendor to walk in? Never over a tip box (or tips waiting), the dragon show / wish, a pet popup, a pause or the title screen.</summary>
+    private static bool CalmForVisit()
+    {
+        if (Time.timeScale <= 0f) return false;                       // paused or Time Stop
+        if (PixelNotice.IsShowing || PixelHints.TipsPending) return false;
+        if (PixelDragonFind.Playing || PixelDragonWish.Active || PixelPets.PopupOpen) return false;
+        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return false;
+        return true;
+    }
     private float savedTimeScale = 1f;
     private bool froze;
 
@@ -179,6 +205,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (!running || visiting || clicker == null) return;
         spawnTimer -= Time.deltaTime;
         if (spawnTimer > 0f) return;
+        if (anyVisiting || Time.unscaledTime < nextAnyVisitTime || !CalmForVisit()) return;   // waits (checked every frame) for a quiet moment
         if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(VisitRoutine());
         else spawnTimer = PixelMinigameLimits.RetrySeconds;
     }
@@ -204,10 +231,12 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     protected override void OnDespawned()
     {
         visiting = false;
+        anyVisiting = false;
+        nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
         dialogOpen = false;
         Unfreeze();
         PixelWindows.Unregister(this);
-        spawnTimer = Random.Range(minInterval, maxInterval);
+        spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
     }
 
     // ------------------------------------------------------------------
@@ -217,12 +246,23 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private IEnumerator VisitRoutine()
     {
         visiting = true;
+        anyVisiting = true;
         decision = 0;
         waresDone = false;
         Report(MinigameEvent.Spawned);
         PixelHints.Announce(Pick(arrivedLog, DefaultArrivedLog));
         PixelAudio.Play(Id + "_spawn");
         BuildUI();
+
+        // The screen darkens and time stops for the whole visit (Escape = send them away).
+        dim = new GameObject("Dim", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        dim.transform.SetParent(canvasRoot.transform, false);
+        dim.color = new Color(0f, 0f, 0f, 0f);
+        dim.raycastTarget = false;
+        PixelUIKit.Stretch(dim.rectTransform);
+        dim.transform.SetAsFirstSibling();
+        Freeze();
+        PixelWindows.Register(this, 150, () => visiting, Leave);
 
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         float visitorW = visitorRect.sizeDelta.x;
@@ -235,14 +275,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         {
             float k = Mathf.SmoothStep(0f, 1f, t / slideSeconds);
             visitorRect.anchoredPosition = new Vector2(Mathf.Lerp(hiddenX, restX, k), barH + 24f + Mathf.Abs(Mathf.Sin(t * 9f)) * 10f);
+            SetDim(k);
             yield return null;
         }
         visitorRect.anchoredPosition = new Vector2(restX, barH + 24f);
+        SetDim(1f);
 
-        // Time stops and they greet you.
-        Freeze();
+        // They greet you.
         dialogOpen = true;
-        PixelWindows.Register(this, 150, () => dialogOpen, Leave); // Escape = no thanks
         greetingPanel.gameObject.SetActive(true);
 
         while (decision == 0) { Bob(restX, barH); yield return null; }
@@ -264,13 +304,22 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         {
             float k = Mathf.SmoothStep(0f, 1f, t / slideSeconds);
             visitorRect.anchoredPosition = new Vector2(Mathf.Lerp(restX, hiddenX, k), barH + 24f + Mathf.Abs(Mathf.Sin(t * 9f)) * 10f);
+            SetDim(1f - k);
             yield return null;
         }
 
         if (canvasRoot != null) Destroy(canvasRoot);
         canvasRoot = null;
+        dim = null;
         visiting = false;
-        spawnTimer = Random.Range(minInterval, maxInterval);
+        anyVisiting = false;
+        nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
+        spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+    }
+
+    private void SetDim(float amount)
+    {
+        if (dim != null) dim.color = new Color(0f, 0f, 0f, visitDarkness * Mathf.Clamp01(amount));
     }
 
     private void Bob(float restX, float barH)
