@@ -872,6 +872,13 @@ public class PixelHints : MonoBehaviour
             wasShowing = true;
             return;
         }
+        if (next.id == "device_Sorter")
+        {
+            // The Sorter tip is a small box and stops time until it is closed.
+            PixelNotice.Show(next.text, 0f, small: true, freezeTime: true);
+            wasShowing = true;
+            return;
+        }
         PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && (next.id.StartsWith("minigame_") || next.id.StartsWith("timestop_") || next.id.StartsWith("bank_")),
                          aboveCombo: next.id == "combo", nearLog: next.id == "event_log"); // the first combo tip sits just above the combo meter
         wasShowing = true;
