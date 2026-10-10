@@ -971,6 +971,11 @@ public class PixelPauseMenu : MonoBehaviour
 
     private TMP_Text AddRowLabel(Transform parent, string text, float y, out RectTransform row)
     {
+        // "(after restart)" / "(next start)" / "(requires restart)" is taken off the name and shown as a hover tip instead.
+        bool needsRestart = false;
+        System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(text, @"\s*\((after restart|next start|requires restart)\)\s*$",
+                                                                                         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (m.Success) { text = text.Substring(0, m.Index); needsRestart = true; }
         GameObject go = new GameObject(text + " Row", typeof(RectTransform));
         go.transform.SetParent(parent, false);
         row = go.GetComponent<RectTransform>();
@@ -994,7 +999,54 @@ public class PixelPauseMenu : MonoBehaviour
         lr.anchorMin = Vector2.zero;
         lr.anchorMax = new Vector2(0.62f, 1f);
         lr.offsetMin = lr.offsetMax = Vector2.zero;
+        if (needsRestart)
+        {
+            Image hit = go.AddComponent<Image>();   // invisible, only so the whole row reacts to the mouse
+            hit.color = new Color(0f, 0f, 0f, 0f);
+            AddSettingTip(go, restartTipText);
+        }
         return label;
+    }
+
+    [Tooltip("Hover tip on Settings rows whose change only applies after the game is restarted.")]
+    [SerializeField] private string restartTipText = "Requires a restart to take effect.";
+
+    private RectTransform settingTipRect;
+    private TMP_Text settingTipLabel;
+
+    /// <summary>A small box next to the mouse while it is over 'target' (the Settings screen's own hover tip).</summary>
+    private void AddSettingTip(GameObject target, string text)
+    {
+        if (settingTipRect == null)
+        {
+            GameObject box = new GameObject("Setting Tip", typeof(RectTransform), typeof(Image), typeof(PixelDevTip));
+            box.transform.SetParent(canvasRoot.transform, false);
+            Image bg = box.GetComponent<Image>();
+            bg.color = new Color(0.05f, 0.06f, 0.09f, 0.96f);
+            bg.raycastTarget = false;
+            PixelUIKit.StyleBox(bg);
+            settingTipRect = box.GetComponent<RectTransform>();
+            settingTipRect.anchorMin = settingTipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            settingTipLabel = MakeText(box.transform, "Text", "", rowFontSize * 0.6f, FontStyles.Normal);
+            settingTipLabel.raycastTarget = false;
+            PixelUIKit.Stretch(settingTipLabel.rectTransform);
+            settingTipLabel.rectTransform.offsetMin = new Vector2(12f, 8f);
+            settingTipLabel.rectTransform.offsetMax = new Vector2(-12f, -8f);
+            PixelDevTip follow = box.GetComponent<PixelDevTip>();
+            follow.canvasRect = canvasRoot.GetComponent<RectTransform>();
+            follow.rect = settingTipRect;
+            box.SetActive(false);
+        }
+        PixelHoverTip hover = target.AddComponent<PixelHoverTip>();
+        hover.onEnter = () =>
+        {
+            settingTipLabel.text = text;
+            Vector2 pref = settingTipLabel.GetPreferredValues(text, 520f, 0f);
+            settingTipRect.sizeDelta = new Vector2(Mathf.Min(520f, pref.x) + 24f, pref.y + 16f);
+            settingTipRect.gameObject.SetActive(true);
+            settingTipRect.SetAsLastSibling();
+        };
+        hover.onExit = () => { if (settingTipRect != null) settingTipRect.gameObject.SetActive(false); };
     }
 
     private TMP_Text AddStatRow(Transform parent, string label, ref float y)
