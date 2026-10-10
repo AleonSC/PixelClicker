@@ -161,7 +161,7 @@ public partial class PixelShop
         subTabRow.pivot = new Vector2(0.5f, 1f);
         subTabRow.sizeDelta = new Vector2(0f, subTabHeight);
 
-        string[] names = { featuresSubTabText, valueSubTabText };
+        string[] names = { featuresSubTabText, valueSubTabText, operationSubTabText };
         int n = names.Length;
         subTabImages = new Image[n];
         for (int i = 0; i < n; i++)
@@ -421,6 +421,7 @@ public partial class PixelShop
     public void CloseUpgradesWindow()
     {
         openParent = -1;
+        openOperation = -1;
         subPanelObject.SetActive(false);
     }
 
@@ -463,7 +464,7 @@ public partial class PixelShop
     {
         if (panelObject == null || !builtOk) return;
         if (!panelObject.activeSelf) panelObject.SetActive(true);
-        upgradesSubTab = Mathf.Clamp(subTab, 0, 1);
+        upgradesSubTab = Mathf.Clamp(subTab, 0, 2);
         SelectTab(tab);
         RefreshCurrency();
     }
@@ -861,6 +862,9 @@ public partial class PixelShop
             row.buyLabel.text = maxed ? maxedText : valueButtonText;
             row.buyImage.color = canBuy ? buyColor : disabledColor;
         }
+
+        // Upgrades > Operation: the consumables and their upgrade window.
+        RefreshOperation(onUpgrades, ref y, ref visibleCount, ref subY, ref subVisibleCount);
 
         // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.
         ApplyContentHeight(contentRect, emptyLabel, y, visibleCount);

@@ -519,6 +519,22 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Highest boost level a pixel type can reach. 0 = no limit.")]
     [SerializeField] private int ultraMaxLevel = 20;
 
+    [Header("Operation Upgrades (Upgrades > Operation: upgrades for the consumables)")]
+    [Tooltip("Text of the sub-tab that lists the consumables and their upgrades (inside the Upgrades tab).")]
+    [SerializeField] private string operationSubTabText = "Operation";
+
+    [Tooltip("Title of a consumable's upgrade window. {0} = its name.")]
+    [SerializeField] private string operationWindowTitle = "{0} Upgrades";
+
+    [Tooltip("Shown on a consumable's row. {0} = upgrade levels bought, {1} = levels in all.")]
+    [SerializeField] private string operationSummaryFormat = "Upgrades: {0} / {1}";
+
+    [Tooltip("Cost line of an upgrade. {0} = price, {1} = pixel name, {2} = how many you have.")]
+    [SerializeField] private string operationCostFormat = "Cost: {0} {1}   (you have {2})";
+
+    [Tooltip("The consumables' upgrades. The built-in ones are added by id when missing; edit levels, effects and prices here.")]
+    [SerializeField] private System.Collections.Generic.List<PixelOperationUpgrade> operationUpgrades = new System.Collections.Generic.List<PixelOperationUpgrade>();
+
     [Header("Value Upgrades (spend a pixel type's own currency)")]
     [Tooltip("Text of the sub-tab that lists the Value upgrades (inside the Upgrades tab).")]
     [SerializeField] private string valueSubTabText = "Value";
@@ -705,6 +721,7 @@ public partial class PixelShop : MonoBehaviour
                              "Remove the extra one so purchases and the inventory use the same potions.", this);
 
         EnsureDefaultPacks();
+        EnsureDefaultOperationUpgrades();
 
         // Make sure every reward tier exists in PixelClicker (added locked, unlocked on purchase).
         foreach (ShopPack pack in packs)
@@ -1047,6 +1064,7 @@ public partial class PixelShop : MonoBehaviour
         {
             if (this == null || Application.isPlaying) return;
             if (EnsureDefaultPacks()) UnityEditor.EditorUtility.SetDirty(this);
+            if (EnsureDefaultOperationUpgrades()) UnityEditor.EditorUtility.SetDirty(this);
 
             if (resetBuiltInPricesNow)
             {
@@ -1114,6 +1132,7 @@ public partial class PixelShop : MonoBehaviour
     private void OnDestroy()
     {
         PixelWindows.Unregister(this);
+        OnDestroyOperation();
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
@@ -1157,6 +1176,7 @@ public partial class PixelShop : MonoBehaviour
             RefreshCurrency();
         }
         UpdateCurrencyAndWindows();
+        UpdateOperationPictures();
     }
 
     // ------------------------------------------------------------------

@@ -239,6 +239,9 @@ public class PixelGhostMinigame : PixelMinigame
 
     private float spawnTimer;
     private bool ghostActive;
+    /// <summary>How many ghosts a Ghost Bait calls before any Operation upgrade.</summary>
+    public int BaitGhostCount => baitGhosts;
+
     private int baitGhostsLeft; // ghosts still to come from Ghost Bait
 
     [Header("Ghost Bait")]
@@ -265,7 +268,8 @@ public class PixelGhostMinigame : PixelMinigame
     public bool UseBait()
     {
         if (!running || baitGhostsLeft > 0) return false;
-        baitGhostsLeft = Mathf.Max(1, baitGhosts);
+        PixelConsumables baitSource = PixelFind.First<PixelConsumables>();
+        baitGhostsLeft = Mathf.Max(1, baitGhosts + (baitSource != null ? Mathf.RoundToInt(baitSource.OperationBonus(PixelConsumables.DeviceKind.GhostBait, PixelOperationStat.BaitGhosts)) : 0)); // Operation upgrades
         if (!ghostActive) spawnTimer = Mathf.Min(spawnTimer, baitFirstDelay);
         return true;
     }

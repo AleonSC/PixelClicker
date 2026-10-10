@@ -304,12 +304,16 @@ public partial class PixelPets : MonoBehaviour
 
     private float Hyper => treatTimer > 0f ? treatHyperFactor : 1f;
 
+    /// <summary>Seconds a Pet Treat lasts before any Operation upgrade.</summary>
+    public float TreatSeconds => treatSeconds;
+
     /// <summary>Pet Treat: pets go hyper and glow for a while. False when no pet is out.</summary>
     public bool TryUseTreat()
     {
         bool anyOut = pets.Exists(p => !p.off && p.body != null);
         if (!anyOut) return false;
-        treatTimer = treatSeconds;
+        PixelConsumables treatSource = PixelFind.First<PixelConsumables>();
+        treatTimer = treatSeconds + (treatSource != null ? treatSource.OperationBonus(PixelConsumables.DeviceKind.PetTreat, PixelOperationStat.Duration) : 0f); // Operation upgrades
         return true;
     }
 

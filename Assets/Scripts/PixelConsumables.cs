@@ -105,6 +105,9 @@ public class PixelConsumables : MonoBehaviour
     [Serializable]
     public class Device
     {
+        /// <summary>A shallow copy (used to apply the Operation upgrades without changing the real settings).</summary>
+        public Device Clone() => (Device)MemberwiseClone();
+
         [Tooltip("What this device does.")]
         public DeviceKind kind = DeviceKind.Vacuum;
 
@@ -987,7 +990,9 @@ public class PixelConsumables : MonoBehaviour
     {
         if (IsDevice(item))
         {
-            int held = devices[item - potions.Length].maxHeld; // Combo Fuel 3, Ghost Bait 1, Pet Treat 5, placeable devices unlimited
+            Device dev = devices[item - potions.Length];
+            int held = dev.maxHeld; // Combo Fuel 3, Ghost Bait 1, Pet Treat 5, placeable devices unlimited
+            if (held > 0) held += Mathf.RoundToInt(OperationBonus(dev.kind, PixelOperationStat.Storage)); // Operation upgrades
             return held > 0 ? held : int.MaxValue;
         }
         if (maxPotionsHeld <= 0) return int.MaxValue;
@@ -1231,13 +1236,254 @@ public class PixelConsumables : MonoBehaviour
         IsDevice(item) ? devices[item - potions.Length].requiredType : potions[item].type;
 
     /// <summary>How long a placed device lasts: the Vacuum Device uses <see cref="vacuumDeviceSeconds"/> (default 5), the others their own setting.</summary>
-    private float DeviceSeconds(Device d) => d.kind == DeviceKind.Vacuum ? (vacuumDeviceSeconds > 0f ? vacuumDeviceSeconds : 5f) : d.durationSeconds;
+    private float DeviceSeconds(Device d) => d.kind == DeviceKind.Vacuum ? (vacuumDeviceSeconds > 0f ? vacuumDeviceSeconds : 5f) + OperationBonus(DeviceKind.Vacuum, PixelOperationStat.Duration) : d.durationSeconds;
+
+    // ------------------------------------------------------------------
+    // Operation upgrades (bought in the shop's Upgrades > Operation sub-tab)
+    // ------------------------------------------------------------------
+
+    private PixelShop opShop;
+
+    /// <summary>How much the bought Operation upgrades add to a stat of a consumable (0 when there are none).</summary>
+    public float OperationBonus(DeviceKind kind, PixelOperationStat stat)
+    {
+        if (opShop == null) opShop = PixelFind.First<PixelShop>();
+        return opShop != null ? opShop.OperationBonus(kind, stat) : 0f;
+    }
+
+    /// <summary>A copy of the device with the Operation upgrades applied (duration, reach, strength, uses...). Used whenever a device is placed, previewed or described.</summary>
+    private Device EffectiveDevice(Device d)
+    {
+        Device e = d.Clone();
+        float B(PixelOperationStat st) => OperationBonus(d.kind, st);
+        switch (d.kind)
+        {
+            case DeviceKind.Vacuum:
+                e.durationSeconds = (vacuumDeviceSeconds > 0f ? vacuumDeviceSeconds : 5f) + B(PixelOperationStat.Duration);
+                e.radius += B(PixelOperationStat.Radius);
+                e.pullAcceleration += B(PixelOperationStat.Pull);
+                break;
+            case DeviceKind.Fan:
+                e.durationSeconds += B(PixelOperationStat.Duration);
+                e.radius += B(PixelOperationStat.Radius);
+                e.blowAcceleration += B(PixelOperationStat.Blow);
+                break;
+            case DeviceKind.Sorter:
+                e.durationSeconds += B(PixelOperationStat.Duration);
+                e.sorterSliderMax = (d.sorterSliderMax > 0f ? d.sorterSliderMax : 3f) + B(PixelOperationStat.ForceMax);
+                break;
+            case DeviceKind.ChargeBooster:
+                e.uses += Mathf.RoundToInt(B(PixelOperationStat.Uses));
+                e.chargeCapacity = Mathf.Max(2f, e.chargeCapacity + B(PixelOperationStat.ChargeNeeded));
+                e.superChargeSeconds += B(PixelOperationStat.SuperSeconds);
+                break;
+            case DeviceKind.LightningRod:
+                e.uses += Mathf.RoundToInt(B(PixelOperationStat.Uses));
+                e.strikeSeconds = Mathf.Max(0.6f, e.strikeSeconds + B(PixelOperationStat.StrikeInterval));
+                e.radius += B(PixelOperationStat.Radius);
+                break;
+        }
+        return e;
+    }
+
+    /// <summary>The first device of a kind (null if there is none).</summary>
+    public Device FindDeviceOfKind(DeviceKind kind)
+    {
+        foreach (Device x in devices) if (x != null && x.kind == kind) return x;
+        return null;
+    }
+
+    /// <summary>The value of a stat before any upgrade (the number the upgrade tooltips start from).</summary>
+    public float OperationBase(DeviceKind kind, PixelOperationStat stat)
+    {
+        Device d = FindDeviceOfKind(kind);
+        if (d == null) return 0f;
+        switch (stat)
+        {
+            case PixelOperationStat.Duration:
+                if (kind == DeviceKind.Vacuum) return vacuumDeviceSeconds > 0f ? vacuumDeviceSeconds : 5f;
+                if (kind == DeviceKind.PetTreat) return PixelPets.Instance != null ? PixelPets.Instance.TreatSeconds : 60f;
+                return d.durationSeconds;
+            case PixelOperationStat.Radius: return d.radius;
+            case PixelOperationStat.Pull: return d.pullAcceleration;
+            case PixelOperationStat.Blow: return d.blowAcceleration;
+            case PixelOperationStat.ForceMax: return d.sorterSliderMax > 0f ? d.sorterSliderMax : 3f;
+            case PixelOperationStat.Uses: return d.uses;
+            case PixelOperationStat.ChargeNeeded: return d.chargeCapacity;
+            case PixelOperationStat.SuperSeconds: return d.superChargeSeconds;
+            case PixelOperationStat.StrikeInterval: return d.strikeSeconds;
+            case PixelOperationStat.Storage: return d.maxHeld;
+            case PixelOperationStat.BaitGhosts:
+            {
+                PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();
+                return ghosts != null ? ghosts.BaitGhostCount : 3f;
+            }
+        }
+        return 0f;
+    }
+
+    /// <summary>The pixel type an upgrade of this consumable is paid in (the pixel the consumable itself needs).</summary>
+    public PixelClicker.PixelType OperationCostType(DeviceKind kind)
+    {
+        Device d = FindDeviceOfKind(kind);
+        return d != null ? d.requiredType : PixelClicker.PixelType.White;
+    }
+
+    /// <summary>Is a consumable of this kind available to show in the Operation tab (its pixel type is unlocked, or you hold one)?</summary>
+    public bool OperationListed(DeviceKind kind)
+    {
+        Device d = FindDeviceOfKind(kind);
+        return d != null && (clicker.IsUnlocked(d.requiredType) || d.owned > 0);
+    }
+
+    /// <summary>The name of the first consumable of a kind.</summary>
+    public string OperationName(DeviceKind kind)
+    {
+        Device d = FindDeviceOfKind(kind);
+        return d != null ? d.displayName : kind.ToString();
+    }
+
+    /// <summary>The description of the first consumable of a kind (with its upgrades applied).</summary>
+    public string OperationDescription(DeviceKind kind)
+    {
+        Device d = FindDeviceOfKind(kind);
+        if (d == null) return "";
+        Device e = EffectiveDevice(d);
+        return (e.description ?? "").Replace("{radius}", e.radius.ToString("0.##")).Replace("{duration}", DeviceSeconds(e).ToString("0.##"));
+    }
+
+    // --- A 3D picture of each consumable for the Operation tab ---
+
+    private bool displayOnly;   // building a model for the shop: no range markings, no timer
+
+    /// <summary>Builds a model of a consumable at the origin (no timer, range disc or collider), or null if there is none. The caller owns it.</summary>
+    public GameObject CreateDisplayModel(DeviceKind kind)
+    {
+        Device d = FindDeviceOfKind(kind);
+        if (d == null || clicker == null) return null;
+        displayOnly = true;
+        GameObject root = null;
+        try
+        {
+            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            switch (kind)
+            {
+                case DeviceKind.Fan:
+                    root = BuildFanObject(d, false, out _, out _);
+                    break;
+                case DeviceKind.Sorter:
+                {
+                    PixelSorterDevice.Parts parts = PixelSorterDevice.Parts.Create(clicker, d, cam, false, 1f);
+                    parts.Apply(0f, 25f, false, 1, 0.55f, "x1.00");
+                    root = parts.Root;
+                    break;
+                }
+                case DeviceKind.Vacuum:
+                    root = BuildDeviceObject(d, false, out _, out _);
+                    break;
+                case DeviceKind.ChargeBooster:
+                    root = BuildDeviceObject(d, false, out _, out _);
+                    DecorateBoosterModel(root, d);
+                    break;
+                case DeviceKind.LightningRod:
+                    root = BuildDeviceObject(d, false, out _, out _);
+                    DecorateRodModel(root, d);
+                    break;
+                case DeviceKind.ComboFuel:
+                case DeviceKind.GhostBait:
+                case DeviceKind.PetTreat:
+                    root = BuildItemModel(kind, d);
+                    break;
+            }
+        }
+        finally { displayOnly = false; }
+        return root;
+    }
+
+    private void DecorateBoosterModel(GameObject root, Device d)
+    {
+        Color bright = Color.Lerp(d.color, Color.white, 0.5f);
+        GameObject meter = MakePrimitive(PrimitiveType.Cube, "Meter", root.transform, new Color(0.1f, 0.1f, 0.14f, 1f), false);
+        meter.transform.localScale = new Vector3(0.14f, d.bodyHeight * 1.1f, 0.14f);
+        meter.transform.localPosition = new Vector3(d.bodyDiameter * 0.75f, d.bodyHeight * 0.55f, 0f);
+        GameObject fill = MakePrimitive(PrimitiveType.Cube, "Fill", root.transform, bright, false);
+        fill.transform.localScale = new Vector3(0.1f, d.bodyHeight * 0.7f, 0.1f);
+        fill.transform.localPosition = new Vector3(d.bodyDiameter * 0.75f, d.bodyHeight * 0.4f, 0f);
+        GameObject spark = MakePrimitive(PrimitiveType.Sphere, "Spark", root.transform, bright, false);
+        spark.transform.localScale = Vector3.one * (d.bodyDiameter * 0.45f);
+        spark.transform.localPosition = new Vector3(0f, d.bodyHeight + d.bodyDiameter * 0.3f, 0f);
+    }
+
+    private void DecorateRodModel(GameObject root, Device d)
+    {
+        Color bright = Color.Lerp(d.color, Color.white, 0.6f);
+        GameObject tip = MakePrimitive(PrimitiveType.Sphere, "Tip", root.transform, bright, false);
+        tip.transform.localScale = Vector3.one * Mathf.Max(0.3f, d.bodyDiameter * 2.4f);
+        tip.transform.localPosition = new Vector3(0f, d.bodyHeight, 0f);
+        GameObject foot = MakePrimitive(PrimitiveType.Cylinder, "Foot", root.transform, new Color(d.color.r * 0.4f, d.color.g * 0.4f, d.color.b * 0.4f, 1f), false);
+        foot.transform.localScale = new Vector3(0.5f, 0.05f, 0.5f);
+        foot.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+    }
+
+    /// <summary>Simple models for the consumables that are never placed: a fuel canister, a ghost-bait orb and a pet-treat bone.</summary>
+    private GameObject BuildItemModel(DeviceKind kind, Device d)
+    {
+        GameObject root = new GameObject(d.displayName + " (Model)");
+        Color main = d.color;
+        Color dark = new Color(main.r * 0.4f, main.g * 0.4f, main.b * 0.4f, 1f);
+        Color bright = Color.Lerp(main, Color.white, 0.55f);
+        if (kind == DeviceKind.ComboFuel)
+        {
+            GameObject can = MakePrimitive(PrimitiveType.Cylinder, "Canister", root.transform, main, false);
+            can.transform.localScale = new Vector3(0.5f, 0.45f, 0.5f);
+            can.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+            GameObject band = MakePrimitive(PrimitiveType.Cylinder, "Band", root.transform, bright, false);
+            band.transform.localScale = new Vector3(0.52f, 0.06f, 0.52f);
+            band.transform.localPosition = new Vector3(0f, 0.45f, 0f);
+            GameObject cap = MakePrimitive(PrimitiveType.Cylinder, "Cap", root.transform, dark, false);
+            cap.transform.localScale = new Vector3(0.28f, 0.07f, 0.28f);
+            cap.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+            GameObject flame = MakePrimitive(PrimitiveType.Sphere, "Flame", root.transform, bright, false);
+            flame.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
+            flame.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+        }
+        else if (kind == DeviceKind.GhostBait)
+        {
+            GameObject orb = MakePrimitive(PrimitiveType.Sphere, "Orb", root.transform, new Color(main.r, main.g, main.b, 1f), false);
+            orb.transform.localScale = Vector3.one * 0.8f;
+            orb.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            for (int i = -1; i <= 1; i += 2)
+            {
+                GameObject eye = MakePrimitive(PrimitiveType.Sphere, "Eye", root.transform, new Color(0.05f, 0.05f, 0.08f, 1f), false);
+                eye.transform.localScale = new Vector3(0.12f, 0.16f, 0.12f);
+                eye.transform.localPosition = new Vector3(i * 0.17f, 0.58f, -0.34f);
+            }
+            GameObject tail = MakePrimitive(PrimitiveType.Cylinder, "Tail", root.transform, bright, false);
+            tail.transform.localScale = new Vector3(0.4f, 0.12f, 0.4f);
+            tail.transform.localPosition = new Vector3(0f, 0.12f, 0f);
+        }
+        else
+        {
+            GameObject shaft = MakePrimitive(PrimitiveType.Cylinder, "Shaft", root.transform, main, false);
+            shaft.transform.localScale = new Vector3(0.22f, 0.5f, 0.22f);
+            shaft.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            shaft.transform.localPosition = new Vector3(0f, 0.4f, 0f);
+            for (int sx = -1; sx <= 1; sx += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                {
+                    GameObject knob = MakePrimitive(PrimitiveType.Sphere, "Knob", root.transform, bright, false);
+                    knob.transform.localScale = Vector3.one * 0.3f;
+                    knob.transform.localPosition = new Vector3(sx * 0.52f, 0.4f, sz * 0.12f);
+                }
+        }
+        return root;
+    }
 
     public string ItemDescription(int item)
     {
         if (!IsDevice(item)) return Describe(item);
 
-        Device d = devices[item - potions.Length];
+        Device d = EffectiveDevice(devices[item - potions.Length]);
         return (d.description ?? "")
             .Replace("{radius}", d.radius.ToString("0.##"))
             .Replace("{duration}", DeviceSeconds(d).ToString("0.##"));
@@ -1370,7 +1616,7 @@ public class PixelConsumables : MonoBehaviour
             placingYaw = 0f; // for the sorter this is the pipe's angle around the ring (0 = pointing right on screen)
             sorterPhase = 0;
             sorterBend = 0f;
-            previewSorter = PixelSorterDevice.Parts.Create(clicker, devices[deviceIndex], cam, true, previewOpacity);
+            previewSorter = PixelSorterDevice.Parts.Create(clicker, EffectiveDevice(devices[deviceIndex]), cam, true, previewOpacity);
             previewSorter.Apply(placingYaw, 0f, false, devices[deviceIndex].sorterDefaultForce);
             preview = previewSorter.Root;
         }
@@ -1383,8 +1629,8 @@ public class PixelConsumables : MonoBehaviour
         else
         {
             preview = devices[deviceIndex].kind == DeviceKind.Fan
-                ? BuildFanObject(devices[deviceIndex], true, out _, out _)
-                : BuildDeviceObject(devices[deviceIndex], true, out _, out _);
+                ? BuildFanObject(EffectiveDevice(devices[deviceIndex]), true, out _, out _)
+                : BuildDeviceObject(EffectiveDevice(devices[deviceIndex]), true, out _, out _);
             preview.SetActive(false);
         }
         clicker.SetClicksBlocked(true); // so the placing click doesn't also hit the cube
@@ -1505,7 +1751,7 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
-        PixelPlacedDevice placedSorter = SpawnDevice(index, Vector3.zero, 0f, d.durationSeconds, placingYaw, sorterBend, -1);
+        PixelPlacedDevice placedSorter = SpawnDevice(index, Vector3.zero, 0f, EffectiveDevice(d).durationSeconds, placingYaw, sorterBend, -1);
         if (placedSorter != null) placedSorter.Disarm();
 
         EndPlacement();
@@ -1519,7 +1765,8 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
-        PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? d.uses : DeviceSeconds(d), 0f, 0f, -1);
+        Device effective = EffectiveDevice(d);
+        PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
         if (placed != null) placed.Disarm();   // starts grey and idle until you left-click it
 
         EndPlacement();
@@ -1530,7 +1777,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>Builds a working device in the world (placing it, or restoring it from a save).</summary>
     private PixelPlacedDevice SpawnDevice(int index, Vector3 point, float yaw, float duration, float aim, float bend, int force)
     {
-        Device d = devices[index];
+        Device d = EffectiveDevice(devices[index]);
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         PixelPlacedDevice result;
         PixelPlacedDevice.DisarmedText = string.IsNullOrEmpty(disarmedText) ? "Click to start" : disarmedText;
@@ -1736,7 +1983,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         // Flat disc showing the reach.
-        if (showRange)
+        if (showRange && !displayOnly)
         {
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "Range";
@@ -1761,7 +2008,7 @@ public class PixelConsumables : MonoBehaviour
         suckPoint = top.transform;
 
         timer = null;
-        if (!isPreview)
+        if (!isPreview && !displayOnly)
         {
             GameObject tg = new GameObject("Timer");
             tg.transform.SetParent(root.transform, false);
@@ -1931,7 +2178,7 @@ public class PixelConsumables : MonoBehaviour
         blades = bladeRoot.transform;
 
         // The area that gets blown: a flat wedge on the floor.
-        if (showRange)
+        if (showRange && !displayOnly)
         {
             GameObject wedge = new GameObject("Blow Area", typeof(MeshFilter), typeof(MeshRenderer));
             wedge.transform.SetParent(root.transform, false);
@@ -1948,7 +2195,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         timer = null;
-        if (!isPreview)
+        if (!isPreview && !displayOnly)
         {
             GameObject tg = new GameObject("Timer");
             tg.transform.SetParent(root.transform, false);
