@@ -1456,6 +1456,14 @@ public class OldPixelShatter : MonoBehaviour
         Shatter(contact.point, contact.normal);
     }
 
+    /// <summary>A Sorter's stream put the pixel on the ground (it had no collision on the way). Returns true if it shattered (then it is gone).</summary>
+    public bool StreamLand(Vector3 point, Vector3 normal)
+    {
+        if (done || clicker == null || held) return false;
+        Shatter(point, normal);
+        return true;
+    }
+
     private void Shatter(Vector3 point, Vector3 normal)
     {
         PixelStats.Count("old.shattered");

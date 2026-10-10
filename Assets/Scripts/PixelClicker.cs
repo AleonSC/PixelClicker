@@ -3077,6 +3077,12 @@ public class PixelClicker : MonoBehaviour
             OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
+            if (!stored)
+            {
+                // A Sorter's stream: no collisions while the pixel is in the air, solid again once it has landed (see OldPixelStream).
+                OldPixelStream stream = copy.AddComponent<OldPixelStream>();
+                stream.Setup(this, box);
+            }
             oldPixels.Add(rb);
             while (CopyCap > 0 && oldPixels.Count > CopyCap)
             {

@@ -342,6 +342,13 @@ public class OldPixelSplash : MonoBehaviour
         Splash(contact.point);
     }
 
+    /// <summary>A Sorter's stream put the pixel on the ground (it had no collision on the way): that is its first landing.</summary>
+    public void Land(Vector3 point)
+    {
+        if (done || clicker == null) return;
+        Splash(point);
+    }
+
     private void Update()
     {
         if (done || clicker == null || body == null) return;
