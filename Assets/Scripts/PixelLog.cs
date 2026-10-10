@@ -316,6 +316,7 @@ public class PixelLog : MonoBehaviour
         public Image background;
         public TMP_Text modeTag;
         public int groupIndex;
+        public int achIndex = -1;
     }
 
     private int currentTab; // 0 = Pixels, 1 = Achievements, 2 = Goals
@@ -522,10 +523,89 @@ public class PixelLog : MonoBehaviour
         TickDeltas();
         if (!panelObject.activeSelf) { panelWasOpen = false; return; }
         if (currentTab == 1) SpinVisibleSkins();
+        UpdateAchievementTip();
         if (panelWasOpen && Time.unscaledTime < nextRefreshTime) return;
         panelWasOpen = true;
         nextRefreshTime = Time.unscaledTime + refreshSeconds;
         Refresh();
+    }
+
+    // The hover text over an achievement: says exactly what counts (collecting vs clicking).
+    private int hoverAchievement = -1;
+    private GameObject tipRoot;
+    private RectTransform tipRect;
+    private TMP_Text tipLabel;
+
+    private string AchievementTipText(int a)
+    {
+        PixelAchievements.Kind kind = achievements.GetKind(a);
+        double target = achievements.GetCurrentTarget(a);
+        double have = Math.Min(achievements.GetProgress(a), target);
+        string pixel = kind == PixelAchievements.Kind.CollectPixelType || kind == PixelAchievements.Kind.ClickPixelType
+            ? PixelNameOf(achievements.GetPixelType(a)) : "";
+        string head, body;
+        if (kind == PixelAchievements.Kind.ClickPixelType)
+        {
+            head = "CLICKING";
+            body = "Click " + pixel + " pixels " + FormatAmount(target) + " times. Only your clicks count - auto clicker clicks too, but not the pixels you earn (multipliers, vacuums and minigames don't add to it).";
+        }
+        else if (kind == PixelAchievements.Kind.CollectPixelType)
+        {
+            head = "COLLECTING";
+            body = "Collect " + FormatAmount(target) + " " + pixel + " pixels in total. Everything you earn counts - clicks with their multipliers, the auto clicker, vacuums, minigames and rewards - and spending them does not lower it.";
+        }
+        else
+        {
+            head = "ACHIEVEMENT";
+            body = achievements.GetDescription(a);
+        }
+        int tiers = achievements.GetTierCount(a);
+        string tier = tiers > 1 ? "\nTier " + Math.Min(achievements.GetEarnedTiers(a) + 1, tiers) + " of " + tiers : "";
+        return "<b>" + head + "</b>\n" + body + "\nProgress: " + FormatAmount(have) + " / " + FormatAmount(target) + tier;
+    }
+
+    private string PixelNameOf(PixelClicker.PixelType type)
+    {
+        int t = clicker != null ? clicker.IndexOf(type) : -1;
+        return t >= 0 ? clicker.Tiers[t].displayName : type.ToString();
+    }
+
+    private void UpdateAchievementTip()
+    {
+        bool show = currentTab == 1 && hoverAchievement >= 0 && achievements != null && hoverAchievement < achievements.Count;
+        if (!show) { if (tipRoot != null && tipRoot.activeSelf) tipRoot.SetActive(false); return; }
+
+        if (tipRoot == null)
+        {
+            tipRoot = new GameObject("Achievement Tip", typeof(RectTransform), typeof(Image));
+            tipRoot.transform.SetParent(canvasRoot.transform, false);
+            tipRoot.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.09f, 0.97f);
+            tipRoot.GetComponent<Image>().raycastTarget = false;
+            tipRect = tipRoot.GetComponent<RectTransform>();
+            tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            tipRect.pivot = new Vector2(0f, 1f);
+            tipLabel = CreateText(tipRoot.transform, "Text", "", rowFontSize * 0.7f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
+            tipLabel.richText = true;
+            tipLabel.raycastTarget = false;
+            tipLabel.rectTransform.anchorMin = Vector2.zero; tipLabel.rectTransform.anchorMax = Vector2.one;
+            tipLabel.rectTransform.offsetMin = new Vector2(16f, 12f); tipLabel.rectTransform.offsetMax = new Vector2(-16f, -12f);
+        }
+        if (!tipRoot.activeSelf) tipRoot.SetActive(true);
+        tipRoot.transform.SetAsLastSibling();
+
+        string text = AchievementTipText(hoverAchievement);
+        const float width = 620f;
+        tipLabel.text = text;
+        float h = Mathf.Ceil(tipLabel.GetPreferredValues(text, width - 32f, 0f).y) + 28f;
+        tipRect.sizeDelta = new Vector2(width, h);
+
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        RectTransformUtility.ScreenPointToLocalPoint(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
+        Vector2 pos = local + new Vector2(26f, -22f);
+        Rect r = canvasRect.rect;
+        pos.x = Mathf.Clamp(pos.x, r.xMin + 8f, r.xMax - width - 8f);
+        pos.y = Mathf.Clamp(pos.y, r.yMin + h + 8f, r.yMax - 8f);
+        tipRect.anchoredPosition = pos;
     }
 
     private bool panelWasOpen;
@@ -689,7 +769,10 @@ public class PixelLog : MonoBehaviour
             TMP_Text label = tab.GetComponentInChildren<TMP_Text>();
             label.enableAutoSizing = true;
             label.fontSizeMax = tabFontSize;
-            label.fontSizeMin = Mathf.Min(14f, tabFontSize);
+            label.fontSizeMin = 10f;
+            label.textWrappingMode = TextWrappingModes.NoWrap;   // long names ("Achievements") shrink to fit instead of spilling out
+            label.rectTransform.offsetMin = new Vector2(10f, 4f);
+            label.rectTransform.offsetMax = new Vector2(-10f, -4f);
 
             RectTransform rt = tab.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
@@ -814,7 +897,7 @@ public class PixelLog : MonoBehaviour
         GameObject go = new GameObject("Achievement " + index, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(achievementsContent, false);
         row.background = go.GetComponent<Image>();
-        row.background.color = new Color(0f, 0f, 0f, 0f);   // transparent (still takes the mouse wheel)
+        row.background.color = achievementRowColor;   // a panel per achievement, with a gap between them
         row.rect = go.GetComponent<RectTransform>();
         row.rect.anchorMin = new Vector2(0f, 1f);
         row.rect.anchorMax = new Vector2(1f, 1f);
@@ -843,17 +926,27 @@ public class PixelLog : MonoBehaviour
         sr.anchoredPosition = new Vector2(8f, 0f);
         skinGo.SetActive(false);
 
-        // The vertical divider.
-        float dividerX = 8f + iconSize + 12f;
-        GameObject div = new GameObject("Divider", typeof(RectTransform), typeof(Image));
-        div.transform.SetParent(go.transform, false);
-        Image di = div.GetComponent<Image>();
-        di.color = new Color(1f, 1f, 1f, 0.55f);
-        di.raycastTarget = false;
-        RectTransform dr0 = div.GetComponent<RectTransform>();
-        dr0.anchorMin = new Vector2(0f, 0.08f); dr0.anchorMax = new Vector2(0f, 0.92f); dr0.pivot = new Vector2(0f, 0.5f);
-        dr0.sizeDelta = new Vector2(3f, 0f);
-        dr0.anchoredPosition = new Vector2(dividerX, 0f);
+        // The picture sits in its own framed box.
+        float boxSize = iconSize + 12f;
+        GameObject frame = new GameObject("Icon Frame", typeof(RectTransform), typeof(Image));
+        frame.transform.SetParent(go.transform, false);
+        frame.transform.SetSiblingIndex(0);
+        frame.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.6f);
+        frame.GetComponent<Image>().raycastTarget = false;
+        RectTransform fr = frame.GetComponent<RectTransform>();
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0f, 0.5f);
+        fr.sizeDelta = new Vector2(boxSize, boxSize);
+        fr.anchoredPosition = new Vector2(8f, 0f);
+        GameObject inner = new GameObject("Inner", typeof(RectTransform), typeof(Image));
+        inner.transform.SetParent(frame.transform, false);
+        inner.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 1f);
+        inner.GetComponent<Image>().raycastTarget = false;
+        RectTransform inr = inner.GetComponent<RectTransform>();
+        inr.anchorMin = Vector2.zero; inr.anchorMax = Vector2.one;
+        inr.offsetMin = new Vector2(3f, 3f); inr.offsetMax = new Vector2(-3f, -3f);
+        ir.anchoredPosition = new Vector2(8f + 6f, 0f);
+        sr.anchoredPosition = new Vector2(8f + 6f, 0f);
+        float dividerX = 8f + boxSize - 3f;
 
         float left = dividerX + 3f + 16f;
 
@@ -895,7 +988,11 @@ public class PixelLog : MonoBehaviour
         row.progress.raycastTarget = false;
         PixelUIKit.Stretch(row.progress.rectTransform);
 
-        // (The description is kept only as hidden storage; the title and bar say it all.)
+        PixelHoverTip tip = go.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => hoverAchievement = row.achIndex;
+        tip.onExit = () => { if (hoverAchievement == row.achIndex) hoverAchievement = -1; };
+
+        // (The description is kept only as hidden storage; the tooltip says it all.)
         row.description = CreateText(go.transform, "Description", "", 12f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
         row.description.gameObject.SetActive(false);
 
@@ -1245,6 +1342,7 @@ public class PixelLog : MonoBehaviour
             row.groupIndex = i;
             List<int> group = achievementGroups[i];
             int a = ChosenAchievement(group);
+            row.achIndex = a;
 
             bool unlocked = achievements.IsComplete(a);           // every tier earned
             bool started = achievements.HasAnyTier(a);            // at least one tier earned
