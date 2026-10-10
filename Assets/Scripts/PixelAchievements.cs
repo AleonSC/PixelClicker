@@ -417,6 +417,9 @@ public class PixelAchievements : MonoBehaviour
         return 0d;
     }
 
+    /// <summary>The achievement's id (used to sort them into sections).</summary>
+    public string GetId(int index) => achievements[index].id;
+
     /// <summary>What an achievement measures.</summary>
     public Kind GetKind(int index) => achievements[index].kind;
 

@@ -1448,6 +1448,61 @@ public class PixelLog : MonoBehaviour
         panelRect.sizeDelta = new Vector2(panelWidth, FixedPanelHeight);
     }
 
+    private const float sectionHeaderHeight = 56f;
+    private readonly HashSet<string> collapsedAchievementSections = new HashSet<string>();
+
+    private class SectionHeader
+    {
+        public Button button;
+        public TMP_Text label;
+        public string name;
+    }
+    private readonly List<SectionHeader> achievementSectionHeaders = new List<SectionHeader>();
+
+    /// <summary>Which section an achievement belongs to: what it measures, or (for code-made ones) what it is about.</summary>
+    private static string AchievementSection(PixelAchievements.Kind kind, string id)
+    {
+        if (kind == PixelAchievements.Kind.CollectPixelType || kind == PixelAchievements.Kind.CollectAnyPixel) return "Collected";
+        if (kind == PixelAchievements.Kind.ClickPixelType) return "Clicks";
+        if (id.StartsWith("pet_")) return "Pets";
+        if (id.StartsWith("use_")) return "Items";
+        return "Other";
+    }
+
+    private static int SectionRank(string name)
+    {
+        switch (name)
+        {
+            case "Collected": return 0;
+            case "Clicks": return 1;
+            case "Pets": return 2;
+            case "Items": return 3;
+            default: return 9;
+        }
+    }
+
+    private SectionHeader BuildSectionHeader(int index)
+    {
+        SectionHeader h = new SectionHeader();
+        h.button = CreateButton(achievementsContent, "Section " + index, "", new Vector2(10f, sectionHeaderHeight),
+                                new Color(0.25f, 0.25f, 0.3f, 1f), amountColor, rowFontSize * 0.9f);
+        RectTransform rt = h.button.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(0f, sectionHeaderHeight);
+        h.label = h.button.GetComponentInChildren<TMP_Text>();
+        h.label.alignment = TextAlignmentOptions.MidlineLeft;
+        h.label.fontStyle = FontStyles.Bold;
+        h.label.rectTransform.offsetMin = new Vector2(16f, 0f);
+        h.button.onClick.AddListener(() =>
+        {
+            if (!collapsedAchievementSections.Remove(h.name)) collapsedAchievementSections.Add(h.name);
+            RefreshAchievementsTab();
+        });
+        return h;
+    }
+
     private void RefreshAchievementsTab()
     {
         HidePixelsTab();
@@ -1456,11 +1511,53 @@ public class PixelLog : MonoBehaviour
         int count = achievementGroups.Count;
         while (achievementRows.Count < count) achievementRows.Add(BuildAchievementRow(achievementRows.Count));
 
+        // Sections (Collected, Clicks, Pets, ...): each one a fold-away heading with its achievements under it.
+        List<string> sectionNames = new List<string>();
+        List<List<int>> sectionRows = new List<List<int>>();
+        for (int i = 0; i < count; i++)
+        {
+            string name = AchievementSection(achievements.GetKind(achievementGroups[i][0]), achievements.GetId(achievementGroups[i][0]));
+            int s = sectionNames.IndexOf(name);
+            if (s < 0) { sectionNames.Add(name); sectionRows.Add(new List<int>()); s = sectionNames.Count - 1; }
+            sectionRows[s].Add(i);
+        }
+        int[] order = new int[sectionNames.Count];
+        for (int i = 0; i < order.Length; i++) order[i] = i;
+        System.Array.Sort(order, (p, q) => SectionRank(sectionNames[p]).CompareTo(SectionRank(sectionNames[q])));
+
         float y = 0f;
+        float[] rowY = new float[achievementRows.Count];
+        bool[] rowShown = new bool[achievementRows.Count];
+        while (achievementSectionHeaders.Count < sectionNames.Count) achievementSectionHeaders.Add(BuildSectionHeader(achievementSectionHeaders.Count));
+        for (int h = 0; h < achievementSectionHeaders.Count; h++) achievementSectionHeaders[h].button.gameObject.SetActive(false);
+        for (int n = 0; n < order.Length; n++)
+        {
+            int sIndex = order[n];
+            string name = sectionNames[sIndex];
+            bool collapsed = collapsedAchievementSections.Contains(name);
+            int earned = 0, total = sectionRows[sIndex].Count;
+            foreach (int r in sectionRows[sIndex]) if (achievements.IsComplete(achievementGroups[r][0])) earned++;
+
+            SectionHeader header = achievementSectionHeaders[n];
+            header.name = name;
+            header.button.gameObject.SetActive(true);
+            PixelUIKit.SetText(header.label, (collapsed ? "+  " : "-  ") + name.ToUpperInvariant() + "  (" + earned + " / " + total + ")");
+            header.button.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -y);
+            y += sectionHeaderHeight + achievementSpacing;
+
+            if (collapsed) continue;
+            foreach (int r in sectionRows[sIndex])
+            {
+                rowY[r] = y;
+                rowShown[r] = true;
+                y += achievementRowHeight + achievementSpacing;
+            }
+        }
+
         for (int i = 0; i < achievementRows.Count; i++)
         {
             AchievementRow row = achievementRows[i];
-            bool visible = i < count;
+            bool visible = i < count && rowShown[i];
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
@@ -1497,8 +1594,7 @@ public class PixelLog : MonoBehaviour
             row.barFill.color = unlocked ? achievementUnlockedColor : achievementBarColor;
             row.barFillRect.anchorMax = new Vector2(unlocked ? 1f : achievements.GetFraction(a), 1f);
 
-            row.rect.anchoredPosition = new Vector2(0f, -y);
-            y += achievementRowHeight + achievementSpacing;
+            row.rect.anchoredPosition = new Vector2(0f, -rowY[i]);
         }
 
         achievementsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));

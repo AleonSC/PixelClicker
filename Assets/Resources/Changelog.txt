@@ -369,3 +369,4 @@
 [2026-10-10 16:51 UTC] Save slots show total time played above the pixel count.
 [2026-10-10 16:53 UTC] Inventory, Log and Got-it boxes now grow from small to full size when they open and shrink away when they close.
 [2026-10-10 16:53 UTC] Stats section headings line up with the rows under them (text starts at the same edge).
+[2026-10-10 16:56 UTC] Achievements are grouped into collapsible sections (Collected, Clicks, Pets, Items, Other) with an earned / total count on each heading.
