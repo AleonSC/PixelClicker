@@ -337,3 +337,4 @@
 [2026-10-10 15:03 UTC] Settings: pick the neon bar glow colour (hue slider, plus a 'Cycle glow colour' switch) and a custom UI colour for the windows (hue slider, applies live); the Log's Goals tab now uses badge rows with a round progress dial, a wide bar and the explanation / exact numbers on hover.
 [2026-10-10 15:06 UTC] Added the Nuclear pixel (testing pixel, 10 White in the shop's Pixels tab): a glowing radioactive green cube whose old pixel makes every other old pixel near it despawn almost at once.
 [2026-10-10 15:08 UTC] Goal rows show a live 3D picture of the goal's item (ghost, singularity, meteor, solar, next pixel, red) instead of the dial, and the Log's list rows now line up with the tabs (the scroll bar moved into the margin).
+[2026-10-10 15:10 UTC] The Log window is now one fixed size on every tab (Clicks, Achievements, Goals), so the window and its tab buttons no longer move when you switch tabs.

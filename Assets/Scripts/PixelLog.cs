@@ -331,6 +331,9 @@ public class PixelLog : MonoBehaviour
     /// <summary>Where content starts: below the title bar and the two tab buttons.</summary>
     private float ContentTop => headerHeight + tabHeight + tabGap;
 
+    /// <summary>The window is always this tall, whichever tab is open, so nothing moves when you switch tabs.</summary>
+    private float FixedPanelHeight => ContentTop + rowFontSize * 1.3f + 6f + achievementsViewHeight + panelPadding;
+
     private GameObject canvasRoot;
     private GameObject panelObject;
     private RectTransform panelRect;
@@ -862,7 +865,8 @@ public class PixelLog : MonoBehaviour
         vr.anchorMin = new Vector2(0f, 1f);
         vr.anchorMax = new Vector2(1f, 1f);
         vr.pivot = new Vector2(0.5f, 1f);
-        vr.sizeDelta = new Vector2(-(panelPadding * 2f), achievementsViewHeight);   // exactly as wide as the tab row above: the rows line up with the tabs
+        float viewHeight = FixedPanelHeight - viewTop - panelPadding;   // fills the fixed window under the tabs (and the summary line)
+        vr.sizeDelta = new Vector2(-(panelPadding * 2f), viewHeight);   // exactly as wide as the tab row above: the rows line up with the tabs
         vr.anchoredPosition = new Vector2(0f, -viewTop);
 
         GameObject contentGo = new GameObject("Content", typeof(RectTransform));
@@ -881,7 +885,7 @@ public class PixelLog : MonoBehaviour
         RectTransform br = barGo.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
         float barWidth = Mathf.Min(scrollbarWidth, Mathf.Max(6f, panelPadding - 6f));   // the bar sits in the margin beside the rows, not on top of them
-        br.sizeDelta = new Vector2(barWidth, achievementsViewHeight);
+        br.sizeDelta = new Vector2(barWidth, viewHeight);
         br.anchoredPosition = new Vector2(-3f, -viewTop);
 
         GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
@@ -1421,7 +1425,7 @@ public class PixelLog : MonoBehaviour
 
         goalsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));
         noGoalsLabel.gameObject.SetActive(goals.Count == 0);
-        panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + achievementsViewHeight + panelPadding);
+        panelRect.sizeDelta = new Vector2(panelWidth, FixedPanelHeight);
     }
 
     private void RefreshAchievementsTab()
@@ -1482,7 +1486,7 @@ public class PixelLog : MonoBehaviour
         PixelUIKit.SetText(achievementSummary, string.Format(achievementSummaryFormat, achievements != null ? achievements.EarnedTierTotal : 0, achievements != null ? achievements.TierTotal : 0));
 
         float summaryHeight = rowFontSize * 1.3f;
-        panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + summaryHeight + 6f + achievementsViewHeight + panelPadding);
+        panelRect.sizeDelta = new Vector2(panelWidth, FixedPanelHeight);
     }
 
     /// <summary>Lists unlocked tiers with their lifetime totals and resizes the panel to fit.</summary>
@@ -1541,8 +1545,8 @@ public class PixelLog : MonoBehaviour
             y += rowHeight;
         }
 
-        float viewHeight = Mathf.Min(y, pixelsMaxListHeight);
-        panelRect.sizeDelta = new Vector2(panelWidth, ContentTop + viewHeight + panelPadding);
+        float viewHeight = FixedPanelHeight - ContentTop - panelPadding;
+        panelRect.sizeDelta = new Vector2(panelWidth, FixedPanelHeight);
         pixelsViewport.offsetMin = new Vector2(0f, panelPadding);
         pixelsViewport.offsetMax = new Vector2(0f, -ContentTop);
         PixelUIKit.UpdateScrollView(pixelsScroll, pixelsBar, y, viewHeight);
