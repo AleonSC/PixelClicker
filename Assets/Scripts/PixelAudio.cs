@@ -232,6 +232,7 @@ public class PixelAudio : MonoBehaviour
             Make("bomb_explode", 0.2f),
             Make("seed_dig", 0.04f, 0.9f, 1.1f),
             Make("seed_plant", 0.05f, 0.9f, 1.1f),
+            Make("water_splash", 0.05f, 0.9f, 1.1f),
         };
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
             list.Add(Make("pixel_" + type.ToString().ToLowerInvariant(), 0.03f, 0.92f, 1.08f));
@@ -247,9 +248,10 @@ public class PixelAudio : MonoBehaviour
         if (sounds == null) return;
         foreach (Sound s in sounds)
         {
-            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon" && s.id != "seed_dig" && s.id != "seed_plant")) continue;
+            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon" && s.id != "seed_dig" && s.id != "seed_plant" && s.id != "water_splash")) continue;
             if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
-            s.clips = s.id == "seed_plant" ? new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) }
+            s.clips = s.id == "water_splash" ? new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) }
+                    : s.id == "seed_plant" ? new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) }
                     : s.id == "seed_dig" ? new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) }
                     : s.id == "dragon_summon" ? new[] { PixelSynth.Summon() }
                     : s.id == "overcharge" ? new[] { PixelSynth.Charge() }
@@ -644,6 +646,40 @@ public static class PixelSynth
     }
 
     /// <summary>A charge-up: a rising buzz with growing crackle that ends in a big snap.</summary>
+    /// <summary>A watery splash: a hiss of filtered noise plus a few quick rising bubble "bloops". 'seed' picks a variant.</summary>
+    public static AudioClip Splash(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.32f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(500 + seed * 31);
+        float lp = 0f;
+        float[] bloopAt = { 0.015f, 0.06f + seed * 0.01f, 0.115f };
+        float[] bloopHz = { 520f + seed * 60f, 700f + seed * 50f, 900f };
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.18f;
+            float hiss = (noise - lp) * Mathf.Exp(-sec * 14f);        // bright splash hiss
+            float bloops = 0f;
+            for (int k = 0; k < bloopAt.Length; k++)
+            {
+                float t = sec - bloopAt[k];
+                if (t < 0f) continue;
+                float hz = bloopHz[k] * (1f + t * 6f);               // each bubble rises in pitch as it pops
+                bloops += Mathf.Sin(t * hz * Mathf.PI * 2f) * Mathf.Exp(-t * 38f) * 0.45f;
+            }
+            data[i] = (hiss * 0.8f + bloops) * Mathf.Clamp01(sec / 0.003f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
+        AudioClip clip = AudioClip.Create("Splash " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
     /// <summary>A small crunch, like a seed being pressed into gravelly soil: a few quick crackles over a soft low squash. 'seed' picks a variant.</summary>
     public static AudioClip Crunch(int seed)
     {

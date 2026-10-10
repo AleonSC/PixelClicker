@@ -249,6 +249,7 @@ public partial class PixelPets : MonoBehaviour
         public bool planter => type == PixelClicker.PixelType.Seed; // the Seed pet plants itself and sows seeds
         public bool planted;
         public float seedTimer;
+        public float wet;           // Seed pet: seconds of "watered" left (a Water pixel splashed nearby): it sows faster
         public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
         public GameObject mound;
         public PixelClicker.PixelType type;
@@ -860,12 +861,24 @@ public partial class PixelPets : MonoBehaviour
 
         // Planted: sow a seed every so often (only while nothing holds or hovers it).
         if (stopped) return;
-        float solarPart, waterPart;
-        float growBoost = clicker.SeedBoostAt(p.body.transform.position, out solarPart, out waterPart); // Solar / Water pixels nearby make it sow faster too
+        if (p.wet > 0f) p.wet -= Time.deltaTime;
+        float growBoost = clicker.SolarSeedBoostAt(p.body.transform.position) + (p.wet > 0f ? clicker.SeedWaterRate : 0f); // Solar pixels nearby and splashes of water make it sow faster
         p.seedTimer -= Time.deltaTime * Hyper * (1f + growBoost);
         if (p.seedTimer > 0f) return;
         p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y), Mathf.Max(seedPetInterval.x, seedPetInterval.y));
         SowSeed(p, size);
+    }
+
+    /// <summary>A Water pixel splashed at 'point': every planted Seed pet within 'reach' is watered (sows faster for a while).</summary>
+    public static void WaterPets(Vector3 point, float reach, float wetSeconds, float wetMax)
+    {
+        if (Instance == null) return;
+        foreach (Pet p in Instance.pets)
+        {
+            if (!p.planter || !p.planted || p.body == null) continue;
+            if ((p.body.transform.position - point).sqrMagnitude > reach * reach) continue;
+            p.wet = Mathf.Min(wetMax, p.wet + wetSeconds);
+        }
     }
 
     /// <summary>Where a new Seed pet drops from: a spot well to the side of the cube (not above it), up in the air, and on screen.</summary>

@@ -418,8 +418,9 @@ public partial class PixelShop
     }
 
     /// <summary>
-    /// Default Water Pixel pack (Pixels tab): TESTING price (10 White, no requirements) so it is available right away. Water pixels lying near
-    /// Seed sprouts and the Seed pet speed them up: stream them over a field of sprouts with a Sorter to make a farm.
+    /// Default Water Pixel pack (Pixels tab): TESTING price (10 White, no requirements) so it is available right away. Old Water pixels splash
+    /// on the ground and are used up; Seed sprouts and the Seed pet near a splash are watered (grow / sow faster): stream them over a field of
+    /// sprouts with a Sorter to make a farm.
     /// </summary>
     private static ShopPack CreateWaterPixelPack()
     {
@@ -427,7 +428,7 @@ public partial class PixelShop
         {
             displayName = "Water Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Water pixel: a wobbling blue jelly cube. Old Water pixels near Seed sprouts and the Seed pet make them grow and sow much faster.",
+            description = "Adds the Water pixel: a wobbling blue jelly cube. Old Water pixels splash when they hit the ground (and are used up); sprouts and the Seed pet near the splash grow and sow much faster for a while.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]

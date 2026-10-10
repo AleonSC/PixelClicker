@@ -210,6 +210,9 @@ public class PixelLook
     [Tooltip("Seed: draw a brown shell texture (tan with dark cracks that spread as the shell is hit) instead of the default dark surface texture. Needs Damage Cracks.")]
     public bool shellTexture = false;
 
+    [Tooltip("Water: old pixels of this type splash on the ground and are gone (whether or not anything needed watering); nearby Seed sprouts and the Seed pet are watered.")]
+    public bool splash = false;
+
     [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
@@ -265,7 +268,7 @@ public static class PixelLooks
 
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
-                            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true },
+                            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true },
 
             // Mirror: polished chrome that reflects the sky.
             new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = Color.white,

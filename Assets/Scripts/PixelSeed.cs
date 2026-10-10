@@ -14,7 +14,7 @@ public class SeedSprout : MonoBehaviour
     public static int Count { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Count = 0; }
+    private static void ResetStatics() { Count = 0; all.Clear(); }
 
     private PixelClicker clicker;
     private Rigidbody body;
@@ -30,12 +30,26 @@ public class SeedSprout : MonoBehaviour
     private float yaw;
 
     private static readonly Color GlowGreen = new Color(0.45f, 1f, 0.4f, 1f), GlowSun = new Color(1f, 0.85f, 0.3f, 1f), GlowWater = new Color(0.35f, 0.75f, 1f, 1f);
-    private float solarPart, waterPart;
+    private float solarPart, wetLeft;
+
+    private static readonly System.Collections.Generic.List<SeedSprout> all = new System.Collections.Generic.List<SeedSprout>();
+
+    /// <summary>Waters every sprout within 'reach' of 'point': it grows fast while wet, and a growing one also jumps ahead a little.</summary>
+    public static void WaterAll(Vector3 point, float reach, float wetSeconds, float wetMax, float instantSeconds)
+    {
+        float reachSqr = reach * reach;
+        foreach (SeedSprout s in all)
+        {
+            if (s == null || (s.transform.position - point).sqrMagnitude > reachSqr) continue;
+            s.wetLeft = Mathf.Min(wetMax, s.wetLeft + wetSeconds);
+            if (s.stage == Stage.Growing) s.stageTime += instantSeconds;
+        }
+    }
 
     private float StemTop => unit * sproutScale * PixelLooks.SproutStemTop;
 
-    private void OnEnable() => Count++;
-    private void OnDisable() => Count = Mathf.Max(0, Count - 1);
+    private void OnEnable() { Count++; all.Add(this); }
+    private void OnDisable() { Count = Mathf.Max(0, Count - 1); all.Remove(this); }
 
     public void Setup(PixelClicker owner, float pixelSize, float grow, float hold, float scale)
     {
@@ -91,8 +105,10 @@ public class SeedSprout : MonoBehaviour
             case Stage.Growing:
             {
                 solarTimer -= Time.deltaTime;
-                if (solarTimer <= 0f) { solarTimer = 0.3f; boost = clicker.SeedBoostAt(transform.position, out solarPart, out waterPart); }
-                stageTime += Time.deltaTime * (1f + boost); // Solar pixels nearby speed it up
+                if (solarTimer <= 0f) { solarTimer = 0.3f; solarPart = clicker.SolarSeedBoostAt(transform.position); }
+                if (wetLeft > 0f) wetLeft -= Time.deltaTime;
+                boost = solarPart + (wetLeft > 0f ? clicker.SeedWaterRate : 0f); // Solar pixels nearby and splashes of water speed it up
+                stageTime += Time.deltaTime * (1f + boost);
                 float k = Mathf.Clamp01(stageTime / growSeconds);
                 float ease = k * k * (3f - 2f * k);
                 if (pixel != null)
@@ -143,7 +159,7 @@ public class SeedSprout : MonoBehaviour
         }
         if (glow != null)
         {
-            glow.color = Color.Lerp(Color.Lerp(GlowGreen, GlowSun, Mathf.Clamp01(solarPart / 1.5f)), GlowWater, Mathf.Clamp01(waterPart / 1.5f)); // sun = yellow, water = blue
+            glow.color = Color.Lerp(Color.Lerp(GlowGreen, GlowSun, Mathf.Clamp01(solarPart / 1.5f)), GlowWater, wetLeft > 0f ? 0.85f : 0f); // sun = yellow, wet = blue
             glow.intensity = (0.8f + 0.25f * Mathf.Sin(t * 5f)) * (1f + boost * 0.6f);
         }
     }
@@ -294,5 +310,134 @@ public static class SeedDigFx
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         r.receiveShadows = false;
         return ps;
+    }
+}
+
+/// <summary>
+/// An old Water pixel: the first time it lands on the ground (or after it has lain still for a moment) it splashes and is gone - used up
+/// whether or not anything needed watering. Seed sprouts and the Seed pet near the splash are watered (see <see cref="PixelClicker.WaterSplashAt"/>).
+/// </summary>
+public class OldPixelSplash : MonoBehaviour
+{
+    private PixelClicker clicker;
+    private bool done;
+    private float stillTime;
+    private Rigidbody body;
+
+    public void Setup(PixelClicker owner)
+    {
+        clicker = owner;
+        body = GetComponent<Rigidbody>();
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (done || clicker == null) return;
+        if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel is not the ground
+        if (collision.contactCount == 0) return;
+        ContactPoint contact = collision.GetContact(0);
+        if (contact.normal.y < 0.4f) return; // only the ground, not a wall or the cube
+        OldPixelDespawn despawn = GetComponent<OldPixelDespawn>();
+        if (despawn != null && despawn.Held) return; // carried by the player
+        Splash(contact.point);
+    }
+
+    private void Update()
+    {
+        if (done || clicker == null || body == null) return;
+        // A water pixel that was already lying still (loaded from a save, or settled on other pixels) splashes after a moment too.
+#if UNITY_6000_0_OR_NEWER
+        float speed = body.linearVelocity.magnitude;
+#else
+        float speed = body.velocity.magnitude;
+#endif
+        OldPixelDespawn despawn = GetComponent<OldPixelDespawn>();
+        if (despawn != null && (despawn.Held || despawn.IsDespawning)) { stillTime = 0f; return; }
+        stillTime = speed < 0.1f && !body.isKinematic ? stillTime + Time.deltaTime : 0f;
+        if (stillTime > 1.5f) Splash(transform.position);
+    }
+
+    private void Splash(Vector3 point)
+    {
+        done = true;
+        PixelStats.Count("water.splashed");
+        float size = Mathf.Max(0.05f, transform.lossyScale.x);
+        if (body != null) clicker.ReleaseOldPixel(body, false); // used up: no payout, and gone from the old-pixel list
+        clicker.WaterSplashAt(point);
+        WaterSplashFx.Play(point, size);
+        PixelAudio.Play("water_splash");
+        Destroy(gameObject);
+    }
+}
+
+/// <summary>A burst of blue droplets and a little mist where a Water pixel splashes (two code-built particle systems; destroys itself).</summary>
+public static class WaterSplashFx
+{
+    private static Material material;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { material = null; }
+
+    public static void Play(Vector3 point, float size)
+    {
+        if (material == null)
+        {
+            Shader shader = PixelShaders.SpriteDefault();
+            if (shader == null) return;
+            material = new Material(shader) { name = "WaterDrops" };
+        }
+        GameObject root = new GameObject("Water Splash Fx");
+        root.transform.position = point;
+        Build(root.transform, "Drops", size, 14, new Vector2(0.5f, 0.9f), new Vector2(1.5f, 3.5f), new Vector2(0.07f, 0.14f), 2.6f,
+              new Color(0.45f, 0.78f, 1f, 0.95f), new Color(0.7f, 0.9f, 1f, 0.9f), false, 38f);
+        Build(root.transform, "Mist", size, 6, new Vector2(0.6f, 1.0f), new Vector2(0.3f, 1f), new Vector2(0.3f, 0.55f), 0.05f,
+              new Color(0.7f, 0.88f, 1f, 0.4f), new Color(0.6f, 0.82f, 1f, 0.3f), true, 70f);
+        Object.Destroy(root, 2.5f);
+    }
+
+    private static void Build(Transform parent, string name, float size, int count, Vector2 lifetime, Vector2 speed, Vector2 startSize, float gravity,
+                              Color colorA, Color colorB, bool fade, float coneAngle)
+    {
+        GameObject go = new GameObject(name, typeof(ParticleSystem));
+        go.transform.SetParent(parent, false);
+        go.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f); // the cone's forward (+Z) points up
+        ParticleSystem ps = go.GetComponent<ParticleSystem>();
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        ParticleSystem.MainModule main = ps.main;
+        main.loop = false;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(lifetime.x, lifetime.y);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(speed.x * Mathf.Sqrt(size * 2f), speed.y * Mathf.Sqrt(size * 2f));
+        main.startSize = new ParticleSystem.MinMaxCurve(startSize.x * size * 2f, startSize.y * size * 2f);
+        main.gravityModifier = gravity;
+        main.startColor = new ParticleSystem.MinMaxGradient(colorA, colorB);
+        main.maxParticles = 48;
+
+        ParticleSystem.EmissionModule emission = ps.emission;
+        emission.rateOverTime = 0f;
+        emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)count) });
+
+        ParticleSystem.ShapeModule shape = ps.shape;
+        shape.shapeType = ParticleSystemShapeType.Cone;
+        shape.angle = coneAngle;
+        shape.radius = size * 0.4f;
+
+        if (fade)
+        {
+            ParticleSystem.ColorOverLifetimeModule col = ps.colorOverLifetime;
+            col.enabled = true;
+            Gradient g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                      new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+        }
+
+        ParticleSystemRenderer r = go.GetComponent<ParticleSystemRenderer>();
+        r.sharedMaterial = material;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
+        ps.Play();
     }
 }

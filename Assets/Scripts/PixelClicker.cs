@@ -676,12 +676,28 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float seedSolarBoostMax = 3f;
 
     [Min(0f)]
-    [Tooltip("Growth speed added to a sprout (and sowing speed to a Seed pet) by each old Water pixel within the same reach as Solar (1 = +100% each).")]
-    [SerializeField] private float seedWaterBoostEach = 1f;
+    [Tooltip("How close (in old-pixel widths) a Water pixel must splash to a growing sprout or the Seed pet to water it.")]
+    [SerializeField] private float seedWaterReach = 5f;
 
     [Min(0f)]
-    [Tooltip("Most speed Water pixels can add to one sprout / Seed pet (4 = up to 5x as fast, on top of Solar).")]
-    [SerializeField] private float seedWaterBoostMax = 4f;
+    [Tooltip("Extra growth speed (sowing speed for the Seed pet) while watered (3 = four times as fast).")]
+    [SerializeField] private float seedWaterRate = 3f;
+
+    [Min(0f)]
+    [Tooltip("Seconds of 'wet' (fast growth) each splash adds. Splashes add up to the maximum below.")]
+    [SerializeField] private float seedWaterWetSeconds = 6f;
+
+    [Min(0f)]
+    [Tooltip("The most 'wet' seconds a sprout / Seed pet can store.")]
+    [SerializeField] private float seedWaterWetMax = 30f;
+
+    [Min(0f)]
+    [Tooltip("Seconds of growth a splash gives a growing sprout at once, on top of the wet boost.")]
+    [SerializeField] private float seedWaterInstantSeconds = 0.6f;
+
+    [Range(0f, 1f)]
+    [Tooltip("Chance that a sprout grows a Singularity pixel (when that type is unlocked) instead of a normal random type. Singularity is left out of the normal rarity roll.")]
+    [SerializeField] private float seedSingularityChance = 0.03f;
 
     [Header("Click Hint")]
     [Tooltip("Turn off the 'click me' pulse that the cube plays after the first guide text until the first pixel is collected.")]
@@ -1073,6 +1089,13 @@ public class PixelClicker : MonoBehaviour
                 looks = extended15.ToArray();
             }
             looksVersion = 15;
+        }
+        if (looksVersion < 16)
+        {
+            // Water pixels now splash on the ground: switch that on in a Water look saved before it existed.
+            PixelLook savedWater = PixelLooks.Find(looks, PixelType.Water);
+            if (savedWater != null) savedWater.splash = true;
+            looksVersion = 16;
         }
 
         if (pixelRenderer != null)
@@ -1842,6 +1865,10 @@ public class PixelClicker : MonoBehaviour
     /// <summary>A random pixel type a Seed sprout can grow: unlocked, not a rare drop, not a fly-away type and not a Seed itself. -1 if none.</summary>
     public int RandomSeedPixelTier()
     {
+        // A small fixed chance of a Singularity pixel (once that type is unlocked).
+        int singularity = IndexOf(PixelType.Singularity);
+        if (singularity >= 0 && tiers[singularity].unlocked && UnityEngine.Random.value < seedSingularityChance) return singularity;
+
         // Rarer types (lower spawn weight) are likelier: chance ~ 1 / weight^bias.
         System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
         System.Collections.Generic.List<float> weights = new System.Collections.Generic.List<float>();
@@ -1849,7 +1876,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             PixelTier t = tiers[i];
-            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed) continue;
+            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed || t.type == PixelType.Singularity) continue;
             float w = 1f / Mathf.Pow(Mathf.Max(0.02f, t.spawnWeight), seedRarityBias);
             candidates.Add(i);
             weights.Add(w);
@@ -1865,29 +1892,31 @@ public class PixelClicker : MonoBehaviour
         return candidates[candidates.Count - 1];
     }
 
-    /// <summary>
-    /// Extra growth speed (0 = none) a sprout or Seed pet at 'position' gets from old pixels lying close to it: Solar pixels and Water
-    /// pixels (a sorter streaming Water pixels over a field of sprouts is a farm). 'solar' and 'water' are the two parts (for colouring).
-    /// </summary>
-    public float SeedBoostAt(Vector3 position, out float solar, out float water)
+    /// <summary>Extra growth speed (0 = none) a sprout or Seed pet at 'position' gets from old Solar pixels lying close to it.</summary>
+    public float SolarSeedBoostAt(Vector3 position)
     {
-        solar = 0f;
-        water = 0f;
-        int solarTier = IndexOf(PixelType.Solar), waterTier = IndexOf(PixelType.Water);
-        if (solarTier < 0 && waterTier < 0) return 0f;
+        int solar = IndexOf(PixelType.Solar);
+        if (solar < 0 || seedSolarBoostEach <= 0f) return 0f;
         float reach = OldPixelWorldSize * seedSolarReach, reachSqr = reach * reach;
-        int nearSolar = 0, nearWater = 0;
+        int near = 0;
         foreach (Rigidbody rb in oldPixels)
         {
             if (rb == null || (rb.position - position).sqrMagnitude > reachSqr) continue;
             OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
-            if (info == null) continue;
-            if (info.tierIndex == solarTier) nearSolar++;
-            else if (info.tierIndex == waterTier) nearWater++;
+            if (info != null && info.tierIndex == solar) near++;
         }
-        solar = Mathf.Min(seedSolarBoostMax, nearSolar * seedSolarBoostEach);
-        water = Mathf.Min(seedWaterBoostMax, nearWater * seedWaterBoostEach);
-        return solar + water;
+        return Mathf.Min(seedSolarBoostMax, near * seedSolarBoostEach);
+    }
+
+    /// <summary>Extra growth / sowing speed a watered sprout or Seed pet gets while it is wet.</summary>
+    public float SeedWaterRate => seedWaterRate;
+
+    /// <summary>A Water pixel splashed at 'point': every growing sprout and the Seed pet within reach is watered (fast growth for a while, plus a small instant jump).</summary>
+    public void WaterSplashAt(Vector3 point)
+    {
+        float reach = OldPixelWorldSize * seedWaterReach;
+        SeedSprout.WaterAll(point, reach, seedWaterWetSeconds, seedWaterWetMax, seedWaterInstantSeconds);
+        PixelPets.WaterPets(point, reach, seedWaterWetSeconds, seedWaterWetMax);
     }
 
     /// <summary>What one harvest of this pixel type would pay now (a random payout rolled for random-payout types, with the Value / Ultra multipliers).</summary>
@@ -3010,6 +3039,8 @@ public class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelGravityWell>().Setup(this, styled);
                 if (styled.floatAway)
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
+                if (styled.splash)
+                    copy.AddComponent<OldPixelSplash>().Setup(this);
                 if (styled.shatter)
                     copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
             }

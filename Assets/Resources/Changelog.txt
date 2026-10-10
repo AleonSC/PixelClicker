@@ -244,3 +244,4 @@
 [2026-10-10 06:15 UTC] Fixed the Seed pet planting itself on top of the clicker cube when it spawned: it now drops from beside the cube, passes through the cube's colliders, and never counts the cube as ground.
 [2026-10-10 06:18 UTC] Each Singularity pixel now pulls at most 20 old pixels at a time (nearest first, one well per pixel), and other Singularity pixels in its radius count towards that so they have to be spaced out.
 [2026-10-10 06:30 UTC] Added the Water pixel (10 White for testing, available right away, wobbling blue jelly look): old Water pixels near Seed sprouts and the Seed pet make them grow and sow much faster, so a Sorter streaming water over sprouts makes a farm.
+[2026-10-10 06:33 UTC] Water pixels now splash on the ground and are used up (watering nearby sprouts and the Seed pet for a while), and Seed sprouts have a 3% chance to grow a Singularity pixel.
