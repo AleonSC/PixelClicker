@@ -36,6 +36,9 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Start with 'Disable old pixel despawns' ticked: old pixels never expire on their own.")]
     [SerializeField] private bool disableDespawn = false;
 
+    [Tooltip("Start with 'Disable old pixel limit' ticked: any number of old pixels can lie around (the Old Pixel Capacity cap is ignored).")]
+    [SerializeField] private bool disableOldPixelLimit = false;
+
     [Tooltip("Start with 'God pixel mode' ticked: the mouse spawns pixels (left click) and destroys them (right click); scroll to choose the pixel.")]
     [SerializeField] private bool godMode = false;
 
@@ -99,6 +102,9 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Label of the disable-despawns tick box.")]
     [SerializeField] private string noDespawnToggleText = "Disable old pixel despawns";
+
+    [Tooltip("Label of the tick box that removes the limit on old pixels.")]
+    [SerializeField] private string noLimitToggleText = "Disable old pixel limit";
 
     [Tooltip("Label of the god-pixel-mode tick box.")]
     [SerializeField] private string godToggleText = "God pixel mode (scroll = pick, left = spawn, right = destroy)";
@@ -286,6 +292,7 @@ public class PixelDevTools : MonoBehaviour
         LoadSettings();
         PixelClicker.InfiniteResources = infiniteResources;
         OldPixelDespawn.DevNoDespawn = disableDespawn;
+        PixelClicker.DevNoOldPixelLimit = disableOldPixelLimit;
         PixelClicker.GodMode = godMode;
         PixelClicker.DevClickCount = clickCount;
     }
@@ -317,7 +324,7 @@ public class PixelDevTools : MonoBehaviour
 
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, godToggle;
+    private Toggle clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -330,12 +337,14 @@ public class PixelDevTools : MonoBehaviour
         LoadSettings();
         PixelClicker.InfiniteResources = infiniteResources;
         OldPixelDespawn.DevNoDespawn = disableDespawn;
+        PixelClicker.DevNoOldPixelLimit = disableOldPixelLimit;
         PixelClicker.DevClickCount = clickCount;
         if (clickCountField != null) clickCountField.SetTextWithoutNotify(clickCount.ToString());
         if (clearToggle != null) clearToggle.SetIsOnWithoutNotify(clearKeyEnabled);
         if (infiniteToggle != null) infiniteToggle.SetIsOnWithoutNotify(infiniteResources);
         if (selectorToggle != null) selectorToggle.SetIsOnWithoutNotify(spawnSelectorEnabled);
         if (noDespawnToggle != null) noDespawnToggle.SetIsOnWithoutNotify(disableDespawn);
+        if (noLimitToggle != null) noLimitToggle.SetIsOnWithoutNotify(disableOldPixelLimit);
         if (godToggle != null) godToggle.SetIsOnWithoutNotify(godMode);
         if (amountField != null) amountField.SetTextWithoutNotify(defaultAmount);
         if (pixelDropdown != null && pixelDropdown.options.Count > 0)
@@ -356,6 +365,7 @@ public class PixelDevTools : MonoBehaviour
         infiniteResources = GetBool("Infinite", infiniteResources);
         spawnSelectorEnabled = GetBool("Selector", spawnSelectorEnabled);
         disableDespawn = GetBool("NoDespawn", disableDespawn);
+        disableOldPixelLimit = GetBool("NoLimit", disableOldPixelLimit);
         godMode = GetBool("God", godMode);
         clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
         if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
@@ -420,6 +430,7 @@ public class PixelDevTools : MonoBehaviour
         if (godRoot != null) Destroy(godRoot);
         PixelClicker.GodMode = false;
         OldPixelDespawn.DevNoDespawn = false;
+        PixelClicker.DevNoOldPixelLimit = false;
         if (spawnSelectorEnabled && clicker != null && clicker.isActiveAndEnabled) clicker.SetDevSpawnTiers(null);
     }
 
@@ -792,6 +803,15 @@ public class PixelDevTools : MonoBehaviour
             disableDespawn = on;
             OldPixelDespawn.DevNoDespawn = on;
             SetBool("NoDespawn", on);
+        });
+        y += rowHeight + 24f;
+
+        // Row: tick box to remove the old pixel limit
+        noLimitToggle = BuildToggleRow(content, noLimitToggleText, y, inner, disableOldPixelLimit, on =>
+        {
+            disableOldPixelLimit = on;
+            PixelClicker.DevNoOldPixelLimit = on;
+            SetBool("NoLimit", on);
         });
         y += rowHeight + 24f;
 

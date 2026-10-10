@@ -29,6 +29,7 @@ public class PixelClicker : MonoBehaviour
         ClickHint = false;
         GodMode = false;
         InfiniteResources = false;
+        DevNoOldPixelLimit = false;
         DevClickCount = 1;
         OldPixelLanded = null;
         UltraGained = null;
@@ -1515,6 +1516,9 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Dev cheat (set by Dev Tools): everything costs nothing - spending always works and takes nothing away.</summary>
     public static bool InfiniteResources;
 
+    /// <summary>Dev tools: the limit on how many old pixels can lie around is switched off while true.</summary>
+    public static bool DevNoOldPixelLimit;
+
     /// <summary>Can the player pay this much of a pixel type? (Always, with the infinite resources cheat.)</summary>
     public bool CanAfford(PixelType type, double amount) => InfiniteResources || GetCount(type) >= amount;
 
@@ -1871,7 +1875,7 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Frame time for the cube's click animations: they keep running while Time Stop has frozen the game clock.</summary>
-    private int CopyCap => PixelTimeStop.IsStopped ? (timeStopStockpileMax <= 0 ? 0 : Mathf.Max(timeStopStockpileMax, OldPixelCap)) : OldPixelCap;
+    private int CopyCap => DevNoOldPixelLimit ? 0 : PixelTimeStop.IsStopped ? (timeStopStockpileMax <= 0 ? 0 : Mathf.Max(timeStopStockpileMax, OldPixelCap)) : OldPixelCap;
 
     private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
 

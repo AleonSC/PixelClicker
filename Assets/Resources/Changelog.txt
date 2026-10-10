@@ -263,3 +263,4 @@
 [2026-10-10 08:03 UTC] The old Vacuum pixel now shows the pixels it sucked up as tiny drifting versions inside it.
 [2026-10-10 08:19 UTC] Made the pixels inside the Vacuum pixel bigger and not dependent on a new Inspector value, and made Vacuum (0.2 to 0.28) and Electric (0.15 to 0.2) pixels slightly more common.
 [2026-10-10 08:54 UTC] Dev tools 'Infinite resources' now makes the Pixel Bank infinite: it never fills up, spitting never uses up what is stored, and area suction is faster.
+[2026-10-10 08:58 UTC] Added a 'Disable old pixel limit' tick box to the dev tools: any number of old pixels can lie around.
