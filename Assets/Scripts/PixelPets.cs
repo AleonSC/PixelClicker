@@ -319,6 +319,17 @@ public partial class PixelPets : MonoBehaviour
 
     public bool IsOwned(PixelClicker.PixelType type) => pets.Exists(p => p.type == type);
 
+    /// <summary>The body of the pet of this pixel type if it is out in the world right now (owned, switched on, shown, not shattered). Used by the Electric pet's arcs.</summary>
+    public static bool TryGetActivePetBody(PixelClicker.PixelType type, out Transform body)
+    {
+        body = null;
+        if (Instance == null) return false;
+        Pet p = Instance.pets.Find(x => x.type == type);
+        if (p == null || p.off || p.broken || p.body == null || !p.body.activeInHierarchy) return false;
+        body = p.body.transform;
+        return true;
+    }
+
     /// <summary>A pet's tick-box state in the Toggles window (true = roaming).</summary>
     public bool IsOn(PixelClicker.PixelType type)
     {

@@ -225,3 +225,4 @@
 [2026-10-10 00:00 UTC] Added Cubby, a suspicious cube guide who introduces the game, shows you the shop once you can prove you have money and hands you a gift pack; the Wizard, Tinkerer and Pixel Entrepreneur are now free visitors he starts as you progress (their shop packs are gone).
 [2026-10-10 00:04 UTC] Settings > Replay tutorial now replays Cubby's two visits too (without a second gift).
 [2026-10-10 00:08 UTC] Cubby now appears sooner after the intro tips, and the cube gives a click-me pulse (bigger and brighter) once the first guide text shows, until the first pixel is collected.
+[2026-10-10 00:13 UTC] The Electric pet is now a perpetual source of daisy-chain arcs: Electric old pixels link out from it (as many as fit) and never despawn while connected.

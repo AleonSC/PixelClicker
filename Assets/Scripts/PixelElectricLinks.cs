@@ -70,6 +70,8 @@ public class PixelElectricLinks : MonoBehaviour
         public Rigidbody parentBody;      // null when the parent is a device
         public PixelPlacedDevice device;  // the device at the root of the chain
         public PixelPlacedDevice parentDevice;
+        public Transform anchor;          // the Electric pet at the root of the chain (a perpetual source: no timer, its pixels never despawn)
+        public Transform parentAnchor;    // the pet, when it is this pixel's direct partner
     }
 
     private readonly Dictionary<Rigidbody, Link> links = new Dictionary<Rigidbody, Link>();
@@ -107,7 +109,7 @@ public class PixelElectricLinks : MonoBehaviour
         // Pixels linked to a device don't age while linked (chains without a device only get the extra time).
         foreach (KeyValuePair<Rigidbody, Link> kv in links)
         {
-            if (kv.Key == null || kv.Value.device == null) continue;
+            if (kv.Key == null || (kv.Value.device == null && kv.Value.anchor == null)) continue;
             OldPixelDespawn d = kv.Key.GetComponent<OldPixelDespawn>();
             if (d != null) d.KeepAlive();
         }
@@ -192,6 +194,24 @@ public class PixelElectricLinks : MonoBehaviour
             }
         }
 
+        // The Electric pet is a perpetual source: daisy chains run out from it to every Electric pixel that fits (up to maxLinks), and
+        // pixels linked to it never despawn. Devices got their pick of the pixels first.
+        if (PixelPets.TryGetActivePetBody(PixelClicker.PixelType.Electric, out Transform petBody))
+        {
+            while (unlinked.Count > 0 && links.Count < maxLinks)
+            {
+                int index = NearestUnlinked(petBody.position, null, null, unlinked, previous, rangeSqr, petBody);
+                if (index < 0) break;
+                Rigidbody tail = Attach(unlinked, index, null, null, null, petBody, petBody);
+                while (links.Count < maxLinks)
+                {
+                    index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
+                    if (index < 0) break;
+                    tail = Attach(unlinked, index, tail, null, null, null, petBody);
+                }
+            }
+        }
+
         // Electric pixels out of reach of any device still daisy-chain to each other: a chain grows from both of its ends.
         List<Rigidbody> chainSeeds = new List<Rigidbody>();
         while (unlinked.Count > 0 && links.Count < maxLinks)
@@ -221,7 +241,7 @@ public class PixelElectricLinks : MonoBehaviour
 
     /// <summary>The nearest unlinked pixel to 'from' within reach (a pixel keeps its old partner while that is still in reach), or -1.</summary>
     private int NearestUnlinked(Vector3 from, Rigidbody fromBody, PixelPlacedDevice fromDevice, List<Rigidbody> unlinked,
-                                Dictionary<Rigidbody, Link> previous, float rangeSqr)
+                                Dictionary<Rigidbody, Link> previous, float rangeSqr, Transform fromAnchor = null)
     {
         int best = -1;
         float bestDist = rangeSqr;
@@ -229,7 +249,8 @@ public class PixelElectricLinks : MonoBehaviour
         {
             float dist = (unlinked[i].position - from).sqrMagnitude;
             if (previous.TryGetValue(unlinked[i], out Link old) && old != null &&
-                ((fromBody != null && old.parentBody == fromBody) || (fromDevice != null && old.parentDevice == fromDevice)))
+                ((fromBody != null && old.parentBody == fromBody) || (fromDevice != null && old.parentDevice == fromDevice) ||
+                 (fromAnchor != null && old.parentAnchor == fromAnchor)))
                 dist *= stickiness;
             if (dist < bestDist) { bestDist = dist; best = i; }
         }
@@ -237,13 +258,16 @@ public class PixelElectricLinks : MonoBehaviour
     }
 
     /// <summary>Links unlinked[index] to its partner (a pixel or a device) as the next link of a chain, pays the device its second, and returns the pixel.</summary>
-    private Rigidbody Attach(List<Rigidbody> unlinked, int index, Rigidbody parentBody, PixelPlacedDevice parentDevice, PixelPlacedDevice rootDevice)
+    private Rigidbody Attach(List<Rigidbody> unlinked, int index, Rigidbody parentBody, PixelPlacedDevice parentDevice, PixelPlacedDevice rootDevice,
+                             Transform parentAnchor = null, Transform rootAnchor = null)
     {
         Rigidbody body = unlinked[index];
         unlinked.RemoveAt(index);
         PixelPlacedDevice root = rootDevice;
-        Vector3 point = parentBody != null ? parentBody.position : parentDevice != null ? DeviceAnchor(parentDevice) : body.position;
-        links[body] = new Link { body = body, device = root, parentBody = parentBody, parentDevice = parentDevice, parentPoint = point };
+        Vector3 point = parentBody != null ? parentBody.position : parentDevice != null ? DeviceAnchor(parentDevice)
+                      : parentAnchor != null ? parentAnchor.position : body.position;
+        links[body] = new Link { body = body, device = root, parentBody = parentBody, parentDevice = parentDevice, parentPoint = point,
+                                 anchor = rootAnchor, parentAnchor = parentAnchor };
 
         if (root != null && credited.Add(body) && secondsPerPixel > 0f)
         {
@@ -340,7 +364,8 @@ public class PixelElectricLinks : MonoBehaviour
             if (kv.Key == null) continue;
             Vector3 from = kv.Key.position;
             Vector3 to = link.parentBody != null ? link.parentBody.position
-                       : link.parentDevice != null ? DeviceAnchor(link.parentDevice) : link.parentPoint;
+                       : link.parentDevice != null ? DeviceAnchor(link.parentDevice)
+                       : link.parentAnchor != null ? link.parentAnchor.position : link.parentPoint;
             float length = Vector3.Distance(from, to);
             int segments = Mathf.Clamp(Mathf.CeilToInt(length / (unit * 0.25f)), 3, 8);
             float pixelSize = Mathf.Max(0.05f, kv.Key.transform.lossyScale.x); // the arcs are as thick as the old pixels they join, not the big cube
