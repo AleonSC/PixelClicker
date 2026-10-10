@@ -86,10 +86,18 @@ public class PixelDragonFind : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { instance = null; }
 
-    private void Awake() { instance = this; }
+    private bool skipRequested;
+
+    private void Awake()
+    {
+        instance = this;
+        // Escape skips the show (the cube is already yours); it must not open the pause menu while one plays.
+        PixelWindows.Register(this, 165, () => playing, () => skipRequested = true);
+    }
     private void OnDestroy()
     {
         if (instance == this) instance = null;
+        PixelWindows.Unregister(this);
         Cleanup();
     }
 
@@ -159,6 +167,13 @@ public class PixelDragonFind : MonoBehaviour
         while (t < total + fadeT)
         {
             float dt = Time.unscaledDeltaTime;
+            if (skipRequested)
+            {
+                skipRequested = false;
+                queue.Clear();                      // skip every waiting show too
+                if (t < total) t = total;           // jump straight to the cube landing in the backpack and the screen brightening
+                burstedArrival = true;
+            }
             t += dt;
             float darkAmount;
             float packAlpha, titleAlpha;

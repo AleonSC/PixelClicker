@@ -306,3 +306,4 @@
 [2026-10-10 11:58 UTC] The Robot Worker's station now sits on the corner where four floor tiles meet (bottom right of the old tile) and he stands there facing up the screen.
 [2026-10-10 12:00 UTC] Fixed the 'Can't destroy RectTransform of Dragon' error after the wish, and summoning the dragon now always uses up the seven Dragon Cubes (Infinite resources no longer makes them free).
 [2026-10-10 12:01 UTC] Seeds can no longer be planted on top of each other: placing one too close to another sprout (or a planted Seed pet) is refused with a note, the Seed pet picks another spot, and sprouts that land from a shell slide sideways to make room (`seedSpacing`).
+[2026-10-10 12:02 UTC] Escape now skips the Dragon Cube find animation (and any queued ones); the cube is already added to your inventory.
