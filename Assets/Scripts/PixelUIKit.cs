@@ -96,11 +96,7 @@ public static class PixelUIKit
 
         Image image = go.GetComponent<Image>();
         image.color = color;
-        if (FancyButtons)
-        {
-            image.sprite = ButtonSprite();
-            image.type = Image.Type.Sliced;
-        }
+        StyleButton(image);
         go.GetComponent<Button>().targetGraphic = image;
         go.GetComponent<Button>().onClick.AddListener(() => PixelAudio.Play("ui_click"));
 
@@ -137,6 +133,14 @@ public static class PixelUIKit
     /// A grey-scale 9-sliced button sprite (drawn once in code; it takes the button's colour as a tint): rounded corners, a dark outline,
     /// a vertical light-to-dark gradient and a bright strip just inside the top edge, so a button reads as a raised key.
     /// </summary>
+    /// <summary>Gives a button's background image the bevelled look when Fancy buttons is on (also used by the shop's own button builder).</summary>
+    public static void StyleButton(Image image)
+    {
+        if (image == null || !FancyButtons) return;
+        image.sprite = ButtonSprite();
+        image.type = Image.Type.Sliced;
+    }
+
     private static Sprite ButtonSprite()
     {
         if (buttonSprite != null) return buttonSprite;

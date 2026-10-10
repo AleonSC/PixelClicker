@@ -35,7 +35,7 @@ public class PixelHud : MonoBehaviour
     [SerializeField] private float glowSize = 70f;
 
     [Tooltip("How far the glow leaks onto the bar itself (canvas units).")]
-    [SerializeField] private float glowInnerSize = 22f;
+    [SerializeField] private float glowInnerReach = 12f;
 
     [Tooltip("Brightness of the glow (0 - 1).")]
     [SerializeField] private float glowStrength = 0.6f;
@@ -48,6 +48,9 @@ public class PixelHud : MonoBehaviour
 
     [Tooltip("Colour saturation of the glow (0 = white, 1 = vivid).")]
     [SerializeField] private float glowSaturation = 0.85f;
+
+    [Tooltip("How far the docked buttons sit towards the screen edge instead of centred in the bar, as a fraction of the free space (keeps them clear of the bar glow). 0 = the default 0.55; 1 = right against the screen edge.")]
+    [SerializeField] private float buttonEdgeBias = 0f;
 
     [Header("Buttons (all the same size)")]
     [Tooltip("Size of every docked button (canvas units). Keep the height a little less than the bar height.")]
@@ -194,7 +197,7 @@ public class PixelHud : MonoBehaviour
             glowParts[i] = new[]
             {
                 PixelBarGlow.AddStrip(r, "Glow", !top, true, glowSize),
-                PixelBarGlow.AddStrip(r, "Glow Inner", !top, false, glowInnerSize),
+                PixelBarGlow.AddStrip(r, "Glow Inner", !top, false, glowInnerReach),
                 PixelBarGlow.AddLine(r, "Glow Line", !top),
             };
         }
@@ -236,7 +239,7 @@ public class PixelHud : MonoBehaviour
     }
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
-    internal float ShownInset => barsEnabled ? (BarHeight - buttonSize.y) * 0.5f : sideMargin * 0.5f;
+    internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - buttonSize.y) * 0.5f * (1f - (buttonEdgeBias > 0f ? buttonEdgeBias : 0.55f))) : sideMargin * 0.5f;
     internal float HiddenInset => -(buttonSize.y - sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).

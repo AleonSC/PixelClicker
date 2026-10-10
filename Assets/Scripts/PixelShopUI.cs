@@ -716,6 +716,7 @@ public partial class PixelShop
 
         image = go.GetComponent<Image>();
         image.color = color;
+        PixelUIKit.StyleButton(image);
 
         Button button = go.GetComponent<Button>();
         button.targetGraphic = image;
