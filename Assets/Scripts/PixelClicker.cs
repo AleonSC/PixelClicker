@@ -217,10 +217,10 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Runtime: the player switched this pixel's spawning off (saved).")]
         public bool spawnDisabled;
 
-        /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric) that can have their spawning switched off.</summary>
+        /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
