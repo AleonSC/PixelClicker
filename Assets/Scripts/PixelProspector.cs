@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// The Prospector's Pack: six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel). They are tough little rocks that crack as you hit them,
 /// shower chips and, now and then, turn out to be a RICH VEIN that pays big. They have no other integration (no potions, pets, crafting, Value
-/// upgrades or achievements). A switch in the Toggles window ("Prospector mode") makes the ores REPLACE the RGB pixels (
-/// Red, Green, Blue) in what spawns - the RGB pack or the ores, never both.
+/// upgrades or achievements). Ores are NOT in the random spawns by default: a switch in the Toggles window ("Prospector mode", off by default) brings them in and
+/// takes the monochrome pack, RGB, Glass and Luminescent out of what spawns; with it off the ores never appear at all.
 /// </summary>
 public static class PixelProspector
 {
@@ -28,8 +28,13 @@ public static class PixelProspector
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
     public static void ReloadSettingsFromPrefs() { cache = -1; }
 
-    /// <summary>The pixels the ores replace: only the RGB pack (Red, Green, Blue) - it is either one or the other.</summary>
-    public static bool IsBase(PixelClicker.PixelType type) => type >= PixelClicker.PixelType.Red && type <= PixelClicker.PixelType.Blue;
+    /// <summary>The pixels the ores replace while Prospector mode is on: the monochrome pack (White, Gray, Black), RGB, Glass and Luminescent.</summary>
+    public static bool IsBase(PixelClicker.PixelType type) =>
+        (type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Glass) || type == PixelClicker.PixelType.Luminescent;
+
+    /// <summary>Is this type kept out of the random spawns right now? Ores only spawn in Prospector mode; in that mode the basic pixels don't.</summary>
+    public static bool LeftOut(PixelClicker.PixelType type, bool prospecting) =>
+        prospecting ? IsBase(type) : PixelClicker.IsOre(type);
 
     /// <summary>Has the player unlocked at least one ore?</summary>
     public static bool AnyOreUnlocked(PixelClicker clicker)

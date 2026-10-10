@@ -259,7 +259,7 @@ public class PixelToggles : MonoBehaviour
             if (PixelProspector.AnyOreUnlocked(clicker))
                 list.Add(new Entry
                 {
-                    label = "Prospector mode (ores replace the RGB pixels)",
+                    label = "Prospector mode (ores spawn instead of the basic pixels)",
                     on = PixelProspector.Setting,
                     setter = on => { PixelProspector.Setting = on; clicker.RefreshSpawnTier(); },
                 });

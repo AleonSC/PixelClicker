@@ -2084,14 +2084,14 @@ public class PixelClicker : MonoBehaviour
 
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn && !(prospecting && PixelProspector.IsBase(tiers[i].type))) total += SpawnWeightOf(i);
+            if (tiers[i].CanSpawn && !PixelProspector.LeftOut(tiers[i].type, prospecting)) total += SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].CanSpawn || (prospecting && PixelProspector.IsBase(tiers[i].type))) continue;
+            if (!tiers[i].CanSpawn || PixelProspector.LeftOut(tiers[i].type, prospecting)) continue;
             roll -= SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }

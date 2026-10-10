@@ -507,7 +507,7 @@ public partial class PixelShop
     /// <summary>
     /// Default Prospector's Pack (Pixels tab): very cheap (10 White, no requirements). Six base-metal ore pixels - tough rocks that crack and shed
     /// chips as you hit them, break in a shower of nuggets and are sometimes a glittering RICH VEIN that pays 5x. No other integration; a switch
-    /// in the Toggles window (Prospector mode) makes them replace the RGB pixels in what spawns.
+    /// in the Toggles window (Prospector mode, off by default) brings them into what spawns in place of the monochrome, RGB, Glass and Luminescent pixels.
     /// </summary>
     private static ShopPack CreateProspectorPack()
     {
@@ -520,7 +520,7 @@ public partial class PixelShop
         {
             displayName = "Prospector's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Switch on Prospector mode in the Toggles window to make the ores replace the RGB pixels (Red, Green, Blue).",
+            description = "Adds six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. The ores only spawn while Prospector mode is on (Toggles window); then they replace the monochrome, RGB, Glass and Luminescent pixels.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]

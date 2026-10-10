@@ -309,3 +309,4 @@
 [2026-10-10 12:02 UTC] Escape now skips the Dragon Cube find animation (and any queued ones); the cube is already added to your inventory.
 [2026-10-10 12:11 UTC] Escape now closes the 'Got it' tip box and clears any tips waiting behind it (instead of opening the pause menu).
 [2026-10-10 12:16 UTC] Added the Treasure pixel (shop pack 'Treasure Pixel'): a chest that takes a random 1-20 clicks to open (the count is hidden), light leaking from its lid as you hit it; the more clicks it took the bigger the payout, and when it opens a pile of other pixel types pours out, with gold effects and new synthesized sounds.
+[2026-10-10 12:21 UTC] Prospector ores no longer spawn by default: with Prospector mode off they never appear, and with it on they spawn in place of the monochrome pack, RGB, Glass and Luminescent pixels.
