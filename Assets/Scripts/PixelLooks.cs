@@ -65,6 +65,9 @@ public class PixelLook
     [Tooltip("Outline colour when 'Outline Uses Tier Colour' is off.")]
     public Color outlineColor = Color.white;
 
+    [Tooltip("A bevel instead of neon: one thin SOLID line of exactly the outline colour lying flat along each edge (no glow, no bright core, no halo), so the cube looks like it has bevelled edges. Off = the glowing neon lines.")]
+    public bool outlineBevel = false;
+
     [Range(-1f, 1f)]
     [Tooltip("Draw the outline as a different SHADE of the pixel's own colour instead of 'Outline Color': above 0 lightens it towards white (0.4 = a lighter tint), below 0 darkens it towards black (-0.4 = a darker shade). 0 = off (use the colours above).")]
     public float outlineShade = 0f;
@@ -243,19 +246,19 @@ public static class PixelLooks
         {
             // The basic pixels: a subtle drawn surface and a thin bevelled rim (a slightly lighter edge line) so they read as solid objects.
             new PixelLook { type = PixelClicker.PixelType.White, basicSurface = PixelLook.BasicSurface.Grain,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineThickness = 0.028f, outlineShade = -0.3f, outlineStrength = 0.55f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = -0.3f, outlineStrength = 0.55f },
             new PixelLook { type = PixelClicker.PixelType.Gray, basicSurface = PixelLook.BasicSurface.Brushed,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
             new PixelLook { type = PixelClicker.PixelType.Black, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineThickness = 0.026f, outlineShade = 0.3f, outlineStrength = 0.6f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.3f, outlineStrength = 0.6f },
 
             // Red, green and blue: a faint pixel-art mosaic and a lighter rim in their own colour; with the colour-blind setting on they also get a shape on every face.
             new PixelLook { type = PixelClicker.PixelType.Red, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.6f, 0.55f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.6f, 0.55f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
             new PixelLook { type = PixelClicker.PixelType.Green, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 1f, 0.65f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 1f, 0.65f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
             new PixelLook { type = PixelClicker.PixelType.Blue, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.75f, 1f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.75f, 1f, 1f), outlineBevel = true, outlineThickness = 0.045f, outlineShade = 0.4f, outlineStrength = 0.5f },
 
             // Vacuum: a dark purple see-through block with a black circle on every face.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
@@ -536,7 +539,7 @@ public static class PixelLooks
             edges.transform.SetParent(root.transform, false);
             edges.transform.localPosition = centre;
             edges.layer = root.layer;
-            edges.GetComponent<MeshFilter>().sharedMesh = EdgeMesh(size, look.outlineThickness, c, look.outlineStrength);
+            edges.GetComponent<MeshFilter>().sharedMesh = EdgeMesh(size, look.outlineThickness, c, look.outlineStrength, look.outlineBevel);
             MeshRenderer mr = edges.GetComponent<MeshRenderer>();
             mr.sharedMaterial = NeonMaterial();
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -992,9 +995,9 @@ public static class PixelLooks
     // Neon edge mesh: 12 thin boxes for a bright core plus 12 wider, fainter ones for the halo
     // ------------------------------------------------------------------
 
-    private static Mesh EdgeMesh(Vector3 size, float thicknessFraction, Color colour, float strength)
+    private static Mesh EdgeMesh(Vector3 size, float thicknessFraction, Color colour, float strength, bool bevel = false)
     {
-        int key = unchecked(size.GetHashCode() * 31 + thicknessFraction.GetHashCode() * 17 + colour.GetHashCode() * 13 + strength.GetHashCode());
+        int key = unchecked(size.GetHashCode() * 31 + thicknessFraction.GetHashCode() * 17 + colour.GetHashCode() * 13 + strength.GetHashCode() + (bevel ? 977 : 0));
         if (edgeMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
 
         float t = Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * thicknessFraction;
@@ -1005,8 +1008,18 @@ public static class PixelLooks
         List<Vector3> v = new List<Vector3>(400);
         List<Color> col = new List<Color>(400);
         List<int> tri = new List<int>(600);
-        AddEdgeBoxes(v, col, tri, size, t * 2.6f, halo);
-        AddEdgeBoxes(v, col, tri, size, t, core);
+        if (bevel)
+        {
+            // One thin solid strip along each edge, lying just inside the surface (its outer faces a hair outside the cube's faces).
+            Color solid = colour;
+            solid.a = Mathf.Clamp01(strength);
+            AddEdgeBoxes(v, col, tri, size, t, solid, true);
+        }
+        else
+        {
+            AddEdgeBoxes(v, col, tri, size, t * 2.6f, halo);
+            AddEdgeBoxes(v, col, tri, size, t, core);
+        }
 
         Mesh mesh = new Mesh { name = "NeonEdges" };
         mesh.SetVertices(v);
@@ -1017,7 +1030,7 @@ public static class PixelLooks
         return mesh;
     }
 
-    private static void AddEdgeBoxes(List<Vector3> v, List<Color> col, List<int> tri, Vector3 size, float t, Color colour)
+    private static void AddEdgeBoxes(List<Vector3> v, List<Color> col, List<int> tri, Vector3 size, float t, Color colour, bool flush = false)
     {
         Vector3 h = size * 0.5f;
         for (int axis = 0; axis < 3; axis++)
@@ -1028,8 +1041,9 @@ public static class PixelLooks
                 for (int j = -1; j <= 1; j += 2)
                 {
                     Vector3 centre = Vector3.zero, ext = Vector3.zero;
-                    centre[a] = i * h[a];
-                    centre[b] = j * h[b];
+                    float inset = flush ? t * 0.5f - Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.004f : 0f; // flush: pulled in so the strip lies on the faces
+                    centre[a] = i * (h[a] - inset);
+                    centre[b] = j * (h[b] - inset);
                     ext[axis] = h[axis] + t * 0.5f; // a little longer so the corners close up
                     ext[a] = t * 0.5f;
                     ext[b] = t * 0.5f;

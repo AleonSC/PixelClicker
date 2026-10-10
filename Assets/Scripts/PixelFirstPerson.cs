@@ -287,6 +287,9 @@ public class PixelFirstPerson : MonoBehaviour
         TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintText, PixelKeys.Name(PixelAction.FirstPerson))),
                                               26f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 1f, 1f, 0.75f));
         hint.raycastTarget = false;
+        hint.color = Color.white;
+        hint.outlineWidth = 0.3f; // a dark edge so it stays readable over pale floors
+        hint.outlineColor = new Color32(0, 0, 0, 255);
         RectTransform hr = hint.rectTransform;
         hr.anchorMin = new Vector2(0f, 0f);
         hr.anchorMax = new Vector2(1f, 0f);

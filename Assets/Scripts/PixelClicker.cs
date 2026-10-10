@@ -298,7 +298,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1169,6 +1169,19 @@ public class PixelClicker : MonoBehaviour
                 if (Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) < 0.02f) saved.outlineShade = def.outlineShade;
             }
             looksVersion = 18;
+        }
+        if (looksVersion < 19)
+        {
+            // The basic pixels' rims became a flat solid bevel (the glowing neon halo looked like a blurry frame): switch it on where the rim is still the shaded default.
+            foreach (PixelType basic in new[] { PixelType.White, PixelType.Gray, PixelType.Black, PixelType.Red, PixelType.Green, PixelType.Blue })
+            {
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), basic);
+                PixelLook saved = PixelLooks.Find(looks, basic);
+                if (def == null || saved == null || !saved.outline || Mathf.Abs(saved.outlineShade) < 0.001f || saved.outlineBevel) continue;
+                saved.outlineBevel = true;
+                saved.outlineThickness = def.outlineThickness;
+            }
+            looksVersion = 19;
         }
 
         if (pixelRenderer != null)

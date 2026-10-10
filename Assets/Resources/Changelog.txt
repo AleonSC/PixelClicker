@@ -271,3 +271,4 @@
 [2026-10-10 09:27 UTC] Added first person mode (key F): shrink to half an old pixel's size, run about on the floor, and click the clicker cube from any distance by aiming the crosshair at it.
 [2026-10-10 09:31 UTC] The basic White, Gray, Black, Red, Green and Blue pixels now have a subtle drawn surface (grain, brushed metal, sheen, pixel mosaic) and a thin lighter rim.
 [2026-10-10 09:35 UTC] The rims on the basic pixels are now a lighter or darker shade of the pixel's own colour.
+[2026-10-10 09:37 UTC] The basic pixels' rims are now a flat solid bevel (no neon glow halo), and the first person hint text has a dark edge so it is readable.
