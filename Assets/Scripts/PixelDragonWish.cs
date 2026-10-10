@@ -596,6 +596,15 @@ public class PixelDragonWish : MonoBehaviour
         pool.RemoveAll(w => !w.available());
 
         List<Wish> offer = new List<Wish>();
+        // The dragon always offers one of its own cubes as a pet FIRST (until you have all seven Dragon Cube pets).
+        if (UnownedDragonPetTypes().Count > 0)
+            offer.Add(new Wish
+            {
+                name = "Dragon Friend",
+                description = "A Dragon Cube pet joins you: one of the seven dragon cubes, a pet only the dragon can give.",
+                available = () => true,
+                apply = GiveDragonPet,
+            });
         while (offer.Count < 3 && pool.Count > 0)
         {
             int i = UnityEngine.Random.Range(0, pool.Count);
@@ -660,6 +669,26 @@ public class PixelDragonWish : MonoBehaviour
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
             if (!t.rareDrop && !pets.IsOwned(t.type)) list.Add(t.type);
         return list;
+    }
+
+    private List<PixelClicker.PixelType> UnownedDragonPetTypes()
+    {
+        List<PixelClicker.PixelType> list = new List<PixelClicker.PixelType>();
+        PixelPets pets = PixelPets.Instance;
+        if (pets == null || clicker == null) return list;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            if (PixelClicker.IsDragonCube(t.type) && !pets.IsOwned(t.type)) list.Add(t.type);
+        return list;
+    }
+
+    private void GiveDragonPet()
+    {
+        List<PixelClicker.PixelType> list = UnownedDragonPetTypes();
+        if (list.Count == 0) { GivePet(); return; }
+        PixelClicker.PixelType type = list[UnityEngine.Random.Range(0, list.Count)];
+        PixelPets.Instance.Award(type, false);
+        int tier = clicker.IndexOf(type);
+        PixelHints.Announce("A Dragon Cube pet joined you: " + (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()) + " Pet!");
     }
 
     private void GivePet()

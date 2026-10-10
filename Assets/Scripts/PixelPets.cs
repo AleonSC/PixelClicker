@@ -428,9 +428,10 @@ public partial class PixelPets : MonoBehaviour
     }
 
     /// <summary>Gives a pet (dev tools use this too). 'popup' false adds it quietly.</summary>
-    public void Award(PixelClicker.PixelType type, bool popup = true)
+    public void Award(PixelClicker.PixelType type, bool popup = true, bool startOff = false)
     {
         if (IsOwned(type)) return;
+        if (startOff) startOffTypes.Add(type);   // the dev tools give pets switched off
         if (!popup)
         {
             AddPet(type, false);
@@ -440,8 +441,11 @@ public partial class PixelPets : MonoBehaviour
         ShowPopup(type);
     }
 
+    private readonly HashSet<PixelClicker.PixelType> startOffTypes = new HashSet<PixelClicker.PixelType>();
+
     private void AddPet(PixelClicker.PixelType type, bool off)
     {
+        if (startOffTypes.Remove(type)) off = true;
         Pet p = new Pet { type = type, off = off, hopTimer = Random.Range(0.3f, 1f), ghost = type == PixelClicker.PixelType.Ghost, phase = Random.Range(0f, 6.28f) };
         pets.Add(p);
         PixelStats.Count("pets.found");

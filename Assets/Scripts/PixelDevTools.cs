@@ -601,7 +601,7 @@ public class PixelDevTools : MonoBehaviour
     {
         PixelPets pets = PixelPets.Instance;
         if (pets == null || clicker == null) return;
-        foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false);
+        foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false, true);   // switched off, so they can be turned on one by one in Toggles > Pets
     }
 
     /// <summary>Gives the pet of the pixel selected in the top drop-down (a popup), or every pet quietly for "All pixels".</summary>
@@ -612,10 +612,10 @@ public class PixelDevTools : MonoBehaviour
         int selected = pixelDropdown.value - 1; // 0 = All pixels
         if (selected < 0)
         {
-            foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false);
+            foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false, true);   // switched off, so they can be turned on one by one in Toggles > Pets
             return;
         }
-        if (selected < clicker.Tiers.Length) pets.Award(clicker.Tiers[selected].type);
+        if (selected < clicker.Tiers.Length) pets.Award(clicker.Tiers[selected].type, true, true);
     }
 
     /// <summary>Gives the lowest-numbered Dragon Cube you don't hold yet (nothing once you hold all seven).</summary>
