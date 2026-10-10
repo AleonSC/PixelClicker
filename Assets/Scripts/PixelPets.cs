@@ -232,8 +232,24 @@ public partial class PixelPets : MonoBehaviour
     /// <summary>True while the "pet found" popup freezes the game.</summary>
     public static bool PopupOpen { get; private set; }
 
+    [Header("Seed Pet")]
+    [Min(1f)]
+    [Tooltip("How big the Seed pet's sprout is drawn, in main-pixel widths (the sprouts it plants are about a third of this).")]
+    [SerializeField] private float seedPetScale = 3f;
+
+    [Tooltip("Seconds between seeds the planted Seed pet sows around itself (a random value between the two numbers; hyper pets sow faster).")]
+    [SerializeField] private Vector2 seedPetInterval = new Vector2(10f, 20f);
+
+    [Min(1f)]
+    [Tooltip("How far (in main-pixel widths) around itself the Seed pet sows its seeds.")]
+    [SerializeField] private float seedPetRadius = 5f;
+
     private class Pet
     {
+        public bool planter => type == PixelClicker.PixelType.Seed; // the Seed pet plants itself and sows seeds
+        public bool planted;
+        public float seedTimer;
+        public GameObject mound;
         public PixelClicker.PixelType type;
         public bool off;
         public string customName;     // the player's name for the pet ("" = the default)
@@ -538,13 +554,22 @@ public partial class PixelPets : MonoBehaviour
         go.transform.position = clicker.PixelTransform.position + new Vector3(Random.Range(-2f, 2f), size * 3f, Random.Range(-2f, 2f));
         go.transform.rotation = Random.rotation;
 
-        GameObject model = clicker.CreateDisplayPixel(tier, go.transform, size);
+        GameObject model = p.planter ? PixelLooks.CreateSproutObject(go.transform, size * seedPetScale)   // the Seed pet is a big sprout
+                                     : clicker.CreateDisplayPixel(tier, go.transform, size);
         if (model == null) { Destroy(go); return; }
         model.transform.localPosition = Vector3.zero;
         model.transform.localRotation = Quaternion.identity;
 
         BoxCollider box = go.AddComponent<BoxCollider>();
-        box.size = Vector3.one * size;
+        if (p.planter)
+        {
+            float w = size * seedPetScale * 0.5f, h = size * seedPetScale * 0.32f; // a tall box around the stem and leaves, base at the origin
+            box.size = new Vector3(w, h, w);
+            box.center = new Vector3(0f, h * 0.5f, 0f);
+            p.planted = false;
+            p.seedTimer = 0f;
+        }
+        else box.size = Vector3.one * size;
 #if UNITY_6000_0_OR_NEWER
         PhysicsMaterial material = new PhysicsMaterial("Pet")
         {
@@ -600,6 +625,7 @@ public partial class PixelPets : MonoBehaviour
             bool stopped = p == hovered || p == held || (p == tagPet && TagVisible); // a pet whose name tag is up stands still too
             if (p.type == PixelClicker.PixelType.Electric && PixelElectricLinks.PetConnected) stopped = true; // the Electric pet stays put while arcs connect it to pixels
             if (p.ghost) RoamGhost(p, stopped);
+            else if (p.planter) RoamSeed(p, stopped);
             else Roam(p, stopped);
             if (p.type == PixelClicker.PixelType.Vacuum) SuckAround(p);
             else if (p.type == PixelClicker.PixelType.Glass && p != held) MaybeBreak(p);
@@ -704,6 +730,7 @@ public partial class PixelPets : MonoBehaviour
         if (held == null || held.body == null || dragCamera == null) return;
         Rigidbody rb = held.body.GetComponent<Rigidbody>();
         if (rb == null) return;
+        if (rb.isKinematic) { held.planted = false; rb.isKinematic = false; } // a planted Seed pet is uprooted the moment it is picked up
         Ray ray = dragCamera.ScreenPointToRay(PointerPosition());
         if (!dragPlane.Raycast(ray, out float enter)) return;
         Vector3 target = ray.GetPoint(enter) + dragOffset;
@@ -793,6 +820,94 @@ public partial class PixelPets : MonoBehaviour
         float hyperBoost = 1f + (Hyper - 1f) * 0.3f; // a hyper pet hops harder too
         rb.AddForce(dir * (rb.mass * rollSpeed * hyperBoost) + Vector3.up * (rb.mass * hopSpeed * hyperBoost), ForceMode.Impulse);
         rb.AddTorque(Vector3.Cross(Vector3.up, dir) * (spinSpeed * hyperBoost), ForceMode.VelocityChange);
+    }
+
+    /// <summary>
+    /// The Seed pet: wherever it lands (or is put down) it stands up, pushes up a dirt mound and plants itself; from then on it
+    /// stays put and now and then sows a seed (a growing sprout) somewhere in a radius around it. Picking it up uproots it.
+    /// </summary>
+    private void RoamSeed(Pet p, bool stopped)
+    {
+        Rigidbody rb = p.body.GetComponent<Rigidbody>();
+        if (rb == null || clicker.PixelTransform == null) return;
+        if (held == p)
+        {
+            if (p.planted) Uproot(p, rb);
+            return;
+        }
+        float size = clicker.PixelBaseSize;
+
+        if (!p.planted)
+        {
+            // Fell out of the world: back above the cube.
+            if (rb.position.y < clicker.PixelTransform.position.y - 25f)
+            {
+                rb.position = clicker.PixelTransform.position + Vector3.up * size * 3f;
+                SetVelocity(rb, Vector3.zero);
+                return;
+            }
+            // Resting on the ground: plant itself here.
+            if (GetVelocity(rb).sqrMagnitude < 0.2f * 0.2f && Physics.Raycast(rb.position + Vector3.up * size * 0.1f, Vector3.down, size * 0.9f, ~0, QueryTriggerInteraction.Ignore))
+                PlantPet(p, rb, size);
+            return;
+        }
+
+        // Planted: sow a seed every so often (only while nothing holds or hovers it).
+        if (stopped) return;
+        p.seedTimer -= Time.deltaTime * Hyper;
+        if (p.seedTimer > 0f) return;
+        p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y), Mathf.Max(seedPetInterval.x, seedPetInterval.y));
+        SowSeed(p, size);
+    }
+
+    private void PlantPet(Pet p, Rigidbody rb, float size)
+    {
+        SetVelocity(rb, Vector3.zero);
+        rb.angularVelocity = Vector3.zero;
+        rb.isKinematic = true;
+        rb.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        p.body.transform.rotation = rb.rotation;
+        p.planted = true;
+        p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y) * 0.4f, Mathf.Max(seedPetInterval.x, seedPetInterval.y) * 0.6f); // the first seed comes sooner
+        PixelAudio.PlayScaled("pixel_land", 0.7f);
+        SeedDigFx.Play(rb.position + Vector3.up * (size * 0.1f), size, 0.7f);
+
+        if (p.mound != null) Destroy(p.mound);
+        GameObject m = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        m.name = "Dirt Mound";
+        Destroy(m.GetComponent<Collider>());
+        m.transform.SetParent(p.body.transform, false);
+        m.transform.localPosition = new Vector3(0f, size * 0.03f, 0f);
+        m.transform.localScale = new Vector3(size * 1.5f, size * 0.3f, size * 1.5f);
+        Material dirt = clicker.CreateVisualMaterial(new Color(0.36f, 0.23f, 0.12f, 1f), false);
+        Renderer mr = m.GetComponent<Renderer>();
+        if (dirt != null) mr.sharedMaterial = dirt; else mr.material.color = new Color(0.36f, 0.23f, 0.12f, 1f);
+        p.mound = m;
+    }
+
+    private void Uproot(Pet p, Rigidbody rb)
+    {
+        p.planted = false;
+        rb.isKinematic = false;
+        if (p.mound != null) { Destroy(p.mound); p.mound = null; }
+    }
+
+    /// <summary>Plants a seed (a growing sprout) at a random spot around the Seed pet, somewhere on screen.</summary>
+    private void SowSeed(Pet p, float size)
+    {
+        Vector3 centre = p.body.transform.position;
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            Vector2 ring = Random.insideUnitCircle.normalized * Random.Range(size * 1.5f, size * seedPetRadius);
+            Vector3 spot = new Vector3(centre.x + ring.x, centre.y, centre.z + ring.y);
+            if (OutsideView(spot)) continue;
+            if (clicker.PlantSeedSproutAt(spot))
+            {
+                SeedDigFx.Play(spot + Vector3.up * (size * 0.1f), size * 0.6f, 0.4f);
+                PixelAudio.PlayScaled("seed_dig", 0.8f);
+            }
+            return;
+        }
     }
 
     private bool OutsideView(Vector3 pos)

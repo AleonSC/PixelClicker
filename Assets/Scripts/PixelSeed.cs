@@ -57,6 +57,9 @@ public class SeedSprout : MonoBehaviour
         glow.intensity = 0.8f;
     }
 
+    /// <summary>Plants the sprout right where it is (no falling): used by the Seed pet when it sows seeds around itself.</summary>
+    public void PlantNow() => Plant();
+
     private void OnCollisionEnter(Collision collision)
     {
         if (stage != Stage.Falling || collision.contactCount == 0) return;

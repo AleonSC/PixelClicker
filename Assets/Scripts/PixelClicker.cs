@@ -1878,6 +1878,19 @@ public class PixelClicker : MonoBehaviour
         SeedDigFx.Play(pixelTransform.position, PixelBaseSize, Mathf.Clamp01(0.25f + progress * 0.75f));
     }
 
+    /// <summary>Plants a Seed sprout straight into the floor at 'position' (it grows a random pixel like any other). False when too many sprouts exist. Used by the Seed pet.</summary>
+    public bool PlantSeedSproutAt(Vector3 position)
+    {
+        if (SeedSprout.Count >= seedMaxSprouts) return false;
+        GameObject go = new GameObject("Seed Sprout");
+        go.transform.position = position;
+        if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
+        SeedSprout sprout = go.AddComponent<SeedSprout>();
+        sprout.Setup(this, OldPixelWorldSize, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
+        sprout.PlantNow();
+        return true;
+    }
+
     /// <summary>A cracked Seed shell: a small sprout pops out, falls, plants itself and grows a random old pixel (see <see cref="SeedSprout"/>).</summary>
     private void SpawnSeedSprout()
     {

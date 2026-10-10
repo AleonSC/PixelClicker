@@ -236,3 +236,4 @@
 [2026-10-10 04:13 UTC] Reworked the Seed pixel: a brown shell that cracks over 3 clicks, then a sprout falls, plants itself and grows a random old pixel that pops off after a second.
 [2026-10-10 04:53 UTC] Seed pixel: old Solar pixels near a sprout speed up its growth, sprouts favour rarer pixel types, the sprout is bigger with a dirt mound and green glow, and the shell takes 8 clicks with a digging sound and falling dirt and dust.
 [2026-10-10 04:56 UTC] Made the Mirror pixel actually look reflective: a chrome sky-and-horizon texture, a little glow, and a bright glint that sweeps across its faces.
+[2026-10-10 05:02 UTC] The Seed pet is now a big sprout that plants itself (with a dirt mound) wherever it lands or is put down, and every 10-20 seconds sows a seed in a radius around itself that grows a random pixel.
