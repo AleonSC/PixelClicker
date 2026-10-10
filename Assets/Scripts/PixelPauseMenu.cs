@@ -1760,10 +1760,15 @@ public class PixelPauseMenu : MonoBehaviour
         {
             int index = i;
             string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "First person mode" : ((PixelAction)i).ToString();
-            AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
+            TMP_Text keyLabel = AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
+            keyLabel.enableAutoSizing = true;           // long names ("Turn left (fan / sorter)") shrink to fit, they are not cut off
+            keyLabel.fontSizeMax = rowFontSize * 0.65f;
+            keyLabel.fontSizeMin = 9f;
+            keyLabel.rectTransform.anchorMax = new Vector2(0.66f, 1f);
+            keyLabel.rectTransform.offsetMax = new Vector2(-12f, 0f);
             Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.85f);
             RectTransform br = b.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(0.6f, 0.06f);
+            br.anchorMin = new Vector2(0.68f, 0.06f);
             br.anchorMax = new Vector2(1f, 0.94f);
             br.offsetMin = br.offsetMax = Vector2.zero;
             TMP_Text text = b.GetComponentInChildren<TMP_Text>();
@@ -1775,13 +1780,26 @@ public class PixelPauseMenu : MonoBehaviour
             y += rowHeight + 6f;
         }
 
-        y += 10f;
+        y += 18f;
         AddMenuButton(keysPanel.transform, resetKeysText, menuButtonColor, ref y, () =>
         {
             PixelKeys.ResetAll();
             capturingAction = -1;
             RefreshKeyLabels();
         });
+        Transform resetButton = keysPanel.transform.GetChild(keysPanel.transform.childCount - 1);
+        TMP_Text resetText = resetButton.GetComponentInChildren<TMP_Text>();
+        if (resetText != null)
+        {
+            resetText.enableAutoSizing = true;          // one line
+            resetText.fontSizeMax = menuButtonFontSize;
+            resetText.fontSizeMin = 12f;
+#if UNITY_2023_1_OR_NEWER
+            resetText.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            resetText.enableWordWrapping = false;
+#endif
+        }
         RefreshKeyLabels();
         FinishSectionPanel(keysPanel, y, settingsPanel);
     }
