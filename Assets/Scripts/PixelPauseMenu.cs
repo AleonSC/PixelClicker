@@ -1704,10 +1704,12 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>A label with a button on the right that steps through the options each click (wraps around).</summary>
     private void AddChoiceRow(Transform parent, string label, string[] options, System.Func<int> get, System.Action<int> set, ref float y)
     {
-        AddRowLabel(parent, label, y, out RectTransform row);
+        TMP_Text choiceLabel = AddRowLabel(parent, label, y, out RectTransform row);
+        choiceLabel.rectTransform.anchorMax = new Vector2(0.6f, 1f);
+        choiceLabel.rectTransform.offsetMax = new Vector2(-14f, 0f);   // a gap before the button
         Button b = MakeButton(row, "Choice", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.8f);
         RectTransform br = b.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0.6f, 0.06f);
+        br.anchorMin = new Vector2(0.62f, 0.06f);
         br.anchorMax = new Vector2(1f, 0.94f);
         br.offsetMin = br.offsetMax = Vector2.zero;
         TMP_Text text = b.GetComponentInChildren<TMP_Text>();
