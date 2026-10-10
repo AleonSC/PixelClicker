@@ -502,7 +502,7 @@ public class PixelAchievements : MonoBehaviour
         // The kinds of device that exist.
         List<PixelConsumables.DeviceKind> kinds = new List<PixelConsumables.DeviceKind>();
         for (int i = 0; i < consumables.DeviceCount; i++)
-            if (consumables.GetDevice(i).kind != PixelConsumables.DeviceKind.Seed && !kinds.Contains(consumables.GetDevice(i).kind)) kinds.Add(consumables.GetDevice(i).kind);
+            if (PixelConsumables.IsPlaceableKind(consumables.GetDevice(i).kind) && !kinds.Contains(consumables.GetDevice(i).kind)) kinds.Add(consumables.GetDevice(i).kind);   // only the devices you can place
 
         Register(new Achievement
         {
@@ -519,7 +519,7 @@ public class PixelAchievements : MonoBehaviour
             {
                 long placed = kind == PixelConsumables.DeviceKind.Fan ? stats.FansUsed
                             : kind == PixelConsumables.DeviceKind.Vacuum ? stats.VacuumDevicesUsed
-                            : kind == PixelConsumables.DeviceKind.Sorter ? stats.SortersUsed : 0L;
+                            : kind == PixelConsumables.DeviceKind.Sorter ? stats.SortersUsed : (long)PixelStats.Total("device.placed." + kind);
                 if (placed > 0) used++;
             }
             return used;

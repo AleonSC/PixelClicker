@@ -2302,9 +2302,9 @@ public class PixelClicker : MonoBehaviour
     public float SeedWaterCooldown => seedWaterCooldown;
 
     /// <summary>A Water pixel splashed at 'point': every growing sprout and the Seed pet within reach gets an instant bit of growth (rate-limited per target).</summary>
-    public void WaterSplashAt(Vector3 point)
+    public void WaterSplashAt(Vector3 point, float reachOverride = 0f)
     {
-        float reach = OldPixelWorldSize * seedWaterReach;
+        float reach = reachOverride > 0f ? reachOverride : OldPixelWorldSize * seedWaterReach;
         SeedSprout.WaterAll(point, reach, seedWaterGrowSeconds, seedWaterCooldown);
         PixelPets.WaterPets(point, reach, seedWaterGrowSeconds, seedWaterCooldown);
     }

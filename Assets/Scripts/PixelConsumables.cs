@@ -99,6 +99,8 @@ public class PixelConsumables : MonoBehaviour
         LightningRod = 7,
         /// <summary>Not a device: a seed of one pixel type. Right-click in the inventory, then click the floor to plant it; it grows that pixel type.</summary>
         Seed = 8,
+        /// <summary>Placed: waters nearby Seed sprouts and the Seed pet about once a second, so they grow much faster.</summary>
+        Sprinkler = 9,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -127,6 +129,10 @@ public class PixelConsumables : MonoBehaviour
         [Min(0)]
         [Tooltip("The most of this item you can hold at once (0 = no limit). The shop and crafting stop at this number.")]
         public int maxHeld = 0;
+
+        [Min(0f)]
+        [Tooltip("Sprinkler only: seconds between waterings of the seeds in reach (0 = 1).")]
+        public float sprayInterval = 1f;
 
         [Min(1f)]
         [Tooltip("How many seconds the device works once placed.")]
@@ -494,6 +500,28 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultSprinkler()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Sprinkler,
+            displayName = "Sprinkler",
+            description = "Place it near your seeds. For {duration} seconds it waters every growing sprout and Seed pet within {radius} units once a second, so they grow far faster.",
+            requiredType = PixelClicker.PixelType.Water,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Water, amount = 40 },
+            },
+            durationSeconds = 45f,
+            radius = 4.5f,
+            sprayInterval = 1f,
+            color = new Color(0.3f, 0.7f, 1f, 1f),
+            bodyDiameter = 0.5f,
+            bodyHeight = 0.7f,
+            placingMessage = "Click the floor near your seeds to place the {0}  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultSorter()
     {
         return new Device
@@ -712,6 +740,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.PetTreat, CreateDefaultPetTreat),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ChargeBooster, CreateDefaultChargeBooster),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sprinkler, CreateDefaultSprinkler),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1379,6 +1408,7 @@ public class PixelConsumables : MonoBehaviour
                     break;
                 }
                 case DeviceKind.Vacuum:
+                case DeviceKind.Sprinkler:
                     root = BuildDeviceObject(d, false, out _, out _);
                     break;
                 case DeviceKind.ChargeBooster:
@@ -1606,7 +1636,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The placeable kinds (the ones that stand in the world): the Robot Worker can keep any of these going.</summary>
     public static bool IsPlaceableKind(DeviceKind kind) =>
         kind == DeviceKind.Vacuum || kind == DeviceKind.Fan || kind == DeviceKind.Sorter ||
-        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod;
+        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler;
 
     /// <summary>How many of a device you hold (huge with infinite resources).</summary>
     public int DeviceOwned(int deviceIndex) => Inf ? 99999 : devices[deviceIndex].owned;
@@ -1908,6 +1938,14 @@ public class PixelConsumables : MonoBehaviour
                 result = rod;
             }
         }
+        else if (d.kind == DeviceKind.Sprinkler)
+        {
+            GameObject root = BuildDeviceObject(d, false, out _, out TextMeshPro timer);
+            root.transform.position = point;
+            PixelSprinklerDevice sprinkler = root.AddComponent<PixelSprinklerDevice>();
+            sprinkler.Init(clicker, cam, timer, timerFormat, duration, shrinkSeconds, d.radius, d.sprayInterval);
+            result = sprinkler;
+        }
         else
         {
             GameObject root = BuildDeviceObject(d, false, out Transform suckPoint, out TextMeshPro timer);
@@ -2045,6 +2083,10 @@ public class PixelConsumables : MonoBehaviour
         {
             BuildVacuumBody(root, d, isPreview);
         }
+        else if (d.kind == DeviceKind.Sprinkler)
+        {
+            BuildSprinklerBody(root, d, isPreview);
+        }
         else
         {
             // Cylinder body (Unity's cylinder is 2 units tall, hence the halved Y scale).
@@ -2109,6 +2151,41 @@ public class PixelConsumables : MonoBehaviour
     /// The Vacuum Device's look: a turned (lathe) body with a flared base, a slim waist and a funnel mouth at the top, two glowing bands, a glowing
     /// core in the funnel and a small spinning turbine ("Spinner", turned by PixelVacuumDevice) above it.
     /// </summary>
+    /// <summary>A flat base, a short post and a spinning head with two nozzles ("Spinner" with "Nozzle 0/1" children, used by <see cref="PixelSprinklerDevice"/>).</summary>
+    private void BuildSprinklerBody(GameObject root, Device d, bool isPreview)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        Color main = d.color; main.a = opacity;
+        Color metal = new Color(0.62f, 0.66f, 0.72f, opacity);
+        float H = d.bodyHeight;
+
+        GameObject Part(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(type);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(parent, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return g;
+        }
+
+        Part(PrimitiveType.Cylinder, "Base", root.transform, new Vector3(0f, 0.04f, 0f), new Vector3(d.bodyDiameter * 1.4f, 0.04f, d.bodyDiameter * 1.4f), metal);
+        Part(PrimitiveType.Cylinder, "Post", root.transform, new Vector3(0f, H * 0.5f, 0f), new Vector3(d.bodyDiameter * 0.28f, H * 0.5f, d.bodyDiameter * 0.28f), main);
+        Transform spinner = new GameObject("Spinner").transform;
+        spinner.SetParent(root.transform, false);
+        spinner.localPosition = new Vector3(0f, H, 0f);
+        Part(PrimitiveType.Sphere, "Hub", spinner, Vector3.zero, Vector3.one * d.bodyDiameter * 0.55f, main);
+        Part(PrimitiveType.Cube, "Arm", spinner, Vector3.zero, new Vector3(d.bodyDiameter * 1.5f, d.bodyDiameter * 0.14f, d.bodyDiameter * 0.14f), metal);
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject nozzle = Part(PrimitiveType.Sphere, "Nozzle " + i, spinner, new Vector3((i == 0 ? 1f : -1f) * d.bodyDiameter * 0.75f, 0f, 0f), Vector3.one * d.bodyDiameter * 0.2f, metal);
+        }
+    }
+
     private void BuildVacuumBody(GameObject root, Device d, bool isPreview)
     {
         float R = d.bodyDiameter * 0.5f, H = d.bodyHeight;

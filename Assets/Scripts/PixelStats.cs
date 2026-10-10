@@ -283,6 +283,7 @@ public class PixelStats : MonoBehaviour
         if (kind == PixelConsumables.DeviceKind.Fan) fansUsed++;
         else if (kind == PixelConsumables.DeviceKind.Vacuum) vacuumDevicesUsed++;
         else if (kind == PixelConsumables.DeviceKind.Sorter) sortersUsed++;
+        else Count("device.placed." + kind);   // every other kind (Charge Booster, Lightning Rod, Sprinkler) is counted generically
     }
 
     private void OnCombo(int count)
