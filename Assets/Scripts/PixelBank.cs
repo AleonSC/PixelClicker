@@ -137,6 +137,10 @@ public class PixelBank : MonoBehaviour
     [Tooltip("How quickly the nozzle swings to its new aim (higher = snappier).")]
     [SerializeField] private float aimSharpness = 14f;
 
+    [Min(0f)]
+    [Tooltip("How quickly the nozzle swings back along the hose after a flick has timed out (lower = a slower, smoother swing). 0 = the coded default (3).")]
+    [SerializeField] private float aimReturnSharpness = 0f;
+
     [Header("Area Suction (hold the right mouse button)")]
     [Min(0.05f)]
     [Tooltip("How long (seconds) you hold the right button before the hose switches from sucking up one pixel to sucking up an area.")]
@@ -690,7 +694,11 @@ public class PixelBank : MonoBehaviour
         if (hoseHeading.sqrMagnitude < 0.0001f) hoseHeading = cam.transform.right;
         bool flicked = flickAim && Time.unscaledTime - lastFlickTime < flickHoldSeconds;
         Vector3 wantedAim = flicked ? flickDirection : hoseHeading.normalized;
-        aimDirection = Vector3.Slerp(aimDirection, wantedAim, 1f - Mathf.Exp(-aimSharpness * dt)).normalized;
+        // Turn in the screen plane (round the camera's view axis) rather than slerping: slerp has no fixed way round when the new aim is
+        // exactly opposite, which made the nozzle hesitate and then snap. Swinging back after a flick is slower than the flick itself.
+        float turnSharpness = flicked ? aimSharpness : (aimReturnSharpness > 0f ? aimReturnSharpness : 3f);
+        float turn = Vector3.SignedAngle(aimDirection, wantedAim, cam.transform.forward);
+        aimDirection = (Quaternion.AngleAxis(turn * (1f - Mathf.Exp(-turnSharpness * dt)), cam.transform.forward) * aimDirection).normalized;
         Vector3 heading = aimDirection; // the nozzle and the spat-out pixels follow the aim
 
         // The hose ends inside the nozzle's swivel ball at its back, and arrives along the nozzle's own axis, so it never pokes through

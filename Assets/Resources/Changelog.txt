@@ -267,3 +267,4 @@
 [2026-10-10 09:06 UTC] Sucked-up pixels now swirl round the Vacuum pixel; the Pixel Bank nozzle is remodelled with a glass cube showing the selected pixel, a count plate on the nozzle itself and a faint aim line to where a spat pixel lands.
 [2026-10-10 09:13 UTC] Pixel Bank hose: bigger count text, the hose now enters the nozzle along its axis through a swivel ball (no more clipping or snapping), and it starts far off screen so its shadow doesn't pop in.
 [2026-10-10 09:18 UTC] A Vacuum pixel spat out of the Pixel Bank hose now swirls the old pixels into itself instead of into the clicker cube.
+[2026-10-10 09:21 UTC] Pixel Bank nozzle now swings smoothly in the screen plane (also when turned right round) and returns slowly after a flick instead of waiting and snapping.
