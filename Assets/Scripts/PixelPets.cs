@@ -552,7 +552,8 @@ public partial class PixelPets : MonoBehaviour
 
         float size = clicker.PixelBaseSize;
         GameObject go = new GameObject("Pet " + p.type);
-        go.transform.position = clicker.PixelTransform.position + new Vector3(Random.Range(-2f, 2f), size * 3f, Random.Range(-2f, 2f));
+        go.transform.position = p.planter ? SeedPetSpawnPoint(size)
+                                          : clicker.PixelTransform.position + new Vector3(Random.Range(-2f, 2f), size * 3f, Random.Range(-2f, 2f));
         go.transform.rotation = Random.rotation;
 
         GameObject model = p.planter ? PixelLooks.CreateSproutObject(go.transform, size * seedPetScale)   // the Seed pet is a big sprout
@@ -570,6 +571,9 @@ public partial class PixelPets : MonoBehaviour
             p.planted = false;
             p.seedTimer = 0f;
             p.born = Time.time;
+            // The Seed pet never rests on the clicker cube (it would plant itself on top of it): it passes through the cube's colliders.
+            foreach (Collider live in clicker.PixelTransform.GetComponentsInChildren<Collider>())
+                Physics.IgnoreCollision(box, live);
         }
         else box.size = Vector3.one * size;
 #if UNITY_6000_0_OR_NEWER
@@ -862,6 +866,21 @@ public partial class PixelPets : MonoBehaviour
         SowSeed(p, size);
     }
 
+    /// <summary>Where a new Seed pet drops from: a spot well to the side of the cube (not above it), up in the air, and on screen.</summary>
+    private Vector3 SeedPetSpawnPoint(float size)
+    {
+        Vector3 cube = clicker.PixelTransform.position;
+        Vector3 best = cube + new Vector3(size * 3f, size * 3f, 0f);
+        for (int attempt = 0; attempt < 10; attempt++)
+        {
+            Vector2 side = Random.insideUnitCircle.normalized * Random.Range(size * 2.5f, size * 4.5f);
+            Vector3 spot = cube + new Vector3(side.x, size * 3f, side.y);
+            best = spot;
+            if (!OutsideView(spot)) break;
+        }
+        return best;
+    }
+
     /// <summary>Is there ground (or an old pixel) just below the pet? Its own collider is skipped: the pet is tilted while it falls, so a plain raycast from inside it would hit its own side and plant it in mid-air.</summary>
     private bool SolidBelow(Pet p, Vector3 position, float size)
     {
@@ -869,6 +888,7 @@ public partial class PixelPets : MonoBehaviour
         foreach (RaycastHit h in hits)
         {
             if (h.collider == null || h.collider.transform.IsChildOf(p.body.transform)) continue;
+            if (clicker.PixelTransform != null && h.collider.transform.IsChildOf(clicker.PixelTransform)) continue; // the clicker cube is not ground
             return true;
         }
         return false;
