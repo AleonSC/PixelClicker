@@ -1334,6 +1334,12 @@ public class PixelUI : MonoBehaviour
         if (closeButtonObject != null && closeButtonObject.activeSelf == compact) closeButtonObject.SetActive(!compact);
         foreach (GameObject tab in tabObjects) if (tab != null && tab.activeSelf == compact) tab.SetActive(!compact);
         if (compact && categoryDropdown != null && categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(false);
+        if (compactSwitch != null)
+        {
+            if (compactSwitch.gameObject.activeSelf != compact) compactSwitch.gameObject.SetActive(compact);
+            if (potionIcon != null) potionIcon.SetActive(CompactMode == 1);   // showing currency: the button offers the potions
+            if (moneyIcon != null) moneyIcon.SetActive(CompactMode == 2);     // showing potions: the button offers the currency back
+        }
         if (compactButton != null) compactButton.GetComponent<Image>().color = compact ? new Color(0.2f, 0.6f, 0.3f, 1f) : closeButtonColor;
     }
 
@@ -1495,6 +1501,8 @@ public class PixelUI : MonoBehaviour
             sr.anchoredPosition = new Vector2((k % 2 == 0 ? -1f : 1f) * (cell + gap) * 0.5f, (k < 2 ? 1f : -1f) * (cell + gap) * 0.5f);
         }
 
+        BuildCompactSwitch(size);
+
         PixelHoverTip tip = compactButton.gameObject.AddComponent<PixelHoverTip>();
         tip.onEnter = () => tooltipCustomText = Compact ? compactOffTip : compactOnTip;
         tip.onExit = HideTooltip;
@@ -1504,6 +1512,67 @@ public class PixelUI : MonoBehaviour
             if (listContent != null) listContent.anchoredPosition = Vector2.zero;
             Refresh();
         });
+    }
+
+    private Button compactSwitch;
+    private GameObject potionIcon, moneyIcon;
+
+    /// <summary>A second button beside the toggle, only while the simplified view is on: swaps between the currency list (shows a potion) and the potion list (shows a coin).</summary>
+    private void BuildCompactSwitch(float size)
+    {
+        compactSwitch = MakeButton(boxObject.transform, "Compact Switch", "", new Vector2(size, size), closeButtonColor, headerTextColor, size * 0.5f);
+        RectTransform rt = compactSwitch.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(panelPadding + size + 8f, -panelPadding * 0.5f);
+
+        // Potion: a cork, a thin neck and a round-ish body, drawn from little rectangles.
+        potionIcon = new GameObject("Potion Icon", typeof(RectTransform));
+        potionIcon.transform.SetParent(compactSwitch.transform, false);
+        PixelUIKit.Stretch(potionIcon.GetComponent<RectTransform>());
+        IconRect(potionIcon.transform, new Color(0.65f, 0.45f, 0.25f, 1f), size * 0.16f, size * 0.1f, 0f, size * 0.32f);   // cork
+        IconRect(potionIcon.transform, new Color(0.85f, 0.9f, 0.95f, 1f), size * 0.12f, size * 0.16f, 0f, size * 0.2f);    // neck
+        IconRect(potionIcon.transform, new Color(0.9f, 0.3f, 0.35f, 1f), size * 0.4f, size * 0.3f, 0f, -size * 0.02f);      // body
+        IconRect(potionIcon.transform, new Color(0.9f, 0.3f, 0.35f, 1f), size * 0.28f, size * 0.1f, 0f, -size * 0.24f);     // rounded bottom
+        IconRect(potionIcon.transform, new Color(1f, 1f, 1f, 0.5f), size * 0.07f, size * 0.16f, -size * 0.1f, -size * 0.02f); // glint
+
+        // Money: a gold coin with a "$".
+        moneyIcon = new GameObject("Money Icon", typeof(RectTransform));
+        moneyIcon.transform.SetParent(compactSwitch.transform, false);
+        PixelUIKit.Stretch(moneyIcon.GetComponent<RectTransform>());
+        IconRect(moneyIcon.transform, new Color(0.95f, 0.75f, 0.2f, 1f), size * 0.5f, size * 0.5f, 0f, 0f);
+        IconRect(moneyIcon.transform, new Color(0.75f, 0.55f, 0.1f, 1f), size * 0.38f, size * 0.38f, 0f, 0f);
+        TMP_Text dollar = MakeText(moneyIcon.transform, "Dollar", "$", size * 0.4f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.92f, 0.5f, 1f));
+        dollar.raycastTarget = false;
+        PixelUIKit.Stretch(dollar.rectTransform);
+
+        compactSwitch.onClick.AddListener(() =>
+        {
+            CompactMode = CompactMode == 1 ? 2 : 1;
+            if (listContent != null) listContent.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
+        PixelHoverTip tip = compactSwitch.gameObject.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => tooltipCustomText = CompactMode == 1 ? switchToPotionsTip : switchToCurrencyTip;
+        tip.onExit = HideTooltip;
+        compactSwitch.gameObject.SetActive(false);
+    }
+
+    [Tooltip("Hover tip on the switch button while the simplified Inventory shows the currency.")]
+    [SerializeField] private string switchToPotionsTip = "Show your consumables";
+    [Tooltip("Hover tip on the switch button while the simplified Inventory shows the consumables.")]
+    [SerializeField] private string switchToCurrencyTip = "Show your currency";
+
+    private static void IconRect(Transform parent, Color color, float w, float h, float x, float y)
+    {
+        GameObject go = new GameObject("Part", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        Image im = go.GetComponent<Image>();
+        im.color = color;
+        im.raycastTarget = false;
+        RectTransform r = go.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+        r.sizeDelta = new Vector2(w, h);
+        r.anchoredPosition = new Vector2(x, y);
     }
 
     [Tooltip("Hover tip on the toggle while the Inventory is in its normal form.")]

@@ -379,3 +379,4 @@
 [2026-10-10 17:11 UTC] Shop lists now run the full window width (rows line up with the tabs on the right); the scroll bar fades in over the edge instead of leaving a gap.
 [2026-10-10 17:13 UTC] The shop's scroll bars are hidden (the wheel still scrolls); a 'Show Scroll Bars' tick box on the shop brings them back.
 [2026-10-10 17:15 UTC] Shop pack costs are shown as a tidy three-column grid ('1K White') and the Buy label always fits its bar.
+[2026-10-10 17:17 UTC] The simplified Inventory has a second button beside the toggle that swaps between the currency list (potion icon) and the consumables list (coin icon).
