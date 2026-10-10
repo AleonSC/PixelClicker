@@ -360,3 +360,4 @@
 [2026-10-10 16:40 UTC] Removed the (1.2K) from the Abbreviate numbers setting label.
 [2026-10-10 16:41 UTC] Settings row labels all use the same font size so rows line up.
 [2026-10-10 16:41 UTC] Settings choice rows leave a gap between the label and the button.
+[2026-10-10 16:43 UTC] Floor style and Sky settings are now drop-down lists with their pictures; removed the Graphics quality option from Settings.

@@ -12,6 +12,12 @@ public interface IPixelLookSource
     /// <summary>Index of the look in use.</summary>
     int Current { get; }
 
+    /// <summary>How many looks there are (the picker's drop-down lists them all).</summary>
+    int StyleCount { get; }
+
+    /// <summary>Use look 'index' (applied and remembered right away).</summary>
+    void SetStyle(int index);
+
     string StyleName(int index);
 
     /// <summary>A picture of look 'index' for the picker's icon (may be null: then only <see cref="PreviewColor"/> shows).</summary>

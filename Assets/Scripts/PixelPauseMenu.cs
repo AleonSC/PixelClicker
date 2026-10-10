@@ -1630,8 +1630,6 @@ public class PixelPauseMenu : MonoBehaviour
         AddSliderRow(list, uiHueLabel, PixelUIKit.UiHue, v => PixelUIKit.UiHue = v, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
-        AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
-                     v => PixelDisplaySettings.QualityLevel = v, ref y);
         List<Vector2Int> resolutions = PixelDisplaySettings.Resolutions;
         string[] resolutionNames = new string[resolutions.Count];
         for (int i = 0; i < resolutionNames.Length; i++) resolutionNames[i] = resolutions[i].x + " x " + resolutions[i].y;
@@ -1821,38 +1819,48 @@ public class PixelPauseMenu : MonoBehaviour
     private void AddLookRow(Transform parent, string labelText, System.Func<IPixelLookSource> source, ref float y)
     {
         TMP_Text label = AddRowLabel(parent, labelText, y, out RectTransform row);
-        label.rectTransform.anchorMax = new Vector2(0.42f, 1f);
+        label.rectTransform.anchorMax = new Vector2(0.4f, 1f);
 
-        GameObject picker = new GameObject(labelText + " Picker", typeof(RectTransform));
-        picker.transform.SetParent(row, false);
-        RectTransform pr = picker.GetComponent<RectTransform>();
-        pr.anchorMin = new Vector2(0.42f, 0f);
-        pr.anchorMax = Vector2.one;
+        // One drop-down button: picture + name + a down arrow. The list opens over everything (see OpenLookList).
+        Button pick = MakeButton(row, labelText + " Picker", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.8f);
+        RectTransform pr = pick.GetComponent<RectTransform>();
+        pr.anchorMin = new Vector2(0.42f, 0.06f);
+        pr.anchorMax = new Vector2(1f, 0.94f);
         pr.offsetMin = pr.offsetMax = Vector2.zero;
 
-        float arrow = tickBoxSize;
+        float icon = rowHeight * 0.7f;
         GameObject swatchGo = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
-        swatchGo.transform.SetParent(picker.transform, false);
+        swatchGo.transform.SetParent(pick.transform, false);
         RawImage swatch = swatchGo.GetComponent<RawImage>();
         swatch.raycastTarget = false;
         RectTransform sr = swatchGo.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
-        sr.sizeDelta = new Vector2(arrow, arrow);
-        sr.anchoredPosition = new Vector2(arrow + 8f, 0f);
+        sr.sizeDelta = new Vector2(icon, icon);
+        sr.anchoredPosition = new Vector2(8f, 0f);
 
-        TMP_Text nameText = MakeText(picker.transform, "Name", "", rowFontSize, FontStyles.Bold);
+        TMP_Text nameText = pick.GetComponentInChildren<TMP_Text>();
         nameText.color = statValueColor;
+        nameText.alignment = TextAlignmentOptions.MidlineLeft;
         nameText.enableAutoSizing = true;
-        nameText.fontSizeMax = rowFontSize;
-        nameText.fontSizeMin = 14f;
+        nameText.fontSizeMax = rowFontSize * 0.7f;
+        nameText.fontSizeMin = 12f;
+        nameText.overflowMode = TextOverflowModes.Ellipsis;
         RectTransform nr = nameText.rectTransform;
         nr.anchorMin = Vector2.zero;
         nr.anchorMax = Vector2.one;
-        nr.offsetMin = new Vector2(arrow * 2f + 14f, 0f);
-        nr.offsetMax = new Vector2(-arrow - 6f, 0f);
+        nr.offsetMin = new Vector2(icon + 18f, 0f);
+        nr.offsetMax = new Vector2(-icon - 6f, 0f);
+
+        Button arrow = MakeButton(pick.transform, "Arrow", ">", new Vector2(icon * 0.7f, icon * 0.7f), floorArrowColor, rowFontSize);
+        RectTransform ar = arrow.GetComponent<RectTransform>();
+        ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0.5f);
+        ar.anchoredPosition = new Vector2(-8f, 0f);
+        PixelUIKit.UseArrowGlyph(arrow, false);
+        ar.localRotation = Quaternion.Euler(0f, 0f, -90f);   // points down
 
         System.Action refresh = () =>
         {
+            CloseLookList();
             IPixelLookSource look = source();
             bool usable = look != null && look.Usable;
             nameText.text = usable ? look.StyleName(look.Current) : noFloorText;
@@ -1860,29 +1868,116 @@ public class PixelPauseMenu : MonoBehaviour
             swatch.color = usable ? look.PreviewColor(look.Current) : new Color(1f, 1f, 1f, 0.15f);
             swatch.uvRect = usable ? look.PreviewRect : new Rect(0f, 0f, 1f, 1f);
         };
-        System.Action<int> step = direction =>
+        System.Action open = () =>
         {
             IPixelLookSource look = source();
-            if (look != null && look.Usable) look.Step(direction);
-            refresh();
+            if (look == null || !look.Usable) return;
+            OpenLookList(pr, look, refresh);
         };
-
-        Button left = MakeButton(picker.transform, "Previous", "<", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
-        RectTransform lr = left.GetComponent<RectTransform>();
-        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 0.5f);
-        lr.anchoredPosition = Vector2.zero;
-        PixelUIKit.UseArrowGlyph(left, true);
-        left.onClick.AddListener(() => step(-1));
-
-        Button right = MakeButton(picker.transform, "Next", ">", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
-        RectTransform rr = right.GetComponent<RectTransform>();
-        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
-        rr.anchoredPosition = Vector2.zero;
-        PixelUIKit.UseArrowGlyph(right, false);
-        right.onClick.AddListener(() => step(1));
+        pick.onClick.AddListener(() => open());
+        arrow.onClick.AddListener(() => open());
 
         settingsRefreshers.Add(refresh);
         y += rowHeight + 6f;
+    }
+
+    private GameObject lookListRoot;
+
+    private void CloseLookList()
+    {
+        if (lookListRoot != null) Destroy(lookListRoot);
+        lookListRoot = null;
+    }
+
+    /// <summary>The look drop-down: a list of every look (picture + name) that opens under (or above) the button, over the whole menu.</summary>
+    private void OpenLookList(RectTransform anchor, IPixelLookSource look, System.Action refresh)
+    {
+        CloseLookList();
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+
+        // Full-screen catcher: a click anywhere else closes the list.
+        lookListRoot = new GameObject("Look List", typeof(RectTransform), typeof(Image), typeof(Button));
+        lookListRoot.transform.SetParent(canvasRoot.transform, false);
+        lookListRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f);
+        PixelUIKit.Stretch(lookListRoot.GetComponent<RectTransform>());
+        lookListRoot.GetComponent<Button>().onClick.AddListener(CloseLookList);
+
+        Vector3[] corners = new Vector3[4];
+        anchor.GetWorldCorners(corners);
+        Vector2 bl = canvasRect.InverseTransformPoint(corners[0]);
+        Vector2 tr = canvasRect.InverseTransformPoint(corners[2]);
+        float width = tr.x - bl.x;
+        float itemH = rowHeight * 0.85f;
+        int count = look.StyleCount;
+        float height = Mathf.Min(count, 6) * itemH + 12f;
+        float below = bl.y - (-canvasRect.rect.height * 0.5f);   // room under the button
+        bool goUp = below < height + 20f;
+
+        GameObject boxGo = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        boxGo.transform.SetParent(lookListRoot.transform, false);
+        Image boxImage = boxGo.GetComponent<Image>();
+        boxImage.color = tickBoxColor;
+        PixelUIKit.StyleBox(boxImage, true);
+        RectTransform box = boxGo.GetComponent<RectTransform>();
+        box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
+        box.pivot = new Vector2(0f, goUp ? 0f : 1f);
+        box.sizeDelta = new Vector2(width, height);
+        box.anchoredPosition = goUp ? new Vector2(bl.x, tr.y + 4f) : new Vector2(bl.x, bl.y - 4f);
+
+        ScrollRect scroll = PixelUIKit.CreateScrollView(boxGo.transform, "List", scrollbarColor, 10f, itemH,
+                                                        out RectTransform content, out GameObject bar);
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = Vector2.zero;
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = new Vector2(6f, 6f);
+        vr.offsetMax = new Vector2(-6f, -6f);
+
+        float icon = itemH * 0.75f;
+        for (int i = 0; i < count; i++)
+        {
+            int index = i;
+            Button item = MakeButton(content, "Look " + i, look.StyleName(i), new Vector2(10f, itemH - 4f),
+                                     i == look.Current ? floorArrowColor : tickBoxColor, rowFontSize * 0.7f);
+            RectTransform ir = item.GetComponent<RectTransform>();
+            ir.anchorMin = new Vector2(0f, 1f);
+            ir.anchorMax = new Vector2(1f, 1f);
+            ir.pivot = new Vector2(0.5f, 1f);
+            ir.sizeDelta = new Vector2(-14f, itemH - 4f);
+            ir.anchoredPosition = new Vector2(0f, -i * itemH);
+
+            TMP_Text t = item.GetComponentInChildren<TMP_Text>();
+            t.alignment = TextAlignmentOptions.MidlineLeft;
+            t.enableAutoSizing = true;
+            t.fontSizeMax = rowFontSize * 0.7f;
+            t.fontSizeMin = 12f;
+            t.overflowMode = TextOverflowModes.Ellipsis;
+            t.rectTransform.offsetMin = new Vector2(icon + 18f, 0f);
+            t.rectTransform.offsetMax = new Vector2(-6f, 0f);
+
+            GameObject pic = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
+            pic.transform.SetParent(item.transform, false);
+            RawImage ri = pic.GetComponent<RawImage>();
+            ri.raycastTarget = false;
+            ri.texture = look.PreviewTexture(i);
+            ri.color = look.PreviewColor(i);
+            ri.uvRect = look.PreviewRect;
+            RectTransform pr2 = pic.GetComponent<RectTransform>();
+            pr2.anchorMin = pr2.anchorMax = pr2.pivot = new Vector2(0f, 0.5f);
+            pr2.sizeDelta = new Vector2(icon, icon);
+            pr2.anchoredPosition = new Vector2(8f, 0f);
+
+            item.onClick.AddListener(() =>
+            {
+                look.SetStyle(index);
+                CloseLookList();
+                refresh();
+            });
+        }
+        PixelUIKit.UpdateScrollView(scroll, bar, count * itemH, height - 12f);
+        // Bring the current look into view.
+        float visible = height - 12f;
+        float want = Mathf.Max(0f, look.Current * itemH - visible * 0.5f + itemH * 0.5f);
+        content.anchoredPosition = new Vector2(0f, Mathf.Min(want, Mathf.Max(0f, count * itemH - visible)));
     }
 
     private string FormatCount(double value)
