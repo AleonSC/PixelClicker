@@ -156,6 +156,7 @@ public class SeedSprout : MonoBehaviour
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         transform.position += Vector3.down * (unit * 0.03f); // pressed slightly into the ground
         PixelAudio.PlayScaled("pixel_land", 0.6f);
+        PixelAudio.Play("seed_plant"); // the crunch of it going into the ground (every sprout, whoever planted it)
         SeedDigFx.Play(transform.position + Vector3.up * (unit * 0.1f), unit, 0.5f); // a puff of dirt where it lands
 
         GameObject m = GameObject.CreatePrimitive(PrimitiveType.Sphere);

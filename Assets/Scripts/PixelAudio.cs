@@ -231,6 +231,7 @@ public class PixelAudio : MonoBehaviour
             Make("bomb_tick", 0.1f, 1f, 1f),
             Make("bomb_explode", 0.2f),
             Make("seed_dig", 0.04f, 0.9f, 1.1f),
+            Make("seed_plant", 0.05f, 0.9f, 1.1f),
         };
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
             list.Add(Make("pixel_" + type.ToString().ToLowerInvariant(), 0.03f, 0.92f, 1.08f));
@@ -246,9 +247,10 @@ public class PixelAudio : MonoBehaviour
         if (sounds == null) return;
         foreach (Sound s in sounds)
         {
-            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon" && s.id != "seed_dig")) continue;
+            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon" && s.id != "seed_dig" && s.id != "seed_plant")) continue;
             if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
-            s.clips = s.id == "seed_dig" ? new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) }
+            s.clips = s.id == "seed_plant" ? new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) }
+                    : s.id == "seed_dig" ? new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) }
                     : s.id == "dragon_summon" ? new[] { PixelSynth.Summon() }
                     : s.id == "overcharge" ? new[] { PixelSynth.Charge() }
                     : new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
@@ -642,6 +644,35 @@ public static class PixelSynth
     }
 
     /// <summary>A charge-up: a rising buzz with growing crackle that ends in a big snap.</summary>
+    /// <summary>A small crunch, like a seed being pressed into gravelly soil: a few quick crackles over a soft low squash. 'seed' picks a variant.</summary>
+    public static AudioClip Crunch(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.2f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(300 + seed * 23);
+        // A handful of crackle bursts at slightly different times: the "crunch".
+        float[] at = { 0.004f, 0.03f + seed * 0.004f, 0.065f, 0.1f + seed * 0.003f };
+        float lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.55f;
+            float env = 0f;
+            for (int k = 0; k < at.Length; k++)
+                if (sec >= at[k]) env += Mathf.Exp(-(sec - at[k]) * 70f) * (0.9f - k * 0.15f);
+            float squash = Mathf.Sin(sec * (95f - seed * 8f) * Mathf.PI * 2f) * Mathf.Exp(-sec * 30f) * 0.5f;
+            data[i] = (lp * env + squash) * Mathf.Clamp01(sec / 0.002f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
+        AudioClip clip = AudioClip.Create("Crunch " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
     /// <summary>A short digging sound: a gritty scrape of dirt over a low thud. 'seed' picks one of a few variants.</summary>
     public static AudioClip Dig(int seed)
     {

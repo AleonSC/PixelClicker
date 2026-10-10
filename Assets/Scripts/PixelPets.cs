@@ -870,6 +870,7 @@ public partial class PixelPets : MonoBehaviour
         p.planted = true;
         p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y) * 0.4f, Mathf.Max(seedPetInterval.x, seedPetInterval.y) * 0.6f); // the first seed comes sooner
         PixelAudio.PlayScaled("pixel_land", 0.7f);
+        PixelAudio.Play("seed_plant");
         SeedDigFx.Play(rb.position + Vector3.up * (size * 0.1f), size, 0.7f);
 
         if (p.mound != null) Destroy(p.mound);
@@ -903,8 +904,7 @@ public partial class PixelPets : MonoBehaviour
             if (OutsideView(spot)) continue;
             if (clicker.PlantSeedSproutAt(spot))
             {
-                SeedDigFx.Play(spot + Vector3.up * (size * 0.1f), size * 0.6f, 0.4f);
-                PixelAudio.PlayScaled("seed_dig", 0.8f);
+                SeedDigFx.Play(spot + Vector3.up * (size * 0.1f), size * 0.6f, 0.4f); // (the planted sprout plays the crunch itself)
             }
             return;
         }
