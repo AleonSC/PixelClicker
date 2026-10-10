@@ -583,7 +583,55 @@ public partial class PixelShop
             row.arrowButton.onClick.AddListener(() => OpenUpgradesWindow(captured));
         }
 
+        if (!potion) LayoutPackRowLikeCards(row, hasChildren);
         return row;
+    }
+
+    /// <summary>
+    /// Lines a pack row up like the Consumables cards: the orange '!' sits flush in the picture's top-left corner, the name and the
+    /// cost run down the middle, and the Buy button is a wide bar along the bottom (with the upgrades arrow at its right end).
+    /// </summary>
+    private void LayoutPackRowLikeCards(PackRow row, bool hasArrow)
+    {
+        const float side = 20f, bottom = 14f;
+        float bar = Mathf.Min(buyButtonSize.y, rowHeight * 0.26f);
+
+        RectTransform picture = row.rect.Find("Picture") as RectTransform;
+        RectTransform info = row.rect.Find("Info") as RectTransform;
+        float left = side;
+        if (picture != null)
+        {
+            float size = picture.sizeDelta.x;
+            left = picture.anchoredPosition.x + size + 14f;
+            if (info != null)
+            {
+                info.anchoredPosition = new Vector2(picture.anchoredPosition.x, -(rowHeight - size) * 0.5f);   // flush with the picture's corner
+                info.SetAsLastSibling();                                                                      // and drawn over it
+            }
+        }
+        else if (info != null) left = side + info.sizeDelta.x + 12f;
+
+        // Name on top, cost under it, both clear of the bar and (now) of nothing on the right.
+        SetBand(row.nameLabel.rectTransform, 0.62f, 1f, side);
+        row.nameLabel.rectTransform.offsetMin = new Vector2(left, 0f);
+        SetBand(row.costLabel.rectTransform, 0f, 0.62f, side);
+        row.costLabel.rectTransform.offsetMin = new Vector2(left, bottom + bar + 6f);
+
+        RectTransform br = row.buyButton.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0f, 0f);
+        br.anchorMax = new Vector2(1f, 0f);
+        br.pivot = new Vector2(0.5f, 0f);
+        float arrowSpace = hasArrow && row.arrowButton != null ? upgradesArrowSize.x + 10f : 0f;
+        br.offsetMin = new Vector2(left, bottom);
+        br.offsetMax = new Vector2(-(side + arrowSpace), bottom + bar);
+
+        if (hasArrow && row.arrowButton != null)
+        {
+            RectTransform ar = row.arrowButton.GetComponent<RectTransform>();
+            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0f);
+            ar.sizeDelta = new Vector2(upgradesArrowSize.x, bar);
+            ar.anchoredPosition = new Vector2(-side, bottom);
+        }
     }
 
     /// <summary>A stat row with a title, a count and a progress bar (the Singularity and Ghost trackers).</summary>
