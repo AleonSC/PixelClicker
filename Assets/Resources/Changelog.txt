@@ -363,3 +363,4 @@
 [2026-10-10 16:43 UTC] Floor style and Sky settings are now drop-down lists with their pictures; removed the Graphics quality option from Settings.
 [2026-10-10 16:43 UTC] Key Bindings screen: names no longer cut off or touching the key buttons, Reset keys on one line, more room above it.
 [2026-10-10 16:44 UTC] Save slots now show the date, pixel count and total time played on separate lines.
+[2026-10-10 16:47 UTC] Stats screen sections (General, Pixels, ...) can be folded and unfolded by clicking their headings.

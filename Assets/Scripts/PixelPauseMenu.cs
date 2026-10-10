@@ -2024,13 +2024,43 @@ public class PixelPauseMenu : MonoBehaviour
         else
         {
             int v = 0;
+            bool hidden = false;
             for (int i = 0; i < lines.Count; i++)
             {
-                if (lines[i].header) continue;
+                if (lines[i].header) { hidden = collapsedStatSections.Contains(lines[i].label); continue; }
+                if (hidden) continue;
                 if (v < statValueTexts.Count) statValueTexts[v++].text = lines[i].value;
             }
         }
         PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
+    }
+
+    private readonly HashSet<string> collapsedStatSections = new HashSet<string>();
+
+    /// <summary>A Stats section heading you can click to fold / unfold the rows under it ("-" open, "+" folded).</summary>
+    private void AddStatSectionHeader(Transform parent, string text, bool collapsed, ref float y)
+    {
+        y += 8f;
+        float h = rowHeight * 0.8f;
+        Button b = MakeButton(parent, text + " Header", (collapsed ? "+  " : "-  ") + text, new Vector2(10f, h), tickBoxColor, rowFontSize * 0.7f);
+        RectTransform rt = b.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(-80f, h);
+        rt.anchoredPosition = new Vector2(0f, -y);
+        TMP_Text t = b.GetComponentInChildren<TMP_Text>();
+        t.color = statValueColor;
+        t.fontStyle = FontStyles.Bold;
+        t.alignment = TextAlignmentOptions.MidlineLeft;
+        t.rectTransform.offsetMin = new Vector2(16f, 0f);
+        b.onClick.AddListener(() =>
+        {
+            if (!collapsedStatSections.Remove(text)) collapsedStatSections.Add(text);
+            RebuildStatRows();
+            PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
+        });
+        y += h + 4f;
     }
 
     private void RebuildStatRows(List<PixelStats.Line> lines = null)
@@ -2043,10 +2073,15 @@ public class PixelPauseMenu : MonoBehaviour
         float cy = 0f;
         if (lines != null)
         {
+            bool hidden = false;
             foreach (PixelStats.Line line in lines)
             {
-                if (line.header) AddHeaderRow(statsContent, line.label, ref cy);
-                else
+                if (line.header)
+                {
+                    hidden = collapsedStatSections.Contains(line.label);
+                    AddStatSectionHeader(statsContent, line.label, hidden, ref cy);
+                }
+                else if (!hidden)
                 {
                     TMP_Text value = AddStatRow(statsContent, line.label, ref cy);
                     value.text = line.value;
