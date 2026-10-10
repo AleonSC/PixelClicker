@@ -385,3 +385,4 @@
 [2026-10-10 17:27 UTC] Stats sections now start folded, and the Settings screen is split into collapsible sections (Gameplay, Interface, Saving, Display, Audio, Controls) that also start folded.
 [2026-10-10 17:28 UTC] Fixed a duplicate field name compile error in the Settings sections.
 [2026-10-10 17:32 UTC] Got-it boxes placed beside a window (Log, Inventory, Shop) now measure the window at full size, so they no longer overlap it while it is still growing in.
+[2026-10-10 17:33 UTC] Cubie's speech box has the fancy window frame in teal, a tail pointing at him, typewriter text, a shimmering name and a pulsing Next button.

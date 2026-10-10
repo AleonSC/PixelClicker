@@ -278,12 +278,35 @@ public class PixelGuideVendor : MonoBehaviour
             PixelUIKit.SetText(message, text);
             PixelUIKit.SetText(nextLabel, i == pages.Length - 1 ? lastText : nextText);
             int start = advance;
-            while (advance == start)
+
+            // The page types itself out; Next while it types shows the rest at once, Next again turns the page.
+            message.ForceMeshUpdate();
+            int total = message.textInfo.characterCount;
+            float shown = 0f, speed = typeCharsPerSecond > 0f ? typeCharsPerSecond : 55f;
+            message.maxVisibleCharacters = 0;
+            while (true)
             {
+                if (advance != start)
+                {
+                    if (shown < total) { shown = total; message.maxVisibleCharacters = total; start = advance; }
+                    else break;
+                }
+                else if (shown < total)
+                {
+                    shown += Time.unscaledDeltaTime * speed;
+                    message.maxVisibleCharacters = Mathf.Min(total, (int)shown);
+                }
+
                 characterRect.anchoredPosition = new Vector2(restX, barH + 24f + Mathf.Sin(Time.unscaledTime * 3f) * 4f);
                 Glance();
+                bool done = shown >= total;
+                nextButton.transform.localScale = Vector3.one * (done ? 1f + 0.05f * Mathf.Sin(Time.unscaledTime * 6f) : 1f);   // the button pulses once the page is complete
+                if (nameLabel != null)
+                    nameLabel.color = Color.Lerp(new Color(0.5f, 0.95f, 0.85f), new Color(0.8f, 1f, 0.92f), 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 2.5f));   // the name shimmers
                 yield return null;
             }
+            message.maxVisibleCharacters = int.MaxValue;
+            nextButton.transform.localScale = Vector3.one;
         }
 
         PixelPop.Hide(panel.gameObject);
@@ -407,14 +430,29 @@ public class PixelGuideVendor : MonoBehaviour
         // Speech box.
         GameObject pg = new GameObject("Speech", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         pg.transform.SetParent(canvasRoot.transform, false);
-        pg.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.16f, 0.97f);
+        PixelUIKit.StyleWindow(pg.GetComponent<Image>(), new Color(0.07f, 0.17f, 0.19f, 0.97f));   // the same rounded glowing frame as every window, tinted teal like Cubie
         panel = pg.GetComponent<RectTransform>();
         panel.anchorMin = panel.anchorMax = new Vector2(1f, 0.5f);
         panel.pivot = new Vector2(1f, 0.5f);
         panel.sizeDelta = new Vector2(760f, 500f);
         panel.anchoredPosition = new Vector2(-(characterRect.sizeDelta.x + 130f), 0f);
 
+        // A little tail on the right edge, pointing at Cubie.
+        GameObject tail = new GameObject("Tail", typeof(RectTransform), typeof(Image));
+        tail.transform.SetParent(panel, false);
+        tail.transform.SetAsFirstSibling();
+        Image tailImage = tail.GetComponent<Image>();
+        tailImage.color = new Color(0.07f, 0.17f, 0.19f, 0.97f);
+        tailImage.raycastTarget = false;
+        RectTransform tailRect = tail.GetComponent<RectTransform>();
+        tailRect.anchorMin = tailRect.anchorMax = new Vector2(1f, 0.55f);
+        tailRect.pivot = new Vector2(0.5f, 0.5f);
+        tailRect.sizeDelta = new Vector2(46f, 46f);
+        tailRect.anchoredPosition = new Vector2(8f, 0f);
+        tailRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
         TMP_Text title = PixelUIKit.CreateText(Font, panel, "Name", characterName, 56f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.5f, 0.95f, 0.85f));
+        nameLabel = title;
         PixelUIKit.Caps(title);
         SetRect(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -84f), new Vector2(-20f, -16f));
 
@@ -435,6 +473,11 @@ public class PixelGuideVendor : MonoBehaviour
         nextButton.onClick.AddListener(() => advance++);
         panel.gameObject.SetActive(false);
     }
+
+    private TMP_Text nameLabel;
+
+    [Tooltip("How many letters of Cubie's speech appear per second (0 = 55). Clicking Next while it types shows the whole page at once.")]
+    [SerializeField] private float typeCharsPerSecond = 0f;
 
     private static void SetRect(RectTransform r, float minX, float minY, float maxX, float maxY, Vector2 offsetMin, Vector2 offsetMax)
     {
