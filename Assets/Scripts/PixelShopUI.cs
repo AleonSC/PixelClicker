@@ -393,6 +393,7 @@ public partial class PixelShop
         RectTransform br = back.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0f, 1f);
         br.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
+        PixelUIKit.UseArrowGlyph(back, true);   // a drawn backwards triangle instead of the "<" letter
         back.onClick.AddListener(CloseUpgradesWindow);
 
         Button close = CreateButton(subPanelObject.transform, "Close", "X", new Vector2(80f, 80f),

@@ -470,6 +470,7 @@ public class PixelTitleScreen : MonoBehaviour
             RectTransform ar = arrow.GetComponent<RectTransform>();
             ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(side < 0 ? 0f : 1f, 0.5f);
             ar.anchoredPosition = Vector2.zero;
+            PixelUIKit.UseArrowGlyph(arrow, side < 0);
             arrow.onClick.AddListener(() =>
             {
                 if (playing) return;

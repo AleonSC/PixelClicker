@@ -167,6 +167,19 @@ public static class PixelUIKit
         r.anchoredPosition = Vector2.zero;
     }
 
+    /// <summary>Swaps a "&lt;" / "&gt;" arrow button's letter for a drawn triangle pointing left or right, tinted with the label's colour.</summary>
+    public static void UseArrowGlyph(Button button, bool pointLeft)
+    {
+        if (button == null) return;
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        Color color = label != null ? label.color : Color.white;
+        Vector2 size = button.GetComponent<RectTransform>().sizeDelta;
+        if (size.x <= 1f || size.y <= 1f) size = new Vector2(80f, 80f);
+        UseRightTriangle(button.gameObject, label, color, size);
+        Transform glyph = button.transform.Find("Triangle");
+        if (glyph != null && pointLeft) glyph.localRotation = Quaternion.Euler(0f, 0f, -90f); // down -> left
+    }
+
     /// <summary>Swaps a close button's "X" letter for the drawn cross, tinted with the label colour.</summary>
     public static void UseCloseGlyph(GameObject button, TMP_Text label, Color color, Vector2 buttonSize)
     {

@@ -581,6 +581,8 @@ public partial class PixelPets
 
         Button left = PixelUIKit.CreateButton(font, box.transform, "Previous Outfit", "<", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
         Button right = PixelUIKit.CreateButton(font, box.transform, "Next Outfit", ">", new Vector2(110f, 170f), buttonColor, Color.white, 64f);
+        PixelUIKit.UseArrowGlyph(left, true);
+        PixelUIKit.UseArrowGlyph(right, false);
         foreach (KeyValuePair<Button, float> a in new[] { new KeyValuePair<Button, float>(left, -1f), new KeyValuePair<Button, float>(right, 1f) })
         {
             RectTransform ar = a.Key.GetComponent<RectTransform>();

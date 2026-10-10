@@ -1833,12 +1833,14 @@ public class PixelPauseMenu : MonoBehaviour
         RectTransform lr = left.GetComponent<RectTransform>();
         lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(0f, 0.5f);
         lr.anchoredPosition = Vector2.zero;
+        PixelUIKit.UseArrowGlyph(left, true);
         left.onClick.AddListener(() => step(-1));
 
         Button right = MakeButton(picker.transform, "Next", ">", new Vector2(arrow, arrow), floorArrowColor, rowFontSize);
         RectTransform rr = right.GetComponent<RectTransform>();
         rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
         rr.anchoredPosition = Vector2.zero;
+        PixelUIKit.UseArrowGlyph(right, false);
         right.onClick.AddListener(() => step(1));
 
         settingsRefreshers.Add(refresh);
