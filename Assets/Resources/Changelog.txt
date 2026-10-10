@@ -376,3 +376,4 @@
 [2026-10-10 17:05 UTC] The Inventory pin toggle now pins just the tab you are on (Currency or Consumables); Shop and Crafting windows also grow / shrink when opened and closed.
 [2026-10-10 17:06 UTC] Vendor, Wizard and the other visitors' greeting / wares windows (and Cubie's speech box) grow and shrink when they open and close.
 [2026-10-10 17:07 UTC] Shop pack rows: Buy bar now has the same side margins as the picture and spans the full box width on rows without a picture; level text and boxes moved to the name line so they no longer overlap the cost.
+[2026-10-10 17:11 UTC] Shop lists now run the full window width (rows line up with the tabs on the right); the scroll bar fades in over the edge instead of leaving a gap.

@@ -320,7 +320,7 @@ public partial class PixelShop
         sr.anchorMax = Vector2.one;
         sr.pivot = new Vector2(0.5f, 0.5f);
         sr.offsetMin = new Vector2(panelPadding, panelPadding);
-        sr.offsetMax = new Vector2(-(panelPadding + scrollbarWidth + 8f), -top);
+        sr.offsetMax = new Vector2(-panelPadding, -top);   // full width, like the tabs and the Consumables cards: the scroll bar fades in over the right edge instead of reserving room there
 
         // Content
         GameObject contentGo = new GameObject("Content", typeof(RectTransform));
