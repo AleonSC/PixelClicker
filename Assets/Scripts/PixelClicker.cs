@@ -459,6 +459,17 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Speed curve of the suck-in (time 0..1, progress 0..1). Rising curves pull faster toward the end.")]
     [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+    [Tooltip("The old Vacuum pixel that drops after a vacuum click shows the pixels it sucked up as very small versions floating inside it.")]
+    [SerializeField] private bool vacuumShowContents = true;
+
+    [Min(1)]
+    [Tooltip("Most tiny pixels shown inside the Vacuum pixel (a random selection of what it sucked up when there were more).")]
+    [SerializeField] private int vacuumContentsMax = 24;
+
+    [Range(0.05f, 0.4f)]
+    [Tooltip("Size of each tiny pixel inside the Vacuum pixel, as a fraction of its edge.")]
+    [SerializeField] private float vacuumContentSize = 0.16f;
+
     [Header("Old Pixel Physics")]
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
     [SerializeField] private float fallingCopyLifetime = 6f;
@@ -2511,11 +2522,15 @@ public class PixelClicker : MonoBehaviour
     /// <summary>
     /// Vacuum pixel effect: every old pixel flies into the cube and its original reward is added again.
     /// </summary>
+    // The tier of each pixel the last vacuum click sucked up, waiting for the old Vacuum pixel that drops in the same click.
+    private readonly System.Collections.Generic.List<int> vacuumContents = new System.Collections.Generic.List<int>();
+
     public void Vacuum(int vacuumTierIndex)
     {
         double total = 0d;
         int count = 0;
         double[] perTier = new double[tiers.Length];
+        vacuumContents.Clear();
 
         for (int i = 0; i < oldPixels.Count; i++)
         {
@@ -2529,6 +2544,7 @@ public class PixelClicker : MonoBehaviour
                 perTier[info.tierIndex] += info.amount;
                 total += info.amount;
                 count++;
+                if (vacuumShowContents) vacuumContents.Add(info.tierIndex);
             }
 
             StartCoroutine(SuckRoutine(body));
@@ -3114,6 +3130,13 @@ public class PixelClicker : MonoBehaviour
             {
                 PixelLooks.AddExtras(copy.transform, srcFilter.sharedMesh, styled, tiers[tierIndex].color, defaultMaterial);
                 if (styled.wobble) MakeWobbleVisual(copy, styled);
+                if (tiers[tierIndex].vacuum && !stored && vacuumContents.Count > 0)
+                {
+                    // The old Vacuum pixel carries what it just sucked up, as tiny pixels inside it.
+                    while (vacuumContents.Count > vacuumContentsMax) vacuumContents.RemoveAt(UnityEngine.Random.Range(0, vacuumContents.Count));
+                    copy.AddComponent<PixelVacuumContents>().Fill(this, vacuumContents, vacuumContentSize);
+                    vacuumContents.Clear();
+                }
                 if (styled.gravityWell)
                     copy.AddComponent<OldPixelGravityWell>().Setup(this, styled);
                 if (styled.floatAway)
