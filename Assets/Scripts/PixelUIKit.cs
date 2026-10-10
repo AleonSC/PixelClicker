@@ -607,6 +607,7 @@ public static class PixelUIKit
         root.GetComponent<RectTransform>().sizeDelta = size;
         Image image = root.GetComponent<Image>();
         image.color = boxColor;
+        StyleBox(image, true);   // a sunken, rounded field
 
         GameObject area = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
         area.transform.SetParent(root.transform, false);

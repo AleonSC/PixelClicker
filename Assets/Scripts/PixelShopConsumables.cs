@@ -102,7 +102,7 @@ public partial class PixelShop
         RectTransform infoRect = CreateInfoBox(go.transform, infoSize, () => card.tipText);
         PlaceTopLeft(infoRect, 14f, y + 7f, infoSize, infoSize);
 
-        card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
+        card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.Center, FontStyles.Normal);   // centred in the space beside the '!' box
         card.cost.richText = true;
         card.cost.enableAutoSizing = true;
         card.cost.fontSizeMax = costFontSize;
@@ -110,8 +110,8 @@ public partial class PixelShop
         PlaceTopLeft(card.cost.rectTransform, 14f + infoSize + 10f, y, inner - infoSize - 10f, 58f);
         y += 58f + 8f;
 
-        // How many: [-] [ 1 ] [+]
-        float cx = 14f;
+        // How many: [-] [ 1 ] [+] - the whole group centred on the card.
+        float cx = 14f + (inner - (52f + 8f + 120f + 8f + 52f)) * 0.5f;
         card.minus = CreateButton(go.transform, "Minus", "-", Vector2.zero, tabInactiveColor, textColor, buyFontSize, out _, out _);
         PlaceTopLeft(card.minus.GetComponent<RectTransform>(), cx, y, 52f, 56f);
         card.minus.onClick.AddListener(() => ChangeCount(card, -1));

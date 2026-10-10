@@ -350,3 +350,4 @@
 [2026-10-10 15:42 UTC] Ultra pixels are now one general currency instead of one per pixel type: minigames and the dragon's Ultra Blessing give plain 'Ultra pixels', and the Inventory's Currency tab shows them at the very top with an animated rainbow swatch and a line under them (older saves add their per-pixel Ultras together).
 [2026-10-10 15:44 UTC] The Shop's boxes (pack rows, currency rows, consumable cards, operation rows) are now softly rounded with a gentle gradient and a thin lit rim, and the 3D picture frames are sunken rounded frames (Settings > Fancy windows switches them back to flat).
 [2026-10-10 15:45 UTC] Every drop-down now looks fancier: the closed box is a bevelled rounded button, and the opened list is a rounded panel with each entry as its own rounded chip.
+[2026-10-10 15:48 UTC] Input boxes are now sunken rounded fields; on the shop's consumable cards the cost line is centred beside the '!' box and the - / count / + group is centred.
