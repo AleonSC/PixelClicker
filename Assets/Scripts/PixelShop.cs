@@ -626,6 +626,12 @@ public partial class PixelShop : MonoBehaviour
     [SerializeField] private float currencyPanelGap = 10f;
 
     /// <summary>Width of the currency panel (the Toggles window copies it).</summary>
+    /// <summary>Layout numbers the windows beside the shop copy so their contents line up with the shop's: where the first element under the header starts, how tall the tab row is and where the list starts.</summary>
+    public float HeaderHeightValue => headerHeight;
+    public float TabHeightValue => tabHeight;
+    public float PanelPaddingValue => panelPadding;
+    public float ListTopValue => headerHeight + tabHeight + panelPadding * 0.5f;
+
     public float CurrencyPanelWidth => currencyPanelWidth > 40f ? currencyPanelWidth : 380f;
 
     /// <summary>Gap between the shop and its currency panel.</summary>

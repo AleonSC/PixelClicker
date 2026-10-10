@@ -70,9 +70,6 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Keep the Toggles tab hidden until the Auto Clicker has been bought.")]
     [SerializeField] private bool hideUntilAutoClicker = true;
 
-    [Tooltip("Label of a pixel's toggle. {0} = pixel name.")]
-    [SerializeField] private string pixelLabelFormat = "{0} spawn";
-
     [Tooltip("Window size (canvas units).")]
     [SerializeField] private Vector2 windowSize = new Vector2(640f, 720f);
 
@@ -265,7 +262,7 @@ public class PixelToggles : MonoBehaviour
             if (PixelProspector.AnyOreUnlocked(clicker))
                 list.Add(new Entry
                 {
-                    label = "Prospector mode (ores spawn instead of the basic pixels)",
+                    label = "Prospector mode",
                     on = PixelProspector.Setting,
                     setter = on => { PixelProspector.Setting = on; clicker.RefreshSpawnTier(); },
                 });
@@ -276,7 +273,7 @@ public class PixelToggles : MonoBehaviour
                 int index = i;
                 list.Add(new Entry
                 {
-                    label = string.Format(pixelLabelFormat, t.displayName),
+                    label = ShortPixelName(t.displayName),
                     on = !t.spawnDisabled,
                     setter = on => clicker.SetSpawnEnabled(index, on),
                 });
@@ -373,23 +370,30 @@ public class PixelToggles : MonoBehaviour
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
     }
 
+    /// <summary>"Seed Pixels" -> "Seed": the Pixels group already says what the switches are for, and short names stay on one line at full size.</summary>
+    private static string ShortPixelName(string name)
+    {
+        if (name.EndsWith(" Pixels")) return name.Substring(0, name.Length - 7);
+        if (name.EndsWith(" Pixel")) return name.Substring(0, name.Length - 6);
+        return name;
+    }
+
     private RowUI BuildRow()
     {
         RowUI row = new RowUI();
         row.go = new GameObject("Toggle Row", typeof(RectTransform), typeof(Image));
         row.go.transform.SetParent(content, false);
         row.go.GetComponent<Image>().color = rowColor;
+        PixelUIKit.StyleBox(row.go.GetComponent<Image>());
         RectTransform rr = row.go.GetComponent<RectTransform>();
         rr.anchorMin = new Vector2(0f, 1f);
         rr.anchorMax = new Vector2(1f, 1f);
         rr.pivot = new Vector2(0.5f, 1f);
-        rr.sizeDelta = new Vector2(-24f, rowHeight);
+        rr.sizeDelta = new Vector2(0f, rowHeight);
 
         row.label = PixelUIKit.CreateText(font, row.go.transform, "Label", "", fontSize, TextAlignmentOptions.MidlineLeft,
                                           FontStyles.Normal, textColor);
-        row.label.enableAutoSizing = true;
-        row.label.fontSizeMax = fontSize;
-        row.label.fontSizeMin = 14f;
+        OneLine(row.label, fontSize, 14f);   // one line: a long name shrinks instead of wrapping into two
         RectTransform lr = row.label.rectTransform;
         lr.anchorMin = Vector2.zero;
         lr.anchorMax = Vector2.one;
@@ -400,6 +404,7 @@ public class PixelToggles : MonoBehaviour
         box.transform.SetParent(row.go.transform, false);
         Image bg = box.GetComponent<Image>();
         bg.color = tickBoxColor;
+        PixelUIKit.StyleBox(bg, true);   // a sunken box
         float size = rowHeight * 0.72f;
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
@@ -455,6 +460,13 @@ public class PixelToggles : MonoBehaviour
         wr.sizeDelta = windowSize;
         wr.anchoredPosition = new Vector2(-(hud.SideMargin * 0.35f), 0f); // takes the spot the button slides out to
 
+        // The contents line up with the Shop's: the first element under the header starts at the shop's tab row, is as tall, and the list starts where the shop's list does.
+        PixelShop layoutShop = PixelFind.First<PixelShop>();
+        float headerH = layoutShop != null ? layoutShop.HeaderHeightValue : 100f;
+        float tabH = layoutShop != null ? layoutShop.TabHeightValue : 70f;
+        float listTop = layoutShop != null ? layoutShop.ListTopValue : headerH + tabH + 10f;
+        float sidePad = layoutShop != null ? layoutShop.PanelPaddingValue : 20f;
+
         float y = 16f;
         TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
                                                TextAlignmentOptions.Center, FontStyles.Bold, textColor);
@@ -473,13 +485,13 @@ public class PixelToggles : MonoBehaviour
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(Close);
-        y += titleFontSize * 1.4f + 14f;
+        y = headerH;   // same y as the shop's tab row
 
         // --- The group drop-down (Pixels / Upgrades / Minigames / Vendors / Pets).
         List<string> groupLabels = new List<string>();
         for (int i = 0; i < GroupCount; i++)
             groupLabels.Add(tabNames != null && i < tabNames.Length && !string.IsNullOrEmpty(tabNames[i]) ? tabNames[i] : ((Group)i).ToString());
-        groupDropdown = PixelUIKit.CreateDropdown(font, windowObject.transform, "Group Dropdown", new Vector2(0f, 60f), groupColor,
+        groupDropdown = PixelUIKit.CreateDropdown(font, windowObject.transform, "Group Dropdown", new Vector2(0f, tabH), groupColor,
                                                   new Color(groupColor.r * 0.8f, groupColor.g * 0.8f, groupColor.b * 0.8f, 1f), textColor, fontSize);
         groupDropdown.ClearOptions();
         groupDropdown.AddOptions(groupLabels);
@@ -488,8 +500,8 @@ public class PixelToggles : MonoBehaviour
         gr.anchorMin = new Vector2(0f, 1f);
         gr.anchorMax = new Vector2(1f, 1f);
         gr.pivot = new Vector2(0.5f, 1f);
-        gr.offsetMin = new Vector2(20f, -(y + 60f));
-        gr.offsetMax = new Vector2(-20f, -y);
+        gr.offsetMin = new Vector2(sidePad, -(y + tabH));
+        gr.offsetMax = new Vector2(-sidePad, -y);
         groupDropdown.onValueChanged.AddListener(value =>
         {
             current = (Group)value;
@@ -519,8 +531,8 @@ public class PixelToggles : MonoBehaviour
             br.anchorMin = new Vector2(i / (float)GroupCount, 1f);
             br.anchorMax = new Vector2((i + 1) / (float)GroupCount, 1f);
             br.pivot = new Vector2(0.5f, 1f);
-            br.offsetMin = new Vector2(i == 0 ? 20f : 4f, -(y + 60f));
-            br.offsetMax = new Vector2(i == GroupCount - 1 ? -20f : -4f, -y);
+            br.offsetMin = new Vector2(i == 0 ? sidePad : 4f, -(y + tabH));
+            br.offsetMax = new Vector2(i == GroupCount - 1 ? -sidePad : -4f, -y);
 
             int captured = i;
             b.onClick.AddListener(() =>
@@ -530,15 +542,15 @@ public class PixelToggles : MonoBehaviour
                 Refresh();
             });
         }
-        y += 60f + 16f;
+        y = listTop;   // same y as the shop's list
 
         // --- The list of switches.
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Toggle List", scrollbarColor, 12f, rowHeight, out content, out bar);
         RectTransform vr = scroll.GetComponent<RectTransform>();
         vr.anchorMin = new Vector2(0f, 0f);
         vr.anchorMax = new Vector2(1f, 1f);
-        vr.offsetMin = new Vector2(14f, 14f);
-        vr.offsetMax = new Vector2(-14f, -y);
+        vr.offsetMin = new Vector2(sidePad, sidePad);
+        vr.offsetMax = new Vector2(-sidePad, -y);
 
         TMP_Text empty = PixelUIKit.CreateText(font, windowObject.transform, "Empty", emptyText.ToUpperInvariant(), fontSize * 0.9f,
                                                TextAlignmentOptions.Center, FontStyles.Bold,
@@ -547,8 +559,8 @@ public class PixelToggles : MonoBehaviour
         RectTransform er = empty.rectTransform; // capitals, centred over the whole list area
         er.anchorMin = Vector2.zero;
         er.anchorMax = Vector2.one;
-        er.offsetMin = new Vector2(14f, 14f);
-        er.offsetMax = new Vector2(-14f, -y);
+        er.offsetMin = new Vector2(sidePad, sidePad);
+        er.offsetMax = new Vector2(-sidePad, -y);
         emptyObject = empty.gameObject;
         emptyLabel = empty;
 
