@@ -298,7 +298,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1133,6 +1133,29 @@ public class PixelClicker : MonoBehaviour
             PixelLook savedWater = PixelLooks.Find(looks, PixelType.Water);
             if (savedWater != null) savedWater.splash = true;
             looksVersion = 16;
+        }
+        if (looksVersion < 17)
+        {
+            // The basic pixels (White, Gray, Black, Red, Green, Blue) got a subtle surface and a bevelled rim: add the looks that are missing, and give
+            // the saved ones (Red / Green / Blue, which carried only the colour-blind marks) the new surface unless you already changed them.
+            System.Collections.Generic.List<PixelLook> list17 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            foreach (PixelType basic in new[] { PixelType.White, PixelType.Gray, PixelType.Black, PixelType.Red, PixelType.Green, PixelType.Blue })
+            {
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), basic);
+                PixelLook saved = PixelLooks.Find(list17.ToArray(), basic);
+                if (def == null) continue;
+                if (saved == null) { list17.Add(def); continue; }
+                if (saved.outline || saved.basicSurface != PixelLook.BasicSurface.None) continue;
+                saved.basicSurface = def.basicSurface;
+                saved.outline = def.outline;
+                saved.outlineUsesTierColor = def.outlineUsesTierColor;
+                saved.outlineColor = def.outlineColor;
+                saved.outlineThickness = def.outlineThickness;
+                saved.outlineStrength = def.outlineStrength;
+                if (def.useColor && !saved.useColor) { saved.useColor = true; saved.color = def.color; }
+            }
+            looks = list17.ToArray();
+            looksVersion = 17;
         }
 
         if (pixelRenderer != null)
@@ -2260,7 +2283,9 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        Texture2D tex = look.chromeTexture ? PixelLooks.ChromeTexture()
+        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture;
+        Texture2D tex = onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
+                      : look.chromeTexture ? PixelLooks.ChromeTexture()
                       : PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max, look.shellTexture);
         block.SetTexture("_BaseMap", tex);
         block.SetTexture("_MainTex", tex);

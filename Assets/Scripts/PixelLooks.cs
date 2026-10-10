@@ -42,7 +42,13 @@ public class PixelLook
     [Tooltip("Multiplies the glow of a glowing tier (1 = unchanged, 0.3 = much dimmer).")]
     public float glowScale = 1f;
 
+    /// <summary>A gentle built-in surface for the basic pixels (the texture is near-white, so the colour shows through it).</summary>
+    public enum BasicSurface { None = 0, Grain = 1, Brushed = 2, Sheen = 3, Mosaic = 4 }
+
     [Header("Surface texture")]
+    [Tooltip("A subtle drawn surface: Grain (fine chalky speckle), Brushed (horizontal brushed-metal streaks), Sheen (soft diagonal highlights on dark pixels), Mosaic (a faint pixel-art mosaic with a lighter top edge on every face). Used by White, Gray, Black, Red, Green and Blue.")]
+    public BasicSurface basicSurface = BasicSurface.None;
+
     [Tooltip("Draw thin white streaks on a dark base (use a white Color above so the texture shows true). Used by Obsidian.")]
     public bool streakTexture = false;
 
@@ -220,7 +226,7 @@ public class PixelLook
     public bool HasExtras => outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
-    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture;
+    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || basicSurface != BasicSurface.None;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -231,14 +237,21 @@ public static class PixelLooks
     {
         return new[]
         {
-            // White, gray and black keep their plain tier look (no entry).
+            // The basic pixels: a subtle drawn surface and a thin bevelled rim (a slightly lighter edge line) so they read as solid objects.
+            new PixelLook { type = PixelClicker.PixelType.White, basicSurface = PixelLook.BasicSurface.Grain,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineThickness = 0.028f, outlineStrength = 0.55f },
+            new PixelLook { type = PixelClicker.PixelType.Gray, basicSurface = PixelLook.BasicSurface.Brushed,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+            new PixelLook { type = PixelClicker.PixelType.Black, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineThickness = 0.026f, outlineStrength = 0.6f },
 
-            // Red, green and blue keep their plain flat colours (no entry).
-
-            // Red, green and blue stay flat colours; with the colour-blind setting on they get a shape on every face.
-            new PixelLook { type = PixelClicker.PixelType.Red, colorBlindSides = 3, colorBlindRotation = 90f },
-            new PixelLook { type = PixelClicker.PixelType.Green, colorBlindSides = 4, colorBlindRotation = 45f },
-            new PixelLook { type = PixelClicker.PixelType.Blue, colorBlindSides = 32 },
+            // Red, green and blue: a faint pixel-art mosaic and a lighter rim in their own colour; with the colour-blind setting on they also get a shape on every face.
+            new PixelLook { type = PixelClicker.PixelType.Red, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.6f, 0.55f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+            new PixelLook { type = PixelClicker.PixelType.Green, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 1f, 0.65f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+            new PixelLook { type = PixelClicker.PixelType.Blue, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.75f, 1f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
 
             // Vacuum: a dark purple see-through block with a black circle on every face.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
@@ -316,6 +329,80 @@ public static class PixelLooks
     // ------------------------------------------------------------------
 
     private static readonly Dictionary<int, Texture2D> surfaceTextures = new Dictionary<int, Texture2D>();
+    private static readonly Dictionary<int, Texture2D> basicTextures = new Dictionary<int, Texture2D>();
+
+    /// <summary>
+    /// The subtle surfaces of the basic pixels (see <see cref="PixelLook.BasicSurface"/>): 128 px, mostly near-white so the pixel's colour shows
+    /// through (the texture multiplies the colour). Drawn once per style and shared. Tiles seamlessly.
+    /// </summary>
+    public static Texture2D BasicTexture(PixelLook.BasicSurface style)
+    {
+        int key = (int)style;
+        if (basicTextures.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+        const int size = 128;
+        Color32[] px = new Color32[size * size];
+        System.Random rnd = new System.Random(300 + key);
+        float[] rowTone = new float[size];
+        for (int y = 0; y < size; y++) rowTone[y] = (float)rnd.NextDouble();
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float v = 0.93f;
+                switch (style)
+                {
+                    case PixelLook.BasicSurface.Grain:
+                    {
+                        // Fine chalky speckle with a few soft larger blotches.
+                        float blotch = PixelNoise.TileNoise(x / (float)size, y / (float)size, 6, 6, 11) - 0.5f;
+                        v = 0.94f + ((float)rnd.NextDouble() - 0.5f) * 0.07f + blotch * 0.05f;
+                        break;
+                    }
+                    case PixelLook.BasicSurface.Brushed:
+                    {
+                        // Horizontal brushed-metal streaks: every row has its own tone, stretched along x with a little slow variation.
+                        float along = PixelNoise.TileNoise(x / (float)size, y / (float)size, 3, 128, 7) - 0.5f;
+                        v = 0.88f + (rowTone[y] - 0.5f) * 0.12f + along * 0.06f;
+                        break;
+                    }
+                    case PixelLook.BasicSurface.Sheen:
+                    {
+                        // Soft diagonal highlight bands (the colour is dark, so this reads as a glossy sheen) plus very fine grain.
+                        float band = Mathf.Sin((x + y) / (float)size * Mathf.PI * 4f) * 0.5f + 0.5f;
+                        v = 0.8f + band * band * 0.2f + ((float)rnd.NextDouble() - 0.5f) * 0.03f;
+                        break;
+                    }
+                    case PixelLook.BasicSurface.Mosaic:
+                    {
+                        // An 8x8 pixel-art mosaic: neighbouring cells differ a little; each face is lighter at the top and darker at the bottom.
+                        int cx = x / 16, cy = y / 16;
+                        float cell = (((cx + cy) & 1) == 0 ? 0.0f : -0.05f) + (Hash01(cx, cy) - 0.5f) * 0.05f;
+                        float gradient = Mathf.Lerp(0.86f, 1.0f, y / (float)(size - 1));
+                        v = (0.97f + cell) * gradient;
+                        break;
+                    }
+                }
+                byte b = (byte)Mathf.Clamp(Mathf.RoundToInt(v * 255f), 0, 255);
+                px[y * size + x] = new Color32(b, b, b, 255);
+            }
+        }
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, filterMode = style == PixelLook.BasicSurface.Mosaic ? FilterMode.Point : FilterMode.Bilinear, name = "PixelBasic" + style };
+        tex.SetPixels32(px);
+        tex.Apply(true, false);
+        basicTextures[key] = tex;
+        return tex;
+    }
+
+    private static float Hash01(int x, int y)
+    {
+        unchecked
+        {
+            int h = x * 374761393 + y * 668265263;
+            h = (h ^ (h >> 13)) * 1274126177;
+            return ((h ^ (h >> 16)) & 0xFFFF) / 65535f;
+        }
+    }
 
     /// <summary>
     /// The pixel's surface texture. 'level' 0 = undamaged; up to 'maxLevel' = about to break (more cracks each level).
