@@ -243,6 +243,10 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
                             forceTranslucent = true, smoothness = 0.9f, metallic = 0f, emission = 0.6f, lightning = true },
 
+            // Mirror: polished chrome that reflects the sky.
+            new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = new Color(0.92f, 0.95f, 1f, 1f),
+                            metallic = 1f, smoothness = 1f },
+
             // Dragon Cubes 1-7: glassy orange cubes with 1-7 dark orange small cubes inside, like dragon balls.
             DragonCubeLook(PixelClicker.PixelType.DragonCube1, 1),
             DragonCubeLook(PixelClicker.PixelType.DragonCube2, 2),

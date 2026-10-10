@@ -749,6 +749,15 @@ public partial class PixelShop : MonoBehaviour
             packs[packs.Length - 1] = builtIn.create(requiredIndex);
             changed = true;
         }
+
+        // The Mirror pixel is listed after Electric and before Vacuum: move it there once in lists that got it appended at the end.
+        if (packDataVersion < 6)
+        {
+            int mirrorIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Mirror));
+            int vacuumIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Vacuum));
+            if (mirrorIndex >= 0 && vacuumIndex >= 0 && mirrorIndex > vacuumIndex) MovePack(mirrorIndex, vacuumIndex);
+            if (mirrorIndex >= 0) { packDataVersion = 6; changed = true; }
+        }
         return changed;
     }
 

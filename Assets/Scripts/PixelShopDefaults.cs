@@ -388,6 +388,35 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Mirror Pixel pack (Pixels tab): listed after Electric and before Vacuum, needs the Electric pack. Clicking a Mirror also counts as a click on the last other pixel type.</summary>
+    private static ShopPack CreateMirrorPixelPack(int requiresElectricIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Mirror Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Mirror pixel: polished chrome that reflects the last other pixel you collected, so clicking it pays that pixel's amount again.",
+            requirements = Needs(requiresElectricIndex),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 15000 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 15000 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 15000 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Mirror, displayName = "Mirror Pixels",
+                    color = new Color(0.88f, 0.92f, 1f, 1f),
+                    amountPerClick = 4,
+                    spawnWeight = 0.2f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Black Hole pack (Minigames tab). Needs the Vacuum pack first.</summary>
     private static ShopPack CreateBlackholePack(int requiresVacuumIndex)
     {
@@ -691,6 +720,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
                           requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Mirror),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Electric), create = CreateMirrorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Vacuum),
                           requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateVacuumPack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerInterval,

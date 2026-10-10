@@ -66,6 +66,7 @@ public class PixelClicker : MonoBehaviour
         DragonCube5 = 19,
         DragonCube6 = 20,
         DragonCube7 = 21,
+        Mirror = 22,
     }
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
@@ -218,7 +219,7 @@ public class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -727,6 +728,8 @@ public class PixelClicker : MonoBehaviour
     public static bool ClickHint;
 
     private bool clickHintDone;
+    private int lastReflectTier = -1;      // the last non-Mirror pixel type collected (what a Mirror pixel reflects)
+    private double lastReflectAmount;      // and what that click paid
 
     /// <summary>While true, clicks on the cube are ignored (set by the pixel bank's hose, which uses the mouse buttons itself).</summary>
     public static bool ExternalClickBlock;
@@ -972,6 +975,18 @@ public class PixelClicker : MonoBehaviour
             looks = list10.ToArray();
             looksVersion = 10;
         }
+        if (looksVersion < 11)
+        {
+            // The Mirror look (polished chrome) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Mirror) == null)
+            {
+                PixelLook mirrorLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Mirror);
+                System.Collections.Generic.List<PixelLook> extended11 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (mirrorLook != null) extended11.Add(mirrorLook);
+                looks = extended11.ToArray();
+            }
+            looksVersion = 11;
+        }
 
         if (pixelRenderer != null)
         {
@@ -1196,6 +1211,22 @@ public class PixelClicker : MonoBehaviour
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
         PixelCollected?.Invoke(tierIndex, amount, automatic);
+
+        // A Mirror pixel also counts as a click on the last other pixel type collected: it pays that click's amount again.
+        if (tier.type == PixelType.Mirror)
+        {
+            if (IsValidTier(lastReflectTier) && lastReflectAmount > 0d)
+            {
+                tiers[lastReflectTier].timesCollected += 1;
+                AddCurrency(lastReflectTier, lastReflectAmount);
+                PixelCollected?.Invoke(lastReflectTier, lastReflectAmount, automatic);
+            }
+        }
+        else
+        {
+            lastReflectTier = tierIndex;
+            lastReflectAmount = amount;
+        }
 
         PlayClickEffects(tier);
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
