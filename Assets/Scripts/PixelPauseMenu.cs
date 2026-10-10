@@ -2113,13 +2113,14 @@ public class PixelPauseMenu : MonoBehaviour
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(-80f, h);
+        rt.sizeDelta = new Vector2(-60f, h);   // 10 wider than the rows on each side, so the heading's text starts exactly where the row names do
         rt.anchoredPosition = new Vector2(0f, -y);
         TMP_Text t = b.GetComponentInChildren<TMP_Text>();
         t.color = statValueColor;
         t.fontStyle = FontStyles.Bold;
         t.alignment = TextAlignmentOptions.MidlineLeft;
-        t.rectTransform.offsetMin = new Vector2(16f, 0f);
+        t.rectTransform.offsetMin = new Vector2(10f, 0f);
+        t.rectTransform.offsetMax = new Vector2(-10f, 0f);
         b.onClick.AddListener(() =>
         {
             if (!collapsedStatSections.Remove(text)) collapsedStatSections.Add(text);
