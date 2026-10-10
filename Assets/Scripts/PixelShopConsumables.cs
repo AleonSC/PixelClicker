@@ -97,17 +97,20 @@ public partial class PixelShop
         });
         y += 58f + 8f;
 
-        // An orange box with an exclamation mark: hover it to read the item's description.
-        float infoSize = 44f;
+        // An orange box with an exclamation mark on the top left corner of the item's picture: hover it to read the item's description.
+        float infoSize = 30f;
         RectTransform infoRect = CreateInfoBox(go.transform, infoSize, () => card.tipText);
-        PlaceTopLeft(infoRect, 14f, y + 7f, infoSize, infoSize);
+        float pictureX = width - 14f - cardPictureSize;
+        if (hidePictures) PlaceTopLeft(infoRect, width - 14f - infoSize, 8f, infoSize, infoSize);
+        else PlaceTopLeft(infoRect, pictureX - infoSize * 0.5f, 2f, infoSize, infoSize);
+        infoRect.SetAsLastSibling();   // above the picture
 
         card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.Center, FontStyles.Normal);   // centred in the space beside the '!' box
         card.cost.richText = true;
         card.cost.enableAutoSizing = true;
         card.cost.fontSizeMax = costFontSize;
         card.cost.fontSizeMin = Mathf.Min(12f, costFontSize);
-        PlaceTopLeft(card.cost.rectTransform, 14f + infoSize + 10f, y, inner - infoSize - 10f, 58f);
+        PlaceTopLeft(card.cost.rectTransform, 14f, y, inner, 58f);   // the whole card width: the cost reads on one or two clean centred lines
         y += 58f + 8f;
 
         // How many: [-] [ 1 ] [+] - the whole group centred on the card.
