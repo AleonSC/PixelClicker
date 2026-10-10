@@ -17,7 +17,13 @@ public class PixelSorterDevice : PixelPlacedDevice
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         Current = null;
+        hotFrame = -10;
     }
+
+    private static int hotFrame = -10;
+
+    /// <summary>True while the mouse is over (or dragging) one of a working sorter's handles - its pipe end, ring, force slider or buttons. PixelClicker then ignores cube clicks.</summary>
+    public static bool HandleHot => hotFrame >= Time.frameCount - 1;
 
     /// <summary>The sorter that is currently working (null = none). <see cref="PixelClicker"/> asks it where to send each pixel.</summary>
     public static PixelSorterDevice Current { get; private set; }
@@ -26,7 +32,10 @@ public class PixelSorterDevice : PixelPlacedDevice
     private PixelConsumables.Device settings;
     private float aimDegrees;
     private float bendDegrees;
-    private int force = 1;
+    private float forceValue = 1f;                 // the force multiplier now (buttons set a preset, the slider any value in between)
+    private enum Drag { None, Knob, Bend, Aim }
+    private Drag drag = Drag.None;
+    private float dragOffset;
 
     /// <summary>Called by the consumables script after it built the sorter.</summary>
     /// <summary>Where the pipe points (degrees around the ring, 0 = right on screen).</summary>
@@ -35,8 +44,37 @@ public class PixelSorterDevice : PixelPlacedDevice
     /// <summary>How far the pipe is bent (degrees).</summary>
     public float BendDegrees => bendDegrees;
 
-    /// <summary>Which force button is selected (0 = the first).</summary>
-    public int Force => force;
+    /// <summary>Which force button matches the current force (0 = the first); the default one when the slider sits between buttons.</summary>
+    public int Force => Mathf.Max(0, SelectedPreset());
+
+    /// <summary>The exact force multiplier now.</summary>
+    public float ForceValue => forceValue;
+
+    /// <summary>Lowest / highest force the slider can be set to.</summary>
+    public float ForceMin => settings != null && settings.sorterSliderMin > 0f ? settings.sorterSliderMin : 0.2f;
+    public float ForceMax => Mathf.Max(ForceMin + 0.1f, settings != null && settings.sorterSliderMax > 0f ? settings.sorterSliderMax : 3f);
+
+    private int SelectedPreset()
+    {
+        float[] forces = Forces(settings);
+        for (int i = 0; i < forces.Length; i++)
+            if (Mathf.Abs(forces[i] - forceValue) < 0.005f) return i;
+        return -1;
+    }
+
+    private float ForceT() => Mathf.InverseLerp(ForceMin, ForceMax, forceValue);
+
+    /// <summary>Sets the exact force (clamped to the slider's range).</summary>
+    public void SetForceValue(float value)
+    {
+        forceValue = Mathf.Clamp(value, ForceMin, ForceMax);
+        RefreshParts();
+    }
+
+    private void RefreshParts()
+    {
+        if (parts != null) parts.Apply(aimDegrees, bendDegrees, false, SelectedPreset(), ForceT(), "x" + forceValue.ToString("0.00"));
+    }
 
     public void Init(PixelClicker owner, Camera camera, Parts builtParts, PixelConsumables.Device device, TextMeshPro timer,
                      string format, float duration, float aim, float bend, int startForce, float shrinkTime)
@@ -46,8 +84,10 @@ public class PixelSorterDevice : PixelPlacedDevice
         settings = device;
         aimDegrees = aim;
         bendDegrees = bend;
-        force = Mathf.Clamp(startForce < 0 ? device.sorterDefaultForce : startForce, 0, Forces(device).Length - 1);
-        parts.Apply(aim, bend, false, force);
+        int startIndex = Mathf.Clamp(startForce < 0 ? device.sorterDefaultForce : startForce, 0, Forces(device).Length - 1);
+        forceValue = Forces(device)[startIndex];
+        forceValue = Mathf.Clamp(forceValue, ForceMin, ForceMax);
+        RefreshParts();
         Current = this;
     }
 
@@ -56,26 +96,124 @@ public class PixelSorterDevice : PixelPlacedDevice
         if (Current == this) Current = null;
     }
 
+    private enum Hover { None, Knob, Button, Mouth, Ring }
+    private int hoverButton;
+
     protected override void OnTick()
     {
         if (parts == null || cam == null) return;
-        if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f || !LeftPressed() || PointerOverUI()) return;
+        if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f) { drag = Drag.None; return; }
 
-        // Clicking one of the three buttons sets the force.
+        if (drag != Drag.None)
+        {
+            hotFrame = Time.frameCount;
+            if (!LeftHeld()) { drag = Drag.None; return; }
+            UpdateDrag();
+            return;
+        }
+
+        if (PointerOverUI()) return;
         Vector2 pointer = PointerPosition();
+        Hover hover = FindHover(pointer);
+        if (hover != Hover.None) hotFrame = Time.frameCount;
+        if (hover == Hover.None || !LeftPressed()) return;
+
+        switch (hover)
+        {
+            case Hover.Button:
+                SetForceValue(Forces(settings)[hoverButton]);
+                PixelAudio.Play("sorter_button");
+                break;
+            case Hover.Knob:
+                drag = Drag.Knob;
+                break;
+            case Hover.Mouth:
+                if (PointerLocal(out Vector2 mouthPointer))
+                {
+                    drag = Drag.Bend;
+                    dragOffset = bendDegrees - Mathf.DeltaAngle(aimDegrees, Angle(mouthPointer - parts.ConeApex(aimDegrees)));
+                }
+                break;
+            case Hover.Ring:
+                if (PointerLocal(out Vector2 ringPointer))
+                {
+                    drag = Drag.Aim;
+                    dragOffset = Mathf.DeltaAngle(Angle(ringPointer), aimDegrees);
+                }
+                break;
+        }
+    }
+
+    private static float Angle(Vector2 v) => Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
+
+    /// <summary>The pointer on the plane through the ring, in the sorter's local space.</summary>
+    private bool PointerLocal(out Vector2 local)
+    {
+        local = Vector2.zero;
+        Transform root = transform;
+        Plane plane = new Plane(root.forward, root.position);
+        Ray ray = cam.ScreenPointToRay(PointerPosition());
+        if (!plane.Raycast(ray, out float enter)) return false;
+        Vector3 p = root.InverseTransformPoint(ray.GetPoint(enter));
+        local = new Vector2(p.x, p.y);
+        return true;
+    }
+
+    private float ScreenRadius(Vector3 world, float worldRadius)
+    {
+        Vector3 a = cam.WorldToScreenPoint(world), b = cam.WorldToScreenPoint(world + cam.transform.right * worldRadius);
+        return Mathf.Abs(b.x - a.x);
+    }
+
+    private Hover FindHover(Vector2 pointer)
+    {
+        // The slider knob.
+        Vector3 knob = transform.TransformPoint(parts.KnobLocal);
+        Vector3 ks = cam.WorldToScreenPoint(knob);
+        if (ks.z > 0f && ((Vector2)ks - pointer).sqrMagnitude <= Mathf.Pow(Mathf.Max(22f, ScreenRadius(knob, 0.16f)), 2f)) return Hover.Knob;
+
+        // The three force buttons.
         for (int i = 0; i < parts.Buttons.Length; i++)
         {
             Transform b = parts.Buttons[i];
             Vector3 screen = cam.WorldToScreenPoint(b.position);
             if (screen.z <= 0f) continue;
-            Vector3 edge = cam.WorldToScreenPoint(b.position + cam.transform.right * (settings.sorterButtonSize * 0.5f));
-            float radius = Mathf.Max(22f, Mathf.Abs(edge.x - screen.x) * 1.4f); // a forgiving click area
-            if (((Vector2)screen - pointer).sqrMagnitude <= radius * radius)
+            float radius = Mathf.Max(22f, ScreenRadius(b.position, settings.sorterButtonSize * 0.5f) * 1.4f); // a forgiving click area
+            if (((Vector2)screen - pointer).sqrMagnitude <= radius * radius) { hoverButton = i; return Hover.Button; }
+        }
+
+        // The end of the pipe (bends it) and the ring itself (turns the pipe round the cube).
+        Vector3 mouth = transform.TransformPoint(parts.MouthLocal);
+        Vector3 ms = cam.WorldToScreenPoint(mouth);
+        if (ms.z > 0f && ((Vector2)ms - pointer).sqrMagnitude <= Mathf.Pow(Mathf.Max(26f, ScreenRadius(mouth, 0.22f)), 2f)) return Hover.Mouth;
+
+        if (PointerLocal(out Vector2 local) && Mathf.Abs(local.magnitude - parts.Outer) < parts.Outer * 0.22f) return Hover.Ring;
+        return Hover.None;
+    }
+
+    private void UpdateDrag()
+    {
+        if (!PointerLocal(out Vector2 local)) return;
+        switch (drag)
+        {
+            case Drag.Knob:
             {
-                force = i;
-                parts.Apply(aimDegrees, bendDegrees, false, force);
-                PixelAudio.Play("sorter_button");
-                return;
+                float t = parts.ProjectSlider(local);
+                SetForceValue(Mathf.Lerp(ForceMin, ForceMax, t));
+                break;
+            }
+            case Drag.Bend:
+            {
+                float delta = Mathf.DeltaAngle(aimDegrees, Angle(local - parts.ConeApex(aimDegrees)));
+                bendDegrees = Mathf.Clamp(delta + dragOffset, -settings.sorterBendConeDegrees, settings.sorterBendConeDegrees);
+                RefreshParts();
+                break;
+            }
+            case Drag.Aim:
+            {
+                aimDegrees = Mathf.Repeat(Angle(local) + dragOffset, 360f);
+                RefreshParts();
+                break;
             }
         }
     }
@@ -115,9 +253,7 @@ public class PixelSorterDevice : PixelPlacedDevice
         Vector3 direction = transform.TransformDirection(new Vector3(Mathf.Cos(parts.ExitHeading * Mathf.Deg2Rad),
                                                                      Mathf.Sin(parts.ExitHeading * Mathf.Deg2Rad), 0f));
         Quaternion wobble = Quaternion.AngleAxis(Random.Range(-settings.sorterSpreadDegrees, settings.sorterSpreadDegrees), transform.forward);
-        float[] forces = Forces(settings);
-        float multiplier = forces[Mathf.Clamp(force, 0, forces.Length - 1)];
-        velocity = wobble * direction * (settings.sorterExitSpeed * multiplier);
+        velocity = wobble * direction * (settings.sorterExitSpeed * forceValue);
         return true;
     }
 
@@ -140,6 +276,34 @@ public class PixelSorterDevice : PixelPlacedDevice
         private Transform[] buttonLabels;
         private Material dimMaterial, litMaterial;
         private Mesh coneMesh;
+
+        // The force slider along the pipe: a thin track, a knob and a value label.
+        private MeshFilter trackFilter;
+        private Transform knob;
+        private TextMeshPro sliderText;
+        private Vector3[] sliderPts;
+        private float[] sliderCum;
+        private float sliderLen;
+
+        /// <summary>Local position of the slider knob.</summary>
+        public Vector3 KnobLocal => knob != null ? knob.localPosition : Vector3.zero;
+
+        /// <summary>Where along the slider (0 = pipe base, 1 = pipe mouth) a point in local space is closest.</summary>
+        public float ProjectSlider(Vector2 local)
+        {
+            if (sliderPts == null || sliderLen <= 0f) return 0f;
+            float best = float.MaxValue, bestAt = 0f;
+            for (int i = 0; i < sliderPts.Length - 1; i++)
+            {
+                Vector2 a = sliderPts[i], b = sliderPts[i + 1];
+                Vector2 ab = b - a;
+                float len2 = ab.sqrMagnitude;
+                float u = len2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(local - a, ab) / len2) : 0f;
+                float dist = (a + ab * u - local).sqrMagnitude;
+                if (dist < best) { best = dist; bestAt = sliderCum[i] + u * (sliderCum[i + 1] - sliderCum[i]); }
+            }
+            return Mathf.Clamp01(bestAt / sliderLen);
+        }
 
         /// <summary>The renderer of the bent pipe.</summary>
         public Renderer PipeRenderer => pipeFilter != null ? pipeFilter.GetComponent<Renderer>() : null;
@@ -219,6 +383,28 @@ public class PixelSorterDevice : PixelPlacedDevice
                 p.buttonLabels[i] = label.transform;
             }
 
+            // The force slider along the pipe (real sorters only).
+            if (!isPreview)
+            {
+                GameObject track = new GameObject("Slider Track", typeof(MeshFilter), typeof(MeshRenderer));
+                track.transform.SetParent(p.Root.transform, false);
+                p.trackFilter = track.GetComponent<MeshFilter>();
+                Material trackMat = clicker.CreateVisualMaterial(dark, false);
+                if (trackMat != null) track.GetComponent<MeshRenderer>().sharedMaterial = trackMat;
+
+                p.knob = MakePrimitive(clicker, PrimitiveType.Sphere, "Slider Knob", p.Root.transform, lit, false).transform;
+                p.knob.localScale = Vector3.one * Mathf.Max(0.18f, device.sorterPipeDiameter * 0.9f);
+
+                p.sliderText = new GameObject("Slider Value").AddComponent<TextMeshPro>();
+                p.sliderText.transform.SetParent(p.Root.transform, false);
+                p.sliderText.fontSize = 2.2f;
+                p.sliderText.fontStyle = FontStyles.Bold;
+                p.sliderText.alignment = TextAlignmentOptions.Center;
+                p.sliderText.color = Color.white;
+                if (clicker.UIFont != null) p.sliderText.font = clicker.UIFont;
+                p.sliderText.rectTransform.sizeDelta = new Vector2(1.6f, 0.5f);
+            }
+
             // The cone you click inside to bend the pipe (preview only).
             if (isPreview)
             {
@@ -235,7 +421,7 @@ public class PixelSorterDevice : PixelPlacedDevice
         }
 
         /// <summary>Re-shapes the pipe, lip, buttons and cone for the given aim and bend (degrees).</summary>
-        public void Apply(float aim, float bend, bool showCone, int selectedForce)
+        public void Apply(float aim, float bend, bool showCone, int selectedForce, float sliderT = -1f, string sliderLabel = null)
         {
             // Pipe: a constant-curvature arc that turns by 'bend' degrees over its length.
             const int samples = 20;
@@ -252,6 +438,8 @@ public class PixelSorterDevice : PixelPlacedDevice
                 headings[i + 1] = aim + bend * (i + 1f) / samples;
             }
             pipeFilter.sharedMesh = BuildPipeMesh(pts, headings, d.sorterPipeDiameter * 0.5f, 12, pipeFilter.sharedMesh);
+
+            if (trackFilter != null) UpdateSlider(pts, headings, sliderT < 0f ? 0.5f : sliderT, sliderLabel);
 
             MouthLocal = pts[samples];
             ExitHeading = aim + bend;
@@ -277,6 +465,44 @@ public class PixelSorterDevice : PixelPlacedDevice
             {
                 cone.gameObject.SetActive(showCone);
                 if (showCone) BuildConeMesh(coneMesh, ConeApex(aim), aim, d.sorterBendConeDegrees, d.sorterConeLength);
+            }
+        }
+
+        /// <summary>Lays the slider track beside the pipe (on its left side), puts the knob at 't' (0 = base, 1 = mouth) and writes the value next to it.</summary>
+        private void UpdateSlider(Vector3[] pipePts, float[] headings, float t, string label)
+        {
+            int n = pipePts.Length;
+            if (sliderPts == null || sliderPts.Length != n) { sliderPts = new Vector3[n]; sliderCum = new float[n]; }
+            float offset = d.sorterPipeDiameter * 0.5f + 0.2f;
+            for (int i = 0; i < n; i++)
+            {
+                float h = headings[i] * Mathf.Deg2Rad;
+                Vector3 side = new Vector3(-Mathf.Sin(h), Mathf.Cos(h), 0f);
+                sliderPts[i] = pipePts[i] + side * offset + new Vector3(0f, 0f, -0.03f);
+                sliderCum[i] = i == 0 ? 0f : sliderCum[i - 1] + ((Vector2)sliderPts[i] - (Vector2)sliderPts[i - 1]).magnitude;
+            }
+            sliderLen = sliderCum[n - 1];
+            trackFilter.sharedMesh = BuildPipeMesh(sliderPts, headings, 0.016f, 6, trackFilter.sharedMesh);
+
+            // The knob's position along the polyline.
+            float at = Mathf.Clamp01(t) * sliderLen;
+            Vector3 knobPos = sliderPts[n - 1];
+            float knobHeading = headings[n - 1];
+            for (int i = 0; i < n - 1; i++)
+                if (at <= sliderCum[i + 1] || i == n - 2)
+                {
+                    float span = Mathf.Max(1e-5f, sliderCum[i + 1] - sliderCum[i]);
+                    knobPos = Vector3.Lerp(sliderPts[i], sliderPts[i + 1], Mathf.Clamp01((at - sliderCum[i]) / span));
+                    knobHeading = headings[i];
+                    break;
+                }
+            knob.localPosition = knobPos;
+            if (sliderText != null)
+            {
+                float h = knobHeading * Mathf.Deg2Rad;
+                sliderText.text = label ?? "";
+                sliderText.transform.localPosition = knobPos + new Vector3(-Mathf.Sin(h), Mathf.Cos(h), 0f) * 0.32f + new Vector3(0f, 0f, -0.05f);
+                sliderText.transform.localRotation = Quaternion.identity;
             }
         }
 

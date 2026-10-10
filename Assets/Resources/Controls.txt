@@ -45,6 +45,7 @@ Click a Bank row | Select that pixel type
 
 # Devices and Minigames
 Click buttons 1-3 on the Sorter | Change how hard it spits
+Drag the Sorter's force slider | Set exactly how hard it spits (the pipe's end bends it, dragging the ring turns it)
 Click a wire (Bomb) | Cut it
 Click the ghost or meteor | Collect the reward
 

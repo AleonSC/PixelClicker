@@ -833,7 +833,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Something else (a minigame, the hose, a hovered pet, first person mode) has the mouse: the cube ignores ordinary clicks.</summary>
     public static bool ExternalClickBlock
     {
-        get => externalClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed;
+        get => externalClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot;
         set => externalClickBlock = value;
     }
 

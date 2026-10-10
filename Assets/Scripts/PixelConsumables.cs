@@ -201,6 +201,14 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("Sorter: which force button is selected when the sorter is placed (0 = the first).")]
         public int sorterDefaultForce = 1;
 
+        [Min(0f)]
+        [Tooltip("Sorter: the lowest force the force slider can be set to (a multiplier of the exit speed). 0 = the coded default (0.2).")]
+        public float sorterSliderMin = 0f;
+
+        [Min(0f)]
+        [Tooltip("Sorter: the highest force the force slider can be set to (a multiplier of the exit speed). 0 = the coded default (3).")]
+        public float sorterSliderMax = 0f;
+
         [Min(0.1f)]
         [Tooltip("Sorter: size of the round force buttons on the ring (world units).")]
         public float sorterButtonSize = 0.3f;
@@ -1609,6 +1617,7 @@ public class PixelConsumables : MonoBehaviour
         public float aim;
         public float bend;
         public int force;
+        public float forceValue;   // the exact force set with the slider (0 = use the force button index)
         public bool disarmed;   // placed but never switched on yet
     }
 
@@ -1633,6 +1642,7 @@ public class PixelConsumables : MonoBehaviour
                 state.aim = sorter.AimDegrees;
                 state.bend = sorter.BendDegrees;
                 state.force = sorter.Force;
+                state.forceValue = sorter.ForceValue;
             }
             list.Add(state);
         }
@@ -1654,6 +1664,7 @@ public class PixelConsumables : MonoBehaviour
         if (index < 0) return;
         PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
         if (restored != null && state.disarmed) restored.Disarm();
+        if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
     }
 
     /// <summary>Starts a potion again with the time it had left (no sound, nothing used up). Used when loading a save.</summary>

@@ -294,3 +294,4 @@
 [2026-10-10 10:56 UTC] Clicking an item in the crafting Materials list puts it in the first free box again; only clicking a recipe in the recipe book fills both boxes.
 [2026-10-10 10:59 UTC] The Sorter's 'Got it' tip is now a small box and freezes time until you close it.
 [2026-10-10 11:04 UTC] Placed devices now start grey and asleep until you left-click them (then they fade into colour and the timer starts), the Vacuum Device lasts only 5 seconds and has a much nicer turned look with glowing bands and a spinning turbine, and the Fan and Vacuum tips are small boxes.
+[2026-10-10 11:15 UTC] The Sorter can be adjusted after it is switched on: drag the pipe's end to bend it, drag the ring to turn it, and drag the new force slider beside the pipe to set the exact force.
