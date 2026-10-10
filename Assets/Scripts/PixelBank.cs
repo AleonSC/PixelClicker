@@ -502,6 +502,9 @@ public class PixelBank : MonoBehaviour
         hoseFilter = tube.GetComponent<MeshFilter>();
         Material hoseMat = clicker.CreateVisualMaterial(hoseColor, false);
         if (hoseMat != null) tube.GetComponent<MeshRenderer>().sharedMaterial = hoseMat;
+        MeshRenderer hoseRenderer = tube.GetComponent<MeshRenderer>();
+        hoseRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;   // the hose casts no shadow
+        hoseRenderer.receiveShadows = false;
         hosePoints = new Vector3[hoseSegments * 2 + 1]; // twice as many points: the hose now also covers a long stretch off screen
 
         BuildNozzle();

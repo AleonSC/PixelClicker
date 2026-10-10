@@ -283,3 +283,4 @@
 [2026-10-10 10:14 UTC] The hose controls are smoother: the nozzle no longer spins round, the hose's entry point slides round the screen edge instead, and pressing X (rebindable) cycles the shot arc Flat / Arc / Lob with the nozzle and aim line following.
 [2026-10-10 10:20 UTC] The hose now hangs from the ceiling and points straight down with a red laser dot: left-click drops a pixel on the dot, right-click sucks up what the dot is on. Also removed the rims from Red/Green/Blue and made Gray's rim darker.
 [2026-10-10 10:22 UTC] Removed the rims from the Black and Gray pixels and made Obsidian's rim darker.
+[2026-10-10 10:27 UTC] The Pixel Bank hose no longer casts a shadow.
