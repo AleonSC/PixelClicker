@@ -89,6 +89,7 @@ public class PixelRobotWorker : MonoBehaviour
     private bool hasHome;
     private float nextSpotTime;
     private bool hovering, walking;
+    private float cellSize;   // side of the floor tile he stands on (0 = the floor has no grid: free standing)
 
     // The bubble with his face.
     private GameObject bubbleCanvas;
@@ -173,7 +174,8 @@ public class PixelRobotWorker : MonoBehaviour
 
     private Camera Cam => clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
 
-    private float UnitScale => clicker.PixelBaseSize * robotScale / 2.5f;
+    /// <summary>One model unit in world units: he is as wide as a floor tile when the floor has a grid, else a size relative to the main pixel.</summary>
+    private float UnitScale => cellSize > 0f ? cellSize / 1.5f : clicker.PixelBaseSize * robotScale / 2.5f;
 
     /// <summary>The floor spot where he stands next to the ghost: on the side facing his station (a sorter's ring is round the cube, so further out).</summary>
     private Vector3 PostSpot()
@@ -189,8 +191,14 @@ public class PixelRobotWorker : MonoBehaviour
         }
         Vector3 away = homePos - anchor; away.y = 0f;
         away = away.sqrMagnitude > 0.0001f ? away.normalized : Vector3.left;
-        Vector3 spot = anchor + away * (standDistance + extra) * clicker.PixelBaseSize;
+        Vector3 spot = cellSize > 0f ? anchor + away * (cellSize + extra * clicker.PixelBaseSize)   // always the neighbouring tile
+                                      : anchor + away * (standDistance + extra) * clicker.PixelBaseSize;
         spot.y = homePos.y;
+        if (cellSize > 0f && PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(spot, out Vector3 snapped, out _))
+        {
+            spot = snapped;
+            spot.y = homePos.y;
+        }
         return spot;
     }
 
@@ -221,6 +229,8 @@ public class PixelRobotWorker : MonoBehaviour
             nextSpotTime = Time.unscaledTime + 0.5f;
             if (consumables.TryGetFloorPoint(new Vector2(Screen.width * screenX, Screen.height * screenY), out Vector3 p))
             {
+                if (PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(p, out Vector3 cell, out float cs)) { p = cell; cellSize = cs; }   // lined up with a floor tile
+                else cellSize = 0f;
                 homePos = p;
                 if (!hasHome) { hasHome = true; root.transform.position = p; }
             }
@@ -229,7 +239,7 @@ public class PixelRobotWorker : MonoBehaviour
 
         stationRoot.position = homePos;
         float unit = UnitScale;
-        stationRoot.localScale = Vector3.one * unit;
+        stationRoot.localScale = Vector3.one * (cellSize > 0f ? cellSize / 2.1f : unit);   // the pad is exactly one tile
 
         Camera cam = Cam;
         Vector3 toCam = cam != null ? cam.transform.position - root.transform.position : Vector3.back; toCam.y = 0f;
