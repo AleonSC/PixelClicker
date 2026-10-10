@@ -246,7 +246,7 @@ public class PixelTimeStop : MonoBehaviour
             else PixelAudio.Play("time_denied");
         }
 
-        if (!paused && timeSlowOwned && !stopped && PixelKeys.Pressed(PixelAction.TimeSlow))
+        if (!paused && timeSlowOwned && !stopped && !PixelFirstPerson.Active && PixelKeys.Pressed(PixelAction.TimeSlow)) // S is "back" in first person mode
         {
             if (slowed) SetSlowed(false);
             else if (energy >= minStartFraction) SetSlowed(true);

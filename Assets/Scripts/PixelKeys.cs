@@ -14,6 +14,7 @@ public enum PixelAction
     RotateRight = 3,
     EventLog = 4,
     TimeSlow = 5,
+    FirstPerson = 6,
 }
 
 /// <summary>
@@ -31,6 +32,7 @@ public static class PixelKeys
         KeyCode.E,        // RotateRight
         KeyCode.Return,   // EventLog
         KeyCode.S,        // TimeSlow
+        KeyCode.F,        // FirstPerson
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";
@@ -183,6 +185,26 @@ public static class PixelKeys
         return false;
 #else
         return Input.GetKeyDown(key) || (key == KeyCode.Return && Input.GetKeyDown(KeyCode.KeypadEnter));
+#endif
+    }
+
+    /// <summary>True while any key is held (not a bound action: fixed keys such as WASD in first person mode).</summary>
+    public static bool KeyHeld(KeyCode key)
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Control(key, out var c) && c.isPressed;
+#else
+        return Input.GetKey(key);
+#endif
+    }
+
+    /// <summary>True on the frame a fixed key went down.</summary>
+    public static bool KeyPressed(KeyCode key)
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Control(key, out var c) && c.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(key);
 #endif
     }
 

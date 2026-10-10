@@ -820,7 +820,14 @@ public class PixelClicker : MonoBehaviour
     private double lastReflectAmount;      // and what that click paid
 
     /// <summary>While true, clicks on the cube are ignored (set by the pixel bank's hose, which uses the mouse buttons itself).</summary>
-    public static bool ExternalClickBlock;
+    private static bool externalClickBlock;
+
+    /// <summary>Something else (a minigame, the hose, a hovered pet, first person mode) has the mouse: the cube ignores ordinary clicks.</summary>
+    public static bool ExternalClickBlock
+    {
+        get => externalClickBlock || PixelFirstPerson.Active;
+        set => externalClickBlock = value;
+    }
 
     /// <summary>Dev tools "god pixel" mode: the mouse spawns / destroys pixels instead of clicking the cube.</summary>
     public static bool GodMode;
@@ -951,6 +958,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
+        if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
         if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors
         if (PixelFind.First<PixelDragonWish>() == null) gameObject.AddComponent<PixelDragonWish>(); // the Dragon Cube wish (all seven cubes)
         if (PixelFind.First<PixelOvercharge>() == null) gameObject.AddComponent<PixelOvercharge>(); // clicking an Electric pixel overcharges the auto clicker
@@ -1289,6 +1297,20 @@ public class PixelClicker : MonoBehaviour
 
     /// <summary>Performs one click. Public so buttons or automation can call it too.</summary>
     public void Collect() => CollectInternal(false);
+
+    /// <summary>
+    /// A manual click from first person mode: the player aims at the cube from any distance. Follows the same rules as a mouse click
+    /// (paused, blocked, intro lock, the minimum time between clicks). Returns true if it clicked.
+    /// </summary>
+    public bool ManualClickFromAfar()
+    {
+        if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return false;
+        if (clicksBlocked || GodMode || PixelCameraIntro.ClicksLocked) return false;
+        if (Time.unscaledTime - lastManualClickTime < minClickInterval) return false;
+        lastManualClickTime = Time.unscaledTime;
+        Collect();
+        return true;
+    }
 
     /// <summary>A click made by automation (the auto clicker). Same as <see cref="Collect"/>, but flagged as automatic.</summary>
     public void AutoCollect() => CollectInternal(true);

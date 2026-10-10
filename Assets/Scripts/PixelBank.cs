@@ -490,7 +490,7 @@ public class PixelBank : MonoBehaviour
 
     private bool HoseKeyPressed()
     {
-        return PixelKeys.Pressed(PixelAction.Hose); // rebindable in Settings
+        return !PixelFirstPerson.Active && PixelKeys.Pressed(PixelAction.Hose); // rebindable in Settings
     }
 
     private static bool IsTyping()
