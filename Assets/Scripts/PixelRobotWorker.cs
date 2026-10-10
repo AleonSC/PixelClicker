@@ -203,6 +203,18 @@ public class PixelRobotWorker : MonoBehaviour
         return spot;
     }
 
+    /// <summary>From a tile's centre to its bottom-right corner on screen (right and towards the viewer), where four tiles meet.</summary>
+    private Vector3 CornerOffset(float cell)
+    {
+        Camera cam = Cam;
+        if (cam == null) return Vector3.zero;
+        Vector3 right = cam.transform.right; right.y = 0f;
+        Vector3 down = -cam.transform.forward; down.y = 0f;
+        if (down.magnitude < 0.3f) { down = -cam.transform.up; down.y = 0f; }
+        if (right.sqrMagnitude < 0.0001f || down.sqrMagnitude < 0.0001f) return Vector3.zero;
+        return (Cardinal(right) + Cardinal(down)) * cell * 0.5f;
+    }
+
     /// <summary>The nearest of the four world axes (+X, -X, +Z, -Z) to a flat direction.</summary>
     private static Vector3 Cardinal(Vector3 v)
     {
@@ -236,7 +248,7 @@ public class PixelRobotWorker : MonoBehaviour
             nextSpotTime = Time.unscaledTime + 0.5f;
             if (consumables.TryGetFloorPoint(new Vector2(Screen.width * screenX, Screen.height * screenY), out Vector3 p))
             {
-                if (PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(p, out Vector3 cell, out float cs)) { p = cell; cellSize = cs; }   // lined up with a floor tile
+                if (PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(p, out Vector3 cell, out float cs)) { p = cell + CornerOffset(cs); cellSize = cs; }   // lined up with the corner where four floor tiles meet (bottom right of that tile)
                 else cellSize = 0f;
                 homePos = p;
                 if (!hasHome) { hasHome = true; root.transform.position = p; }
@@ -275,7 +287,7 @@ public class PixelRobotWorker : MonoBehaviour
             root.transform.position = pos;
             faceDir = cellSize > 0f ? Cardinal(flat) : flat.normalized;
         }
-        else if (cellSize > 0f) faceDir = toCam;   // square to the tiles
+        else if (cellSize > 0f) faceDir = -toCam;   // square to the tiles, looking up the screen (away from the viewer)
         else
         {
             // Standing: face the camera, turned a little towards the cube.

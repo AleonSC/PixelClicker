@@ -303,3 +303,4 @@
 [2026-10-10 11:53 UTC] The Robot Worker is now as wide as a floor tile, his charging pad is exactly one tile and he stands and walks tile to tile, lined up with the floor's grid (new PixelFloor.TryGetCell; floors without a steady grid keep the old free size).
 [2026-10-10 11:55 UTC] The Robot Worker, his station and bubble now hide while the intro camera moves and reappear at the station once it settles, so the camera no longer drags him around.
 [2026-10-10 11:56 UTC] The Robot Worker and his pad now face square to the floor tiles (the nearest grid direction towards the camera, or the screen's bottom for a top-down camera) instead of turning at a slant.
+[2026-10-10 11:58 UTC] The Robot Worker's station now sits on the corner where four floor tiles meet (bottom right of the old tile) and he stands there facing up the screen.
