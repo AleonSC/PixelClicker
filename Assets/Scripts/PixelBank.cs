@@ -82,6 +82,10 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Length of the nozzle at the end of the hose (world units).")]
     [SerializeField] private float nozzleLength = 0.4f;
 
+    [Min(0f)]
+    [Tooltip("Scales the whole nozzle assembly (nozzle, glass cube and count plate) together. 0 = the coded default (1.6).")]
+    [SerializeField] private float nozzleScale = 0f;
+
     [Min(0.02f)]
     [Tooltip("Radius of the nozzle (world units).")]
     [SerializeField] private float nozzleRadius = 0.17f;
@@ -663,7 +667,7 @@ public class PixelBank : MonoBehaviour
         float height = (nozzleHeightCubes > 0f ? nozzleHeightCubes : 2.5f) * unit;
         for (int i = 0; i < 7; i++)
         {
-            Vector3 view = cam.WorldToViewportPoint(point + up * (height + nozzleLength * 1.3f));
+            Vector3 view = cam.WorldToViewportPoint(point + up * (height + nozzleLength * NozzleScale * 1.3f));
             if (view.z <= 0f || view.y <= 0.9f) break;
             height *= 0.75f;
         }
@@ -675,7 +679,7 @@ public class PixelBank : MonoBehaviour
 
         // The hose hangs from far above the top of the screen, arriving straight down into the back of the nozzle. Its top and middle trail
         // behind the nozzle so it swings when you move the mouse.
-        Vector3 hoseEnd = tip + up * (nozzleLength * 0.93f);
+        Vector3 hoseEnd = tip + up * (nozzleLength * NozzleScale * 0.93f);
         float arm = Mathf.Clamp(height * 0.5f, 0.4f, 2.5f);
         Vector3 endHandle = hoseEnd + up * arm;
         float extra = hoseOffscreenExtra > 0f ? hoseOffscreenExtra : 14f;
@@ -708,6 +712,7 @@ public class PixelBank : MonoBehaviour
     }
 
     private Vector3 mouthPosition, mouthDirection;
+    private float NozzleScale => nozzleScale > 0f ? nozzleScale : 1.6f;
 
     // ------------------------------------------------------------------
     // The laser beam: straight down from the nozzle
@@ -1049,7 +1054,7 @@ public class PixelBank : MonoBehaviour
         Vector3 forward = Vector3.Cross(up, heading); // local +Z
         nozzle.rotation = Quaternion.LookRotation(forward, heading);
         nozzle.position = tip;
-        nozzle.localScale = Vector3.one * punch;
+        nozzle.localScale = Vector3.one * (punch * NozzleScale);
 
         // The count plate goes on the side that faces the camera and is read upright (its up is the screen-up side of the nozzle).
         float side = Vector3.Dot(forward, cam.transform.forward) > 0f ? 1f : -1f; // +1 when local +Z points away from the camera (so the camera-facing side is -Z)
