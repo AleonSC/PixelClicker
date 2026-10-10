@@ -6,6 +6,23 @@ using UnityEngine;
 /// </summary>
 public class PixelTinkererMinigame : PixelVisitorMinigame
 {
+    [Header("Stock")]
+    [Min(1)]
+    [Tooltip("How many different devices he brings each visit (a random selection of the ones he could sell).")]
+    [SerializeField] private int devicesOffered = 3;
+
+    [Min(1)]
+    [Tooltip("Fewest of each device he has.")]
+    [SerializeField] private int stockMin = 1;
+
+    [Min(1)]
+    [Tooltip("Most of each device he has (so you can't stock up).")]
+    [SerializeField] private int stockMax = 3;
+
+    protected override int OfferedWares => devicesOffered;
+    protected override int StockMin => stockMin;
+    protected override int StockMax => stockMax;
+
     public override string Id => "tinkerer";
     public override string DisplayName => "Tinkerer";
 
