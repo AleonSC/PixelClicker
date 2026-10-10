@@ -325,3 +325,4 @@
 [2026-10-10 14:10 UTC] The Robot Worker is now a fixed size (robotScale, default 2.5 = about 1.5 cubes wide) and stands the same distance from his ghost on every floor style; his size no longer follows the floor's tile grid.
 [2026-10-10 14:18 UTC] The Log's first tab is now called 'Clicks' (it lists how many times you clicked each pixel), and the Robot Worker's station moves inwards from the screen edge so he and his pad are never cut off.
 [2026-10-10 14:27 UTC] The Robot Worker is now a small UFO that idly hovers about the map (never over the cube), flies to a ghost and beams a new device down onto it, or abducts loose pixels into the Pixel Bank with its beam; Water pixels also got a splashy click sound.
+[2026-10-10 14:29 UTC] The title screen's black bar now has a neon LED-strip glow along its top and bottom edges that slowly cycles through colours.
