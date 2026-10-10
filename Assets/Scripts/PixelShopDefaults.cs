@@ -702,7 +702,7 @@ public partial class PixelShop
         {
             displayName = "Robot Worker",
             tab = ShopTab.Upgrades,
-            description = "A robot stands off to the side. Click him, choose a consumable and place its ghost: every time that device runs out he puts a new one there, as long as you have one to spare.",
+            description = "A little UFO hovers about the map. Click it, choose a consumable and place its ghost: every time that device runs out it beams a new one down there, as long as you have one to spare. It can also abduct loose pixels into your Pixel Bank.",
             costs = AllSix(1000000),
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksRobot = true,

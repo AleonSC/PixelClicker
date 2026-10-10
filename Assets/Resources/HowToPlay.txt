@@ -79,5 +79,5 @@ Vendors | The Wizard, Tinkerer, Farmer (seeds) and Pixel Entrepreneur drop by as
 # First person mode
 First person | Press {key:FirstPerson} to shrink to half the size of an old pixel and run about on the floor. The game keeps running: old pixels still fall and you can shove them. Aim the crosshair at the clicker cube (any distance) and click to click it.
 
-# Robot Worker
-Robot Worker | Buy the Robot Worker upgrade and a robot lives on the left of the screen by his charging station (a bubble with his face floats over him). Click him, choose a device (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod) and place its ghost like you would the real one. He walks to the ghost and, whenever that device runs out, puts a new one on it as long as you have one left; when you have none he walks back to the charger. Click him again to change or stop the job.
+# UFO Helper (Robot Worker upgrade)
+UFO Helper | Buy the Robot Worker upgrade and a little UFO hovers about the map (never right over the cube) with a bubble showing an alien face. Click it, choose a device (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod, Sprinkler) and place its ghost like you would the real one. Whenever that device runs out the UFO flies over and beams a new one down onto the ghost, already switched on, as long as you have one left. Or pick "Abduct a pixel into the bank" and it beams loose pixels of one type into your Pixel Bank. Click it again to change or stop the job.

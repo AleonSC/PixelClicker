@@ -276,6 +276,7 @@ public class PixelAudio : MonoBehaviour
             case "dragon_summon": return new[] { PixelSynth.Summon() };
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
             case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
+            case "pixel_water": return new[] { PixelSynth.WaterClick(1), PixelSynth.WaterClick(2), PixelSynth.WaterClick(3), PixelSynth.WaterClick(4) };
             case "water_splash": return new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) };
             case "chest_hit": return new[] { PixelSynth.ChestHit(1), PixelSynth.ChestHit(2), PixelSynth.ChestHit(3) };
             case "chest_open": return new[] { PixelSynth.ChestOpen() };
@@ -715,6 +716,35 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
         AudioClip clip = AudioClip.Create("Splash " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A short splashy click for a Water pixel: a quick droplet "plip" with a little splash hiss around it. 'seed' picks a variant.</summary>
+    public static AudioClip WaterClick(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.2f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(900 + seed * 17);
+        float lp = 0f;
+        float plipHz = 620f + seed * 90f;
+        float secondAt = 0.045f + seed * 0.006f, secondHz = 980f + seed * 70f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.22f;
+            float splash = (noise - lp) * Mathf.Exp(-sec * 24f) * 0.55f;                         // the wet hiss
+            float plip = Mathf.Sin(sec * plipHz * (1f + sec * 9f) * Mathf.PI * 2f) * Mathf.Exp(-sec * 32f);   // a droplet rising in pitch
+            float t2 = sec - secondAt;
+            float plip2 = t2 > 0f ? Mathf.Sin(t2 * secondHz * (1f + t2 * 7f) * Mathf.PI * 2f) * Mathf.Exp(-t2 * 40f) * 0.5f : 0f;
+            data[i] = (splash + plip * 0.8f + plip2) * Mathf.Clamp01(sec / 0.002f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("Water Click " + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }
