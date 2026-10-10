@@ -259,3 +259,4 @@
 [2026-10-10 07:19 UTC] All shop listings now show their description as a tooltip on an orange '!' box next to the name instead of description text.
 [2026-10-10 07:26 UTC] Fixed the offline 'Welcome back' window popping up when loading a different save: it now waits for the title screen to go away and is dropped if another save is loaded.
 [2026-10-10 07:30 UTC] Renamed the guide character from Cubby to Cubie.
+[2026-10-10 07:51 UTC] The Farmer now rarely offers a glowing yellow Dragon Seed that grows a Dragon Cube you don't hold, and is drawn with a shotgun and a wheat stalk in his mouth.

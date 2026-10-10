@@ -21,12 +21,26 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
     [Tooltip("Stock of a rare seed (spawn weight under 0.3): fewest and most he has.")]
     [SerializeField] private Vector2Int rareStock = new Vector2Int(1, 3);
 
+    [Range(0f, 1f)]
+    [Tooltip("Chance per visit that he also has a Dragon Seed (a seed that grows a Dragon Cube you don't hold). Only offered while you lack at least one Dragon Cube. Shown glowing yellow, always stock 1.")]
+    [SerializeField] private float dragonSeedChance = 0.05f;
+
     protected override int OfferedWares => seedsOffered;
+
+    protected override void ModifyWares(System.Collections.Generic.List<int> wares)
+    {
+        if (consumables == null || clicker == null || Random.value >= dragonSeedChance || clicker.PickMissingDragonCube() < 0) return;
+        for (int i = 0; i < consumables.ItemCount; i++)
+            if (consumables.IsDragonSeed(i)) { wares.Insert(0, i); return; } // first in the list
+    }
+
+    protected override bool Highlighted(int item) => consumables != null && consumables.IsDragonSeed(item);
     protected override int StockMin => commonStock.x;
     protected override int StockMax => Mathf.Max(commonStock.y, 1);
 
     protected override int StockFor(int item)
     {
+        if (consumables != null && consumables.IsDragonSeed(item)) return 1;
         float weight = 1f;
         if (clicker != null && consumables != null)
         {
@@ -41,7 +55,7 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
     public override string DisplayName => "Farmer";
 
     protected override bool IsWare(int item) =>
-        consumables != null && clicker != null && consumables.IsSeedItem(item)
+        consumables != null && clicker != null && consumables.IsSeedItem(item) && !consumables.IsDragonSeed(item)
         && (consumables.ItemOwned(item) > 0 || clicker.IsUnlocked(consumables.ItemRequiredType(item)));
 
     protected override string DefaultName => "Farmer";
@@ -56,7 +70,7 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
     {
         Color shirt = new Color(0.78f, 0.22f, 0.2f), denim = new Color(0.22f, 0.36f, 0.68f), denimDark = new Color(0.16f, 0.27f, 0.52f);
         Color skin = new Color(0.95f, 0.76f, 0.58f), straw = new Color(0.93f, 0.8f, 0.4f), strawDark = new Color(0.78f, 0.62f, 0.25f);
-        Color boot = new Color(0.34f, 0.22f, 0.12f), wood = new Color(0.5f, 0.34f, 0.17f), metal = new Color(0.7f, 0.72f, 0.76f);
+        Color boot = new Color(0.34f, 0.22f, 0.12f), wood = new Color(0.5f, 0.34f, 0.17f);
         Color sack = new Color(0.8f, 0.68f, 0.45f), leaf = new Color(0.36f, 0.78f, 0.3f), dark = new Color(0.16f, 0.1f, 0.07f);
 
         // Seed sack on the left, with a sprout poking out.
@@ -77,12 +91,13 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
         Block(art, "Strap R", denimDark, new Vector2(14f, 74f), new Vector2(40f, 225f));
         Block(art, "Pocket", denimDark, new Vector2(40f, 30f), new Vector2(0f, 190f));
 
-        // Pitchfork in the right hand.
-        Block(art, "Fork Handle", wood, new Vector2(10f, 250f), new Vector2(136f, 215f), -6f);
-        Block(art, "Fork Bar", metal, new Vector2(52f, 10f), new Vector2(130f, 338f), -6f);
-        Block(art, "Fork Tine L", metal, new Vector2(8f, 44f), new Vector2(110f, 362f), -6f);
-        Block(art, "Fork Tine M", metal, new Vector2(8f, 50f), new Vector2(130f, 366f), -6f);
-        Block(art, "Fork Tine R", metal, new Vector2(8f, 44f), new Vector2(150f, 362f), -6f);
+        // Shotgun held across the body in the right hand, pointing up and away (axis tilted 20 degrees).
+        Color gunMetal = new Color(0.2f, 0.21f, 0.24f);
+        Block(art, "Gun Stock", wood, new Vector2(64f, 24f), new Vector2(52f, 219f), 20f);
+        Block(art, "Gun Receiver", gunMetal, new Vector2(44f, 18f), new Vector2(86f, 231f), 20f);
+        Block(art, "Gun Barrel", gunMetal, new Vector2(124f, 9f), new Vector2(153f, 256f), 20f);
+        Block(art, "Gun Barrel 2", new Color(0.3f, 0.31f, 0.35f), new Vector2(124f, 4f), new Vector2(150f, 247f), 20f);
+        Block(art, "Gun Pump", wood, new Vector2(40f, 16f), new Vector2(124f, 232f), 20f);
         Block(art, "Arm R", shirt, new Vector2(36f, 120f), new Vector2(98f, 185f), -22f);
         Block(art, "Hand R", skin, new Vector2(34f, 34f), new Vector2(126f, 235f));
 
@@ -94,6 +109,11 @@ public class PixelFarmerMinigame : PixelVisitorMinigame
         Block(art, "Eye L", dark, new Vector2(12f, 14f), new Vector2(-24f, 300f));
         Block(art, "Eye R", dark, new Vector2(12f, 14f), new Vector2(24f, 300f));
         Block(art, "Smile", dark, new Vector2(40f, 7f), new Vector2(0f, 268f));
-        Block(art, "Stalk", straw, new Vector2(6f, 26f), new Vector2(36f, 268f), -35f); // a piece of wheat in his mouth
+        // A stalk of wheat sticking out of his mouth (up and to the right), with grains on the end.
+        Block(art, "Wheat Stem", straw, new Vector2(5f, 64f), new Vector2(36f, 284f), -60f);
+        Block(art, "Wheat Grain 1", straw, new Vector2(10f, 20f), new Vector2(70f, 304f), -60f);
+        Block(art, "Wheat Grain 2", strawDark, new Vector2(10f, 18f), new Vector2(62f, 311f), -30f);
+        Block(art, "Wheat Grain 3", strawDark, new Vector2(10f, 18f), new Vector2(76f, 296f), -90f);
+        Block(art, "Wheat Grain 4", straw, new Vector2(9f, 16f), new Vector2(81f, 309f), -75f);
     }
 }

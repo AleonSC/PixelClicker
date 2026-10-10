@@ -178,7 +178,7 @@ public partial class PixelShop
         {
             if (consumables.ItemCraftOnly(i)) continue;             // combo potions can only be crafted
             bool seedItem = consumables.IsSeedItem(i);
-            if (card.seeds) { if (seedItem) list.Add(i); }          // the Seeds card: seeds only
+            if (card.seeds) { if (seedItem && !consumables.IsDragonSeed(i)) list.Add(i); }          // the Seeds card: seeds only
             else if (!seedItem && consumables.IsDevice(i) == card.utilities) list.Add(i);
         }
 

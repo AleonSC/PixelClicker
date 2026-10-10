@@ -584,6 +584,27 @@ public class PixelConsumables : MonoBehaviour
     private static bool HasSeed(PixelClicker.PixelType type) =>
         !PixelClicker.IsDragonCube(type) && type != PixelClicker.PixelType.Seed && type != PixelClicker.PixelType.Meteor;
 
+    /// <summary>The Dragon Seed: a rare seed only the Farmer offers; it grows a Dragon Cube the player doesn't hold (marked by seedType = DragonCube1).</summary>
+    private Device CreateDefaultDragonSeed()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Seed,
+            seedType = PixelClicker.PixelType.DragonCube1,
+            displayName = "Dragon Seed",
+            description = "A glowing seed. Plant it: it sprouts into a Dragon Cube you don't have yet.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 500000 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 250000 },
+            },
+            maxHeld = 3,
+            color = new Color(1f, 0.85f, 0.2f, 1f),
+            placingMessage = "Click the floor to plant the {0}  (right-click to stop)",
+        };
+    }
+
     private Device CreateDefaultSeed(PixelClicker.PixelType type)
     {
         return new Device
@@ -668,6 +689,13 @@ public class PixelConsumables : MonoBehaviour
                     added = true;
                 }
             }
+        }
+
+        if (addDefaultDevices && devices != null && !Array.Exists(devices, d => d != null && d.kind == DeviceKind.Seed && PixelClicker.IsDragonCube(d.seedType)))
+        {
+            Array.Resize(ref devices, devices.Length + 1);
+            devices[devices.Length - 1] = CreateDefaultDragonSeed();
+            added = true;
         }
 
         if (addDefaultDevices && devices != null)
@@ -1101,7 +1129,7 @@ public class PixelConsumables : MonoBehaviour
     /// </summary>
     public PixelShop.PackCost[] ItemCosts(int item)
     {
-        if (IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed && clicker != null)
+        if (IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed && clicker != null && !IsDragonSeed(item))
         {
             int t = clicker.IndexOf(devices[item - potions.Length].seedType);
             if (t < 0) return new PixelShop.PackCost[0];
@@ -1164,6 +1192,9 @@ public class PixelConsumables : MonoBehaviour
 
     /// <summary>True for a seed item (a "device" of kind Seed: planted, not placed).</summary>
     public bool IsSeedItem(int item) => IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed;
+
+    /// <summary>True for the rare Dragon Seed (typed prices, offered only by the Farmer, grows a Dragon Cube the player lacks).</summary>
+    public bool IsDragonSeed(int item) => IsSeedItem(item) && PixelClicker.IsDragonCube(devices[item - potions.Length].seedType);
 
     /// <summary>The pixel type a seed item grows.</summary>
     public PixelClicker.PixelType SeedTypeOf(int item) => devices[item - potions.Length].seedType;
@@ -1350,6 +1381,16 @@ public class PixelConsumables : MonoBehaviour
     {
         Device d = devices[placingIndex];
         int tier = clicker.IndexOf(d.seedType);
+        if (PixelClicker.IsDragonCube(d.seedType))
+        {
+            tier = clicker.PickMissingDragonCube(); // a Dragon Cube you don't hold
+            if (tier < 0)
+            {
+                PixelHints.Announce("You already hold all seven Dragon Cubes - the Dragon Seed has nothing left to grow");
+                EndPlacement();
+                return;
+            }
+        }
         if ((!Inf && d.owned <= 0) || tier < 0) { EndPlacement(); return; }
         if (!clicker.PlantSeedSproutAt(point, tier))
         {

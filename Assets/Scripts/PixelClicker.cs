@@ -1379,6 +1379,15 @@ public class PixelClicker : MonoBehaviour
         if (HasAllDragonCubes) PixelHints.Announce("You hold all seven Dragon Cubes! Summon the dragon.");
     }
 
+    /// <summary>A random Dragon Cube tier the player does not hold right now (so a Dragon Seed grows one they lack). -1 when they hold all seven.</summary>
+    public int PickMissingDragonCube()
+    {
+        System.Collections.Generic.List<int> missing = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < tiers.Length; i++)
+            if (tiers[i].rareDrop && IsDragonCube(tiers[i].type) && tiers[i].count < 1d) missing.Add(i);
+        return missing.Count == 0 ? -1 : missing[UnityEngine.Random.Range(0, missing.Count)];
+    }
+
     /// <summary>Does the player hold at least one of each of the seven Dragon Cubes?</summary>
     public bool HasAllDragonCubes
     {

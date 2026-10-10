@@ -232,7 +232,10 @@ public class SeedSprout : MonoBehaviour
         if (pixel != null) Destroy(pixel);
         pixel = null;
         Vector2 side = Random.insideUnitCircle.normalized * Random.Range(0.4f, 1.2f);
-        clicker.SpawnStoredPixel(tier, amount, at, new Vector3(side.x, Random.Range(2.5f, 4f), side.y));
+        bool dragon = PixelClicker.IsDragonCube(clicker.Tiers[tier].type);
+        // A Dragon Cube is not a floor pixel to collect later: it is yours the moment it pops off (the pixel that flies out is only for show).
+        if (dragon) clicker.AddCurrency(tier, 1d);
+        clicker.SpawnStoredPixel(tier, dragon ? 0d : amount, at, new Vector3(side.x, Random.Range(2.5f, 4f), side.y));
         PixelAudio.Play("click");
         SeedDigFx.Play(at, unit, 0.4f);
         PixelStats.Count("seed.grown");

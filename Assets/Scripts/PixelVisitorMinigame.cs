@@ -141,6 +141,10 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>Most of each ware in stock (0 = unlimited).</summary>
     protected virtual int StockMax => 0;
     /// <summary>How many of this ware he has this visit (default: random between <see cref="StockMin"/> and <see cref="StockMax"/>).</summary>
+    /// <summary>Lets a visitor change this visit's wares after the random selection (e.g. the Farmer's rare Dragon Seed). Called before the stock is rolled.</summary>
+    protected virtual void ModifyWares(List<int> wares) { }
+    /// <summary>A ware shown glowing yellow in the list (something important).</summary>
+    protected virtual bool Highlighted(int item) => false;
     protected virtual int StockFor(int item) => Random.Range(Mathf.Max(1, StockMin), Mathf.Max(StockMin, StockMax) + 1);
 
     private readonly Dictionary<int, int> stock = new Dictionary<int, int>(); // ware -> how many are left this visit (only when the stock is limited)
@@ -500,6 +504,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         stock.Clear();
         if (!tradeMode && OfferedWares > 0)
             while (wares.Count > OfferedWares) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
+        if (!tradeMode) ModifyWares(wares);
         if (!tradeMode && StockMax > 0)
             foreach (int w in wares) stock[w] = StockFor(w);
         int rowCount = tradeMode ? trades.Count : wares.Count;
@@ -538,6 +543,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             row.rect.pivot = new Vector2(0.5f, 1f);
             row.rect.sizeDelta = new Vector2(-20f, rowH);
             row.rect.anchoredPosition = new Vector2(0f, -y);
+            Image rowBack = go.GetComponent<Image>();
+            Outline rowGlow = null;
+            if (!tradeMode && Highlighted(item))
+            {
+                rowGlow = go.AddComponent<Outline>();
+                rowGlow.effectDistance = new Vector2(4f, -4f);
+                rowGlow.useGraphicAlpha = false;
+            }
 
             row.name = PixelUIKit.CreateText(Font, go.transform, "Name", tradeMode ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
             row.name.enableAutoSizing = true; row.name.fontSizeMax = 32f; row.name.fontSizeMin = 14f;
@@ -557,6 +570,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             RectTransform br = row.buy.GetComponent<RectTransform>();
             br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
             br.anchoredPosition = new Vector2(-14f, 0f);
+            if (rowGlow != null) go.AddComponent<PixelPulseGlow>().Setup(rowBack, rowGlow, row.name);
             int captured = item;
             Trade capturedTrade = trade;
             row.buy.onClick.AddListener(() => { if (capturedTrade != null) DoTrade(capturedTrade); else Buy(captured); });
@@ -602,5 +616,29 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         r.anchorMin = r.anchorMax = anchor;
         r.pivot = new Vector2(0.5f, 0f);
         r.anchoredPosition = offset;
+    }
+}
+
+/// <summary>Makes a ware row glow yellow: the row's background and outline pulse between dark and bright gold and the name turns yellow (unscaled time: the game is stopped during a visit).</summary>
+public class PixelPulseGlow : MonoBehaviour
+{
+    private Image back;
+    private Outline outline;
+    private TMP_Text label;
+
+    public void Setup(Image background, Outline glow, TMP_Text name)
+    {
+        back = background;
+        outline = glow;
+        label = name;
+    }
+
+    private void Update()
+    {
+        if (back == null) return;
+        float t = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
+        back.color = Color.Lerp(new Color(0.3f, 0.24f, 0.06f, 1f), new Color(0.52f, 0.42f, 0.08f, 1f), t);
+        if (outline != null) outline.effectColor = Color.Lerp(new Color(1f, 0.8f, 0.1f, 0.35f), new Color(1f, 0.92f, 0.3f, 1f), t);
+        if (label != null) label.color = Color.Lerp(new Color(1f, 0.9f, 0.35f), new Color(1f, 1f, 0.7f), t);
     }
 }
