@@ -1763,6 +1763,11 @@ public class PixelConsumables : MonoBehaviour
             }
         }
         if ((!Inf && d.owned <= 0) || tier < 0) { EndPlacement(); return; }
+        if (!clicker.SeedSpotFree(point))
+        {
+            PixelHints.Announce("There is already a seed there - plant it a little further away");
+            return;
+        }
         if (!clicker.PlantSeedSproutAt(point, tier))
         {
             PixelHints.Announce("Too many sprouts already - wait for some to finish growing");

@@ -913,6 +913,19 @@ public partial class PixelPets : MonoBehaviour
         SowSeed(p, size);
     }
 
+    /// <summary>Is a planted Seed pet within 'radius' of the point (sideways distance)? Seeds are not planted on top of it.</summary>
+    public static bool PlanterNear(Vector3 point, float radius)
+    {
+        if (Instance == null) return false;
+        foreach (Pet p in Instance.pets)
+        {
+            if (!p.planter || !p.planted || p.body == null) continue;
+            Vector3 d = p.body.transform.position - point; d.y = 0f;
+            if (d.sqrMagnitude < radius * radius) return true;
+        }
+        return false;
+    }
+
     /// <summary>A Water pixel splashed at 'point': every planted Seed pet within 'reach' is watered (sows faster for a while).</summary>
     public static void WaterPets(Vector3 point, float reach, float growSeconds, float cooldown)
     {
@@ -1016,7 +1029,7 @@ public partial class PixelPets : MonoBehaviour
         {
             Vector2 ring = Random.insideUnitCircle.normalized * Random.Range(size * 1.5f, size * seedPetRadius);
             Vector3 spot = new Vector3(centre.x + ring.x, centre.y, centre.z + ring.y);
-            if (OutsideView(spot)) continue;
+            if (OutsideView(spot) || !clicker.SeedSpotFree(spot)) continue;   // try another spot
             if (clicker.PlantSeedSproutAt(spot))
             {
                 SeedDigFx.Play(spot + Vector3.up * (size * 0.1f), size * 0.6f, 0.4f); // (the planted sprout plays the crunch itself)

@@ -720,6 +720,10 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Each seed has its own despawn timer: seconds from the moment it drops until it withers away if it hasn't popped its pixel yet. 0 = the coded default (45). The pixel it grows is an ordinary old pixel with its own normal despawn timer.")]
     [SerializeField] private float seedSproutLifetime = 0f;
 
+    [Min(0f)]
+    [Tooltip("Seeds can't be planted closer together than this (world units between sprout centres). 0 = the coded default (0.7 x a sprout's width).")]
+    [SerializeField] private float seedSpacing = 0f;
+
     [Min(1f)]
     [Tooltip("How big the sprout is drawn compared to an old pixel (bigger = easier to spot).")]
     [SerializeField] private float seedSproutScale = 2.2f;
@@ -2294,10 +2298,20 @@ public class PixelClicker : MonoBehaviour
         SeedDigFx.Play(pixelTransform.position, PixelBaseSize, Mathf.Clamp01(0.25f + progress * 0.75f));
     }
 
+    /// <summary>The least distance between two planted seeds (world units).</summary>
+    public float SeedSpacing => seedSpacing > 0f ? seedSpacing : SeedSproutWorldSize * 0.7f;
+
+    /// <summary>Is there room to plant a seed here? False when another sprout (or a planted Seed pet) is too close - seeds can't sit on top of each other.</summary>
+    public bool SeedSpotFree(Vector3 position)
+    {
+        float r = SeedSpacing;
+        return !SeedSprout.AnyNear(position, r, null) && !PixelPets.PlanterNear(position, r);
+    }
+
     /// <summary>Plants a Seed sprout straight into the floor at 'position' (it grows a random pixel like any other). False when too many sprouts exist. Used by the Seed pet.</summary>
     public bool PlantSeedSproutAt(Vector3 position, int growTier = -1)
     {
-        if (SeedSprout.Count >= seedSproutCap) return false;
+        if (SeedSprout.Count >= seedSproutCap || !SeedSpotFree(position)) return false;
         GameObject go = new GameObject("Seed Sprout");
         go.transform.position = position;
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;

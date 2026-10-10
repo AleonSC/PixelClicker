@@ -51,6 +51,40 @@ public class SeedSprout : MonoBehaviour
 
     private float StemTop => unit * sproutScale * PixelLooks.SproutStemTop;
 
+    /// <summary>Is a planted (not tumbling or withering) sprout other than 'ignore' within 'radius' of the point (sideways distance)?</summary>
+    public static bool AnyNear(Vector3 point, float radius, SeedSprout ignore)
+    {
+        float r2 = radius * radius;
+        foreach (SeedSprout s in all)
+        {
+            if (s == ignore || s == null || s.stage == Stage.Falling || s.stage == Stage.Shrinking) continue;
+            Vector3 d = s.transform.position - point; d.y = 0f;
+            if (d.sqrMagnitude < r2) return true;
+        }
+        return false;
+    }
+
+    /// <summary>A sprout that landed on top of another one slides sideways until it has room.</summary>
+    private void MakeRoom()
+    {
+        float spacing = clicker.SeedSpacing;
+        for (int iter = 0; iter < 6; iter++)
+        {
+            bool moved = false;
+            foreach (SeedSprout s in all)
+            {
+                if (s == this || s == null || s.stage == Stage.Falling || s.stage == Stage.Shrinking) continue;
+                Vector3 d = transform.position - s.transform.position; d.y = 0f;
+                float dist = d.magnitude;
+                if (dist >= spacing) continue;
+                Vector3 dir = dist > 0.001f ? d / dist : new Vector3(Random.value - 0.5f, 0f, Random.value - 0.5f).normalized;
+                transform.position += dir * (spacing - dist + 0.01f);
+                moved = true;
+            }
+            if (!moved) break;
+        }
+    }
+
     private void OnEnable() { Count++; all.Add(this); }
     private void OnDisable() { Count = Mathf.Max(0, Count - 1); all.Remove(this); }
 
@@ -211,6 +245,7 @@ public class SeedSprout : MonoBehaviour
             body.isKinematic = true;
         }
         if (hit != null) hit.enabled = false;
+        MakeRoom();   // never on top of another sprout
         yaw = Random.Range(0f, 360f);
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
         transform.position += Vector3.down * (unit * 0.03f); // pressed slightly into the ground
