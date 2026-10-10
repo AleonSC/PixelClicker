@@ -239,3 +239,4 @@
 [2026-10-10 05:02 UTC] The Seed pet is now a big sprout that plants itself (with a dirt mound) wherever it lands or is put down, and every 10-20 seconds sows a seed in a radius around itself that grows a random pixel.
 [2026-10-10 05:02 UTC] Added a small crunching sound when a seed is planted, from any source (falling sprouts, the Seed pet's seeds, the pet planting itself).
 [2026-10-10 05:04 UTC] The Seed pixel now has a spawn switch in the Toggles window like the other special pixels.
+[2026-10-10 06:13 UTC] Fixed Seed sprouts piling up inside the clicker pixel: they now never collide with the cube and start as ghosts for a moment like fresh old pixels.

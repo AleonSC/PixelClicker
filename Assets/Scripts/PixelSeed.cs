@@ -57,6 +57,11 @@ public class SeedSprout : MonoBehaviour
         glow.intensity = 0.8f;
     }
 
+    private float ghostLeft;
+
+    /// <summary>Keeps the collider a trigger (no collisions) for this many seconds after the sprout is born, so a burst of sprouts doesn't jam.</summary>
+    public void SetGhost(float seconds) => ghostLeft = Mathf.Max(0f, seconds);
+
     /// <summary>Plants the sprout right where it is (no falling): used by the Seed pet when it sows seeds around itself.</summary>
     public void PlantNow() => Plant();
 
@@ -74,6 +79,11 @@ public class SeedSprout : MonoBehaviour
         switch (stage)
         {
             case Stage.Falling:
+                if (ghostLeft > 0f)
+                {
+                    ghostLeft -= Time.deltaTime;
+                    if (ghostLeft <= 0f && hit != null) hit.isTrigger = false; // solid now
+                }
                 if (age > 6f || transform.position.y < -50f) Plant(); // never lands: plant it where it is
                 break;
 

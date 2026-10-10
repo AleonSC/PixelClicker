@@ -1905,9 +1905,11 @@ public class PixelClicker : MonoBehaviour
         box.size = Vector3.one * unit * 0.5f;
         box.center = new Vector3(0f, unit * 0.3f, 0f);
         box.sharedMaterial = SharedOldPixelPhysicsMaterial();
-        if (!collideWithLivePixel)
-            foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
-                Physics.IgnoreCollision(box, live);
+        // A sprout never collides with the live cube (it starts inside it), and, like a fresh old pixel, it is a ghost for a moment
+        // (a trigger) so many sprouts born at the same spot don't jam against each other.
+        foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
+            Physics.IgnoreCollision(box, live);
+        if (popNoCollisionSeconds > 0f) box.isTrigger = true;
 
         Rigidbody rb = go.AddComponent<Rigidbody>();
         rb.mass = Mathf.Max(0.0001f, fallingCopyMass);
@@ -1929,7 +1931,9 @@ public class PixelClicker : MonoBehaviour
         rb.AddForce(direction * UnityEngine.Random.Range(popSpeedRange.x, popSpeedRange.y), ForceMode.VelocityChange);
         rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y), ForceMode.VelocityChange);
 
-        go.AddComponent<SeedSprout>().Setup(this, unit, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
+        SeedSprout sprout = go.AddComponent<SeedSprout>();
+        sprout.Setup(this, unit, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
+        sprout.SetGhost(popNoCollisionSeconds + 0.15f);
     }
 
     private void AnimatePixel()
