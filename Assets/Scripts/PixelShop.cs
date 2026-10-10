@@ -767,6 +767,25 @@ public partial class PixelShop : MonoBehaviour
             if (seedIndex >= 0 && electricIdx >= 0 && seedIndex > electricIdx) MovePack(seedIndex, electricIdx);
             if (seedIndex >= 0) { packDataVersion = 7; changed = true; }
         }
+
+        // The Seed is a cracking shell now (3 clicks, pays 6 on the last, a sprout grows a random pixel): update packs saved with the first Seed version.
+        if (packDataVersion < 8 && packs != null)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Seed)) continue;
+                ShopPack fresh = CreateSeedPixelPack(-1);
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (reward.type != PixelClicker.PixelType.Seed) continue;
+                    if (reward.clicksToCollect <= 1) reward.clicksToCollect = 3;
+                    if (Mathf.Approximately((float)reward.amountPerClick, 2f)) reward.amountPerClick = 6;
+                }
+                if (pack.description != null && pack.description.StartsWith("Adds the Seed pixel: a brown cube with a sprout")) pack.description = fresh.description;
+                packDataVersion = 8;
+                changed = true;
+            }
+        }
         return changed;
     }
 

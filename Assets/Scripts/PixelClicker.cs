@@ -641,6 +641,19 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Slowly spin the pixel (degrees per second per axis). Set to 0 for no spin.")]
     [SerializeField] private Vector3 idleSpin = new Vector3(0f, 20f, 0f);
 
+    [Header("Seed Pixel")]
+    [Min(0.5f)]
+    [Tooltip("Seconds a planted Seed sprout takes to grow its pixel from nothing to full size.")]
+    [SerializeField] private float seedGrowSeconds = 6f;
+
+    [Min(0f)]
+    [Tooltip("Seconds the grown pixel waits (wobbling) on its sprout before it pops off.")]
+    [SerializeField] private float seedHoldSeconds = 1f;
+
+    [Min(1)]
+    [Tooltip("The most Seed sprouts that can be growing at once (extra cracked shells just pay out).")]
+    [SerializeField] private int seedMaxSprouts = 12;
+
     [Header("Click Hint")]
     [Tooltip("Turn off the 'click me' pulse that the cube plays after the first guide text until the first pixel is collected.")]
     [SerializeField] private bool disableClickHint = false;
@@ -1000,6 +1013,16 @@ public class PixelClicker : MonoBehaviour
             }
             looksVersion = 12;
         }
+        if (looksVersion < 13)
+        {
+            // The Seed is a brown shell now (cracks as you click it, a sprout grows out): replace the older sprout-on-a-cube look.
+            System.Collections.Generic.List<PixelLook> list13 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            list13.RemoveAll(l => l != null && l.type == PixelType.Seed);
+            PixelLook shellLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Seed);
+            if (shellLook != null) list13.Add(shellLook);
+            looks = list13.ToArray();
+            looksVersion = 13;
+        }
 
         if (pixelRenderer != null)
         {
@@ -1243,7 +1266,8 @@ public class PixelClicker : MonoBehaviour
 
         PlayClickEffects(tier);
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
-        if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
+        if (tier.type == PixelType.Seed) SpawnSeedSprout();            // the shell cracked: a sprout comes out instead of an old pixel
+        else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
         if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
@@ -1760,6 +1784,72 @@ public class PixelClicker : MonoBehaviour
         return 0.5f + 0.5f * Mathf.Sin(time * clickHintSpeed * Mathf.PI * 2f);
     }
 
+    /// <summary>The edge length of an old pixel in world units.</summary>
+    public float OldPixelWorldSize => PixelBaseSize * oldPixelScale;
+
+    /// <summary>A random pixel type a Seed sprout can grow: unlocked, not a rare drop, not a fly-away type and not a Seed itself. -1 if none.</summary>
+    public int RandomSeedPixelTier()
+    {
+        System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            PixelTier t = tiers[i];
+            if (t.unlocked && !t.rareDrop && !t.flyAway && t.type != PixelType.Seed) candidates.Add(i);
+        }
+        return candidates.Count > 0 ? candidates[UnityEngine.Random.Range(0, candidates.Count)] : -1;
+    }
+
+    /// <summary>What one harvest of this pixel type would pay now (a random payout rolled for random-payout types, with the Value / Ultra multipliers).</summary>
+    public double RollOldPixelAmount(int tierIndex)
+    {
+        if (!IsValidTier(tierIndex)) return 0d;
+        PixelTier t = tiers[tierIndex];
+        double basePayout = t.amountPerClick;
+        if (t.randomPayout) basePayout = UnityEngine.Random.Range(Mathf.Min(t.payoutMin, t.payoutMax), Mathf.Max(t.payoutMin, t.payoutMax) + 1);
+        return basePayout * PayoutMultiplier(tierIndex) * clickMultiplier;
+    }
+
+    /// <summary>A cracked Seed shell: a small sprout pops out, falls, plants itself and grows a random old pixel (see <see cref="SeedSprout"/>).</summary>
+    private void SpawnSeedSprout()
+    {
+        if (pixelTransform == null || SeedSprout.Count >= seedMaxSprouts) return;
+        float unit = OldPixelWorldSize;
+
+        GameObject go = new GameObject("Seed Sprout");
+        go.transform.SetPositionAndRotation(pixelTransform.position, UnityEngine.Random.rotation);
+        if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
+
+        BoxCollider box = go.AddComponent<BoxCollider>();
+        box.size = Vector3.one * unit * 0.35f;
+        box.center = new Vector3(0f, unit * 0.15f, 0f);
+        box.sharedMaterial = SharedOldPixelPhysicsMaterial();
+        if (!collideWithLivePixel)
+            foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
+                Physics.IgnoreCollision(box, live);
+
+        Rigidbody rb = go.AddComponent<Rigidbody>();
+        rb.mass = Mathf.Max(0.0001f, fallingCopyMass);
+        rb.useGravity = false;
+        rb.collisionDetectionMode = collisionDetection;
+#if UNITY_6000_0_OR_NEWER
+        rb.linearDamping = fallingCopyDrag;
+        rb.angularDamping = fallingCopyAngularDrag;
+#else
+        rb.drag = fallingCopyDrag;
+        rb.angularDrag = fallingCopyAngularDrag;
+#endif
+        if (gravityScale > 0f) go.AddComponent<ScaledGravity>().scale = gravityScale;
+
+        Vector2 flat = UnityEngine.Random.insideUnitCircle;
+        if (flat.sqrMagnitude < 0.0001f) flat = Vector2.right;
+        flat.Normalize();
+        Vector3 direction = new Vector3(flat.x, UnityEngine.Random.Range(popVerticalRange.x, popVerticalRange.y), flat.y).normalized;
+        rb.AddForce(direction * UnityEngine.Random.Range(popSpeedRange.x, popSpeedRange.y), ForceMode.VelocityChange);
+        rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y), ForceMode.VelocityChange);
+
+        go.AddComponent<SeedSprout>().Setup(this, unit, seedGrowSeconds, seedHoldSeconds);
+    }
+
     private void AnimatePixel()
     {
         float time = Time.time;
@@ -1896,7 +1986,7 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        Texture2D tex = PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max);
+        Texture2D tex = PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max, look.shellTexture);
         block.SetTexture("_BaseMap", tex);
         block.SetTexture("_MainTex", tex);
     }
@@ -2803,8 +2893,6 @@ public class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelGravityWell>().Setup(this, styled);
                 if (styled.floatAway)
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
-                if (styled.growSeconds > 0f)
-                    copy.AddComponent<OldPixelSeed>().Setup(this, styled.growSeconds, styled.growScale, styled.growMultiplier, stored);
                 if (styled.shatter)
                     copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
             }

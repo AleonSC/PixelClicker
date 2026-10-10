@@ -197,17 +197,8 @@ public class PixelLook
     [Tooltip("Seed: a small green sprout (stem and two leaves) grows out of the top of the cube.")]
     public bool sprout = false;
 
-    [Min(0f)]
-    [Tooltip("Seed: seconds an old pixel of this type takes to grow to full size and full value (it doesn't despawn while growing). 0 = it doesn't grow.")]
-    public float growSeconds = 0f;
-
-    [Min(1f)]
-    [Tooltip("Seed: how many times bigger the old pixel is when fully grown.")]
-    public float growScale = 2.2f;
-
-    [Min(1f)]
-    [Tooltip("Seed: how many times its payout the old pixel is worth when fully grown (paid when it is vacuumed, banked or clicked).")]
-    public float growMultiplier = 5f;
+    [Tooltip("Seed: draw a brown shell texture (tan with dark cracks that spread as the shell is hit) instead of the default dark surface texture. Needs Damage Cracks.")]
+    public bool shellTexture = false;
 
     [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
@@ -258,9 +249,9 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
                             forceTranslucent = true, smoothness = 0.9f, metallic = 0f, emission = 0.6f, lightning = true },
 
-            // Seed: a plain brown cube with a green sprout; old ones grow bigger and worth more.
-            new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = new Color(0.46f, 0.3f, 0.15f, 1f),
-                            metallic = 0f, smoothness = 0.15f, sprout = true, growSeconds = 40f, growScale = 2.2f, growMultiplier = 5f },
+            // Seed: a brown shell that cracks as you click it; a sprout comes out and grows a pixel.
+            new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = Color.white,
+                            metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true },
 
             // Mirror: polished chrome that reflects the sky.
             new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = new Color(0.92f, 0.95f, 1f, 1f),
@@ -313,17 +304,27 @@ public static class PixelLooks
     /// The pixel's surface texture. 'level' 0 = undamaged; up to 'maxLevel' = about to break (more cracks each level).
     /// Drawn once per level and shared.
     /// </summary>
-    public static Texture2D SurfaceTexture(bool streaks, int level, int maxLevel)
+    public static Texture2D SurfaceTexture(bool streaks, int level, int maxLevel, bool shell = false)
     {
         maxLevel = Mathf.Max(1, maxLevel);
         level = Mathf.Clamp(level, 0, maxLevel);
-        int key = (streaks ? 1 : 0) + level * 2 + maxLevel * 1000;
+        int key = (streaks ? 1 : 0) + level * 2 + maxLevel * 1000 + (shell ? 1 << 22 : 0);
         if (surfaceTextures.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
 
         const int size = 128;
         Color32[] px = new Color32[size * size];
-        Color32 baseColour = new Color32(6, 6, 9, 255);
+        Color32 baseColour = shell ? new Color32(140, 92, 46, 255) : new Color32(6, 6, 9, 255);
         for (int i = 0; i < px.Length; i++) px[i] = baseColour;
+        if (shell)
+        {
+            // Speckled wood-like grain so the shell isn't flat.
+            System.Random grain = new System.Random(5);
+            for (int i = 0; i < px.Length; i++)
+            {
+                int d = grain.Next(-14, 12);
+                px[i] = new Color32((byte)Mathf.Clamp(140 + d, 0, 255), (byte)Mathf.Clamp(92 + d, 0, 255), (byte)Mathf.Clamp(46 + d / 2, 0, 255), 255);
+            }
+        }
 
         if (streaks)
         {
@@ -354,7 +355,7 @@ public static class PixelLooks
                     angle += ((float)rnd.NextDouble() - 0.5f) * 1.1f;
                     float step = 6f + (float)rnd.NextDouble() * 9f;
                     float nx = x + Mathf.Cos(angle) * step, ny = y + Mathf.Sin(angle) * step;
-                    if (s < segments) DrawLine(px, size, x, y, nx, ny, level >= maxLevel ? 2 : 1, 1f, 0.97f);
+                    if (s < segments) DrawLine(px, size, x, y, nx, ny, level >= maxLevel ? 2 : 1, 1f, shell ? 0.06f : 0.97f);
                     x = nx; y = ny;
                 }
             }
@@ -577,15 +578,15 @@ public static class PixelLooks
     private static readonly Dictionary<int, Mesh> sproutMeshes = new Dictionary<int, Mesh>();
 
     /// <summary>A little sprout on top of a cube: a green stem and two angled leaves, flat-shaded with vertex colours.</summary>
-    private static Mesh SproutMesh(Vector3 size)
+    private static Mesh SproutMesh(Vector3 size, bool baseAtOrigin = false)
     {
-        int key = Mathf.RoundToInt(size.x * 1000f) * 31 + Mathf.RoundToInt(size.y * 1000f);
+        int key = Mathf.RoundToInt(size.x * 1000f) * 31 + Mathf.RoundToInt(size.y * 1000f) + (baseAtOrigin ? 1 << 24 : 0);
         if (sproutMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
 
         List<Vector3> v = new List<Vector3>();
         List<Color> c = new List<Color>();
         List<int> t = new List<int>();
-        float top = size.y * 0.5f;
+        float top = baseAtOrigin ? 0f : size.y * 0.5f; // on top of a cube, or standing on its own origin
         AddShadedBox(v, c, t, new Vector3(0f, top + size.y * 0.13f, 0f), new Vector3(size.x * 0.035f, size.y * 0.13f, size.x * 0.035f), Quaternion.identity, new Color(0.3f, 0.7f, 0.22f, 1f));
         Vector3 leafHalf = new Vector3(size.x * 0.15f, size.y * 0.022f, size.x * 0.075f);
         AddShadedBox(v, c, t, new Vector3(-size.x * 0.13f, top + size.y * 0.3f, 0f), leafHalf, Quaternion.Euler(0f, 0f, 24f), new Color(0.42f, 0.85f, 0.3f, 1f));
@@ -598,6 +599,23 @@ public static class PixelLooks
         mesh.RecalculateBounds();
         sproutMeshes[key] = mesh;
         return mesh;
+    }
+
+    /// <summary>Height of a free-standing sprout's stem top as a fraction of its size (where a growing pixel sits).</summary>
+    public const float SproutStemTop = 0.26f;
+
+    /// <summary>A free-standing sprout (stem + two leaves, base at the origin) as a child of 'parent'; 'unit' = the size it is built for (a pixel's edge).</summary>
+    public static GameObject CreateSproutObject(Transform parent, float unit)
+    {
+        GameObject go = new GameObject("Sprout", typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.SetParent(parent, false);
+        go.layer = parent.gameObject.layer;
+        go.GetComponent<MeshFilter>().sharedMesh = SproutMesh(Vector3.one * Mathf.Max(0.01f, unit), true);
+        MeshRenderer r = go.GetComponent<MeshRenderer>();
+        r.sharedMaterial = OverlayMaterial();
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
+        return go;
     }
 
     /// <summary>Adds a flat-shaded box (centre, half extents, rotation) to a vertex-colour mesh under construction.</summary>

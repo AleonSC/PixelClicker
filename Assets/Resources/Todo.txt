@@ -8,4 +8,4 @@
 [ ] Find a use for Ectoplasm (the Ghost minigame's material) - e.g. a crafting ingredient, potion booster or pet item
 [ ] Make minigame materials buyable with the pixels related to that minigame (e.g. stardust / meteor chunks / bomb parts / ectoplasm for their matching pixel types)
 [ ] Solar pixel makes Seed pixels grow faster
-[ ] Rework the Seed pixel's visuals and mechanics
+[x] Rework the Seed pixel's visuals and mechanics (shell, sprout, random grown pixel)

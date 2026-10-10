@@ -233,3 +233,4 @@
 [2026-10-10 00:28 UTC] Added the Seed pixel (brown cube with a sprout, 4K Red/Green/Blue, listed before Electric): old Seed pixels grow bigger and worth up to 5x over 40 seconds and can be harvested by click, vacuum or hose.
 [2026-10-10 00:29 UTC] Fixed a compile error in the Seed pixel's growth.
 [2026-10-10 03:56 UTC] Added two to-do items: Solar pixel speeds up Seed pixel growth, and rework the Seed pixel's visuals and mechanics.
+[2026-10-10 04:13 UTC] Reworked the Seed pixel: a brown shell that cracks over 3 clicks, then a sprout falls, plants itself and grows a random old pixel that pops off after a second.

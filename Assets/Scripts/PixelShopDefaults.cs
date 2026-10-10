@@ -388,14 +388,14 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Seed Pixel pack (Pixels tab): an early unlock listed before Electric, needs the RGB pack. Old Seed pixels grow bigger and worth more.</summary>
+    /// <summary>Default Seed Pixel pack (Pixels tab): an early unlock listed before Electric, needs the RGB pack. A brown shell that cracks; a sprout grows a random old pixel.</summary>
     private static ShopPack CreateSeedPixelPack(int requiresRgbIndex)
     {
         return new ShopPack
         {
             displayName = "Seed Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Seed pixel: a brown cube with a sprout. Old Seed pixels slowly grow bigger and worth several times more; collect them with a vacuum, the hose or a click once they are ripe.",
+            description = "Adds the Seed pixel: a brown shell you click a few times to crack. A sprout comes out, plants itself and grows a random old pixel that pops off.",
             requirements = Needs(requiresRgbIndex),
             costs = new[]
             {
@@ -409,7 +409,7 @@ public partial class PixelShop
                 {
                     type = PixelClicker.PixelType.Seed, displayName = "Seed Pixels",
                     color = new Color(0.55f, 0.38f, 0.18f, 1f),
-                    amountPerClick = 2,
+                    amountPerClick = 6, clicksToCollect = 3, // 3 clicks crack the shell; only the last pays
                     spawnWeight = 0.3f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
