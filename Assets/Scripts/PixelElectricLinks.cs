@@ -63,6 +63,12 @@ public class PixelElectricLinks : MonoBehaviour
     [Tooltip("How strongly a link keeps its old partner while it is still in reach: lower = stickier, so arcs stay connected to the same neighbour instead of flipping around.")]
     [SerializeField] private float stickiness = 0.4f;
 
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { PetConnected = false; }
+
+    /// <summary>True while the Electric pet has at least one Electric pixel linked to it (the pet stands still then).</summary>
+    public static bool PetConnected { get; private set; }
+
     private class Link
     {
         public Rigidbody body;
@@ -140,6 +146,7 @@ public class PixelElectricLinks : MonoBehaviour
 
     private void Scan()
     {
+        PetConnected = false;
         // Devices that are working.
         List<PixelPlacedDevice> devices = new List<PixelPlacedDevice>();
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
@@ -203,6 +210,7 @@ public class PixelElectricLinks : MonoBehaviour
                 int index = NearestUnlinked(petBody.position, null, null, unlinked, previous, rangeSqr, petBody);
                 if (index < 0) break;
                 Rigidbody tail = Attach(unlinked, index, null, null, null, petBody, petBody);
+                PetConnected = true;
                 while (links.Count < maxLinks)
                 {
                     index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);

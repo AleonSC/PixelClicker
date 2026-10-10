@@ -598,6 +598,7 @@ public partial class PixelPets : MonoBehaviour
             if (hide) continue;
             UpdateTreatGlow(p, treatTimer > 0f && !p.off);
             bool stopped = p == hovered || p == held || (p == tagPet && TagVisible); // a pet whose name tag is up stands still too
+            if (p.type == PixelClicker.PixelType.Electric && PixelElectricLinks.PetConnected) stopped = true; // the Electric pet stays put while arcs connect it to pixels
             if (p.ghost) RoamGhost(p, stopped);
             else Roam(p, stopped);
             if (p.type == PixelClicker.PixelType.Vacuum) SuckAround(p);
