@@ -916,6 +916,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>How many more of an item you can hold right now (devices: no limit).</summary>
     public int ItemRoom(int item)
     {
+        if (Inf) return int.MaxValue;
         int cap = ItemCapacity(item);
         if (cap == int.MaxValue) return int.MaxValue;
         return Mathf.Max(0, cap - ItemOwned(item));
@@ -936,10 +937,10 @@ public class PixelConsumables : MonoBehaviour
         if (index < 0 || index >= potions.Length) return false;
 
         Potion potion = potions[index];
-        if (potion.owned <= 0 || !clicker.IsUnlocked(potion.type)) return false;
+        if ((!Inf && potion.owned <= 0) || !clicker.IsUnlocked(potion.type)) return false;
         if (potion.craftOnly && !clicker.IsUnlocked(potion.secondType)) return false;
 
-        potion.owned--;
+        if (!Inf) potion.owned--;
         ApplyPotion(index, 1f);
         PotionDrunk?.Invoke(ItemName(index));
         return true;
@@ -1033,7 +1034,10 @@ public class PixelConsumables : MonoBehaviour
 
     public string ItemName(int item) => IsDevice(item) ? devices[item - potions.Length].displayName : potions[item].displayName;
 
-    public int ItemOwned(int item) => IsDevice(item) ? devices[item - potions.Length].owned : potions[item].owned;
+    /// <summary>True while the dev tools' "Infinite resources" is on: every consumable counts as plentiful and using one costs nothing.</summary>
+    private static bool Inf => PixelClicker.InfiniteResources;
+
+    public int ItemOwned(int item) => Inf ? 99999 : IsDevice(item) ? devices[item - potions.Length].owned : potions[item].owned;
 
     private PixelAutoClicker autoClicker;
 
@@ -1168,6 +1172,7 @@ public class PixelConsumables : MonoBehaviour
     public bool TryRemoveItem(int item, int amount)
     {
         if (item < 0 || item >= ItemCount || amount <= 0 || ItemOwned(item) < amount) return false;
+        if (Inf) return true;
         if (IsDevice(item)) devices[item - potions.Length].owned -= amount;
         else potions[item].owned -= amount;
         return true;
@@ -1187,7 +1192,7 @@ public class PixelConsumables : MonoBehaviour
             {
                 PixelGhostMinigame ghosts = PixelFind.First<PixelGhostMinigame>();
                 if (ghosts == null || !ghosts.UseBait()) { PixelHints.Announce("Ghost Bait needs the Ghost Hunt running"); return false; }
-                devices[index].owned--;
+                if (!Inf) devices[index].owned--;
                 PixelStats.Count("bait.used");
                 PixelHints.Announce("Ghost Bait set out");
                 return true;
@@ -1195,7 +1200,7 @@ public class PixelConsumables : MonoBehaviour
             case DeviceKind.PetTreat:
             {
                 if (PixelPets.Instance == null || !PixelPets.Instance.TryUseTreat()) { PixelHints.Announce("Pet Treat needs a pet that is out"); return false; }
-                devices[index].owned--;
+                if (!Inf) devices[index].owned--;
                 PixelStats.Count("treat.used");
                 PixelHints.Announce("Your pets are hyper!");
                 return true;
@@ -1213,8 +1218,8 @@ public class PixelConsumables : MonoBehaviour
     {
         for (int i = 0; i < devices.Length; i++)
         {
-            if (devices[i] == null || devices[i].kind != kind || devices[i].owned <= 0) continue;
-            devices[i].owned--;
+            if (devices[i] == null || devices[i].kind != kind || (!Inf && devices[i].owned <= 0)) continue;
+            if (!Inf) devices[i].owned--;
             return true;
         }
         return false;
@@ -1253,7 +1258,7 @@ public class PixelConsumables : MonoBehaviour
     public bool BeginPlacement(int deviceIndex)
     {
         if (IsPlacing || deviceIndex < 0 || deviceIndex >= devices.Length) return false;
-        if (devices[deviceIndex].owned <= 0) return false;
+        if (!Inf && devices[deviceIndex].owned <= 0) return false;
 
         placingIndex = deviceIndex;
         placeStartFrame = Time.frameCount;
@@ -1345,15 +1350,15 @@ public class PixelConsumables : MonoBehaviour
     {
         Device d = devices[placingIndex];
         int tier = clicker.IndexOf(d.seedType);
-        if (d.owned <= 0 || tier < 0) { EndPlacement(); return; }
+        if ((!Inf && d.owned <= 0) || tier < 0) { EndPlacement(); return; }
         if (!clicker.PlantSeedSproutAt(point, tier))
         {
             PixelHints.Announce("Too many sprouts already - wait for some to finish growing");
             return;
         }
-        d.owned = Mathf.Max(0, d.owned - 1);
+        if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
         PixelStats.Count("seeds.planted");
-        if (d.owned <= 0) EndPlacement();
+        if (!Inf && d.owned <= 0) EndPlacement();
     }
 
     /// <summary>
@@ -1388,7 +1393,7 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
-        d.owned = Mathf.Max(0, d.owned - 1);
+        if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
         SpawnDevice(index, Vector3.zero, 0f, d.durationSeconds, placingYaw, sorterBend, -1);
 
@@ -1401,7 +1406,7 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
-        d.owned = Mathf.Max(0, d.owned - 1);
+        if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
         SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? d.uses : d.durationSeconds, 0f, 0f, -1);
 
