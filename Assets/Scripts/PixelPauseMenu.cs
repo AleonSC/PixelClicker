@@ -1582,7 +1582,7 @@ public class PixelPauseMenu : MonoBehaviour
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
         pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
-        abbreviateToggle = AddToggleRow(list, abbreviateLabel, PixelClicker.AbbreviateNumbers,
+        abbreviateToggle = AddToggleRow(list, abbreviateLabel.Replace(" (1.2K)", ""), PixelClicker.AbbreviateNumbers,
                                         on => PixelClicker.AbbreviateNumbers = on, ref y);
         hidePurchasedToggle = AddToggleRow(list, hidePurchasedLabel, PixelShop.HidePurchased,
                                            on => PixelShop.HidePurchased = on, ref y);

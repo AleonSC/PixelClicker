@@ -357,3 +357,4 @@
 [2026-10-10 16:02 UTC] The Toggles window's contents now line up with the Shop's (drop-down at the shop's tab row and as tall as it, list at the same height and edges); toggle labels stay on one line (names shortened, e.g. 'Seed', 'Prospector mode') and the rows and tick boxes are rounded.
 [2026-10-10 16:10 UTC] All scroll bars now fade away as soon as they are not in use (they show while the list scrolls or the mouse is over / holding the bar, then fade out quickly).
 [2026-10-10 16:36 UTC] Settings rows keep their names on one line (tick-box rows use the full width and long names shrink instead of wrapping).
+[2026-10-10 16:40 UTC] Removed the (1.2K) from the Abbreviate numbers setting label.
