@@ -96,6 +96,11 @@ public static class PixelUIKit
 
         Image image = go.GetComponent<Image>();
         image.color = color;
+        if (FancyButtons)
+        {
+            image.sprite = ButtonSprite();
+            image.type = Image.Type.Sliced;
+        }
         go.GetComponent<Button>().targetGraphic = image;
         go.GetComponent<Button>().onClick.AddListener(() => PixelAudio.Play("ui_click"));
 
@@ -104,6 +109,60 @@ public static class PixelUIKit
         Stretch(text.rectTransform);
         if (label == "X") UseCloseGlyph(go, text, labelColor, size); // close buttons draw a cross instead of the letter
         return go.GetComponent<Button>();
+    }
+
+    private const string PrefFancyButtons = "PixelClicker.Setting.FancyButtons";
+    private static int fancyCache = -1;
+    private static Sprite buttonSprite;
+
+    /// <summary>Buttons get a bevelled, rounded, gradient look instead of a flat colour (Settings > Display, applies to windows built after the next start). On by default.</summary>
+    public static bool FancyButtons
+    {
+        get
+        {
+            if (fancyCache < 0) fancyCache = PlayerPrefs.GetInt(PrefFancyButtons, 1);
+            return fancyCache != 0;
+        }
+        set
+        {
+            fancyCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefFancyButtons, fancyCache);
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetButtonStatics() { fancyCache = -1; buttonSprite = null; }
+
+    /// <summary>
+    /// A grey-scale 9-sliced button sprite (drawn once in code; it takes the button's colour as a tint): rounded corners, a dark outline,
+    /// a vertical light-to-dark gradient and a bright strip just inside the top edge, so a button reads as a raised key.
+    /// </summary>
+    private static Sprite ButtonSprite()
+    {
+        if (buttonSprite != null) return buttonSprite;
+        const int n = 48;
+        const float r = 10f;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Button", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f;
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float qx = Mathf.Max(Mathf.Abs(x - c) - (c - r), 0f), qy = Mathf.Max(Mathf.Abs(y - c) - (c - r), 0f);
+                float d = Mathf.Sqrt(qx * qx + qy * qy) - r;                   // < 0 inside the rounded rectangle
+                float alpha = Mathf.Clamp01(0.5f - d);
+                float depth = -d;                                              // distance in from the edge
+                float t = y / (float)(n - 1);                                  // 0 bottom, 1 top
+                float shade = Mathf.Lerp(0.7f, 1f, t);
+                if (depth < 2.2f) shade = Mathf.Lerp(0.42f, shade, Mathf.Clamp01(depth - 1f));          // the dark outline
+                else if (depth < 5f && t > 0.5f) shade = Mathf.Min(1.25f, shade + 0.22f * (1f - (depth - 2.2f) / 2.8f));   // the light strip under the top edge
+                else if (depth < 4f && t < 0.35f) shade *= 0.88f;                                       // a slightly darker lip at the bottom
+                px[y * n + x] = new Color(Mathf.Clamp01(shade), Mathf.Clamp01(shade), Mathf.Clamp01(shade), alpha);
+            }
+        tex.SetPixels(px);
+        tex.Apply(false, true);
+        buttonSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(14, 14, 14, 14));
+        return buttonSprite;
     }
 
     /// <summary>Shows a label in capitals (a style, so the text itself and later changes stay as written).</summary>

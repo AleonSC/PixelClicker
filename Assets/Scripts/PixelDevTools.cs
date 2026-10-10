@@ -947,6 +947,15 @@ public class PixelDevTools : MonoBehaviour
                                                  buttonColor, textColor, fontSize);
         PlaceTop(despawn.GetComponent<RectTransform>(), x, top, despawnSize);
         despawn.onClick.AddListener(DespawnSelected);
+        TMP_Text despawnLabel = despawn.GetComponentInChildren<TMP_Text>(true);
+        if (despawnLabel != null)
+        {
+            despawnLabel.enableAutoSizing = true;   // the text shrinks to fit the button instead of spilling out of it
+            despawnLabel.fontSizeMax = fontSize;
+            despawnLabel.fontSizeMin = 10f;
+            despawnLabel.rectTransform.offsetMin = new Vector2(4f, 0f);
+            despawnLabel.rectTransform.offsetMax = new Vector2(-4f, 0f);
+        }
 
         // An invisible area around the whole row: the mouse over it keeps the row (or brings it back) visible.
         GameObject hoverGo = new GameObject("Hover Area", typeof(RectTransform));
