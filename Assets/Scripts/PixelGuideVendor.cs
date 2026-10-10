@@ -101,10 +101,21 @@ public class PixelGuideVendor : MonoBehaviour
     /// <summary>True while the guide still has to show visit 2 (the shop tutorial waits for it).</summary>
     public static bool Pending => instance != null && !instance.disableGuide && PixelStats.Total(Stage2Key) < 1d;
 
+    /// <summary>Settings > Replay tutorial: Cubby's two visits play again (without a second gift).</summary>
+    public static void Replay()
+    {
+        if (instance == null) return;
+        PixelStats.Clear(Stage1Key);
+        PixelStats.Clear(Stage2Key);
+        instance.replaying = true;
+        instance.calmTimer = 0f;
+    }
+
     /// <summary>True while he is on screen.</summary>
     public static bool Visiting => instance != null && instance.visiting;
 
     private PixelStats stats;
+    private bool replaying; // Settings > Replay tutorial: both visits again, no second gift
     private bool visiting;
     private float calmTimer, vendorTimer;
     private float savedTimeScale = 1f;
@@ -157,7 +168,7 @@ public class PixelGuideVendor : MonoBehaviour
         bool s1 = PixelStats.Total(Stage1Key) >= 1d, s2 = PixelStats.Total(Stage2Key) >= 1d;
         if (!s2)
         {
-            if (ShopThere && !s1)
+            if (ShopThere && !s1 && !replaying)
             {
                 // A save that already reached the shop: no visits, no gift - just the vendors from now on.
                 PixelStats.Best(Stage1Key, 1d);
@@ -255,7 +266,7 @@ public class PixelGuideVendor : MonoBehaviour
             string text = pages[i];
             if (text.Contains("{gift}"))
             {
-                text = text.Replace("{gift}", GiveGift());
+                text = text.Replace("{gift}", replaying ? "(You already got yours, no seconds!)" : GiveGift());
                 if (giftBox != null) giftBox.gameObject.SetActive(true);
             }
             PixelUIKit.SetText(message, text);
@@ -276,6 +287,7 @@ public class PixelGuideVendor : MonoBehaviour
         if (second)
         {
             PixelStats.Best(Stage2Key, 1d);
+            replaying = false;
             StartVendors(false);
         }
 

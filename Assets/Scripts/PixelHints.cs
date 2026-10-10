@@ -370,6 +370,7 @@ public class PixelHints : MonoBehaviour
     public static void ReplayTutorial()
     {
         ResetSeen();
+        PixelGuideVendor.Replay(); // Cubby's visits are part of the tutorial
         if (instance == null) return;
         instance.forceIntro = true;
         instance.introChecked = false;

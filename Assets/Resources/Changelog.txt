@@ -223,3 +223,4 @@
 [2026-10-09 23:21 UTC] Offline progress can now find Dragon Cubes: the auto clicks made while you were away roll real dice at each cube's spawn-weight chance.
 [2026-10-09 23:39 UTC] Added the Pixel Entrepreneur visitor (75 White Pixels, Minigames tab) who offers random pixel-for-pixel deals: a random amount of a pixel you hold for a random amount of another pixel, at a rarity-based rate with random luck.
 [2026-10-10 00:00 UTC] Added Cubby, a suspicious cube guide who introduces the game, shows you the shop once you can prove you have money and hands you a gift pack; the Wizard, Tinkerer and Pixel Entrepreneur are now free visitors he starts as you progress (their shop packs are gone).
+[2026-10-10 00:04 UTC] Settings > Replay tutorial now replays Cubby's two visits too (without a second gift).

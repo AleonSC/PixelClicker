@@ -127,6 +127,12 @@ public class PixelStats : MonoBehaviour
         if (now <= 0d || value < now) instance.counters[key] = value;
     }
 
+    /// <summary>Removes a counter (back to 0).</summary>
+    public static void Clear(string key)
+    {
+        if (instance != null) instance.counters.Remove(key);
+    }
+
     /// <summary>A counter's value by key, from anywhere (0 when there is no PixelStats or nothing recorded).</summary>
     public static double Total(string key) => instance != null ? instance.Counter(key) : 0d;
 
