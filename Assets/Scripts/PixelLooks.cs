@@ -163,6 +163,10 @@ public class PixelLook
     [Tooltip("How quickly a pixel settles into that drag speed (per second). Higher = it grabs hold harder.")]
     public float wellGrip = 8f;
 
+    [Min(0)]
+    [Tooltip("The most old pixels one well pulls at a time (0 = 20). Other gravity-well pixels inside its radius count towards this, so wells placed close together use up each other's slots and have to be spaced out. A pixel is only ever held by one well.")]
+    public int wellMaxPixels = 20;
+
     [Range(0f, 1f)]
     [Tooltip("How visible the ring is (0 = invisible). Keep it very faint.")]
     public float wellRingOpacity = 0.16f;
@@ -1018,6 +1022,15 @@ public class OldPixelGravityWell : MonoBehaviour
 
     private PixelLook look; // read every frame, so changing the values in the Inspector while playing takes effect at once
 
+    // The pixels this well is holding right now (at most wellMaxPixels). A pixel is claimed by one well only.
+    private readonly HashSet<Rigidbody> members = new HashSet<Rigidbody>();
+    private readonly HashSet<Rigidbody> inReach = new HashSet<Rigidbody>();
+    private readonly List<Rigidbody> candidates = new List<Rigidbody>();
+    private static readonly Dictionary<Rigidbody, OldPixelGravityWell> claims = new Dictionary<Rigidbody, OldPixelGravityWell>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { claims.Clear(); }
+
     public void Setup(PixelClicker owner, PixelLook source)
     {
         clicker = owner;
@@ -1084,6 +1097,8 @@ public class OldPixelGravityWell : MonoBehaviour
         var list = clicker.OldPixels;
         Vector3 centre = transform.position;
         float blend = Mathf.Clamp01(grip * Time.fixedDeltaTime);
+        candidates.Clear();
+        inReach.Clear();
         for (int i = 0; i < list.Count; i++)
         {
             Rigidbody other = list[i];
@@ -1125,10 +1140,40 @@ public class OldPixelGravityWell : MonoBehaviour
             OldPixelDespawn despawn = other.GetComponent<OldPixelDespawn>();
             if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue; // carried by the player / vanishing
 
+            if ((centre - other.position).magnitude > radius) continue;
+            candidates.Add(other);
+            inReach.Add(other);
+        }
+
+        // Keep the pixels already held that are still in reach; free the others.
+        members.RemoveWhere(m =>
+        {
+            bool keep = m != null && inReach.Contains(m);
+            if (!keep && claims.TryGetValue(m, out OldPixelGravityWell owner) && owner == this) claims.Remove(m);
+            return !keep;
+        });
+
+        // Fill the free slots with the nearest unclaimed pixels in reach (other gravity wells count as pixels too, which forces spacing).
+        int cap = look != null && look.wellMaxPixels > 0 ? look.wellMaxPixels : 20;
+        if (members.Count < cap)
+        {
+            candidates.Sort((a, b) => (centre - a.position).sqrMagnitude.CompareTo((centre - b.position).sqrMagnitude));
+            foreach (Rigidbody c in candidates)
+            {
+                if (members.Count >= cap) break;
+                if (members.Contains(c)) continue;
+                if (claims.TryGetValue(c, out OldPixelGravityWell owner) && owner != null && owner != this) continue; // another well has it
+                claims[c] = this;
+                members.Add(c);
+            }
+        }
+
+        foreach (Rigidbody other in members)
+        {
             Vector3 to = centre - other.position;
             float distance = to.magnitude;
-            if (distance > radius) continue;
-            if (despawn != null) despawn.KeepAlive(); // inside the pull radius: it doesn't age while the well works
+            OldPixelDespawn despawn = other.GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.KeepAlive(); // held by the well: it doesn't age while the well works
             if (distance < 0.08f) continue;
 
             // A constant drag: whatever the pixel is doing (even sitting on the floor against its friction), its speed towards
@@ -1153,6 +1198,8 @@ public class OldPixelGravityWell : MonoBehaviour
 
     private void OnDestroy()
     {
+        foreach (Rigidbody m in members) claims.Remove(m); // let go of everything it held
+        members.Clear();
         if (ring != null) Destroy(ring);
     }
 
