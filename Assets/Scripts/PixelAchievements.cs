@@ -198,7 +198,7 @@ public class PixelAchievements : MonoBehaviour
         List<Achievement> list = new List<Achievement>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue; // Dragon Cubes have no achievements of their own
+            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue; // Dragon Cubes, the Fire pixel and the ores have no achievements of their own
             list.Add(CreateCollectAchievement(type, BuiltInTiers));
             list.Add(CreateClickAchievement(type));
         }
@@ -233,7 +233,7 @@ public class PixelAchievements : MonoBehaviour
 
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
             // Skip a type that already has any 'Collect Pixel Type' achievement.
             if (achievements.Exists(a => a != null && a.kind == Kind.CollectPixelType && a.pixelType == type)) continue;
             achievements.Add(CreateCollectAchievement(type, tiers));
@@ -243,7 +243,7 @@ public class PixelAchievements : MonoBehaviour
         // The "times clicked" achievement of each pixel type.
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
             if (achievements.Exists(a => a != null && a.kind == Kind.ClickPixelType && a.pixelType == type)) continue;
             achievements.Add(CreateClickAchievement(type));
             changed = true;
@@ -535,7 +535,7 @@ public class PixelAchievements : MonoBehaviour
         if (!addPetAchievements || clicker == null) return;
         foreach (PixelClicker.PixelTier tier in clicker.Tiers)
         {
-            if (tier.rareDrop) continue; // no pets for Dragon Cubes
+            if (tier.rareDrop || PixelClicker.IsStandalone(tier.type)) continue; // no pets for Dragon Cubes, Fire or the ores
             PixelClicker.PixelType type = tier.type;
             Register(new Achievement
             {

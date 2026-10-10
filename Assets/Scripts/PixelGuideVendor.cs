@@ -200,7 +200,7 @@ public class PixelGuideVendor : MonoBehaviour
     private int UnlockedTypes()
     {
         int n = 0;
-        foreach (PixelClicker.PixelTier t in clicker.Tiers) if (t.unlocked && !t.rareDrop) n++;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers) if (t.unlocked && !t.rareDrop && !PixelClicker.IsStandalone(t.type)) n++;
         return n;
     }
 
@@ -317,7 +317,7 @@ public class PixelGuideVendor : MonoBehaviour
         for (int i = 0; i < clicker.Tiers.Length; i++)
         {
             PixelClicker.PixelTier t = clicker.Tiers[i];
-            if (t.unlocked && !t.rareDrop && !t.flyAway) candidates.Add(i);
+            if (t.unlocked && !t.rareDrop && !t.flyAway && !PixelClicker.IsStandalone(t.type)) candidates.Add(i);
         }
         StringBuilder sb = new StringBuilder();
         for (int n = 0; n < giftTypes && candidates.Count > 0; n++)

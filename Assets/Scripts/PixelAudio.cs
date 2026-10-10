@@ -233,7 +233,13 @@ public class PixelAudio : MonoBehaviour
             Make("seed_dig", 0.04f, 0.9f, 1.1f),
             Make("seed_plant", 0.05f, 0.9f, 1.1f),
             Make("water_splash", 0.05f, 0.9f, 1.1f),
+            Make("fire_burst", 0.1f, 0.92f, 1.08f),
+            Make("fire_crackle", 0.15f, 0.85f, 1.15f),
+            Make("ore_chip", 0.04f, 0.8f, 1.3f),
+            Make("ore_gleam", 0.3f, 0.95f, 1.05f),
         };
+        foreach (PixelClicker.PixelType ore in Enum.GetValues(typeof(PixelClicker.PixelType)))
+            if (PixelClicker.IsOre(ore)) list.Add(Make("pixel_bounce_" + ore.ToString().ToLowerInvariant(), 0.04f, 0.9f, 1.15f)); // ore clinks when an old ore lands
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
             list.Add(Make("pixel_" + type.ToString().ToLowerInvariant(), 0.03f, 0.92f, 1.08f));
         return list;
@@ -248,15 +254,40 @@ public class PixelAudio : MonoBehaviour
         if (sounds == null) return;
         foreach (Sound s in sounds)
         {
-            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon" && s.id != "seed_dig" && s.id != "seed_plant" && s.id != "water_splash")) continue;
+            if (s == null || string.IsNullOrEmpty(s.id)) continue;
+            AudioClip[] made = SynthFor(s.id);
+            if (made == null) continue;
             if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
-            s.clips = s.id == "water_splash" ? new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) }
-                    : s.id == "seed_plant" ? new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) }
-                    : s.id == "seed_dig" ? new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) }
-                    : s.id == "dragon_summon" ? new[] { PixelSynth.Summon() }
-                    : s.id == "overcharge" ? new[] { PixelSynth.Charge() }
-                    : new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
+            s.clips = made;
         }
+    }
+
+    /// <summary>The code-made clips of a sound id (null = this sound has none).</summary>
+    private static AudioClip[] SynthFor(string id)
+    {
+        switch (id)
+        {
+            case "pixel_bounce_electric": return new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
+            case "overcharge": return new[] { PixelSynth.Charge() };
+            case "dragon_summon": return new[] { PixelSynth.Summon() };
+            case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
+            case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
+            case "water_splash": return new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) };
+            case "fire_burst": return new[] { PixelSynth.FireBurst(1), PixelSynth.FireBurst(2), PixelSynth.FireBurst(3) };
+            case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
+            case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
+            case "ore_gleam": return new[] { PixelSynth.OreGleam() };
+        }
+        // Each ore's own click is the sound of it breaking; its landing is a metallic clink.
+        foreach (PixelClicker.PixelType ore in System.Enum.GetValues(typeof(PixelClicker.PixelType)))
+        {
+            if (!PixelClicker.IsOre(ore)) continue;
+            string name = ore.ToString().ToLowerInvariant();
+            int variant = (int)ore - (int)PixelClicker.PixelType.Copper;
+            if (id == "pixel_" + name) return new[] { PixelSynth.OreBreak(1 + variant), PixelSynth.OreBreak(7 + variant) };
+            if (id == "pixel_bounce_" + name) return new[] { PixelSynth.OreClink(1 + variant), PixelSynth.OreClink(11 + variant), PixelSynth.OreClink(21 + variant) };
+        }
+        return null;
     }
 
     /// <summary>True if a sound with this id exists and has at least one clip.</summary>
@@ -807,6 +838,166 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
         AudioClip clip = AudioClip.Create("Dragon Summon", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A whoosh of fire: a rising roar of band-limited noise with a deep thump at the start and a sprinkle of crackles. 'seed' picks a variant.</summary>
+    public static AudioClip FireBurst(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.7f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(1100 + seed * 41);
+        float lp = 0f, lp2 = 0f, crackle = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.12f;           // low-passed: a rumbling roar
+            lp2 += (lp - lp2) * 0.35f;
+            float env = Mathf.Clamp01(sec / 0.05f) * Mathf.Exp(-sec * 4.2f);
+            float thump = Mathf.Sin(sec * (70f - seed * 6f) * Mathf.PI * 2f) * Mathf.Exp(-sec * 14f) * 0.9f;
+            if (rng.NextDouble() < 0.012 * (1f - sec)) crackle = ((float)rng.NextDouble() * 2f - 1f) * 0.9f;
+            crackle *= 0.86f;
+            data[i] = (lp2 * 3.2f * env + thump + crackle * 0.5f * Mathf.Exp(-sec * 3f));
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
+        AudioClip clip = AudioClip.Create("FireBurst " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>Fire crackling: a few sharp pops and snaps over a soft hiss.</summary>
+    public static AudioClip FireCrackle(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.45f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(1300 + seed * 53);
+        float lp = 0f, pop = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.3f;
+            if (rng.NextDouble() < 0.006) pop = ((float)rng.NextDouble() * 2f - 1f);
+            pop *= 0.78f;
+            data[i] = (pop * 1.2f + (noise - lp) * 0.1f) * Mathf.Exp(-sec * 5f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("FireCrackle " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A pickaxe hit on rock: a tick of grit and a short metallic ping. 'seed' picks the pitch.</summary>
+    public static AudioClip OreChip(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.22f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(1500 + seed * 17);
+        float hz = 1500f + seed * 260f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float tick = ((float)rng.NextDouble() * 2f - 1f) * Mathf.Exp(-sec * 160f);
+            float ping = (Mathf.Sin(sec * hz * Mathf.PI * 2f) + 0.5f * Mathf.Sin(sec * hz * 2.76f * Mathf.PI * 2f)) * Mathf.Exp(-sec * 28f);
+            data[i] = tick * 0.9f + ping * 0.45f;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
+        AudioClip clip = AudioClip.Create("OreChip " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The ore breaking: a crack, a low rumble and a cascade of falling nuggets (little pings). 'seed' picks the variant.</summary>
+    public static AudioClip OreBreak(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.5f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(1700 + seed * 29);
+        float lp = 0f;
+        float[] at = { 0.05f, 0.09f, 0.14f, 0.2f, 0.27f };
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.4f;
+            float crack = lp * Mathf.Exp(-sec * 38f) * 1.4f;
+            float rumble = Mathf.Sin(sec * (55f + (seed % 5) * 6f) * Mathf.PI * 2f) * Mathf.Exp(-sec * 9f) * 0.8f;
+            float nuggets = 0f;
+            for (int k = 0; k < at.Length; k++)
+            {
+                float t = sec - at[k] - (seed % 3) * 0.004f;
+                if (t < 0f) continue;
+                float hz = 1600f + k * 330f + (seed % 7) * 70f;
+                nuggets += Mathf.Sin(t * hz * Mathf.PI * 2f) * Mathf.Exp(-t * 55f) * (0.5f - k * 0.07f);
+            }
+            data[i] = (crack + rumble + nuggets) * Mathf.Clamp01(sec / 0.002f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
+        AudioClip clip = AudioClip.Create("OreBreak " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A bright three-note bell sparkle: the sound of a rich vein.</summary>
+    public static AudioClip OreGleam()
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.8f);
+        float[] data = new float[n];
+        float[] notes = { 1318.5f, 1760f, 2637f };   // E6, A6, E7
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float v = 0f;
+            for (int k = 0; k < notes.Length; k++)
+            {
+                float t = sec - k * 0.09f;
+                if (t < 0f) continue;
+                v += (Mathf.Sin(t * notes[k] * Mathf.PI * 2f) + 0.3f * Mathf.Sin(t * notes[k] * 3f * Mathf.PI * 2f)) * Mathf.Exp(-t * 5.5f) * 0.5f;
+            }
+            data[i] = v * Mathf.Clamp01(sec / 0.003f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("OreGleam", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A short metallic clink of a chunk of ore landing. 'seed' picks the pitch.</summary>
+    public static AudioClip OreClink(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.18f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(1900 + seed * 13);
+        float hz = 900f + (seed % 9) * 130f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float tick = ((float)rng.NextDouble() * 2f - 1f) * Mathf.Exp(-sec * 220f);
+            float ring = (Mathf.Sin(sec * hz * Mathf.PI * 2f) + 0.6f * Mathf.Sin(sec * hz * 1.59f * Mathf.PI * 2f)) * Mathf.Exp(-sec * 32f);
+            data[i] = tick * 0.7f + ring * 0.5f;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("OreClink " + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

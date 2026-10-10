@@ -835,7 +835,7 @@ public partial class PixelShop
         {
             PackRow row = valueRows[t];
             PixelClicker.PixelTier tier = clicker.Tiers[t];
-            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked && !(HidePurchased && ValueUpgradeMaxed(t));
+            bool visible = onUpgrades && upgradesSubTab == 1 && tier.unlocked && !PixelClicker.IsStandalone(tier.type) && !(HidePurchased && ValueUpgradeMaxed(t));
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 

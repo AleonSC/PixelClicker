@@ -64,7 +64,7 @@ public class PixelEntrepreneurMinigame : PixelVisitorMinigame
         List<int> receivable = new List<int>(); // unlocked pixel types he can give
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (tiers[i].rareDrop) continue;
+            if (tiers[i].rareDrop || PixelClicker.IsStandalone(tiers[i].type)) continue;
             if (tiers[i].count >= minHeld) payable.Add(i);
             if (tiers[i].unlocked) receivable.Add(i);
         }

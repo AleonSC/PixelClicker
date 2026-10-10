@@ -460,10 +460,10 @@ public class PixelStats : MonoBehaviour
         {
             Head("Pets");
             int petTypes = 0;
-            foreach (PixelClicker.PixelTier t in clicker.Tiers) if (!t.rareDrop) petTypes++;
+            foreach (PixelClicker.PixelTier t in clicker.Tiers) if (!t.rareDrop && !PixelClicker.IsStandalone(t.type)) petTypes++;
             Row("Pets found", petSystem.OwnedCount + " / " + petTypes);
             foreach (PixelClicker.PixelTier t in clicker.Tiers)
-                if (!t.rareDrop) Row("   " + (petSystem.IsOwned(t.type) ? petSystem.NameOf(t.type) : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
+                if (!t.rareDrop && !PixelClicker.IsStandalone(t.type)) Row("   " + (petSystem.IsOwned(t.type) ? petSystem.NameOf(t.type) : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
             if (petSystem.IsOwned(PixelClicker.PixelType.Vacuum) || Counter("pet.vacuum") > 0d)
                 Cnt("Old pixels sucked by the Vacuum Pet", "pet.vacuum");
         }

@@ -224,7 +224,8 @@ public class PixelToggles : MonoBehaviour
         {
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
             bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled))
-                        || (PixelPets.Instance != null && PixelPets.Instance.OwnedCount > 0); // a pet also opens the window
+                        || (PixelPets.Instance != null && PixelPets.Instance.OwnedCount > 0) // a pet also opens the window
+                        || PixelProspector.AnyOreUnlocked(clicker); // so does the Prospector mode switch
             if (openObject.activeSelf != show) openObject.SetActive(show);
             if (!show && windowObject != null && windowObject.activeSelf) windowObject.SetActive(false);
         }
@@ -254,6 +255,14 @@ public class PixelToggles : MonoBehaviour
 
         if (group == Group.Pixels)
         {
+            // Prospector mode: the ores replace the basic pixels in what spawns (only once an ore is unlocked).
+            if (PixelProspector.AnyOreUnlocked(clicker))
+                list.Add(new Entry
+                {
+                    label = "Prospector mode (ores replace the basic pixels)",
+                    on = PixelProspector.Setting,
+                    setter = on => { PixelProspector.Setting = on; clicker.RefreshSpawnTier(); },
+                });
             for (int i = 0; i < clicker.Tiers.Length; i++)
             {
                 PixelClicker.PixelTier t = clicker.Tiers[i];

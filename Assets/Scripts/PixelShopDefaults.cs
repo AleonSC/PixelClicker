@@ -445,6 +445,64 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>
+    /// Default Fire Pixel pack (Pixels tab): a TESTING pixel (5 White, no requirements). Clicking it bursts a ring of flames round the cube; the
+    /// old pixel falls while it burns away. No potions, pets, crafting or other integration.
+    /// </summary>
+    private static ShopPack CreateFirePixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Fire Pixel",
+            tab = ShopTab.Pixels,
+            description = "TEST: Adds the Fire pixel, a glowing orange cube with flames rising off it. Clicking it bursts a ring of fire round the cube, and the old pixel burns away as it falls.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 5 } },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Fire, displayName = "Fire Pixels",
+                    color = new Color(1f, 0.45f, 0.1f, 1f), glow = true, glowIntensity = 1.5f,
+                    amountPerClick = 6,
+                    spawnWeight = 0.5f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>
+    /// Default Prospector's Pack (Pixels tab): very cheap (10 White, no requirements). Six base-metal ore pixels - tough rocks that crack and shed
+    /// chips as you hit them, break in a shower of nuggets and are sometimes a glittering RICH VEIN that pays 5x. No other integration; a switch
+    /// in the Toggles window (Prospector mode) makes them replace the basic pixels in what spawns.
+    /// </summary>
+    private static ShopPack CreateProspectorPack()
+    {
+        PixelClicker.PixelTier Ore(PixelClicker.PixelType type, string name, Color color, int hits, int pay, float weight) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
+        return new ShopPack
+        {
+            displayName = "Prospector's Pack",
+            tab = ShopTab.Pixels,
+            description = "Adds six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Switch on Prospector mode in the Toggles window to make the ores replace the basic pixels.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            rewardTiers = new[]
+            {
+                Ore(PixelClicker.PixelType.Copper, "Copper Ore", new Color(0.86f, 0.46f, 0.26f, 1f), 2, 3, 1.0f),
+                Ore(PixelClicker.PixelType.Tin, "Tin Ore", new Color(0.75f, 0.8f, 0.84f, 1f), 2, 3, 0.9f),
+                Ore(PixelClicker.PixelType.Iron, "Iron Ore", new Color(0.62f, 0.36f, 0.3f, 1f), 3, 5, 0.8f),
+                Ore(PixelClicker.PixelType.Lead, "Lead Ore", new Color(0.46f, 0.52f, 0.66f, 1f), 3, 5, 0.7f),
+                Ore(PixelClicker.PixelType.Zinc, "Zinc Ore", new Color(0.7f, 0.88f, 0.95f, 1f), 4, 7, 0.5f),
+                Ore(PixelClicker.PixelType.Nickel, "Nickel Ore", new Color(0.82f, 0.76f, 0.58f, 1f), 5, 10, 0.4f),
+            }
+        };
+    }
+
     /// <summary>Default Mirror Pixel pack (Pixels tab): listed after Electric and before Vacuum, needs the Electric pack. Clicking a Mirror also counts as a click on the last other pixel type.</summary>
     private static ShopPack CreateMirrorPixelPack(int requiresElectricIndex)
     {
@@ -779,6 +837,10 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSeedPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Water),
                           requires = null, create = i => CreateWaterPixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),
+                          requires = null, create = i => CreateFirePixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Copper),
+                          requires = null, create = i => CreateProspectorPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
                           requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Mirror),

@@ -1647,7 +1647,10 @@ public partial class PixelShop : MonoBehaviour
             if (pack.unlocksBank) PixelHints.Trigger("bank");
             if (pack.rewardTiers != null)
                 foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
                     PixelHints.Trigger("pixel_" + reward.type);
+                }
 
             // The auto clicker starts switched off: a box points the player to the Toggles window to turn it on.
             if (pack.unlocksAutoClicker && autoClicker != null)

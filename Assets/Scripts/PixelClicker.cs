@@ -70,7 +70,20 @@ public class PixelClicker : MonoBehaviour
         Mirror = 22,
         Seed = 23,
         Water = 24,
+        Fire = 25,
+        Copper = 26,
+        Tin = 27,
+        Iron = 28,
+        Lead = 29,
+        Zinc = 30,
+        Nickel = 31,
     }
+
+    /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
+    public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
+
+    /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || IsOre(type);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -222,7 +235,7 @@ public class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water || t == PixelType.Fire;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -298,7 +311,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -459,6 +472,25 @@ public class PixelClicker : MonoBehaviour
 
     [Tooltip("Speed curve of the suck-in (time 0..1, progress 0..1). Rising curves pull faster toward the end.")]
     [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("Fire Pixel / Prospector Ores")]
+    [Tooltip("Tick to turn off the Fire pixel's burst of flames when it is clicked and its burning old pixels (the pixel itself stays).")]
+    [SerializeField] private bool disableFireFx = false;
+
+    [Min(0f)]
+    [Tooltip("Seconds an old Fire pixel takes to burn away. 0 = the coded default (6).")]
+    [SerializeField] private float fireBurnSeconds = 0f;
+
+    [Tooltip("Tick to turn off the ore pixels' chips, glitter and rich veins.")]
+    [SerializeField] private bool disableProspectorFx = false;
+
+    [Range(0f, 1f)]
+    [Tooltip("Chance that a fresh ore pixel is a RICH VEIN (it glitters and pays much more). 0 = the coded default (8%).")]
+    [SerializeField] private float richVeinChance = 0f;
+
+    [Min(0f)]
+    [Tooltip("How many times its normal payout a rich vein pays. 0 = the coded default (5).")]
+    [SerializeField] private float richVeinMultiplier = 0f;
 
     [Tooltip("Old pixels sucked up swirl round the Vacuum pixel instead of flying straight in. Tick to turn the swirl off.")]
     [SerializeField] private bool disableVacuumSwirl = false;
@@ -1278,6 +1310,19 @@ public class PixelClicker : MonoBehaviour
             }
             looksVersion = 24;
         }
+        if (looksVersion < 25)
+        {
+            // The Fire pixel and the six Prospector ores are new: add their looks to lists saved before they existed.
+            System.Collections.Generic.List<PixelLook> list25 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            foreach (PixelType t in new[] { PixelType.Fire, PixelType.Copper, PixelType.Tin, PixelType.Iron, PixelType.Lead, PixelType.Zinc, PixelType.Nickel })
+            {
+                if (PixelLooks.Find(list25.ToArray(), t) != null) continue;
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), t);
+                if (def != null) list25.Add(def);
+            }
+            looks = list25.ToArray();
+            looksVersion = 25;
+        }
 
         if (pixelRenderer != null)
         {
@@ -1481,6 +1526,7 @@ public class PixelClicker : MonoBehaviour
                 SetLiveDamage(tier, hitsOnCurrentPixel);
                 PlayClickEffects(tier);
                 if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)tier.clicksToCollect);
+                if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)tier.clicksToCollect);
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, tier.clicksToCollect, automatic);
                 onPixelClicked?.Invoke();
                 return;
@@ -1503,6 +1549,8 @@ public class PixelClicker : MonoBehaviour
         }
 
         double basePayout = tier.amountPerClick * breaks;
+        bool richBreak = liveRich && IsOre(tier.type);
+        if (richBreak) basePayout *= richVeinMultiplier > 0f ? richVeinMultiplier : 5f;   // a rich vein pays big
         if (tier.randomPayout)
         {
             // A fresh random amount for every pixel harvested (a big dev click count uses the average instead of rolling thousands of times).
@@ -1536,6 +1584,12 @@ public class PixelClicker : MonoBehaviour
         }
 
         PlayClickEffects(tier);
+        if (tier.type == PixelType.Fire && !disableFireFx) FireBurstFx.Play(pixelTransform.position, PixelBaseSize);
+        if (IsOre(tier.type) && !disableProspectorFx)
+        {
+            OreFx.Break(pixelTransform.position, PixelBaseSize, tier.color, richBreak);
+            if (richBreak) { liveRich = false; if (richGlitter != null) { Destroy(richGlitter); richGlitter = null; } }
+        }
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
         if (tier.type == PixelType.Seed) { SeedDigEffect(1f); for (int s = 0, n = seedsPerShell > 0 ? seedsPerShell : 3; s < n; s++) SpawnSeedSprout(); } // the shell cracked: several seeds (sprouts) come out instead of an old pixel
         else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
@@ -1982,20 +2036,31 @@ public class PixelClicker : MonoBehaviour
             return pick;
         }
 
+        // Prospector mode: the ores replace the basic pixels (White..Blue, Glass) in what spawns.
+        bool prospecting = PixelProspector.Setting && PixelProspector.AnyOreUnlocked(this);
+
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn) total += SpawnWeightOf(i);
+            if (tiers[i].CanSpawn && !(prospecting && PixelProspector.IsBase(tiers[i].type))) total += SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].CanSpawn) continue;
+            if (!tiers[i].CanSpawn || (prospecting && PixelProspector.IsBase(tiers[i].type))) continue;
             roll -= SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }
         return GetHighestUnlockedIndex();
+    }
+
+    /// <summary>Rolls the next pixel again now (used when the Prospector mode switch changes).</summary>
+    public void RefreshSpawnTier()
+    {
+        if (!randomizeSpawnTier || pixelTransform == null) return;
+        currentTierIndex = PickSpawnTier();
+        Materialize(GetClickTier());
     }
 
     private int GetClickTierIndex()
@@ -2155,7 +2220,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             PixelTier t = tiers[i];
-            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed || t.type == PixelType.Singularity) continue;
+            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed || t.type == PixelType.Singularity || IsStandalone(t.type)) continue;
             float w = 1f / Mathf.Pow(Mathf.Max(0.02f, t.spawnWeight), seedRarityBias);
             candidates.Add(i);
             weights.Add(w);
@@ -2416,8 +2481,9 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture;
+        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture;
         Texture2D tex = onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
+                      : look.oreTexture ? PixelLooks.OreTexture(look.oreColor, look.damageCracks ? level : 0, max)
                       : look.chromeTexture ? PixelLooks.ChromeTexture()
                       : PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max, look.shellTexture);
         block.SetTexture("_BaseMap", tex);
@@ -2689,9 +2755,17 @@ public class PixelClicker : MonoBehaviour
         return m;
     }
 
+    private bool liveRich;          // the ore on the cube is a rich vein
+    private GameObject richGlitter;
+
     private void Materialize(PixelTier tier)
     {
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
+
+        // A fresh ore pixel is sometimes a rich vein: it glitters and pays much more when it breaks.
+        if (richGlitter != null) { Destroy(richGlitter); richGlitter = null; }
+        liveRich = IsOre(tier.type) && !disableProspectorFx && UnityEngine.Random.value < (richVeinChance > 0f ? richVeinChance : 0.08f);
+        if (liveRich && pixelTransform != null) richGlitter = OreFx.Glitter(pixelTransform, PixelBaseSize);
         if (materializeRoutine != null) StopCoroutine(materializeRoutine);
         materializeRoutine = StartCoroutine(MaterializeRoutine(tier));
     }
@@ -3366,6 +3440,8 @@ public class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.splash)
                     copy.AddComponent<OldPixelSplash>().Setup(this);
+                if (styled.burn && !disableFireFx)
+                    copy.AddComponent<OldPixelBurn>().Setup(this, fireBurnSeconds > 0f ? fireBurnSeconds : 6f);
                 if (styled.shatter)
                     copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
             }

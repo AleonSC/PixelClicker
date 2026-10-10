@@ -372,7 +372,7 @@ public class PixelCrafting : MonoBehaviour
         List<Recipe> list = new List<Recipe>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
             list.Add(new Recipe
             {
                 label = type + " Potion",
@@ -392,7 +392,7 @@ public class PixelCrafting : MonoBehaviour
         bool changed = false;
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
             if (recipes.Exists(r => r != null && r.resultKind == ResultKind.Potion && r.resultPotion == type)) continue;
             recipes.Add(new Recipe
             {
@@ -1257,7 +1257,7 @@ public class PixelCrafting : MonoBehaviour
         FitWindow();
         List<Item> items = new List<Item>();
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (Math.Floor(t.count) >= 1d && !t.rareDrop) items.Add(new Item(ItemKind.Pixel, t.type)); // Dragon Cubes are for the wish, not crafting
+            if (Math.Floor(t.count) >= 1d && !t.rareDrop && !PixelClicker.IsStandalone(t.type)) items.Add(new Item(ItemKind.Pixel, t.type)); // Dragon Cubes are for the wish, not crafting
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount && !consumables.IsDevice(i); i++)
                 if (consumables.ItemCraftOnly(i) ? consumables.Get(i).owned > 0 : consumables.ItemOwned(i) > 0) // combo potions only when really held (Infinite resources would list all of them)
@@ -1432,7 +1432,7 @@ public class PixelCrafting : MonoBehaviour
 
         if (potion.hasThird) return null;
         if (potion.type == pixel.type || (potion.combo && potion.second == pixel.type)) return null;
-        if (PixelClicker.IsDragonCube(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
+        if (PixelClicker.IsDragonCube(pixel.type) || PixelClicker.IsStandalone(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
         if (clicker.IndexOf(pixel.type) < 0) return null;
 
         if (potion.combo)

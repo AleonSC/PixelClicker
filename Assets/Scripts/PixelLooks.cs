@@ -235,19 +235,102 @@ public class PixelLook
     [Tooltip("Water: old pixels of this type splash on the ground and are gone (whether or not anything needed watering); nearby Seed sprouts and the Seed pet are watered.")]
     public bool splash = false;
 
+    [Tooltip("Ore pixels (Prospector's Pack): draw a rock texture speckled and veined with 'Ore Color' metal; cracks spread over it with every hit (needs Damage Cracks).")]
+    public bool oreTexture = false;
+
+    [Tooltip("The metal showing in the ore's veins and flecks.")]
+    public Color oreColor = new Color(0.85f, 0.47f, 0.28f, 1f);
+
+    [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
+    public bool flames = false;
+
+    [Tooltip("Fire: old pixels of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
+    public bool burn = false;
+
     [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => flames || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
-    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || basicSurface != BasicSurface.None;
+    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || basicSurface != BasicSurface.None;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
 public static class PixelLooks
 {
+    private static PixelLook OreLook(PixelClicker.PixelType type, Color metal)
+        => new PixelLook { type = type, useColor = true, color = Color.white, metallic = 0.2f, smoothness = 0.3f, damageCracks = true, oreTexture = true, oreColor = metal };
+
+    private static readonly Dictionary<int, Texture2D> oreTextures = new Dictionary<int, Texture2D>();
+
+    /// <summary>
+    /// An ore's surface: chunky 64 px pixel-art rock (grey, speckled) with veins and flecks of 'metal' running through it. 'level' 0 = whole,
+    /// up to 'maxLevel' = about to break (dark cracks spread a little further with each level). Drawn once per colour and level.
+    /// </summary>
+    public static Texture2D OreTexture(Color metal, int level, int maxLevel)
+    {
+        maxLevel = Mathf.Max(1, maxLevel);
+        level = Mathf.Clamp(level, 0, maxLevel);
+        int rgb = (Mathf.RoundToInt(metal.r * 255f) << 16) | (Mathf.RoundToInt(metal.g * 255f) << 8) | Mathf.RoundToInt(metal.b * 255f);
+        int key = unchecked(rgb * 31 + level * 7919 + maxLevel * 104729);
+        if (oreTextures.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+        const int size = 64;
+        Color32[] px = new Color32[size * size];
+        int seed = rgb % 997;
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)size, v = y / (float)size;
+                float rockNoise = PixelNoise.Fbm(u, v, 4, 3, 11 + seed);
+                float grit = PixelNoise.Hash(x, y, 5 + seed);
+                float grey = Mathf.Lerp(0.22f, 0.5f, rockNoise) + (grit - 0.5f) * 0.1f;
+                Color c = new Color(grey * 1.04f, grey, grey * 0.96f, 1f);
+
+                // Veins: thin winding bands where a second noise crosses its middle value.
+                float vein = Mathf.Abs(PixelNoise.Fbm(u + 0.17f, v, 3, 3, 23 + seed) - 0.5f);
+                // Flecks: blobs where a finer noise is high.
+                float fleck = PixelNoise.Fbm(u, v, 7, 2, 31 + seed);
+                bool isMetal = vein < 0.03f || fleck > 0.7f;
+                if (isMetal)
+                {
+                    float shine = 0.78f + grit * 0.5f;
+                    c = new Color(metal.r * shine, metal.g * shine, metal.b * shine, 1f);
+                    if (grit > 0.92f) c = Color.Lerp(c, Color.white, 0.55f);   // a glint
+                }
+                px[y * size + x] = new Color32((byte)Mathf.Clamp(c.r * 255f, 0f, 255f), (byte)Mathf.Clamp(c.g * 255f, 0f, 255f), (byte)Mathf.Clamp(c.b * 255f, 0f, 255f), 255);
+            }
+
+        if (level > 0)
+        {
+            // Dark cracks: the same jagged paths every time, longer and in more places with each level.
+            int cracks = 2 + level * 2;
+            int segments = 3 + level * 2;
+            for (int c = 0; c < cracks; c++)
+            {
+                System.Random rnd = new System.Random(2000 + c * 37);
+                float x = size * (0.25f + (float)rnd.NextDouble() * 0.5f), y = size * (0.25f + (float)rnd.NextDouble() * 0.5f);
+                float angle = (float)rnd.NextDouble() * Mathf.PI * 2f;
+                for (int sIdx = 0; sIdx < 12; sIdx++)
+                {
+                    angle += ((float)rnd.NextDouble() - 0.5f) * 1.2f;
+                    float step = 3f + (float)rnd.NextDouble() * 5f;
+                    float nx = x + Mathf.Cos(angle) * step, ny = y + Mathf.Sin(angle) * step;
+                    if (sIdx < segments) DrawLine(px, size, x, y, nx, ny, level >= maxLevel ? 2 : 1, 1f, 0.04f);
+                    x = nx; y = ny;
+                }
+            }
+        }
+
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Point, name = "OreSurface" };
+        tex.SetPixels32(px);
+        tex.Apply(true, false);
+        oreTextures[key] = tex;
+        return tex;
+    }
+
     /// <summary>The built-in styles (used when the list on PixelClicker is new).</summary>
     public static PixelLook[] CreateDefaults()
     {
@@ -292,6 +375,18 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = Color.white,
                             metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.85f },
+
+            // Fire (testing pixel): a glowing orange cube with flames rising off it; the old pixel burns away.
+            new PixelLook { type = PixelClicker.PixelType.Fire, useColor = true, color = new Color(1f, 0.42f, 0.08f, 1f),
+                            metallic = 0f, smoothness = 0.15f, emission = 1.2f, flames = true, burn = true },
+
+            // The Prospector ores: rock cubes veined and flecked with metal; they crack as you hit them.
+            OreLook(PixelClicker.PixelType.Copper, new Color(0.86f, 0.46f, 0.26f, 1f)),
+            OreLook(PixelClicker.PixelType.Tin, new Color(0.75f, 0.8f, 0.84f, 1f)),
+            OreLook(PixelClicker.PixelType.Iron, new Color(0.62f, 0.36f, 0.3f, 1f)),
+            OreLook(PixelClicker.PixelType.Lead, new Color(0.46f, 0.52f, 0.66f, 1f)),
+            OreLook(PixelClicker.PixelType.Zinc, new Color(0.7f, 0.88f, 0.95f, 1f)),
+            OreLook(PixelClicker.PixelType.Nickel, new Color(0.82f, 0.76f, 0.58f, 1f)),
 
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
@@ -531,6 +626,8 @@ public static class PixelLooks
         root.layer = parent.gameObject.layer;
         Vector3 size = cube.bounds.size;
         Vector3 centre = cube.bounds.center;
+
+        if (look.flames) PixelFlames.Attach(root.transform, centre, size);
 
         if (look.outline)
         {
