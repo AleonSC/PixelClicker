@@ -589,7 +589,7 @@ public class PixelSortMinigame : PixelMinigame
                 double pay = p.amount * multiplier;
                 payout += pay;
                 clicker.AddCurrency(p.tier, pay);
-                UltraRoll(clicker, p.tier, ultraChance, 0.06f, ultraMaxPerRound, 3, disableUltra, 1f + fraction, p.body.position);
+                UltraRoll(clicker, ultraChance, 0.06f, ultraMaxPerRound, 3, disableUltra, 1f + fraction, p.body.position);
                 if (p.despawn != null) p.despawn.Begin(); // the sorted pixels shrink away
             }
             else

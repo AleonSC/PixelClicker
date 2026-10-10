@@ -579,7 +579,7 @@ public class PixelBreakoutMinigame : PixelMinigame
             double pay = b.amount * brickMultiplier;
             earned += pay;
             clicker.AddCurrency(b.tier, pay);
-            UltraRoll(clicker, b.tier, ultraChance, 0.03f, ultraMaxPerRound, 3, disableUltra, 1f, b.tf.position);
+            UltraRoll(clicker, ultraChance, 0.03f, ultraMaxPerRound, 3, disableUltra, 1f, b.tf.position);
             if (b.despawn != null) b.despawn.Begin(); // the broken pixel shrinks away
             bricksLeft--;
             speed = Mathf.Min(maxBallSpeed, speed + speedUpPerBrick);

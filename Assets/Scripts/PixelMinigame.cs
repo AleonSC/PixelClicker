@@ -125,16 +125,16 @@ public abstract class PixelMinigame : MonoBehaviour
     /// The shared Ultra roll: 'chance' (or 'defaultChance' when it is 0, e.g. an older saved scene) that a pixel of this type gives one
     /// Ultra pixel, up to 'cap' per round ('defaultCap' when 0). Announces the gain in the event log. Returns true if one was given.
     /// </summary>
-    protected bool UltraRoll(PixelClicker clicker, int tier, float chance, float defaultChance, int cap, int defaultCap,
+    protected bool UltraRoll(PixelClicker clicker, float chance, float defaultChance, int cap, int defaultCap,
                              bool disabled, float chanceMultiplier = 1f, Vector3? at = null)
     {
-        if (disabled || clicker == null || !clicker.IsValidTierIndex(tier)) return false;
+        if (disabled || clicker == null) return false;
         if (ultraRoundCount >= (cap > 0 ? cap : defaultCap)) return false;
-        if (!clicker.RollUltra(tier, (chance > 0f ? chance : defaultChance) * chanceMultiplier)) return false;
+        if (!clicker.RollUltra((chance > 0f ? chance : defaultChance) * chanceMultiplier)) return false;
         ultraRoundCount++;
         PixelStats.Count("ultra." + Id);
-        PixelHints.Announce("Ultra " + clicker.Tiers[tier].displayName + " pixel gained!");
-        if (at.HasValue) PixelUltraFx.Play(clicker, tier, at.Value);
+        PixelHints.Announce("Ultra pixel gained!");
+        if (at.HasValue) PixelUltraFx.Play(clicker, at.Value);
         return true;
     }
 

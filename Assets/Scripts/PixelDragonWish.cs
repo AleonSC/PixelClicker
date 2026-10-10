@@ -35,7 +35,7 @@ public class PixelDragonWish : MonoBehaviour
     [SerializeField] private float goldenSeconds = 600f;
 
     [Min(1)]
-    [Tooltip("Ultra Blessing: how many Ultra pixels it gives (each of a random unlocked type).")]
+    [Tooltip("Ultra Blessing: how many Ultra pixels it gives.")]
     [SerializeField] private int blessingUltra = 5;
 
     [Min(1)]
@@ -574,7 +574,7 @@ public class PixelDragonWish : MonoBehaviour
             new Wish
             {
                 name = "Ultra Blessing",
-                description = blessingUltra + " Ultra pixels, each of a random pixel type you have unlocked.",
+                description = blessingUltra + " Ultra pixels.",
                 available = () => true,
                 apply = GiveUltra,
             },
@@ -639,11 +639,7 @@ public class PixelDragonWish : MonoBehaviour
 
     private void GiveUltra()
     {
-        List<int> unlocked = new List<int>();
-        for (int i = 0; i < clicker.Tiers.Length; i++)
-            if (clicker.Tiers[i].unlocked && !clicker.Tiers[i].rareDrop) unlocked.Add(i);
-        if (unlocked.Count == 0) return;
-        for (int n = 0; n < blessingUltra; n++) clicker.AddUltra(unlocked[UnityEngine.Random.Range(0, unlocked.Count)], 1);
+        clicker.AddUltra(blessingUltra);
     }
 
     private void GivePotions()

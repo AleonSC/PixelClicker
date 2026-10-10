@@ -602,7 +602,7 @@ public class PixelUI : MonoBehaviour
 
     [Header("Ultra Tooltip")]
     [Tooltip("Tooltip shown when hovering a pixel's entry. {0} = pixel name, {1} = how many Ultra versions you own.")]
-    [SerializeField] private string ultraTooltipFormat = "Ultra {0}: {1}";
+    [SerializeField] private string ultraRowTip = "Ultra pixels - earned from minigames (click to switch between the name and the number)";
 
     [Tooltip("Tooltip text size.")]
     [SerializeField] private float tooltipFontSize = 30f;
@@ -659,7 +659,7 @@ public class PixelUI : MonoBehaviour
         if (!show) return;
 
         string text = custom ? tooltipCustomText
-            : clicker.Tiers[tooltipTier].displayName + (clicker.Tiers[tooltipTier].ultraCount > 0d ? "   (" + string.Format(ultraTooltipFormat, "Ultra", FormatAmount(clicker.Tiers[tooltipTier].ultraCount)).Replace("Ultra Ultra", "Ultra") + ")" : "");
+            : clicker.Tiers[tooltipTier].displayName;
         tooltipLabel.text = text;
         tooltipLabel.ForceMeshUpdate();
         float measured = tooltipLabel.preferredWidth;
@@ -1042,11 +1042,45 @@ public class PixelUI : MonoBehaviour
             deltaLabels[i] = delta;
         }
 
+        BuildUltraRow(anchor);
+
         boxObject.SetActive(startOpen);
         BuildConsumableList(anchor);
         PixelWindows.Register(this, 10, () => boxObject != null && boxObject.activeSelf, () => boxObject.SetActive(false));
         inventoryInstance = this;
         PixelDebug.Info("PixelUI: created the Inventory box with " + count + " currency lines.", this);
+    }
+
+    private TMP_Text ultraLabel;
+    private Image ultraDivider;
+
+    /// <summary>The Ultra pixel row (an animated swatch + the number) and the thin line under it; both start hidden.</summary>
+    private void BuildUltraRow(Vector2 anchor)
+    {
+        ultraLabel = MakeText(ListParent, "Ultra Pixels", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, RowTextColor);
+        RectTransform rt = ultraLabel.rectTransform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch);
+        ultraLabel.raycastTarget = true;
+        ultraLabel.gameObject.AddComponent<PixelClickable>().onClick = () => { CurrencyShowNames = !CurrencyShowNames; Refresh(); };
+        PixelHoverTip tip = ultraLabel.gameObject.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => tooltipCustomText = ultraRowTip;
+        tip.onExit = HideTooltip;
+        ultraLabel.gameObject.SetActive(false);
+
+        GameObject line = new GameObject("Ultra Divider", typeof(RectTransform), typeof(Image));
+        line.transform.SetParent(ListParent, false);
+        ultraDivider = line.GetComponent<Image>();
+        ultraDivider.color = new Color(1f, 1f, 1f, 0.28f);
+        ultraDivider.raycastTarget = false;
+        RectTransform lr = line.GetComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = new Vector2(1f, 1f);
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.sizeDelta = new Vector2(-panelPadding * 2f, 2f);
+        line.SetActive(false);
     }
 
     // ------------------------------------------------------------------
@@ -1141,7 +1175,7 @@ public class PixelUI : MonoBehaviour
     }
 
     /// <summary>Fills one row: name (left, light), amount (right) and the swatch colour.</summary>
-    private void SetRow(TMP_Text label, string name, string amount, Color swatch, bool dim = false)
+    private void SetRow(TMP_Text label, string name, string amount, Color swatch, bool dim = false, bool animatedSwatch = false)
     {
         if (!rowParts.TryGetValue(label, out RowParts parts)) parts = BuildRowParts(label);
         PixelUIKit.SetText(label, name);
@@ -1149,7 +1183,11 @@ public class PixelUI : MonoBehaviour
         Color text = dim ? lockedColor : RowTextColor;
         label.color = text;
         parts.amount.color = text;
-        parts.swatch.color = dim ? new Color(swatch.r, swatch.g, swatch.b, 0.35f) : swatch;
+        if (animatedSwatch)
+        {
+            if (parts.swatch.GetComponent<PixelUltraSwatch>() == null) parts.swatch.gameObject.AddComponent<PixelUltraSwatch>();   // it colours itself
+        }
+        else parts.swatch.color = dim ? new Color(swatch.r, swatch.g, swatch.b, 0.35f) : swatch;
     }
 
     /// <summary>Writes the current amounts into the texts (and stacks visible lines in automatic mode).</summary>
@@ -1164,6 +1202,24 @@ public class PixelUI : MonoBehaviour
         if (autoMode) UpdateSubTabs();
         bool showCurrency = !autoMode || inventoryTab == 0;
         float y = 0f; // lines are laid out inside the scrolling list (its top = just below the tabs)
+
+        // The Ultra pixel row comes first, set apart from the pixel counts by a thin line.
+        bool showUltra = autoMode && showCurrency && clicker.UltraEarned > 0;
+        if (ultraLabel != null)
+        {
+            if (ultraLabel.gameObject.activeSelf != showUltra) ultraLabel.gameObject.SetActive(showUltra);
+            if (ultraDivider.gameObject.activeSelf != showUltra) ultraDivider.gameObject.SetActive(showUltra);
+        }
+        if (showUltra && ultraLabel != null)
+        {
+            ultraLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
+            string ultraAmount = FormatAmount(clicker.TotalUltra);
+            if (CurrencyShowNames) SetRow(ultraLabel, "Ultra", ultraAmount, Color.white, false, true);
+            else SetRow(ultraLabel, ultraAmount, "", Color.white, false, true);
+            y += LinePitch;
+            ultraDivider.rectTransform.anchoredPosition = new Vector2(0f, -(y + 4f));
+            y += 12f;
+        }
 
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {

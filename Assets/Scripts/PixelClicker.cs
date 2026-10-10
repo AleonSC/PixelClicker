@@ -230,8 +230,6 @@ public class PixelClicker : MonoBehaviour
         [Tooltip("Runtime: Value upgrade level of this pixel type, bought with its own currency (saved). Raises its payout. See the shop's Upgrades > Value tab.")]
         public int valueLevel;
 
-        [Tooltip("How many Ultra versions of this pixel type you own (from the Ultra Pad minigame; saved). They will be used for upgrades later.")]
-        public long ultraCount;
 
         [Tooltip("How many pixels of this type have been collected (one per payout, whatever it paid). Used by the 'times clicked' achievements.")]
         public long timesCollected;
@@ -1732,22 +1730,34 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Restores the lifetime Ultra count when loading a save (never below what you currently hold).</summary>
     public void SetUltraEarned(long value) => ultraEarned = System.Math.Max(System.Math.Max(0L, value), TotalUltra);
 
-    /// <summary>The shared Ultra roll used by the minigames: a 'chance' (0..1) of giving one Ultra pixel of this type. Returns true if it did.</summary>
-    public bool RollUltra(int tierIndex, float chance)
+    // Ultra pixels are ONE general currency now (not per pixel type): minigames reward them, upgrades will spend them.
+    private long ultraPixels, pendingLegacyUltra;
+
+    /// <summary>The shared Ultra roll used by the minigames: a 'chance' (0..1) of giving one Ultra pixel. Returns true if it did.</summary>
+    public bool RollUltra(float chance)
     {
-        if (!IsValidTier(tierIndex) || chance <= 0f || UnityEngine.Random.value >= chance) return false;
-        AddUltra(tierIndex, 1);
+        if (chance <= 0f || UnityEngine.Random.value >= chance) return false;
+        AddUltra(1);
         return true;
     }
 
-    /// <summary>Gives Ultra versions of a pixel type.</summary>
-    public void AddUltra(int tierIndex, long amount)
+    /// <summary>Gives Ultra pixels.</summary>
+    public void AddUltra(long amount)
     {
-        if (!IsValidTier(tierIndex) || amount <= 0) return;
+        if (amount <= 0) return;
         ultraEarned += amount;
-        tiers[tierIndex].ultraCount += amount;
+        ultraPixels += amount;
         NotifyChanged();
         UltraGained?.Invoke();
+    }
+
+    /// <summary>Restores the Ultra pixels held when loading a save (a negative value = an older save: the old per-pixel counts are added up instead).</summary>
+    public void RestoreUltra(long held)
+    {
+        ultraPixels = held >= 0 ? held : pendingLegacyUltra;
+        pendingLegacyUltra = 0;
+        ultraEarned = System.Math.Max(ultraEarned, ultraPixels);
+        NotifyChanged();
     }
 
     /// <summary>How much each Ultra boost level adds to a pixel type's payout multiplier.</summary>
@@ -1787,30 +1797,15 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Spends Ultra pixels to raise a pixel type's boost level by one. Returns false if you don't have enough.</summary>
     public bool TryBuyUltraBoost(int tierIndex, long cost)
     {
-        if (!IsValidTier(tierIndex) || cost < 0 || (!InfiniteResources && tiers[tierIndex].ultraCount < cost)) return false;
-        if (!InfiniteResources) tiers[tierIndex].ultraCount -= cost;
+        if (!IsValidTier(tierIndex) || cost < 0 || (!InfiniteResources && ultraPixels < cost)) return false;
+        if (!InfiniteResources) ultraPixels -= cost;
         tiers[tierIndex].ultraLevel++;
         NotifyChanged();
         return true;
     }
 
-    /// <summary>Ultra versions owned of a pixel type.</summary>
-    public long GetUltra(PixelType type)
-    {
-        int i = IndexOf(type);
-        return i >= 0 ? tiers[i].ultraCount : 0L;
-    }
-
-    /// <summary>Ultra versions owned, of every pixel type together.</summary>
-    public long TotalUltra
-    {
-        get
-        {
-            long total = 0;
-            foreach (PixelTier t in tiers) total += t.ultraCount;
-            return total;
-        }
-    }
+    /// <summary>Ultra pixels held.</summary>
+    public long TotalUltra => ultraPixels;
 
     /// <summary>Dev cheat (set by Dev Tools): everything costs nothing - spending always works and takes nothing away.</summary>
     public static bool InfiniteResources;
@@ -1863,7 +1858,7 @@ public class PixelClicker : MonoBehaviour
         tier.unlocked = unlocked || tier.unlockedAtStart;
         tier.spawnDisabled = spawnDisabled;
         tier.timesCollected = System.Math.Max(0L, timesCollected);
-        tier.ultraCount = System.Math.Max(0L, ultraCount);
+        pendingLegacyUltra += System.Math.Max(0L, ultraCount);   // older saves counted Ultra per pixel type: RestoreUltra adds them up
         tier.ultraLevel = System.Math.Max(0, ultraLevel);
         tier.valueLevel = System.Math.Max(0, valueLevel);
     }

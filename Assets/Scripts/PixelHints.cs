@@ -258,7 +258,7 @@ public class PixelHints : MonoBehaviour
         H("timestop_slow", "Time is slowed! Everything crawls - even meteor pixels, which you can now grab. The Time Stop meter drains slowly while it lasts; press {key:TimeSlow} to go back to normal speed."),
         H("timestop_first", "Time is stopped! Everything freezes, but you can keep clicking the cube. The meter at the top drains while time is stopped and refills once it runs again; press T to resume."),
         H("timestop_empty", "The Time Stop meter ran out, so time started again. It refills quickly while time runs - wait until it is a little full before stopping time again."),
-        H("ultra", "Ultra pixel earned! Spend Ultra pixels in the shop's Upgrades > Pixel sub-tab to boost a pixel type's payout."),
+        H("ultra", "Ultra pixel earned! Your Ultra pixels are one general currency, shown at the very top of the Inventory's Currency tab."),
     };
 
     private bool EnsureDefaultHints()

@@ -347,3 +347,4 @@
 [2026-10-10 15:32 UTC] Infinite-resources counts now show an infinity sign instead of the word 'Unlimited' (it overlapped the names).
 [2026-10-10 15:36 UTC] Inventory rows never wrap (long names shrink to fit one line); Currency rows now show just the swatch and the number, hovering a row shows the pixel's name, and clicking a row switches every row between number and name + number (remembered).
 [2026-10-10 15:38 UTC] To-do: rework the Ultra Pad minigame into a pad sorting game with a single Ultra pixel item.
+[2026-10-10 15:42 UTC] Ultra pixels are now one general currency instead of one per pixel type: minigames and the dragon's Ultra Blessing give plain 'Ultra pixels', and the Inventory's Currency tab shows them at the very top with an animated rainbow swatch and a line under them (older saves add their per-pixel Ultras together).

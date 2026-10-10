@@ -469,7 +469,7 @@ public class PixelDevTools : MonoBehaviour
     private void GiveAmount(int tierIndex, double amount)
     {
         clicker.AddCurrency(tierIndex, amount);
-        if (alsoAddUltra && amount >= 1d) clicker.AddUltra(tierIndex, (long)System.Math.Floor(amount));
+        if (alsoAddUltra && amount >= 1d) clicker.AddUltra((long)System.Math.Floor(amount));
     }
 
     private void AddSelected()

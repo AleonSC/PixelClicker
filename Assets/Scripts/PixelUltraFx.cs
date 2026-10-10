@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// The feedback for gaining an Ultra pixel, played where the pixel was: a gold "+1 Ultra Red" text that rises and fades, a burst of
+/// The feedback for gaining an Ultra pixel, played where the pixel was: a gold "+1 Ultra Pixel" text that rises and fades, a burst of
 /// sparkles, and the sound <c>ultra_gain</c> (silent until a clip is assigned in the PixelAudio sound list). Everything is drawn
 /// in code and cleans itself up after about a second and a half. Called by <see cref="PixelMinigame.UltraRoll"/>.
 /// </summary>
@@ -13,7 +13,7 @@ public class PixelUltraFx : MonoBehaviour
     private static readonly Color Gold = new Color(1f, 0.85f, 0.3f, 1f);
 
     /// <summary>Plays the effect at a world position. 'text' / 'sound' can be switched off when the caller already has its own.</summary>
-    public static void Play(PixelClicker clicker, int tier, Vector3 at, bool text = true, bool sound = true)
+    public static void Play(PixelClicker clicker, Vector3 at, bool text = true, bool sound = true)
     {
         if (clicker == null) return;
         if (sound) PixelAudio.Play("ultra_gain");
@@ -22,10 +22,10 @@ public class PixelUltraFx : MonoBehaviour
 
         GameObject go = new GameObject("Ultra Gain Fx");
         PixelUltraFx fx = go.AddComponent<PixelUltraFx>();
-        fx.StartCoroutine(fx.Run(clicker, tier, at, cam, text));
+        fx.StartCoroutine(fx.Run(clicker, at, cam, text));
     }
 
-    private IEnumerator Run(PixelClicker clicker, int tier, Vector3 at, Camera cam, bool showText)
+    private IEnumerator Run(PixelClicker clicker, Vector3 at, Camera cam, bool showText)
     {
         // Sparkles: small gold squares thrown outwards in the camera's plane.
         Shader shader = PixelShaders.SpriteDefault();
@@ -63,8 +63,7 @@ public class PixelUltraFx : MonoBehaviour
             GameObject tgo = new GameObject("Ultra Gain Text");
             tgo.transform.SetParent(transform, false);
             label = tgo.AddComponent<TextMeshPro>();
-            string name = clicker.IsValidTierIndex(tier) ? clicker.Tiers[tier].displayName : "";
-            label.text = "+1 Ultra " + name;
+            label.text = "+1 Ultra Pixel";
             label.fontSize = 4f;
             label.fontStyle = FontStyles.Bold;
             label.alignment = TextAlignmentOptions.Center;

@@ -81,6 +81,7 @@ public class PixelSaveGame : MonoBehaviour
         public string savedAt;
         public long savedAtTicks;   // UTC, used for offline progress
         public TierSave[] tiers;
+        public long ultraPixels = -1;   // Ultra pixels held (-1 = an older save: the per-pixel counts in the tiers are added up)
         public PackSave[] packs;
         public PotionSave[] potions;
         public DeviceSave[] devices;
@@ -434,6 +435,7 @@ public class PixelSaveGame : MonoBehaviour
 
             PixelClicker.PixelTier[] tiers = clicker.Tiers;
             data.tiers = new TierSave[tiers.Length];
+            data.ultraPixels = clicker.TotalUltra;
             for (int i = 0; i < tiers.Length; i++)
                 data.tiers[i] = new TierSave
                 {
@@ -443,7 +445,6 @@ public class PixelSaveGame : MonoBehaviour
                     unlocked = tiers[i].unlocked,
                     spawnDisabled = tiers[i].spawnDisabled,
                     timesCollected = tiers[i].timesCollected,
-                    ultraCount = tiers[i].ultraCount,
                     ultraLevel = tiers[i].ultraLevel,
                     valueLevel = tiers[i].valueLevel,
                 };
@@ -595,6 +596,7 @@ public class PixelSaveGame : MonoBehaviour
                 clicker.LoadTierState(tier.type, 0d, 0d, false);
             foreach (TierSave t in data.tiers)
                 clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraCount, t.ultraLevel, t.valueLevel);
+            clicker.RestoreUltra(data.ultraPixels);
 
             // Shop: match packs by name.
             if (shop != null)

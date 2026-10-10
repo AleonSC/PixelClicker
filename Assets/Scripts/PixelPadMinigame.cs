@@ -9,9 +9,9 @@ using static PixelInput;
 ///
 /// Every so often a coloured square pad appears on the ground at a random spot. It wants old pixels of ONE pixel
 /// type - the one whose colour it shows. Get old pixels onto it (they fall, you can fan or drag them there):
-///   - a pixel of the right type is taken in, and has a chance to give you an "Ultra" version of that pixel;
+///   - a pixel of the right type is taken in, and has a chance to give you an Ultra pixel;
 ///   - a pixel of any other type is taken too, but its value is subtracted from that pixel type's currency.
-/// Ultra pixels are counted per pixel type (hover a pixel's entry in the inventory to see them) and are saved; they will
+/// Ultra pixels are ONE general currency (PixelClicker.TotalUltra, shown at the top of the Inventory's Currency tab) and are saved; they will
 /// be used for upgrades later.
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
@@ -43,7 +43,7 @@ public class PixelPadMinigame : PixelMinigame
 
     [TextArea(1, 3)]
     [Tooltip("Description of the tracker row.")]
-    [SerializeField] private string trackerDescription = "Feed the pad the pixels it wants for a chance at Ultra pixels. Hover a pixel in the inventory to see its Ultras.";
+    [SerializeField] private string trackerDescription = "Feed the pad the pixels it wants for a chance at Ultra pixels. Your Ultra pixels are shown at the top of the Inventory.";
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = Ultra pixels, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} Ultra pixels";
@@ -691,11 +691,11 @@ public class PixelPadMinigame : PixelMinigame
                 Report(MinigameEvent.Clicked);
                 if (Random.value < ultraChance)
                 {
-                    clicker.AddUltra(target, 1);
+                    clicker.AddUltra(1);
                     PixelStats.Count("ultra.pad");
                     onUltraGained?.Invoke();
                     PixelAudio.Play("pad_ultra");
-                    PixelUltraFx.Play(clicker, target, at, text: false, sound: false); // its own rising text and sound already play
+                    PixelUltraFx.Play(clicker, at, text: false, sound: false); // its own rising text and sound already play
                     StartCoroutine(RisingMessage(at, cam, string.Format(ultraFormat, clicker.Tiers[target].displayName), ultraColor, 1.4f));
                 }
                 else
