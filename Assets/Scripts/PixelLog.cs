@@ -325,6 +325,8 @@ public class PixelLog : MonoBehaviour
     private RectTransform achievementsContent, goalsContent;
     private TMP_Text noGoalsLabel;
     private TMP_Text achievementSummary;
+    private Image achievementSummaryFill;
+    private RectTransform achievementSummaryFillRect;
     private TMP_Text noAchievementsLabel;
     private System.Collections.Generic.List<AchievementRow> achievementRows = new System.Collections.Generic.List<AchievementRow>();
 
@@ -566,7 +568,7 @@ public class PixelLog : MonoBehaviour
         double target = achievements.GetCurrentTarget(a);
         double have = Math.Min(achievements.GetProgress(a), target);
         string pixel = kind == PixelAchievements.Kind.CollectPixelType || kind == PixelAchievements.Kind.ClickPixelType
-            ? PixelNameOf(achievements.GetPixelType(a)) : "";
+            ? PixelNameOf(achievements.GetPixelType(a)).Replace(" Pixels", "").Replace(" Pixel", "") : "";
         string head, body;
         if (kind == PixelAchievements.Kind.ClickPixelType)
         {
@@ -845,14 +847,46 @@ public class PixelLog : MonoBehaviour
         summary = null;
         if (withSummary)
         {
-            summary = CreateText(group.transform, "Summary", "", rowFontSize * 0.85f,
-                                 TextAlignmentOptions.MidlineLeft, FontStyles.Bold, amountColor);
-            RectTransform sr = summary.rectTransform;
+            // A fancy progress bar: a rounded dark trough, a coloured fill with a lighter strip along its top, and the count centred over it.
+            GameObject barGo = new GameObject("Summary Bar", typeof(RectTransform), typeof(Image));
+            barGo.transform.SetParent(group.transform, false);
+            Image trough = barGo.GetComponent<Image>();
+            trough.color = new Color(0.07f, 0.07f, 0.1f, 1f);
+            PixelUIKit.StyleButton(trough);
+            RectTransform sr = barGo.GetComponent<RectTransform>();
             sr.anchorMin = new Vector2(0f, 1f);
             sr.anchorMax = new Vector2(1f, 1f);
             sr.pivot = new Vector2(0.5f, 1f);
             sr.sizeDelta = new Vector2(-panelPadding * 2f, summaryHeight);
             sr.anchoredPosition = new Vector2(0f, -ContentTop);
+
+            GameObject fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fillGo.transform.SetParent(barGo.transform, false);
+            achievementSummaryFill = fillGo.GetComponent<Image>();
+            achievementSummaryFill.color = achievementUnlockedColor;
+            achievementSummaryFill.raycastTarget = false;
+            achievementSummaryFillRect = fillGo.GetComponent<RectTransform>();
+            achievementSummaryFillRect.anchorMin = Vector2.zero;
+            achievementSummaryFillRect.anchorMax = new Vector2(0f, 1f);
+            achievementSummaryFillRect.offsetMin = new Vector2(4f, 4f);
+            achievementSummaryFillRect.offsetMax = new Vector2(-4f, -4f);
+
+            GameObject shineGo = new GameObject("Shine", typeof(RectTransform), typeof(Image));
+            shineGo.transform.SetParent(fillGo.transform, false);
+            Image shine = shineGo.GetComponent<Image>();
+            shine.color = new Color(1f, 1f, 1f, 0.28f);
+            shine.raycastTarget = false;
+            RectTransform shr = shineGo.GetComponent<RectTransform>();
+            shr.anchorMin = new Vector2(0f, 0.5f); shr.anchorMax = Vector2.one;
+            shr.offsetMin = shr.offsetMax = Vector2.zero;
+
+            summary = CreateText(barGo.transform, "Summary", "", rowFontSize * 0.8f,
+                                 TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+            summary.enableAutoSizing = true;
+            summary.fontSizeMax = rowFontSize * 0.8f;
+            summary.fontSizeMin = 10f;
+            summary.raycastTarget = false;
+            PixelUIKit.Stretch(summary.rectTransform);
         }
 
         float viewTop = withSummary ? ContentTop + summaryHeight + 6f : ContentTop;
@@ -884,14 +918,16 @@ public class PixelLog : MonoBehaviour
         barGo.GetComponent<Image>().color = scrollbarTrackColor;
         RectTransform br = barGo.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
-        float barWidth = Mathf.Min(scrollbarWidth, Mathf.Max(6f, panelPadding - 6f));   // the bar sits in the margin beside the rows, not on top of them
+        float barWidth = Mathf.Min(scrollbarWidth, 10f);                          // slim, rounded, and centred in the margin beside the rows
         br.sizeDelta = new Vector2(barWidth, viewHeight);
-        br.anchoredPosition = new Vector2(-3f, -viewTop);
+        br.anchoredPosition = new Vector2(-(panelPadding - barWidth) * 0.5f, -viewTop);
+        PixelUIKit.StyleButton(barGo.GetComponent<Image>());
 
         GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
         handleGo.transform.SetParent(barGo.transform, false);
         Image handleImage = handleGo.GetComponent<Image>();
         handleImage.color = scrollbarHandleColor;
+        PixelUIKit.StyleButton(handleImage);
         RectTransform hr = handleGo.GetComponent<RectTransform>();
         hr.offsetMin = hr.offsetMax = Vector2.zero;
 
@@ -1483,7 +1519,9 @@ public class PixelLog : MonoBehaviour
 
         achievementsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));
         noAchievementsLabel.gameObject.SetActive(count == 0);
-        PixelUIKit.SetText(achievementSummary, string.Format(achievementSummaryFormat, achievements != null ? achievements.EarnedTierTotal : 0, achievements != null ? achievements.TierTotal : 0));
+        int earnedTotal = achievements != null ? achievements.EarnedTierTotal : 0, tierTotal = achievements != null ? achievements.TierTotal : 0;
+        PixelUIKit.SetText(achievementSummary, string.Format(achievementSummaryFormat, earnedTotal, tierTotal));
+        if (achievementSummaryFillRect != null) achievementSummaryFillRect.anchorMax = new Vector2(tierTotal > 0 ? Mathf.Clamp01(earnedTotal / (float)tierTotal) : 0f, 1f);
 
         float summaryHeight = rowFontSize * 1.3f;
         panelRect.sizeDelta = new Vector2(panelWidth, FixedPanelHeight);
