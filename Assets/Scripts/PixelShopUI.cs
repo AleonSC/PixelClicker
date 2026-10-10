@@ -454,6 +454,9 @@ public partial class PixelShop
     /// <summary>The shop window's rectangle (used to place tutorial boxes next to it).</summary>
     public RectTransform PanelRect => panelRect;
 
+    /// <summary>The shop window's size (width, height) from its settings, available before the window is built (the Crafting window copies it).</summary>
+    public Vector2 PanelSize => new Vector2(panelWidth, panelHeight);
+
     /// <summary>Shop tutorial: opens the shop on a tab (and, for Upgrades, a sub-tab: 0 = Features, 1 = Value).</summary>
     public void TutorialOpen(ShopTab tab, int subTab)
     {

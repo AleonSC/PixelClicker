@@ -286,3 +286,4 @@
 [2026-10-10 10:27 UTC] The Pixel Bank hose no longer casts a shadow.
 [2026-10-10 10:28 UTC] The hose nozzle, glass display and count plate are 60% bigger (adjustable with Nozzle Scale).
 [2026-10-10 10:30 UTC] The top of the Pixel Bank hose now fades out so it no longer gets cut off by the camera.
+[2026-10-10 10:35 UTC] The Crafting window now matches the shop's layout: same size, a Materials list on the left formatted like the Currency list, and the recipe book opens as a panel to the right of it.

@@ -156,8 +156,8 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "Crafting";
 
-    [Tooltip("Shown until two items are in the boxes.")]
-    [SerializeField] private string hintText = "Drag two items from below into the boxes (or click them). Right-click a box to empty it.";
+    [Tooltip("Shown until two items are in the boxes. (An older text that says 'from below' is shown as 'from the list on the left'.)")]
+    [SerializeField] private string hintText = "Drag two items from the list on the left into the boxes (or click them). Right-click a box to empty it.";
 
     [Tooltip("Shown when the two items don't make anything.")]
     [SerializeField] private string noRecipeText = "These two can't be crafted together.";
@@ -168,8 +168,8 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Shown under the recipe when you already hold the most of that potion you can.")]
     [SerializeField] private string potionFullText = "You can't hold any more of this potion - drink one first.";
 
-    [Tooltip("Heading of the list of what you own.")]
-    [SerializeField] private string itemsHeading = "Your items (drag into the boxes)";
+    [Tooltip("Title of the list of crafting materials on the left (like the shop's Currency list).")]
+    [SerializeField] private string materialsTitle = "Materials";
 
     [Tooltip("Shown in the item list when you own nothing.")]
     [SerializeField] private string emptyItemsText = "You have no items yet.";
@@ -186,21 +186,14 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Line for one ingredient. {0} = name, {1} = what you have, {2} = what is needed.")]
     [SerializeField] private string needFormat = "{0}:  {1} / {2}";
 
-    [Tooltip("Window width (canvas units).")]
-    [SerializeField] private float windowWidth = 980f;
+    [Tooltip("Window width (canvas units). Used only when there is no shop to copy: the Crafting window takes the shop window's size and the Materials list is as wide as the shop's Currency list.")]
+    [SerializeField] private float windowWidth = 900f;
 
     [Tooltip("Size of each of the two boxes.")]
     [SerializeField] private float slotSize = 150f;
 
-    [Tooltip("Size of one item in the list (the cube plus its name).")]
+    [Tooltip("Size of one item's cube in the Materials list and while dragging (a row is 0.7 of this tall).")]
     [SerializeField] private float cellSize = 120f;
-
-    [Tooltip("Gap between items in the list.")]
-    [SerializeField] private float cellGap = 10f;
-
-    [Min(100f)]
-    [Tooltip("Height of the scrolling item list. More items scroll.")]
-    [SerializeField] private float listHeight = 300f;
 
     [Tooltip("Text size of the window.")]
     [SerializeField] private float fontSize = 30f;
@@ -311,8 +304,10 @@ public class PixelCrafting : MonoBehaviour
     private GameObject windowObject;
     private readonly Slot[] slots = new Slot[2];
     private readonly List<Cell> cells = new List<Cell>();
-    private float listTopY;
-    private float CellHeight => cellSize * 1.3f; // name above, spinning item, amount below
+    private float RowHeight => cellSize * 0.7f;   // one line of the Materials list
+    private RectTransform bodyRect, materialsRect;
+    private float bodyHeight;
+    private string HintText => string.IsNullOrEmpty(hintText) ? "" : hintText.Replace("from below", "from the list on the left");
     private float fittedHeight = -1f;
     private ScrollRect listScroll;
     private GameObject listBar;
@@ -507,13 +502,23 @@ public class PixelCrafting : MonoBehaviour
         close.onClick.AddListener(Close);
         y += titleH + 14f;
 
+        // Everything except the title / close / book button lives in a body that FitWindow centres a little in the free height.
+        GameObject body = new GameObject("Body", typeof(RectTransform));
+        body.transform.SetParent(windowObject.transform, false);
+        bodyRect = body.GetComponent<RectTransform>();
+        bodyRect.anchorMin = new Vector2(0f, 1f);
+        bodyRect.anchorMax = new Vector2(1f, 1f);
+        bodyRect.pivot = new Vector2(0.5f, 1f);
+        bodyRect.sizeDelta = Vector2.zero;
+        bodyRect.anchoredPosition = Vector2.zero;
+
         // --- The two boxes
         float gap = 70f;
         for (int i = 0; i < 2; i++)
         {
             Slot slot = new Slot();
             GameObject box = new GameObject("Slot " + (i + 1), typeof(RectTransform), typeof(Image), typeof(PixelCraftDrag));
-            box.transform.SetParent(windowObject.transform, false);
+            box.transform.SetParent(body.transform, false);
             Image bi = box.GetComponent<Image>();
             bi.color = slotColor;
             slot.rect = box.GetComponent<RectTransform>();
@@ -547,7 +552,7 @@ public class PixelCrafting : MonoBehaviour
             slots[i] = slot;
         }
 
-        TMP_Text plus = MakeLabel(windowObject.transform, "Plus", "+", fontSize * 1.6f, TextAlignmentOptions.Center, FontStyles.Bold);
+        TMP_Text plus = MakeLabel(body.transform, "Plus", "+", fontSize * 1.6f, TextAlignmentOptions.Center, FontStyles.Bold);
         RectTransform pr = plus.rectTransform;
         pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 1f);
         pr.sizeDelta = new Vector2(gap, slotSize);
@@ -556,7 +561,7 @@ public class PixelCrafting : MonoBehaviour
 
         // --- Recipe text, Craft button, status
         float recipeHeight = fontSize * 1.35f * 5f;
-        recipeText = MakeLabel(windowObject.transform, "Recipe", hintText, fontSize, TextAlignmentOptions.Top, FontStyles.Normal);
+        recipeText = MakeLabel(body.transform, "Recipe", HintText, fontSize, TextAlignmentOptions.Top, FontStyles.Normal);
         recipeText.richText = true;
         RectTransform rr = recipeText.rectTransform;
         rr.anchorMin = new Vector2(0f, 1f);
@@ -566,7 +571,7 @@ public class PixelCrafting : MonoBehaviour
         rr.anchoredPosition = new Vector2(0f, -y);
         y += recipeHeight + 8f;
 
-        craftButton = PixelUIKit.CreateButton(font, windowObject.transform, "Craft Button", craftText, new Vector2(320f, 74f),
+        craftButton = PixelUIKit.CreateButton(font, body.transform, "Craft Button", craftText, new Vector2(320f, 74f),
                                               craftColor, textColor, fontSize * 1.2f);
         craftImage = craftButton.GetComponent<Image>();
         RectTransform cbr = craftButton.GetComponent<RectTransform>();
@@ -575,7 +580,7 @@ public class PixelCrafting : MonoBehaviour
         craftButton.onClick.AddListener(Craft);
         y += 74f + 6f;
 
-        statusLabel = MakeLabel(windowObject.transform, "Status", "", fontSize * 0.85f, TextAlignmentOptions.Center, FontStyles.Bold);
+        statusLabel = MakeLabel(body.transform, "Status", "", fontSize * 0.85f, TextAlignmentOptions.Center, FontStyles.Bold);
         statusLabel.color = enoughColor;
         RectTransform sr = statusLabel.rectTransform;
         sr.anchorMin = new Vector2(0f, 1f);
@@ -585,43 +590,58 @@ public class PixelCrafting : MonoBehaviour
         sr.anchoredPosition = new Vector2(0f, -y);
         y += fontSize * 1.3f + 8f;
 
-        // --- Item list
-        TMP_Text heading = MakeLabel(windowObject.transform, "Items Heading", itemsHeading, fontSize * 0.85f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
-        RectTransform hr = heading.rectTransform;
-        hr.anchorMin = new Vector2(0f, 1f);
-        hr.anchorMax = new Vector2(1f, 1f);
-        hr.pivot = new Vector2(0.5f, 1f);
-        hr.sizeDelta = new Vector2(-80f, fontSize * 1.3f);
-        hr.anchoredPosition = new Vector2(0f, -y);
-        y += fontSize * 1.3f + 4f;
+        bodyHeight = y;
 
-        listScroll = PixelUIKit.CreateScrollView(windowObject.transform, "Item List", scrollbarColor, 12f, cellSize * 0.6f,
-                                                 out listContent, out listBar);
-        RectTransform vr = listScroll.GetComponent<RectTransform>();
-        vr.anchorMin = new Vector2(0f, 1f);
-        vr.anchorMax = new Vector2(1f, 1f);
-        vr.pivot = new Vector2(0.5f, 1f);
-        vr.sizeDelta = new Vector2(-60f, listHeight);
-        vr.anchoredPosition = new Vector2(0f, -y);
-        listTopY = y;
-
-        emptyLabel = MakeLabel(listContent, "Empty", emptyItemsText, fontSize * 0.9f, TextAlignmentOptions.Center, FontStyles.Italic);
-        emptyLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
-        RectTransform er = emptyLabel.rectTransform;
-        er.anchorMin = new Vector2(0f, 1f);
-        er.anchorMax = new Vector2(1f, 1f);
-        er.pivot = new Vector2(0.5f, 1f);
-        er.sizeDelta = new Vector2(0f, fontSize * 1.5f);
-        er.anchoredPosition = Vector2.zero;
-        y += listHeight + 30f;
-
-        wr.sizeDelta = new Vector2(windowWidth, y);
+        BuildMaterialsPanel();
 
         BuildBookButton();
         BuildBook();
 
         windowObject.SetActive(false);
         PixelWindows.Register(this, 25, () => windowObject != null && windowObject.activeSelf, () => { if (BookOpen) CloseBook(); else Close(); }); // Escape closes the recipe book first
+    }
+
+    private float SideWidth { get { PixelShop shop = PixelFind.First<PixelShop>(); return shop != null ? shop.CurrencyPanelWidth : 380f; } }
+    private float SideGap { get { PixelShop shop = PixelFind.First<PixelShop>(); return shop != null ? shop.CurrencyPanelGap : 10f; } }
+
+    /// <summary>The Materials list: a panel hanging off the left of the window, laid out like the shop's Currency list (a spinning cube and an amount per row).</summary>
+    private void BuildMaterialsPanel()
+    {
+        GameObject panel = new GameObject("Materials Panel", typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(windowObject.transform, false);
+        panel.GetComponent<Image>().color = panelColor;
+        materialsRect = panel.GetComponent<RectTransform>();
+        materialsRect.anchorMin = new Vector2(0f, 0f);
+        materialsRect.anchorMax = new Vector2(0f, 1f);
+        materialsRect.pivot = new Vector2(1f, 0.5f);
+        materialsRect.sizeDelta = new Vector2(SideWidth, 0f);
+        materialsRect.anchoredPosition = new Vector2(-SideGap, 0f);
+
+        float titleH = titleFontSize * 1.4f;
+        TMP_Text title = MakeLabel(panel.transform, "Title", materialsTitle, titleFontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Bold);
+        PixelUIKit.Caps(title);
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(-40f, titleH);
+        tr.anchoredPosition = new Vector2(0f, -20f);
+
+        listScroll = PixelUIKit.CreateScrollView(panel.transform, "Item List", scrollbarColor, 12f, RowHeight * 0.6f, out listContent, out listBar);
+        RectTransform vr = listScroll.GetComponent<RectTransform>();
+        vr.anchorMin = Vector2.zero;
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = new Vector2(20f, 20f);
+        vr.offsetMax = new Vector2(-20f, -(20f + titleH));
+
+        emptyLabel = MakeLabel(listContent, "Empty", emptyItemsText, fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Italic);
+        emptyLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
+        RectTransform er = emptyLabel.rectTransform;
+        er.anchorMin = new Vector2(0f, 1f);
+        er.anchorMax = new Vector2(1f, 1f);
+        er.pivot = new Vector2(0.5f, 1f);
+        er.sizeDelta = new Vector2(0f, fontSize * 2.6f);
+        er.anchoredPosition = Vector2.zero;
     }
 
     // ------------------------------------------------------------------
@@ -734,49 +754,52 @@ public class PixelCrafting : MonoBehaviour
         Part("Line 3", new Color(0.5f, 0.45f, 0.35f, 1f), new Vector2(22f, 3f), new Vector2(4f, -6f));
     }
 
+    /// <summary>The recipe book: a panel to the right of the Crafting window (as tall as it, as wide as the Materials list on the other side).</summary>
     private void BuildBook()
     {
         bookObject = new GameObject("Recipe Book", typeof(RectTransform), typeof(Image));
-        bookObject.transform.SetParent(canvasRoot.transform, false);
+        bookObject.transform.SetParent(windowObject.transform, false);
         bookObject.GetComponent<Image>().color = panelColor;
         RectTransform wr = bookObject.GetComponent<RectTransform>();
-        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 0.5f);
+        wr.anchorMin = new Vector2(1f, 0f);
+        wr.anchorMax = new Vector2(1f, 1f);
+        wr.pivot = new Vector2(0f, 0.5f);
+        wr.sizeDelta = new Vector2(SideWidth, 0f);
+        wr.anchoredPosition = new Vector2(SideGap, 0f);
 
         float titleH = titleFontSize * 1.4f;
-        TMP_Text title = MakeLabel(bookObject.transform, "Title", bookTitle, titleFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        TMP_Text title = MakeLabel(bookObject.transform, "Title", bookTitle, titleFontSize * 0.7f, TextAlignmentOptions.Center, FontStyles.Bold);
         PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
         tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(-200f, titleH);
+        tr.sizeDelta = new Vector2(-150f, titleH);
         tr.anchoredPosition = new Vector2(0f, -20f);
 
-        Button close = PixelUIKit.CreateButton(font, bookObject.transform, "Close", "X", new Vector2(70f, 70f),
-                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
+        Button close = PixelUIKit.CreateButton(font, bookObject.transform, "Close", "X", new Vector2(60f, 60f),
+                                               new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 32f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
-        cr.anchoredPosition = new Vector2(-20f, -14f);
+        cr.anchoredPosition = new Vector2(-14f, -14f);
         close.onClick.AddListener(CloseBook);
 
-        bookScroll = PixelUIKit.CreateScrollView(bookObject.transform, "Recipe List", scrollbarColor, 12f, bookRowHeight * 0.6f,
+        bookScroll = PixelUIKit.CreateScrollView(bookObject.transform, "Recipe List", scrollbarColor, 12f, BookRowHeight * 0.6f,
                                                  out bookContent, out bookBar);
         RectTransform vr = bookScroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
-        vr.offsetMin = new Vector2(30f, 20f);
-        vr.offsetMax = new Vector2(-30f, -(20f + titleH + 20f));
+        vr.offsetMin = new Vector2(20f, 20f);
+        vr.offsetMax = new Vector2(-20f, -(20f + titleH));
 
         bookObject.SetActive(false);
     }
 
+    private float BookRowHeight => Mathf.Max(bookRowHeight, fontSize * 0.8f * 1.35f * 3f + 28f);   // three lines: ingredients and result
+
     private void OpenBook()
     {
-        RectTransform wr = windowObject.GetComponent<RectTransform>();
-        RectTransform br = bookObject.GetComponent<RectTransform>();
-        br.sizeDelta = wr.sizeDelta; // same size and place as the crafting window
-        br.anchoredPosition = wr.anchoredPosition;
-        bookObject.transform.SetAsLastSibling();
+        if (BookOpen) { CloseBook(); return; }
         RebuildBook();
         bookObject.SetActive(true);
         PixelAudio.Play("ui_click");
@@ -807,22 +830,17 @@ public class PixelCrafting : MonoBehaviour
             rr.anchorMin = new Vector2(0f, 1f);
             rr.anchorMax = new Vector2(1f, 1f);
             rr.pivot = new Vector2(0.5f, 1f);
-            rr.sizeDelta = new Vector2(-24f, bookRowHeight - 8f);
+            rr.sizeDelta = new Vector2(-24f, BookRowHeight - 8f);
             rr.anchoredPosition = new Vector2(0f, -y);
 
             string text = known
-                ? IngredientText(r.a) + "  +  " + IngredientText(r.b) + "  =  <b>" + ResultName(r) + "</b>"
-                : unknownText + "  +  " + unknownText + "  =  " + unknownText;
+                ? IngredientText(r.a) + "  +\n" + IngredientText(r.b) + "\n=  <b>" + ResultName(r) + "</b>"
+                : unknownText + "  +\n" + unknownText + "\n=  " + unknownText;
             TMP_Text label = MakeLabel(row.transform, "Text", text, fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Normal);
             label.richText = true;
             label.enableAutoSizing = true;
             label.fontSizeMax = fontSize * 0.8f;
             label.fontSizeMin = 10f;
-#if UNITY_2023_1_OR_NEWER
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-#else
-            label.enableWordWrapping = false;
-#endif
             label.color = known ? textColor : new Color(textColor.r, textColor.g, textColor.b, 0.45f);
             RectTransform lr = label.rectTransform;
             lr.anchorMin = Vector2.zero;
@@ -831,7 +849,7 @@ public class PixelCrafting : MonoBehaviour
             lr.offsetMax = new Vector2(-14f, -4f);
 
             bookRows.Add(row);
-            y += bookRowHeight;
+            y += BookRowHeight;
         }
         PixelUIKit.UpdateScrollView(bookScroll, bookBar, Mathf.Max(0f, y - 8f), bookScroll.GetComponent<RectTransform>().rect.height);
     }
@@ -1017,25 +1035,25 @@ public class PixelCrafting : MonoBehaviour
         return p >= 0 ? consumables.ItemOwned(p) : 0;
     }
 
-    /// <summary>Sizes the window to the space between the black bars; the item list takes whatever height is left.</summary>
+    /// <summary>Sizes the window like the shop window (never taller than the space between the black bars); the body is centred a little in the free height.</summary>
     private void FitWindow()
     {
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        float height = Mathf.Max(400f, canvasRect.rect.height - bars * 2f - 16f);
-        if (Mathf.Approximately(height, fittedHeight)) return;
-        fittedHeight = height;
+        float available = Mathf.Max(400f, canvasRect.rect.height - bars * 2f - 16f);
+        PixelShop shop = PixelFind.First<PixelShop>();
+        float width = shop != null ? shop.PanelSize.x : windowWidth;
+        float height = shop != null ? Mathf.Min(available, shop.PanelSize.y) : available;
+        float key = width * 10000f + height;
+        if (Mathf.Approximately(key, fittedHeight)) return;
+        fittedHeight = key;
 
         RectTransform wr = windowObject.GetComponent<RectTransform>();
-        wr.sizeDelta = new Vector2(windowWidth, height);
+        wr.sizeDelta = new Vector2(width, height);
         wr.anchoredPosition = Vector2.zero; // the bars are the same height top and bottom, so centred is between them
 
-        RectTransform vr = listScroll.GetComponent<RectTransform>();
-        vr.anchorMin = new Vector2(0f, 0f);
-        vr.anchorMax = new Vector2(1f, 1f);
-        vr.pivot = new Vector2(0.5f, 1f);
-        vr.offsetMin = new Vector2(30f, 20f);
-        vr.offsetMax = new Vector2(-30f, -listTopY);
+        float spare = Mathf.Max(0f, height - bodyHeight - 20f);
+        bodyRect.anchoredPosition = new Vector2(0f, -spare * 0.35f);
     }
 
     private void RefreshList()
@@ -1051,7 +1069,6 @@ public class PixelCrafting : MonoBehaviour
                         ? new Item(ItemKind.Potion, consumables.ItemRequiredType(i), true, consumables.ItemSecondType(i))
                         : new Item(ItemKind.Potion, consumables.ItemRequiredType(i)));
 
-        int columns = Mathf.Max(1, Mathf.FloorToInt((windowWidth - 60f - 20f + cellGap) / (cellSize + cellGap)));
         while (cells.Count < items.Count) cells.Add(BuildCell());
 
         for (int i = 0; i < cells.Count; i++)
@@ -1072,12 +1089,10 @@ public class PixelCrafting : MonoBehaviour
             }
             cell.count.text = PixelClicker.FormatNumber(Shown(item)); // the real amount (Infinite resources only affects what can be spent)
 
-            int col = i % columns, row = i / columns;
-            cell.rect.anchoredPosition = new Vector2(col * (cellSize + cellGap), -row * (CellHeight + cellGap));
+            cell.rect.anchoredPosition = new Vector2(0f, -i * RowHeight);
         }
 
-        int rows = Mathf.CeilToInt(items.Count / (float)columns);
-        float contentHeight = items.Count > 0 ? rows * (CellHeight + cellGap) : fontSize * 1.5f;
+        float contentHeight = items.Count > 0 ? items.Count * RowHeight : fontSize * 2.6f;
         emptyLabel.gameObject.SetActive(items.Count == 0);
         PixelUIKit.UpdateScrollView(listScroll, listBar, contentHeight, listScroll.GetComponent<RectTransform>().rect.height);
     }
@@ -1089,36 +1104,41 @@ public class PixelCrafting : MonoBehaviour
         go.transform.SetParent(listContent, false);
         go.GetComponent<Image>().color = cellColor;
         cell.rect = go.GetComponent<RectTransform>();
-        cell.rect.anchorMin = cell.rect.anchorMax = cell.rect.pivot = new Vector2(0f, 1f);
-        cell.rect.sizeDelta = new Vector2(cellSize, CellHeight);
+        cell.rect.anchorMin = new Vector2(0f, 1f);
+        cell.rect.anchorMax = new Vector2(1f, 1f);
+        cell.rect.pivot = new Vector2(0.5f, 1f);
+        cell.rect.sizeDelta = new Vector2(0f, RowHeight - 8f);
 
+        // The cube (or the potion's glass cube) on the left, like the shop's Currency rows.
+        float icon = (RowHeight - 8f) * 0.86f;
         cell.iconHost = new GameObject("Icon Host", typeof(RectTransform));
         cell.iconHost.transform.SetParent(go.transform, false);
         RectTransform ir = cell.iconHost.GetComponent<RectTransform>();
-        ir.anchorMin = new Vector2(0f, 0.22f);
-        ir.anchorMax = new Vector2(1f, 0.78f);
-        ir.offsetMin = ir.offsetMax = Vector2.zero;
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
+        ir.sizeDelta = new Vector2(icon, icon);
+        ir.anchoredPosition = new Vector2(10f, 0f);
 
-        // Name on top, amount underneath: neither overlaps the spinning item.
-        cell.nameLabel = MakeLabel(go.transform, "Name", "", fontSize * 0.5f, TextAlignmentOptions.Center, FontStyles.Normal);
+        // A small name on top (potions need one) and the amount underneath in the same bold style as the Currency list.
+        cell.nameLabel = MakeLabel(go.transform, "Name", "", fontSize * 0.5f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         cell.nameLabel.enableAutoSizing = true;
         cell.nameLabel.fontSizeMax = fontSize * 0.5f;
         cell.nameLabel.fontSizeMin = 9f;
+        cell.nameLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.75f);
         RectTransform nr = cell.nameLabel.rectTransform;
-        nr.anchorMin = new Vector2(0f, 0.78f);
+        nr.anchorMin = new Vector2(0f, 0.55f);
         nr.anchorMax = Vector2.one;
-        nr.offsetMin = new Vector2(4f, 0f);
-        nr.offsetMax = new Vector2(-4f, -2f);
+        nr.offsetMin = new Vector2(icon + 24f, 0f);
+        nr.offsetMax = new Vector2(-8f, -3f);
 
-        cell.count = MakeLabel(go.transform, "Count", "", fontSize * 0.7f, TextAlignmentOptions.Center, FontStyles.Bold);
+        cell.count = MakeLabel(go.transform, "Count", "", fontSize * 0.95f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
         cell.count.enableAutoSizing = true;
-        cell.count.fontSizeMax = fontSize * 0.7f;
-        cell.count.fontSizeMin = 9f;
+        cell.count.fontSizeMax = fontSize * 0.95f;
+        cell.count.fontSizeMin = 12f;
         RectTransform cr = cell.count.rectTransform;
         cr.anchorMin = Vector2.zero;
-        cr.anchorMax = new Vector2(1f, 0.22f);
-        cr.offsetMin = new Vector2(4f, 2f);
-        cr.offsetMax = new Vector2(-4f, 0f);
+        cr.anchorMax = new Vector2(1f, 0.58f);
+        cr.offsetMin = new Vector2(icon + 24f, 3f);
+        cr.offsetMax = new Vector2(-8f, 0f);
 
         PixelCraftDrag drag = go.GetComponent<PixelCraftDrag>();
         drag.onBegin = e => BeginDrag(cell.item, e);
@@ -1255,7 +1275,7 @@ public class PixelCrafting : MonoBehaviour
 
         if (!slots[0].has || !slots[1].has)
         {
-            recipeText.text = hintText;
+            recipeText.text = HintText;
         }
         else
         {
