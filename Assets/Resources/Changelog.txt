@@ -327,3 +327,4 @@
 [2026-10-10 14:27 UTC] The Robot Worker is now a small UFO that idly hovers about the map (never over the cube), flies to a ghost and beams a new device down onto it, or abducts loose pixels into the Pixel Bank with its beam; Water pixels also got a splashy click sound.
 [2026-10-10 14:29 UTC] The title screen's black bar now has a neon LED-strip glow along its top and bottom edges that slowly cycles through colours.
 [2026-10-10 14:32 UTC] The neon colour-cycling glow now also runs along the HUD's top and bottom bars (Settings > 'Neon bar glow' switches every bar glow off); the UFO Helper always hovers higher than the cube, has no text over it and has a switch in Toggles > Upgrades; the bomb no longer shows hint text above it.
+[2026-10-10 14:35 UTC] Fixed Breakout visuals: Electric link arcs no longer scribble across the brick wall (links pause during takeover minigames) and the court backdrop sits behind the bricks so see-through pixels aren't covered by it.
