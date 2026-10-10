@@ -437,6 +437,16 @@ public class PixelUI : MonoBehaviour
     private bool built;
     private RectTransform popupCanvasRect;
     private int inventoryTab; // 0 = Currency, 1 = Consumables, 2 = Materials
+    private Button compactButton;
+    private GameObject closeButtonObject;
+    private readonly System.Collections.Generic.List<GameObject> tabObjects = new System.Collections.Generic.List<GameObject>();
+
+    [Header("Compact (pinned) Inventory")]
+    [Tooltip("Width of the simplified Inventory (0 = 62% of the normal width).")]
+    [SerializeField] private float compactWidth = 0f;
+    private float CompactWidth => compactWidth > 0f ? compactWidth : panelWidth * 0.62f;
+    private float CompactToggleSize => closeButtonSize > 0f ? closeButtonSize : 56f;
+    private float CompactTop => CompactToggleSize + panelPadding * 1.5f;
     private readonly System.Collections.Generic.List<TMP_Text> materialLabels = new System.Collections.Generic.List<TMP_Text>();
     private TMP_Text noMaterialsLabel;
     private int consumableSubTab; // inside Consumables: 0 = Potions, 1 = Devices
@@ -528,10 +538,11 @@ public class PixelUI : MonoBehaviour
     /// <summary>The Inventory window's rectangle (null if there is none); used to place tip boxes next to it.</summary>
     public static RectTransform WindowRect => inventoryInstance != null && inventoryInstance.boxObject != null ? inventoryInstance.boxObject.GetComponent<RectTransform>() : null;
 
-    public static void SetInventoryOpen(bool open)
+    public static void SetInventoryOpen(bool open, bool force = false)
     {
         PixelUI ui = inventoryInstance;
         if (ui == null || ui.boxObject == null) return;
+        if (!open && Compact && !force) return;   // the pinned Inventory stays up when other windows open (its own button / toggle still closes it)
         if (open) PixelPop.Show(ui.boxObject); else PixelPop.Hide(ui.boxObject);
         if (open)
         {
@@ -939,7 +950,7 @@ public class PixelUI : MonoBehaviour
         br.anchoredPosition = new Vector2(sx * margin.x, sy * margin.y);
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => boxObject != null && boxObject.activeSelf); // standard size, slides out near the mouse
-        button.onClick.AddListener(() => SetInventoryOpen(!PixelPop.IsOpen(boxObject)));
+        button.onClick.AddListener(() => SetInventoryOpen(!PixelPop.IsOpen(boxObject), true));
 
         // --- Box (sits next to the button, growing away from the screen edge)
         boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
@@ -981,10 +992,12 @@ public class PixelUI : MonoBehaviour
                 cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
                 cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
                 close.onClick.AddListener(() => PixelPop.Hide(boxObject));
+                closeButtonObject = close.gameObject;
             }
         }
 
         BuildInventoryTabs(anchor);
+        BuildCompactToggle();
         BuildListViewport();
 
         // One text per tier (positions are set in Refresh so hidden tiers leave no gaps).
@@ -1046,7 +1059,7 @@ public class PixelUI : MonoBehaviour
 
         boxObject.SetActive(startOpen);
         BuildConsumableList(anchor);
-        PixelWindows.Register(this, 10, () => boxObject != null && PixelPop.IsOpen(boxObject), () => PixelPop.Hide(boxObject));
+        PixelWindows.Register(this, 10, () => boxObject != null && PixelPop.IsOpen(boxObject) && !Compact, () => PixelPop.Hide(boxObject));   // a pinned one ignores Escape
         inventoryInstance = this;
         PixelDebug.Info("PixelUI: created the Inventory box with " + count + " currency lines.", this);
     }
@@ -1112,8 +1125,26 @@ public class PixelUI : MonoBehaviour
         }
     }
 
+    private const string PrefCompact = "PixelClicker.Setting.InventoryCompact";
+    private static int compactCache = -1;
+
+    /// <summary>The pinned, simplified Inventory: just swatches and numbers (currency, then the consumables you can use with a click).</summary>
+    public static bool Compact
+    {
+        get
+        {
+            if (compactCache < 0) compactCache = PlayerPrefs.GetInt(PrefCompact, 0);
+            return compactCache != 0;
+        }
+        set
+        {
+            compactCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefCompact, compactCache);
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetInventoryStatics() { currencyNamesCache = -1; }
+    private static void ResetInventoryStatics() { currencyNamesCache = -1; compactCache = -1; }
 
     private struct RowParts { public TMP_Text amount; public Image swatch; }
     private readonly Dictionary<TMP_Text, RowParts> rowParts = new Dictionary<TMP_Text, RowParts>();
@@ -1200,7 +1231,10 @@ public class PixelUI : MonoBehaviour
             if (titleLabel != null) PixelUIKit.SetText(titleLabel, inventoryTitle);
         }
         if (autoMode) UpdateSubTabs();
-        bool showCurrency = !autoMode || inventoryTab == 0;
+        bool compact = autoMode && Compact;
+        if (autoMode) ApplyCompactLook(compact);
+        bool names = CurrencyShowNames && !compact;
+        bool showCurrency = !autoMode || inventoryTab == 0 || compact;
         float y = 0f; // lines are laid out inside the scrolling list (its top = just below the tabs)
 
         // The Ultra pixel row comes first, set apart from the pixel counts by a thin line.
@@ -1214,7 +1248,7 @@ public class PixelUI : MonoBehaviour
         {
             ultraLabel.rectTransform.anchoredPosition = new Vector2(0f, -y);
             string ultraAmount = FormatAmount(clicker.TotalUltra);
-            if (CurrencyShowNames) SetRow(ultraLabel, "Ultra", ultraAmount, Color.white, false, true);
+            if (names) SetRow(ultraLabel, "Ultra", ultraAmount, Color.white, false, true);
             else SetRow(ultraLabel, ultraAmount, "", Color.white, false, true);
             y += LinePitch;
             ultraDivider.rectTransform.anchoredPosition = new Vector2(0f, -(y + 4f));
@@ -1233,7 +1267,7 @@ public class PixelUI : MonoBehaviour
             if (!visible) continue;
 
             string amount = (tier.unlocked || holding) ? FormatAmount(tier.count) : lockedText;
-            if (CurrencyShowNames) SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
+            if (names) SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
             else SetRow(label, amount, "", tier.UIColor, !tier.unlocked && !holding);   // swatch + number; the name is in the hover tip
 
             if (autoMode)
@@ -1243,7 +1277,13 @@ public class PixelUI : MonoBehaviour
             }
         }
 
-        if (autoMode)
+        if (autoMode && compact)
+        {
+            HideMaterialWidgets();
+            HideConsumableWidgets();
+            y = RefreshCompactConsumables(y);
+        }
+        else if (autoMode)
         {
             if (inventoryTab == 1)
             {
@@ -1263,8 +1303,9 @@ public class PixelUI : MonoBehaviour
         // Box height follows the number of visible lines.
         if (autoMode && boxRect != null)
         {
-            float boxHeight = maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
-            boxRect.sizeDelta = new Vector2(panelWidth, boxHeight);
+            float boxHeight = compact ? Mathf.Min(maxPanelHeight, ContentTop + y + panelPadding + 4f)   // the simplified one is only as tall as its lines
+                                      : maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
+            boxRect.sizeDelta = new Vector2(compact ? CompactWidth : panelWidth, boxHeight);
 
             // Keep the list just below the tabs (the header height can change after the box is built).
             listViewport.offsetMin = new Vector2(0f, panelPadding);
@@ -1277,6 +1318,16 @@ public class PixelUI : MonoBehaviour
             if (listBarObject != null && listBarObject.activeSelf != scrolls) listBarObject.SetActive(scrolls);
             if (!scrolls) listContent.anchoredPosition = Vector2.zero;
         }
+    }
+
+    /// <summary>Hides / shows the parts the simplified Inventory drops (title, X, tabs, category list) and tints the toggle.</summary>
+    private void ApplyCompactLook(bool compact)
+    {
+        if (titleLabel != null && titleLabel.gameObject.activeSelf == compact) titleLabel.gameObject.SetActive(!compact);
+        if (closeButtonObject != null && closeButtonObject.activeSelf == compact) closeButtonObject.SetActive(!compact);
+        foreach (GameObject tab in tabObjects) if (tab != null && tab.activeSelf == compact) tab.SetActive(!compact);
+        if (compact && categoryDropdown != null && categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(false);
+        if (compactButton != null) compactButton.GetComponent<Image>().color = compact ? new Color(0.2f, 0.6f, 0.3f, 1f) : closeButtonColor;
     }
 
     /// <summary>The place the currency lines and potion rows live: the scrolling list in automatic mode, else the box itself.</summary>
@@ -1339,7 +1390,7 @@ public class PixelUI : MonoBehaviour
     }
 
     /// <summary>Where the lines start: below the title bar and (in automatic mode) the two tab buttons.</summary>
-    private float ContentTop => headerHeight + (showHeader ? 0f : panelPadding * 0.5f) + (autoMode ? subTabHeight + subTabGap : 0f)
+    private float ContentTop => Compact && autoMode ? CompactTop : headerHeight + (showHeader ? 0f : panelPadding * 0.5f) + (autoMode ? subTabHeight + subTabGap : 0f)
                                 + (autoMode && inventoryTab == 1 ? categoryDropdownHeight + subTabGap : 0f); // room for the category drop-down
 
     // ------------------------------------------------------------------
@@ -1362,6 +1413,7 @@ public class PixelUI : MonoBehaviour
                                     subTabFontSize > 0f ? subTabFontSize : 28f);
             PixelUIKit.Caps(tab);
             subTabImages[i] = tab.GetComponent<Image>();
+            tabObjects.Add(tab.gameObject);
 
             RectTransform rt = tab.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
@@ -1409,6 +1461,76 @@ public class PixelUI : MonoBehaviour
             Refresh();
         });
         categoryDropdown.gameObject.SetActive(false);
+    }
+
+    /// <summary>The little button at the window's top left that switches the simplified (pinned) Inventory on and off.</summary>
+    private void BuildCompactToggle()
+    {
+        if (!autoMode) return;
+        float size = CompactToggleSize;
+        compactButton = MakeButton(boxObject.transform, "Compact Toggle", "", new Vector2(size, size), closeButtonColor, headerTextColor, size * 0.5f);
+        RectTransform rt = compactButton.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
+
+        // Icon: four small squares (a tiny grid = "just the swatches").
+        float cell = size * 0.22f, gap = size * 0.1f;
+        for (int k = 0; k < 4; k++)
+        {
+            GameObject sq = new GameObject("Icon " + k, typeof(RectTransform), typeof(Image));
+            sq.transform.SetParent(compactButton.transform, false);
+            Image im = sq.GetComponent<Image>();
+            im.raycastTarget = false;
+            im.color = headerTextColor;
+            RectTransform sr = sq.GetComponent<RectTransform>();
+            sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0.5f, 0.5f);
+            sr.sizeDelta = new Vector2(cell, cell);
+            sr.anchoredPosition = new Vector2((k % 2 == 0 ? -1f : 1f) * (cell + gap) * 0.5f, (k < 2 ? 1f : -1f) * (cell + gap) * 0.5f);
+        }
+
+        PixelHoverTip tip = compactButton.gameObject.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => tooltipCustomText = Compact ? compactOffTip : compactOnTip;
+        tip.onExit = HideTooltip;
+        compactButton.onClick.AddListener(() =>
+        {
+            Compact = !Compact;
+            if (listContent != null) listContent.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
+    }
+
+    [Tooltip("Hover tip on the toggle while the Inventory is in its normal form.")]
+    [SerializeField] private string compactOnTip = "Simplify: just swatches and numbers, pinned on screen (click a consumable to use it)";
+    [Tooltip("Hover tip on the toggle while the Inventory is simplified.")]
+    [SerializeField] private string compactOffTip = "Back to the full Inventory";
+
+    /// <summary>The simplified view's consumables: every potion / device / seed you hold as a swatch + count; a click uses it. Returns the y below.</summary>
+    private float RefreshCompactConsumables(float y)
+    {
+        if (consumables == null) return y;
+        if (potionRowObjects == null || potionRowObjects.Length != consumables.ItemCount) BuildPotionRows();
+        bool first = true;
+        int count = potionRowObjects.Length;
+        for (int i = 0; i < count; i++)
+        {
+            int owned = consumables.ItemOwned(i);
+            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0);
+            if (potionRowObjects[i] == null)
+            {
+                if (!visible) continue;
+                CreatePotionRow(i);
+            }
+            if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
+            if (!visible) continue;
+
+            if (first) { y += 10f; first = false; }   // a gap between the currency and the consumables
+            potionRowObjects[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -y);
+            y += LinePitch;
+            int tierIndex = clicker.IndexOf(consumables.ItemRequiredType(i));
+            SetRow(potionLabels[i], "x" + (owned >= 99999 ? PixelConsumables.OwnedText(owned) : FormatAmount(owned)), "",
+                   tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : RowTextColor);
+        }
+        return y;
     }
 
     private void UpdateSubTabs()
@@ -1466,6 +1588,7 @@ public class PixelUI : MonoBehaviour
         itemTip.onEnter = () => ShowItemTooltip(captured);
         itemTip.onExit = HideTooltip;
         click.onRightClick = () => { if (consumables != null && consumables.TryUseItem(captured)) Refresh(); };
+        click.onLeftClick = () => { if (Compact && consumables != null && consumables.TryUseItem(captured)) Refresh(); };   // the simplified Inventory: a plain click uses it
 
         TMP_Text label = MakeText(row.transform, "Label", "", fontSize, align, FontStyles.Normal, textColor);
         RectTransform lr = label.rectTransform;
@@ -1829,13 +1952,14 @@ public class PixelUI : MonoBehaviour
 /// </summary>
 public class PotionRowClick : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
-    public Action onRightClick;
+    public Action onRightClick, onLeftClick;
     public Image highlight;
     public Color hoverColor = new Color(1f, 1f, 1f, 0.15f);
 
     public void OnPointerClick(PointerEventData eventData)
     {
         if (eventData.button == PointerEventData.InputButton.Right) onRightClick?.Invoke();
+        else if (eventData.button == PointerEventData.InputButton.Left) onLeftClick?.Invoke();
     }
 
     public void OnPointerEnter(PointerEventData eventData)

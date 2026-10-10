@@ -371,3 +371,4 @@
 [2026-10-10 16:53 UTC] Stats section headings line up with the rows under them (text starts at the same edge).
 [2026-10-10 16:56 UTC] Achievements are grouped into collapsible sections (Collected, Clicks, Pets, Items, Other) with an earned / total count on each heading.
 [2026-10-10 16:57 UTC] Saved / Loaded message and the overwrite warning are now compact pop-up cards over a dimmed menu instead of a full-window blue panel.
+[2026-10-10 17:02 UTC] Inventory has a toggle (top left) for a simplified pinned view: just swatches and numbers for currency and consumables; click a consumable there to use it.
