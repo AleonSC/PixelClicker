@@ -669,6 +669,10 @@ public partial class PixelShop
         GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
         info.transform.SetParent(parent, false);
         info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
+        PixelUIKit.StyleButton(info.GetComponent<Image>());   // the bevelled, rounded look
+        Shadow dropShadow = info.AddComponent<Shadow>();      // and a little lift off the card
+        dropShadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+        dropShadow.effectDistance = new Vector2(0f, -2f);
         RectTransform rect = info.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(size, size);
         TMP_Text mark = CreateText(info.transform, "Mark", "!", buyFontSize, TextAlignmentOptions.Center, FontStyles.Bold);

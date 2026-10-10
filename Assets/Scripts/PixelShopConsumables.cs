@@ -98,11 +98,11 @@ public partial class PixelShop
         y += 58f + 8f;
 
         // An orange box with an exclamation mark on the top left corner of the item's picture: hover it to read the item's description.
-        float infoSize = 30f;
+        float infoSize = 34f;
         RectTransform infoRect = CreateInfoBox(go.transform, infoSize, () => card.tipText);
         float pictureX = width - 14f - cardPictureSize;
         if (hidePictures) PlaceTopLeft(infoRect, width - 14f - infoSize, 8f, infoSize, infoSize);
-        else PlaceTopLeft(infoRect, pictureX - infoSize * 0.5f, 2f, infoSize, infoSize);
+        else PlaceTopLeft(infoRect, pictureX, 8f, infoSize, infoSize);   // flush with the picture box's top left corner
         infoRect.SetAsLastSibling();   // above the picture
 
         card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.Center, FontStyles.Normal);   // centred in the space beside the '!' box

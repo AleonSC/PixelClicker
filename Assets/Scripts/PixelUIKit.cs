@@ -581,10 +581,30 @@ public static class PixelUIKit
         toggle.graphic = checkImage;
         toggle.isOn = false;
 
+        // A scroll bar for long lists, in the same slim rounded style as every other one (hidden when the list fits).
+        GameObject barGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+        barGo.transform.SetParent(template.transform, false);
+        RectTransform barRt = barGo.GetComponent<RectTransform>();
+        barRt.anchorMin = new Vector2(1f, 0f); barRt.anchorMax = new Vector2(1f, 1f);
+        barRt.pivot = new Vector2(1f, 0.5f);
+        barRt.sizeDelta = new Vector2(ScrollBarWidth, -12f);
+        barRt.anchoredPosition = new Vector2(-4f, 0f);
+        GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleGo.transform.SetParent(barGo.transform, false);
+        Image handleImg = handleGo.GetComponent<Image>();
+        StyleScrollBar(barGo.GetComponent<Image>(), handleImg);
+        Stretch(handleGo.GetComponent<RectTransform>());
+        Scrollbar dropBar = barGo.GetComponent<Scrollbar>();
+        dropBar.direction = Scrollbar.Direction.BottomToTop;
+        dropBar.handleRect = handleGo.GetComponent<RectTransform>();
+        dropBar.targetGraphic = handleImg;
+
         ScrollRect scroll = template.GetComponent<ScrollRect>();
         scroll.gameObject.AddComponent<PixelScrollSound>();
         scroll.content = cr;
         scroll.viewport = viewport.GetComponent<RectTransform>();
+        scroll.verticalScrollbar = dropBar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
         scroll.horizontal = false;
         scroll.movementType = ScrollRect.MovementType.Clamped;
         scroll.scrollSensitivity = 30f;
