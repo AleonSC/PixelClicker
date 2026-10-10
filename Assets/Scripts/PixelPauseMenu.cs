@@ -1251,12 +1251,12 @@ public class PixelPauseMenu : MonoBehaviour
         overwriteOverlay.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.7f); // also blocks the clicks behind it
         PixelUIKit.Stretch(overwriteOverlay.GetComponent<RectTransform>());
 
-        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
+        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         box.transform.SetParent(overwriteOverlay.transform, false);
         PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
         RectTransform br = box.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
-        br.sizeDelta = new Vector2(panelSize.x - 30f, 460f);
+        br.sizeDelta = new Vector2(panelSize.x - 60f, 340f);
 
         TMP_Text title = MakeText(box.transform, "Title", "", titleFontSize * 0.8f, FontStyles.Bold);
         title.color = overwriteWarningColor;
@@ -1313,25 +1313,32 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject resultOverlay;
     private TMP_Text resultLabel;
 
-    /// <summary>A blue window the size of the Save / Load menu that says what happened ("Saved to slot 2") with a Got it button.</summary>
+    /// <summary>A compact dialog card over a dimmed Save / Load menu that says what happened ("Saved to slot 2") with a Got it button.</summary>
     private void BuildResultOverlay(Transform parent)
     {
         resultOverlay = new GameObject("Result Window", typeof(RectTransform), typeof(Image));
         resultOverlay.transform.SetParent(parent, false);
-        resultOverlay.GetComponent<Image>().color = resultColor; // opaque: covers the whole menu and blocks the clicks behind it
+        resultOverlay.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.7f); // dims the menu and blocks the clicks behind it
         PixelUIKit.Stretch(resultOverlay.GetComponent<RectTransform>());
 
-        resultLabel = MakeText(resultOverlay.transform, "Message", "", titleFontSize, FontStyles.Bold);
+        GameObject card = new GameObject("Card", typeof(RectTransform), typeof(Image), typeof(PixelPop));
+        card.transform.SetParent(resultOverlay.transform, false);
+        PixelUIKit.StyleWindow(card.GetComponent<Image>(), resultColor);
+        RectTransform cr = card.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0.5f);
+        cr.sizeDelta = new Vector2(panelSize.x - 60f, 120f + menuButtonSize.y + 60f);
+
+        resultLabel = MakeText(card.transform, "Message", "", titleFontSize * 0.8f, FontStyles.Bold);
         resultLabel.alignment = TextAlignmentOptions.Center;
         resultLabel.enableAutoSizing = true;
-        resultLabel.fontSizeMax = titleFontSize;
-        resultLabel.fontSizeMin = 18f;
+        resultLabel.fontSizeMax = titleFontSize * 0.8f;
+        resultLabel.fontSizeMin = 16f;
         RectTransform lr = resultLabel.rectTransform;
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one; lr.pivot = new Vector2(0.5f, 0.5f);
-        lr.offsetMin = new Vector2(40f, 24f + menuButtonSize.y + 30f);
-        lr.offsetMax = new Vector2(-40f, -40f);
+        lr.offsetMin = new Vector2(30f, 24f + menuButtonSize.y + 20f);
+        lr.offsetMax = new Vector2(-30f, -30f);
 
-        Button ok = MakeButton(resultOverlay.transform, "Got It", resultButtonText, menuButtonSize, menuButtonColor, menuButtonFontSize);
+        Button ok = MakeButton(card.transform, "Got It", resultButtonText, new Vector2(cr.sizeDelta.x - 80f, menuButtonSize.y), menuButtonColor, menuButtonFontSize);
         RectTransform or = ok.GetComponent<RectTransform>();
         or.anchorMin = or.anchorMax = or.pivot = new Vector2(0.5f, 0f);
         or.anchoredPosition = new Vector2(0f, 24f);
