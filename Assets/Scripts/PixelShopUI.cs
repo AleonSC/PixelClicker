@@ -593,7 +593,7 @@ public partial class PixelShop
     /// </summary>
     private void LayoutPackRowLikeCards(PackRow row, bool hasArrow)
     {
-        const float side = 20f, bottom = 14f;
+        const float side = 14f, bottom = 14f;   // the same margin as the picture on the left
         float bar = Mathf.Min(buyButtonSize.y, rowHeight * 0.26f);
 
         RectTransform picture = row.rect.Find("Picture") as RectTransform;
@@ -609,11 +609,17 @@ public partial class PixelShop
                 info.SetAsLastSibling();                                                                      // and drawn over it
             }
         }
-        else if (info != null) left = side + info.sizeDelta.x + 12f;
+        float nameLeft = left;
+        if (picture == null && info != null)
+        {
+            info.anchoredPosition = new Vector2(side, -(rowHeight * 0.38f * 0.5f - info.sizeDelta.y * 0.5f));   // in front of the name, on the box's left edge
+            nameLeft = side + info.sizeDelta.x + 12f;
+            left = side;                                                                                        // the cost and the bar start at the box's left edge
+        }
 
-        // Name on top, cost under it, both clear of the bar and (now) of nothing on the right.
+        // Name on top, cost under it, both clear of the bar.
         SetBand(row.nameLabel.rectTransform, 0.62f, 1f, side);
-        row.nameLabel.rectTransform.offsetMin = new Vector2(left, 0f);
+        row.nameLabel.rectTransform.offsetMin = new Vector2(nameLeft, 0f);
         SetBand(row.costLabel.rectTransform, 0f, 0.62f, side);
         row.costLabel.rectTransform.offsetMin = new Vector2(left, bottom + bar + 6f);
 
@@ -970,11 +976,12 @@ public partial class PixelShop
     /// </summary>
     private void ApplyLevelWidgets(PackRow row, int level, int max)
     {
+        float w = max > 10 ? 10f : 18f, h = 34f, gap = 6f;
         if (row.levelLabel == null)
         {
-            float s = Mathf.Min(52f, rowHeight * 0.22f);
-            float left = 20f + s + 12f;
-            row.levelLabel = CreateText(row.rect, "Level", "", costFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+            float markersWidth = max * (w + gap);
+            const float labelWidth = 210f, side = 14f;
+            row.levelLabel = CreateText(row.rect, "Level", "", costFontSize, TextAlignmentOptions.MidlineRight, FontStyles.Bold);
             row.levelLabel.color = levelColor;
             row.levelLabel.raycastTarget = false;
             row.levelLabel.enableAutoSizing = true;
@@ -986,30 +993,28 @@ public partial class PixelShop
 #else
             row.levelLabel.enableWordWrapping = false;
 #endif
+            // On the name's line, right-aligned: "LEVEL 2/5" and the little level boxes at the right edge.
             RectTransform lr = row.levelLabel.rectTransform;
-            lr.anchorMin = new Vector2(0f, 0.36f); lr.anchorMax = new Vector2(0f, 0.6f);
-            lr.pivot = new Vector2(0f, 0.5f);
-            lr.sizeDelta = new Vector2(230f, 0f);
-            lr.anchoredPosition = new Vector2(left, 0f);
+            lr.anchorMin = new Vector2(1f, 0.62f); lr.anchorMax = new Vector2(1f, 1f);
+            lr.pivot = new Vector2(1f, 0.5f);
+            lr.sizeDelta = new Vector2(labelWidth, 0f);
+            lr.anchoredPosition = new Vector2(-(side + markersWidth + 10f), 0f);
 
             GameObject rootGo = new GameObject("Level Markers", typeof(RectTransform));
             rootGo.transform.SetParent(row.rect, false);
             row.markerRoot = rootGo.GetComponent<RectTransform>();
-            row.markerRoot.anchorMin = new Vector2(0f, 0.36f); row.markerRoot.anchorMax = new Vector2(0f, 0.6f);
-            row.markerRoot.pivot = new Vector2(0f, 0.5f);
-            row.markerRoot.anchoredPosition = new Vector2(left + 240f, 0f);
-            row.markerRoot.sizeDelta = Vector2.zero;
+            row.markerRoot.anchorMin = new Vector2(1f, 0.62f); row.markerRoot.anchorMax = new Vector2(1f, 1f);
+            row.markerRoot.pivot = new Vector2(1f, 0.5f);
+            row.markerRoot.anchoredPosition = new Vector2(-side, 0f);
+            row.markerRoot.sizeDelta = new Vector2(markersWidth, 0f);
 
-            // The cost line moves down to make room for this line.
-            RectTransform cr = row.costLabel.rectTransform;
-            cr.anchorMin = new Vector2(cr.anchorMin.x, 0.05f);
-            cr.anchorMax = new Vector2(cr.anchorMax.x, 0.34f);
+            // The name keeps clear of them.
+            row.nameLabel.rectTransform.offsetMax = new Vector2(-(side + markersWidth + labelWidth + 20f), 0f);
         }
 
         bool maxed = level >= max;
         PixelUIKit.SetText(row.levelLabel, string.Format(maxed ? maxedLevelFormat : levelFormat, level, max));
 
-        float w = max > 10 ? 10f : 18f, h = 34f, gap = 6f;
         while (row.markers.Count < max)
         {
             GameObject box = new GameObject("Level " + row.markers.Count, typeof(RectTransform), typeof(Image));
