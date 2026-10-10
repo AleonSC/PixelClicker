@@ -88,6 +88,18 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Colour of the nozzle.")]
     [SerializeField] private Color nozzleColor = new Color(0.8f, 0.8f, 0.85f, 1f);
 
+    [Header("Aim Line")]
+    [Tooltip("Tick to hide the faint line that shows where a spat-out pixel will land.")]
+    [SerializeField] private bool hideAimLine = false;
+
+    [Range(0f, 1f)]
+    [Tooltip("How see-through the aim line starts (it fades towards the landing spot). 0 = the coded default (0.4).")]
+    [SerializeField] private float aimLineAlpha = 0f;
+
+    [Min(0f)]
+    [Tooltip("Width of the aim line (world units). 0 = the coded default (0.035).")]
+    [SerializeField] private float aimLineWidth = 0f;
+
     [Header("Sucking and Spitting")]
     [Min(0.05f)]
     [Tooltip("How close (world units) an old pixel has to be to the mouse for a right-click to suck it up.")]
@@ -267,10 +279,18 @@ public class PixelBank : MonoBehaviour
     // Hose
     private GameObject hoseRoot;
     private MeshFilter hoseFilter;
-    private Transform nozzle;
-    private Transform displayCube;
-    private Renderer displayRenderer;
-    private TextMeshPro displayText;
+    private Transform nozzle;          // the nozzle assembly: its origin is the mouth, +Y points the way pixels leave, +X is the side the glass cube sits on
+    private Transform glassCube;       // the glass cube on the nozzle
+    private GameObject glassPixel;     // the selected pixel's model inside the glass
+    private int glassTier = -1;
+    private Transform counterPlate;    // the small plate on the nozzle with the stored count
+    private TextMeshPro counterText;
+    private TextMeshPro displayText;   // floating message only ("Bank full" / "Bank empty")
+    private LineRenderer aimLine;
+    private Transform aimMarker;
+    private Material aimMaterial;
+    private readonly System.Collections.Generic.List<Vector3> aimPoints = new System.Collections.Generic.List<Vector3>();
+    private static readonly RaycastHit[] aimHits = new RaycastHit[8];
     private Mesh hoseMesh;
     private Vector3[] hosePoints;
     private Vector3 control;
@@ -429,6 +449,7 @@ public class PixelBank : MonoBehaviour
         if (canvasRoot != null) Destroy(canvasRoot);
         if (hoseRoot != null) Destroy(hoseRoot);
         if (hoseMesh != null) Destroy(hoseMesh);
+        if (aimMaterial != null) Destroy(aimMaterial);
     }
 
     private void Update()
@@ -502,22 +523,9 @@ public class PixelBank : MonoBehaviour
         if (hoseMat != null) tube.GetComponent<MeshRenderer>().sharedMaterial = hoseMat;
         hosePoints = new Vector3[hoseSegments + 1];
 
-        GameObject nozzleObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        nozzleObject.name = "Nozzle";
-        Destroy(nozzleObject.GetComponent<Collider>());
-        nozzleObject.transform.SetParent(hoseRoot.transform, false);
-        Material nozzleMat = clicker.CreateVisualMaterial(nozzleColor, false);
-        if (nozzleMat != null) nozzleObject.GetComponent<Renderer>().sharedMaterial = nozzleMat;
-        nozzle = nozzleObject.transform;
+        BuildNozzle();
 
-        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cube.name = "Selected Pixel";
-        Destroy(cube.GetComponent<Collider>());
-        cube.transform.SetParent(hoseRoot.transform, false);
-        displayCube = cube.transform;
-        displayRenderer = cube.GetComponent<Renderer>();
-
-        GameObject textObject = new GameObject("Selected Pixel Text");
+        GameObject textObject = new GameObject("Bank Message Text");
         textObject.transform.SetParent(hoseRoot.transform, false);
         displayText = textObject.AddComponent<TextMeshPro>();
         displayText.fontSize = displayTextSize;
@@ -529,6 +537,26 @@ public class PixelBank : MonoBehaviour
         displayText.rectTransform.pivot = new Vector2(0f, 0.5f); // the text starts at its position and runs to the right
         if (clicker.UIFont != null) displayText.font = clicker.UIFont;
 
+        // The aim line: a faint line from the nozzle to where a spat pixel lands, with a small ring on the floor there.
+        GameObject lineObject = new GameObject("Aim Line", typeof(LineRenderer));
+        lineObject.transform.SetParent(hoseRoot.transform, false);
+        aimLine = lineObject.GetComponent<LineRenderer>();
+        aimMaterial = new Material(PixelShaders.SpriteDefault());
+        aimLine.sharedMaterial = aimMaterial;
+        aimLine.useWorldSpace = true;
+        aimLine.numCapVertices = 4;
+        aimLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        aimLine.receiveShadows = false;
+        aimLine.positionCount = 0;
+        GameObject marker = new GameObject("Aim Marker", typeof(MeshFilter), typeof(MeshRenderer));
+        marker.transform.SetParent(hoseRoot.transform, false);
+        marker.GetComponent<MeshFilter>().sharedMesh = PixelSorterDevice.BuildRingMesh(0.55f, 1f, 0.02f, 28);
+        Renderer markerRenderer = marker.GetComponent<MeshRenderer>();
+        markerRenderer.sharedMaterial = aimMaterial;
+        markerRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        aimMarker = marker.transform;
+        aimMarker.gameObject.SetActive(false);
+
         // The ring that shows the area (a unit-radius ring, scaled to the area's radius).
         GameObject ring = new GameObject("Area Ring", typeof(MeshFilter), typeof(MeshRenderer));
         ring.transform.SetParent(hoseRoot.transform, false);
@@ -537,6 +565,75 @@ public class PixelBank : MonoBehaviour
         areaRingRenderer = ring.GetComponent<Renderer>();
         areaRingRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         areaRing.gameObject.SetActive(false);
+    }
+
+    private static readonly Color CollarColor = new Color(0.22f, 0.24f, 0.3f, 1f);
+    private static readonly Color AccentColor = new Color(0.95f, 0.6f, 0.15f, 1f);
+    private static readonly Color DarkColor = new Color(0.05f, 0.05f, 0.07f, 1f);
+
+    private Transform Part(string name, PrimitiveType shape, Transform parent, Vector3 position, Vector3 scale, Color color, bool translucent = false)
+    {
+        GameObject go = GameObject.CreatePrimitive(shape);
+        go.name = name;
+        Destroy(go.GetComponent<Collider>());
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = position;
+        go.transform.localScale = scale;
+        Renderer r = go.GetComponent<Renderer>();
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        Material m = clicker.CreateVisualMaterial(color, translucent);
+        if (m != null) r.sharedMaterial = m; else r.material.color = color;
+        return go.transform;
+    }
+
+    /// <summary>
+    /// The nozzle: a hose collar with an orange ring, a metal body that narrows to a flared lip with a dark opening, a glass cube mounted
+    /// on its upper side (the selected pixel spins inside it) and a small plate on the camera side that carries the stored count.
+    /// Built along -Y from the mouth at the origin (+Y = the way pixels leave).
+    /// </summary>
+    private void BuildNozzle()
+    {
+        float L = nozzleLength, R = nozzleRadius;
+        GameObject root = new GameObject("Nozzle");
+        root.transform.SetParent(hoseRoot.transform, false);
+        nozzle = root.transform;
+
+        // Cylinder primitives are 2 tall: y scale = half the height.
+        Part("Collar", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.9f * L, 0f), new Vector3(2.1f * R, 0.1f * L, 2.1f * R), CollarColor);
+        Part("Collar Ring", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.77f * L, 0f), new Vector3(2.45f * R, 0.035f * L, 2.45f * R), AccentColor);
+        Part("Body", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.46f * L, 0f), new Vector3(2f * R, 0.29f * L, 2f * R), nozzleColor);
+        Part("Grip Ring", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.3f * L, 0f), new Vector3(2.2f * R, 0.025f * L, 2.2f * R), CollarColor);
+        Part("Front", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.14f * L, 0f), new Vector3(1.85f * R, 0.14f * L, 1.85f * R), Color.Lerp(nozzleColor, CollarColor, 0.35f));
+        Part("Lip", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.025f * L, 0f), new Vector3(2.5f * R, 0.025f * L, 2.5f * R), AccentColor);
+        Part("Opening", PrimitiveType.Cylinder, nozzle, new Vector3(0f, 0.002f * L, 0f), new Vector3(1.7f * R, 0.01f * L, 1.7f * R), DarkColor);
+
+        // The glass cube sits on the upper (+X) side of the body, on a small mount.
+        float g = Mathf.Max(0.1f, displaySize);
+        Part("Glass Mount", PrimitiveType.Cube, nozzle, new Vector3(R + 0.04f, -0.45f * L, 0f), new Vector3(0.1f, 0.2f * L, 0.14f), CollarColor);
+        Part("Glass Base", PrimitiveType.Cube, nozzle, new Vector3(R + 0.09f, -0.45f * L, 0f), new Vector3(0.05f, g * 1.1f, g * 1.1f), CollarColor);
+        glassCube = Part("Glass Cube", PrimitiveType.Cube, nozzle, new Vector3(R + 0.115f + g * 0.5f, -0.45f * L, 0f), Vector3.one * g, new Color(0.7f, 0.9f, 1f, 0.26f), true);
+        // Thin metal corner bars make the glass read as a case.
+        float bar = 0.018f;
+        for (int sx = -1; sx <= 1; sx += 2)
+            for (int sz = -1; sz <= 1; sz += 2)
+                Part("Glass Edge", PrimitiveType.Cube, glassCube, new Vector3(sx * 0.5f, 0f, sz * 0.5f), new Vector3(bar / g, 1.02f, bar / g), CollarColor);
+
+        // The count plate (on the camera side; UpdateNozzle flips it to whichever side faces the camera).
+        counterPlate = Part("Counter Plate", PrimitiveType.Cube, nozzle, new Vector3(0f, -0.46f * L, 0f), new Vector3(0.28f, 0.16f, 0.025f), DarkColor);
+        GameObject textObject = new GameObject("Counter Text");
+        textObject.transform.SetParent(counterPlate, false);
+        textObject.transform.localPosition = new Vector3(0f, 0f, -0.52f);
+        counterText = textObject.AddComponent<TextMeshPro>();
+        counterText.fontSize = 4f;
+        counterText.fontStyle = FontStyles.Bold;
+        counterText.alignment = TextAlignmentOptions.Center;
+        counterText.color = new Color(0.55f, 1f, 0.65f, 1f);
+        counterText.overflowMode = TextOverflowModes.Overflow;
+        counterText.rectTransform.sizeDelta = new Vector2(1f, 1f);
+        counterText.enableAutoSizing = false;
+        if (clicker.UIFont != null) counterText.font = clicker.UIFont;
+        // The text is scaled with the plate (a child), so undo the plate's squash.
+        textObject.transform.localScale = new Vector3(1f / 0.28f, 1f / 0.16f, 1f / 0.025f) * 0.2f;
     }
 
     private void UpdateHose()
@@ -603,9 +700,7 @@ public class PixelBank : MonoBehaviour
         heading = aimDirection; // the nozzle and the spat-out pixels follow the aim
         kick = Mathf.MoveTowards(kick, 0f, dt * 4f);
         float punch = 1f + kick * 0.35f;
-        nozzle.rotation = Quaternion.FromToRotation(Vector3.up, heading);
-        nozzle.localScale = new Vector3(nozzleRadius * 2f * punch, nozzleLength * 0.5f, nozzleRadius * 2f * punch);
-        nozzle.position = tip - heading * (nozzleLength * 0.5f - 0.02f);
+        PlaceNozzle(cam, tip, heading, 1f + kick * 0.15f);
         mouthPosition = tip + heading * 0.05f;
         mouthDirection = heading;
         tipPosition = tip;
@@ -919,38 +1014,129 @@ public class PixelBank : MonoBehaviour
     // The little display of the selected pixel
     // ------------------------------------------------------------------
 
+    /// <summary>Orients the nozzle assembly: +Y along the aim, +X towards the top of the screen (so the glass cube sits on top).</summary>
+    private void PlaceNozzle(Camera cam, Vector3 tip, Vector3 heading, float punch)
+    {
+        Vector3 up = cam.transform.up - heading * Vector3.Dot(cam.transform.up, heading);
+        if (up.sqrMagnitude < 0.0001f) up = cam.transform.right - heading * Vector3.Dot(cam.transform.right, heading);
+        up.Normalize();
+        Vector3 forward = Vector3.Cross(up, heading); // local +Z
+        nozzle.rotation = Quaternion.LookRotation(forward, heading);
+        nozzle.position = tip;
+        nozzle.localScale = Vector3.one * punch;
+
+        // The count plate goes on the side that faces the camera and is read upright (its up is the screen-up side of the nozzle).
+        float side = Vector3.Dot(forward, cam.transform.forward) > 0f ? 1f : -1f; // +1 when local +Z points away from the camera (so the camera-facing side is -Z)
+        float r = nozzleRadius * 0.92f;
+        counterPlate.localPosition = new Vector3(0f, counterPlate.localPosition.y, -side * r);
+        counterPlate.rotation = Quaternion.LookRotation(cam.transform.forward, up);
+    }
+
     private void UpdateDisplay(Camera cam, Vector3 tip)
     {
         bool hasSelection = selected >= 0 && selected < counts.Length && counts[selected] > 0;
         if (selected >= 0 && !hasSelection) { selected = NextStocked(selected, 1); hasSelection = selected >= 0; }
 
-        Vector3 basePosition = tip + cam.transform.right * displayOffset.x + cam.transform.up * displayOffset.y;
-        displayCube.gameObject.SetActive(hasSelection);
-        if (hasSelection)
+        // The glass cube holds a spinning model of the selected pixel (its real look).
+        if (!hasSelection)
         {
-            if (displayTier != selected)
+            if (glassPixel != null) { Destroy(glassPixel); glassPixel = null; }
+            glassTier = -1;
+        }
+        else
+        {
+            if (glassTier != selected || glassPixel == null)
             {
+                if (glassPixel != null) Destroy(glassPixel);
+                glassPixel = clicker.CreateDisplayPixel(selected, glassCube, 0.52f);
+                glassTier = selected;
                 displayTier = selected;
-                PixelClicker.PixelTier t = clicker.Tiers[selected];
-                Material m = clicker.CreateVisualMaterial(t.color, t.translucent);
-                if (m != null) displayRenderer.sharedMaterial = m;
-                else displayRenderer.material.color = t.color;
+                if (glassPixel != null) glassPixel.transform.localPosition = Vector3.zero;
             }
-            displayCube.position = basePosition;
-            displayCube.rotation = Quaternion.Euler(20f, Time.unscaledTime * displaySpin, 0f);
-            displayCube.localScale = Vector3.one * displaySize;
+            if (glassPixel != null) glassPixel.transform.localRotation = Quaternion.Euler(20f, Time.unscaledTime * displaySpin, 0f);
         }
 
-        fullTimer = Mathf.Max(0f, fullTimer - Time.unscaledDeltaTime);
-        string text;
-        if (fullTimer > 0f) text = flashMessage;
-        else if (hasSelection) text = string.Format(displayTextFormat, clicker.Tiers[selected].displayName, counts[selected]);
-        else text = emptyDisplayText;
+        // The stored count is written on the plate on the nozzle.
+        counterPlate.gameObject.SetActive(true);
+        string number = hasSelection ? PixelClicker.FormatNumber(counts[selected]) : "0";
+        if (counterText.text != number) counterText.text = number;
+        counterText.color = hasSelection ? new Color(0.55f, 1f, 0.65f, 1f) : new Color(1f, 0.45f, 0.4f, 1f);
 
-        displayText.text = text;
-        displayText.transform.position = basePosition + cam.transform.right * (hasSelection ? displaySize * 0.9f : 0f);
-        displayText.transform.rotation = cam.transform.rotation;
-        displayText.alignment = TextAlignmentOptions.Left;
+        // A floating message only when there is something to say ("Bank full" / "Bank empty").
+        fullTimer = Mathf.Max(0f, fullTimer - Time.unscaledDeltaTime);
+        string text = fullTimer > 0f ? flashMessage : !hasSelection ? emptyDisplayText : "";
+        displayText.gameObject.SetActive(!string.IsNullOrEmpty(text));
+        if (!string.IsNullOrEmpty(text))
+        {
+            displayText.text = text;
+            displayText.transform.position = tip + cam.transform.right * displayOffset.x + cam.transform.up * displayOffset.y;
+            displayText.transform.rotation = cam.transform.rotation;
+            displayText.alignment = TextAlignmentOptions.Left;
+        }
+
+        UpdateAimLine(hasSelection);
+    }
+
+    /// <summary>The faint aim line: the path a spat-out pixel would take (its start speed, gravity and drag) until it hits the ground.</summary>
+    private void UpdateAimLine(bool hasSelection)
+    {
+        bool show = !hideAimLine && hasSelection && !areaActive && aimLine != null;
+        if (aimLine == null) return;
+        if (!show)
+        {
+            if (aimLine.positionCount != 0) aimLine.positionCount = 0;
+            if (aimMarker.gameObject.activeSelf) aimMarker.gameObject.SetActive(false);
+            return;
+        }
+
+        Vector3 p = mouthPosition;
+        Vector3 v = mouthDirection * spitSpeed;
+        Vector3 gravity = Physics.gravity * clicker.OldPixelGravityScale;
+        float drag = clicker.OldPixelDrag;
+        const float step = 0.03f;
+        aimPoints.Clear();
+        aimPoints.Add(p);
+        bool landed = false;
+        Vector3 landPoint = p;
+        for (int i = 0; i < 90 && !landed; i++)
+        {
+            v += gravity * step;
+            if (drag > 0f) v /= 1f + drag * step;
+            Vector3 next = p + v * step;
+            Vector3 delta = next - p;
+            float len = delta.magnitude;
+            if (len > 0.0001f)
+            {
+                int n = Physics.RaycastNonAlloc(p, delta / len, aimHits, len, ~0, QueryTriggerInteraction.Ignore);
+                float best = float.MaxValue;
+                for (int h = 0; h < n; h++)
+                {
+                    Collider c = aimHits[h].collider;
+                    if (c == null || c.GetComponentInParent<OldPixelInfo>() != null) continue;           // other old pixels
+                    if (clicker.PixelTransform != null && c.transform.IsChildOf(clicker.PixelTransform)) continue; // the cube
+                    if (aimHits[h].distance < best) { best = aimHits[h].distance; landPoint = aimHits[h].point; landed = true; }
+                }
+            }
+            p = landed ? landPoint : next;
+            aimPoints.Add(p);
+        }
+
+        float alpha = aimLineAlpha > 0f ? aimLineAlpha : 0.4f;
+        float width = aimLineWidth > 0f ? aimLineWidth : 0.035f;
+        aimLine.positionCount = aimPoints.Count;
+        for (int i = 0; i < aimPoints.Count; i++) aimLine.SetPosition(i, aimPoints[i]);
+        aimLine.widthMultiplier = width;
+        aimLine.startColor = new Color(1f, 1f, 1f, alpha);
+        aimLine.endColor = new Color(1f, 1f, 1f, landed ? alpha * 0.6f : 0f);
+
+        aimMarker.gameObject.SetActive(landed);
+        if (landed)
+        {
+            aimMarker.position = landPoint + Vector3.up * 0.02f;
+            aimMarker.rotation = Quaternion.Euler(90f, 0f, 0f); // lies flat on the ground
+            aimMarker.localScale = Vector3.one * 0.22f;
+            aimMaterial.color = new Color(1f, 1f, 1f, alpha);
+        }
     }
 
     // ------------------------------------------------------------------

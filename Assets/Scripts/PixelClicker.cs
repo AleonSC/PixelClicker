@@ -460,6 +460,13 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Speed curve of the suck-in (time 0..1, progress 0..1). Rising curves pull faster toward the end.")]
     [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
+    [Tooltip("Old pixels sucked up swirl round the Vacuum pixel instead of flying straight in. Tick to turn the swirl off.")]
+    [SerializeField] private bool disableVacuumSwirl = false;
+
+    [Min(0f)]
+    [Tooltip("How many times a sucked-up pixel circles the Vacuum pixel on its way in. 0 = the coded default (1.5).")]
+    [SerializeField] private float vacuumSwirlTurns = 0f;
+
     [Tooltip("The old Vacuum pixel that drops after a vacuum click shows the pixels it sucked up as very small versions floating inside it.")]
     [SerializeField] private bool hideVacuumContents = false;
 
@@ -574,6 +581,12 @@ public class PixelClicker : MonoBehaviour
     private int oldPixelCapOverride; // set by the shop's Old Pixel Capacity upgrade (0 = none bought)
 
     /// <summary>The cap in use: the shop upgrade's value when one is bought, otherwise the Inspector value.</summary>
+    /// <summary>Gravity multiplier of old pixels (the Pixel Bank's aim line uses it to predict where a spat pixel lands).</summary>
+    public float OldPixelGravityScale => gravityScale;
+
+    /// <summary>Linear drag of old pixels (see <see cref="OldPixelGravityScale"/>).</summary>
+    public float OldPixelDrag => fallingCopyDrag;
+
     public int OldPixelCap => oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap;
 
     /// <summary>Called by the shop's Old Pixel Capacity upgrade (0 = back to the Inspector value).</summary>
@@ -2926,6 +2939,15 @@ public class PixelClicker : MonoBehaviour
         Vector3 startScale = t.localScale;
         float time = 0f;
 
+        // The swirl: the pixel's offset from the target turns round the vertical axis while it shrinks towards the centre.
+        Vector3 startOffset = startPos - endPos;
+        Vector2 startFlat = new Vector2(startOffset.x, startOffset.z);
+        float startRadius = startFlat.magnitude;
+        float startAngle = Mathf.Atan2(startOffset.z, startOffset.x);
+        float turns = vacuumSwirlTurns > 0f ? vacuumSwirlTurns : 1.5f;
+        float spinDirection = UnityEngine.Random.value < 0.5f ? -1f : 1f; // some go round the other way for a busier look
+        bool swirl = !disableVacuumSwirl && startRadius > 0.05f;
+
         while (time < vacuumSuckDuration)
         {
             if (t == null) yield break; // destroyed (lifetime ran out) while flying
@@ -2934,7 +2956,16 @@ public class PixelClicker : MonoBehaviour
             float eased = vacuumSuckCurve.Evaluate(k);
 
             if (dest != null) endPos = dest.position;
-            t.position = Vector3.Lerp(startPos, endPos, eased);
+            if (swirl)
+            {
+                float radius = startRadius * (1f - eased);
+                float angle = startAngle + spinDirection * turns * Mathf.PI * 2f * eased;
+                t.position = new Vector3(endPos.x + Mathf.Cos(angle) * radius,
+                                         Mathf.Lerp(startPos.y, endPos.y, eased),
+                                         endPos.z + Mathf.Sin(angle) * radius);
+                t.Rotate(0f, spinDirection * 540f * Time.deltaTime, 0f, Space.World); // tumbles as it goes round
+            }
+            else t.position = Vector3.Lerp(startPos, endPos, eased);
             t.localScale = startScale * (1f - eased);
             yield return null;
         }
