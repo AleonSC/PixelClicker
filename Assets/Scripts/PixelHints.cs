@@ -214,9 +214,9 @@ public class PixelHints : MonoBehaviour
         H("minigame_bomb", "A bomb! Cut the wire that matches the colour you have the MOST of before time runs out. A wrong wire (or timeout) clears your old pixels."),
         H("minigame_pad", "An Ultra Pad! Drop old pixels of the colour it asks for onto it to earn Ultra pixels. Other colours cost you pixels."),
         H("potion", "Potion drunk! For a while only that pixel type spawns. Right-click the active potion line at the top to cancel it."),
-        H("device_Vacuum", "Vacuum Device placed! It pulls in old pixels and collects them again until its timer runs out. Hold right-click on a placed device to remove it."),
-        H("device_Fan", "Fan placed! It blows old pixels along the floor in front of it until its timer runs out."),
-        H("device_Sorter", "Sorter placed! Click its buttons to change how hard old pixels are pushed out of the pipe."),
+        H("device_Vacuum", "Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in old pixels and collects them again for a few seconds. Hold right-click on a placed device to remove it."),
+        H("device_Fan", "Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows old pixels along the floor in front of it until its timer runs out."),
+        H("device_Sorter", "Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),
         H("combo", "Combo! Keep clicking quickly to raise the combo bonus. It breaks if you stop for a moment."),
         H("upgrade_interval", "The auto clicker now clicks faster. Each level shortens the time between its clicks."),
@@ -879,7 +879,7 @@ public class PixelHints : MonoBehaviour
             wasShowing = true;
             return;
         }
-        PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && (next.id.StartsWith("minigame_") || next.id.StartsWith("timestop_") || next.id.StartsWith("bank_")),
+        PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && (next.id.StartsWith("device_") || next.id.StartsWith("minigame_") || next.id.StartsWith("timestop_") || next.id.StartsWith("bank_")),
                          aboveCombo: next.id == "combo", nearLog: next.id == "event_log"); // the first combo tip sits just above the combo meter
         wasShowing = true;
     }

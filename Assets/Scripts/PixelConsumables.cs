@@ -30,7 +30,11 @@ public class PixelConsumables : MonoBehaviour
     {
         PotionDrunk = null;
         DevicePlaced = null;
+        HoveringDisarmed = false;
     }
+
+    /// <summary>True while the mouse is over a placed device that is still waiting for its first click (PixelClicker then ignores clicks, so the click switches the device on instead).</summary>
+    public static bool HoveringDisarmed { get; private set; }
 
     /// <summary>One kind of potion.</summary>
     [Serializable]
@@ -271,6 +275,17 @@ public class PixelConsumables : MonoBehaviour
     [SerializeField] private int maxPotionsHeld = 10;
 
     [Header("Devices")]
+    [Min(0f)]
+    [Tooltip("How many seconds a placed Vacuum Device works (it overrides that device's own duration). 0 = the coded default (5).")]
+    [SerializeField] private float vacuumDeviceSeconds = 0f;
+
+    [Tooltip("Text above a placed device that has not been switched on yet (devices start grey and idle until you left-click them once). Empty = 'Click to start'.")]
+    [SerializeField] private string disarmedText = "";
+
+    [Min(0f)]
+    [Tooltip("Seconds a grey device takes to fade into colour when it is switched on. 0 = the coded default (0.7).")]
+    [SerializeField] private float armFadeSeconds = 0f;
+
     [Tooltip("Placeable devices. A Vacuum Device is created for you; edit its price, radius and duration here.")]
     [SerializeField] private Device[] devices = CreateDefaultDevices();
 
@@ -885,8 +900,8 @@ public class PixelConsumables : MonoBehaviour
         }
     }
 
-    /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings.</summary>
-    private PixelPlacedDevice DeviceUnderPointer()
+    /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings. 'onlyDisarmed' = only devices still waiting for their first click.</summary>
+    private PixelPlacedDevice DeviceUnderPointer(bool onlyDisarmed = false)
     {
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return null;
@@ -896,24 +911,32 @@ public class PixelConsumables : MonoBehaviour
         float bestDistance = float.MaxValue;
         foreach (PixelPlacedDevice device in PixelPlacedDevice.All)
         {
-            if (device == null || device.IsRemoving) continue;
-            foreach (Renderer r in device.GetComponentsInChildren<Renderer>())
+            if (device == null || device.IsRemoving || (onlyDisarmed && device.Armed)) continue;
+            if (device.HitTest(ray, out float distance) && distance < bestDistance)
             {
-                if (!r.enabled || r.name == "Range" || r.name == "Blow Area") continue;
-                if (r.bounds.IntersectRay(ray, out float distance) && distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    best = device;
-                }
+                bestDistance = distance;
+                best = device;
             }
         }
         return best;
+    }
+
+    /// <summary>A left click on a grey (not yet switched on) device switches it on. While the mouse is over one, clicks don't reach the cube.</summary>
+    private void UpdateArming()
+    {
+        HoveringDisarmed = false;
+        if (IsPlacing || PixelBank.HoseOn || PixelClicker.GodMode || PixelFirstPerson.Active || PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PointerOverUI()) return;
+        PixelPlacedDevice target = DeviceUnderPointer(true);
+        if (target == null) return;
+        HoveringDisarmed = true;
+        if (LeftPressed() && Time.frameCount != placeEndFrame) target.Arm();
     }
 
     private void Update()
     {
         if (IsPlacing) UpdatePlacement();
         UpdateRemoval();
+        UpdateArming();
 
         if (activeIndex < 0) return;
 
@@ -1199,6 +1222,9 @@ public class PixelConsumables : MonoBehaviour
     public PixelClicker.PixelType ItemRequiredType(int item) =>
         IsDevice(item) ? devices[item - potions.Length].requiredType : potions[item].type;
 
+    /// <summary>How long a placed device lasts: the Vacuum Device uses <see cref="vacuumDeviceSeconds"/> (default 5), the others their own setting.</summary>
+    private float DeviceSeconds(Device d) => d.kind == DeviceKind.Vacuum ? (vacuumDeviceSeconds > 0f ? vacuumDeviceSeconds : 5f) : d.durationSeconds;
+
     public string ItemDescription(int item)
     {
         if (!IsDevice(item)) return Describe(item);
@@ -1206,7 +1232,7 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[item - potions.Length];
         return (d.description ?? "")
             .Replace("{radius}", d.radius.ToString("0.##"))
-            .Replace("{duration}", d.durationSeconds.ToString("0.##"));
+            .Replace("{duration}", DeviceSeconds(d).ToString("0.##"));
     }
 
     /// <summary>Adds items to the inventory (a shop purchase).</summary>
@@ -1471,7 +1497,8 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
-        SpawnDevice(index, Vector3.zero, 0f, d.durationSeconds, placingYaw, sorterBend, -1);
+        PixelPlacedDevice placedSorter = SpawnDevice(index, Vector3.zero, 0f, d.durationSeconds, placingYaw, sorterBend, -1);
+        if (placedSorter != null) placedSorter.Disarm();
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -1484,7 +1511,8 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
 
-        SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? d.uses : d.durationSeconds, 0f, 0f, -1);
+        PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? d.uses : DeviceSeconds(d), 0f, 0f, -1);
+        if (placed != null) placed.Disarm();   // starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -1497,6 +1525,8 @@ public class PixelConsumables : MonoBehaviour
         Device d = devices[index];
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         PixelPlacedDevice result;
+        PixelPlacedDevice.DisarmedText = string.IsNullOrEmpty(disarmedText) ? "Click to start" : disarmedText;
+        PixelPlacedDevice.ArmFadeSeconds = armFadeSeconds > 0f ? armFadeSeconds : 0.7f;
 
         if (d.kind == DeviceKind.Fan)
         {
@@ -1579,6 +1609,7 @@ public class PixelConsumables : MonoBehaviour
         public float aim;
         public float bend;
         public int force;
+        public bool disarmed;   // placed but never switched on yet
     }
 
     /// <summary>The devices currently standing in the world (those not already shrinking away).</summary>
@@ -1594,6 +1625,7 @@ public class PixelConsumables : MonoBehaviour
                 position = placed.transform.position,
                 yaw = placed.transform.eulerAngles.y,
                 remaining = placed.Remaining,
+                disarmed = !placed.Armed,
             };
             if (placed is PixelChargeBooster booster) state.aim = booster.Charge;
             if (placed is PixelSorterDevice sorter)
@@ -1620,7 +1652,8 @@ public class PixelConsumables : MonoBehaviour
         if (state == null || state.remaining <= 0f) return;
         int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
         if (index < 0) return;
-        SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
+        PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
+        if (restored != null && state.disarmed) restored.Disarm();
     }
 
     /// <summary>Starts a potion again with the time it had left (no sound, nothing used up). Used when loading a save.</summary>
@@ -1670,19 +1703,26 @@ public class PixelConsumables : MonoBehaviour
     {
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
 
-        // Cylinder body (Unity's cylinder is 2 units tall, hence the halved Y scale).
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        body.name = "Body";
-        Destroy(body.GetComponent<Collider>()); // never blocks clicks, placement rays or old pixels
-        body.transform.SetParent(root.transform, false);
-        body.transform.localScale = new Vector3(d.bodyDiameter, d.bodyHeight * 0.5f, d.bodyDiameter);
-        body.transform.localPosition = new Vector3(0f, d.bodyHeight * 0.5f, 0f);
+        if (d.kind == DeviceKind.Vacuum)
+        {
+            BuildVacuumBody(root, d, isPreview);
+        }
+        else
+        {
+            // Cylinder body (Unity's cylinder is 2 units tall, hence the halved Y scale).
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            body.name = "Body";
+            Destroy(body.GetComponent<Collider>()); // never blocks clicks, placement rays or old pixels
+            body.transform.SetParent(root.transform, false);
+            body.transform.localScale = new Vector3(d.bodyDiameter, d.bodyHeight * 0.5f, d.bodyDiameter);
+            body.transform.localPosition = new Vector3(0f, d.bodyHeight * 0.5f, 0f);
 
-        Color bodyColor = d.color;
-        if (isPreview) bodyColor.a = previewOpacity;
-        Material bodyMat = clicker.CreateVisualMaterial(bodyColor, isPreview);
-        if (bodyMat != null) body.GetComponent<Renderer>().sharedMaterial = bodyMat;
-        else body.GetComponent<Renderer>().material.color = bodyColor;
+            Color bodyColor = d.color;
+            if (isPreview) bodyColor.a = previewOpacity;
+            Material bodyMat = clicker.CreateVisualMaterial(bodyColor, isPreview);
+            if (bodyMat != null) body.GetComponent<Renderer>().sharedMaterial = bodyMat;
+            else body.GetComponent<Renderer>().material.color = bodyColor;
+        }
 
         // Flat disc showing the reach.
         if (showRange)
@@ -1716,7 +1756,7 @@ public class PixelConsumables : MonoBehaviour
             tg.transform.SetParent(root.transform, false);
             tg.transform.localPosition = new Vector3(0f, d.bodyHeight + timerHeightAbove, 0f);
             timer = tg.AddComponent<TextMeshPro>();
-            timer.text = string.Format(timerFormat, Mathf.CeilToInt(d.durationSeconds));
+            timer.text = string.Format(timerFormat, Mathf.CeilToInt(DeviceSeconds(d)));
             timer.fontSize = timerFontSize;
             timer.fontStyle = FontStyles.Bold;
             timer.alignment = TextAlignmentOptions.Center;
@@ -1725,6 +1765,119 @@ public class PixelConsumables : MonoBehaviour
         }
 
         return root;
+    }
+
+    /// <summary>
+    /// The Vacuum Device's look: a turned (lathe) body with a flared base, a slim waist and a funnel mouth at the top, two glowing bands, a glowing
+    /// core in the funnel and a small spinning turbine ("Spinner", turned by PixelVacuumDevice) above it.
+    /// </summary>
+    private void BuildVacuumBody(GameObject root, Device d, bool isPreview)
+    {
+        float R = d.bodyDiameter * 0.5f, H = d.bodyHeight;
+        float opacity = isPreview ? previewOpacity : 1f;
+        Color main = d.color; main.a = opacity;
+        Color glow = Color.Lerp(d.color, Color.white, 0.55f); glow.a = opacity;
+
+        // The turned body.
+        GameObject body = new GameObject("Body", typeof(MeshFilter), typeof(MeshRenderer));
+        body.transform.SetParent(root.transform, false);
+        body.GetComponent<MeshFilter>().sharedMesh = VacuumLatheMesh(R, H);
+        MeshRenderer bodyRenderer = body.GetComponent<MeshRenderer>();
+        Material bodyMat = clicker.CreateVisualMaterial(main, isPreview);
+        if (bodyMat != null) bodyRenderer.sharedMaterial = bodyMat; else bodyRenderer.material.color = main;
+
+        // Two glowing bands round the body (unlit, so they read as lit from inside).
+        float[] bandHeights = { 0.26f, 0.46f };
+        foreach (float bh in bandHeights)
+        {
+            GameObject band = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            band.name = "Glow Band";
+            Destroy(band.GetComponent<Collider>());
+            band.transform.SetParent(root.transform, false);
+            band.transform.localScale = new Vector3(R * 2f * 0.93f, H * 0.012f, R * 2f * 0.93f);
+            band.transform.localPosition = new Vector3(0f, H * bh, 0f);
+            Renderer br = band.GetComponent<Renderer>();
+            br.sharedMaterial = PixelLooks.OverlayMaterial();
+            br.material.color = glow;
+            br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            br.receiveShadows = false;
+        }
+
+        // The glowing core in the funnel.
+        GameObject core = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        core.name = "Core";
+        Destroy(core.GetComponent<Collider>());
+        core.transform.SetParent(root.transform, false);
+        core.transform.localScale = new Vector3(R * 2f * 0.8f, H * 0.01f, R * 2f * 0.8f);
+        core.transform.localPosition = new Vector3(0f, H * 0.9f, 0f);
+        Renderer cr = core.GetComponent<Renderer>();
+        cr.sharedMaterial = PixelLooks.OverlayMaterial();
+        cr.material.color = Color.Lerp(glow, Color.white, 0.35f);
+        cr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        cr.receiveShadows = false;
+
+        // A little turbine over the core.
+        GameObject spinner = new GameObject("Spinner");
+        spinner.transform.SetParent(root.transform, false);
+        spinner.transform.localPosition = new Vector3(0f, H * 0.93f, 0f);
+        Color dark = new Color(d.color.r * 0.35f, d.color.g * 0.35f, d.color.b * 0.35f, opacity);
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject blade = MakePrimitive(PrimitiveType.Cube, "Blade " + i, spinner.transform, dark, isPreview);
+            blade.transform.localRotation = Quaternion.Euler(0f, i * 60f, 0f);
+            blade.transform.localScale = new Vector3(R * 1.5f, H * 0.012f, R * 0.14f);
+        }
+    }
+
+    /// <summary>A surface of revolution (a turned body): flared base, straight body, slim waist, funnel mouth with a thin lip and a hollow top.</summary>
+    private static Mesh VacuumLatheMesh(float R, float H)
+    {
+        // (radius as a multiple of R, height as a fraction of H), from the middle of the bottom, out and up, over the lip and back to the middle of the funnel.
+        float[,] profile =
+        {
+            { 0f, 0f }, { 1.3f, 0f }, { 1.3f, 0.045f }, { 1.05f, 0.09f }, { 0.9f, 0.15f }, { 0.9f, 0.58f }, { 0.78f, 0.66f }, { 0.7f, 0.74f },
+            { 0.78f, 0.83f }, { 1.0f, 0.95f }, { 1.1f, 0.99f }, { 1.08f, 1.0f }, { 0.98f, 0.98f }, { 0.85f, 0.93f }, { 0.5f, 0.88f }, { 0f, 0.87f },
+        };
+        int rings = profile.GetLength(0), sides = 28;
+        Vector3[] vertices = new Vector3[rings * sides];
+        for (int i = 0; i < rings; i++)
+            for (int k = 0; k < sides; k++)
+            {
+                float angle = k * Mathf.PI * 2f / sides;
+                float r = profile[i, 0] * R;
+                vertices[i * sides + k] = new Vector3(Mathf.Cos(angle) * r, profile[i, 1] * H, Mathf.Sin(angle) * r);
+            }
+
+        System.Collections.Generic.List<int> triangles = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < rings - 1; i++)
+        {
+            // Outward normal of this stretch of the profile (the solid is on its left): rotate the tangent a quarter turn clockwise.
+            float dr = profile[i + 1, 0] * R - profile[i, 0] * R, dy = profile[i + 1, 1] * H - profile[i, 1] * H;
+            for (int k = 0; k < sides; k++)
+            {
+                int n = (k + 1) % sides;
+                int a = i * sides + k, b = i * sides + n, c = (i + 1) * sides + k, e = (i + 1) * sides + n;
+                float angle = (k + 0.5f) * Mathf.PI * 2f / sides;
+                Vector3 expected = new Vector3(Mathf.Cos(angle) * dy, -dr, Mathf.Sin(angle) * dy);
+                AddOriented(triangles, vertices, a, c, b, expected);
+                AddOriented(triangles, vertices, b, c, e, expected);
+            }
+        }
+
+        Mesh mesh = new Mesh { name = "VacuumBody" };
+        mesh.vertices = vertices;
+        mesh.triangles = triangles.ToArray();
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    private static void AddOriented(System.Collections.Generic.List<int> triangles, Vector3[] v, int a, int b, int c, Vector3 expectedNormal)
+    {
+        Vector3 geometric = Vector3.Cross(v[b] - v[a], v[c] - v[a]);
+        if (geometric.sqrMagnitude < 1e-12f) return;   // a collapsed triangle (at the middle of the bottom / top)
+        if (Vector3.Dot(geometric, expectedNormal) < 0f) { int t = b; b = c; c = t; }
+        triangles.Add(a); triangles.Add(b); triangles.Add(c);
     }
 
     /// <summary>
@@ -1790,7 +1943,7 @@ public class PixelConsumables : MonoBehaviour
             tg.transform.SetParent(root.transform, false);
             tg.transform.localPosition = new Vector3(0f, d.bodyHeight + d.bodyDiameter * 0.5f + timerHeightAbove, 0f);
             timer = tg.AddComponent<TextMeshPro>();
-            timer.text = string.Format(timerFormat, Mathf.CeilToInt(d.durationSeconds));
+            timer.text = string.Format(timerFormat, Mathf.CeilToInt(DeviceSeconds(d)));
             timer.fontSize = timerFontSize;
             timer.fontStyle = FontStyles.Bold;
             timer.alignment = TextAlignmentOptions.Center;

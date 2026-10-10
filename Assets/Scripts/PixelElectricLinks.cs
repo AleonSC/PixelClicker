@@ -150,7 +150,7 @@ public class PixelElectricLinks : MonoBehaviour
         // Devices that are working.
         List<PixelPlacedDevice> devices = new List<PixelPlacedDevice>();
         foreach (PixelPlacedDevice d in PixelPlacedDevice.All)
-            if (d != null && !d.IsRemoving) devices.Add(d);
+            if (d != null && !d.IsRemoving && d.Armed) devices.Add(d);
 
         // Electric old pixels lying around (not flying away, not vanishing).
         scratch.Clear();

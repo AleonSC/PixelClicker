@@ -146,14 +146,14 @@ public class PixelChargeBooster : PixelPlacedDevice
 
     private void OnCollected(int tier, double amount, bool automatic)
     {
-        if (!automatic || bursting || IsDying || Supercharged) return;
+        if (!automatic || bursting || IsDying || !Armed || Supercharged) return;
         SpendUse();
     }
 
     /// <summary>An Electric pixel gave its charge. Returns false when the meter is full or the booster is busy (the pixel is left alone).</summary>
     public bool AddCharge(float amount)
     {
-        if (IsDying || Supercharged || charge >= capacity) return false;
+        if (IsDying || !Armed || Supercharged || charge >= capacity) return false;
         charge = Mathf.Min(capacity, charge + amount);
         PixelAudio.PlayScaled("pixel_bounce_electric", 0.5f);
         if (charge >= capacity) PixelAudio.Play("overcharge");

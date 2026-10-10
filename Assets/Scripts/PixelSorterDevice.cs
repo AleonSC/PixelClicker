@@ -80,6 +80,27 @@ public class PixelSorterDevice : PixelPlacedDevice
         }
     }
 
+    /// <summary>The sorter wraps round the cube, so only its ring and pipe count as 'on' the device (clicking the cube inside must not switch it on).</summary>
+    public override bool HitTest(Ray ray, out float distance)
+    {
+        distance = float.MaxValue;
+        if (parts == null) return false;
+        bool hit = false;
+        Renderer pipe = parts.PipeRenderer;
+        if (pipe != null && pipe.bounds.IntersectRay(ray, out float pd)) { distance = pd; hit = true; }
+        Camera c = cam != null ? cam : Camera.main;
+        if (c != null)
+        {
+            Plane plane = new Plane(-c.transform.forward, transform.position);
+            if (plane.Raycast(ray, out float e))
+            {
+                float d = Vector3.Distance(ray.GetPoint(e), transform.position);
+                if (Mathf.Abs(d - parts.Outer) < parts.Outer * 0.22f && e < distance) { distance = e; hit = true; }
+            }
+        }
+        return hit;
+    }
+
     /// <summary>
     /// Where a freshly collected pixel should appear (the mouth of the pipe) and how fast it leaves.
     /// Returns false when the sorter is shutting down.
@@ -88,7 +109,7 @@ public class PixelSorterDevice : PixelPlacedDevice
     {
         mouth = transform.position;
         velocity = Vector3.zero;
-        if (IsDying || parts == null) return false;
+        if (IsDying || !Armed || parts == null) return false;
 
         mouth = transform.TransformPoint(parts.MouthLocal);
         Vector3 direction = transform.TransformDirection(new Vector3(Mathf.Cos(parts.ExitHeading * Mathf.Deg2Rad),
@@ -119,6 +140,9 @@ public class PixelSorterDevice : PixelPlacedDevice
         private Transform[] buttonLabels;
         private Material dimMaterial, litMaterial;
         private Mesh coneMesh;
+
+        /// <summary>The renderer of the bent pipe.</summary>
+        public Renderer PipeRenderer => pipeFilter != null ? pipeFilter.GetComponent<Renderer>() : null;
 
         /// <summary>Outer radius of the ring.</summary>
         public float Outer => outer;

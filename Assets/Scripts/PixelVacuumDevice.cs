@@ -14,6 +14,8 @@ public class PixelVacuumDevice : PixelPlacedDevice
     private float radius;
     private float pullAcceleration;
     private float absorbDistance;
+    private Transform spinner;
+    private float spinAngle;
 
     public void Init(PixelClicker owner, Camera camera, Transform pullTarget, TextMeshPro timer, string format,
                      float duration, float suctionRadius, float pull, float absorb, float shrinkTime)
@@ -23,11 +25,20 @@ public class PixelVacuumDevice : PixelPlacedDevice
         radius = suctionRadius;
         pullAcceleration = pull;
         absorbDistance = absorb;
+        spinner = transform.Find("Spinner");
+    }
+
+    protected override void OnTick()
+    {
+        // The little turbine over the funnel spins while the device works.
+        if (spinner == null) return;
+        spinAngle += 540f * Time.deltaTime;
+        spinner.localRotation = Quaternion.Euler(0f, spinAngle, 0f);
     }
 
     private void FixedUpdate()
     {
-        if (IsDying || clicker == null) return;
+        if (IsDying || !Armed || clicker == null) return;
 
         var pixels = clicker.OldPixels;
         Vector3 target = suckPoint.position;
