@@ -25,6 +25,10 @@ public partial class PixelShop
     [Tooltip("Resolution (pixels) of every picture. Lower = cheaper.")]
     [SerializeField] private int pictureResolution = 160;
 
+    [Min(0.3f)]
+    [Tooltip("How much of the picture a pixel / potion cube fills: the camera's half-height in cube widths. Smaller = bigger cube (0.85 fits a spinning cube with its corners just touching the frame).")]
+    [SerializeField] private float pictureCubeFraming = 0.85f;
+
     [Tooltip("Size of the picture on a Consumables card.")]
     [SerializeField] private float cardPictureSize = 112f;
 
@@ -195,7 +199,8 @@ public partial class PixelShop
     {
         if (pictures.TryGetValue(key, out ShopPicture existing)) return existing;
         GameObject model = BuildModel(key);
-        ShopPicture pic = model != null ? BuildStudio(key, model) : null;
+        // Pixels and potions are unit cubes: frame them by the cube itself (not by glow halos / rims, which made some tiny), as big as fits.
+        ShopPicture pic = model != null ? BuildStudio(key, model, key.StartsWith("tier:") ? pictureCubeFraming : 0f) : null;
         pictures[key] = pic;   // a null entry remembers "no model" so it isn't retried every frame
         return pic;
     }
@@ -259,7 +264,7 @@ public partial class PixelShop
         return consumables.CreateDisplayModel(consumables.DeviceKindOf(item));
     }
 
-    private ShopPicture BuildStudio(string key, GameObject model)
+    private ShopPicture BuildStudio(string key, GameObject model, float fixedFraming = 0f)
     {
         GameObject root = new GameObject("Shop Studio " + key);
         root.transform.position = new Vector3(pictureCounter++ * 40f, PictureStudioHeight, 0f);
@@ -278,8 +283,16 @@ public partial class PixelShop
             if (r.GetComponent<TMP_Text>() != null) continue;
             if (!any) { bounds = r.bounds; any = true; } else bounds.Encapsulate(r.bounds);
         }
-        model.transform.position += root.transform.position - bounds.center;
-        float radius = Mathf.Max(0.3f, bounds.extents.magnitude);
+        float radius;
+        if (fixedFraming > 0f)
+        {
+            radius = 0.9f;   // a unit cube's half diagonal; the model sits at the studio's centre
+        }
+        else
+        {
+            model.transform.position += root.transform.position - bounds.center;
+            radius = Mathf.Max(0.3f, bounds.extents.magnitude);
+        }
 
         ShopPicture st = new ShopPicture { root = root, pivot = pivot.transform };
         int res = Mathf.Clamp(pictureResolution, 64, 512);
@@ -291,7 +304,7 @@ public partial class PixelShop
         st.cam.clearFlags = CameraClearFlags.SolidColor;
         st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
         st.cam.orthographic = true;
-        st.cam.orthographicSize = radius * 1.05f;
+        st.cam.orthographicSize = fixedFraming > 0f ? fixedFraming : radius * 1.05f;
         st.cam.nearClipPlane = 0.1f;
         st.cam.farClipPlane = 60f;
         st.cam.allowHDR = false;
