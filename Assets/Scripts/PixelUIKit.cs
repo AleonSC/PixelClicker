@@ -715,6 +715,8 @@ public static class PixelUIKit
     public static void StyleScrollBar(Image track, Image handle)
     {
         if (track != null) { track.color = new Color(0.16f, 0.16f, 0.2f, 1f); StyleButton(track); }
+        if (track != null && track.GetComponent<Scrollbar>() != null && track.GetComponent<PixelScrollBarFade>() == null)
+            track.gameObject.AddComponent<PixelScrollBarFade>();   // every scroll bar fades away when not in use
         if (handle != null) { handle.color = new Color(0.5f, 0.5f, 0.6f, 1f); StyleButton(handle); }
     }
 
