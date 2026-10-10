@@ -381,3 +381,4 @@
 [2026-10-10 17:15 UTC] Shop pack costs are shown as a tidy three-column grid ('1K White') and the Buy label always fits its bar.
 [2026-10-10 17:17 UTC] The simplified Inventory has a second button beside the toggle that swaps between the currency list (potion icon) and the consumables list (coin icon).
 [2026-10-10 17:18 UTC] The first-potion tip stops time until you press Got it.
+[2026-10-10 17:26 UTC] The Toggles window and every pause-menu screen grow from small when they open and shrink away when you resume.

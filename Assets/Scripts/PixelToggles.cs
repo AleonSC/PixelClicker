@@ -452,7 +452,7 @@ public class PixelToggles : MonoBehaviour
         buttonGroup = openObject.AddComponent<CanvasGroup>();
 
         // --- The window, just left of the button.
-        windowObject = new GameObject("Toggles Window", typeof(RectTransform), typeof(Image));
+        windowObject = new GameObject("Toggles Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         windowObject.transform.SetParent(canvasRoot.transform, false);
         PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
         RectTransform wr = windowObject.GetComponent<RectTransform>();
@@ -590,22 +590,22 @@ public class PixelToggles : MonoBehaviour
         hintObject.SetActive(false);
 
         windowObject.SetActive(false);
-        PixelWindows.Register(this, 15, () => windowObject != null && windowObject.activeSelf, Close);
+        PixelWindows.Register(this, 15, () => windowObject != null && PixelPop.IsOpen(windowObject), Close);
     }
 
     private void Toggle()
     {
-        if (windowObject.activeSelf) Close();
+        if (PixelPop.IsOpen(windowObject)) Close();
         else
         {
             CloseHint(); // the player found the window
-            windowObject.SetActive(true);
+            PixelPop.Show(windowObject);
             refreshTimer = 0f;
             Refresh();
         }
     }
 
-    private void Close() => windowObject.SetActive(false);
+    private void Close() => PixelPop.Hide(windowObject);
 
     /// <summary>Keeps a text on one line, shrinking it to fit the width.</summary>
     private static void OneLine(TMP_Text t, float maxSize, float minSize)

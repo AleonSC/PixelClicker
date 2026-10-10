@@ -697,8 +697,39 @@ public class PixelPauseMenu : MonoBehaviour
 
         ApplyFreeze();
 
-        if (menuRoot != null) menuRoot.SetActive(paused);
+        if (menuRoot != null)
+        {
+            if (paused) menuRoot.SetActive(true);
+            else
+            {
+                // Resuming: the open screen shrinks away, then the whole menu goes (time already runs again).
+                GameObject open = OpenView();
+                if (open != null && menuRoot.activeSelf) PixelPop.Hide(open, menuRoot);
+                else menuRoot.SetActive(false);
+            }
+        }
         if (paused) ShowView(mainPanel);
+    }
+
+    /// <summary>Shows a pause-menu screen with the grow animation, or hides it at once (screens swap instantly, the new one pops in).</summary>
+    private static void SetView(GameObject panel, bool on)
+    {
+        if (panel == null) return;
+        if (!on) { panel.SetActive(false); return; }
+        if (panel.GetComponent<PixelPop>() == null) panel.AddComponent<PixelPop>();
+        PixelPop.Show(panel);
+    }
+
+    /// <summary>The pause-menu screen that is showing now (null if none).</summary>
+    private GameObject OpenView()
+    {
+        GameObject[] views =
+        {
+            mainPanel, statsPanel, settingsPanel, changelogPanel, howToPlayScreen != null ? howToPlayScreen.panel : null,
+            controlsScreen != null ? controlsScreen.panel : null, restartPanel, quitPanel, saveLoadPanel, keysPanel
+        };
+        foreach (GameObject v in views) if (v != null && v.activeSelf) return v;
+        return null;
     }
 
     private bool openedFromTitle;
@@ -896,18 +927,18 @@ public class PixelPauseMenu : MonoBehaviour
     {
         if (view == null) return;
         if (openedFromTitle && view == mainPanel) { SetPaused(false); return; } // 'back' returns to the title screen
-        if (mainPanel != null) mainPanel.SetActive(view == mainPanel);
-        if (statsPanel != null) statsPanel.SetActive(view == statsPanel);
-        if (settingsPanel != null) settingsPanel.SetActive(view == settingsPanel);
-        if (changelogPanel != null) changelogPanel.SetActive(view == changelogPanel);
-        if (howToPlayScreen != null) howToPlayScreen.panel.SetActive(view == howToPlayScreen.panel);
-        if (controlsScreen != null) controlsScreen.panel.SetActive(view == controlsScreen.panel);
+        if (mainPanel != null) SetView(mainPanel, view == mainPanel);
+        if (statsPanel != null) SetView(statsPanel, view == statsPanel);
+        if (settingsPanel != null) SetView(settingsPanel, view == settingsPanel);
+        if (changelogPanel != null) SetView(changelogPanel, view == changelogPanel);
+        if (howToPlayScreen != null) SetView(howToPlayScreen.panel, view == howToPlayScreen.panel);
+        if (controlsScreen != null) SetView(controlsScreen.panel, view == controlsScreen.panel);
         if (howToPlayScreen != null && view == howToPlayScreen.panel) RefreshGuideScreen(howToPlayScreen);
         if (controlsScreen != null && view == controlsScreen.panel) RefreshGuideScreen(controlsScreen);
-        if (restartPanel != null) restartPanel.SetActive(view == restartPanel);
-        if (quitPanel != null) quitPanel.SetActive(view == quitPanel);
-        if (saveLoadPanel != null) saveLoadPanel.SetActive(view == saveLoadPanel);
-        if (keysPanel != null) keysPanel.SetActive(view == keysPanel);
+        if (restartPanel != null) SetView(restartPanel, view == restartPanel);
+        if (quitPanel != null) SetView(quitPanel, view == quitPanel);
+        if (saveLoadPanel != null) SetView(saveLoadPanel, view == saveLoadPanel);
+        if (keysPanel != null) SetView(keysPanel, view == keysPanel);
         if (view == keysPanel) { capturingAction = -1; RefreshKeyLabels(); }
         if (view == saveLoadPanel) OpenSaveLoad();
         if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
