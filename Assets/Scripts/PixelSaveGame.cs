@@ -556,6 +556,12 @@ public class PixelSaveGame : MonoBehaviour
     public bool Load(bool showMessage, bool grantOffline = false)
     {
         if (clicker == null) return false;
+        if (!grantOffline)
+        {
+            // A later load (another slot) makes the "Welcome back" summary of the startup load meaningless.
+            PixelOfflineProgress old = PixelFind.First<PixelOfflineProgress>();
+            if (old != null) old.Dismiss();
+        }
 
         if (!HasSave)
         {

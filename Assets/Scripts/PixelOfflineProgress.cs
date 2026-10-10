@@ -151,8 +151,32 @@ public class PixelOfflineProgress : MonoBehaviour
         if (!any) return false;
 
         if (stats != null) stats.AddAutoClicks((long)clicks);
-        if (showSummary) ShowSummary(away, clicks, gains);
+        if (showSummary)
+        {
+            // Not while the title screen is up: the window would sit hidden behind it and pop up later (e.g. when another save is loaded from the title).
+            pendingAway = away;
+            pendingClicks = clicks;
+            pendingGains = gains;
+        }
         return true;
+    }
+
+    private double pendingAway, pendingClicks;
+    private double[] pendingGains;
+
+    private void Update()
+    {
+        if (pendingGains == null || PixelTitleScreen.Showing) return;
+        double[] gains = pendingGains;
+        pendingGains = null;
+        ShowSummary(pendingAway, pendingClicks, gains);
+    }
+
+    /// <summary>Drops a window (or one still waiting for the title screen to go away): another save was loaded, so it no longer applies.</summary>
+    public void Dismiss()
+    {
+        pendingGains = null;
+        if (canvasRoot != null) Close();
     }
 
     /// <summary>
