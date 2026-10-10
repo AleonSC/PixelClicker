@@ -1761,7 +1761,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         settingsScroll = scroll;
         settingsBar = bar;
-        settingsViewHeight = viewHeight;
+        settingsListHeight = viewHeight;
         CaptureSettingsLayout(content, y);
         LayoutSettings();
         BuildKeysPanel();
@@ -1771,7 +1771,7 @@ public class PixelPauseMenu : MonoBehaviour
     // ---- Settings sections: a heading you click folds / unfolds the rows under it (all start folded) ----
     private ScrollRect settingsScroll;
     private GameObject settingsBar;
-    private float settingsViewHeight, settingsTotalHeight;
+    private float settingsListHeight, settingsTotalHeight;
     private readonly HashSet<string> expandedSettingsSections = new HashSet<string>();
     private readonly Dictionary<RectTransform, string> settingsHeaders = new Dictionary<RectTransform, string>();
     private readonly List<SettingsItem> settingsItems = new List<SettingsItem>();
@@ -1850,7 +1850,7 @@ public class PixelPauseMenu : MonoBehaviour
             Vector2 p = item.rect.anchoredPosition;
             item.rect.anchoredPosition = new Vector2(p.x, -(item.top - removed));
         }
-        if (settingsScroll != null) PixelUIKit.UpdateScrollView(settingsScroll, settingsBar, settingsTotalHeight - removed, settingsViewHeight);
+        if (settingsScroll != null) PixelUIKit.UpdateScrollView(settingsScroll, settingsBar, settingsTotalHeight - removed, settingsListHeight);
     }
 
     private int NearestUiScaleIndex()
