@@ -64,6 +64,11 @@ public class PixelRobotWorker : MonoBehaviour
     [SerializeField] private string noDevicesText = "You have no devices to work with yet.";
     [SerializeField] private string clearJobText = "Stop working";
     [SerializeField] private string jobSetFormat = "The Robot Worker will keep a {0} running there";
+    [SerializeField] private string bankPixelsText = "Pick up and bank a pixel";
+    [SerializeField] private string pickPixelText = "Which pixel should I pick up and put in your Pixel Bank?";
+    [SerializeField] private string bankJobSetFormat = "The Robot Worker will pick up {0} and bank them";
+    [SerializeField] private string needsBankText = "Needs the Pixel Bank";
+    [SerializeField] private string bankFullText = "Bank full";
 
     private PixelClicker clicker;
     private PixelConsumables consumables;
@@ -97,6 +102,13 @@ public class PixelRobotWorker : MonoBehaviour
     private RectTransform bubbleRect;
     private Sprite bubbleSprite;
 
+    // The bank job: he fetches one pixel type and stores it in the Pixel Bank.
+    private bool bankJob;
+    private PixelClicker.PixelType bankType;
+    private Rigidbody bankTarget;
+    private float bankRetarget, bankCooldown;
+    private PixelBank bankSys;
+
     // The window.
     private GameObject windowRoot;
     private RectTransform windowPanel;
@@ -129,6 +141,7 @@ public class PixelRobotWorker : MonoBehaviour
     {
         clicker = PixelFind.First<PixelClicker>();
         consumables = PixelFind.First<PixelConsumables>();
+        bankSys = PixelFind.First<PixelBank>();
         PixelWindows.Register(this, 55, () => windowRoot != null && windowRoot.activeSelf, CloseWindow);
     }
 
@@ -233,6 +246,12 @@ public class PixelRobotWorker : MonoBehaviour
     /// <summary>Where he wants to be: at the ghost while there is work (or a device running there and he is already standing by), else at the charging station.</summary>
     private Vector3 WantedSpot()
     {
+        if (bankJob)
+        {
+            if (bankTarget == null) return homePos;
+            Vector3 p = bankTarget.position;
+            return new Vector3(p.x, homePos.y, p.z);
+        }
         if (HasJob)
         {
             bool stock = consumables.DeviceOwned(jobDevice) > 0;
@@ -316,6 +335,7 @@ public class PixelRobotWorker : MonoBehaviour
 
     private void UpdateJob()
     {
+        if (bankJob) { UpdateBankJob(); return; }
         if (!HasJob)
         {
             if (ghost != null) ghost.SetActive(false);
@@ -358,6 +378,73 @@ public class PixelRobotWorker : MonoBehaviour
                 if (ghost != null) ghost.SetActive(false);
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // The bank job
+    // ------------------------------------------------------------------
+
+    private bool ValidBankTarget(Rigidbody body, int tierIndex)
+    {
+        if (body == null || !body.gameObject.activeInHierarchy || body.isKinematic) return false;
+        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        if (info == null || info.tierIndex != tierIndex) return false;
+        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+        return despawn == null || !despawn.Held;
+    }
+
+    private Rigidbody FindBankTarget(int tierIndex)
+    {
+        Rigidbody best = null;
+        float bestD = float.MaxValue;
+        Vector3 from = root.transform.position;
+        foreach (Rigidbody body in clicker.OldPixels)
+        {
+            if (!ValidBankTarget(body, tierIndex)) continue;
+            Vector3 d = body.position - from; d.y = 0f;
+            float m = d.sqrMagnitude;
+            if (m < bestD) { bestD = m; best = body; }
+        }
+        return best;
+    }
+
+    private void UpdateBankJob()
+    {
+        if (ghost != null) ghost.SetActive(false);
+        int idx = clicker.IndexOf(bankType);
+        if (bankSys == null) bankSys = PixelFind.First<PixelBank>();
+        if (bankSys == null || !bankSys.Active || idx < 0)
+        {
+            bankTarget = null;
+            SetLabel(needsBankText, !walking, new Color(1f, 0.45f, 0.4f, 1f));
+            return;
+        }
+        if (bankSys.IsFull)
+        {
+            bankTarget = null;
+            SetLabel(bankFullText, !walking, new Color(1f, 0.45f, 0.4f, 1f));
+            return;
+        }
+
+        SetLabel(hovering ? changeJobText : "", hovering);
+        bankCooldown -= Time.deltaTime;
+        if (bankTarget != null && !ValidBankTarget(bankTarget, idx)) bankTarget = null;
+        if (bankTarget == null && Time.time >= bankRetarget)
+        {
+            bankRetarget = Time.time + 0.4f;
+            bankTarget = FindBankTarget(idx);
+        }
+        if (bankTarget == null || bankCooldown > 0f) return;
+
+        // Close enough: scoop it up and store it.
+        Vector3 d = bankTarget.position - root.transform.position; d.y = 0f;
+        float reach = Mathf.Max(clicker.PixelBaseSize * 0.9f, cellSize * 0.6f);
+        if (d.magnitude > reach) return;
+        workT = 0.35f;
+        Vector3 hand = root.transform.position + Vector3.up * (1.2f * UnitScale);
+        if (bankSys.StoreOldPixel(bankTarget, hand)) PixelStats.Count("robot.banked");
+        bankTarget = null;
+        bankCooldown = 0.35f;
     }
 
     /// <summary>Is a device of the job's kind already standing there (or, for the sorter, anywhere)?</summary>
@@ -619,6 +706,7 @@ public class PixelRobotWorker : MonoBehaviour
     private void OpenWindow()
     {
         PixelWindows.CloseAllExcept(this);
+        windowPage = 0;
         BuildWindow();
         windowRoot.SetActive(true);
         PixelAudio.Play("ui_click");
@@ -633,6 +721,33 @@ public class PixelRobotWorker : MonoBehaviour
         }
     }
 
+    private int windowPage;   // 0 = devices to keep running, 1 = pixel types to pick up and bank
+
+    private Button AddRow(RectTransform content, float y, float rowH, string name, string countText, Color countColor, bool current, System.Action onClick)
+    {
+        TMP_FontAsset font = clicker.UIFont;
+        Button b = PixelUIKit.CreateButton(font, content, "Row " + name, "", new Vector2(0f, rowH),
+                                           current ? new Color(0.75f, 0.42f, 0.1f, 1f) : new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 30f);
+        RectTransform rt = b.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(0.5f, 1f);
+        rt.offsetMin = new Vector2(8f, -(y + rowH)); rt.offsetMax = new Vector2(-8f, -y);
+        ColorBlock cb = b.colors;
+        cb.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
+        cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+        b.colors = cb;
+
+        TMP_Text left = PixelUIKit.CreateText(font, b.transform, "Name", name, 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
+        left.rectTransform.anchorMin = Vector2.zero; left.rectTransform.anchorMax = new Vector2(0.68f, 1f);
+        left.rectTransform.offsetMin = new Vector2(22f, 0f); left.rectTransform.offsetMax = Vector2.zero;
+        left.enableAutoSizing = true; left.fontSizeMax = 32f; left.fontSizeMin = 18f;
+        TMP_Text right = PixelUIKit.CreateText(font, b.transform, "Count", countText, 28f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, countColor);
+        right.rectTransform.anchorMin = new Vector2(0.55f, 0f); right.rectTransform.anchorMax = Vector2.one;
+        right.rectTransform.offsetMin = Vector2.zero; right.rectTransform.offsetMax = new Vector2(-22f, 0f);
+        right.enableAutoSizing = true; right.fontSizeMax = 28f; right.fontSizeMin = 16f;
+        b.onClick.AddListener(() => onClick());
+        return b;
+    }
+
     private void BuildWindow()
     {
         if (windowRoot != null) Destroy(windowRoot);
@@ -640,16 +755,7 @@ public class PixelRobotWorker : MonoBehaviour
         windowRoot = PixelUIKit.CreateCanvas("Robot Worker Window", 520, new Vector2(1920f, 1080f), true);
         PixelUIKit.EnsureEventSystem();
 
-        // Rows: every placeable device the player can use.
-        var rows = new System.Collections.Generic.List<int>();
-        for (int i = 0; i < consumables.DeviceCount; i++)
-        {
-            PixelConsumables.Device d = consumables.GetDevice(i);
-            if (PixelConsumables.IsPlaceableKind(d.kind) && consumables.OperationListed(d.kind)) rows.Add(i);
-        }
-
-        const float width = 760f, rowH = 76f, gap = 12f, pad = 24f;
-        float height = pad + 70f + 90f + rows.Count * (rowH + gap) + (jobDevice >= 0 ? rowH + gap : 0f) + (rows.Count == 0 ? 60f : 0f) + pad;
+        const float width = 780f, height = 780f, pad = 24f, rowH = 78f, gap = 10f, headerH = 170f, footerH = 96f;
 
         GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(windowRoot.transform, false);
@@ -658,6 +764,7 @@ public class PixelRobotWorker : MonoBehaviour
         windowPanel.anchorMin = windowPanel.anchorMax = windowPanel.pivot = new Vector2(0.5f, 0.5f);
         windowPanel.sizeDelta = new Vector2(width, height);
 
+        bool pixels = windowPage == 1;
         TMP_Text title = PixelUIKit.CreateText(font, panel.transform, "Title", windowTitle, 44f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
         PixelUIKit.Caps(title);
         RectTransform tr = title.rectTransform;
@@ -670,39 +777,88 @@ public class PixelRobotWorker : MonoBehaviour
         cr.anchoredPosition = new Vector2(-14f, -14f);
         close.onClick.AddListener(CloseWindow);
 
-        TMP_Text ask = PixelUIKit.CreateText(font, panel.transform, "Ask", rows.Count == 0 ? noDevicesText : askText, 28f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 1f, 1f, 0.85f));
+        TMP_Text ask = PixelUIKit.CreateText(font, panel.transform, "Ask", pixels ? pickPixelText : askText, 28f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 1f, 1f, 0.85f));
         ask.enableAutoSizing = true; ask.fontSizeMax = 28f; ask.fontSizeMin = 18f;
         RectTransform ar = ask.rectTransform;
         ar.anchorMin = new Vector2(0f, 1f); ar.anchorMax = new Vector2(1f, 1f); ar.pivot = new Vector2(0.5f, 1f);
         ar.sizeDelta = new Vector2(-pad * 2f, 84f); ar.anchoredPosition = new Vector2(0f, -(pad * 0.5f + 70f));
 
-        float y = pad + 70f + 90f;
-        foreach (int index in rows)
+        // The list: a scrolling view between the header and the footer buttons.
+        ScrollRect scroll = PixelUIKit.CreateScrollView(panel.transform, "List", new Color(1f, 1f, 1f, 0.35f), 12f, rowH, out RectTransform content, out GameObject bar);
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f); vr.anchorMax = new Vector2(1f, 1f); vr.pivot = new Vector2(0.5f, 1f);
+        float listH = height - headerH - footerH;
+        vr.offsetMin = new Vector2(pad, -(headerH + listH)); vr.offsetMax = new Vector2(-pad, -headerH);
+
+        float y = 0f;
+        Color dim = new Color(1f, 1f, 1f, 0.7f), bad = new Color(1f, 0.45f, 0.4f, 1f);
+        if (!pixels)
         {
-            int captured = index;
-            PixelConsumables.Device d = consumables.GetDevice(index);
-            bool current = index == jobDevice;
-            int owned = consumables.DeviceOwned(index);
-            Button b = PixelUIKit.CreateButton(font, panel.transform, "Device " + index,
-                d.displayName + "      x" + (owned >= 99999 ? "inf" : owned.ToString()), new Vector2(width - pad * 2f, rowH),
-                current ? new Color(0.75f, 0.42f, 0.1f, 1f) : new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 32f);
-            PlaceTop(b.GetComponent<RectTransform>(), y);
-            b.onClick.AddListener(() => ChooseDevice(captured));
-            y += rowH + gap;
+            for (int i = 0; i < consumables.DeviceCount; i++)
+            {
+                PixelConsumables.Device d = consumables.GetDevice(i);
+                if (!PixelConsumables.IsPlaceableKind(d.kind) || !consumables.OperationListed(d.kind)) continue;
+                int index = i, owned = consumables.DeviceOwned(i);
+                AddRow(content, y, rowH, d.displayName, owned >= 99999 ? "Unlimited" : "x" + owned, owned > 0 ? dim : bad, !bankJob && i == jobDevice, () => ChooseDevice(index));
+                y += rowH + gap;
+            }
+            if (bankSys != null && bankSys.Active)
+            {
+                AddRow(content, y, rowH, bankPixelsText, bankJob ? clicker.Tiers[Mathf.Max(0, clicker.IndexOf(bankType))].displayName : "", dim, bankJob, () => { windowPage = 1; BuildWindow(); windowRoot.SetActive(true); });
+                y += rowH + gap;
+            }
+            if (y <= 0f)
+            {
+                TMP_Text none = PixelUIKit.CreateText(font, content, "None", noDevicesText, 28f, TextAlignmentOptions.Center, FontStyles.Normal, dim);
+                none.rectTransform.anchorMin = new Vector2(0f, 1f); none.rectTransform.anchorMax = new Vector2(1f, 1f); none.rectTransform.pivot = new Vector2(0.5f, 1f);
+                none.rectTransform.sizeDelta = new Vector2(0f, 80f);
+                y = 90f;
+            }
         }
-        if (jobDevice >= 0)
+        else
         {
-            Button clear = PixelUIKit.CreateButton(font, panel.transform, "Clear", clearJobText, new Vector2(width - pad * 2f, rowH),
+            for (int i = 0; i < clicker.Tiers.Length; i++)
+            {
+                PixelClicker.PixelTier t = clicker.Tiers[i];
+                if (!t.unlocked || t.flyAway || t.rareDrop) continue;
+                PixelClicker.PixelType type = t.type;
+                AddRow(content, y, rowH, t.displayName, "Banked: " + PixelClicker.FormatNumberShort(bankSys != null ? bankSys.Stored(i) : 0L), dim, bankJob && bankType == type, () => ChoosePixel(type));
+                y += rowH + gap;
+            }
+        }
+        PixelUIKit.UpdateScrollView(scroll, bar, y, listH);
+
+        // Footer: back (pixel page) and stop working.
+        float fy = height - footerH + 10f;
+        float half = (width - pad * 2f - gap) * 0.5f;
+        bool anyJob = bankJob || jobDevice >= 0;
+        if (pixels)
+        {
+            Button back = PixelUIKit.CreateButton(font, panel.transform, "Back", "Back", new Vector2(anyJob ? half : width - pad * 2f, rowH),
+                                                  new Color(0.25f, 0.3f, 0.45f, 1f), Color.white, 30f);
+            PlaceBottomLeft(back.GetComponent<RectTransform>(), pad, 14f);
+            back.onClick.AddListener(() => { windowPage = 0; BuildWindow(); windowRoot.SetActive(true); });
+        }
+        if (anyJob)
+        {
+            Button clear = PixelUIKit.CreateButton(font, panel.transform, "Clear", clearJobText, new Vector2(pixels ? half : width - pad * 2f, rowH),
                                                    new Color(0.45f, 0.18f, 0.18f, 1f), Color.white, 30f);
-            PlaceTop(clear.GetComponent<RectTransform>(), y);
+            PlaceBottomLeft(clear.GetComponent<RectTransform>(), pixels ? pad + half + gap : pad, 14f);
             clear.onClick.AddListener(() => { ClearJob(); CloseWindow(); });
         }
     }
 
-    private static void PlaceTop(RectTransform rt, float y)
+    private static void PlaceBottomLeft(RectTransform rt, float x, float y)
     {
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = new Vector2(0f, -y);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0f);
+        rt.anchoredPosition = new Vector2(x, y);
+    }
+
+    private void ChoosePixel(PixelClicker.PixelType type)
+    {
+        CloseWindow();
+        SetBankJob(type);
+        PixelHints.Announce(string.Format(bankJobSetFormat, clicker.Tiers[Mathf.Max(0, clicker.IndexOf(type))].displayName));
     }
 
     private void ChooseDevice(int index)
@@ -725,6 +881,8 @@ public class PixelRobotWorker : MonoBehaviour
 
     private void SetJob(int device, Vector3 point, float yaw, float bend)
     {
+        bankJob = false;
+        bankTarget = null;
         jobDevice = device; jobPos = point; jobYaw = yaw; jobBend = bend;
         waitT = 0f;
         occupied = false;
@@ -739,6 +897,7 @@ public class PixelRobotWorker : MonoBehaviour
     /// <summary>The job as text for the save file ("" = none).</summary>
     public string Export()
     {
+        if (bankJob) return "bank|" + bankType;
         if (jobDevice < 0 || consumables == null) return "";
         CultureInfo c = CultureInfo.InvariantCulture;
         return consumables.GetDevice(jobDevice).displayName + "|" + jobPos.x.ToString("R", c) + "|" + jobPos.y.ToString("R", c) + "|" +
@@ -753,6 +912,11 @@ public class PixelRobotWorker : MonoBehaviour
         ClearJobQuiet();
         if (string.IsNullOrEmpty(text) || consumables == null) return;
         string[] p = text.Split('|');
+        if (p.Length == 2 && p[0] == "bank")
+        {
+            if (System.Enum.TryParse(p[1], out PixelClicker.PixelType saved)) SetBankJob(saved);
+            return;
+        }
         if (p.Length < 6) return;
         CultureInfo c = CultureInfo.InvariantCulture;
         int index = -1;
@@ -764,8 +928,18 @@ public class PixelRobotWorker : MonoBehaviour
         SetJob(index, new Vector3(x, y, z), yaw, bend);
     }
 
+    private void SetBankJob(PixelClicker.PixelType type)
+    {
+        SetJob(-1, Vector3.zero, 0f, 0f);
+        bankJob = true;
+        bankType = type;
+        bankRetarget = 0f;
+    }
+
     private void ClearJobQuiet()
     {
+        bankJob = false;
+        bankTarget = null;
         jobDevice = -1;
         if (ghost != null) Destroy(ghost);
         ghost = null;

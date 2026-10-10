@@ -1019,7 +1019,13 @@ public class PixelBank : MonoBehaviour
     }
 
     /// <summary>Stores one old pixel (it flies into the nozzle). Returns false, and says so, if the bank is full.</summary>
-    private bool TakeIntoBank(Rigidbody body)
+    /// <summary>Is the bank full (never with infinite resources)?</summary>
+    public bool IsFull => !PixelClicker.InfiniteResources && Total >= Capacity;
+
+    /// <summary>Stores an old pixel for the Robot Worker; it flies to 'flyTo' (his hand) instead of the nozzle. False if the bank is full.</summary>
+    public bool StoreOldPixel(Rigidbody body, Vector3 flyTo) => body != null && TakeIntoBank(body, flyTo);
+
+    private bool TakeIntoBank(Rigidbody body, Vector3? flyTo = null)
     {
         if (!PixelClicker.InfiniteResources && Total >= Capacity) // infinite resources: the bank never fills up
         {
@@ -1040,12 +1046,12 @@ public class PixelBank : MonoBehaviour
         kick = 1f;
         PixelAudio.Play("bank_suck");
         PixelHints.Trigger("bank_suck");
-        StartCoroutine(FlyIntoNozzle(body));
+        StartCoroutine(FlyIntoNozzle(body, flyTo));
         refreshTimer = 0f;
         return true;
     }
 
-    private IEnumerator FlyIntoNozzle(Rigidbody body)
+    private IEnumerator FlyIntoNozzle(Rigidbody body, Vector3? flyTo = null)
     {
         if (body == null) yield break;
         PixelStats.Count("old.banked");
@@ -1062,7 +1068,7 @@ public class PixelBank : MonoBehaviour
             elapsed += Time.deltaTime;
             float k = Mathf.Clamp01(elapsed / suckSeconds);
             float ease = k * k;
-            t.position = Vector3.Lerp(start, mouthPosition, ease);
+            t.position = Vector3.Lerp(start, flyTo ?? mouthPosition, ease);
             t.localScale = startScale * Mathf.Lerp(1f, 0.05f, ease);
             yield return null;
         }

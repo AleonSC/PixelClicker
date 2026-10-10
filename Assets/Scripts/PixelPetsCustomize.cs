@@ -88,6 +88,8 @@ public partial class PixelPets
         Sunglasses, Mustache,                                                      // face
         BowTie, Scarf,                                                             // neck
         Cape, Wings,                                                               // back
+        // Added later (only used by the named special outfits, so the generated outfits keep their numbers):
+        SuperSaiyanHair, Aura, CatEars, BunnyEars, VikingHelmet, PirateHat, ChefHat, SantaHat, Flower, Monocle, Eyepatch, Backpack, Tail, Spikes,
     }
 
     private static readonly string[] AccNames =
@@ -111,6 +113,38 @@ public partial class PixelPets
         new Color(0.95f, 0.95f, 0.95f), new Color(0.15f, 0.15f, 0.2f),
     };
 
+    /// <summary>The named special outfits that follow the generated ones (Super Saiyan hair and other themed sets).</summary>
+    private static List<Outfit> specialOutfits;
+
+    private static List<Outfit> Specials()
+    {
+        if (specialOutfits != null) return specialOutfits;
+        Color gold = new Color(1f, 0.85f, 0.15f), blue = new Color(0.3f, 0.65f, 1f), silver = new Color(0.82f, 0.9f, 1f), red = new Color(1f, 0.25f, 0.2f);
+        Color black = new Color(0.1f, 0.1f, 0.13f), white = new Color(0.97f, 0.97f, 0.97f), pink = new Color(1f, 0.55f, 0.75f), brown = new Color(0.5f, 0.32f, 0.18f);
+        Color auraGold = new Color(1f, 0.85f, 0.2f, 0.28f), auraBlue = new Color(0.3f, 0.65f, 1f, 0.28f), auraSilver = new Color(0.85f, 0.92f, 1f, 0.3f), auraRed = new Color(1f, 0.3f, 0.2f, 0.28f);
+        Outfit O(string name, params KeyValuePair<Acc, Color>[] pieces) { Outfit o = new Outfit { name = name }; o.pieces.AddRange(pieces); return o; }
+        KeyValuePair<Acc, Color> P(Acc a, Color c) => new KeyValuePair<Acc, Color>(a, c);
+        specialOutfits = new List<Outfit>
+        {
+            O("Super Saiyan", P(Acc.SuperSaiyanHair, gold), P(Acc.Aura, auraGold)),
+            O("Super Saiyan Blue", P(Acc.SuperSaiyanHair, blue), P(Acc.Aura, auraBlue)),
+            O("Super Saiyan God", P(Acc.SuperSaiyanHair, red), P(Acc.Aura, auraRed)),
+            O("Ultra Instinct", P(Acc.SuperSaiyanHair, silver), P(Acc.Aura, auraSilver)),
+            O("Legendary Spikes", P(Acc.SuperSaiyanHair, new Color(0.45f, 0.95f, 0.35f)), P(Acc.Aura, new Color(0.45f, 0.95f, 0.35f, 0.26f)), P(Acc.Sunglasses, black)),
+            O("Pirate Captain", P(Acc.PirateHat, black), P(Acc.Eyepatch, black), P(Acc.Cape, red)),
+            O("Viking", P(Acc.VikingHelmet, new Color(0.6f, 0.62f, 0.68f)), P(Acc.Scarf, brown)),
+            O("Chef", P(Acc.ChefHat, white), P(Acc.Mustache, black), P(Acc.BowTie, red)),
+            O("Kitty", P(Acc.CatEars, pink), P(Acc.Tail, pink), P(Acc.BowTie, red)),
+            O("Bunny", P(Acc.BunnyEars, white), P(Acc.Tail, white)),
+            O("Santa", P(Acc.SantaHat, red), P(Acc.Mustache, white)),
+            O("Flower Child", P(Acc.Flower, pink), P(Acc.Scarf, gold)),
+            O("Gentleman", P(Acc.TopHat, black), P(Acc.Monocle, gold), P(Acc.Mustache, black)),
+            O("Explorer", P(Acc.Backpack, brown), P(Acc.Bandana, red), P(Acc.Sunglasses, black)),
+            O("Punk", P(Acc.Spikes, new Color(0.9f, 0.2f, 0.7f)), P(Acc.Sunglasses, black), P(Acc.Scarf, black)),
+        };
+        return specialOutfits;
+    }
+
     private class Outfit
     {
         public string name;
@@ -121,7 +155,7 @@ public partial class PixelPets
 
     private List<Outfit> OutfitList()
     {
-        if (outfits != null && outfits.Count == outfitCount + 1) return outfits;
+        if (outfits != null && outfits.Count == outfitCount + 1 + Specials().Count) return outfits;
         outfits = new List<Outfit> { new Outfit { name = noOutfitName } };
         for (int i = 1; i <= outfitCount; i++)
         {
@@ -144,6 +178,7 @@ public partial class PixelPets
             o.name = AccNames[(int)o.pieces[0].Key] + " & " + AccNames[(int)o.pieces[1].Key];
             outfits.Add(o);
         }
+        outfits.AddRange(Specials());
         return outfits;
     }
 
@@ -154,7 +189,7 @@ public partial class PixelPets
     {
         if (!accessoryMaterials.TryGetValue(c, out Material m) || m == null)
         {
-            m = clicker.CreateVisualMaterial(c, false);
+            m = clicker.CreateVisualMaterial(c, c.a < 0.99f);   // see-through colours (the aura) get a transparent material
             accessoryMaterials[c] = m;
         }
         return m;
@@ -300,6 +335,113 @@ public partial class PixelPets
             case Acc.Cape:
                 Prim(root, Cube, new Vector3(0f, -0.02f, -0.54f), new Vector3(0.92f, 0.96f, 0.06f), c);
                 Prim(root, Cube, new Vector3(0f, 0.43f, -0.5f), new Vector3(1.04f, 0.1f, 0.14f), dark);
+                break;
+            case Acc.SuperSaiyanHair:
+            {
+                // Tall spiky hair: a big centre spike, spikes swept back and out, and a fringe spike over the face.
+                Prim(root, Cube, new Vector3(0f, 0.55f, 0f), new Vector3(0.95f, 0.18f, 0.95f), c);   // the hairline
+                Prim(root, Cube, new Vector3(0f, 1.0f, -0.02f), new Vector3(0.4f, 0.95f, 0.4f), c, null, true);
+                Prim(root, Cube, new Vector3(-0.3f, 0.92f, 0.12f), new Vector3(0.32f, 0.8f, 0.32f), c, new Vector3(0f, 0f, 22f), true);
+                Prim(root, Cube, new Vector3(0.3f, 0.92f, 0.12f), new Vector3(0.32f, 0.8f, 0.32f), c, new Vector3(0f, 0f, -22f), true);
+                Prim(root, Cube, new Vector3(-0.34f, 0.85f, -0.22f), new Vector3(0.32f, 0.78f, 0.32f), c, new Vector3(-20f, 0f, 28f), true);
+                Prim(root, Cube, new Vector3(0.34f, 0.85f, -0.22f), new Vector3(0.32f, 0.78f, 0.32f), c, new Vector3(-20f, 0f, -28f), true);
+                Prim(root, Cube, new Vector3(0f, 0.88f, -0.3f), new Vector3(0.34f, 0.8f, 0.34f), c, new Vector3(-28f, 0f, 0f), true);
+                Prim(root, Cube, new Vector3(-0.5f, 0.72f, 0f), new Vector3(0.28f, 0.6f, 0.28f), c, new Vector3(0f, 0f, 55f), true);
+                Prim(root, Cube, new Vector3(0.5f, 0.72f, 0f), new Vector3(0.28f, 0.6f, 0.28f), c, new Vector3(0f, 0f, -55f), true);
+                Prim(root, Cube, new Vector3(0f, 0.68f, 0.4f), new Vector3(0.26f, 0.5f, 0.26f), c, new Vector3(50f, 0f, 0f), true);   // the fringe
+                break;
+            }
+            case Acc.Aura:
+                Prim(root, Sph, Vector3.zero, Vector3.one * 1.9f, c);
+                Prim(root, Sph, Vector3.zero, Vector3.one * 1.55f, new Color(c.r, c.g, c.b, c.a * 0.8f));
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = i * Mathf.PI * 2f / 6f;
+                    Prim(root, Cube, new Vector3(Mathf.Cos(a) * 0.7f, -0.5f, Mathf.Sin(a) * 0.7f), new Vector3(0.18f, 0.7f, 0.18f), new Color(c.r, c.g, c.b, c.a * 1.5f), null, true);   // flames licking up from the floor
+                }
+                break;
+            case Acc.CatEars:
+                foreach (float x in new[] { -0.3f, 0.3f })
+                {
+                    Prim(root, Cube, new Vector3(x, 0.62f, 0f), new Vector3(0.3f, 0.36f, 0.22f), c, new Vector3(0f, 0f, -x * 40f), true);
+                    Prim(root, Cube, new Vector3(x, 0.6f, 0.05f), new Vector3(0.17f, 0.22f, 0.12f), light, new Vector3(0f, 0f, -x * 40f), true);
+                }
+                break;
+            case Acc.BunnyEars:
+                foreach (float x in new[] { -0.2f, 0.2f })
+                {
+                    Prim(root, Cube, new Vector3(x, 0.98f, 0f), new Vector3(0.17f, 0.66f, 0.09f), c, new Vector3(0f, 0f, -x * 45f));
+                    Prim(root, Cube, new Vector3(x, 0.98f, 0.04f), new Vector3(0.09f, 0.52f, 0.05f), new Color(1f, 0.7f, 0.8f), new Vector3(0f, 0f, -x * 45f));
+                }
+                break;
+            case Acc.VikingHelmet:
+                Prim(root, Sph, new Vector3(0f, 0.42f, 0f), new Vector3(1.08f, 0.8f, 1.08f), c);
+                Prim(root, Cyl, new Vector3(0f, 0.28f, 0f), new Vector3(1.1f, 0.05f, 1.1f), dark);
+                foreach (float s2 in new[] { -1f, 1f })
+                {
+                    Prim(root, Cube, new Vector3(s2 * 0.62f, 0.66f, 0f), new Vector3(0.2f, 0.5f, 0.2f), new Color(0.96f, 0.93f, 0.82f), new Vector3(0f, 0f, -s2 * 50f), true);
+                    Prim(root, Cyl, new Vector3(s2 * 0.5f, 0.5f, 0f), new Vector3(0.18f, 0.12f, 0.18f), new Color(0.96f, 0.93f, 0.82f), new Vector3(0f, 0f, 90f));
+                }
+                break;
+            case Acc.PirateHat:
+                Prim(root, Cube, new Vector3(0f, 0.55f, 0f), new Vector3(1.2f, 0.1f, 0.85f), c);
+                Prim(root, Cube, new Vector3(0f, 0.7f, 0f), new Vector3(0.8f, 0.3f, 0.7f), c);
+                Prim(root, Cube, new Vector3(-0.62f, 0.62f, 0f), new Vector3(0.18f, 0.3f, 0.8f), c, new Vector3(0f, 0f, 30f));
+                Prim(root, Cube, new Vector3(0.62f, 0.62f, 0f), new Vector3(0.18f, 0.3f, 0.8f), c, new Vector3(0f, 0f, -30f));
+                Prim(root, Sph, new Vector3(0f, 0.72f, 0.36f), new Vector3(0.18f, 0.16f, 0.04f), Color.white);
+                Prim(root, Cube, new Vector3(0f, 0.6f, 0.37f), new Vector3(0.22f, 0.03f, 0.03f), Color.white, new Vector3(0f, 0f, 25f));
+                Prim(root, Cube, new Vector3(0f, 0.6f, 0.37f), new Vector3(0.22f, 0.03f, 0.03f), Color.white, new Vector3(0f, 0f, -25f));
+                break;
+            case Acc.ChefHat:
+                Prim(root, Cyl, new Vector3(0f, 0.58f, 0f), new Vector3(0.72f, 0.1f, 0.72f), c);
+                Prim(root, Sph, new Vector3(0f, 0.85f, 0f), new Vector3(0.95f, 0.6f, 0.95f), c);
+                Prim(root, Sph, new Vector3(-0.3f, 0.75f, 0f), Vector3.one * 0.4f, c);
+                Prim(root, Sph, new Vector3(0.3f, 0.75f, 0f), Vector3.one * 0.4f, c);
+                break;
+            case Acc.SantaHat:
+                Prim(root, Cyl, new Vector3(0f, 0.53f, 0f), new Vector3(1.0f, 0.12f, 1.0f), Color.white);
+                Prim(root, Cube, new Vector3(-0.05f, 0.86f, 0f), new Vector3(0.78f, 0.7f, 0.78f), c, new Vector3(0f, 0f, 14f), true);
+                Prim(root, Sph, new Vector3(0.2f, 1.17f, 0f), Vector3.one * 0.2f, Color.white);
+                break;
+            case Acc.Flower:
+                for (int i = 0; i < 5; i++)
+                {
+                    float a = i * Mathf.PI * 2f / 5f;
+                    Prim(root, Sph, new Vector3(0.34f + Mathf.Cos(a) * 0.13f, 0.58f + Mathf.Sin(a) * 0.13f, 0.28f), Vector3.one * 0.14f, c);
+                }
+                Prim(root, Sph, new Vector3(0.34f, 0.58f, 0.3f), Vector3.one * 0.12f, gold);
+                break;
+            case Acc.Monocle:
+                for (int i = 0; i < 10; i++)
+                {
+                    float a = i * Mathf.PI * 2f / 10f;
+                    Prim(root, Cube, new Vector3(0.2f + Mathf.Cos(a) * 0.14f, 0.1f + Mathf.Sin(a) * 0.14f, 0.54f), Vector3.one * 0.04f, c);
+                }
+                Prim(root, Cube, new Vector3(0.34f, -0.15f, 0.54f), new Vector3(0.02f, 0.5f, 0.02f), c);
+                break;
+            case Acc.Eyepatch:
+                Prim(root, Cube, new Vector3(-0.2f, 0.1f, 0.53f), new Vector3(0.32f, 0.26f, 0.05f), c);
+                Prim(root, Cube, new Vector3(0f, 0.2f, 0f), new Vector3(1.04f, 0.04f, 1.04f), c, new Vector3(0f, 0f, 8f));
+                break;
+            case Acc.Backpack:
+                Prim(root, Cube, new Vector3(0f, 0f, -0.62f), new Vector3(0.62f, 0.72f, 0.22f), c);
+                Prim(root, Cube, new Vector3(0f, -0.2f, -0.74f), new Vector3(0.46f, 0.26f, 0.1f), dark);
+                foreach (float x in new[] { -0.26f, 0.26f })
+                    Prim(root, Cube, new Vector3(x, 0.05f, -0.5f), new Vector3(0.07f, 0.8f, 0.05f), dark);
+                break;
+            case Acc.Tail:
+                for (int i = 0; i < 6; i++)
+                {
+                    float k = i / 5f;
+                    Prim(root, Sph, new Vector3(0.1f * Mathf.Sin(k * 4f), -0.4f + k * 0.55f, -0.58f - Mathf.Sin(k * Mathf.PI) * 0.22f), Vector3.one * (0.2f - k * 0.05f), c);
+                }
+                break;
+            case Acc.Spikes:   // a punk mohawk
+                for (int i = 0; i < 6; i++)
+                {
+                    float z = Mathf.Lerp(-0.4f, 0.4f, i / 5f);
+                    Prim(root, Cube, new Vector3(0f, 0.68f - Mathf.Abs(z) * 0.2f, z), new Vector3(0.16f, 0.45f, 0.16f), c, null, true);
+                }
                 break;
             case Acc.Wings:
                 foreach (float s in new[] { -1f, 1f })
