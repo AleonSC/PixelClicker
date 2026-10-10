@@ -249,6 +249,7 @@ public partial class PixelPets : MonoBehaviour
         public bool planter => type == PixelClicker.PixelType.Seed; // the Seed pet plants itself and sows seeds
         public bool planted;
         public float seedTimer;
+        public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
         public GameObject mound;
         public PixelClicker.PixelType type;
         public bool off;
@@ -568,6 +569,7 @@ public partial class PixelPets : MonoBehaviour
             box.center = new Vector3(0f, h * 0.5f, 0f);
             p.planted = false;
             p.seedTimer = 0f;
+            p.born = Time.time;
         }
         else box.size = Vector3.one * size;
 #if UNITY_6000_0_OR_NEWER
@@ -846,8 +848,8 @@ public partial class PixelPets : MonoBehaviour
                 SetVelocity(rb, Vector3.zero);
                 return;
             }
-            // Resting on the ground: plant itself here.
-            if (GetVelocity(rb).sqrMagnitude < 0.2f * 0.2f && Physics.Raycast(rb.position + Vector3.up * size * 0.1f, Vector3.down, size * 0.9f, ~0, QueryTriggerInteraction.Ignore))
+            // Resting on the ground: plant itself here (never in its first moments, and only when something other than itself is just below).
+            if (Time.time - p.born > 0.5f && GetVelocity(rb).sqrMagnitude < 0.2f * 0.2f && SolidBelow(p, rb.position, size))
                 PlantPet(p, rb, size);
             return;
         }
@@ -858,6 +860,18 @@ public partial class PixelPets : MonoBehaviour
         if (p.seedTimer > 0f) return;
         p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y), Mathf.Max(seedPetInterval.x, seedPetInterval.y));
         SowSeed(p, size);
+    }
+
+    /// <summary>Is there ground (or an old pixel) just below the pet? Its own collider is skipped: the pet is tilted while it falls, so a plain raycast from inside it would hit its own side and plant it in mid-air.</summary>
+    private bool SolidBelow(Pet p, Vector3 position, float size)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(position + Vector3.up * size * 0.1f, Vector3.down, size * 0.9f, ~0, QueryTriggerInteraction.Ignore);
+        foreach (RaycastHit h in hits)
+        {
+            if (h.collider == null || h.collider.transform.IsChildOf(p.body.transform)) continue;
+            return true;
+        }
+        return false;
     }
 
     private void PlantPet(Pet p, Rigidbody rb, float size)
