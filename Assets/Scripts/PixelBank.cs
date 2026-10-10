@@ -122,7 +122,7 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private float spitSpread = 4f;
 
     [Header("Nozzle Aim")]
-    [Tooltip("Flick to aim: moving the mouse quickly points the nozzle the way you are moving it, so you can shoot in any direction (including back toward the left edge). Off = the nozzle always points along the hose.")]
+    [Tooltip("Flick to aim: moving the mouse quickly slides the hose's entry point round the edge of the screen to the side that makes the nozzle point the way you are moving it, so you can shoot in any direction (including back toward the left edge). The nozzle itself never turns on its own: it always points straight away from where the hose comes in. Off = the hose always enters from the left.")]
     [SerializeField] private bool flickAim = true;
 
     [Min(0.1f)]
@@ -130,16 +130,19 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private float flickMinSpeed = 2.5f;
 
     [Min(0f)]
-    [Tooltip("How long (seconds) the nozzle keeps pointing the way you flicked after the mouse slows down, so you have time to click. Then it swings back along the hose.")]
-    [SerializeField] private float flickHoldSeconds = 0.6f;
-
-    [Min(1f)]
-    [Tooltip("How quickly the nozzle swings to its new aim (higher = snappier).")]
-    [SerializeField] private float aimSharpness = 14f;
+    [Tooltip("How quickly the hose's entry point slides round the screen edge to its new place (higher = snappier, lower = lazier and smoother). 0 = the coded default (4).")]
+    [SerializeField] private float entrySlideSharpness = 0f;
 
     [Min(0f)]
-    [Tooltip("How quickly the nozzle swings back along the hose after a flick has timed out (lower = a slower, smoother swing). 0 = the coded default (3).")]
-    [SerializeField] private float aimReturnSharpness = 0f;
+    [Tooltip("The fastest the hose's entry point may travel round the screen edge, in screen heights per second. 0 = the coded default (2.5).")]
+    [SerializeField] private float entryMaxSpeed = 0f;
+
+    [Header("Shot Arc (key: Hose arc, default X)")]
+    [Tooltip("Upward lift of each arc setting (0 = flat shot, bigger = a higher lob). X cycles through them while the hose is out; the nozzle tilts and the aim line follows. Empty = the coded defaults (0, 0.7, 1.8).")]
+    [SerializeField] private float[] arcLifts = new float[0];
+
+    [Tooltip("Launch speed multiplier of each arc setting, in the same order as 'Arc Lifts'. Empty / too short = 1.15, 1, 0.9.")]
+    [SerializeField] private float[] arcSpeeds = new float[0];
 
     [Header("Area Suction (hold the right mouse button)")]
     [Min(0.05f)]
@@ -306,9 +309,10 @@ public class PixelBank : MonoBehaviour
     private string flashMessage = "";
 
     // Nozzle aim
-    private Vector3 aimDirection, lastTip, tipVelocity, flickDirection;
-    private float lastFlickTime = -99f;
+    private Vector3 lastTip, tipVelocity;
+    private float entryS, entryWantedS;      // where the hose comes in, as a distance round the screen's edge (see EntryPoint)
     private bool aimReady;
+    private int arcMode = 1;
 
     // Area suction
     private bool rightDown, areaActive, areaFinished;
@@ -653,6 +657,14 @@ public class PixelBank : MonoBehaviour
         if (hoseRoot.activeSelf != shown) hoseRoot.SetActive(shown);
         if (!shown) return;
 
+        if (PixelKeys.Pressed(PixelAction.HoseArc) && !PixelPauseMenu.IsPaused && Time.timeScale > 0f)
+        {
+            arcMode = (arcMode + 1) % ArcCount;
+            flashMessage = "Arc: " + ArcName(arcMode);
+            fullTimer = 1.1f;
+            PixelAudio.Play("bank_select");
+        }
+
         Ray ray = cam.ScreenPointToRay(PointerPosition());
         Rigidbody candidate = FindSuckCandidate(ray, out float candidateDepth);
 
@@ -666,47 +678,59 @@ public class PixelBank : MonoBehaviour
 
         float along = nozzleDepth / Mathf.Max(0.1f, Vector3.Dot(ray.direction, cam.transform.forward));
         Vector3 tip = ray.origin + ray.direction * along;
-        Vector3 anchor = cam.ViewportToWorldPoint(new Vector3(hoseAnchor.x, hoseAnchor.y, baseDepth));
-
-        // Nozzle aim: normally along the hose; a quick flick of the mouse points it the way you moved.
-        if (!aimReady) { aimDirection = cam.transform.right; lastTip = tip; tipVelocity = Vector3.zero; aimReady = true; }
+        // The hose comes in from a point on the edge of the screen. The nozzle never turns by itself: it points straight away from that entry
+        // point (through the cursor). Flicking the mouse slides the entry point round the screen edge to the side that points the nozzle the
+        // way you flicked, so the hose moves to compensate instead of the nozzle spinning round.
+        float aspect = Mathf.Max(0.1f, (float)Screen.width / Mathf.Max(1, Screen.height));
+        Vector2 tipView = cam.WorldToViewportPoint(tip);
+        Vector2 tipSpace = new Vector2(tipView.x * aspect, tipView.y);
+        if (!aimReady)
+        {
+            entryS = entryWantedS = Mathf.Clamp01(hoseAnchor.y);   // starts on the left edge, like the old fixed anchor
+            lastTip = tip; tipVelocity = Vector3.zero; aimReady = true;
+        }
         Vector3 motion = tip - lastTip;
         motion -= cam.transform.forward * Vector3.Dot(motion, cam.transform.forward); // only movement across the screen
         tipVelocity = Vector3.Lerp(tipVelocity, motion / Mathf.Max(0.0001f, dt), 1f - Mathf.Exp(-18f * dt));
         lastTip = tip;
         if (flickAim && tipVelocity.magnitude > flickMinSpeed)
         {
-            lastFlickTime = Time.unscaledTime;
-            flickDirection = tipVelocity.normalized;
+            Vector2 flick = new Vector2(Vector3.Dot(tipVelocity, cam.transform.right), Vector3.Dot(tipVelocity, cam.transform.up)).normalized;
+            entryWantedS = EdgeDistanceBehind(tipSpace, flick, aspect);
         }
+        float perimeter = 2f * (aspect + 1f);
+        float deltaS = Mathf.Repeat(entryWantedS - entryS + perimeter * 0.5f, perimeter) - perimeter * 0.5f;   // the short way round
+        float slide = deltaS * (1f - Mathf.Exp(-(entrySlideSharpness > 0f ? entrySlideSharpness : 4f) * dt));
+        float maxStep = (entryMaxSpeed > 0f ? entryMaxSpeed : 2.5f) * dt;
+        entryS = Mathf.Repeat(entryS + Mathf.Clamp(slide, -maxStep, maxStep), perimeter);
+
+        Vector2 entry = EntryPoint(entryS, aspect);                            // on the screen's edge, in (aspect x 1) space
+        Vector3 anchor = cam.ViewportToWorldPoint(new Vector3(entry.x / aspect, entry.y, baseDepth));
+        Vector2 outward = entry - new Vector2(aspect, 1f) * 0.5f;
+        if (outward.sqrMagnitude < 0.0001f) outward = Vector2.left;
+        outward.Normalize();
+        // The hose starts far beyond the screen edge, so its shadow never pops into view.
+        float extra = hoseOffscreenExtra > 0f ? hoseOffscreenExtra : 14f;
+        Vector3 start = anchor + (cam.transform.right * outward.x + cam.transform.up * outward.y) * extra;
 
         // The hose's middle trails the ends and sags, so it bends and swings as the mouse moves.
         Vector3 wantedControl = (anchor + tip) * 0.5f - cam.transform.up * ((tip - anchor).magnitude * sag);
         if (!controlReady) { control = wantedControl; controlReady = true; }
         control = Vector3.Lerp(control, wantedControl, 1f - Mathf.Exp(-followSharpness * dt));
 
-        // The nozzle's aim: along the way the hose comes in (independent of where the hose end is, so it can't feed back into itself),
-        // or the way you flicked the mouse for a moment. It swings smoothly to its new aim.
-        Vector3 hoseHeading = tip - control;
-        if (hoseHeading.sqrMagnitude < 0.0001f) hoseHeading = cam.transform.right;
-        bool flicked = flickAim && Time.unscaledTime - lastFlickTime < flickHoldSeconds;
-        Vector3 wantedAim = flicked ? flickDirection : hoseHeading.normalized;
-        // Turn in the screen plane (round the camera's view axis) rather than slerping: slerp has no fixed way round when the new aim is
-        // exactly opposite, which made the nozzle hesitate and then snap. Swinging back after a flick is slower than the flick itself.
-        float turnSharpness = flicked ? aimSharpness : (aimReturnSharpness > 0f ? aimReturnSharpness : 3f);
-        float turn = Vector3.SignedAngle(aimDirection, wantedAim, cam.transform.forward);
-        aimDirection = (Quaternion.AngleAxis(turn * (1f - Mathf.Exp(-turnSharpness * dt)), cam.transform.forward) * aimDirection).normalized;
-        Vector3 heading = aimDirection; // the nozzle and the spat-out pixels follow the aim
+        // The aim: straight away from the (far-off) hose start through the cursor, lifted by the arc setting. The start is so far away that
+        // the direction changes smoothly even when the cursor is near the edge.
+        Vector3 flat = tip - start;
+        flat -= cam.transform.forward * Vector3.Dot(flat, cam.transform.forward);
+        if (flat.sqrMagnitude < 0.0001f) flat = cam.transform.right;
+        flat.Normalize();
+        Vector3 heading = (flat + Vector3.up * ArcLift(arcMode)).normalized;   // the nozzle, the aim line and the spat-out pixels follow this
 
         // The hose ends inside the nozzle's swivel ball at its back, and arrives along the nozzle's own axis, so it never pokes through
         // the nozzle whatever way it is aimed (the end of the curve bends round to meet it).
         Vector3 hoseEnd = tip - heading * (nozzleLength * 0.93f);
         float arm = Mathf.Clamp((tip - anchor).magnitude * 0.3f, 0.35f, 2.2f);
         Vector3 endHandle = hoseEnd - heading * arm;
-
-        // The hose starts far beyond the screen edge, so its shadow never pops into view.
-        float extra = hoseOffscreenExtra > 0f ? hoseOffscreenExtra : 14f;
-        Vector3 start = anchor - cam.transform.right * extra;
 
         int segments = hosePoints.Length - 1;
         for (int i = 0; i <= segments; i++)
@@ -728,6 +752,55 @@ public class PixelBank : MonoBehaviour
     }
 
     private Vector3 mouthPosition, mouthDirection;
+
+    // ------------------------------------------------------------------
+    // Hose entry point round the screen edge, and the shot arc settings
+    // ------------------------------------------------------------------
+
+    private static readonly string[] ArcNames = { "Flat", "Arc", "Lob" };
+    private static readonly float[] DefaultArcLifts = { 0f, 0.7f, 1.8f };
+    private static readonly float[] DefaultArcSpeeds = { 1.15f, 1f, 0.9f };
+
+    private int ArcCount => arcLifts != null && arcLifts.Length > 0 ? arcLifts.Length : DefaultArcLifts.Length;
+    private float ArcLift(int mode) => arcLifts != null && arcLifts.Length > 0 ? arcLifts[Mathf.Clamp(mode, 0, arcLifts.Length - 1)] : DefaultArcLifts[Mathf.Clamp(mode, 0, DefaultArcLifts.Length - 1)];
+    private float ArcSpeed(int mode) => arcSpeeds != null && mode < arcSpeeds.Length ? arcSpeeds[mode] : mode < DefaultArcSpeeds.Length ? DefaultArcSpeeds[mode] : 1f;
+    private string ArcName(int mode) => arcLifts != null && arcLifts.Length > 0 ? (mode == 0 ? "Flat" : mode == arcLifts.Length - 1 ? "Lob" : "Arc " + mode) : ArcNames[Mathf.Clamp(mode, 0, ArcNames.Length - 1)];
+    /// <summary>How fast a spat pixel leaves the nozzle with the current arc setting.</summary>
+    private float ShotSpeed => spitSpeed * ArcSpeed(arcMode);
+
+    /// <summary>A point on the screen's edge (a rectangle 'aspect' wide and 1 high) a distance s round it: up the left edge, along the top, down the right, back along the bottom.</summary>
+    private static Vector2 EntryPoint(float s, float aspect)
+    {
+        float perimeter = 2f * (aspect + 1f);
+        s = Mathf.Repeat(s, perimeter);
+        if (s < 1f) return new Vector2(0f, s);
+        s -= 1f;
+        if (s < aspect) return new Vector2(s, 1f);
+        s -= aspect;
+        if (s < 1f) return new Vector2(aspect, 1f - s);
+        s -= 1f;
+        return new Vector2(aspect - s, 0f);
+    }
+
+    /// <summary>The distance round the screen edge of the point you reach by walking from 'from' backwards, away from 'direction' (where the shot should go).</summary>
+    private static float EdgeDistanceBehind(Vector2 from, Vector2 direction, float aspect)
+    {
+        Vector2 back = -direction;
+        from = new Vector2(Mathf.Clamp(from.x, 0f, aspect), Mathf.Clamp(from.y, 0f, 1f));
+        float t = float.MaxValue;
+        if (back.x > 0.0001f) t = Mathf.Min(t, (aspect - from.x) / back.x); else if (back.x < -0.0001f) t = Mathf.Min(t, -from.x / back.x);
+        if (back.y > 0.0001f) t = Mathf.Min(t, (1f - from.y) / back.y); else if (back.y < -0.0001f) t = Mathf.Min(t, -from.y / back.y);
+        if (t == float.MaxValue) t = 0f;
+        Vector2 p = from + back * t;
+        float perimeter = 2f * (aspect + 1f);
+        // which edge the point lies on (the nearest one)
+        float dl = Mathf.Abs(p.x), dr = Mathf.Abs(aspect - p.x), db = Mathf.Abs(p.y), dt = Mathf.Abs(1f - p.y);
+        float m = Mathf.Min(Mathf.Min(dl, dr), Mathf.Min(db, dt));
+        if (m == dl) return Mathf.Clamp(p.y, 0f, 1f);
+        if (m == dt) return 1f + Mathf.Clamp(p.x, 0f, aspect);
+        if (m == dr) return 1f + aspect + (1f - Mathf.Clamp(p.y, 0f, 1f));
+        return Mathf.Repeat(2f + aspect + (aspect - Mathf.Clamp(p.x, 0f, aspect)), perimeter);
+    }
 
     /// <summary>The nearest suckable old pixel to the mouse ray (within the suck radius), and its depth from the camera.</summary>
     private Rigidbody FindSuckCandidate(Ray ray, out float depth)
@@ -958,7 +1031,7 @@ public class PixelBank : MonoBehaviour
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         Quaternion wobble = Quaternion.AngleAxis(UnityEngine.Random.Range(-spitSpread, spitSpread), cam.transform.forward);
 
-        clicker.SpawnStoredPixel(tier, amount, mouthPosition, wobble * mouthDirection * spitSpeed);
+        clicker.SpawnStoredPixel(tier, amount, mouthPosition, wobble * mouthDirection * ShotSpeed);
 
         // A vacuum pixel works again when it is spat out: every other old pixel swirls into IT (not into the cube) and pays out once more.
         if (clicker.Tiers[tier].vacuum)
@@ -1112,7 +1185,7 @@ public class PixelBank : MonoBehaviour
         }
 
         Vector3 p = mouthPosition;
-        Vector3 v = mouthDirection * spitSpeed;
+        Vector3 v = mouthDirection * ShotSpeed;
         Vector3 gravity = Physics.gravity * clicker.OldPixelGravityScale;
         float drag = clicker.OldPixelDrag;
         const float step = 0.03f;

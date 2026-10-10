@@ -2,7 +2,7 @@
 // Lines starting with // are notes for you and are not shown.
 // A line starting with # is a heading. A line like  Key | What it does  is shown as two columns.
 // Keep the right-hand part short so it stays on one line.
-// {key:TimeStop}, {key:TimeSlow}, {key:Hose}, {key:EventLog}, {key:RotateLeft}, {key:RotateRight}, {key:FirstPerson} are replaced by the player's current key bindings (Settings > Key Bindings).
+// {key:TimeStop}, {key:TimeSlow}, {key:Hose}, {key:EventLog}, {key:RotateLeft}, {key:RotateRight}, {key:FirstPerson}, {key:HoseArc} are replaced by the player's current key bindings (Settings > Key Bindings).
 
 # Mouse
 Left-click the cube | Collect a pixel
@@ -37,7 +37,8 @@ Release | Drop or throw it
 # Pixel Bank Hose
 Mouse wheel | Choose which stored pixel to use
 Left-click | Spit one out
-Flick the mouse, then click | Spit in the direction you flicked
+Flick the mouse, then click | Spit in the direction you flicked (the hose slides round the screen edge to match)
+{key:HoseArc} | Change the shot's arc: Flat, Arc or Lob (the nozzle tilts and the aim line follows)
 Right-click | Suck up the old pixel under the nozzle
 Hold right-click | Suck up an area of the selected pixel type
 Click a Bank row | Select that pixel type
