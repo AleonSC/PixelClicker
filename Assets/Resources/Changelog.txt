@@ -384,3 +384,4 @@
 [2026-10-10 17:26 UTC] The Toggles window and every pause-menu screen grow from small when they open and shrink away when you resume.
 [2026-10-10 17:27 UTC] Stats sections now start folded, and the Settings screen is split into collapsible sections (Gameplay, Interface, Saving, Display, Audio, Controls) that also start folded.
 [2026-10-10 17:28 UTC] Fixed a duplicate field name compile error in the Settings sections.
+[2026-10-10 17:32 UTC] Got-it boxes placed beside a window (Log, Inventory, Shop) now measure the window at full size, so they no longer overlap it while it is still growing in.

@@ -130,7 +130,7 @@ public class PixelNoticeBox : MonoBehaviour
             // Right next to the window it explains: its left edge just past the window's right edge, top or bottom aligned.
             Canvas.ForceUpdateCanvases();
             Vector3[] corners = new Vector3[4];
-            beside.GetWorldCorners(corners); // overlay canvas: world = screen pixels (0 = bottom-left, 2 = top-right)
+            FullSizeCorners(beside, corners); // overlay canvas: world = screen pixels (0 = bottom-left, 2 = top-right)
             RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
             float toUnits = canvasRect.rect.width / Mathf.Max(1f, Screen.width);
             float textHeightB = Mathf.Ceil(label.GetPreferredValues(message, width - 60f, 0f).y);
@@ -154,7 +154,7 @@ public class PixelNoticeBox : MonoBehaviour
             // To the right of the shop, filling the same height as the shop (and its currency panel on the other side).
             Canvas.ForceUpdateCanvases();
             Vector3[] shopCorners = new Vector3[4];
-            PixelNotice.SideAnchor.GetWorldCorners(shopCorners);
+            FullSizeCorners(PixelNotice.SideAnchor, shopCorners);
             RectTransform canvasRect2 = canvasRoot.GetComponent<RectTransform>();
             float toUnits2 = canvasRect2.rect.width / Mathf.Max(1f, Screen.width);
             float sideWidth = PixelNotice.SideWidth;
@@ -247,6 +247,15 @@ public class PixelNoticeBox : MonoBehaviour
     }
 
     private void OnDestroy() { Unfreeze(); PixelWindows.Unregister(this); }
+
+    /// <summary>The window's corners at full size: a window that is still growing in (PixelPop) would otherwise put the box on top of it.</summary>
+    private static void FullSizeCorners(RectTransform window, Vector3[] corners)
+    {
+        Vector3 scale = window.localScale;
+        window.localScale = Vector3.one;
+        window.GetWorldCorners(corners);
+        window.localScale = scale;
+    }
 
     public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf && PixelPop.IsOpen(boxRect.gameObject);
 
