@@ -16,8 +16,8 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelToggles : MonoBehaviour
 {
-    private enum Group { Pixels = 0, Upgrades = 1, Minigames = 2, Pets = 3 }
-    private const int GroupCount = 4;
+    private enum Group { Pixels = 0, Upgrades = 1, Minigames = 2, Vendors = 3, Pets = 4 }
+    private const int GroupCount = 5;
 
     [Header("References")]
     [Tooltip("The PixelClicker whose pixels are listed. Found automatically if left empty.")]
@@ -40,8 +40,11 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "Toggleable";
 
-    [Tooltip("Names of the group buttons: Pixels, Upgrades, Minigames, Pets (a missing name uses the default).")]
-    [SerializeField] private string[] groupNames = { "Pixels", "Upgrades", "Minigames", "Pets" };
+    [Tooltip("Names of the group buttons: Pixels, Upgrades, Minigames, Vendors, Pets (a missing name uses the default). Renamed from 'Group Names' so scenes saved with the four old names pick up the new tab.")]
+    [SerializeField] private string[] tabNames = { "Pixels", "Upgrades", "Minigames", "Vendors", "Pets" };
+
+    [Tooltip("Shown on the Vendors tab until a vendor has started visiting.")]
+    [SerializeField] private string noVendorsText = "No vendors yet. They start visiting as you progress.";
 
     [Tooltip("Shown on the Pets tab while you have no pets.")]
     [SerializeField] private string noPetsText = "No pets yet. Very rarely, clicking a pixel gives you its pet.";
@@ -310,9 +313,12 @@ public class PixelToggles : MonoBehaviour
         }
         else
         {
+            // Minigames and Vendors (the visiting shopkeepers: Wizard, Tinkerer, Farmer, Entrepreneur) share the same on / off rows.
+            bool vendors = group == Group.Vendors;
             foreach (PixelMinigame m in PixelMinigame.All)
             {
                 if (m == null || !(m.Running || m.UserDisabled)) continue;
+                if ((m is PixelVisitorMinigame) != vendors) continue;
                 PixelMinigame mg = m;
                 list.Add(new Entry
                 {
@@ -354,7 +360,7 @@ public class PixelToggles : MonoBehaviour
         }
 
         emptyObject.SetActive(entries.Count == 0);
-        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = (current == Group.Pets ? noPetsText : emptyText).ToUpperInvariant();
+        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = (current == Group.Pets ? noPetsText : current == Group.Vendors ? noVendorsText : emptyText).ToUpperInvariant();
         float contentHeight = entries.Count * (rowHeight + 8f);
         float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
@@ -462,10 +468,10 @@ public class PixelToggles : MonoBehaviour
         close.onClick.AddListener(Close);
         y += titleFontSize * 1.4f + 14f;
 
-        // --- The group drop-down (Pixels / Upgrades / Minigames / Pets).
+        // --- The group drop-down (Pixels / Upgrades / Minigames / Vendors / Pets).
         List<string> groupLabels = new List<string>();
         for (int i = 0; i < GroupCount; i++)
-            groupLabels.Add(groupNames != null && i < groupNames.Length && !string.IsNullOrEmpty(groupNames[i]) ? groupNames[i] : ((Group)i).ToString());
+            groupLabels.Add(tabNames != null && i < tabNames.Length && !string.IsNullOrEmpty(tabNames[i]) ? tabNames[i] : ((Group)i).ToString());
         groupDropdown = PixelUIKit.CreateDropdown(font, windowObject.transform, "Group Dropdown", new Vector2(0f, 60f), groupColor,
                                                   new Color(groupColor.r * 0.8f, groupColor.g * 0.8f, groupColor.b * 0.8f, 1f), textColor, fontSize);
         groupDropdown.ClearOptions();
