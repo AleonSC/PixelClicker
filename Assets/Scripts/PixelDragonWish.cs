@@ -169,7 +169,7 @@ public class PixelDragonWish : MonoBehaviour
         for (int s = 0; s < 7; s++)
         {
             int index = clicker.IndexOf((PixelClicker.PixelType)((int)PixelClicker.PixelType.DragonCube1 + s));
-            if (index >= 0) clicker.TrySpend(index, 1d);
+            if (index >= 0) clicker.RemoveCurrency(index, 1d);   // really used up, even with Infinite resources on
         }
         PixelStats.Count("dragon.summons");
         Freeze();
@@ -267,7 +267,7 @@ public class PixelDragonWish : MonoBehaviour
             yield return null;
         }
         Destroy(doneText);
-        Destroy(dragon.root);
+        Destroy(dragon.root.gameObject);
         for (float t = 0f; t < 0.6f; t += Time.unscaledDeltaTime)
         {
             float k = 1f - t / 0.6f;
