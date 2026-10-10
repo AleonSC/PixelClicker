@@ -82,12 +82,18 @@ public partial class PixelShop
         heading.fontSizeMin = 14f;
         PixelUIKit.Caps(heading); // every title is shown in capitals
         PlaceTopLeft(heading.rectTransform, 14f, y, inner, 44f);
+        RectTransform headingRect = heading.rectTransform;
         y += 44f + 6f;
 
         card.dropdown = PixelUIKit.CreateDropdown(font, go.transform, "Item Dropdown", new Vector2(inner, 58f), tabInactiveColor,
                                                   new Color(0.12f, 0.12f, 0.16f, 1f), textColor, buyFontSize * 0.85f);
         PlaceTopLeft(card.dropdown.GetComponent<RectTransform>(), 14f, y, inner, 58f);
         card.dropdown.onValueChanged.AddListener(_ => RefreshRows());
+        AddCardPicture(card, headingRect, () =>
+        {
+            int it = SelectedItem(card);
+            return it >= 0 && consumables != null ? "item:" + consumables.ItemName(it) : null;
+        });
         y += 58f + 8f;
 
         // An orange box with an exclamation mark: hover it to read the item's description.
@@ -237,7 +243,7 @@ public partial class PixelShop
         if (room <= 0 && !ItemLocked(item))
         {
             card.cost.text = "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" +
-                             string.Format(potionFullFormat, consumables.ItemCapacity(item), consumables.ItemOwned(item)) + "</color>";
+                             string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(item), consumables.ItemOwned(item)) + "</color>";
             card.buy.interactable = false;
             card.buyLabel.text = potionFullText;
             card.buyImage.color = disabledColor;

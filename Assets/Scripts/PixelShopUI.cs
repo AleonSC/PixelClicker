@@ -15,6 +15,12 @@ public partial class PixelShop
     // Runtime
     // ------------------------------------------------------------------
 
+    /// <summary>Drops a "(you have {n})" part from a format string (scenes saved earlier still carry it).</summary>
+    private static string NoHave(string format)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(format ?? "", @"\s*\((you have|owned)[^)]*\)", "");
+    }
+
     private class PackRow
     {
         public RectTransform rect;
@@ -250,6 +256,7 @@ public partial class PixelShop
         {
             PackRow row = BuildPlainRow(contentRect, "Value " + i);
             int captured = i;
+            AddRowPicture(row, () => captured < clicker.Tiers.Length ? TierKey(clicker.Tiers[captured].type) : null);
             row.buyButton.onClick.AddListener(() => { TryBuyValueUpgrade(captured, PixelInput.ShiftHeld()); RefreshRows(); });
             bigger[i] = row;
         }
@@ -545,6 +552,7 @@ public partial class PixelShop
         br.anchoredPosition = new Vector2(-20f, 0f);
 
         LayoutRowHeader(row, textRightInset);
+        if (!potion) AddPackPicture(row, index);
 
         int captured = index;
         if (potion) row.buyButton.onClick.AddListener(() => TryBuyPotion(captured));
@@ -855,7 +863,7 @@ public partial class PixelShop
 
             bool enough = PixelClicker.InfiniteResources || tier.count >= cost;
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
-                                 string.Format(valueCostFormat, PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.count)) + "</color>";
+                                 string.Format(NoHave(valueCostFormat), PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.count)) + "</color>";
 
             bool canBuy = !maxed && enough;
             row.buyButton.interactable = canBuy;

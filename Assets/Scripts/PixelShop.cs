@@ -472,8 +472,8 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Button text on a purchase card when you already hold the most of that potion you can.")]
     [SerializeField] private string potionFullText = "Full";
 
-    [Tooltip("Cost line on a purchase card when that potion is full. {0} = the most you can hold, {1} = how many you hold.")]
-    [SerializeField] private string potionFullFormat = "You can hold {0} of each potion (you have {1}). Drink one to buy more.";
+    [Tooltip("Cost line on a purchase card when that potion is full. {0} = the most you can hold.")]
+    [SerializeField] private string potionFullFormat = "You can hold {0} of each potion. Drink one to buy more.";
 
     [Tooltip("Shown on a card that has no items.")]
     [SerializeField] private string noItemsText = "Nothing to buy here.";
@@ -529,8 +529,8 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Shown on a consumable's row. {0} = upgrade levels bought, {1} = levels in all.")]
     [SerializeField] private string operationSummaryFormat = "Upgrades: {0} / {1}";
 
-    [Tooltip("Cost line of an upgrade. {0} = price, {1} = pixel name, {2} = how many you have.")]
-    [SerializeField] private string operationCostFormat = "Cost: {0} {1}   (you have {2})";
+    [Tooltip("Cost line of an upgrade. {0} = price, {1} = pixel name,")]
+    [SerializeField] private string operationCostFormat = "Cost: {0} {1}";
 
     [Tooltip("The consumables' upgrades. The built-in ones are added by id when missing; edit levels, effects and prices here.")]
     [SerializeField] private System.Collections.Generic.List<PixelOperationUpgrade> operationUpgrades = new System.Collections.Generic.List<PixelOperationUpgrade>();
@@ -545,8 +545,8 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Description of a Value row. {0} = pixel name, {1} = Value multiplier now, {2} = after the next level.")]
     [SerializeField] private string valueRowDescFormat = "Each {0} click pays x{1}  →  x{2}   (Shift-click: buy as many as you can)";
 
-    [Tooltip("Cost line of a Value row. {0} = cost, {1} = pixel name, {2} = how many you have.")]
-    [SerializeField] private string valueCostFormat = "Cost: {0} {1}   (you have {2})";
+    [Tooltip("Cost line of a Value row. {0} = cost, {1} = pixel name,")]
+    [SerializeField] private string valueCostFormat = "Cost: {0} {1}";
 
     [Tooltip("Text of a Value row's button.")]
     [SerializeField] private string valueButtonText = "Upgrade";
@@ -1133,6 +1133,7 @@ public partial class PixelShop : MonoBehaviour
     {
         PixelWindows.Unregister(this);
         OnDestroyOperation();
+        OnDestroyPictures();
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
@@ -1177,6 +1178,7 @@ public partial class PixelShop : MonoBehaviour
         }
         UpdateCurrencyAndWindows();
         UpdateOperationPictures();
+        UpdatePictures();
     }
 
     // ------------------------------------------------------------------
