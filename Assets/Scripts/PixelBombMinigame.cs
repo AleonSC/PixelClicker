@@ -123,9 +123,6 @@ public class PixelBombMinigame : PixelMinigame
     [Tooltip("How far apart the wires are (fraction of the bomb's height). Click areas never grow bigger than this, so wires can't overlap.")]
     [SerializeField] private float wireGap = 0.22f;
 
-    [Tooltip("Small hint shown above the bomb. Leave empty to hide it.")]
-    [SerializeField] private string hintText = "Cut the colour you have the most of";
-
     [Tooltip("Timer text. {0} = seconds left.")]
     [SerializeField] private string timerFormat = "{0:0.0}";
 
@@ -134,7 +131,7 @@ public class PixelBombMinigame : PixelMinigame
     [SerializeField] private float timerTextSize = 3.5f;
 
     [Min(0.3f)]
-    [Tooltip("Size of the hint text above the bomb.")]
+    [Tooltip("Size of the colour-blind letters beside the wires.")]
     [SerializeField] private float hintTextSize = 1.6f;
 
     [Min(0f)]
@@ -344,7 +341,7 @@ public class PixelBombMinigame : PixelMinigame
         float vx = Random.Range(Mathf.Min(xr.x, xr.y), Mathf.Max(xr.x, xr.y));
         float vy = Random.Range(Mathf.Min(heightRange.x, heightRange.y), Mathf.Max(heightRange.x, heightRange.y));
 
-        // The bomb is a metal rectangle. Keep all of it (and the hint above it) inside the view.
+        // The bomb is a metal rectangle. Keep all of it inside the view.
         float bw = bombSize * 1.6f, bh = bombSize * 1.25f, bd = bombSize * 0.35f;
         float viewHeight = 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
         float viewWidth = viewHeight * cam.aspect;
@@ -386,10 +383,6 @@ public class PixelBombMinigame : PixelMinigame
         float frontZ = -(bd * 0.5f + 0.06f);
         TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, timerColor,
                                      new Vector3(0f, -bh * 0.37f, frontZ), bw * 0.9f);
-        TextMeshPro hint = null;
-        Vector3 hintLocal = new Vector3(0f, bh * 0.5f + bombSize * 0.3f, 0f);
-        if (!string.IsNullOrEmpty(hintText))
-            hint = MakeText(root.transform, "Hint", hintText, hintTextSize, new Color(1f, 1f, 1f, 0.9f), hintLocal, bombSize * 8f);
 
         // Three wires run straight across the top of the front panel: red, green, blue. Each is two pieces that meet in the middle.
         Color[] colors = { redWireColor, greenWireColor, blueWireColor };
@@ -432,7 +425,6 @@ public class PixelBombMinigame : PixelMinigame
             timer.color = warning && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? timerWarningColor
                         : warning ? Color.Lerp(timerColor, timerWarningColor, 0.5f) : timerColor;
             spark.transform.localScale = Vector3.one * sparkBase * (1f + 0.35f * Mathf.Sin(Time.time * (left <= warningSeconds ? 26f : 10f)));
-            if (hint != null) hint.transform.position = PixelUIKit.KeepOnScreen(cam, hint, root.transform.TransformPoint(hintLocal)); // never off screen
             int whole = Mathf.CeilToInt(Mathf.Max(0f, left));
             if (whole != lastWhole)
             {

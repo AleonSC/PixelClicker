@@ -212,7 +212,6 @@ public class PixelTitleScreen : MonoBehaviour
     private RectTransform barRect, logoRect;
     private readonly List<Image> glowImages = new List<Image>();   // [0,1] top outer/inner, [2,3] bottom outer/inner, [4] top line, [5] bottom line
     private float glowFade = 1f;
-    private static Sprite glowUp, glowDown;
     private readonly List<RectTransform> shrinkRects = new List<RectTransform>();
     private readonly List<Button> buttons = new List<Button>();
     private Button playButton;
@@ -327,84 +326,27 @@ public class PixelTitleScreen : MonoBehaviour
         chainDivisors.Clear();
     }
 
-    /// <summary>A soft vertical fade: alpha 1 on one edge falling to 0 on the other. 'up' = strongest at the bottom row.</summary>
-    private static Sprite GlowSprite(bool up)
-    {
-        if (up ? glowUp != null : glowDown != null) return up ? glowUp : glowDown;
-        const int h = 64;
-        Texture2D tex = new Texture2D(2, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-        for (int y = 0; y < h; y++)
-        {
-            float v = y / (float)(h - 1);
-            float k = up ? 1f - v : v;
-            float a = k * k * k;   // a soft, quickly fading falloff like light bleeding round a panel
-            for (int x = 0; x < 2; x++) tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
-        }
-        tex.Apply(false, true);
-        Sprite sp = Sprite.Create(tex, new Rect(0, 0, 2, h), new Vector2(0.5f, 0.5f), 100f);
-        if (up) glowUp = sp; else glowDown = sp;
-        return sp;
-    }
-
-    private Image AddGlowStrip(Transform parent, string name, bool topEdge, bool outward, float size)
-    {
-        GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(parent, false);
-        Image img = go.GetComponent<Image>();
-        img.raycastTarget = false;
-        img.type = Image.Type.Simple;
-        bool extendsUp = topEdge == outward;   // outside the top edge / inside the bottom edge reach upwards
-        img.sprite = GlowSprite(extendsUp);
-        RectTransform rt = go.GetComponent<RectTransform>();
-        float y = topEdge ? 1f : 0f;
-        rt.anchorMin = new Vector2(0f, y); rt.anchorMax = new Vector2(1f, y);
-        rt.pivot = new Vector2(0.5f, extendsUp ? 0f : 1f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = new Vector2(0f, size);
-        return img;
-    }
-
     private void BuildBarGlow()
     {
         glowImages.Clear();
-        glowImages.Add(AddGlowStrip(barRect, "Glow Top", true, true, glowSize));
-        glowImages.Add(AddGlowStrip(barRect, "Glow Top Inner", true, false, glowInnerSize));
-        glowImages.Add(AddGlowStrip(barRect, "Glow Bottom", false, true, glowSize));
-        glowImages.Add(AddGlowStrip(barRect, "Glow Bottom Inner", false, false, glowInnerSize));
-        // The bright LED line itself on each edge.
-        for (int i = 0; i < 2; i++)
-        {
-            GameObject go = new GameObject(i == 0 ? "Line Top" : "Line Bottom", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(barRect, false);
-            Image img = go.GetComponent<Image>();
-            img.raycastTarget = false;
-            RectTransform rt = go.GetComponent<RectTransform>();
-            float y = i == 0 ? 1f : 0f;
-            rt.anchorMin = new Vector2(0f, y); rt.anchorMax = new Vector2(1f, y);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(0f, 3f);
-            glowImages.Add(img);
-        }
+        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Top", true, true, glowSize));
+        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Top Inner", true, false, glowInnerSize));
+        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Bottom", false, true, glowSize));
+        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Bottom Inner", false, false, glowInnerSize));
+        glowImages.Add(PixelBarGlow.AddLine(barRect, "Line Top", true));
+        glowImages.Add(PixelBarGlow.AddLine(barRect, "Line Bottom", false));
     }
 
     private void UpdateBarGlow()
     {
         if (glowImages.Count < 6) return;
-        float hue = Time.unscaledTime * glowColorSpeed;
-        Color top = Color.HSVToRGB(Mathf.Repeat(hue, 1f), Mathf.Clamp01(glowSaturation), 1f);
-        Color bottom = Color.HSVToRGB(Mathf.Repeat(hue + glowEdgeOffset, 1f), Mathf.Clamp01(glowSaturation), 1f);
+        bool on = PixelHud.BarGlow;   // the Settings switch covers every bar glow
+        if (glowImages[0].gameObject.activeSelf != on) foreach (Image g in glowImages) g.gameObject.SetActive(on);
+        if (!on) return;
         float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);   // a very slight breathing
         float a = Mathf.Clamp01(glowStrength) * glowFade * shimmer;
-        top.a = a; bottom.a = a;
-        glowImages[0].color = top;
-        glowImages[1].color = new Color(top.r, top.g, top.b, a * 0.55f);
-        glowImages[2].color = bottom;
-        glowImages[3].color = new Color(bottom.r, bottom.g, bottom.b, a * 0.55f);
-        Color lt = Color.Lerp(top, Color.white, 0.55f), lb = Color.Lerp(bottom, Color.white, 0.55f);
-        lt.a = Mathf.Clamp01(a * 1.2f); lb.a = lt.a;
-        glowImages[4].color = lt;
-        glowImages[5].color = lb;
+        PixelBarGlow.Colorize(glowImages[0], glowImages[1], glowImages[4], PixelBarGlow.EdgeColor(Time.unscaledTime, glowColorSpeed, 0f, glowSaturation), a);
+        PixelBarGlow.Colorize(glowImages[2], glowImages[3], glowImages[5], PixelBarGlow.EdgeColor(Time.unscaledTime, glowColorSpeed, glowEdgeOffset, glowSaturation), a);
     }
 
     private void Update()

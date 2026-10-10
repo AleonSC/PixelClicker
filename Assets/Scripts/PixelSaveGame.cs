@@ -108,7 +108,8 @@ public class PixelSaveGame : MonoBehaviour
         public bool timeStopDisabled;
         public bool comboDisabled;
         public string[] pets; // "type:off" per pet (PixelPets)
-        public string robot;  // the Robot Worker's job (PixelRobotWorker)
+        public string robot;  // the UFO Helper's job (PixelRobotWorker)
+        public bool robotDisabled;   // switched off in Toggles
         public string[] eventTexts;
         public string[] eventFulls;
         public PixelClicker.OldPixelState[] oldPixels;   // where the old pixels lie
@@ -532,7 +533,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelPets petSystem = PixelFind.First<PixelPets>();
             if (petSystem != null) data.pets = petSystem.Export();
             PixelRobotWorker robotWorker = PixelFind.First<PixelRobotWorker>();
-            if (robotWorker != null) data.robot = robotWorker.Export();
+            if (robotWorker != null) { data.robot = robotWorker.Export(); data.robotDisabled = robotWorker.UserDisabled; }
             PixelHints.ExportHistory(out data.eventTexts, out data.eventFulls);
             // A minigame that moved the old pixels around (Breakout, Sorting Race...) is running: their positions aren't real now.
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
@@ -623,7 +624,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelPets petsLoad = PixelFind.First<PixelPets>();
             if (petsLoad != null) petsLoad.Import(data.pets); // older saves have no pets
             PixelRobotWorker robotLoad = PixelFind.First<PixelRobotWorker>();
-            if (robotLoad != null) robotLoad.Import(data.robot); // older saves have no robot job
+            if (robotLoad != null) { robotLoad.Import(data.robot); robotLoad.UserDisabled = data.robotDisabled; } // older saves have no robot job
             PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
             PixelSettingsSync.Apply(data.settings);
 

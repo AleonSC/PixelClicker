@@ -68,9 +68,6 @@ public class PixelRobotWorker : MonoBehaviour
     [Tooltip("Seconds between looks at whether the device is still there.")]
     [SerializeField] private float checkInterval = 0.3f;
 
-    [Tooltip("Size of its label above it (3D text).")]
-    [SerializeField] private float labelSize = 3.5f;
-
     [Tooltip("Width of the beam's lower end, as a multiple of the UFO's size.")]
     [SerializeField] private float beamRadius = 0.9f;
 
@@ -83,9 +80,6 @@ public class PixelRobotWorker : MonoBehaviour
     [SerializeField] private Color beamColor = new Color(0.55f, 1f, 0.7f, 1f);
 
     [Header("Texts")]
-    [SerializeField] private string clickMeText = "Click me!";
-    [SerializeField] private string changeJobText = "Click to change job";
-    [SerializeField] private string outOfFormat = "Out of {0}";
     [SerializeField] private string ufoTitle = "UFO Helper";
     [SerializeField] private string askText = "Which device should I keep running? Pick one, then choose where it goes.";
     [SerializeField] private string noDevicesText = "You have no devices to work with yet.";
@@ -94,8 +88,6 @@ public class PixelRobotWorker : MonoBehaviour
     [SerializeField] private string bankPixelsText = "Abduct a pixel into the bank";
     [SerializeField] private string pickPixelText = "Which pixel should I abduct and put in your Pixel Bank?";
     [SerializeField] private string ufoBankJobFormat = "The UFO will abduct {0} and bank them";
-    [SerializeField] private string needsBankText = "Needs the Pixel Bank";
-    [SerializeField] private string bankFullText = "Bank full";
 
     private PixelClicker clicker;
     private PixelConsumables consumables;
@@ -115,7 +107,6 @@ public class PixelRobotWorker : MonoBehaviour
     private Renderer[] lightRenderers;
     private Renderer domeRenderer;
     private BoxCollider box;
-    private TextMeshPro label;
     private Vector3 pos, velocity, wanderTarget;
     private bool hasPos;
     private float nextWander, floorY, nextFloorCheck;
@@ -155,7 +146,23 @@ public class PixelRobotWorker : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Hovering = false; }
 
-    public bool Active => active && !disableRobot;
+    public bool Active => active && !disableRobot && !userDisabled;
+
+    /// <summary>The upgrade was bought (even if the player switched it off in Toggles).</summary>
+    public bool Bought => active && !disableRobot;
+
+    private bool userDisabled;
+
+    /// <summary>The player switched the UFO off with the Toggles window. Saved.</summary>
+    public bool UserDisabled
+    {
+        get => userDisabled;
+        set
+        {
+            userDisabled = value;
+            if (userDisabled) { Hovering = false; HideAll(); CloseWindow(); }
+        }
+    }
 
     /// <summary>The shop upgrade was bought.</summary>
     public void Activate() { active = true; }
@@ -240,9 +247,12 @@ public class PixelRobotWorker : MonoBehaviour
         else if (clicker.PixelTransform != null) floorY = clicker.PixelTransform.position.y - clicker.PixelBaseSize * 0.5f;
     }
 
+    /// <summary>A point above 'flat' at the given height over the floor, but never lower than a little above the top of the cube.</summary>
     private Vector3 Hover(Vector3 flat, float heightInPixels)
     {
-        return new Vector3(flat.x, floorY + heightInPixels * clicker.PixelBaseSize, flat.z);
+        float y = floorY + heightInPixels * clicker.PixelBaseSize;
+        if (clicker.PixelTransform != null) y = Mathf.Max(y, clicker.PixelTransform.position.y + clicker.PixelBaseSize * 1.4f);
+        return new Vector3(flat.x, y, flat.z);
     }
 
     /// <summary>Picks a new spot to drift to: round the cube, on screen, never right over it.</summary>
@@ -262,6 +272,7 @@ public class PixelRobotWorker : MonoBehaviour
             if (sp.z <= 0f) continue;
             if (sp.x < Screen.width * 0.08f || sp.x > Screen.width * 0.92f || sp.y < Screen.height * 0.16f || sp.y > Screen.height * 0.86f) continue;
             if (new Vector2(sp.x - cubeScreen.x, sp.y - cubeScreen.y).magnitude < Screen.height * minScreenGapFraction) continue;
+            if (sp.y < cubeScreen.y + Screen.height * 0.06f) continue;   // always higher up the screen than the cube
             if ((p - pos).magnitude < 1.5f * pb) continue;   // worth the trip
             wanderTarget = p;
             return;
@@ -381,7 +392,6 @@ public class PixelRobotWorker : MonoBehaviour
         {
             if (ghost != null) ghost.SetActive(false);
             waitT = 0f;
-            SetLabel(hovering ? clickMeText : "", hovering);
             return;
         }
 
@@ -394,15 +404,13 @@ public class PixelRobotWorker : MonoBehaviour
 
         PixelConsumables.Device d = consumables.GetDevice(jobDevice);
         bool stock = consumables.DeviceOwned(jobDevice) > 0;
-        if (occupied) { waitT = 0f; SetLabel(hovering ? changeJobText : "", hovering); return; }
+        if (occupied) { waitT = 0f; return; }
         if (!stock)
         {
             waitT = 0f;
-            SetLabel(string.Format(outOfFormat, d.displayName), !flying, new Color(1f, 0.4f, 0.35f, 1f));
             return;
         }
 
-        SetLabel(hovering ? changeJobText : "", hovering);
         if (!AtWork()) { waitT = 0f; return; }   // still flying over
 
         beamWanted = true;
@@ -476,17 +484,14 @@ public class PixelRobotWorker : MonoBehaviour
         if (bankSys == null || !bankSys.Active || idx < 0)
         {
             bankTarget = null; abductT = 0f;
-            SetLabel(needsBankText, !flying, new Color(1f, 0.45f, 0.4f, 1f));
             return;
         }
         if (bankSys.IsFull)
         {
             bankTarget = null; abductT = 0f;
-            SetLabel(bankFullText, !flying, new Color(1f, 0.45f, 0.4f, 1f));
             return;
         }
 
-        SetLabel(hovering ? changeJobText : "", hovering);
         bankCooldown -= Time.deltaTime;
         if (bankTarget != null && !ValidBankTarget(bankTarget, idx)) { bankTarget = null; abductT = 0f; }
         if (bankTarget == null && Time.time >= bankRetarget)
@@ -522,18 +527,6 @@ public class PixelRobotWorker : MonoBehaviour
             if (a.magnitude <= reach) return true;
         }
         return false;
-    }
-
-    private void SetLabel(string text, bool visible, Color? color = null)
-    {
-        if (label == null) return;
-        bool on = visible && !string.IsNullOrEmpty(text);
-        if (label.gameObject.activeSelf != on) label.gameObject.SetActive(on);
-        if (!on) return;
-        if (label.text != text) label.text = text;
-        label.color = color ?? Color.white;
-        Camera cam = Cam;
-        if (cam != null) label.transform.rotation = Quaternion.LookRotation(label.transform.position - cam.transform.position, Vector3.up);
     }
 
     // ------------------------------------------------------------------
@@ -594,22 +587,6 @@ public class PixelRobotWorker : MonoBehaviour
         box.center = new Vector3(0f, 0.2f, 0f);
         box.size = new Vector3(1.9f, 1.0f, 1.9f);
         box.isTrigger = true;
-
-        GameObject lg = new GameObject("Label");
-        lg.transform.SetParent(root.transform, false);
-        lg.transform.localPosition = new Vector3(0f, 1.15f, 0f);
-        label = lg.AddComponent<TextMeshPro>();
-        label.fontSize = labelSize;
-        label.fontStyle = FontStyles.Bold;
-        label.alignment = TextAlignmentOptions.Center;
-        label.enableAutoSizing = false;
-#if UNITY_2023_1_OR_NEWER
-        label.textWrappingMode = TextWrappingModes.NoWrap;
-#else
-        label.enableWordWrapping = false;
-#endif
-        if (clicker.UIFont != null) label.font = clicker.UIFont;
-        lg.SetActive(false);
 
         BuildBeam();
         BuildBubble();

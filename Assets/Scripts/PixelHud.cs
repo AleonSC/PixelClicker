@@ -27,6 +27,28 @@ public class PixelHud : MonoBehaviour
     [Tooltip("Sorting order of the bars' canvas. It must be BELOW every other UI canvas (the buttons' canvases are 100+), so it is kept at -1 or lower whatever you type.")]
     [SerializeField] private int barsSortingOrder = -10;
 
+    [Header("Bar Glow")]
+    [Tooltip("Neon LED-strip glow along the inner edges of the top and bottom bars that slowly changes colour. The player can switch it off in Settings (Display).")]
+    [SerializeField] private bool barGlowAllowed = true;
+
+    [Tooltip("How far the glow spills past the bar edges into the play area (canvas units).")]
+    [SerializeField] private float glowSize = 70f;
+
+    [Tooltip("How far the glow leaks onto the bar itself (canvas units).")]
+    [SerializeField] private float glowInnerSize = 22f;
+
+    [Tooltip("Brightness of the glow (0 - 1).")]
+    [SerializeField] private float glowStrength = 0.6f;
+
+    [Tooltip("How fast the colour changes: full colour cycles per second (0.03 = one cycle every half minute).")]
+    [SerializeField] private float glowColorSpeed = 0.03f;
+
+    [Tooltip("How different the top and bottom bar colours are (0 = the same, 0.5 = opposite).")]
+    [SerializeField] private float glowEdgeOffset = 0.12f;
+
+    [Tooltip("Colour saturation of the glow (0 = white, 1 = vivid).")]
+    [SerializeField] private float glowSaturation = 0.85f;
+
     [Header("Buttons (all the same size)")]
     [Tooltip("Size of every docked button (canvas units). Keep the height a little less than the bar height.")]
     [SerializeField] private Vector2 buttonSize = new Vector2(230f, 64f);
@@ -112,6 +134,45 @@ public class PixelHud : MonoBehaviour
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
+    private const string PrefBarGlow = "PixelClicker.Setting.BarGlow";
+    private static int barGlowCache = -1;
+    private readonly UnityEngine.UI.Image[][] glowParts = new UnityEngine.UI.Image[2][];   // per bar: outer, inner, line
+
+    /// <summary>The player's switch for the neon bar glow (Settings > Display). On by default.</summary>
+    public static bool BarGlow
+    {
+        get
+        {
+            if (barGlowCache < 0) barGlowCache = PlayerPrefs.GetInt(PrefBarGlow, 1);
+            return barGlowCache != 0;
+        }
+        set
+        {
+            barGlowCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefBarGlow, barGlowCache);
+        }
+    }
+
+    public static void ReloadGlowFromPrefs() { barGlowCache = -1; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetGlowStatics() { barGlowCache = -1; }
+
+    private void Update()
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            UnityEngine.UI.Image[] g = glowParts[i];
+            if (g == null) continue;
+            bool on = barGlowAllowed && BarGlow;
+            if (g[0].gameObject.activeSelf != on) { g[0].gameObject.SetActive(on); g[1].gameObject.SetActive(on); g[2].gameObject.SetActive(on); }
+            if (!on) continue;
+            float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);
+            Color c = PixelBarGlow.EdgeColor(Time.unscaledTime, glowColorSpeed, i == 0 ? 0f : glowEdgeOffset, glowSaturation);
+            PixelBarGlow.Colorize(g[0], g[1], g[2], c, Mathf.Clamp01(glowStrength) * shimmer);
+        }
+    }
+
     private void BuildBars()
     {
         if (!barsEnabled) return;
@@ -128,6 +189,14 @@ public class PixelHud : MonoBehaviour
             r.pivot = new Vector2(0.5f, top ? 1f : 0f);
             r.sizeDelta = new Vector2(0f, barHeight);
             r.anchoredPosition = Vector2.zero;
+
+            // The glow sits on the bar's inner edge (the one facing the play area): the top bar's bottom edge, the bottom bar's top edge.
+            glowParts[i] = new[]
+            {
+                PixelBarGlow.AddStrip(r, "Glow", !top, true, glowSize),
+                PixelBarGlow.AddStrip(r, "Glow Inner", !top, false, glowInnerSize),
+                PixelBarGlow.AddLine(r, "Glow Line", !top),
+            };
         }
     }
 

@@ -58,6 +58,9 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Label of the Pixel Grabbing toggle.")]
     [SerializeField] private string grabbingLabel = "Pixel Grabbing";
 
+    [Tooltip("Label of the UFO Helper switch (Upgrades tab).")]
+    [SerializeField] private string ufoLabel = "UFO Helper";
+
     [Tooltip("Label of the Time Stop toggle.")]
     [SerializeField] private string timeStopLabel = "Time Stop";
 
@@ -300,6 +303,10 @@ public class PixelToggles : MonoBehaviour
             PixelTimeStop ts = timeStop;
             if (ts != null && (ts.Active || ts.UserDisabled))
                 list.Add(new Entry { label = timeStopLabel, on = !ts.UserDisabled, setter = on => ts.UserDisabled = !on });
+
+            PixelRobotWorker ufo = PixelFind.First<PixelRobotWorker>();
+            if (ufo != null && (ufo.Bought || ufo.UserDisabled))
+                list.Add(new Entry { label = ufoLabel, on = !ufo.UserDisabled, setter = on => ufo.UserDisabled = !on });
         }
         else if (group == Group.Pets)
         {

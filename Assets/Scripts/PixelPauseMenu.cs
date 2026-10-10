@@ -279,6 +279,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the tick box that softens the floor's far edge with fog.")]
     [SerializeField] private string horizonFogLabel = "Horizon fog";
 
+    [Tooltip("Label of the Settings tick box for the neon glow along the black bars.")]
+    [SerializeField] private string barGlowLabel = "Neon bar glow";
+
     [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
     [SerializeField] private string noFloorText = "No floor found";
 
@@ -1593,6 +1596,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
         AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
+        AddSettingToggle(list, barGlowLabel, () => PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         AddChoiceRow(list, qualityLabel, PixelDisplaySettings.QualityNames, () => PixelDisplaySettings.QualityLevel,
