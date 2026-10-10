@@ -286,7 +286,7 @@ public class PixelGuideVendor : MonoBehaviour
             }
         }
 
-        panel.gameObject.SetActive(false);
+        PixelPop.Hide(panel.gameObject);
         PixelWindows.Unregister(this);
         Unfreeze();
         PixelStats.Best(Stage1Key, 1d);
@@ -405,7 +405,7 @@ public class PixelGuideVendor : MonoBehaviour
         DrawCharacter(art.transform);
 
         // Speech box.
-        GameObject pg = new GameObject("Speech", typeof(RectTransform), typeof(Image));
+        GameObject pg = new GameObject("Speech", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         pg.transform.SetParent(canvasRoot.transform, false);
         pg.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.16f, 0.97f);
         panel = pg.GetComponent<RectTransform>();

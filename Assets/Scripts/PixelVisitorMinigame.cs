@@ -283,14 +283,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         greetingPanel.gameObject.SetActive(true);
 
         while (decision == 0) { Bob(restX, barH); yield return null; }
-        greetingPanel.gameObject.SetActive(false);
+        PixelPop.Hide(greetingPanel.gameObject);
 
         if (decision == 1)
         {
             RefreshWares();
             waresPanel.gameObject.SetActive(true);
             while (!waresDone) { Bob(restX, barH); yield return null; }
-            waresPanel.gameObject.SetActive(false);
+            PixelPop.Hide(waresPanel.gameObject);
         }
 
         // Time resumes and they leave.
@@ -642,7 +642,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     private RectTransform Panel(string name, Vector2 size, float rightOffset)
     {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(PixelPop));   // grows when it opens, shrinks when it closes
         g.transform.SetParent(canvasRoot.transform, false);
         PixelUIKit.StyleWindow(g.GetComponent<Image>(), new Color(0.08f, 0.1f, 0.16f, 0.97f));   // the same rounded glowing frame as every window
         RectTransform r = g.GetComponent<RectTransform>();
