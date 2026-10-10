@@ -631,6 +631,10 @@ public partial class PixelShop
         SetBand(row.costLabel.rectTransform, 0f, 0.62f, side);
         row.costLabel.rectTransform.offsetMin = new Vector2(left, bottom + bar + 6f);
 
+        row.buyLabel.enableAutoSizing = true;   // the label always fits inside the bar
+        row.buyLabel.fontSizeMax = Mathf.Min(buyFontSize, bar * 0.6f);
+        row.buyLabel.fontSizeMin = 10f;
+        row.buyLabel.overflowMode = TextOverflowModes.Overflow;
         RectTransform br = row.buyButton.GetComponent<RectTransform>();
         br.anchorMin = new Vector2(0f, 0f);
         br.anchorMax = new Vector2(1f, 0f);
@@ -1085,12 +1089,25 @@ public partial class PixelShop
         string prefix = capsPrefix ? costPrefix.ToUpperInvariant() : costPrefix;
         if (costs == null || costs.Length == 0) return prefix + "Free";
 
+        // Pack rows: a tidy grid, three prices to a line in fixed columns ("1K White"), instead of one long ragged sentence.
+        bool grid = !capsPrefix && costs.Length > 1;
         StringBuilder sb = new StringBuilder(prefix);
         for (int i = 0; i < costs.Length; i++)
         {
             PackCost cost = costs[i];
             string name = CostName(cost);
             bool enough = CanAffordCost(cost);
+            if (grid)
+            {
+                if (name.EndsWith(" Pixels")) name = name.Substring(0, name.Length - 7);
+                else if (name.EndsWith(" Pixel")) name = name.Substring(0, name.Length - 6);
+                int column = i % 3;
+                if (i > 0 && column == 0) sb.Append('\n');
+                sb.Append("<pos=").Append(column == 0 ? 17 : column == 1 ? 45 : 73).Append("%><color=#")
+                  .Append(ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor))
+                  .Append('>').Append(PixelClicker.FormatNumberShort(cost.amount)).Append(' ').Append(name).Append("</color>");
+                continue;
+            }
 
             string part = string.Format(costEntryFormat, PixelClicker.FormatNumberShort(cost.amount), name);
             sb.Append("<color=#")
