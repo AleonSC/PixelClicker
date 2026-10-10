@@ -640,7 +640,6 @@ public class PixelUI : MonoBehaviour
 
     private void ShowTooltip(int tierIndex)
     {
-        if (!PixelPadMinigame.UltraVisible) return;
         tooltipTier = tierIndex;
     }
 
@@ -655,12 +654,12 @@ public class PixelUI : MonoBehaviour
     {
         if (tooltipRoot == null) return;
         bool custom = !string.IsNullOrEmpty(tooltipCustomText);
-        bool show = custom || (tooltipTier >= 0 && tooltipTier < clicker.Tiers.Length && PixelPadMinigame.UltraVisible);
+        bool show = custom || (tooltipTier >= 0 && tooltipTier < clicker.Tiers.Length);
         if (tooltipRoot.activeSelf != show) tooltipRoot.SetActive(show);
         if (!show) return;
 
         string text = custom ? tooltipCustomText
-            : string.Format(ultraTooltipFormat, clicker.Tiers[tooltipTier].displayName, FormatAmount(clicker.Tiers[tooltipTier].ultraCount));
+            : clicker.Tiers[tooltipTier].displayName + (clicker.Tiers[tooltipTier].ultraCount > 0d ? "   (" + string.Format(ultraTooltipFormat, "Ultra", FormatAmount(clicker.Tiers[tooltipTier].ultraCount)).Replace("Ultra Ultra", "Ultra") + ")" : "");
         tooltipLabel.text = text;
         tooltipLabel.ForceMeshUpdate();
         float measured = tooltipLabel.preferredWidth;
@@ -1027,6 +1026,7 @@ public class PixelUI : MonoBehaviour
             tmp.raycastTarget = true;
             PixelHoverTip tip = tmp.gameObject.AddComponent<PixelHoverTip>();
             int tierForTip = i;
+            tmp.gameObject.AddComponent<PixelClickable>().onClick = () => { CurrencyShowNames = !CurrencyShowNames; Refresh(); };   // click a row: name <-> number
             tip.onEnter = () => ShowTooltip(tierForTip);
             tip.onExit = HideTooltip;
 
@@ -1060,6 +1060,27 @@ public class PixelUI : MonoBehaviour
     // The row text is always this light colour (the scene's own 'Text Color' may be set to something else from when lines were coloured by tier).
     private static readonly Color RowTextColor = new Color(0.94f, 0.95f, 0.98f, 1f);
 
+    private const string PrefCurrencyNames = "PixelClicker.Setting.InventoryNames";
+    private static int currencyNamesCache = -1;
+
+    /// <summary>Currency rows: true = the name beside its amount, false (the default) = just the swatch and the number (hover for the name; click to switch).</summary>
+    public static bool CurrencyShowNames
+    {
+        get
+        {
+            if (currencyNamesCache < 0) currencyNamesCache = PlayerPrefs.GetInt(PrefCurrencyNames, 0);
+            return currencyNamesCache != 0;
+        }
+        set
+        {
+            currencyNamesCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefCurrencyNames, currencyNamesCache);
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetInventoryStatics() { currencyNamesCache = -1; }
+
     private struct RowParts { public TMP_Text amount; public Image swatch; }
     private readonly Dictionary<TMP_Text, RowParts> rowParts = new Dictionary<TMP_Text, RowParts>();
 
@@ -1076,7 +1097,16 @@ public class PixelUI : MonoBehaviour
         float swatchSize = Mathf.Round(LinePitch * 0.8f);   // a clear colour chip
         float deltaSpace = fontSize * 1.5f;   // the "+N" indicator keeps the far right
         label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.margin = new Vector4(swatchSize + 18f, 0f, 150f, 0f);   // the name never runs under the amount
+        label.margin = new Vector4(swatchSize + 18f, 0f, 110f, 0f);   // the name never runs under the amount
+        label.enableAutoSizing = true;                                // a long name shrinks to fit on ONE line instead of wrapping
+        label.fontSizeMax = fontSize;
+        label.fontSizeMin = Mathf.Max(8f, fontSize * 0.3f);
+        label.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        label.enableWordWrapping = false;
+#endif
 
         GameObject sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
         sw.transform.SetParent(label.transform, false);
@@ -1100,7 +1130,7 @@ public class PixelUI : MonoBehaviour
         amount.enableWordWrapping = false;
 #endif
         RectTransform ar = amount.rectTransform;
-        ar.anchorMin = new Vector2(0.38f, 0f);
+        ar.anchorMin = new Vector2(0.55f, 0f);
         ar.anchorMax = Vector2.one;
         ar.offsetMin = Vector2.zero;
         ar.offsetMax = new Vector2(-deltaSpace, 0f);
@@ -1147,7 +1177,8 @@ public class PixelUI : MonoBehaviour
             if (!visible) continue;
 
             string amount = (tier.unlocked || holding) ? FormatAmount(tier.count) : lockedText;
-            SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
+            if (CurrencyShowNames) SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
+            else SetRow(label, amount, "", tier.UIColor, !tier.unlocked && !holding);   // swatch + number; the name is in the hover tip
 
             if (autoMode)
             {
@@ -1764,6 +1795,17 @@ public class PotionRowClick : MonoBehaviour, IPointerClickHandler, IPointerEnter
     private void OnDisable()
     {
         if (highlight != null) highlight.color = new Color(hoverColor.r, hoverColor.g, hoverColor.b, 0f);
+    }
+}
+
+/// <summary>Reports left clicks on a UI element.</summary>
+public class PixelClickable : MonoBehaviour, IPointerClickHandler
+{
+    public Action onClick;
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Left) onClick?.Invoke();
     }
 }
 

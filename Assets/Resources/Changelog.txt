@@ -345,3 +345,4 @@
 [2026-10-10 15:29 UTC] Inventory row text now always uses its own light colour (it could vanish when the scene's text colour was dark) and the colour swatches are bigger.
 [2026-10-10 15:31 UTC] Vendor rows are less cluttered: the vendor's stock is a gold label at the top right, what you already own is a dim 'You own N' at the bottom right, and the cap number is gone.
 [2026-10-10 15:32 UTC] Infinite-resources counts now show an infinity sign instead of the word 'Unlimited' (it overlapped the names).
+[2026-10-10 15:36 UTC] Inventory rows never wrap (long names shrink to fit one line); Currency rows now show just the swatch and the number, hovering a row shows the pixel's name, and clicking a row switches every row between number and name + number (remembered).
