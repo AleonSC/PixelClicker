@@ -677,8 +677,16 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float seedHoldSeconds = 1f;
 
     [Min(1)]
-    [Tooltip("The most Seed sprouts that can be growing at once (extra cracked shells just pay out).")]
-    [SerializeField] private int seedMaxSprouts = 12;
+    [Tooltip("The most Seed sprouts that can exist at once (a cracked shell drops several; extra ones are just not planted).")]
+    [SerializeField] private int seedSproutCap = 36;
+
+    [Min(0)]
+    [Tooltip("How many seeds (sprouts) a cracked Seed shell drops. 0 = the coded default (3).")]
+    [SerializeField] private int seedsPerShell = 0;
+
+    [Min(0f)]
+    [Tooltip("Each seed has its own despawn timer: seconds from the moment it drops until it withers away if it hasn't popped its pixel yet. 0 = the coded default (45). The pixel it grows is an ordinary old pixel with its own normal despawn timer.")]
+    [SerializeField] private float seedSproutLifetime = 0f;
 
     [Min(1f)]
     [Tooltip("How big the sprout is drawn compared to an old pixel (bigger = easier to spot).")]
@@ -1495,7 +1503,7 @@ public class PixelClicker : MonoBehaviour
 
         PlayClickEffects(tier);
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
-        if (tier.type == PixelType.Seed) { SeedDigEffect(1f); SpawnSeedSprout(); } // the shell cracked: a sprout comes out instead of an old pixel
+        if (tier.type == PixelType.Seed) { SeedDigEffect(1f); for (int s = 0, n = seedsPerShell > 0 ? seedsPerShell : 3; s < n; s++) SpawnSeedSprout(); } // the shell cracked: several seeds (sprouts) come out instead of an old pixel
         else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
@@ -2170,13 +2178,14 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Plants a Seed sprout straight into the floor at 'position' (it grows a random pixel like any other). False when too many sprouts exist. Used by the Seed pet.</summary>
     public bool PlantSeedSproutAt(Vector3 position, int growTier = -1)
     {
-        if (SeedSprout.Count >= seedMaxSprouts) return false;
+        if (SeedSprout.Count >= seedSproutCap) return false;
         GameObject go = new GameObject("Seed Sprout");
         go.transform.position = position;
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
         SeedSprout sprout = go.AddComponent<SeedSprout>();
         sprout.Setup(this, OldPixelWorldSize, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
         sprout.ForceTier(growTier);
+        sprout.SetLifetime(seedSproutLifetime > 0f ? seedSproutLifetime : 45f);
         sprout.PlantNow();
         return true;
     }
@@ -2184,7 +2193,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>A cracked Seed shell: a small sprout pops out, falls, plants itself and grows a random old pixel (see <see cref="SeedSprout"/>).</summary>
     private void SpawnSeedSprout()
     {
-        if (pixelTransform == null || SeedSprout.Count >= seedMaxSprouts) return;
+        if (pixelTransform == null || SeedSprout.Count >= seedSproutCap) return;
         float unit = OldPixelWorldSize;
 
         GameObject go = new GameObject("Seed Sprout");
@@ -2224,6 +2233,7 @@ public class PixelClicker : MonoBehaviour
         SeedSprout sprout = go.AddComponent<SeedSprout>();
         sprout.Setup(this, unit, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
         sprout.SetGhost(popNoCollisionSeconds + 0.15f);
+        sprout.SetLifetime(seedSproutLifetime > 0f ? seedSproutLifetime : 45f);
     }
 
     private void AnimatePixel()

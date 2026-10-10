@@ -82,7 +82,10 @@ public class SeedSprout : MonoBehaviour
     /// <summary>A planted seed of a known pixel type: the sprout grows exactly that type (-1 = a random one as usual).</summary>
     public void ForceTier(int tierIndex) => forceTier = tierIndex;
 
-    private float ghostLeft;
+    private float ghostLeft, lifetime;
+
+    /// <summary>This seed's own despawn timer: seconds since it dropped after which it withers away if its pixel hasn't popped off yet (0 = never).</summary>
+    public void SetLifetime(float seconds) => lifetime = Mathf.Max(0f, seconds);
 
     /// <summary>Keeps the collider a trigger (no collisions) for this many seconds after the sprout is born, so a burst of sprouts doesn't jam.</summary>
     public void SetGhost(float seconds) => ghostLeft = Mathf.Max(0f, seconds);
@@ -100,6 +103,16 @@ public class SeedSprout : MonoBehaviour
     {
         if (clicker == null) { Destroy(gameObject); return; }
         age += Time.deltaTime;
+
+        if (lifetime > 0f && age > lifetime && (stage == Stage.Falling || stage == Stage.Growing))
+        {
+            // Its own despawn timer ran out: the seed withers away (a pixel still growing on it goes with it).
+            if (pixel != null) Destroy(pixel);
+            pixel = null;
+            if (sunRay != null) sunRay.SetAmount(0f);
+            stage = Stage.Shrinking;
+            stageTime = 0f;
+        }
 
         switch (stage)
         {
