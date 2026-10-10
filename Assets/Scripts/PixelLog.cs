@@ -66,8 +66,8 @@ public class PixelLog : MonoBehaviour
     // ------------------------------------------------------------------
 
     [Header("Log Tabs")]
-    [Tooltip("Label of the tab that lists your pixel totals.")]
-    [SerializeField] private string pixelsTabText = "Pixels";
+    [Tooltip("Label of the tab that lists how many times you clicked each pixel type (renamed from 'Pixels Tab Text' so a scene saved with the old name picks up the new label).")]
+    [SerializeField] private string clicksTabText = "Clicks";
 
     [Tooltip("Label of the tab that lists achievements.")]
     [SerializeField] private string achievementsTabText = "Achievements";
@@ -753,7 +753,7 @@ public class PixelLog : MonoBehaviour
 
     private void BuildTabs()
     {
-        string[] names = { pixelsTabText, achievementsTabText, goalsTabText };
+        string[] names = { clicksTabText, achievementsTabText, goalsTabText };
         tabImages = new Image[names.Length];
 
         const float gap = 8f;

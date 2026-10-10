@@ -268,7 +268,22 @@ public class PixelRobotWorker : MonoBehaviour
         if (Time.unscaledTime >= nextSpotTime)
         {
             nextSpotTime = Time.unscaledTime + 0.5f;
-            if (consumables.TryGetFloorPoint(new Vector2(Screen.width * screenX, Screen.height * screenY), out Vector3 p))
+            // Keep his whole body (and pad) on screen: if the chosen spot is too close to the left / right edge, move it inwards.
+            float fx = screenX;
+            Camera cam0 = Cam;
+            if (cam0 != null && hasHome)
+            {
+                Vector3 right = cam0.transform.right; right.y = 0f;
+                if (right.sqrMagnitude > 0.0001f)
+                {
+                    right.Normalize();
+                    float half = UnitScale * 1.25f;   // half his width plus the swing of his arms
+                    float x0 = cam0.WorldToScreenPoint(homePos).x, x1 = cam0.WorldToScreenPoint(homePos + right * half).x;
+                    float halfPixels = Mathf.Abs(x1 - x0) + 16f;
+                    fx = Mathf.Clamp(fx, halfPixels / Screen.width, 1f - halfPixels / Screen.width);
+                }
+            }
+            if (consumables.TryGetFloorPoint(new Vector2(Screen.width * fx, Screen.height * screenY), out Vector3 p))
             {
                 if (PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(p, out Vector3 cell, out float cs)) { if (snapHomeToTiles) p = cell + CornerOffset(cs); cellSize = cs; }   // his size follows the tiles; his spot only snaps to a tile corner if asked (floor styles have different grids, which moved him)
                 else cellSize = 0f;
