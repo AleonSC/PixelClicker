@@ -238,7 +238,13 @@ public class PixelNoticeBox : MonoBehaviour
         boxRect.anchoredPosition = new Vector2(right ? p.x + gap : p.x - gap, y);
     }
 
-    private void OnDestroy() { Unfreeze(); }
+    private void Awake()
+    {
+        // Escape closes the tip box (and drops the tips still waiting behind it), like pressing Got it.
+        PixelWindows.Register(this, 140, () => IsOpen, () => { PixelHints.ClearQueue(); Close(); });
+    }
+
+    private void OnDestroy() { Unfreeze(); PixelWindows.Unregister(this); }
 
     public bool IsOpen => canvasRoot != null && canvasRoot.activeSelf;
 

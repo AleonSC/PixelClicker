@@ -378,6 +378,12 @@ public class PixelHints : MonoBehaviour
 
     private bool forceIntro; // "Replay tutorial": run the intro even though this is not a brand-new game
 
+    /// <summary>Forgets the tips that are waiting to show (Escape on a tip box closes the whole pile).</summary>
+    public static void ClearQueue()
+    {
+        if (instance != null) instance.queue.Clear();
+    }
+
     /// <summary>Settings > Replay tutorial: forgets the shown tips and plays the intro tips (Log, Inventory) again.</summary>
     public static void ReplayTutorial()
     {
