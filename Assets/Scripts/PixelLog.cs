@@ -600,7 +600,7 @@ public class PixelLog : MonoBehaviour
         tipRect.sizeDelta = new Vector2(width, h);
 
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
-        RectTransformUtility.ScreenPointToLocalPoint(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
         Vector2 pos = local + new Vector2(26f, -22f);
         Rect r = canvasRect.rect;
         pos.x = Mathf.Clamp(pos.x, r.xMin + 8f, r.xMax - width - 8f);

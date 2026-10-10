@@ -837,7 +837,6 @@ public class PixelRobotWorker : MonoBehaviour
         PixelUIKit.UpdateScrollView(scroll, bar, y, listH);
 
         // Footer: back (pixel page) and stop working.
-        float fy = height - footerH + 10f;
         float half = (width - pad * 2f - gap) * 0.5f;
         bool anyJob = bankJob || jobDevice >= 0;
         if (pixels)
