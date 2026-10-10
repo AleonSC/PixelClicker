@@ -1307,6 +1307,39 @@ public class OldPixelFloat : MonoBehaviour
         if (body != null) body.AddForce(side * (sign * drift) + Vector3.up * (drift * 0.4f), ForceMode.VelocityChange);
     }
 
+    private static readonly RaycastHit[] groundHits = new RaycastHit[12];
+
+    /// <summary>
+    /// A floating ghost pixel has no colliders, so a gravity well dragging it around could pull it through the floor. While it
+    /// floats it is kept above the ground below it instead (the ground = the nearest upward-facing surface that is not an old pixel or the cube).
+    /// </summary>
+    private void FixedUpdate()
+    {
+        if (!floating || body == null) return;
+        Vector3 pos = body.position;
+        float half = Mathf.Max(transform.lossyScale.x, Mathf.Max(transform.lossyScale.y, transform.lossyScale.z)) * 0.5f;
+        int n = Physics.RaycastNonAlloc(pos + Vector3.up * (half * 6f), Vector3.down, groundHits, half * 40f, ~0, QueryTriggerInteraction.Ignore);
+        float groundY = float.NegativeInfinity;
+        for (int i = 0; i < n; i++)
+        {
+            RaycastHit h = groundHits[i];
+            if (h.collider == null || h.normal.y < 0.5f) continue;
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
+            if (clicker != null && clicker.PixelTransform != null && h.collider.transform.IsChildOf(clicker.PixelTransform)) continue;
+            if (h.point.y > groundY) groundY = h.point.y;
+        }
+        if (float.IsNegativeInfinity(groundY) || pos.y >= groundY + half) return;
+        pos.y = groundY + half;
+        body.position = pos;
+#if UNITY_6000_0_OR_NEWER
+        Vector3 vel = body.linearVelocity;
+        if (vel.y < 0f) { vel.y = 0f; body.linearVelocity = vel; }
+#else
+        Vector3 vel = body.velocity;
+        if (vel.y < 0f) { vel.y = 0f; body.velocity = vel; }
+#endif
+    }
+
     private void Update()
     {
         if (!floating) return;
