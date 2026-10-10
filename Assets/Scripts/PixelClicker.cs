@@ -1043,6 +1043,16 @@ public class PixelClicker : MonoBehaviour
             looks = list13.ToArray();
             looksVersion = 13;
         }
+        if (looksVersion < 14)
+        {
+            // The Mirror is reflective now (chrome texture + a glint): replace the earlier plain-metal look.
+            System.Collections.Generic.List<PixelLook> list14 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            list14.RemoveAll(l => l != null && l.type == PixelType.Mirror);
+            PixelLook chromeLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Mirror);
+            if (chromeLook != null) list14.Add(chromeLook);
+            looks = list14.ToArray();
+            looksVersion = 14;
+        }
 
         if (pixelRenderer != null)
         {
@@ -2045,7 +2055,8 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        Texture2D tex = PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max, look.shellTexture);
+        Texture2D tex = look.chromeTexture ? PixelLooks.ChromeTexture()
+                      : PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max, look.shellTexture);
         block.SetTexture("_BaseMap", tex);
         block.SetTexture("_MainTex", tex);
     }

@@ -197,6 +197,12 @@ public class PixelLook
     [Tooltip("Seed: a small green sprout (stem and two leaves) grows out of the top of the cube.")]
     public bool sprout = false;
 
+    [Tooltip("Mirror: a chrome texture (sky, bright horizon band and dark ground, with soft streaks) so the cube looks reflective in any render pipeline.")]
+    public bool chromeTexture = false;
+
+    [Tooltip("Mirror: a bright diagonal glint sweeps across the faces in turn.")]
+    public bool shine = false;
+
     [Tooltip("Seed: draw a brown shell texture (tan with dark cracks that spread as the shell is hit) instead of the default dark surface texture. Needs Damage Cracks.")]
     public bool shellTexture = false;
 
@@ -204,10 +210,10 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter || lightning || sprout || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
-    public bool HasSurfaceTexture => streakTexture || damageCracks;
+    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -254,8 +260,8 @@ public static class PixelLooks
                             metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true },
 
             // Mirror: polished chrome that reflects the sky.
-            new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = new Color(0.92f, 0.95f, 1f, 1f),
-                            metallic = 1f, smoothness = 1f },
+            new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = Color.white,
+                            metallic = 0.7f, smoothness = 0.95f, emission = 0.3f, chromeTexture = true, shine = true },
 
             // Dragon Cubes 1-7: glassy orange cubes with 1-7 dark orange small cubes inside, like dragon balls.
             DragonCubeLook(PixelClicker.PixelType.DragonCube1, 1),
@@ -467,6 +473,21 @@ public static class PixelLooks
             sr.receiveShadows = false;
         }
 
+        if (look.shine)
+        {
+            GameObject shine = new GameObject("Shine", typeof(MeshFilter), typeof(MeshRenderer));
+            shine.transform.SetParent(root.transform, false);
+            shine.transform.localPosition = centre;
+            shine.layer = root.layer;
+            MeshFilter sf = shine.GetComponent<MeshFilter>();
+            sf.sharedMesh = ShineMesh(size);
+            MeshRenderer shr = shine.GetComponent<MeshRenderer>();
+            shr.sharedMaterial = OverlayMaterial(); // unlit, alpha-blended vertex colours
+            shr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            shr.receiveShadows = false;
+            shine.AddComponent<PixelLookShine>();
+        }
+
         if (look.sprout)
         {
             GameObject sprout = new GameObject("Sprout", typeof(MeshFilter), typeof(MeshRenderer));
@@ -572,6 +593,65 @@ public static class PixelLooks
         mesh.SetTriangles(t, 0);
         mesh.RecalculateBounds();
         starMeshes[key] = mesh;
+        return mesh;
+    }
+
+    private static Texture2D chromeTex;
+
+    /// <summary>A chrome-looking texture: pale sky on top, a bright horizon band, dark ground below, with soft diagonal streaks. Shared.</summary>
+    public static Texture2D ChromeTexture()
+    {
+        if (chromeTex != null) return chromeTex;
+        const int size = 128;
+        Color32[] px = new Color32[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            float v = y / (float)(size - 1); // 0 = bottom
+            Color c;
+            if (v > 0.52f) c = Color.Lerp(new Color(0.92f, 0.97f, 1f), new Color(0.45f, 0.65f, 0.9f), (v - 0.52f) / 0.48f);          // sky: pale near the horizon, bluer above
+            else c = Color.Lerp(new Color(0.9f, 0.92f, 0.95f), new Color(0.16f, 0.17f, 0.2f), (0.52f - v) / 0.52f);                   // ground: bright at the horizon, dark below
+            float band = Mathf.Exp(-Mathf.Pow((v - 0.52f) * 14f, 2f)); // the bright horizon line
+            c = Color.Lerp(c, Color.white, band * 0.8f);
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)(size - 1);
+                float streak = Mathf.Exp(-Mathf.Pow(Mathf.Repeat(u + v * 0.6f, 0.5f) - 0.12f, 2f) * 700f) * 0.28f; // soft diagonal streaks
+                Color f = Color.Lerp(c, Color.white, streak);
+                px[y * size + x] = new Color32((byte)(f.r * 255f), (byte)(f.g * 255f), (byte)(f.b * 255f), 255);
+            }
+        }
+        chromeTex = new Texture2D(size, size, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "PixelChrome" };
+        chromeTex.SetPixels32(px);
+        chromeTex.Apply(true, false);
+        return chromeTex;
+    }
+
+    /// <summary>One thin diagonal band per cube face, just above the surface (colours are animated by <see cref="PixelLookShine"/>).</summary>
+    private static Mesh ShineMesh(Vector3 size)
+    {
+        Vector3[] normals = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+        Vector2[] corners = { new Vector2(-0.5f, -0.4f), new Vector2(-0.4f, -0.5f), new Vector2(0.5f, 0.4f), new Vector2(0.4f, 0.5f) };
+        List<Vector3> v = new List<Vector3>();
+        List<Color> c = new List<Color>();
+        List<int> t = new List<int>();
+        foreach (Vector3 n in normals)
+        {
+            Vector3 u = Mathf.Abs(n.y) > 0.5f ? Vector3.right : Vector3.up;
+            Vector3 w = Vector3.Cross(n, u);
+            int b = v.Count;
+            foreach (Vector2 k in corners) v.Add(Vector3.Scale(n * 0.508f + u * k.x + w * k.y, size));
+            for (int i = 0; i < 4; i++) c.Add(new Color(1f, 1f, 1f, 0f));
+            t.Add(b); t.Add(b + 1); t.Add(b + 2);
+            t.Add(b); t.Add(b + 2); t.Add(b + 3);
+            t.Add(b); t.Add(b + 2); t.Add(b + 1); // double-sided
+            t.Add(b); t.Add(b + 3); t.Add(b + 2);
+        }
+        Mesh mesh = new Mesh { name = "Shine" };
+        mesh.MarkDynamic();
+        mesh.SetVertices(v);
+        mesh.SetColors(c);
+        mesh.SetTriangles(t, 0);
+        mesh.RecalculateBounds();
         return mesh;
     }
 
@@ -1184,6 +1264,42 @@ public class OldPixelFloat : MonoBehaviour
             if (clicker != null && body != null) clicker.ReleaseOldPixel(body, false);
             Destroy(gameObject);
         }
+    }
+}
+
+/// <summary>Flashes the Mirror pixel's diagonal glints across its faces in turn (animates the vertex alpha of the Shine mesh).</summary>
+public class PixelLookShine : MonoBehaviour
+{
+    private Mesh mesh;
+    private readonly Color[] colors = new Color[24];
+    private float phase;
+
+    private void Awake()
+    {
+        MeshFilter mf = GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return;
+        mesh = Instantiate(mf.sharedMesh); // each cube gets its own copy so the glints are independent
+        mf.sharedMesh = mesh;
+        phase = UnityEngine.Random.value * 6.28f;
+    }
+
+    private void OnDestroy()
+    {
+        if (mesh != null) Destroy(mesh);
+    }
+
+    private void Update()
+    {
+        if (mesh == null) return;
+        float t = Time.unscaledTime * 2.2f + phase;
+        for (int face = 0; face < 6; face++)
+        {
+            // A short bright flash that passes from face to face.
+            float flash = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(t - face * 1.05f)), 10f);
+            Color col = new Color(1f, 1f, 1f, flash * 0.85f);
+            for (int k = 0; k < 4; k++) colors[face * 4 + k] = col;
+        }
+        mesh.colors = colors;
     }
 }
 
