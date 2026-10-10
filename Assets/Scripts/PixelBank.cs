@@ -1186,6 +1186,8 @@ public class PixelBank : MonoBehaviour
                  -(hud.ButtonSize.y + buttonGap), hoseButtonWidthFraction);
         bankDock = bank.GetComponent<PixelDockedButton>();
         hoseDock = hoseButton.GetComponent<PixelDockedButton>();
+        bankGroup = bank.gameObject.AddComponent<CanvasGroup>();
+        hoseGroup = hoseButton.gameObject.AddComponent<CanvasGroup>();
 
         bank.onClick.AddListener(ToggleWindow);
         hoseButton.onClick.AddListener(() => SetHose(!HoseOn));
@@ -1198,7 +1200,10 @@ public class PixelBank : MonoBehaviour
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0f, 0.5f);
         wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(hud.ButtonSize.x + gapToButton + hud.SideMargin * 0.35f, 0f);
+        wr.anchoredPosition = new Vector2(gapToButton + hud.SideMargin * 0.35f, 0f);   // the window takes the place of the tab and hose buttons while it is open
+
+        BuildWindowHoseButton();
+        RefreshHoseButton();
 
         float y = 16f;
         TMP_Text title = PixelUIKit.CreateText(font, windowObject.transform, "Title", windowTitle, titleFontSize,
@@ -1251,6 +1256,62 @@ public class PixelBank : MonoBehaviour
         canvasRoot.SetActive(bankActive);
     }
 
+    private CanvasGroup bankGroup, hoseGroup;
+    private Image windowHoseImage;
+
+    [Tooltip("Seconds the Bank and Hose tabs take to fade back in (already tucked away) after the Bank window closes.")]
+    [SerializeField] private float buttonFadeSeconds = 1.2f;
+
+    /// <summary>A hand-drawn hose icon button at the top left of the Bank window: switches the hose on / off (like the B key).</summary>
+    private void BuildWindowHoseButton()
+    {
+        Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Window Hose Button", "", new Vector2(64f, 64f),
+                                           hoseButtonColor, buttonTextColor, 20f);
+        windowHoseImage = b.GetComponent<Image>();
+        RectTransform r = b.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
+        r.anchoredPosition = new Vector2(14f, -12f);
+        b.onClick.AddListener(() => SetHose(!HoseOn));
+
+        Image Part(string name, Color color, Vector2 size, Vector2 pos)
+        {
+            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(b.transform, false);
+            Image im = g.GetComponent<Image>();
+            im.color = color;
+            im.raycastTarget = false;
+            RectTransform pr = g.GetComponent<RectTransform>();
+            pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+            pr.sizeDelta = size;
+            pr.anchoredPosition = pos;
+            return im;
+        }
+        // A hose hanging from the top with a nozzle pointing down and a red laser dot.
+        Part("Hose", new Color(0.12f, 0.13f, 0.17f, 1f), new Vector2(9f, 26f), new Vector2(0f, 17f));
+        Part("Collar", AccentColor, new Vector2(17f, 5f), new Vector2(0f, 3f));
+        Part("Body", new Color(0.85f, 0.86f, 0.9f, 1f), new Vector2(17f, 16f), new Vector2(0f, -6f));
+        Part("Front", new Color(0.7f, 0.72f, 0.78f, 1f), new Vector2(11f, 6f), new Vector2(0f, -17f));
+        Part("Lip", AccentColor, new Vector2(15f, 3f), new Vector2(0f, -21f));
+        Part("Laser Dot", new Color(1f, 0.15f, 0.1f, 1f), new Vector2(6f, 6f), new Vector2(0f, -27f));
+    }
+
+    private void LateUpdate()
+    {
+        if (!built || windowObject == null || bankGroup == null) return;
+        bool open = windowObject.activeSelf;
+        FadeTab(bankDock, bankGroup, open);
+        FadeTab(hoseDock, hoseGroup, open);
+    }
+
+    /// <summary>The tab is tucked away and invisible while the window is up; when it closes the tab fades back in (already tucked away), like the Toggles tab.</summary>
+    private void FadeTab(PixelDockedButton dock, CanvasGroup group, bool windowOpen)
+    {
+        if (dock != null) dock.ForceHidden = windowOpen || group.alpha < 0.05f;
+        if (windowOpen) { group.alpha = 0f; group.blocksRaycasts = false; return; }
+        group.blocksRaycasts = true;
+        group.alpha = Mathf.MoveTowards(group.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
+    }
+
     /// <summary>Both buttons stay out while the window is open or the mouse is near either of them.</summary>
     private bool KeepButtonsOut()
     {
@@ -1263,6 +1324,7 @@ public class PixelBank : MonoBehaviour
         if (hoseButtonLabel == null) return;
         hoseButtonLabel.text = HoseOn ? hoseOnText : string.Format(hoseOffText, PixelKeys.Name(PixelAction.Hose));
         hoseButtonImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
+        if (windowHoseImage != null) windowHoseImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
     }
 
     private void ToggleWindow()
