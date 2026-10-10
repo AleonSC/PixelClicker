@@ -979,11 +979,10 @@ public class PixelPauseMenu : MonoBehaviour
         row.sizeDelta = new Vector2(-80f, rowHeight);
         row.anchoredPosition = new Vector2(0f, -y);
 
-        TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize, FontStyles.Normal);
+        TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize * 0.65f, FontStyles.Normal);   // one size for every row so they line up
         label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.enableAutoSizing = true;
-        label.fontSizeMax = rowFontSize;
-        label.fontSizeMin = 10f;
+        label.enableAutoSizing = false;
+        label.fontSize = rowFontSize * 0.65f;
         label.overflowMode = TextOverflowModes.Overflow;
 #if UNITY_2023_1_OR_NEWER
         label.textWrappingMode = TextWrappingModes.NoWrap;   // ONE line: a long name shrinks to fit instead of wrapping

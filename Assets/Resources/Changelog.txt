@@ -358,3 +358,4 @@
 [2026-10-10 16:10 UTC] All scroll bars now fade away as soon as they are not in use (they show while the list scrolls or the mouse is over / holding the bar, then fade out quickly).
 [2026-10-10 16:36 UTC] Settings rows keep their names on one line (tick-box rows use the full width and long names shrink instead of wrapping).
 [2026-10-10 16:40 UTC] Removed the (1.2K) from the Abbreviate numbers setting label.
+[2026-10-10 16:41 UTC] Settings row labels all use the same font size so rows line up.
