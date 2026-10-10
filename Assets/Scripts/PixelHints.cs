@@ -187,6 +187,7 @@ public class PixelHints : MonoBehaviour
             case "pixel_Seed": return "You unlocked Seed Pixels!";
             case "pixel_Water": return "You unlocked Water Pixels!";
             case "pixel_Fire": return "You unlocked Fire Pixels!";
+            case "pixel_Nuclear": return "You unlocked Nuclear Pixels!";
             case "pixel_Treasure": return "You unlocked Treasure Pixels!";
             case "pixel_Copper": return "You unlocked the Prospector's ores!";
             case "dragon_first": return "You found a Dragon Cube!";
@@ -239,6 +240,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Electric", "Electric Pixels unlocked! A cube held together by crackling lightning."),
         H("pixel_Treasure", "Treasure Pixels unlocked! A chest takes a random 1 to 20 clicks to open, and you can't tell how many. The more clicks it took, the bigger the reward - and when it bursts open, a pile of other pixels pours out."),
+        H("pixel_Nuclear", "Nuclear Pixels unlocked! (A testing pixel.) Its old pixel is radioactive: every old pixel lying near it despawns almost at once."),
         H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Lead, Zinc and Nickel are tough rocks: hit them a few times to crack them open. A glittering one is a rich vein and pays 5x. The ores do not spawn on their own: turn on Prospector mode in the Toggles window and they spawn in place of the monochrome, RGB, Glass and Luminescent pixels."),
         H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!"),

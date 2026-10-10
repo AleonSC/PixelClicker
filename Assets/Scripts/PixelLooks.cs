@@ -247,6 +247,9 @@ public class PixelLook
     [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
     public bool flames = false;
 
+    [Tooltip("Nuclear: radioactive motes drift off the pixel, and the OLD pixel makes every other old pixel near it age extremely fast (they vanish within a second or two).")]
+    public bool radiation = false;
+
     [Tooltip("Fire: old pixels of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
     public bool burn = false;
 
@@ -254,7 +257,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => flames || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => flames || radiation || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
@@ -444,6 +447,10 @@ public static class PixelLooks
             // Fire (testing pixel): a glowing orange cube with flames rising off it; the old pixel burns away.
             new PixelLook { type = PixelClicker.PixelType.Fire, useColor = true, color = new Color(1f, 0.42f, 0.08f, 1f),
                             metallic = 0f, smoothness = 0.15f, emission = 1.2f, flames = true, burn = true },
+
+            // Nuclear (testing pixel): a glowing toxic-green cube with radioactive motes; the old pixel makes the pixels round it despawn almost at once.
+            new PixelLook { type = PixelClicker.PixelType.Nuclear, useColor = true, color = new Color(0.5f, 1f, 0.2f, 1f),
+                            metallic = 0f, smoothness = 0.3f, emission = 1.5f, radiation = true },
 
             // The Prospector ores: rock cubes veined and flecked with metal; they crack as you hit them.
             OreLook(PixelClicker.PixelType.Copper, new Color(0.86f, 0.46f, 0.26f, 1f)),
@@ -697,6 +704,7 @@ public static class PixelLooks
         Vector3 centre = cube.bounds.center;
 
         if (look.flames) PixelFlames.Attach(root.transform, centre, size);
+        if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
 
         if (look.outline)
         {

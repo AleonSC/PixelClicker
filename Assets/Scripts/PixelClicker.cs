@@ -78,13 +78,14 @@ public class PixelClicker : MonoBehaviour
         Zinc = 30,
         Nickel = 31,
         Treasure = 32,
+        Nuclear = 33,
     }
 
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
     public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || IsOre(type);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -247,7 +248,7 @@ public class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water || t == PixelType.Fire || t == PixelType.Treasure;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water || t == PixelType.Fire || t == PixelType.Treasure || t == PixelType.Nuclear;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -323,7 +324,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -484,6 +485,16 @@ public class PixelClicker : MonoBehaviour
 
     [Tooltip("Speed curve of the suck-in (time 0..1, progress 0..1). Rising curves pull faster toward the end.")]
     [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("Nuclear Pixel")]
+    [Tooltip("Tick to turn off the Nuclear pixel's radiation (its old pixels no longer make their neighbours despawn; the pixel itself stays).")]
+    [SerializeField] private bool disableNuclearFx = false;
+
+    [Tooltip("How far an old Nuclear pixel's radiation reaches, in main-pixel widths. 0 = 4.")]
+    [SerializeField] private float nuclearRadiusPixels = 0f;
+
+    [Tooltip("How fast other old pixels inside the radiation age, in seconds of age per real second. 0 = 40 (a pixel with a minute left is gone in about a second and a half).")]
+    [SerializeField] private float nuclearAgeRate = 0f;
 
     [Header("Fire Pixel / Prospector Ores")]
     [Tooltip("Tick to turn off the Fire pixel's burst of flames when it is clicked and its burning old pixels (the pixel itself stays).")]
@@ -1351,6 +1362,18 @@ public class PixelClicker : MonoBehaviour
             }
             looks = list26.ToArray();
             looksVersion = 26;
+        }
+        if (looksVersion < 27)
+        {
+            // The Nuclear look is new.
+            System.Collections.Generic.List<PixelLook> list27 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            if (PixelLooks.Find(list27.ToArray(), PixelType.Nuclear) == null)
+            {
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Nuclear);
+                if (def != null) list27.Add(def);
+            }
+            looks = list27.ToArray();
+            looksVersion = 27;
         }
 
         if (pixelRenderer != null)
@@ -3578,6 +3601,8 @@ public class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.splash)
                     copy.AddComponent<OldPixelSplash>().Setup(this);
+                if (styled.radiation && !disableNuclearFx)
+                    copy.AddComponent<OldPixelRadiation>().Setup(this, nuclearRadiusPixels > 0f ? nuclearRadiusPixels : 4f, nuclearAgeRate > 0f ? nuclearAgeRate : 40f);
                 if (styled.burn && !disableFireFx)
                     copy.AddComponent<OldPixelBurn>().Setup(this, fireBurnSeconds > 0f ? fireBurnSeconds : 6f);
                 if (styled.shatter)
@@ -4047,6 +4072,14 @@ public class OldPixelDespawn : MonoBehaviour
     public static bool DevNoDespawn { get; set; }
 
     /// <summary>Gives the pixel more time before it starts to vanish (no effect once it is vanishing or if it never expires).</summary>
+    /// <summary>Ages the pixel by 'seconds' at once (radiation). Respects held pixels, black holes, takeover minigames and the dev switch; ignores gravity-well keep-alive.</summary>
+    public void Hasten(float seconds)
+    {
+        if (despawning || Held || Frozen || DevNoDespawn || HoldAll || lifetime <= 0f) return;
+        age += seconds;
+        if (age >= lifetime) Begin();
+    }
+
     public void AddLifetime(float seconds)
     {
         if (!despawning && lifetime > 0f) lifetime += seconds;

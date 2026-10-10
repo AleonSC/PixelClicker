@@ -473,6 +473,33 @@ public partial class PixelShop
     }
 
     /// <summary>
+    /// Default Nuclear Pixel pack (Pixels tab): a TESTING pixel (10 White, no requirements). A glowing radioactive cube; its old pixel makes every
+    /// other old pixel near it despawn almost at once. No potions, pets, crafting or other integration.
+    /// </summary>
+    private static ShopPack CreateNuclearPixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Nuclear Pixel",
+            tab = ShopTab.Pixels,
+            description = "TEST: Adds the Nuclear pixel, a radioactive cube. Its old pixel is so radioactive that every old pixel lying near it despawns almost at once.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Nuclear, displayName = "Nuclear Pixels",
+                    color = new Color(0.5f, 1f, 0.2f, 1f), glow = true, glowIntensity = 1.5f,
+                    amountPerClick = 8,
+                    spawnWeight = 0.3f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>
     /// Default Treasure Pixel pack (Pixels tab): a treasure chest that takes a RANDOM 1-20 clicks to open; the more clicks it took, the bigger
     /// the reward, and when it opens a pile of other pixel types pours out. No potions, pets, crafting or other integration.
     /// </summary>
@@ -885,6 +912,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateWaterPixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),
                           requires = null, create = i => CreateFirePixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Nuclear),
+                          requires = null, create = i => CreateNuclearPixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Treasure),
                           requires = null, create = i => CreateTreasurePixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Copper),
