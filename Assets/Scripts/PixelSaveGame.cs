@@ -263,10 +263,14 @@ public class PixelSaveGame : MonoBehaviour
     public bool SlotHasSave(int slot) => File.Exists(PathFor(slot));
 
     /// <summary>What a slot holds, for the slot list: when it was saved and how many pixels were collected in total.</summary>
-    public bool TryGetSlotInfo(int slot, out string savedAt, out double totalPixels)
+    public bool TryGetSlotInfo(int slot, out string savedAt, out double totalPixels) => TryGetSlotInfo(slot, out savedAt, out totalPixels, out double _);
+
+    /// <summary>Same, plus the total play time (seconds) stored in that slot.</summary>
+    public bool TryGetSlotInfo(int slot, out string savedAt, out double totalPixels, out double playSeconds)
     {
         savedAt = "";
         totalPixels = 0d;
+        playSeconds = 0d;
         try
         {
             string path = PathFor(slot);
@@ -274,6 +278,7 @@ public class PixelSaveGame : MonoBehaviour
             SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
             if (data == null) return false;
             savedAt = data.savedAt;
+            playSeconds = data.statPlaySeconds;
             if (data.tiers != null) foreach (TierSave t in data.tiers) totalPixels += t.total;
             return true;
         }
