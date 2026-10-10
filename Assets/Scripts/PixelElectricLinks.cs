@@ -105,13 +105,6 @@ public class PixelElectricLinks : MonoBehaviour
     {
         if (!enableLinks || clicker == null) return;
 
-        // A takeover minigame (Breakout bricks, Sorting Race grid...) has moved the old pixels about: no arcs across it.
-        if (PixelMinigame.TakeoverActive)
-        {
-            if (links.Count > 0) { links.Clear(); Redraw(); }
-            return;
-        }
-
         scanTimer -= Time.deltaTime;
         if (scanTimer <= 0f)
         {

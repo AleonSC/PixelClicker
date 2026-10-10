@@ -1338,6 +1338,8 @@ public class PixelBank : MonoBehaviour
         if (windowObject.activeSelf) CloseWindow();
         else
         {
+            PixelUI.SetInventoryOpen(false);   // the Bank window replaces the Inventory and the Log (and they replace it)
+            PixelLog.SetLogOpen(false);
             windowObject.SetActive(true);
             refreshTimer = 0f;
             RefreshWindow();
@@ -1345,6 +1347,13 @@ public class PixelBank : MonoBehaviour
     }
 
     private void CloseWindow() => windowObject.SetActive(false);
+
+    /// <summary>Closes the Bank window if it is open (the Inventory and the Log call this when they open).</summary>
+    public static void CloseWindowIfOpen()
+    {
+        PixelBank bank = PixelFind.First<PixelBank>();
+        if (bank != null && bank.windowObject != null && bank.windowObject.activeSelf) bank.CloseWindow();
+    }
 
     private void RefreshWindow()
     {
