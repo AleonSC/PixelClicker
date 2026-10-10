@@ -112,20 +112,9 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Height of a goal row.")]
     [SerializeField] private float goalRowHeight = 100f;
 
-    [Header("Pixels Tab")]
-    [Min(200f)]
-    [Tooltip("Tallest the Pixels list can get (canvas units). A longer list scrolls (mouse wheel or the scroll bar).")]
-    [SerializeField] private float pixelsMaxListHeight = 560f;
-
     [Header("Achievements Tab")]
     [Tooltip("The achievements to list. Found automatically (or added to this GameObject) if left empty.")]
     [SerializeField] private PixelAchievements achievements;
-
-    [Tooltip("Small tag on a pixel's achievement while it shows 'value collected'. Click the achievement to switch.")]
-    [SerializeField] private string valueModeText = "[Value - click to switch]";
-
-    [Tooltip("Small tag on a pixel's achievement while it shows 'times clicked'.")]
-    [SerializeField] private string clicksModeText = "[Clicks - click to switch]";
 
     [Tooltip("Height of the scrolling list (canvas units). Longer lists scroll.")]
     [SerializeField] private float achievementsViewHeight = 560f;
@@ -848,12 +837,12 @@ public class PixelLog : MonoBehaviour
         if (withSummary)
         {
             // A fancy progress bar: a rounded dark trough, a coloured fill with a lighter strip along its top, and the count centred over it.
-            GameObject barGo = new GameObject("Summary Bar", typeof(RectTransform), typeof(Image));
-            barGo.transform.SetParent(group.transform, false);
-            Image trough = barGo.GetComponent<Image>();
+            GameObject summaryBarGo = new GameObject("Summary Bar", typeof(RectTransform), typeof(Image));
+            summaryBarGo.transform.SetParent(group.transform, false);
+            Image trough = summaryBarGo.GetComponent<Image>();
             trough.color = new Color(0.07f, 0.07f, 0.1f, 1f);
             PixelUIKit.StyleButton(trough);
-            RectTransform sr = barGo.GetComponent<RectTransform>();
+            RectTransform sr = summaryBarGo.GetComponent<RectTransform>();
             sr.anchorMin = new Vector2(0f, 1f);
             sr.anchorMax = new Vector2(1f, 1f);
             sr.pivot = new Vector2(0.5f, 1f);
@@ -861,7 +850,7 @@ public class PixelLog : MonoBehaviour
             sr.anchoredPosition = new Vector2(0f, -ContentTop);
 
             GameObject fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-            fillGo.transform.SetParent(barGo.transform, false);
+            fillGo.transform.SetParent(summaryBarGo.transform, false);
             achievementSummaryFill = fillGo.GetComponent<Image>();
             achievementSummaryFill.color = achievementUnlockedColor;
             achievementSummaryFill.raycastTarget = false;
@@ -880,7 +869,7 @@ public class PixelLog : MonoBehaviour
             shr.anchorMin = new Vector2(0f, 0.5f); shr.anchorMax = Vector2.one;
             shr.offsetMin = shr.offsetMax = Vector2.zero;
 
-            summary = CreateText(barGo.transform, "Summary", "", rowFontSize * 0.8f,
+            summary = CreateText(summaryBarGo.transform, "Summary", "", rowFontSize * 0.8f,
                                  TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
             summary.enableAutoSizing = true;
             summary.fontSizeMax = rowFontSize * 0.8f;

@@ -141,7 +141,6 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private readonly List<WareRow> rows = new List<WareRow>();
     private int decision; // 0 = waiting, 1 = accept, 2 = reject / leave
     private bool waresDone;
-    private bool dialogOpen;
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
 
     /// <summary>One pixel-for-pixel deal (a visitor that trades instead of selling items): you pay 'pay' of tier 'payTier' and get 'get' of tier 'getTier'.</summary>
@@ -233,7 +232,6 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         visiting = false;
         anyVisiting = false;
         nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
-        dialogOpen = false;
         Unfreeze();
         PixelWindows.Unregister(this);
         spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
@@ -282,7 +280,6 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         SetDim(1f);
 
         // They greet you.
-        dialogOpen = true;
         greetingPanel.gameObject.SetActive(true);
 
         while (decision == 0) { Bob(restX, barH); yield return null; }
@@ -297,7 +294,6 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         }
 
         // Time resumes and they leave.
-        dialogOpen = false;
         PixelWindows.Unregister(this);
         Unfreeze();
         for (float t = 0f; t < slideSeconds; t += Time.unscaledDeltaTime)
