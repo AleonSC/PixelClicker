@@ -726,6 +726,7 @@ public class PixelPauseMenu : MonoBehaviour
     private bool PauseKeyPressed()
     {
         if (pauseKey == PauseKey.None) return false;
+        if (pauseKey != PauseKey.Escape && PixelKeys.Typing) return false;   // typing a P / Tab / Backspace in a text box must not pause
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         Keyboard kb = Keyboard.current;
         if (kb == null) return false;

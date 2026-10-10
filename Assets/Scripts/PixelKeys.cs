@@ -44,6 +44,7 @@ public static class PixelKeys
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
+        typingFrame = -1;
         current = null;
         Changed = null;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
@@ -175,9 +176,28 @@ public static class PixelKeys
     // Reading the keys (both input systems)
     // ------------------------------------------------------------------
 
+    private static int typingFrame = -1;
+    private static bool typingCached;
+
+    /// <summary>True while a text box has the keyboard (typing must not trigger the game's keys). Checked once per frame.</summary>
+    public static bool Typing
+    {
+        get
+        {
+            if (typingFrame == Time.frameCount) return typingCached;
+            typingFrame = Time.frameCount;
+            UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
+            GameObject selected = es != null ? es.currentSelectedGameObject : null;
+            TMPro.TMP_InputField field = selected != null ? selected.GetComponent<TMPro.TMP_InputField>() : null;
+            typingCached = field != null && field.isFocused;
+            return typingCached;
+        }
+    }
+
     /// <summary>True on the frame the action's key went down.</summary>
     public static bool Pressed(PixelAction action)
     {
+        if (Typing) return false;
         KeyCode key = Get(action);
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         if (Control(key, out var c) && c.wasPressedThisFrame) return true;
@@ -191,6 +211,7 @@ public static class PixelKeys
     /// <summary>True while any key is held (not a bound action: fixed keys such as WASD in first person mode).</summary>
     public static bool KeyHeld(KeyCode key)
     {
+        if (Typing) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         return Control(key, out var c) && c.isPressed;
 #else
@@ -201,6 +222,7 @@ public static class PixelKeys
     /// <summary>True on the frame a fixed key went down.</summary>
     public static bool KeyPressed(KeyCode key)
     {
+        if (Typing) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         return Control(key, out var c) && c.wasPressedThisFrame;
 #else
@@ -211,6 +233,7 @@ public static class PixelKeys
     /// <summary>True while the action's key is held.</summary>
     public static bool Held(PixelAction action)
     {
+        if (Typing) return false;
         KeyCode key = Get(action);
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         return Control(key, out var c) && c.isPressed;

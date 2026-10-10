@@ -874,7 +874,30 @@ public class PixelCrafting : MonoBehaviour
         bookObject.SetActive(false);
     }
 
-    private float BookRowHeight => Mathf.Max(bookRowHeight, fontSize * 0.8f * 1.35f * 3f + 28f);   // three lines: ingredients and result
+    private float BookRowHeight => Mathf.Max(bookRowHeight, fontSize * 2.6f);   // two lines: the result and what it is made of
+
+    /// <summary>One single-line, left-aligned label of a recipe row between two heights (0..1) of the row.</summary>
+    private TMP_Text BookLine(Transform parent, string text, float size, FontStyles style, float alpha, float yMin, float yMax)
+    {
+        TMP_Text label = MakeLabel(parent, "Line", text, size, TextAlignmentOptions.MidlineLeft, style);
+        label.richText = true;
+        label.enableAutoSizing = true;
+        label.fontSizeMax = size;
+        label.fontSizeMin = 9f;
+        label.color = new Color(textColor.r, textColor.g, textColor.b, alpha);
+        label.raycastTarget = false;
+#if UNITY_2023_1_OR_NEWER
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        label.enableWordWrapping = false;
+#endif
+        RectTransform lr = label.rectTransform;
+        lr.anchorMin = new Vector2(0f, yMin);
+        lr.anchorMax = new Vector2(1f, yMax);
+        lr.offsetMin = new Vector2(16f, 2f);
+        lr.offsetMax = new Vector2(-12f, -2f);
+        return label;
+    }
 
     private void OpenBook()
     {
@@ -930,20 +953,11 @@ public class PixelCrafting : MonoBehaviour
             rr.sizeDelta = new Vector2(-24f, BookRowHeight - 8f);
             rr.anchoredPosition = new Vector2(0f, -y);
 
-            string text = known
-                ? IngredientText(r.a) + "  +\n" + IngredientText(r.b) + "\n=  <b>" + ResultName(r) + "</b>"
-                : unknownText + "  +\n" + unknownText + "\n=  " + unknownText;
-            TMP_Text label = MakeLabel(row.transform, "Text", text, fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Normal);
-            label.richText = true;
-            label.enableAutoSizing = true;
-            label.fontSizeMax = fontSize * 0.8f;
-            label.fontSizeMin = 10f;
-            label.color = known ? textColor : new Color(textColor.r, textColor.g, textColor.b, 0.45f);
-            RectTransform lr = label.rectTransform;
-            lr.anchorMin = Vector2.zero;
-            lr.anchorMax = Vector2.one;
-            lr.offsetMin = new Vector2(14f, 4f);
-            lr.offsetMax = new Vector2(-14f, -4f);
+            // Two tidy left-aligned lines: the result (bold) and, dimmer underneath, what it is made of.
+            string title = known ? ResultName(r) : unknownText;
+            string made = known ? IngredientText(r.a) + "   +   " + IngredientText(r.b) : unknownText + "   +   " + unknownText;
+            TMP_Text top = BookLine(row.transform, title, fontSize * 0.85f, FontStyles.Bold, known ? 1f : 0.45f, 0.5f, 1f);
+            TMP_Text bottom = BookLine(row.transform, made, fontSize * 0.68f, FontStyles.Normal, known ? 0.65f : 0.4f, 0f, 0.5f);
 
             bookRows.Add(row);
             y += BookRowHeight;
