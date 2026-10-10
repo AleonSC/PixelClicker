@@ -473,6 +473,38 @@ public partial class PixelShop
     }
 
     /// <summary>
+    /// Default Treasure Pixel pack (Pixels tab): a treasure chest that takes a RANDOM 1-20 clicks to open; the more clicks it took, the bigger
+    /// the reward, and when it opens a pile of other pixel types pours out. No potions, pets, crafting or other integration.
+    /// </summary>
+    private static ShopPack CreateTreasurePixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Treasure Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Treasure pixel: a chest that takes a random 1 to 20 clicks to open. The more clicks it took, the bigger the reward, and when it bursts open a pile of other pixels pours out.",
+            requirements = Needs(-1),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.White, amount = 50000 },
+                new PackCost { type = PixelClicker.PixelType.Black, amount = 25000 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Treasure, displayName = "Treasure Pixels",
+                    color = new Color(1f, 0.78f, 0.22f, 1f),
+                    clicksToCollect = 10, randomClicks = true, randomClicksMin = 1, randomClicksMax = 20,
+                    amountPerClick = 4,
+                    spawnWeight = 0.1f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>
     /// Default Prospector's Pack (Pixels tab): very cheap (10 White, no requirements). Six base-metal ore pixels - tough rocks that crack and shed
     /// chips as you hit them, break in a shower of nuggets and are sometimes a glittering RICH VEIN that pays 5x. No other integration; a switch
     /// in the Toggles window (Prospector mode) makes them replace the RGB pixels in what spawns.
@@ -853,6 +885,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateWaterPixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),
                           requires = null, create = i => CreateFirePixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Treasure),
+                          requires = null, create = i => CreateTreasurePixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Copper),
                           requires = null, create = i => CreateProspectorPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),

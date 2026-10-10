@@ -241,6 +241,9 @@ public class PixelLook
     [Tooltip("The metal showing in the ore's veins and flecks.")]
     public Color oreColor = new Color(0.85f, 0.47f, 0.28f, 1f);
 
+    [Tooltip("Treasure pixel: draw a wooden chest (gold bands, lock, rivets) on every face; light leaks out along the lid seam as the hits add up (needs Damage Cracks).")]
+    public bool chestTexture = false;
+
     [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
     public bool flames = false;
 
@@ -254,7 +257,7 @@ public class PixelLook
     public bool HasExtras => flames || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
-    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || basicSurface != BasicSurface.None;
+    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -264,6 +267,68 @@ public static class PixelLooks
         => new PixelLook { type = type, useColor = true, color = Color.white, metallic = 0.2f, smoothness = 0.3f, damageCracks = true, oreTexture = true, oreColor = metal };
 
     private static readonly Dictionary<int, Texture2D> oreTextures = new Dictionary<int, Texture2D>();
+    private static readonly Dictionary<int, Texture2D> chestTextures = new Dictionary<int, Texture2D>();
+
+    /// <summary>
+    /// The Treasure chest's surface (the same on every face): chunky 64 px wooden planks with dark outlines, two gold straps, a gold lock plate
+    /// with a keyhole and rivets at the corners. 'step' 0-8 = how far it has been hit: a yellow-white light leaks out along the lid seam, wider
+    /// and brighter with every step. Drawn once per step.
+    /// </summary>
+    public static Texture2D ChestTexture(int step)
+    {
+        step = Mathf.Clamp(step, 0, 8);
+        if (chestTextures.TryGetValue(step, out Texture2D cached) && cached != null) return cached;
+
+        const int n = 64;
+        Color32[] px = new Color32[n * n];
+        Color wood = new Color(0.5f, 0.3f, 0.14f, 1f), woodDark = new Color(0.3f, 0.17f, 0.07f, 1f), gold = new Color(1f, 0.78f, 0.22f, 1f), goldDark = new Color(0.62f, 0.44f, 0.08f, 1f);
+        Color dark = new Color(0.1f, 0.06f, 0.03f, 1f);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                Color c;
+                // Planks run across; a seam every 8 px, each plank its own tone and grain.
+                int plank = y / 8;
+                float tone = 0.85f + PixelNoise.Hash(plank, 7, 3) * 0.3f;
+                float grain = PixelNoise.Hash(x / 2, y, 11) * 0.12f;
+                c = Color.Lerp(woodDark, wood, 0.5f + grain) * tone;
+                if (y % 8 == 0) c = woodDark * 0.8f;
+                c.a = 1f;
+
+                bool strap = (x >= 9 && x <= 14) || (x >= 49 && x <= 54);
+                bool frame = x <= 2 || x >= 61 || y <= 2 || y >= 61;
+                if (strap || frame) { c = Color.Lerp(goldDark, gold, 0.55f + PixelNoise.Hash(x, y, 5) * 0.35f); if (x == 9 || x == 49 || (frame && (x == 2 || x == 61 || y == 2 || y == 61))) c = goldDark * 0.8f; c.a = 1f; }
+
+                // The lid: a dark seam a bit above the middle, with a gold lock plate on it.
+                int seam = 27;
+                if (Mathf.Abs(y - seam) <= 1 && !strap) c = dark;
+                bool lockPlate = x >= 27 && x <= 36 && y >= 22 && y <= 36;
+                if (lockPlate) { c = (x == 27 || x == 36 || y == 22 || y == 36) ? goldDark : Color.Lerp(goldDark, gold, 0.75f); }
+                bool keyhole = (x >= 31 && x <= 32 && y >= 27 && y <= 32) || (x >= 30 && x <= 33 && y >= 31 && y <= 32);
+                if (keyhole) c = dark;
+                // Rivets.
+                if ((x == 5 || x == 58) && (y == 5 || y == 58 || y == 32)) c = gold;
+
+                // Light leaking out of the seam as it is hit.
+                if (step > 0)
+                {
+                    float spread = 1f + step * 0.9f;                                   // half-width in px
+                    float d = Mathf.Abs(y - seam) / spread;
+                    if (d < 1f && !lockPlate)
+                    {
+                        float glow = (1f - d) * (0.35f + step * 0.08f);
+                        c = Color.Lerp(c, new Color(1f, 0.93f, 0.55f, 1f), Mathf.Clamp01(glow));
+                    }
+                }
+                px[y * n + x] = new Color32((byte)Mathf.Clamp(c.r * 255f, 0f, 255f), (byte)Mathf.Clamp(c.g * 255f, 0f, 255f), (byte)Mathf.Clamp(c.b * 255f, 0f, 255f), 255);
+            }
+
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, true) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Point, name = "ChestSurface" + step };
+        tex.SetPixels32(px);
+        tex.Apply(true, false);
+        chestTextures[step] = tex;
+        return tex;
+    }
 
     /// <summary>
     /// An ore's surface: chunky 64 px pixel-art rock (grey, speckled) with veins and flecks of 'metal' running through it. 'level' 0 = whole,
@@ -387,6 +452,10 @@ public static class PixelLooks
             OreLook(PixelClicker.PixelType.Lead, new Color(0.46f, 0.52f, 0.66f, 1f)),
             OreLook(PixelClicker.PixelType.Zinc, new Color(0.7f, 0.88f, 0.95f, 1f)),
             OreLook(PixelClicker.PixelType.Nickel, new Color(0.82f, 0.76f, 0.58f, 1f)),
+
+            // Treasure: a wooden chest with gold bands and a lock; light leaks from the lid as you hit it.
+            new PixelLook { type = PixelClicker.PixelType.Treasure, useColor = true, color = Color.white, metallic = 0.25f, smoothness = 0.4f,
+                            damageCracks = true, chestTexture = true },
 
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),

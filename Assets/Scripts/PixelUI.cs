@@ -717,7 +717,7 @@ public class PixelUI : MonoBehaviour
 
         // Tough pixels are often dark, so lighten the tier colour to keep the counter readable.
         Color color = Color.Lerp(clicker.Tiers[tierIndex].UIColor, Color.white, 0.6f);
-        string text = string.Format(hitPopupFormat, hits, needed);
+        string text = needed < 0 ? hits.ToString() : string.Format(hitPopupFormat, hits, needed);   // a treasure chest (needed < 0) doesn't say how many it needs
         Vector2 jitter = new Vector2(UnityEngine.Random.Range(-popupRandomX, popupRandomX), 0f);
 
         Func<Vector2> anchor;

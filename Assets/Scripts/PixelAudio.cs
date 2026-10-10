@@ -235,6 +235,8 @@ public class PixelAudio : MonoBehaviour
             Make("water_splash", 0.05f, 0.9f, 1.1f),
             Make("fire_burst", 0.1f, 0.92f, 1.08f),
             Make("dragon_find", 0.1f, 1f, 1f),
+            Make("chest_hit", 0.1f, 0.92f, 1.08f),
+            Make("chest_open", 0.1f, 1f, 1f),
             Make("dragon_stash", 0.1f, 1f, 1f),
             Make("fire_crackle", 0.15f, 0.85f, 1.15f),
             Make("ore_chip", 0.04f, 0.8f, 1.3f),
@@ -275,6 +277,8 @@ public class PixelAudio : MonoBehaviour
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
             case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
             case "water_splash": return new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) };
+            case "chest_hit": return new[] { PixelSynth.ChestHit(1), PixelSynth.ChestHit(2), PixelSynth.ChestHit(3) };
+            case "chest_open": return new[] { PixelSynth.ChestOpen() };
             case "dragon_find": return new[] { PixelSynth.DragonFind() };
             case "dragon_stash": return new[] { PixelSynth.DragonStash() };
             case "fire_burst": return new[] { PixelSynth.FireBurst(1), PixelSynth.FireBurst(2), PixelSynth.FireBurst(3) };
@@ -842,6 +846,73 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
         AudioClip clip = AudioClip.Create("Dragon Summon", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A knock on a wooden chest: a short dull thump with a woody click and a tiny coin chime. 'seed' picks a variant.</summary>
+    public static AudioClip ChestHit(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.35f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(900 + seed * 17);
+        float lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.3f;
+            float thump = Mathf.Sin(sec * (120f + seed * 12f) * 6.2832f) * Mathf.Exp(-sec * 22f);
+            float knock = lp * Mathf.Exp(-sec * 60f) * 0.8f;
+            float chime = (Mathf.Sin(sec * (2200f + seed * 180f) * 6.2832f) + 0.5f * Mathf.Sin(sec * 3300f * 6.2832f)) * Mathf.Exp(-sec * 18f) * 0.25f * Mathf.Clamp01((sec - 0.01f) / 0.004f);
+            data[i] = thump + knock + chime;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("ChestHit " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A chest bursts open: a creaking lid, then a shower of coins jingling (about 1.6 seconds).</summary>
+    public static AudioClip ChestOpen()
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 1.6f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(321);
+        float phase = 0f;
+        float[] pingAt = new float[30], pingHz = new float[30];
+        for (int k = 0; k < pingAt.Length; k++) { pingAt[k] = 0.3f + (float)rng.NextDouble() * 1.0f; pingHz[k] = 1500f + (float)rng.NextDouble() * 2600f; }
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            // The creak: a rough saw that glides up while it wobbles, over the first 0.35 s.
+            float v = 0f;
+            if (sec < 0.4f)
+            {
+                float f = Mathf.Lerp(80f, 210f, sec / 0.4f) * (1f + 0.15f * Mathf.Sin(sec * 60f));
+                phase += f / rate;
+                float saw = (phase % 1f) * 2f - 1f;
+                v += saw * 0.35f * Mathf.Sin(Mathf.Clamp01(sec / 0.4f) * Mathf.PI);
+            }
+            // A thump as it opens, then coins.
+            float boomT = sec - 0.3f;
+            if (boomT > 0f) v += Mathf.Sin(boomT * 70f * 6.2832f) * Mathf.Exp(-boomT * 9f) * 0.8f;
+            for (int k = 0; k < pingAt.Length; k++)
+            {
+                float t = sec - pingAt[k];
+                if (t < 0f) continue;
+                v += Mathf.Sin(t * pingHz[k] * 6.2832f) * Mathf.Exp(-t * 14f) * 0.16f * Mathf.Clamp01(t / 0.003f);
+            }
+            data[i] = v;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("ChestOpen", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

@@ -77,13 +77,14 @@ public class PixelClicker : MonoBehaviour
         Lead = 29,
         Zinc = 30,
         Nickel = 31,
+        Treasure = 32,
     }
 
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
     public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || IsOre(type);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || IsOre(type);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -144,6 +145,17 @@ public class PixelClicker : MonoBehaviour
         [Min(1)]
         [Tooltip("How many clicks it takes to collect one pixel of this tier. Only the last click pays out (the pixel is just hit before that).")]
         public int clicksToCollect = 1;
+
+        [Tooltip("Treasure pixel: every fresh pixel needs a RANDOM number of clicks between 'Random Clicks Min' and 'Random Clicks Max' (Clicks To Collect is then just the average, for estimates). The more clicks it took, the bigger the reward.")]
+        public bool randomClicks = false;
+
+        [Min(1)]
+        [Tooltip("Fewest clicks a random-click pixel can need.")]
+        public int randomClicksMin = 1;
+
+        [Min(1)]
+        [Tooltip("Most clicks a random-click pixel can need.")]
+        public int randomClicksMax = 20;
 
         [Tooltip("Lifetime amount of the PREVIOUS tier needed to unlock this tier (total collected, spending does not lower it). Ignored if 'Unlocked At Start' is on.")]
         public double unlockThreshold = 100;
@@ -235,7 +247,7 @@ public class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water || t == PixelType.Fire;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water || t == PixelType.Fire || t == PixelType.Treasure;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -311,7 +323,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1328,6 +1340,18 @@ public class PixelClicker : MonoBehaviour
             looks = list25.ToArray();
             looksVersion = 25;
         }
+        if (looksVersion < 26)
+        {
+            // The Treasure chest look is new.
+            System.Collections.Generic.List<PixelLook> list26 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            if (PixelLooks.Find(list26.ToArray(), PixelType.Treasure) == null)
+            {
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Treasure);
+                if (def != null) list26.Add(def);
+            }
+            looks = list26.ToArray();
+            looksVersion = 26;
+        }
 
         if (pixelRenderer != null)
         {
@@ -1522,30 +1546,33 @@ public class PixelClicker : MonoBehaviour
 
         // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
         int breaks = 1; // pixels broken by this click (more than 1 only with the dev click count)
-        if (tier.clicksToCollect > 1)
+        int need = NeededClicks(tier);                 // a Treasure chest needs a random number of clicks
+        int shownNeed = tier.randomClicks ? -1 : need;  // (the chest doesn't tell you how many it needs)
+        if (need > 1)
         {
             hitsOnCurrentPixel += clickCount;
-            if (hitsOnCurrentPixel < tier.clicksToCollect)
+            if (hitsOnCurrentPixel < need)
             {
                 hitPunchTimer = hitPunchDuration;
                 SetLiveDamage(tier, hitsOnCurrentPixel);
                 PlayClickEffects(tier);
-                if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)tier.clicksToCollect);
-                if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)tier.clicksToCollect);
-                PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, tier.clicksToCollect, automatic);
+                if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)need);
+                if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
+                PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, shownNeed, automatic);
                 onPixelClicked?.Invoke();
                 return;
             }
         }
-        if (tier.clicksToCollect > 1)
+        if (need > 1)
         {
-            SetLiveDamage(tier, tier.clicksToCollect); // the pieces that fall away are fully cracked
-            PixelFinalHit?.Invoke(tierIndex, tier.clicksToCollect, automatic);
+            SetLiveDamage(tier, need); // the pieces that fall away are fully cracked
+            PixelFinalHit?.Invoke(tierIndex, need, automatic);   // the last click shows the final count
         }
-        if (tier.clicksToCollect > 1)
+        if (need > 1)
         {
-            breaks = hitsOnCurrentPixel / tier.clicksToCollect;
-            hitsOnCurrentPixel %= tier.clicksToCollect;
+            breaks = hitsOnCurrentPixel / need;
+            hitsOnCurrentPixel %= need;
         }
         else
         {
@@ -1554,6 +1581,7 @@ public class PixelClicker : MonoBehaviour
         }
 
         double basePayout = tier.amountPerClick * breaks;
+        if (tier.randomClicks) basePayout *= TreasureMultiplier(need);   // the more clicks the chest took, the bigger the reward
         bool richBreak = liveRich && IsOre(tier.type);
         if (richBreak) basePayout *= richVeinMultiplier > 0f ? richVeinMultiplier : 5f;   // a rich vein pays big
         if (tier.randomPayout)
@@ -1591,6 +1619,7 @@ public class PixelClicker : MonoBehaviour
 
         PlayClickEffects(tier);
         if (tier.type == PixelType.Fire && !disableFireFx) FireBurstFx.Play(pixelTransform.position, PixelBaseSize);
+        if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (IsOre(tier.type) && !disableProspectorFx)
         {
             OreFx.Break(pixelTransform.position, PixelBaseSize, tier.color, richBreak);
@@ -2505,8 +2534,9 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture;
+        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture;
         Texture2D tex = onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
+                      : look.chestTexture ? PixelLooks.ChestTexture(max > 0 ? Mathf.RoundToInt(Mathf.Clamp01(level / (float)max) * 8f) : 0)
                       : look.oreTexture ? PixelLooks.OreTexture(look.oreColor, look.damageCracks ? level : 0, max)
                       : look.chromeTexture ? PixelLooks.ChromeTexture()
                       : PixelLooks.SurfaceTexture(look.streakTexture, look.damageCracks ? level : 0, max, look.shellTexture);
@@ -2519,7 +2549,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (pixelRenderer == null || activeLook == null || !activeLook.damageCracks) return;
         pixelRenderer.GetPropertyBlock(propertyBlock);
-        ApplyLookTexture(propertyBlock, activeLook, level, tier.clicksToCollect);
+        ApplyLookTexture(propertyBlock, activeLook, level, NeededClicks(tier));
         pixelRenderer.SetPropertyBlock(propertyBlock);
     }
 
@@ -2708,7 +2738,7 @@ public class PixelClicker : MonoBehaviour
         if (pixelRenderer != null && activeLook != null && activeLook.HasSurfaceTexture)
         {
             pixelRenderer.GetPropertyBlock(propertyBlock);
-            ApplyLookTexture(propertyBlock, activeLook, 0, tier.clicksToCollect);
+            ApplyLookTexture(propertyBlock, activeLook, 0, NeededClicks(tier));
             pixelRenderer.SetPropertyBlock(propertyBlock);
         }
     }
@@ -2779,12 +2809,96 @@ public class PixelClicker : MonoBehaviour
         return m;
     }
 
+    [Header("Treasure pixel")]
+    [Tooltip("Turn off the Treasure chest's sparkles and sounds (it still works).")]
+    [SerializeField] private bool disableTreasureFx = false;
+
+    [Min(0f)]
+    [Tooltip("How much the reward grows per click the chest took: payout = clicks x (1 + clicks x this). 0 = the coded default (0.15), so a 20-click chest pays about 80x a 1-click one.")]
+    [SerializeField] private float treasureRewardGrowth = 0f;
+
+    [Min(0)]
+    [Tooltip("Pixels that pour out of an opened chest = this + the clicks it took (at most 'Treasure Max Pixels'). 0 = the coded default (2).")]
+    [SerializeField] private int treasureBasePixels = 0;
+
+    [Min(0)]
+    [Tooltip("Most pixels one chest can pour out. 0 = the coded default (24).")]
+    [SerializeField] private int treasureMaxPixels = 0;
+
+    private int liveNeed;           // clicks the pixel on the cube needs (only for random-click pixels, i.e. the Treasure chest)
+
+    /// <summary>Reward multiplier of a chest that took 'need' clicks (grows faster than the clicks do).</summary>
+    private float TreasureMultiplier(int need) => need * (1f + need * (treasureRewardGrowth > 0f ? treasureRewardGrowth : 0.15f));
+
+    /// <summary>The chest cracked open: gold bursts out and a pile of other pixel types pours out (paid at once, the pixels that fly out are for show).</summary>
+    private void OpenTreasure(int chestTier, int need)
+    {
+        Vector3 origin = pixelTransform.position;
+        if (!disableTreasureFx) TreasureFx.Open(origin, PixelBaseSize, need);
+
+        // Which pixel types can come out: any unlocked one except the chest itself, rare drops, fly-aways and wells.
+        System.Collections.Generic.List<int> pool = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            PixelTier t = tiers[i];
+            if (i == chestTier || !t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Treasure || t.type == PixelType.Singularity) continue;
+            pool.Add(i);
+        }
+        int count = Mathf.Clamp((treasureBasePixels > 0 ? treasureBasePixels : 2) + need, 3, treasureMaxPixels > 0 ? treasureMaxPixels : 24);
+        PixelStats.Count("treasure.opened");
+        PixelStats.Best("treasure.most_clicks", need);
+        if (pool.Count == 0) return;
+
+        // Pay everything now; the old pixels that pour out carry nothing (so collecting them later doesn't pay twice).
+        float bonus = 1f + need / 10f;
+        int[] picks = new int[count];
+        double[] paid = new double[tiers.Length];
+        for (int i = 0; i < count; i++)
+        {
+            int t = pool[UnityEngine.Random.Range(0, pool.Count)];
+            picks[i] = t;
+            paid[t] += RollOldPixelAmount(t) * bonus;
+        }
+        for (int t = 0; t < paid.Length; t++) if (paid[t] > 0d) AddCurrency(t, paid[t]);
+        PixelHints.Announce(need >= 15 ? "JACKPOT! The chest held " + count + " pixels" : "The treasure chest held " + count + " pixels");
+        StartCoroutine(TreasureFountain(picks, origin));
+    }
+
+    private IEnumerator TreasureFountain(int[] picks, Vector3 origin)
+    {
+        float size = PixelBaseSize;
+        for (int i = 0; i < picks.Length; i++)
+        {
+            float a = UnityEngine.Random.value * Mathf.PI * 2f;
+            float speed = UnityEngine.Random.Range(1.2f, 3.2f) * size;
+            Vector3 vel = new Vector3(Mathf.Cos(a) * speed, UnityEngine.Random.Range(3.5f, 6.5f) * size, Mathf.Sin(a) * speed);
+            SpawnStoredPixel(picks[i], 0d, origin + Vector3.up * size * 0.3f, vel);
+            yield return new WaitForSeconds(0.035f);
+        }
+    }
+
+    private static int RollNeededClicks(PixelTier tier)
+    {
+        int lo = Mathf.Max(1, Mathf.Min(tier.randomClicksMin, tier.randomClicksMax));
+        int hi = Mathf.Max(lo, Mathf.Max(tier.randomClicksMin, tier.randomClicksMax));
+        return UnityEngine.Random.Range(lo, hi + 1);
+    }
+
+    /// <summary>How many clicks the pixel on the cube needs: the tier's own number, or this chest's random one.</summary>
+    private int NeededClicks(PixelTier tier)
+    {
+        if (!tier.randomClicks) return tier.clicksToCollect;
+        if (liveNeed < 1) liveNeed = RollNeededClicks(tier);
+        return liveNeed;
+    }
+
     private bool liveRich;          // the ore on the cube is a rich vein
     private GameObject richGlitter;
 
     private void Materialize(PixelTier tier)
     {
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
+        liveNeed = tier.randomClicks ? RollNeededClicks(tier) : 0;   // a treasure chest needs a random number of clicks
 
         // A fresh ore pixel is sometimes a rich vein: it glitters and pays much more when it breaks.
         if (richGlitter != null) { Destroy(richGlitter); richGlitter = null; }
