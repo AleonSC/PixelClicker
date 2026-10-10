@@ -70,6 +70,7 @@ public partial class PixelShop
 
         currencyScroll = PixelUIKit.CreateScrollView(currencyPanel.transform, "Currency Scroll", scrollbarHandleColor, Mathf.Min(scrollbarWidth, 16f),
                                                      scrollSpeed, out currencyContent, out currencyScrollBar);
+        HideBarGraphics(currencyScrollBar);
         currencyViewRect = currencyScroll.GetComponent<RectTransform>();
         currencyViewRect.anchorMin = Vector2.zero;
         currencyViewRect.anchorMax = Vector2.one;

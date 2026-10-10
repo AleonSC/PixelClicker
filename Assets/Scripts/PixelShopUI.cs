@@ -365,6 +365,7 @@ public partial class PixelShop
         scroll.scrollSensitivity = scrollSpeed;
         scroll.verticalScrollbar = scrollbar;
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        HideBarGraphics(barGo);
 
         // "Nothing here yet" message for empty tabs.
         empty = CreateText(scrollGo.transform, "Empty", emptyTabText, descriptionFontSize + 8f,
@@ -375,6 +376,13 @@ public partial class PixelShop
         er.anchorMax = Vector2.one;
         er.offsetMin = er.offsetMax = Vector2.zero;
         empty.gameObject.SetActive(false);
+    }
+
+    /// <summary>Makes a scroll bar invisible (and unclickable) unless the shop is set to show them; the wheel still scrolls.</summary>
+    private void HideBarGraphics(GameObject bar)
+    {
+        if (showScrollBars || bar == null) return;
+        foreach (Image image in bar.GetComponentsInChildren<Image>(true)) image.enabled = false;
     }
 
     /// <summary>The second window: lists the upgrade packs that belong to the pack whose arrow was pressed.</summary>

@@ -433,6 +433,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Width of the scrollbar (it hides when the list fits).")]
     [SerializeField] private float scrollbarWidth = 24f;
 
+    [Tooltip("Draw scroll bars in the shop's lists (off = the lists still scroll with the mouse wheel, there is just no bar).")]
+    [SerializeField] private bool showScrollBars = false;
+
     [Tooltip("Scrollbar track colour.")]
     [SerializeField] private Color scrollbarTrackColor = new Color(0.16f, 0.16f, 0.2f, 1f);
 
