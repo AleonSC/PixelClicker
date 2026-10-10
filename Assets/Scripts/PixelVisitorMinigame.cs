@@ -458,7 +458,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             PixelUIKit.SetText(row.cost, sb.ToString());
 
             int cap = consumables.ItemCapacity(item);
-            string ownedText = cap > 0 && cap < 100000 ? "Owned " + consumables.ItemOwned(item) + " / " + cap : "Owned " + consumables.ItemOwned(item);
+            string ownedText = cap > 0 && cap < 100000 ? "Owned " + PixelConsumables.OwnedText(consumables.ItemOwned(item)) + " / " + cap : "Owned " + PixelConsumables.OwnedText(consumables.ItemOwned(item));
             bool soldOut = stock.TryGetValue(item, out int stockLeft) && stockLeft < 1;
             if (stock.ContainsKey(item)) ownedText += "   Stock " + Mathf.Max(0, stockLeft);
             PixelUIKit.SetText(row.owned, ownedText);
@@ -581,6 +581,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             GameObject go = new GameObject("Ware", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(waresContent, false);
             go.GetComponent<Image>().color = new Color(0.16f, 0.16f, 0.2f, 1f);
+            PixelUIKit.StyleButton(go.GetComponent<Image>());   // rounded, like the buttons
             go.GetComponent<Image>().raycastTarget = false;
             row.rect = go.GetComponent<RectTransform>();
             row.rect.anchorMin = new Vector2(0f, 1f);
@@ -638,7 +639,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     {
         GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
         g.transform.SetParent(canvasRoot.transform, false);
-        g.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.16f, 0.97f);
+        PixelUIKit.StyleWindow(g.GetComponent<Image>(), new Color(0.08f, 0.1f, 0.16f, 0.97f));   // the same rounded glowing frame as every window
         RectTransform r = g.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = new Vector2(1f, 0.5f);
         r.pivot = new Vector2(1f, 0.5f);

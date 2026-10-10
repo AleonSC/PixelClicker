@@ -66,9 +66,6 @@ public class PixelLog : MonoBehaviour
     // ------------------------------------------------------------------
 
     [Header("Log Tabs")]
-    [Tooltip("Label of the tab that lists how many times you clicked each pixel type (renamed from 'Pixels Tab Text' so a scene saved with the old name picks up the new label).")]
-    [SerializeField] private string clicksTabText = "Clicks";
-
     [Tooltip("Label of the tab that lists achievements.")]
     [SerializeField] private string achievementsTabText = "Achievements";
 
@@ -308,7 +305,7 @@ public class PixelLog : MonoBehaviour
         public int achIndex = -1;
     }
 
-    private int currentTab; // 0 = Pixels, 1 = Achievements, 2 = Goals
+    private int currentTab = 1; // 0 = Pixels (no longer reachable: moved to Settings > Stats), 1 = Achievements, 2 = Goals
     private Image[] tabImages;
     private GameObject achievementsGroup, goalsGroup;
     private RectTransform achievementsContent, goalsContent;
@@ -778,8 +775,8 @@ public class PixelLog : MonoBehaviour
 
     private void BuildTabs()
     {
-        string[] names = { clicksTabText, achievementsTabText, goalsTabText };
-        tabImages = new Image[names.Length];
+        string[] names = { achievementsTabText, goalsTabText };   // the click counts moved to Settings > Stats
+        tabImages = new Image[names.Length + 1];                  // [0] (the old Clicks tab) stays empty
 
         const float gap = 8f;
         float tabWidth = (panelWidth - panelPadding * 2f - gap * (names.Length - 1)) / names.Length;
@@ -789,7 +786,7 @@ public class PixelLog : MonoBehaviour
             Button tab = CreateButton(panelObject.transform, "Tab " + names[i], names[i],
                                       new Vector2(tabWidth, tabHeight), tabInactiveColor, tabTextColor, tabFontSize);
             PixelUIKit.Caps(tab);
-            tabImages[i] = tab.GetComponent<Image>();
+            tabImages[i + 1] = tab.GetComponent<Image>();
 
             TMP_Text label = tab.GetComponentInChildren<TMP_Text>();
             label.enableAutoSizing = true;
@@ -803,7 +800,7 @@ public class PixelLog : MonoBehaviour
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(startX + i * (tabWidth + gap), -headerHeight);
 
-            int captured = i;
+            int captured = i + 1;
             tab.onClick.AddListener(() => { currentTab = captured; Refresh(); });
         }
     }
@@ -1163,7 +1160,7 @@ public class PixelLog : MonoBehaviour
     public void Refresh()
     {
         for (int i = 0; i < tabImages.Length; i++)
-            tabImages[i].color = i == currentTab ? tabActiveColor : tabInactiveColor;
+            if (tabImages[i] != null) tabImages[i].color = i == currentTab ? tabActiveColor : tabInactiveColor;
 
         bool pixelsTab = currentTab == 0;
         achievementsGroup.SetActive(currentTab == 1);

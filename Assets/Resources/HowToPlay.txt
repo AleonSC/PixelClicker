@@ -53,7 +53,7 @@ Switch any of them off in the Toggles window.
 
 # Useful Windows
 <b>Inventory</b> (top left) - your pixels, and your potions and devices.
-<b>Log</b> (bottom left) - pixel totals and achievements.
+<b>Log</b> (bottom left) - your achievements and goals. (Click counts per pixel are in Settings > Stats.)
 <b>Toggles</b> (right edge) - switch pixel spawns, upgrades and minigames on or off.
 <b>Bank</b> (left edge) - what the Pixel Bank holds.
 Buttons slide out of the edge of the screen when your mouse gets close to them.

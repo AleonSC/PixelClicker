@@ -242,7 +242,24 @@ public class PixelStats : MonoBehaviour
 
     private void OnCrafted() => Count("crafts");
 
-    private void OnPixelCollected(int tier, double amount, bool automatic) => CountClick(automatic);
+    private void OnPixelCollected(int tier, double amount, bool automatic)
+    {
+        CountClick(automatic);
+        float now = Time.unscaledTime;
+        if (clickTime.TryGetValue(tier, out float last) && now - last < ClickIndicatorSeconds) clickSum[tier] = clickSum[tier] + 1;
+        else clickSum[tier] = 1;
+        clickTime[tier] = now;
+    }
+
+    // The "+N" next to a pixel's click count on the Stats screen: clicks in the last moment (auto clicker ticks included).
+    private const float ClickIndicatorSeconds = 1.5f;
+    private readonly Dictionary<int, float> clickTime = new Dictionary<int, float>();
+    private readonly Dictionary<int, int> clickSum = new Dictionary<int, int>();
+
+    private int RecentClicks(int tier)
+    {
+        return clickTime.TryGetValue(tier, out float t) && Time.unscaledTime - t < ClickIndicatorSeconds ? clickSum[tier] : 0;
+    }
 
     private void OnPixelHit(int tier, int hits, int needed, bool automatic) => CountClick(automatic);
 
@@ -433,6 +450,22 @@ public class PixelStats : MonoBehaviour
         Cnt("Shop purchases", "shop.purchases");
         Cnt("Consumables bought", "shop.items");
 
+
+        // How many times each pixel type was CLICKED (the Log's old Clicks tab). A gold "+N" shows beside a count while clicks are coming in.
+        Head("Clicks per pixel");
+        if (clicker != null)
+        {
+            double clickTotal = 0d;
+            for (int i = 0; i < clicker.Tiers.Length; i++)
+            {
+                PixelClicker.PixelTier t = clicker.Tiers[i];
+                if (!t.unlocked) continue;
+                clickTotal += t.timesCollected;
+                int recent = RecentClicks(i);
+                Row("   " + t.displayName, number(t.timesCollected) + (recent > 0 ? "  <color=#FFD24D>+" + recent + "</color>" : ""));
+            }
+            Row("All pixels", number(clickTotal));
+        }
 
         Head("Old pixels");
         Cnt("Vacuumed up", "old.vacuumed");

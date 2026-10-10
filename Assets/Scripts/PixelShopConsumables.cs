@@ -243,7 +243,7 @@ public partial class PixelShop
         if (room <= 0 && !ItemLocked(item))
         {
             card.cost.text = "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" +
-                             string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(item), consumables.ItemOwned(item)) + "</color>";
+                             string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(item), PixelConsumables.OwnedText(consumables.ItemOwned(item))) + "</color>";
             card.buy.interactable = false;
             card.buyLabel.text = potionFullText;
             card.buyImage.color = disabledColor;

@@ -115,7 +115,7 @@ public class PixelHints : MonoBehaviour
 
     [TextArea(2, 5)]
     [Tooltip("Tip shown with the Log open.")]
-    [SerializeField] private string introLogText = "This is your Log. It lists every pixel type you have unlocked with its lifetime total, and its second tab tracks your achievements. Open it any time with the Log button at the bottom left.";
+    [SerializeField] private string introLogMessage = "This is your Log. It tracks your achievements and your goals - what to work towards next. (Your click counts per pixel are in Settings > Stats.) Open it any time with the Log button at the bottom left.";
 
     [TextArea(2, 5)]
     [Tooltip("Third new-game intro tip (after the Log and Inventory ones): how you earn currency. Empty = the built-in text. The tier guide (\"Click X more...\") appears once this box is closed.")]
@@ -827,7 +827,7 @@ public class PixelHints : MonoBehaviour
         introRunning = true;
         introIdle = 0f;
         PixelLog.SetLogOpen(true);
-        PixelNotice.Show(introLogText, 0f, compact: true, beside: PixelLog.WindowRect, besideBottom: true, onClosed: () =>
+        PixelNotice.Show(introLogMessage, 0f, compact: true, beside: PixelLog.WindowRect, besideBottom: true, onClosed: () =>
         {
             PixelLog.SetLogOpen(false);
             PixelUI.SetInventoryOpen(true);

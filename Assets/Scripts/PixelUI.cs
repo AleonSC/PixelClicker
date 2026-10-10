@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -170,9 +171,6 @@ public class PixelUI : MonoBehaviour
     [Tooltip("The potions. Found automatically in the scene if left empty.")]
     [SerializeField] private PixelConsumables consumables;
 
-    [Tooltip("One potion line. {0} = name, {1} = amount owned.")]
-    [SerializeField] private string consumableLineFormat = "{0}   x{1}";
-
     [Tooltip("Colour of the \"No potions / devices yet\" message in the Consumables tab (bright, so it is easy to read).")]
     [SerializeField] private Color emptyMessageColor = new Color(0.92f, 0.94f, 1f, 1f);
 
@@ -313,18 +311,12 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Text colour (when 'Color Text By Tier' is off).")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Tooltip("Colour each line with its tier's colour. Black pixels will be hard to read on a dark background, so use the outline below.")]
-    [SerializeField] private bool colorTextByTier = false;
-
     [Tooltip("Outline colour (used for auto-created texts).")]
     [SerializeField] private Color outlineColor = Color.black;
 
     [Range(0f, 1f)]
     [Tooltip("Outline thickness for auto-created texts. 0 = none.")]
     [SerializeField] private float outlineWidth = 0f;
-
-    [Tooltip("Line format. {0} = tier name, {1} = amount.")]
-    [SerializeField] private string lineFormat = "{0}: {1}";
 
     [Header("Locked Tiers")]
     [Tooltip("Show tiers that aren't unlocked yet.")]
@@ -954,7 +946,8 @@ public class PixelUI : MonoBehaviour
         boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image));
         boxObject.transform.SetParent(autoRoot.transform, false);
         Image bg = boxObject.GetComponent<Image>();
-        if (showBackground) PixelUIKit.StyleWindow(bg, backgroundColor); else bg.color = new Color(0f, 0f, 0f, 0f);
+        if (showBackground) PixelUIKit.StyleWindow(bg, new Color(backgroundColor.r, backgroundColor.g, backgroundColor.b, Mathf.Max(backgroundColor.a, 0.95f)));   // nearly solid: the stars must not show through the text
+        else bg.color = new Color(0f, 0f, 0f, 0f);
         bg.raycastTarget = true; // clicks on the box shouldn't reach the pixel behind it
 
         boxRect = boxObject.GetComponent<RectTransform>();
@@ -1060,6 +1053,72 @@ public class PixelUI : MonoBehaviour
     // Refresh
     // ------------------------------------------------------------------
 
+    // ------------------------------------------------------------------
+    // Rows: a small coloured swatch, the name in plain light text, and the amount right-aligned in its own column.
+    // ------------------------------------------------------------------
+
+    private struct RowParts { public TMP_Text amount; public Image swatch; }
+    private readonly Dictionary<TMP_Text, RowParts> rowParts = new Dictionary<TMP_Text, RowParts>();
+
+    /// <summary>The name without its "Pixels" suffix ("White Pixels" -> "White"): the Currency tab is about pixels already.</summary>
+    private static string ShortName(string name)
+    {
+        if (name.EndsWith(" Pixels")) return name.Substring(0, name.Length - 7);
+        if (name.EndsWith(" Pixel")) return name.Substring(0, name.Length - 6);
+        return name;
+    }
+
+    private RowParts BuildRowParts(TMP_Text label)
+    {
+        float swatchSize = Mathf.Round(LinePitch * 0.5f);
+        float deltaSpace = fontSize * 1.5f;   // the "+N" indicator keeps the far right
+        label.alignment = TextAlignmentOptions.MidlineLeft;
+        label.margin = new Vector4(swatchSize + 14f, 0f, 150f, 0f);   // the name never runs under the amount
+
+        GameObject sw = new GameObject("Swatch", typeof(RectTransform), typeof(Image));
+        sw.transform.SetParent(label.transform, false);
+        Image swImage = sw.GetComponent<Image>();
+        swImage.raycastTarget = false;
+        RectTransform sr = sw.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
+        sr.sizeDelta = new Vector2(swatchSize, swatchSize);
+        sr.anchoredPosition = new Vector2(2f, 0f);
+        PixelUIKit.StyleButton(swImage);
+
+        TMP_Text amount = MakeText(label.transform, "Amount", "", fontSize, TextAlignmentOptions.MidlineRight, FontStyles.Bold, textColor);
+        amount.raycastTarget = false;
+        amount.enableAutoSizing = true;
+        amount.fontSizeMax = fontSize;
+        amount.fontSizeMin = Mathf.Max(8f, fontSize * 0.3f);
+        amount.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        amount.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        amount.enableWordWrapping = false;
+#endif
+        RectTransform ar = amount.rectTransform;
+        ar.anchorMin = new Vector2(0.38f, 0f);
+        ar.anchorMax = Vector2.one;
+        ar.offsetMin = Vector2.zero;
+        ar.offsetMax = new Vector2(-deltaSpace, 0f);
+
+        RowParts parts = new RowParts { amount = amount, swatch = swImage };
+        rowParts[label] = parts;
+        return parts;
+    }
+
+    /// <summary>Fills one row: name (left, light), amount (right) and the swatch colour.</summary>
+    private void SetRow(TMP_Text label, string name, string amount, Color swatch, bool dim = false)
+    {
+        if (!rowParts.TryGetValue(label, out RowParts parts)) parts = BuildRowParts(label);
+        PixelUIKit.SetText(label, name);
+        PixelUIKit.SetText(parts.amount, amount);
+        Color text = dim ? lockedColor : textColor;
+        label.color = text;
+        parts.amount.color = text;
+        parts.swatch.color = dim ? new Color(swatch.r, swatch.g, swatch.b, 0.35f) : swatch;
+    }
+
     /// <summary>Writes the current amounts into the texts (and stacks visible lines in automatic mode).</summary>
     public void Refresh()
     {
@@ -1085,10 +1144,7 @@ public class PixelUI : MonoBehaviour
             if (!visible) continue;
 
             string amount = (tier.unlocked || holding) ? FormatAmount(tier.count) : lockedText;
-            PixelUIKit.SetText(label, string.Format(lineFormat, tier.displayName, amount));
-
-            if (!tier.unlocked && !holding) label.color = lockedColor;
-            else label.color = colorTextByTier ? tier.UIColor : textColor;
+            SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
 
             if (autoMode)
             {
@@ -1117,7 +1173,7 @@ public class PixelUI : MonoBehaviour
         // Box height follows the number of visible lines.
         if (autoMode && boxRect != null)
         {
-            float boxHeight = Mathf.Min(ContentTop + y + panelPadding, maxPanelHeight);
+            float boxHeight = maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
             boxRect.sizeDelta = new Vector2(panelWidth, boxHeight);
 
             // Keep the list just below the tabs (the header height can change after the box is built).
@@ -1372,8 +1428,7 @@ public class PixelUI : MonoBehaviour
             TMP_Text label = materialLabels[shown];
             label.gameObject.SetActive(true);
             label.rectTransform.anchoredPosition = new Vector2(0f, -y);
-            PixelUIKit.SetText(label, string.Format(lineFormat, m.MaterialName, FormatAmount(m.MaterialAmount)));
-            label.color = colorTextByTier ? m.MaterialColor : textColor;
+            SetRow(label, m.MaterialName, FormatAmount(m.MaterialAmount), m.MaterialColor);
             y += LinePitch;
             shown++;
         }
@@ -1475,9 +1530,9 @@ public class PixelUI : MonoBehaviour
             y += LinePitch;
             shown++;
 
-            potionLabels[i].text = string.Format(consumableLineFormat, consumables.ItemName(i), FormatAmount(owned));
             int tierIndex = clicker.IndexOf(consumables.ItemRequiredType(i));
-            potionLabels[i].color = colorTextByTier && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : textColor;
+            SetRow(potionLabels[i], consumables.ItemName(i), "x" + (owned >= 99999 ? PixelConsumables.OwnedText(owned) : FormatAmount(owned)),
+                   tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : textColor);
         }
 
         noConsumablesLabel.gameObject.SetActive(shown == 0);
