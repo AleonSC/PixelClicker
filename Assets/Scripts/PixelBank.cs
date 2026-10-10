@@ -73,6 +73,10 @@ public class PixelBank : MonoBehaviour
     [Tooltip("How many pieces the hose is drawn from (more = smoother bends).")]
     [SerializeField] private int hoseSegments = 28;
 
+    [Min(0f)]
+    [Tooltip("How far (world units) the hose carries on beyond the screen edge, so its shadow doesn't suddenly appear in view. 0 = the coded default (14).")]
+    [SerializeField] private float hoseOffscreenExtra = 0f;
+
     [Range(3, 16)]
     [Tooltip("How many sides the round hose has.")]
     [SerializeField] private int hoseSides = 10;
@@ -521,7 +525,7 @@ public class PixelBank : MonoBehaviour
         hoseFilter = tube.GetComponent<MeshFilter>();
         Material hoseMat = clicker.CreateVisualMaterial(hoseColor, false);
         if (hoseMat != null) tube.GetComponent<MeshRenderer>().sharedMaterial = hoseMat;
-        hosePoints = new Vector3[hoseSegments + 1];
+        hosePoints = new Vector3[hoseSegments * 2 + 1]; // twice as many points: the hose now also covers a long stretch off screen
 
         BuildNozzle();
 
@@ -599,6 +603,7 @@ public class PixelBank : MonoBehaviour
         nozzle = root.transform;
 
         // Cylinder primitives are 2 tall: y scale = half the height.
+        Part("Swivel Ball", PrimitiveType.Sphere, nozzle, new Vector3(0f, -0.95f * L, 0f), Vector3.one * (2.35f * R), CollarColor); // the hose ends in here, so any angle looks connected
         Part("Collar", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.9f * L, 0f), new Vector3(2.1f * R, 0.1f * L, 2.1f * R), CollarColor);
         Part("Collar Ring", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.77f * L, 0f), new Vector3(2.45f * R, 0.035f * L, 2.45f * R), AccentColor);
         Part("Body", PrimitiveType.Cylinder, nozzle, new Vector3(0f, -0.46f * L, 0f), new Vector3(2f * R, 0.29f * L, 2f * R), nozzleColor);
@@ -619,12 +624,12 @@ public class PixelBank : MonoBehaviour
                 Part("Glass Edge", PrimitiveType.Cube, glassCube, new Vector3(sx * 0.5f, 0f, sz * 0.5f), new Vector3(bar / g, 1.02f, bar / g), CollarColor);
 
         // The count plate (on the camera side; UpdateNozzle flips it to whichever side faces the camera).
-        counterPlate = Part("Counter Plate", PrimitiveType.Cube, nozzle, new Vector3(0f, -0.46f * L, 0f), new Vector3(0.28f, 0.16f, 0.025f), DarkColor);
+        counterPlate = Part("Counter Plate", PrimitiveType.Cube, nozzle, new Vector3(0f, -0.46f * L, 0f), new Vector3(0.3f, 0.2f, 0.025f), DarkColor);
         GameObject textObject = new GameObject("Counter Text");
         textObject.transform.SetParent(counterPlate, false);
         textObject.transform.localPosition = new Vector3(0f, 0f, -0.52f);
         counterText = textObject.AddComponent<TextMeshPro>();
-        counterText.fontSize = 4f;
+        counterText.fontSize = 7f;
         counterText.fontStyle = FontStyles.Bold;
         counterText.alignment = TextAlignmentOptions.Center;
         counterText.color = new Color(0.55f, 1f, 0.65f, 1f);
@@ -633,7 +638,7 @@ public class PixelBank : MonoBehaviour
         counterText.enableAutoSizing = false;
         if (clicker.UIFont != null) counterText.font = clicker.UIFont;
         // The text is scaled with the plate (a child), so undo the plate's squash.
-        textObject.transform.localScale = new Vector3(1f / 0.28f, 1f / 0.16f, 1f / 0.025f) * 0.2f;
+        textObject.transform.localScale = new Vector3(1f / 0.3f, 1f / 0.2f, 1f / 0.025f) * 0.2f;
     }
 
     private void UpdateHose()
@@ -674,32 +679,40 @@ public class PixelBank : MonoBehaviour
             flickDirection = tipVelocity.normalized;
         }
 
-        // The hose ends where the nozzle's back end is, so the nozzle's mouth sits right at the cursor.
-        Vector3 hoseEnd = tip - aimDirection * (nozzleLength * 0.9f);
-
         // The hose's middle trails the ends and sags, so it bends and swings as the mouse moves.
         Vector3 wantedControl = (anchor + tip) * 0.5f - cam.transform.up * ((tip - anchor).magnitude * sag);
         if (!controlReady) { control = wantedControl; controlReady = true; }
         control = Vector3.Lerp(control, wantedControl, 1f - Mathf.Exp(-followSharpness * dt));
 
+        // The nozzle's aim: along the way the hose comes in (independent of where the hose end is, so it can't feed back into itself),
+        // or the way you flicked the mouse for a moment. It swings smoothly to its new aim.
+        Vector3 hoseHeading = tip - control;
+        if (hoseHeading.sqrMagnitude < 0.0001f) hoseHeading = cam.transform.right;
+        bool flicked = flickAim && Time.unscaledTime - lastFlickTime < flickHoldSeconds;
+        Vector3 wantedAim = flicked ? flickDirection : hoseHeading.normalized;
+        aimDirection = Vector3.Slerp(aimDirection, wantedAim, 1f - Mathf.Exp(-aimSharpness * dt)).normalized;
+        Vector3 heading = aimDirection; // the nozzle and the spat-out pixels follow the aim
+
+        // The hose ends inside the nozzle's swivel ball at its back, and arrives along the nozzle's own axis, so it never pokes through
+        // the nozzle whatever way it is aimed (the end of the curve bends round to meet it).
+        Vector3 hoseEnd = tip - heading * (nozzleLength * 0.93f);
+        float arm = Mathf.Clamp((tip - anchor).magnitude * 0.3f, 0.35f, 2.2f);
+        Vector3 endHandle = hoseEnd - heading * arm;
+
+        // The hose starts far beyond the screen edge, so its shadow never pops into view.
+        float extra = hoseOffscreenExtra > 0f ? hoseOffscreenExtra : 14f;
+        Vector3 start = anchor - cam.transform.right * extra;
+
         int segments = hosePoints.Length - 1;
         for (int i = 0; i <= segments; i++)
         {
-            float t = i / (float)segments;
-            hosePoints[i] = (1f - t) * (1f - t) * anchor + 2f * (1f - t) * t * control + t * t * hoseEnd;
+            float t = i / (float)segments, u = 1f - t;
+            hosePoints[i] = u * u * u * start + 3f * u * u * t * control + 3f * u * t * t * endHandle + t * t * t * hoseEnd;
         }
         hoseMesh = PixelTube.Build(hosePoints, hoseRadius, hoseSides, hoseMesh);
         hoseFilter.sharedMesh = hoseMesh;
 
-        // Nozzle: a short cylinder along the end of the hose; its open end is where pixels come out.
-        Vector3 heading = (hosePoints[segments] - hosePoints[segments - 2]).normalized;
-        if (heading.sqrMagnitude < 0.0001f) heading = cam.transform.right;
-        bool flicked = flickAim && Time.unscaledTime - lastFlickTime < flickHoldSeconds;
-        Vector3 wantedAim = flicked ? flickDirection : heading;
-        aimDirection = Vector3.Slerp(aimDirection, wantedAim, 1f - Mathf.Exp(-aimSharpness * dt)).normalized;
-        heading = aimDirection; // the nozzle and the spat-out pixels follow the aim
         kick = Mathf.MoveTowards(kick, 0f, dt * 4f);
-        float punch = 1f + kick * 0.35f;
         PlaceNozzle(cam, tip, heading, 1f + kick * 0.15f);
         mouthPosition = tip + heading * 0.05f;
         mouthDirection = heading;
