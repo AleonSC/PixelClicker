@@ -983,7 +983,13 @@ public class PixelPauseMenu : MonoBehaviour
         label.alignment = TextAlignmentOptions.MidlineLeft;
         label.enableAutoSizing = true;
         label.fontSizeMax = rowFontSize;
-        label.fontSizeMin = 14f;
+        label.fontSizeMin = 10f;
+        label.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        label.textWrappingMode = TextWrappingModes.NoWrap;   // ONE line: a long name shrinks to fit instead of wrapping
+#else
+        label.enableWordWrapping = false;
+#endif
         RectTransform lr = label.rectTransform;
         lr.anchorMin = Vector2.zero;
         lr.anchorMax = new Vector2(0.62f, 1f);
@@ -1012,7 +1018,9 @@ public class PixelPauseMenu : MonoBehaviour
 
     private Toggle AddToggleRow(Transform parent, string label, bool isOn, UnityEngine.Events.UnityAction<bool> onChanged, ref float y)
     {
-        AddRowLabel(parent, label, y, out RectTransform row);
+        TMP_Text toggleLabel = AddRowLabel(parent, label, y, out RectTransform row);
+        toggleLabel.rectTransform.anchorMax = Vector2.one;                                   // the name may run right up to the tick box
+        toggleLabel.rectTransform.offsetMax = new Vector2(-(tickBoxSize + 14f), 0f);
 
         GameObject box = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
         box.transform.SetParent(row, false);
