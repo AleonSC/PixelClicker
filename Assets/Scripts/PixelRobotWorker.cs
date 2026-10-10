@@ -203,6 +203,12 @@ public class PixelRobotWorker : MonoBehaviour
         return spot;
     }
 
+    /// <summary>The nearest of the four world axes (+X, -X, +Z, -Z) to a flat direction.</summary>
+    private static Vector3 Cardinal(Vector3 v)
+    {
+        return Mathf.Abs(v.x) > Mathf.Abs(v.z) ? new Vector3(Mathf.Sign(v.x), 0f, 0f) : new Vector3(0f, 0f, v.z < 0f ? -1f : 1f);
+    }
+
     private bool HasJob => jobDevice >= 0 && jobDevice < consumables.DeviceCount;
 
     private bool AtPost()
@@ -244,7 +250,15 @@ public class PixelRobotWorker : MonoBehaviour
 
         Camera cam = Cam;
         Vector3 toCam = cam != null ? cam.transform.position - root.transform.position : Vector3.back; toCam.y = 0f;
+        if (cam != null)
+        {
+            // The way the camera "faces back at him": for a tilted camera the reverse of its heading, for a top-down one the bottom of the screen.
+            Vector3 f = -cam.transform.forward; f.y = 0f;
+            if (f.magnitude < 0.3f) { f = -cam.transform.up; f.y = 0f; }
+            if (f.sqrMagnitude > 0.0001f) toCam = f;
+        }
         if (toCam.sqrMagnitude < 0.0001f) toCam = Vector3.back;
+        if (cellSize > 0f) toCam = Cardinal(toCam);   // on a tiled floor he and his pad line up with the tile edges
         stationRoot.rotation = Quaternion.LookRotation(-toCam.normalized, Vector3.up);
 
         // Walk.
@@ -259,8 +273,9 @@ public class PixelRobotWorker : MonoBehaviour
             Vector3 pos = root.transform.position + flat.normalized * Mathf.Min(step, dist);
             pos.y = Mathf.Lerp(pos.y, target.y, 0.2f);
             root.transform.position = pos;
-            faceDir = flat.normalized;
+            faceDir = cellSize > 0f ? Cardinal(flat) : flat.normalized;
         }
+        else if (cellSize > 0f) faceDir = toCam;   // square to the tiles
         else
         {
             // Standing: face the camera, turned a little towards the cube.
