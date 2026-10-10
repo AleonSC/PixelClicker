@@ -680,20 +680,16 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float seedWaterReach = 5f;
 
     [Min(0f)]
-    [Tooltip("Extra growth speed (sowing speed for the Seed pet) while watered (3 = four times as fast).")]
-    [SerializeField] private float seedWaterRate = 3f;
+    [Tooltip("Seconds of growth (sowing time for the Seed pet) a Water pixel's splash adds at once to every growing sprout / planted Seed pet within reach.")]
+    [SerializeField] private float seedWaterGrowSeconds = 1.5f;
 
     [Min(0f)]
-    [Tooltip("Seconds of 'wet' (fast growth) each splash adds. Splashes add up to the maximum below.")]
-    [SerializeField] private float seedWaterWetSeconds = 6f;
+    [Tooltip("Each sprout / Seed pet accepts water at most this often (seconds), so a Sorter or auto clicker streaming Water pixels can't make growth instant. 1.5 s of growth per 0.75 s = about double speed at most.")]
+    [SerializeField] private float seedWaterCooldown = 0.75f;
 
     [Min(0f)]
-    [Tooltip("The most 'wet' seconds a sprout / Seed pet can store.")]
-    [SerializeField] private float seedWaterWetMax = 30f;
-
-    [Min(0f)]
-    [Tooltip("Seconds of growth a splash gives a growing sprout at once, on top of the wet boost.")]
-    [SerializeField] private float seedWaterInstantSeconds = 0.6f;
+    [Tooltip("How long (seconds) a sprout / Seed pet stays 'sun soaked' (Solar speed-up) after an old Solar pixel was last close to it.")]
+    [SerializeField] private float seedSunSoakSeconds = 8f;
 
     [Range(0f, 1f)]
     [Tooltip("Chance that a sprout grows a Singularity pixel (when that type is unlocked) instead of a normal random type. Singularity is left out of the normal rarity roll.")]
@@ -1908,15 +1904,18 @@ public class PixelClicker : MonoBehaviour
         return Mathf.Min(seedSolarBoostMax, near * seedSolarBoostEach);
     }
 
-    /// <summary>Extra growth / sowing speed a watered sprout or Seed pet gets while it is wet.</summary>
-    public float SeedWaterRate => seedWaterRate;
+    /// <summary>How long a sprout / Seed pet stays sun soaked after old Solar pixels were last near it.</summary>
+    public float SeedSunSoakSeconds => seedSunSoakSeconds;
 
-    /// <summary>A Water pixel splashed at 'point': every growing sprout and the Seed pet within reach is watered (fast growth for a while, plus a small instant jump).</summary>
+    /// <summary>Minimum seconds between two waterings of the same sprout / Seed pet.</summary>
+    public float SeedWaterCooldown => seedWaterCooldown;
+
+    /// <summary>A Water pixel splashed at 'point': every growing sprout and the Seed pet within reach gets an instant bit of growth (rate-limited per target).</summary>
     public void WaterSplashAt(Vector3 point)
     {
         float reach = OldPixelWorldSize * seedWaterReach;
-        SeedSprout.WaterAll(point, reach, seedWaterWetSeconds, seedWaterWetMax, seedWaterInstantSeconds);
-        PixelPets.WaterPets(point, reach, seedWaterWetSeconds, seedWaterWetMax);
+        SeedSprout.WaterAll(point, reach, seedWaterGrowSeconds, seedWaterCooldown);
+        PixelPets.WaterPets(point, reach, seedWaterGrowSeconds, seedWaterCooldown);
     }
 
     /// <summary>What one harvest of this pixel type would pay now (a random payout rolled for random-payout types, with the Value / Ultra multipliers).</summary>

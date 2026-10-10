@@ -30,19 +30,21 @@ public class SeedSprout : MonoBehaviour
     private float yaw;
 
     private static readonly Color GlowGreen = new Color(0.45f, 1f, 0.4f, 1f), GlowSun = new Color(1f, 0.85f, 0.3f, 1f), GlowWater = new Color(0.35f, 0.75f, 1f, 1f);
-    private float solarPart, wetLeft;
+    private float solarPart, sunLeft, waterCool, wetFlash;
 
     private static readonly System.Collections.Generic.List<SeedSprout> all = new System.Collections.Generic.List<SeedSprout>();
 
-    /// <summary>Waters every sprout within 'reach' of 'point': it grows fast while wet, and a growing one also jumps ahead a little.</summary>
-    public static void WaterAll(Vector3 point, float reach, float wetSeconds, float wetMax, float instantSeconds)
+    /// <summary>Waters every growing sprout within 'reach' of 'point': it jumps ahead 'growSeconds' at once, but each sprout takes water only every 'cooldown' seconds.</summary>
+    public static void WaterAll(Vector3 point, float reach, float growSeconds, float cooldown)
     {
         float reachSqr = reach * reach;
         foreach (SeedSprout s in all)
         {
             if (s == null || (s.transform.position - point).sqrMagnitude > reachSqr) continue;
-            s.wetLeft = Mathf.Min(wetMax, s.wetLeft + wetSeconds);
-            if (s.stage == Stage.Growing) s.stageTime += instantSeconds;
+            if (s.stage != Stage.Growing || s.waterCool > 0f) continue;
+            s.waterCool = cooldown;
+            s.wetFlash = 0.5f;
+            s.stageTime += growSeconds;
         }
     }
 
@@ -105,9 +107,16 @@ public class SeedSprout : MonoBehaviour
             case Stage.Growing:
             {
                 solarTimer -= Time.deltaTime;
-                if (solarTimer <= 0f) { solarTimer = 0.3f; solarPart = clicker.SolarSeedBoostAt(transform.position); }
-                if (wetLeft > 0f) wetLeft -= Time.deltaTime;
-                boost = solarPart + (wetLeft > 0f ? clicker.SeedWaterRate : 0f); // Solar pixels nearby and splashes of water speed it up
+                if (solarTimer <= 0f)
+                {
+                    solarTimer = 0.3f;
+                    float sun = clicker.SolarSeedBoostAt(transform.position);
+                    if (sun > 0f) { solarPart = sun; sunLeft = clicker.SeedSunSoakSeconds; } // old Solar pixels close by: sun soaked
+                }
+                if (sunLeft > 0f) sunLeft -= Time.deltaTime; else solarPart = 0f;
+                if (waterCool > 0f) waterCool -= Time.deltaTime;
+                if (wetFlash > 0f) wetFlash -= Time.deltaTime;
+                boost = solarPart; // sun soaked sprouts grow faster (water gives instant progress instead)
                 stageTime += Time.deltaTime * (1f + boost);
                 float k = Mathf.Clamp01(stageTime / growSeconds);
                 float ease = k * k * (3f - 2f * k);
@@ -159,7 +168,7 @@ public class SeedSprout : MonoBehaviour
         }
         if (glow != null)
         {
-            glow.color = Color.Lerp(Color.Lerp(GlowGreen, GlowSun, Mathf.Clamp01(solarPart / 1.5f)), GlowWater, wetLeft > 0f ? 0.85f : 0f); // sun = yellow, wet = blue
+            glow.color = Color.Lerp(Color.Lerp(GlowGreen, GlowSun, Mathf.Clamp01(solarPart / 1.5f)), GlowWater, wetFlash > 0f ? 0.85f : 0f); // sun = yellow, a fresh splash flashes blue
             glow.intensity = (0.8f + 0.25f * Mathf.Sin(t * 5f)) * (1f + boost * 0.6f);
         }
     }

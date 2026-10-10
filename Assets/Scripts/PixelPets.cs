@@ -249,7 +249,8 @@ public partial class PixelPets : MonoBehaviour
         public bool planter => type == PixelClicker.PixelType.Seed; // the Seed pet plants itself and sows seeds
         public bool planted;
         public float seedTimer;
-        public float wet;           // Seed pet: seconds of "watered" left (a Water pixel splashed nearby): it sows faster
+        public float wet;           // Seed pet: seconds until it accepts water again (rate limit)
+        public float sunLeft, sunBoost; // Seed pet: "sun soaked" seconds left after Solar pixels were near, and the boost it gave
         public float born;          // Time.time when the body was built (a Seed pet never plants in its first moments)
         public GameObject mound;
         public PixelClicker.PixelType type;
@@ -862,7 +863,10 @@ public partial class PixelPets : MonoBehaviour
         // Planted: sow a seed every so often (only while nothing holds or hovers it).
         if (stopped) return;
         if (p.wet > 0f) p.wet -= Time.deltaTime;
-        float growBoost = clicker.SolarSeedBoostAt(p.body.transform.position) + (p.wet > 0f ? clicker.SeedWaterRate : 0f); // Solar pixels nearby and splashes of water make it sow faster
+        float sun = clicker.SolarSeedBoostAt(p.body.transform.position);
+        if (sun > 0f) { p.sunBoost = sun; p.sunLeft = clicker.SeedSunSoakSeconds; }
+        if (p.sunLeft > 0f) p.sunLeft -= Time.deltaTime; else p.sunBoost = 0f;
+        float growBoost = p.sunBoost; // sun soaked pets sow faster (water gives instant progress instead)
         p.seedTimer -= Time.deltaTime * Hyper * (1f + growBoost);
         if (p.seedTimer > 0f) return;
         p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y), Mathf.Max(seedPetInterval.x, seedPetInterval.y));
@@ -870,14 +874,16 @@ public partial class PixelPets : MonoBehaviour
     }
 
     /// <summary>A Water pixel splashed at 'point': every planted Seed pet within 'reach' is watered (sows faster for a while).</summary>
-    public static void WaterPets(Vector3 point, float reach, float wetSeconds, float wetMax)
+    public static void WaterPets(Vector3 point, float reach, float growSeconds, float cooldown)
     {
         if (Instance == null) return;
         foreach (Pet p in Instance.pets)
         {
             if (!p.planter || !p.planted || p.body == null) continue;
             if ((p.body.transform.position - point).sqrMagnitude > reach * reach) continue;
-            p.wet = Mathf.Min(wetMax, p.wet + wetSeconds);
+            if (p.wet > 0f) continue;
+            p.wet = cooldown;
+            p.seedTimer -= growSeconds;
         }
     }
 
