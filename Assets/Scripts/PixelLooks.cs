@@ -94,6 +94,12 @@ public class PixelLook
     [Tooltip("Circle radius as a fraction of the cube's width (0.5 = touches the edges).")]
     public float faceCircleRadius = 0.3f;
 
+    [Tooltip("Face circles only: draw each disc as a little vortex - black in the middle, a glowing ring in 'Face Ring Colour' around its edge that fades outwards - instead of a plain flat disc.")]
+    public bool faceRing = false;
+
+    [Tooltip("Colour of the glowing ring round each face circle ('Face Ring').")]
+    public Color faceRingColor = new Color(0.7f, 0.35f, 1f, 1f);
+
     [Header("Wobble (jelly)")]
     [Tooltip("The cube squashes and stretches like jelly (the live pixel and its falling copies).")]
     public bool wobble = false;
@@ -265,7 +271,8 @@ public static class PixelLooks
 
             // Vacuum: a dark purple see-through block with a black circle on every face.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
-                            forceTranslucent = true, smoothness = 0.95f, metallic = 0f, faceCircles = true },
+                            forceTranslucent = true, smoothness = 0.95f, metallic = 0f, emission = 0.25f, faceCircles = true, faceRing = true, faceCircleRadius = 0.27f,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.35f, 0.95f, 1f), outlineBevel = true, outlineThickness = 0.04f, outlineShade = 0.55f, outlineStrength = 0.7f },
 
             // Glass: very see-through, a faint edge so it can still be seen, shatters on the ground.
             new PixelLook { type = PixelClicker.PixelType.Glass, alpha = 0.4f, smoothness = 1f, metallic = 0f,
@@ -557,7 +564,7 @@ public static class PixelLooks
             circles.transform.SetParent(root.transform, false);
             circles.transform.localPosition = centre;
             circles.layer = root.layer;
-            circles.GetComponent<MeshFilter>().sharedMesh = CircleMesh(size, look.faceCircleRadius, look.faceCircleColor);
+            circles.GetComponent<MeshFilter>().sharedMesh = look.faceRing ? VortexMesh(size, look.faceCircleRadius, look.faceCircleColor, look.faceRingColor) : CircleMesh(size, look.faceCircleRadius, look.faceCircleColor);
             MeshRenderer cr = circles.GetComponent<MeshRenderer>();
             cr.sharedMaterial = OverlayMaterial(); // drawn after the (translucent) pixel, so the circles stay solid black
             cr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -1124,6 +1131,81 @@ public static class PixelLooks
         mesh.SetTriangles(tri, 0);
         mesh.RecalculateBounds();
         circleMeshes[key] = mesh;
+        return mesh;
+    }
+
+    private static readonly Dictionary<int, Mesh> vortexMeshes = new Dictionary<int, Mesh>();
+
+    /// <summary>Six vortex marks (one per face): a dark centre fading through a glowing ring that softly fades out past the disc's edge.</summary>
+    private static Mesh VortexMesh(Vector3 size, float radiusFraction, Color centre, Color ring)
+    {
+        int key = unchecked(size.GetHashCode() * 31 + radiusFraction.GetHashCode() * 17 + centre.GetHashCode() * 13 + ring.GetHashCode() * 7);
+        if (vortexMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
+
+        const int Segments = 40;
+        // radius factor (of the disc radius) and colour of each ring of vertices, from the middle out
+        float[] rr = { 0f, 0.55f, 0.88f, 1f, 1.22f, 1.4f };
+        Color[] cc =
+        {
+            centre,
+            centre,
+            Color.Lerp(centre, ring, 0.25f),
+            new Color(ring.r, ring.g, ring.b, 0.95f),
+            new Color(ring.r, ring.g, ring.b, 0.35f),
+            new Color(ring.r, ring.g, ring.b, 0f),
+        };
+        float gap = Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.004f;
+        List<Vector3> v = new List<Vector3>();
+        List<Color> col = new List<Color>();
+        List<int> tri = new List<int>();
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            int a = (axis + 1) % 3, b = (axis + 2) % 3;
+            float radius = Mathf.Min(size[a], size[b]) * radiusFraction;
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+                Vector3 mid = Vector3.zero;
+                mid[axis] = sign * (size[axis] * 0.5f + gap);
+                int start = v.Count;
+                for (int r = 0; r < rr.Length; r++)
+                {
+                    int count = r == 0 ? 1 : Segments;
+                    for (int i = 0; i < count; i++)
+                    {
+                        float ang = i * Mathf.PI * 2f / Segments;
+                        Vector3 p = mid;
+                        p[a] += Mathf.Cos(ang) * radius * rr[r];
+                        p[b] += Mathf.Sin(ang) * radius * rr[r];
+                        v.Add(p); col.Add(cc[r]);
+                    }
+                }
+                for (int i = 0; i < Segments; i++)
+                {
+                    int n = (i + 1) % Segments;
+                    int first = start + 1;
+                    // fan from the centre to ring 1
+                    tri.Add(start); tri.Add(first + i); tri.Add(first + n);
+                    tri.Add(start); tri.Add(first + n); tri.Add(first + i);
+                    // strips between the following rings
+                    for (int r = 1; r < rr.Length - 1; r++)
+                    {
+                        int inner = start + 1 + (r - 1) * Segments, outer = inner + Segments;
+                        tri.Add(inner + i); tri.Add(outer + i); tri.Add(outer + n);
+                        tri.Add(inner + i); tri.Add(outer + n); tri.Add(inner + n);
+                        tri.Add(inner + i); tri.Add(outer + n); tri.Add(outer + i);
+                        tri.Add(inner + i); tri.Add(inner + n); tri.Add(outer + n);
+                    }
+                }
+            }
+        }
+
+        Mesh mesh = new Mesh { name = "FaceVortex" };
+        mesh.SetVertices(v);
+        mesh.SetColors(col);
+        mesh.SetTriangles(tri, 0);
+        mesh.RecalculateBounds();
+        vortexMeshes[key] = mesh;
         return mesh;
     }
 

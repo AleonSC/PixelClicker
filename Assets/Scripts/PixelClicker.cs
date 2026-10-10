@@ -298,7 +298,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1214,6 +1214,27 @@ public class PixelClicker : MonoBehaviour
                 saved.emission = def.emission;
             }
             looksVersion = 21;
+        }
+        if (looksVersion < 22)
+        {
+            // The Vacuum pixel got vortex face marks (a glowing ring round each black disc), a violet bevel rim and a faint inner glow.
+            PixelLook defV = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Vacuum);
+            PixelLook savedV = PixelLooks.Find(looks, PixelType.Vacuum);
+            if (defV != null && savedV != null && savedV.faceCircles && !savedV.faceRing && !savedV.outline)
+            {
+                savedV.faceRing = true;
+                savedV.faceRingColor = defV.faceRingColor;
+                savedV.faceCircleRadius = defV.faceCircleRadius;
+                savedV.emission = Mathf.Max(savedV.emission, defV.emission);
+                savedV.outline = true;
+                savedV.outlineUsesTierColor = false;
+                savedV.outlineColor = defV.outlineColor;
+                savedV.outlineBevel = true;
+                savedV.outlineThickness = defV.outlineThickness;
+                savedV.outlineShade = defV.outlineShade;
+                savedV.outlineStrength = defV.outlineStrength;
+            }
+            looksVersion = 22;
         }
 
         if (pixelRenderer != null)
