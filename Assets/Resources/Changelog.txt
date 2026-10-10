@@ -278,3 +278,4 @@
 [2026-10-10 09:52 UTC] Removed seven unused fields that caused CS0414 compiler warnings in the Unity console.
 [2026-10-10 09:55 UTC] The Vacuum pixel looks better: each black face circle is now a vortex with a glowing violet ring, plus a violet bevelled rim and a faint inner glow.
 [2026-10-10 09:57 UTC] Pixel rims are smoother: a flat mitred rim on each face that fades inwards, instead of chunky overlapping bars that stuck out at the corners.
+[2026-10-10 10:04 UTC] The vacuum swirl is gentler: 0.6 turns by default (was 1.5), nearby pixels curve even less, and the tumble is slower.

@@ -464,7 +464,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private bool disableVacuumSwirl = false;
 
     [Min(0f)]
-    [Tooltip("How many times a sucked-up pixel circles the Vacuum pixel on its way in. 0 = the coded default (1.5).")]
+    [Tooltip("How many times a sucked-up pixel circles the Vacuum pixel on its way in. 0 = the coded default (0.6). Pixels far from the Vacuum pixel get the full amount, nearby ones less.")]
     [SerializeField] private float vacuumSwirlTurns = 0f;
 
     [Tooltip("The old Vacuum pixel that drops after a vacuum click shows the pixels it sucked up as very small versions floating inside it.")]
@@ -3075,7 +3075,9 @@ public class PixelClicker : MonoBehaviour
         Vector2 startFlat = new Vector2(startOffset.x, startOffset.z);
         float startRadius = startFlat.magnitude;
         float startAngle = Mathf.Atan2(startOffset.z, startOffset.x);
-        float turns = vacuumSwirlTurns > 0f ? vacuumSwirlTurns : 1.5f;
+        // Far pixels curve the most, nearby ones barely curve, so a big cleanup is a gentle sweep rather than a washing machine.
+        float turns = vacuumSwirlTurns > 0f ? vacuumSwirlTurns : 0.6f;
+        turns *= Mathf.Clamp01(startRadius / (PixelBaseSize * 8f) + 0.2f);
         float spinDirection = UnityEngine.Random.value < 0.5f ? -1f : 1f; // some go round the other way for a busier look
         bool swirl = !disableVacuumSwirl && startRadius > 0.05f;
 
@@ -3094,7 +3096,7 @@ public class PixelClicker : MonoBehaviour
                 t.position = new Vector3(endPos.x + Mathf.Cos(angle) * radius,
                                          Mathf.Lerp(startPos.y, endPos.y, eased),
                                          endPos.z + Mathf.Sin(angle) * radius);
-                t.Rotate(0f, spinDirection * 540f * Time.deltaTime, 0f, Space.World); // tumbles as it goes round
+                t.Rotate(0f, spinDirection * 240f * Time.deltaTime, 0f, Space.World); // a lazy tumble as it goes round
             }
             else t.position = Vector3.Lerp(startPos, endPos, eased);
             t.localScale = startScale * (1f - eased);
