@@ -38,8 +38,8 @@ public class PixelViewBounds : MonoBehaviour
     [SerializeField] private float inset = 0f;
 
     [Min(0f)]
-    [Tooltip("Extra room (world units) between a pixel's centre and an edge, so the whole pixel stays on screen.")]
-    [SerializeField] private float edgeMargin = 0.15f;
+    [Tooltip("Extra room (world units) on top of the pixel's own size between it and an edge. The border is worked out from each pixel's real size and rotation, so a pixel's outer edge touches the screen edge exactly with 0 here.")]
+    [SerializeField] private float extraEdgeMargin = 0f;
 
     [Min(0f)]
     [Tooltip("Pixels can't come closer to the camera than this (world units). 0 = no limit.")]
@@ -58,7 +58,8 @@ public class PixelViewBounds : MonoBehaviour
     private readonly bool[] used = new bool[5];
 
     // Planes only change when the camera or the bars do; infos are looked up once per old pixel.
-    private readonly Dictionary<Rigidbody, OldPixelInfo> infoCache = new Dictionary<Rigidbody, OldPixelInfo>();
+    private struct Entry { public OldPixelInfo info; public BoxCollider box; }
+    private readonly Dictionary<Rigidbody, Entry> infoCache = new Dictionary<Rigidbody, Entry>();
     private Vector3 planesPosition, planesForward;
     private float planesFov = -1f, planesAspect, planesBars = -1f;
     private int planesWidth, planesHeight;
@@ -104,11 +105,12 @@ public class PixelViewBounds : MonoBehaviour
             Rigidbody body = pixels[i];
             if (body == null || body.isKinematic) continue;
 
-            if (!infoCache.TryGetValue(body, out OldPixelInfo info))
+            if (!infoCache.TryGetValue(body, out Entry entry))
             {
-                info = body.GetComponent<OldPixelInfo>();
-                infoCache[body] = info;
+                entry = new Entry { info = body.GetComponent<OldPixelInfo>(), box = body.GetComponent<BoxCollider>() };
+                infoCache[body] = entry;
             }
+            OldPixelInfo info = entry.info;
             if (info != null && info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length &&
                 (clicker.IsFlyingPixel(body) || clicker.IgnoresViewBounds(info.tierIndex))) continue;
 
@@ -116,14 +118,25 @@ public class PixelViewBounds : MonoBehaviour
             Vector3 velocity = GetVelocity(body);
             bool changed = false;
 
+            // The pixel's half size along each of its own axes (it swells, shrinks and tumbles, so this is read every step).
+            Transform tr = body.transform;
+            Vector3 lossy = tr.lossyScale;
+            Vector3 half = entry.box != null
+                ? Vector3.Scale(entry.box.size, new Vector3(Mathf.Abs(lossy.x), Mathf.Abs(lossy.y), Mathf.Abs(lossy.z))) * 0.5f
+                : Vector3.one * (Mathf.Max(Mathf.Abs(lossy.x), Mathf.Max(Mathf.Abs(lossy.y), Mathf.Abs(lossy.z))) * 0.5f);
+
             for (int p = 0; p < planes.Length; p++)
             {
                 if (!used[p]) continue;
                 float distance = planes[p].GetDistanceToPoint(position);
-                if (distance >= edgeMargin) continue;
-
                 Vector3 normal = planes[p].normal; // points into the view
-                position += normal * (edgeMargin - distance);
+                // How far a box of this size and rotation reaches towards the edge from its centre (exact for a box), so the pixel's
+                // outer surface - not its centre - is what meets the edge of the view.
+                float reach = Mathf.Abs(Vector3.Dot(normal, tr.right)) * half.x + Mathf.Abs(Vector3.Dot(normal, tr.up)) * half.y
+                            + Mathf.Abs(Vector3.Dot(normal, tr.forward)) * half.z + extraEdgeMargin;
+                if (distance >= reach) continue;
+
+                position += normal * (reach - distance);
 
                 float into = Vector3.Dot(velocity, normal);
                 if (into < 0f)
