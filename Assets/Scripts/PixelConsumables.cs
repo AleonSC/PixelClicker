@@ -1165,8 +1165,8 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>True while the dev tools' "Infinite resources" is on: every consumable counts as plentiful and using one costs nothing.</summary>
     private static bool Inf => PixelClicker.InfiniteResources;
 
-    /// <summary>How an owned count is shown: 'Unlimited' under Infinite resources (the dev tools' 99999), else the number.</summary>
-    public static string OwnedText(int owned) => PixelClicker.InfiniteResources && owned >= 99999 ? "Unlimited" : owned.ToString();
+    /// <summary>How an owned count is shown: an infinity sign under Infinite resources (the dev tools' 99999), else the number.</summary>
+    public static string OwnedText(int owned) => PixelClicker.InfiniteResources && owned >= 99999 ? "\u221E" : owned.ToString();
 
     public int ItemOwned(int item) => Inf ? 99999 : IsDevice(item) ? devices[item - potions.Length].owned : potions[item].owned;
 

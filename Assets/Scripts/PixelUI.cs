@@ -1534,7 +1534,7 @@ public class PixelUI : MonoBehaviour
             shown++;
 
             int tierIndex = clicker.IndexOf(consumables.ItemRequiredType(i));
-            SetRow(potionLabels[i], consumables.ItemName(i), "x" + (owned >= 99999 ? PixelConsumables.OwnedText(owned) : FormatAmount(owned)),
+            SetRow(potionLabels[i], consumables.ItemName(i), owned >= 99999 ? PixelConsumables.OwnedText(owned) : "x" + FormatAmount(owned),
                    tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : RowTextColor);
         }
 

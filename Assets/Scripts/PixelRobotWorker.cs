@@ -931,7 +931,7 @@ public class PixelRobotWorker : MonoBehaviour
                 PixelConsumables.Device d = consumables.GetDevice(i);
                 if (!PixelConsumables.IsPlaceableKind(d.kind) || !consumables.OperationListed(d.kind)) continue;
                 int index = i, owned = consumables.DeviceOwned(i);
-                AddRow(content, y, rowH, d.displayName, owned >= 99999 ? "Unlimited" : "x" + owned, owned > 0 ? dim : bad, !bankJob && i == jobDevice, () => ChooseDevice(index));
+                AddRow(content, y, rowH, d.displayName, owned >= 99999 ? PixelConsumables.OwnedText(owned) : "x" + owned, owned > 0 ? dim : bad, !bankJob && i == jobDevice, () => ChooseDevice(index));
                 y += rowH + gap;
             }
             if (bankSys != null && bankSys.Active)

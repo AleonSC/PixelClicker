@@ -344,3 +344,4 @@
 [2026-10-10 15:27 UTC] The Log now has only Achievements and Goals; click counts per pixel moved to Settings > Stats ('Clicks per pixel', with a gold +N beside a count while clicks come in, e.g. from the auto clicker). The Inventory rows are readable (swatch, plain name, right-aligned amount, no 'Pixels' suffix, nearly solid background, one fixed window size) and dev 'infinite' counts read 'Unlimited'. The vendor windows use the new rounded window frame.
 [2026-10-10 15:29 UTC] Inventory row text now always uses its own light colour (it could vanish when the scene's text colour was dark) and the colour swatches are bigger.
 [2026-10-10 15:31 UTC] Vendor rows are less cluttered: the vendor's stock is a gold label at the top right, what you already own is a dim 'You own N' at the bottom right, and the cap number is gone.
+[2026-10-10 15:32 UTC] Infinite-resources counts now show an infinity sign instead of the word 'Unlimited' (it overlapped the names).
