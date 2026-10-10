@@ -388,6 +388,35 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Seed Pixel pack (Pixels tab): an early unlock listed before Electric, needs the RGB pack. Old Seed pixels grow bigger and worth more.</summary>
+    private static ShopPack CreateSeedPixelPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Seed Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Seed pixel: a brown cube with a sprout. Old Seed pixels slowly grow bigger and worth several times more; collect them with a vacuum, the hose or a click once they are ripe.",
+            requirements = Needs(requiresRgbIndex),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Red,   amount = 4000 },
+                new PackCost { type = PixelClicker.PixelType.Green, amount = 4000 },
+                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 4000 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Seed, displayName = "Seed Pixels",
+                    color = new Color(0.55f, 0.38f, 0.18f, 1f),
+                    amountPerClick = 2,
+                    spawnWeight = 0.3f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Mirror Pixel pack (Pixels tab): listed after Electric and before Vacuum, needs the Electric pack. Clicking a Mirror also counts as a click on the last other pixel type.</summary>
     private static ShopPack CreateMirrorPixelPack(int requiresElectricIndex)
     {
@@ -718,6 +747,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateAutoClickerPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Glass),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Seed),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSeedPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
                           requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Mirror),

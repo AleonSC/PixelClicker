@@ -194,11 +194,26 @@ public class PixelLook
     [Tooltip("Colour of the small cubes inside a Dragon Cube.")]
     public Color starColor = new Color(0.55f, 0.18f, 0.02f, 1f);
 
+    [Tooltip("Seed: a small green sprout (stem and two leaves) grows out of the top of the cube.")]
+    public bool sprout = false;
+
+    [Min(0f)]
+    [Tooltip("Seed: seconds an old pixel of this type takes to grow to full size and full value (it doesn't despawn while growing). 0 = it doesn't grow.")]
+    public float growSeconds = 0f;
+
+    [Min(1f)]
+    [Tooltip("Seed: how many times bigger the old pixel is when fully grown.")]
+    public float growScale = 2.2f;
+
+    [Min(1f)]
+    [Tooltip("Seed: how many times its payout the old pixel is worth when fully grown (paid when it is vacuumed, banked or clicked).")]
+    public float growMultiplier = 5f;
+
     [Tooltip("Old pixels of this type shatter into shards when they hit the ground (they are gone afterwards).")]
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => outline || darkMatter || lightning || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => outline || darkMatter || lightning || sprout || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks;
@@ -242,6 +257,10 @@ public static class PixelLooks
             // Electric: a faint dark-blue glass box held together by crackling lightning.
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
                             forceTranslucent = true, smoothness = 0.9f, metallic = 0f, emission = 0.6f, lightning = true },
+
+            // Seed: a plain brown cube with a green sprout; old ones grow bigger and worth more.
+            new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = new Color(0.46f, 0.3f, 0.15f, 1f),
+                            metallic = 0f, smoothness = 0.15f, sprout = true, growSeconds = 40f, growScale = 2.2f, growMultiplier = 5f },
 
             // Mirror: polished chrome that reflects the sky.
             new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = new Color(0.92f, 0.95f, 1f, 1f),
@@ -447,6 +466,19 @@ public static class PixelLooks
             sr.receiveShadows = false;
         }
 
+        if (look.sprout)
+        {
+            GameObject sprout = new GameObject("Sprout", typeof(MeshFilter), typeof(MeshRenderer));
+            sprout.transform.SetParent(root.transform, false);
+            sprout.transform.localPosition = centre;
+            sprout.layer = root.layer;
+            sprout.GetComponent<MeshFilter>().sharedMesh = SproutMesh(size);
+            MeshRenderer spr = sprout.GetComponent<MeshRenderer>();
+            spr.sharedMaterial = OverlayMaterial(); // unlit vertex colours
+            spr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            spr.receiveShadows = false;
+        }
+
         if (look.lightning)
         {
             GameObject bolts = new GameObject("Lightning", typeof(MeshFilter), typeof(MeshRenderer));
@@ -540,6 +572,53 @@ public static class PixelLooks
         mesh.RecalculateBounds();
         starMeshes[key] = mesh;
         return mesh;
+    }
+
+    private static readonly Dictionary<int, Mesh> sproutMeshes = new Dictionary<int, Mesh>();
+
+    /// <summary>A little sprout on top of a cube: a green stem and two angled leaves, flat-shaded with vertex colours.</summary>
+    private static Mesh SproutMesh(Vector3 size)
+    {
+        int key = Mathf.RoundToInt(size.x * 1000f) * 31 + Mathf.RoundToInt(size.y * 1000f);
+        if (sproutMeshes.TryGetValue(key, out Mesh cached) && cached != null) return cached;
+
+        List<Vector3> v = new List<Vector3>();
+        List<Color> c = new List<Color>();
+        List<int> t = new List<int>();
+        float top = size.y * 0.5f;
+        AddShadedBox(v, c, t, new Vector3(0f, top + size.y * 0.13f, 0f), new Vector3(size.x * 0.035f, size.y * 0.13f, size.x * 0.035f), Quaternion.identity, new Color(0.3f, 0.7f, 0.22f, 1f));
+        Vector3 leafHalf = new Vector3(size.x * 0.15f, size.y * 0.022f, size.x * 0.075f);
+        AddShadedBox(v, c, t, new Vector3(-size.x * 0.13f, top + size.y * 0.3f, 0f), leafHalf, Quaternion.Euler(0f, 0f, 24f), new Color(0.42f, 0.85f, 0.3f, 1f));
+        AddShadedBox(v, c, t, new Vector3(size.x * 0.13f, top + size.y * 0.3f, 0f), leafHalf, Quaternion.Euler(0f, 0f, -24f), new Color(0.35f, 0.78f, 0.26f, 1f));
+
+        Mesh mesh = new Mesh { name = "Sprout" };
+        mesh.SetVertices(v);
+        mesh.SetColors(c);
+        mesh.SetTriangles(t, 0);
+        mesh.RecalculateBounds();
+        sproutMeshes[key] = mesh;
+        return mesh;
+    }
+
+    /// <summary>Adds a flat-shaded box (centre, half extents, rotation) to a vertex-colour mesh under construction.</summary>
+    private static void AddShadedBox(List<Vector3> v, List<Color> c, List<int> t, Vector3 centre, Vector3 half, Quaternion rot, Color colour)
+    {
+        Vector3[] normals = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+        float[] shade = { 1f, 0.5f, 0.72f, 0.78f, 0.9f, 0.62f };
+        for (int f = 0; f < 6; f++)
+        {
+            Vector3 n = normals[f];
+            Vector3 u = Mathf.Abs(n.y) > 0.5f ? Vector3.right : Vector3.up;
+            Vector3 w = Vector3.Cross(n, u);
+            int b = v.Count;
+            Vector3 hn = Vector3.Scale(n, half), hu = Vector3.Scale(u, half), hw = Vector3.Scale(w, half);
+            v.Add(centre + rot * (hn + hu + hw)); v.Add(centre + rot * (hn + hu - hw));
+            v.Add(centre + rot * (hn - hu - hw)); v.Add(centre + rot * (hn - hu + hw));
+            Color shaded = new Color(colour.r * shade[f], colour.g * shade[f], colour.b * shade[f], colour.a);
+            for (int k = 0; k < 4; k++) c.Add(shaded);
+            t.Add(b); t.Add(b + 1); t.Add(b + 2);
+            t.Add(b); t.Add(b + 2); t.Add(b + 3);
+        }
     }
 
     private static Material NeonMaterial()

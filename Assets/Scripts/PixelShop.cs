@@ -758,6 +758,15 @@ public partial class PixelShop : MonoBehaviour
             if (mirrorIndex >= 0 && vacuumIndex >= 0 && mirrorIndex > vacuumIndex) MovePack(mirrorIndex, vacuumIndex);
             if (mirrorIndex >= 0) { packDataVersion = 6; changed = true; }
         }
+
+        // The Seed pixel is listed before Electric: move it there once in lists that got it appended at the end.
+        if (packDataVersion < 7)
+        {
+            int seedIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Seed));
+            int electricIdx = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Electric));
+            if (seedIndex >= 0 && electricIdx >= 0 && seedIndex > electricIdx) MovePack(seedIndex, electricIdx);
+            if (seedIndex >= 0) { packDataVersion = 7; changed = true; }
+        }
         return changed;
     }
 

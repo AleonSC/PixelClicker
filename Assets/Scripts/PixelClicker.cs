@@ -67,6 +67,7 @@ public class PixelClicker : MonoBehaviour
         DragonCube6 = 20,
         DragonCube7 = 21,
         Mirror = 22,
+        Seed = 23,
     }
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
@@ -986,6 +987,18 @@ public class PixelClicker : MonoBehaviour
                 looks = extended11.ToArray();
             }
             looksVersion = 11;
+        }
+        if (looksVersion < 12)
+        {
+            // The Seed look (brown cube with a sprout that grows) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Seed) == null)
+            {
+                PixelLook seedLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Seed);
+                System.Collections.Generic.List<PixelLook> extended12 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (seedLook != null) extended12.Add(seedLook);
+                looks = extended12.ToArray();
+            }
+            looksVersion = 12;
         }
 
         if (pixelRenderer != null)
@@ -2790,6 +2803,8 @@ public class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelGravityWell>().Setup(this, styled);
                 if (styled.floatAway)
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
+                if (styled.growSeconds > 0f)
+                    copy.AddComponent<OldPixelSeed>().Setup(this, styled.growSeconds, styled.growScale, styled.growMultiplier, stored);
                 if (styled.shatter)
                     copy.AddComponent<OldPixelShatter>().Setup(this, shatterMinSpeed, shardCount, shardSpeed, shardLifeSeconds, shardSize, shatterSoundId);
             }
