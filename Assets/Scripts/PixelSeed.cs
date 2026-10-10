@@ -29,7 +29,8 @@ public class SeedSprout : MonoBehaviour
     private double amount;
     private float yaw;
 
-    private static readonly Color GlowGreen = new Color(0.45f, 1f, 0.4f, 1f), GlowSun = new Color(1f, 0.85f, 0.3f, 1f);
+    private static readonly Color GlowGreen = new Color(0.45f, 1f, 0.4f, 1f), GlowSun = new Color(1f, 0.85f, 0.3f, 1f), GlowWater = new Color(0.35f, 0.75f, 1f, 1f);
+    private float solarPart, waterPart;
 
     private float StemTop => unit * sproutScale * PixelLooks.SproutStemTop;
 
@@ -90,7 +91,7 @@ public class SeedSprout : MonoBehaviour
             case Stage.Growing:
             {
                 solarTimer -= Time.deltaTime;
-                if (solarTimer <= 0f) { solarTimer = 0.3f; boost = clicker.SolarSeedBoostAt(transform.position); }
+                if (solarTimer <= 0f) { solarTimer = 0.3f; boost = clicker.SeedBoostAt(transform.position, out solarPart, out waterPart); }
                 stageTime += Time.deltaTime * (1f + boost); // Solar pixels nearby speed it up
                 float k = Mathf.Clamp01(stageTime / growSeconds);
                 float ease = k * k * (3f - 2f * k);
@@ -142,7 +143,7 @@ public class SeedSprout : MonoBehaviour
         }
         if (glow != null)
         {
-            glow.color = Color.Lerp(GlowGreen, GlowSun, Mathf.Clamp01(boost / 1.5f));
+            glow.color = Color.Lerp(Color.Lerp(GlowGreen, GlowSun, Mathf.Clamp01(solarPart / 1.5f)), GlowWater, Mathf.Clamp01(waterPart / 1.5f)); // sun = yellow, water = blue
             glow.intensity = (0.8f + 0.25f * Mathf.Sin(t * 5f)) * (1f + boost * 0.6f);
         }
     }

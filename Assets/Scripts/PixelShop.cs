@@ -804,6 +804,14 @@ public partial class PixelShop : MonoBehaviour
                 changed = true;
             }
         }
+        // The Water pixel is listed right after Seed (before Electric): move it there once in lists that got it appended at the end.
+        if (packDataVersion < 10)
+        {
+            int waterIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Water));
+            int electricAt = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Electric));
+            if (waterIndex >= 0 && electricAt >= 0 && waterIndex > electricAt) MovePack(waterIndex, electricAt);
+            if (waterIndex >= 0) { packDataVersion = Mathf.Max(packDataVersion, 10); changed = true; }
+        }
         return changed;
     }
 

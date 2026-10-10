@@ -417,6 +417,33 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>
+    /// Default Water Pixel pack (Pixels tab): TESTING price (10 White, no requirements) so it is available right away. Water pixels lying near
+    /// Seed sprouts and the Seed pet speed them up: stream them over a field of sprouts with a Sorter to make a farm.
+    /// </summary>
+    private static ShopPack CreateWaterPixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Water Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Water pixel: a wobbling blue jelly cube. Old Water pixels near Seed sprouts and the Seed pet make them grow and sow much faster.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Water, displayName = "Water Pixels",
+                    color = new Color(0.3f, 0.62f, 1f, 1f),
+                    amountPerClick = 3,
+                    spawnWeight = 0.4f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
     /// <summary>Default Mirror Pixel pack (Pixels tab): listed after Electric and before Vacuum, needs the Electric pack. Clicking a Mirror also counts as a click on the last other pixel type.</summary>
     private static ShopPack CreateMirrorPixelPack(int requiresElectricIndex)
     {
@@ -749,6 +776,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Seed),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSeedPixelPack },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Water),
+                          requires = null, create = i => CreateWaterPixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
                           requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Mirror),

@@ -183,6 +183,7 @@ public class PixelHints : MonoBehaviour
             case "pixel_Electric": return "You unlocked Electric Pixels!";
             case "pixel_Mirror": return "You unlocked Mirror Pixels!";
             case "pixel_Seed": return "You unlocked Seed Pixels!";
+            case "pixel_Water": return "You unlocked Water Pixels!";
             case "dragon_first": return "You found a Dragon Cube!";
             case "pixel_Red": return "You unlocked Red, Green and Blue Pixels!";
             case "bank_hose": return "Hose equipped!";
@@ -231,6 +232,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Singularity", "Singularity Pixels unlocked! A very rare pixel born from the black holes you fed."),
         H("pixel_Ghost", "Ghost Pixels unlocked! A rare pixel from all the ghosts you caught."),
         H("pixel_Electric", "Electric Pixels unlocked! A cube held together by crackling lightning."),
+        H("pixel_Water", "Water Pixels unlocked! Old Water pixels lying near Seed sprouts or the Seed pet make them grow and sow much faster. Stream them over your sprouts with a Sorter!"),
         H("pixel_Seed", "Seed Pixels unlocked! Old Seed pixels slowly grow bigger and worth more. Vacuum them, hose them up or click a ripe one to harvest."),
         H("pixel_Mirror", "Mirror Pixels unlocked! Clicking one also counts as a click on the last other pixel you collected, so it pays that pixel's amount again."),
         H("dragon_first", "A Dragon Cube! There are seven of them, each with a different number of small cubes inside, and they turn up extremely rarely among the pixels. Gather all seven and a button will appear to summon the cube dragon and make a wish."),

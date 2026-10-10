@@ -68,6 +68,7 @@ public class PixelClicker : MonoBehaviour
         DragonCube7 = 21,
         Mirror = 22,
         Seed = 23,
+        Water = 24,
     }
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
@@ -220,7 +221,7 @@ public class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -674,6 +675,14 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Most growth speed Solar pixels can add to one sprout (3 = up to 4x as fast).")]
     [SerializeField] private float seedSolarBoostMax = 3f;
 
+    [Min(0f)]
+    [Tooltip("Growth speed added to a sprout (and sowing speed to a Seed pet) by each old Water pixel within the same reach as Solar (1 = +100% each).")]
+    [SerializeField] private float seedWaterBoostEach = 1f;
+
+    [Min(0f)]
+    [Tooltip("Most speed Water pixels can add to one sprout / Seed pet (4 = up to 5x as fast, on top of Solar).")]
+    [SerializeField] private float seedWaterBoostMax = 4f;
+
     [Header("Click Hint")]
     [Tooltip("Turn off the 'click me' pulse that the cube plays after the first guide text until the first pixel is collected.")]
     [SerializeField] private bool disableClickHint = false;
@@ -1052,6 +1061,18 @@ public class PixelClicker : MonoBehaviour
             if (chromeLook != null) list14.Add(chromeLook);
             looks = list14.ToArray();
             looksVersion = 14;
+        }
+        if (looksVersion < 15)
+        {
+            // The Water look (a wobbling see-through blue jelly cube) is new: add it to lists saved before it existed.
+            if (PixelLooks.Find(looks, PixelType.Water) == null)
+            {
+                PixelLook waterLook = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Water);
+                System.Collections.Generic.List<PixelLook> extended15 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+                if (waterLook != null) extended15.Add(waterLook);
+                looks = extended15.ToArray();
+            }
+            looksVersion = 15;
         }
 
         if (pixelRenderer != null)
@@ -1844,20 +1865,29 @@ public class PixelClicker : MonoBehaviour
         return candidates[candidates.Count - 1];
     }
 
-    /// <summary>Extra growth speed (0 = none) a sprout at 'position' gets from old Solar pixels lying close to it.</summary>
-    public float SolarSeedBoostAt(Vector3 position)
+    /// <summary>
+    /// Extra growth speed (0 = none) a sprout or Seed pet at 'position' gets from old pixels lying close to it: Solar pixels and Water
+    /// pixels (a sorter streaming Water pixels over a field of sprouts is a farm). 'solar' and 'water' are the two parts (for colouring).
+    /// </summary>
+    public float SeedBoostAt(Vector3 position, out float solar, out float water)
     {
-        int solar = IndexOf(PixelType.Solar);
-        if (solar < 0 || seedSolarBoostEach <= 0f) return 0f;
+        solar = 0f;
+        water = 0f;
+        int solarTier = IndexOf(PixelType.Solar), waterTier = IndexOf(PixelType.Water);
+        if (solarTier < 0 && waterTier < 0) return 0f;
         float reach = OldPixelWorldSize * seedSolarReach, reachSqr = reach * reach;
-        int near = 0;
+        int nearSolar = 0, nearWater = 0;
         foreach (Rigidbody rb in oldPixels)
         {
             if (rb == null || (rb.position - position).sqrMagnitude > reachSqr) continue;
             OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
-            if (info != null && info.tierIndex == solar) near++;
+            if (info == null) continue;
+            if (info.tierIndex == solarTier) nearSolar++;
+            else if (info.tierIndex == waterTier) nearWater++;
         }
-        return Mathf.Min(seedSolarBoostMax, near * seedSolarBoostEach);
+        solar = Mathf.Min(seedSolarBoostMax, nearSolar * seedSolarBoostEach);
+        water = Mathf.Min(seedWaterBoostMax, nearWater * seedWaterBoostEach);
+        return solar + water;
     }
 
     /// <summary>What one harvest of this pixel type would pay now (a random payout rolled for random-payout types, with the Value / Ultra multipliers).</summary>

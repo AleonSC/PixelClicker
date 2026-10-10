@@ -263,6 +263,10 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = Color.white,
                             metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true },
 
+            // Water: a see-through blue jelly cube that wobbles.
+            new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
+                            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true },
+
             // Mirror: polished chrome that reflects the sky.
             new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = Color.white,
                             metallic = 0.7f, smoothness = 0.95f, emission = 0.3f, chromeTexture = true, shine = true },

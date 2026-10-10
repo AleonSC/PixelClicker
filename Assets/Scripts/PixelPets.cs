@@ -860,7 +860,9 @@ public partial class PixelPets : MonoBehaviour
 
         // Planted: sow a seed every so often (only while nothing holds or hovers it).
         if (stopped) return;
-        p.seedTimer -= Time.deltaTime * Hyper;
+        float solarPart, waterPart;
+        float growBoost = clicker.SeedBoostAt(p.body.transform.position, out solarPart, out waterPart); // Solar / Water pixels nearby make it sow faster too
+        p.seedTimer -= Time.deltaTime * Hyper * (1f + growBoost);
         if (p.seedTimer > 0f) return;
         p.seedTimer = Random.Range(Mathf.Min(seedPetInterval.x, seedPetInterval.y), Mathf.Max(seedPetInterval.x, seedPetInterval.y));
         SowSeed(p, size);
