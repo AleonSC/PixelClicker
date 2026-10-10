@@ -2,6 +2,8 @@
 
 3D incremental clicker in Unity (C#, TextMeshPro). All code lives in `Assets/Scripts/`. Everything UI is built at runtime (no prefabs/scene UI required). Nothing has been compiled or run by Claude – the user tests in Unity.
 
+**Design intent: read `GAMEPLAY_PHILOSOPHY.md` before proposing or building features** (what the game is for, pillars, anti-goals, open questions).
+
 ## Core architecture
 
 | Script | Role |
