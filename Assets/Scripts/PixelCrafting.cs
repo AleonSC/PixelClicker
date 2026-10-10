@@ -470,7 +470,7 @@ public class PixelCrafting : MonoBehaviour
             if (statusTimer <= 0f) statusLabel.text = "";
         }
         bool othersOpen = PixelWindows.AnyOpenExcept(this);
-        if (windowObject.activeSelf && othersOpen && !otherWindowWasOpen) Close(); // opening any other window closes Crafting
+        if (PixelPop.IsOpen(windowObject) && othersOpen && !otherWindowWasOpen) Close(); // opening any other window closes Crafting
         otherWindowWasOpen = othersOpen;
         if (!windowObject.activeSelf) return;
 
@@ -504,7 +504,7 @@ public class PixelCrafting : MonoBehaviour
         open.onClick.AddListener(Toggle);
 
         // --- Window
-        windowObject = new GameObject("Crafting Window", typeof(RectTransform), typeof(Image));
+        windowObject = new GameObject("Crafting Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         windowObject.transform.SetParent(canvasRoot.transform, false);
         PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
         RectTransform wr = windowObject.GetComponent<RectTransform>();
@@ -645,7 +645,7 @@ public class PixelCrafting : MonoBehaviour
         BuildBook();
 
         windowObject.SetActive(false);
-        PixelWindows.Register(this, 25, () => windowObject != null && windowObject.activeSelf, () => { if (BookOpen) CloseBook(); else Close(); }); // Escape closes the recipe book first
+        PixelWindows.Register(this, 25, () => windowObject != null && PixelPop.IsOpen(windowObject), () => { if (BookOpen) CloseBook(); else Close(); }); // Escape closes the recipe book first
     }
 
     private float SideWidth { get { PixelShop shop = PixelFind.First<PixelShop>(); return shop != null ? shop.CurrencyPanelWidth : 380f; } }
@@ -697,14 +697,14 @@ public class PixelCrafting : MonoBehaviour
 
     private void Toggle()
     {
-        if (windowObject.activeSelf) Close();
+        if (PixelPop.IsOpen(windowObject)) Close();
         else Open();
     }
 
     private void Open()
     {
         PixelWindows.CloseAllExcept(this); // Crafting replaces every other window
-        windowObject.SetActive(true);
+        PixelPop.Show(windowObject);
         refreshTimer = 0f;
         Refresh();
     }
@@ -988,7 +988,7 @@ public class PixelCrafting : MonoBehaviour
     {
         if (BookOpen) CloseBook();
         if (dragGhost != null) Destroy(dragGhost);
-        windowObject.SetActive(false);
+        PixelPop.Hide(windowObject);
     }
 
     // ------------------------------------------------------------------

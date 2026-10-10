@@ -22,7 +22,7 @@ public partial class PixelShop
     public static void CloseShopWindow()
     {
         PixelShop shop = PixelFind.First<PixelShop>();
-        if (shop != null && shop.panelObject != null && shop.panelObject.activeSelf) shop.panelObject.SetActive(false);
+        if (shop != null && shop.panelObject != null && PixelPop.IsOpen(shop.panelObject)) PixelPop.Hide(shop.panelObject);
     }
 
     private GameObject currencyPanel;
@@ -183,7 +183,7 @@ public partial class PixelShop
     /// <summary>Called every frame: tooltip position, and closing the Inventory / Log the moment the shop opens.</summary>
     private void UpdateCurrencyAndWindows()
     {
-        bool open = panelObject != null && panelObject.activeSelf;
+        bool open = panelObject != null && PixelPop.IsOpen(panelObject);
         if (open && !shopWasOpen)
         {
             // The shop replaces the Inventory and Log windows (its currency panel shows what they would).

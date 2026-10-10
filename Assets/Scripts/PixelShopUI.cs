@@ -92,8 +92,8 @@ public partial class PixelShop
 
         button.onClick.AddListener(() =>
         {
-            panelObject.SetActive(!panelObject.activeSelf);
-            if (panelObject.activeSelf) RefreshRows();
+            if (PixelPop.IsOpen(panelObject)) PixelPop.Hide(panelObject); else PixelPop.Show(panelObject);
+            if (PixelPop.IsOpen(panelObject)) RefreshRows();
         });
         shopButtonObject.SetActive(false); // Update() reveals it once the required tier is unlocked.
     }
@@ -102,7 +102,7 @@ public partial class PixelShop
     {
         currentTab = startTab == ShopTab.Automatic ? ShopTab.Pixels : startTab;
 
-        panelObject = new GameObject("Shop Panel", typeof(RectTransform), typeof(Image));
+        panelObject = new GameObject("Shop Panel", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         panelObject.transform.SetParent(parent, false);
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = new Vector2(0.5f, 0.5f);
@@ -131,7 +131,7 @@ public partial class PixelShop
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
-        close.onClick.AddListener(() => panelObject.SetActive(false));
+        close.onClick.AddListener(() => PixelPop.Hide(panelObject));
 
         BuildTabs(panelObject.transform);
         BuildScrollArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f,
@@ -483,7 +483,7 @@ public partial class PixelShop
     public void TutorialOpen(ShopTab tab, int subTab)
     {
         if (panelObject == null || !builtOk) return;
-        if (!panelObject.activeSelf) panelObject.SetActive(true);
+        PixelPop.Show(panelObject);
         upgradesSubTab = Mathf.Clamp(subTab, 0, 2);
         SelectTab(tab);
         RefreshCurrency();

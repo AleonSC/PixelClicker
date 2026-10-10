@@ -373,3 +373,4 @@
 [2026-10-10 16:57 UTC] Saved / Loaded message and the overwrite warning are now compact pop-up cards over a dimmed menu instead of a full-window blue panel.
 [2026-10-10 17:02 UTC] Inventory has a toggle (top left) for a simplified pinned view: just swatches and numbers for currency and consumables; click a consumable there to use it.
 [2026-10-10 17:02 UTC] Shop pack rows line up like the Consumables cards: the '!' flush in the picture's corner, name and cost down the middle, a wide Buy bar along the bottom.
+[2026-10-10 17:05 UTC] The Inventory pin toggle now pins just the tab you are on (Currency or Consumables); Shop and Crafting windows also grow / shrink when opened and closed.

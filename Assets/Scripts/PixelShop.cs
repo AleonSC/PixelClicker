@@ -1130,7 +1130,7 @@ public partial class PixelShop : MonoBehaviour
 
         // Escape closes the upgrades window first, then the shop.
         PixelWindows.Register(this, 40, () => subPanelObject != null && subPanelObject.activeSelf, CloseUpgradesWindow);
-        PixelWindows.Register(this, 30, () => panelObject != null && panelObject.activeSelf, () => panelObject.SetActive(false));
+        PixelWindows.Register(this, 30, () => panelObject != null && PixelPop.IsOpen(panelObject), () => PixelPop.Hide(panelObject));
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         // Diagnostic: where each pack is listed and what it is waiting for.
@@ -1178,7 +1178,7 @@ public partial class PixelShop : MonoBehaviour
         bool visible = alwaysShowButton || clicker.IsUnlocked(requiredTier);
         if (shopButtonObject.activeSelf != visible) shopButtonObject.SetActive(visible);
 
-        if (visible && !wasButtonVisible && openWhenFirstAvailable) panelObject.SetActive(true);
+        if (visible && !wasButtonVisible && openWhenFirstAvailable) PixelPop.Show(panelObject);
         wasButtonVisible = visible;
 
         if (!visible && panelObject.activeSelf) panelObject.SetActive(false);

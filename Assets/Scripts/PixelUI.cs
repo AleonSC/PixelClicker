@@ -1131,14 +1131,21 @@ public class PixelUI : MonoBehaviour
     /// <summary>The pinned, simplified Inventory: just swatches and numbers (currency, then the consumables you can use with a click).</summary>
     public static bool Compact
     {
+        get { return CompactMode != 0; }
+        set { CompactMode = value ? 1 : 0; }
+    }
+
+    /// <summary>0 = off, 1 = the Currency tab pinned (swatches + numbers), 2 = the Consumables tab pinned.</summary>
+    public static int CompactMode
+    {
         get
         {
             if (compactCache < 0) compactCache = PlayerPrefs.GetInt(PrefCompact, 0);
-            return compactCache != 0;
+            return compactCache;
         }
         set
         {
-            compactCache = value ? 1 : 0;
+            compactCache = Mathf.Clamp(value, 0, 2);
             PlayerPrefs.SetInt(PrefCompact, compactCache);
         }
     }
@@ -1234,7 +1241,7 @@ public class PixelUI : MonoBehaviour
         bool compact = autoMode && Compact;
         if (autoMode) ApplyCompactLook(compact);
         bool names = CurrencyShowNames && !compact;
-        bool showCurrency = !autoMode || inventoryTab == 0 || compact;
+        bool showCurrency = !autoMode || (compact ? CompactMode == 1 : inventoryTab == 0);
         float y = 0f; // lines are laid out inside the scrolling list (its top = just below the tabs)
 
         // The Ultra pixel row comes first, set apart from the pixel counts by a thin line.
@@ -1281,7 +1288,7 @@ public class PixelUI : MonoBehaviour
         {
             HideMaterialWidgets();
             HideConsumableWidgets();
-            y = RefreshCompactConsumables(y);
+            if (CompactMode == 2) y = RefreshCompactConsumables(y);
         }
         else if (autoMode)
         {
@@ -1493,14 +1500,14 @@ public class PixelUI : MonoBehaviour
         tip.onExit = HideTooltip;
         compactButton.onClick.AddListener(() =>
         {
-            Compact = !Compact;
+            CompactMode = Compact ? 0 : (inventoryTab == 1 ? 2 : 1);   // pins the tab you are looking at
             if (listContent != null) listContent.anchoredPosition = Vector2.zero;
             Refresh();
         });
     }
 
     [Tooltip("Hover tip on the toggle while the Inventory is in its normal form.")]
-    [SerializeField] private string compactOnTip = "Simplify: just swatches and numbers, pinned on screen (click a consumable to use it)";
+    [SerializeField] private string compactOnTip = "Pin this tab: just swatches and numbers, kept on screen (on Consumables, click one to use it)";
     [Tooltip("Hover tip on the toggle while the Inventory is simplified.")]
     [SerializeField] private string compactOffTip = "Back to the full Inventory";
 
@@ -1523,7 +1530,7 @@ public class PixelUI : MonoBehaviour
             if (potionRowObjects[i].activeSelf != visible) potionRowObjects[i].SetActive(visible);
             if (!visible) continue;
 
-            if (first) { y += 10f; first = false; }   // a gap between the currency and the consumables
+            if (first) { if (y > 0.5f) y += 10f; first = false; }
             potionRowObjects[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -y);
             y += LinePitch;
             int tierIndex = clicker.IndexOf(consumables.ItemRequiredType(i));
