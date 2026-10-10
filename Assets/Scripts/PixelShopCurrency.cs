@@ -207,7 +207,8 @@ public partial class PixelShop
         shopWasOpen = open;
 
         if (currencyTipRect == null) return;
-        bool cardTip = open && hoverCard != null && !string.IsNullOrEmpty(hoverCard.tipText);
+        string tipString = open && hoverTip != null ? hoverTip() : null;
+        bool cardTip = !string.IsNullOrEmpty(tipString);
         bool show = cardTip || (open && currencyHover >= 0 && currencyHover < clicker.Tiers.Length && currencyPanel != null);
         if (currencyTipRect.gameObject.activeSelf != show) currencyTipRect.gameObject.SetActive(show);
         if (!show) return;
@@ -222,8 +223,8 @@ public partial class PixelShop
 #else
             currencyTipText.enableWordWrapping = true;
 #endif
-            PixelUIKit.SetText(currencyTipText, hoverCard.tipText);
-            Vector2 pref = currencyTipText.GetPreferredValues(hoverCard.tipText, wrapWidth, 0f);
+            PixelUIKit.SetText(currencyTipText, tipString);
+            Vector2 pref = currencyTipText.GetPreferredValues(tipString, wrapWidth, 0f);
             currencyTipText.rectTransform.sizeDelta = new Vector2(wrapWidth, pref.y);
             size = new Vector2(wrapWidth, pref.y) + new Vector2(28f, 20f);
         }

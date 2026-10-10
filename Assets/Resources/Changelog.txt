@@ -256,3 +256,4 @@
 [2026-10-10 07:12 UTC] Consumables shop cards: capital titles and COST label, item descriptions moved into an orange '!' box with a hover tooltip.
 [2026-10-10 07:13 UTC] Floating ghost pixels pulled by a Singularity pixel can no longer orbit through the ground.
 [2026-10-10 07:14 UTC] Dev tools 'Infinite resources' now also gives unlimited consumables (potions, devices, seeds).
+[2026-10-10 07:19 UTC] All shop listings now show their description as a tooltip on an orange '!' box next to the name instead of description text.

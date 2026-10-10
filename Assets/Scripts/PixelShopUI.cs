@@ -48,6 +48,7 @@ public partial class PixelShop
     private GameObject shopButtonObject;
     private GameObject panelObject;
     private PackRow[] rows;
+    private System.Func<string> hoverTip; // set while the mouse is over an orange '!' box: returns the description to show as a tooltip
     private bool builtOk;
     private bool wasButtonVisible;
     private AudioSource audioSource;
@@ -233,6 +234,7 @@ public partial class PixelShop
         RectTransform br = row.buyButton.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.anchoredPosition = new Vector2(-20f, 0f);
+        LayoutRowHeader(row, inset);
         return row;
     }
 
@@ -537,6 +539,8 @@ public partial class PixelShop
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
         br.anchoredPosition = new Vector2(-20f, 0f);
 
+        LayoutRowHeader(row, textRightInset);
+
         int captured = index;
         if (potion) row.buyButton.onClick.AddListener(() => TryBuyPotion(captured));
         else row.buyButton.onClick.AddListener(() => TryBuy(captured));
@@ -643,6 +647,41 @@ public partial class PixelShop
     }
 
     /// <summary>Stretches a text across a horizontal band of its parent (anchors are 0..1 vertically).</summary>
+    /// <summary>An orange box with an exclamation mark: hovering it shows 'source()' (an item's description) as a tooltip. The caller places it.</summary>
+    private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source)
+    {
+        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
+        info.transform.SetParent(parent, false);
+        info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
+        RectTransform rect = info.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(size, size);
+        TMP_Text mark = CreateText(info.transform, "Mark", "!", buyFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
+        mark.color = Color.white;
+        mark.raycastTarget = false;
+        PixelUIKit.Stretch(mark.rectTransform);
+        PixelHoverTip tip = info.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => hoverTip = source;
+        tip.onExit = () => { if (hoverTip == source) hoverTip = null; };
+        return rect;
+    }
+
+    /// <summary>
+    /// A row's name line with the info box in front of it (the description is a tooltip now): the name band is taller and the
+    /// description label stays as hidden storage for the tooltip text.
+    /// </summary>
+    private void LayoutRowHeader(PackRow row, float rightInset)
+    {
+        float s = Mathf.Min(52f, rowHeight * 0.22f);
+        SetBand(row.nameLabel.rectTransform, 0.6f, 1f, rightInset);
+        row.nameLabel.rectTransform.offsetMin = new Vector2(20f + s + 12f, 0f);
+        SetBand(row.costLabel.rectTransform, 0.05f, 0.56f, rightInset);
+        row.descLabel.gameObject.SetActive(false);
+
+        RectTransform box = CreateInfoBox(row.rect, s, () => row.descLabel != null ? row.descLabel.text : "");
+        box.anchorMin = box.anchorMax = box.pivot = new Vector2(0f, 1f);
+        box.anchoredPosition = new Vector2(20f, -(rowHeight * 0.4f * 0.5f - s * 0.5f));
+    }
+
     private void SetBand(RectTransform rt, float yMin, float yMax, float rightInset)
     {
         rt.anchorMin = new Vector2(0f, yMin);

@@ -30,7 +30,6 @@ public partial class PixelShop
     }
 
     private PurchaseCard potionCard, utilityCard, seedCard, spareCard;
-    private PurchaseCard hoverCard; // the card whose '!' box the mouse is over
     private GameObject consumablesArea;
 
     // ------------------------------------------------------------------
@@ -93,17 +92,8 @@ public partial class PixelShop
 
         // An orange box with an exclamation mark: hover it to read the item's description.
         float infoSize = 44f;
-        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
-        info.transform.SetParent(go.transform, false);
-        info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
-        PlaceTopLeft(info.GetComponent<RectTransform>(), 14f, y + 7f, infoSize, infoSize);
-        TMP_Text mark = CreateText(info.transform, "Mark", "!", buyFontSize, TextAlignmentOptions.Center, FontStyles.Bold);
-        mark.color = Color.white;
-        mark.raycastTarget = false;
-        PixelUIKit.Stretch(mark.rectTransform);
-        PixelHoverTip infoTip = info.AddComponent<PixelHoverTip>();
-        infoTip.onEnter = () => hoverCard = card;
-        infoTip.onExit = () => { if (hoverCard == card) hoverCard = null; };
+        RectTransform infoRect = CreateInfoBox(go.transform, infoSize, () => card.tipText);
+        PlaceTopLeft(infoRect, 14f, y + 7f, infoSize, infoSize);
 
         card.cost = CreateText(go.transform, "Cost", "", costFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal);
         card.cost.richText = true;
