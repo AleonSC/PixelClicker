@@ -65,6 +65,10 @@ public class PixelLook
     [Tooltip("Outline colour when 'Outline Uses Tier Colour' is off.")]
     public Color outlineColor = Color.white;
 
+    [Range(-1f, 1f)]
+    [Tooltip("Draw the outline as a different SHADE of the pixel's own colour instead of 'Outline Color': above 0 lightens it towards white (0.4 = a lighter tint), below 0 darkens it towards black (-0.4 = a darker shade). 0 = off (use the colours above).")]
+    public float outlineShade = 0f;
+
     [Range(0.005f, 0.3f)]
     [Tooltip("Line thickness as a fraction of the cube's width.")]
     public float outlineThickness = 0.045f;
@@ -239,19 +243,19 @@ public static class PixelLooks
         {
             // The basic pixels: a subtle drawn surface and a thin bevelled rim (a slightly lighter edge line) so they read as solid objects.
             new PixelLook { type = PixelClicker.PixelType.White, basicSurface = PixelLook.BasicSurface.Grain,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineThickness = 0.028f, outlineStrength = 0.55f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.62f, 0.64f, 0.68f, 1f), outlineThickness = 0.028f, outlineShade = -0.3f, outlineStrength = 0.55f },
             new PixelLook { type = PixelClicker.PixelType.Gray, basicSurface = PixelLook.BasicSurface.Brushed,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.86f, 0.87f, 0.9f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
             new PixelLook { type = PixelClicker.PixelType.Black, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineThickness = 0.026f, outlineStrength = 0.6f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.42f, 0.42f, 0.48f, 1f), outlineThickness = 0.026f, outlineShade = 0.3f, outlineStrength = 0.6f },
 
             // Red, green and blue: a faint pixel-art mosaic and a lighter rim in their own colour; with the colour-blind setting on they also get a shape on every face.
             new PixelLook { type = PixelClicker.PixelType.Red, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.6f, 0.55f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.6f, 0.55f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
             new PixelLook { type = PixelClicker.PixelType.Green, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 1f, 0.65f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 1f, 0.65f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
             new PixelLook { type = PixelClicker.PixelType.Blue, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.75f, 1f, 1f), outlineThickness = 0.028f, outlineStrength = 0.5f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.75f, 1f, 1f), outlineThickness = 0.028f, outlineShade = 0.4f, outlineStrength = 0.5f },
 
             // Vacuum: a dark purple see-through block with a black circle on every face.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
@@ -521,6 +525,13 @@ public static class PixelLooks
         if (look.outline)
         {
             Color c = look.outlineUsesTierColor ? new Color(tierColor.r, tierColor.g, tierColor.b, 1f) : look.outlineColor;
+            if (Mathf.Abs(look.outlineShade) > 0.001f)
+            {
+                // A lighter or darker shade of the pixel's own colour (its 3D colour if the look overrides it).
+                Color own = look.useColor ? look.color : tierColor;
+                c = look.outlineShade > 0f ? Color.Lerp(own, Color.white, look.outlineShade) : Color.Lerp(own, Color.black, -look.outlineShade);
+                c.a = 1f;
+            }
             GameObject edges = new GameObject("Neon Edges", typeof(MeshFilter), typeof(MeshRenderer));
             edges.transform.SetParent(root.transform, false);
             edges.transform.localPosition = centre;
