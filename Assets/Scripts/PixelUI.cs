@@ -64,8 +64,6 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Tallest the inventory box can get (canvas units). A longer list scrolls (mouse wheel or the scroll bar).")]
     [SerializeField] private float maxPanelHeight = 640f;
 
-    [Tooltip("Scroll bar colour.")]
-    [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
 
     [Tooltip("Height of each text line.")]
     [SerializeField] private float lineHeight = 60f;
@@ -1182,7 +1180,7 @@ public class PixelUI : MonoBehaviour
         GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
         handle.transform.SetParent(listBarObject.transform, false);
         Image handleImage = handle.GetComponent<Image>();
-        handleImage.color = scrollbarColor;
+        PixelUIKit.StyleScrollBar(listBarObject.GetComponent<Image>(), handleImage);
         PixelUIKit.Stretch(handle.GetComponent<RectTransform>());
 
         Scrollbar bar = listBarObject.GetComponent<Scrollbar>();

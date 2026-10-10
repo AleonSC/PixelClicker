@@ -340,3 +340,4 @@
 [2026-10-10 15:10 UTC] The Log window is now one fixed size on every tab (Clicks, Achievements, Goals), so the window and its tab buttons no longer move when you switch tabs.
 [2026-10-10 15:12 UTC] The Achievements tab's 'x / y unlocked' line is now a centred fancy progress bar, the Log's scroll bars are slim and rounded and centred in the margin, and the achievement tooltip no longer says 'Pixels pixels'.
 [2026-10-10 15:13 UTC] Fixed the Console error in the Log (duplicate 'barGo' name) and removed the unused fields behind the four warnings.
+[2026-10-10 15:17 UTC] Every scroll bar in the game (lists, shop, inventory, pause menu, welcome back...) now uses the same slim, rounded look as the Achievements tab.

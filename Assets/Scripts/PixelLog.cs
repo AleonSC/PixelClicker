@@ -907,16 +907,14 @@ public class PixelLog : MonoBehaviour
         barGo.GetComponent<Image>().color = scrollbarTrackColor;
         RectTransform br = barGo.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
-        float barWidth = Mathf.Min(scrollbarWidth, 10f);                          // slim, rounded, and centred in the margin beside the rows
+        float barWidth = PixelUIKit.ScrollBarWidth;                               // slim, rounded, and centred in the margin beside the rows
         br.sizeDelta = new Vector2(barWidth, viewHeight);
         br.anchoredPosition = new Vector2(-(panelPadding - barWidth) * 0.5f, -viewTop);
-        PixelUIKit.StyleButton(barGo.GetComponent<Image>());
 
         GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
         handleGo.transform.SetParent(barGo.transform, false);
         Image handleImage = handleGo.GetComponent<Image>();
-        handleImage.color = scrollbarHandleColor;
-        PixelUIKit.StyleButton(handleImage);
+        PixelUIKit.StyleScrollBar(barGo.GetComponent<Image>(), handleImage);
         RectTransform hr = handleGo.GetComponent<RectTransform>();
         hr.offsetMin = hr.offsetMax = Vector2.zero;
 

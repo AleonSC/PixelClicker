@@ -609,13 +609,13 @@ public static class PixelUIKit
         br.anchorMin = new Vector2(1f, 0f);
         br.anchorMax = new Vector2(1f, 1f);
         br.pivot = new Vector2(1f, 0.5f);
-        br.sizeDelta = new Vector2(barWidth, 0f);
+        br.sizeDelta = new Vector2(Mathf.Min(barWidth, ScrollBarWidth), 0f);
         br.anchoredPosition = new Vector2(-2f, 0f);
 
         GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
         handle.transform.SetParent(barObject.transform, false);
         Image handleImage = handle.GetComponent<Image>();
-        handleImage.color = handleColor;
+        StyleScrollBar(barObject.GetComponent<Image>(), handleImage);
         Stretch(handle.GetComponent<RectTransform>());
 
         Scrollbar bar = barObject.GetComponent<Scrollbar>();
@@ -638,6 +638,16 @@ public static class PixelUIKit
         hide.bar = barObject;
         return scroll;
     }
+
+    /// <summary>The one look for every scroll bar: a slim rounded dark track with a lighter rounded handle (flat when Fancy buttons is off).</summary>
+    public static void StyleScrollBar(Image track, Image handle)
+    {
+        if (track != null) { track.color = new Color(0.16f, 0.16f, 0.2f, 1f); StyleButton(track); }
+        if (handle != null) { handle.color = new Color(0.5f, 0.5f, 0.6f, 1f); StyleButton(handle); }
+    }
+
+    /// <summary>Width of every scroll bar (canvas units).</summary>
+    public const float ScrollBarWidth = 10f;
 
     /// <summary>Sets a scroll view's content height and shows the scroll bar only when the content doesn't fit.</summary>
     public static void UpdateScrollView(ScrollRect scroll, GameObject barObject, float contentHeight, float viewHeight)

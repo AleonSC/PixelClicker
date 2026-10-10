@@ -82,8 +82,6 @@ public class PixelOfflineProgress : MonoBehaviour
     [Tooltip("Tallest the earnings list can get (canvas units). A longer list scrolls (mouse wheel or scroll bar).")]
     [SerializeField] private float maxListHeight = 420f;
 
-    [Tooltip("Scroll bar colour.")]
-    [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
 
     [Tooltip("Button size.")]
     [SerializeField] private Vector2 buttonSize = new Vector2(320f, 90f);
@@ -380,7 +378,7 @@ public class PixelOfflineProgress : MonoBehaviour
             GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
             handle.transform.SetParent(bar.transform, false);
             Image hi = handle.GetComponent<Image>();
-            hi.color = scrollbarColor;
+            PixelUIKit.StyleScrollBar(bar.GetComponent<Image>(), hi);
             PixelUIKit.Stretch(handle.GetComponent<RectTransform>());
 
             Scrollbar sb = bar.GetComponent<Scrollbar>();

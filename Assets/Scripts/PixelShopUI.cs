@@ -336,13 +336,13 @@ public partial class PixelShop
         br.anchorMin = new Vector2(1f, 0f);
         br.anchorMax = new Vector2(1f, 1f);
         br.pivot = new Vector2(1f, 0.5f);
-        br.offsetMin = new Vector2(-(panelPadding + scrollbarWidth), panelPadding);
+        br.offsetMin = new Vector2(-(panelPadding + PixelUIKit.ScrollBarWidth), panelPadding);
         br.offsetMax = new Vector2(-panelPadding, -top);
 
         GameObject handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
         handleGo.transform.SetParent(barGo.transform, false);
         Image handleImage = handleGo.GetComponent<Image>();
-        handleImage.color = scrollbarHandleColor;
+        PixelUIKit.StyleScrollBar(barGo.GetComponent<Image>(), handleImage);
         RectTransform hr = handleGo.GetComponent<RectTransform>();
         hr.offsetMin = hr.offsetMax = Vector2.zero;
 
