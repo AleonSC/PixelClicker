@@ -134,6 +134,15 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     private List<Trade> trades;
 
+    /// <summary>How many different wares this visitor brings per visit (0 = everything it can sell).</summary>
+    protected virtual int OfferedWares => 0;
+    /// <summary>Fewest of each ware in stock (with <see cref="StockMax"/> 0 = unlimited stock).</summary>
+    protected virtual int StockMin => 0;
+    /// <summary>Most of each ware in stock (0 = unlimited).</summary>
+    protected virtual int StockMax => 0;
+
+    private readonly Dictionary<int, int> stock = new Dictionary<int, int>(); // ware -> how many are left this visit (only when the stock is limited)
+
     private class WareRow
     {
         public Trade trade;
@@ -345,10 +354,12 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private void Buy(int item)
     {
         if (consumables.ItemRoom(item) < 1) return;
+        if (stock.TryGetValue(item, out int left) && left < 1) return;
         PixelShop.PackCost[] price = PriceOf(item);
         foreach (PixelShop.PackCost c in price) if (!CanAfford(c)) return;
         foreach (PixelShop.PackCost c in price) Spend(c);
         consumables.AddItem(item, 1);
+        if (stock.ContainsKey(item)) stock[item]--;
         PixelStats.Count("shop.items");
         PixelStats.Count(Id + ".bought");
         PixelAudio.Play("purchase");
@@ -396,14 +407,17 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             PixelUIKit.SetText(row.cost, sb.ToString());
 
             int cap = consumables.ItemCapacity(item);
-            PixelUIKit.SetText(row.owned, cap > 0 && cap < 100000 ? "Owned " + consumables.ItemOwned(item) + " / " + cap : "Owned " + consumables.ItemOwned(item));
+            string ownedText = cap > 0 && cap < 100000 ? "Owned " + consumables.ItemOwned(item) + " / " + cap : "Owned " + consumables.ItemOwned(item);
+            bool soldOut = stock.TryGetValue(item, out int stockLeft) && stockLeft < 1;
+            if (stock.ContainsKey(item)) ownedText += "   Stock " + Mathf.Max(0, stockLeft);
+            PixelUIKit.SetText(row.owned, ownedText);
 
             bool full = consumables.ItemRoom(item) < 1;
             bool afford = true;
             foreach (PixelShop.PackCost c in price) if (!CanAfford(c)) afford = false;
-            row.buy.interactable = !full && afford;
-            PixelUIKit.SetText(row.buyLabel, full ? fullText : buyText);
-            row.buyImage.color = full || !afford ? new Color(0.3f, 0.3f, 0.35f, 1f) : new Color(0.2f, 0.55f, 0.3f, 1f);
+            row.buy.interactable = !full && !soldOut && afford;
+            PixelUIKit.SetText(row.buyLabel, soldOut ? "Sold out" : full ? fullText : buyText);
+            row.buyImage.color = full || soldOut || !afford ? new Color(0.3f, 0.3f, 0.35f, 1f) : new Color(0.2f, 0.55f, 0.3f, 1f);
         }
     }
 
@@ -481,6 +495,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         trades = RollTrades();
         bool tradeMode = trades != null;
         List<int> wares = tradeMode ? new List<int>() : Wares();
+        stock.Clear();
+        if (!tradeMode && OfferedWares > 0)
+            while (wares.Count > OfferedWares) wares.RemoveAt(Random.Range(0, wares.Count)); // a small random selection
+        if (!tradeMode && StockMax > 0)
+            foreach (int w in wares) stock[w] = Random.Range(Mathf.Max(1, StockMin), Mathf.Max(StockMin, StockMax) + 1);
         int rowCount = tradeMode ? trades.Count : wares.Count;
         float rowH = 104f;
         float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + rowCount * (rowH + 8f) + 110f);
