@@ -65,7 +65,7 @@ public class OldPixelSeed : MonoBehaviour
             float k = Mathf.Clamp01(age / growSeconds);
             float ease = k * k * (3f - 2f * k);
             transform.localScale = baseScale * Mathf.Lerp(1f, maxScale, ease);
-            if (!alreadyGrown) info.amount = baseAmount * Mathf.Lerp(1d, maxMultiplier, ease);
+            if (!alreadyGrown) info.amount = baseAmount * Mathf.Lerp(1f, maxMultiplier, ease);
             if (despawn != null) despawn.KeepAlive(); // it lives until it is fully grown
             return;
         }
