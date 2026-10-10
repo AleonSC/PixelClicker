@@ -523,7 +523,6 @@ public class PixelPauseMenu : MonoBehaviour
         public GameObject panel;
         public ScrollRect scroll;
         public GameObject bar;
-        public TMP_Text label;
         public string resource, empty;
         public float viewHeight;
     }
@@ -1462,71 +1461,86 @@ public class PixelPauseMenu : MonoBehaviour
         vr.sizeDelta = new Vector2(-60f, s.viewHeight);
         vr.anchoredPosition = new Vector2(0f, -y);
 
-        s.label = MakeText(content, title + " Text", "", guideFontSize, FontStyles.Normal);
-        s.label.alignment = TextAlignmentOptions.TopLeft;
-        s.label.richText = true;
-        RectTransform lr = s.label.rectTransform;
-        lr.anchorMin = new Vector2(0f, 1f);
-        lr.anchorMax = new Vector2(1f, 1f);
-        lr.pivot = new Vector2(0.5f, 1f);
-        lr.offsetMin = new Vector2(10f, -s.viewHeight);
-        lr.offsetMax = new Vector2(-26f, 0f);
-
         FinishSectionPanel(s.panel, y + s.viewHeight);
         return s;
     }
 
-    /// <summary>Reloads the screen's text file and shows it.</summary>
+    /// <summary>
+    /// Reloads the screen's text file and shows it as rows: lines starting with // are skipped, # is a coloured heading,
+    /// "Key | Action" is two columns (the action wraps inside its own column, so rows never overlap), anything else is plain text.
+    /// </summary>
     private void RefreshGuideScreen(GuideScreen s)
     {
         TextAsset asset = Resources.Load<TextAsset>(s.resource);
-        string text = FormatGuideText(asset != null ? asset.text : "");
-        if (text.Trim().Length == 0) text = s.empty;
-        s.label.text = text;
+        string raw = PixelKeys.Replace(asset != null ? asset.text : "");
+        RectTransform content = s.scroll.content;
+        for (int i = content.childCount - 1; i >= 0; i--) Destroy(content.GetChild(i).gameObject);
 
-        float width = s.label.rectTransform.rect.width > 1f ? s.label.rectTransform.rect.width : guideWidth - 100f;
-        float height = Mathf.Ceil(s.label.GetPreferredValues(text, width, 0f).y) + 10f;
-        s.label.rectTransform.offsetMin = new Vector2(10f, -height);
-        s.scroll.content.anchoredPosition = Vector2.zero;
-        PixelUIKit.UpdateScrollView(s.scroll, s.bar, height, s.viewHeight);
-    }
+        float viewWidth = s.scroll.GetComponent<RectTransform>().rect.width;
+        if (viewWidth < 100f) viewWidth = guideWidth - 60f;
+        float width = viewWidth - 36f;
+        float keyWidth = width * Mathf.Clamp(guideColumnPercent, 15f, 60f) / 100f;
+        float gap = 14f;
+        float actionWidth = width - keyWidth - gap;
 
-    /// <summary>
-    /// Turns the text file into what is shown: lines starting with // are skipped, a line starting with # is a coloured
-    /// heading, and "Key | Action" becomes two columns. Everything else is shown as written.
-    /// </summary>
-    private string FormatGuideText(string raw)
-    {
-        string headingHex = ColorUtility.ToHtmlStringRGB(guideHeadingColor);
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        bool first = true;
-
-        foreach (string rawLine in PixelKeys.Replace(raw).Replace("\r", "").Split('\n'))
+        float y = 0f;
+        bool any = false;
+        foreach (string rawLine in raw.Replace("\r", "").Split('\n'))
         {
             string line = rawLine.TrimEnd();
-            if (line.TrimStart().StartsWith("//")) continue;
-
             string trimmed = line.TrimStart();
-            string shown;
+            if (trimmed.StartsWith("//")) continue;
+
             if (trimmed.StartsWith("#"))
             {
-                shown = "<size=" + guideHeadingPercent.ToString("0") + "%><b><color=#" + headingHex + ">" +
-                        trimmed.TrimStart('#').Trim() + "</color></b></size>";
-                if (!first) sb.Append('\n'); // an extra blank line above each heading
+                if (any) y += 18f;   // air above each heading
+                float size = guideFontSize * guideHeadingPercent / 100f;
+                TMP_Text h = GuideCell(content, trimmed.TrimStart('#').Trim(), size, FontStyles.Bold, guideHeadingColor, 10f, width, y);
+                y += Mathf.Ceil(h.GetPreferredValues(h.text, width, 0f).y) + 8f;
             }
             else if (line.Contains(" | "))
             {
                 int bar = line.IndexOf(" | ", System.StringComparison.Ordinal);
-                shown = "<b>" + line.Substring(0, bar).Trim() + "</b><pos=" + guideColumnPercent.ToString("0") + "%>" +
-                        line.Substring(bar + 3).Trim();
+                TMP_Text k = GuideCell(content, line.Substring(0, bar).Trim(), guideFontSize, FontStyles.Bold, textColor, 10f, keyWidth, y);
+                TMP_Text a = GuideCell(content, line.Substring(bar + 3).Trim(), guideFontSize, FontStyles.Normal, textColor, 10f + keyWidth + gap, actionWidth, y);
+                float hk = Mathf.Ceil(k.GetPreferredValues(k.text, keyWidth, 0f).y);
+                float ha = Mathf.Ceil(a.GetPreferredValues(a.text, actionWidth, 0f).y);
+                y += Mathf.Max(hk, ha) + 10f;
             }
-            else shown = line;
-
-            if (!first) sb.Append('\n');
-            sb.Append(shown);
-            first = false;
+            else if (trimmed.Length == 0)
+            {
+                if (any) y += guideFontSize * 0.6f;
+                continue;
+            }
+            else
+            {
+                TMP_Text p = GuideCell(content, line, guideFontSize, FontStyles.Normal, textColor, 10f, width, y);
+                y += Mathf.Ceil(p.GetPreferredValues(p.text, width, 0f).y) + 8f;
+            }
+            any = true;
         }
-        return sb.ToString();
+
+        if (!any)
+        {
+            TMP_Text e = GuideCell(content, s.empty, guideFontSize, FontStyles.Normal, textColor, 10f, width, 0f);
+            y = Mathf.Ceil(e.GetPreferredValues(e.text, width, 0f).y);
+        }
+        s.scroll.content.anchoredPosition = Vector2.zero;
+        PixelUIKit.UpdateScrollView(s.scroll, s.bar, y + 10f, s.viewHeight);
+    }
+
+    /// <summary>One wrapping text cell of the Controls / How to Play screens, top-left anchored at (x, -y).</summary>
+    private TMP_Text GuideCell(RectTransform parent, string text, float size, FontStyles style, Color color, float x, float width, float y)
+    {
+        TMP_Text t = MakeText(parent, "Guide Text", text, size, style);
+        t.alignment = TextAlignmentOptions.TopLeft;
+        t.richText = true;
+        t.color = color;
+        RectTransform r = t.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
+        r.sizeDelta = new Vector2(width, 10f);
+        r.anchoredPosition = new Vector2(x, -y);
+        return t;
     }
 
     /// <summary>Reads the changelog file (one change per line) and shows it, newest first.</summary>
