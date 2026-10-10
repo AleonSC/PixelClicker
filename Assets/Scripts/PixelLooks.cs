@@ -1043,7 +1043,7 @@ public static class PixelLooks
             // One thin solid strip along each edge, lying just inside the surface (its outer faces a hair outside the cube's faces).
             Color solid = colour;
             solid.a = Mathf.Clamp01(strength);
-            AddEdgeBoxes(v, col, tri, size, t, solid, true);
+            AddBevelRims(v, col, tri, size, t, solid);
         }
         else
         {
@@ -1058,6 +1058,51 @@ public static class PixelLooks
         mesh.RecalculateBounds();
         edgeMeshes[key] = mesh;
         return mesh;
+    }
+
+    /// <summary>
+    /// A smooth rim lying flat on every face along its four borders: mitred at the corners (nothing overlaps or sticks out), solid at the cube's edge
+    /// and softly fading inwards, so the bevel reads as a clean chamfer line instead of a chunky frame.
+    /// </summary>
+    private static void AddBevelRims(List<Vector3> v, List<Color> col, List<int> tri, Vector3 size, float t, Color solid)
+    {
+        float gap = Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.004f;
+        Color clear = solid; clear.a = 0f;
+        // distance in from the edge of each ring of vertices, and its colour
+        float[] depth = { 0f, t * 0.55f, t * 1.5f };
+        Color[] ringColour = { solid, solid, clear };
+        for (int axis = 0; axis < 3; axis++)
+        {
+            int a = (axis + 1) % 3, b = (axis + 2) % 3;
+            for (int sign = -1; sign <= 1; sign += 2)
+            {
+                int start = v.Count;
+                for (int r = 0; r < depth.Length; r++)
+                {
+                    float ha = size[a] * 0.5f - depth[r], hb = size[b] * 0.5f - depth[r];
+                    for (int c = 0; c < 4; c++)
+                    {
+                        Vector3 p = Vector3.zero;
+                        p[axis] = sign * (size[axis] * 0.5f + gap);
+                        p[a] = (c == 0 || c == 3) ? -ha : ha;
+                        p[b] = (c < 2) ? -hb : hb;
+                        v.Add(p); col.Add(ringColour[r]);
+                    }
+                }
+                for (int r = 0; r < depth.Length - 1; r++)
+                {
+                    int inner = start + (r + 1) * 4, outer = start + r * 4;
+                    for (int c = 0; c < 4; c++)
+                    {
+                        int n = (c + 1) % 4;
+                        tri.Add(outer + c); tri.Add(outer + n); tri.Add(inner + n);
+                        tri.Add(outer + c); tri.Add(inner + n); tri.Add(inner + c);
+                        tri.Add(outer + c); tri.Add(inner + n); tri.Add(outer + n);
+                        tri.Add(outer + c); tri.Add(inner + c); tri.Add(inner + n);
+                    }
+                }
+            }
+        }
     }
 
     private static void AddEdgeBoxes(List<Vector3> v, List<Color> col, List<int> tri, Vector3 size, float t, Color colour, bool flush = false)
