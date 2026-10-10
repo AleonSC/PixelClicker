@@ -112,6 +112,17 @@ public class PixelRobotWorker : MonoBehaviour
     private float nextWander, floorY, nextFloorCheck;
     private bool hovering, flying;
     private Quaternion tilt = Quaternion.identity;
+    private float fadeAmount, fadeAlpha = 1f;
+    private Image bubbleImage;
+
+    private class Part
+    {
+        public Renderer renderer;
+        public Color color;
+        public Material solidMaterial, ghostMaterial;
+        public bool transparentBase, isLight;
+    }
+    private readonly System.Collections.Generic.List<Part> parts = new System.Collections.Generic.List<Part>();
 
     // The beam.
     private GameObject beam;
@@ -140,8 +151,11 @@ public class PixelRobotWorker : MonoBehaviour
     private RectTransform windowPanel;
     private int ignoreClickFrame = -1;
 
-    /// <summary>True while the mouse is over the UFO (the cube ignores that click).</summary>
+    /// <summary>Kept for the click-block check: always false now, because the UFO is click-through (left clicks pass straight through it).</summary>
     public static bool Hovering;
+
+    [Tooltip("How see-through the UFO gets while the mouse is over it (0 = invisible, 1 = solid). Left clicks go through it; right-click opens its window.")]
+    [SerializeField] private float hoverAlpha = 0.25f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Hovering = false; }
@@ -378,9 +392,52 @@ public class PixelRobotWorker : MonoBehaviour
         {
             Ray ray = cam.ScreenPointToRay(PointerPosition());
             hovering = box != null && box.Raycast(ray, out _, 1000f);
+            if (!hovering && bubbleRect != null && bubbleCanvas != null && bubbleCanvas.activeSelf)
+                hovering = RectTransformUtility.RectangleContainsScreenPoint(bubbleRect, PointerPosition(), null);
         }
-        Hovering = hovering;
-        if (hovering && LeftPressed() && Time.frameCount != ignoreClickFrame) OpenWindow();
+        // Left clicks pass through it (nothing is blocked); a right-click opens the window.
+        if (hovering && RightPressed() && Time.frameCount != ignoreClickFrame) OpenWindow();
+        UpdateFade();
+    }
+
+    /// <summary>The UFO and its bubble go see-through while hovered: every part swaps to a transparent material and fades to 'hoverAlpha'.</summary>
+    private void UpdateFade()
+    {
+        float target = hovering ? 1f : 0f;
+        float before = fadeAmount;
+        fadeAmount = Mathf.MoveTowards(fadeAmount, target, Time.unscaledDeltaTime * 6f);
+        fadeAlpha = Mathf.Lerp(1f, Mathf.Clamp01(hoverAlpha), fadeAmount);
+        if (bubbleImage != null) bubbleImage.color = new Color(1f, 1f, 1f, fadeAlpha);
+        if (fadeAmount == before && fadeAmount != 1f) return;   // nothing to update (while fully faded the lights still change every frame, parts don't)
+        bool ghost = fadeAmount > 0.001f;
+        foreach (Part p in parts)
+        {
+            if (p.renderer == null) continue;
+            if (!p.isLight)
+            {
+                if (ghost)
+                {
+                    if (p.ghostMaterial == null) p.ghostMaterial = p.transparentBase ? p.solidMaterial : clicker.CreateVisualMaterial(new Color(p.color.r, p.color.g, p.color.b, 1f), true);
+                    if (p.ghostMaterial != null && p.renderer.sharedMaterial != p.ghostMaterial) p.renderer.sharedMaterial = p.ghostMaterial;
+                    Color c = p.color; c.a = p.color.a * fadeAlpha;
+                    MaterialPropertyBlock block = new MaterialPropertyBlock();
+                    block.SetColor("_BaseColor", c);
+                    block.SetColor("_Color", c);
+                    p.renderer.SetPropertyBlock(block);
+                }
+                else
+                {
+                    if (p.solidMaterial != null && p.renderer.sharedMaterial != p.solidMaterial) p.renderer.sharedMaterial = p.solidMaterial;
+                    p.renderer.SetPropertyBlock(null);
+                }
+            }
+            else if (p.ghostMaterial == null && ghost) p.ghostMaterial = clicker.CreateVisualMaterial(new Color(p.color.r, p.color.g, p.color.b, 1f), true);
+            if (p.isLight)
+            {
+                Material want = ghost ? p.ghostMaterial : p.solidMaterial;
+                if (want != null && p.renderer.sharedMaterial != want) p.renderer.sharedMaterial = want;
+            }
+        }
     }
 
     private void UpdateJob()
@@ -545,6 +602,7 @@ public class PixelRobotWorker : MonoBehaviour
         Renderer r = g.GetComponent<Renderer>();
         if (m != null) r.sharedMaterial = m;
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        parts.Add(new Part { renderer = r, color = color, solidMaterial = m, transparentBase = transparent, isLight = name.StartsWith("Light") });
         return g;
     }
 
@@ -667,13 +725,13 @@ public class PixelRobotWorker : MonoBehaviour
         bubbleCanvas = PixelUIKit.CreateCanvas("UFO Bubble", 280, new Vector2(1920f, 1080f), true);
         bubbleCanvasComponent = bubbleCanvas.GetComponent<Canvas>();
         if (bubbleSprite == null) bubbleSprite = BuildBubbleSprite();
-        GameObject go = new GameObject("Bubble", typeof(RectTransform), typeof(Image), typeof(Button));
+        GameObject go = new GameObject("Bubble", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(bubbleCanvas.transform, false);
         Image img = go.GetComponent<Image>();
         img.sprite = bubbleSprite;
         img.preserveAspect = true;
-        go.GetComponent<Button>().targetGraphic = img;
-        go.GetComponent<Button>().onClick.AddListener(() => { if (!consumables.IsPlacing && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) OpenWindow(); });
+        img.raycastTarget = false;   // click-through, like the UFO: right-click it (UpdateHoverAndClick) to open the window
+        bubbleImage = img;
         bubbleRect = go.GetComponent<RectTransform>();
         bubbleRect.anchorMin = bubbleRect.anchorMax = Vector2.zero;
         bubbleRect.pivot = new Vector2(0.5f, 0f);
@@ -757,15 +815,15 @@ public class PixelRobotWorker : MonoBehaviour
         for (int i = 0; i < lightRenderers.Length; i++)
         {
             float pulse = 0.5f + 0.5f * Mathf.Sin(t * (working ? 12f : 4f) + i * 0.8f);
-            SetRendererColor(lightRenderers[i], Color.Lerp(eyeColor * 0.35f, working ? Color.white : eyeColor, pulse));
+            SetRendererColor(lightRenderers[i], Color.Lerp(eyeColor * 0.35f, working ? Color.white : eyeColor, pulse), fadeAlpha);
         }
         if (alienHead != null) alienHead.localRotation = Quaternion.Euler(0f, hovering ? Mathf.Sin(t * 6f) * 35f : Mathf.Sin(t * 0.8f) * 20f, Mathf.Sin(t * 1.6f) * 5f);
     }
 
-    private static void SetRendererColor(Renderer r, Color c)
+    private static void SetRendererColor(Renderer r, Color c, float alpha)
     {
         if (r == null) return;
-        c.a = 1f;
+        c.a = alpha;
         MaterialPropertyBlock block = new MaterialPropertyBlock();
         r.GetPropertyBlock(block);
         block.SetColor("_BaseColor", c);

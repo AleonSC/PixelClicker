@@ -329,3 +329,4 @@
 [2026-10-10 14:32 UTC] The neon colour-cycling glow now also runs along the HUD's top and bottom bars (Settings > 'Neon bar glow' switches every bar glow off); the UFO Helper always hovers higher than the cube, has no text over it and has a switch in Toggles > Upgrades; the bomb no longer shows hint text above it.
 [2026-10-10 14:35 UTC] Fixed Breakout visuals: Electric link arcs no longer scribble across the brick wall (links pause during takeover minigames) and the court backdrop sits behind the bricks so see-through pixels aren't covered by it.
 [2026-10-10 14:39 UTC] Electric link arcs are back during Breakout (the black backdrop was the problem); opening the Pixel Bank window now closes the Inventory / Log and opening those closes the Bank window.
+[2026-10-10 14:41 UTC] The UFO Helper (and its bubble) goes see-through when the mouse is over it, left clicks pass straight through it, and a right-click opens its window.
