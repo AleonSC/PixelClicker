@@ -654,6 +654,26 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("The most Seed sprouts that can be growing at once (extra cracked shells just pay out).")]
     [SerializeField] private int seedMaxSprouts = 12;
 
+    [Min(1f)]
+    [Tooltip("How big the sprout is drawn compared to an old pixel (bigger = easier to spot).")]
+    [SerializeField] private float seedSproutScale = 2.2f;
+
+    [Min(0f)]
+    [Tooltip("How strongly a sprout favours rare pixel types: a type's chance is 1 / spawnWeight to this power. 0 = every unlocked type equally likely, 1 = rarer types are proportionally more likely.")]
+    [SerializeField] private float seedRarityBias = 1f;
+
+    [Min(0f)]
+    [Tooltip("How close (in old-pixel widths) an old Solar pixel must lie to a growing sprout to speed it up.")]
+    [SerializeField] private float seedSolarReach = 6f;
+
+    [Min(0f)]
+    [Tooltip("Growth speed added to a sprout by each old Solar pixel in reach (0.75 = +75% each).")]
+    [SerializeField] private float seedSolarBoostEach = 0.75f;
+
+    [Min(0f)]
+    [Tooltip("Most growth speed Solar pixels can add to one sprout (3 = up to 4x as fast).")]
+    [SerializeField] private float seedSolarBoostMax = 3f;
+
     [Header("Click Hint")]
     [Tooltip("Turn off the 'click me' pulse that the cube plays after the first guide text until the first pixel is collected.")]
     [SerializeField] private bool disableClickHint = false;
@@ -1210,6 +1230,7 @@ public class PixelClicker : MonoBehaviour
                 hitPunchTimer = hitPunchDuration;
                 SetLiveDamage(tier, hitsOnCurrentPixel);
                 PlayClickEffects(tier);
+                if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)tier.clicksToCollect);
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, tier.clicksToCollect, automatic);
                 onPixelClicked?.Invoke();
                 return;
@@ -1266,7 +1287,7 @@ public class PixelClicker : MonoBehaviour
 
         PlayClickEffects(tier);
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
-        if (tier.type == PixelType.Seed) SpawnSeedSprout();            // the shell cracked: a sprout comes out instead of an old pixel
+        if (tier.type == PixelType.Seed) { SeedDigEffect(1f); SpawnSeedSprout(); } // the shell cracked: a sprout comes out instead of an old pixel
         else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
@@ -1790,13 +1811,43 @@ public class PixelClicker : MonoBehaviour
     /// <summary>A random pixel type a Seed sprout can grow: unlocked, not a rare drop, not a fly-away type and not a Seed itself. -1 if none.</summary>
     public int RandomSeedPixelTier()
     {
+        // Rarer types (lower spawn weight) are likelier: chance ~ 1 / weight^bias.
         System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
+        System.Collections.Generic.List<float> weights = new System.Collections.Generic.List<float>();
+        float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
         {
             PixelTier t = tiers[i];
-            if (t.unlocked && !t.rareDrop && !t.flyAway && t.type != PixelType.Seed) candidates.Add(i);
+            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed) continue;
+            float w = 1f / Mathf.Pow(Mathf.Max(0.02f, t.spawnWeight), seedRarityBias);
+            candidates.Add(i);
+            weights.Add(w);
+            total += w;
         }
-        return candidates.Count > 0 ? candidates[UnityEngine.Random.Range(0, candidates.Count)] : -1;
+        if (candidates.Count == 0) return -1;
+        float pick = UnityEngine.Random.value * total;
+        for (int n = 0; n < candidates.Count; n++)
+        {
+            pick -= weights[n];
+            if (pick <= 0f) return candidates[n];
+        }
+        return candidates[candidates.Count - 1];
+    }
+
+    /// <summary>Extra growth speed (0 = none) a sprout at 'position' gets from old Solar pixels lying close to it.</summary>
+    public float SolarSeedBoostAt(Vector3 position)
+    {
+        int solar = IndexOf(PixelType.Solar);
+        if (solar < 0 || seedSolarBoostEach <= 0f) return 0f;
+        float reach = OldPixelWorldSize * seedSolarReach, reachSqr = reach * reach;
+        int near = 0;
+        foreach (Rigidbody rb in oldPixels)
+        {
+            if (rb == null || (rb.position - position).sqrMagnitude > reachSqr) continue;
+            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            if (info != null && info.tierIndex == solar) near++;
+        }
+        return Mathf.Min(seedSolarBoostMax, near * seedSolarBoostEach);
     }
 
     /// <summary>What one harvest of this pixel type would pay now (a random payout rolled for random-payout types, with the Value / Ultra multipliers).</summary>
@@ -1807,6 +1858,14 @@ public class PixelClicker : MonoBehaviour
         double basePayout = t.amountPerClick;
         if (t.randomPayout) basePayout = UnityEngine.Random.Range(Mathf.Min(t.payoutMin, t.payoutMax), Mathf.Max(t.payoutMin, t.payoutMax) + 1);
         return basePayout * PayoutMultiplier(tierIndex) * clickMultiplier;
+    }
+
+    /// <summary>The digging sound and a burst of dirt and dust falling from the shell; 'progress' 0-1 = how close it is to cracking.</summary>
+    private void SeedDigEffect(float progress)
+    {
+        if (pixelTransform == null) return;
+        PixelAudio.Play("seed_dig");
+        SeedDigFx.Play(pixelTransform.position, PixelBaseSize, Mathf.Clamp01(0.25f + progress * 0.75f));
     }
 
     /// <summary>A cracked Seed shell: a small sprout pops out, falls, plants itself and grows a random old pixel (see <see cref="SeedSprout"/>).</summary>
@@ -1820,8 +1879,8 @@ public class PixelClicker : MonoBehaviour
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
 
         BoxCollider box = go.AddComponent<BoxCollider>();
-        box.size = Vector3.one * unit * 0.35f;
-        box.center = new Vector3(0f, unit * 0.15f, 0f);
+        box.size = Vector3.one * unit * 0.5f;
+        box.center = new Vector3(0f, unit * 0.3f, 0f);
         box.sharedMaterial = SharedOldPixelPhysicsMaterial();
         if (!collideWithLivePixel)
             foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
@@ -1847,7 +1906,7 @@ public class PixelClicker : MonoBehaviour
         rb.AddForce(direction * UnityEngine.Random.Range(popSpeedRange.x, popSpeedRange.y), ForceMode.VelocityChange);
         rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y), ForceMode.VelocityChange);
 
-        go.AddComponent<SeedSprout>().Setup(this, unit, seedGrowSeconds, seedHoldSeconds);
+        go.AddComponent<SeedSprout>().Setup(this, unit, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
     }
 
     private void AnimatePixel()

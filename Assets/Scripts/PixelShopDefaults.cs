@@ -395,7 +395,7 @@ public partial class PixelShop
         {
             displayName = "Seed Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Seed pixel: a brown shell you click a few times to crack. A sprout comes out, plants itself and grows a random old pixel that pops off.",
+            description = "Adds the Seed pixel: a brown shell you dig at with many clicks to crack. A sprout comes out, plants itself and grows a random old pixel that pops off.",
             requirements = Needs(requiresRgbIndex),
             costs = new[]
             {
@@ -409,7 +409,7 @@ public partial class PixelShop
                 {
                     type = PixelClicker.PixelType.Seed, displayName = "Seed Pixels",
                     color = new Color(0.55f, 0.38f, 0.18f, 1f),
-                    amountPerClick = 6, clicksToCollect = 3, // 3 clicks crack the shell; only the last pays
+                    amountPerClick = 15, clicksToCollect = 8, // 8 clicks crack the shell; only the last pays
                     spawnWeight = 0.3f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },

@@ -230,6 +230,7 @@ public class PixelAudio : MonoBehaviour
             Make("bomb_click", 0.1f),
             Make("bomb_tick", 0.1f, 1f, 1f),
             Make("bomb_explode", 0.2f),
+            Make("seed_dig", 0.04f, 0.9f, 1.1f),
         };
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
             list.Add(Make("pixel_" + type.ToString().ToLowerInvariant(), 0.03f, 0.92f, 1.08f));
@@ -245,9 +246,10 @@ public class PixelAudio : MonoBehaviour
         if (sounds == null) return;
         foreach (Sound s in sounds)
         {
-            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon")) continue;
+            if (s == null || (s.id != "pixel_bounce_electric" && s.id != "overcharge" && s.id != "dragon_summon" && s.id != "seed_dig")) continue;
             if (s.clips != null && s.clips.Length > 0 && s.clips[0] != null) continue;
-            s.clips = s.id == "dragon_summon" ? new[] { PixelSynth.Summon() }
+            s.clips = s.id == "seed_dig" ? new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) }
+                    : s.id == "dragon_summon" ? new[] { PixelSynth.Summon() }
                     : s.id == "overcharge" ? new[] { PixelSynth.Charge() }
                     : new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
         }
@@ -640,6 +642,34 @@ public static class PixelSynth
     }
 
     /// <summary>A charge-up: a rising buzz with growing crackle that ends in a big snap.</summary>
+    /// <summary>A short digging sound: a gritty scrape of dirt over a low thud. 'seed' picks one of a few variants.</summary>
+    public static AudioClip Dig(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.26f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(900 + seed * 17);
+        float lp = 0f, lp2 = 0f;
+        float thumpHz = 60f + seed * 9f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.32f;            // rough, mid-low scrape
+            lp2 += (lp - lp2) * 0.5f;
+            float scrape = lp2 * (0.55f + 0.45f * Mathf.Sin(sec * (70f + seed * 12f))) * Mathf.Exp(-sec * 11f);
+            float grit = rng.NextDouble() < 0.035 ? ((float)rng.NextDouble() * 2f - 1f) * Mathf.Exp(-sec * 18f) : 0f;
+            float thump = Mathf.Sin(sec * thumpHz * Mathf.PI * 2f) * Mathf.Exp(-sec * 24f) * 0.9f;
+            data[i] = (scrape * 1.4f + grit * 0.6f + thump) * Mathf.Clamp01(sec / 0.004f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("Dig " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
     public static AudioClip Charge()
     {
         const int rate = 44100;

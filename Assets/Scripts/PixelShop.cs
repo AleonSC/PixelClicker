@@ -786,6 +786,24 @@ public partial class PixelShop : MonoBehaviour
                 changed = true;
             }
         }
+        // The Seed shell now takes 8 clicks and pays 15 (it was 3 and 6): only the previous defaults are changed.
+        if (packDataVersion < 9 && packs != null)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Seed)) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (reward.type != PixelClicker.PixelType.Seed) continue;
+                    if (reward.clicksToCollect == 3) reward.clicksToCollect = 8;
+                    if (Mathf.Approximately((float)reward.amountPerClick, 6f)) reward.amountPerClick = 15;
+                }
+                if (pack.description != null && pack.description.StartsWith("Adds the Seed pixel: a brown shell you click a few times to crack."))
+                    pack.description = CreateSeedPixelPack(-1).description;
+                packDataVersion = 9;
+                changed = true;
+            }
+        }
         return changed;
     }
 

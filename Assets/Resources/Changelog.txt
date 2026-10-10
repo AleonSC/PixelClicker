@@ -234,3 +234,4 @@
 [2026-10-10 00:29 UTC] Fixed a compile error in the Seed pixel's growth.
 [2026-10-10 03:56 UTC] Added two to-do items: Solar pixel speeds up Seed pixel growth, and rework the Seed pixel's visuals and mechanics.
 [2026-10-10 04:13 UTC] Reworked the Seed pixel: a brown shell that cracks over 3 clicks, then a sprout falls, plants itself and grows a random old pixel that pops off after a second.
+[2026-10-10 04:53 UTC] Seed pixel: old Solar pixels near a sprout speed up its growth, sprouts favour rarer pixel types, the sprout is bigger with a dirt mound and green glow, and the shell takes 8 clicks with a digging sound and falling dirt and dust.
