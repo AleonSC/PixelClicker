@@ -68,6 +68,9 @@ public class PixelLook
     [Tooltip("A bevel instead of neon: one thin SOLID line of exactly the outline colour lying flat along each edge (no glow, no bright core, no halo), so the cube looks like it has bevelled edges. Off = the glowing neon lines.")]
     public bool outlineBevel = false;
 
+    [Tooltip("With 'Outline Shade': take the shade from the pixel's TIER colour even when the look draws the pixel in another colour (Obsidian and Seed are drawn white and get their colour from a texture).")]
+    public bool outlineShadeOfTier = false;
+
     [Range(-1f, 1f)]
     [Tooltip("Draw the outline as a different SHADE of the pixel's own colour instead of 'Outline Color': above 0 lightens it towards white (0.4 = a lighter tint), below 0 darkens it towards black (-0.4 = a darker shade). 0 = off (use the colours above).")]
     public float outlineShade = 0f;
@@ -276,7 +279,8 @@ public static class PixelLooks
 
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
-                            metallic = 1f, smoothness = 0.95f, streakTexture = true, damageCracks = true },
+                            metallic = 1f, smoothness = 0.95f, streakTexture = true, damageCracks = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = 0.45f, outlineStrength = 0.8f },
 
             // Electric: a faint dark-blue glass box held together by crackling lightning.
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
@@ -284,7 +288,8 @@ public static class PixelLooks
 
             // Seed: a brown shell that cracks as you click it; a sprout comes out and grows a pixel.
             new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = Color.white,
-                            metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true },
+                            metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.85f },
 
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
@@ -531,7 +536,7 @@ public static class PixelLooks
             if (Mathf.Abs(look.outlineShade) > 0.001f)
             {
                 // A lighter or darker shade of the pixel's own colour (its 3D colour if the look overrides it).
-                Color own = look.useColor ? look.color : tierColor;
+                Color own = look.useColor && !look.outlineShadeOfTier ? look.color : tierColor;
                 c = look.outlineShade > 0f ? Color.Lerp(own, Color.white, look.outlineShade) : Color.Lerp(own, Color.black, -look.outlineShade);
                 c.a = 1f;
             }
@@ -738,25 +743,43 @@ public static class PixelLooks
         return chromeTex;
     }
 
-    /// <summary>One thin diagonal band per cube face, just above the surface (colours are animated by <see cref="PixelLookShine"/>).</summary>
+    /// <summary>Vertices along one side of a Shine face grid.</summary>
+    public const int ShineGrid = 8;
+
+    /// <summary>
+    /// A finely divided sheet just above each cube face. <see cref="PixelLookShine"/> animates the vertex alpha so a soft diagonal band of light
+    /// sweeps across (a plain four-corner quad could only blink as a white rectangle).
+    /// </summary>
     private static Mesh ShineMesh(Vector3 size)
     {
         Vector3[] normals = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
-        Vector2[] corners = { new Vector2(-0.5f, -0.4f), new Vector2(-0.4f, -0.5f), new Vector2(0.5f, 0.4f), new Vector2(0.4f, 0.5f) };
         List<Vector3> v = new List<Vector3>();
         List<Color> c = new List<Color>();
         List<int> t = new List<int>();
-        foreach (Vector3 n in normals)
+        int n = ShineGrid;
+        foreach (Vector3 normal in normals)
         {
-            Vector3 u = Mathf.Abs(n.y) > 0.5f ? Vector3.right : Vector3.up;
-            Vector3 w = Vector3.Cross(n, u);
+            Vector3 u = Mathf.Abs(normal.y) > 0.5f ? Vector3.right : Vector3.up;
+            Vector3 w = Vector3.Cross(normal, u);
             int b = v.Count;
-            foreach (Vector2 k in corners) v.Add(Vector3.Scale(n * 0.508f + u * k.x + w * k.y, size));
-            for (int i = 0; i < 4; i++) c.Add(new Color(1f, 1f, 1f, 0f));
-            t.Add(b); t.Add(b + 1); t.Add(b + 2);
-            t.Add(b); t.Add(b + 2); t.Add(b + 3);
-            t.Add(b); t.Add(b + 2); t.Add(b + 1); // double-sided
-            t.Add(b); t.Add(b + 3); t.Add(b + 2);
+            for (int iy = 0; iy <= n; iy++)
+            {
+                for (int ix = 0; ix <= n; ix++)
+                {
+                    float fx = ix / (float)n - 0.5f, fy = iy / (float)n - 0.5f;
+                    v.Add(Vector3.Scale(normal * 0.508f + u * fx + w * fy, size));
+                    c.Add(new Color(1f, 1f, 1f, 0f));
+                }
+            }
+            for (int iy = 0; iy < n; iy++)
+            {
+                for (int ix = 0; ix < n; ix++)
+                {
+                    int i0 = b + iy * (n + 1) + ix, i1 = i0 + 1, i2 = i0 + (n + 1), i3 = i2 + 1;
+                    t.Add(i0); t.Add(i2); t.Add(i1); t.Add(i1); t.Add(i2); t.Add(i3);
+                    t.Add(i0); t.Add(i1); t.Add(i2); t.Add(i1); t.Add(i3); t.Add(i2); // double-sided
+                }
+            }
         }
         Mesh mesh = new Mesh { name = "Shine" };
         mesh.MarkDynamic();
@@ -1466,12 +1489,14 @@ public class OldPixelFloat : MonoBehaviour
     }
 }
 
-/// <summary>Flashes the Mirror pixel's diagonal glints across its faces in turn (animates the vertex alpha of the Shine mesh).</summary>
+/// <summary>Sweeps a soft diagonal band of light across the Mirror pixel's faces in turn (animates the vertex alpha of the Shine mesh).</summary>
 public class PixelLookShine : MonoBehaviour
 {
     private Mesh mesh;
-    private readonly Color[] colors = new Color[24];
+    private Color[] colors;
+    private float[] diagonal;      // each vertex's position along the sweep direction, -1..1
     private float phase;
+    private bool wasActive;
 
     private void Awake()
     {
@@ -1480,6 +1505,14 @@ public class PixelLookShine : MonoBehaviour
         mesh = Instantiate(mf.sharedMesh); // each cube gets its own copy so the glints are independent
         mf.sharedMesh = mesh;
         phase = UnityEngine.Random.value * 6.28f;
+
+        int n = PixelLooks.ShineGrid, perFace = (n + 1) * (n + 1);
+        colors = new Color[perFace * 6];
+        diagonal = new float[perFace * 6];
+        for (int face = 0; face < 6; face++)
+            for (int iy = 0; iy <= n; iy++)
+                for (int ix = 0; ix <= n; ix++)
+                    diagonal[face * perFace + iy * (n + 1) + ix] = (ix + iy) / (float)n - 1f;
     }
 
     private void OnDestroy()
@@ -1490,15 +1523,30 @@ public class PixelLookShine : MonoBehaviour
     private void Update()
     {
         if (mesh == null) return;
-        float t = Time.unscaledTime * 2.2f + phase;
+        int n = PixelLooks.ShineGrid, perFace = (n + 1) * (n + 1);
+        float time = Time.unscaledTime * 0.55f + phase;
+        bool any = false;
         for (int face = 0; face < 6; face++)
         {
-            // A short bright flash that passes from face to face.
-            float flash = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(t - face * 1.05f)), 10f);
-            Color col = new Color(1f, 1f, 1f, flash * 0.85f);
-            for (int k = 0; k < 4; k++) colors[face * 4 + k] = col;
+            // Each face gets a sweep once per cycle (a little after the previous face); the rest of the time it is clear.
+            float s = Mathf.Repeat(time - face * 0.22f, 2.4f);
+            bool active = s < 0.7f;
+            float centre = Mathf.Lerp(-1.5f, 1.5f, s / 0.7f);
+            for (int i = 0; i < perFace; i++)
+            {
+                float a = 0f;
+                if (active)
+                {
+                    float d = Mathf.Abs(diagonal[face * perFace + i] - centre) / 0.45f;
+                    float k = Mathf.Clamp01(1f - d);
+                    a = k * k * (3f - 2f * k) * 0.8f;
+                    any = true;
+                }
+                colors[face * perFace + i] = new Color(1f, 1f, 1f, a);
+            }
         }
-        mesh.colors = colors;
+        if (any || wasActive) mesh.colors = colors; // nothing to redraw while every face is clear
+        wasActive = any;
     }
 }
 

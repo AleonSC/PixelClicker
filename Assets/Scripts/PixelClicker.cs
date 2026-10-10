@@ -298,7 +298,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1182,6 +1182,24 @@ public class PixelClicker : MonoBehaviour
                 saved.outlineThickness = def.outlineThickness;
             }
             looksVersion = 19;
+        }
+        if (looksVersion < 20)
+        {
+            // Obsidian and Seed got the same flat bevelled rim as the basic pixels: add it to looks saved without one.
+            foreach (PixelType special in new[] { PixelType.Obsidian, PixelType.Seed })
+            {
+                PixelLook def = PixelLooks.Find(PixelLooks.CreateDefaults(), special);
+                PixelLook saved = PixelLooks.Find(looks, special);
+                if (def == null || saved == null || saved.outline) continue;
+                saved.outline = true;
+                saved.outlineUsesTierColor = def.outlineUsesTierColor;
+                saved.outlineBevel = def.outlineBevel;
+                saved.outlineThickness = def.outlineThickness;
+                saved.outlineShadeOfTier = def.outlineShadeOfTier;
+                saved.outlineShade = def.outlineShade;
+                saved.outlineStrength = def.outlineStrength;
+            }
+            looksVersion = 20;
         }
 
         if (pixelRenderer != null)
