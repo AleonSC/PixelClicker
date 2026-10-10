@@ -97,6 +97,7 @@ public class PixelRobotWorker : MonoBehaviour
     private bool hasHome;
     private float nextSpotTime;
     private bool hovering, walking;
+    private float smoothUnit;
     private float cellSize;   // side of the floor tile he stands on (0 = the floor has no grid: free standing)
 
     // The bubble with his face.
@@ -211,7 +212,7 @@ public class PixelRobotWorker : MonoBehaviour
         Vector3 spot = cellSize > 0f ? anchor + away * (cellSize + extra * clicker.PixelBaseSize)   // always the neighbouring tile
                                       : anchor + away * (standDistance + extra) * clicker.PixelBaseSize;
         spot.y = homePos.y;
-        if (cellSize > 0f && PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(spot, out Vector3 snapped, out _))
+        if (snapHomeToTiles && cellSize > 0f && PixelFloor.Instance != null && PixelFloor.Instance.TryGetCell(spot, out Vector3 snapped, out _))
         {
             spot = snapped;
             spot.y = homePos.y;
@@ -236,6 +237,8 @@ public class PixelRobotWorker : MonoBehaviour
     {
         return Mathf.Abs(v.x) > Mathf.Abs(v.z) ? new Vector3(Mathf.Sign(v.x), 0f, 0f) : new Vector3(0f, 0f, v.z < 0f ? -1f : 1f);
     }
+
+    private static float unitToPad(float cell, float unit) => cell > 0f ? (cell / 2.1f) / unit : 1f;
 
     private bool HasJob => jobDevice >= 0 && jobDevice < consumables.DeviceCount;
 
@@ -280,7 +283,7 @@ public class PixelRobotWorker : MonoBehaviour
 
         stationRoot.position = homePos;
         float unit = UnitScale;
-        stationRoot.localScale = Vector3.one * (cellSize > 0f ? cellSize / 2.1f : unit);   // the pad is exactly one tile
+        stationRoot.localScale = Vector3.one * (smoothUnit > 0f ? smoothUnit * unitToPad(cellSize, unit) : unit);   // the pad is about one tile
 
         Camera cam = Cam;
         Vector3 toCam = cam != null ? cam.transform.position - root.transform.position : Vector3.back; toCam.y = 0f;
@@ -307,7 +310,7 @@ public class PixelRobotWorker : MonoBehaviour
             Vector3 pos = root.transform.position + flat.normalized * Mathf.Min(step, dist);
             pos.y = Mathf.Lerp(pos.y, target.y, 0.2f);
             root.transform.position = pos;
-            faceDir = cellSize > 0f ? Cardinal(flat) : flat.normalized;
+            faceDir = flat.normalized;   // turns smoothly the way he walks (no 90-degree snaps)
         }
         else if (cellSize > 0f) faceDir = -toCam;   // square to the tiles, looking up the screen (away from the viewer)
         else
@@ -318,7 +321,9 @@ public class PixelRobotWorker : MonoBehaviour
         }
         Quaternion want = Quaternion.LookRotation(-faceDir, Vector3.up);   // the model's front is -Z
         root.transform.rotation = Quaternion.Slerp(root.transform.rotation, want, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
-        root.transform.localScale = Vector3.one * unit * (hovering ? 1.06f : 1f);
+        // His size eases to the tile size instead of jumping when the floor style (and so the tile) changes.
+        smoothUnit = smoothUnit <= 0f ? unit : Mathf.Lerp(smoothUnit, unit, 1f - Mathf.Exp(-6f * Time.unscaledDeltaTime));
+        root.transform.localScale = Vector3.one * smoothUnit * (hovering ? 1.06f : 1f);
     }
 
     private void UpdateHoverAndClick()
