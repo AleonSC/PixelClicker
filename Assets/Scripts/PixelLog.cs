@@ -803,6 +803,10 @@ public class PixelLog : MonoBehaviour
         group.SetActive(false);
     }
 
+    /// <summary>
+    /// One achievement per row, laid out like a badge: the pixel's picture on the left, a thin vertical divider, then the title with a wide
+    /// progress bar under it that carries its "60 / 100" count in the middle. The row itself has no background.
+    /// </summary>
     private AchievementRow BuildAchievementRow(int index)
     {
         AchievementRow row = new AchievementRow();
@@ -810,96 +814,68 @@ public class PixelLog : MonoBehaviour
         GameObject go = new GameObject("Achievement " + index, typeof(RectTransform), typeof(Image));
         go.transform.SetParent(achievementsContent, false);
         row.background = go.GetComponent<Image>();
-        row.background.color = achievementRowColor;
+        row.background.color = new Color(0f, 0f, 0f, 0f);   // transparent (still takes the mouse wheel)
         row.rect = go.GetComponent<RectTransform>();
         row.rect.anchorMin = new Vector2(0f, 1f);
         row.rect.anchorMax = new Vector2(1f, 1f);
         row.rect.pivot = new Vector2(0.5f, 1f);
         row.rect.sizeDelta = new Vector2(0f, achievementRowHeight);
 
-        // Spinning cube icon.
+        float iconSize = Mathf.Min(achievementIconSize, achievementRowHeight - 16f);
+
+        // The pixel's picture (a spinning cube icon until its real look is rendered).
         GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
         iconGo.transform.SetParent(go.transform, false);
         row.icon = iconGo.AddComponent<PixelCubeIcon>();
         row.icon.spinDegreesPerSecond = achievementIconSpin;
         RectTransform ir = row.icon.rectTransform;
         ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
-        ir.sizeDelta = new Vector2(achievementIconSize, achievementIconSize);
-        ir.anchoredPosition = new Vector2(10f, 0f);
+        ir.sizeDelta = new Vector2(iconSize, iconSize);
+        ir.anchoredPosition = new Vector2(8f, 0f);
 
-        // Real pixel look (rendered once per pixel type); shown instead of the plain cube when available.
         GameObject skinGo = new GameObject("Skin", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
         skinGo.transform.SetParent(go.transform, false);
         row.skin = skinGo.GetComponent<RawImage>();
         row.skin.raycastTarget = false;
         RectTransform sr = row.skin.rectTransform;
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 0.5f);
-        sr.sizeDelta = new Vector2(achievementIconSize, achievementIconSize);
-        sr.anchoredPosition = new Vector2(10f, 0f);
+        sr.sizeDelta = new Vector2(iconSize, iconSize);
+        sr.anchoredPosition = new Vector2(8f, 0f);
         skinGo.SetActive(false);
 
-        float left = achievementIconSize + 24f;
+        // The vertical divider.
+        float dividerX = 8f + iconSize + 12f;
+        GameObject div = new GameObject("Divider", typeof(RectTransform), typeof(Image));
+        div.transform.SetParent(go.transform, false);
+        Image di = div.GetComponent<Image>();
+        di.color = new Color(1f, 1f, 1f, 0.55f);
+        di.raycastTarget = false;
+        RectTransform dr0 = div.GetComponent<RectTransform>();
+        dr0.anchorMin = new Vector2(0f, 0.08f); dr0.anchorMax = new Vector2(0f, 0.92f); dr0.pivot = new Vector2(0f, 0.5f);
+        dr0.sizeDelta = new Vector2(3f, 0f);
+        dr0.anchoredPosition = new Vector2(dividerX, 0f);
 
-        row.title = CreateText(go.transform, "Title", "", rowFontSize * 0.9f, TextAlignmentOptions.MidlineLeft,
-                               FontStyles.Bold, textColor);
+        float left = dividerX + 3f + 16f;
+
+        // The title, big and bold.
+        row.title = CreateText(go.transform, "Title", "", rowFontSize * 1.05f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         row.title.enableAutoSizing = true;
-        row.title.fontSizeMax = rowFontSize * 0.9f;
+        row.title.fontSizeMax = rowFontSize * 1.05f;
         row.title.fontSizeMin = 14f;
         RectTransform tr = row.title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 0.58f);
+        tr.anchorMin = new Vector2(0f, 0.5f);
         tr.anchorMax = new Vector2(1f, 1f);
         tr.offsetMin = new Vector2(left, 0f);
-        tr.offsetMax = new Vector2(-170f, -4f);
+        tr.offsetMax = new Vector2(-12f, -6f);
 
-        row.progress = CreateText(go.transform, "Progress", "", rowFontSize * 0.75f, TextAlignmentOptions.MidlineRight,
-                                  FontStyles.Bold, amountColor);
-        row.progress.enableAutoSizing = true;
-        row.progress.fontSizeMax = rowFontSize * 0.75f;
-        row.progress.fontSizeMin = 12f;
-        RectTransform pr = row.progress.rectTransform;
-        pr.anchorMin = new Vector2(1f, 0.58f);
-        pr.anchorMax = new Vector2(1f, 1f);
-        pr.pivot = new Vector2(1f, 0.5f);
-        pr.sizeDelta = new Vector2(160f, 0f);
-        pr.anchoredPosition = new Vector2(-10f, -2f);
-
-        row.description = CreateText(go.transform, "Description", "", rowFontSize * 0.68f, TextAlignmentOptions.MidlineLeft,
-                                     FontStyles.Normal, new Color(textColor.r, textColor.g, textColor.b, 0.7f));
-        row.description.enableAutoSizing = true;
-        row.description.fontSizeMax = rowFontSize * 0.68f;
-        row.description.fontSizeMin = 12f;
-        RectTransform dr = row.description.rectTransform;
-        dr.anchorMin = new Vector2(0f, 0.28f);
-        dr.anchorMax = new Vector2(1f, 0.58f);
-        dr.offsetMin = new Vector2(left, 0f);
-        dr.offsetMax = new Vector2(-250f, 0f);
-
-        // Small tag showing which of the pixel's two achievements this slot shows (click the row to switch).
-        row.modeTag = CreateText(go.transform, "Mode", "", rowFontSize * 0.6f, TextAlignmentOptions.MidlineRight,
-                                 FontStyles.Italic, new Color(textColor.r, textColor.g, textColor.b, 0.55f));
-        RectTransform mr = row.modeTag.rectTransform;
-        mr.anchorMin = new Vector2(1f, 0.28f);
-        mr.anchorMax = new Vector2(1f, 0.58f);
-        mr.pivot = new Vector2(1f, 0.5f);
-        mr.sizeDelta = new Vector2(240f, 0f);
-        mr.anchoredPosition = new Vector2(-10f, 0f);
-        row.modeTag.textWrappingMode = TextWrappingModes.NoWrap;
-        row.modeTag.overflowMode = TextOverflowModes.Overflow;
-
-        // Clicking the row switches between "value collected" and "times clicked".
-        Button click = go.AddComponent<Button>();
-        click.targetGraphic = row.background;
-        click.transition = Selectable.Transition.None;
-        click.onClick.AddListener(() => ToggleAchievementMode(row.groupIndex));
-
-        // Progress bar.
+        // The progress bar with its count in the middle.
         GameObject back = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         back.transform.SetParent(go.transform, false);
         back.GetComponent<Image>().color = achievementBarBackColor;
         back.GetComponent<Image>().raycastTarget = false;
         RectTransform br = back.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0f, 0.07f);
-        br.anchorMax = new Vector2(1f, 0.21f);
+        br.anchorMin = new Vector2(0f, 0.1f);
+        br.anchorMax = new Vector2(1f, 0.46f);
         br.offsetMin = new Vector2(left, 0f);
         br.offsetMax = new Vector2(-12f, 0f);
 
@@ -911,6 +887,17 @@ public class PixelLog : MonoBehaviour
         row.barFillRect.anchorMin = Vector2.zero;
         row.barFillRect.anchorMax = new Vector2(0f, 1f);
         row.barFillRect.offsetMin = row.barFillRect.offsetMax = Vector2.zero;
+
+        row.progress = CreateText(back.transform, "Progress", "", rowFontSize * 0.72f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        row.progress.enableAutoSizing = true;
+        row.progress.fontSizeMax = rowFontSize * 0.72f;
+        row.progress.fontSizeMin = 10f;
+        row.progress.raycastTarget = false;
+        PixelUIKit.Stretch(row.progress.rectTransform);
+
+        // (The description is kept only as hidden storage; the title and bar say it all.)
+        row.description = CreateText(go.transform, "Description", "", 12f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
+        row.description.gameObject.SetActive(false);
 
         return row;
     }
@@ -1054,19 +1041,8 @@ public class PixelLog : MonoBehaviour
     private void BuildAchievementGroups()
     {
         achievementGroups.Clear();
-        Dictionary<PixelClicker.PixelType, int> byType = new Dictionary<PixelClicker.PixelType, int>();
         int total = achievements != null ? achievements.Count : 0;
-        for (int i = 0; i < total; i++)
-        {
-            PixelAchievements.Kind kind = achievements.GetKind(i);
-            if (IsPixelKind(kind))
-            {
-                PixelClicker.PixelType type = achievements.GetPixelType(i);
-                if (byType.TryGetValue(type, out int g)) { achievementGroups[g].Add(i); continue; }
-                byType[type] = achievementGroups.Count;
-            }
-            achievementGroups.Add(new List<int> { i });
-        }
+        for (int i = 0; i < total; i++) achievementGroups.Add(new List<int> { i });   // every achievement has its own row
     }
 
     /// <summary>The achievement a group currently shows.</summary>
@@ -1269,12 +1245,6 @@ public class PixelLog : MonoBehaviour
             row.groupIndex = i;
             List<int> group = achievementGroups[i];
             int a = ChosenAchievement(group);
-            if (row.modeTag != null)
-            {
-                bool two = group.Count > 1;
-                row.modeTag.gameObject.SetActive(two);
-                if (two) row.modeTag.text = achievements.GetKind(a) == PixelAchievements.Kind.ClickPixelType ? clicksModeText : valueModeText;
-            }
 
             bool unlocked = achievements.IsComplete(a);           // every tier earned
             bool started = achievements.HasAnyTier(a);            // at least one tier earned
