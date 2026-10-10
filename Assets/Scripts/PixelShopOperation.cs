@@ -231,8 +231,8 @@ public partial class PixelShop
             double cost = OperationCost(u), have = tierIndex >= 0 ? clicker.Tiers[tierIndex].count : 0d;
             bool enough = PixelClicker.InfiniteResources || have >= cost;
 
-            row.nameLabel.text = u.displayName + "   <size=65%><color=#" + ColorUtility.ToHtmlStringRGB(levelColor) + ">" +
-                                 string.Format(maxed ? maxedLevelFormat : levelFormat, level, u.maxLevel) + "</color></size>";
+            row.nameLabel.text = u.displayName;
+            ApplyLevelWidgets(row, level, u.maxLevel);
             row.descLabel.text = OperationStatText(u);   // the orange '!' box shows this as its tooltip
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
                                  string.Format(NoHave(operationCostFormat), PixelClicker.FormatNumberShort(cost), pixelName, PixelClicker.FormatNumberShort(have)) + "</color>";

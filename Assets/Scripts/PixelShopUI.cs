@@ -32,6 +32,9 @@ public partial class PixelShop
         public TMP_Text costLabel;
         public Button arrowButton;
         public bool isPotion;
+        public TMP_Text levelLabel;                                   // "Level 4/5" on its own single line (upgrade rows)
+        public RectTransform markerRoot;                              // the row of level boxes next to it
+        public readonly System.Collections.Generic.List<Image> markers = new System.Collections.Generic.List<Image>();
     }
 
     private RectTransform panelRect;
@@ -383,11 +386,20 @@ public partial class PixelShop
         pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
         pr.sizeDelta = new Vector2(panelWidth, panelHeight);
         pr.anchoredPosition = Vector2.zero;
-        PixelUIKit.StyleWindow(subPanelObject.GetComponent<Image>(), panelColor);
+        PixelUIKit.StyleWindow(subPanelObject.GetComponent<Image>(), new Color(panelColor.r, panelColor.g, panelColor.b, 1f));   // opaque: the shop behind must not show through
 
         subTitle = CreateText(subPanelObject.transform, "Title", "", titleFontSize,
                               TextAlignmentOptions.Center, FontStyles.Bold);
         PixelUIKit.Caps(subTitle);
+        subTitle.enableAutoSizing = true;            // a long title ("Auto Clicker Upgrades") shrinks to ONE line between the two buttons
+        subTitle.fontSizeMax = titleFontSize;
+        subTitle.fontSizeMin = 14f;
+        subTitle.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        subTitle.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        subTitle.enableWordWrapping = false;
+#endif
         RectTransform tr = subTitle.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);
@@ -820,6 +832,7 @@ public partial class PixelShop
             }
 
             PixelUIKit.SetText(row.nameLabel, BuildNameText(pack));
+            if (IsLeveled(pack)) ApplyLevelWidgets(row, pack.level, pack.levels.Length);
             PixelUIKit.SetText(row.descLabel, ResolveDescription(pack));
 
             bool canBuy = !owned && requirementMet && CanAfford(i);
@@ -900,12 +913,75 @@ public partial class PixelShop
     /// <summary>Pack name, plus "Level 2/5" for upgrade packs.</summary>
     private string BuildNameText(ShopPack pack)
     {
-        if (!IsLeveled(pack)) return pack.displayName;
+        return pack.displayName;   // the level shows on its own line + as level boxes (ApplyLevelWidgets)
+    }
 
-        bool maxed = pack.level >= pack.levels.Length;
-        string levelText = string.Format(maxed ? maxedLevelFormat : levelFormat, pack.level, pack.levels.Length);
-        return pack.displayName + "   <size=65%><color=#" + ColorUtility.ToHtmlStringRGB(levelColor) + ">" +
-               levelText + "</color></size>";
+    /// <summary>
+    /// An upgrade row's level: "Level 2/5" on its own single line under the name, and one small box per level beside it
+    /// (dark = not bought yet, green = bought), so the progress reads at a glance.
+    /// </summary>
+    private void ApplyLevelWidgets(PackRow row, int level, int max)
+    {
+        if (row.levelLabel == null)
+        {
+            float s = Mathf.Min(52f, rowHeight * 0.22f);
+            float left = 20f + s + 12f;
+            row.levelLabel = CreateText(row.rect, "Level", "", costFontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+            row.levelLabel.color = levelColor;
+            row.levelLabel.raycastTarget = false;
+            row.levelLabel.enableAutoSizing = true;
+            row.levelLabel.fontSizeMax = costFontSize;
+            row.levelLabel.fontSizeMin = 10f;
+            row.levelLabel.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+            row.levelLabel.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            row.levelLabel.enableWordWrapping = false;
+#endif
+            RectTransform lr = row.levelLabel.rectTransform;
+            lr.anchorMin = new Vector2(0f, 0.36f); lr.anchorMax = new Vector2(0f, 0.6f);
+            lr.pivot = new Vector2(0f, 0.5f);
+            lr.sizeDelta = new Vector2(230f, 0f);
+            lr.anchoredPosition = new Vector2(left, 0f);
+
+            GameObject rootGo = new GameObject("Level Markers", typeof(RectTransform));
+            rootGo.transform.SetParent(row.rect, false);
+            row.markerRoot = rootGo.GetComponent<RectTransform>();
+            row.markerRoot.anchorMin = new Vector2(0f, 0.36f); row.markerRoot.anchorMax = new Vector2(0f, 0.6f);
+            row.markerRoot.pivot = new Vector2(0f, 0.5f);
+            row.markerRoot.anchoredPosition = new Vector2(left + 240f, 0f);
+            row.markerRoot.sizeDelta = Vector2.zero;
+
+            // The cost line moves down to make room for this line.
+            RectTransform cr = row.costLabel.rectTransform;
+            cr.anchorMin = new Vector2(cr.anchorMin.x, 0.05f);
+            cr.anchorMax = new Vector2(cr.anchorMax.x, 0.34f);
+        }
+
+        bool maxed = level >= max;
+        PixelUIKit.SetText(row.levelLabel, string.Format(maxed ? maxedLevelFormat : levelFormat, level, max));
+
+        float w = max > 10 ? 10f : 18f, h = 34f, gap = 6f;
+        while (row.markers.Count < max)
+        {
+            GameObject box = new GameObject("Level " + row.markers.Count, typeof(RectTransform), typeof(Image));
+            box.transform.SetParent(row.markerRoot, false);
+            Image img = box.GetComponent<Image>();
+            img.raycastTarget = false;
+            PixelUIKit.StyleBox(img);
+            RectTransform br = box.GetComponent<RectTransform>();
+            br.anchorMin = br.anchorMax = new Vector2(0f, 0.5f);
+            br.pivot = new Vector2(0f, 0.5f);
+            br.sizeDelta = new Vector2(w, h);
+            br.anchoredPosition = new Vector2(row.markers.Count * (w + gap), 0f);
+            row.markers.Add(img);
+        }
+        for (int i = 0; i < row.markers.Count; i++)
+        {
+            bool shown = i < max;
+            if (row.markers[i].gameObject.activeSelf != shown) row.markers[i].gameObject.SetActive(shown);
+            row.markers[i].color = i < level ? new Color(0.28f, 0.82f, 0.4f, 1f) : new Color(0.1f, 0.1f, 0.14f, 1f);
+        }
     }
 
     private string ResolveDescription(ShopPack pack)

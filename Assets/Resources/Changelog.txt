@@ -353,3 +353,4 @@
 [2026-10-10 15:48 UTC] Input boxes are now sunken rounded fields; on the shop's consumable cards the cost line is centred beside the '!' box and the - / count / + group is centred.
 [2026-10-10 15:50 UTC] On the shop's consumable cards the orange '!' box now sits on the top left corner of the item's picture, and the cost line uses the full card width.
 [2026-10-10 15:53 UTC] The orange '!' info boxes are fancy (bevelled, rounded, with a drop shadow) and on the shop's cards sit flush in the top left corner of the 3D picture box; drop-down lists now have the same slim scroll bar as the other lists.
+[2026-10-10 15:57 UTC] Upgrade rows (and the Operation upgrades) show 'Level x/y' on its own single line with a row of level boxes beside it (dark = not bought, green = bought); the upgrades window's title shrinks to one line and the window is opaque.
