@@ -291,3 +291,4 @@
 [2026-10-10 10:51 UTC] The back arrow in the shop's upgrade windows (Pixel Bank, Auto Clicker) is now a drawn backwards triangle, and the other < > arrow buttons (floor/sky pickers, pet outfits) use drawn triangles too.
 [2026-10-10 10:52 UTC] Opening the Pixel Bank now hides the Bank and Hose tabs (the window takes their place) and they fade back in when it closes, like the Toggles tab; the window has a hose icon button at the top left to switch the hose on or off.
 [2026-10-10 10:55 UTC] Typing in a text box (like the recipe search) no longer triggers keybinds such as Time Stop, and the recipe book rows are tidier: the result in bold with what it is made of underneath.
+[2026-10-10 10:56 UTC] Clicking an item in the crafting Materials list puts it in the first free box again; only clicking a recipe in the recipe book fills both boxes.

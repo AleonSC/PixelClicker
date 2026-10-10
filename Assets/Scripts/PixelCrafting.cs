@@ -1124,22 +1124,6 @@ public class PixelCrafting : MonoBehaviour
         Refresh();
     }
 
-    /// <summary>A click on a Materials row: a pixel goes into a box; a potion that fits what is already in a box goes into the other box, otherwise it fills BOTH boxes with the ingredients that make it.</summary>
-    private void ClickItem(Item item)
-    {
-        if (item.kind == ItemKind.Potion)
-        {
-            bool oneFilled = slots[0].has != slots[1].has;
-            Item filled = slots[0].has ? slots[0].item : slots[1].item;
-            if (!(oneFilled && FindRecipe(filled, item) != null))
-            {
-                AutoFillFor(item);
-                return;
-            }
-        }
-        QuickPlace(item);
-    }
-
     private void FillBoxes(Recipe r)
     {
         for (int i = 0; i < 2; i++) ClearSlotQuiet(i);
@@ -1156,19 +1140,6 @@ public class PixelCrafting : MonoBehaviour
         s.has = false;
         s.pinned = false;
         s.label.text = "";
-    }
-
-    /// <summary>Puts the two ingredients that make this potion into the boxes (the way you can best afford).</summary>
-    private void AutoFillFor(Item potion)
-    {
-        Recipe best = null;
-        int bestScore = -1;
-        foreach (Recipe r in Decompositions(potion))
-        {
-            int score = (Have(ItemOf(r.a)) >= r.a.Amount ? 1 : 0) + (Have(ItemOf(r.b)) >= r.b.Amount ? 1 : 0) + (CanAfford(r) ? 2 : 0);
-            if (score > bestScore) { best = r; bestScore = score; }
-        }
-        if (best != null) FillBoxes(best);
     }
 
     /// <summary>Every way to craft this potion (a plain potion: its recipe; a 2-type combo: either potion + the other pixel; a 3-type combo: any pair potion + the last pixel).</summary>
@@ -1381,7 +1352,7 @@ public class PixelCrafting : MonoBehaviour
         drag.onClick = e =>
         {
             if (e.button != PointerEventData.InputButton.Left || cell.disabled) return;
-            ClickItem(cell.item);
+            QuickPlace(cell.item);   // into the first free box
         };
         return cell;
     }
