@@ -28,7 +28,7 @@ public class PixelGuideVendor : MonoBehaviour
 
     [Min(0f)]
     [Tooltip("Seconds of calm (title screen over, no tip box, no minigame round, not paused) before a visit starts.")]
-    [SerializeField] private float calmSeconds = 5f;
+    [SerializeField] private float calmSeconds = 1.5f;
 
     [Min(0.1f)]
     [Tooltip("Seconds he takes to slide in (and out).")]

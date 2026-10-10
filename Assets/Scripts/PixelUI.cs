@@ -1566,6 +1566,7 @@ public class PixelUI : MonoBehaviour
         {
             text = BuildGuideText();
         }
+        PixelClicker.ClickHint = unlockTimer <= 0f && !string.IsNullOrEmpty(text) && showTierGuide; // the cube pulses while this text shows and nothing was collected yet
 
         bool visible = !string.IsNullOrEmpty(text);
         if (guideRoot.activeSelf != visible) guideRoot.SetActive(visible);

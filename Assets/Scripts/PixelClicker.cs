@@ -26,6 +26,7 @@ public class PixelClicker : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         ExternalClickBlock = false;
+        ClickHint = false;
         GodMode = false;
         InfiniteResources = false;
         DevClickCount = 1;
@@ -638,6 +639,22 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Slowly spin the pixel (degrees per second per axis). Set to 0 for no spin.")]
     [SerializeField] private Vector3 idleSpin = new Vector3(0f, 20f, 0f);
 
+    [Header("Click Hint")]
+    [Tooltip("Turn off the 'click me' pulse that the cube plays after the first guide text until the first pixel is collected.")]
+    [SerializeField] private bool disableClickHint = false;
+
+    [Min(0f)]
+    [Tooltip("How much bigger the cube gets at the peak of the click-me pulse (0.12 = +12%).")]
+    [SerializeField] private float clickHintAmount = 0.12f;
+
+    [Min(0f)]
+    [Tooltip("How much brighter the cube gets at the peak of the click-me pulse (0.35 = +35%).")]
+    [SerializeField] private float clickHintBrightness = 0.35f;
+
+    [Min(0.1f)]
+    [Tooltip("Click-me pulses per second.")]
+    [SerializeField] private float clickHintSpeed = 1.6f;
+
     [Header("Pulsing")]
     [Tooltip("Enable the pulsing scale effect.")]
     [SerializeField] private bool pulseEnabled = true;
@@ -705,6 +722,11 @@ public class PixelClicker : MonoBehaviour
     private int hitsOnCurrentPixel;
     private bool clicksBlocked;
     private float lastManualClickTime = -99f;
+
+    /// <summary>Set by the Inventory UI while the "Click N more..." guide text shows. With nothing collected yet the cube then pulses to say "click me".</summary>
+    public static bool ClickHint;
+
+    private bool clickHintDone;
 
     /// <summary>While true, clicks on the cube are ignored (set by the pixel bank's hose, which uses the mouse buttons itself).</summary>
     public static bool ExternalClickBlock;
@@ -1685,6 +1707,15 @@ public class PixelClicker : MonoBehaviour
 
     private static float AnimDelta => (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) ? Time.unscaledDeltaTime : Time.deltaTime;
 
+    /// <summary>0..1 pulse that tells a brand-new player to click the cube: only while the guide text shows and nothing has been collected yet.</summary>
+    private float ClickHintPulse(float time)
+    {
+        if (disableClickHint || clickHintDone || !ClickHint) return 0f;
+        foreach (PixelTier t in tiers)
+            if (t.totalCollected > 0d) { clickHintDone = true; return 0f; }
+        return 0.5f + 0.5f * Mathf.Sin(time * clickHintSpeed * Mathf.PI * 2f);
+    }
+
     private void AnimatePixel()
     {
         float time = Time.time;
@@ -1719,7 +1750,8 @@ public class PixelClicker : MonoBehaviour
         if (activeLook != null && activeLook.wobble && allowPulsing)
             liveBase = Vector3.Scale(baseScale, PixelWobble.Scale(time, activeLook.wobbleAmount, activeLook.wobbleSpeed, 0f));
         cubeShrinkCurrent = Mathf.MoveTowards(cubeShrinkCurrent, cubeShrinkTarget, Time.unscaledDeltaTime / Mathf.Max(0.05f, cubeShrinkSeconds));
-        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount) * cubeShrinkCurrent);
+        float hintPulse = ClickHintPulse(time);
+        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount) * (1f + hintPulse * clickHintAmount) * cubeShrinkCurrent);
 
         if (pulseEnabled && allowPulsing && pulseBrightness)
         {
@@ -1730,6 +1762,13 @@ public class PixelClicker : MonoBehaviour
         else if (activeGlow > 0f)
         {
             ApplyPixelColor(currentColor, false); // keeps the glow breathing
+        }
+
+        if (hintPulse > 0f && clickHintBrightness > 0f)
+        {
+            Color bright = currentColor * (1f + hintPulse * clickHintBrightness);
+            bright.a = currentColor.a;
+            ApplyPixelColor(bright, false);
         }
 
         if (glowLight != null && glowLight.enabled)
