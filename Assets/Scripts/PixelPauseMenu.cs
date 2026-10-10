@@ -1684,7 +1684,7 @@ public class PixelPauseMenu : MonoBehaviour
         }, ref y);
 
         // ---- Gameplay ----
-        AddHeaderRow(list, headerGameplay, ref y);
+        AddSettingsSectionHeader(list, headerGameplay, ref y);
         rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
         pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
@@ -1703,7 +1703,7 @@ public class PixelPauseMenu : MonoBehaviour
         }, ref y);
 
         // ---- Interface ----
-        AddHeaderRow(list, headerInterface, ref y);
+        AddSettingsSectionHeader(list, headerInterface, ref y);
         AddSettingToggle(list, tipsLabel, () => PixelHints.TipsEnabled, on => PixelHints.TipsEnabled = on, ref y);
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
@@ -1718,14 +1718,14 @@ public class PixelPauseMenu : MonoBehaviour
         // ---- Saving ----
         if (saveGame != null)
         {
-            AddHeaderRow(list, headerSaving, ref y);
+            AddSettingsSectionHeader(list, headerSaving, ref y);
             AddSettingToggle(list, autoSaveMessageLabel, () => saveGame.AutoSaveMessageNow,
                              on => PixelSaveGame.AutoSaveMessageChoice = on ? 1 : 0, ref y);
             AddChoiceRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
         }
 
         // ---- Display ----
-        AddHeaderRow(list, headerDisplay, ref y);
+        AddSettingsSectionHeader(list, headerDisplay, ref y);
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
         AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
@@ -1748,7 +1748,7 @@ public class PixelPauseMenu : MonoBehaviour
         PixelAudio audio = PixelFind.First<PixelAudio>();
         if (audio != null)
         {
-            AddHeaderRow(list, headerAudio, ref y);
+            AddSettingsSectionHeader(list, headerAudio, ref y);
             muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
             masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
             effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
@@ -1756,12 +1756,101 @@ public class PixelPauseMenu : MonoBehaviour
         }
 
         // ---- Controls ----
-        AddHeaderRow(list, headerControls, ref y);
+        AddSettingsSectionHeader(list, headerControls, ref y);
         AddWideButtonRow(list, keyBindingsText, () => ShowView(keysPanel), ref y);
 
-        PixelUIKit.UpdateScrollView(scroll, bar, y, viewHeight);
+        settingsScroll = scroll;
+        settingsBar = bar;
+        settingsViewHeight = viewHeight;
+        CaptureSettingsLayout(content, y);
+        LayoutSettings();
         BuildKeysPanel();
         FinishSectionPanel(settingsPanel, top + viewHeight);
+    }
+
+    // ---- Settings sections: a heading you click folds / unfolds the rows under it (all start folded) ----
+    private ScrollRect settingsScroll;
+    private GameObject settingsBar;
+    private float settingsViewHeight, settingsTotalHeight;
+    private readonly HashSet<string> expandedSettingsSections = new HashSet<string>();
+    private readonly Dictionary<RectTransform, string> settingsHeaders = new Dictionary<RectTransform, string>();
+    private readonly List<SettingsItem> settingsItems = new List<SettingsItem>();
+
+    private class SettingsItem
+    {
+        public RectTransform rect;
+        public string section;          // the heading it sits under (null = above the first heading: always shown)
+        public bool isHeader, wasActive;
+        public float top, extent;       // where it was built, and how far down to the next item (its own height + the gap)
+    }
+
+    private void AddSettingsSectionHeader(Transform parent, string text, ref float y)
+    {
+        y += 8f;
+        float h = rowHeight * 0.8f;
+        Button b = MakeButton(parent, text + " Header", "", new Vector2(10f, h), tickBoxColor, rowFontSize * 0.7f);
+        RectTransform rt = b.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(-60f, h);   // 10 wider than the rows, so the heading's text starts where the row names do
+        rt.anchoredPosition = new Vector2(0f, -y);
+        TMP_Text t = b.GetComponentInChildren<TMP_Text>();
+        t.color = statValueColor;
+        t.fontStyle = FontStyles.Bold;
+        t.alignment = TextAlignmentOptions.MidlineLeft;
+        t.rectTransform.offsetMin = new Vector2(10f, 0f);
+        t.rectTransform.offsetMax = new Vector2(-10f, 0f);
+        settingsHeaders[rt] = text;
+        b.onClick.AddListener(() =>
+        {
+            if (!expandedSettingsSections.Remove(text)) expandedSettingsSections.Add(text);
+            LayoutSettings();
+        });
+        y += h + 4f;
+    }
+
+    /// <summary>Remembers where every settings row was built (they are laid out top to bottom in creation order).</summary>
+    private void CaptureSettingsLayout(RectTransform content, float totalHeight)
+    {
+        settingsItems.Clear();
+        settingsTotalHeight = totalHeight;
+        string section = null;
+        for (int i = 0; i < content.childCount; i++)
+        {
+            RectTransform rt = content.GetChild(i) as RectTransform;
+            if (rt == null) continue;
+            SettingsItem item = new SettingsItem { rect = rt, top = -rt.anchoredPosition.y, wasActive = rt.gameObject.activeSelf };
+            if (settingsHeaders.TryGetValue(rt, out string name)) { item.isHeader = true; section = name; item.section = name; }
+            else item.section = section;
+            settingsItems.Add(item);
+        }
+        settingsItems.Sort((a, b) => a.top.CompareTo(b.top));
+        for (int i = 0; i < settingsItems.Count; i++)
+        {
+            float next = i + 1 < settingsItems.Count ? settingsItems[i + 1].top : totalHeight;
+            settingsItems[i].extent = Mathf.Max(0f, next - settingsItems[i].top);
+        }
+    }
+
+    /// <summary>Hides the rows of folded sections and closes the gaps they leave.</summary>
+    private void LayoutSettings()
+    {
+        float removed = 0f;
+        foreach (SettingsItem item in settingsItems)
+        {
+            bool shown = item.isHeader || item.section == null || expandedSettingsSections.Contains(item.section);
+            if (item.isHeader)
+            {
+                TMP_Text label = item.rect.GetComponentInChildren<TMP_Text>();
+                if (label != null) label.text = (expandedSettingsSections.Contains(item.section) ? "-  " : "+  ") + item.section;
+            }
+            if (!shown) { item.rect.gameObject.SetActive(false); removed += item.extent; continue; }
+            if (item.wasActive && !item.rect.gameObject.activeSelf) item.rect.gameObject.SetActive(true);
+            Vector2 p = item.rect.anchoredPosition;
+            item.rect.anchoredPosition = new Vector2(p.x, -(item.top - removed));
+        }
+        if (settingsScroll != null) PixelUIKit.UpdateScrollView(settingsScroll, settingsBar, settingsTotalHeight - removed, settingsViewHeight);
     }
 
     private int NearestUiScaleIndex()
@@ -2131,7 +2220,7 @@ public class PixelPauseMenu : MonoBehaviour
             bool hidden = false;
             for (int i = 0; i < lines.Count; i++)
             {
-                if (lines[i].header) { hidden = collapsedStatSections.Contains(lines[i].label); continue; }
+                if (lines[i].header) { hidden = !expandedStatSections.Contains(lines[i].label); continue; }
                 if (hidden) continue;
                 if (v < statValueTexts.Count) statValueTexts[v++].text = lines[i].value;
             }
@@ -2139,7 +2228,7 @@ public class PixelPauseMenu : MonoBehaviour
         PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
     }
 
-    private readonly HashSet<string> collapsedStatSections = new HashSet<string>();
+    private readonly HashSet<string> expandedStatSections = new HashSet<string>();   // empty = every section starts folded
 
     /// <summary>A Stats section heading you can click to fold / unfold the rows under it ("-" open, "+" folded).</summary>
     private void AddStatSectionHeader(Transform parent, string text, bool collapsed, ref float y)
@@ -2161,7 +2250,7 @@ public class PixelPauseMenu : MonoBehaviour
         t.rectTransform.offsetMax = new Vector2(-10f, 0f);
         b.onClick.AddListener(() =>
         {
-            if (!collapsedStatSections.Remove(text)) collapsedStatSections.Add(text);
+            if (!expandedStatSections.Remove(text)) expandedStatSections.Add(text);
             RebuildStatRows();
             PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
         });
@@ -2183,7 +2272,7 @@ public class PixelPauseMenu : MonoBehaviour
             {
                 if (line.header)
                 {
-                    hidden = collapsedStatSections.Contains(line.label);
+                    hidden = !expandedStatSections.Contains(line.label);
                     AddStatSectionHeader(statsContent, line.label, hidden, ref cy);
                 }
                 else if (!hidden)

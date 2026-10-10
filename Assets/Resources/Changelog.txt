@@ -382,3 +382,4 @@
 [2026-10-10 17:17 UTC] The simplified Inventory has a second button beside the toggle that swaps between the currency list (potion icon) and the consumables list (coin icon).
 [2026-10-10 17:18 UTC] The first-potion tip stops time until you press Got it.
 [2026-10-10 17:26 UTC] The Toggles window and every pause-menu screen grow from small when they open and shrink away when you resume.
+[2026-10-10 17:27 UTC] Stats sections now start folded, and the Settings screen is split into collapsible sections (Gameplay, Interface, Saving, Display, Audio, Controls) that also start folded.
