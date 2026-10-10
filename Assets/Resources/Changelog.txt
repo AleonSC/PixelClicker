@@ -250,3 +250,4 @@
 [2026-10-10 06:47 UTC] Sun soaked seed sprouts and the Seed pet now show a soft ray of sunlight above them.
 [2026-10-10 06:50 UTC] The Seed pet now sprouts up out of the ground beside the cube instead of dropping from the air.
 [2026-10-10 06:54 UTC] Added 'Farmer visitor that sells pixel seeds' to the to-do list.
+[2026-10-10 07:02 UTC] Five or more old Solar pixels touching each other now last indefinitely.

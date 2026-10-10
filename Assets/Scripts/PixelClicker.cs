@@ -663,6 +663,14 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How strongly a sprout favours rare pixel types: a type's chance is 1 / spawnWeight to this power. 0 = every unlocked type equally likely, 1 = rarer types are proportionally more likely.")]
     [SerializeField] private float seedRarityBias = 1f;
 
+    [Min(2)]
+    [Tooltip("This many old Solar pixels touching each other (a connected group) never run out: they stay on the floor indefinitely. 0 = switched off.")]
+    [SerializeField] private int solarClusterSize = 5;
+
+    [Min(0.5f)]
+    [Tooltip("Two old Solar pixels count as touching when their centres are within this many old-pixel widths of each other.")]
+    [SerializeField] private float solarClusterDistance = 1.5f;
+
     [Min(0f)]
     [Tooltip("How close (in old-pixel widths) an old Solar pixel must lie to a growing sprout to speed it up.")]
     [SerializeField] private float seedSolarReach = 6f;
@@ -1180,6 +1188,7 @@ public class PixelClicker : MonoBehaviour
         AnimatePixel();
 
         CleanOldPixels();
+        UpdateSolarClusters();
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
@@ -1853,6 +1862,64 @@ public class PixelClicker : MonoBehaviour
         foreach (PixelTier t in tiers)
             if (t.totalCollected > 0d) { clickHintDone = true; return 0f; }
         return 0.5f + 0.5f * Mathf.Sin(time * clickHintSpeed * Mathf.PI * 2f);
+    }
+
+    private float solarClusterTimer;
+    private readonly System.Collections.Generic.List<Rigidbody> solarBodies = new System.Collections.Generic.List<Rigidbody>();
+    private readonly System.Collections.Generic.List<OldPixelDespawn> solarDespawns = new System.Collections.Generic.List<OldPixelDespawn>();
+    private readonly System.Collections.Generic.List<int> solarGroup = new System.Collections.Generic.List<int>();
+    private bool[] solarSeen = new bool[0];
+
+    /// <summary>
+    /// Old Solar pixels that touch each other in a group of <see cref="solarClusterSize"/> or more are kept alive (they never age
+    /// or despawn while the group is complete). Checked a few times a second; the keep-alive lasts a little longer than that.
+    /// </summary>
+    private void UpdateSolarClusters()
+    {
+        if (solarClusterSize < 2 || Time.timeScale <= 0f) return;
+        solarClusterTimer -= Time.unscaledDeltaTime;
+        if (solarClusterTimer > 0f) return;
+        solarClusterTimer = 0.15f;
+
+        int solar = IndexOf(PixelType.Solar);
+        if (solar < 0) return;
+        solarBodies.Clear();
+        solarDespawns.Clear();
+        foreach (Rigidbody rb in oldPixels)
+        {
+            if (rb == null) continue;
+            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            if (info == null || info.tierIndex != solar) continue;
+            OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
+            if (d == null || d.IsDespawning) continue;
+            solarBodies.Add(rb);
+            solarDespawns.Add(d);
+        }
+        int n = solarBodies.Count;
+        if (n < solarClusterSize) return;
+
+        float reach = OldPixelWorldSize * solarClusterDistance, reachSqr = reach * reach;
+        if (solarSeen.Length < n) solarSeen = new bool[n * 2];
+        for (int i = 0; i < n; i++) solarSeen[i] = false;
+        for (int start = 0; start < n; start++)
+        {
+            if (solarSeen[start]) continue;
+            solarGroup.Clear();
+            solarGroup.Add(start);
+            solarSeen[start] = true;
+            for (int g = 0; g < solarGroup.Count; g++)
+            {
+                Vector3 from = solarBodies[solarGroup[g]].position;
+                for (int j = 0; j < n; j++)
+                {
+                    if (solarSeen[j] || (solarBodies[j].position - from).sqrMagnitude > reachSqr) continue;
+                    solarSeen[j] = true;
+                    solarGroup.Add(j);
+                }
+            }
+            if (solarGroup.Count < solarClusterSize) continue;
+            foreach (int member in solarGroup) solarDespawns[member].KeepAlive();
+        }
     }
 
     /// <summary>The edge length of an old pixel in world units.</summary>
