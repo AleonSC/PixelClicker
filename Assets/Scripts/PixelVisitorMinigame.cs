@@ -177,6 +177,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     public override void Deactivate() => running = false;
 
+    /// <summary>Sets the seconds until the next visit (the guide uses it to bring a newly started vendor soon).</summary>
+    public void ScheduleFirstVisit(float seconds) => spawnTimer = Mathf.Max(1f, seconds);
+
     [ContextMenu("Spawn Tinkerer Now")]
     public override void SpawnNow()
     {

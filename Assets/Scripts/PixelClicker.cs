@@ -838,6 +838,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelViewBounds>() == null) gameObject.AddComponent<PixelViewBounds>(); // keeps old pixels on screen
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
+        if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubby, the shopkeeper who introduces the shop and the vendors
         if (PixelFind.First<PixelDragonWish>() == null) gameObject.AddComponent<PixelDragonWish>(); // the Dragon Cube wish (all seven cubes)
         if (PixelFind.First<PixelOvercharge>() == null) gameObject.AddComponent<PixelOvercharge>(); // clicking an Electric pixel overcharges the auto clicker
         if (PixelFind.First<PixelElectricLinks>() == null) gameObject.AddComponent<PixelElectricLinks>(); // Electric old pixels arc to nearby devices

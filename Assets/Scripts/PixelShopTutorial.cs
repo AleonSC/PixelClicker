@@ -59,7 +59,7 @@ public class PixelShopTutorial : MonoBehaviour
         if (PixelHints.IsTipSeen(SeenId) || !PixelHints.TipsEnabled) return;
 
         // Wait for a calm moment: title screen over, the new-game intro finished, no other tip, no minigame takeover, not paused.
-        if (PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelNotice.IsShowing || PixelPauseMenu.IsPaused ||
+        if (PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelGuideVendor.Pending || PixelGuideVendor.Visiting || PixelNotice.IsShowing || PixelPauseMenu.IsPaused ||
             PixelMinigame.TakeoverActive || Time.timeScale <= 0f)
         {
             readyTimer = 0f;
