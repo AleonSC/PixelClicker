@@ -261,3 +261,4 @@
 [2026-10-10 07:30 UTC] Renamed the guide character from Cubby to Cubie.
 [2026-10-10 07:51 UTC] The Farmer now rarely offers a glowing yellow Dragon Seed that grows a Dragon Cube you don't hold, and is drawn with a shotgun and a wheat stalk in his mouth.
 [2026-10-10 08:03 UTC] The old Vacuum pixel now shows the pixels it sucked up as tiny drifting versions inside it.
+[2026-10-10 08:19 UTC] Made the pixels inside the Vacuum pixel bigger and not dependent on a new Inspector value, and made Vacuum (0.2 to 0.28) and Electric (0.15 to 0.2) pixels slightly more common.

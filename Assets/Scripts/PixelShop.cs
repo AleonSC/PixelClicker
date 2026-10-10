@@ -816,6 +816,27 @@ public partial class PixelShop : MonoBehaviour
             if (waterIndex >= 0 && electricAt >= 0 && waterIndex > electricAt) MovePack(waterIndex, electricAt);
             if (waterIndex >= 0) { packDataVersion = Mathf.Max(packDataVersion, 10); changed = true; }
         }
+        // Vacuum (0.2 -> 0.28) and Electric (0.15 -> 0.2) pixels are slightly more common; only the old defaults are changed, not a value you typed.
+        if (packDataVersion < 11 && packs != null)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack == null || pack.rewardTiers == null) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (reward.type == PixelClicker.PixelType.Vacuum && Mathf.Approximately(reward.spawnWeight, 0.2f)) reward.spawnWeight = 0.28f;
+                    if (reward.type == PixelClicker.PixelType.Electric && Mathf.Approximately(reward.spawnWeight, 0.15f)) reward.spawnWeight = 0.2f;
+                }
+            }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type == PixelClicker.PixelType.Vacuum && Mathf.Approximately(t.spawnWeight, 0.2f)) t.spawnWeight = 0.28f;
+                    if (t.type == PixelClicker.PixelType.Electric && Mathf.Approximately(t.spawnWeight, 0.15f)) t.spawnWeight = 0.2f;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 11);
+            changed = true;
+        }
         return changed;
     }
 

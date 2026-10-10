@@ -460,15 +460,15 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private AnimationCurve vacuumSuckCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     [Tooltip("The old Vacuum pixel that drops after a vacuum click shows the pixels it sucked up as very small versions floating inside it.")]
-    [SerializeField] private bool vacuumShowContents = true;
+    [SerializeField] private bool hideVacuumContents = false;
 
-    [Min(1)]
-    [Tooltip("Most tiny pixels shown inside the Vacuum pixel (a random selection of what it sucked up when there were more).")]
-    [SerializeField] private int vacuumContentsMax = 24;
+    [Min(0)]
+    [Tooltip("Most tiny pixels shown inside the Vacuum pixel (a random selection of what it sucked up when there were more). 0 = the coded default (16).")]
+    [SerializeField] private int vacuumContentsMax = 0;
 
-    [Range(0.05f, 0.4f)]
-    [Tooltip("Size of each tiny pixel inside the Vacuum pixel, as a fraction of its edge.")]
-    [SerializeField] private float vacuumContentSize = 0.16f;
+    [Range(0f, 0.4f)]
+    [Tooltip("Size of each tiny pixel inside the Vacuum pixel, as a fraction of its edge. 0 = the coded default (0.26).")]
+    [SerializeField] private float vacuumContentSize = 0f;
 
     [Header("Old Pixel Physics")]
     [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
@@ -2544,7 +2544,7 @@ public class PixelClicker : MonoBehaviour
                 perTier[info.tierIndex] += info.amount;
                 total += info.amount;
                 count++;
-                if (vacuumShowContents) vacuumContents.Add(info.tierIndex);
+                if (!hideVacuumContents) vacuumContents.Add(info.tierIndex);
             }
 
             StartCoroutine(SuckRoutine(body));
@@ -3133,8 +3133,9 @@ public class PixelClicker : MonoBehaviour
                 if (tiers[tierIndex].vacuum && !stored && vacuumContents.Count > 0)
                 {
                     // The old Vacuum pixel carries what it just sucked up, as tiny pixels inside it.
-                    while (vacuumContents.Count > vacuumContentsMax) vacuumContents.RemoveAt(UnityEngine.Random.Range(0, vacuumContents.Count));
-                    copy.AddComponent<PixelVacuumContents>().Fill(this, vacuumContents, vacuumContentSize);
+                    int maxShown = vacuumContentsMax > 0 ? vacuumContentsMax : 16;
+                    while (vacuumContents.Count > maxShown) vacuumContents.RemoveAt(UnityEngine.Random.Range(0, vacuumContents.Count));
+                    copy.AddComponent<PixelVacuumContents>().Fill(this, vacuumContents, vacuumContentSize > 0f ? vacuumContentSize : 0.26f);
                     vacuumContents.Clear();
                 }
                 if (styled.gravityWell)

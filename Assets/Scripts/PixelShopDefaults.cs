@@ -96,7 +96,7 @@ public partial class PixelShop
                 {
                     type = PixelClicker.PixelType.Vacuum, displayName = "Vacuum Pixels",
                     color = new Color(0.65f, 0.3f, 0.95f, 1f), vacuum = true,
-                    amountPerClick = 1, spawnWeight = 0.2f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                    amountPerClick = 1, spawnWeight = 0.28f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
         };
@@ -381,7 +381,7 @@ public partial class PixelShop
                     type = PixelClicker.PixelType.Electric, displayName = "Electric Pixels",
                     color = new Color(0.4f, 0.85f, 1f, 1f), glow = true, glowIntensity = 3.5f,
                     amountPerClick = 8, randomPayout = true, payoutMin = 1, payoutMax = 15, // 1-15 every harvest (8 = the average)
-                    spawnWeight = 0.15f,
+                    spawnWeight = 0.2f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
