@@ -106,6 +106,7 @@ public partial class PixelSkills
 
     private void BuildWindow()
     {
+        LoadTrackerPrefs();
         PixelHud hud = PixelHud.Ensure(gameObject);
         canvasRoot = PixelUIKit.CreateCanvas("PixelSkills Canvas", sortingOrder, new Vector2(1920f, 1080f), true);
 
@@ -141,6 +142,7 @@ public partial class PixelSkills
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(() => PixelPop.Hide(windowObject));
+        BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
 
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
@@ -719,6 +721,7 @@ public partial class PixelSkills
 
     private void Update()
     {
+        UpdateTracker();
         CheckFarmBundle();
         UpdateTreeLayout();
         if (!built) return;

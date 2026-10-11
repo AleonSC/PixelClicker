@@ -491,3 +491,4 @@
 [2026-10-11 16:00 UTC] Egg and Bean now give the egg / Magic Beans only on their first appearance; they can return afterwards and bring a random present of pixels instead.
 [2026-10-11 16:02 UTC] The title screen's floor and sky pickers only show while the mouse is over them.
 [2026-10-11 16:05 UTC] Title screen: Load is a floppy disk, Settings a cog and Quit an open door, all in one row under the Play button (hover shows their names).
+[2026-10-11 16:11 UTC] Skills window: a pin button (top left) closes it and pins the training skill with an XP bar in a small draggable window with lock (stick), downsize and close buttons; closing it does not reopen the Skills menu.

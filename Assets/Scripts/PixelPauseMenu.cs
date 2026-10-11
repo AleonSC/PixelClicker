@@ -2888,10 +2888,11 @@ public class PixelPopoutDrag : MonoBehaviour, UnityEngine.EventSystems.IDragHand
     public RectTransform target;
     public Canvas canvas;
     public System.Action onMoved;
+    public bool locked;   // 'stuck' boxes can't be dragged
 
     public void OnDrag(UnityEngine.EventSystems.PointerEventData e)
     {
-        if (target == null) return;
+        if (target == null || locked) return;
         float scale = canvas != null && canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
         target.anchoredPosition += e.delta / scale;
         onMoved?.Invoke();
