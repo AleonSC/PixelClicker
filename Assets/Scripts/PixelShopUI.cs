@@ -1008,7 +1008,8 @@ public partial class PixelShop
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
                 : (searching ? MatchesSearch(pack) : TabOf(pack) == currentTab && showGeneral) && listed && !HiddenAsPurchased(i);
 
-            if (visible && grouped && !child)
+            if (visible && grouped && !child && SectionOf(pack) == 0 && owned) visible = false;   // the RGB pack disappears once bought, whatever the 'hide purchased' setting says
+            if (visible && grouped && !child && SectionOf(pack) != 0)
             {
                 int sec = SectionOf(pack);
                 if (sec != lastSection)
@@ -1114,20 +1115,19 @@ public partial class PixelShop
         ApplyContentHeight(subContentRect, subEmptyLabel, subY, subVisibleCount);
     }
 
-    private static readonly string[] SectionNames = { "Base pixels", "Toggleables", "Skill packs" };
+    private static readonly string[] SectionNames = { "RGB", "Toggleables", "Skill packs" };   // section 0 (the RGB pack) has no header: it stands above the other two
     private Button[] sectionHeaders;
     private TMP_Text[] sectionLabels;
-    private readonly bool[] sectionCollapsed = new bool[3];
+    private readonly bool[] sectionCollapsed = { false, true, true };   // the two sections start collapsed
 
-    /// <summary>Which Pixels-tab section a pack belongs to: 0 = base pixels (RGB, Glass, Luminescent), 1 = single toggleable pixels, 2 = skill packs (many pixels at once).</summary>
+    /// <summary>Which Pixels-tab section a pack belongs to: 0 = the RGB pack (listed above the sections, hidden once bought), 1 = single toggleable pixels (Glass, Luminescent, Obsidian...), 2 = skill packs (many pixels at once).</summary>
     private static int SectionOf(ShopPack pack)
     {
         if (!string.IsNullOrEmpty(pack.skillId)) return 2;   // a skill pack, even without reward pixels of its own
         if (pack.rewardTiers == null || pack.rewardTiers.Length == 0) return 1;
         if (pack.rewardTiers.Length >= 4) return 2;
         foreach (PixelClicker.PixelTier t in pack.rewardTiers)
-            if (t.type != PixelClicker.PixelType.Red && t.type != PixelClicker.PixelType.Green && t.type != PixelClicker.PixelType.Blue &&
-                t.type != PixelClicker.PixelType.Glass && t.type != PixelClicker.PixelType.Luminescent) return 1;
+            if (t.type != PixelClicker.PixelType.Red && t.type != PixelClicker.PixelType.Green && t.type != PixelClicker.PixelType.Blue) return 1;
         return 0;
     }
 
