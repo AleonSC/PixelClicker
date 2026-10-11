@@ -453,6 +453,51 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Width of the simplified Inventory (0 = 62% of the normal width).")]
     [SerializeField] private float compactWidth = 0f;
     private float CompactWidth => compactWidth > 0f ? compactWidth : panelWidth * 0.62f;
+
+    private TMP_Text measureLabel;
+    private bool marginsCompact;
+
+    /// <summary>The pinned window's width: just wide enough for the widest line (swatch + the text at full size) with a little room, never wider than the full window.</summary>
+    private float FitCompactWidth()
+    {
+        if (compactWidth > 0f) return compactWidth;   // a width typed in the Inspector wins
+        if (measureLabel == null)
+        {
+            measureLabel = MakeText(boxObject.transform, "Measure", "", fontSize, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, Color.clear);
+            measureLabel.raycastTarget = false;
+            measureLabel.enableAutoSizing = false;
+#if UNITY_2023_1_OR_NEWER
+            measureLabel.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+            measureLabel.enableWordWrapping = false;
+#endif
+            measureLabel.gameObject.SetActive(false);
+        }
+        measureLabel.fontSize = fontSize;
+        float widest = 0f;
+        void Consider(TMP_Text label)
+        {
+            if (label == null || !label.gameObject.activeSelf) return;
+            measureLabel.text = label.text;
+            widest = Mathf.Max(widest, measureLabel.GetPreferredValues(label.text).x);
+        }
+        Consider(ultraLabel);
+        if (tierLabels != null) foreach (TMP_Text l in tierLabels) Consider(l);
+        if (potionLabels != null) foreach (TMP_Text l in potionLabels) Consider(l);
+        float swatchSize = Mathf.Round(LinePitch * 0.8f);
+        float width = swatchSize + 18f + widest + 14f + panelPadding * 2f;
+        return Mathf.Clamp(width, 150f, panelWidth);
+    }
+
+    /// <summary>The right margin of a row's text leaves room for the amount in the full window; the pinned one has no amount column, so the margin shrinks.</summary>
+    private void ApplyRowMargins(bool compact)
+    {
+        if (compact == marginsCompact) return;
+        marginsCompact = compact;
+        float swatchSize = Mathf.Round(LinePitch * 0.8f);
+        foreach (var pair in rowParts)
+            if (pair.Key != null) pair.Key.margin = new Vector4(swatchSize + 18f, 0f, compact ? 8f : 110f, 0f);
+    }
     private float CompactToggleSize => closeButtonSize > 0f ? closeButtonSize : 56f;
     private float CompactTop => CompactToggleSize + panelPadding * 1.5f;
     private readonly System.Collections.Generic.List<TMP_Text> materialLabels = new System.Collections.Generic.List<TMP_Text>();
@@ -1185,7 +1230,7 @@ public class PixelUI : MonoBehaviour
         float swatchSize = Mathf.Round(LinePitch * 0.8f);   // a clear colour chip
         float deltaSpace = fontSize * 1.5f;   // the "+N" indicator keeps the far right
         label.alignment = TextAlignmentOptions.MidlineLeft;
-        label.margin = new Vector4(swatchSize + 18f, 0f, 110f, 0f);   // the name never runs under the amount
+        label.margin = new Vector4(swatchSize + 18f, 0f, marginsCompact ? 8f : 110f, 0f);   // the name never runs under the amount (the pinned window has no amount column)
         label.enableAutoSizing = true;                                // a long name shrinks to fit on ONE line instead of wrapping
         label.fontSizeMax = fontSize;
         label.fontSizeMin = Mathf.Max(8f, fontSize * 0.3f);
@@ -1328,7 +1373,8 @@ public class PixelUI : MonoBehaviour
         {
             float boxHeight = compact ? Mathf.Min(maxPanelHeight, ContentTop + y + panelPadding + 4f)   // the simplified one is only as tall as its lines
                                       : maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
-            boxRect.sizeDelta = new Vector2(compact ? CompactWidth : panelWidth, boxHeight);
+            ApplyRowMargins(compact);
+            boxRect.sizeDelta = new Vector2(compact ? FitCompactWidth() : panelWidth, boxHeight);
 
             // Keep the list just below the tabs (the header height can change after the box is built).
             listViewport.offsetMin = new Vector2(0f, panelPadding);
