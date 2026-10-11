@@ -14,13 +14,13 @@ Clicks are limited to about 14 per second.
 # The Shop
 The Shop button appears once you have unlocked the Black pixel. It has four tabs:
 <b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
-<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Crafting, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Features" sub-tab holds the feature unlocks. Ultra pixels are a rare second currency, one general kind (not per pixel type), shown at the very top of your Inventory's Currency tab; the Ultra Pad, Snake, Breakout, Sorting Race and Black Holes can reward them.
+<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Features" sub-tab holds the feature unlocks. Ultra pixels are a rare second currency, one general kind (not per pixel type), shown at the very top of your Inventory's Currency tab; the Ultra Pad, Snake, Breakout, Sorting Race and Black Holes can reward them.
 <b>Consumables</b> - potions and utilities (see below).
 <b>Minigames</b> - events that appear on their own once bought.
 Things you can't buy yet show in grey with what they need.
 
 # Special Pixels
-<b>Glass</b> - the ingredient for potions in Crafting.
+<b>Glass</b> - the ingredient for potions in Crafting. Buying the Glass pixel also unlocks Crafting. Glass and Luminescent have switches in the Toggles window (on by default).
 <b>Vacuum</b> - when you collect one, every old pixel on the floor flies into the cube and pays out again.
 <b>Obsidian</b> and <b>Luminescent</b> - tougher or rarer pixels worth more.
 <b>Singularity</b>, <b>Ghost</b> and <b>Meteor</b> - rare pixels you earn by playing their minigames.

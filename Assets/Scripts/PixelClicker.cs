@@ -275,6 +275,7 @@ public class PixelClicker : MonoBehaviour
             {
                 if (spawnSwitch == SpawnSwitch.Switchable) return true;
                 if (spawnSwitch == SpawnSwitch.AlwaysOn) return false;
+                if (type == PixelType.Glass || type == PixelType.Luminescent) return true;   // extra pixels: a spawn switch in Toggles, on by default
                 return IsSpecialType(type);
             }
         }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// SHELL of the skill system: skill packs replace the standard base cubes (monochrome, RGB, Glass, Luminescent) with a different set, and you train
+/// SHELL of the skill system: skill packs replace the standard base cubes (monochrome and RGB) with a different set, and you train
 /// the skill that belongs to the pack you play with. This file holds the data and the rules; the window is in PixelSkillsWindow.cs.
 ///
 /// What works now: the pack list (Standard + Mining, built on the Prospector pack), the active pack (Mining = Prospector mode, one source of truth),
@@ -97,7 +97,7 @@ public partial class PixelSkills : MonoBehaviour
     public event Action Changed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; offlineCache = -1; packCache = null; guestCache = null; }
+    private static void ResetStatics() { Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
 
     private float bundleCheckTimer;
 
@@ -152,15 +152,15 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(0, new SkillPack
             {
                 id = StandardId, displayName = "Standard", accent = new Color(0.5f, 0.55f, 0.65f),
-                description = "The usual rotation: monochrome, RGB, Glass and Luminescent pixels. No skill is trained.",
-                replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue, Glass, Luminescent", xpFrom = "Nothing",
+                description = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). No skill is trained.",
+                replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "Nothing",
             });
         if (!packs.Exists(p => p.id == MiningId))
             packs.Add(new SkillPack
             {
                 id = MiningId, displayName = "Mining", accent = new Color(0.86f, 0.46f, 0.26f),
                 description = "Swap the basic cubes for six tough ores. Break them for mining XP; some are rich veins that pay big.",
-                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
+                replaces = "Monochrome, RGB", spawns = "Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
                 types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel },
@@ -178,7 +178,7 @@ public partial class PixelSkills : MonoBehaviour
             {
                 id = FarmingId, displayName = "Farming", accent = new Color(0.45f, 0.78f, 0.3f),
                 description = "Swap the basic cubes for eight farm blocks: dirt, seeds, water, fertilizer, pollen, wheat, weevils and golden fruit. Grow sprouts for farming XP.",
-                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit",
+                replaces = "Monochrome, RGB", spawns = "Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit",
                 xpFrom = "Collecting farm blocks and growing sprouts",
                 unlockHint = "Buy Farmer's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
@@ -195,7 +195,7 @@ public partial class PixelSkills : MonoBehaviour
             {
                 id = ElectricianId, displayName = "Electrician", accent = new Color(0.35f, 0.7f, 1f),
                 description = "Swap the basic cubes for eight electrical blocks: Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse and Bulb. Wire, Battery and Resistor link up to power your devices, a Battery sets off an Overcharge, a Capacitor stores charge from every other click, a Transistor doubles your next click, a Fuse pays big if you click it fast and a Bulb shines brighter the more wired pixels lie around.",
-                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb",
+                replaces = "Monochrome, RGB", spawns = "Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb",
                 xpFrom = "Collecting electrical pixels",
                 unlockHint = "Buy the Electrician's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
@@ -238,6 +238,19 @@ public partial class PixelSkills : MonoBehaviour
             foreach (TreeNode def in DefaultNodes(pack.id))
                 if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
             pack.nodes = merged.ToArray();
+        }
+
+        // Texts saved in older scenes still say the skill packs replace Glass and Luminescent too.
+        foreach (SkillPack pack in packs)
+        {
+            if (pack.replaces != null) pack.replaces = pack.replaces.Replace("Monochrome, RGB, Glass, Luminescent", "Monochrome, RGB");
+            if (pack.id == StandardId)
+            {
+                if (pack.description != null && pack.description.StartsWith("The usual rotation: monochrome, RGB, Glass and Luminescent"))
+                    pack.description = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). No skill is trained.";
+                if (pack.spawns == "White, Gray, Black, Red, Green, Blue, Glass, Luminescent")
+                    pack.spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)";
+            }
         }
 
         // Offline Progression is listed right under Standard.
@@ -373,7 +386,7 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
-        if (IsOptIn(type)) return s == null || !GuestSet.Contains(type.ToString());   // Wood and Rock: only when switched on in the Toggles window
+        if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type);
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
@@ -403,7 +416,31 @@ public partial class PixelSkills : MonoBehaviour
     public static bool IsOptIn(PixelClicker.PixelType type) => type == PixelClicker.PixelType.Wood || type == PixelClicker.PixelType.Rock;
 
     /// <summary>Is the opt-in block (Wood, Rock) switched on?</summary>
-    public static bool OptInOn(PixelClicker.PixelType type) => GuestSet.Contains(type.ToString());
+    public static bool OptInOn(PixelClicker.PixelType type) => !OffSet.Contains(type.ToString());
+
+    private const string OffPref = "PixelClicker.Setting.OptInOff";
+    private static System.Collections.Generic.HashSet<string> offCache;
+
+    private static System.Collections.Generic.HashSet<string> OffSet
+    {
+        get
+        {
+            if (offCache == null)
+            {
+                offCache = new System.Collections.Generic.HashSet<string>();
+                foreach (string part in PlayerPrefs.GetString(OffPref, "").Split(',')) if (part.Length > 0) offCache.Add(part);
+            }
+            return offCache;
+        }
+    }
+
+    /// <summary>Switches Wood / Rock on or off (they are on by default).</summary>
+    public void SetOptIn(PixelClicker.PixelType type, bool on)
+    {
+        if (on) OffSet.Remove(type.ToString()); else OffSet.Add(type.ToString());
+        PlayerPrefs.SetString(OffPref, string.Join(",", OffSet));
+        Changed?.Invoke();
+    }
 
     /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
     public bool GuestUnlocked(PixelClicker.PixelType type)
@@ -463,7 +500,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { offlineCache = -1; packCache = null; guestCache = null; }
+    public static void ReloadSettingsFromPrefs() { offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
 
     /// <summary>The skill that earns the XP right now: Offline Progression while it is chosen, else the pack in play.</summary>
     public string TrainingId => OfflineMode && IsAvailable(Find(OfflineId)) ? OfflineId : ActiveId;

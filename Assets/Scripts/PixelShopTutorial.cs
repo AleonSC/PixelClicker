@@ -51,7 +51,7 @@ public class PixelShopTutorial : MonoBehaviour
         {
             new Step { tab = PixelShop.ShopTab.Pixels, text = "Welcome to the Shop! The list on the left shows every pixel you hold - prices are paid in those pixels. The tabs along the top split up what is for sale." },
             new Step { tab = PixelShop.ShopTab.Pixels, text = "Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames before you can buy them." },
-            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades - Features: one-time unlocks such as the Auto Clicker, Crafting, Pixel Grabbing, Time Stop and the Pixel Bank, plus upgrades for them." },
+            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades - Features: one-time unlocks such as the Auto Clicker, Pixel Grabbing, Time Stop and the Pixel Bank, plus upgrades for them." },
             new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 1, text = "Upgrades - Value: makes a pixel type pay more, paid in that same pixel. Each level costs a little more than the last. Shift-click buys as many levels as you can afford." },
             new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 2, text = "Upgrades - Operation: improves your consumables. Each one has a spinning picture and an orange arrow that opens its upgrades: longer lasting, bigger reach, more uses, more storage." },
             new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: things with a one-time use - potions, devices, seeds and supplies. Buy them here, then use them from the Consumables tab of your Inventory." },

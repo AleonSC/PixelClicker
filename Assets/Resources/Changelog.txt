@@ -477,3 +477,5 @@
 [2026-10-11 14:23 UTC] Added a to-do line about working Cubie and the vendors into the 'pixels are money' idea.
 [2026-10-11 14:24 UTC] The 'Click N more...' guide text fades out while a window is open and comes right back when it closes.
 [2026-10-11 14:30 UTC] The pinned Inventory fades out while another window is open and returns when it closes; Skills: Offline Progression sits under Standard, each skill card has a green tree square that opens its skill tree, the detail title stays on one line and the label reads 'Base Pixel Pack'.
+[2026-10-11 14:46 UTC] Glass and Luminescent are no longer part of the base rotation: they have Toggles switches (on by default) and stay in every skill rotation; Wood and Rock are on by default too; the base six are monochrome + RGB.
+[2026-10-11 14:46 UTC] Crafting is no longer a shop purchase: the Glass pixel unlocks it (Glass now costs 10K White / Gray / Black and 12.5K Red / Green / Blue), and buying Glass shows a Got it box beside the Toggles tab explaining the switch.

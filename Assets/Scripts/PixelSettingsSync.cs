@@ -36,7 +36,7 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog", "BarGlow", "GlowHue", "GlowCycle", "UiColor", "UiHue", "Prospector", "SkillPack", "SkillGuests", "SkillOffline", "ClickFx",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog", "BarGlow", "GlowHue", "GlowCycle", "UiColor", "UiHue", "Prospector", "SkillPack", "SkillGuests", "OptInOff", "SkillOffline", "ClickFx",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));

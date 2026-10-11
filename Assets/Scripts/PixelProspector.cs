@@ -27,9 +27,9 @@ public static class PixelProspector
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
     public static void ReloadSettingsFromPrefs() { }   // the setting lives in PixelSkills now (reloaded there)
 
-    /// <summary>The pixels the ores replace while Prospector mode is on: the monochrome pack (White, Gray, Black), RGB, Glass and Luminescent.</summary>
+    /// <summary>The pixels the skill packs replace: the monochrome pack (White, Gray, Black) and RGB. (Glass and Luminescent are extra pixels with their own spawn switches and stay in every rotation.)</summary>
     public static bool IsBase(PixelClicker.PixelType type) =>
-        (type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Glass) || type == PixelClicker.PixelType.Luminescent;
+        type >= PixelClicker.PixelType.White && type <= PixelClicker.PixelType.Blue;
 
     /// <summary>Is this type kept out of the random spawns right now? Ores only spawn in Prospector mode; in that mode the basic pixels don't.</summary>
     public static bool LeftOut(PixelClicker.PixelType type, bool prospecting) =>

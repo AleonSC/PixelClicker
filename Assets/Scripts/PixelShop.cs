@@ -904,6 +904,8 @@ public partial class PixelShop : MonoBehaviour
     }
 
     /// <summary>Brings packs saved by older versions up to date (renames, tab, minigame ids). Returns true if anything changed.</summary>
+    private const string glassToggleHint = "Glass unlocked!\nIt is switched ON by default and now spawns with your other pixels. Open the Toggles window (the tab on the right edge of the screen), go to Pixels and untick Glass if you don't want it. Crafting is unlocked too!";
+
     private bool MigrateOldPackData()
     {
         bool renamed = false;
@@ -930,6 +932,8 @@ public partial class PixelShop : MonoBehaviour
                                              // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
                                              || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
                                                  && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
+                                             // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
+                                             || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
                                              // Electric is part of the Electrician's Pack now, no longer sold on its own.
                                              || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Electric
                                                  && string.IsNullOrEmpty(pack.skillId)));
@@ -987,6 +991,19 @@ public partial class PixelShop : MonoBehaviour
                         renamed = true;
                     }
                 }
+            }
+        }
+
+        // The Glass pack unlocks Crafting (price raised to match); older saved Glass packs are brought up to date unless the price was edited.
+        if (packs != null)
+        {
+            ShopPack glassPack = Array.Find(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Glass));
+            if (glassPack != null && !glassPack.unlocksCrafting)
+            {
+                glassPack.unlocksCrafting = true;
+                if (glassPack.costs != null && glassPack.costs.Length == 3 && glassPack.costs[0].amount == 2500) glassPack.costs = GlassCosts();
+                if (glassPack.description == "Adds the see-through Glass pixel to the random spawn pool.") glassPack.description = CreateGlassPack(-1).description;
+                renamed = true;
             }
         }
 
@@ -1739,6 +1756,13 @@ public partial class PixelShop : MonoBehaviour
                 {
                     if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
                     if (PixelClicker.IsFarm(reward.type) && reward.type != PixelClicker.PixelType.Dirt) continue;   // and one for the Farmer's Pack
+                    if (reward.type == PixelClicker.PixelType.Glass)
+                    {
+                        // Glass is switched on by default: a box beside the Toggles tab says where to switch it off.
+                        PixelToggles.ShowHint(glassToggleHint);
+                        PixelHints.Announce("You unlocked Glass Pixels!", glassToggleHint);
+                        continue;
+                    }
                     PixelHints.Trigger("pixel_" + reward.type);
                 }
 

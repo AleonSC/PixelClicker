@@ -228,6 +228,15 @@ public class PixelToggles : MonoBehaviour
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
+    private bool AnySwitchablePixel()
+    {
+        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) return false;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            if (t.unlocked && (t.CanSwitchOff || PixelSkills.IsOptIn(t.type))) return true;
+        return false;
+    }
+
     private void Update()
     {
         if (built && openObject != null)
@@ -235,7 +244,8 @@ public class PixelToggles : MonoBehaviour
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
             bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled))
                         || (PixelPets.Instance != null && PixelPets.Instance.OwnedCount > 0) // a pet also opens the window
-                        || (PixelSkills.Instance != null && PixelSkills.Instance.AnyPackAvailable); // so do the skill pack switches
+                        || (PixelSkills.Instance != null && PixelSkills.Instance.AnyPackAvailable) // so do the skill pack switches
+                        || AnySwitchablePixel(); // and any pixel with a spawn switch (Glass...)
             if (openObject.activeSelf != show) openObject.SetActive(show);
             if (!show && windowObject != null && windowObject.activeSelf) windowObject.SetActive(false);
         }
@@ -269,12 +279,12 @@ public class PixelToggles : MonoBehaviour
             PixelSkills skills = PixelSkills.Instance;
             if (skills != null)
             {
-                // The basic shop blocks (Wood, Rock) are not in the base rotation: each is a switch, off until you turn it on.
+                // The basic shop blocks (Wood, Rock) are not in the base rotation: each is a switch, on by default once unlocked.
                 foreach (PixelClicker.PixelTier t in clicker.Tiers)
                 {
                     if (!t.unlocked || !PixelSkills.IsOptIn(t.type)) continue;
                     PixelClicker.PixelType type = t.type;
-                    list.Add(new Entry { label = ShortPixelName(t.displayName), on = PixelSkills.OptInOn(type), setter = on => skills.SetGuest(type, on) });
+                    list.Add(new Entry { label = ShortPixelName(t.displayName), on = PixelSkills.OptInOn(type), setter = on => skills.SetOptIn(type, on) });
                 }
                 // Skill-only blocks unlocked in a skill tree can be switched on for every rotation.
                 foreach (PixelClicker.PixelType guest in skills.UnlockedGuests())

@@ -47,6 +47,17 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Glass pays for Crafting too (the old Crafting pack cost 10K of each of the six basic pixels; Glass used to cost 2.5K Red / Green / Blue).</summary>
+    private static PackCost[] GlassCosts() => new[]
+    {
+        new PackCost { type = PixelClicker.PixelType.White, amount = 10000 },
+        new PackCost { type = PixelClicker.PixelType.Gray,  amount = 10000 },
+        new PackCost { type = PixelClicker.PixelType.Black, amount = 10000 },
+        new PackCost { type = PixelClicker.PixelType.Red,   amount = 12500 },
+        new PackCost { type = PixelClicker.PixelType.Green, amount = 12500 },
+        new PackCost { type = PixelClicker.PixelType.Blue,  amount = 12500 },
+    };
+
     /// <summary>Default Glass pack: unlocks see-through Glass pixels for 100 Red + 100 Green + 100 Blue. Needs the RGB pack first.</summary>
     private static ShopPack CreateGlassPack(int requiresRgbIndex)
     {
@@ -54,14 +65,10 @@ public partial class PixelShop
         {
             displayName = "Glass Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the see-through Glass pixel to the random spawn pool.",
+            description = "Adds the see-through Glass pixel to the random spawn pool (switched on by default; you can switch it off in the Toggles window) and unlocks Crafting.",
             requirements = Needs(requiresRgbIndex),
-            costs = new[]
-            {
-                new PackCost { type = PixelClicker.PixelType.Red,   amount = 2500 },
-                new PackCost { type = PixelClicker.PixelType.Green, amount = 2500 },
-                new PackCost { type = PixelClicker.PixelType.Blue,  amount = 2500 },
-            },
+            unlocksCrafting = true,
+            costs = GlassCosts(),
             rewardTiers = new[]
             {
                 new PixelClicker.PixelTier
@@ -818,20 +825,6 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Crafting upgrade (Upgrades tab): puts a Crafting button on screen.</summary>
-    private static ShopPack CreateCraftingPack()
-    {
-        return new ShopPack
-        {
-            displayName = "Crafting",
-            tab = ShopTab.Upgrades,
-            description = "Unlocks the Crafting button: combine two items to make potions.",
-            costs = AllSix(10000),
-            rewardTiers = new PixelClicker.PixelTier[0],
-            unlocksCrafting = true,
-        };
-    }
-
     /// <summary>Default Pixel Grabbing upgrade (Upgrades tab): old pixels can be clicked and dragged.</summary>
     private static ShopPack CreateGrabbingPack()
     {
@@ -1098,8 +1091,6 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSnakePack },
         new DefaultPack { isThis = p => Unlocks(p, "bomb"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBombPack },
-        new DefaultPack { isThis = p => p.unlocksCrafting,
-                          requires = null, create = i => CreateCraftingPack() },
         new DefaultPack { isThis = p => p.unlocksGrabbing,
                           requires = null, create = i => CreateGrabbingPack() },
         new DefaultPack { isThis = p => p.unlocksTimeStop,
