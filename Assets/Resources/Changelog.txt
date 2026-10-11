@@ -439,3 +439,4 @@
 [2026-10-11 11:28 UTC] Windows against a screen edge (like the Pixel Log at 130% UI scale) now also shrink so their far side stays inside the black bars.
 [2026-10-11 11:29 UTC] The scroll-list fade now fades whole rows near the bottom instead of using a soft mask, so rows no longer show over the shop tabs when scrolling up.
 [2026-10-11 11:31 UTC] New animated floor: Laser Corridor (teal metal panels with red security lasers sweeping and blinking across).
+[2026-10-11 11:34 UTC] Obsidian reworked: violet glow, sweeping light, drifting sparks, glass shards on hits and a shattering burst on the break; its click sound is a glassy ping that starts low and rises with every click.

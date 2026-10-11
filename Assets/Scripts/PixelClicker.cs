@@ -1429,6 +1429,17 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 29;
         }
 
+        if (looksVersion < 30)
+        {
+            // Obsidian got a fancier look (violet glow, light sweep, sparks): replace the saved one with the new default.
+            PixelLook def30 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Obsidian);
+            System.Collections.Generic.List<PixelLook> list30 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            int at30 = list30.FindIndex(l => l != null && l.type == PixelType.Obsidian);
+            if (def30 != null) { if (at30 >= 0) list30[at30] = def30; else list30.Add(def30); }
+            looks = list30.ToArray();
+            looksVersion = 30;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1637,6 +1648,7 @@ public class PixelClicker : MonoBehaviour
                 if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
                 if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)need);
                 else if (IsFarm(tier.type) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, shownNeed, automatic);
@@ -1704,6 +1716,7 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
         if (IsFarm(tier.type) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
+        if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Break(pixelTransform.position, PixelBaseSize);
         if (IsOre(tier.type) && !disableProspectorFx)
         {
             OreFx.Break(pixelTransform.position, PixelBaseSize, tier.color, richBreak);

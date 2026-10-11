@@ -255,6 +255,7 @@ public class PixelLook
 
     [Tooltip("Farming blocks: a loop of little particles around the cube (pollen motes, dew drips, crumbs, spores, chaff, golden sparkles, scurrying bugs).")]
     public FarmAmbient farmFx = FarmAmbient.None;
+    [Tooltip("Violet sparks drift off the cube (Obsidian).")] public bool obsidianFx = false;
 
     [Tooltip("Fire: old pixels of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
     public bool burn = false;
@@ -263,7 +264,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => flames || radiation || farmFx != FarmAmbient.None || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => flames || radiation || farmFx != FarmAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
@@ -438,7 +439,7 @@ public static class PixelLooks
 
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
-                            metallic = 1f, smoothness = 0.95f, streakTexture = true, damageCracks = true,
+                            metallic = 1f, smoothness = 0.97f, emission = 0.22f, streakTexture = true, damageCracks = true, shine = true, obsidianFx = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.55f, outlineStrength = 0.9f },
 
             // Electric: a faint dark-blue glass box held together by crackling lightning.
@@ -735,6 +736,7 @@ public static class PixelLooks
         if (look.flames) PixelFlames.Attach(root.transform, centre, size);
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
         if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);
+        if (look.obsidianFx) PixelObsidianFx.Attach(root.transform, centre, size);
 
         if (look.outline)
         {

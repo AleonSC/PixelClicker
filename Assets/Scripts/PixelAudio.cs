@@ -288,6 +288,7 @@ public class PixelAudio : MonoBehaviour
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
             case "ore_gleam": return new[] { PixelSynth.OreGleam() };
+            case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
             case "farm_gleam": return new[] { PixelSynth.Farm(9, 1) };
             case "pixel_dirt": return new[] { PixelSynth.Farm(1, 1), PixelSynth.Farm(1, 2), PixelSynth.Farm(1, 3) };
@@ -610,7 +611,11 @@ public class PixelAudio : MonoBehaviour
     {
         PlaySound(automatic ? "auto_click" : "click", 1f);
         if (clicker != null && tierIndex >= 0 && tierIndex < clicker.Tiers.Length)
-            PlaySound("pixel_" + clicker.Tiers[tierIndex].type.ToString().ToLowerInvariant(), 1f);
+        {
+            PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
+            // Obsidian: the clicks climb in pitch, the breaking one is the highest.
+            PlaySound("pixel_" + type.ToString().ToLowerInvariant(), type == PixelClicker.PixelType.Obsidian ? 1.6f : 1f);
+        }
     }
 
     private void OnHit(int tierIndex, int hits, int needed, bool automatic)
@@ -621,7 +626,9 @@ public class PixelAudio : MonoBehaviour
         if (clicker != null && tierIndex >= 0 && tierIndex < clicker.Tiers.Length)
         {
             float ramp = Mathf.Clamp01(hits / (float)Mathf.Max(1, needed));
-            PlaySound("pixel_" + clicker.Tiers[tierIndex].type.ToString().ToLowerInvariant(), 1f, Mathf.Max(0.1f, ramp * ramp));
+            PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
+            float pitch = type == PixelClicker.PixelType.Obsidian ? Mathf.Lerp(0.6f, 1.45f, ramp) : 1f;   // starts low, rises each click
+            PlaySound("pixel_" + type.ToString().ToLowerInvariant(), pitch, Mathf.Max(0.1f, ramp * ramp));
         }
     }
 
@@ -775,6 +782,31 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
         AudioClip clip = AudioClip.Create("Farm " + kind + "-" + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A glassy, ringing tap of black volcanic glass; the game pitches it up with every click.</summary>
+    public static AudioClip ObsidianPing(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.45f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(2100 + seed * 31);
+        float f = 380f + seed * 40f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            float ring = Mathf.Sin(t * f * Mathf.PI * 2f) * Mathf.Exp(-t * 7f)
+                       + 0.55f * Mathf.Sin(t * f * 2.76f * Mathf.PI * 2f) * Mathf.Exp(-t * 11f)
+                       + 0.3f * Mathf.Sin(t * f * 5.4f * Mathf.PI * 2f) * Mathf.Exp(-t * 18f);
+            data[i] = (ring + noise * Mathf.Exp(-t * 90f) * 0.8f) * Mathf.Clamp01(t / 0.001f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("Obsidian " + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }
