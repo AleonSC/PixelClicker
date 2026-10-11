@@ -133,9 +133,6 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("Size of the Quit button.")]
     [SerializeField] private Vector2 quitSize = new Vector2(110f, 34f);
 
-    [Tooltip("Font size of the Quit button.")]
-    [SerializeField] private float quitFontSize = 20f;
-
     [Tooltip("Colour of the Quit button.")]
     [SerializeField] private Color quitColor = new Color(0.45f, 0.18f, 0.18f, 0.9f);
 

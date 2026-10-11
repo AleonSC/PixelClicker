@@ -499,3 +499,4 @@
 [2026-10-11 22:57 UTC] Fixed fitted floors (retro, 8-bit, Pac-Man, scenes) going wonky during the camera intro and the zoom back to the main menu: they now fit to the camera's final pose.
 [2026-10-11 23:01 UTC] Egg hatch: the egg is one piece until it pops, the pet hops around the shell instead of through it (the empty shell crumbles away), and a pet from an egg starts switched off.
 [2026-10-11 23:12 UTC] Reworked the Meteor (dark cratered rock with glowing cracks, 3 clicks, embers and a fiery wake when it streaks away) and Solar (golden sun-cube with a turning corona, hovering old pixels that pay a trickle, and a Daylight bar raised by Solar clicks that speeds seed growth).
+[2026-10-11 23:13 UTC] Fixed a compile error in the egg hatch show and removed an unused Quit font size field from the title screen.

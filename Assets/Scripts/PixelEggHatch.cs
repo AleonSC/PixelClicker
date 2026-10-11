@@ -272,7 +272,7 @@ public class PixelEggHatch : MonoBehaviour
                 if (crumble >= 1f && shellPart.gameObject.activeSelf)
                 {
                     shellPart.gameObject.SetActive(false);
-                    foreach (Transform c in cracks) if (c != null && c.parent == eggRoot) c.gameObject.SetActive(false);   // the cracks went with it
+                    foreach (Transform crack in cracks) if (crack != null && crack.parent == eggRoot) crack.gameObject.SetActive(false);   // the cracks went with it
                 }
             }
             AnimateDebris(dt, ref lidVel, lidSpin, popped);
