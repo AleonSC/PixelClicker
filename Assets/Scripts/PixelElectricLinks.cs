@@ -7,7 +7,7 @@ using UnityEngine;
 /// are not near a device still arc to each other (just for looks).
 /// Pixels linked to a timed device POWER it: the device runs on batteries, so its countdown pauses while any are linked. Every linked
 /// pixel carries <see cref="pixelCharge"/> charge and the group of a device holds the total; the group drains it
-/// (<see cref="drainPerSecond"/>) one pixel at a time, the OLDEST first, which fizzles out and vanishes when empty. New pixels add to the
+/// (<see cref="drainPerSecond"/>) one pixel at a time, the one FURTHEST along its daisy chain first, which fizzles out and vanishes when empty. New pixels add to the
 /// total without interrupting the drain. Pixels that arc to each other (device or not) also carry charge and never despawn while linked;
 /// at most <see cref="maxLinkedTotal"/> pixels are linked in total (all groups together): beyond that the oldest are despawned.
 /// They stay when the device ends (they just stop being held). Added by PixelClicker.Awake.
@@ -149,13 +149,20 @@ public class PixelElectricLinks : MonoBehaviour
             if (d != null) d.KeepAlive();
         }
 
-        // One focus pixel per powered device: the oldest member.
+        // One focus pixel per powered device: the one FURTHEST along its daisy chain (the tail), so the chain burns away from the far end
+        // and the pixel touching the machine is the last to go. Ties go to the older pixel.
         Dictionary<PixelPlacedDevice, Rigidbody> focus = new Dictionary<PixelPlacedDevice, Rigidbody>();
+        Dictionary<PixelPlacedDevice, int> focusDepth = new Dictionary<PixelPlacedDevice, int>();
         foreach (KeyValuePair<Rigidbody, Link> kv in links)
         {
             PixelPlacedDevice dev = kv.Value.device;
             if (kv.Key == null || dev == null || dev.UsesMode || dev.IsRemoving || !dev.Armed) continue;
-            if (!focus.TryGetValue(dev, out Rigidbody cur) || order[kv.Key] < order[cur]) focus[dev] = kv.Key;
+            int depth = ChainDepth(kv.Key);
+            if (!focus.TryGetValue(dev, out Rigidbody cur) || depth > focusDepth[dev] || (depth == focusDepth[dev] && order[kv.Key] < order[cur]))
+            {
+                focus[dev] = kv.Key;
+                focusDepth[dev] = depth;
+            }
         }
         List<Rigidbody> empty = null;
         foreach (KeyValuePair<PixelPlacedDevice, Rigidbody> kv in focus)
@@ -170,6 +177,19 @@ public class PixelElectricLinks : MonoBehaviour
         }
         if (empty != null)
             foreach (Rigidbody body in empty) Dissipate(body);
+    }
+
+    /// <summary>How many arcs lie between this pixel and the device at the root of its chain (1 = touching the device).</summary>
+    private int ChainDepth(Rigidbody body)
+    {
+        int depth = 0;
+        Rigidbody cur = body;
+        while (cur != null && depth < 80 && links.TryGetValue(cur, out Link l))
+        {
+            depth++;
+            cur = l.parentBody;
+        }
+        return depth;
     }
 
     /// <summary>A pixel's charge ran out (or it was pushed out by newer ones): it swells and vanishes.</summary>

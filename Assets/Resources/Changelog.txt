@@ -401,3 +401,4 @@
 [2026-10-11 07:08 UTC] Electric pixels now work like batteries: linked pixels pause a device's timer and drain charge (100 each, oldest first, fizzling out), pixels no longer vanish with the device, and a device holds at most 30 (the oldest despawn first); the Electric 'box' idea is on the to-do.
 [2026-10-11 07:13 UTC] Electric pixels that arc to each other now get charge and stop despawning even without a device; the 30-pixel cap counts every group together and the oldest despawn first.
 [2026-10-11 07:17 UTC] Skills: new Offline Progression skill (pick it, then pick which pack's pixels to play; only it earns XP) and a skill tree with skill points for every skill (effects still to build).
+[2026-10-11 07:17 UTC] Electric pixels powering a machine now drain from the far end of the daisy chain instead of the pixel touching the machine.
