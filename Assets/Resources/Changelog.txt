@@ -405,3 +405,4 @@
 [2026-10-11 07:21 UTC] Toggles window: every tab with two or more switches now starts with a 'Toggle all' row.
 [2026-10-11 07:25 UTC] Skills window: a skill's description is now a tooltip on an orange '!' box on its card, and the Skill tree button opens a separate skill tree window to the right of it.
 [2026-10-11 07:26 UTC] Skills window: card names now shrink to fit (two lines at most) instead of breaking inside words.
+[2026-10-11 07:28 UTC] New Magnet consumable (needs Electric pixels): like the Vacuum Device it pulls old pixels in, but holds them in a heap instead of collecting them.

@@ -101,6 +101,8 @@ public class PixelConsumables : MonoBehaviour
         Seed = 8,
         /// <summary>Placed: waters nearby Seed sprouts and the Seed pet about once a second, so they grow much faster.</summary>
         Sprinkler = 9,
+        /// <summary>Placed: like the Vacuum Device it pulls old pixels in, but it never consumes them: it holds them in a heap.</summary>
+        Magnet = 10,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -500,6 +502,29 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultMagnet()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Magnet,
+            displayName = "Magnet",
+            description = "Place it near the cube. For {duration} seconds it pulls every loose old pixel within {radius} units into a heap around it, without collecting them.",
+            requiredType = PixelClicker.PixelType.Electric,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Electric, amount = 20 },
+            },
+            durationSeconds = 30f,
+            radius = 5f,
+            pullAcceleration = 24f,
+            absorbDistance = 0.9f,   // inside this distance a pixel just settles (nothing is collected)
+            color = new Color(0.85f, 0.2f, 0.2f, 1f),
+            bodyDiameter = 0.8f,
+            bodyHeight = 0.9f,
+            placingMessage = "Click the floor to place the {0}  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultSprinkler()
     {
         return new Device
@@ -741,6 +766,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ChargeBooster, CreateDefaultChargeBooster),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sprinkler, CreateDefaultSprinkler),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Magnet, CreateDefaultMagnet),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1412,6 +1438,7 @@ public class PixelConsumables : MonoBehaviour
                 }
                 case DeviceKind.Vacuum:
                 case DeviceKind.Sprinkler:
+                case DeviceKind.Magnet:
                     root = BuildDeviceObject(d, false, out _, out _);
                     break;
                 case DeviceKind.ChargeBooster:
@@ -1639,7 +1666,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The placeable kinds (the ones that stand in the world): the Robot Worker can keep any of these going.</summary>
     public static bool IsPlaceableKind(DeviceKind kind) =>
         kind == DeviceKind.Vacuum || kind == DeviceKind.Fan || kind == DeviceKind.Sorter ||
-        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler;
+        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler || kind == DeviceKind.Magnet;
 
     /// <summary>How many of a device you hold (huge with infinite resources).</summary>
     public int DeviceOwned(int deviceIndex) => Inf ? 99999 : devices[deviceIndex].owned;
@@ -1941,6 +1968,14 @@ public class PixelConsumables : MonoBehaviour
                 result = rod;
             }
         }
+        else if (d.kind == DeviceKind.Magnet)
+        {
+            GameObject root = BuildDeviceObject(d, false, out Transform topPoint, out TextMeshPro timer);
+            root.transform.position = point;
+            PixelMagnetDevice magnet = root.AddComponent<PixelMagnetDevice>();
+            magnet.Init(clicker, cam, topPoint, timer, timerFormat, duration, d.radius, d.pullAcceleration, d.absorbDistance, shrinkSeconds, d.bodyHeight);
+            result = magnet;
+        }
         else if (d.kind == DeviceKind.Sprinkler)
         {
             GameObject root = BuildDeviceObject(d, false, out _, out TextMeshPro timer);
@@ -2090,6 +2125,10 @@ public class PixelConsumables : MonoBehaviour
         {
             BuildSprinklerBody(root, d, isPreview);
         }
+        else if (d.kind == DeviceKind.Magnet)
+        {
+            BuildMagnetBody(root, d, isPreview);
+        }
         else
         {
             // Cylinder body (Unity's cylinder is 2 units tall, hence the halved Y scale).
@@ -2187,6 +2226,40 @@ public class PixelConsumables : MonoBehaviour
         {
             GameObject nozzle = Part(PrimitiveType.Sphere, "Nozzle " + i, spinner, new Vector3((i == 0 ? 1f : -1f) * d.bodyDiameter * 0.75f, 0f, 0f), Vector3.one * d.bodyDiameter * 0.2f, metal);
         }
+    }
+
+    /// <summary>An upright horseshoe magnet standing on its two silver tips: a red arch, two legs and a small base plate.</summary>
+    private void BuildMagnetBody(GameObject root, Device d, bool isPreview)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        Color red = d.color; red.a = opacity;
+        Color silver = new Color(0.78f, 0.8f, 0.86f, opacity);
+        Color dark = new Color(0.25f, 0.27f, 0.32f, opacity);
+        float D = d.bodyDiameter, H = d.bodyHeight, leg = D * 0.26f;
+
+        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(type);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(root.transform, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return g;
+        }
+
+        Part(PrimitiveType.Cylinder, "Base", new Vector3(0f, 0.025f, 0f), new Vector3(D * 1.3f, 0.025f, D * 1.3f), dark);
+        for (int s = -1; s <= 1; s += 2)
+        {
+            float x = s * D * 0.4f;
+            Part(PrimitiveType.Cube, "Leg", new Vector3(x, H * 0.5f, 0f), new Vector3(leg, H * 0.78f, leg), red);
+            Part(PrimitiveType.Cube, "Tip", new Vector3(x, H * 0.12f, 0f), new Vector3(leg * 1.04f, H * 0.24f, leg * 1.04f), silver);
+        }
+        Part(PrimitiveType.Cube, "Arch", new Vector3(0f, H - leg * 0.5f, 0f), new Vector3(D * 0.8f + leg, leg, leg), red);
+        Part(PrimitiveType.Cube, "Arch Cap", new Vector3(0f, H + leg * 0.02f, 0f), new Vector3(D * 0.8f + leg * 0.6f, leg * 0.25f, leg * 0.7f), silver);
     }
 
     private void BuildVacuumBody(GameObject root, Device d, bool isPreview)
