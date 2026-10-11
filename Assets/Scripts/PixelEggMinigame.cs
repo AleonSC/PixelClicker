@@ -272,6 +272,7 @@ public class PixelEgg : MonoBehaviour
         float grow = Mathf.Clamp01((Time.time - bornTime) / 0.6f);
         body.localScale = Vector3.one * size * grow * (1f - punch * 0.12f);
 
+        if (hatching) return;
         if (PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PointerOverUI()) return;
         Vector3 screen = cam.WorldToScreenPoint(transform.position);
         if (screen.z <= 0f) return;
@@ -293,9 +294,46 @@ public class PixelEgg : MonoBehaviour
         ShowCracks();
     }
 
+    private bool hatching;
+
     private void Hatch()
     {
-        // Shell fragments burst out.
+        if (hatching) return;
+        hatching = true;
+        List<PixelClicker.PixelType> list = PetCandidates(clicker);
+        if (list.Count == 0 || PixelPets.Instance == null)
+        {
+            ShellBurst();
+            PixelStats.Clear("egg.pending");
+            PixelHints.Announce("The egg hatched, but nothing was inside...");
+            Destroy(gameObject);
+            return;
+        }
+        PixelClicker.PixelType type = list[Random.Range(0, list.Count)];
+        int tier = clicker.IndexOf(type);
+        string petName = (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString());
+        if (petName.EndsWith(" Pixels")) petName = petName.Substring(0, petName.Length - 1);
+        petName += " Pet";
+
+        // The hatching show plays over a dark screen (the egg stays, hidden, so the cube stays away and the state is kept until the pet is awarded).
+        body.gameObject.SetActive(false);
+        if (PixelEggHatch.Play(clicker, tier, petName, transform.position, () => FinishHatch(type, petName, true))) return;
+
+        body.gameObject.SetActive(true);
+        ShellBurst();
+        FinishHatch(type, petName, false);
+    }
+
+    private void FinishHatch(PixelClicker.PixelType type, string petName, bool shown)
+    {
+        PixelStats.Clear("egg.pending");
+        if (PixelPets.Instance != null) PixelPets.Instance.Award(type, !shown);   // the show replaces the found-a-pet popup
+        PixelHints.Announce("The egg hatched! A new pet: " + petName);
+        Destroy(gameObject);
+    }
+
+    private void ShellBurst()
+    {
         for (int i = 0; i < 12; i++)
         {
             GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -311,18 +349,6 @@ public class PixelEgg : MonoBehaviour
             Destroy(piece, 2.5f);
         }
         PixelAudio.Play("achievement");
-
-        List<PixelClicker.PixelType> list = PetCandidates(clicker);
-        PixelStats.Clear("egg.pending");
-        if (list.Count > 0 && PixelPets.Instance != null)
-        {
-            PixelClicker.PixelType type = list[Random.Range(0, list.Count)];
-            int tier = clicker.IndexOf(type);
-            PixelPets.Instance.Award(type, true);
-            PixelHints.Announce("The egg hatched! A new pet: " + (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()) + " Pet");
-        }
-        else PixelHints.Announce("The egg hatched, but nothing was inside...");
-        Destroy(gameObject);
     }
 
     /// <summary>A cube of edge 1 with rounded corners (radius as a fraction of the edge), made by pushing a subdivided cube out from its inner box.</summary>
