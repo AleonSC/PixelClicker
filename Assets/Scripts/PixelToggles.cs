@@ -417,6 +417,7 @@ public class PixelToggles : MonoBehaviour
         float contentHeight = entries.Count * (rowHeight + 8f);
         float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
+        UpdateTabTip();
     }
 
     /// <summary>"Seed Pixels" -> "Seed": the Pixels group already says what the switches are for, and short names stay on one line at full size.</summary>
@@ -563,19 +564,26 @@ public class PixelToggles : MonoBehaviour
         groupTabs = new GameObject[GroupCount];
         for (int i = 0; i < GroupCount; i++)
         {
-            Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + groupLabels[i], groupLabels[i], Vector2.zero, groupColor,
+            Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Group " + groupLabels[i], "", Vector2.zero, groupColor,
                                                textColor, fontSize);
-            PixelUIKit.Caps(b);
             groupTabs[i] = b.gameObject;
             groupImages[i] = b.GetComponent<Image>();
-            TMP_Text groupLabel = b.GetComponentInChildren<TMP_Text>();
-            if (groupLabel != null) // four buttons share the width: shrink a long name to fit instead of breaking it
-            {
-                groupLabel.enableAutoSizing = true;
-                groupLabel.fontSizeMax = fontSize;
-                groupLabel.fontSizeMin = 12f;
-                groupLabel.margin = new Vector4(4f, 0f, 4f, 0f);
-            }
+
+            // A pixel-art icon instead of a name; the name shows in a tip when the mouse is over the tab.
+            GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
+            iconGo.transform.SetParent(b.transform, false);
+            RawImage icon = iconGo.GetComponent<RawImage>();
+            icon.texture = PixelTabIcons.Get(i);
+            icon.raycastTarget = false;
+            RectTransform ir = iconGo.GetComponent<RectTransform>();
+            ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
+            float iconSize = Mathf.Max(24f, tabH - 14f);
+            ir.sizeDelta = new Vector2(iconSize, iconSize);
+            int tipIndex = i;
+            string tipName = groupLabels[i];
+            PixelHoverTip hoverTip = b.gameObject.AddComponent<PixelHoverTip>();
+            hoverTip.onEnter = () => { hoveredTab = tipIndex; hoveredTabName = tipName; };
+            hoverTip.onExit = () => { if (hoveredTab == tipIndex) hoveredTab = -1; };
             RectTransform br = b.GetComponent<RectTransform>();
             br.anchorMin = new Vector2(i / (float)GroupCount, 1f);
             br.anchorMax = new Vector2((i + 1) / (float)GroupCount, 1f);
@@ -595,6 +603,8 @@ public class PixelToggles : MonoBehaviour
 
         // --- The list of switches.
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Toggle List", scrollbarColor, 12f, rowHeight, out content, out bar);
+        PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;
+        if (barFade != null) barFade.hideBar = true;   // no visible scroll bar here (the list still scrolls with the wheel, and fades at the bottom)
         RectTransform vr = scroll.GetComponent<RectTransform>();
         vr.anchorMin = new Vector2(0f, 0f);
         vr.anchorMax = new Vector2(1f, 1f);
@@ -715,10 +725,52 @@ public class PixelToggles : MonoBehaviour
     /// <summary>Drop-down while docked beside the shop (narrow), tab buttons when the window stands alone.</summary>
     private void ApplyGroupControl()
     {
-        if (groupDropdown != null && groupDropdown.gameObject.activeSelf != besideShop) groupDropdown.gameObject.SetActive(besideShop);
+        // The icon tabs are used both beside the shop and standing alone (the drop-down is no longer shown).
+        if (groupDropdown != null && groupDropdown.gameObject.activeSelf) groupDropdown.gameObject.SetActive(false);
         if (groupTabs != null)
             foreach (GameObject tab in groupTabs)
-                if (tab != null && tab.activeSelf == besideShop) tab.SetActive(!besideShop);
+                if (tab != null && !tab.activeSelf) tab.SetActive(true);
+        UpdateTabTip();
+    }
+
+    private int hoveredTab = -1;
+    private string hoveredTabName = "";
+    private RectTransform tabTipRect;
+    private TMP_Text tabTipLabel;
+
+    /// <summary>The little name box under the tab the mouse is over.</summary>
+    private void UpdateTabTip()
+    {
+        if (windowObject == null || groupTabs == null) return;
+        if (tabTipRect == null)
+        {
+            GameObject go = new GameObject("Tab Tip", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(windowObject.transform, false);
+            Image bg = go.GetComponent<Image>();
+            bg.color = new Color(0.04f, 0.05f, 0.09f, 0.96f);
+            bg.raycastTarget = false;
+            PixelUIKit.StyleBox(bg);
+            tabTipRect = go.GetComponent<RectTransform>();
+            tabTipRect.anchorMin = tabTipRect.anchorMax = new Vector2(0f, 1f);
+            tabTipRect.pivot = new Vector2(0.5f, 1f);
+            tabTipLabel = PixelUIKit.CreateText(font, go.transform, "Text", "", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.88f, 0.4f, 1f));
+            PixelUIKit.Caps(tabTipLabel);
+            tabTipLabel.raycastTarget = false;
+            PixelUIKit.Stretch(tabTipLabel.rectTransform);
+            go.SetActive(false);
+        }
+        bool show = hoveredTab >= 0 && hoveredTab < groupTabs.Length && groupTabs[hoveredTab] != null && groupTabs[hoveredTab].activeInHierarchy;
+        if (tabTipRect.gameObject.activeSelf != show) tabTipRect.gameObject.SetActive(show);
+        if (!show) return;
+        tabTipRect.SetAsLastSibling();
+        PixelUIKit.SetText(tabTipLabel, hoveredTabName);
+        RectTransform tabRect = groupTabs[hoveredTab].GetComponent<RectTransform>();
+        Vector3[] c = new Vector3[4];
+        tabRect.GetWorldCorners(c);
+        Vector3 bottomCentre = new Vector3((c[0].x + c[3].x) * 0.5f, c[0].y, c[0].z);
+        float w = Mathf.Max(120f, hoveredTabName.Length * fontSize * 0.75f + 36f);
+        tabTipRect.sizeDelta = new Vector2(w, fontSize * 1.9f);
+        tabTipRect.position = bottomCentre + Vector3.down * (6f * tabTipRect.lossyScale.y);
     }
 
     private PixelDockedButton dock;
@@ -728,6 +780,7 @@ public class PixelToggles : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdateTabTip();
         if (buttonGroup == null || windowObject == null) return;
         bool open = windowObject.activeSelf;
         if (open) FitBesideShop();

@@ -433,3 +433,4 @@
 [2026-10-11 11:14 UTC] Scrollable lists now fade out at the bottom (with a small bobbing arrow) while there is more to scroll to.
 [2026-10-11 11:17 UTC] The scroll-list fade now fades the content itself (soft mask edge) instead of a coloured overlay, so it no longer shows seams or pokes over rounded window edges.
 [2026-10-11 11:17 UTC] Fixed the pinned Inventory's consumable rows losing hover and clicks (they were switched off and on every refresh).
+[2026-10-11 11:22 UTC] The Toggles window has no visible scroll bar now, and its tabs are new pixel-art icons (cubes, machine with green arrow, joystick and Pac-Man, market stall, cat and dog) that show the tab name when hovered.

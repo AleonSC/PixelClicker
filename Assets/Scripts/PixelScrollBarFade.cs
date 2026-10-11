@@ -19,6 +19,9 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
     [Tooltip("Height (canvas units) of the fade at the bottom of the list.")]
     public float fadeHeight = 44f;
 
+    [Tooltip("Never show the bar itself (the bottom fade and the mouse wheel still work).")]
+    public bool hideBar;
+
     private CanvasGroup group;
     private ScrollRect scroll;
     private bool lookedForScroll;
@@ -50,7 +53,8 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
     {
         if (group == null) return;
         bool active = hovering || pressed || Time.unscaledTime - lastMove < holdSeconds;
-        group.alpha = Mathf.MoveTowards(group.alpha, active ? 1f : 0f, Time.unscaledDeltaTime / Mathf.Max(0.01f, fadeSeconds));
+        group.alpha = hideBar ? 0f : Mathf.MoveTowards(group.alpha, active ? 1f : 0f, Time.unscaledDeltaTime / Mathf.Max(0.01f, fadeSeconds));
+        if (hideBar) group.blocksRaycasts = false;
         UpdateBottomFade();
     }
 
