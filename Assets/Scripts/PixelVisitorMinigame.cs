@@ -104,6 +104,23 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     protected virtual string DefaultArrivedLog => DefaultName + " is here!";
     /// <summary>Extra seconds before the first visit (so two visitors don't arrive together).</summary>
     protected virtual float StartDelayOffset => 0f;
+
+    // --- Rare, one-off visitors (Egg, Bean): they give a gift instead of selling, and never come back ---
+    /// <summary>True for a visitor who gives something away instead of selling: accepting runs <see cref="OnGift"/> (after the optional second speech box).</summary>
+    protected virtual bool IsGift => false;
+    /// <summary>Called when the player accepts the gift (the visitor is still on screen).</summary>
+    protected virtual void OnGift() { }
+    /// <summary>True for a visitor who shows up once ever: the visit is recorded in the counter '&lt;id&gt;.met' and the visitor never starts again.</summary>
+    protected virtual bool OneTimeOnly => false;
+    /// <summary>Chance (0-1) that a visit actually happens each time the visit timer runs out (a failed roll just waits for the next timer).</summary>
+    protected virtual float VisitChance => 1f;
+    /// <summary>Can the visit happen now? (Checked together with the chance roll; e.g. the Egg needs a pet you don't have.)</summary>
+    protected virtual bool CanVisit => true;
+    protected virtual string AcceptLabel => acceptText;
+    protected virtual string RejectLabel => rejectText;
+
+    /// <summary>Has this one-off visitor already come?</summary>
+    public bool HasMet => PixelStats.Total(Id + ".met") >= 1d;
     protected virtual Color TitleColor => new Color(1f, 0.85f, 0.4f);
 
     private static string Pick(string set, string fallback) => string.IsNullOrEmpty(set) ? fallback : set;
@@ -204,13 +221,27 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         base.OnDestroy();
     }
 
+    private bool rolled;
+
     private void Update()
     {
         if (!running || visiting || clicker == null) return;
+        if (OneTimeOnly && HasMet) { running = false; return; }
         spawnTimer -= Time.deltaTime;
         if (spawnTimer > 0f) return;
+        if (!rolled)
+        {
+            // A rare visitor: one roll per timer, and only when the visit would make sense.
+            rolled = true;
+            if (!CanVisit || Random.value >= VisitChance)
+            {
+                rolled = false;
+                spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+                return;
+            }
+        }
         if (anyVisiting || Time.unscaledTime < nextAnyVisitTime || !CalmForVisit()) return;   // waits (checked every frame) for a quiet moment
-        if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(VisitRoutine());
+        if (PixelMinigameLimits.AllowAnother(this)) { rolled = false; StartCoroutine(VisitRoutine(false)); }
         else spawnTimer = PixelMinigameLimits.RetrySeconds;
     }
 
@@ -229,7 +260,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     [ContextMenu("Spawn Tinkerer Now")]
     public override void SpawnNow()
     {
-        if (Application.isPlaying && !visiting && clicker != null) StartCoroutine(VisitRoutine());
+        if (Application.isPlaying && !visiting && clicker != null) StartCoroutine(VisitRoutine(true));
     }
 
     protected override void OnDespawned()
@@ -246,8 +277,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     // The visit
     // ------------------------------------------------------------------
 
-    private IEnumerator VisitRoutine()
+    private IEnumerator VisitRoutine(bool dev)
     {
+        if (OneTimeOnly && !dev) PixelStats.Best(Id + ".met", 1d);   // they never come back, whatever you decide
         visiting = true;
         anyVisiting = true;
         decision = 0;
@@ -300,7 +332,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             if (decision == 0) decision = 2;
         }
 
-        if (decision == 1)
+        if (decision == 1 && IsGift) OnGift();
+        if (decision == 1 && !IsGift)
         {
             RefreshWares();
             waresPanel.gameObject.SetActive(true);
@@ -326,6 +359,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         anyVisiting = false;
         nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
         spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+        if (OneTimeOnly && !dev) running = false;
     }
 
     private void SetDim(float amount)
@@ -546,11 +580,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         message.fontSizeMin = 18f;
         Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
 
-        Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", acceptText, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
+        Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", AcceptLabel, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
         PixelUIKit.Caps(accept);
         Corner(accept.GetComponent<RectTransform>(), new Vector2(0.25f, 0f), new Vector2(0f, 36f));
         accept.onClick.AddListener(() => { if (decision == 0) decision = 1; });
-        Button reject = PixelUIKit.CreateButton(Font, greetingPanel, "Reject", rejectText, new Vector2(300f, 80f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 36f);
+        Button reject = PixelUIKit.CreateButton(Font, greetingPanel, "Reject", RejectLabel, new Vector2(300f, 80f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 36f);
         PixelUIKit.Caps(reject);
         Corner(reject.GetComponent<RectTransform>(), new Vector2(0.75f, 0f), new Vector2(0f, 36f));
         reject.onClick.AddListener(() => { if (decision == 0) decision = 2; });

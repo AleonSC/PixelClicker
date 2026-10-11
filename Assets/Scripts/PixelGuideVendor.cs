@@ -307,6 +307,9 @@ public class PixelGuideVendor : MonoBehaviour
         TryStart("tinkerer", UnlockedTypes() >= tinkererAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
         TryStart("farmer", UnlockedTypes() >= farmerAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
         TryStart("entrepreneur", UnlockedTypes() >= entrepreneurAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
+        // Two very rare, one-off visitors: a cat called Egg and a woman called Bean (they never come back once they have shown up).
+        TryStart("egg", UnlockedTypes() >= 4, Random.Range(600f, 1200f));
+        TryStart("bean", UnlockedTypes() >= 6, Random.Range(900f, 1500f));
     }
 
     private static void TryStart(string id, bool condition, float firstVisit)
@@ -314,6 +317,7 @@ public class PixelGuideVendor : MonoBehaviour
         if (!condition) return;
         PixelMinigame m = PixelMinigame.Find(id);
         if (m == null || m.Running || m.UserDisabled) return;
+        if (m is PixelVisitorMinigame visitor && visitor.HasMet && (id == "egg" || id == "bean")) return;   // one-off visitors never start again
         m.Activate();
         if (m is PixelVisitorMinigame v) v.ScheduleFirstVisit(firstVisit);
     }

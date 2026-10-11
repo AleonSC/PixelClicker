@@ -270,6 +270,10 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("Height of the cylinder (world units).")]
         public float bodyHeight = 1f;
 
+        [Header("Magic Beans (Seed kind only)")]
+        [Tooltip("This seed item is the Magic Beans: planting it grows a beanstalk (with a Dragon Cube) instead of a sprout. Craft-only: never sold.")]
+        public bool beans = false;
+
         [Header("Seed only")]
         [Tooltip("Seed: the pixel type the planted seed grows into. (The price is worked out from this pixel's payout and rarity, in that pixel.)")]
         public PixelClicker.PixelType seedType = PixelClicker.PixelType.White;
@@ -570,6 +574,24 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultMagicBeans()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Seed,
+            displayName = "Magic Beans",
+            description = "Plant them (right-click in the Inventory, then click the floor). A tall beanstalk grows with a handful of random cubes along it, and one of them is a Dragon Cube you don't hold yet.",
+            requiredType = PixelClicker.PixelType.White,
+            seedType = PixelClicker.PixelType.White,
+            beans = true,
+            craftOnly = true,
+            maxHeld = 1,
+            costs = new PixelShop.PackCost[0],
+            color = new Color(0.45f, 0.8f, 0.3f, 1f),
+            placingMessage = "Click the floor to plant the {0}  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultSprinkler()
     {
         return new Device
@@ -824,7 +846,14 @@ public class PixelConsumables : MonoBehaviour
             }
         }
 
-        if (addDefaultDevices && devices != null && !Array.Exists(devices, d => d != null && d.kind == DeviceKind.Seed && PixelClicker.IsDragonCube(d.seedType)))
+        if (addDefaultDevices && devices != null && !Array.Exists(devices, d => d != null && d.beans))
+        {
+            Array.Resize(ref devices, devices.Length + 1);
+            devices[devices.Length - 1] = CreateDefaultMagicBeans();
+            added = true;
+        }
+
+        if (addDefaultDevices && devices != null && !Array.Exists(devices, d => d != null && d.kind == DeviceKind.Seed && !d.beans && PixelClicker.IsDragonCube(d.seedType)))
         {
             Array.Resize(ref devices, devices.Length + 1);
             devices[devices.Length - 1] = CreateDefaultDragonSeed();
@@ -837,7 +866,7 @@ public class PixelConsumables : MonoBehaviour
             foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
             {
                 if (!HasSeed(type)) continue;
-                if (Array.Exists(devices, d => d != null && d.kind == DeviceKind.Seed && d.seedType == type)) continue;
+                if (Array.Exists(devices, d => d != null && d.kind == DeviceKind.Seed && !d.beans && d.seedType == type)) continue;
                 Array.Resize(ref devices, devices.Length + 1);
                 devices[devices.Length - 1] = CreateDefaultSeed(type);
                 added = true;
@@ -1633,7 +1662,14 @@ public class PixelConsumables : MonoBehaviour
     public bool IsSeedItem(int item) => IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed;
 
     /// <summary>True for the rare Dragon Seed (typed prices, offered only by the Farmer, grows a Dragon Cube the player lacks).</summary>
-    public bool IsDragonSeed(int item) => IsSeedItem(item) && PixelClicker.IsDragonCube(devices[item - potions.Length].seedType);
+    public bool IsDragonSeed(int item) => IsSeedItem(item) && !devices[item - potions.Length].beans && PixelClicker.IsDragonCube(devices[item - potions.Length].seedType);
+
+    /// <summary>The item index of the Magic Beans, or -1.</summary>
+    public int BeansItem()
+    {
+        for (int i = 0; i < devices.Length; i++) if (devices[i] != null && devices[i].beans) return potions.Length + i;
+        return -1;
+    }
 
     /// <summary>The pixel type a seed item grows.</summary>
     public PixelClicker.PixelType SeedTypeOf(int item) => devices[item - potions.Length].seedType;
@@ -1874,6 +1910,24 @@ public class PixelConsumables : MonoBehaviour
     private void PlantSeed(Vector3 point)
     {
         Device d = devices[placingIndex];
+        if (d.beans)
+        {
+            // Magic Beans: a beanstalk with a Dragon Cube (and a handful of other cubes) instead of a sprout.
+            if (PixelBeanstalk.Current != null) { PixelHints.Announce("A beanstalk is already growing - pick its cubes first"); return; }
+            int dragonTier = clicker.PickMissingDragonCube();
+            if (dragonTier < 0 && Inf) dragonTier = clicker.PickAnyDragonCube();
+            if (dragonTier < 0)
+            {
+                PixelHints.Announce("You already hold all seven Dragon Cubes - the beans have nothing to grow");
+                EndPlacement();
+                return;
+            }
+            PixelBeanstalk.Plant(clicker, point, dragonTier, false);
+            if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
+            PixelStats.Count("beans.planted");
+            EndPlacement();
+            return;
+        }
         int tier = clicker.IndexOf(d.seedType);
         if (PixelClicker.IsDragonCube(d.seedType))
         {
