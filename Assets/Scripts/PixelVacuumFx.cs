@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The Vacuum pixel's look: a clear glass container (a hollow box with thin walls) with ONE round opening in its front (-Z) face, a glowing
+/// The Vacuum pixel's look: a clear glass container (a hollow box with thin walls) with a round opening in each of its FOUR side faces (never the top or bottom), a glowing
 /// lavender lip round the opening and a "suction wind" outside it - streaks of air that curl in towards the opening and vanish into it.
 /// <see cref="PixelVacuumMesh"/> builds the hollow mesh (swapped in for the plain cube by <c>PixelClicker.MeshFor</c> when
 /// <c>PixelLook.vacuumContainer</c> is set); <see cref="PixelVacuumFx.Attach"/> adds the lip and the wind (<c>PixelLook.windFx</c>).
@@ -39,28 +39,27 @@ public static class PixelVacuumMesh
         List<Vector2> uv = new List<Vector2>();
         List<int> t = new List<int>();
         float h = 0.5f, hi = 0.5f - Wall, r = HoleRadius;
+        Quaternion none = Quaternion.identity;
 
-        // Outer skin: five full faces and the front face with the opening.
-        Quad(v, n, uv, t, new Vector3(-h, -h, h), new Vector3(h, -h, h), new Vector3(h, h, h), new Vector3(-h, h, h), Vector3.forward);
-        Quad(v, n, uv, t, new Vector3(h, -h, -h), new Vector3(h, -h, h), new Vector3(h, h, h), new Vector3(h, h, -h), Vector3.right);
-        Quad(v, n, uv, t, new Vector3(-h, -h, -h), new Vector3(-h, -h, h), new Vector3(-h, h, h), new Vector3(-h, h, -h), Vector3.left);
-        Quad(v, n, uv, t, new Vector3(-h, h, -h), new Vector3(h, h, -h), new Vector3(h, h, h), new Vector3(-h, h, h), Vector3.up);
-        Quad(v, n, uv, t, new Vector3(-h, -h, -h), new Vector3(h, -h, -h), new Vector3(h, -h, h), new Vector3(-h, -h, h), Vector3.down);
-        Annulus(v, n, uv, t, -h, h, r, Vector3.back);
+        // Top and bottom are plain walls: the outer skin and the inner surface facing the hollow.
+        Quad(v, n, uv, t, new Vector3(-h, h, -h), new Vector3(h, h, -h), new Vector3(h, h, h), new Vector3(-h, h, h), Vector3.up, none);
+        Quad(v, n, uv, t, new Vector3(-h, -h, -h), new Vector3(h, -h, -h), new Vector3(h, -h, h), new Vector3(-h, -h, h), Vector3.down, none);
+        Quad(v, n, uv, t, new Vector3(-hi, hi, -hi), new Vector3(hi, hi, -hi), new Vector3(hi, hi, hi), new Vector3(-hi, hi, hi), Vector3.down, none);
+        Quad(v, n, uv, t, new Vector3(-hi, -hi, -hi), new Vector3(hi, -hi, -hi), new Vector3(hi, -hi, hi), new Vector3(-hi, -hi, hi), Vector3.up, none);
 
-        // The inner surface of the walls (facing into the hollow) and the inside of the opening's tube.
-        Quad(v, n, uv, t, new Vector3(-hi, -hi, hi), new Vector3(hi, -hi, hi), new Vector3(hi, hi, hi), new Vector3(-hi, hi, hi), Vector3.back);
-        Quad(v, n, uv, t, new Vector3(hi, -hi, -hi), new Vector3(hi, -hi, hi), new Vector3(hi, hi, hi), new Vector3(hi, hi, -hi), Vector3.left);
-        Quad(v, n, uv, t, new Vector3(-hi, -hi, -hi), new Vector3(-hi, -hi, hi), new Vector3(-hi, hi, hi), new Vector3(-hi, hi, -hi), Vector3.right);
-        Quad(v, n, uv, t, new Vector3(-hi, hi, -hi), new Vector3(hi, hi, -hi), new Vector3(hi, hi, hi), new Vector3(-hi, hi, hi), Vector3.down);
-        Quad(v, n, uv, t, new Vector3(-hi, -hi, -hi), new Vector3(hi, -hi, -hi), new Vector3(hi, -hi, hi), new Vector3(-hi, -hi, hi), Vector3.up);
-        Annulus(v, n, uv, t, -hi, hi, r, Vector3.forward);
-        for (int i = 0; i < Seg; i++)
+        // The four SIDE walls each have a round opening (built once facing -Z and turned to each side).
+        for (int side = 0; side < 4; side++)
         {
-            float a0 = i * Mathf.PI * 2f / Seg, a1 = (i + 1) * Mathf.PI * 2f / Seg;
-            Vector3 p0 = new Vector3(Mathf.Cos(a0) * r, Mathf.Sin(a0) * r, 0f), p1 = new Vector3(Mathf.Cos(a1) * r, Mathf.Sin(a1) * r, 0f);
-            Vector3 mid = -(p0 + p1).normalized;   // the tube's wall faces the axis
-            Quad(v, n, uv, t, new Vector3(p0.x, p0.y, -h), new Vector3(p1.x, p1.y, -h), new Vector3(p1.x, p1.y, -hi), new Vector3(p0.x, p0.y, -hi), mid);
+            Quaternion q = Quaternion.Euler(0f, side * 90f, 0f);
+            Annulus(v, n, uv, t, -h, h, r, Vector3.back, q);          // outer skin
+            Annulus(v, n, uv, t, -hi, hi, r, Vector3.forward, q);     // inner surface
+            for (int i = 0; i < Seg; i++)                              // the tube through the wall
+            {
+                float a0 = i * Mathf.PI * 2f / Seg, a1 = (i + 1) * Mathf.PI * 2f / Seg;
+                Vector3 p0 = new Vector3(Mathf.Cos(a0) * r, Mathf.Sin(a0) * r, 0f), p1 = new Vector3(Mathf.Cos(a1) * r, Mathf.Sin(a1) * r, 0f);
+                Vector3 mid = -(p0 + p1).normalized;   // the tube's wall faces the axis
+                Quad(v, n, uv, t, new Vector3(p0.x, p0.y, -h), new Vector3(p1.x, p1.y, -h), new Vector3(p1.x, p1.y, -hi), new Vector3(p0.x, p0.y, -hi), mid, q);
+            }
         }
 
         Vector3 size = b.size, centre = b.center;
@@ -82,8 +81,9 @@ public static class PixelVacuumMesh
         return new Vector2(p.x + 0.5f, p.z + 0.5f);
     }
 
-    private static void Quad(List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> t, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal)
+    private static void Quad(List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> t, Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, Quaternion q)
     {
+        a = q * a; b = q * b; c = q * c; d = q * d; normal = q * normal;
         int s = v.Count;
         v.Add(a); v.Add(b); v.Add(c); v.Add(d);
         for (int i = 0; i < 4; i++) n.Add(normal);
@@ -93,14 +93,14 @@ public static class PixelVacuumMesh
     }
 
     /// <summary>A flat frame at height z between a square of half-extent 'half' and a round hole of radius 'r'.</summary>
-    private static void Annulus(List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> t, float z, float half, float r, Vector3 normal)
+    private static void Annulus(List<Vector3> v, List<Vector3> n, List<Vector2> uv, List<int> t, float z, float half, float r, Vector3 normal, Quaternion q)
     {
         for (int i = 0; i < Seg; i++)
         {
             float a0 = i * Mathf.PI * 2f / Seg, a1 = (i + 1) * Mathf.PI * 2f / Seg;
             Vector3 c0 = new Vector3(Mathf.Cos(a0) * r, Mathf.Sin(a0) * r, z), c1 = new Vector3(Mathf.Cos(a1) * r, Mathf.Sin(a1) * r, z);
             Vector3 s0 = Square(a0, half, z), s1 = Square(a1, half, z);
-            Quad(v, n, uv, t, c0, c1, s1, s0, normal);
+            Quad(v, n, uv, t, c0, c1, s1, s0, normal, q);
         }
     }
 
@@ -119,17 +119,23 @@ public static class PixelVacuumFx
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { lipMesh = null; }
 
-    /// <summary>Adds the glowing lip round the opening and the suction wind outside it, under 'parent' (the cube's mesh object).</summary>
+    /// <summary>Adds a glowing lip and a suction wind at each of the four side openings, under 'parent' (the cube's mesh object).</summary>
     public static void Attach(Transform parent, Vector3 centre, Vector3 size)
     {
+        for (int side = 0; side < 4; side++) AttachOne(parent, centre, size, Quaternion.Euler(0f, side * 90f, 0f));
+    }
+
+    private static void AttachOne(Transform parent, Vector3 centre, Vector3 size, Quaternion q)
+    {
         float unit = Mathf.Max(0.05f, Mathf.Max(size.x, Mathf.Max(size.y, size.z)));
-        Vector3 mouth = centre + new Vector3(0f, 0f, -size.z * 0.5f);
+        Vector3 mouth = centre + q * new Vector3(0f, 0f, -size.z * 0.5f);
         float hole = Mathf.Min(size.x, size.y) * PixelVacuumMesh.HoleRadius;
 
         // The lip: a bright lavender ring that fades outwards, lying just outside the face.
         GameObject lip = new GameObject("Opening Lip", typeof(MeshFilter), typeof(MeshRenderer));
         lip.transform.SetParent(parent, false);
-        lip.transform.localPosition = mouth + new Vector3(0f, 0f, -size.z * 0.004f);
+        lip.transform.localPosition = mouth + q * new Vector3(0f, 0f, -size.z * 0.004f);
+        lip.transform.localRotation = q;
         lip.layer = parent.gameObject.layer;
         lip.GetComponent<MeshFilter>().sharedMesh = LipMesh(hole);
         MeshRenderer lr = lip.GetComponent<MeshRenderer>();
@@ -144,13 +150,13 @@ public static class PixelVacuumFx
         {
             lifetime = new Vector2(0.16f, 0.4f), speed = Vector2.zero, size = new Vector2(0.02f, 0.04f) * unit, gravity = 0f,
             colorA = new Color(0.92f, 0.88f, 1f, 0.9f), colorB = new Color(0.62f, 0.48f, 1f, 0.8f),
-            rate = 46f, loop = true, localSpace = true, shape = ParticleSystemShapeType.ConeVolume, shapeRadius = hole * 0.5f, shapeAngle = 26f,
-            sizeOverLife = new Vector2(1f, 0.1f), maxParticles = 70,
+            rate = 26f, loop = true, localSpace = true, shape = ParticleSystemShapeType.ConeVolume, shapeRadius = hole * 0.5f, shapeAngle = 26f,
+            sizeOverLife = new Vector2(1f, 0.1f), maxParticles = 40,
             overLife = PixelFx.FadeGradient(Color.white, new Color(0.9f, 0.85f, 1f), new Color(0.6f, 0.5f, 1f), 0.9f),
         });
         Transform wt = wind.transform;
         wt.localPosition = mouth;
-        wt.localRotation = Quaternion.LookRotation(Vector3.back, Vector3.up);
+        wt.localRotation = q * Quaternion.LookRotation(Vector3.back, Vector3.up);
         ParticleSystem.ShapeModule shape = wind.shape;
         shape.length = unit * 1.05f;
         ParticleSystem.VelocityOverLifetimeModule vol = wind.velocityOverLifetime;

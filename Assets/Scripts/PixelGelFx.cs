@@ -20,11 +20,11 @@ public static class PixelGelFx
         if (cube == null) return null;
         int key = cube.GetInstanceID();
         if (blobs.TryGetValue(key, out Mesh cached) && cached != null) return cached;
-        Mesh m = Object.Instantiate(PixelEgg.RoundedCubeMesh(0.38f, 12));
+        Mesh m = Object.Instantiate(PixelEgg.RoundedCubeMesh(0.32f, 12));
         m.name = "Gel Blob";
         Vector3 size = cube.bounds.size, centre = cube.bounds.center;
         Vector3[] v = m.vertices;
-        for (int i = 0; i < v.Length; i++) v[i] = Vector3.Scale(v[i], size) + centre;
+        for (int i = 0; i < v.Length; i++) v[i] = Vector3.Scale(v[i], size * 1.1f) + centre;   // a touch bigger than the cube: a rounded blob reads smaller than a box
         m.vertices = v;
         m.RecalculateBounds();
         blobs[key] = m;
