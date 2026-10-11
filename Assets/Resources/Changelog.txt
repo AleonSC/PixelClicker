@@ -415,3 +415,4 @@
 [2026-10-11 08:22 UTC] Farmer now has black hair and wispy facial hair, a better-placed shotgun, a second speech box when he has a Dragon Seed, and a Dev Tools tick box to make him always bring one.
 [2026-10-11 08:33 UTC] Fixed a compile error (duplicate Update in the skills scripts).
 [2026-10-11 08:55 UTC] Skill perks are collapsible per-level sections with larger, easier-to-read text; the shop has a blue ? button (hold to replay the shop tutorial) left of the X.
+[2026-10-11 08:58 UTC] The shop's Pixels tab is now split into collapsible sections: Base pixels, Toggleables and Skill packs.

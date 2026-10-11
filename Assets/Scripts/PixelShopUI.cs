@@ -884,8 +884,18 @@ public partial class PixelShop
         }
         bool showGeneral = !onUpgrades || upgradesSubTab == 0;
 
-        for (int i = 0; i < packs.Length && i < rows.Length; i++)
+        // Pixels tab: the packs are grouped into collapsible sections (base pixels, toggleables, skill packs).
+        EnsureSectionHeaders();
+        foreach (Button oldHeader in sectionHeaders) if (oldHeader.gameObject.activeSelf) oldHeader.gameObject.SetActive(false);
+        int[] order = new int[Mathf.Min(packs.Length, rows.Length)];
+        for (int o = 0; o < order.Length; o++) order[o] = o;
+        bool grouped = currentTab == ShopTab.Pixels;
+        if (grouped) System.Array.Sort(order, (a, b) => { int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b])); return d != 0 ? d : a.CompareTo(b); });
+        int lastSection = -1;
+
+        for (int oi = 0; oi < order.Length; oi++)
         {
+            int i = order[oi];
             PackRow row = rows[i];
             ShopPack pack = packs[i];
             bool leveled = IsLeveled(pack);
@@ -897,6 +907,22 @@ public partial class PixelShop
             bool visible = child
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
                 : TabOf(pack) == currentTab && listed && showGeneral && !HiddenAsPurchased(i);
+
+            if (visible && grouped && !child)
+            {
+                int sec = SectionOf(pack);
+                if (sec != lastSection)
+                {
+                    lastSection = sec;
+                    Button hb = sectionHeaders[sec];
+                    hb.gameObject.SetActive(true);
+                    hb.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -y);
+                    PixelUIKit.SetText(sectionLabels[sec], (sectionCollapsed[sec] ? "+  " : "-  ") + SectionNames[sec]);
+                    y += rowHeight * 0.5f + rowSpacing;
+                    visibleCount++;
+                }
+                if (sectionCollapsed[sec]) visible = false;
+            }
 
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
@@ -982,6 +1008,47 @@ public partial class PixelShop
         // The scroll content is as tall as the visible rows; the panel itself stays a fixed size.
         ApplyContentHeight(contentRect, emptyLabel, y, visibleCount);
         ApplyContentHeight(subContentRect, subEmptyLabel, subY, subVisibleCount);
+    }
+
+    private static readonly string[] SectionNames = { "Base pixels", "Toggleables", "Skill packs" };
+    private Button[] sectionHeaders;
+    private TMP_Text[] sectionLabels;
+    private readonly bool[] sectionCollapsed = new bool[3];
+
+    /// <summary>Which Pixels-tab section a pack belongs to: 0 = base pixels (RGB, Glass, Luminescent), 1 = single toggleable pixels, 2 = skill packs (many pixels at once).</summary>
+    private static int SectionOf(ShopPack pack)
+    {
+        if (pack.rewardTiers == null || pack.rewardTiers.Length == 0) return 1;
+        if (pack.rewardTiers.Length >= 4) return 2;
+        foreach (PixelClicker.PixelTier t in pack.rewardTiers)
+            if (t.type != PixelClicker.PixelType.Red && t.type != PixelClicker.PixelType.Green && t.type != PixelClicker.PixelType.Blue &&
+                t.type != PixelClicker.PixelType.Glass && t.type != PixelClicker.PixelType.Luminescent) return 1;
+        return 0;
+    }
+
+    private void EnsureSectionHeaders()
+    {
+        if (sectionHeaders != null || contentRect == null) return;
+        sectionHeaders = new Button[SectionNames.Length];
+        sectionLabels = new TMP_Text[SectionNames.Length];
+        for (int i = 0; i < SectionNames.Length; i++)
+        {
+            int index = i;
+            Button b = CreateButton(contentRect, "Section " + SectionNames[i], "", new Vector2(10f, rowHeight * 0.5f), tabInactiveColor, textColor,
+                                    tabFontSize + 2f, out TMP_Text label, out _);
+            PixelUIKit.Caps(b);
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.margin = new Vector4(18f, 0f, 8f, 0f);
+            RectTransform rt = b.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(0f, rowHeight * 0.5f);
+            b.onClick.AddListener(() => { sectionCollapsed[index] = !sectionCollapsed[index]; RefreshRows(); });
+            b.gameObject.SetActive(false);
+            sectionHeaders[i] = b;
+            sectionLabels[i] = label;
+        }
     }
 
     private void ApplyContentHeight(RectTransform content, TMP_Text empty, float y, int count)
