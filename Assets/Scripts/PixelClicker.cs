@@ -29,6 +29,7 @@ public class PixelClicker : MonoBehaviour
         ClickHint = false;
         GodMode = false;
         InfiniteResources = false;
+        capacitorCharge = 0;
         DevNoOldPixelLimit = false;
         DevClickCount = 1;
         OldPixelLanded = null;
@@ -87,6 +88,9 @@ public class PixelClicker : MonoBehaviour
         Wheat = 39,
         Weevil = 40,
         GoldenFruit = 41,
+        Wire = 42,
+        Battery = 43,
+        Capacitor = 44,
     }
 
     /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
@@ -96,7 +100,7 @@ public class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.GoldenFruit);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Capacitor);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1451,6 +1455,22 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 30;
         }
 
+        if (looksVersion < 32)
+        {
+            // The Electrician pixels (Wire, Battery, Capacitor) got their looks.
+            System.Collections.Generic.List<PixelLook> list32 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults32 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Wire, PixelType.Battery, PixelType.Capacitor })
+            {
+                PixelLook def = PixelLooks.Find(defaults32, t);
+                if (def == null) continue;
+                int at = list32.FindIndex(l => l != null && l.type == t);
+                if (at >= 0) list32[at] = def; else list32.Add(def);
+            }
+            looks = list32.ToArray();
+            looksVersion = 32;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1684,6 +1704,12 @@ public class PixelClicker : MonoBehaviour
         }
 
         double basePayout = tier.amountPerClick * breaks;
+        if (tier.type == PixelType.Capacitor)
+        {
+            basePayout *= 1d + capacitorCharge * (capacitorPayPerCharge > 0f ? capacitorPayPerCharge : 0.15f);   // it pays out everything the other clicks stored in it
+            capacitorCharge = 0;
+        }
+        else capacitorCharge = Mathf.Min(capacitorChargeCap > 0 ? capacitorChargeCap : 40, capacitorCharge + breaks);
         if (tier.randomClicks) basePayout *= TreasureMultiplier(need);   // the more clicks the chest took, the bigger the reward
         if (tier.type == PixelType.Wheat) basePayout *= 1d + Mathf.Min(wheatMaxSprouts > 0 ? wheatMaxSprouts : 8, SeedSprout.Count) * (wheatPerSprout > 0f ? wheatPerSprout : 0.25f);   // a busy field feeds the wheat
         bool richBreak = liveRich && IsOre(tier.type);
@@ -3018,6 +3044,16 @@ public class PixelClicker : MonoBehaviour
     private int liveNeed;           // clicks the pixel on the cube needs (only for random-click pixels, i.e. the Treasure chest)
 
     /// <summary>Reward multiplier of a chest that took 'need' clicks (grows faster than the clicks do).</summary>
+    [Header("Electrician")]
+    [Tooltip("The Capacitor pixel stores charge from every other click, up to this many (0 = 40) and pays 1 + charge x 'Capacitor Pay Per Charge' when collected.")]
+    [SerializeField] private int capacitorChargeCap = 0;
+    [Tooltip("Extra payout per stored charge for the Capacitor pixel (0 = 0.15).")]
+    [SerializeField] private float capacitorPayPerCharge = 0f;
+    private static int capacitorCharge;
+
+    /// <summary>How much charge the Capacitor pixel holds right now (every non-Capacitor click adds one).</summary>
+    public static int CapacitorCharge => capacitorCharge;
+
     private float TreasureMultiplier(int need) => need * (1f + need * (treasureRewardGrowth > 0f ? treasureRewardGrowth : 0.15f));
 
     /// <summary>The chest cracked open: gold bursts out and a pile of other pixel types pours out (paid at once, the pixels that fly out are for show).</summary>

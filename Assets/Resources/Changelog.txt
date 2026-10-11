@@ -459,3 +459,4 @@
 [2026-10-11 12:24 UTC] Save slots are compact: just the name, a Rename button (opens a text box; empty goes back to 'Slot N') and the date, time played and pixels in a hover box.
 [2026-10-11 12:26 UTC] Added the Electrician's Pack to the shop (Pixels tab, Skill packs; needs the Electric Pixel pack, 1,500 Electric) - buying it makes the Electrician skill available; save messages (overwrite warning, saved / loaded) now use a slot's custom name.
 [2026-10-11 12:28 UTC] Title screen: the sky / floor picker captions and names are gone (the name shows in a hover tooltip instead) and Quit is now a thin red bar under Load and Settings, as wide as Play, all inside the black bar.
+[2026-10-11 13:26 UTC] Electrician skill gets three new pixels bought with the Electrician's Pack: Wire (common, carries device links), Battery (3 clicks, carries links and sets off Overcharge) and Capacitor (stores charge from every other click and pays it out).

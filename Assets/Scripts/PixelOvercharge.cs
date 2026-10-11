@@ -96,7 +96,7 @@ public class PixelOvercharge : MonoBehaviour
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
         if (!enableOvercharge || (automatic && !triggerOnAutoClicks) || bursting || clicker == null) return;
-        if (!clicker.IsValidTierIndex(tierIndex) || clicker.Tiers[tierIndex].type != PixelClicker.PixelType.Electric) return;
+        if (!clicker.IsValidTierIndex(tierIndex) || clicker.Tiers[tierIndex].type != PixelClicker.PixelType.Electric && clicker.Tiers[tierIndex].type != PixelClicker.PixelType.Battery) return;   // a Battery sets it off too
 
         if (needsAutoClicker)
         {

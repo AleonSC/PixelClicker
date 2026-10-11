@@ -298,12 +298,16 @@ public class PixelElectricLinks : MonoBehaviour
         return r != null ? r.bounds.center : d.transform.position;
     }
 
+    /// <summary>Electric pixels and the Electrician skill's Wire and Battery pixels all carry the arcs.</summary>
+    private static bool IsConductor(PixelClicker.PixelType t) =>
+        t == PixelClicker.PixelType.Electric || t == PixelClicker.PixelType.Wire || t == PixelClicker.PixelType.Battery;
+
     private bool IsElectric(Rigidbody body, out OldPixelDespawn despawn)
     {
         despawn = null;
         if (body == null) return false;
         OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-        if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].type != PixelClicker.PixelType.Electric) return false;
+        if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || !IsConductor(clicker.Tiers[info.tierIndex].type)) return false;
         despawn = body.GetComponent<OldPixelDespawn>();
         return despawn == null || !despawn.IsDespawning;
     }

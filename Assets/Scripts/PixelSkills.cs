@@ -109,7 +109,13 @@ public partial class PixelSkills : MonoBehaviour
         bundleCheckTimer = 3f;
         foreach (SkillPack p in packs)
         {
-            if (p.id != FarmingId || p.types == null || p.types.Length == 0 || !clicker.IsUnlocked(p.types[0])) continue;
+            if (p.types == null || p.types.Length == 0) continue;
+            if (p.id == ElectricianId)
+            {
+                if (shop == null) shop = PixelFind.First<PixelShop>();
+                if (shop == null || !shop.IsSkillPackBought(ElectricianId)) continue;   // bought: every one of its pixels is unlocked
+            }
+            else if (p.id != FarmingId || !clicker.IsUnlocked(p.types[0])) continue;
             foreach (PixelClicker.PixelType t in p.types)
             {
                 int i = clicker.IndexOf(t);
@@ -188,12 +194,12 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(Mathf.Min(packs.Count, 3), new SkillPack
             {
                 id = ElectricianId, displayName = "Electrician", accent = new Color(0.35f, 0.7f, 1f),
-                description = "Swap the basic cubes for Electric pixels only. Every Electric click trains the skill and can set off an Overcharge; link the pixels you drop to power your devices.",
-                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Electric",
-                xpFrom = "Collecting Electric pixels",
+                description = "Swap the basic cubes for four electrical blocks: Electric, Wire, Battery and Capacitor. Wire and Battery link up to power your devices, a Battery sets off an Overcharge and a Capacitor stores charge from every other click and pays it all out.",
+                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Electric, Wire, Battery, Capacitor",
+                xpFrom = "Collecting electrical pixels",
                 unlockHint = "Buy the Electrician's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
-                types = new[] { PixelClicker.PixelType.Electric },
+                types = new[] { PixelClicker.PixelType.Electric, PixelClicker.PixelType.Wire, PixelClicker.PixelType.Battery, PixelClicker.PixelType.Capacitor },
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Overcharge+: Overcharge bursts add more clicks" },
@@ -218,6 +224,12 @@ public partial class PixelSkills : MonoBehaviour
             });
         foreach (SkillPack pack in packs)
         {
+            if (pack.id == ElectricianId && (pack.types == null || pack.types.Length < 4))   // a saved pack from when Electric was its only pixel
+            {
+                pack.types = new[] { PixelClicker.PixelType.Electric, PixelClicker.PixelType.Wire, PixelClicker.PixelType.Battery, PixelClicker.PixelType.Capacitor };
+                pack.spawns = "Electric, Wire, Battery, Capacitor";
+                pack.xpFrom = "Collecting electrical pixels";
+            }
             if (pack.id == MiningId && (pack.types == null || pack.types.Length == 0))
                 pack.types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel };
             // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).

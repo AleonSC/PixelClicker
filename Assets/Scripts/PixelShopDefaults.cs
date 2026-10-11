@@ -392,6 +392,22 @@ public partial class PixelShop
     /// Default Electrician's Pack (Pixels tab, Skill packs): needs the Electric Pixel pack. Buying it makes the Electrician skill available: Electric
     /// pixels replace the basic cubes while the skill is in play.
     /// </summary>
+    /// <summary>The three pixels the Electrician's Pack adds (Electric itself comes from the Electric Pixel pack).</summary>
+    private static PixelClicker.PixelTier[] ElectricianTiers()
+    {
+        PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
+        return new[]
+        {
+            Block(PixelClicker.PixelType.Wire, "Wire Pixels", new Color(0.86f, 0.5f, 0.26f, 1f), 1, 2, 1.0f),
+            Block(PixelClicker.PixelType.Battery, "Battery Pixels", new Color(0.5f, 0.9f, 0.3f, 1f), 3, 12, 0.4f),
+            Block(PixelClicker.PixelType.Capacitor, "Capacitor Pixels", new Color(0.3f, 0.55f, 0.95f, 1f), 1, 6, 0.35f),
+        };
+    }
+
     private static ShopPack CreateElectricianPack(int requiresElectricIndex)
     {
         return new ShopPack
@@ -399,9 +415,10 @@ public partial class PixelShop
             displayName = "Electrician's Pack",
             tab = ShopTab.Pixels,
             skillId = PixelSkills.ElectricianId,
-            description = "Unlocks the Electrician skill. While it is in play (Toggles or Skills window) Electric pixels replace the basic cubes: every click trains the skill and can set off an Overcharge, and the pixels you drop link up to power your devices.",
+            description = "Unlocks the Electrician skill and three new pixels: Wire, Battery and Capacitor. While the skill is in play (Toggles or Skills window) Electric, Wire, Battery and Capacitor replace the basic cubes. Wire and Battery carry your device links, a Battery also sets off an Overcharge, and a Capacitor stores charge from every other click and pays it all out.",
             requirements = Needs(requiresElectricIndex),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.Electric, amount = 1500 } },
+            rewardTiers = ElectricianTiers(),
         };
     }
 

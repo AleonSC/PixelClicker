@@ -494,6 +494,15 @@ public static class PixelLooks
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = 0.5f, outlineStrength = 0.9f,
                             farmFx = PixelLook.FarmAmbient.Sparkle },
 
+            // Electrician pixels: copper Wire, a green Battery and a blue Capacitor.
+            new PixelLook { type = PixelClicker.PixelType.Wire, useColor = true, color = new Color(0.86f, 0.5f, 0.26f, 1f), metallic = 1f, smoothness = 0.65f, basicSurface = PixelLook.BasicSurface.Brushed,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = true, outlineShade = 0.4f, outlineStrength = 0.8f },
+            new PixelLook { type = PixelClicker.PixelType.Battery, useColor = true, color = new Color(0.5f, 0.9f, 0.3f, 1f), metallic = 0.3f, smoothness = 0.75f, emission = 0.35f, shine = true,
+                            damageCracks = false,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.5f, outlineStrength = 0.85f },
+            new PixelLook { type = PixelClicker.PixelType.Capacitor, useColor = true, color = new Color(0.3f, 0.55f, 0.95f, 1f), metallic = 0.8f, smoothness = 0.85f, emission = 0.3f, shine = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.5f, outlineStrength = 0.8f },
+
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
                             forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true, farmFx = PixelLook.FarmAmbient.Dew },

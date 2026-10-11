@@ -913,6 +913,15 @@ public partial class PixelShop : MonoBehaviour
             foreach (ShopPack rp in packs)
                 if (rp != null && rp.unlocksRobot && rp.displayName == "Robot Worker") { rp.displayName = "UFO Helper"; renamed = true; }
 
+        // A saved Electrician's Pack from before it had its own pixels gets them.
+        if (packs != null)
+            foreach (ShopPack ep in packs)
+                if (ep != null && ep.skillId == PixelSkills.ElectricianId && (ep.rewardTiers == null || ep.rewardTiers.Length == 0))
+                {
+                    ep.rewardTiers = ElectricianTiers();
+                    renamed = true;
+                }
+
         // The short-lived Pong pack (replaced by Breakout) may still be saved in the scene's pack list: take it out, and fix the
         // pack numbers the other packs' requirements point at.
         if (packs != null)

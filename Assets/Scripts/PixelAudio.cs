@@ -288,6 +288,9 @@ public class PixelAudio : MonoBehaviour
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
             case "ore_gleam": return new[] { PixelSynth.OreGleam() };
+            case "pixel_wire": return new[] { PixelSynth.Zap(11), PixelSynth.Zap(12) };
+            case "pixel_battery": return new[] { PixelSynth.Zap(21), PixelSynth.Zap(22) };
+            case "pixel_capacitor": return new[] { PixelSynth.Zap(31), PixelSynth.Zap(32) };
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
             case "farm_gleam": return new[] { PixelSynth.Farm(9, 1) };
