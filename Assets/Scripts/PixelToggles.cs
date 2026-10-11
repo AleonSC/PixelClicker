@@ -127,6 +127,9 @@ public class PixelToggles : MonoBehaviour
     [Tooltip("Hint box background colour.")]
     [SerializeField] private Color hintColor = new Color(0.12f, 0.2f, 0.3f, 0.98f);
 
+    [Tooltip("Label of the row at the top of every tab that switches everything in that tab on or off at once.")]
+    [SerializeField] private string toggleAllText = "Toggle all";
+
     [Header("Canvas")]
     [Tooltip("Sorting order of the canvas (above the inventory, below the log and shop).")]
     [SerializeField] private int sortingOrder = 130;
@@ -147,6 +150,7 @@ public class PixelToggles : MonoBehaviour
         public string label;
         public bool on;
         public Action<bool> setter;
+        public bool skipAll;   // not switched by the 'Toggle all' row (a mode switch rather than an on / off item)
     }
 
     private GameObject canvasRoot, windowObject, emptyObject, hintObject, openObject;
@@ -263,6 +267,7 @@ public class PixelToggles : MonoBehaviour
                 list.Add(new Entry
                 {
                     label = "Prospector mode",
+                    skipAll = true,   // it swaps which pixels spawn, so 'Toggle all' leaves it alone
                     on = PixelProspector.Setting,
                     setter = on => { PixelProspector.Setting = on; clicker.RefreshSpawnTier(); },
                 });
@@ -348,6 +353,23 @@ public class PixelToggles : MonoBehaviour
         ApplyGroupControl();
 
         List<Entry> entries = Collect(current);
+        List<Entry> switchable = entries.FindAll(e => !e.skipAll);
+        if (switchable.Count >= 2)
+        {
+            // A 'Toggle all' row on top: ticked while everything below is on; clicking it sets everything to its new value.
+            bool allOn = switchable.TrueForAll(e => e.on);
+            entries.Insert(0, new Entry
+            {
+                label = toggleAllText,
+                on = allOn,
+                skipAll = true,
+                setter = on =>
+                {
+                    foreach (Entry e in switchable) e.setter?.Invoke(on);
+                    Refresh();
+                },
+            });
+        }
         while (rows.Count < entries.Count) rows.Add(BuildRow());
 
         for (int i = 0; i < rows.Count; i++)
