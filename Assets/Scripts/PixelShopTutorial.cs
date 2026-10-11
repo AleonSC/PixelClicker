@@ -14,7 +14,7 @@ public class PixelShopTutorial : MonoBehaviour
     {
         [TextArea(2, 5)] public string text;
         public PixelShop.ShopTab tab = PixelShop.ShopTab.Pixels;
-        [Tooltip("Upgrades tab only: 0 = Features, 1 = Value.")] public int subTab;
+        [Tooltip("Upgrades tab only: 0 = Features, 1 = Value, 2 = Operation.")] public int subTab;
     }
 
     private const string SeenId = "shop_tutorial";
@@ -50,8 +50,9 @@ public class PixelShopTutorial : MonoBehaviour
             new Step { tab = PixelShop.ShopTab.Pixels, text = "Pixels: packs that unlock new pixel types. Every new type is its own currency, and some need goals from the minigames before you can buy them." },
             new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 0, text = "Upgrades - Features: one-time unlocks such as the Auto Clicker, Crafting, Pixel Grabbing, Time Stop and the Pixel Bank, plus upgrades for them." },
             new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 1, text = "Upgrades - Value: makes a pixel type pay more, paid in that same pixel. Each level costs a little more than the last. Shift-click buys as many levels as you can afford." },
-            new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: potions and devices. Buy them here, then use them from the Consumables tab of your Inventory." },
-            new Step { tab = PixelShop.ShopTab.Minigames, text = "Minigames: events that start on their own once you buy them, from ghosts and meteors to Snake and Breakout. They pay rewards and unlock rare pixels." },
+            new Step { tab = PixelShop.ShopTab.Upgrades, subTab = 2, text = "Upgrades - Operation: improves your consumables. Each one has a spinning picture and an orange arrow that opens its upgrades: longer lasting, bigger reach, more uses, more storage." },
+            new Step { tab = PixelShop.ShopTab.Consumables, text = "Consumables: things with a one-time use - potions, devices, seeds and supplies. Buy them here, then use them from the Consumables tab of your Inventory." },
+            new Step { tab = PixelShop.ShopTab.Minigames, text = "Minigames: events that start on their own once you buy them, from ghosts and meteors to Snake and Breakout. They pay rewards and unlock rare pixels. Every minigame can be switched on or off in the Toggles window, so you can customize your gameplay experience." },
             new Step { tab = PixelShop.ShopTab.Pixels, text = "Anything greyed out shows what it still needs. Open the Shop again any time with the Shop button at the top right." },
         };
     }
@@ -105,6 +106,7 @@ public class PixelShopTutorial : MonoBehaviour
             return;
         }
 
+        if (index > 0) PixelGuideVendor.NarratorReact();
         if (index == 0) PixelGuideVendor.BeginNarration();   // Cubie narrates his shop from the bottom right
         Step step = steps[index];
         shop.TutorialOpen(step.tab, step.subTab);

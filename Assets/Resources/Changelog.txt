@@ -426,3 +426,4 @@
 [2026-10-11 09:22 UTC] Cubie now stands at the bottom right and narrates the shop tutorial, and every tutorial box is sized to the longest step so the Got it button never moves.
 [2026-10-11 09:23 UTC] The shop's Robot Worker is now called UFO Helper (old saves still load it).
 [2026-10-11 09:25 UTC] New Supplies consumable category (shop card + Inventory category) holding Combo Fuel, Ghost Bait and Pet Treat, which left Utilities.
+[2026-10-11 09:32 UTC] Shop tutorial: new Operation sub-tab box, Consumables text now says one-time use, Minigames box mentions the Toggles switches, and Cubie is bigger and more animated.

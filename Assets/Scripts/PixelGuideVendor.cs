@@ -123,7 +123,11 @@ public class PixelGuideVendor : MonoBehaviour
 
     private bool narrating;
     private Coroutine narrateRoutine;
-    private const float NarratorScale = 0.62f;
+    private const float NarratorScale = 0.85f;
+    private float reactTime = -10f;
+
+    /// <summary>A new tutorial step: Cubie hops excitedly.</summary>
+    public static void NarratorReact() { if (instance != null) instance.reactTime = Time.unscaledTime; }
 
     private void StartNarration()
     {
@@ -153,12 +157,27 @@ public class PixelGuideVendor : MonoBehaviour
             Glance();
             yield return null;
         }
+        float nextHop = Time.unscaledTime + 1.2f;
+        float hopStart = -10f;
         while (narrating)
         {
-            characterRect.anchoredPosition = new Vector2(restX, y + Mathf.Sin(Time.unscaledTime * 3f) * 4f);
+            float now = Time.unscaledTime;
+            if (now >= nextHop) { hopStart = now; nextHop = now + Random.Range(1.8f, 3.2f); }
+            if (reactTime > hopStart) { hopStart = reactTime; nextHop = Mathf.Max(nextHop, reactTime + 1.5f); }
+            bool excited = now - reactTime < 1.4f;
+            float hopLen = excited ? 0.55f : 0.45f, hopHeight = excited ? 70f : 36f;
+            float k = (now - hopStart) / hopLen;
+            float lift = k >= 0f && k <= 1f ? Mathf.Sin(k * Mathf.PI) * hopHeight : 0f;
+            // Squash on the ground, stretch in the air.
+            float stretch = k >= 0f && k <= 1f ? 1f + Mathf.Sin(k * Mathf.PI) * 0.1f : 1f + Mathf.Sin(now * 3f) * 0.015f;
+            float squash = k >= 0f && k <= 1f ? 1f / stretch : 1f / stretch;
+            characterRect.localScale = new Vector3(NarratorScale * squash, NarratorScale * stretch, 1f);
+            characterRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(now * 2.2f) * 3.5f + (excited ? Mathf.Sin(now * 14f) * 5f : 0f));
+            characterRect.anchoredPosition = new Vector2(restX + Mathf.Sin(now * 1.3f) * 10f, y + lift + Mathf.Sin(now * 3f) * 3f);
             Glance();
             yield return null;
         }
+        characterRect.localRotation = Quaternion.identity;
         float from = characterRect != null ? characterRect.anchoredPosition.x : restX;
         for (float t = 0f; t < slideSeconds * 0.7f && characterRect != null; t += Time.unscaledDeltaTime)
         {
