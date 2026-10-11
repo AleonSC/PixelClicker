@@ -621,6 +621,7 @@ public partial class PixelSkills
 
     private void Update()
     {
+        CheckFarmBundle();
         if (!built) return;
 
         bool available = AnyTrainable;

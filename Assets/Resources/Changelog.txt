@@ -413,3 +413,4 @@
 [2026-10-11 08:11 UTC] Fixed a compile error in the Ultra Holes minigame and two unused-field warnings.
 [2026-10-11 08:21 UTC] Seed and Water are no longer spawn switches in Toggles (they come with the Farmer's Pack); farm blocks are all unlocked together; farming pixels got bevelled looks, ambient particles (pollen, dew, crumbs, spores, chaff, bugs, golden sparkles), hit/break bursts and their own synthesized sounds.
 [2026-10-11 08:22 UTC] Farmer now has black hair and wispy facial hair, a better-placed shotgun, a second speech box when he has a Dragon Seed, and a Dev Tools tick box to make him always bring one.
+[2026-10-11 08:33 UTC] Fixed a compile error (duplicate Update in the skills scripts).

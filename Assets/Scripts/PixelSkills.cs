@@ -100,7 +100,7 @@ public partial class PixelSkills : MonoBehaviour
     private float bundleCheckTimer;
 
     /// <summary>Safety net: the Farmer's Pack gives every farm block at once, so if the first one is unlocked (an old save, a half-applied purchase) the rest are unlocked too.</summary>
-    private void Update()
+    private void CheckFarmBundle()
     {
         bundleCheckTimer -= Time.unscaledDeltaTime;
         if (bundleCheckTimer > 0f || clicker == null) return;
