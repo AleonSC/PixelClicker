@@ -1512,7 +1512,7 @@ public class PixelUI : MonoBehaviour
         BuildCompactSwitch(size);
 
         PixelHoverTip tip = compactButton.gameObject.AddComponent<PixelHoverTip>();
-        tip.onEnter = () => tooltipCustomText = Compact ? compactOffTip : compactOnTip;
+        tip.onEnter = () => tooltipCustomText = Compact ? compactOffTip : pinTip;
         tip.onExit = HideTooltip;
         compactButton.onClick.AddListener(() =>
         {
@@ -1584,9 +1584,9 @@ public class PixelUI : MonoBehaviour
     }
 
     [Tooltip("Hover tip on the toggle while the Inventory is in its normal form.")]
-    [SerializeField] private string compactOnTip = "Pin this tab: just swatches and numbers, kept on screen (on Consumables, click one to use it)";
+    [SerializeField] private string pinTip = "Pin this tab";
     [Tooltip("Hover tip on the toggle while the Inventory is simplified.")]
-    [SerializeField] private string compactOffTip = "Back to the full Inventory";
+    [SerializeField] private string compactOffTip = "Unpin this tab";
 
     /// <summary>The simplified view's consumables: every potion / device / seed you hold as a swatch + count; a click uses it. Returns the y below.</summary>
     private float RefreshCompactConsumables(float y)
