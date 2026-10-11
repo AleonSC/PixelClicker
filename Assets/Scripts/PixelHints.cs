@@ -840,10 +840,13 @@ public class PixelHints : MonoBehaviour
         PixelNotice.Show(introLogMessage, 0f, compact: true, beside: PixelLog.WindowRect, besideBottom: true, onClosed: () =>
         {
             PixelLog.SetLogOpen(false);
+            int pinnedBefore = PixelUI.CompactMode;   // a game reset can leave the pinned (compact) view on: the intro always shows the full window
+            PixelUI.CompactMode = 0;
             PixelUI.SetInventoryOpen(true);
             PixelNotice.Show(introInventoryText, 0f, compact: true, beside: PixelUI.WindowRect, onClosed: () =>
             {
-                PixelUI.SetInventoryOpen(false);
+                PixelUI.SetInventoryOpen(false, true);
+                PixelUI.CompactMode = pinnedBefore;
                 // Third tip: how currency is earned. The tier guide ("Click X more...") shows once it is closed.
                 string earn = string.IsNullOrEmpty(introEarnText)
                     ? "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn."
