@@ -403,6 +403,7 @@ public class PixelLog : MonoBehaviour
             log.Refresh();
             PixelUI.SetInventoryOpen(false);
             PixelBank.CloseWindowIfOpen();
+            PixelSkills.CloseWindowIfOpen();
             PixelShop.CloseShopWindow();
         }
     }

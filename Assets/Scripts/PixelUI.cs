@@ -549,6 +549,7 @@ public class PixelUI : MonoBehaviour
             ui.Refresh();
             PixelLog.SetLogOpen(false);
             PixelBank.CloseWindowIfOpen();
+            PixelSkills.CloseWindowIfOpen();
             PixelShop.CloseShopWindow();
         }
     }
