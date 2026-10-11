@@ -487,3 +487,4 @@
 [2026-10-11 15:30 UTC] Settings > Floor style has a pop-out button: it closes the settings and opens a small draggable box with only the floor style arrows; closing it brings the settings back.
 [2026-10-11 15:43 UTC] Added 8 retrowave / cyberpunk floor styles (Retro Sunset Grid, Neon Highway, Grid Tunnel, Rain Alley, Vapor Checker, Neon City Map, Light Cycles, Arcade Carpet) and 8 8-bit game floors (Platformer, Invaders, Brick Breaker, Pong, Snake, Block Stack, Dungeon, Crossing).
 [2026-10-11 15:43 UTC] Offline Progression: the pack assigned to it earns 50% of its normal XP, and Offline Progression itself earns +50% XP when no skill pack is assigned; the description says so.
+[2026-10-11 15:57 UTC] Added two very rare one-off vendors: Egg (an orange cat who gives an egg you click 1-50 times to hatch a new pet) and Bean (a grey tabby cat who gives Magic Beans that grow a beanstalk with a Dragon Cube among other cubes). Neither returns after showing up once.
