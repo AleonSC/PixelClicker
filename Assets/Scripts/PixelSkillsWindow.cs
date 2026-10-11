@@ -28,10 +28,17 @@ public partial class PixelSkills
     [SerializeField] private string useStandardText = "Use standard pixels";
     [SerializeField] private string activeBadgeText = "ACTIVE";
     [SerializeField] private string lockedName = "???";
+    [SerializeField] private string treeButtonText = "Skill tree";
+    [SerializeField] private string detailsButtonText = "Details";
+    [SerializeField] private string pixelsBadgeText = "PIXELS";
+
+    [Tooltip("Size of one skill tree node and the gaps between nodes (canvas units).")]
+    [SerializeField] private Vector2 nodeSize = new Vector2(120f, 64f);
+    [SerializeField] private Vector2 nodeGap = new Vector2(20f, 14f);
 
     [TextArea(2, 6)]
     [Tooltip("The first-time explanation shown beside the window.")]
-    [SerializeField] private string introText = "Skill packs swap the basic cubes in your rotation for a new set. Pick a pack on the left and press Train: its pixels start to spawn and you earn XP for that skill. XP is kept per pack, so you can switch back and forth whenever you like.";
+    [SerializeField] private string introText = "Skill packs swap the basic cubes in your rotation for a new set. Pick a pack on the left and press Train: its pixels start to spawn and you earn XP for that skill. XP is kept per pack, so you can switch back and forth whenever you like. Offline Progression lets you play with any pack while only that skill earns XP, and every skill has a skill tree: spend the point you earn each level on its nodes.";
 
     [Tooltip("Colours.")]
     [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
@@ -61,7 +68,17 @@ public partial class PixelSkills
     private TMP_Text headerLabel, detailName, detailDesc, detailInfo, trainLabel;
     private readonly List<Card> cards = new List<Card>();
     private readonly List<TMP_Text> perkRows = new List<TMP_Text>();
-    private int selected;
+    private int selected, selectedNode;
+    private bool showTree;
+    private Button treeToggle, unlockButton;
+    private TMP_Text treeToggleLabel, pointsLabel, nodeInfoLabel, unlockLabel;
+    private RectTransform treeRoot, nodeArea;
+    private readonly List<Button> nodeButtons = new List<Button>();
+    private readonly List<Image> nodeImages = new List<Image>();
+    private readonly List<TMP_Text> nodeLabels = new List<TMP_Text>();
+    private readonly List<Image> treeLines = new List<Image>();
+    private readonly List<Button> pixelPackButtons = new List<Button>();
+    private readonly List<TMP_Text> pixelPackLabels = new List<TMP_Text>();
     private float refreshTimer;
     private bool built;
 
@@ -155,7 +172,7 @@ public partial class PixelSkills
 
         detailName = PixelUIKit.CreateText(Font, detail.transform, "Name", "", 44f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         PixelUIKit.Caps(detailName);
-        Place(detailName.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -62f), new Vector2(-22f, -10f));
+        Place(detailName.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -62f), new Vector2(-200f, -10f));
         detailDesc = PixelUIKit.CreateText(Font, detail.transform, "Description", "", 24f, TextAlignmentOptions.TopLeft, FontStyles.Normal, dimTextColor);
         detailDesc.enableAutoSizing = true;   // always fits its band
         detailDesc.fontSizeMax = 24f;
@@ -184,6 +201,8 @@ public partial class PixelSkills
             perkRows.Add(row);
         }
 
+        BuildTreeUi(detail.transform);
+
         trainButton = PixelUIKit.CreateButton(Font, detail.transform, "Train", trainText, new Vector2(10f, 70f), new Color(0.2f, 0.55f, 0.3f, 1f), textColor, 34f);
         PixelUIKit.Caps(trainButton);
         trainLabel = trainButton.GetComponentInChildren<TMP_Text>();
@@ -203,6 +222,185 @@ public partial class PixelSkills
         PixelWindows.Register(this, 14, () => WindowOpen, () => PixelPop.Hide(windowObject));
         Changed += () => { if (WindowOpen) RefreshWindow(); };
         built = true;
+    }
+
+    /// <summary>The skill tree view (nodes, connector lines, a points label and an Unlock button) and the pixel-pack buttons of Offline Progression.</summary>
+    private void BuildTreeUi(Transform detail)
+    {
+        treeToggle = PixelUIKit.CreateButton(Font, detail, "Tree Toggle", treeButtonText, new Vector2(170f, 48f), new Color(0.25f, 0.3f, 0.45f, 1f), textColor, 24f);
+        PixelUIKit.Caps(treeToggle);
+        treeToggleLabel = treeToggle.GetComponentInChildren<TMP_Text>();
+        RectTransform tt = treeToggle.GetComponent<RectTransform>();
+        tt.anchorMin = tt.anchorMax = tt.pivot = new Vector2(1f, 1f);
+        tt.anchoredPosition = new Vector2(-18f, -14f);
+        treeToggle.onClick.AddListener(() => { showTree = !showTree; RefreshWindow(); });
+        treeToggle.gameObject.SetActive(false);
+
+        GameObject root = new GameObject("Tree", typeof(RectTransform));
+        root.transform.SetParent(detail, false);
+        treeRoot = root.GetComponent<RectTransform>();
+        Place(treeRoot, 0f, 0f, 1f, 1f, new Vector2(22f, 104f), new Vector2(-22f, -72f));
+
+        pointsLabel = PixelUIKit.CreateText(Font, treeRoot, "Points", "", 26f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, perkUnlockedColor);
+        Place(pointsLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(0f, -36f), new Vector2(0f, 0f));
+
+        GameObject area = new GameObject("Nodes", typeof(RectTransform));
+        area.transform.SetParent(treeRoot, false);
+        nodeArea = area.GetComponent<RectTransform>();
+        nodeArea.anchorMin = nodeArea.anchorMax = nodeArea.pivot = new Vector2(0f, 1f);
+        nodeArea.anchoredPosition = new Vector2(0f, -46f);
+        nodeArea.sizeDelta = new Vector2(540f, 3f * nodeSize.y + 2f * nodeGap.y);
+
+        for (int i = 0; i < 30; i++)   // connector lines first so the nodes draw over them
+        {
+            GameObject g = new GameObject("Line " + i, typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(nodeArea, false);
+            Image im = g.GetComponent<Image>();
+            im.raycastTarget = false;
+            RectTransform r = g.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
+            g.SetActive(false);
+            treeLines.Add(im);
+        }
+        for (int i = 0; i < 8; i++)
+        {
+            Button b = PixelUIKit.CreateButton(Font, nodeArea, "Node " + i, "", nodeSize, cardColor, textColor, 20f);
+            RectTransform r = b.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
+            TMP_Text label = b.GetComponentInChildren<TMP_Text>();
+            label.enableAutoSizing = true;
+            label.fontSizeMax = 20f;
+            label.fontSizeMin = 11f;
+            label.richText = true;
+            label.rectTransform.offsetMin = new Vector2(4f, 2f);
+            label.rectTransform.offsetMax = new Vector2(-4f, -2f);
+            int captured = i;
+            b.onClick.AddListener(() => { selectedNode = captured; RefreshWindow(); });
+            b.gameObject.SetActive(false);
+            nodeButtons.Add(b);
+            nodeImages.Add(b.GetComponent<Image>());
+            nodeLabels.Add(label);
+        }
+
+        nodeInfoLabel = PixelUIKit.CreateText(Font, treeRoot, "Node Info", "", 22f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
+        nodeInfoLabel.richText = true;
+        nodeInfoLabel.enableAutoSizing = true;
+        nodeInfoLabel.fontSizeMax = 22f;
+        nodeInfoLabel.fontSizeMin = 12f;
+        Place(nodeInfoLabel.rectTransform, 0f, 0f, 1f, 0f, new Vector2(0f, 64f), new Vector2(0f, 150f));
+
+        unlockButton = PixelUIKit.CreateButton(Font, treeRoot, "Unlock", "Unlock", new Vector2(10f, 56f), new Color(0.2f, 0.45f, 0.7f, 1f), textColor, 28f);
+        PixelUIKit.Caps(unlockButton);
+        unlockLabel = unlockButton.GetComponentInChildren<TMP_Text>();
+        RectTransform ur = unlockButton.GetComponent<RectTransform>();
+        ur.anchorMin = new Vector2(0f, 0f);
+        ur.anchorMax = new Vector2(1f, 0f);
+        ur.pivot = new Vector2(0.5f, 0f);
+        ur.offsetMin = new Vector2(0f, 0f);
+        ur.offsetMax = new Vector2(0f, 56f);
+        unlockButton.onClick.AddListener(() =>
+        {
+            SkillPack sp = packs[Mathf.Clamp(selected, 0, packs.Count - 1)];
+            if (sp.nodes != null && selectedNode >= 0 && selectedNode < sp.nodes.Length) UnlockNode(sp, sp.nodes[selectedNode]);
+        });
+        treeRoot.gameObject.SetActive(false);
+
+        // Offline Progression: which pack's pixels to play with.
+        for (int i = 0; i < 4; i++)
+        {
+            Button b = PixelUIKit.CreateButton(Font, detail, "Pixel Pack " + i, "", new Vector2(10f, 50f), cardColor, textColor, 26f);
+            RectTransform r = b.GetComponent<RectTransform>();
+            r.anchorMin = new Vector2(0f, 1f);
+            r.anchorMax = new Vector2(1f, 1f);
+            r.pivot = new Vector2(0.5f, 1f);
+            r.offsetMin = new Vector2(22f, 0f);
+            r.offsetMax = new Vector2(-22f, 0f);
+            r.sizeDelta = new Vector2(-44f, 50f);
+            r.anchoredPosition = new Vector2(0f, -(330f + i * 58f));
+            int slot = i;
+            b.onClick.AddListener(() =>
+            {
+                int n = 0;
+                foreach (SkillPack pack in packs)
+                {
+                    if (pack.id == OfflineId || !IsAvailable(pack)) continue;
+                    if (n++ == slot) { SetPixelPack(pack.id); break; }
+                }
+                RefreshWindow();
+            });
+            b.gameObject.SetActive(false);
+            pixelPackButtons.Add(b);
+            pixelPackLabels.Add(b.GetComponentInChildren<TMP_Text>());
+        }
+    }
+
+    /// <summary>Shows the selected pack's skill tree: nodes laid out by depth (column) and row, joined by lines.</summary>
+    private void RefreshTree(SkillPack p)
+    {
+        int count = p.nodes != null ? Mathf.Min(p.nodes.Length, nodeButtons.Count) : 0;
+        selectedNode = Mathf.Clamp(selectedNode, 0, Mathf.Max(0, count - 1));
+        PixelUIKit.SetText(pointsLabel, "Skill points: " + PointsAvailable(p) + "   (one per level)");
+
+        Vector2[] pos = new Vector2[count];
+        for (int i = 0; i < count; i++)
+        {
+            TreeNode n = p.nodes[i];
+            pos[i] = new Vector2(Depth(p, n) * (nodeSize.x + nodeGap.x), Mathf.Clamp(n.row, 0, 2) * (nodeSize.y + nodeGap.y));
+        }
+        int line = 0;
+        for (int i = 0; i < nodeButtons.Count; i++)
+        {
+            bool used = i < count;
+            nodeButtons[i].gameObject.SetActive(used);
+            if (!used) continue;
+            TreeNode n = p.nodes[i];
+            RectTransform r = nodeButtons[i].GetComponent<RectTransform>();
+            r.anchoredPosition = new Vector2(pos[i].x, -pos[i].y);
+            bool owned = NodeUnlocked(p, n), can = CanUnlock(p, n);
+            Color c = owned ? new Color(0.2f, 0.5f, 0.3f, 1f) : can ? new Color(0.25f, 0.38f, 0.62f, 1f) : cardColor;
+            if (i == selectedNode) c = Color.Lerp(c, Color.white, 0.22f);
+            nodeImages[i].color = c;
+            PixelUIKit.SetText(nodeLabels[i], n.displayName + "\n<size=70%>" + (owned ? "OWNED" : n.cost + (n.cost == 1 ? " point" : " points")) + "</size>");
+
+            // Connector from the parent: right edge -> a vertical step -> this node's left edge.
+            TreeNode parent = ParentOf(p, n);
+            int pi = parent != null ? System.Array.IndexOf(p.nodes, parent) : -1;
+            if (pi < 0 || pi >= count) continue;
+            Color lc = NodeUnlocked(p, parent) ? perkUnlockedColor : new Color(1f, 1f, 1f, 0.3f);
+            float x0 = pos[pi].x + nodeSize.x, y0 = pos[pi].y + nodeSize.y * 0.5f;
+            float x1 = pos[i].x, y1 = pos[i].y + nodeSize.y * 0.5f;
+            float mid = (x0 + x1) * 0.5f;
+            if (line + 3 <= treeLines.Count)
+            {
+                SetLine(treeLines[line++], x0, y0, mid, y0, lc);
+                SetLine(treeLines[line++], mid, y0, mid, y1, lc);
+                SetLine(treeLines[line++], mid, y1, x1, y1, lc);
+            }
+        }
+        for (int i = line; i < treeLines.Count; i++) treeLines[i].gameObject.SetActive(false);
+
+        if (count == 0) { PixelUIKit.SetText(nodeInfoLabel, ""); unlockButton.gameObject.SetActive(false); return; }
+        TreeNode sel = p.nodes[selectedNode];
+        bool own = NodeUnlocked(p, sel);
+        TreeNode par = ParentOf(p, sel);
+        string soon = sel.implemented ? "" : "  <color=#ffffff80>(coming soon)</color>";
+        PixelUIKit.SetText(nodeInfoLabel, "<b>" + sel.displayName + "</b>" + soon + "\n" + sel.description);
+        unlockButton.gameObject.SetActive(true);
+        bool canUnlock = CanUnlock(p, sel);
+        unlockButton.interactable = canUnlock;
+        PixelUIKit.SetText(unlockLabel, own ? "Unlocked" : canUnlock ? "Unlock (" + sel.cost + " pt)"
+            : (par != null && !NodeUnlocked(p, par) ? "Needs " + par.displayName : "Not enough points"));
+    }
+
+    private static void SetLine(Image img, float x0, float y0, float x1, float y1, Color color)
+    {
+        const float t = 4f;
+        float minX = Mathf.Min(x0, x1), maxX = Mathf.Max(x0, x1), minY = Mathf.Min(y0, y1), maxY = Mathf.Max(y0, y1);
+        img.gameObject.SetActive(true);
+        img.color = color;
+        RectTransform r = img.rectTransform;
+        r.anchoredPosition = new Vector2(minX - (maxX - minX < t ? t * 0.5f : 0f), -(minY - (maxY - minY < t ? t * 0.5f : 0f)));
+        r.sizeDelta = new Vector2(Mathf.Max(t, maxX - minX), Mathf.Max(t, maxY - minY));
     }
 
     private static void Place(RectTransform r, float minX, float minY, float maxX, float maxY, Vector2 offsetMin, Vector2 offsetMax)
@@ -255,7 +453,7 @@ public partial class PixelSkills
         fr.pivot = new Vector2(0f, 0.5f);
 
         int captured = index;
-        c.button.onClick.AddListener(() => { selected = captured; RefreshWindow(); });
+        c.button.onClick.AddListener(() => { selected = captured; selectedNode = 0; RefreshWindow(); });
         return c;
     }
 
@@ -270,7 +468,7 @@ public partial class PixelSkills
         PixelUI.SetInventoryOpen(false);   // the Skills window replaces the Inventory, the Log and the Bank window (and they replace it)
         PixelLog.SetLogOpen(false);
         PixelBank.CloseWindowIfOpen();
-        selected = Mathf.Max(0, packs.FindIndex(p => p.id == ActiveId));
+        selected = Mathf.Max(0, packs.FindIndex(p => p.id == TrainingId));
         PixelPop.Show(windowObject);
         RefreshWindow();
         if (!PixelHints.IsTipSeen("skills_intro"))
@@ -312,11 +510,13 @@ public partial class PixelSkills
         if (!built) return;
         refreshTimer = 0.4f;
 
-        SkillPack active = Find(ActiveId);
+        SkillPack active = Find(TrainingId);
         double into, need;
         int level = LevelOf(active, out into, out need);
         string trainingFormat = active.id == StandardId ? "Playing: {0}" : "Training: {0}   Lv {1}";
-        PixelUIKit.SetText(headerLabel, string.Format(trainingFormat, active.displayName, level));
+        string header = string.Format(trainingFormat, active.displayName, level);
+        if (active.id == OfflineId) header += "   (pixels: " + Find(ActiveId).displayName + ")";
+        PixelUIKit.SetText(headerLabel, header);
         headerFill.anchorMax = new Vector2(active.id == StandardId ? 0f : Mathf.Clamp01((float)(into / need)), 1f);
         headerFill.offsetMax = new Vector2(-3f, -3f);
 
@@ -324,13 +524,15 @@ public partial class PixelSkills
         {
             Card c = cards[i];
             bool open = IsAvailable(c.pack);
-            bool isActive = c.pack.id == ActiveId;
+            bool isActive = c.pack.id == TrainingId;
+            bool pixelsOnly = !isActive && OfflineMode && c.pack.id == ActiveId;   // Offline Progression is trained, this pack only supplies the pixels
+            PixelUIKit.SetText(c.badge, pixelsOnly ? pixelsBadgeText : activeBadgeText);
             double ci, cn;
             int cl = LevelOf(c.pack, out ci, out cn);
             c.background.color = i == selected ? cardSelectedColor : cardColor;
             PixelUIKit.SetText(c.nameLabel, open ? c.pack.displayName : lockedName);
             PixelUIKit.SetText(c.levelLabel, open && c.pack.id != StandardId ? "Lv " + cl : "");
-            c.badge.gameObject.SetActive(isActive);
+            c.badge.gameObject.SetActive(isActive || pixelsOnly);
             c.barFill.color = open ? c.pack.accent : new Color(0.3f, 0.3f, 0.35f, 1f);
             RectTransform fr = c.barFill.rectTransform;
             fr.anchorMax = new Vector2(open && c.pack.id != StandardId ? Mathf.Clamp01((float)(ci / cn)) : 0f, 1f);
@@ -347,14 +549,43 @@ public partial class PixelSkills
         if (available)
         {
             string info = "<b>Replaces:</b> " + p.replaces + "\n<b>Spawns:</b> " + p.spawns + "\n<b>XP from:</b> " + p.xpFrom;
+            if (p.id == OfflineId) info += "\n<b>Pixels to play with:</b> choose below";
             PixelUIKit.SetText(detailInfo, info);
         }
         else PixelUIKit.SetText(detailInfo, "");
 
+        // Skill tree view / details view.
+        bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
+        if (!hasNodes) showTree = false;
+        treeToggle.gameObject.SetActive(hasNodes);
+        PixelUIKit.SetText(treeToggleLabel, showTree ? detailsButtonText : treeButtonText);
+        treeRoot.gameObject.SetActive(showTree);
+        detailDesc.gameObject.SetActive(!showTree);
+        detailInfo.gameObject.SetActive(!showTree);
+        if (showTree) RefreshTree(p);
+
+        // Offline Progression: one button per pack whose pixels you can play with.
+        int slot = 0;
+        foreach (SkillPack other in packs)
+        {
+            if (other.id == OfflineId || !IsAvailable(other)) continue;
+            if (slot >= pixelPackButtons.Count) break;
+            bool show = available && p.id == OfflineId && !showTree;
+            pixelPackButtons[slot].gameObject.SetActive(show);
+            if (show)
+            {
+                bool current = other.id == ActiveId;
+                PixelUIKit.SetText(pixelPackLabels[slot], other.displayName + (current ? "   (playing)" : ""));
+                pixelPackButtons[slot].GetComponent<Image>().color = current ? new Color(0.2f, 0.5f, 0.3f, 1f) : cardColor;
+            }
+            slot++;
+        }
+        for (int i = slot; i < pixelPackButtons.Count; i++) pixelPackButtons[i].gameObject.SetActive(false);
+
         int pl = LevelOf(p);
         for (int i = 0; i < perkRows.Count; i++)
         {
-            bool used = available && p.perks != null && i < p.perks.Length;
+            bool used = available && !showTree && p.id != OfflineId && p.perks != null && i < p.perks.Length;
             perkRows[i].gameObject.SetActive(used);
             if (!used) continue;
             Perk perk = p.perks[i];
@@ -364,7 +595,7 @@ public partial class PixelSkills
             perkRows[i].color = got ? perkUnlockedColor : dimTextColor;
         }
 
-        bool isActiveSel = p.id == ActiveId;
+        bool isActiveSel = p.id == TrainingId;
         trainButton.interactable = available && !isActiveSel;
         PixelUIKit.SetText(trainLabel, isActiveSel ? trainingText : (p.id == StandardId ? useStandardText : trainText));
         trainButton.gameObject.SetActive(available);

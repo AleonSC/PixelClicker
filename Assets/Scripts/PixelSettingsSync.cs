@@ -36,7 +36,7 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog", "BarGlow", "GlowHue", "GlowCycle", "UiColor", "UiHue", "Prospector", "ClickFx",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog", "BarGlow", "GlowHue", "GlowCycle", "UiColor", "UiHue", "Prospector", "SkillOffline", "ClickFx",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
@@ -111,6 +111,7 @@ public static class PixelSettingsSync
         PixelHud.ReloadGlowFromPrefs();
         PixelUIKit.ReloadColorFromPrefs();
         PixelProspector.ReloadSettingsFromPrefs();
+        PixelSkills.ReloadSettingsFromPrefs();
         PixelBasicFx.ReloadFromPrefs();
     }
 }
