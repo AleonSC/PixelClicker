@@ -1711,6 +1711,14 @@ public partial class PixelShop : MonoBehaviour
 
         // Pixel types with a spawn switch are left switched off too.
         for (int t = 0; t < clicker.Tiers.Length; t++) clicker.SetSpawnEnabled(t, false);
+
+        // So are the opt-in blocks (Wood, Rock) and every minigame / vendor that has no pack of its own (Stardust, the visitors).
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills != null)
+            foreach (PixelClicker.PixelTier tier in clicker.Tiers)
+                if (PixelSkills.IsOptIn(tier.type)) skills.SetOptIn(tier.type, false);
+        foreach (PixelMinigame game in PixelMinigame.All)
+            if (game != null) game.UserDisabled = true;
         RefreshRows();
     }
 

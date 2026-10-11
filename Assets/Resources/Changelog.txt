@@ -482,3 +482,4 @@
 [2026-10-11 14:49 UTC] Tip boxes beside a window (the intro's Inventory / Log tips) now follow the window if it was still resizing when the tip appeared, so they no longer overlap it.
 [2026-10-11 14:53 UTC] Shop Pixels tab: the RGB pack stands above the sections (and disappears once bought), Glass and Luminescent moved into Toggleables, the Base pixels section is gone and Toggleables / Skill packs start collapsed.
 [2026-10-11 15:00 UTC] Added the Cube Dash minigame (Minigames tab, 50K of each basic pixel): the cube dashes around the screen, the auto clicker switches off and you earn 10x the pixel's worth for every click you land.
+[2026-10-11 15:03 UTC] Dev tools 'Unlock all' now leaves Wood, Rock, Stardust and every vendor switched off too.
