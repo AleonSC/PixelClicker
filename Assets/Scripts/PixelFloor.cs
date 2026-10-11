@@ -261,6 +261,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private void OnDestroy()
     {
+        if (fitCam != null) Destroy(fitCam.gameObject);
         if (Instance == this) Instance = null;
         ReleaseActive();
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
@@ -541,6 +542,25 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         Camera cam = Camera.main;
         if (cam == null || floorRenderer == null) return false;
+        // While the camera intro moves the camera, fit to the pose it settles into instead of the live (close-up) one.
+        if (intro == null) intro = PixelFind.First<PixelCameraIntro>();
+        if (intro != null && intro.TryGetFinalPose(out Vector3 fp, out Quaternion fr, out float ffov, out float fortho))
+        {
+            if (fitCam == null)
+            {
+                GameObject go = new GameObject("Floor Fit Camera");
+                go.hideFlags = HideFlags.HideAndDontSave;
+                fitCam = go.AddComponent<Camera>();
+                fitCam.enabled = false;
+            }
+            fitCam.CopyFrom(cam);
+            fitCam.enabled = false;
+            fitCam.transform.SetPositionAndRotation(fp, fr);
+            fitCam.fieldOfView = ffov;
+            if (fitCam.orthographic) fitCam.orthographicSize = fortho;
+            fitCam.aspect = cam.aspect;
+            cam = fitCam;
+        }
         Transform ct = cam.transform;
         if (!force && ct.position == lastFitCamPos && ct.rotation == lastFitCamRot && Mathf.Approximately(cam.aspect, lastFitAspect)) return false;
 
@@ -640,6 +660,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // Width / height of the area one copy of the texture covers (set from the fitted view) so pixel-art patterns can keep square pixels.
     private static float shadeAspect = 1f;
     private float viewAspect = 16f / 9f;
+    private PixelCameraIntro intro;
+    private Camera fitCam;
     private static Color[] fillBuffer; // reused by animated floors so redrawing doesn't allocate every frame
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

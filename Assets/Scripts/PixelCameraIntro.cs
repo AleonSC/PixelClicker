@@ -119,6 +119,16 @@ public class PixelCameraIntro : MonoBehaviour
     private bool fresh = true;
 
     /// <summary>
+    /// While the camera is in the close-up or swinging between it and the normal view, gives the pose it will settle into (what the floor
+    /// styles that fit the view should be fitted to, so they don't swim and stretch during the move). False once the camera is at rest.
+    /// </summary>
+    public bool TryGetFinalPose(out Vector3 position, out Quaternion rotation, out float fov, out float orthoSize)
+    {
+        position = finalPosition; rotation = finalRotation; fov = finalFov; orthoSize = finalOrtho;
+        return (reversing || !done) && prepared;
+    }
+
+    /// <summary>
     /// Zooms the camera back to the close-up (the intro in reverse), then calls 'onDone'. Returns false (and does nothing)
     /// if there is no intro to reverse (switched off in Settings, or no camera) - the caller carries on without it.
     /// </summary>
