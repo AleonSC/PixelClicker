@@ -339,7 +339,7 @@ public class PixelPadMinigame : PixelMinigame
         if (!pulling || pullAcceleration <= 0f || holes.Count == 0) return;
         float band = holeRadius * (pullBandFraction > 0f ? pullBandFraction : 0.5f);
         float pb = clicker.PixelBaseSize;
-        List<Rigidbody> list = clicker.OldPixels;
+        IReadOnlyList<Rigidbody> list = clicker.OldPixels;
         for (int i = 0; i < list.Count; i++)
         {
             Rigidbody body = list[i];
@@ -495,7 +495,7 @@ public class PixelPadMinigame : PixelMinigame
     {
         lastUltra = false;
         int result = 0;
-        List<Rigidbody> list = clicker.OldPixels;
+        IReadOnlyList<Rigidbody> list = clicker.OldPixels;
         float pb = clicker.PixelBaseSize;
         float reach = holeRadius * (captureFraction > 0f ? captureFraction : 0.85f);
 

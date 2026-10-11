@@ -410,3 +410,4 @@
 [2026-10-11 07:45 UTC] New Farming skill pack with eight farm blocks (Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit) bought with the Farmer's Pack; new basic Wood and Rock pixels in the shop (Seed and Water are no longer sold alone); skill pixel packs are generic and skill tree nodes can unlock a skill-only block as a toggle for every rotation.
 [2026-10-11 07:54 UTC] Wood and Rock are no longer part of the base rotation: each is an opt-in switch in the Toggles window (off until you turn it on).
 [2026-10-11 07:59 UTC] Ultra Pad reworked into Ultra Holes: four round black holes open near the screen corners, the marked one (spinning wanted pixel in its centre) pays out and can give Ultra pixels, wrong drops are just lost, and the marker jumps after each correct drop or after 12 s idle.
+[2026-10-11 08:11 UTC] Fixed a compile error in the Ultra Holes minigame and two unused-field warnings.

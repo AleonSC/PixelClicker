@@ -29,7 +29,6 @@ public partial class PixelSkills
     [SerializeField] private string activeBadgeText = "ACTIVE";
     [SerializeField] private string lockedName = "???";
     [SerializeField] private string treeButtonText = "Skill tree";
-    [SerializeField] private string detailsButtonText = "Details";
     [SerializeField] private string pixelsBadgeText = "PIXELS";
 
     [SerializeField] private string treeTitleText = "Skill tree";

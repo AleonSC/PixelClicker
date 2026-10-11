@@ -9,10 +9,9 @@ using UnityEngine;
 public static class PixelProspector
 {
     private const string Pref = "PixelClicker.Setting.Prospector";
-    private static int cache = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { cache = -1; richAnnounced = false; }
+    private static void ResetStatics() { richAnnounced = false; }
 
     /// <summary>The player's switch: the ores replace the basic pixels while it is on (and at least one ore is unlocked).</summary>
     public static bool Setting
@@ -26,7 +25,7 @@ public static class PixelProspector
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { cache = -1; }
+    public static void ReloadSettingsFromPrefs() { }   // the setting lives in PixelSkills now (reloaded there)
 
     /// <summary>The pixels the ores replace while Prospector mode is on: the monochrome pack (White, Gray, Black), RGB, Glass and Luminescent.</summary>
     public static bool IsBase(PixelClicker.PixelType type) =>
