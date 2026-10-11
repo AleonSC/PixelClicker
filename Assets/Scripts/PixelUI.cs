@@ -595,7 +595,8 @@ public class PixelUI : MonoBehaviour
     {
         PixelUI ui = inventoryInstance;
         if (ui == null || ui.boxObject == null) return;
-        if (!open && Compact && !force) return;   // the pinned Inventory stays up when other windows open (its own button / toggle still closes it)
+        ui.pinnedSuspended = false;                 // its own button / toggle is the player's choice: forget any 'put away by another window'
+        if (!open && Compact && !force) return;   // the pinned Inventory is put away by Update (UpdatePinnedHierarchy) when other windows open, not here
         if (open) PixelPop.Show(ui.boxObject); else PixelPop.Hide(ui.boxObject);
         if (open)
         {
@@ -625,9 +626,32 @@ public class PixelUI : MonoBehaviour
         }
     }
 
+    private bool pinnedSuspended;
+
+    /// <summary>
+    /// The pinned Inventory obeys the same window hierarchy as the normal one: any registered window below priority 100 (Shop, Log, Bank, Skills,
+    /// Crafting, Toggles, the UFO window...) puts it away, and it comes back by itself once they are all closed. (It still ignores Escape.)
+    /// </summary>
+    private void UpdatePinnedHierarchy()
+    {
+        if (!autoMode || boxObject == null) return;
+        if (!Compact) { pinnedSuspended = false; return; }
+        if (PixelWindows.AnyOpenExcept(this))
+        {
+            if (!pinnedSuspended && PixelPop.IsOpen(boxObject)) { pinnedSuspended = true; PixelPop.Hide(boxObject); }
+        }
+        else if (pinnedSuspended)
+        {
+            pinnedSuspended = false;
+            PixelPop.Show(boxObject);
+            Refresh();
+        }
+    }
+
     private void Update()
     {
         if (!built) return;
+        UpdatePinnedHierarchy();
         TickDeltas();
         UpdateTooltip();
         UpdateActiveHud();
