@@ -1,18 +1,16 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using static PixelInput;
 
 /// <summary>
-/// Ultra Pad minigame for Pixel Clicker.
-///
-/// Every so often a coloured square pad appears on the ground at a random spot. It wants old pixels of ONE pixel
-/// type - the one whose colour it shows. Get old pixels onto it (they fall, you can fan or drag them there):
-///   - a pixel of the right type is taken in, and has a chance to give you an Ultra pixel;
-///   - a pixel of any other type is taken too, but its value is subtracted from that pixel type's currency.
-/// Ultra pixels are ONE general currency (PixelClicker.TotalUltra, shown at the top of the Inventory's Currency tab) and are saved; they will
-/// be used for upgrades later.
+/// Ultra Holes (the reworked Ultra Pad; the minigame id stays "pad"). Every so often FOUR round holes open in the floor, one near each corner of
+/// the screen. They are plain black voids: old pixels that tumble in fall away and are gone. One of the holes is the CORRECT one, marked by a model
+/// of the wanted pixel type spinning in its centre. A pixel of that type dropped into the correct hole pays out (its normal value) and has a chance
+/// at an Ultra pixel; anything else that falls into any hole is simply taken away. After every correct drop the marker jumps to another hole,
+/// and it also jumps if nothing is deposited for a while. The round ends on a timer. A very gentle pull around the edge of every hole helps
+/// nudge pixels in (nothing is drawn for it). Ultra pixels are ONE general currency (PixelClicker.TotalUltra).
 ///
 /// Add this to any GameObject (e.g. the cube). PixelShop adds it automatically if it is missing.
 /// </summary>
@@ -31,11 +29,11 @@ public class PixelPadMinigame : PixelMinigame
 
     [Header("Ultra Pixels")]
     [Range(0f, 1f)]
-    [Tooltip("Chance that each CORRECT pixel gives you an Ultra version of it (0.1 = 10%).")]
+    [Tooltip("Chance that each CORRECT pixel gives you an Ultra pixel (0.1 = 10%).")]
     [SerializeField] private float ultraChance = 0.1f;
 
     [Min(1)]
-    [Tooltip("The goal shown on the tracker's progress bar (total Ultra pixels of every type; the count keeps going).")]
+    [Tooltip("The goal shown on the tracker's progress bar (Ultra pixels ever earned; the count keeps going).")]
     [SerializeField] private double ultraGoal = 10;
 
     [Tooltip("Title of the tracker row in the shop.")]
@@ -43,101 +41,79 @@ public class PixelPadMinigame : PixelMinigame
 
     [TextArea(1, 3)]
     [Tooltip("Description of the tracker row.")]
-    [SerializeField] private string trackerDescription = "Feed the pad the pixels it wants for a chance at Ultra pixels. Your Ultra pixels are shown at the top of the Inventory.";
+    [SerializeField] private string trackerDescription = "Drop the pixel a hole wants into the marked hole for a chance at Ultra pixels. Your Ultra pixels are shown at the top of the Inventory.";
 
     [Tooltip("Text on a locked shop pack that needs the goal. {0} = Ultra pixels, {1} = goal.")]
     [SerializeField] private string requirementFormat = "Requires: {0} / {1} Ultra pixels";
 
     [Header("When it appears")]
     [Min(0f)]
-    [Tooltip("Seconds after the minigame starts before the first pad.")]
+    [Tooltip("Seconds after the minigame starts before the first round.")]
     [SerializeField] private float firstPadDelay = 15f;
 
     [Min(1f)]
-    [Tooltip("Shortest wait between pads (seconds), counted from when the last one went away.")]
+    [Tooltip("Shortest wait between rounds (seconds), counted from when the last one ended.")]
     [SerializeField] private float minInterval = 45f;
 
     [Min(1f)]
-    [Tooltip("Longest wait between pads (seconds).")]
+    [Tooltip("Longest wait between rounds (seconds).")]
     [SerializeField] private float maxInterval = 90f;
 
-    [Min(1f)]
-    [Tooltip("How long a pad stays before it disappears (seconds).")]
-    [SerializeField] private float padSeconds = 30f;
+    [Header("The Round")]
+    [Tooltip("How long the four holes stay open (seconds). 0 = 45.")]
+    [SerializeField] private float roundSeconds = 0f;
 
-    [Header("The Pad")]
-    [Min(0.5f)]
-    [Tooltip("Width of the square pad (world units).")]
-    [SerializeField] private float padSize = 2.6f;
+    [Tooltip("If nothing is dropped in the correct hole for this many seconds, the marker jumps to another hole. 0 = 12.")]
+    [SerializeField] private float swapIdleSeconds = 0f;
 
-    [Min(0.2f)]
-    [Tooltip("How far above the pad an old pixel still counts as 'on' it (world units).")]
-    [SerializeField] private float captureHeight = 1.2f;
+    [Tooltip("Off (default): the wanted pixel type stays the same for the whole round and only the marked hole changes. On: the type changes with every jump too.")]
+    [SerializeField] private bool changeTypeOnSwap = false;
 
-    [Tooltip("The pad appears to the LEFT or RIGHT of the clicker cube, between the cube and the screen edge. " +
-             "This is how far from the cube's centre (as a fraction of the screen's width) the pad's area starts.")]
-    [Range(0.05f, 0.45f)]
-    [SerializeField] private float cubeClearance = 0.14f;
+    [Header("The Holes")]
+    [Tooltip("Radius of a hole in main-pixel widths. 0 = 1.3.")]
+    [SerializeField] private float holeRadiusPixels = 0f;
 
-    [Tooltip("How far in from the screen edge the pad's area ends (fraction of the screen's width).")]
-    [Range(0f, 0.3f)]
-    [SerializeField] private float screenEdgeMargin = 0.07f;
+    [Tooltip("Where the holes open, as viewport fractions in from the screen edge (x) and in from the black bars (y). The four corners use these.")]
+    [SerializeField] private Vector2 cornerInset = new Vector2(0.12f, 0.1f);
 
-    [Tooltip("How high up the screen the pad can appear (viewport fractions): lowest and highest.")]
-    [SerializeField] private Vector2 heightRange = new Vector2(0.15f, 0.5f);
+    [Tooltip("An old pixel whose middle comes inside this fraction of the radius (and low enough) falls in. 0 = 0.85.")]
+    [SerializeField] private float captureFraction = 0f;
 
     [Tooltip("Layers that count as ground when picking a spot.")]
     [SerializeField] private LayerMask floorLayers = ~0;
 
-    [Tooltip("If no ground is under the chosen spot, the pad goes on a flat plane at this height instead.")]
+    [Tooltip("If no ground is under a corner, the hole goes on a flat plane at this height instead.")]
     [SerializeField] private float fallbackFloorY = 0f;
 
-    [Tooltip("Colour of the pad's frame.")]
-    [SerializeField] private Color frameColor = new Color(0.12f, 0.12f, 0.14f, 1f);
+    [Tooltip("Colour of the dark ring round each hole.")]
+    [SerializeField] private Color rimColor = new Color(0.16f, 0.16f, 0.19f, 1f);
 
+    [Tooltip("Spin speed of the marker model (degrees per second).")]
+    [SerializeField] private float modelSpin = 60f;
+
+    [Header("Pull")]
     [Min(0f)]
-    [Tooltip("How much the pad glows (so it is easy to spot).")]
-    [SerializeField] private float padGlow = 0.6f;
+    [Tooltip("A very gentle pull towards the middle of a hole, only in a thin band round its edge (acceleration). Nothing is drawn for it. 0 = none.")]
+    [SerializeField] private float pullAcceleration = 5f;
 
-    [Tooltip("Text at the top of the pad. {0} = the pixel type in capitals.")]
-    [SerializeField] private string nameText = "{0}";
-
-    [Min(0.3f)]
-    [Tooltip("Size of that text (3D text: about 10 per world unit). It is written flat on the pad.")]
-    [SerializeField] private float labelTextSize = 2f;
-
-    [Range(0f, 0.95f)]
-    [Tooltip("Where the text sits on the pad: 0 = the middle, 1 = the pad's far edge (the top of it on screen).")]
-    [SerializeField] private float labelInset = 0.58f;
-
-    [Tooltip("Timer text at the bottom of the pad. {0} = seconds left.")]
-    [SerializeField] private string timerText = "{0}s";
-
-    [Min(0.3f)]
-    [Tooltip("Size of the timer text (3D text: about 10 per world unit). Written flat on the pad.")]
-    [SerializeField] private float timerTextSize = 3.4f;
-
-    [Range(0f, 0.95f)]
-    [Tooltip("Where the timer sits on the pad: 0 = the middle, 1 = the pad's near edge (the bottom of it on screen).")]
-    [SerializeField] private float timerInset = 0.55f;
+    [Tooltip("Width of the pull band outside the hole's edge, as a fraction of the radius. 0 = 0.5.")]
+    [SerializeField] private float pullBandFraction = 0f;
 
     [Header("Feedback")]
-    [Tooltip("Text when a correct pixel is taken.")]
+    [Tooltip("Text when a correct pixel falls in.")]
     [SerializeField] private string correctText = "+";
 
     [Tooltip("Text when you get an Ultra. {0} = pixel name.")]
     [SerializeField] private string ultraFormat = "ULTRA {0}!";
 
-    [Tooltip("Text when a wrong pixel is taken. {0} = amount lost, {1} = pixel name.")]
-    [SerializeField] private string wrongFormat = "-{0} {1}";
+    [Tooltip("Text when a pixel is lost to a wrong hole.")]
+    [SerializeField] private string wrongText = "x";
 
-    [Tooltip("Colour of the correct-pixel text.")]
+    [Tooltip("Text at the top of the screen while a round runs. {0} = seconds left, {1} = the wanted pixel.")]
+    [SerializeField] private string hudFormat = "ULTRA HOLES   {0}s   -   {1}";
+
     [SerializeField] private Color correctColor = new Color(0.6f, 1f, 0.65f, 1f);
-
-    [Tooltip("Colour of the Ultra text.")]
     [SerializeField] private Color ultraColor = new Color(1f, 0.85f, 0.25f, 1f);
-
-    [Tooltip("Colour of the wrong-pixel text.")]
     [SerializeField] private Color wrongColor = new Color(1f, 0.4f, 0.35f, 1f);
 
     [Min(0.5f)]
@@ -149,30 +125,41 @@ public class PixelPadMinigame : PixelMinigame
     [SerializeField] private float messageSeconds = 1.1f;
 
     [Header("Events")]
-    [Tooltip("Fired when a pad appears.")]
+    [Tooltip("Fired when a round starts.")]
     public UnityEvent onPadAppeared;
 
     [Tooltip("Fired when you receive an Ultra pixel.")]
     public UnityEvent onUltraGained;
 
+    private class Hole
+    {
+        public Transform root;
+        public Transform model;
+        public Vector3 centre;
+        public float scale;   // 0..1: how far the marker model has grown
+    }
+
+    private readonly List<Hole> holes = new List<Hole>();
+    private readonly object[] claimOwners = { new object(), new object(), new object(), new object() };   // one area claim per hole, reused every round
     private float spawnTimer;
-    private bool padActive;
+    private bool padActive, pulling;
+    private float holeRadius;
 
     public override bool Busy => padActive;
 
     protected override void OnDespawned()
     {
         padActive = false;
-        padPulling = false;
-        padRoot = null;
+        pulling = false;
+        holes.Clear();
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
     }
 
     public override string Id => "pad";
-    public override string DisplayName => "Ultra Pad";
+    public override string DisplayName => "Ultra Holes";
     public override bool Running => running;
 
-    // --- Tracker: Ultra pixels ever earned (spending them on boosts does not lower it; what you currently hold lives on the pixel types) ---
+    // --- Tracker: Ultra pixels ever earned ---
     public override bool HasTracker => true;
     public override string TrackerTitle => trackerTitle;
     public override string TrackerDescription => trackerDescription;
@@ -181,8 +168,7 @@ public class PixelPadMinigame : PixelMinigame
     public override double TrackerGoal => ultraGoal;
     public override string RequirementFormat => requirementFormat;
 
-    /// <summary>True when the inventory should show Ultra counts in its tooltips. Ultra pixels now come from every minigame and
-    /// the Inventory always lists them, so this is always on (even on a new game).</summary>
+    /// <summary>True when the inventory should show Ultra counts in its tooltips (always on).</summary>
     public static bool UltraVisible => true;
 
     protected override void Awake()
@@ -205,8 +191,8 @@ public class PixelPadMinigame : PixelMinigame
         spawnTimer -= Time.deltaTime;
         if (spawnTimer <= 0f)
         {
-            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(PadRoutine());
-            else spawnTimer = PixelMinigameLimits.RetrySeconds; // too many minigames running right now
+            if (PixelMinigameLimits.AllowAnother(this)) StartCoroutine(RoundRoutine());
+            else spawnTimer = PixelMinigameLimits.RetrySeconds;
         }
     }
 
@@ -219,503 +205,351 @@ public class PixelPadMinigame : PixelMinigame
 
     public override void Deactivate() => running = false;
 
-    /// <summary>Puts a pad down right now (right-click the component &gt; Spawn Pad Now).</summary>
+    /// <summary>Opens the holes right now (right-click the component &gt; Spawn Pad Now).</summary>
     [ContextMenu("Spawn Pad Now")]
     public override void SpawnNow()
     {
-        if (Application.isPlaying && !padActive) StartCoroutine(PadRoutine());
+        if (Application.isPlaying && !padActive) StartCoroutine(RoundRoutine());
     }
 
     // ------------------------------------------------------------------
     // Picking what and where
     // ------------------------------------------------------------------
 
-    /// <summary>A random unlocked pixel type, or -1.</summary>
-    private int PickTargetTier()
+    /// <summary>A random unlocked pixel type that can actually lie on the floor, or -1.</summary>
+    private int PickTargetTier(int avoid = -1)
     {
-        System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
+        List<int> candidates = new List<int>();
         for (int i = 0; i < clicker.Tiers.Length; i++)
-            if (clicker.Tiers[i].unlocked) candidates.Add(i);
+        {
+            PixelClicker.PixelTier t = clicker.Tiers[i];
+            if (t.unlocked && !t.rareDrop && !t.flyAway && i != avoid) candidates.Add(i);
+        }
+        if (candidates.Count == 0 && avoid >= 0) return avoid;
         return candidates.Count > 0 ? candidates[Random.Range(0, candidates.Count)] : -1;
     }
 
-    /// <summary>How far from its centre the pad's footprint (with the arrows around it) reaches on the floor.</summary>
-    private float PadReach => padSize * 0.5f + (showArrows ? arrowTravel + arrowLength * 0.6f : 0.1f);
+    private float BarFraction()
+    {
+        return PixelHud.Instance != null
+            ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
+    }
 
-    private bool TryPickSpot(Camera cam, out Vector3 point)
+    private bool FloorPoint(Camera cam, Vector2 viewport, out Vector3 point)
     {
         point = Vector3.zero;
-        // Beside the cube: pick the left or right side, then a spot between the cube and that screen edge.
-        float cubeX = 0.5f;
-        if (clicker.PixelTransform != null) cubeX = cam.WorldToViewportPoint(clicker.PixelTransform.position).x;
-        bool left = Random.value < 0.5f;
-        float xNear = left ? cubeX - cubeClearance : cubeX + cubeClearance;
-        float xFar = left ? screenEdgeMargin : 1f - screenEdgeMargin;
-        float xMin = Mathf.Clamp01(Mathf.Min(xNear, xFar)), xMax = Mathf.Clamp01(Mathf.Max(xNear, xFar));
-
-        // Try several spots; take the first where the whole pad (arrows, model, label) is inside the view, else the least cut off.
-        bool found = false;
-        float bestCut = float.MaxValue;
-        Vector3 bestPoint = Vector3.zero;
-        for (int attempt = 0; attempt < 40; attempt++)
+        Ray ray = cam.ViewportPointToRay(new Vector3(viewport.x, viewport.y, 0f));
+        RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, floorLayers, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (RaycastHit hit in hits)
         {
-            Vector3 viewport = new Vector3(
-                Random.Range(xMin, xMax),
-                Random.Range(Mathf.Min(heightRange.x, heightRange.y), Mathf.Max(heightRange.x, heightRange.y)), 0f);
-            Ray ray = cam.ViewportPointToRay(viewport);
-
-            Vector3 candidate = Vector3.zero;
-            bool ok = false;
-            RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, floorLayers, QueryTriggerInteraction.Ignore);
-            System.Array.Sort(hits, (a2, b2) => a2.distance.CompareTo(b2.distance));
-            foreach (RaycastHit hit in hits)
-            {
-                if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
-                if (clicker.PixelTransform != null && hit.transform.IsChildOf(clicker.PixelTransform)) continue;
-                if (hit.normal.y < 0.5f) continue;
-                candidate = hit.point;
-                ok = true;
-                break;
-            }
-            if (!ok)
-            {
-                Plane floor = new Plane(Vector3.up, new Vector3(0f, fallbackFloorY, 0f));
-                if (floor.Raycast(ray, out float enter)) { candidate = ray.GetPoint(enter); ok = true; }
-            }
-            if (!ok) continue;
-            if (!AreaFree(this, candidate, PadReach)) continue; // would overlap a black hole: try another spot
-
-            float cut = CutOff(cam, candidate);
-            if (cut < bestCut) { bestCut = cut; bestPoint = candidate; found = true; }
-            if (cut <= 0f) break;
+            if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
+            if (clicker.PixelTransform != null && hit.transform.IsChildOf(clicker.PixelTransform)) continue;
+            if (hit.normal.y < 0.5f) continue;
+            point = hit.point;
+            return true;
         }
-        point = bestPoint;
-        return found;
+        Plane floor = new Plane(Vector3.up, new Vector3(0f, fallbackFloorY, 0f));
+        if (floor.Raycast(ray, out float enter)) { point = ray.GetPoint(enter); return true; }
+        return false;
     }
 
-    /// <summary>How far (viewport fractions, summed) the pad's footprint, arrows, model and label would stick out of the view. 0 = fully visible.</summary>
-    private float CutOff(Camera cam, Vector3 point)
+    /// <summary>The floor spot for one corner: the viewport corner nudged towards the middle until the whole hole is on screen and clear of other minigames.</summary>
+    private bool CornerSpot(Camera cam, Vector2 corner, out Vector3 point)
     {
-        float bars = PixelHud.Instance != null
-            ? PixelHud.Instance.RawBarHeight * Mathf.Lerp(Screen.width / 1920f, Screen.height / 1080f, 0.5f) / Mathf.Max(1, Screen.height) : 0f;
-        const float margin = 0.02f;
-        float reach = padSize * 0.5f + (showArrows ? arrowTravel + arrowLength * 0.6f : 0.1f);
-
-
-        Vector3[] checks =
+        point = Vector3.zero;
+        float bars = BarFraction();
+        Vector2 centre = new Vector2(0.5f, 0.5f);
+        for (int step = 0; step < 8; step++)
         {
-            point + new Vector3(reach, 0f, reach), point + new Vector3(-reach, 0f, reach),
-            point + new Vector3(reach, 0f, -reach), point + new Vector3(-reach, 0f, -reach),
-            point + Vector3.up * (modelLift + modelEdge),
-        };
-        float cut = 0f;
-        foreach (Vector3 w in checks)
-        {
-            Vector3 v = cam.WorldToViewportPoint(w);
-            if (v.z <= 0f) { cut += 1f; continue; }
-            cut += Mathf.Max(0f, margin - v.x) + Mathf.Max(0f, v.x - (1f - margin));
-            cut += Mathf.Max(0f, bars + margin - v.y) + Mathf.Max(0f, v.y - (1f - bars - margin));
+            Vector2 v = Vector2.Lerp(corner, centre, step * 0.05f);
+            if (!FloorPoint(cam, v, out Vector3 p)) continue;
+            bool visible = true;
+            for (int k = 0; k < 4 && visible; k++)
+            {
+                float a = k * Mathf.PI * 0.5f;
+                Vector3 edge = cam.WorldToViewportPoint(p + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * holeRadius);
+                if (edge.z <= 0f || edge.x < 0.01f || edge.x > 0.99f || edge.y < bars + 0.01f || edge.y > 1f - bars - 0.01f) visible = false;
+            }
+            if (!visible || !AreaFree(this, p, holeRadius * 1.15f)) continue;
+            point = p;
+            return true;
         }
-        return cut;
+        return false;
     }
 
     // ------------------------------------------------------------------
-    // The pad
-    [Header("Pad Look")]
-    [Tooltip("Arrows around the OUTSIDE of the pad that drift inwards toward its border, showing it pulls pixels in.")]
-    [SerializeField] private bool showArrows = true;
-
-    [Range(1, 6)]
-    [Tooltip("Arrows on each side of the pad.")]
-    [SerializeField] private int arrowsEachSide = 4;
-
-    [Min(0.05f)]
-    [Tooltip("Size of an arrow (world units).")]
-    [SerializeField] private float arrowLength = 0.4f;
-
-    [Min(0.1f)]
-    [Tooltip("How far outside the pad's edge the arrows start before drifting in (world units).")]
-    [SerializeField] private float arrowTravel = 1.0f;
-
-    [Min(0.05f)]
-    [Tooltip("How fast the arrows drift inwards (cycles per second).")]
-    [SerializeField] private float arrowSpeed = 0.45f;
-
-    [Range(0f, 1f)]
-    [Tooltip("How see-through the arrows are at their brightest.")]
-    [SerializeField] private float arrowOpacity = 0.85f;
-
-    [Tooltip("Show a spinning model of the wanted pixel (drawn with that pixel's current look) floating above the pad.")]
-    [SerializeField] private bool showModel = true;
-
-    [Min(0.1f)]
-    [Tooltip("Edge length of the model (world units).")]
-    [SerializeField] private float modelEdge = 0.55f;
-
-    [Min(0f)]
-    [Tooltip("How high above the pad the model sits (world units). Low = it rests on the pad.")]
-    [SerializeField] private float modelLift = 0.42f;
-
-    [Tooltip("Spin speed of the model (degrees per second, around the up axis).")]
-    [SerializeField] private float modelSpin = 45f;
-
-    [Header("Pull")]
-    [Min(0f)]
-    [Tooltip("How strongly the pad pulls old pixels toward its middle (acceleration). Gentle: a black hole is far stronger. 0 = no pull.")]
-    [SerializeField] private float pullAcceleration = 8f;
-
-    [Min(0f)]
-    [Tooltip("How far beyond the pad's edge the pull reaches (world units). It fades with distance.")]
-    [SerializeField] private float pullRange = 1.4f;
-
-    [Min(0.2f)]
-    [Tooltip("Old pixels higher than this above the pad are not pulled (world units).")]
-    [SerializeField] private float pullHeight = 2f;
-
+    // The holes
     // ------------------------------------------------------------------
 
-    private Transform padRoot;
-    private bool padPulling;
-    private static Mesh arrowMesh;
-    private static Material arrowMaterial;
-
-    /// <summary>A small flat dart pointing along +Z (lying on the pad).</summary>
-    private static Mesh ArrowMesh()
+    private GameObject Disc(Transform parent, string name, float radius, float height, float y, Color color)
     {
-        if (arrowMesh != null) return arrowMesh;
-        arrowMesh = new Mesh { name = "Pad Arrow" };
-        // A chevron (two thick arms meeting at a tip), flat, pointing +Z.
-        arrowMesh.vertices = new[]
-        {
-            new Vector3(-0.5f, 0f, -0.3f),  // 0 left arm, outer
-            new Vector3(0f, 0f, 0.2f),      // 1 tip, outer
-            new Vector3(0.5f, 0f, -0.3f),   // 2 right arm, outer
-            new Vector3(-0.5f, 0f, -0.58f), // 3 left arm, inner
-            new Vector3(0f, 0f, -0.08f),    // 4 tip, inner
-            new Vector3(0.5f, 0f, -0.58f),  // 5 right arm, inner
-        };
-        arrowMesh.triangles = new[] { 0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4 };
-        Color[] colours = { Color.white, Color.white, Color.white, Color.white, Color.white, Color.white };
-        arrowMesh.colors = colours;
-        arrowMesh.RecalculateNormals();
-        arrowMesh.RecalculateBounds();
-        return arrowMesh;
+        GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        g.name = name;
+        Destroy(g.GetComponent<Collider>());
+        g.transform.SetParent(parent, false);
+        g.transform.localScale = new Vector3(radius * 2f, height * 0.5f, radius * 2f);
+        g.transform.localPosition = new Vector3(0f, y, 0f);
+        Material m = clicker.CreateVisualMaterial(color, false);
+        Renderer r = g.GetComponent<Renderer>();
+        if (m != null) r.sharedMaterial = m;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
+        return g;
     }
 
-    private Material ArrowMaterial(Color colour)
+    private Hole BuildHole(Vector3 point)
     {
-        if (arrowMaterial != null) return arrowMaterial;
-        Shader shader = PixelShaders.SpriteDefault(); // unlit, alpha blended, vertex colour * _Color in every pipeline
-        arrowMaterial = shader != null ? new Material(shader) : clicker.CreateVisualMaterial(colour, true);
-        return arrowMaterial;
+        GameObject root = new GameObject("Ultra Hole");
+        Track(root);
+        root.transform.position = point;
+        Disc(root.transform, "Rim", holeRadius * 1.14f, 0.03f, 0.015f, rimColor);
+        Disc(root.transform, "Void", holeRadius, 0.04f, 0.03f, new Color(0.02f, 0.02f, 0.03f, 1f));
+        Disc(root.transform, "Deep", holeRadius * 0.72f, 0.04f, 0.036f, Color.black);
+        return new Hole { root = root.transform, centre = point };
     }
 
-    /// <summary>The animated extras of one pad: drifting arrows and the floating model.</summary>
-    private class PadVisual
+    private void SetModel(Hole h, int target)
     {
-        public struct Arrow { public Transform tf; public Renderer renderer; public int side; public float lateral, phase; }
-        public System.Collections.Generic.List<Arrow> arrows = new System.Collections.Generic.List<Arrow>();
-        public Transform model;
-        public Color arrowColour;
-        public float half, size, speed, opacity, modelLift, modelSpin, travel;
-        private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
-
-        public void Animate(float time)
-        {
-            foreach (Arrow a in arrows)
-            {
-                if (a.tf == null) continue;
-                float t = Mathf.Repeat(time * speed + a.phase, 1f);
-                float angle = a.side * 90f * Mathf.Deg2Rad;
-                Vector3 outward = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
-                Vector3 lateral = new Vector3(Mathf.Cos(angle), 0f, -Mathf.Sin(angle));
-                float from = half + travel, to = half + size * 0.55f; // outside the pad, drifting in toward its border
-                a.tf.localPosition = outward * Mathf.Lerp(from, to, t) + lateral * a.lateral + Vector3.up * 0.085f;
-                a.tf.localRotation = Quaternion.LookRotation(-outward, Vector3.up); // points inwards
-
-                Color c = arrowColour;
-                c.a = Mathf.Sin(t * Mathf.PI) * opacity;
-                block.SetColor("_Color", c);
-                a.renderer.SetPropertyBlock(block);
-            }
-
-            if (model != null)
-            {
-                model.localPosition = new Vector3(0f, modelLift + Mathf.Sin(time * 1.6f) * 0.03f, 0f);
-                model.localRotation = Quaternion.Euler(0f, time * modelSpin, 0f);
-            }
-        }
+        if (h.model != null) Destroy(h.model.gameObject);
+        float pb = clicker.PixelBaseSize;
+        GameObject model = clicker.CreateDisplayPixel(target, h.root, 0.6f * pb);
+        h.model = model != null ? model.transform : null;
     }
 
-    private PadVisual BuildPadVisual(Transform root, int target, Color colour)
+    private void AnimateModels(int correct, float time, float dt)
     {
-        PadVisual v = new PadVisual
+        float pb = clicker.PixelBaseSize;
+        for (int i = 0; i < holes.Count; i++)
         {
-            half = padSize * 0.5f, travel = arrowTravel, size = arrowLength, speed = arrowSpeed, opacity = arrowOpacity,
-            modelLift = modelLift, modelSpin = modelSpin,
-            arrowColour = Color.Lerp(colour, Color.white, 0.55f),
-        };
-
-        if (showArrows)
-        {
-            Material mat = ArrowMaterial(colour);
-            for (int side = 0; side < 4; side++)
-                for (int i = 0; i < arrowsEachSide; i++)
-                {
-                    GameObject go = new GameObject("Arrow");
-                    go.transform.SetParent(root, false);
-                    go.transform.localScale = Vector3.one * arrowLength;
-                    go.AddComponent<MeshFilter>().sharedMesh = ArrowMesh();
-                    MeshRenderer mr = go.AddComponent<MeshRenderer>();
-                    mr.sharedMaterial = mat;
-                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    mr.receiveShadows = false;
-                    float spread = padSize * 0.95f;
-                    float lateral = arrowsEachSide == 1 ? 0f : Mathf.Lerp(-spread * 0.5f, spread * 0.5f, i / (float)(arrowsEachSide - 1));
-                    v.arrows.Add(new PadVisual.Arrow
-                    {
-                        tf = go.transform, renderer = mr, side = side, lateral = lateral,
-                        phase = (i * 0.37f + side * 0.21f) % 1f, // staggered so they don't all pulse together
-                    });
-                }
+            Hole h = holes[i];
+            h.scale = Mathf.MoveTowards(h.scale, i == correct ? 1f : 0f, dt * 3f);
+            if (h.model == null) continue;
+            bool show = h.scale > 0.01f;
+            if (h.model.gameObject.activeSelf != show) h.model.gameObject.SetActive(show);
+            if (!show) continue;
+            h.model.localScale = Vector3.one * Mathf.SmoothStep(0f, 1f, h.scale);
+            h.model.localPosition = new Vector3(0f, 0.55f * pb + Mathf.Sin(time * 1.8f) * 0.04f * pb, 0f);
+            h.model.localRotation = Quaternion.Euler(0f, time * modelSpin, 0f);
         }
-
-        if (showModel)
-        {
-            GameObject model = clicker.CreateDisplayPixel(target, root, modelEdge);
-            if (model != null) v.model = model.transform;
-        }
-        return v;
     }
 
     private void FixedUpdate()
     {
-        if (!padPulling || padRoot == null || pullAcceleration <= 0f) return;
-
-        float half = padSize * 0.5f;
-        var list = clicker.OldPixels;
+        if (!pulling || pullAcceleration <= 0f || holes.Count == 0) return;
+        float band = holeRadius * (pullBandFraction > 0f ? pullBandFraction : 0.5f);
+        float pb = clicker.PixelBaseSize;
+        List<Rigidbody> list = clicker.OldPixels;
         for (int i = 0; i < list.Count; i++)
         {
             Rigidbody body = list[i];
             if (body == null || body.isKinematic) continue;
-
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null || clicker.IsFlyingPixel(body)) continue;
-            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-            if (despawn != null && despawn.Held) continue; // the player is carrying it
-
-            Vector3 local = padRoot.InverseTransformPoint(body.position);
-            float edge = Mathf.Max(Mathf.Abs(local.x), Mathf.Abs(local.z)); // square distance from the middle
-            if (edge > half + pullRange || local.y < -0.3f || local.y > pullHeight) continue;
-
-            Vector3 toCentre = padRoot.TransformDirection(new Vector3(-local.x, 0f, -local.z));
-            if (toCentre.sqrMagnitude < 0.0001f) continue;
-            float fade = 1f - Mathf.Clamp01((edge - half) / Mathf.Max(0.01f, pullRange)); // strongest on the pad, fading out
-            body.AddForce(toCentre.normalized * pullAcceleration * fade, ForceMode.Acceleration);
+            if (clicker.IsFlyingPixel(body)) continue;
+            OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+            if (d != null && (d.Held || d.IsDespawning)) continue;
+            foreach (Hole h in holes)
+            {
+                Vector3 to = h.centre - body.position; to.y = 0f;
+                float dist = to.magnitude;
+                if (dist <= holeRadius || dist > holeRadius + band || body.position.y > h.centre.y + 1.5f * pb) continue;
+                float fade = 1f - (dist - holeRadius) / band;   // strongest right at the edge, gone at the outer edge of the band
+                body.AddForce(to / Mathf.Max(0.001f, dist) * pullAcceleration * fade, ForceMode.Acceleration);
+                break;
+            }
         }
     }
 
-    private IEnumerator PadRoutine()
+    // ------------------------------------------------------------------
+    // The round
+    // ------------------------------------------------------------------
+
+    private IEnumerator RoundRoutine()
     {
         padActive = true;
-
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         int target = PickTargetTier();
-        if (cam == null || target < 0 || !TryPickSpot(cam, out Vector3 point))
+        holeRadius = (holeRadiusPixels > 0f ? holeRadiusPixels : 1.3f) * Mathf.Max(0.1f, clicker.PixelBaseSize);
+        if (cam == null || target < 0)
         {
-            spawnTimer = 5f; // try again shortly
+            spawnTimer = 5f;
             padActive = false;
             yield break;
         }
 
-        ClaimArea(this, point, PadReach, () => padActive);
+        // One hole near each corner of the screen (a corner that is blocked is skipped; at least two are needed).
+        holes.Clear();
+        float bars = BarFraction();
+        float x0 = cornerInset.x, x1 = 1f - cornerInset.x;
+        float y0 = bars + cornerInset.y, y1 = 1f - bars - cornerInset.y;
+        Vector2[] corners = { new Vector2(x0, y0), new Vector2(x1, y0), new Vector2(x0, y1), new Vector2(x1, y1) };
+        foreach (Vector2 c in corners)
+            if (CornerSpot(cam, c, out Vector3 spot))
+            {
+                Hole h = BuildHole(spot);
+                holes.Add(h);
+                ClaimArea(claimOwners[Mathf.Min(holes.Count - 1, claimOwners.Length - 1)], spot, holeRadius * 1.15f, () => padActive);
+            }
+        if (holes.Count < 2)
+        {
+            foreach (Hole h in holes) if (h.root != null) Destroy(h.root.gameObject);
+            holes.Clear();
+            spawnTimer = 5f;
+            padActive = false;
+            yield break;
+        }
+        foreach (Hole h in holes) SetModel(h, target);
+
         onPadAppeared?.Invoke();
         Report(MinigameEvent.Spawned);
 
-        PixelClicker.PixelTier tier = clicker.Tiers[target];
-        Color colour = tier.UIColor;
+        // The timer line at the top of the screen.
+        GameObject hudCanvas = PixelUIKit.CreateCanvas("Ultra Holes HUD", 140, new Vector2(1920f, 1080f), false);
+        Track(hudCanvas);
+        TMP_Text hud = PixelUIKit.CreateText(clicker.UIFont, hudCanvas.transform, "Timer", "", 34f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
+        hud.raycastTarget = false;
+        RectTransform hr = hud.rectTransform;
+        float top = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(0f, 50f);
+        hr.anchoredPosition = new Vector2(0f, -(top + 8f));
 
-        GameObject root = new GameObject("Ultra Pad");
-        Track(root);
-        root.transform.position = point;
-
-        GameObject frame = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        frame.name = "Frame";
-        Destroy(frame.GetComponent<Collider>());
-        frame.transform.SetParent(root.transform, false);
-        frame.transform.localScale = new Vector3(padSize * 1.12f, 0.05f, padSize * 1.12f);
-        frame.transform.localPosition = new Vector3(0f, 0.025f, 0f);
-        Material frameMat = clicker.CreateVisualMaterial(frameColor, false);
-        if (frameMat != null) frame.GetComponent<Renderer>().sharedMaterial = frameMat;
-
-        GameObject face = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        face.name = "Face";
-        Destroy(face.GetComponent<Collider>());
-        face.transform.SetParent(root.transform, false);
-        face.transform.localScale = new Vector3(padSize, 0.06f, padSize);
-        face.transform.localPosition = new Vector3(0f, 0.04f, 0f);
-        Color faceColour = Color.Lerp(colour, Color.black, 0.55f); // darker, so the arrows and the model stand out
-        Material faceMat = clicker.CreateVisualMaterial(faceColour, false);
-        if (faceMat != null)
-        {
-            faceMat.EnableKeyword("_EMISSION");
-            faceMat.SetColor("_EmissionColor", colour * padGlow * 0.5f);
-            face.GetComponent<Renderer>().sharedMaterial = faceMat;
-        }
-
-        // A bright glowing border strip around the face.
-        Material borderMat = clicker.CreateVisualMaterial(colour, false);
-        if (borderMat != null)
-        {
-            borderMat.EnableKeyword("_EMISSION");
-            borderMat.SetColor("_EmissionColor", colour * padGlow * 1.6f);
-        }
-        float strip = padSize * 0.035f;
-        for (int side = 0; side < 4; side++)
-        {
-            GameObject bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            bar.name = "Border";
-            Destroy(bar.GetComponent<Collider>());
-            bar.transform.SetParent(root.transform, false);
-            bool alongX = side % 2 == 0;
-            float offset = (padSize * 0.5f - strip * 0.5f) * (side < 2 ? 1f : -1f);
-            bar.transform.localScale = alongX ? new Vector3(padSize, 0.065f, strip) : new Vector3(strip, 0.065f, padSize);
-            bar.transform.localPosition = alongX ? new Vector3(0f, 0.045f, offset) : new Vector3(offset, 0.045f, 0f);
-            if (borderMat != null) bar.GetComponent<Renderer>().sharedMaterial = borderMat;
-        }
-
-        PadVisual visual = BuildPadVisual(root.transform, target, colour);
-        float animTime = 0f;
-
-        GameObject labelGo = new GameObject("Label");
-        labelGo.transform.SetParent(root.transform, false);
-        TextMeshPro label = labelGo.AddComponent<TextMeshPro>();
-        label.fontSize = labelTextSize;
-        label.fontStyle = FontStyles.Bold;
-        label.alignment = TextAlignmentOptions.Center;
-        label.color = Color.Lerp(colour, Color.white, 0.4f);
-        label.overflowMode = TextOverflowModes.Overflow;
-        if (clicker.UIFont != null) label.font = clicker.UIFont;
-        label.rectTransform.sizeDelta = new Vector2(padSize * 4f, 0.8f);
-
-        // The text floats above the pixel preview, facing the camera.
-        // The text is written flat on the pad, near its far (top-on-screen) edge, upright for the camera, the timer centred underneath.
-        Vector3 far = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
-        if (far.sqrMagnitude < 0.0001f) far = Vector3.forward;
-        far = Mathf.Abs(far.x) > Mathf.Abs(far.z) ? new Vector3(Mathf.Sign(far.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(far.z)); // parallel to the pad's edges
-        labelGo.transform.position = point + far * (padSize * 0.5f * labelInset) + Vector3.up * 0.09f;
-        labelGo.transform.rotation = Quaternion.LookRotation(Vector3.down, far);
-
-        // The timer: bigger, flat on the pad near its near (bottom-on-screen) edge.
-        GameObject timerGo = new GameObject("Timer");
-        timerGo.transform.SetParent(root.transform, false);
-        TextMeshPro timerLabel = timerGo.AddComponent<TextMeshPro>();
-        timerLabel.fontSize = timerTextSize;
-        timerLabel.fontStyle = FontStyles.Bold;
-        timerLabel.alignment = TextAlignmentOptions.Center;
-        timerLabel.color = Color.white;
-        timerLabel.overflowMode = TextOverflowModes.Overflow;
-        if (clicker.UIFont != null) timerLabel.font = clicker.UIFont;
-        timerLabel.rectTransform.sizeDelta = new Vector2(padSize, 1.2f);
-        timerGo.transform.position = point - far * (padSize * 0.5f * timerInset) + Vector3.up * 0.09f;
-        timerGo.transform.rotation = Quaternion.LookRotation(Vector3.down, far);
+        int correct = Random.Range(0, holes.Count);
+        float anim = 0f, idle = 0f;
+        float total = roundSeconds > 0f ? roundSeconds : 45f, left = total;
+        float idleLimit = swapIdleSeconds > 0f ? swapIdleSeconds : 12f;
+        int dropped = 0, ultras = 0;
 
         // Grow in.
         float t = 0f;
-        while (t < 0.35f)
+        while (t < 0.4f)
         {
             t += Time.deltaTime;
-            animTime += Time.deltaTime;
-            visual.Animate(animTime);
-            root.transform.localScale = new Vector3(1f, 1f, 1f) * Mathf.SmoothStep(0f, 1f, t / 0.35f);
+            float k = Mathf.SmoothStep(0f, 1f, t / 0.4f);
+            foreach (Hole h in holes) if (h.root != null) h.root.localScale = new Vector3(k, 1f, k);
             yield return null;
         }
-        root.transform.localScale = Vector3.one;
-        padRoot = root.transform;
-        padPulling = true;
+        foreach (Hole h in holes) if (h.root != null) h.root.localScale = Vector3.one;
+        pulling = true;
 
-        // Wait for pixels.
-        float left = padSeconds;
         while (left > 0f)
         {
-            left -= Time.deltaTime;
-            animTime += Time.deltaTime;
-            visual.Animate(animTime);
-            label.text = string.Format(nameText, tier.displayName.ToUpperInvariant());
-            timerLabel.text = string.Format(timerText, Mathf.CeilToInt(Mathf.Max(0f, left)));
-            TakePixels(root.transform, target, cam);
+            float dt = Time.deltaTime;
+            left -= dt;
+            idle += dt;
+            anim += dt;
+
+            if (idle >= idleLimit) { correct = NextHole(correct); if (changeTypeOnSwap) target = ChangeType(target); idle = 0f; }
+            AnimateModels(correct, anim, dt);
+            PixelUIKit.SetText(hud, string.Format(hudFormat, Mathf.CeilToInt(Mathf.Max(0f, left)), clicker.Tiers[target].displayName));
+
+            int result = TakePixels(cam, correct, target);   // 0 nothing, 1 wrong ones taken, 2 a correct drop
+            if (result >= 2)
+            {
+                dropped++;
+                correct = NextHole(correct);
+                if (changeTypeOnSwap) target = ChangeType(target);
+                idle = 0f;
+                if (lastUltra) ultras++;
+            }
             yield return null;
         }
 
-        // Shrink away.
-        padPulling = false;
+        // Close.
+        pulling = false;
         t = 0f;
         while (t < 0.4f)
         {
             t += Time.deltaTime;
-            animTime += Time.deltaTime;
-            visual.Animate(animTime);
-            root.transform.localScale = Vector3.one * Mathf.Lerp(1f, 0f, t / 0.4f);
+            float k = Mathf.Lerp(1f, 0f, t / 0.4f);
+            foreach (Hole h in holes) if (h.root != null) h.root.localScale = new Vector3(k, 1f, k);
             yield return null;
         }
-        padRoot = null;
-        Destroy(root);
+        foreach (Hole h in holes) if (h.root != null) Destroy(h.root.gameObject);
+        holes.Clear();
+        Destroy(hudCanvas);
+        if (dropped > 0) PixelHints.Announce("Ultra Holes: " + dropped + " correct" + (ultras > 0 ? ", " + ultras + " Ultra!" : "."));
 
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         padActive = false;
     }
 
-    /// <summary>Takes in every old pixel that is on the pad: right ones may give an Ultra, wrong ones cost currency.</summary>
-    private void TakePixels(Transform pad, int target, Camera cam)
+    private int NextHole(int current)
     {
-        var list = clicker.OldPixels;
-        float half = padSize * 0.5f;
+        if (holes.Count <= 1) return 0;
+        int n = Random.Range(0, holes.Count - 1);
+        return n >= current ? n + 1 : n;
+    }
+
+    private int ChangeType(int target)
+    {
+        int next = PickTargetTier(target);
+        if (next < 0 || next == target) return target;
+        foreach (Hole h in holes) SetModel(h, next);
+        return next;
+    }
+
+    private bool lastUltra;
+
+    /// <summary>Takes every old pixel that has fallen into a hole. Returns 2 if a correct pixel went into the marked hole, 1 if only wrong ones were taken, else 0.</summary>
+    private int TakePixels(Camera cam, int correct, int target)
+    {
+        lastUltra = false;
+        int result = 0;
+        List<Rigidbody> list = clicker.OldPixels;
+        float pb = clicker.PixelBaseSize;
+        float reach = holeRadius * (captureFraction > 0f ? captureFraction : 0.85f);
 
         for (int i = list.Count - 1; i >= 0; i--)
         {
             Rigidbody body = list[i];
-            if (body == null || clicker.IsFlyingPixel(body)) continue; // a meteor must be caught (grabbed while time is slowed) first
-
-            Vector3 local = pad.InverseTransformPoint(body.position);
-            if (Mathf.Abs(local.x) > half || Mathf.Abs(local.z) > half || local.y < -0.3f || local.y > captureHeight) continue;
-
-            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null || !clicker.ReleaseOldPixel(body, false)) continue;
-
+            if (body == null || clicker.IsFlyingPixel(body) || body.isKinematic) continue;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-            if (despawn != null) despawn.Begin(); // it shrinks away into the pad
+            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
 
-            Vector3 at = body.position;
-            if (info.tierIndex == target)
+            for (int hi = 0; hi < holes.Count; hi++)
             {
-                Report(MinigameEvent.Clicked);
-                if (Random.value < ultraChance)
+                Hole h = holes[hi];
+                Vector3 to = body.position - h.centre; to.y = 0f;
+                if (to.magnitude > reach || body.position.y > h.centre.y + 1.5f * pb) continue;
+
+                OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+                if (info == null) break;
+                bool right = hi == correct && info.tierIndex == target;
+                if (!clicker.ReleaseOldPixel(body, right)) break;
+                if (despawn != null) despawn.Begin();   // it turns into a trigger and shrinks as it tumbles down through the floor
+
+                Vector3 at = body.position;
+                if (right)
                 {
-                    clicker.AddUltra(1);
-                    PixelStats.Count("ultra.pad");
-                    onUltraGained?.Invoke();
-                    PixelAudio.Play("pad_ultra");
-                    PixelUltraFx.Play(clicker, at, text: false, sound: false); // its own rising text and sound already play
-                    StartCoroutine(RisingMessage(at, cam, string.Format(ultraFormat, clicker.Tiers[target].displayName), ultraColor, 1.4f));
+                    Report(MinigameEvent.Clicked);
+                    result = 2;
+                    if (Random.value < ultraChance)
+                    {
+                        lastUltra = true;
+                        clicker.AddUltra(1);
+                        PixelStats.Count("ultra.pad");
+                        onUltraGained?.Invoke();
+                        PixelAudio.Play("pad_ultra");
+                        PixelUltraFx.Play(clicker, at, text: false, sound: false);
+                        StartCoroutine(RisingMessage(at, cam, string.Format(ultraFormat, clicker.Tiers[target].displayName), ultraColor, 1.4f));
+                    }
+                    else StartCoroutine(RisingMessage(at, cam, correctText, correctColor, 1f));
                 }
                 else
                 {
-                    StartCoroutine(RisingMessage(at, cam, correctText, correctColor, 1f));
+                    if (result < 1) result = 1;
+                    PixelAudio.Play("pad_wrong");
+                    StartCoroutine(RisingMessage(at, cam, wrongText, wrongColor, 0.8f));
                 }
-            }
-            else
-            {
-                double lost = clicker.RemoveCurrency(info.tierIndex, info.amount);
-                PixelAudio.Play("pad_wrong");
-                string name = info.tierIndex >= 0 && info.tierIndex < clicker.Tiers.Length ? clicker.Tiers[info.tierIndex].displayName : "";
-                StartCoroutine(RisingMessage(at, cam, string.Format(wrongFormat, PixelClicker.FormatNumber(lost), name), wrongColor, 1f));
+                break;
             }
         }
+        return result;
     }
 
     private IEnumerator RisingMessage(Vector3 start, Camera cam, string message, Color color, float sizeScale)
     {
-        GameObject go = new GameObject("Pad Message");
+        GameObject go = new GameObject("Hole Message");
         Track(go);
         TextMeshPro text = go.AddComponent<TextMeshPro>();
         text.text = message;

@@ -229,7 +229,7 @@ public partial class PixelShop
         {
             displayName = "Ultra Pad",
             tab = ShopTab.Minigames,
-            description = "A coloured pad appears on the ground. Get old pixels of that colour onto it for a chance at Ultra pixels - but wrong pixels cost you currency.",
+            description = "Four round holes open in the floor, one near each corner of the screen. The marked hole (a spinning pixel floats in its centre) wants that pixel: drop it in for its value and a chance at an Ultra pixel. Anything else that falls into a hole is lost. The marker jumps to another hole after every correct drop.",
             requirements = Needs(requiresRgbIndex),
             costs = AllSix(175000),
             rewardTiers = new PixelClicker.PixelTier[0],
