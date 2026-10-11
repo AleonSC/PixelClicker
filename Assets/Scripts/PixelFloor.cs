@@ -10,7 +10,7 @@ using static PixelNoise;
 /// the cube, else an object called Floor / Ground / Plane. Some styles move (scroll, pulse, disco tiles).
 /// Added by PixelClicker.Awake if missing.
 /// </summary>
-public class PixelFloor : MonoBehaviour, IPixelLookSource
+public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 {
     public enum FloorPattern
     {
@@ -56,7 +56,26 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         NeonMerge,       // neon grid whose lines fade out and back so the squares grow into bigger squares (animated)
         NeonWave,        // neon grid that ripples like cloth while its colours cycle (animated)
         NeonPrism,       // neon grid with a rainbow that sweeps across it (animated)
-        LaserHall        // teal glass-and-metal corridor floor with red security laser beams sweeping and blinking across it (animated)
+        LaserHall,       // teal glass-and-metal corridor floor with red security laser beams sweeping and blinking across it (animated)
+        BattleCrater,    // scorched, cracked ground with shaded craters, burnt halos and glowing embers
+        Galaxy,          // a slowly turning spiral galaxy (animated)
+        BlackHole,       // a black hole with a glowing accretion disk and lensed stars (animated)
+        Hyperspace,      // stars streaking outwards at light speed (animated)
+        DataStream,      // lanes of glowing data packets racing past (animated)
+        CircuitFlow,     // circuit traces with light pulses running along them (animated)
+        CyberHex,        // hex cells pulsing with a scanning band (animated)
+        Glitch,          // colour bars torn by digital glitches (animated)
+        Psychedelic,     // flowing rainbow rings (animated)
+        HypnoSpiral,     // a hypnotic rotating spiral (animated)
+        Plasma,          // classic sine plasma (animated)
+        OpArt,           // a warping bulging checkerboard (animated)
+        BloodBoards,     // dark wooden boards with blood pools
+        HauntedTiles,    // filthy cracked tiles under a flickering light (animated)
+        Graveyard,       // grave soil with dead grass, bones and drifting fog (animated)
+        WatchingEyes,    // darkness full of glowing eyes that blink (animated)
+        NoirSmoker,      // a noir profile silhouette smoking a cigarette (animated)
+        Skyline,         // a night city skyline reflected in water (animated)
+        GroundSky        // ground under a sky: meadow, desert, arctic, alien (cells 1-4 picks the scene)
     }
 
     [Serializable]
@@ -261,6 +280,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             case "Super Saiyan Blue Aura": saved = "Blue Aura"; break;
             case "Super Saiyan God Aura": saved = "God Aura"; break;
             case "Destruction Energy": saved = "Death Energy"; break;
+            case "Planet Namek": saved = "Alien Planet"; break;
+            case "Time Chamber": saved = "Chamber Tiles"; break;
+            case "Tournament of Power": saved = "Power Tournament"; break;
         }
         int index = styles.FindIndex(s => s.name == saved);
         SetStyle(index >= 0 ? index : 0);
@@ -689,7 +711,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
     /// <summary>Strength (0..1) of one grid line in the 'merge' variant: every second line fades out and back, then every fourth, so the squares grow and shrink.</summary>
     private static float MergeStrength(int k, float phase)
     {
-        float a = Mathf.SmoothStep(0.12f, 0.45f, phase), b = Mathf.SmoothStep(0.55f, 0.88f, phase);
+        float a = Sstep(0.12f, 0.45f, phase), b = Sstep(0.55f, 0.88f, phase);
         int m = ((k % 4) + 4) % 4;
         if (m == 0) return 1f;
         if (m == 2) return 1f - b;
@@ -1310,7 +1332,7 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 return c;
             }
         }
-        return s.colorA;
+        return ShadeExtra(s, u, v, x, y, n, cells);
     }
 
     // ------------------------------------------------------------------
@@ -1996,6 +2018,25 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 4;
         }
 
+        // Renames, removals and the reworked battle crater.
+        if (defaultsVersion < 5)
+        {
+            string[,] renames5 = { { "Planet Namek", "Alien Planet" }, { "Time Chamber", "Chamber Tiles" }, { "Tournament of Power", "Power Tournament" } };
+            for (int r = 0; r < renames5.GetLength(0); r++)
+            {
+                FloorStyle st = styles.Find(x => x != null && x.name == renames5[r, 0]);
+                if (st != null && !styles.Exists(x => x != null && x.name == renames5[r, 1])) st.name = renames5[r, 1];
+            }
+            styles.RemoveAll(x => x != null && (x.name == "Gravity Room" || x.pattern == FloorPattern.GravityRoom));
+            FloorStyle crater = styles.Find(x => x != null && x.name == "Battle Crater");
+            if (crater != null)
+            {
+                foreach (FloorStyle def in DefaultStyles())
+                    if (def.name == "Battle Crater") { int at = styles.IndexOf(crater); styles[at] = def; break; }
+            }
+            defaultsVersion = 5;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2120,23 +2161,18 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
 
 
         // ---- Dragon Ball Z themed ----
-        yield return S("Planet Namek", FloorPattern.PixelGrass, new Color(0.15f, 0.55f, 0.45f), new Color(0.3f, 0.72f, 0.55f),
+        yield return S("Alien Planet", FloorPattern.PixelGrass, new Color(0.15f, 0.55f, 0.45f), new Color(0.3f, 0.72f, 0.55f),
                        new Color(0.95f, 0.85f, 0.3f), 48, true, 4f, 1, 0.05f);
 
 
-        yield return S("Battle Crater", FloorPattern.Craters, new Color(0.62f, 0.5f, 0.36f), new Color(0.48f, 0.38f, 0.27f),
-                       new Color(0.2f, 0.15f, 0.1f), 256, false, 8f, 5, 0.1f);
+        yield return S("Battle Crater", FloorPattern.BattleCrater, new Color(0.5f, 0.4f, 0.3f), new Color(0.36f, 0.29f, 0.22f),
+                       new Color(0.12f, 0.09f, 0.07f), 256, false, 8f, 5, 0.1f, 0.1f);
 
-        FloorStyle gravity = S("Gravity Room", FloorPattern.GravityRoom, new Color(0.62f, 0.64f, 0.68f), new Color(0.25f, 0.26f, 0.3f),
-                               new Color(1f, 0.15f, 0.1f), 256, false, 10f, 4, 0.75f, 0.35f);
-        gravity.metallic = 0.7f; gravity.pulseSpeed = 0.6f; gravity.pulseAmount = 0.5f;
-        yield return gravity;
-
-        yield return S("Time Chamber", FloorPattern.Checker, new Color(0.98f, 0.98f, 0.97f), new Color(0.93f, 0.93f, 0.92f),
+        yield return S("Chamber Tiles", FloorPattern.Checker, new Color(0.98f, 0.98f, 0.97f), new Color(0.93f, 0.93f, 0.92f),
                        Color.white, 64, false, 6f, 2, 0.9f);
 
         // ---- Dragon Ball Super themed ----
-        FloorStyle top = S("Tournament of Power", FloorPattern.PowerArena, new Color(0.62f, 0.66f, 0.74f), new Color(0.42f, 0.45f, 0.55f),
+        FloorStyle top = S("Power Tournament", FloorPattern.PowerArena, new Color(0.62f, 0.66f, 0.74f), new Color(0.42f, 0.45f, 0.55f),
                            new Color(0.4f, 0.85f, 1f), 256, false, 6f, 6, 0.45f, 0.45f);
         top.pulseSpeed = 0.4f; top.pulseAmount = 0.4f;
         yield return top;
@@ -2201,5 +2237,46 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                              new Color(0.55f, 0.35f, 0.18f), 256, true, 8f, 1, 0.3f);
         fight.animateFps = 20f; fight.fitToView = true;
         yield return fight;
+
+        foreach (FloorStyle extra in ExtraStyles()) yield return extra;
+    }
+
+    /// <summary>The second batch: space, tech, trippy, horror, a noir smoker, a skyline and ground-and-sky scenes (patterns in PixelFloorScenes.cs).</summary>
+    private static IEnumerable<FloorStyle> ExtraStyles()
+    {
+        FloorStyle St(string name, FloorPattern p, Color a, Color b, Color c, int res, float tile, int cells, float fps, bool fit, float glow = 0f, float smooth = 0.4f)
+        {
+            FloorStyle f = S(name, p, a, b, c, res, false, tile, cells, smooth, glow);
+            f.animateFps = fps; f.fitToView = fit;
+            return f;
+        }
+        // ---- Space ----
+        yield return St("Spiral Galaxy", FloorPattern.Galaxy, new Color(0.01f, 0.01f, 0.04f), new Color(0.35f, 0.5f, 1f), new Color(1f, 0.8f, 0.55f), 192, 8f, 1, 12f, true, 0.8f);
+        yield return St("Black Hole", FloorPattern.BlackHole, new Color(0.005f, 0.005f, 0.02f), new Color(1f, 0.45f, 0.1f), new Color(1f, 0.9f, 0.7f), 256, 8f, 1, 12f, true, 1f);
+        yield return St("Hyperspace", FloorPattern.Hyperspace, new Color(0f, 0f, 0.03f), new Color(0.5f, 0.7f, 1f), new Color(0.9f, 0.5f, 1f), 192, 8f, 6, 24f, true, 1f);
+        yield return St("Moon Surface", FloorPattern.Craters, new Color(0.55f, 0.55f, 0.57f), new Color(0.4f, 0.4f, 0.43f), new Color(0.15f, 0.15f, 0.17f), 256, 8f, 6, 0f, false, 0f, 0.1f);
+        yield return St("Red Planet", FloorPattern.Craters, new Color(0.7f, 0.35f, 0.2f), new Color(0.55f, 0.26f, 0.15f), new Color(0.25f, 0.1f, 0.06f), 256, 8f, 5, 0f, false, 0f, 0.1f);
+        // ---- Digital / tech ----
+        yield return St("Data Streams", FloorPattern.DataStream, new Color(0.01f, 0.02f, 0.05f), new Color(0.1f, 0.8f, 1f), new Color(1f, 0.3f, 0.7f), 192, 8f, 16, 20f, true, 1f);
+        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 256, 6f, 12, 20f, false, 0.8f);
+        yield return St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 256, 6f, 8, 16f, false, 0.9f);
+        yield return St("Glitch", FloorPattern.Glitch, new Color(0.03f, 0.03f, 0.05f), new Color(0.9f, 0.2f, 0.6f), new Color(0.2f, 1f, 0.9f), 192, 8f, 1, 14f, true, 0.4f);
+        // ---- Trippy ----
+        yield return St("Psychedelic", FloorPattern.Psychedelic, new Color(0.3f, 0.1f, 0.5f), Color.white, Color.white, 192, 8f, 1, 20f, true, 0.6f);
+        yield return St("Hypno Spiral", FloorPattern.HypnoSpiral, new Color(0.05f, 0f, 0.15f), new Color(1f, 0.2f, 0.8f), Color.white, 192, 8f, 8, 20f, true, 0.4f);
+        yield return St("Plasma", FloorPattern.Plasma, new Color(0.1f, 0f, 0.4f), new Color(1f, 0.2f, 0.5f), new Color(1f, 0.9f, 0.2f), 128, 8f, 1, 20f, true, 0.7f);
+        yield return St("Op Art", FloorPattern.OpArt, Color.black, Color.white, Color.gray, 192, 8f, 6, 20f, true, 0f);
+        // ---- Horror ----
+        yield return St("Bloody Boards", FloorPattern.BloodBoards, new Color(0.12f, 0.07f, 0.05f), new Color(0.25f, 0.15f, 0.1f), new Color(0.55f, 0.03f, 0.04f), 256, 6f, 7, 0f, false, 0f, 0.35f);
+        yield return St("Haunted Tiles", FloorPattern.HauntedTiles, new Color(0.1f, 0.1f, 0.11f), new Color(0.55f, 0.55f, 0.52f), new Color(0.35f, 0.05f, 0.04f), 128, 6f, 6, 12f, false, 0f, 0.25f);
+        yield return St("Graveyard", FloorPattern.Graveyard, new Color(0.1f, 0.08f, 0.06f), new Color(0.2f, 0.17f, 0.12f), new Color(0.55f, 0.65f, 0.7f), 128, 8f, 1, 8f, false, 0f, 0.1f);
+        yield return St("Watching Eyes", FloorPattern.WatchingEyes, new Color(0.02f, 0.02f, 0.03f), Color.black, new Color(1f, 0.1f, 0.05f), 192, 8f, 7, 20f, false, 1.2f);
+        // ---- Scenes ----
+        yield return St("Noir Smoke", FloorPattern.NoirSmoker, new Color(0.05f, 0.12f, 0.15f), new Color(0.93f, 0.74f, 0.62f), new Color(0.85f, 0.1f, 0.18f), 256, 8f, 1, 14f, true, 0f);
+        yield return St("City Skyline", FloorPattern.Skyline, new Color(0.02f, 0.03f, 0.12f), new Color(0.55f, 0.25f, 0.45f), new Color(0.06f, 0.05f, 0.12f), 256, 8f, 1, 8f, true, 0.3f);
+        yield return St("Meadow Horizon", FloorPattern.GroundSky, new Color(0.25f, 0.5f, 0.9f), new Color(0.75f, 0.88f, 0.98f), new Color(0.3f, 0.62f, 0.2f), 256, 8f, 1, 0f, true, 0f, 0.15f);
+        yield return St("Desert Dusk", FloorPattern.GroundSky, new Color(0.25f, 0.1f, 0.4f), new Color(1f, 0.6f, 0.3f), new Color(0.8f, 0.55f, 0.3f), 256, 8f, 2, 0f, true, 0f, 0.1f);
+        yield return St("Arctic Dawn", FloorPattern.GroundSky, new Color(0.05f, 0.1f, 0.3f), new Color(0.7f, 0.6f, 0.7f), new Color(0.9f, 0.95f, 1f), 256, 8f, 3, 6f, true, 0.1f, 0.3f);
+        yield return St("Twin Moons", FloorPattern.GroundSky, new Color(0.05f, 0.02f, 0.2f), new Color(0.5f, 0.2f, 0.45f), new Color(0.05f, 0.2f, 0.22f), 256, 8f, 4, 6f, true, 0.4f, 0.3f);
     }
 }
