@@ -423,3 +423,4 @@
 [2026-10-11 09:16 UTC] All shop tutorial boxes now share one minimum height so the Got it button stays in the same spot.
 [2026-10-11 09:19 UTC] The pinned (simplified) Inventory's consumable rows now show the item's name and 'click to use' when hovered.
 [2026-10-11 09:19 UTC] The Inventory pin button's hover text is now just 'Pin this tab' (and 'Unpin this tab' while pinned).
+[2026-10-11 09:22 UTC] Cubie now stands at the bottom right and narrates the shop tutorial, and every tutorial box is sized to the longest step so the Got it button never moves.

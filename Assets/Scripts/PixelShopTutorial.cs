@@ -86,17 +86,28 @@ public class PixelShopTutorial : MonoBehaviour
         ShowStep(0);
     }
 
+    /// <summary>One height for every box: tall enough for the longest step (a rough characters-per-line estimate), never under boxHeight, so Got it never moves.</summary>
+    private float UniformHeight()
+    {
+        int longest = 0;
+        foreach (Step st in steps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
+        int lines = Mathf.CeilToInt(longest / 28f) + 1;
+        return Mathf.Max(boxHeight, 84f + lines * 30f);
+    }
+
     private void ShowStep(int index)
     {
         if (index >= steps.Count || shop == null)
         {
             running = false;
+            PixelGuideVendor.EndNarration();
             PixelHints.SetTipSeen(SeenId);
             return;
         }
 
+        if (index == 0) PixelGuideVendor.BeginNarration();   // Cubie narrates his shop from the bottom right
         Step step = steps[index];
         shop.TutorialOpen(step.tab, step.subTab);
-        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: boxHeight);
+        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: UniformHeight());
     }
 }

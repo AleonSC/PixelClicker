@@ -115,8 +115,64 @@ public class PixelGuideVendor : MonoBehaviour
         instance.calmTimer = 0f;
     }
 
+    /// <summary>The shop tutorial asks Cubie to stand at the bottom right and narrate it (no speech box: the tutorial's own Got it boxes do the talking).</summary>
+    public static void BeginNarration() { if (instance != null) instance.StartNarration(); }
+
+    /// <summary>The tutorial is over: Cubie slides away again.</summary>
+    public static void EndNarration() { if (instance != null) instance.StopNarration(); }
+
+    private bool narrating;
+    private Coroutine narrateRoutine;
+    private const float NarratorScale = 0.62f;
+
+    private void StartNarration()
+    {
+        if (disableGuide || visiting || narrating) return;
+        narrating = true;
+        narrateRoutine = StartCoroutine(NarrateRoutine());
+    }
+
+    private void StopNarration()
+    {
+        narrating = false;
+    }
+
+    private IEnumerator NarrateRoutine()
+    {
+        BuildUI();
+        characterRect.localScale = Vector3.one * NarratorScale;
+        float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float w = characterRect.sizeDelta.x * NarratorScale;
+        float restX = -(w * 0.5f + 30f);
+        float hiddenX = w * 0.5f + 40f;
+        float y = barH + 16f;
+        for (float t = 0f; t < slideSeconds && narrating; t += Time.unscaledDeltaTime)
+        {
+            float k = Mathf.SmoothStep(0f, 1f, t / slideSeconds);
+            characterRect.anchoredPosition = new Vector2(Mathf.Lerp(hiddenX, restX, k), y + Mathf.Abs(Mathf.Sin(t * 9f)) * 8f);
+            Glance();
+            yield return null;
+        }
+        while (narrating)
+        {
+            characterRect.anchoredPosition = new Vector2(restX, y + Mathf.Sin(Time.unscaledTime * 3f) * 4f);
+            Glance();
+            yield return null;
+        }
+        float from = characterRect != null ? characterRect.anchoredPosition.x : restX;
+        for (float t = 0f; t < slideSeconds * 0.7f && characterRect != null; t += Time.unscaledDeltaTime)
+        {
+            float k = Mathf.SmoothStep(0f, 1f, t / (slideSeconds * 0.7f));
+            characterRect.anchoredPosition = new Vector2(Mathf.Lerp(from, hiddenX, k), y);
+            yield return null;
+        }
+        if (!visiting && canvasRoot != null) Destroy(canvasRoot);
+        narrateRoutine = null;
+    }
+
     /// <summary>True while he is on screen.</summary>
     public static bool Visiting => instance != null && instance.visiting;
+
 
     private PixelStats stats;
     private bool replaying; // Settings > Replay tutorial: both visits again, no second gift
