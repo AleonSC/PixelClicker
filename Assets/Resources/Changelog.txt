@@ -452,3 +452,4 @@
 [2026-10-11 12:09 UTC] The on-screen spawner's open drop-down lists now close when it hides (pause menu or any window), instead of staying on screen.
 [2026-10-11 12:12 UTC] Added a search box to the Achievements tab of the Log, between the total bar and the first heading; matches show expanded.
 [2026-10-11 12:15 UTC] Inventory Consumables tab: the category drop-down is half width and has a search box beside it that finds consumables you hold across every category.
+[2026-10-11 12:18 UTC] Pause menu: 'Paused' now sits on the left with a search box on the right that lists matching menu screens and settings (a settings result opens Settings filtered to the matches); the Crafting materials list rows now use the shop's rounded box style.

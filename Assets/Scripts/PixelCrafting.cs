@@ -1398,6 +1398,7 @@ public class PixelCrafting : MonoBehaviour
         GameObject go = new GameObject("Item", typeof(RectTransform), typeof(Image), typeof(PixelCraftDrag));
         go.transform.SetParent(listContent, false);
         go.GetComponent<Image>().color = cellColor;
+        PixelUIKit.StyleBox(go.GetComponent<Image>());   // the same rounded, softly shaded boxes as the shop's rows
         cell.group = go.AddComponent<CanvasGroup>();
         cell.rect = go.GetComponent<RectTransform>();
         cell.rect.anchorMin = new Vector2(0f, 1f);

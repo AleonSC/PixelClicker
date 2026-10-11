@@ -710,7 +710,7 @@ public class PixelPauseMenu : MonoBehaviour
                 else menuRoot.SetActive(false);
             }
         }
-        if (paused) ShowView(mainPanel);
+        if (paused) { ClearMenuSearch(); ShowView(mainPanel); }
     }
 
     /// <summary>Shows a pause-menu screen with the grow animation, or hides it at once (screens swap instantly, the new one pops in).</summary>
@@ -881,12 +881,23 @@ public class PixelPauseMenu : MonoBehaviour
 
         TMP_Text title = MakeText(panel.transform, "Title", menuTitle, titleFontSize, FontStyles.Bold);
         PixelUIKit.Caps(title);
+        title.alignment = TextAlignmentOptions.MidlineLeft;   // "Paused" on the left, the search box on the right
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
+        tr.anchorMax = new Vector2(0.5f, 1f);
+        tr.pivot = new Vector2(0f, 1f);
         tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
-        tr.anchoredPosition = new Vector2(0f, -30f);
+        tr.anchoredPosition = new Vector2(40f, -30f);
+
+        float searchWidth = (mainPanelWidth - 80f) * 0.5f;
+        menuSearchField = PixelUIKit.CreateInputField(font, panel.transform, "Menu Search", new Vector2(searchWidth, titleFontSize * 1.2f),
+                                                      tickBoxColor, textColor, rowFontSize * 0.85f, menuSearchPlaceholder);
+        RectTransform msr = menuSearchField.GetComponent<RectTransform>();
+        msr.anchorMin = msr.anchorMax = msr.pivot = new Vector2(1f, 1f);
+        msr.sizeDelta = new Vector2(searchWidth, titleFontSize * 1.2f);
+        msr.anchoredPosition = new Vector2(-40f, -30f - titleFontSize * 0.2f);
+        menuSearchField.onValueChanged.AddListener(OnMenuSearchChanged);
+        menuSearchTop = 30f + titleFontSize * 1.6f + 20f;
 
         float y = 30f + titleFontSize * 1.6f + 20f;
         List<MenuEntry> entries = new List<MenuEntry>();
@@ -915,7 +926,11 @@ public class PixelPauseMenu : MonoBehaviour
         // Quit at the bottom, alone
         if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = () => ShowView(quitPanel), fullRow = true });
 
+        int buttonsBefore = panel.transform.childCount;
         LayoutMainButtons(panel.transform, entries, y, panelRect);
+        mainButtons.Clear();
+        for (int c = buttonsBefore; c < panel.transform.childCount; c++) mainButtons.Add(panel.transform.GetChild(c).gameObject);
+        mainEntries = entries;
 
         menuRoot.SetActive(false);
     }
@@ -1659,6 +1674,94 @@ public class PixelPauseMenu : MonoBehaviour
         PixelUIKit.UpdateScrollView(changelogScroll, changelogBar, height, changelogFitHeight);
     }
 
+    // ------------------------------------------------------------------
+    // Menu search (top right of the pause menu): lists the menu's screens and the matching settings
+    // ------------------------------------------------------------------
+
+    [Tooltip("Placeholder of the search box at the top right of the pause menu.")]
+    [SerializeField] private string menuSearchPlaceholder = "Search menu and settings...";
+
+    private TMP_InputField menuSearchField;
+    private float menuSearchTop;
+    private readonly List<GameObject> mainButtons = new List<GameObject>();
+    private readonly List<GameObject> searchResults = new List<GameObject>();
+    private List<MenuEntry> mainEntries;
+    private string menuSearch = "";
+    private string settingsFilter = "";
+
+    private static string RowText(SettingsItem item)
+    {
+        TMP_Text label = item.rect != null ? item.rect.GetComponentInChildren<TMP_Text>(true) : null;
+        return label != null ? label.text : "";
+    }
+
+    private void OnMenuSearchChanged(string text)
+    {
+        menuSearch = (text ?? "").Trim().ToLowerInvariant();
+        bool searching = menuSearch.Length > 0;
+        foreach (GameObject b in mainButtons) if (b != null) b.SetActive(!searching);
+        foreach (GameObject r in searchResults) if (r != null) Destroy(r);
+        searchResults.Clear();
+        if (!searching || mainPanel == null) return;
+
+        float y = menuSearchTop, height = Mathf.Min(menuButtonSize.y, 64f);
+        void AddResult(string label, Color color, UnityEngine.Events.UnityAction action)
+        {
+            Button b = MakeButton(mainPanel.transform, label + " Result", label, new Vector2(mainPanelWidth - 80f, height), color, menuButtonFontSize * 0.85f);
+            RectTransform rt = b.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -y);
+            b.onClick.AddListener(action);
+            searchResults.Add(b.gameObject);
+            y += height + menuButtonSpacing;
+        }
+
+        int found = 0;
+        if (mainEntries != null)
+            foreach (MenuEntry e in mainEntries)
+                if (e.label.ToLowerInvariant().Contains(menuSearch)) { AddResult(e.label, e.color, new UnityEngine.Events.UnityAction(e.action)); found++; }
+
+        // Settings that match: each line opens the Settings screen filtered to the matches.
+        int shownSettings = 0, totalSettings = 0;
+        foreach (SettingsItem item in settingsItems)
+        {
+            if (item.isHeader || !item.wasActive) continue;
+            string text = RowText(item);
+            if (!text.ToLowerInvariant().Contains(menuSearch)) continue;
+            totalSettings++;
+            if (shownSettings >= 6) continue;
+            shownSettings++;
+            AddResult(settingsText + " > " + text, tickBoxColor, () => OpenFilteredSettings());
+        }
+        if (totalSettings > shownSettings) AddResult("+ " + (totalSettings - shownSettings) + " more in " + settingsText, tickBoxColor, () => OpenFilteredSettings());
+        found += totalSettings;
+        if (found == 0)
+        {
+            TMP_Text none = MakeText(mainPanel.transform, "No Results", "NOTHING FOUND", rowFontSize, FontStyles.Normal);
+            none.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
+            RectTransform nr = none.rectTransform;
+            nr.anchorMin = nr.anchorMax = nr.pivot = new Vector2(0.5f, 1f);
+            nr.sizeDelta = new Vector2(mainPanelWidth - 80f, rowHeight);
+            nr.anchoredPosition = new Vector2(0f, -y);
+            searchResults.Add(none.gameObject);
+        }
+    }
+
+    private void OpenFilteredSettings()
+    {
+        settingsFilter = menuSearch;
+        ShowView(settingsPanel);
+        LayoutSettings();
+        if (settingsScroll != null && settingsScroll.content != null) settingsScroll.content.anchoredPosition = Vector2.zero;
+    }
+
+    private void ClearMenuSearch()
+    {
+        settingsFilter = "";
+        if (menuSearchField != null && menuSearchField.text.Length > 0) menuSearchField.text = "";   // notifies: the main buttons come back
+        else if (menuSearch.Length > 0) OnMenuSearchChanged("");
+    }
+
     private void BuildSettingsPanel()
     {
         settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float top);
@@ -1840,13 +1943,20 @@ public class PixelPauseMenu : MonoBehaviour
     private void LayoutSettings()
     {
         float removed = 0f;
+        bool filtering = settingsFilter.Length > 0;
+        HashSet<string> sectionsWithMatch = new HashSet<string>();
+        if (filtering)
+            foreach (SettingsItem it in settingsItems)
+                if (!it.isHeader && it.wasActive && it.section != null && RowText(it).ToLowerInvariant().Contains(settingsFilter)) sectionsWithMatch.Add(it.section);
         foreach (SettingsItem item in settingsItems)
         {
             bool shown = item.isHeader || item.section == null || expandedSettingsSections.Contains(item.section);
+            if (filtering)   // a search shows just the matching rows (and their headings), whatever is folded
+                shown = item.isHeader ? sectionsWithMatch.Contains(item.section) : RowText(item).ToLowerInvariant().Contains(settingsFilter);
             if (item.isHeader)
             {
                 TMP_Text label = item.rect.GetComponentInChildren<TMP_Text>();
-                if (label != null) label.text = (expandedSettingsSections.Contains(item.section) ? "-  " : "+  ") + item.section;
+                if (label != null) label.text = (filtering || expandedSettingsSections.Contains(item.section) ? "-  " : "+  ") + item.section;
             }
             if (!shown) { item.rect.gameObject.SetActive(false); removed += item.extent; continue; }
             if (item.wasActive && !item.rect.gameObject.activeSelf) item.rect.gameObject.SetActive(true);
