@@ -184,6 +184,9 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Height of that drop-down.")]
     [SerializeField] private float categoryDropdownHeight = 52f;
 
+    [Tooltip("Placeholder of the search box beside the category drop-down on the Consumables tab.")]
+    [SerializeField] private string consumableSearchPlaceholder = "Search...";
+
     [Tooltip("Shown on the Devices sub-tab when you own no devices.")]
     [SerializeField] private string noDevicesText = "No devices yet.";
 
@@ -1309,7 +1312,7 @@ public class PixelUI : MonoBehaviour
             {
                 if (categoryDropdown != null)
                 {
-                    if (!categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(true);
+                    SetCategoryRowActive(true);
                     if (categoryDropdown.value != consumableSubTab) categoryDropdown.SetValueWithoutNotify(consumableSubTab);
                 }
                 y = RefreshConsumables(0f);
@@ -1346,7 +1349,7 @@ public class PixelUI : MonoBehaviour
         if (titleLabel != null && titleLabel.gameObject.activeSelf == compact) titleLabel.gameObject.SetActive(!compact);
         if (closeButtonObject != null && closeButtonObject.activeSelf == compact) closeButtonObject.SetActive(!compact);
         foreach (GameObject tab in tabObjects) if (tab != null && tab.activeSelf == compact) tab.SetActive(!compact);
-        if (compact && categoryDropdown != null && categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(false);
+        if (compact) SetCategoryRowActive(false);
         if (compactSwitch != null)
         {
             if (compactSwitch.gameObject.activeSelf != compact) compactSwitch.gameObject.SetActive(compact);
@@ -1488,6 +1491,37 @@ public class PixelUI : MonoBehaviour
             Refresh();
         });
         categoryDropdown.gameObject.SetActive(false);
+
+        // Half-width drop-down on the left, a search box on the right (searches every kind of consumable you hold).
+        float gapBetween = 8f, half = (innerWidth - gapBetween) * 0.5f;
+        dr.anchorMin = dr.anchorMax = new Vector2(0.5f, 1f);
+        dr.pivot = new Vector2(0f, 1f);
+        dr.sizeDelta = new Vector2(half, categoryDropdownHeight);
+        dr.anchoredPosition = new Vector2(-innerWidth * 0.5f, -(tabTop + subTabHeight + subTabGap));
+        consumableSearchField = PixelUIKit.CreateInputField(font, boxObject.transform, "Consumable Search", new Vector2(half, categoryDropdownHeight),
+                                                            subTabInactiveColor, subTabTextColor, subTabFontSize > 0f ? subTabFontSize * 0.9f : 26f, consumableSearchPlaceholder);
+        RectTransform csr = consumableSearchField.GetComponent<RectTransform>();
+        csr.anchorMin = csr.anchorMax = new Vector2(0.5f, 1f);
+        csr.pivot = new Vector2(1f, 1f);
+        csr.sizeDelta = new Vector2(half, categoryDropdownHeight);
+        csr.anchoredPosition = new Vector2(innerWidth * 0.5f, -(tabTop + subTabHeight + subTabGap));
+        consumableSearchField.onValueChanged.AddListener(text =>
+        {
+            consumableSearch = (text ?? "").Trim().ToLowerInvariant();
+            if (listContent != null) listContent.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
+        consumableSearchField.gameObject.SetActive(false);
+    }
+
+    private TMP_InputField consumableSearchField;
+    private string consumableSearch = "";
+
+    /// <summary>Shows / hides the category drop-down and the search box beside it together.</summary>
+    private void SetCategoryRowActive(bool on)
+    {
+        if (categoryDropdown != null && categoryDropdown.gameObject.activeSelf != on) categoryDropdown.gameObject.SetActive(on);
+        if (consumableSearchField != null && consumableSearchField.gameObject.activeSelf != on) consumableSearchField.gameObject.SetActive(on);
     }
 
     /// <summary>The little button at the window's top left that switches the simplified (pinned) Inventory on and off.</summary>
@@ -1761,6 +1795,7 @@ public class PixelUI : MonoBehaviour
     /// <summary>Does this item belong to the chosen Consumables category (Potions / Devices / Seeds)?</summary>
     private bool InConsumableCategory(int item, bool onDevices, bool onSeeds)
     {
+        if (consumableSearch.Length > 0) return consumables.ItemName(item).ToLowerInvariant().Contains(consumableSearch);   // searching: every kind, by name
         return consumables.CategoryOf(item) == consumableSubTab;   // 0 potions, 1 devices, 2 seeds, 3 supplies
     }
 
@@ -1768,7 +1803,7 @@ public class PixelUI : MonoBehaviour
     private void HideConsumableWidgets(bool keepRows = false)
     {
         if (activeLabel != null) activeLabel.gameObject.SetActive(false);
-        if (categoryDropdown != null && categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(false);
+        SetCategoryRowActive(false);
         if (noConsumablesLabel != null) noConsumablesLabel.gameObject.SetActive(false);
         if (hintLabel != null) hintLabel.gameObject.SetActive(false);
         if (potionRowObjects != null && !keepRows)

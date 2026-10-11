@@ -451,3 +451,4 @@
 [2026-10-11 12:08 UTC] Fixed Circuit Flow lag: the spark glow is only worked out in cells next to a spark, the background noise is cached, and the floor now redraws a smaller texture 15 times a second.
 [2026-10-11 12:09 UTC] The on-screen spawner's open drop-down lists now close when it hides (pause menu or any window), instead of staying on screen.
 [2026-10-11 12:12 UTC] Added a search box to the Achievements tab of the Log, between the total bar and the first heading; matches show expanded.
+[2026-10-11 12:15 UTC] Inventory Consumables tab: the category drop-down is half width and has a search box beside it that finds consumables you hold across every category.
