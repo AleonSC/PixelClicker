@@ -139,13 +139,23 @@ public partial class PixelShop
         RectTransform hr = help.GetComponent<RectTransform>();
         hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 1f);
         hr.anchoredPosition = new Vector2(-panelPadding - 90f, -panelPadding * 0.5f);
+        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(help.transform, false);
+        Image fillImage = fillGo.GetComponent<Image>();
+        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
+        fillImage.raycastTarget = false;
+        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = new Vector2(0f, 1f);
+        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        fillRect.SetSiblingIndex(1);   // above the button's face, under its label
         PixelHoldButton hold = help.gameObject.AddComponent<PixelHoldButton>();
-        hold.holdSeconds = helpHoldSeconds;
-        hold.onComplete = () =>
+        hold.Setup(fillRect, helpHoldSeconds, () =>
         {
+            hold.ResetProgress();
             PixelShopTutorial tut = PixelFind.First<PixelShopTutorial>();
             if (tut != null) tut.Replay();
-        };
+        });
         PixelHoverTip helpTip = help.gameObject.AddComponent<PixelHoverTip>();
         System.Func<string> helpText = () => "Hold to replay the shop tutorial";
         helpTip.onEnter = () => hoverTip = helpText;
