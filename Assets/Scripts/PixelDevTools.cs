@@ -109,6 +109,12 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the tick box that removes the limit on old pixels.")]
     [SerializeField] private string noLimitToggleText = "Disable old pixel limit";
 
+    [Tooltip("Label of the tick box that makes the Farmer bring a Dragon Seed on every visit.")]
+    [SerializeField] private string farmerSeedsToggleText = "Farmer always has dragon seeds";
+
+    private bool farmerAlwaysSeeds;
+    private Toggle farmerSeedsToggle;
+
     [Tooltip("Label of the god-pixel-mode tick box.")]
     [SerializeField] private string godModeLabel = "God Pixel Mode";
 
@@ -351,6 +357,7 @@ public class PixelDevTools : MonoBehaviour
         if (selectorToggle != null) selectorToggle.SetIsOnWithoutNotify(spawnSelectorEnabled);
         if (noDespawnToggle != null) noDespawnToggle.SetIsOnWithoutNotify(disableDespawn);
         if (noLimitToggle != null) noLimitToggle.SetIsOnWithoutNotify(disableOldPixelLimit);
+        if (farmerSeedsToggle != null) farmerSeedsToggle.SetIsOnWithoutNotify(farmerAlwaysSeeds);
         if (godToggle != null) godToggle.SetIsOnWithoutNotify(godMode);
         if (amountField != null) amountField.SetTextWithoutNotify(defaultAmount);
         if (pixelDropdown != null && pixelDropdown.options.Count > 0)
@@ -372,6 +379,8 @@ public class PixelDevTools : MonoBehaviour
         spawnSelectorEnabled = GetBool("Selector", spawnSelectorEnabled);
         disableDespawn = GetBool("NoDespawn", disableDespawn);
         disableOldPixelLimit = GetBool("NoLimit", disableOldPixelLimit);
+        farmerAlwaysSeeds = GetBool("FarmerSeeds", farmerAlwaysSeeds);
+        PixelFarmerMinigame.DevAlwaysDragonSeeds = farmerAlwaysSeeds;
         godMode = GetBool("God", godMode);
         clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
         if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
@@ -430,6 +439,7 @@ public class PixelDevTools : MonoBehaviour
             instance = null;
             PixelClicker.InfiniteResources = false;
             PixelClicker.DevClickCount = 1;
+            PixelFarmerMinigame.DevAlwaysDragonSeeds = false;
         }
         if (canvasRoot != null) Destroy(canvasRoot);
         if (selectorRoot != null) Destroy(selectorRoot);
@@ -818,6 +828,15 @@ public class PixelDevTools : MonoBehaviour
             disableOldPixelLimit = on;
             PixelClicker.DevNoOldPixelLimit = on;
             SetBool("NoLimit", on);
+        });
+        y += rowHeight + 24f;
+
+        // Row: tick box so the Farmer always brings a Dragon Seed
+        farmerSeedsToggle = BuildToggleRow(content, farmerSeedsToggleText, y, inner, farmerAlwaysSeeds, on =>
+        {
+            farmerAlwaysSeeds = on;
+            PixelFarmerMinigame.DevAlwaysDragonSeeds = on;
+            SetBool("FarmerSeeds", on);
         });
         y += rowHeight + 24f;
 

@@ -168,6 +168,11 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>How many of this ware he has this visit (default: random between <see cref="StockMin"/> and <see cref="StockMax"/>).</summary>
     /// <summary>Lets a visitor change this visit's wares after the random selection (e.g. the Farmer's rare Dragon Seed). Called before the stock is rolled.</summary>
     protected virtual void ModifyWares(List<int> wares) { }
+
+    /// <summary>Set by a subclass (in <see cref="ModifyWares"/>) to give the visitor a second speech box that shows after you accept, before the wares window.</summary>
+    protected string AsideText;
+    private RectTransform asidePanel;
+    private bool asideDone;
     /// <summary>A ware shown glowing yellow in the list (something important).</summary>
     protected virtual bool Highlighted(int item) => false;
     protected virtual int StockFor(int item) => Random.Range(Mathf.Max(1, StockMin), Mathf.Max(StockMin, StockMax) + 1);
@@ -246,6 +251,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         visiting = true;
         anyVisiting = true;
         decision = 0;
+        asideDone = false;
+        AsideText = null;
         waresDone = false;
         Report(MinigameEvent.Spawned);
         PixelHints.Announce(Pick(arrivedLog, DefaultArrivedLog));
@@ -284,6 +291,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
         while (decision == 0) { Bob(restX, barH); yield return null; }
         PixelPop.Hide(greetingPanel.gameObject);
+
+        if (decision == 1 && asidePanel != null)
+        {
+            asidePanel.gameObject.SetActive(true);
+            while (!asideDone && decision == 1) { Bob(restX, barH); yield return null; }
+            PixelPop.Hide(asidePanel.gameObject);
+            if (decision == 0) decision = 2;
+        }
 
         if (decision == 1)
         {
@@ -635,6 +650,26 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         Corner(done.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 20f));
         done.onClick.AddListener(() => waresDone = true);
         waresPanel.gameObject.SetActive(false);
+
+        // --- A second speech box (only when the subclass set AsideText for this visit).
+        asidePanel = null;
+        if (!string.IsNullOrEmpty(AsideText))
+        {
+            asidePanel = Panel("Aside", new Vector2(720f, 400f), visitorRect.sizeDelta.x + 90f);
+            TMP_Text at = PixelUIKit.CreateText(Font, asidePanel, "Name", Pick(visitorName, DefaultName), 54f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
+            PixelUIKit.Caps(at);
+            Anchor(at.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -78f), new Vector2(-20f, -16f));
+            TMP_Text am = PixelUIKit.CreateText(Font, asidePanel, "Message", AsideText, 34f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
+            am.enableAutoSizing = true;
+            am.fontSizeMax = 34f;
+            am.fontSizeMin = 18f;
+            Anchor(am.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
+            Button next = PixelUIKit.CreateButton(Font, asidePanel, "Next", "Next", new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
+            PixelUIKit.Caps(next);
+            Corner(next.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 36f));
+            next.onClick.AddListener(() => asideDone = true);
+            asidePanel.gameObject.SetActive(false);
+        }
     }
 
     private string TradeGetText(Trade t) =>
