@@ -72,6 +72,7 @@ public class PixelEggHatch : MonoBehaviour
     private Camera studioCam;
     private RenderTexture rt;
     private Material shellMat;
+    private Transform shellPart, lidMesh, wholePart;
     private Transform eggRoot, lidPart, petPivot, petModel;
     private readonly List<Transform> cracks = new List<Transform>();
     private readonly List<ChipBody> chips = new List<ChipBody>();
@@ -145,9 +146,11 @@ public class PixelEggHatch : MonoBehaviour
         float reach = Mathf.Min(size.x / 200f * 0.6f, 6.5f);
         List<Vector2> spots = new List<Vector2>();
         float sideSign = Random.value < 0.5f ? -1f : 1f;
+        float minX = S * 0.5f + P * 0.5f + 0.3f;   // never land on the shell
+        reach = Mathf.Max(reach, minX + 0.6f);
         for (int i = 0; i < hops; i++)
         {
-            spots.Add(new Vector2(centre.x + sideSign * Random.Range(0.35f, 1f) * reach, groundY));
+            spots.Add(new Vector2(centre.x + sideSign * Mathf.Lerp(minX, reach, Random.value), groundY));
             sideSign = -sideSign;
         }
 
@@ -200,6 +203,9 @@ public class PixelEggHatch : MonoBehaviour
                     flashAmt = 1f;
                     PixelAudio.Play("achievement");
                     // The lid flies off, shell chips burst out, the pet is revealed.
+                    wholePart.gameObject.SetActive(false);
+                    shellPart.gameObject.SetActive(true);
+                    lidMesh.gameObject.SetActive(true);
                     lidPart.SetParent(studioRoot.transform, true);
                     lidVel = new Vector3(Random.Range(-1.5f, 1.5f), 9f, -1f);
                     lidSpin = new Vector3(Random.Range(-200f, 200f), Random.Range(-120f, 120f), Random.Range(-260f, 260f));
@@ -258,6 +264,16 @@ public class PixelEggHatch : MonoBehaviour
                 }
                 if (petModel != null) petModel.localScale = modelScale;
                 ApplyPet(petPos, petScale, petEuler);
+            }
+            if (popped && shellPart != null && t >= tHop)
+            {
+                float crumble = Mathf.Clamp01((t - tHop) / 0.35f);   // the empty shell shrinks away as the pet hops out
+                shellPart.localScale = new Vector3(S, S * 0.55f, S) * (1f - Smooth(crumble));
+                if (crumble >= 1f && shellPart.gameObject.activeSelf)
+                {
+                    shellPart.gameObject.SetActive(false);
+                    foreach (Transform c in cracks) if (c != null && c.parent == eggRoot) c.gameObject.SetActive(false);   // the cracks went with it
+                }
             }
             AnimateDebris(dt, ref lidVel, lidSpin, popped);
             bump = Mathf.Max(0f, bump - dt * 3.5f);
@@ -520,10 +536,13 @@ public class PixelEggHatch : MonoBehaviour
         Mesh mesh = PixelEgg.RoundedCubeMesh(0.16f, 6);
         Material shell = clicker.CreateVisualMaterial(new Color(0.99f, 0.99f, 0.97f, 1f), false);
         shellMat = shell;
-        NewPart("Shell", eggRoot, mesh, shell, new Vector3(S, S * 0.55f, S), new Vector3(0f, -S * 0.225f, 0f));
+        wholePart = NewPart("Whole Egg", eggRoot, mesh, shell, Vector3.one * S, Vector3.zero);   // one piece until it pops, so no seam shows
+        shellPart = NewPart("Shell", eggRoot, mesh, shell, new Vector3(S, S * 0.55f, S), new Vector3(0f, -S * 0.225f, 0f));
         lidPart = new GameObject("Lid Holder").transform;   // unscaled, so the cracks on it keep their shape
         lidPart.SetParent(eggRoot, false);
-        NewPart("Lid", lidPart, mesh, shell, new Vector3(S, S * 0.45f, S), new Vector3(0f, S * 0.275f, 0f));
+        lidMesh = NewPart("Lid", lidPart, mesh, shell, new Vector3(S, S * 0.45f, S), new Vector3(0f, S * 0.275f, 0f));
+        shellPart.gameObject.SetActive(false);
+        lidMesh.gameObject.SetActive(false);
 
         Material glow = clicker.CreateVisualMaterial(new Color(1f, 0.93f, 0.55f, 1f), false);
         Random.State saved = Random.state;

@@ -327,7 +327,7 @@ public class PixelEgg : MonoBehaviour
     private void FinishHatch(PixelClicker.PixelType type, string petName, bool shown)
     {
         PixelStats.Clear("egg.pending");
-        if (PixelPets.Instance != null) PixelPets.Instance.Award(type, !shown);   // the show replaces the found-a-pet popup
+        if (PixelPets.Instance != null) PixelPets.Instance.Award(type, !shown, startOff: true);   // the show replaces the found-a-pet popup; a pet from an egg starts switched OFF in Toggles
         PixelHints.Announce("The egg hatched! A new pet: " + petName);
         Destroy(gameObject);
     }
