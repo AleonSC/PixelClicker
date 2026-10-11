@@ -247,6 +247,9 @@ public class PixelLook
     [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
     public bool flames = false;
 
+    [Tooltip("Rocky pixels (Obsidian, Meteor, Rock, the ores): the cube's edges and corners are chipped into an irregular jagged shape instead of straight lines. Draws a different mesh; the hit box stays a cube.")]
+    public bool jagged = false;
+
     [Tooltip("Meteor: dark cratered rock with glowing lava cracks that spread with every hit (needs Damage Cracks).")]
     public bool meteorTexture = false;
 
@@ -288,7 +291,7 @@ public class PixelLook
 public static class PixelLooks
 {
     private static PixelLook OreLook(PixelClicker.PixelType type, Color metal)
-        => new PixelLook { type = type, useColor = true, color = Color.white, metallic = 0.2f, smoothness = 0.3f, damageCracks = true, oreTexture = true, oreColor = metal };
+        => new PixelLook { type = type, useColor = true, color = Color.white, metallic = 0.2f, smoothness = 0.3f, damageCracks = true, oreTexture = true, oreColor = metal, jagged = true };
 
     private static readonly Dictionary<int, Texture2D> oreTextures = new Dictionary<int, Texture2D>();
     private static readonly Dictionary<int, Texture2D> chestTextures = new Dictionary<int, Texture2D>();
@@ -453,8 +456,7 @@ public static class PixelLooks
 
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
-                            metallic = 1f, smoothness = 0.97f, streakTexture = true, damageCracks = true, shine = true, obsidianFx = true,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.03f, outlineShadeOfTier = false, outlineShade = -0.82f, outlineStrength = 0.6f },
+                            metallic = 1f, smoothness = 0.97f, streakTexture = true, damageCracks = true, shine = true, obsidianFx = true, jagged = true },
 
             // Electric: a faint dark-blue glass box held together by crackling lightning.
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),
@@ -475,8 +477,7 @@ public static class PixelLooks
 
             // Meteor: a dark cratered rock whose lava cracks glow brighter with every hit; embers rise off it and the old pixel streaks away trailing fire.
             new PixelLook { type = PixelClicker.PixelType.Meteor, useColor = true, color = Color.white,
-                            metallic = 0f, smoothness = 0.2f, damageCracks = true, meteorTexture = true, cometTail = true,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = false, outlineShade = -0.5f, outlineStrength = 0.7f },
+                            metallic = 0f, smoothness = 0.2f, damageCracks = true, meteorTexture = true, cometTail = true, jagged = true },
 
             // Solar: a clean golden sun-cube with a turning corona; the old pixel hovers and pays a trickle.
             new PixelLook { type = PixelClicker.PixelType.Solar, useColor = true, color = Color.white,
@@ -497,7 +498,7 @@ public static class PixelLooks
 
             // Wood and Rock: plain basic blocks that fit any rotation.
             new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = new Color(0.6f, 0.4f, 0.22f, 1f), metallic = 0f, smoothness = 0.2f, basicSurface = PixelLook.BasicSurface.Brushed },
-            new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = new Color(0.55f, 0.55f, 0.58f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Mosaic },
+            new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = new Color(0.55f, 0.55f, 0.58f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Mosaic, jagged = true },
 
             // The farming blocks: each has a bevelled rim in a shade of its own colour and an ambient particle effect.
             new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = new Color(0.42f, 0.28f, 0.16f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain,

@@ -343,7 +343,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1497,6 +1497,22 @@ public class PixelClicker : MonoBehaviour
             }
             looks = list35.ToArray();
             looksVersion = 35;
+        }
+
+        if (looksVersion < 36)
+        {
+            // The rocky pixels lost their outlines and got jagged edges.
+            System.Collections.Generic.List<PixelLook> list36 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults36 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Obsidian, PixelType.Meteor, PixelType.Rock, PixelType.Copper, PixelType.Tin, PixelType.Iron, PixelType.Lead, PixelType.Zinc, PixelType.Nickel })
+            {
+                PixelLook def = PixelLooks.Find(defaults36, t);
+                if (def == null) continue;
+                int at = list36.FindIndex(l => l != null && l.type == t);
+                if (at >= 0) list36[at] = def; else list36.Add(def);
+            }
+            looks = list36.ToArray();
+            looksVersion = 36;
         }
 
         if (pixelRenderer != null)
@@ -2788,6 +2804,26 @@ public class PixelClicker : MonoBehaviour
     private PixelType liveExtrasType;
     private bool liveExtrasBuilt;
 
+    private Mesh baseCubeMesh;
+
+    /// <summary>The plain cube mesh of the pixel (captured before any look swaps it for a jagged one).</summary>
+    private Mesh BaseMesh()
+    {
+        if (baseCubeMesh == null && pixelRenderer != null)
+        {
+            MeshFilter mf = pixelRenderer.GetComponent<MeshFilter>();
+            if (mf != null) baseCubeMesh = mf.sharedMesh;
+        }
+        return baseCubeMesh;
+    }
+
+    /// <summary>The mesh a look draws: the chipped rock cube for jagged looks, else the plain cube.</summary>
+    private Mesh MeshFor(PixelLook look)
+    {
+        Mesh basic = BaseMesh();
+        return look != null && look.jagged && basic != null ? PixelRockMesh.Get(basic, (int)look.type) : basic;
+    }
+
     /// <summary>True if old pixels of this tier pass through the screen edges (ghosts), see PixelLook.ignoreViewBounds.</summary>
     public bool IgnoresViewBounds(int tierIndex)
     {
@@ -3003,6 +3039,12 @@ public class PixelClicker : MonoBehaviour
         activeGlow = tier.glow ? tier.glowIntensity : 0f;
         activeGlowType = tier.type;
         activeLook = LookOf(tier);
+        if (pixelRenderer != null)
+        {
+            MeshFilter liveMf = pixelRenderer.GetComponent<MeshFilter>();
+            Mesh wantedMesh = MeshFor(activeLook);
+            if (liveMf != null && wantedMesh != null && liveMf.sharedMesh != wantedMesh) liveMf.sharedMesh = wantedMesh;   // rocky pixels are drawn jagged
+        }
         UpdateGlowLight(tier);
         UpdateLiveExtras(tier, activeLook);
         UpdateGlowShell(tier, activeLook);
@@ -3763,9 +3805,10 @@ public class PixelClicker : MonoBehaviour
 
         // Copy only the visuals (mesh + material) so we don't duplicate this script.
         MeshFilter srcFilter = pixelRenderer != null ? pixelRenderer.GetComponent<MeshFilter>() : null;
+        Mesh copyMesh = MeshFor(IsValidTier(tierIndex) ? LookOf(tiers[tierIndex]) : null);
         if (srcFilter != null && pixelRenderer != null)
         {
-            copy.AddComponent<MeshFilter>().sharedMesh = srcFilter.sharedMesh;
+            copy.AddComponent<MeshFilter>().sharedMesh = copyMesh;
             MeshRenderer mr = copy.AddComponent<MeshRenderer>();
             MaterialPropertyBlock block = new MaterialPropertyBlock();
             if (stored && IsValidTier(tierIndex))
@@ -3892,7 +3935,7 @@ public class PixelClicker : MonoBehaviour
             PixelLook styled = LookOf(tiers[tierIndex]);
             if (styled != null)
             {
-                PixelLooks.AddExtras(copy.transform, srcFilter.sharedMesh, styled, tiers[tierIndex].color, defaultMaterial);
+                PixelLooks.AddExtras(copy.transform, copyMesh, styled, tiers[tierIndex].color, defaultMaterial);
                 if (styled.wobble) MakeWobbleVisual(copy, styled);
                 if (tiers[tierIndex].vacuum && !stored && vacuumContents.Count > 0)
                 {
@@ -3926,7 +3969,7 @@ public class PixelClicker : MonoBehaviour
             bool bright = IsBrightOldPixel(tierIndex); // bright old pixels (Luminescent) glow much harder, like their boosted emission
             float hdr = GlowShellHdr(glowTier) * (bright ? Mathf.Max(1f, oldPixelGlowBoost * 0.7f) : 1f);
             if (WantsGlowShell(glowTier, glowLook))
-                PixelLooks.AddGlowShell(copy.transform, srcFilter.sharedMesh, GlowShellColor(glowTier), GlowShellAlpha(glowTier, bright ? 1.3f : 1f), hdr: hdr);
+                PixelLooks.AddGlowShell(copy.transform, copyMesh, GlowShellColor(glowTier), GlowShellAlpha(glowTier, bright ? 1.3f : 1f), hdr: hdr);
             if (WantsGlowHalo(glowTier, glowLook))
                 PixelLooks.AddGlowHalo(copy.transform, GlowShellColor(glowTier), GlowShellAlpha(glowTier, bright ? 1.3f : 1f), hdr, bright ? 2.4f : 1f);
         }
@@ -4017,7 +4060,8 @@ public class PixelClicker : MonoBehaviour
         go.transform.localScale = Vector3.one * size;
         if (fallingCopyLayer >= 0 && fallingCopyLayer < 32) go.layer = fallingCopyLayer;
 
-        go.AddComponent<MeshFilter>().sharedMesh = srcFilter.sharedMesh;
+        Mesh displayMesh = MeshFor(styled);
+        go.AddComponent<MeshFilter>().sharedMesh = displayMesh;
         MeshRenderer mr = go.AddComponent<MeshRenderer>();
         Material m = MaterialForTier(tier);
         mr.sharedMaterial = m != null ? m : pixelRenderer.sharedMaterial;
@@ -4038,10 +4082,10 @@ public class PixelClicker : MonoBehaviour
 
         if (styled != null)
         {
-            PixelLooks.AddExtras(go.transform, srcFilter.sharedMesh, styled, tier.color, defaultMaterial);
+            PixelLooks.AddExtras(go.transform, displayMesh, styled, tier.color, defaultMaterial);
             if (styled.wobble) MakeWobbleVisual(go, styled);
         }
-        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, srcFilter.sharedMesh, GlowShellColor(tier), GlowShellAlpha(tier), hdr: GlowShellHdr(tier));
+        if (WantsGlowShell(tier, styled)) PixelLooks.AddGlowShell(go.transform, displayMesh, GlowShellColor(tier), GlowShellAlpha(tier), hdr: GlowShellHdr(tier));
         if (WantsGlowHalo(tier, styled)) PixelLooks.AddGlowHalo(go.transform, GlowShellColor(tier), GlowShellAlpha(tier), GlowShellHdr(tier));
         return go;
     }
