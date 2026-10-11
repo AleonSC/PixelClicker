@@ -421,3 +421,4 @@
 [2026-10-11 09:13 UTC] Removed two unused fields to clear the yellow compiler warnings.
 [2026-10-11 09:16 UTC] The Bank and Skills tabs now only slide out when both of their windows are closed.
 [2026-10-11 09:16 UTC] All shop tutorial boxes now share one minimum height so the Got it button stays in the same spot.
+[2026-10-11 09:19 UTC] The pinned (simplified) Inventory's consumable rows now show the item's name and 'click to use' when hovered.

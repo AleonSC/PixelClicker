@@ -659,6 +659,13 @@ public class PixelUI : MonoBehaviour
 
     private void ShowItemTooltip(int item)
     {
+        if (Compact && consumables != null)
+        {
+            // The simplified Inventory has no names on its rows: the tip says what it is and what a click does.
+            string verb = consumables.IsSeedItem(item) ? "plant" : consumables.IsDevice(item) ? "place / use" : "drink";
+            tooltipCustomText = consumables.ItemName(item) + "  -  click to " + verb;
+            return;
+        }
         tooltipCustomText = consumables != null && consumables.IsSeedItem(item) ? seedHint : consumables != null && consumables.IsDevice(item) ? deviceHint : potionHint;
     }
 
