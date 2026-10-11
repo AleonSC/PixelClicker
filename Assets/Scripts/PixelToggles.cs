@@ -143,6 +143,8 @@ public class PixelToggles : MonoBehaviour
         public TMP_Text label;
         public Toggle toggle;
         public Action<bool> setter;
+        public Button edit;        // pet rows: the pencil that opens the pet's name window
+        public Action editAction;
     }
 
     private struct Entry
@@ -150,6 +152,7 @@ public class PixelToggles : MonoBehaviour
         public string label;
         public bool on;
         public Action<bool> setter;
+        public Action editAction;   // pet rows: opens the rename window (a pencil shows at the left of the name)
         public bool skipAll;   // not switched by the 'Toggle all' row (a mode switch rather than an on / off item)
     }
 
@@ -332,7 +335,7 @@ public class PixelToggles : MonoBehaviour
                 foreach (KeyValuePair<PixelClicker.PixelType, string> pet in pets.Owned())
                 {
                     PixelClicker.PixelType type = pet.Key;
-                    list.Add(new Entry { label = pet.Value, on = pets.IsOn(type), setter = on => pets.SetOn(type, on) });
+                    list.Add(new Entry { label = pet.Value, on = pets.IsOn(type), setter = on => pets.SetOn(type, on), editAction = () => pets.EditPet(type) });
                 }
         }
         else
@@ -396,6 +399,9 @@ public class PixelToggles : MonoBehaviour
 
             row.label.text = entries[i].label;
             row.setter = entries[i].setter;
+            row.editAction = entries[i].editAction;
+            row.edit.gameObject.SetActive(row.editAction != null);
+            row.label.rectTransform.offsetMin = new Vector2(row.editAction != null ? rowHeight : 16f, 0f);
             row.toggle.SetIsOnWithoutNotify(entries[i].on);
             row.go.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -i * (rowHeight + 8f));
         }
@@ -437,6 +443,22 @@ public class PixelToggles : MonoBehaviour
         lr.anchorMax = Vector2.one;
         lr.offsetMin = new Vector2(16f, 0f);
         lr.offsetMax = new Vector2(-(rowHeight + 20f), 0f);
+
+        // The pencil (pet rows only) on the far left.
+        GameObject pencil = new GameObject("Pencil", typeof(RectTransform), typeof(Image), typeof(Button));
+        pencil.transform.SetParent(row.go.transform, false);
+        Image pencilImage = pencil.GetComponent<Image>();
+        PixelPets petsForIcon = PixelPets.Instance;
+        pencilImage.sprite = petsForIcon != null ? petsForIcon.PencilSprite() : null;
+        pencilImage.preserveAspect = true;
+        pencil.GetComponent<Button>().targetGraphic = pencilImage;
+        RectTransform pencilRect = pencil.GetComponent<RectTransform>();
+        pencilRect.anchorMin = pencilRect.anchorMax = pencilRect.pivot = new Vector2(0f, 0.5f);
+        pencilRect.sizeDelta = new Vector2(rowHeight * 0.62f, rowHeight * 0.62f);
+        pencilRect.anchoredPosition = new Vector2(12f, 0f);
+        pencil.GetComponent<Button>().onClick.AddListener(() => { row.editAction?.Invoke(); PixelAudio.Play("ui_click"); });
+        row.edit = pencil.GetComponent<Button>();
+        pencil.SetActive(false);
 
         GameObject box = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
         box.transform.SetParent(row.go.transform, false);

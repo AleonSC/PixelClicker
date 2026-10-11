@@ -455,7 +455,9 @@ public partial class PixelPets : MonoBehaviour
     private string PetName(PixelClicker.PixelType type)
     {
         int tier = TierOf(type);
-        return (tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString()) + " Pet";
+        string name = tier >= 0 ? clicker.Tiers[tier].displayName : type.ToString();
+        if (name.EndsWith(" Pixels")) name = name.Substring(0, name.Length - 1);   // "Gray Pixels" -> "Gray Pixel Pet"
+        return name + " Pet";
     }
 
     private int TierOf(PixelClicker.PixelType type)

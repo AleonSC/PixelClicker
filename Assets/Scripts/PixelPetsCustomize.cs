@@ -76,6 +76,22 @@ public partial class PixelPets
         return p != null ? NameOf(p) : PetName(type);
     }
 
+    /// <summary>Opens the name / outfit window of an owned pet (from the Toggles window). Returns false if the pet isn't out.</summary>
+    public bool EditPet(PixelClicker.PixelType type)
+    {
+        Pet p = pets.Find(x => x.type == type);
+        if (p == null || p.body == null || PopupOpen || customizing) return false;
+        OpenCustomize(p);
+        return true;
+    }
+
+    /// <summary>The pencil picture (shared with the Toggles window).</summary>
+    public Sprite PencilSprite()
+    {
+        if (pencilSprite == null) pencilSprite = BuildPencilSprite();
+        return pencilSprite;
+    }
+
     private string NameOf(Pet p) => string.IsNullOrWhiteSpace(p.customName) ? PetName(p.type) : p.customName;
 
     // ------------------------------------------------------------------

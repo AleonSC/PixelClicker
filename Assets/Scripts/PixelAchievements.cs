@@ -532,6 +532,8 @@ public class PixelAchievements : MonoBehaviour
     // ------------------------------------------------------------------
     // (continued above: usage achievements)
 
+    private static string SingularPixel(string name) => name.EndsWith(" Pixels") ? name.Substring(0, name.Length - 1) : name;
+
     /// <summary>One achievement per pet type: "{Pixel} Pet" is earned by finding that pixel's pet (PixelPets).</summary>
     private void RegisterPetAchievements()
     {
@@ -543,8 +545,8 @@ public class PixelAchievements : MonoBehaviour
             Register(new Achievement
             {
                 id = "pet_" + type,
-                title = tier.displayName + " Pet",
-                description = "Find the " + tier.displayName + " Pet. Clicking a pixel very rarely gives you its pet.",
+                title = SingularPixel(tier.displayName) + " Pet",
+                description = "Find the " + SingularPixel(tier.displayName) + " Pet. Clicking a pixel very rarely gives you its pet.",
                 pixelType = type,
                 tiers = new double[0],
                 target = 1,
