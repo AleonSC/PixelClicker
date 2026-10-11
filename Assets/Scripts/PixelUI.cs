@@ -1682,12 +1682,16 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Hover tip on the switch button while the simplified Inventory shows the consumables.")]
     [SerializeField] private string switchToCurrencyTip = "Show your currency";
 
-    /// <summary>The Inventory key in the pinned view: while it shows the currency, the key switches to the consumables first; the next press closes it. Returns true when it handled the press.</summary>
+    /// <summary>The Inventory key in the pinned view: the first press after it opened switches to the other tab (currency <-> consumables); the next press closes it. Returns true when it handled the press.</summary>
+    private static bool keyCycled;
+
     public static bool InventoryKeyCycle()
     {
         PixelUI ui = inventoryInstance;
-        if (ui == null || !Compact || !InventoryOpen || CompactMode != 1) return false;
-        CompactMode = 2;
+        if (ui == null || !Compact || !InventoryOpen) { keyCycled = false; return false; }
+        if (keyCycled) { keyCycled = false; return false; }   // already switched once since it opened: this press closes it
+        keyCycled = true;
+        CompactMode = CompactMode == 1 ? 2 : 1;
         if (ui.listContent != null) ui.listContent.anchoredPosition = Vector2.zero;
         ui.Refresh();
         return true;
