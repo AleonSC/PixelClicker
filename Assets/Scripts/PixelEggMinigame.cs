@@ -3,8 +3,8 @@ using UnityEngine;
 using static PixelInput;
 
 /// <summary>
-/// Egg (id "egg"): a very rare, one-off visitor. An orange cat who gives you an egg - a pure white pixel with slightly rounded corners - that
-/// you click between 1 and 50 times (rolled when you take it) to hatch it into a pet you don't own yet. He never comes back, whatever you decide.
+/// Egg (id "egg"): a very rare visitor. An orange cat who gives you, on his FIRST visit, an egg - a pure white pixel with slightly rounded corners - that
+/// you click between 1 and 50 times (rolled when you take it) to hatch it into a pet you don't own yet. Later visits bring a random present of pixels, like a cat bringing its owner a gift.
 /// All the visiting (sliding in, speech box, accept / reject) is in <see cref="PixelVisitorMinigame"/>; the egg itself is <see cref="PixelEgg"/>.
 /// </summary>
 public class PixelEggMinigame : PixelVisitorMinigame
@@ -23,8 +23,25 @@ public class PixelEggMinigame : PixelVisitorMinigame
     [SerializeField] private int clicksMax = 50;
 
     [TextArea(2, 4)]
-    [Tooltip("What he says after you take the egg (a second speech box).")]
-    [SerializeField] private string farewellText = "Click it. Keep clicking. Something will hatch, and I won't tell you what. Mrrp. You won't see me again.";
+    [Tooltip("What he says after you take the egg on his first visit (a second speech box).")]
+    [SerializeField] private string farewellText = "Click it. Keep clicking. Something will hatch, and I won't tell you what. Mrrp. I'll stop by again. Maybe.";
+
+    [TextArea(2, 4)]
+    [Tooltip("What he says after you accept a present on a later visit.")]
+    [SerializeField] private string giftFarewellText = "Mrrp. You're welcome. Don't tell the other cats.";
+
+    [Header("Later visits (presents)")]
+    [Min(1)]
+    [Tooltip("How many different pixel types the present holds.")]
+    [SerializeField] private int giftTypes = 3;
+
+    [Min(1)]
+    [Tooltip("Each pixel type in the present is worth at least this many normal clicks of that pixel.")]
+    [SerializeField] private int giftClicksMin = 30;
+
+    [Min(1)]
+    [Tooltip("...and at most this many.")]
+    [SerializeField] private int giftClicksMax = 120;
 
     private bool restoreChecked;
 
@@ -32,13 +49,16 @@ public class PixelEggMinigame : PixelVisitorMinigame
     public override string DisplayName => "Egg";
     protected override bool IsWare(int item) => false;
     protected override bool IsGift => true;
-    protected override bool OneTimeOnly => true;
+    protected override bool TracksMeeting => true;
     protected override float VisitChance => visitChance;
-    protected override bool CanVisit => PixelEgg.PetCandidates(clicker).Count > 0 && PixelEgg.Current == null && Total("egg.pending") < 1d;
-    protected override string AcceptLabel => "Take the egg";
+    // The first visit needs a pet you don't own (and no egg waiting); later visits just bring a present.
+    protected override bool CanVisit => HasMet || (PixelEgg.PetCandidates(clicker).Count > 0 && PixelEgg.Current == null && Total("egg.pending") < 1d);
+    protected override string AcceptLabel => FirstVisitNow ? "Take the egg" : "Thanks, Egg!";
     protected override string RejectLabel => "No thanks";
     protected override string DefaultName => "Egg";
-    protected override string DefaultGreeting => "Mrrp. Name's Egg. Yes, the cat. I don't do this often. Today I have exactly one thing to give you: a perfect egg. Pure white. Never a scratch. Interested?";
+    protected override string DefaultGreeting => FirstVisitNow
+        ? "Mrrp. Name's Egg. Yes, the cat. I don't do this often. Today I have exactly one thing to give you: a perfect egg. Pure white. Never a scratch. Interested?"
+        : "Mrrp. It's me. Egg. I found something. For you. Don't ask where. I left it right here. Be grateful.";
     protected override string DefaultWaresTitle => "Egg";
     protected override string DefaultArrivedLog => "A cat called Egg stopped by...";
     protected override float StartDelayOffset => 120f;
@@ -46,10 +66,11 @@ public class PixelEggMinigame : PixelVisitorMinigame
 
     private static double Total(string key) => PixelStats.Total(key);
 
-    protected override void ModifyWares(List<int> wares) { AsideText = farewellText; }
+    protected override void ModifyWares(List<int> wares) { AsideText = FirstVisitNow ? farewellText : giftFarewellText; }
 
     protected override void OnGift()
     {
+        if (!FirstVisitNow) { GivePixelGift("Egg", giftTypes, giftClicksMin, giftClicksMax); return; }
         int need = Random.Range(Mathf.Max(1, clicksMin), Mathf.Max(clicksMin, clicksMax) + 1);
         PixelStats.Best("egg.pending", 1d);
         PixelStats.Clear("egg.need");

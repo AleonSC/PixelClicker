@@ -3,7 +3,7 @@ using UnityEngine;
 using static PixelInput;
 
 /// <summary>
-/// Bean (id "bean"): a very rare, one-off visitor (a grey tabby cat) who gives you Magic Beans. Plant them (right-click the item in the Inventory's Seeds category, click the
+/// Bean (id "bean"): a very rare visitor (a grey tabby cat) who gives you Magic Beans on her FIRST visit (a random present of pixels on later ones). Plant them (right-click the item in the Inventory's Seeds category, click the
 /// floor) and a tall stalk grows with a handful of random cubes along it - and one Dragon Cube you don't hold yet. She never comes back, whatever you
 /// decide. All the visiting is in <see cref="PixelVisitorMinigame"/>; the plant is <see cref="PixelBeanstalk"/>; the beans are a consumable made by
 /// <see cref="PixelConsumables"/> (the device flagged <c>beans</c>).
@@ -16,8 +16,25 @@ public class PixelBeanMinigame : PixelVisitorMinigame
     [SerializeField] private float visitChance = 0.04f;
 
     [TextArea(2, 4)]
-    [Tooltip("What she says after you take the beans (a second speech box).")]
-    [SerializeField] private string farewellText = "Find a nice open spot and plant them. Then stand back, dear. Don't wait too long to pick what grows. I won't be passing this way again. Mrrow!";
+    [Tooltip("What she says after you take the beans on her first visit (a second speech box).")]
+    [SerializeField] private string farewellText = "Find a nice open spot and plant them. Then stand back, dear. Don't wait too long to pick what grows. Mrrow!";
+
+    [TextArea(2, 4)]
+    [Tooltip("What she says after you accept a present on a later visit.")]
+    [SerializeField] private string giftFarewellText = "Mrrow! Fresh from the garden. I'll bring more if I find any.";
+
+    [Header("Later visits (presents)")]
+    [Min(1)]
+    [Tooltip("How many different pixel types the present holds.")]
+    [SerializeField] private int giftTypes = 3;
+
+    [Min(1)]
+    [Tooltip("Each pixel type in the present is worth at least this many normal clicks of that pixel.")]
+    [SerializeField] private int giftClicksMin = 30;
+
+    [Min(1)]
+    [Tooltip("...and at most this many.")]
+    [SerializeField] private int giftClicksMax = 120;
 
     private bool restoreChecked;
 
@@ -25,23 +42,28 @@ public class PixelBeanMinigame : PixelVisitorMinigame
     public override string DisplayName => "Bean";
     protected override bool IsWare(int item) => false;
     protected override bool IsGift => true;
-    protected override bool OneTimeOnly => true;
+    protected override bool TracksMeeting => true;
     protected override float VisitChance => visitChance;
-    protected override bool CanVisit => clicker != null && consumables != null && clicker.PickMissingDragonCube() >= 0 && consumables.BeansItem() >= 0
-                                         && consumables.ItemOwned(consumables.BeansItem()) < 1 && PixelBeanstalk.Current == null && PixelStats.Total("bean.pending") < 1d;
-    protected override string AcceptLabel => "Take the beans";
+    // The first visit needs a Dragon Cube you don't hold (and no beans / stalk about); later visits just bring a present.
+    protected override bool CanVisit => clicker != null && consumables != null && (HasMet ||
+        (clicker.PickMissingDragonCube() >= 0 && consumables.BeansItem() >= 0 && consumables.ItemOwned(consumables.BeansItem()) < 1
+         && PixelBeanstalk.Current == null && PixelStats.Total("bean.pending") < 1d));
+    protected override string AcceptLabel => FirstVisitNow ? "Take the beans" : "Thanks, Bean!";
     protected override string RejectLabel => "No thanks";
     protected override string DefaultName => "Bean";
-    protected override string DefaultGreeting => "Mrrow, hello there! I'm Bean. I grow things, and I give things away, and today I have a very special handful of beans for you. No, no, you can't pay for them. Care to take them?";
+    protected override string DefaultGreeting => FirstVisitNow
+        ? "Mrrow, hello there! I'm Bean. I grow things, and I give things away, and today I have a very special handful of beans for you. No, no, you can't pay for them. Care to take them?"
+        : "Mrrow! Bean here. I was digging in my garden and look what turned up! A little present, just for you. Go on, take it.";
     protected override string DefaultWaresTitle => "Bean";
     protected override string DefaultArrivedLog => "A grey tabby called Bean stopped by...";
     protected override float StartDelayOffset => 180f;
     protected override Color TitleColor => new Color(0.5f, 0.9f, 0.45f);
 
-    protected override void ModifyWares(List<int> wares) { AsideText = farewellText; }
+    protected override void ModifyWares(List<int> wares) { AsideText = FirstVisitNow ? farewellText : giftFarewellText; }
 
     protected override void OnGift()
     {
+        if (!FirstVisitNow) { GivePixelGift("Bean", giftTypes, giftClicksMin, giftClicksMax); return; }
         int item = consumables != null ? consumables.BeansItem() : -1;
         if (item < 0) return;
         consumables.AddItem(item, 1);

@@ -110,8 +110,38 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     protected virtual bool IsGift => false;
     /// <summary>Called when the player accepts the gift (the visitor is still on screen).</summary>
     protected virtual void OnGift() { }
-    /// <summary>True for a visitor who shows up once ever: the visit is recorded in the counter '&lt;id&gt;.met' and the visitor never starts again.</summary>
-    protected virtual bool OneTimeOnly => false;
+    /// <summary>True for a visitor who remembers having met you: the first real visit is recorded in the counter '&lt;id&gt;.met' (<see cref="FirstVisitNow"/> tells which visit this is).</summary>
+    protected virtual bool TracksMeeting => false;
+    /// <summary>True during the visitor's first visit ever (only meaningful for visitors that track meeting you).</summary>
+    protected bool FirstVisitNow { get; private set; }
+
+    /// <summary>
+    /// A cat's "gift": a few random unlocked pixel types, each worth 'minClicks'..'maxClicks' normal clicks of that pixel (so it grows with your Value upgrades).
+    /// Pays at once, announces it in the event log and returns the text.
+    /// </summary>
+    protected string GivePixelGift(string giverName, int types, int minClicks, int maxClicks)
+    {
+        List<int> candidates = new List<int>();
+        for (int i = 0; i < clicker.Tiers.Length; i++)
+        {
+            PixelClicker.PixelTier t = clicker.Tiers[i];
+            if (t.unlocked && !t.rareDrop && !t.flyAway && !PixelClicker.IsStandalone(t.type)) candidates.Add(i);
+        }
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        for (int n = 0; n < types && candidates.Count > 0; n++)
+        {
+            int pick = Random.Range(0, candidates.Count);
+            int tier = candidates[pick];
+            candidates.RemoveAt(pick);
+            double amount = System.Math.Max(1d, System.Math.Floor(clicker.RollOldPixelAmount(tier) * Random.Range(Mathf.Max(1, minClicks), Mathf.Max(minClicks, maxClicks) + 1)));
+            clicker.AddCurrency(tier, amount);
+            if (sb.Length > 0) sb.Append(", ");
+            sb.Append('+').Append(PixelClicker.FormatNumberShort(amount)).Append(' ').Append(clicker.Tiers[tier].displayName);
+        }
+        PixelAudio.Play("purchase");
+        PixelHints.Announce(giverName + " brought you a gift!", giverName + " brought you: " + sb);
+        return sb.ToString();
+    }
     /// <summary>Chance (0-1) that a visit actually happens each time the visit timer runs out (a failed roll just waits for the next timer).</summary>
     protected virtual float VisitChance => 1f;
     /// <summary>Can the visit happen now? (Checked together with the chance roll; e.g. the Egg needs a pet you don't have.)</summary>
@@ -226,7 +256,6 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private void Update()
     {
         if (!running || visiting || clicker == null) return;
-        if (OneTimeOnly && HasMet) { running = false; return; }
         spawnTimer -= Time.deltaTime;
         if (spawnTimer > 0f) return;
         if (!rolled)
@@ -279,7 +308,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     private IEnumerator VisitRoutine(bool dev)
     {
-        if (OneTimeOnly && !dev) PixelStats.Best(Id + ".met", 1d);   // they never come back, whatever you decide
+        FirstVisitNow = !HasMet;
+        if (TracksMeeting && !dev) PixelStats.Best(Id + ".met", 1d);   // remembered, whatever you decide
         visiting = true;
         anyVisiting = true;
         decision = 0;
@@ -359,7 +389,6 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         anyVisiting = false;
         nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
         spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
-        if (OneTimeOnly && !dev) running = false;
     }
 
     private void SetDim(float amount)
