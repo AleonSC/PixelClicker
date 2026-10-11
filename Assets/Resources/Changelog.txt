@@ -506,3 +506,4 @@
 [2026-10-11 23:35 UTC] Fallen stars now make a falling-star sound, shed magical dust while they fall and move, and twinkle white while they lie still (collecting one also has a chime).
 [2026-10-11 23:44 UTC] The Vacuum pixel is now a clear glass container with one round opening, a glowing lip and a suction wind that curls into the opening.
 [2026-10-11 23:47 UTC] Vacuum pixel: thick solid violet outlines and a much tighter suction wind that funnels straight into the opening.
+[2026-10-11 23:49 UTC] Ghost pixels are now a gray translucent gel blob with a drifting nucleus and rising bubbles, with gloopy click, squishy landing and breathy float-away sounds.

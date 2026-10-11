@@ -343,7 +343,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container; 39 = Ghost gel blob
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1524,6 +1524,17 @@ public class PixelClicker : MonoBehaviour
             if (def38 != null) { if (at38 >= 0) list38[at38] = def38; else list38.Add(def38); }
             looks = list38.ToArray();
             looksVersion = 38;
+        }
+
+        if (looksVersion < 39)
+        {
+            // The Ghost pixel became a gray gelatinous blob.
+            PixelLook def39 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Ghost);
+            System.Collections.Generic.List<PixelLook> list39 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            int at39 = list39.FindIndex(l => l != null && l.type == PixelType.Ghost);
+            if (def39 != null) { if (at39 >= 0) list39[at39] = def39; else list39.Add(def39); }
+            looks = list39.ToArray();
+            looksVersion = 39;
         }
 
         if (pixelRenderer != null)
@@ -2849,6 +2860,7 @@ public class PixelClicker : MonoBehaviour
         if (look != null && basic != null)
         {
             if (look.vacuumContainer) return PixelVacuumMesh.Get(basic);
+            if (look.blob) return PixelGelFx.BlobMesh(basic);
             if (look.jagged) return PixelRockMesh.Get(basic, (int)look.type);
         }
         return basic;

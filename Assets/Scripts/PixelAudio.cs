@@ -242,6 +242,8 @@ public class PixelAudio : MonoBehaviour
             Make("ore_chip", 0.04f, 0.8f, 1.3f),
             Make("ore_gleam", 0.3f, 0.95f, 1.05f),
             Make("stardust_fall", 0.3f, 0.97f, 1.03f),
+            Make("pixel_bounce_ghost", 0.05f, 0.9f, 1.15f),
+            Make("ghost_float", 0.3f, 0.95f, 1.05f),
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
@@ -290,6 +292,9 @@ public class PixelAudio : MonoBehaviour
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
             case "ore_gleam": return new[] { PixelSynth.OreGleam() };
+            case "pixel_ghost": return new[] { PixelSynth.GhostClick(1), PixelSynth.GhostClick(2), PixelSynth.GhostClick(3) };
+            case "pixel_bounce_ghost": return new[] { PixelSynth.GhostBounce(1), PixelSynth.GhostBounce(2), PixelSynth.GhostBounce(3) };
+            case "ghost_float": return new[] { PixelSynth.GhostFloat() };
             case "stardust_fall": return new[] { PixelSynth.StarFall(1), PixelSynth.StarFall(2) };
             case "stardust_collect": return new[] { PixelSynth.StarChime() };
             case "pixel_wire": return new[] { PixelSynth.Elec(0, 1), PixelSynth.Elec(0, 2), PixelSynth.Elec(0, 3) };
@@ -1310,6 +1315,105 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
         AudioClip clip = AudioClip.Create("OreBreak " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    private static void Normalize(float[] data, float level)
+    {
+        float peak = 0.0001f;
+        for (int i = 0; i < data.Length; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < data.Length; i++) data[i] = data[i] / peak * level;
+    }
+
+    /// <summary>The Ghost pixel's click: a wet gloopy "bloop" (a pitch that drops then wobbles up, a second bubble pop) with a soft airy breath after it.</summary>
+    public static AudioClip GhostClick(int variant)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.5f);
+        float[] data = new float[n];
+        System.Random rnd = new System.Random(300 + variant * 17);
+        float baseFreq = 170f + variant * 38f;
+        float phase = 0f, phase2 = 0f, lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            // Bloop: the pitch starts high, drops fast and then rises a touch, like a bubble closing.
+            float f = baseFreq * (1f + 1.1f * Mathf.Exp(-t * 18f) + 0.18f * Mathf.Sin(Mathf.Clamp01(t / 0.2f) * Mathf.PI));
+            phase += f / rate;
+            float v = Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-t * 9f);
+            // A second smaller bubble.
+            float t2 = t - 0.085f;
+            if (t2 > 0f)
+            {
+                phase2 += baseFreq * 2.3f * (1f + 0.5f * Mathf.Exp(-t2 * 22f)) / rate;
+                v += Mathf.Sin(phase2 * Mathf.PI * 2f) * Mathf.Exp(-t2 * 20f) * 0.45f;
+            }
+            // Wet squelch: low-passed noise right at the start.
+            lp += (((float)rnd.NextDouble() * 2f - 1f) - lp) * 0.22f;
+            v += lp * Mathf.Exp(-t * 34f) * 0.5f;
+            // The ghost's breath: two soft detuned tones with a slow wobble.
+            float breath = (Mathf.Sin(t * 520f * Mathf.PI * 2f + 2f * Mathf.Sin(t * 6f)) + 0.6f * Mathf.Sin(t * 781f * Mathf.PI * 2f)) * Mathf.Exp(-t * 5f) * Mathf.Clamp01(t / 0.05f) * 0.13f;
+            data[i] = (v + breath) * Mathf.Clamp01(t / 0.002f);
+        }
+        Normalize(data, 0.55f);
+        AudioClip clip = AudioClip.Create("GhostClick" + variant, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A soft squishy landing: a low "splut" dropping in pitch with a puff of wet noise.</summary>
+    public static AudioClip GhostBounce(int variant)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.26f);
+        float[] data = new float[n];
+        System.Random rnd = new System.Random(500 + variant * 13);
+        float phase = 0f, lp = 0f;
+        float baseFreq = 70f + variant * 14f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            phase += baseFreq * (1f + 1.6f * Mathf.Exp(-t * 26f)) / rate;
+            float v = Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-t * 15f);
+            lp += (((float)rnd.NextDouble() * 2f - 1f) - lp) * 0.16f;
+            v += lp * Mathf.Exp(-t * 40f) * 0.55f;
+            float t2 = t - 0.045f;
+            if (t2 > 0f) v += Mathf.Sin(t2 * (360f + variant * 60f) * Mathf.PI * 2f) * Mathf.Exp(-t2 * 38f) * 0.22f;   // a tiny bubble
+            data[i] = v * Mathf.Clamp01(t / 0.002f);
+        }
+        Normalize(data, 0.5f);
+        AudioClip clip = AudioClip.Create("GhostBounce" + variant, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The ghost starts to float away: a hollow, breathy "whoo" that rises and fades.</summary>
+    public static AudioClip GhostFloat()
+    {
+        const int rate = 22050;
+        float length = 1.1f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rnd = new System.Random(777);
+        float phase = 0f, lp = 0f, lp2 = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float k = t / length;
+            float env = Mathf.Sin(Mathf.Clamp01(k) * Mathf.PI);
+            env *= env;
+            float f = Mathf.Lerp(300f, 520f, k) * (1f + 0.025f * Mathf.Sin(t * 9f));
+            phase += f / rate;
+            float tone = Mathf.Sin(phase * Mathf.PI * 2f) + 0.35f * Mathf.Sin(phase * 2f * Mathf.PI * 2f);
+            // Breath: noise run through two one-pole low-passes whose cutoff rises with the sound.
+            float coef = Mathf.Lerp(0.05f, 0.18f, k);
+            lp += (((float)rnd.NextDouble() * 2f - 1f) - lp) * coef;
+            lp2 += (lp - lp2) * coef;
+            data[i] = (tone * 0.35f + lp2 * 2.2f) * env;
+        }
+        Normalize(data, 0.45f);
+        AudioClip clip = AudioClip.Create("GhostFloat", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

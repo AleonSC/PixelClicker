@@ -247,6 +247,12 @@ public class PixelLook
     [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
     public bool flames = false;
 
+    [Tooltip("Ghost: draw a very rounded gel blob instead of a cube. Draws a different mesh; the hit box stays a cube.")]
+    public bool blob = false;
+
+    [Tooltip("Ghost: a darker nucleus drifts inside the pixel and tiny bubbles rise through it.")]
+    public bool gelFx = false;
+
     [Tooltip("Vacuum: draw a clear glass container (hollow, thin walls) with ONE round opening in its front face instead of a solid cube. Draws a different mesh; the hit box stays a cube.")]
     public bool vacuumContainer = false;
 
@@ -287,7 +293,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => windFx || flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => gelFx || windFx || flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => meteorTexture || sunTexture || streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
@@ -455,10 +461,10 @@ public static class PixelLooks
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.85f, 0.97f, 1f, 1f),
                             outlineThickness = 0.02f, outlineStrength = 0.5f, shatter = true },
 
-            // Ghost: soft, matte, see-through (not shiny like glass), wobbling like jelly. Bounces slowly and floats off the screen.
-            new PixelLook { type = PixelClicker.PixelType.Ghost, useColor = true, color = new Color(0.88f, 0.94f, 1f, 0.28f),
-                            smoothness = 0f, metallic = 0f, emission = 0.7f,
-                            wobble = true, customPhysics = true, ignoreViewBounds = true, floatAway = true },
+            // Ghost: a gray, translucent, gelatinous blob with a darker nucleus and tiny bubbles, wobbling like jelly. Bounces slowly and floats off the screen.
+            new PixelLook { type = PixelClicker.PixelType.Ghost, useColor = true, color = new Color(0.62f, 0.66f, 0.71f, 0.4f),
+                            forceTranslucent = true, smoothness = 0.92f, metallic = 0f, emission = 0.22f, blob = true, gelFx = true,
+                            wobble = true, wobbleAmount = 0.2f, wobbleSpeed = 2.8f, customPhysics = true, ignoreViewBounds = true, floatAway = true },
 
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
@@ -786,6 +792,7 @@ public static class PixelLooks
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
         if (look.cometTail) PixelCometFx.Attach(root.transform, centre, size);
         if (look.windFx) PixelVacuumFx.Attach(root.transform, centre, size);
+        if (look.gelFx) PixelGelFx.Attach(root.transform, centre, size);
         if (look.sunFx) PixelSunFx.Attach(root.transform, centre, size);
         if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);
         if (look.obsidianFx) PixelObsidianFx.Attach(root.transform, centre, size);
@@ -1818,6 +1825,7 @@ public class OldPixelFloat : MonoBehaviour
     private void StartFloating()
     {
         floating = true;
+        PixelAudio.Play("ghost_float");
         ScaledGravity gravity = GetComponent<ScaledGravity>();
         if (gravity != null) gravity.scale = -lift; // gently upwards from now on
         foreach (Collider c in GetComponents<Collider>()) c.enabled = false; // nothing stops it any more
