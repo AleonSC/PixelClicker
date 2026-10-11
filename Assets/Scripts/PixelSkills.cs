@@ -74,6 +74,7 @@ public partial class PixelSkills : MonoBehaviour
     public const string MiningId = "mining";
     public const string OfflineId = "offline";
     public const string FarmingId = "farming";
+    public const string ElectricianId = "electrician";
 
     [Header("Skill Packs")]
     [Tooltip("The packs, in the order they are listed. Missing built-in ones (by id) are added automatically.")]
@@ -182,6 +183,24 @@ public partial class PixelSkills : MonoBehaviour
                     new Perk { level = 5, text = "Bumper crop: sprouts pay a little more" },
                 },
             });
+        if (!packs.Exists(p => p.id == ElectricianId))
+            packs.Insert(Mathf.Min(packs.Count, 3), new SkillPack
+            {
+                id = ElectricianId, displayName = "Electrician", accent = new Color(0.35f, 0.7f, 1f),
+                description = "Swap the basic cubes for Electric pixels only. Every Electric click trains the skill and can set off an Overcharge; link the pixels you drop to power your devices.",
+                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Electric",
+                xpFrom = "Collecting Electric pixels",
+                unlockHint = "Buy the Electric Pixel pack in the Shop",
+                baseXp = 100f, xpGrowth = 1.6f,
+                types = new[] { PixelClicker.PixelType.Electric },
+                perks = new[]
+                {
+                    new Perk { level = 2, text = "Overcharge+: Overcharge bursts add more clicks" },
+                    new Perk { level = 4, text = "Wired up: device links reach further" },
+                    new Perk { level = 6, text = "Power bank: the Electric pet holds more charge" },
+                    new Perk { level = 8, text = "Surge: a rare click pays much more" },
+                },
+            });
         if (!packs.Exists(p => p.id == OfflineId))
             packs.Add(new SkillPack
             {
@@ -201,7 +220,7 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == MiningId && (pack.types == null || pack.types.Length == 0))
                 pack.types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel };
             // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
-            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId) continue;
+            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId) continue;
             System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
             foreach (TreeNode def in DefaultNodes(pack.id))
                 if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
@@ -230,6 +249,15 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "compost", displayName = "Compost heap", description = "Fertilizer blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "seeds", row = 2, implemented = true, guestType = "Fertilizer" },
                 new TreeNode { id = "hive", displayName = "Beehive", description = "Pollen blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "rain", row = 0, cost = 2, implemented = true, guestType = "Pollen" },
                 new TreeNode { id = "thumb", displayName = "Green thumb", description = "Sprouts grow a little faster.", requires = "compost", row = 2, cost = 2 },
+            };
+        if (id == ElectricianId)
+            return new[]
+            {
+                new TreeNode { id = "static", displayName = "Static charge", description = "Electric blocks can be switched on in the Toggles window to spawn in any rotation.", row = 1, implemented = true, guestType = "Electric" },
+                new TreeNode { id = "overcharge", displayName = "Overcharge+", description = "Overcharge bursts add more clicks.", requires = "static", row = 0 },
+                new TreeNode { id = "grid", displayName = "Wired up", description = "Device links reach further and carry more pixels.", requires = "static", row = 2 },
+                new TreeNode { id = "bank", displayName = "Power bank", description = "The Electric pet holds more charge and recharges faster.", requires = "overcharge", row = 0, cost = 2 },
+                new TreeNode { id = "surge", displayName = "Surge", description = "A rare click pays much more.", requires = "grid", row = 2, cost = 2 },
             };
         return new[]
         {

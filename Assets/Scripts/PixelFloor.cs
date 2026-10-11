@@ -75,7 +75,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         WatchingEyes,    // darkness full of glowing eyes that blink (animated)
         NoirSmoker,      // a noir profile silhouette smoking a cigarette (animated)
         Skyline,         // a night city skyline reflected in water (animated)
-        GroundSky        // ground under a sky: meadow, desert, arctic, alien (cells 1-4 picks the scene)
+        GroundSky,       // ground under a sky: meadow, desert, arctic, alien (cells 1-4 picks the scene)
+        MineTrack,       // gravel with rails and wooden sleepers
+        OreVeins,        // dark rock with glittering metal veins and crystals
+        Strata,          // layers of sediment
+        CropRows,        // ploughed rows with seedlings
+        WheatField,      // swaying golden wheat (animated)
+        Patchwork        // a patchwork of fields seen from the air
     }
 
     [Serializable]
@@ -637,6 +643,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         int cells = Mathf.Max(1, s.cells);
         shadeTime = time;
         if (s.pattern == FloorPattern.Fighter) PrepareFighter(time, s.seed); // works out the fight once per frame
+        if (s.pattern == FloorPattern.CircuitFlow) PrepareSparks(s, time);   // and the wandering sparks
 
         for (int y = 0; y < n; y++)
         {
@@ -2037,6 +2044,14 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 5;
         }
 
+        if (defaultsVersion < 6)
+        {
+            styles.RemoveAll(x => x != null && (x.name == "Noir Smoke" || x.name == "Bloody Boards" || x.pattern == FloorPattern.NoirSmoker || x.pattern == FloorPattern.BloodBoards));
+            foreach (FloorStyle st in styles)
+                if (st != null && st.name == "Circuit Flow") { st.animateFps = 20f; st.cells = Mathf.Max(8, st.cells); }
+            defaultsVersion = 6;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2267,16 +2282,22 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return St("Plasma", FloorPattern.Plasma, new Color(0.1f, 0f, 0.4f), new Color(1f, 0.2f, 0.5f), new Color(1f, 0.9f, 0.2f), 128, 8f, 1, 20f, true, 0.7f);
         yield return St("Op Art", FloorPattern.OpArt, Color.black, Color.white, Color.gray, 192, 8f, 6, 20f, true, 0f);
         // ---- Horror ----
-        yield return St("Bloody Boards", FloorPattern.BloodBoards, new Color(0.12f, 0.07f, 0.05f), new Color(0.25f, 0.15f, 0.1f), new Color(0.55f, 0.03f, 0.04f), 256, 6f, 7, 0f, false, 0f, 0.35f);
         yield return St("Haunted Tiles", FloorPattern.HauntedTiles, new Color(0.1f, 0.1f, 0.11f), new Color(0.55f, 0.55f, 0.52f), new Color(0.35f, 0.05f, 0.04f), 128, 6f, 6, 12f, false, 0f, 0.25f);
         yield return St("Graveyard", FloorPattern.Graveyard, new Color(0.1f, 0.08f, 0.06f), new Color(0.2f, 0.17f, 0.12f), new Color(0.55f, 0.65f, 0.7f), 128, 8f, 1, 8f, false, 0f, 0.1f);
         yield return St("Watching Eyes", FloorPattern.WatchingEyes, new Color(0.02f, 0.02f, 0.03f), Color.black, new Color(1f, 0.1f, 0.05f), 192, 8f, 7, 20f, false, 1.2f);
         // ---- Scenes ----
-        yield return St("Noir Smoke", FloorPattern.NoirSmoker, new Color(0.05f, 0.12f, 0.15f), new Color(0.93f, 0.74f, 0.62f), new Color(0.85f, 0.1f, 0.18f), 256, 8f, 1, 14f, true, 0f);
         yield return St("City Skyline", FloorPattern.Skyline, new Color(0.02f, 0.03f, 0.12f), new Color(0.55f, 0.25f, 0.45f), new Color(0.06f, 0.05f, 0.12f), 256, 8f, 1, 8f, true, 0.3f);
         yield return St("Meadow Horizon", FloorPattern.GroundSky, new Color(0.25f, 0.5f, 0.9f), new Color(0.75f, 0.88f, 0.98f), new Color(0.3f, 0.62f, 0.2f), 256, 8f, 1, 0f, true, 0f, 0.15f);
         yield return St("Desert Dusk", FloorPattern.GroundSky, new Color(0.25f, 0.1f, 0.4f), new Color(1f, 0.6f, 0.3f), new Color(0.8f, 0.55f, 0.3f), 256, 8f, 2, 0f, true, 0f, 0.1f);
         yield return St("Arctic Dawn", FloorPattern.GroundSky, new Color(0.05f, 0.1f, 0.3f), new Color(0.7f, 0.6f, 0.7f), new Color(0.9f, 0.95f, 1f), 256, 8f, 3, 6f, true, 0.1f, 0.3f);
         yield return St("Twin Moons", FloorPattern.GroundSky, new Color(0.05f, 0.02f, 0.2f), new Color(0.5f, 0.2f, 0.45f), new Color(0.05f, 0.2f, 0.22f), 256, 8f, 4, 6f, true, 0.4f, 0.3f);
+        // ---- Mining ----
+        yield return St("Mine Track", FloorPattern.MineTrack, new Color(0.3f, 0.27f, 0.24f), new Color(0.5f, 0.46f, 0.42f), new Color(1f, 0.85f, 0.3f), 256, 6f, 4, 0f, false, 0f, 0.15f);
+        yield return St("Ore Veins", FloorPattern.OreVeins, new Color(0.14f, 0.14f, 0.16f), new Color(1f, 0.75f, 0.25f), new Color(0.3f, 0.85f, 1f), 256, 6f, 5, 0f, false, 0.15f, 0.35f);
+        yield return St("Rock Strata", FloorPattern.Strata, new Color(0.55f, 0.4f, 0.28f), new Color(0.72f, 0.6f, 0.45f), new Color(0.38f, 0.3f, 0.26f), 256, 6f, 8, 0f, false, 0f, 0.1f);
+        // ---- Farming ----
+        yield return St("Crop Rows", FloorPattern.CropRows, new Color(0.2f, 0.12f, 0.07f), new Color(0.4f, 0.26f, 0.14f), new Color(0.3f, 0.7f, 0.22f), 256, 6f, 8, 0f, false, 0f, 0.1f);
+        yield return St("Wheat Field", FloorPattern.WheatField, new Color(0.62f, 0.45f, 0.14f), new Color(0.95f, 0.8f, 0.35f), new Color(1f, 0.92f, 0.55f), 128, 6f, 1, 15f, false, 0f, 0.1f);
+        yield return St("Farm Patchwork", FloorPattern.Patchwork, new Color(0.12f, 0.34f, 0.12f), new Color(0.88f, 0.72f, 0.28f), new Color(0.38f, 0.24f, 0.14f), 256, 8f, 4, 0f, false, 0f, 0.1f);
     }
 }

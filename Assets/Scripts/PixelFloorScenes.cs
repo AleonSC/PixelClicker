@@ -25,13 +25,17 @@ public partial class PixelFloor
             case FloorPattern.HypnoSpiral: return ShadeHypno(s, u, v, cells);
             case FloorPattern.Plasma: return ShadePlasma(s, u, v);
             case FloorPattern.OpArt: return ShadeOpArt(s, u, v, cells);
-            case FloorPattern.BloodBoards: return ShadeBloodBoards(s, u, v, cells);
             case FloorPattern.HauntedTiles: return ShadeHauntedTiles(s, u, v, x, y, cells);
             case FloorPattern.Graveyard: return ShadeGraveyard(s, u, v, x, y);
             case FloorPattern.WatchingEyes: return ShadeEyes(s, u, v, cells);
-            case FloorPattern.NoirSmoker: return ShadeSmoker(s, u, v, n);
             case FloorPattern.Skyline: return ShadeSkyline(s, u, v);
             case FloorPattern.GroundSky: return ShadeGroundSky(s, u, v, x, y, cells);
+            case FloorPattern.MineTrack: return ShadeMineTrack(s, u, v, x, y, cells);
+            case FloorPattern.OreVeins: return ShadeOreVeins(s, u, v, x, y, cells);
+            case FloorPattern.Strata: return ShadeStrata(s, u, v, x, y, cells);
+            case FloorPattern.CropRows: return ShadeCropRows(s, u, v, x, y, cells);
+            case FloorPattern.WheatField: return ShadeWheat(s, u, v, x, y);
+            case FloorPattern.Patchwork: return ShadePatchwork(s, u, v, x, y, cells);
         }
         return s.colorA;
     }
@@ -288,8 +292,82 @@ public partial class PixelFloor
 
         if (trace > 0f) c = ScMix(c, s.colorB * 0.7f, 0.85f);
         c += s.colorC * pulse * trace * 1.4f;
+
+        // The bright sparks wandering across the circuits (positions worked out once per frame in PrepareSparks).
+        float spark = 0f, sparkGlow = 0f;
+        for (int k = 0; k < sparkCount; k++)
+        {
+            float w = k % SparkTrail == 0 ? 1f : Mathf.Pow(0.72f, k % SparkTrail);
+            float dx = Mathf.Abs(Mathf.Repeat(gu - sparkX[k] + cells * 0.5f, cells) - cells * 0.5f);
+            if (dx > 1.1f) continue;
+            float dy = Mathf.Abs(Mathf.Repeat(gv - sparkY[k] + cells * 0.5f, cells) - cells * 0.5f);
+            if (dy > 1.1f) continue;
+            float d2 = dx * dx + dy * dy;
+            spark += w * Mathf.Exp(-d2 / 0.012f);
+            sparkGlow += w * Mathf.Exp(-d2 / 0.18f);
+        }
+        c += Color.white * Mathf.Clamp01(spark) * 1.2f + s.colorC * sparkGlow * 0.55f;
         c.a = 1f;
         return c;
+    }
+
+    // ---- the wandering sparks of Circuit Flow ----
+    private const int SparkTrail = 7, SparkWalkers = 2, SparkSteps = 120;
+    private static int sparkCount;
+    private static readonly float[] sparkX = new float[SparkTrail * SparkWalkers], sparkY = new float[SparkTrail * SparkWalkers];
+
+    private static bool RightEdge(int i, int j, int cells, int seed) { return Hash(Wrap(i, cells), Wrap(j, cells), seed) > 0.42f; }
+    private static bool UpEdge(int i, int j, int cells, int seed) { return Hash(Wrap(i, cells), Wrap(j, cells), seed + 5) > 0.42f; }
+
+    /// <summary>Walks a spark along the traces: every few seconds it starts at a random node and follows the circuit, turning at random junctions.</summary>
+    private static void PrepareSparks(FloorStyle s, float t)
+    {
+        int cells = Mathf.Max(2, s.cells);
+        const float edgesPerSecond = 3.2f, epochSeconds = 22f;
+        int[] ni = new int[SparkSteps + 3], nj = new int[SparkSteps + 3];
+        sparkCount = 0;
+        for (int w = 0; w < SparkWalkers; w++)
+        {
+            float local = t + w * epochSeconds * 0.5f;
+            int epoch = Mathf.FloorToInt(local / epochSeconds);
+            float p = (local - epoch * epochSeconds) * edgesPerSecond;
+            int steps = Mathf.Min(SparkSteps, Mathf.FloorToInt(p) + 2);
+            int seed = s.seed + w * 31;
+            ni[0] = Mathf.FloorToInt(Hash(epoch, w, seed + 1) * cells);
+            nj[0] = Mathf.FloorToInt(Hash(epoch, w + 7, seed + 2) * cells);
+            int prevDir = -1;   // 0 right, 1 left, 2 up, 3 down
+            for (int k = 1; k <= steps; k++)
+            {
+                int i = ni[k - 1], j = nj[k - 1];
+                int[] dirs = new int[4]; int count = 0;
+                if (RightEdge(i, j, cells, s.seed)) dirs[count++] = 0;
+                if (RightEdge(i - 1, j, cells, s.seed)) dirs[count++] = 1;
+                if (UpEdge(i, j, cells, s.seed)) dirs[count++] = 2;
+                if (UpEdge(i, j - 1, cells, s.seed)) dirs[count++] = 3;
+                // Don't turn straight back unless it is a dead end.
+                int back = prevDir == 0 ? 1 : prevDir == 1 ? 0 : prevDir == 2 ? 3 : prevDir == 3 ? 2 : -1;
+                int usable = 0; int[] pick = new int[4];
+                for (int d = 0; d < count; d++) if (dirs[d] != back) pick[usable++] = dirs[d];
+                int chosen;
+                if (usable > 0) chosen = pick[Mathf.Min(usable - 1, Mathf.FloorToInt(Hash(i + epoch * 13, j + k, seed + 9) * usable))];
+                else if (count > 0) chosen = dirs[0];
+                else chosen = Hash(i, j + k, seed + 3) > 0.5f ? 0 : 2;       // an isolated node: jump on
+                ni[k] = i + (chosen == 0 ? 1 : chosen == 1 ? -1 : 0);
+                nj[k] = j + (chosen == 2 ? 1 : chosen == 3 ? -1 : 0);
+                prevDir = chosen;
+            }
+            for (int tr = 0; tr < SparkTrail; tr++)
+            {
+                float q = p - tr * 0.2f;
+                if (q < 0f) q = 0f;
+                int idx = Mathf.Min(steps - 1, Mathf.FloorToInt(q));
+                float f = Mathf.Min(1f, q - idx);
+                int slot = w * SparkTrail + tr;
+                sparkX[slot] = Mathf.Lerp(ni[idx], ni[idx + 1], f) + 0.5f;
+                sparkY[slot] = Mathf.Lerp(nj[idx], nj[idx + 1], f) + 0.5f;
+            }
+            sparkCount += SparkTrail;
+        }
     }
 
     /// <summary>A pulse running along an edge: 'pos' is how far along the edge (0..1 of 'length'), the head position cycles with time.</summary>
@@ -412,28 +490,6 @@ public partial class PixelFloor
     // Horror
     // ------------------------------------------------------------------
 
-    private static Color ShadeBloodBoards(FloorStyle s, float u, float v, int cells)
-    {
-        int plank = Mathf.FloorToInt(v * cells);
-        float pv = Frac(v * cells);
-        float shift = Hash(plank, 1, s.seed);
-        float pu = Frac(u * 3f + shift);
-        float grain = Fbm(u, v, 4, cells * 2, 3, s.seed);
-        Color wood = Color.Lerp(s.colorA, s.colorB, grain) * (0.85f + 0.2f * Hash(plank, 4, s.seed));
-        if (pv < 0.06f || pv > 0.985f) wood = s.colorA * 0.25f;                 // seams
-        else if (pu < 0.012f) wood = s.colorA * 0.3f;                           // end joints
-
-        float m = Fbm(u, v, 3, 3, s.seed + 4);
-        float drip = Fbm(u, v, 26, 3, 2, s.seed + 6);
-        float pool = Sstep(0.54f, 0.6f, m + (drip - 0.5f) * 0.14f);
-        Color blood = s.colorC * (0.55f + 0.35f * grain);
-        Color c = ScMix(wood, blood, pool * 0.92f);
-        float rim = pool * (1f - pool) * 4f;                                    // a wet shine on the pool's edge
-        c += new Color(0.5f, 0.12f, 0.1f) * rim * 0.35f;
-        c.a = 1f;
-        return c;
-    }
-
     private static Color ShadeHauntedTiles(FloorStyle s, float u, float v, int x, int y, int cells)
     {
         float t = shadeTime;
@@ -500,87 +556,6 @@ public partial class PixelFloor
                 c += s.colorC * (core + halo);
             }
         }
-        c.a = 1f;
-        return c;
-    }
-
-    // ------------------------------------------------------------------
-    // Noir smoker: a glamorous profile silhouette in a smoky room, a cigarette with a glowing ember and a curl of smoke rising.
-    // ------------------------------------------------------------------
-
-    private static Color ShadeSmoker(FloorStyle s, float u, float v, int n)
-    {
-        float A = ViewAspect();
-        float px = (u - 0.5f) * A, py = v - 0.5f;
-        float texel = 1f / n;
-        float t = shadeTime;
-
-        // Room: dark blue-green with slanting light from window blinds.
-        float blinds = Sstep(0.3f, 0.5f, Mathf.Abs(Frac((py + px * 0.4f) * 8f) - 0.5f) * 2f);
-        Color c = Color.Lerp(s.colorA * 0.45f, s.colorA * 1.35f, blinds * Mathf.Clamp01(0.6f + px * 0.8f));
-        c *= 1f - 0.5f * Mathf.Clamp01((Mathf.Abs(px) / A * 2f) * 0.9f + Mathf.Abs(py) * 0.5f - 0.25f);     // vignette
-
-        Color skin = s.colorB, lips = s.colorC;
-        Color hair = new Color(0.04f, 0.035f, 0.05f);
-        float light = Mathf.Clamp01((-px + 0.05f) * 4f);                                     // lit from the left
-
-        // Back hair, falling behind the shoulders.
-        float backHair = Mathf.Max(ScEll(px, py, 0.06f, 0.02f, 0.15f, 0.27f, texel), ScEll(px, py, 0.1f, -0.2f, 0.12f, 0.2f, texel));
-        c = ScMix(c, hair * (0.8f + 0.5f * Mathf.Clamp01(Fbm(u, v, 6, 3, s.seed) - 0.3f)), backHair);
-
-        // Dress / shoulders (dark with a red edge) and the neck.
-        Color dress = Color.Lerp(new Color(0.07f, 0.04f, 0.06f), s.colorC * 0.5f, Mathf.Clamp01(light * 0.7f));
-        c = ScMix(c, dress, ScEll(px, py, 0.03f, -0.4f, 0.34f, 0.26f, texel));
-        c = ScMix(c, skin * (0.55f + 0.35f * light), ScBox(px, py, -0.045f, -0.17f, 0.055f, 0.03f, texel));
-        c = ScMix(c, skin * (0.6f + 0.35f * light), ScEll(px, py, 0f, -0.2f, 0.085f, 0.07f, texel) * 0.9f);      // collarbone
-
-        // Face in profile, looking left: head, nose, chin, lips.
-        float face = Mathf.Max(ScEll(px, py, 0f, 0.12f, 0.13f, 0.17f, texel), ScEll(px, py, -0.128f, 0.113f, 0.028f, 0.032f, texel));
-        face = Mathf.Max(face, ScEll(px, py, -0.083f, -0.012f, 0.058f, 0.05f, texel));
-        face = Mathf.Max(face, ScEll(px, py, -0.1f, 0.02f, 0.045f, 0.05f, texel));
-        c = ScMix(c, skin * (0.62f + 0.42f * light), face);
-        c = ScMix(c, lips, ScEll(px, py, -0.122f, 0.047f, 0.026f, 0.012f, texel) * face);
-        c = ScMix(c, new Color(0.03f, 0.02f, 0.03f), ScEll(px, py, -0.07f, 0.148f, 0.032f, 0.0065f, texel) * face);   // the eye
-        c = ScMix(c, new Color(0.03f, 0.02f, 0.03f), ScEll(px, py, -0.078f, 0.172f, 0.04f, 0.005f, texel) * face);   // brow
-
-        // Front hair: a swept fringe over the forehead and the crown.
-        float front = ScEll(px, py, 0.04f, 0.2f, 0.15f, 0.17f, texel) * Sstep(-0.06f - (py - 0.2f) * 0.5f, -0.04f - (py - 0.2f) * 0.5f, px);
-        c = ScMix(c, hair * (1f + 0.6f * Mathf.Exp(-Mathf.Pow((px - 0.0f) / 0.04f, 2f))), front);
-
-        // Cigarette held in the fingers.
-        float along;
-        float dCig = ScSeg(px, py, -0.14f, 0.044f, -0.31f, 0.078f, out along);
-        float cig = Mathf.Clamp01((0.0045f - dCig) / texel + 0.5f);
-        Color paper = along > 0.86f ? new Color(1f, 0.5f, 0.12f) : new Color(0.95f, 0.94f, 0.9f);
-        // Hand: two finger blobs around the cigarette.
-        float hand = Mathf.Max(ScEll(px, py, -0.2f, 0.045f, 0.028f, 0.042f, texel), ScEll(px, py, -0.19f, 0.07f, 0.02f, 0.03f, texel));
-        c = ScMix(c, paper, cig);
-        c = ScMix(c, skin * (0.7f + 0.3f * light), hand * 0.97f);
-        float ember = Mathf.Exp(-(Mathf.Pow(px + 0.31f, 2f) + Mathf.Pow(py - 0.078f, 2f)) / 0.0007f) * (0.75f + 0.25f * Mathf.Sin(t * 5f));
-        c += new Color(1f, 0.5f, 0.15f) * ember * 1.1f;
-
-        // Smoke: a curling plume from the tip that widens, drifts and fades as it rises.
-        float sy = py - 0.078f;
-        if (sy > 0f)
-        {
-            float cx = -0.31f + Mathf.Sin(sy * 15f - t * 1.4f) * 0.028f * Mathf.Min(1f, sy * 6f) + sy * 0.1f;
-            float w = 0.008f + sy * 0.2f;
-            float dens = Mathf.Exp(-((px - cx) * (px - cx)) / (w * w)) * Mathf.Exp(-sy * 1.7f);
-            dens *= 0.35f + 0.9f * Fbm(u * 2f - t * 0.02f, v * 2f - t * 0.07f, 4, 3, s.seed + 7);
-            c = ScMix(c, new Color(0.86f, 0.88f, 0.92f), Mathf.Clamp01(dens) * 0.8f);
-        }
-        // A thin exhale drifting away from the lips.
-        float ex = px + 0.15f, ey = py - 0.05f;
-        if (ex < 0f)
-        {
-            float spread = 0.01f + (-ex) * 0.22f;
-            float wob = Mathf.Sin(-ex * 18f - t * 1.2f) * 0.012f;
-            float dens2 = Mathf.Exp(-((ey - wob - (-ex) * 0.1f) * (ey - wob - (-ex) * 0.1f)) / (spread * spread)) * Mathf.Exp(ex * 2.6f);
-            dens2 *= 0.25f + 0.8f * Fbm(u * 2f - t * 0.03f, v * 2f, 4, 3, s.seed + 9);
-            c = ScMix(c, new Color(0.8f, 0.82f, 0.88f), Mathf.Clamp01(dens2) * 0.45f);
-        }
-
-        c += Color.white * ((Hash(Mathf.FloorToInt(u * n), Mathf.FloorToInt(v * n), s.seed + Mathf.FloorToInt(t * 12f)) - 0.5f) * 0.05f);   // film grain
         c.a = 1f;
         return c;
     }
@@ -747,6 +722,153 @@ public partial class PixelFloor
         g = ScMix(g, s.colorB, haze * 0.8f);
         g.a = 1f;
         return g;
+    }
+
+    // ------------------------------------------------------------------
+    // Mining
+    // ------------------------------------------------------------------
+
+    /// <summary>Gravel with a pair of rails and wooden sleepers running across it, a few metal flecks in the stone. Tiles.</summary>
+    private static Color ShadeMineTrack(FloorStyle s, float u, float v, int x, int y, int cells)
+    {
+        Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 8, 3, s.seed));
+        c *= 0.78f + 0.4f * Hash(x, y, s.seed);
+        if (Hash(x / 2, y / 2, s.seed + 3) > 0.965f) c = ScMix(c, s.colorB * 1.5f, 0.7f);                  // pale pebbles
+        if (Hash(x, y, s.seed + 7) > 0.996f) c = ScMix(c, s.colorC, 0.9f);                                    // glinting ore flecks
+
+        // Sleepers: wooden planks across the track.
+        float su = Frac(u * cells);
+        if (v > 0.2f && v < 0.8f && su > 0.12f && su < 0.88f)
+        {
+            float grain = Fbm(u, v, cells * 2, 18, 2, s.seed + 4);
+            Color wood = Color.Lerp(new Color(0.32f, 0.2f, 0.1f), new Color(0.5f, 0.33f, 0.18f), grain) * (0.85f + 0.2f * Hash(Mathf.FloorToInt(u * cells), 2, s.seed));
+            if (su < 0.16f || su > 0.84f || v < 0.215f || v > 0.785f) wood *= 0.65f;                          // dark edges
+            c = wood;
+        }
+        // Two steel rails with a bright top edge, nails where they cross a sleeper.
+        for (int r = 0; r < 2; r++)
+        {
+            float rc = r == 0 ? 0.36f : 0.64f;
+            float d = Mathf.Abs(v - rc);
+            if (d < 0.022f) c = Color.Lerp(new Color(0.3f, 0.31f, 0.34f), new Color(0.72f, 0.74f, 0.78f), 1f - d / 0.022f);
+            else if (d < 0.03f) c *= 0.55f;
+        }
+        return c;
+    }
+
+    /// <summary>Dark rock whose cracks are filled with glittering metal veins and a few embedded crystals. Tiles.</summary>
+    private static Color ShadeOreVeins(FloorStyle s, float u, float v, int x, int y, int cells)
+    {
+        Color c = Color.Lerp(s.colorA, s.colorA * 1.8f, Fbm(u, v, 6, 4, s.seed));
+        c *= 0.8f + 0.3f * Hash(x, y, s.seed);
+        Voronoi(u, v, cells, s.seed + 1, out float f1, out float f2, out int id);
+        float edge = (f2 - f1) * cells;
+        float width = 0.05f + 0.07f * Fbm(u, v, 10, 2, s.seed + 2);
+        if (edge < width && HashId(id, s.seed) > 0.35f)
+        {
+            float k = 1f - edge / width;
+            Color vein = Color.Lerp(s.colorB * 0.7f, s.colorB * 1.3f, Hash(x, y, s.seed + 5));
+            if (Hash(x, y, s.seed + 6) > 0.93f) vein = Color.white;                                           // glitter
+            c = ScMix(c, vein, Mathf.Clamp01(k * 2.2f));
+        }
+        // A crystal cluster in some cells: faceted, glowing from within.
+        float d = f1 * cells;
+        if (HashId(id, s.seed + 8) > 0.72f && d < 0.1f)
+        {
+            float facet = 0.55f + 0.5f * Mathf.Abs(Mathf.Sin(Mathf.Atan2(v * cells - Mathf.Floor(v * cells) - 0.5f, u * cells - Mathf.Floor(u * cells) - 0.5f) * 3f));
+            c = s.colorC * facet * (1f - d * 4f) + c * 0.2f;
+            c += s.colorC * 0.25f;
+        }
+        return c;
+    }
+
+    /// <summary>Layers of sediment in different rock colours with wavy boundaries, grit and pebbles. Tiles.</summary>
+    private static Color ShadeStrata(FloorStyle s, float u, float v, int x, int y, int cells)
+    {
+        float warp = (Fbm(u, v, 3, 3, s.seed) - 0.5f) * 1.8f;
+        float band = v * cells + warp;
+        int layer = Mathf.FloorToInt(band);
+        float inside = band - layer;
+        float h = HashId(Wrap(layer, cells), s.seed);
+        Color c = h < 0.33f ? Color.Lerp(s.colorA, s.colorB, h * 3f) : h < 0.66f ? Color.Lerp(s.colorB, s.colorC, (h - 0.33f) * 3f) : Color.Lerp(s.colorC, s.colorA, (h - 0.66f) * 3f);
+        c *= 0.85f + 0.25f * Fbm(u, v, 24, cells * 4, 2, s.seed + 3);                                         // grain along the layer
+        c *= 0.9f + 0.2f * Hash(x, y, s.seed + 4);
+        if (inside < 0.06f) c *= 0.6f + 0.4f * (inside / 0.06f);                                              // dark join between layers
+        if (Hash(x / 2, y / 2, s.seed + 5) > 0.985f) c = ScMix(c, c * 1.5f, 0.8f);                           // pebbles
+        return c;
+    }
+
+    // ------------------------------------------------------------------
+    // Farming
+    // ------------------------------------------------------------------
+
+    /// <summary>Ploughed rows of earth with little green seedlings of different sizes growing along them. Tiles.</summary>
+    private static Color ShadeCropRows(FloorStyle s, float u, float v, int x, int y, int cells)
+    {
+        float rv = Frac(v * cells);
+        float ridge = Mathf.Sin(rv * Mathf.PI);
+        Color c = Color.Lerp(s.colorA, s.colorB, ridge) * (0.85f + 0.25f * Hash(x, y, s.seed));
+        c *= 0.9f + 0.2f * Fbm(u, v, 8, 3, s.seed);
+
+        // One seedling per cell along the ridge: a star of leaves around a stem.
+        int ci = Mathf.FloorToInt(u * cells), cj = Mathf.FloorToInt(v * cells);
+        float h = Hash(Wrap(ci, cells), Wrap(cj, cells), s.seed + 2);
+        if (h > 0.12f)
+        {
+            float dx = Frac(u * cells) - 0.5f, dy = rv - 0.5f;
+            float scale = 0.45f + 0.55f * Hash(Wrap(ci, cells), Wrap(cj, cells), s.seed + 3);
+            float r = Mathf.Sqrt(dx * dx + dy * dy);
+            float ang = Mathf.Atan2(dy, dx);
+            float leaf = (0.12f + 0.2f * Mathf.Abs(Mathf.Cos(ang * 2f + h * 6f))) * scale;
+            if (r < leaf)
+            {
+                Color green = Color.Lerp(s.colorC * 0.7f, s.colorC * 1.25f, 1f - r / Mathf.Max(0.01f, leaf));
+                c = green * (0.85f + 0.3f * Mathf.Cos(ang - 0.8f));
+            }
+            else if (r < leaf + 0.05f && dx > 0f) c *= 0.7f;                                                  // a soft shadow to the right
+        }
+        return c;
+    }
+
+    /// <summary>A ripe wheat field seen from above: golden streaks and seed heads with waves of wind rolling through. Animated, tiles.</summary>
+    private static Color ShadeWheat(FloorStyle s, float u, float v, int x, int y)
+    {
+        float t = shadeTime;
+        float wave = Mathf.Sin((u * 2f + v * 3f) * Mathf.PI * 2f - t * 1.1f) * 0.5f + Mathf.Sin((u * 5f - v * 2f) * Mathf.PI * 2f + t * 0.7f) * 0.25f;
+        float streak = Fbm(u + wave * 0.01f, v, 48, 6, 3, s.seed);                                            // stalks run along the field
+        Color c = Color.Lerp(s.colorA, s.colorB, streak);
+        c *= 0.82f + 0.22f * wave + 0.1f;
+        if (Hash(x, y, s.seed + 4) > 0.93f) c = ScMix(c, s.colorC, 0.7f);                                     // seed heads
+        return c;
+    }
+
+    /// <summary>A patchwork of fields from the air: crops, wheat, ploughed earth, meadow and flowers, with hedges between. Tiles.</summary>
+    private static Color ShadePatchwork(FloorStyle s, float u, float v, int x, int y, int cells)
+    {
+        float gu = u * cells, gv = v * cells;
+        int ci = Mathf.FloorToInt(gu), cj = Mathf.FloorToInt(gv);
+        float fu = gu - ci, fv = gv - cj;
+        int wi = Wrap(ci, cells), wj = Wrap(cj, cells);
+        float h = Hash(wi, wj, s.seed);
+        bool alongX = Hash(wi, wj, s.seed + 1) > 0.5f;
+        float line = Frac((alongX ? fv : fu) * 14f);
+        float tone = 0.88f + 0.2f * Hash(x, y, s.seed + 2);
+
+        Color c;
+        if (h < 0.25f) c = (line < 0.5f ? new Color(0.28f, 0.62f, 0.22f) : new Color(0.2f, 0.5f, 0.16f)) * tone;          // crop rows
+        else if (h < 0.5f) c = (line < 0.5f ? s.colorB : s.colorB * 0.88f) * tone;                                        // wheat
+        else if (h < 0.7f) c = (line < 0.5f ? s.colorC : s.colorC * 0.75f) * tone;                                        // ploughed earth
+        else if (h < 0.88f) c = new Color(0.45f, 0.72f, 0.3f) * (0.9f + 0.15f * Fbm(u, v, 12, 3, s.seed + 5));            // meadow
+        else
+        {
+            c = new Color(0.4f, 0.68f, 0.28f) * tone;
+            if (Hash(x / 2, y / 2, s.seed + 6) > 0.9f) c = Hash(x, y, s.seed + 7) > 0.5f ? new Color(0.95f, 0.85f, 0.2f) : new Color(0.85f, 0.4f, 0.7f);   // flowers
+        }
+        // Hedges along the field borders.
+        float edge = Mathf.Min(Mathf.Min(fu, 1f - fu), Mathf.Min(fv, 1f - fv)) * cells;
+        float hedge = 0.045f + 0.02f * Hash(x, y, s.seed + 8);
+        if (edge * 1f / cells < hedge) c = ScMix(s.colorA * (0.8f + 0.4f * Hash(x, y, s.seed + 9)), c, 0f);
+        return c;
     }
 
     private static Color Sun(Color under, float px, float v, float cx, float cy, float radius, Color colour)
