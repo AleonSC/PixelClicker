@@ -569,7 +569,7 @@ public partial class PixelShop
         {
             displayName = "Wood Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Wood pixel: a plain wooden block. A basic block that spawns in every rotation, whatever skill you are training.",
+            description = "Adds the Wood pixel: a plain wooden block. A basic block that is not in the base rotation: switch it on in the Toggles window to have it spawn.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 300 } },
             rewardTiers = new[]
@@ -593,7 +593,7 @@ public partial class PixelShop
         {
             displayName = "Rock Pixel",
             tab = ShopTab.Pixels,
-            description = "Adds the Rock pixel: a plain grey rock that takes two clicks to break. A basic block that spawns in every rotation, whatever skill you are training.",
+            description = "Adds the Rock pixel: a plain grey rock that takes two clicks to break. A basic block that is not in the base rotation: switch it on in the Toggles window to have it spawn.",
             requirements = Needs(-1),
             costs = new[]
             {

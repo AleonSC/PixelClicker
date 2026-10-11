@@ -299,6 +299,7 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
+        if (IsOptIn(type)) return s == null || !GuestSet.Contains(type.ToString());   // Wood and Rock: only when switched on in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type);
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
@@ -323,6 +324,12 @@ public partial class PixelSkills : MonoBehaviour
             return guestCache;
         }
     }
+
+    /// <summary>The basic shop blocks (Wood, Rock) are never part of a rotation by themselves: they spawn only while the player has switched them on (the same switch set as the guests).</summary>
+    public static bool IsOptIn(PixelClicker.PixelType type) => type == PixelClicker.PixelType.Wood || type == PixelClicker.PixelType.Rock;
+
+    /// <summary>Is the opt-in block (Wood, Rock) switched on?</summary>
+    public static bool OptInOn(PixelClicker.PixelType type) => GuestSet.Contains(type.ToString());
 
     /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
     public bool GuestUnlocked(PixelClicker.PixelType type)

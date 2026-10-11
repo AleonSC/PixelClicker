@@ -278,6 +278,13 @@ public class PixelToggles : MonoBehaviour
                         setter = on => { skills.SetActive(on ? packId : PixelSkills.StandardId); clicker.RefreshSpawnTier(); },
                     });
                 }
+                // The basic shop blocks (Wood, Rock) are not in the base rotation: each is a switch, off until you turn it on.
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (!t.unlocked || !PixelSkills.IsOptIn(t.type)) continue;
+                    PixelClicker.PixelType type = t.type;
+                    list.Add(new Entry { label = ShortPixelName(t.displayName), on = PixelSkills.OptInOn(type), setter = on => skills.SetGuest(type, on) });
+                }
                 // Skill-only blocks unlocked in a skill tree can be switched on for every rotation.
                 foreach (PixelClicker.PixelType guest in skills.UnlockedGuests())
                 {
