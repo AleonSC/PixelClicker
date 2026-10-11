@@ -1704,38 +1704,51 @@ public class PixelPauseMenu : MonoBehaviour
         searchResults.Clear();
         if (!searching || mainPanel == null) return;
 
-        float y = menuSearchTop, height = Mathf.Min(menuButtonSize.y, 64f);
-        void AddResult(string label, Color color, UnityEngine.Events.UnityAction action)
-        {
-            Button b = MakeButton(mainPanel.transform, label + " Result", label, new Vector2(mainPanelWidth - 80f, height), color, menuButtonFontSize * 0.85f);
-            RectTransform rt = b.GetComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(0f, -y);
-            b.onClick.AddListener(action);
-            searchResults.Add(b.gameObject);
-            y += height + menuButtonSpacing;
-        }
-
-        int found = 0;
+        // Collect every result first, so the lines can be sized (and the settings list trimmed) to fit inside the panel.
+        List<string> labels = new List<string>();
+        List<Color> colors = new List<Color>();
+        List<UnityEngine.Events.UnityAction> actions = new List<UnityEngine.Events.UnityAction>();
         if (mainEntries != null)
             foreach (MenuEntry e in mainEntries)
-                if (e.label.ToLowerInvariant().Contains(menuSearch)) { AddResult(e.label, e.color, new UnityEngine.Events.UnityAction(e.action)); found++; }
+                if (e.label.ToLowerInvariant().Contains(menuSearch)) { labels.Add(e.label); colors.Add(e.color); actions.Add(e.action); }
+        int entryCount = labels.Count;
 
-        // Settings that match: each line opens the Settings screen filtered to the matches.
-        int shownSettings = 0, totalSettings = 0;
+        List<string> settingLabels = new List<string>();
         foreach (SettingsItem item in settingsItems)
         {
             if (item.isHeader || !item.wasActive) continue;
             string rowLabel = RowText(item);
-            if (!rowLabel.ToLowerInvariant().Contains(menuSearch)) continue;
-            totalSettings++;
-            if (shownSettings >= 6) continue;
-            shownSettings++;
-            AddResult(settingsText + " > " + rowLabel, tickBoxColor, () => OpenFilteredSettings());
+            if (rowLabel.ToLowerInvariant().Contains(menuSearch)) settingLabels.Add(rowLabel);
         }
-        if (totalSettings > shownSettings) AddResult("+ " + (totalSettings - shownSettings) + " more in " + settingsText, tickBoxColor, () => OpenFilteredSettings());
-        found += totalSettings;
-        if (found == 0)
+
+        float avail = (mainPanel.transform as RectTransform).rect.height - menuSearchTop - 24f;
+        float minHeight = 38f;
+        int maxLines = Mathf.Max(1, Mathf.FloorToInt((avail + menuButtonSpacing) / (minHeight + menuButtonSpacing)));
+        int settingsRoom = Mathf.Max(0, maxLines - entryCount);
+        int shownSettings = settingLabels.Count <= settingsRoom ? settingLabels.Count : Mathf.Max(0, settingsRoom - 1);   // one line is kept for '+ N more'
+        for (int k = 0; k < shownSettings; k++)
+        {
+            labels.Add(settingsText + " > " + settingLabels[k]); colors.Add(tickBoxColor); actions.Add(OpenFilteredSettings);
+        }
+        if (settingLabels.Count > shownSettings)
+        {
+            labels.Add("+ " + (settingLabels.Count - shownSettings) + " more in " + settingsText); colors.Add(tickBoxColor); actions.Add(OpenFilteredSettings);
+        }
+
+        float height = Mathf.Clamp(avail / Mathf.Max(1, labels.Count) - menuButtonSpacing, minHeight, Mathf.Min(menuButtonSize.y, 64f));
+        float y = menuSearchTop;
+        for (int k = 0; k < labels.Count; k++)
+        {
+            Button b = MakeButton(mainPanel.transform, labels[k] + " Result", labels[k], new Vector2(mainPanelWidth - 80f, height), colors[k], menuButtonFontSize * (height < 50f ? 0.7f : 0.85f));
+            RectTransform rt = b.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -y);
+            b.onClick.AddListener(actions[k]);
+            searchResults.Add(b.gameObject);
+            y += height + menuButtonSpacing;
+        }
+
+        if (labels.Count == 0)
         {
             TMP_Text none = MakeText(mainPanel.transform, "No Results", "NOTHING FOUND", rowFontSize, FontStyles.Normal);
             none.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
