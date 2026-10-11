@@ -117,6 +117,7 @@ public partial class PixelSkills
         hud.DockInGroup(tabRect, new Vector2(0f, 0.5f), () => WindowOpen || (tabDock != null && tabDock.PointerNear()),
                         -(hud.ButtonSize.y + tabGap), groupWidth, 0f, groupWidth);
         tabDock = tabButton.GetComponent<PixelDockedButton>();
+        tabDock.blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
         tabGroup = tabObject.AddComponent<CanvasGroup>();
         tabButton.onClick.AddListener(Toggle);
         tabObject.SetActive(false);

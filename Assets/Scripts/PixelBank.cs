@@ -1188,6 +1188,10 @@ public class PixelBank : MonoBehaviour
         AddHoseTip(hoseButton.gameObject);
         bankDock = bank.GetComponent<PixelDockedButton>();
         hoseDock = hoseButton.GetComponent<PixelDockedButton>();
+        // The tabs only slide out when both left-edge windows (Bank and Skills) are closed.
+        System.Func<bool> otherOpen = () => (PixelSkills.Instance != null && PixelSkills.Instance.WindowOpen) || (windowObject != null && windowObject.activeSelf);
+        bankDock.blockPointer = otherOpen;
+        hoseDock.blockPointer = otherOpen;
         bankGroup = bank.gameObject.AddComponent<CanvasGroup>();
         hoseGroup = hoseButton.gameObject.AddComponent<CanvasGroup>();
 
@@ -1363,6 +1367,8 @@ public class PixelBank : MonoBehaviour
     }
 
     /// <summary>Both buttons stay out while the window is open or the mouse is near either of them.</summary>
+    public bool WindowIsOpen => windowObject != null && windowObject.activeSelf;
+
     private bool KeepButtonsOut()
     {
         if (windowObject != null && windowObject.activeSelf) return true;

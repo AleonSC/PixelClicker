@@ -317,6 +317,9 @@ public class PixelDockedButton : MonoBehaviour
     /// <summary>While true the button is snapped to its hidden position and stays there (even with the mouse near).</summary>
     public bool ForceHidden { get; set; }
 
+    /// <summary>When it returns true the mouse never makes this button slide out (a neighbouring window is open over its strip).</summary>
+    public Func<bool> blockPointer;
+
     /// <summary>How far out the button is (0 = hidden, 1 = fully shown).</summary>
     public float SlideAmount => slide;
 
@@ -366,6 +369,7 @@ public class PixelDockedButton : MonoBehaviour
     /// <summary>Is the mouse over (or close to) the spot the button slides out to?</summary>
     public bool PointerNear()
     {
+        if (blockPointer != null && blockPointer()) return false;
         if (canvas == null) canvas = rect.GetComponentInParent<Canvas>();
         if (canvas == null) return false;
         float scale = Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor);
