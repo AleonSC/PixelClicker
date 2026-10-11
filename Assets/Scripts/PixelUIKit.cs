@@ -219,6 +219,19 @@ public static class PixelUIKit
         ApplyWindow(image, color);
     }
 
+    /// <summary>The body colour of the nearest window above 'from' (the one built with <see cref="StyleWindow"/>), or a dark navy if there is none. Used by the scroll fade.</summary>
+    public static Color WindowBodyColorAbove(Transform from)
+    {
+        for (Transform t = from; t != null; t = t.parent)
+        {
+            Image img = t.GetComponent<Image>();
+            if (img == null) continue;
+            for (int i = 0; i < windowImages.Count; i++)
+                if (windowImages[i].image == img) { Color c = Tinted(windowImages[i].color); c.a = 1f; return c; }
+        }
+        return new Color(0.08f, 0.1f, 0.16f, 1f);
+    }
+
     private static void ApplyWindow(Image image, Color color)
     {
         Color body = Tinted(color);
