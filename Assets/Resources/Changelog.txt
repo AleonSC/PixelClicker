@@ -476,3 +476,4 @@
 [2026-10-11 14:23 UTC] The Inventory key in the pinned view switches to the other tab (either way) before the next press closes it.
 [2026-10-11 14:23 UTC] Added a to-do line about working Cubie and the vendors into the 'pixels are money' idea.
 [2026-10-11 14:24 UTC] The 'Click N more...' guide text fades out while a window is open and comes right back when it closes.
+[2026-10-11 14:30 UTC] The pinned Inventory fades out while another window is open and returns when it closes; Skills: Offline Progression sits under Standard, each skill card has a green tree square that opens its skill tree, the detail title stays on one line and the label reads 'Base Pixel Pack'.

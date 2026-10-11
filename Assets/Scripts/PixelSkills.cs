@@ -239,6 +239,15 @@ public partial class PixelSkills : MonoBehaviour
                 if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
             pack.nodes = merged.ToArray();
         }
+
+        // Offline Progression is listed right under Standard.
+        int offlineAt = packs.FindIndex(p => p.id == OfflineId);
+        if (offlineAt > 1)
+        {
+            SkillPack offline = packs[offlineAt];
+            packs.RemoveAt(offlineAt);
+            packs.Insert(1, offline);
+        }
     }
 
     private static TreeNode[] DefaultNodes(string id)

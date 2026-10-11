@@ -596,7 +596,6 @@ public class PixelUI : MonoBehaviour
     {
         PixelUI ui = inventoryInstance;
         if (ui == null || ui.boxObject == null) return;
-        ui.pinnedSuspended = false;                 // its own button / toggle is the player's choice: forget any 'put away by another window'
         if (!open && Compact && !force) return;   // the pinned Inventory is put away by Update (UpdatePinnedHierarchy) when other windows open, not here
         if (open) PixelPop.Show(ui.boxObject); else PixelPop.Hide(ui.boxObject);
         if (open)
@@ -627,7 +626,7 @@ public class PixelUI : MonoBehaviour
         }
     }
 
-    private bool pinnedSuspended;
+    private float pinnedFade = 1f;
 
     /// <summary>
     /// The pinned Inventory obeys the same window hierarchy as the normal one: any registered window below priority 100 (Shop, Log, Bank, Skills,
@@ -636,17 +635,14 @@ public class PixelUI : MonoBehaviour
     private void UpdatePinnedHierarchy()
     {
         if (!autoMode || boxObject == null) return;
-        if (!Compact) { pinnedSuspended = false; return; }
-        if (PixelWindows.AnyOpenExcept(this))
-        {
-            if (!pinnedSuspended && PixelPop.IsOpen(boxObject)) { pinnedSuspended = true; PixelPop.Hide(boxObject); }
-        }
-        else if (pinnedSuspended)
-        {
-            pinnedSuspended = false;
-            PixelPop.Show(boxObject);
-            Refresh();
-        }
+        CanvasGroup group = boxObject.GetComponent<CanvasGroup>();
+        if (group == null) group = boxObject.AddComponent<CanvasGroup>();
+        // Fades away while another window is open and comes straight back when they are all closed (same timing as the guide text).
+        bool away = Compact && PixelWindows.AnyOpenExcept(this);
+        pinnedFade = Mathf.MoveTowards(pinnedFade, away ? 0f : 1f, Time.unscaledDeltaTime / (away ? 0.25f : 0.06f));
+        group.alpha = pinnedFade;
+        group.blocksRaycasts = pinnedFade > 0.5f;
+        group.interactable = pinnedFade > 0.5f;
     }
 
     private void Update()

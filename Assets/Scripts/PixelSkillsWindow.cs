@@ -56,7 +56,7 @@ public partial class PixelSkills
     private class Card
     {
         public SkillPack pack;
-        public Button button;
+        public Button button, treeButton;
         public Image background, barFill;
         public TMP_Text nameLabel, levelLabel, badge;
     }
@@ -186,6 +186,14 @@ public partial class PixelSkills
         detailName = PixelUIKit.CreateText(Font, detail.transform, "Name", "", 44f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         PixelUIKit.Caps(detailName);
         Place(detailName.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -62f), new Vector2(-200f, -10f));
+        detailName.enableAutoSizing = true;   // one line: a long name ("Offline Progression") shrinks instead of wrapping over the text below
+        detailName.fontSizeMax = 44f;
+        detailName.fontSizeMin = 20f;
+#if UNITY_2023_1_OR_NEWER
+        detailName.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        detailName.enableWordWrapping = false;
+#endif
         detailDesc = PixelUIKit.CreateText(Font, detail.transform, "Description", "", 24f, TextAlignmentOptions.TopLeft, FontStyles.Normal, dimTextColor);
         detailDesc.enableAutoSizing = true;   // always fits its band
         detailDesc.fontSizeMax = 24f;
@@ -590,7 +598,51 @@ public partial class PixelSkills
         Place(c.nameLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(56f, -52f), new Vector2(-84f, -6f));
         RectTransform infoBox = CreateInfoBox(c.button.transform, 34f, () => PackTip(c.pack));   // the description is a tooltip on this orange '!' box
         infoBox.anchorMin = infoBox.anchorMax = infoBox.pivot = new Vector2(0f, 1f);
-        infoBox.anchoredPosition = new Vector2(10f, -10f);
+        infoBox.anchoredPosition = new Vector2(10f, -8f);
+        infoBox.sizeDelta = new Vector2(30f, 30f);
+
+        // A green 'skill tree' square under the '!': selects the skill and opens its tree.
+        GameObject treeSquare = new GameObject("Tree Button", typeof(RectTransform), typeof(Image), typeof(Button));
+        treeSquare.transform.SetParent(c.button.transform, false);
+        Image treeImage = treeSquare.GetComponent<Image>();
+        treeImage.color = new Color(0.2f, 0.62f, 0.3f, 1f);
+        PixelUIKit.StyleButton(treeImage);
+        treeSquare.GetComponent<Button>().targetGraphic = treeImage;
+        RectTransform tsr = treeSquare.GetComponent<RectTransform>();
+        tsr.anchorMin = tsr.anchorMax = tsr.pivot = new Vector2(0f, 1f);
+        tsr.sizeDelta = new Vector2(30f, 30f);
+        tsr.anchoredPosition = new Vector2(10f, -44f);
+        // The glyph: a root node on top joined to two nodes below.
+        void Dot(float x, float y, float w, float h)
+        {
+            GameObject d = new GameObject("Dot", typeof(RectTransform), typeof(Image));
+            d.transform.SetParent(treeSquare.transform, false);
+            d.GetComponent<Image>().color = Color.white;
+            d.GetComponent<Image>().raycastTarget = false;
+            RectTransform r = d.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+            r.sizeDelta = new Vector2(w, h);
+            r.anchoredPosition = new Vector2(x, y);
+        }
+        Dot(0f, 8f, 8f, 7f); Dot(0f, 2f, 2f, 5f); Dot(0f, -1f, 14f, 2f); Dot(-7f, -6f, 7f, 7f); Dot(7f, -6f, 7f, 7f);
+        PixelHoverTip treeTip = treeSquare.AddComponent<PixelHoverTip>();
+        System.Func<string> treeSource = () => "Open the skill tree";
+        treeTip.onEnter = () => hoverTip = treeSource;
+        treeTip.onExit = () => { if (hoverTip == treeSource) hoverTip = null; };
+        c.treeButton = treeSquare.GetComponent<Button>();
+        int treeIndex = index;
+        c.treeButton.onClick.AddListener(() =>
+        {
+            selected = treeIndex;
+            selectedNode = 0;
+            RefreshWindow();
+            SkillPack sp = packs[Mathf.Clamp(selected, 0, packs.Count - 1)];
+            if (IsAvailable(sp) && sp.nodes != null && sp.nodes.Length > 0)
+            {
+                PixelPop.Show(treeWindow);
+                RefreshWindow();
+            }
+        });
         c.levelLabel = PixelUIKit.CreateText(Font, c.button.transform, "Level", "", 26f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, dimTextColor);
         c.levelLabel.raycastTarget = false;
         Place(c.levelLabel.rectTransform, 1f, 1f, 1f, 1f, new Vector2(-82f, -52f), new Vector2(-10f, -6f));
@@ -599,13 +651,16 @@ public partial class PixelSkills
         c.levelLabel.fontSizeMin = 12f;
         c.badge = PixelUIKit.CreateText(Font, c.button.transform, "Badge", activeBadgeText, 20f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, perkUnlockedColor);
         c.badge.raycastTarget = false;
-        Place(c.badge.rectTransform, 0f, 0f, 0f, 0f, new Vector2(18f, 12f), new Vector2(120f, 40f));
+        Place(c.badge.rectTransform, 0f, 0f, 0f, 0f, new Vector2(50f, 12f), new Vector2(130f, 40f));
+        c.badge.enableAutoSizing = true;
+        c.badge.fontSizeMax = 20f;
+        c.badge.fontSizeMin = 10f;
 
         GameObject track = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(c.button.transform, false);
         track.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 1f);
         track.GetComponent<Image>().raycastTarget = false;
-        Place(track.GetComponent<RectTransform>(), 0f, 0f, 1f, 0f, new Vector2(124f, 18f), new Vector2(-16f, 32f));
+        Place(track.GetComponent<RectTransform>(), 0f, 0f, 1f, 0f, new Vector2(136f, 18f), new Vector2(-16f, 32f));
         GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
         fill.transform.SetParent(track.transform, false);
         c.barFill = fill.GetComponent<Image>();
@@ -721,6 +776,7 @@ public partial class PixelSkills
             PixelUIKit.SetText(c.nameLabel, open ? c.pack.displayName : lockedName);
             PixelUIKit.SetText(c.levelLabel, open && c.pack.id != StandardId ? "Lv " + cl : "");
             c.badge.gameObject.SetActive(isActive || pixelsOnly);
+            c.treeButton.gameObject.SetActive(open && c.pack.nodes != null && c.pack.nodes.Length > 0);
             c.barFill.color = open ? c.pack.accent : new Color(0.3f, 0.3f, 0.35f, 1f);
             RectTransform fr = c.barFill.rectTransform;
             fr.anchorMax = new Vector2(open && c.pack.id != StandardId ? Mathf.Clamp01((float)(ci / cn)) : 0f, 1f);
@@ -733,7 +789,7 @@ public partial class PixelSkills
         SkillPack p = packs[selected];
         bool available = IsAvailable(p);
         PixelUIKit.SetText(detailName, available ? p.displayName : lockedName);
-        PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>Pixels to play with:</b>" : "");
+        PixelUIKit.SetText(detailInfo, available && p.id == OfflineId ? "<b>Base Pixel Pack:</b>" : "");
 
         // The skill tree has its own window; the button only shows for a skill that has one.
         bool hasNodes = available && p.nodes != null && p.nodes.Length > 0;
