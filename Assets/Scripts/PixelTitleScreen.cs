@@ -225,6 +225,9 @@ public class PixelTitleScreen : MonoBehaviour
         public string shownName = "";
         public int shownIndex = -2;
         public bool shownUsable;
+        public RectTransform rect;
+        public CanvasGroup group;
+        public float alpha;      // 0 = hidden, 1 = shown (the picker only shows while the mouse is over it)
     }
     private readonly List<LookPicker> lookPickers = new List<LookPicker>();
     private RenderTexture liveTexture;
@@ -362,6 +365,7 @@ public class PixelTitleScreen : MonoBehaviour
         if (foreground != null && foreground.activeSelf == menuOpen) foreground.SetActive(!menuOpen);
 
         if (!menuOpen) foreach (LookPicker p in lookPickers) RefreshPicker(p, false);
+        UpdatePickerFade();
         UpdateLookTip(lookFont);
 
         if (logoRect != null && !playing)
@@ -510,7 +514,8 @@ public class PixelTitleScreen : MonoBehaviour
         rr.anchoredPosition = position;
         shrinkRects.Add(rr);
 
-        LookPicker picker = new LookPicker { source = source };
+        LookPicker picker = new LookPicker { source = source, rect = rr, group = root.AddComponent<CanvasGroup>() };
+        picker.group.alpha = 0f;
         PixelHoverTip hoverTip = root.AddComponent<PixelHoverTip>();
         hoverTip.onEnter = () => hoveredPicker = picker;
         hoverTip.onExit = () => { if (hoveredPicker == picker) hoveredPicker = null; };
@@ -560,6 +565,26 @@ public class PixelTitleScreen : MonoBehaviour
 
     // ---- the picker's name shows in a small tooltip while the mouse is over it ----
     private LookPicker hoveredPicker;
+
+    [Tooltip("Extra pixels around a floor / sky picker where the mouse still counts as over it (the pickers fade in only while hovered).")]
+    [SerializeField] private float pickerHoverMargin = 28f;
+
+    /// <summary>The floor and sky pickers are invisible until the mouse is over them: they fade in quickly and fade out slowly.</summary>
+    private void UpdatePickerFade()
+    {
+        Vector2 pointer = PixelInput.PointerPosition();
+        Vector3[] corners = new Vector3[4];
+        foreach (LookPicker p in lookPickers)
+        {
+            if (p.rect == null || p.group == null) continue;
+            p.rect.GetWorldCorners(corners);   // overlay canvas: world = screen pixels
+            bool over = !playing && pointer.x >= corners[0].x - pickerHoverMargin && pointer.x <= corners[2].x + pickerHoverMargin
+                        && pointer.y >= corners[0].y - pickerHoverMargin && pointer.y <= corners[2].y + pickerHoverMargin;
+            p.alpha = Mathf.MoveTowards(p.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.35f));
+            p.group.alpha = p.alpha;
+            p.group.blocksRaycasts = p.alpha > 0.05f;
+        }
+    }
     private TMP_FontAsset lookFont;
     private GameObject lookTip;
     private TMP_Text lookTipLabel;
