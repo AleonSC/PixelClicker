@@ -175,11 +175,8 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Text on the Bank tab.")]
     [SerializeField] private string bankButtonText = "Bank";
 
-    [Tooltip("Text on the hose button while the hose is put away. {0} = the key.")]
-    [SerializeField] private string hoseOffText = "Hose ({0})";
-
-    [Tooltip("Text on the hose button while the hose is equipped.")]
-    [SerializeField] private string hoseOnText = "Hose: ON";
+    [Tooltip("Hover tip on the square hose button (here and in the Bank window). {0} = the key bound to the hose.")]
+    [SerializeField] private string hoseTipText = "Hose: click here or press {0} to equip it or put it away";
 
     [Tooltip("Colour of the Bank tab.")]
     [SerializeField] private Color bankButtonColor = new Color(0.25f, 0.55f, 0.6f, 1f);
@@ -193,12 +190,9 @@ public class PixelBank : MonoBehaviour
     [Tooltip("Button text colour.")]
     [SerializeField] private Color buttonTextColor = Color.white;
 
-    [Tooltip("Gap between the two buttons.")]
-    [SerializeField] private float buttonGap = 12f;
-
     [Range(0.2f, 1f)]
-    [Tooltip("Width of the Hose button compared with the Bank tab (0.5 = half as wide, centred under it so it stays hidden while the tab is tucked away).")]
-    [SerializeField] private float hoseButtonWidthFraction = 0.72f;
+    [Tooltip("Width of the Bank tab compared with a normal docked button (0.5 = half as wide). The square hose button sits on its right, so it slides out first.")]
+    [SerializeField] private float bankTabWidthFraction = 0.5f;
 
     [Header("Window")]
     [Tooltip("Window title.")]
@@ -313,7 +307,7 @@ public class PixelBank : MonoBehaviour
     private GameObject canvasRoot, windowObject;
     private Button hoseButton;
     private Image hoseButtonImage;
-    private TMP_Text hoseButtonLabel, capacityLabel;
+    private TMP_Text capacityLabel;
     private PixelDockedButton bankDock, hoseDock;
     private ScrollRect scroll;
     private RectTransform content;
@@ -1181,15 +1175,17 @@ public class PixelBank : MonoBehaviour
         // The Bank tab, docked to the middle of the left edge (opposite the Toggles tab).
         Button bank = PixelUIKit.CreateButton(font, canvasRoot.transform, "Bank Button", bankButtonText, hud.ButtonSize,
                                               bankButtonColor, buttonTextColor, 30f);
-        // The hose button slides out with it, underneath.
+        // The square hose button sits on the tab's right (the side nearest the screen), so it is the part that slides out first.
         hoseButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "Hose Button", "", hud.ButtonSize, hoseButtonColor,
                                              buttonTextColor, 30f);
         hoseButtonImage = hoseButton.GetComponent<Image>();
-        hoseButtonLabel = hoseButton.GetComponentInChildren<TMP_Text>();
 
-        hud.Dock(bank.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut);
-        hud.Dock(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut,
-                 -(hud.ButtonSize.y + buttonGap), hoseButtonWidthFraction);
+        float tabWidth = hud.ButtonSize.x * bankTabWidthFraction, hoseSize = hud.ButtonSize.y, groupWidth = tabWidth + hoseSize;
+        hud.DockInGroup(bank.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, tabWidth, 0f, groupWidth);
+        hud.DockInGroup(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, hoseSize, tabWidth, groupWidth);
+        DrawHoseIcon(hoseButton.transform, hoseSize / 64f);
+        BuildTip();
+        AddHoseTip(hoseButton.gameObject);
         bankDock = bank.GetComponent<PixelDockedButton>();
         hoseDock = hoseButton.GetComponent<PixelDockedButton>();
         bankGroup = bank.gameObject.AddComponent<CanvasGroup>();
@@ -1269,6 +1265,72 @@ public class PixelBank : MonoBehaviour
     [SerializeField] private float buttonFadeSeconds = 1.2f;
 
     /// <summary>A hand-drawn hose icon button at the top left of the Bank window: switches the hose on / off (like the B key).</summary>
+    private RectTransform tipRect;
+    private TMP_Text tipLabel;
+
+    /// <summary>A small hover-tip box that follows the mouse (shared by the hose buttons).</summary>
+    private void BuildTip()
+    {
+        GameObject box = new GameObject("Hose Tip", typeof(RectTransform), typeof(Image), typeof(PixelDevTip));
+        box.transform.SetParent(canvasRoot.transform, false);
+        Image bg = box.GetComponent<Image>();
+        bg.color = new Color(0.05f, 0.06f, 0.09f, 0.96f);
+        bg.raycastTarget = false;
+        PixelUIKit.StyleBox(bg);
+        tipRect = box.GetComponent<RectTransform>();
+        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+        tipLabel = PixelUIKit.CreateText(font, box.transform, "Text", "", 24f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
+        tipLabel.raycastTarget = false;
+        PixelUIKit.Stretch(tipLabel.rectTransform);
+        tipLabel.rectTransform.offsetMin = new Vector2(12f, 8f);
+        tipLabel.rectTransform.offsetMax = new Vector2(-12f, -8f);
+        PixelDevTip follow = box.GetComponent<PixelDevTip>();
+        follow.canvasRect = canvasRoot.GetComponent<RectTransform>();
+        follow.rect = tipRect;
+        box.SetActive(false);
+    }
+
+    /// <summary>Hovering 'target' tells the player the hose can also be toggled with its key.</summary>
+    private void AddHoseTip(GameObject target)
+    {
+        PixelHoverTip hover = target.GetComponent<PixelHoverTip>();
+        if (hover == null) hover = target.AddComponent<PixelHoverTip>();
+        hover.onEnter = () =>
+        {
+            string text = string.Format(hoseTipText, PixelKeys.Name(PixelAction.Hose));
+            tipLabel.text = text;
+            Vector2 pref = tipLabel.GetPreferredValues(text, 520f, 0f);
+            tipRect.sizeDelta = new Vector2(Mathf.Min(520f, pref.x) + 24f, pref.y + 16f);
+            tipRect.gameObject.SetActive(true);
+            tipRect.SetAsLastSibling();
+        };
+        hover.onExit = () => { if (tipRect != null) tipRect.gameObject.SetActive(false); };
+    }
+
+    /// <summary>The hose picture: a hose hanging from the top with a nozzle pointing down and a red laser dot (scale 1 = the 64 px window button).</summary>
+    private void DrawHoseIcon(Transform parent, float scale)
+    {
+        Image Part(string name, Color color, Vector2 size, Vector2 pos)
+        {
+            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(parent, false);
+            Image im = g.GetComponent<Image>();
+            im.color = color;
+            im.raycastTarget = false;
+            RectTransform pr = g.GetComponent<RectTransform>();
+            pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+            pr.sizeDelta = size * scale;
+            pr.anchoredPosition = pos * scale;
+            return im;
+        }
+        Part("Hose", new Color(0.12f, 0.13f, 0.17f, 1f), new Vector2(9f, 26f), new Vector2(0f, 17f));
+        Part("Collar", AccentColor, new Vector2(17f, 5f), new Vector2(0f, 3f));
+        Part("Body", new Color(0.85f, 0.86f, 0.9f, 1f), new Vector2(17f, 16f), new Vector2(0f, -6f));
+        Part("Front", new Color(0.7f, 0.72f, 0.78f, 1f), new Vector2(11f, 6f), new Vector2(0f, -17f));
+        Part("Lip", AccentColor, new Vector2(15f, 3f), new Vector2(0f, -21f));
+        Part("Laser Dot", new Color(1f, 0.15f, 0.1f, 1f), new Vector2(6f, 6f), new Vector2(0f, -27f));
+    }
+
     private void BuildWindowHoseButton()
     {
         Button b = PixelUIKit.CreateButton(font, windowObject.transform, "Window Hose Button", "", new Vector2(64f, 64f),
@@ -1279,26 +1341,8 @@ public class PixelBank : MonoBehaviour
         r.anchoredPosition = new Vector2(14f, -12f);
         b.onClick.AddListener(() => SetHose(!HoseOn));
 
-        Image Part(string name, Color color, Vector2 size, Vector2 pos)
-        {
-            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
-            g.transform.SetParent(b.transform, false);
-            Image im = g.GetComponent<Image>();
-            im.color = color;
-            im.raycastTarget = false;
-            RectTransform pr = g.GetComponent<RectTransform>();
-            pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
-            pr.sizeDelta = size;
-            pr.anchoredPosition = pos;
-            return im;
-        }
-        // A hose hanging from the top with a nozzle pointing down and a red laser dot.
-        Part("Hose", new Color(0.12f, 0.13f, 0.17f, 1f), new Vector2(9f, 26f), new Vector2(0f, 17f));
-        Part("Collar", AccentColor, new Vector2(17f, 5f), new Vector2(0f, 3f));
-        Part("Body", new Color(0.85f, 0.86f, 0.9f, 1f), new Vector2(17f, 16f), new Vector2(0f, -6f));
-        Part("Front", new Color(0.7f, 0.72f, 0.78f, 1f), new Vector2(11f, 6f), new Vector2(0f, -17f));
-        Part("Lip", AccentColor, new Vector2(15f, 3f), new Vector2(0f, -21f));
-        Part("Laser Dot", new Color(1f, 0.15f, 0.1f, 1f), new Vector2(6f, 6f), new Vector2(0f, -27f));
+        DrawHoseIcon(b.transform, 1f);
+        AddHoseTip(b.gameObject);
     }
 
     private void LateUpdate()
@@ -1327,8 +1371,7 @@ public class PixelBank : MonoBehaviour
 
     private void RefreshHoseButton()
     {
-        if (hoseButtonLabel == null) return;
-        hoseButtonLabel.text = HoseOn ? hoseOnText : string.Format(hoseOffText, PixelKeys.Name(PixelAction.Hose));
+        if (hoseButtonImage == null) return;
         hoseButtonImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
         if (windowHoseImage != null) windowHoseImage.color = HoseOn ? hoseButtonOnColor : hoseButtonColor;
     }

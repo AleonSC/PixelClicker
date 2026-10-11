@@ -272,6 +272,21 @@ public class PixelHud : MonoBehaviour
         dock.Setup(this, button, anchor, keepOut, sideOffsetY, (buttonSize.x - button.sizeDelta.x) * 0.5f);
     }
 
+    /// <summary>
+    /// Docks one button of a side-by-side GROUP on the middle of a side edge (e.g. the Bank tab with the square Hose button beside it).
+    /// 'leftOffset' = how far the button sits from the group's outer edge, 'groupWidth' = the group's total width; the whole group slides
+    /// as one and the button nearest the screen centre is the part that stays visible as the sliver.
+    /// </summary>
+    public void DockInGroup(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY, float width, float leftOffset, float groupWidth)
+    {
+        Dock(button, anchor, keepOut, sideOffsetY);
+        button.sizeDelta = new Vector2(width, buttonSize.y);
+        PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
+        dock.Setup(this, button, anchor, keepOut, sideOffsetY, leftOffset, groupWidth);
+    }
+
+    internal float Sliver => sliver;
+
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
     internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - buttonSize.y) * 0.5f * (1f - (buttonEdgeBias > 0f ? buttonEdgeBias : 0.55f))) : sideMargin * 0.5f;
     internal float HiddenInset => -(buttonSize.y - sliver);
@@ -305,10 +320,13 @@ public class PixelDockedButton : MonoBehaviour
     /// <summary>How far out the button is (0 = hidden, 1 = fully shown).</summary>
     public float SlideAmount => slide;
 
-    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f, float offsetX = 0f)
+    private float groupWidth; // > 0: this button is one of a side-by-side group that slides as a whole (see PixelHud.DockInGroup)
+
+    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f, float offsetX = 0f, float groupTotalWidth = 0f)
     {
         sideOffsetY = offsetY;
         sideOffsetX = offsetX;
+        groupWidth = groupTotalWidth;
         hud = owner;
         rect = button;
         anchor = corner;
@@ -332,7 +350,8 @@ public class PixelDockedButton : MonoBehaviour
         if (Mathf.Approximately(anchor.y, 0.5f))
         {
             // Docked to a side edge: slides sideways, centred vertically.
-            float sideInset = Mathf.Lerp(hud.SideHiddenInset, hud.SideShownInset, Mathf.SmoothStep(0f, 1f, slide));
+            float hiddenInset = groupWidth > 0f ? -(groupWidth - hud.Sliver) : hud.SideHiddenInset;
+            float sideInset = Mathf.Lerp(hiddenInset, hud.SideShownInset, Mathf.SmoothStep(0f, 1f, slide));
             rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -(sideInset + sideOffsetX) : sideInset + sideOffsetX, sideOffsetY);
             return;
         }
@@ -356,7 +375,7 @@ public class PixelDockedButton : MonoBehaviour
         float pad = hud.TriggerPadding;
         if (Mathf.Approximately(anchor.y, 0.5f))
         {
-            float sw = rect.sizeDelta.x + sideOffsetX, sh = hud.ButtonSize.y;
+            float sw = groupWidth > 0f ? groupWidth : rect.sizeDelta.x + sideOffsetX, sh = hud.ButtonSize.y;
             float fromSide = anchor.x > 0.5f ? Screen.width / scale - p.x / scale : p.x / scale;
             // Narrow strip along the edge to open; once sliding out, the visible part of the button keeps it open.
             float depth = hud.SideTriggerDepth + slide * sw;
