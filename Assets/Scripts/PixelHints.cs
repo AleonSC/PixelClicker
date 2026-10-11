@@ -152,7 +152,7 @@ public class PixelHints : MonoBehaviour
             case "grab": return "You unlocked Pixel Grabbing!";
             case "timestop": return "You unlocked Time Stop! (press T)";
             case "bank": return "You unlocked the Pixel Bank!";
-            case "robot": return "You hired the Robot Worker!";
+            case "robot": return "You hired the UFO Helper!";
             case "minigame_ghost": return "A ghost appeared!";
             case "minigame_meteor": return "A meteor appeared!";
             case "minigame_stardust": return "A star fell from the sky!";
@@ -261,7 +261,7 @@ public class PixelHints : MonoBehaviour
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
-        H("robot", "Robot Worker hired! He stands off to the side of the screen. Click him, pick a consumable and place its ghost where you want it: whenever that device runs out, he puts a new one there as long as you have one to spare."),
+        H("robot", "UFO Helper hired! It hovers off to the side of the screen. Click him, pick a consumable and place its ghost where you want it: whenever that device runs out, he puts a new one there as long as you have one to spare."),
         H("timeslow", "Time Slow unlocked! Press {key:TimeSlow} to slow time and again to return to normal. It uses the same energy meter as Time Stop, but drains it more slowly. Meteor pixels crawl while time is slow - grab one with Pixel Grabbing and put it where you like."),
         H("timestop_slow", "Time is slowed! Everything crawls - even meteor pixels, which you can now grab. The Time Stop meter drains slowly while it lasts; press {key:TimeSlow} to go back to normal speed."),
         H("timestop_first", "Time is stopped! Everything freezes, but you can keep clicking the cube. The meter at the top drains while time is stopped and refills once it runs again; press T to resume."),

@@ -812,7 +812,7 @@ public partial class PixelShop
     {
         return new ShopPack
         {
-            displayName = "Robot Worker",
+            displayName = "UFO Helper",
             tab = ShopTab.Upgrades,
             description = "A little UFO hovers about the map. Click it, choose a consumable and place its ghost: every time that device runs out it beams a new one down there, as long as you have one to spare. It can also abduct loose pixels into your Pixel Bank.",
             costs = AllSix(1000000),

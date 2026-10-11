@@ -609,7 +609,7 @@ public class PixelSaveGame : MonoBehaviour
                 for (int i = 0; i < shop.PackCount; i++)
                 {
                     PackSave saved = data.packs != null
-                        ? Array.Find(data.packs, p => p.name == shop.GetPackName(i)) : null;
+                        ? Array.Find(data.packs, p => p.name == shop.GetPackName(i) || (p.name == "Robot Worker" && shop.GetPackName(i) == "UFO Helper")) : null;
                     shop.SetPackState(i, saved != null && saved.purchased, saved != null ? saved.level : 0);
                 }
             }

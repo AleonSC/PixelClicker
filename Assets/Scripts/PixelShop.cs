@@ -898,6 +898,11 @@ public partial class PixelShop : MonoBehaviour
     {
         bool renamed = false;
 
+        // The Robot Worker is the UFO Helper now (saves are matched by pack name, PixelSaveGame knows the old one too).
+        if (packs != null)
+            foreach (ShopPack rp in packs)
+                if (rp != null && rp.unlocksRobot && rp.displayName == "Robot Worker") { rp.displayName = "UFO Helper"; renamed = true; }
+
         // The short-lived Pong pack (replaced by Breakout) may still be saved in the scene's pack list: take it out, and fix the
         // pack numbers the other packs' requirements point at.
         if (packs != null)
