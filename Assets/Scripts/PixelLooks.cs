@@ -247,6 +247,18 @@ public class PixelLook
     [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
     public bool flames = false;
 
+    [Tooltip("Meteor: dark cratered rock with glowing lava cracks that spread with every hit (needs Damage Cracks).")]
+    public bool meteorTexture = false;
+
+    [Tooltip("Meteor: a few embers rise off the cube, and the old pixel that streaks away leaves a fiery wake.")]
+    public bool cometTail = false;
+
+    [Tooltip("Solar: churning gold with a white-hot middle on every face.")]
+    public bool sunTexture = false;
+
+    [Tooltip("Solar: a soft turning corona with rays behind the cube, and the old pixel hovers and pays a trickle (swells with daylight).")]
+    public bool sunFx = false;
+
     [Tooltip("Nuclear: radioactive motes drift off the pixel, and the OLD pixel makes every other old pixel near it age extremely fast (they vanish within a second or two).")]
     public bool radiation = false;
 
@@ -266,10 +278,10 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => flames || radiation || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
-    public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
+    public bool HasSurfaceTexture => meteorTexture || sunTexture || streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -460,6 +472,16 @@ public static class PixelLooks
             // Nuclear (testing pixel): a glowing toxic-green cube with radioactive motes; the old pixel makes the pixels round it despawn almost at once.
             new PixelLook { type = PixelClicker.PixelType.Nuclear, useColor = true, color = new Color(0.5f, 1f, 0.2f, 1f),
                             metallic = 0f, smoothness = 0.3f, emission = 1.5f, radiation = true },
+
+            // Meteor: a dark cratered rock whose lava cracks glow brighter with every hit; embers rise off it and the old pixel streaks away trailing fire.
+            new PixelLook { type = PixelClicker.PixelType.Meteor, useColor = true, color = Color.white,
+                            metallic = 0f, smoothness = 0.2f, damageCracks = true, meteorTexture = true, cometTail = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = false, outlineShade = -0.5f, outlineStrength = 0.7f },
+
+            // Solar: a clean golden sun-cube with a turning corona; the old pixel hovers and pays a trickle.
+            new PixelLook { type = PixelClicker.PixelType.Solar, useColor = true, color = Color.white,
+                            metallic = 0f, smoothness = 0.3f, emission = 0.9f, sunTexture = true, sunFx = true,
+                            customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0f },
 
             // The Prospector ores: rock cubes veined and flecked with metal; they crack as you hit them.
             OreLook(PixelClicker.PixelType.Copper, new Color(0.86f, 0.46f, 0.26f, 1f)),
@@ -755,6 +777,8 @@ public static class PixelLooks
 
         if (look.flames) PixelFlames.Attach(root.transform, centre, size);
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
+        if (look.cometTail) PixelCometFx.Attach(root.transform, centre, size);
+        if (look.sunFx) PixelSunFx.Attach(root.transform, centre, size);
         if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);
         if (look.obsidianFx) PixelObsidianFx.Attach(root.transform, centre, size);
         if (look.electricFx != PixelLook.ElectricAmbient.None) PixelElectricFx.Attach(root.transform, centre, size, look.electricFx);

@@ -282,8 +282,8 @@ public partial class PixelShop
                 new PixelClicker.PixelTier
                 {
                     type = PixelClicker.PixelType.Meteor, displayName = "Meteor Pixels",
-                    color = new Color(0.9f, 0.4f, 0.1f, 1f), glow = true, glowIntensity = 2f,
-                    amountPerClick = 15, spawnWeight = 0.25f,
+                    color = new Color(0.9f, 0.4f, 0.1f, 1f), glow = false, glowIntensity = 2f,   // a dark rock whose cracks glow (the look draws them)
+                    amountPerClick = 45, clicksToCollect = 3, spawnWeight = 0.25f,
                     flyAway = true, flyDirection = new Vector2(1f, 0.6f), flySpeed = 30f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },

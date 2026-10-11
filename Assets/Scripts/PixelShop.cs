@@ -879,6 +879,32 @@ public partial class PixelShop : MonoBehaviour
             packDataVersion = Mathf.Max(packDataVersion, 11);
             changed = true;
         }
+        // The Meteor became a 3-click rock with glowing cracks (it paid 15 for one click, now 45 for three) and no longer glows as a flat colour.
+        if (packDataVersion < 12)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null) continue;
+                    foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    {
+                        if (reward.type != PixelClicker.PixelType.Meteor) continue;
+                        if (reward.clicksToCollect <= 1) reward.clicksToCollect = 3;
+                        if (Mathf.Approximately((float)reward.amountPerClick, 15f)) reward.amountPerClick = 45;
+                        reward.glow = false;
+                    }
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type != PixelClicker.PixelType.Meteor) continue;
+                    if (t.clicksToCollect <= 1) t.clicksToCollect = 3;
+                    if (Mathf.Approximately((float)t.amountPerClick, 15f)) t.amountPerClick = 45;
+                    t.glow = false;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 12);
+            changed = true;
+        }
         return changed;
     }
 

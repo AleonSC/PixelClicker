@@ -343,7 +343,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -532,6 +532,10 @@ public class PixelClicker : MonoBehaviour
 
     [Tooltip("Tick to turn off the ore pixels' chips, glitter and rich veins.")]
     [SerializeField] private bool disableProspectorFx = false;
+
+    [Header("Meteor and Solar")]
+    [Tooltip("Tick to turn off the Meteor's hit particles and the fiery wake of its old pixel (the look's embers come from the look).")]
+    [SerializeField] private bool disableMeteorFx = false;
 
     [Range(0f, 1f)]
     [Tooltip("Chance that a fresh ore pixel is a RICH VEIN (it glitters and pays much more). 0 = the coded default (8%).")]
@@ -1053,6 +1057,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
         if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
+        if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
         if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors
@@ -1478,6 +1483,22 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 34;
         }
 
+        if (looksVersion < 35)
+        {
+            // Meteor and Solar got their own looks.
+            System.Collections.Generic.List<PixelLook> list35 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults35 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Meteor, PixelType.Solar })
+            {
+                PixelLook def = PixelLooks.Find(defaults35, t);
+                if (def == null) continue;
+                int at = list35.FindIndex(l => l != null && l.type == t);
+                if (at >= 0) list35[at] = def; else list35.Add(def);
+            }
+            looks = list35.ToArray();
+            looksVersion = 35;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1689,6 +1710,7 @@ public class PixelClicker : MonoBehaviour
                 if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Meteor && !disableMeteorFx) PixelCometFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, shownNeed, automatic);
                 onPixelClicked?.Invoke();
@@ -1764,6 +1786,7 @@ public class PixelClicker : MonoBehaviour
         PlayClickEffects(tier);
         if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 1f, clickPopStrength);
         if (tier.type == PixelType.Fire && !disableFireFx) FireBurstFx.Play(pixelTransform.position, PixelBaseSize);
+        if (tier.type == PixelType.Solar) PixelDaylight.OnSolarClick();
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
         if (IsFarm(tier.type) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
@@ -2460,7 +2483,7 @@ public class PixelClicker : MonoBehaviour
             if (info.tierIndex == solar) boost += solarEach;
             else if (info.tierIndex == dirt) boost += dirtEach;
         }
-        return Mathf.Min(seedSolarBoostMax, boost);
+        return Mathf.Min(seedSolarBoostMax, boost) + PixelDaylight.GrowthBonus;   // daylight (raised by clicking Solar) speeds growth everywhere
     }
 
     // ---- Farming pixels ----
@@ -2787,8 +2810,10 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture;
+        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture && !look.meteorTexture && !look.sunTexture;
         Texture2D tex = onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
+                      : look.meteorTexture ? PixelStarTextures.Meteor(look.damageCracks ? level : 0, max)
+                      : look.sunTexture ? PixelStarTextures.Sun()
                       : look.chestTexture ? PixelLooks.ChestTexture(max > 0 ? Mathf.RoundToInt(Mathf.Clamp01(level / (float)max) * 8f) : 0)
                       : look.oreTexture ? PixelLooks.OreTexture(look.oreColor, look.damageCracks ? level : 0, max)
                       : look.chromeTexture ? PixelLooks.ChromeTexture()
@@ -3832,6 +3857,9 @@ public class PixelClicker : MonoBehaviour
             rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
                          ForceMode.VelocityChange);
 
+            PixelLook flyLook = LookOf(tiers[tierIndex]);
+            if (flyLook != null && flyLook.cometTail && !disableMeteorFx) PixelCometFx.AttachWake(copy.transform, copy.transform.lossyScale.x);
+
             if (flyTrailSeconds > 0f)
             {
                 TrailRenderer trail = copy.AddComponent<TrailRenderer>();
@@ -3880,6 +3908,8 @@ public class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.splash)
                     copy.AddComponent<OldPixelSplash>().Setup(this);
+                if (styled.sunFx)
+                    copy.AddComponent<OldPixelSolarHover>().Setup(this);
                 if (styled.radiation && !disableNuclearFx)
                     copy.AddComponent<OldPixelRadiation>().Setup(this, nuclearRadiusPixels > 0f ? nuclearRadiusPixels : 4f, nuclearAgeRate > 0f ? nuclearAgeRate : 40f);
                 if (styled.burn && !disableFireFx)
