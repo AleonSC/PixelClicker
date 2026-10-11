@@ -560,13 +560,20 @@ public partial class PixelSkills
         c.nameLabel = PixelUIKit.CreateText(Font, c.button.transform, "Name", "", 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         c.nameLabel.raycastTarget = false;
         PixelUIKit.Caps(c.nameLabel);
-        Place(c.nameLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(56f, -48f), new Vector2(-110f, -8f));
+        c.nameLabel.enableAutoSizing = true;   // shrinks to fit (two lines at most) instead of breaking inside a word
+        c.nameLabel.fontSizeMax = 30f;
+        c.nameLabel.fontSizeMin = 12f;
+        c.nameLabel.overflowMode = TextOverflowModes.Truncate;
+        Place(c.nameLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(56f, -52f), new Vector2(-84f, -6f));
         RectTransform infoBox = CreateInfoBox(c.button.transform, 34f, () => PackTip(c.pack));   // the description is a tooltip on this orange '!' box
         infoBox.anchorMin = infoBox.anchorMax = infoBox.pivot = new Vector2(0f, 1f);
         infoBox.anchoredPosition = new Vector2(10f, -10f);
         c.levelLabel = PixelUIKit.CreateText(Font, c.button.transform, "Level", "", 26f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, dimTextColor);
         c.levelLabel.raycastTarget = false;
-        Place(c.levelLabel.rectTransform, 1f, 1f, 1f, 1f, new Vector2(-110f, -48f), new Vector2(-14f, -8f));
+        Place(c.levelLabel.rectTransform, 1f, 1f, 1f, 1f, new Vector2(-82f, -52f), new Vector2(-10f, -6f));
+        c.levelLabel.enableAutoSizing = true;
+        c.levelLabel.fontSizeMax = 24f;
+        c.levelLabel.fontSizeMin = 12f;
         c.badge = PixelUIKit.CreateText(Font, c.button.transform, "Badge", activeBadgeText, 20f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, perkUnlockedColor);
         c.badge.raycastTarget = false;
         Place(c.badge.rectTransform, 0f, 0f, 0f, 0f, new Vector2(18f, 12f), new Vector2(120f, 40f));
