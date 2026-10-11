@@ -492,3 +492,4 @@
 [2026-10-11 16:02 UTC] The title screen's floor and sky pickers only show while the mouse is over them.
 [2026-10-11 16:05 UTC] Title screen: Load is a floppy disk, Settings a cog and Quit an open door, all in one row under the Play button (hover shows their names).
 [2026-10-11 16:11 UTC] Skills window: a pin button (top left) closes it and pins the training skill with an XP bar in a small draggable window with lock (stick), downsize and close buttons; closing it does not reopen the Skills menu.
+[2026-10-11 16:25 UTC] The pinned Inventory can now be dragged anywhere, minimised to its button row and stuck in place with a padlock, stays visible beneath other windows instead of fading away, and remembers its spot.

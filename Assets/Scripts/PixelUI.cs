@@ -486,7 +486,7 @@ public class PixelUI : MonoBehaviour
         if (potionLabels != null) foreach (TMP_Text l in potionLabels) Consider(l);
         float swatchSize = Mathf.Round(LinePitch * 0.8f);
         float width = swatchSize + 18f + widest + 14f + panelPadding * 2f;
-        float buttons = CompactToggleSize * 2f + 8f + panelPadding * 2f;   // the two buttons on top (pin switch + currency / potions) always fit side by side
+        float buttons = CompactToggleSize * 2f + 8f + CompactToggleSize * 0.5f + 12f + panelPadding * 2f;   // the two buttons on top (pin switch + currency / potions) always fit side by side
         return Mathf.Clamp(Mathf.Max(width, buttons), 150f, Mathf.Max(panelWidth, buttons));
     }
 
@@ -638,8 +638,8 @@ public class PixelUI : MonoBehaviour
         CanvasGroup group = boxObject.GetComponent<CanvasGroup>();
         if (group == null) group = boxObject.AddComponent<CanvasGroup>();
         // Fades away while another window is open and comes straight back when they are all closed (same timing as the guide text).
-        bool away = Compact && PixelWindows.AnyOpenExcept(this);
-        pinnedFade = Mathf.MoveTowards(pinnedFade, away ? 0f : 1f, Time.unscaledDeltaTime / (away ? 0.25f : 0.06f));
+        // The pinned window no longer fades away: it is a movable window that simply sits beneath the others (its canvas sorts below theirs).
+        pinnedFade = Mathf.MoveTowards(pinnedFade, 1f, Time.unscaledDeltaTime / 0.06f);
         group.alpha = pinnedFade;
         group.blocksRaycasts = pinnedFade > 0.5f;
         group.interactable = pinnedFade > 0.5f;
@@ -649,6 +649,7 @@ public class PixelUI : MonoBehaviour
     {
         if (!built) return;
         UpdatePinnedHierarchy();
+        UpdatePinnedPlacement();
         TickDeltas();
         UpdateTooltip();
         UpdateActiveHud();
@@ -1393,7 +1394,7 @@ public class PixelUI : MonoBehaviour
         // Box height follows the number of visible lines.
         if (autoMode && boxRect != null)
         {
-            float boxHeight = compact ? Mathf.Min(maxPanelHeight, ContentTop + y + panelPadding + 4f)   // the simplified one is only as tall as its lines
+            float boxHeight = compact ? (compactSmall ? CompactTop + panelPadding * 0.5f : Mathf.Min(maxPanelHeight, ContentTop + y + panelPadding + 4f))   // the simplified one is only as tall as its lines (minimised: just the button row)
                                       : maxPanelHeight;   // one fixed size on every tab, so the window never changes shape
             ApplyRowMargins(compact);
             boxRect.sizeDelta = new Vector2(compact ? FitCompactWidth() : panelWidth, boxHeight);
@@ -1401,6 +1402,7 @@ public class PixelUI : MonoBehaviour
             // Keep the list just below the tabs (the header height can change after the box is built).
             listViewport.offsetMin = new Vector2(0f, panelPadding);
             listViewport.offsetMax = new Vector2(0f, -ContentTop);
+            if (listViewport.gameObject.activeSelf == (compact && compactSmall)) listViewport.gameObject.SetActive(!(compact && compactSmall));
 
             // The list scrolls when it is taller than the room the box has for it.
             float viewHeight = boxHeight - ContentTop - panelPadding;
@@ -1408,6 +1410,8 @@ public class PixelUI : MonoBehaviour
             bool scrolls = y > viewHeight + 0.5f;
             if (listBarObject != null && listBarObject.activeSelf != scrolls) listBarObject.SetActive(scrolls);
             if (!scrolls) listContent.anchoredPosition = Vector2.zero;
+            ScrollRect sr = listViewport.GetComponent<ScrollRect>();
+            if (sr != null) sr.enabled = !compact || scrolls;   // a pinned list that doesn't scroll lets the drag through, so the whole window can be moved
         }
     }
 
@@ -1424,6 +1428,8 @@ public class PixelUI : MonoBehaviour
             if (potionIcon != null) potionIcon.SetActive(CompactMode == 1);   // showing currency: the button offers the potions
             if (moneyIcon != null) moneyIcon.SetActive(CompactMode == 2);     // showing potions: the button offers the currency back
         }
+        if (compactSmallButton != null && compactSmallButton.gameObject.activeSelf != compact) compactSmallButton.gameObject.SetActive(compact);
+        if (compactStickButton != null && compactStickButton.gameObject.activeSelf != compact) compactStickButton.gameObject.SetActive(compact);
         if (compactButton != null) compactButton.GetComponent<Image>().color = compact ? new Color(0.2f, 0.6f, 0.3f, 1f) : closeButtonColor;
     }
 
@@ -1618,6 +1624,7 @@ public class PixelUI : MonoBehaviour
         }
 
         BuildCompactSwitch(size);
+        BuildCompactWindowButtons(size);
 
         PixelHoverTip tip = compactButton.gameObject.AddComponent<PixelHoverTip>();
         tip.onEnter = () => tooltipCustomText = Compact ? compactOffTip : pinTip;
@@ -1628,6 +1635,161 @@ public class PixelUI : MonoBehaviour
             if (listContent != null) listContent.anchoredPosition = Vector2.zero;
             Refresh();
         });
+    }
+
+    // ---- Movable pinned window: drag anywhere, minimise, stick in place ----
+    private const string PrefCompactX = "PixelClicker.Inventory.CompactX";
+    private const string PrefCompactY = "PixelClicker.Inventory.CompactY";
+    private const string PrefCompactSmall = "PixelClicker.Inventory.CompactSmall";
+    private const string PrefCompactStuck = "PixelClicker.Inventory.CompactStuck";
+    private Button compactSmallButton, compactStickButton;
+    private TMP_Text compactSmallLabel;
+    private Image compactStickImage;
+    private GameObject compactLockClosed, compactLockOpen;
+    private PixelPopoutDrag compactDrag;
+    private bool compactSmall, compactStuck, compactPrefsLoaded, compactPlaced;
+    private Vector2 normalBoxPosition;
+
+    private void LoadCompactPrefs()
+    {
+        if (compactPrefsLoaded) return;
+        compactPrefsLoaded = true;
+        compactSmall = PlayerPrefs.GetInt(PrefCompactSmall, 0) == 1;
+        compactStuck = PlayerPrefs.GetInt(PrefCompactStuck, 0) == 1;
+    }
+
+    /// <summary>Two small buttons stacked at the pinned window's top right: minimise (- / +) and stick (a padlock), plus the drag handler on the whole box.</summary>
+    private void BuildCompactWindowButtons(float size)
+    {
+        LoadCompactPrefs();
+        normalBoxPosition = boxRect.anchoredPosition;
+        compactDrag = boxObject.AddComponent<PixelPopoutDrag>();
+        compactDrag.target = boxRect;
+        compactDrag.canvas = autoRoot.GetComponent<Canvas>();
+        compactDrag.onMoved = () => { KeepCompactOnScreen(); SaveCompactPosition(); };
+
+        float small = size * 0.5f;
+        compactSmallButton = MakeButton(boxObject.transform, "Compact Minimise", "", new Vector2(small, small), closeButtonColor, headerTextColor, small * 0.7f);
+        RectTransform a = compactSmallButton.GetComponent<RectTransform>();
+        a.anchorMin = a.anchorMax = a.pivot = new Vector2(1f, 1f);
+        a.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
+        compactSmallLabel = compactSmallButton.GetComponentInChildren<TMP_Text>();
+        compactSmallButton.onClick.AddListener(() =>
+        {
+            compactSmall = !compactSmall;
+            PlayerPrefs.SetInt(PrefCompactSmall, compactSmall ? 1 : 0);
+            Refresh();
+        });
+        PixelHoverTip t1 = compactSmallButton.gameObject.AddComponent<PixelHoverTip>();
+        t1.onEnter = () => tooltipCustomText = compactSmall ? "Show the whole list" : "Minimise to just the buttons";
+        t1.onExit = HideTooltip;
+
+        compactStickButton = MakeButton(boxObject.transform, "Compact Stick", "", new Vector2(small, small), closeButtonColor, headerTextColor, small * 0.7f);
+        RectTransform b = compactStickButton.GetComponent<RectTransform>();
+        b.anchorMin = b.anchorMax = b.pivot = new Vector2(1f, 1f);
+        b.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f - small - 4f);
+        compactStickImage = compactStickButton.GetComponent<Image>();
+        compactLockClosed = BuildCompactLock(compactStickButton.transform, false, small);
+        compactLockOpen = BuildCompactLock(compactStickButton.transform, true, small);
+        compactStickButton.onClick.AddListener(() =>
+        {
+            compactStuck = !compactStuck;
+            PlayerPrefs.SetInt(PrefCompactStuck, compactStuck ? 1 : 0);
+            UpdatePinnedPlacement();
+        });
+        PixelHoverTip t2 = compactStickButton.gameObject.AddComponent<PixelHoverTip>();
+        t2.onEnter = () => tooltipCustomText = compactStuck ? "Stuck in place - click to let it move again" : "Stick it in place so it can't be moved";
+        t2.onExit = HideTooltip;
+
+        compactSmallButton.gameObject.SetActive(false);
+        compactStickButton.gameObject.SetActive(false);
+    }
+
+    /// <summary>A little padlock from rectangles (closed = shackle in the body, open = lifted).</summary>
+    private GameObject BuildCompactLock(Transform parent, bool open, float size)
+    {
+        GameObject root = new GameObject(open ? "Lock Open" : "Lock Closed", typeof(RectTransform));
+        root.transform.SetParent(parent, false);
+        RectTransform rr = root.GetComponent<RectTransform>();
+        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 0.5f);
+        rr.sizeDelta = new Vector2(size, size);
+        float u = size / 24f;
+        void Part(Vector2 sz, Vector2 at, Color c)
+        {
+            GameObject g = new GameObject("Part", typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(root.transform, false);
+            Image im = g.GetComponent<Image>();
+            im.color = c;
+            im.raycastTarget = false;
+            RectTransform r = g.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+            r.sizeDelta = sz * u;
+            r.anchoredPosition = at * u;
+        }
+        Color metal = new Color(0.85f, 0.88f, 0.95f), body = new Color(0.95f, 0.75f, 0.25f);
+        Part(new Vector2(16f, 10f), new Vector2(0f, -4f), body);
+        if (!open)
+        {
+            Part(new Vector2(3f, 8f), new Vector2(-5f, 5f), metal);
+            Part(new Vector2(3f, 8f), new Vector2(5f, 5f), metal);
+            Part(new Vector2(13f, 3f), new Vector2(0f, 9f), metal);
+        }
+        else
+        {
+            Part(new Vector2(3f, 6f), new Vector2(-5f, 4f), metal);
+            Part(new Vector2(3f, 8f), new Vector2(5f, 8f), metal);
+            Part(new Vector2(13f, 3f), new Vector2(0f, 12f), metal);
+        }
+        return root;
+    }
+
+    private void SaveCompactPosition()
+    {
+        PlayerPrefs.SetFloat(PrefCompactX, boxRect.anchoredPosition.x);
+        PlayerPrefs.SetFloat(PrefCompactY, boxRect.anchoredPosition.y);
+    }
+
+    /// <summary>Keeps the pinned window fully on screen, between the black bars.</summary>
+    private void KeepCompactOnScreen()
+    {
+        if (boxRect == null || autoRoot == null) return;
+        RectTransform canvasRect = autoRoot.GetComponent<RectTransform>();
+        float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        Vector2 canvasSize = canvasRect.rect.size, size = boxRect.sizeDelta;
+        Vector2 an = boxRect.anchorMin, pv = boxRect.pivot;
+        Vector2 origin = new Vector2((an.x - 0.5f) * canvasSize.x, (an.y - 0.5f) * canvasSize.y);
+        Vector2 offset = new Vector2((0.5f - pv.x) * size.x, (0.5f - pv.y) * size.y);
+        Vector2 c = origin + boxRect.anchoredPosition + offset;
+        Vector2 half = canvasSize * 0.5f, h = size * 0.5f;
+        c.x = Mathf.Clamp(c.x, -half.x + h.x, Mathf.Max(-half.x + h.x, half.x - h.x));
+        c.y = Mathf.Clamp(c.y, -half.y + bars + h.y, Mathf.Max(-half.y + bars + h.y, half.y - bars - h.y));
+        boxRect.anchoredPosition = c - origin - offset;
+    }
+
+    /// <summary>While pinned: apply the saved spot, the stuck padlock and the minimise sign; when un-pinned the window goes back to its normal place.</summary>
+    private void UpdatePinnedPlacement()
+    {
+        if (!autoMode || boxRect == null || compactDrag == null) return;
+        LoadCompactPrefs();
+        bool compact = Compact;
+        if (compact && !compactPlaced)
+        {
+            compactPlaced = true;
+            if (PlayerPrefs.HasKey(PrefCompactX))
+                boxRect.anchoredPosition = new Vector2(PlayerPrefs.GetFloat(PrefCompactX), PlayerPrefs.GetFloat(PrefCompactY));
+        }
+        else if (!compact && compactPlaced)
+        {
+            compactPlaced = false;
+            boxRect.anchoredPosition = normalBoxPosition;
+        }
+        compactDrag.locked = !compact || compactStuck;
+        if (!compact) return;
+        KeepCompactOnScreen();
+        if (compactStickImage != null) compactStickImage.color = compactStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : closeButtonColor;
+        if (compactLockClosed != null && compactLockClosed.activeSelf != compactStuck) compactLockClosed.SetActive(compactStuck);
+        if (compactLockOpen != null && compactLockOpen.activeSelf == compactStuck) compactLockOpen.SetActive(!compactStuck);
+        if (compactSmallLabel != null) PixelUIKit.SetText(compactSmallLabel, compactSmall ? "+" : "-");
     }
 
     private Button compactSwitch;
