@@ -431,3 +431,4 @@
 [2026-10-11 10:43 UTC] At high UI scale the Crafting window now shrinks to fit the screen and the title logo shrinks so it stays above the middle bar.
 [2026-10-11 10:45 UTC] The skill tree window now shrinks together with the Skills window at high UI scale so it is no longer cut off.
 [2026-10-11 11:14 UTC] Scrollable lists now fade out at the bottom (with a small bobbing arrow) while there is more to scroll to.
+[2026-10-11 11:17 UTC] The scroll-list fade now fades the content itself (soft mask edge) instead of a coloured overlay, so it no longer shows seams or pokes over rounded window edges.
