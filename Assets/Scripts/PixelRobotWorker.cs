@@ -14,7 +14,7 @@ using static PixelInput;
 /// ghost and its beam drops a fresh one down, already switched on, as long as you have one to spare. With the "bank a pixel" job it flies
 /// over the nearest loose pixel of the chosen type and abducts it into your Pixel Bank with its beam.
 /// </summary>
-public class PixelRobotWorker : MonoBehaviour
+public partial class PixelRobotWorker : MonoBehaviour
 {
     [Header("UFO")]
     [Tooltip("Turn the UFO Helper off completely.")]
@@ -214,6 +214,7 @@ public class PixelRobotWorker : MonoBehaviour
     private void OnDestroy()
     {
         PixelWindows.Unregister(this);
+        ExitCockpit();
         Hovering = false;
         if (root != null) Destroy(root);
         if (UfoRoot == null || UfoRoot == (root != null ? root.transform : null)) UfoRoot = null;
@@ -231,6 +232,7 @@ public class PixelRobotWorker : MonoBehaviour
     {
         if (clicker == null || consumables == null) return;
         bool show = Active && !PixelTitleScreen.Showing && !PixelMinigame.TakeoverActive && !PixelCameraIntro.Moving;
+        if (Piloting && (!show || userDisabled)) ExitCockpit();
         if (!show)
         {
             Hovering = false;
@@ -241,6 +243,13 @@ public class PixelRobotWorker : MonoBehaviour
 
         if (root == null) BuildUfo();
         if (!root.activeSelf) root.SetActive(true);
+
+        if (Piloting)
+        {
+            Hovering = false;
+            UpdateCockpit();
+            return;
+        }
 
         UpdateFloor();
         UpdateMovement();
@@ -939,6 +948,11 @@ public class PixelRobotWorker : MonoBehaviour
                 if (!PixelConsumables.IsPlaceableKind(d.kind) || !consumables.OperationListed(d.kind)) continue;
                 int index = i, owned = consumables.DeviceOwned(i);
                 AddRow(content, y, rowH, d.displayName, owned >= 99999 ? PixelConsumables.OwnedText(owned) : "x" + owned, owned > 0 ? dim : bad, !bankJob && i == jobDevice, () => ChooseDevice(index));
+                y += rowH + gap;
+            }
+            if (CanPilot())
+            {
+                AddRow(content, y, rowH, takeControlText, "", dim, false, () => { CloseWindow(); EnterCockpit(); });
                 y += rowH + gap;
             }
             if (bankSys != null && bankSys.Active)
