@@ -897,15 +897,15 @@ public partial class PixelShop
         // Pixels tab: the packs are grouped into collapsible sections (base pixels, toggleables, skill packs).
         EnsureSectionHeaders();
         foreach (Button oldHeader in sectionHeaders) if (oldHeader.gameObject.activeSelf) oldHeader.gameObject.SetActive(false);
-        int[] order = new int[Mathf.Min(packs.Length, rows.Length)];
-        for (int o = 0; o < order.Length; o++) order[o] = o;
+        int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
+        for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
         bool grouped = currentTab == ShopTab.Pixels;
-        if (grouped) System.Array.Sort(order, (a, b) => { int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b])); return d != 0 ? d : a.CompareTo(b); });
+        if (grouped) System.Array.Sort(packOrder, (a, b) => { int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b])); return d != 0 ? d : a.CompareTo(b); });
         int lastSection = -1;
 
-        for (int oi = 0; oi < order.Length; oi++)
+        for (int oi = 0; oi < packOrder.Length; oi++)
         {
-            int i = order[oi];
+            int i = packOrder[oi];
             PackRow row = rows[i];
             ShopPack pack = packs[i];
             bool leveled = IsLeveled(pack);
