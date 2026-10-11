@@ -507,3 +507,4 @@
 [2026-10-11 23:44 UTC] The Vacuum pixel is now a clear glass container with one round opening, a glowing lip and a suction wind that curls into the opening.
 [2026-10-11 23:47 UTC] Vacuum pixel: thick solid violet outlines and a much tighter suction wind that funnels straight into the opening.
 [2026-10-11 23:49 UTC] Ghost pixels are now a gray translucent gel blob with a drifting nucleus and rising bubbles, with gloopy click, squishy landing and breathy float-away sounds.
+[2026-10-11 23:50 UTC] Old pixels that get sucked up or taken away (by a Vacuum pixel, the bank, black holes...) now stop their particle effects, so a sucked-up Vacuum pixel no longer keeps blowing its suction wind.

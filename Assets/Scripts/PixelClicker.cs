@@ -3509,6 +3509,14 @@ public class PixelClicker : MonoBehaviour
         return true;
     }
 
+    /// <summary>Stops and clears every particle system on an old pixel (its look's ambient effects) - used when something takes the pixel away.</summary>
+    private static void QuietParticles(GameObject go)
+    {
+        if (go == null) return;
+        foreach (ParticleSystem ps in go.GetComponentsInChildren<ParticleSystem>(true))
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
     /// <summary>
     /// Takes an old pixel out of the game's old-pixel list so something else (the black hole) can handle it.
     /// 'credit' re-adds its original reward. The caller is responsible for removing the object. Returns false if it wasn't listed.
@@ -3516,6 +3524,7 @@ public class PixelClicker : MonoBehaviour
     public bool ReleaseOldPixel(Rigidbody body, bool credit)
     {
         if (body == null || !oldPixels.Remove(body)) return false;
+        QuietParticles(body.gameObject);   // a pixel being taken away stops emitting (the Vacuum's suction wind, embers, motes...)
 
         if (credit)
         {
@@ -3733,6 +3742,7 @@ public class PixelClicker : MonoBehaviour
         Transform t = body.transform;
         foreach (Collider c in body.GetComponents<Collider>()) c.enabled = false;
         body.isKinematic = true;
+        QuietParticles(body.gameObject);
 
         Vector3 startPos = t.position;
         Vector3 endPos = dest != null ? dest.position : startPos;
