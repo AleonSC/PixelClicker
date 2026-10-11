@@ -10,6 +10,9 @@ public class PixelMinigameLimits : MonoBehaviour
     [Tooltip("Turn the limit on or off. Off = minigames spawn completely independently, as before.")]
     [SerializeField] private bool limitAtOnce = true;
 
+    [Tooltip("Off (default) = only ONE minigame can have something on screen at a time: nothing spawns while another is busy. Tick this to use the Min / Max At Once numbers below instead (needs 'Limit At Once' on).")]
+    [SerializeField] private bool allowOverlap = false;
+
     [Min(0f)]
     [Tooltip("No minigame spawns for this many seconds after the player presses Play (or after the game starts, without a title screen).")]
     [SerializeField] private float quietSecondsAfterPlay = 30f;
@@ -54,6 +57,13 @@ public class PixelMinigameLimits : MonoBehaviour
         // While a takeover round (Snake, Sorting Race, Breakout) is running, nothing else spawns.
         foreach (PixelMinigame m in PixelMinigame.All)
             if (m != null && m != self && m.Takeover && m.Busy) return false;
+        if (!instance.allowOverlap)
+        {
+            // One at a time: any other minigame (or visitor) with something on screen holds this one back.
+            foreach (PixelMinigame m in PixelMinigame.All)
+                if (m != null && m != self && m.Running && m.Busy) return false;
+            return true;
+        }
         if (!instance.limitAtOnce) return true;
 
         int busy = 0;
