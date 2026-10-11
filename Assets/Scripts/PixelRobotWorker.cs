@@ -158,7 +158,12 @@ public class PixelRobotWorker : MonoBehaviour
     [SerializeField] private float hoverAlpha = 0.25f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Hovering = false; }
+    private static void ResetStatics() { Hovering = false; UfoRoot = null; }
+
+    /// <summary>The UFO's root object (null while it does not exist). Cube clicks look straight through anything that belongs to it.</summary>
+    public static Transform UfoRoot { get; private set; }
+
+    public static bool BelongsToUfo(Transform t) => UfoRoot != null && t != null && (t == UfoRoot || t.IsChildOf(UfoRoot));
 
     public bool Active => active && !disableRobot && !userDisabled;
 
@@ -211,6 +216,7 @@ public class PixelRobotWorker : MonoBehaviour
         PixelWindows.Unregister(this);
         Hovering = false;
         if (root != null) Destroy(root);
+        if (UfoRoot == null || UfoRoot == (root != null ? root.transform : null)) UfoRoot = null;
         if (beam != null) Destroy(beam);
         if (bubbleCanvas != null) Destroy(bubbleCanvas);
         if (ghost != null) Destroy(ghost);
@@ -618,6 +624,7 @@ public class PixelRobotWorker : MonoBehaviour
     private void BuildUfo()
     {
         root = new GameObject("UFO Helper");
+        UfoRoot = root.transform;
         bodyT = Pivot(root.transform, "Body", Vector3.zero);
         Transform b = bodyT;
 

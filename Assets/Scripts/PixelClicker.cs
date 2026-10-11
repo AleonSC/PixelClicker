@@ -1483,6 +1483,7 @@ public class PixelClicker : MonoBehaviour
         {
             // Old pixels are skipped unless they're allowed to block clicks.
             if (!oldPixelsBlockClicks && !GrabEnabled && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
+            if (PixelRobotWorker.BelongsToUfo(hit.transform)) continue;   // the UFO is see-through: clicks go straight through it to the cube
 
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
             {
