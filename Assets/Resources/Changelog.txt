@@ -449,3 +449,4 @@
 [2026-10-11 12:05 UTC] Added the Electrician skill (Electric pixels replace the basic cubes while it is in play and are no longer a spawn toggle), removed the Noir Smoke and Bloody Boards floors, gave Circuit Flow wandering bright sparks, and added mining (Mine Track, Ore Veins, Rock Strata) and farming (Crop Rows, Wheat Field, Farm Patchwork) floors.
 [2026-10-11 12:07 UTC] Crafting window: livelier boxes (sunken frame, glowing rim, breathing plus), the how-to text replaced by hover tooltips on the boxes and the materials; the on-screen spawner now also hides while the pinned Inventory is open.
 [2026-10-11 12:08 UTC] Fixed Circuit Flow lag: the spark glow is only worked out in cells next to a spark, the background noise is cached, and the floor now redraws a smaller texture 15 times a second.
+[2026-10-11 12:09 UTC] The on-screen spawner's open drop-down lists now close when it hides (pause menu or any window), instead of staying on screen.
