@@ -180,6 +180,12 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Width of the on-screen minigame Despawn button next to it (canvas units).")]
     [SerializeField] private float despawnButtonWidth = 150f;
 
+    [Tooltip("Width of the on-screen 'middle-click swap' drop-down at the end of the row (canvas units).")]
+    [SerializeField] private float swapSelectorWidth = 300f;
+
+    [Tooltip("Prefix of the middle-click swap drop-down entries.")]
+    [SerializeField] private string swapPrefix = "Middle click: ";
+
     [Tooltip("Text of the Despawn button (removes the selected minigame's current round).")]
     [SerializeField] private string despawnText = "Despawn";
 
@@ -434,9 +440,23 @@ public class PixelDevTools : MonoBehaviour
         if (spawnSelectorEnabled && clicker != null && clicker.isActiveAndEnabled) clicker.SetDevSpawnTiers(null);
     }
 
+    private TMP_Dropdown swapDropdown;
+    private readonly List<PixelClicker.PixelType> swapChoices = new List<PixelClicker.PixelType>();
+
+    /// <summary>Middle click (with the on-screen selector on) swaps the pixel on the cube for the one chosen in the swap drop-down.</summary>
+    private void UpdateMiddleSwap()
+    {
+        if (!spawnSelectorEnabled || clicker == null || swapDropdown == null || PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        if (!PixelInput.MiddlePressed() || PixelInput.PointerOverUI() || IsTyping()) return;
+        int v = swapDropdown.value;
+        if (v < 0 || v >= swapChoices.Count) return;
+        clicker.DevSwapCurrentPixel(swapChoices[v]);
+    }
+
     private void Update()
     {
         UpdateGod();
+        UpdateMiddleSwap();
         if (!clearKeyEnabled || clicker == null || PixelPauseMenu.IsPaused) return;
         if (IsTyping()) return;
         if (PixelInput.QPressed()) clicker.ClearOldPixels();
@@ -902,7 +922,7 @@ public class PixelDevTools : MonoBehaviour
         selectorRoot.AddComponent<CanvasGroup>();
 
         const float gap = 10f;
-        float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth + gap + despawnButtonWidth;
+        float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth + gap + despawnButtonWidth + gap + swapSelectorWidth;
         float x = -total * 0.5f;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         float top = -(bar + 12f);
@@ -926,13 +946,19 @@ public class PixelDevTools : MonoBehaviour
         PlaceTop(spawn.GetComponent<RectTransform>(), x, top, btnSize);
         spawn.onClick.AddListener(SpawnSelected);
         x += spawnButtonWidth + gap;
-        float rowRight = x + despawnButtonWidth;
+        float rowRight = x + despawnButtonWidth + gap + swapSelectorWidth;
 
         Vector2 despawnSize = new Vector2(despawnButtonWidth, selectorSize.y);
         Button despawn = PixelUIKit.CreateButton(font, selectorRoot.transform, "Despawn Button", despawnText, despawnSize,
                                                  buttonColor, textColor, fontSize);
         PlaceTop(despawn.GetComponent<RectTransform>(), x, top, despawnSize);
         despawn.onClick.AddListener(DespawnSelected);
+        x += despawnButtonWidth + gap;
+
+        Vector2 swapSize = new Vector2(swapSelectorWidth, selectorSize.y);
+        swapDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Swap Dropdown", swapSize, boxColor, listColor, textColor, fontSize);
+        PlaceTop(swapDropdown.GetComponent<RectTransform>(), x, top, swapSize);
+        swapDropdown.onValueChanged.AddListener(v => SetInt("SelSwap", v));
         TMP_Text despawnLabel = despawn.GetComponentInChildren<TMP_Text>(true);
         if (despawnLabel != null)
         {
@@ -963,6 +989,7 @@ public class PixelDevTools : MonoBehaviour
     {
         if (selectorDropdown != null && selectorDropdown.IsExpanded) return true;
         if (selectorMinigameDropdown != null && selectorMinigameDropdown.IsExpanded) return true;
+        if (swapDropdown != null && swapDropdown.IsExpanded) return true;
         return selectorHover != null && RectTransformUtility.RectangleContainsScreenPoint(selectorHover, PixelInput.PointerPosition(), null);
     }
 
@@ -998,6 +1025,23 @@ public class PixelDevTools : MonoBehaviour
         selectorDropdown.AddOptions(names);
         selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, names.Count - 1));
         selectorDropdown.RefreshShownValue();
+
+        // Middle-click swap: every pixel type.
+        if (swapDropdown != null)
+        {
+            int keepSwap = first ? GetInt("SelSwap", 0) : swapDropdown.value;
+            swapChoices.Clear();
+            List<string> swapNames = new List<string>();
+            foreach (PixelClicker.PixelTier tier in clicker.Tiers)
+            {
+                swapNames.Add(swapPrefix + tier.displayName + (tier.unlocked ? "" : " (locked)"));
+                swapChoices.Add(tier.type);
+            }
+            swapDropdown.ClearOptions();
+            swapDropdown.AddOptions(swapNames);
+            swapDropdown.SetValueWithoutNotify(Mathf.Clamp(keepSwap, 0, Mathf.Max(0, swapNames.Count - 1)));
+            swapDropdown.RefreshShownValue();
+        }
 
         // Minigames
         int keepGame = first ? GetInt("SelMinigame", 0) : selectorMinigameDropdown.value;

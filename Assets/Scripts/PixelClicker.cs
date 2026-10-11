@@ -1457,7 +1457,7 @@ public class PixelClicker : MonoBehaviour
 
     private void Start()
     {
-        if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
         ApplyUIFont();
         ApplyTierLook(GetClickTier());
         RefreshUI();
@@ -1662,7 +1662,7 @@ public class PixelClicker : MonoBehaviour
         else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
-        if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());
 
         onPixelClicked?.Invoke();
@@ -1887,7 +1887,7 @@ public class PixelClicker : MonoBehaviour
         tiers[tierIndex].spawnDisabled = !enabled;
         if (randomizeSpawnTier && !enabled && currentTierIndex == tierIndex && !isSpawning)
         {
-            currentTierIndex = PickSpawnTier();
+            currentTierIndex = RollTier();
             Materialize(GetClickTier());
         }
     }
@@ -1896,7 +1896,7 @@ public class PixelClicker : MonoBehaviour
     public void FinishLoad()
     {
         ClearForcedSpawnTier();
-        if (randomizeSpawnTier) currentTierIndex = PickSpawnTier();
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());
         NotifyChanged();
     }
@@ -2018,11 +2018,26 @@ public class PixelClicker : MonoBehaviour
         bool fine = devSpawnTiers != null ? System.Array.IndexOf(devSpawnTiers, currentTierIndex) >= 0
                                           : IsValidTier(currentTierIndex) && tiers[currentTierIndex].unlocked;
         if (fine) return;
-        currentTierIndex = PickSpawnTier();
+        currentTierIndex = RollTier();
         Materialize(GetClickTier());
     }
 
     private int forcedTierIndex = -1;
+
+    private bool devSwapped; // dev tools: the pixel on the cube was swapped by hand and stays until it is clicked (even a locked type)
+
+    private int RollTier() { devSwapped = false; return PickSpawnTier(); }
+
+    /// <summary>Dev tools: replaces the pixel on the cube with this type at once (even a locked one) so its behaviour can be tested.</summary>
+    public void DevSwapCurrentPixel(PixelType type)
+    {
+        int index = IndexOf(type);
+        if (index < 0 || pixelTransform == null) return;
+        if (!randomizeSpawnTier) { activeTierIndex = index; }
+        currentTierIndex = index;
+        devSwapped = true;
+        Materialize(tiers[index]);
+    }
 
     /// <summary>True while a potion (or other effect) restricts spawning to one pixel type.</summary>
     public bool HasForcedSpawnTier => forcedTierIndex >= 0;
@@ -2069,7 +2084,7 @@ public class PixelClicker : MonoBehaviour
 
         if (randomizeSpawnTier && currentTierIndex != forcedTierIndex && currentTierIndex != forcedTierIndex2 && currentTierIndex != forcedTierIndex3)
         {
-            currentTierIndex = PickSpawnTier();
+            currentTierIndex = RollTier();
             Materialize(GetClickTier());
         }
     }
@@ -2131,13 +2146,13 @@ public class PixelClicker : MonoBehaviour
     public void RefreshSpawnTier()
     {
         if (!randomizeSpawnTier || pixelTransform == null) return;
-        currentTierIndex = PickSpawnTier();
+        currentTierIndex = RollTier();
         Materialize(GetClickTier());
     }
 
     private int GetClickTierIndex()
     {
-        if (randomizeSpawnTier && devSpawnTiers != null && IsValidTier(currentTierIndex)) return currentTierIndex; // dev tools: even locked tiers
+        if (randomizeSpawnTier && (devSpawnTiers != null || devSwapped) && IsValidTier(currentTierIndex)) return currentTierIndex; // dev tools: even locked tiers
         if (randomizeSpawnTier)
             return IsValidTier(currentTierIndex) && (tiers[currentTierIndex].unlocked || tiers[currentTierIndex].rareDrop)
                 ? currentTierIndex

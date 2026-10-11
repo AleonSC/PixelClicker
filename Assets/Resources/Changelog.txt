@@ -397,3 +397,4 @@
 [2026-10-11 06:38 UTC] UFO cockpit: added a one-off diagnostic log line when you take control.
 [2026-10-11 06:40 UTC] Fixed the UFO cockpit camera ending up 10 units above the cabin (its position is now set every frame).
 [2026-10-11 06:41 UTC] Minigames and visitors no longer overlap: only one can have something on screen at a time (Inspector option 'Allow Overlap' on Pixel Minigame Limits restores the old limit).
+[2026-10-11 06:46 UTC] Dev tools: new 'Middle click' drop-down in the on-screen spawn selector; middle-clicking swaps the pixel on the cube for the chosen type at once.
