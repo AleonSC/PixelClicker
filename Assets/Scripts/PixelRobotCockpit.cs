@@ -114,15 +114,18 @@ public partial class PixelRobotWorker
         float unit = UnitScale;
 
         // The cabin: one rig at the saucer, scaled so the model's units are the saucer's units.
+        // (the rig itself stays unscaled: a camera under a scaled parent culls wrongly; only the cabin model is scaled)
         cockpitRig = new GameObject("UFO Cockpit");
-        cockpitRig.transform.localScale = Vector3.one * unit;
-        BuildInterior(cockpitRig.transform);
+        GameObject cabin = new GameObject("Cabin");
+        cabin.transform.SetParent(cockpitRig.transform, false);
+        cabin.transform.localScale = Vector3.one * unit;
+        BuildInterior(cabin.transform);
 
         // The pilot's head (the camera).
         GameObject head = new GameObject("UFO Pilot Head");
         headT = head.transform;
         headT.SetParent(cockpitRig.transform, false);
-        headT.localPosition = new Vector3(0f, 0.42f, -0.2f);
+        headT.localPosition = new Vector3(0f, 0.42f, -0.2f) * unit;
         cockpitCamera = head.AddComponent<Camera>();
         cockpitCamera.CopyFrom(mainCam);
         cockpitCamera.depth = mainCam.depth + 1f;
