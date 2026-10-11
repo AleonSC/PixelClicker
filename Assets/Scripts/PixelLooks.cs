@@ -247,6 +247,12 @@ public class PixelLook
     [Tooltip("Fire: flames rise off the pixel (a little stream of flame squares).")]
     public bool flames = false;
 
+    [Tooltip("Vacuum: draw a clear glass container (hollow, thin walls) with ONE round opening in its front face instead of a solid cube. Draws a different mesh; the hit box stays a cube.")]
+    public bool vacuumContainer = false;
+
+    [Tooltip("Vacuum: a glowing lip round the opening and a suction wind (streaks of air curling into it) outside it.")]
+    public bool windFx = false;
+
     [Tooltip("Rocky pixels (Obsidian, Meteor, Rock, the ores): the cube's edges and corners are chipped into an irregular jagged shape instead of straight lines. Draws a different mesh; the hit box stays a cube.")]
     public bool jagged = false;
 
@@ -281,7 +287,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => windFx || flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => meteorTexture || sunTexture || streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
@@ -439,10 +445,10 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Green, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic, },
             new PixelLook { type = PixelClicker.PixelType.Blue, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic, },
 
-            // Vacuum: a dark purple see-through block with a black circle on every face.
-            new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.2f, 0.05f, 0.35f, 0.55f),
-                            forceTranslucent = true, smoothness = 0.95f, metallic = 0f, emission = 0.25f, faceCircles = true, faceRing = true, faceCircleRadius = 0.27f,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.6f, 0.35f, 0.95f, 1f), outlineBevel = true, outlineThickness = 0.04f, outlineShade = 0.55f, outlineStrength = 0.7f },
+            // Vacuum: a clear lavender glass container with one round opening and a suction wind curling into it.
+            new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.62f, 0.5f, 0.95f, 0.2f),
+                            forceTranslucent = true, smoothness = 0.97f, metallic = 0f, emission = 0.12f, vacuumContainer = true, windFx = true,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.7f, 0.55f, 1f, 1f), outlineBevel = true, outlineThickness = 0.025f, outlineShade = 0.5f, outlineStrength = 0.55f },
 
             // Glass: very see-through, a faint edge so it can still be seen, shatters on the ground.
             new PixelLook { type = PixelClicker.PixelType.Glass, alpha = 0.4f, smoothness = 1f, metallic = 0f,
@@ -779,6 +785,7 @@ public static class PixelLooks
         if (look.flames) PixelFlames.Attach(root.transform, centre, size);
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
         if (look.cometTail) PixelCometFx.Attach(root.transform, centre, size);
+        if (look.windFx) PixelVacuumFx.Attach(root.transform, centre, size);
         if (look.sunFx) PixelSunFx.Attach(root.transform, centre, size);
         if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);
         if (look.obsidianFx) PixelObsidianFx.Attach(root.transform, centre, size);

@@ -1515,6 +1515,17 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 36;
         }
 
+        if (looksVersion < 37)
+        {
+            // The Vacuum pixel became a clear glass container with one opening and a suction wind.
+            PixelLook def37 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Vacuum);
+            System.Collections.Generic.List<PixelLook> list37 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            int at37 = list37.FindIndex(l => l != null && l.type == PixelType.Vacuum);
+            if (def37 != null) { if (at37 >= 0) list37[at37] = def37; else list37.Add(def37); }
+            looks = list37.ToArray();
+            looksVersion = 37;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2835,7 +2846,12 @@ public class PixelClicker : MonoBehaviour
     private Mesh MeshFor(PixelLook look)
     {
         Mesh basic = BaseMesh();
-        return look != null && look.jagged && basic != null ? PixelRockMesh.Get(basic, (int)look.type) : basic;
+        if (look != null && basic != null)
+        {
+            if (look.vacuumContainer) return PixelVacuumMesh.Get(basic);
+            if (look.jagged) return PixelRockMesh.Get(basic, (int)look.type);
+        }
+        return basic;
     }
 
     /// <summary>True if old pixels of this tier pass through the screen edges (ghosts), see PixelLook.ignoreViewBounds.</summary>
