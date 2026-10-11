@@ -13,7 +13,7 @@ public partial class PixelSkills
 {
     [Header("Window")]
     [Tooltip("Size of the Skills window (canvas units).")]
-    [SerializeField] private Vector2 windowSize = new Vector2(980f, 640f);
+    [SerializeField] private Vector2 windowSize = new Vector2(980f, 820f);
 
     [Tooltip("Gap between the screen edge's docked tab and the window.")]
     [SerializeField] private float gapToButton = 14f;
@@ -157,10 +157,16 @@ public partial class PixelSkills
         PixelUIKit.Caps(detailName);
         Place(detailName.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -62f), new Vector2(-22f, -10f));
         detailDesc = PixelUIKit.CreateText(Font, detail.transform, "Description", "", 24f, TextAlignmentOptions.TopLeft, FontStyles.Normal, dimTextColor);
-        Place(detailDesc.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -128f), new Vector2(-22f, -64f));
+        detailDesc.enableAutoSizing = true;   // always fits its band
+        detailDesc.fontSizeMax = 24f;
+        detailDesc.fontSizeMin = 13f;
+        Place(detailDesc.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -158f), new Vector2(-22f, -66f));
         detailInfo = PixelUIKit.CreateText(Font, detail.transform, "Info", "", 22f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
         detailInfo.richText = true;
-        Place(detailInfo.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -236f), new Vector2(-22f, -132f));
+        detailInfo.enableAutoSizing = true;
+        detailInfo.fontSizeMax = 22f;
+        detailInfo.fontSizeMin = 13f;
+        Place(detailInfo.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -312f), new Vector2(-22f, -164f));
         for (int i = 0; i < 8; i++)
         {
             TMP_Text row = PixelUIKit.CreateText(Font, detail.transform, "Perk " + i, "", 22f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, dimTextColor);
@@ -172,8 +178,8 @@ public partial class PixelSkills
             pr.anchorMin = new Vector2(0f, 1f);
             pr.anchorMax = new Vector2(1f, 1f);
             pr.pivot = new Vector2(0.5f, 1f);
-            pr.sizeDelta = new Vector2(-44f, 40f);
-            pr.anchoredPosition = new Vector2(0f, -(246f + i * 42f));
+            pr.sizeDelta = new Vector2(-44f, 32f);
+            pr.anchoredPosition = new Vector2(0f, -(320f + i * 36f));
             row.gameObject.SetActive(false);
             perkRows.Add(row);
         }

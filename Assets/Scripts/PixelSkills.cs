@@ -151,8 +151,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         SkillPack pack = Find(id);
         if (pack == null || !IsAvailable(pack) || id == ActiveId) return;
-        PixelProspector.Setting = id == MiningId;
-        if (clicker != null) clicker.RefreshSpawnTier();
+        PixelProspector.Setting = id == MiningId;   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected
         Changed?.Invoke();
     }
 

@@ -389,3 +389,4 @@
 [2026-10-11 05:34 UTC] Bank tab is now half width with a square hose-icon button on its right (it slides out first); both hose buttons show a hover tip about the hose key.
 [2026-10-11 05:41 UTC] Early pixels (White, Gray, Black, Red, Green, Blue, Glass, Luminescent) get small click particle pops: lighter on auto clicks, one chip on tough pixels, a light touch for Luminescent, with a Click effects setting (Off / Light / Normal); added combo-tier particle effects and the skill system to the to-do.
 [2026-10-11 05:44 UTC] Skill system shell: Standard and Mining packs (Mining = Prospector mode), XP and levels per pack, level-up log lines and a Skills window opened from a new Skills tab under the Bank and Hose buttons; perks and the XP bar are not built yet.
+[2026-10-11 05:48 UTC] Skills window: swapping packs keeps the current cube until it is collected, and the pack description / info / perks now fit (taller window, auto-sized texts).
