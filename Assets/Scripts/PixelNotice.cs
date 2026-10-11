@@ -108,6 +108,7 @@ public class PixelNoticeBox : MonoBehaviour
                      RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
+        besideTarget = null;
         Unfreeze();
         followPoint = nearScreen;
         if (canvasRoot == null) Build();
@@ -155,6 +156,9 @@ public class PixelNoticeBox : MonoBehaviour
                 boxRect.pivot = new Vector2(0f, 1f);
                 boxRect.anchoredPosition = new Vector2(x, corners[2].y * toUnits);
             }
+            besideTarget = beside;
+            besideBottomFlag = besideBottom;
+            besideRight = corners[2].x;
         }
         else if (fixedSize.x > 0f && fixedSize.y > 0f && PixelNotice.SideAnchor != null && PixelNotice.SideAnchor.gameObject.activeInHierarchy && PixelNotice.SideWidth > 40f)
         {
@@ -280,8 +284,27 @@ public class PixelNoticeBox : MonoBehaviour
         if (wasOpen) callback?.Invoke();
     }
 
+    // The window the box sits beside is tracked: if it was still opening / laying out when the box appeared (so it was a different size then), the box moves to its real edge.
+    private RectTransform besideTarget;
+    private bool besideBottomFlag;
+    private float besideRight = -1f;
+
+    private void TrackBesideWindow()
+    {
+        if (besideTarget == null || !besideTarget.gameObject.activeInHierarchy) { besideTarget = null; return; }
+        Vector3[] corners = new Vector3[4];
+        FullSizeCorners(besideTarget, corners);
+        if (Mathf.Abs(corners[2].x - besideRight) < 1f) return;
+        besideRight = corners[2].x;
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        float toUnits = canvasRect.rect.width / Mathf.Max(1f, Screen.width);
+        float x = Mathf.Min(corners[2].x * toUnits + 24f, canvasRect.rect.width - boxRect.rect.width - 10f);
+        boxRect.anchoredPosition = new Vector2(x, (besideBottomFlag ? corners[0].y : corners[2].y) * toUnits);
+    }
+
     private void Update()
     {
+        if (canvasRoot != null && canvasRoot.activeSelf) TrackBesideWindow();
         if (followPoint != null && canvasRoot != null && canvasRoot.activeSelf) PlaceNearPoint();
         if (!timed || canvasRoot == null || !canvasRoot.activeSelf) return;
         timer -= Time.unscaledDeltaTime;
