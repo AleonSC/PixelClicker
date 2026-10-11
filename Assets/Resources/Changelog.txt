@@ -471,3 +471,4 @@
 [2026-10-11 14:03 UTC] Fixed a compile error in the crafting code (device field not assigned in the item constructor).
 [2026-10-11 14:09 UTC] Toggles > Pets rows have a pencil at the left that opens the pet's rename / outfit window, and pet names are singular now ("Gray Pixel Pet").
 [2026-10-11 14:11 UTC] In the pinned Inventory the Inventory key now switches from currency to consumables first; pressing it again closes the window.
+[2026-10-11 14:14 UTC] The shop tutorial is now remembered per save (not globally), so it plays after Cubie's second visit on every new game.

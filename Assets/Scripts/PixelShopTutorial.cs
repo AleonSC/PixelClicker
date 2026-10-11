@@ -42,6 +42,9 @@ public class PixelShopTutorial : MonoBehaviour
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }
 
+    /// <summary>Stat counter (saved with the game) that says this save has seen the shop tutorial; Cubie's Replay clears it.</summary>
+    public const string DoneKey = "guide.shopTutorial";
+
     private static List<Step> DefaultSteps()
     {
         return new List<Step>
@@ -60,7 +63,7 @@ public class PixelShopTutorial : MonoBehaviour
     private void Update()
     {
         if (running || !enableTutorial || shop == null || !shop.ShopAvailable) { readyTimer = 0f; return; }
-        if (PixelHints.IsTipSeen(SeenId) || !PixelHints.TipsEnabled) return;
+        if (PixelStats.Total(DoneKey) >= 1d || !PixelHints.TipsEnabled) return;   // remembered per save (the tip flag in PlayerPrefs is global, so a new game never replayed it)
 
         // Wait for a calm moment: title screen over, the new-game intro finished, no other tip, no minigame takeover, not paused.
         if (PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelGuideVendor.Pending || PixelGuideVendor.Visiting || PixelNotice.IsShowing || PixelPauseMenu.IsPaused ||
@@ -103,6 +106,7 @@ public class PixelShopTutorial : MonoBehaviour
             running = false;
             PixelGuideVendor.EndNarration();
             PixelHints.SetTipSeen(SeenId);
+            PixelStats.Best(DoneKey, 1d);
             return;
         }
 

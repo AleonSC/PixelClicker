@@ -111,6 +111,7 @@ public class PixelGuideVendor : MonoBehaviour
         if (instance == null) return;
         PixelStats.Clear(Stage1Key);
         PixelStats.Clear(Stage2Key);
+        PixelStats.Clear(PixelShopTutorial.DoneKey);
         instance.replaying = true;
         instance.calmTimer = 0f;
     }
@@ -272,6 +273,7 @@ public class PixelGuideVendor : MonoBehaviour
                 // A save that already reached the shop: no visits, no gift - just the vendors from now on.
                 PixelStats.Best(Stage1Key, 1d);
                 PixelStats.Best(Stage2Key, 1d);
+                PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
                 StartVendors(true);
             }
             else if (ShopThere) StartCoroutine(Visit(true));
