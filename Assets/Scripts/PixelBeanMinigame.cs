@@ -4,8 +4,7 @@ using static PixelInput;
 
 /// <summary>
 /// Bean (id "bean"): a very rare visitor (a grey tabby cat) who gives you Magic Beans on her FIRST visit (a random present of pixels on later ones). Plant them (right-click the item in the Inventory's Seeds category, click the
-/// floor) and a tall stalk grows with a handful of random cubes along it - and one Dragon Cube you don't hold yet. She never comes back, whatever you
-/// decide. All the visiting is in <see cref="PixelVisitorMinigame"/>; the plant is <see cref="PixelBeanstalk"/>; the beans are a consumable made by
+/// floor) and a tall stalk grows with a handful of random cubes along it - and one Dragon Cube you don't hold yet. All the visiting is in <see cref="PixelVisitorMinigame"/>; the plant is <see cref="PixelBeanstalk"/>; the beans are a consumable made by
 /// <see cref="PixelConsumables"/> (the device flagged <c>beans</c>).
 /// </summary>
 public class PixelBeanMinigame : PixelVisitorMinigame
