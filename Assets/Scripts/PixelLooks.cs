@@ -503,6 +503,15 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Capacitor, useColor = true, color = new Color(0.3f, 0.55f, 0.95f, 1f), metallic = 0.8f, smoothness = 0.85f, emission = 0.3f, shine = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.5f, outlineStrength = 0.8f },
 
+            new PixelLook { type = PixelClicker.PixelType.Resistor, useColor = true, color = new Color(0.82f, 0.68f, 0.45f, 1f), metallic = 0.1f, smoothness = 0.4f, basicSurface = PixelLook.BasicSurface.Grain,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = true, outlineShade = -0.45f, outlineStrength = 0.8f },
+            new PixelLook { type = PixelClicker.PixelType.Transistor, useColor = true, color = new Color(0.18f, 0.2f, 0.26f, 1f), metallic = 0.85f, smoothness = 0.8f, emission = 0.15f, shine = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.55f, outlineStrength = 0.85f },
+            new PixelLook { type = PixelClicker.PixelType.Fuse, useColor = true, color = new Color(0.95f, 0.45f, 0.2f, 1f), metallic = 0.2f, smoothness = 0.5f, emission = 0.5f,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.8f },
+            new PixelLook { type = PixelClicker.PixelType.Bulb, useColor = true, color = new Color(1f, 0.95f, 0.6f, 0.9f), forceTranslucent = true, metallic = 0f, smoothness = 0.95f, emission = 1.2f, shine = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.4f, outlineStrength = 0.7f },
+
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
                             forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true, farmFx = PixelLook.FarmAmbient.Dew },

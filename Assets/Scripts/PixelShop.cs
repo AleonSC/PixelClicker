@@ -916,7 +916,7 @@ public partial class PixelShop : MonoBehaviour
         // A saved Electrician's Pack from before it had its own pixels gets them.
         if (packs != null)
             foreach (ShopPack ep in packs)
-                if (ep != null && ep.skillId == PixelSkills.ElectricianId && (ep.rewardTiers == null || ep.rewardTiers.Length == 0))
+                if (ep != null && ep.skillId == PixelSkills.ElectricianId && (ep.rewardTiers == null || ep.rewardTiers.Length < 7))
                 {
                     ep.rewardTiers = ElectricianTiers();
                     renamed = true;

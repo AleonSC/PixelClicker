@@ -405,6 +405,10 @@ public partial class PixelShop
             Block(PixelClicker.PixelType.Wire, "Wire Pixels", new Color(0.86f, 0.5f, 0.26f, 1f), 1, 2, 1.0f),
             Block(PixelClicker.PixelType.Battery, "Battery Pixels", new Color(0.5f, 0.9f, 0.3f, 1f), 3, 12, 0.4f),
             Block(PixelClicker.PixelType.Capacitor, "Capacitor Pixels", new Color(0.3f, 0.55f, 0.95f, 1f), 1, 6, 0.35f),
+            Block(PixelClicker.PixelType.Resistor, "Resistor Pixels", new Color(0.82f, 0.68f, 0.45f, 1f), 2, 5, 0.6f),
+            Block(PixelClicker.PixelType.Transistor, "Transistor Pixels", new Color(0.3f, 0.34f, 0.45f, 1f), 1, 5, 0.4f),
+            Block(PixelClicker.PixelType.Fuse, "Fuse Pixels", new Color(0.95f, 0.45f, 0.2f, 1f), 1, 5, 0.4f),
+            Block(PixelClicker.PixelType.Bulb, "Bulb Pixels", new Color(1f, 0.95f, 0.6f, 1f), 1, 6, 0.3f),
         };
     }
 
@@ -415,7 +419,7 @@ public partial class PixelShop
             displayName = "Electrician's Pack",
             tab = ShopTab.Pixels,
             skillId = PixelSkills.ElectricianId,
-            description = "Unlocks the Electrician skill and three new pixels: Wire, Battery and Capacitor. While the skill is in play (Toggles or Skills window) Electric, Wire, Battery and Capacitor replace the basic cubes. Wire and Battery carry your device links, a Battery also sets off an Overcharge, and a Capacitor stores charge from every other click and pays it all out.",
+            description = "Unlocks the Electrician skill and seven new pixels: Wire, Battery, Capacitor, Resistor, Transistor, Fuse and Bulb. While the skill is in play (Toggles or Skills window) these and Electric replace the basic cubes. Wire, Battery and Resistor carry your device links, a Battery also sets off an Overcharge, a Capacitor stores charge from every other click, a Transistor doubles your next click, a Fuse pays big if you click it fast and a Bulb shines brighter the more wired pixels lie around.",
             requirements = Needs(requiresElectricIndex),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.Electric, amount = 1500 } },
             rewardTiers = ElectricianTiers(),

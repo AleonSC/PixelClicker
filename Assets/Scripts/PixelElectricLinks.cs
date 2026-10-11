@@ -299,8 +299,7 @@ public class PixelElectricLinks : MonoBehaviour
     }
 
     /// <summary>Electric pixels and the Electrician skill's Wire and Battery pixels all carry the arcs.</summary>
-    private static bool IsConductor(PixelClicker.PixelType t) =>
-        t == PixelClicker.PixelType.Electric || t == PixelClicker.PixelType.Wire || t == PixelClicker.PixelType.Battery;
+    private static bool IsConductor(PixelClicker.PixelType t) => PixelClicker.IsConductorType(t);
 
     private bool IsElectric(Rigidbody body, out OldPixelDespawn despawn)
     {

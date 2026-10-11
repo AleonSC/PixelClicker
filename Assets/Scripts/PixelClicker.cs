@@ -30,6 +30,7 @@ public class PixelClicker : MonoBehaviour
         GodMode = false;
         InfiniteResources = false;
         capacitorCharge = 0;
+        transistorBoost = 1d;
         DevNoOldPixelLimit = false;
         DevClickCount = 1;
         OldPixelLanded = null;
@@ -91,6 +92,10 @@ public class PixelClicker : MonoBehaviour
         Wire = 42,
         Battery = 43,
         Capacitor = 44,
+        Resistor = 45,
+        Transistor = 46,
+        Fuse = 47,
+        Bulb = 48,
     }
 
     /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
@@ -100,7 +105,7 @@ public class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Capacitor);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Bulb);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1455,12 +1460,12 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 30;
         }
 
-        if (looksVersion < 32)
+        if (looksVersion < 33)
         {
             // The Electrician pixels (Wire, Battery, Capacitor) got their looks.
             System.Collections.Generic.List<PixelLook> list32 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
             PixelLook[] defaults32 = PixelLooks.CreateDefaults();
-            foreach (PixelType t in new[] { PixelType.Wire, PixelType.Battery, PixelType.Capacitor })
+            foreach (PixelType t in new[] { PixelType.Wire, PixelType.Battery, PixelType.Capacitor, PixelType.Resistor, PixelType.Transistor, PixelType.Fuse, PixelType.Bulb })
             {
                 PixelLook def = PixelLooks.Find(defaults32, t);
                 if (def == null) continue;
@@ -1468,7 +1473,7 @@ public class PixelClicker : MonoBehaviour
                 if (at >= 0) list32[at] = def; else list32.Add(def);
             }
             looks = list32.ToArray();
-            looksVersion = 32;
+            looksVersion = 33;
         }
 
         if (pixelRenderer != null)
@@ -1704,6 +1709,12 @@ public class PixelClicker : MonoBehaviour
         }
 
         double basePayout = tier.amountPerClick * breaks;
+        if (transistorBoost > 1d) { basePayout *= transistorBoost; transistorBoost = 1d; }   // a Transistor amplified this click
+        if (tier.type == PixelType.Transistor) transistorBoost = transistorMultiplier > 0f ? transistorMultiplier : 2f;
+        if (tier.type == PixelType.Fuse)
+            basePayout *= Time.time - liveSince <= (fuseSeconds > 0f ? fuseSeconds : 3f) ? (fuseBonus > 0f ? fuseBonus : 3f) : 0.3f;   // collected before it burns out: big, after: almost nothing
+        if (tier.type == PixelType.Bulb)
+            basePayout *= 1d + CountConductors() * (bulbPerConductor > 0f ? bulbPerConductor : 0.1f);   // it shines brighter the more wired-up pixels lie around
         if (tier.type == PixelType.Capacitor)
         {
             basePayout *= 1d + capacitorCharge * (capacitorPayPerCharge > 0f ? capacitorPayPerCharge : 0.15f);   // it pays out everything the other clicks stored in it
@@ -3050,6 +3061,33 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Extra payout per stored charge for the Capacitor pixel (0 = 0.15).")]
     [SerializeField] private float capacitorPayPerCharge = 0f;
     private static int capacitorCharge;
+    [Tooltip("The Transistor pixel makes the NEXT pixel you collect pay this many times as much (0 = 2).")]
+    [SerializeField] private float transistorMultiplier = 0f;
+    [Tooltip("Seconds a Fuse pixel can be collected for its bonus before it burns out (0 = 3).")]
+    [SerializeField] private float fuseSeconds = 0f;
+    [Tooltip("Payout multiplier of a Fuse collected in time (0 = 3). Too late it pays 0.3.")]
+    [SerializeField] private float fuseBonus = 0f;
+    [Tooltip("Extra payout of a Bulb per old conductor pixel (Electric, Wire, Battery, Resistor) lying around, up to 30 of them (0 = 0.1).")]
+    [SerializeField] private float bulbPerConductor = 0f;
+    private static double transistorBoost = 1d;
+    private float liveSince;
+
+    /// <summary>The old pixels on the floor that carry current (Electric, Wire, Battery, Resistor), at most 30.</summary>
+    public int CountConductors()
+    {
+        int n = 0;
+        foreach (Rigidbody body in oldPixels)
+        {
+            if (body == null) continue;
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info != null && IsValidTier(info.tierIndex) && IsConductorType(Tiers[info.tierIndex].type) && ++n >= 30) break;
+        }
+        return n;
+    }
+
+    /// <summary>Electric, Wire, Battery and Resistor pixels carry the Electrician's current.</summary>
+    public static bool IsConductorType(PixelType t) =>
+        t == PixelType.Electric || t == PixelType.Wire || t == PixelType.Battery || t == PixelType.Resistor;
 
     /// <summary>How much charge the Capacitor pixel holds right now (every non-Capacitor click adds one).</summary>
     public static int CapacitorCharge => capacitorCharge;
@@ -3124,6 +3162,7 @@ public class PixelClicker : MonoBehaviour
     private void Materialize(PixelTier tier)
     {
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
+        liveSince = Time.time;
         liveNeed = tier.randomClicks ? RollNeededClicks(tier) : 0;   // a treasure chest needs a random number of clicks
 
         // A fresh ore pixel is sometimes a rich vein: it glitters and pays much more when it breaks.
