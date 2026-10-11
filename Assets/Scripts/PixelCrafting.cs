@@ -1239,7 +1239,7 @@ public class PixelCrafting : MonoBehaviour
         float available = Mathf.Max(400f, canvasRect.rect.height - bars * 2f - 16f);
         PixelShop shop = PixelFind.First<PixelShop>();
         float width = shop != null ? shop.PanelSize.x : windowWidth;
-        float height = shop != null ? Mathf.Min(available, shop.PanelSize.y) : available;
+        float height = shop != null ? shop.PanelSize.y : available;   // too tall for the screen (high UI scale)? PixelPop shrinks the whole window to fit
         float key = width * 10000f + height;
         if (Mathf.Approximately(key, fittedHeight)) return;
         fittedHeight = key;

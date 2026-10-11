@@ -230,6 +230,7 @@ public class PixelTitleScreen : MonoBehaviour
     private readonly List<RenderTexture> chain = new List<RenderTexture>();
     private readonly List<int> chainDivisors = new List<int>();
     private Texture2D logoTexture;
+    private float logoAspect = 0.41f;
     private float timeScaleBefore = 1f;
     private bool playing, pictureReady;
     private int framesShown;
@@ -362,7 +363,21 @@ public class PixelTitleScreen : MonoBehaviour
         if (!menuOpen) foreach (LookPicker p in lookPickers) RefreshPicker(p, false);
 
         if (logoRect != null && !playing)
-            logoRect.anchoredPosition = new Vector2(0f, -logoTopMargin + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
+        {
+            // The logo must end above the middle bar: at a big UI scale the canvas is shorter, so it shrinks to fit.
+            float top = logoTopMargin;
+            RectTransform canvasRect = canvasRoot != null ? canvasRoot.GetComponent<RectTransform>() : null;
+            float canvasH = canvasRect != null ? canvasRect.rect.height : 0f;
+            float natural = logoWidth * logoAspect;
+            if (canvasH > 100f)
+            {
+                float room = canvasH * 0.5f - barHeight * 0.5f - 16f;   // from the screen's top edge down to just above the bar
+                top = Mathf.Min(logoTopMargin, room * 0.15f);
+                float shrink = Mathf.Clamp(Mathf.Min(1f, (room - top - logoBobAmount) / natural), 0.3f, 1f);
+                logoRect.sizeDelta = new Vector2(logoWidth * shrink, natural * shrink);
+            }
+            logoRect.anchoredPosition = new Vector2(0f, -top + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
+        }
     }
 
     private void LateUpdate()
@@ -638,7 +653,8 @@ public class PixelTitleScreen : MonoBehaviour
         logoImage.raycastTarget = false;
         logoRect = go.GetComponent<RectTransform>();
         logoRect.anchorMin = logoRect.anchorMax = logoRect.pivot = new Vector2(0.5f, 1f);
-        logoRect.sizeDelta = new Vector2(logoWidth, logoWidth * height / width);
+        logoAspect = (float)height / width;
+        logoRect.sizeDelta = new Vector2(logoWidth, logoWidth * logoAspect);
         logoRect.anchoredPosition = new Vector2(0f, -logoTopMargin);
     }
 
