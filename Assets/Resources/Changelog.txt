@@ -494,3 +494,4 @@
 [2026-10-11 16:11 UTC] Skills window: a pin button (top left) closes it and pins the training skill with an XP bar in a small draggable window with lock (stick), downsize and close buttons; closing it does not reopen the Skills menu.
 [2026-10-11 16:25 UTC] The pinned Inventory can now be dragged anywhere, minimised to its button row and stuck in place with a padlock, stays visible beneath other windows instead of fading away, and remembers its spot.
 [2026-10-11 22:44 UTC] Fixed the scroll arrow staying on screen when the pinned Inventory is minimised and rows staying faded in the Settings menu after a list stopped scrolling.
+[2026-10-11 22:47 UTC] Egg's egg now replaces the pixel clicker cube (same spot and size, cube hidden) until it hatches instead of sitting beside it.

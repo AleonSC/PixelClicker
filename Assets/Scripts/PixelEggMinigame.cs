@@ -198,16 +198,12 @@ public class PixelEgg : MonoBehaviour
         cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         need = Mathf.Max(1, clicksNeeded);
         clicks = Mathf.Clamp(clicksSoFar, 0, need - 1);
-        size = clicker.PixelBaseSize * 0.85f;
         bornTime = Time.time;
 
-        // A spot on the floor beside the cube.
-        Vector3 start = clicker.CubeBasePosition;
-        Vector3 side = cam != null ? cam.transform.right : Vector3.right;
-        Vector3 spot = start + side * size * 2.6f;
-        float floorY = start.y - size * 1.5f;
-        if (Physics.Raycast(spot + Vector3.up * 10f, Vector3.down, out RaycastHit hit, 60f, ~0, QueryTriggerInteraction.Ignore)) floorY = hit.point.y;
-        transform.position = new Vector3(spot.x, floorY + size * 0.5f, spot.z);
+        // The egg takes the cube's place until it hatches: the cube shrinks away (the auto clicker pauses with it) and comes back afterwards.
+        size = clicker.PixelBaseSize;
+        transform.position = clicker.CubeBasePosition;
+        clicker.SetCubeShrink(0.02f, 0.4f);
 
         GameObject eggBody = new GameObject("Egg Body", typeof(MeshFilter), typeof(MeshRenderer));
         eggBody.transform.SetParent(transform, false);
@@ -253,7 +249,12 @@ public class PixelEgg : MonoBehaviour
         for (int i = 0; i < cracks.Count; i++) cracks[i].gameObject.SetActive(i < visible);
     }
 
-    private void OnDestroy() { if (Current == this) Current = null; }
+    private void OnDestroy()
+    {
+        if (Current != this) return;
+        Current = null;
+        if (clicker != null && !PixelMinigame.TakeoverActive) clicker.SetCubeShrink(1f, 0.5f);   // the cube returns
+    }
 
     private void Update()
     {
@@ -261,6 +262,8 @@ public class PixelEgg : MonoBehaviour
         if (cam == null) cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null || body == null) return;
 
+        if (!clicker.CubeHidden && !PixelMinigame.TakeoverActive) clicker.SetCubeShrink(0.02f, 0.4f);   // something else gave the cube back: keep it away while the egg stands in for it
+        transform.position = clicker.CubeBasePosition;
         shake = Mathf.MoveTowards(shake, 0f, Time.unscaledDeltaTime * 2.5f);
         punch = Mathf.MoveTowards(punch, 0f, Time.unscaledDeltaTime * 4f);
         float progress = clicks / (float)need;
