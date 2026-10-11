@@ -81,7 +81,23 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         Strata,          // layers of sediment
         CropRows,        // ploughed rows with seedlings
         WheatField,      // swaying golden wheat (animated)
-        Patchwork        // a patchwork of fields seen from the air
+        Patchwork,       // a patchwork of fields seen from the air
+        SynthSun,        // retrowave: a striped sun over mountains and a neon grid rushing past (animated)
+        NeonHighway,     // retrowave: a neon road into a night city with tail lights (animated)
+        GridTunnel,      // retrowave: a neon tunnel rushing past (animated)
+        RainAlley,       // cyberpunk: wet asphalt with neon puddles, ripples and rain (animated)
+        VaporChecker,    // vaporwave: a pastel checkerboard sliding towards a big sun (animated)
+        CityMap,         // cyberpunk: an aerial night city with glowing roofs and traffic (animated)
+        LightCycles,     // a dark grid with light trails racing along its lines (animated)
+        ArcadeCarpet,    // 80s arcade carpet: neon confetti on a dark ground (animated)
+        Platformer,      // 8-bit side scroller: hills, pipes, blocks, a running hero (animated)
+        Invaders,        // 8-bit shoot-em-up: marching alien rows and a cannon (animated)
+        BrickBreaker,    // 8-bit brick breaker with a bouncing ball (animated)
+        PongCourt,       // 8-bit pong court (animated)
+        SnakeGrid,       // 8-bit green LCD snake (animated)
+        BlockStack,      // 8-bit falling blocks in a well (animated)
+        Dungeon,         // 8-bit top-down dungeon: tiles, carpet, braziers, a hero and a slime (animated)
+        Crossing         // 8-bit crossing: traffic, a river and a hopping frog (animated)
     }
 
     [Serializable]
@@ -2261,6 +2277,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return fight;
 
         foreach (FloorStyle extra in ExtraStyles()) yield return extra;
+        foreach (FloorStyle retro in RetroStyles()) yield return retro;
     }
 
     /// <summary>The second batch: space, tech, trippy, horror, a noir smoker, a skyline and ground-and-sky scenes (patterns in PixelFloorScenes.cs).</summary>

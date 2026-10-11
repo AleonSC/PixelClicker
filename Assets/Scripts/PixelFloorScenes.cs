@@ -37,7 +37,7 @@ public partial class PixelFloor
             case FloorPattern.WheatField: return ShadeWheat(s, u, v, x, y);
             case FloorPattern.Patchwork: return ShadePatchwork(s, u, v, x, y, cells);
         }
-        return s.colorA;
+        return ShadeRetro(s, u, v, x, y, n, cells);
     }
 
     // ---- small helpers ----
