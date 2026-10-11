@@ -10,7 +10,10 @@ using UnityEngine;
 /// (<see cref="drainPerSecond"/>) one pixel at a time, the one FURTHEST along its daisy chain first, which fizzles out and vanishes when empty. New pixels add to the
 /// total without interrupting the drain. Pixels that arc to each other (device or not) also carry charge and never despawn while linked;
 /// at most <see cref="maxLinkedTotal"/> pixels are linked in total (all groups together): beyond that the oldest are despawned.
-/// They stay when the device ends (they just stop being held). Added by PixelClicker.Awake.
+/// They stay when the device ends (they just stop being held).
+/// The Electric pet is a rechargeable battery bank: it links like one more node, and while it is part of a device's group the group drains the
+/// pet's own charge (<see cref="petCapacity"/>) before any pixel; it recharges slowly (<see cref="petRechargePerSecond"/>) while unused, and a tiny
+/// meter floats over it. Added by PixelClicker.Awake.
 /// </summary>
 public class PixelElectricLinks : MonoBehaviour
 {
@@ -45,6 +48,18 @@ public class PixelElectricLinks : MonoBehaviour
     [Min(1)]
     [Tooltip("At most this many Electric pixels can be linked in total, counting every group together (3 here + 10 there = 13). When more link up, the OLDEST ones are despawned (out with the old, in with the new).")]
     [SerializeField] private int maxLinkedTotal = 30;
+
+    [Header("Electric pet battery")]
+    [Min(1f)]
+    [Tooltip("Charge the Electric pet stores. While it is linked into a device's group this is drained first (at the same rate as pixels), then the pixels' charge.")]
+    [SerializeField] private float petCapacity = 600f;
+
+    [Min(0f)]
+    [Tooltip("Charge the pet regains per second while it is not powering anything. 2 = 5 minutes for a full recharge.")]
+    [SerializeField] private float petRechargePerSecond = 2f;
+
+    [Tooltip("Show the tiny charge meter over the Electric pet.")]
+    [SerializeField] private bool showPetMeter = true;
 
     [Header("Look")]
     [Tooltip("Colour of the bright centre of each arc.")]
@@ -93,6 +108,12 @@ public class PixelElectricLinks : MonoBehaviour
     private readonly HashSet<Rigidbody> fizzling = new HashSet<Rigidbody>();
     private readonly HashSet<Rigidbody> chainSeeds = new HashSet<Rigidbody>();   // the first pixel of a free chain (not a key of links)
     private int orderCounter;
+    private Rigidbody petBody;          // the Electric pet's body while it is out (it links like a pixel but is never despawned)
+    private float petCharge = -1f;      // -1 = not set up yet (starts full)
+    private bool petDrained;            // the pet powered a device this frame (so it does not recharge)
+    private GameObject meterRoot;
+    private Transform meterFill;
+    private Material meterBack, meterFront;
     private readonly List<Rigidbody> scratch = new List<Rigidbody>();
     private float scanTimer, redrawTimer;
     private GameObject boltObject;
@@ -108,6 +129,9 @@ public class PixelElectricLinks : MonoBehaviour
     {
         if (boltMesh != null) Destroy(boltMesh);
         if (boltObject != null) Destroy(boltObject);
+        if (meterRoot != null) Destroy(meterRoot);
+        if (meterBack != null) Destroy(meterBack);
+        if (meterFront != null) Destroy(meterFront);
     }
 
     private void Update()
@@ -121,6 +145,7 @@ public class PixelElectricLinks : MonoBehaviour
             Scan();
         }
 
+        UpdatePet();
         DrainAndHold();
 
         redrawTimer -= Time.unscaledDeltaTime;
@@ -129,6 +154,54 @@ public class PixelElectricLinks : MonoBehaviour
             redrawTimer = redrawInterval;
             Redraw();
         }
+    }
+
+    private float PetMax => Mathf.Max(1f, petCapacity);
+
+    /// <summary>Recharges the Electric pet when it is not powering anything and keeps its tiny meter over it.</summary>
+    private void UpdatePet()
+    {
+        if (petCharge < 0f) petCharge = PetMax;
+        if (petBody == null || !petBody.gameObject.activeInHierarchy) { if (meterRoot != null && meterRoot.activeSelf) meterRoot.SetActive(false); petBody = null; return; }
+        if (!petDrained && petCharge < PetMax) petCharge = Mathf.Min(PetMax, petCharge + petRechargePerSecond * Time.deltaTime);
+        petDrained = false;
+        DrawPetMeter();
+    }
+
+    private void DrawPetMeter()
+    {
+        if (!showPetMeter || petBody == null) { if (meterRoot != null && meterRoot.activeSelf) meterRoot.SetActive(false); return; }
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return;
+        if (meterRoot == null)
+        {
+            Shader sh = PixelShaders.SpriteDefault();
+            if (sh == null) return;
+            meterRoot = new GameObject("Electric Pet Meter");
+            meterBack = new Material(sh) { color = new Color(0.05f, 0.07f, 0.1f, 0.85f), renderQueue = 3500 };
+            meterFront = new Material(sh) { color = new Color(0.4f, 0.85f, 1f, 1f), renderQueue = 3510 };
+            GameObject back = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            back.name = "Back";
+            Destroy(back.GetComponent<Collider>());
+            back.transform.SetParent(meterRoot.transform, false);
+            back.transform.localScale = new Vector3(1.04f, 0.2f, 1f);
+            back.GetComponent<Renderer>().sharedMaterial = meterBack;
+            GameObject fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            fill.name = "Fill";
+            Destroy(fill.GetComponent<Collider>());
+            fill.transform.SetParent(meterRoot.transform, false);
+            fill.GetComponent<Renderer>().sharedMaterial = meterFront;
+            meterFill = fill.transform;
+        }
+        if (!meterRoot.activeSelf) meterRoot.SetActive(true);
+        float unit = Mathf.Max(0.1f, clicker.PixelBaseSize);
+        meterRoot.transform.position = petBody.position + Vector3.up * (unit * 0.95f);
+        meterRoot.transform.rotation = cam.transform.rotation;   // always faces the camera
+        meterRoot.transform.localScale = new Vector3(unit * 0.8f, unit * 0.8f, 1f);
+        float f = Mathf.Clamp01(petCharge / PetMax);
+        meterFill.localScale = new Vector3(Mathf.Max(0.001f, f), 0.12f, 1f);
+        meterFill.localPosition = new Vector3(-0.5f + f * 0.5f, 0f, -0.001f);
+        meterFront.color = f > 0.25f ? new Color(0.4f, 0.85f, 1f, 1f) : new Color(1f, 0.6f, 0.3f, 1f);
     }
 
     /// <summary>Linked pixels don't age; every powered device's group drains its oldest pixel and holds the device's countdown.</summary>
@@ -157,6 +230,7 @@ public class PixelElectricLinks : MonoBehaviour
         {
             PixelPlacedDevice dev = kv.Value.device;
             if (kv.Key == null || dev == null || dev.UsesMode || dev.IsRemoving || !dev.Armed) continue;
+            if (kv.Key == petBody) continue;   // the pet is handled separately (first while it has charge, never dissipated)
             int depth = ChainDepth(kv.Key);
             if (!focus.TryGetValue(dev, out Rigidbody cur) || depth > focusDepth[dev] || (depth == focusDepth[dev] && order[kv.Key] < order[cur]))
             {
@@ -164,11 +238,24 @@ public class PixelElectricLinks : MonoBehaviour
                 focusDepth[dev] = depth;
             }
         }
+        // The Electric pet, when it is part of a device's group (even alone with it), is drained before any pixel until its own store is empty.
+        if (petBody != null && petCharge > 0f && links.TryGetValue(petBody, out Link petLink) && petLink.device != null)
+        {
+            PixelPlacedDevice pd = petLink.device;
+            if (!pd.UsesMode && !pd.IsRemoving && pd.Armed) focus[pd] = petBody;
+        }
         List<Rigidbody> empty = null;
         foreach (KeyValuePair<PixelPlacedDevice, Rigidbody> kv in focus)
         {
             kv.Key.HoldPower();
             Rigidbody body = kv.Value;
+            if (body == petBody)
+            {
+                petCharge = Mathf.Max(0f, petCharge - drainPerSecond * Time.deltaTime);
+                petDrained = true;
+                if (petCharge <= PetMax * fizzleFraction) fizzling.Add(body);
+                continue;
+            }
             float left = charge.TryGetValue(body, out float c) ? c : pixelCharge;
             left -= drainPerSecond * Time.deltaTime;
             charge[body] = left;
@@ -231,6 +318,8 @@ public class PixelElectricLinks : MonoBehaviour
 
         // Electric old pixels lying around (not flying away, not vanishing).
         scratch.Clear();
+        petBody = null;
+        if (PixelPets.TryGetActivePetBody(PixelClicker.PixelType.Electric, out Transform petT)) petBody = petT.GetComponent<Rigidbody>();
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         foreach (Rigidbody body in clicker.OldPixels)
         {
@@ -243,10 +332,17 @@ public class PixelElectricLinks : MonoBehaviour
             scratch.Add(body);
         }
 
+        // The Electric pet joins the network as one more node (a battery with its own charge).
+        if (petBody != null)
+        {
+            Vector3 pv = cam != null ? cam.WorldToViewportPoint(petBody.position) : new Vector3(0.5f, 0.5f, 1f);
+            if (pv.z > 0f && pv.x >= 0f && pv.x <= 1f && pv.y >= 0f && pv.y <= 1f) scratch.Add(petBody);
+        }
+
         Dictionary<Rigidbody, Link> previous = new Dictionary<Rigidbody, Link>(links); // last scan's partners: kept while still in reach
         links.Clear();
         chainSeeds.Clear();
-        if (scratch.Count == 0) { PruneCredits(); return; }
+        if (scratch.Count == 0) { PetConnected = false; PruneCredits(); return; }
 
         float range = linkRange * Mathf.Max(0.1f, clicker.PixelBaseSize);
         float rangeSqr = range * range;
@@ -258,7 +354,7 @@ public class PixelElectricLinks : MonoBehaviour
         {
             while (unlinked.Count > 0 && links.Count < ScanCeiling)
             {
-                int index = NearestUnlinked(DeviceAnchor(device), null, device, unlinked, previous, rangeSqr);
+                int index = NearestUnlinked(DeviceAnchor(device), null, device, unlinked, previous, rangeSqr, null, device is PixelChargeBooster ? petBody : null);
                 if (index < 0) break;
                 if (device is PixelChargeBooster booster)
                 {
@@ -272,25 +368,6 @@ public class PixelElectricLinks : MonoBehaviour
                     index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
                     if (index < 0) break;
                     tail = Attach(unlinked, index, tail, null, device);
-                }
-            }
-        }
-
-        // The Electric pet is a perpetual source: daisy chains run out from it to every Electric pixel that fits (up to the scan ceiling), and
-        // pixels linked to it never despawn. Devices got their pick of the pixels first.
-        if (PixelPets.TryGetActivePetBody(PixelClicker.PixelType.Electric, out Transform petBody))
-        {
-            while (unlinked.Count > 0 && links.Count < ScanCeiling)
-            {
-                int index = NearestUnlinked(petBody.position, null, null, unlinked, previous, rangeSqr, petBody);
-                if (index < 0) break;
-                Rigidbody tail = Attach(unlinked, index, null, null, null, petBody, petBody);
-                PetConnected = true;
-                while (links.Count < ScanCeiling)
-                {
-                    index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
-                    if (index < 0) break;
-                    tail = Attach(unlinked, index, tail, null, null, null, petBody);
                 }
             }
         }
@@ -315,18 +392,20 @@ public class PixelElectricLinks : MonoBehaviour
             if (length >= 2) { chainSeeds.Add(seed); Register(seed); }   // a lone pixel is not a chain
         }
 
+        PetConnected = petBody != null && (links.ContainsKey(petBody) || chainSeeds.Contains(petBody));
         EvictOldest();
         PruneCredits();
     }
 
     /// <summary>The nearest unlinked pixel to 'from' within reach (a pixel keeps its old partner while that is still in reach), or -1.</summary>
     private int NearestUnlinked(Vector3 from, Rigidbody fromBody, PixelPlacedDevice fromDevice, List<Rigidbody> unlinked,
-                                Dictionary<Rigidbody, Link> previous, float rangeSqr, Transform fromAnchor = null)
+                                Dictionary<Rigidbody, Link> previous, float rangeSqr, Transform fromAnchor = null, Rigidbody exclude = null)
     {
         int best = -1;
         float bestDist = rangeSqr;
         for (int i = 0; i < unlinked.Count; i++)
         {
+            if (exclude != null && unlinked[i] == exclude) continue;
             float dist = (unlinked[i].position - from).sqrMagnitude;
             if (previous.TryGetValue(unlinked[i], out Link old) && old != null &&
                 ((fromBody != null && old.parentBody == fromBody) || (fromDevice != null && old.parentDevice == fromDevice) ||
@@ -356,6 +435,7 @@ public class PixelElectricLinks : MonoBehaviour
     /// <summary>A pixel that links up (to a device or to other Electric pixels) gets its charge and its place in the order of arrival.</summary>
     private void Register(Rigidbody body)
     {
+        if (body == petBody) return;   // the pet has its own battery and is never despawned or counted
         if (!order.ContainsKey(body)) { order[body] = ++orderCounter; PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f); }
         if (!charge.ContainsKey(body)) charge[body] = pixelCharge;
     }
