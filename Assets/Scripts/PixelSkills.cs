@@ -83,6 +83,12 @@ public partial class PixelSkills : MonoBehaviour
     [Tooltip("Share of the XP an automatic (auto clicker) click gives compared with a manual click.")]
     [SerializeField] private float autoXpFactor = 0.25f;
 
+    [Tooltip("Offline Progression: the skill pack you play with while Offline Progression is chosen earns this share of its normal XP (0.5 = 50%).")]
+    [SerializeField] private float offlineAssignedShare = 0.5f;
+
+    [Tooltip("Offline Progression: extra XP for Offline Progression itself when no skill pack is in play (0.5 = +50%).")]
+    [SerializeField] private float offlineNoSkillBonus = 0.5f;
+
     [Tooltip("Turn the whole skill system (and its Skills tab) off.")]
     [SerializeField] private bool disableSkills = false;
 
@@ -212,8 +218,8 @@ public partial class PixelSkills : MonoBehaviour
             packs.Add(new SkillPack
             {
                 id = OfflineId, displayName = "Offline Progression", accent = new Color(0.62f, 0.45f, 0.9f),
-                description = "Pick this skill, then pick which pack's pixels you play with. You earn no XP for that pack, only for Offline Progression, which will improve what you earn while you are away.",
-                replaces = "Nothing: you choose the pixel pack", spawns = "Whatever the chosen pack spawns", xpFrom = "Every click, whichever pack is in play",
+                description = "Pick this skill, then pick which pack's pixels you play with. Every click trains Offline Progression, which will improve what you earn while you are away. The pack you assign still earns 50% of its normal XP. With no skill pack assigned (Standard), Offline Progression earns +50% XP.",
+                replaces = "Nothing: you choose the pixel pack", spawns = "Whatever the chosen pack spawns", xpFrom = "Every click (the assigned pack earns 50%; +50% for itself with no pack assigned)",
                 unlockHint = "Buy the Auto Clicker in the Shop",
                 baseXp = 150f, xpGrowth = 1.6f,
                 perks = new[]
@@ -244,6 +250,13 @@ public partial class PixelSkills : MonoBehaviour
         foreach (SkillPack pack in packs)
         {
             if (pack.replaces != null) pack.replaces = pack.replaces.Replace("Monochrome, RGB, Glass, Luminescent", "Monochrome, RGB");
+            if (pack.id == OfflineId)
+            {
+                if (pack.description != null && pack.description.Contains("You earn no XP for that pack"))
+                    pack.description = "Pick this skill, then pick which pack's pixels you play with. Every click trains Offline Progression, which will improve what you earn while you are away. The pack you assign still earns 50% of its normal XP. With no skill pack assigned (Standard), Offline Progression earns +50% XP.";
+                if (pack.xpFrom == "Every click, whichever pack is in play")
+                    pack.xpFrom = "Every click (the assigned pack earns 50%; +50% for itself with no pack assigned)";
+            }
             if (pack.id == StandardId)
             {
                 if (pack.description != null && pack.description.StartsWith("The usual rotation: monochrome, RGB, Glass and Luminescent"))
@@ -608,9 +621,17 @@ public partial class PixelSkills : MonoBehaviour
 
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
-        // Offline Progression: every click earns XP for that skill ONLY, whichever pixel pack is in play.
+        // Offline Progression: every click trains it; the pack assigned to it (the pixels in play) still earns half of its normal XP,
+        // and with no skill pack in play Offline Progression itself earns 50% more.
         SkillPack offline = Find(OfflineId);
-        if (OfflineMode && IsAvailable(offline)) { AddXp(offline, automatic ? autoXpFactor : 1d); return; }
+        if (OfflineMode && IsAvailable(offline))
+        {
+            double rate = automatic ? autoXpFactor : 1d;
+            SkillPack assigned = PackForTier(tierIndex);
+            if (assigned != null && assigned.id == ActiveId) AddXp(assigned, rate * offlineAssignedShare);
+            AddXp(offline, rate * (ActiveId == StandardId ? 1d + offlineNoSkillBonus : 1d));
+            return;
+        }
         SkillPack pack = PackForTier(tierIndex);
         if (pack == null || pack.id != ActiveId) return;
         AddXp(pack, automatic ? autoXpFactor : 1d);

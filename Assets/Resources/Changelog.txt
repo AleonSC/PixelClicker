@@ -486,3 +486,4 @@
 [2026-10-11 15:21 UTC] Added the minigame progression rework (base-coin minigames, skill bonuses, Mining unlocking Obsidian) to the to-do list.
 [2026-10-11 15:30 UTC] Settings > Floor style has a pop-out button: it closes the settings and opens a small draggable box with only the floor style arrows; closing it brings the settings back.
 [2026-10-11 15:43 UTC] Added 8 retrowave / cyberpunk floor styles (Retro Sunset Grid, Neon Highway, Grid Tunnel, Rain Alley, Vapor Checker, Neon City Map, Light Cycles, Arcade Carpet) and 8 8-bit game floors (Platformer, Invaders, Brick Breaker, Pong, Snake, Block Stack, Dungeon, Crossing).
+[2026-10-11 15:43 UTC] Offline Progression: the pack assigned to it earns 50% of its normal XP, and Offline Progression itself earns +50% XP when no skill pack is assigned; the description says so.
