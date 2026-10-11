@@ -1001,6 +1001,7 @@ public class PixelDevTools : MonoBehaviour
         PixelFadeOnIdle fade = selectorRoot.AddComponent<PixelFadeOnIdle>();
         fade.Setup(selectorRoot.GetComponent<CanvasGroup>(), selectorHideSeconds > 0f ? selectorHideSeconds : 2.5f,
                    selectorFadeSeconds > 0f ? selectorFadeSeconds : 0.35f, SelectorActive);
+        fade.hideWhen = () => PixelWindows.AnyOpen() || PixelPauseMenu.IsPaused;
     }
 
     /// <summary>The selector counts as 'in use' while the mouse is over it, a drop-down is open or a button is held.</summary>
@@ -1095,7 +1096,9 @@ public class PixelDevTools : MonoBehaviour
     {
         if (selectorMinigameDropdown == null || selectorMinigameDropdown.value < 0 || selectorMinigameDropdown.value >= dropdownMinigames.Count) return;
         PixelMinigame game = dropdownMinigames[selectorMinigameDropdown.value];
-        if (game != null) game.DespawnNow();
+        if (game != null && game.Busy) { game.DespawnNow(); return; }
+        // The selected one isn't on screen: clear every minigame that is.
+        foreach (PixelMinigame other in dropdownMinigames) if (other != null && other.Busy) other.DespawnNow();
     }
 
     // ------------------------------------------------------------------
@@ -1206,8 +1209,22 @@ public class PixelDevTools : MonoBehaviour
                 Vector3 anchor = cube != null ? cube.position : cam.transform.position + cam.transform.forward * 10f;
                 Plane plane = new Plane(-cam.transform.forward, anchor);
                 Ray ray = cam.ScreenPointToRay(pointer);
-                if (plane.Raycast(ray, out float enter))
-                    clicker.SpawnStoredPixel(godTiers[godChoice], tier.amountPerClick, ray.GetPoint(enter), Random.insideUnitSphere * 0.6f);
+                Vector3 spawnAt = Vector3.zero;
+                bool haveSpot = false;
+                // Drop it above whatever the cursor is over (the floor, a hole), so it falls where it was pointed - not at the cube's depth.
+                RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Ignore);
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                foreach (RaycastHit hit in hits)
+                {
+                    if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
+                    if (cube != null && hit.transform.IsChildOf(cube)) continue;
+                    if (hit.normal.y < 0.5f) continue;
+                    spawnAt = hit.point + Vector3.up * (clicker.PixelBaseSize * 2f);
+                    haveSpot = true;
+                    break;
+                }
+                if (!haveSpot && plane.Raycast(ray, out float enter)) { spawnAt = ray.GetPoint(enter); haveSpot = true; }
+                if (haveSpot) clicker.SpawnStoredPixel(godTiers[godChoice], tier.amountPerClick, spawnAt, Random.insideUnitSphere * 0.3f);
             }
         }
 
@@ -1536,6 +1553,8 @@ public class PixelFadeOnIdle : MonoBehaviour
     private CanvasGroup group;
     private float hideAfter, fadeSeconds, lastUse;
     private System.Func<bool> inUse;
+    /// <summary>While this returns true the group is hidden whatever else happens (an interface is open).</summary>
+    public System.Func<bool> hideWhen;
 
     public void Setup(CanvasGroup canvasGroup, float hideAfterSeconds, float fadeDuration, System.Func<bool> isInUse)
     {
@@ -1554,6 +1573,7 @@ public class PixelFadeOnIdle : MonoBehaviour
         if (group == null) return;
         if (inUse != null && inUse()) lastUse = Time.unscaledTime;
         float target = Time.unscaledTime - lastUse < hideAfter ? 1f : 0f;
+        if (hideWhen != null && hideWhen()) target = 0f;
         group.alpha = Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / fadeSeconds);
         bool usable = group.alpha > 0.3f;
         group.interactable = usable;

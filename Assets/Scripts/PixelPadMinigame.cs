@@ -152,6 +152,7 @@ public class PixelPadMinigame : PixelMinigame
         padActive = false;
         pulling = false;
         holes.Clear();
+        foreach (object owner in claimOwners) ReleaseArea(owner);
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
     }
 
@@ -366,6 +367,7 @@ public class PixelPadMinigame : PixelMinigame
     private IEnumerator RoundRoutine()
     {
         padActive = true;
+        foreach (object owner in claimOwners) ReleaseArea(owner);   // last round's claims are still 'active' (padActive is true again) and would block every corner
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         int target = PickTargetTier();
         holeRadius = (holeRadiusPixels > 0f ? holeRadiusPixels : 1.3f) * Mathf.Max(0.1f, clicker.PixelBaseSize);
@@ -471,6 +473,7 @@ public class PixelPadMinigame : PixelMinigame
 
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
         padActive = false;
+        foreach (object owner in claimOwners) ReleaseArea(owner);
     }
 
     private int NextHole(int current)

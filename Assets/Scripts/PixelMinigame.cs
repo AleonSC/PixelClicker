@@ -105,6 +105,12 @@ public abstract class PixelMinigame : MonoBehaviour
         claims.Add(new AreaClaim { owner = owner, centre = centre, radius = radius, active = active });
     }
 
+    /// <summary>Drops this owner's area claim (a round ended or a new one is starting).</summary>
+    protected static void ReleaseArea(object owner)
+    {
+        claims.RemoveAll(c => c.owner == owner);
+    }
+
     /// <summary>Is this round floor area clear of every other minigame's claimed area? (Measured on the floor, ignoring height.)</summary>
     protected static bool AreaFree(object self, Vector3 centre, float radius)
     {
