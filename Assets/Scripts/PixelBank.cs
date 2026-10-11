@@ -390,7 +390,7 @@ public class PixelBank : MonoBehaviour
                 values[index] = Math.Max(0d, e.value);
             }
         }
-        if (selected < 0 || selected >= counts.Length || counts[selected] <= 0) selected = NextStocked(-1, 1);
+        if (selected < 0 || selected >= counts.Length || !Has(selected)) selected = NextStocked(-1, 1);
         refreshTimer = 0f;
     }
 
@@ -959,6 +959,16 @@ public class PixelBank : MonoBehaviour
         refreshTimer = 0f;
     }
 
+    /// <summary>Can this pixel type be spat out? Stored ones, or - with the dev tools' Infinite resources - every unlocked ordinary type, stored or not.</summary>
+    private bool Has(int i)
+    {
+        if (i < 0 || i >= counts.Length) return false;
+        if (counts[i] > 0) return true;
+        if (!PixelClicker.InfiniteResources) return false;
+        PixelClicker.PixelTier t = clicker.Tiers[i];
+        return t.unlocked && !t.rareDrop && !t.flyAway;
+    }
+
     /// <summary>The next tier with stored pixels after 'from' in the given direction, or -1 if there is none.</summary>
     private int NextStocked(int from, int direction)
     {
@@ -966,14 +976,14 @@ public class PixelBank : MonoBehaviour
         for (int step = 1; step <= n; step++)
         {
             int i = ((from + direction * step) % n + n) % n;
-            if (counts[i] > 0) return i;
+            if (Has(i)) return i;
         }
         return -1;
     }
 
     private void Spit()
     {
-        if (selected < 0 || selected >= counts.Length || counts[selected] <= 0)
+        if (selected < 0 || selected >= counts.Length || !Has(selected))
         {
             selected = NextStocked(selected, 1);
             if (selected < 0) { PixelAudio.Play("bank_empty"); fullTimer = 0.9f; flashMessage = emptyDisplayText; }
@@ -981,7 +991,7 @@ public class PixelBank : MonoBehaviour
         }
 
         int tier = selected;
-        double amount = values[tier] / counts[tier];
+        double amount = counts[tier] > 0 ? values[tier] / counts[tier] : clicker.RollOldPixelAmount(tier);   // infinite resources: a type that was never stored pays its normal amount
         if (!PixelClicker.InfiniteResources) // dev tools "Infinite resources": the bank never runs out of what it holds
         {
             counts[tier]--;
@@ -1002,7 +1012,7 @@ public class PixelBank : MonoBehaviour
         kick = 1f;
         PixelAudio.Play("bank_spit");
         PixelHints.Trigger("bank_spit");
-        if (counts[tier] <= 0) selected = NextStocked(tier, 1);
+        if (!Has(tier)) selected = NextStocked(tier, 1);
         refreshTimer = 0f;
     }
 
@@ -1093,7 +1103,7 @@ public class PixelBank : MonoBehaviour
 
     private void UpdateDisplay(Camera cam, Vector3 tip)
     {
-        bool hasSelection = selected >= 0 && selected < counts.Length && counts[selected] > 0;
+        bool hasSelection = selected >= 0 && selected < counts.Length && Has(selected);
         if (selected >= 0 && !hasSelection) { selected = NextStocked(selected, 1); hasSelection = selected >= 0; }
 
         // The glass cube holds a spinning model of the selected pixel (its real look).
@@ -1117,7 +1127,7 @@ public class PixelBank : MonoBehaviour
 
         // The stored count is written on the plate on the nozzle.
         counterPlate.gameObject.SetActive(true);
-        string number = hasSelection ? PixelClicker.FormatNumber(counts[selected]) : "0";
+        string number = hasSelection ? (PixelClicker.InfiniteResources ? "\u221E" : PixelClicker.FormatNumber(counts[selected])) : "0";
         if (counterText.text != number) counterText.text = number;
         counterText.color = hasSelection ? new Color(0.55f, 1f, 0.65f, 1f) : new Color(1f, 0.45f, 0.4f, 1f);
 
@@ -1460,7 +1470,7 @@ public class PixelBank : MonoBehaviour
         // Clicking a row selects that pixel type (when there are some stored).
         row.go.GetComponent<Button>().onClick.AddListener(() =>
         {
-            if (row.tier >= 0 && row.tier < counts.Length && counts[row.tier] > 0)
+            if (row.tier >= 0 && row.tier < counts.Length && Has(row.tier))
             {
                 selected = row.tier;
                 refreshTimer = 0f;

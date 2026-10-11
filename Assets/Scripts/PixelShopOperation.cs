@@ -191,7 +191,8 @@ public partial class PixelShop
         for (int i = 0; i < operationRows.Length; i++)
         {
             OperationRow o = operationRows[i];
-            bool visible = showKinds && consumables.OperationListed(o.kind);
+            bool searchHit = shopSearch.Length > 0 && TextMatches(consumables.OperationName(o.kind) + " upgrades operation");
+            bool visible = (showKinds || searchHit) && consumables.OperationListed(o.kind);
             o.row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 
