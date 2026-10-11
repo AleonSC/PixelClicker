@@ -468,3 +468,4 @@
 [2026-10-11 13:56 UTC] The simplified (pinned) Inventory is never narrower than its two top buttons.
 [2026-10-11 14:02 UTC] Added the Magnetized Sorter: craft a Sorter with a Magnet; it sucks pixels from an arc in front into a box and three grabbable exit pipes shoot out the stored pixel type you scroll-select.
 [2026-10-11 14:02 UTC] Crafting can now use devices as ingredients (and craft-only devices are never sold in the shop).
+[2026-10-11 14:03 UTC] Fixed a compile error in the crafting code (device field not assigned in the item constructor).

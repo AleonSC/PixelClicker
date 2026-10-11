@@ -293,6 +293,7 @@ public class PixelCrafting : MonoBehaviour
         {
             kind = k;
             type = t;
+            device = PixelConsumables.DeviceKind.Vacuum;
             combo = isCombo;
             second = secondType;
             hasThird = withThird;
