@@ -2046,6 +2046,8 @@ public class PixelUI : MonoBehaviour
         return null;
     }
 
+    private float windowFade = 1f;
+
     private void UpdateGuide()
     {
         if (guideLabel == null) return;
@@ -2073,6 +2075,11 @@ public class PixelUI : MonoBehaviour
         bool visible = !string.IsNullOrEmpty(text);
         if (guideRoot.activeSelf != visible) guideRoot.SetActive(visible);
         if (!visible) return;
+
+        // Fades away while a window is open and comes straight back when it closes.
+        bool windowOpen = PixelWindows.AnyOpenExcept(null);
+        windowFade = Mathf.MoveTowards(windowFade, windowOpen ? 0f : 1f, Time.unscaledDeltaTime / (windowOpen ? 0.25f : 0.06f));
+        fade *= windowFade;
 
         guideLabel.text = text;
         guideLabel.fontSize = size;

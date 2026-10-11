@@ -475,3 +475,4 @@
 [2026-10-11 14:18 UTC] The intro's Inventory tip always shows the full Inventory window (so the tip box no longer overlaps a pinned one); the pinned setting comes back afterwards.
 [2026-10-11 14:23 UTC] The Inventory key in the pinned view switches to the other tab (either way) before the next press closes it.
 [2026-10-11 14:23 UTC] Added a to-do line about working Cubie and the vendors into the 'pixels are money' idea.
+[2026-10-11 14:24 UTC] The 'Click N more...' guide text fades out while a window is open and comes right back when it closes.
