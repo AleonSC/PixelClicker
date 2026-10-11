@@ -395,3 +395,4 @@
 [2026-10-11 06:23 UTC] UFO cockpit rebuilt as a real 3D cabin (seat, window frame, sloped console with a screen, levers, lamps): hold right mouse to look around, the cabin leans as you fly.
 [2026-10-11 06:29 UTC] Fixed the UFO cockpit view not showing the cabin (the camera no longer sits under a scaled object).
 [2026-10-11 06:38 UTC] UFO cockpit: added a one-off diagnostic log line when you take control.
+[2026-10-11 06:40 UTC] Fixed the UFO cockpit camera ending up 10 units above the cabin (its position is now set every frame).

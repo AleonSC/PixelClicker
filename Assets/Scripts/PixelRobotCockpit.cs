@@ -309,6 +309,8 @@ public partial class PixelRobotWorker
         root.transform.position = pos;
         cockpitRig.transform.SetPositionAndRotation(pos + Vector3.up * (Mathf.Sin(t * 1.7f) * 0.012f * unit),
                                                    Quaternion.Euler(pitchLean, pilotYaw, roll));
+        headT.localPosition = new Vector3(0f, 0.42f, -0.2f) * unit;   // set every frame: Camera.CopyFrom can carry the main camera's pose over
+        headT.localScale = Vector3.one;
         headT.localRotation = Quaternion.Euler(lookPitch, lookYaw, 0f);
         downCamera.transform.SetPositionAndRotation(UnderSide(), Quaternion.Euler(90f, pilotYaw, 0f));
 
