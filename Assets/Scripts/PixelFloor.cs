@@ -55,7 +55,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         NeonDrift,       // neon grid that slides along while its colours cycle (animated)
         NeonMerge,       // neon grid whose lines fade out and back so the squares grow into bigger squares (animated)
         NeonWave,        // neon grid that ripples like cloth while its colours cycle (animated)
-        NeonPrism        // neon grid with a rainbow that sweeps across it (animated)
+        NeonPrism,       // neon grid with a rainbow that sweeps across it (animated)
+        LaserHall        // teal glass-and-metal corridor floor with red security laser beams sweeping and blinking across it (animated)
     }
 
     [Serializable]
@@ -635,6 +636,48 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         tex.Apply(false);
     }
 
+    /// <summary>
+    /// A security-laser corridor: pale teal metal panels with glowing light strips along the seams, and thin red beams that sway across the floor in both directions,
+    /// each blinking on and off, with white-hot spots where two cross. 'cells' = beams per direction (the texture tiles).
+    /// </summary>
+    private static Color LaserHall(FloorStyle s, float u, float v, int n, int cells)
+    {
+        float t = shadeTime;
+        // Panels: brushed metal with dark seams and a lit strip of lights beside each seam.
+        int panels = Mathf.Max(2, cells / 2);
+        float pu = Frac(u * panels), pv = Frac(v * panels);
+        float seam = Mathf.Min(Mathf.Min(pu, 1f - pu), Mathf.Min(pv, 1f - pv)) * n / panels;     // texels from the nearest seam
+        Color c = s.colorA * (0.82f + 0.25f * Fbm(u, v, 6, 3, s.seed) + 0.05f * Mathf.Sin(v * n * 0.8f));
+        if (seam < 1.2f) c = s.colorA * 0.3f;                                                    // the seam itself
+        else if (seam < 3.2f && pu > 0.5f) c = Color.Lerp(c, s.colorB, 0.35f);                    // a glass edge catching the light
+        // Wall-style light dashes along the vertical seams.
+        float dash = Mathf.Repeat(v * panels * 6f, 1f);
+        if (pu > 0.93f && dash < 0.45f) c = Color.Lerp(c, s.colorB, 0.9f);
+
+        // Lasers.
+        float[] acc = new float[2];
+        for (int axis = 0; axis < 2; axis++)
+        {
+            float coord = axis == 0 ? v : u;
+            for (int i = 0; i < cells; i++)
+            {
+                float centre = (i + 0.5f + 0.32f * Mathf.Sin(t * (0.8f + 0.11f * i) + i * 1.9f + axis * 2.4f)) / cells;
+                int slot = Mathf.FloorToInt(t * 1.4f + i * 0.37f + axis * 3f);
+                if (Hash(i * 7 + axis, slot, s.seed) <= 0.28f) continue;                         // this beam is blinking off
+                float d = Mathf.Abs(Mathf.Repeat(coord - centre + 0.5f, 1f) - 0.5f) * n;           // texels from the beam
+                float beam = Mathf.Clamp01(Mathf.Clamp01(1.3f - d) + Mathf.Exp(-d * 0.55f) * 0.55f);
+                if (beam > acc[axis]) acc[axis] = beam;
+            }
+        }
+        float best = Mathf.Max(acc[0], acc[1]);
+        float hot = Mathf.Min(acc[0], acc[1]);                                                    // white-hot where two beams cross
+        Color laser = s.colorC;
+        c = Color.Lerp(c, laser, Mathf.Clamp01(best));
+        c = Color.Lerp(c, Color.white, Mathf.Clamp01(hot) * 0.85f);
+        c.a = 1f;
+        return c;
+    }
+
     private static Color HueShift(Color c, float shift)
     {
         Color.RGBToHSV(c, out float h, out float sat, out float val);
@@ -720,6 +763,9 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 float cross = Mathf.Clamp01(2.5f - Mathf.Max(du, dv) * n / cells);
                 return Color.Lerp(c, s.colorC, cross * 0.8f);
             }
+
+            case FloorPattern.LaserHall:
+                return LaserHall(s, u, v, n, cells);
 
             case FloorPattern.NeonDrift:
             case FloorPattern.NeonMerge:
@@ -2121,6 +2167,11 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return hakai;
 
         // ---- Animated ----
+        FloorStyle lasers = S("Laser Corridor", FloorPattern.LaserHall, new Color(0.2f, 0.34f, 0.36f), new Color(0.6f, 0.95f, 1f),
+                              new Color(1f, 0.08f, 0.05f), 128, false, 8f, 8, 0.8f, 1.1f);
+        lasers.animateFps = 20f; lasers.metallic = 0.3f;
+        yield return lasers;
+
         FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
                               new Color(0.85f, 1f, 1f), 128, false, 3f, 2, 0.95f, 0.25f);
         liquid.animateFps = 15f;
