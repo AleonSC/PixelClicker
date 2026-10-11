@@ -676,6 +676,13 @@ public class PixelPauseMenu : MonoBehaviour
         UpdateSlotTip();
         if (IsPaused && UpdateKeyCapture()) return;
 
+        if (floorPopout != null)
+        {
+            UpdateFloorPopout();
+            if (EscapePressed()) CloseFloorPopout();
+            return;
+        }
+
         if (EscapePressed())
         {
             if (IsPaused && PixelDevTools.ClosePanel())
@@ -712,6 +719,119 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     private float nextStatsRefresh;
+
+    // ------------------------------------------------------------------
+    // The draggable floor-style box (opened from Settings > Floor style)
+    // ------------------------------------------------------------------
+
+    private GameObject floorPopout;
+    private RawImage floorPopPreview;
+    private TMP_Text floorPopName;
+    private static Vector2 floorPopPosition = new Vector2(520f, 120f);
+
+    /// <summary>Hides the menu and shows a small box you can drag around whose only option is the floor style. Closing it brings the menu back.</summary>
+    private void OpenFloorPopout()
+    {
+        if (floorPopout != null || PixelFloor.Instance == null || !PixelFloor.Instance.Usable) return;
+        CloseLookList();
+        if (menuRoot != null) menuRoot.SetActive(false);
+
+        floorPopout = new GameObject("Floor Popout", typeof(RectTransform), typeof(Image));
+        floorPopout.transform.SetParent(canvasRoot.transform, false);
+        PixelUIKit.StyleWindow(floorPopout.GetComponent<Image>(), panelColor);
+        RectTransform box = floorPopout.GetComponent<RectTransform>();
+        box.anchorMin = box.anchorMax = box.pivot = new Vector2(0.5f, 0.5f);
+        box.sizeDelta = new Vector2(460f, 270f);
+        box.anchoredPosition = floorPopPosition;
+
+        // The whole top strip drags the box.
+        GameObject handle = new GameObject("Drag Handle", typeof(RectTransform), typeof(Image), typeof(PixelPopoutDrag));
+        handle.transform.SetParent(box, false);
+        handle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.06f);
+        RectTransform hr = handle.GetComponent<RectTransform>();
+        hr.anchorMin = new Vector2(0f, 1f);
+        hr.anchorMax = new Vector2(1f, 1f);
+        hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(-16f, 64f);
+        hr.anchoredPosition = new Vector2(0f, -8f);
+        PixelPopoutDrag drag = handle.GetComponent<PixelPopoutDrag>();
+        drag.target = box;
+        drag.canvas = canvasRoot.GetComponent<Canvas>();
+        drag.onMoved = () => floorPopPosition = box.anchoredPosition;
+
+        TMP_Text title = MakeText(handle.transform, "Title", floorStyleLabel.ToUpperInvariant(), rowFontSize * 0.8f, FontStyles.Bold);
+        title.alignment = TextAlignmentOptions.Center;
+        title.raycastTarget = false;
+        PixelUIKit.Stretch(title.rectTransform);
+        title.rectTransform.offsetMax = new Vector2(-70f, 0f);
+        title.rectTransform.offsetMin = new Vector2(16f, 0f);
+
+        Button close = MakeButton(box, "Close", "X", new Vector2(52f, 52f), menuButtonColor, rowFontSize);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+        cr.anchoredPosition = new Vector2(-14f, -14f);
+        close.onClick.AddListener(CloseFloorPopout);
+
+        // Body: [<] picture [>] and the style's name underneath.
+        float pic = 130f;
+        GameObject picGo = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
+        picGo.transform.SetParent(box, false);
+        floorPopPreview = picGo.GetComponent<RawImage>();
+        floorPopPreview.raycastTarget = false;
+        RectTransform pr = picGo.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(pic, pic);
+        pr.anchoredPosition = new Vector2(0f, -18f);
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            int dir = side;
+            Button arrow = MakeButton(box, side < 0 ? "Previous" : "Next", side < 0 ? "<" : ">", new Vector2(64f, 64f), floorArrowColor, rowFontSize);
+            RectTransform ar = arrow.GetComponent<RectTransform>();
+            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 0.5f);
+            ar.anchoredPosition = new Vector2(side * 140f, -18f);
+            PixelUIKit.UseArrowGlyph(arrow, side < 0);
+            arrow.onClick.AddListener(() => { if (PixelFloor.Instance != null) PixelFloor.Instance.Step(dir); });
+        }
+
+        floorPopName = MakeText(box, "Name", "", rowFontSize * 0.7f, FontStyles.Normal);
+        floorPopName.alignment = TextAlignmentOptions.Center;
+        floorPopName.raycastTarget = false;
+        floorPopName.enableAutoSizing = true;
+        floorPopName.fontSizeMax = rowFontSize * 0.7f;
+        floorPopName.fontSizeMin = 12f;
+        RectTransform nr = floorPopName.rectTransform;
+        nr.anchorMin = new Vector2(0f, 0f);
+        nr.anchorMax = new Vector2(1f, 0f);
+        nr.pivot = new Vector2(0.5f, 0f);
+        nr.sizeDelta = new Vector2(-40f, 44f);
+        nr.anchoredPosition = new Vector2(0f, 14f);
+
+        UpdateFloorPopout();
+    }
+
+    private void UpdateFloorPopout()
+    {
+        IPixelLookSource look = PixelFloor.Instance;
+        if (look == null || floorPopName == null) return;
+        PixelUIKit.SetText(floorPopName, look.StyleName(look.Current));
+        floorPopPreview.texture = look.PreviewTexture(look.Current);
+        floorPopPreview.color = look.PreviewColor(look.Current);
+        floorPopPreview.uvRect = look.PreviewRect;
+    }
+
+    private void CloseFloorPopout()
+    {
+        if (floorPopout != null) Destroy(floorPopout);
+        floorPopout = null;
+        if (menuRoot != null) { menuRoot.SetActive(true); settingsRefreshersRun(); }
+    }
+
+    /// <summary>The settings rows re-read their values (the floor picker shows the new style).</summary>
+    private void settingsRefreshersRun()
+    {
+        foreach (System.Action refresh in settingsRefreshers) refresh?.Invoke();
+    }
 
     private void OnDestroy()
     {
@@ -1995,7 +2115,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         // ---- Display ----
         AddSettingsSectionHeader(list, headerDisplay, ref y);
-        AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y);
+        AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
         AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
@@ -2323,7 +2443,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// A "pick a look" row (floor style, sky): a picture of the current look, its name, and arrows to step through
     /// the looks. 'source' is asked again each time, so it works even if the look component wakes up later.
     /// </summary>
-    private void AddLookRow(Transform parent, string labelText, System.Func<IPixelLookSource> source, ref float y)
+    private void AddLookRow(Transform parent, string labelText, System.Func<IPixelLookSource> source, ref float y, bool popout = false)
     {
         TMP_Text label = AddRowLabel(parent, labelText, y, out RectTransform row);
         label.rectTransform.anchorMax = new Vector2(0.4f, 1f);
@@ -2334,6 +2454,32 @@ public class PixelPauseMenu : MonoBehaviour
         pr.anchorMin = new Vector2(0.42f, 0.06f);
         pr.anchorMax = new Vector2(1f, 0.94f);
         pr.offsetMin = pr.offsetMax = Vector2.zero;
+
+        if (popout)
+        {
+            // A small 'pop-out' button right of the picker: closes the settings and opens a draggable floor-style box.
+            pr.offsetMax = new Vector2(-(rowHeight * 0.8f + 10f), 0f);
+            Button pop = MakeButton(row, "Floor Popout Button", "", new Vector2(rowHeight * 0.8f, rowHeight * 0.88f), menuButtonColor, rowFontSize * 0.7f);
+            RectTransform pbr = pop.GetComponent<RectTransform>();
+            pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 0.5f);
+            pbr.anchoredPosition = Vector2.zero;
+            // Icon: a big square with a smaller one standing out of its corner.
+            void Square(float size, Vector2 at, Color c)
+            {
+                GameObject g = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                g.transform.SetParent(pop.transform, false);
+                g.GetComponent<Image>().color = c;
+                g.GetComponent<Image>().raycastTarget = false;
+                RectTransform r = g.GetComponent<RectTransform>();
+                r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+                r.sizeDelta = new Vector2(size, size);
+                r.anchoredPosition = at;
+            }
+            float s = rowHeight * 0.3f;
+            Square(s * 1.5f, new Vector2(-s * 0.25f, -s * 0.2f), new Color(1f, 1f, 1f, 0.55f));
+            Square(s, new Vector2(s * 0.35f, s * 0.3f), Color.white);
+            pop.onClick.AddListener(OpenFloorPopout);
+        }
 
         float icon = rowHeight * 0.7f;
         GameObject swatchGo = new GameObject("Preview", typeof(RectTransform), typeof(RawImage));
@@ -2733,5 +2879,21 @@ public class PixelHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHan
     {
         if (fill == null) return;
         fill.anchorMax = new Vector2(Mathf.Clamp01(held / seconds), 1f);
+    }
+}
+
+/// <summary>Drags a UI box by this handle (the pause menu's floor-style pop-out).</summary>
+public class PixelPopoutDrag : MonoBehaviour, UnityEngine.EventSystems.IDragHandler
+{
+    public RectTransform target;
+    public Canvas canvas;
+    public System.Action onMoved;
+
+    public void OnDrag(UnityEngine.EventSystems.PointerEventData e)
+    {
+        if (target == null) return;
+        float scale = canvas != null && canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
+        target.anchoredPosition += e.delta / scale;
+        onMoved?.Invoke();
     }
 }

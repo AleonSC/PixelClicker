@@ -484,3 +484,4 @@
 [2026-10-11 15:00 UTC] Added the Cube Dash minigame (Minigames tab, 50K of each basic pixel): the cube dashes around the screen, the auto clicker switches off and you earn 10x the pixel's worth for every click you land.
 [2026-10-11 15:03 UTC] Dev tools 'Unlock all' now leaves Wood, Rock, Stardust and every vendor switched off too.
 [2026-10-11 15:21 UTC] Added the minigame progression rework (base-coin minigames, skill bonuses, Mining unlocking Obsidian) to the to-do list.
+[2026-10-11 15:30 UTC] Settings > Floor style has a pop-out button: it closes the settings and opens a small draggable box with only the floor style arrows; closing it brings the settings back.
