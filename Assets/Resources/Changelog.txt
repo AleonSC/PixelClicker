@@ -392,3 +392,4 @@
 [2026-10-11 05:48 UTC] Skills window: swapping packs keeps the current cube until it is collected, and the pack description / info / perks now fit (taller window, auto-sized texts).
 [2026-10-11 05:49 UTC] The UFO Helper no longer blocks left clicks: clicks go straight through it to the cube.
 [2026-10-11 06:01 UTC] UFO Helper: new 'Take control' option puts you in a cockpit - fly inside the screen bounds and click pixels on the console's downward-view screen to abduct them.
+[2026-10-11 06:23 UTC] UFO cockpit rebuilt as a real 3D cabin (seat, window frame, sloped console with a screen, levers, lamps): hold right mouse to look around, the cabin leans as you fly.

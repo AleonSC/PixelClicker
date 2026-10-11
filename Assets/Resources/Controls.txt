@@ -44,9 +44,10 @@ Hold right-click | Suck up an area of the selected pixel type
 Click a Bank row | Select that pixel type
 
 # UFO Cockpit (Take control)
+Hold right mouse + move | Look around the cabin
 {key:RotateLeft} / {key:RotateRight} | Turn the saucer
 W A S D / Arrows | Fly (inside the screen, not up or down)
-Click on the console screen | Abduct the pixel you click
+Click on the console screen | Abduct the pixel you point at
 Esc | Leave the cockpit
 
 # Devices and Minigames
