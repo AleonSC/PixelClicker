@@ -429,3 +429,4 @@
 [2026-10-11 09:32 UTC] Shop tutorial: new Operation sub-tab box, Consumables text now says one-time use, Minigames box mentions the Toggles switches, and Cubie is bigger and more animated.
 [2026-10-11 10:39 UTC] Windows that are too big for the screen at high UI scale (like the shop at 130%) now shrink to fit between the black bars.
 [2026-10-11 10:43 UTC] At high UI scale the Crafting window now shrinks to fit the screen and the title logo shrinks so it stays above the middle bar.
+[2026-10-11 10:45 UTC] The skill tree window now shrinks together with the Skills window at high UI scale so it is no longer cut off.

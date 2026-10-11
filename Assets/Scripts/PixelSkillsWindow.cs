@@ -641,9 +641,30 @@ public partial class PixelSkills
         }
     }
 
+    /// <summary>
+    /// The tree window sits right of the Skills window and stretches to the right screen edge. When the Skills window had to shrink to fit
+    /// the screen (high UI scale), both share that scale: the tree window keeps the same design height and is made wider by 1 / scale to still reach the edge.
+    /// </summary>
+    private void UpdateTreeLayout()
+    {
+        if (treeRect == null || windowObject == null || treeWindow == null || !treeWindow.activeSelf) return;
+        PixelPop pop = windowObject.GetComponent<PixelPop>();
+        float s = pop != null ? Mathf.Max(0.3f, pop.Fit) : 1f;
+        RectTransform parent = treeRect.parent as RectTransform;
+        if (parent == null) return;
+        PixelHud hud = PixelHud.Ensure(gameObject);
+        float parentW = parent.rect.width;
+        float leftVisual = windowRect.anchoredPosition.x + windowSize.x * s + 14f;
+        float rightVisual = gapToButton + hud.SideMargin * 0.35f;
+        float designW = Mathf.Max(300f, (parentW - leftVisual - rightVisual) / s);
+        treeRect.offsetMin = new Vector2(leftVisual, -windowSize.y * 0.5f);
+        treeRect.offsetMax = new Vector2(leftVisual + designW - parentW, windowSize.y * 0.5f);
+    }
+
     private void Update()
     {
         CheckFarmBundle();
+        UpdateTreeLayout();
         if (!built) return;
 
         bool available = AnyTrainable;

@@ -28,7 +28,8 @@ public class PixelPop : MonoBehaviour
     private float ComputeFit()
     {
         RectTransform rt = transform as RectTransform;
-        if (rt == null || !Mathf.Approximately(rt.anchorMin.y, rt.anchorMax.y) || !Mathf.Approximately(rt.anchorMin.x, rt.anchorMax.x)) return 1f;
+        if (rt == null || !Mathf.Approximately(rt.anchorMin.y, rt.anchorMax.y)) return 1f;   // stretched in height = already follows the screen
+        bool fixedWidth = Mathf.Approximately(rt.anchorMin.x, rt.anchorMax.x);
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas == null) return 1f;
         RectTransform root = canvas.rootCanvas.transform as RectTransform;
@@ -37,8 +38,11 @@ public class PixelPop : MonoBehaviour
         float availH = root.rect.height - bars, availW = root.rect.width - 20f;
         Vector2 size = rt.rect.size;
         if (size.x < 1f || size.y < 1f || availH < 50f) return 1f;
-        return Mathf.Clamp(Mathf.Min(1f, availH / size.y, availW / size.x), 0.4f, 1f);
+        return Mathf.Clamp(Mathf.Min(1f, availH / size.y, fixedWidth ? availW / size.x : 1f), 0.4f, 1f);
     }
+
+    /// <summary>The scale this window was shrunk to so it fits the screen (1 = full size).</summary>
+    public float Fit => fit;
 
     /// <summary>True while the window is shown and not on its way out.</summary>
     public static bool IsOpen(GameObject go)
