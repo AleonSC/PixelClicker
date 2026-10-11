@@ -343,7 +343,7 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1515,15 +1515,15 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 36;
         }
 
-        if (looksVersion < 37)
+        if (looksVersion < 38)
         {
             // The Vacuum pixel became a clear glass container with one opening and a suction wind.
-            PixelLook def37 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Vacuum);
-            System.Collections.Generic.List<PixelLook> list37 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
-            int at37 = list37.FindIndex(l => l != null && l.type == PixelType.Vacuum);
-            if (def37 != null) { if (at37 >= 0) list37[at37] = def37; else list37.Add(def37); }
-            looks = list37.ToArray();
-            looksVersion = 37;
+            PixelLook def38 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Vacuum);
+            System.Collections.Generic.List<PixelLook> list38 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            int at38 = list38.FindIndex(l => l != null && l.type == PixelType.Vacuum);
+            if (def38 != null) { if (at38 >= 0) list38[at38] = def38; else list38.Add(def38); }
+            looks = list38.ToArray();
+            looksVersion = 38;
         }
 
         if (pixelRenderer != null)

@@ -448,7 +448,7 @@ public static class PixelLooks
             // Vacuum: a clear lavender glass container with one round opening and a suction wind curling into it.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.62f, 0.5f, 0.95f, 0.2f),
                             forceTranslucent = true, smoothness = 0.97f, metallic = 0f, emission = 0.12f, vacuumContainer = true, windFx = true,
-                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.7f, 0.55f, 1f, 1f), outlineBevel = true, outlineThickness = 0.025f, outlineShade = 0.5f, outlineStrength = 0.55f },
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.5f, 0.27f, 0.92f, 1f), outlineBevel = true, outlineThickness = 0.055f, outlineShade = 0f, outlineStrength = 1f },   // thick SOLID violet edges: never mistaken for the plain glass pixel
 
             // Glass: very see-through, a faint edge so it can still be seen, shatters on the ground.
             new PixelLook { type = PixelClicker.PixelType.Glass, alpha = 0.4f, smoothness = 1f, metallic = 0f,

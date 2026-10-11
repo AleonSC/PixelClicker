@@ -138,31 +138,33 @@ public static class PixelVacuumFx
         lr.receiveShadows = false;
 
         if (PixelFx.Material == null) return;
-        // The wind: streaks born in a cone in front of the opening, curling in (orbit) and racing into it. The emitter's +Z points out of the opening.
+        // The wind: streaks born inside a narrow cone in front of the opening that all fly straight at the opening's centre (radial velocity towards the
+        // emitter's origin = a funnel), curling a little as they go, and shrink away as they reach it. The emitter's +Z points out of the opening.
         ParticleSystem wind = PixelFx.Make(parent, "Suction Wind", new PixelFx.Spec
         {
-            lifetime = new Vector2(0.3f, 0.7f), speed = Vector2.zero, size = new Vector2(0.03f, 0.06f) * unit, gravity = 0f,
+            lifetime = new Vector2(0.16f, 0.4f), speed = Vector2.zero, size = new Vector2(0.02f, 0.04f) * unit, gravity = 0f,
             colorA = new Color(0.92f, 0.88f, 1f, 0.9f), colorB = new Color(0.62f, 0.48f, 1f, 0.8f),
-            rate = 42f, loop = true, localSpace = true, shape = ParticleSystemShapeType.ConeVolume, shapeRadius = hole * 0.9f, shapeAngle = 34f,
-            sizeOverLife = new Vector2(1f, 0.25f), maxParticles = 90,
+            rate = 46f, loop = true, localSpace = true, shape = ParticleSystemShapeType.ConeVolume, shapeRadius = hole * 0.5f, shapeAngle = 26f,
+            sizeOverLife = new Vector2(1f, 0.1f), maxParticles = 70,
             overLife = PixelFx.FadeGradient(Color.white, new Color(0.9f, 0.85f, 1f), new Color(0.6f, 0.5f, 1f), 0.9f),
         });
         Transform wt = wind.transform;
         wt.localPosition = mouth;
         wt.localRotation = Quaternion.LookRotation(Vector3.back, Vector3.up);
         ParticleSystem.ShapeModule shape = wind.shape;
-        shape.length = unit * 2.1f;
+        shape.length = unit * 1.05f;
         ParticleSystem.VelocityOverLifetimeModule vol = wind.velocityOverLifetime;
         vol.enabled = true;
         vol.space = ParticleSystemSimulationSpace.Local;
         vol.x = new ParticleSystem.MinMaxCurve(0f);
         vol.y = new ParticleSystem.MinMaxCurve(0f);
-        vol.z = new ParticleSystem.MinMaxCurve(-unit * 3.2f);          // towards the opening
-        vol.orbitalZ = new ParticleSystem.MinMaxCurve(3.5f);           // and curling round it
+        vol.z = new ParticleSystem.MinMaxCurve(0f);
+        vol.radial = new ParticleSystem.MinMaxCurve(-unit * 2.6f);     // straight at the opening: a funnel
+        vol.orbitalZ = new ParticleSystem.MinMaxCurve(2.2f);           // with a slight curl round it
         ParticleSystemRenderer pr = wind.GetComponent<ParticleSystemRenderer>();
         pr.renderMode = ParticleSystemRenderMode.Stretch;
-        pr.velocityScale = 0.12f;
-        pr.lengthScale = 1.8f;
+        pr.velocityScale = 0.1f;
+        pr.lengthScale = 1.2f;
         wind.Play();
     }
 
