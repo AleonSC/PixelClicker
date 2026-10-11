@@ -2438,12 +2438,26 @@ public class PixelClicker : MonoBehaviour
                 }
             }
             if (solarGroup.Count < solarClusterSize) continue;
-            foreach (int member in solarGroup) solarDespawns[member].KeepAlive();
+            foreach (int member in solarGroup)
+            {
+                solarDespawns[member].KeepAlive();
+                OldPixelSolarAura aura = solarBodies[member].GetComponent<OldPixelSolarAura>();
+                if (aura != null) aura.Keep();   // a complete group glows
+            }
         }
     }
 
     /// <summary>How big a Seed sprout is drawn, in world units (an old pixel's width x the sprout scale).</summary>
     public float SeedSproutWorldSize => OldPixelWorldSize * seedSproutScale;
+
+    [Tooltip("Old Solar pixels last this many times as long as other old pixels, so it is easier to gather a group of them. 0 = 1.6.")]
+    [SerializeField] private float solarLifetimeFactor = 0f;
+
+    private float LifetimeFactor(int tierIndex)
+    {
+        if (!IsValidTier(tierIndex) || tiers[tierIndex].type != PixelType.Solar) return 1f;
+        return solarLifetimeFactor > 0f ? solarLifetimeFactor : 1.6f;
+    }
 
     /// <summary>The edge length of an old pixel in world units.</summary>
     public float OldPixelWorldSize => PixelBaseSize * oldPixelScale;
@@ -3952,7 +3966,10 @@ public class PixelClicker : MonoBehaviour
                 if (styled.splash)
                     copy.AddComponent<OldPixelSplash>().Setup(this);
                 if (styled.sunFx)
+                {
                     copy.AddComponent<OldPixelSolarHover>().Setup(this);
+                    copy.AddComponent<OldPixelSolarAura>();
+                }
                 if (styled.radiation && !disableNuclearFx)
                     copy.AddComponent<OldPixelRadiation>().Setup(this, nuclearRadiusPixels > 0f ? nuclearRadiusPixels : 4f, nuclearAgeRate > 0f ? nuclearAgeRate : 40f);
                 if (styled.burn && !disableFireFx)
@@ -3989,7 +4006,7 @@ public class PixelClicker : MonoBehaviour
             rb.AddForce(routedVelocity, ForceMode.VelocityChange);
             rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
                          ForceMode.VelocityChange);
-            AddDespawn(copy, fallingCopyLifetime);
+            AddDespawn(copy, fallingCopyLifetime * LifetimeFactor(tierIndex));
             OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
@@ -4028,7 +4045,7 @@ public class PixelClicker : MonoBehaviour
             pop.Setup(box, copy.transform.localScale, popStartScale, popGrowSeconds, popNoCollisionSeconds);
         }
 
-        AddDespawn(copy, fallingCopyLifetime);
+        AddDespawn(copy, fallingCopyLifetime * LifetimeFactor(tierIndex));
 
         OldPixelInfo info = copy.AddComponent<OldPixelInfo>();
         info.tierIndex = tierIndex;

@@ -24,7 +24,8 @@ public static class PixelRockMesh
         return m;
     }
 
-    private static Vector3 Displace(Vector3 p, int seed)
+    /// <summary>Pulls a point of the unit cube (-0.5..0.5, on the 8x8 face grid) inwards if it lies on an edge / corner; the same for every caller, so overlays can follow the jagged shape.</summary>
+    public static Vector3 Displace(Vector3 p, int seed)
     {
         float ax = Mathf.Abs(p.x) * 2f, ay = Mathf.Abs(p.y) * 2f, az = Mathf.Abs(p.z) * 2f;
         float hi = Mathf.Max(ax, Mathf.Max(ay, az)), lo = Mathf.Min(ax, Mathf.Min(ay, az));

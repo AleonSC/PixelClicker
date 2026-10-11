@@ -851,7 +851,7 @@ public static class PixelLooks
             shine.transform.localPosition = centre;
             shine.layer = root.layer;
             MeshFilter sf = shine.GetComponent<MeshFilter>();
-            sf.sharedMesh = ShineMesh(size);
+            sf.sharedMesh = ShineMesh(size, look.jagged, (int)look.type);
             MeshRenderer shr = shine.GetComponent<MeshRenderer>();
             shr.sharedMaterial = OverlayMaterial(); // unlit, alpha-blended vertex colours
             shr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -1004,7 +1004,7 @@ public static class PixelLooks
     /// A finely divided sheet just above each cube face. <see cref="PixelLookShine"/> animates the vertex alpha so a soft diagonal band of light
     /// sweeps across (a plain four-corner quad could only blink as a white rectangle).
     /// </summary>
-    private static Mesh ShineMesh(Vector3 size)
+    private static Mesh ShineMesh(Vector3 size, bool jagged = false, int seed = 0)
     {
         Vector3[] normals = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
         List<Vector3> v = new List<Vector3>();
@@ -1021,7 +1021,13 @@ public static class PixelLooks
                 for (int ix = 0; ix <= n; ix++)
                 {
                     float fx = ix / (float)n - 0.5f, fy = iy / (float)n - 0.5f;
-                    v.Add(Vector3.Scale(normal * 0.508f + u * fx + w * fy, size));
+                    if (jagged)
+                    {
+                        // Follow the chipped rock cube (same displacement as PixelRockMesh) so the sheen never sticks out past the jagged edges.
+                        Vector3 rock = PixelRockMesh.Displace(normal * 0.5f + u * fx + w * fy, seed) + normal * 0.012f;
+                        v.Add(Vector3.Scale(rock, size));
+                    }
+                    else v.Add(Vector3.Scale(normal * 0.508f + u * fx + w * fy, size));
                     c.Add(new Color(1f, 1f, 1f, 0f));
                 }
             }

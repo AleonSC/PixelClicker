@@ -445,3 +445,71 @@ public class PixelDaylight : MonoBehaviour
         built = true;
     }
 }
+
+/// <summary>
+/// The faint yellow aura of a complete Solar group: every old Solar pixel that is part of a group of 5+ (see <see cref="PixelClicker"/> UpdateSolarClusters,
+/// which calls <see cref="Keep"/>) draws a soft camera-facing glow; overlapping glows read as one aura round the group. Fades in and out.
+/// </summary>
+public class OldPixelSolarAura : MonoBehaviour
+{
+    private static Sprite glow;
+    private SpriteRenderer sr;
+    private float lastKeep = -99f, alpha;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { glow = null; }
+
+    private static Sprite GlowSprite()
+    {
+        if (glow != null) return glow;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x - c) / c, dy = (y - c) / c;
+                float f = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy));
+                tex.SetPixel(x, y, new Color(1f, 0.86f, 0.35f, f * f * (3f - 2f * f)));
+            }
+        tex.Apply(false, true);
+        glow = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        return glow;
+    }
+
+    /// <summary>Called every few frames while this pixel is part of a complete group.</summary>
+    public void Keep() { lastKeep = Time.time; }
+
+    private void Awake()
+    {
+        if (PixelFx.Material == null) { enabled = false; return; }
+        GameObject go = new GameObject("Solar Aura", typeof(SpriteRenderer));
+        go.transform.SetParent(transform, false);
+        go.layer = gameObject.layer;
+        sr = go.GetComponent<SpriteRenderer>();
+        sr.sprite = GlowSprite();
+        sr.sharedMaterial = PixelFx.Material;
+        sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        sr.receiveShadows = false;
+        sr.color = new Color(1f, 0.86f, 0.35f, 0f);
+        go.SetActive(false);
+    }
+
+    private void LateUpdate()
+    {
+        if (sr == null) return;
+        bool on = Time.time - lastKeep < 0.5f;
+        alpha = Mathf.MoveTowards(alpha, on ? 0.3f : 0f, Time.deltaTime * 0.6f);
+        bool show = alpha > 0.005f;
+        if (sr.gameObject.activeSelf != show) sr.gameObject.SetActive(show);
+        if (!show) return;
+        Camera cam = Camera.main;
+        if (cam == null) return;
+        float size = Mathf.Max(0.05f, transform.lossyScale.x);
+        Transform t = sr.transform;
+        t.position = transform.position + cam.transform.forward * size * 0.9f;   // behind the pixel
+        t.rotation = cam.transform.rotation;
+        t.localScale = Vector3.one * (size * 4.2f / 0.64f / size);   // diameter ~4.2 pixel widths (sprite is 0.64 units across)
+        Color c = sr.color; c.a = alpha * (0.85f + 0.15f * Mathf.Sin(Time.time * 2.3f)); sr.color = c;
+    }
+}

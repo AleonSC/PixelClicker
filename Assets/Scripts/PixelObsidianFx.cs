@@ -36,6 +36,26 @@ public static class PixelObsidianFx
         return root;
     }
 
+    /// <summary>Black and grey dust that poofs sideways off the cube, swelling and fading (a flat ring of puffs plus a few that drift up).</summary>
+    private static void Dust(Transform root, float size, int count, float strength)
+    {
+        Gradient fade = PixelFx.FadeGradient(Color.white, new Color(0.85f, 0.85f, 0.88f), new Color(0.55f, 0.55f, 0.6f), 0.75f);
+        PixelFx.Make(root, "Dust", new PixelFx.Spec
+        {
+            lifetime = new Vector2(0.7f, 1.4f), speed = new Vector2(0.6f, 2.1f) * size * strength, size = new Vector2(0.2f, 0.42f) * size, gravity = -0.04f,
+            colorA = new Color(0.07f, 0.07f, 0.08f, 1f), colorB = new Color(0.46f, 0.47f, 0.5f, 1f), burst = count,
+            shape = ParticleSystemShapeType.Circle, shapeRadius = size * 0.45f, shapeRotation = new Vector3(90f, 0f, 0f), randomDirection = 0.12f,
+            sizeOverLife = new Vector2(0.5f, 1.8f), maxParticles = 60, overLife = fade,
+        }).Play();
+        PixelFx.Make(root, "Dust Up", new PixelFx.Spec
+        {
+            lifetime = new Vector2(0.8f, 1.5f), speed = new Vector2(0.2f, 0.9f) * size * strength, size = new Vector2(0.18f, 0.34f) * size, gravity = -0.12f,
+            colorA = new Color(0.1f, 0.1f, 0.11f, 1f), colorB = new Color(0.4f, 0.41f, 0.44f, 1f), burst = Mathf.Max(3, count / 3),
+            shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.5f, randomDirection = 0.2f,
+            sizeOverLife = new Vector2(0.5f, 1.6f), maxParticles = 30, overLife = fade,
+        }).Play();
+    }
+
     /// <summary>A non-final hit (progress 0-1): dark glassy shards and violet glints; more of them the closer it is to breaking.</summary>
     public static void Hit(Vector3 centre, float size, float progress)
     {
@@ -54,7 +74,7 @@ public static class PixelObsidianFx
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.55f, randomDirection = 0.1f, maxParticles = 20,
             overLife = PixelFx.FadeGradient(Color.white, Pale, Violet, 1f),
         }).Play();
-        FractureFx.Play(centre, size, Mathf.RoundToInt(Mathf.Lerp(2f, 6f, progress)), 0.55f + 0.5f * progress, 0.22f);   // cracks flash across the glass and spread with every hit
+        Dust(root.transform, size, Mathf.RoundToInt(Mathf.Lerp(5f, 12f, progress)), 0.6f);   // a little puff of dust off the sides
     }
 
     /// <summary>The final break: a spray of black glass, a violet burst and an expanding ring.</summary>
@@ -75,7 +95,7 @@ public static class PixelObsidianFx
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.6f, randomDirection = 0.1f, maxParticles = 50,
             overLife = PixelFx.FadeGradient(Color.white, new Color(0.85f, 0.9f, 0.95f), new Color(0.45f, 0.5f, 0.56f), 1f),
         }).Play();
-        FractureFx.Play(centre, size, 10, 2.2f, 0.4f);   // the glass fractures: bright cracks race outward from the middle
+        Dust(root.transform, size, 30, 1f);   // black / grey dust poofs off the sides
     }
 }
 
