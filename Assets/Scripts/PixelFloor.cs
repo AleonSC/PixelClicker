@@ -51,7 +51,11 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         Kaleidoscope,    // mirrored, colour-shifting kaleidoscope (animated)
         PacMan,          // maze with a chomping Pac-Man, pellets and ghosts (animated)
         RoadRacer,       // 8-bit top-down road: a car weaving through traffic as the road scrolls by (animated)
-        Fighter          // 8-bit side-view fight: two fighters trade punches and kicks, health bars, K.O. (animated)
+        Fighter,         // 8-bit side-view fight: two fighters trade punches and kicks, health bars, K.O. (animated)
+        NeonDrift,       // neon grid that slides along while its colours cycle (animated)
+        NeonMerge,       // neon grid whose lines fade out and back so the squares grow into bigger squares (animated)
+        NeonWave,        // neon grid that ripples like cloth while its colours cycle (animated)
+        NeonPrism        // neon grid with a rainbow that sweeps across it (animated)
     }
 
     [Serializable]
@@ -248,6 +252,15 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         BuildUvMap();
 
         string saved = PlayerPrefs.GetString(PrefStyle, defaultStyle);
+        switch (saved)   // styles that were renamed
+        {
+            case "Dragon Radar": saved = "Radar"; break;
+            case "Super Saiyan Aura": saved = "Super Aura"; break;
+            case "Ultra Instinct Aura": saved = "Divine Aura"; break;
+            case "Super Saiyan Blue Aura": saved = "Blue Aura"; break;
+            case "Super Saiyan God Aura": saved = "God Aura"; break;
+            case "Destruction Energy": saved = "Death Energy"; break;
+        }
         int index = styles.FindIndex(s => s.name == saved);
         SetStyle(index >= 0 ? index : 0);
     }
@@ -622,6 +635,74 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         tex.Apply(false);
     }
 
+    private static Color HueShift(Color c, float shift)
+    {
+        Color.RGBToHSV(c, out float h, out float sat, out float val);
+        Color r = Color.HSVToRGB(Mathf.Repeat(h + shift, 1f), sat, val);
+        r.a = 1f;
+        return r;
+    }
+
+    /// <summary>Strength (0..1) of one grid line in the 'merge' variant: every second line fades out and back, then every fourth, so the squares grow and shrink.</summary>
+    private static float MergeStrength(int k, float phase)
+    {
+        float a = Mathf.SmoothStep(0.12f, 0.45f, phase), b = Mathf.SmoothStep(0.55f, 0.88f, phase);
+        int m = ((k % 4) + 4) % 4;
+        if (m == 0) return 1f;
+        if (m == 2) return 1f - b;
+        return 1f - a;
+    }
+
+    private static float NeonLine(float texels) { return Mathf.Clamp01(Mathf.Clamp01(1.5f - texels) + Mathf.Exp(-texels * 0.45f) * 0.55f); }
+
+    /// <summary>The four animated neon grids (they move and change colour over time; 'cells' should be divisible by 4 so the texture still tiles).</summary>
+    private static Color NeonAnimated(FloorStyle s, float u, float v, int n, int cells)
+    {
+        float t = shadeTime;
+        float hue = 0f;
+        float phase = 0.5f + 0.5f * Mathf.Sin(t * 0.45f);
+        float gu = u, gv = v;
+        switch (s.pattern)
+        {
+            case FloorPattern.NeonDrift:
+                gu = u + t * 0.045f; gv = v + t * 0.028f;                       // the whole grid slides
+                hue = t * 0.05f;
+                break;
+            case FloorPattern.NeonMerge:
+                gu = u + t * 0.01f; gv = v - t * 0.008f;
+                hue = t * 0.035f;
+                break;
+            case FloorPattern.NeonWave:
+                gu = u + 0.022f * Mathf.Sin((v * 2f + t * 0.35f) * Mathf.PI * 2f);   // lines ripple like cloth
+                gv = v + 0.022f * Mathf.Sin((u * 2f - t * 0.3f) * Mathf.PI * 2f);
+                hue = t * 0.045f;
+                break;
+            default: // NeonPrism
+                gu = u + t * 0.02f; gv = v;
+                hue = Mathf.Repeat((u + v) * 1f - t * 0.12f, 1f);                    // a rainbow sweeping diagonally
+                break;
+        }
+        Color lineColor = HueShift(s.colorB, hue), crossColor = HueShift(s.colorC, hue + 0.12f);
+        Color ground = s.colorA * (0.85f + 0.15f * Fbm(u, v, 4, 3, s.seed));
+
+        float fu = Frac(gu * cells), fv = Frac(gv * cells);
+        int ku = Mathf.FloorToInt(gu * cells), kv = Mathf.FloorToInt(gv * cells);
+        float bestU = 0f, bestV = 0f, nearU = 99f, nearV = 99f, strU = 1f, strV = 1f;
+        for (int side = 0; side < 2; side++)
+        {
+            float du = side == 0 ? fu : 1f - fu, dv = side == 0 ? fv : 1f - fv;
+            float stU = s.pattern == FloorPattern.NeonMerge ? MergeStrength(ku + side, phase) : 1f;
+            float stV = s.pattern == FloorPattern.NeonMerge ? MergeStrength(kv + side, phase) : 1f;
+            float iu = NeonLine(du * n / cells) * stU, iv = NeonLine(dv * n / cells) * stV;
+            if (iu > bestU) { bestU = iu; nearU = du * n / cells; strU = stU; }
+            if (iv > bestV) { bestV = iv; nearV = dv * n / cells; strV = stV; }
+        }
+        float line = Mathf.Max(bestU, bestV);
+        Color c = Color.Lerp(ground, lineColor, line);
+        float cross = Mathf.Clamp01(2.5f - Mathf.Max(nearU, nearV)) * Mathf.Min(strU, strV);
+        return Color.Lerp(c, crossColor, cross * 0.8f);
+    }
+
     private static Color Shade(FloorStyle s, float u, float v, int x, int y, int n, int cells)
     {
         switch (s.pattern)
@@ -639,6 +720,12 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 float cross = Mathf.Clamp01(2.5f - Mathf.Max(du, dv) * n / cells);
                 return Color.Lerp(c, s.colorC, cross * 0.8f);
             }
+
+            case FloorPattern.NeonDrift:
+            case FloorPattern.NeonMerge:
+            case FloorPattern.NeonWave:
+            case FloorPattern.NeonPrism:
+                return NeonAnimated(s, u, v, n, cells);
 
             case FloorPattern.Checker:
             {
@@ -669,7 +756,8 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                 // Two planks per row; each row is shifted so the seams don't line up.
                 float shift = Hash(row, 7, s.seed);
                 float pu = Frac(u * 2f + shift);
-                int plank = Mathf.FloorToInt(u * 2f + shift) + row * 3;
+                int plankInRow = ((Mathf.FloorToInt(u * 2f + shift) % 2) + 2) % 2;   // 2 planks per row: the plank at the right edge continues at the left, so the texture tiles
+                int plank = plankInRow + row * 2;
                 float tone = 0.85f + 0.3f * Hash(plank, 3, s.seed);
                 float grain = Mathf.Sin((rv * 6f + Fbm(u, v, 2, 4, s.seed + plank) * 3f) * Mathf.PI * 2f) * 0.5f + 0.5f;
                 Color c = Color.Lerp(s.colorA, s.colorB, grain * 0.6f) * tone;
@@ -1834,6 +1922,34 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 3;
         }
 
+        // Renamed, removed and regrouped styles: bring saved lists up to date once (before the missing defaults are added, so nothing is duplicated).
+        if (defaultsVersion < 4)
+        {
+            string[,] renames =
+            {
+                { "Dragon Radar", "Radar" }, { "Super Saiyan Aura", "Super Aura" }, { "Ultra Instinct Aura", "Divine Aura" },
+                { "Super Saiyan Blue Aura", "Blue Aura" }, { "Super Saiyan God Aura", "God Aura" }, { "Destruction Energy", "Death Energy" },
+            };
+            for (int r = 0; r < renames.GetLength(0); r++)
+            {
+                FloorStyle st = styles.Find(x => x != null && x.name == renames[r, 0]);
+                if (st != null && !styles.Exists(x => x != null && x.name == renames[r, 1])) st.name = renames[r, 1];
+            }
+            styles.RemoveAll(x => x != null && (x.name == "Dragon Balls" || x.name == "Yu-Gi-Oh Card Back" || x.pattern == FloorPattern.DragonBalls || x.pattern == FloorPattern.CardBack));
+            FloorStyle superAura = styles.Find(x => x != null && x.name == "Super Aura"), divine = styles.Find(x => x != null && x.name == "Divine Aura");
+            if (superAura != null && divine != null)
+            {
+                styles.Remove(superAura);
+                styles.Insert(styles.IndexOf(divine), superAura);   // the auras sit together
+            }
+            // The new neon grid variants go right after Neon Grid.
+            int neonAt = styles.FindIndex(x => x != null && x.name == "Neon Grid");
+            if (neonAt >= 0)
+                foreach (FloorStyle def in DefaultStyles())
+                    if (def.name.StartsWith("Neon ") && !styles.Exists(x => x != null && x.name == def.name)) styles.Insert(++neonAt, def);
+            defaultsVersion = 4;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -1844,6 +1960,13 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                             pixelated = pixelated, tileWorldSize = tile, cells = cells, smoothness = smooth, glow = glow,
                             seed = name.Length * 7 + 3 };
 
+    private static FloorStyle NeonVariant(string name, FloorPattern p, Color ground, Color line, Color cross)
+    {
+        FloorStyle st = S(name, p, ground, line, cross, 128, false, 6f, 8, 0.7f, 1.6f);
+        st.animateFps = 20f; st.pulseSpeed = 0.35f; st.pulseAmount = 0.3f;
+        return st;
+    }
+
     private static IEnumerable<FloorStyle> DefaultStyles()
     {
         yield return S("Classic", FloorPattern.Classic, Color.white, Color.gray, Color.black, 8, false, 1f, 1);
@@ -1852,6 +1975,11 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
                             new Color(1f, 0.3f, 0.9f), 256, false, 6f, 4, 0.7f, 1.6f);
         neon.pulseSpeed = 0.35f; neon.pulseAmount = 0.35f;
         yield return neon;
+
+        yield return NeonVariant("Neon Drift", FloorPattern.NeonDrift, new Color(0.03f, 0.02f, 0.08f), new Color(0.1f, 0.85f, 1f), new Color(1f, 0.3f, 0.9f));
+        yield return NeonVariant("Neon Merge", FloorPattern.NeonMerge, new Color(0.02f, 0.03f, 0.08f), new Color(0.2f, 1f, 0.6f), new Color(1f, 0.9f, 0.3f));
+        yield return NeonVariant("Neon Wave", FloorPattern.NeonWave, new Color(0.04f, 0.01f, 0.08f), new Color(1f, 0.3f, 0.8f), new Color(0.3f, 0.9f, 1f));
+        yield return NeonVariant("Neon Prism", FloorPattern.NeonPrism, new Color(0.02f, 0.02f, 0.05f), new Color(1f, 0.2f, 0.3f), new Color(1f, 1f, 1f));
 
         yield return S("Retro Checker", FloorPattern.Checker, new Color(0.92f, 0.92f, 0.9f), new Color(0.12f, 0.12f, 0.14f),
                        Color.black, 64, true, 4f, 4, 0.45f);
@@ -1939,22 +2067,16 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return S("Tournament Stage", FloorPattern.TournamentTiles, new Color(0.86f, 0.84f, 0.78f), new Color(0.72f, 0.7f, 0.64f),
                        new Color(0.3f, 0.28f, 0.26f), 256, false, 6f, 4, 0.25f);
 
-        FloorStyle radar = S("Dragon Radar", FloorPattern.DragonRadar, new Color(0.04f, 0.2f, 0.08f), new Color(0.3f, 0.8f, 0.35f),
+        FloorStyle radar = S("Radar", FloorPattern.DragonRadar, new Color(0.04f, 0.2f, 0.08f), new Color(0.3f, 0.8f, 0.35f),
                              new Color(1f, 0.55f, 0.05f), 256, false, 8f, 8, 0.7f, 0.9f);
         radar.pulseSpeed = 0.8f; radar.pulseAmount = 0.45f;
         yield return radar;
 
-        yield return S("Dragon Balls", FloorPattern.DragonBalls, new Color(1f, 0.72f, 0.2f), new Color(0.8f, 0.35f, 0.02f),
-                       new Color(0.1f, 0.12f, 0.25f), 256, false, 5f, 4, 0.85f);
 
         // ---- Dragon Ball Z themed ----
         yield return S("Planet Namek", FloorPattern.PixelGrass, new Color(0.15f, 0.55f, 0.45f), new Color(0.3f, 0.72f, 0.55f),
                        new Color(0.95f, 0.85f, 0.3f), 48, true, 4f, 1, 0.05f);
 
-        FloorStyle ssj = S("Super Saiyan Aura", FloorPattern.KiAura, new Color(0.35f, 0.18f, 0.0f), new Color(1f, 0.78f, 0.1f),
-                           new Color(1f, 1f, 0.85f), 256, false, 6f, 1, 0.6f, 1.3f);
-        ssj.scrollSpeed = new Vector2(0f, 0.35f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f;
-        yield return ssj;
 
         yield return S("Battle Crater", FloorPattern.Craters, new Color(0.62f, 0.5f, 0.36f), new Color(0.48f, 0.38f, 0.27f),
                        new Color(0.2f, 0.15f, 0.1f), 256, false, 8f, 5, 0.1f);
@@ -1973,31 +2095,30 @@ public class PixelFloor : MonoBehaviour, IPixelLookSource
         top.pulseSpeed = 0.4f; top.pulseAmount = 0.4f;
         yield return top;
 
-        FloorStyle ui = S("Ultra Instinct Aura", FloorPattern.KiAura, new Color(0.12f, 0.14f, 0.25f), new Color(0.65f, 0.75f, 1f),
+        FloorStyle ssj = S("Super Aura", FloorPattern.KiAura, new Color(0.35f, 0.18f, 0.0f), new Color(1f, 0.78f, 0.1f),
+                           new Color(1f, 1f, 0.85f), 256, false, 6f, 1, 0.6f, 1.3f);
+        ssj.scrollSpeed = new Vector2(0f, 0.35f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f;
+        yield return ssj;
+
+        FloorStyle ui = S("Divine Aura", FloorPattern.KiAura, new Color(0.12f, 0.14f, 0.25f), new Color(0.65f, 0.75f, 1f),
                           new Color(1f, 1f, 1f), 256, false, 6f, 1, 0.8f, 1.2f);
         ui.scrollSpeed = new Vector2(0f, 0.25f); ui.pulseSpeed = 0.7f; ui.pulseAmount = 0.35f; ui.seed = 91;
         yield return ui;
 
-        FloorStyle blue = S("Super Saiyan Blue Aura", FloorPattern.KiAura, new Color(0.0f, 0.12f, 0.3f), new Color(0.1f, 0.7f, 1f),
+        FloorStyle blue = S("Blue Aura", FloorPattern.KiAura, new Color(0.0f, 0.12f, 0.3f), new Color(0.1f, 0.7f, 1f),
                             new Color(0.85f, 1f, 1f), 256, false, 6f, 1, 0.7f, 1.3f);
         blue.scrollSpeed = new Vector2(0f, 0.35f); blue.pulseSpeed = 1.2f; blue.pulseAmount = 0.3f; blue.seed = 57;
         yield return blue;
 
-        FloorStyle god = S("Super Saiyan God Aura", FloorPattern.KiAura, new Color(0.3f, 0.02f, 0.05f), new Color(1f, 0.25f, 0.3f),
+        FloorStyle god = S("God Aura", FloorPattern.KiAura, new Color(0.3f, 0.02f, 0.05f), new Color(1f, 0.25f, 0.3f),
                            new Color(1f, 0.85f, 0.75f), 256, false, 6f, 1, 0.6f, 1.3f);
         god.scrollSpeed = new Vector2(0f, 0.3f); god.pulseSpeed = 1f; god.pulseAmount = 0.3f; god.seed = 73;
         yield return god;
 
-        FloorStyle hakai = S("Destruction Energy", FloorPattern.EnergyWisps, new Color(0.04f, 0.0f, 0.08f), new Color(0.55f, 0.1f, 0.85f),
+        FloorStyle hakai = S("Death Energy", FloorPattern.EnergyWisps, new Color(0.04f, 0.0f, 0.08f), new Color(0.55f, 0.1f, 0.85f),
                              new Color(1f, 0.7f, 1f), 256, false, 7f, 1, 0.6f, 1.2f);
         hakai.scrollSpeed = new Vector2(0.02f, 0.035f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f;
         yield return hakai;
-
-        // ---- Yu-Gi-Oh themed ----
-        FloorStyle card = S("Yu-Gi-Oh Card Back", FloorPattern.CardBack, new Color(0.95f, 0.55f, 0.15f), new Color(0.35f, 0.17f, 0.06f),
-                            new Color(0.06f, 0.04f, 0.03f), 1024, false, 8f, 1, 0.55f);
-        card.stretchToFloor = true; card.fitToView = true;
-        yield return card;
 
         // ---- Animated ----
         FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
