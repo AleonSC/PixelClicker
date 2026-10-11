@@ -113,8 +113,11 @@ public class PixelCameraIntro : MonoBehaviour
     /// <summary>True while the camera is in the close-up or moving between it and the normal view (the view-bounds planes are wrong then).</summary>
     public static bool Moving { get; private set; }
 
+    /// <summary>How far the camera is from the title close-up (0) to its normal view (1); 1 whenever it is at rest. The fitted floors use it to blend their picture.</summary>
+    public static float Progress { get; private set; } = 1f;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { ClicksLocked = false; Moving = false; }
+    private static void ResetStatics() { ClicksLocked = false; Moving = false; Progress = 1f; }
 
     private bool fresh = true;
 
@@ -189,6 +192,7 @@ public class PixelCameraIntro : MonoBehaviour
     /// <summary>Puts the camera at 'k' of the way from the close-up (0) to the normal view (1).</summary>
     private void Apply(float k)
     {
+        Progress = k;
         // Swing round the cube on an arc: the offset turns and its length changes smoothly.
         Vector3 offset = Vector3.Slerp(startOffset, finalOffset, k);
         offset = offset.normalized * Mathf.Lerp(startOffset.magnitude, finalOffset.magnitude, k);
@@ -215,6 +219,7 @@ public class PixelCameraIntro : MonoBehaviour
     {
         ClicksLocked = false;
         Moving = false;
+        Progress = 1f;
         cam.transform.SetPositionAndRotation(finalPosition, finalRotation);
         cam.fieldOfView = finalFov;
         if (cam.orthographic) cam.orthographicSize = finalOrtho;
@@ -225,6 +230,7 @@ public class PixelCameraIntro : MonoBehaviour
     {
         ClicksLocked = false;
         Moving = false;
+        Progress = 1f;
         // Never leave the camera stuck mid-move.
         if (cam != null && !done && prepared) Finish();
     }

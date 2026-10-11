@@ -419,7 +419,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         baseOffset = new Vector2(0.5f - Frac(0.5f * baseTiling.x), 0.5f - Frac(0.5f * baseTiling.y));
         animTimer = animClock = 0f;
         if (style.fitToView) FitToView(true);
-        SetTiling(m, baseTiling, baseOffset + offset);
+        ApplyTiling(m, style);
 
         Material[] mats = new Material[Mathf.Max(1, originalMaterials != null ? originalMaterials.Length : 1)];
         for (int i = 0; i < mats.Length; i++) mats[i] = m;
@@ -449,7 +449,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             offset.y -= Mathf.Floor(offset.y);
             tilingDirty = true;
         }
-        if (tilingDirty) SetTiling(activeMaterial, baseTiling, baseOffset + offset);
+        float blend = FitBlend(style);
+        if (!Mathf.Approximately(blend, lastBlend)) { lastBlend = blend; tilingDirty = true; }
+        if (tilingDirty) ApplyTiling(activeMaterial, style);
 
         if (style.glow > 0f && style.pulseSpeed > 0f && activeMaterial.HasProperty("_EmissionColor"))
         {
@@ -462,7 +464,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         {
             animClock += dt * style.animSpeed;
             animTimer += dt;
-            if (animTimer >= 1f / style.animateFps)
+            // While the camera swings the redraws slow down (a big texture re-filled every frame is what made the pan stutter).
+            float fps = PixelCameraIntro.Progress > 0.001f && PixelCameraIntro.Progress < 0.999f ? Mathf.Min(style.animateFps, 8f) : style.animateFps;
+            if (animTimer >= 1f / fps)
             {
                 animTimer = 0f;
                 shadeAspect = style.fitToView ? viewAspect : 1f;
@@ -485,6 +489,35 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // ------------------------------------------------------------------
     // Fit to view: one copy of the pattern exactly covers what the camera sees of the floor
     // ------------------------------------------------------------------
+
+    private float lastBlend = 1f;
+
+    /// <summary>1 = the picture is fitted to the view (normal); less while the camera is away from its normal view: a fitted style then spreads over the WHOLE floor once instead of repeating.</summary>
+    private float FitBlend(FloorStyle style) => style.fitToView ? Mathf.Clamp01(PixelCameraIntro.Progress) : 1f;
+
+    /// <summary>Sets the floor's tiling: the normal one, or for a fitted style a blend from 'the picture over the whole floor' to the fitted view.</summary>
+    private void ApplyTiling(Material m, FloorStyle style)
+    {
+        float e = FitBlend(style);
+        if (e >= 0.9999f || !TryWholeFloorTiling(out Vector2 wt, out Vector2 wo)) { SetTiling(m, baseTiling, baseOffset + offset); return; }
+        SetTiling(m, Vector2.Lerp(wt, baseTiling, e), Vector2.Lerp(wo, baseOffset, e) + offset);
+    }
+
+    /// <summary>The tiling / offset that maps one copy of the texture over the floor's whole UV range.</summary>
+    private bool TryWholeFloorTiling(out Vector2 tiling, out Vector2 off)
+    {
+        tiling = Vector2.one; off = Vector2.zero;
+        if (floorRenderer == null) return false;
+        Bounds b = floorRenderer.bounds;
+        Vector2 a = WorldToFloorUv(new Vector3(b.min.x, b.max.y, b.min.z)), c = WorldToFloorUv(new Vector3(b.max.x, b.max.y, b.max.z));
+        Vector2 d = WorldToFloorUv(new Vector3(b.min.x, b.max.y, b.max.z)), f = WorldToFloorUv(new Vector3(b.max.x, b.max.y, b.min.z));
+        Vector2 lo = Vector2.Min(Vector2.Min(a, c), Vector2.Min(d, f)), hi = Vector2.Max(Vector2.Max(a, c), Vector2.Max(d, f));
+        Vector2 span = hi - lo;
+        if (span.x < 1e-5f || span.y < 1e-5f) return false;
+        tiling = new Vector2(1f / span.x, 1f / span.y);
+        off = new Vector2(-lo.x * tiling.x, -lo.y * tiling.y);
+        return true;
+    }
 
     /// <summary>Reads one triangle of the floor mesh so any point on the floor can be turned into its UV.</summary>
     private void BuildUvMap()
@@ -646,7 +679,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false)
         {
             name = "Floor " + s.name,
-            wrapMode = s.stretchToFloor ? TextureWrapMode.Clamp : TextureWrapMode.Repeat,
+            wrapMode = s.stretchToFloor || s.fitToView ? TextureWrapMode.Clamp : TextureWrapMode.Repeat,   // a fitted picture is ONE copy: never repeated over the floor
             filterMode = s.pixelated ? FilterMode.Point : FilterMode.Bilinear,
             anisoLevel = 4
         };
