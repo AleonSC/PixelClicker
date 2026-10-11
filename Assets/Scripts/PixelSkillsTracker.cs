@@ -90,7 +90,7 @@ public partial class PixelSkills
     {
         if (trackerBuilt) return;
         trackerBuilt = true;
-        trackerCanvas = PixelUIKit.CreateCanvas("PixelSkills Tracker", sortingOrder + 1, new Vector2(1920f, 1080f), true);
+        trackerCanvas = PixelUIKit.CreateCanvas("PixelSkills Tracker", sortingOrder - 1, new Vector2(1920f, 1080f), true);
         trackerCanvas.transform.SetParent(transform, false);
 
         trackerPanel = new GameObject("Tracker", typeof(RectTransform), typeof(Image));

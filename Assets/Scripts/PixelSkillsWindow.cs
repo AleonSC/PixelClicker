@@ -518,7 +518,7 @@ public partial class PixelSkills
     private void UpdateTip()
     {
         if (tipRect == null) return;
-        string text = WindowOpen && hoverTip != null ? hoverTip() : null;
+        string text = (WindowOpen || trackerOn) && hoverTip != null ? hoverTip() : null;
         bool show = !string.IsNullOrEmpty(text);
         if (tipRect.gameObject.activeSelf != show) tipRect.gameObject.SetActive(show);
         if (!show) return;
