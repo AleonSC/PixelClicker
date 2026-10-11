@@ -455,3 +455,4 @@
 [2026-10-11 12:18 UTC] Pause menu: 'Paused' now sits on the left with a search box on the right that lists matching menu screens and settings (a settings result opens Settings filtered to the matches); the Crafting materials list rows now use the shop's rounded box style.
 [2026-10-11 12:19 UTC] Fixed the pause menu search compile error (duplicate name) and removed an unused field warning.
 [2026-10-11 12:21 UTC] Pause menu search results now fit inside the panel: the lines shrink to fit and extra settings are summarised as '+ N more'.
+[2026-10-11 12:21 UTC] Fixed the Crafting window briefly showing at the wrong size when opened at high UI scale (it is now sized before it opens).

@@ -795,6 +795,7 @@ public class PixelCrafting : MonoBehaviour
     private void Open()
     {
         PixelWindows.CloseAllExcept(this); // Crafting replaces every other window
+        FitWindow();                       // size it BEFORE it opens, so PixelPop works out the right fit (at high UI scale it used to pop at full size, then shrink)
         PixelPop.Show(windowObject);
         refreshTimer = 0f;
         Refresh();
