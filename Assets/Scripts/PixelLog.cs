@@ -706,6 +706,7 @@ public class PixelLog : MonoBehaviour
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => panelObject != null && panelObject.activeSelf);
         button.onClick.AddListener(() => SetLogOpen(!PixelPop.IsOpen(panelObject)));
+        PixelMenuKeys.Register(PixelAction.LogWindow, button);
 
         // --- Panel (sits next to the button, growing away from the screen edge)
         panelObject = new GameObject("Log Panel", typeof(RectTransform), typeof(Image), typeof(PixelPop));

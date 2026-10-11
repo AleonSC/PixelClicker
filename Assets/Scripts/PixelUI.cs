@@ -486,7 +486,8 @@ public class PixelUI : MonoBehaviour
         if (potionLabels != null) foreach (TMP_Text l in potionLabels) Consider(l);
         float swatchSize = Mathf.Round(LinePitch * 0.8f);
         float width = swatchSize + 18f + widest + 14f + panelPadding * 2f;
-        return Mathf.Clamp(width, 150f, panelWidth);
+        float buttons = CompactToggleSize * 2f + 8f + panelPadding * 2f;   // the two buttons on top (pin switch + currency / potions) always fit side by side
+        return Mathf.Clamp(Mathf.Max(width, buttons), 150f, Mathf.Max(panelWidth, buttons));
     }
 
     /// <summary>The right margin of a row's text leaves room for the amount in the full window; the pinned one has no amount column, so the margin shrinks.</summary>
@@ -1036,6 +1037,7 @@ public class PixelUI : MonoBehaviour
         PixelHud hud = PixelHud.Ensure(gameObject);
         hud.Dock(br, anchor, () => boxObject != null && boxObject.activeSelf); // standard size, slides out near the mouse
         button.onClick.AddListener(() => SetInventoryOpen(!PixelPop.IsOpen(boxObject), true));
+        PixelMenuKeys.Register(PixelAction.Inventory, button);
 
         // --- Box (sits next to the button, growing away from the screen edge)
         boxObject = new GameObject("Inventory Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));

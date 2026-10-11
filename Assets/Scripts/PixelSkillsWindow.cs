@@ -120,6 +120,7 @@ public partial class PixelSkills
         tabDock.blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
         tabGroup = tabObject.AddComponent<CanvasGroup>();
         tabButton.onClick.AddListener(Toggle);
+        PixelMenuKeys.Register(PixelAction.Skills, tabButton);
         tabObject.SetActive(false);
 
         // ---- The window. ----

@@ -15,6 +15,13 @@ public enum PixelAction
     EventLog = 4,
     TimeSlow = 5,
     FirstPerson = 6,
+    Inventory = 7,
+    Shop = 8,
+    LogWindow = 9,
+    Crafting = 10,
+    Toggles = 11,
+    Bank = 12,
+    Skills = 13,
 }
 
 /// <summary>
@@ -33,6 +40,13 @@ public static class PixelKeys
         KeyCode.Return,   // EventLog
         KeyCode.S,        // TimeSlow
         KeyCode.F,        // FirstPerson
+        KeyCode.None,     // Inventory (blank until the player picks a key)
+        KeyCode.None,     // Shop
+        KeyCode.None,     // Log window
+        KeyCode.None,     // Crafting
+        KeyCode.None,     // Toggles
+        KeyCode.None,     // Bank
+        KeyCode.None,     // Skills
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";
@@ -89,7 +103,7 @@ public static class PixelKeys
         KeyCode old = current[index];
         for (int i = 0; i < current.Length; i++)
         {
-            if (i != index && current[i] == key)
+            if (key != KeyCode.None && i != index && current[i] == key)
             {
                 current[i] = old; // swap, so no two actions share a key
                 Save(i);
@@ -124,6 +138,7 @@ public static class PixelKeys
     {
         switch (key)
         {
+            case KeyCode.None: return "-";
             case KeyCode.Return: return "Enter";
             case KeyCode.KeypadEnter: return "Num Enter";
             case KeyCode.Alpha0: return "0";
@@ -199,6 +214,7 @@ public static class PixelKeys
     {
         if (Typing) return false;
         KeyCode key = Get(action);
+        if (key == KeyCode.None) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         if (Control(key, out var c) && c.wasPressedThisFrame) return true;
         if (key == KeyCode.Return && Control(KeyCode.KeypadEnter, out var n) && n.wasPressedThisFrame) return true;
@@ -235,6 +251,7 @@ public static class PixelKeys
     {
         if (Typing) return false;
         KeyCode key = Get(action);
+        if (key == KeyCode.None) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         return Control(key, out var c) && c.isPressed;
 #else

@@ -95,6 +95,7 @@ public partial class PixelShop
             if (PixelPop.IsOpen(panelObject)) PixelPop.Hide(panelObject); else PixelPop.Show(panelObject);
             if (PixelPop.IsOpen(panelObject)) RefreshRows();
         });
+        PixelMenuKeys.Register(PixelAction.Shop, button);
         shopButtonObject.SetActive(false); // Update() reveals it once the required tier is unlocked.
     }
 

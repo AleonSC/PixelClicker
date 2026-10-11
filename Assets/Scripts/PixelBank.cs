@@ -1206,6 +1206,7 @@ public class PixelBank : MonoBehaviour
         hoseGroup = hoseButton.gameObject.AddComponent<CanvasGroup>();
 
         bank.onClick.AddListener(ToggleWindow);
+        PixelMenuKeys.Register(PixelAction.Bank, bank);
         hoseButton.onClick.AddListener(() => SetHose(!HoseOn));
         RefreshHoseButton();
 

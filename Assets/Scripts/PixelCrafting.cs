@@ -579,6 +579,7 @@ public class PixelCrafting : MonoBehaviour
         br.anchoredPosition = new Vector2(-buttonMargin.x, buttonMargin.y);
         PixelHud.Ensure(gameObject).Dock(br, new Vector2(1f, 0f), () => windowObject != null && windowObject.activeSelf);
         open.onClick.AddListener(Toggle);
+        PixelMenuKeys.Register(PixelAction.Crafting, open);
 
         // --- Window
         windowObject = new GameObject("Crafting Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));

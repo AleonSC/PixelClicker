@@ -2232,7 +2232,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int index = i;
-            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "First person mode" : ((PixelAction)i).ToString();
+            string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "First person mode" : MenuKeyLabel((PixelAction)i);
             TMP_Text keyLabel = AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
             keyLabel.enableAutoSizing = true;           // long names ("Turn left (fan / sorter)") shrink to fit, they are not cut off
             keyLabel.fontSizeMax = rowFontSize * 0.65f;
@@ -2277,6 +2277,21 @@ public class PixelPauseMenu : MonoBehaviour
         FinishSectionPanel(keysPanel, y, settingsPanel);
     }
 
+    private static string MenuKeyLabel(PixelAction action)
+    {
+        switch (action)
+        {
+            case PixelAction.Inventory: return "Open Inventory";
+            case PixelAction.Shop: return "Open Shop";
+            case PixelAction.LogWindow: return "Open Log";
+            case PixelAction.Crafting: return "Open Crafting";
+            case PixelAction.Toggles: return "Open Toggles";
+            case PixelAction.Bank: return "Open Pixel Bank";
+            case PixelAction.Skills: return "Open Skills";
+        }
+        return action.ToString();
+    }
+
     private void RefreshKeyLabels()
     {
         if (keyButtonLabels == null) return;
@@ -2296,6 +2311,7 @@ public class PixelPauseMenu : MonoBehaviour
         }
         if (PixelKeys.TryCapture(out KeyCode key))
         {
+            if (key == KeyCode.Backspace || key == KeyCode.Delete) key = KeyCode.None;   // Backspace / Delete leaves the action blank
             PixelKeys.Set((PixelAction)capturingAction, key);
             capturingAction = -1;
             RefreshKeyLabels();

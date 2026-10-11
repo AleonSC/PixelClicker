@@ -485,6 +485,7 @@ public class PixelToggles : MonoBehaviour
         hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f),
                  () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)); // stays out while its hint is showing
         open.onClick.AddListener(Toggle);
+        PixelMenuKeys.Register(PixelAction.Toggles, open);
         openObject = open.gameObject;
         dock = openObject.GetComponent<PixelDockedButton>();
         buttonGroup = openObject.AddComponent<CanvasGroup>();
