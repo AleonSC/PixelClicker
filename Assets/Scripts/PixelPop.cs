@@ -34,11 +34,21 @@ public class PixelPop : MonoBehaviour
         if (canvas == null) return 1f;
         RectTransform root = canvas.rootCanvas.transform as RectTransform;
         if (root == null) return 1f;
-        float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight * 2f : 0f;
-        float availH = root.rect.height - bars, availW = root.rect.width - 20f;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight + 4f : 0f;
+        float availH = root.rect.height - bar * 2f, availW = root.rect.width - 20f;
         Vector2 size = rt.rect.size;
         if (size.x < 1f || size.y < 1f || availH < 50f) return 1f;
-        return Mathf.Clamp(Mathf.Min(1f, availH / size.y, fixedWidth ? availW / size.x : 1f), 0.4f, 1f);
+        float f = Mathf.Min(1f, availH / size.y, fixedWidth ? availW / size.x : 1f);
+
+        // The window scales around its pivot, so a window sitting against one edge (the Log, the Inventory) must also keep its far side inside the bars:
+        // how far the pivot is from the bottom / top bar limits how tall it can be.
+        float pivotY = rt.pivot.y;
+        float pivotFromBottom = root.InverseTransformPoint(rt.position).y - root.rect.yMin;   // the pivot's height above the bottom of the canvas
+        float room = pivotFromBottom - bar;                                                   // down to the bottom bar
+        float roomUp = root.rect.height - bar - pivotFromBottom;                              // up to the top bar
+        if (pivotY > 0.001f && room > 0f) f = Mathf.Min(f, room / (pivotY * size.y));
+        if (pivotY < 0.999f && roomUp > 0f) f = Mathf.Min(f, roomUp / ((1f - pivotY) * size.y));
+        return Mathf.Clamp(f, 0.4f, 1f);
     }
 
     /// <summary>The scale this window was shrunk to so it fits the screen (1 = full size).</summary>

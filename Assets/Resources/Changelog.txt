@@ -436,3 +436,4 @@
 [2026-10-11 11:22 UTC] The Toggles window has no visible scroll bar now, and its tabs are new pixel-art icons (cubes, machine with green arrow, joystick and Pac-Man, market stall, cat and dog) that show the tab name when hovered.
 [2026-10-11 11:25 UTC] Floors: Wood Planks now tiles seamlessly; Dragon Radar is Radar; Dragon Balls and Yu-Gi-Oh Card Back removed; the auras are grouped and renamed (Super Aura, Divine Aura, Blue Aura, God Aura); Destruction Energy is Death Energy; four new animated Neon Grid variants (Drift, Merge, Wave, Prism).
 [2026-10-11 11:26 UTC] The docked corner buttons shrink slightly when the black bar is thin (130% UI scale) so they no longer stick out past it.
+[2026-10-11 11:28 UTC] Windows against a screen edge (like the Pixel Log at 130% UI scale) now also shrink so their far side stays inside the black bars.
