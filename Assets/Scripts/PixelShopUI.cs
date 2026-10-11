@@ -133,6 +133,24 @@ public partial class PixelShop
         cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
         close.onClick.AddListener(() => PixelPop.Hide(panelObject));
 
+        // Help button (blue square with a question mark, left of the X): hold it to replay the shop tutorial.
+        Button help = CreateButton(panelObject.transform, "Help", "?", new Vector2(80f, 80f),
+                                   new Color(0.2f, 0.4f, 0.85f, 1f), Color.white, 44f, out _, out _);
+        RectTransform hr = help.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 1f);
+        hr.anchoredPosition = new Vector2(-panelPadding - 90f, -panelPadding * 0.5f);
+        PixelHoldButton hold = help.gameObject.AddComponent<PixelHoldButton>();
+        hold.holdSeconds = helpHoldSeconds;
+        hold.onComplete = () =>
+        {
+            PixelShopTutorial tut = PixelFind.First<PixelShopTutorial>();
+            if (tut != null) tut.Replay();
+        };
+        PixelHoverTip helpTip = help.gameObject.AddComponent<PixelHoverTip>();
+        System.Func<string> helpText = () => "Hold to replay the shop tutorial";
+        helpTip.onEnter = () => hoverTip = helpText;
+        helpTip.onExit = () => { if (hoverTip == helpText) hoverTip = null; };
+
         BuildTabs(panelObject.transform);
         BuildScrollArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f,
                         out contentRect, out scrollRect, out emptyLabel);

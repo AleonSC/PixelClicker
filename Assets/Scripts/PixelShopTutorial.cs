@@ -73,6 +73,16 @@ public class PixelShopTutorial : MonoBehaviour
         ShowStep(0);
     }
 
+    /// <summary>Plays the tutorial again now (the shop's blue ? button), whether or not it was seen.</summary>
+    public void Replay()
+    {
+        if (running || shop == null) return;
+        if (steps == null || steps.Count == 0) steps = DefaultSteps();
+        PixelNotice.Hide();
+        running = true;
+        ShowStep(0);
+    }
+
     private void ShowStep(int index)
     {
         if (index >= steps.Count || shop == null)

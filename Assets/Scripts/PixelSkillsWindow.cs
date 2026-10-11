@@ -70,7 +70,13 @@ public partial class PixelSkills
     private GameObject listBar;
     private TMP_Text headerLabel, detailName, detailDesc, detailInfo, trainLabel;
     private readonly List<Card> cards = new List<Card>();
-    private readonly List<TMP_Text> perkRows = new List<TMP_Text>();
+    private readonly List<Button> perkHeads = new List<Button>();
+    private readonly List<TMP_Text> perkHeadLabels = new List<TMP_Text>();
+    private readonly List<TMP_Text> perkBodies = new List<TMP_Text>();
+    private readonly HashSet<string> perkOpen = new HashSet<string>();   // "<pack id>:<level>" of the sections that are expanded
+    private ScrollRect perkScroll;
+    private RectTransform perkContent;
+    private GameObject perkBar;
     private int selected, selectedNode;
     private Button treeToggle, unlockButton;
     private TMP_Text treeToggleLabel, pointsLabel, nodeInfoLabel, unlockLabel, treeTitle, tipText;
@@ -190,21 +196,36 @@ public partial class PixelSkills
         detailInfo.fontSizeMax = 22f;
         detailInfo.fontSizeMin = 13f;
         Place(detailInfo.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -122f), new Vector2(-22f, -70f));
+        // The perks: one collapsible section per level (a header button, the text underneath when open).
+        perkScroll = PixelUIKit.CreateScrollView(detail.transform, "Perks", new Color(0f, 0f, 0f, 0f), 12f, 40f, out perkContent, out perkBar);
+        RectTransform psr = perkScroll.GetComponent<RectTransform>();
+        psr.anchorMin = Vector2.zero;
+        psr.anchorMax = Vector2.one;
+        psr.offsetMin = new Vector2(14f, 106f);
+        psr.offsetMax = new Vector2(-14f, -84f);
         for (int i = 0; i < 8; i++)
         {
-            TMP_Text row = PixelUIKit.CreateText(Font, detail.transform, "Perk " + i, "", 22f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal, dimTextColor);
-            row.enableAutoSizing = true;
-            row.fontSizeMax = 22f;
-            row.fontSizeMin = 12f;
-            row.richText = true;
-            RectTransform pr = row.rectTransform;
-            pr.anchorMin = new Vector2(0f, 1f);
-            pr.anchorMax = new Vector2(1f, 1f);
-            pr.pivot = new Vector2(0.5f, 1f);
-            pr.sizeDelta = new Vector2(-44f, 32f);
-            pr.anchoredPosition = new Vector2(0f, -(84f + i * 38f));
-            row.gameObject.SetActive(false);
-            perkRows.Add(row);
+            int index = i;
+            Button head = PixelUIKit.CreateButton(Font, perkContent, "Perk Header " + i, "", new Vector2(10f, 44f), new Color(0.2f, 0.22f, 0.3f, 1f), textColor, 24f);
+            TMP_Text hl = head.GetComponentInChildren<TMP_Text>();
+            hl.alignment = TextAlignmentOptions.MidlineLeft;
+            hl.richText = true;
+            hl.margin = new Vector4(16f, 0f, 8f, 0f);
+            head.onClick.AddListener(() =>
+            {
+                if (selected < 0 || selected >= packs.Count || packs[selected].perks == null || index >= packs[selected].perks.Length) return;
+                string key = packs[selected].id + ":" + packs[selected].perks[index].level;
+                if (!perkOpen.Add(key)) perkOpen.Remove(key);
+                RefreshWindow();
+            });
+            head.gameObject.SetActive(false);
+            perkHeads.Add(head);
+            perkHeadLabels.Add(hl);
+
+            TMP_Text body = PixelUIKit.CreateText(Font, perkContent, "Perk Body " + i, "", 24f, TextAlignmentOptions.TopLeft, FontStyles.Normal, new Color(1f, 1f, 1f, 0.92f));
+            body.richText = true;
+            body.gameObject.SetActive(false);
+            perkBodies.Add(body);
         }
 
         BuildTreeUi(detail.transform);
@@ -718,16 +739,50 @@ public partial class PixelSkills
         for (int i = slot; i < pixelPackButtons.Count; i++) pixelPackButtons[i].gameObject.SetActive(false);
 
         int pl = LevelOf(p);
-        for (int i = 0; i < perkRows.Count; i++)
+        bool showPerks = available && !showTree && p.id != OfflineId && p.perks != null;
+        perkScroll.gameObject.SetActive(showPerks);
+        float py = 0f;
+        float bodyWidth = Mathf.Max(200f, perkContent.rect.width > 1f ? perkContent.rect.width - 40f : 360f);
+        for (int i = 0; i < perkHeads.Count; i++)
         {
-            bool used = available && !showTree && p.id != OfflineId && p.perks != null && i < p.perks.Length;
-            perkRows[i].gameObject.SetActive(used);
+            bool used = showPerks && i < p.perks.Length;
+            perkHeads[i].gameObject.SetActive(used);
+            perkBodies[i].gameObject.SetActive(false);
             if (!used) continue;
             Perk perk = p.perks[i];
             bool got = pl >= perk.level && perk.implemented;
-            string tag = perk.implemented ? "" : "  <color=#ffffff80>(coming soon)</color>";
-            PixelUIKit.SetText(perkRows[i], "Lv " + perk.level + "   " + perk.text + tag);
-            perkRows[i].color = got ? perkUnlockedColor : dimTextColor;
+            bool open = perkOpen.Contains(p.id + ":" + perk.level);
+            string status = got ? "unlocked" : (perk.implemented ? "locked" : "coming soon");
+            string color = got ? "#8CFF99" : "#C8CCD8";
+            PixelUIKit.SetText(perkHeadLabels[i], (open ? "-  " : "+  ") + "Level " + perk.level + "   <size=70%><color=" + color + ">" + status.ToUpperInvariant() + "</color></size>");
+            RectTransform hr = perkHeads[i].GetComponent<RectTransform>();
+            hr.anchorMin = new Vector2(0f, 1f);
+            hr.anchorMax = new Vector2(1f, 1f);
+            hr.pivot = new Vector2(0.5f, 1f);
+            hr.sizeDelta = new Vector2(0f, 44f);
+            hr.anchoredPosition = new Vector2(0f, -py);
+            py += 48f;
+            if (open)
+            {
+                TMP_Text body = perkBodies[i];
+                body.gameObject.SetActive(true);
+                PixelUIKit.SetText(body, perk.text);
+                float h = body.GetPreferredValues(perk.text, bodyWidth, 0f).y + 14f;
+                RectTransform br = body.rectTransform;
+                br.anchorMin = new Vector2(0f, 1f);
+                br.anchorMax = new Vector2(1f, 1f);
+                br.pivot = new Vector2(0.5f, 1f);
+                br.offsetMin = new Vector2(20f, 0f);
+                br.offsetMax = new Vector2(-20f, 0f);
+                br.sizeDelta = new Vector2(-40f, h);
+                br.anchoredPosition = new Vector2(0f, -py - 4f);
+                py += h + 10f;
+            }
+        }
+        if (showPerks)
+        {
+            RectTransform sr = perkScroll.GetComponent<RectTransform>();
+            PixelUIKit.UpdateScrollView(perkScroll, perkBar, py, sr.rect.height > 1f ? sr.rect.height : 260f);
         }
 
         bool isActiveSel = p.id == TrainingId;

@@ -325,6 +325,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Make the tip boxes (the \"Got it\" boxes shown after purchases and for first-time tips) fill the shop's height and sit to the right of the shop window, as wide as the currency panel (centred shop-sized when the shop is closed). Off = they size to their text at the top of the screen.")]
     [SerializeField] private bool tipBoxMatchesShop = true;
 
+    [Tooltip("How long (seconds) the blue ? button in the shop must be held to replay the shop tutorial.")]
+    [SerializeField] private float helpHoldSeconds = 0.7f;
+
     [Tooltip("Height of each pack row.")]
     [SerializeField] private float rowHeight = 230f;
 
