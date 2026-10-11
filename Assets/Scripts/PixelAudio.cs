@@ -241,6 +241,8 @@ public class PixelAudio : MonoBehaviour
             Make("fire_crackle", 0.15f, 0.85f, 1.15f),
             Make("ore_chip", 0.04f, 0.8f, 1.3f),
             Make("ore_gleam", 0.3f, 0.95f, 1.05f),
+            Make("stardust_fall", 0.3f, 0.97f, 1.03f),
+            Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
         };
@@ -288,6 +290,8 @@ public class PixelAudio : MonoBehaviour
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
             case "ore_gleam": return new[] { PixelSynth.OreGleam() };
+            case "stardust_fall": return new[] { PixelSynth.StarFall(1), PixelSynth.StarFall(2) };
+            case "stardust_collect": return new[] { PixelSynth.StarChime() };
             case "pixel_wire": return new[] { PixelSynth.Elec(0, 1), PixelSynth.Elec(0, 2), PixelSynth.Elec(0, 3) };
             case "pixel_battery": return new[] { PixelSynth.Elec(1, 1), PixelSynth.Elec(1, 2), PixelSynth.Elec(1, 3) };
             case "pixel_resistor": return new[] { PixelSynth.Elec(3, 1), PixelSynth.Elec(3, 2), PixelSynth.Elec(3, 3) };
@@ -1306,6 +1310,77 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
         AudioClip clip = AudioClip.Create("OreBreak " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A star falling: a glassy whistle that slides down while tiny sparkles tinkle behind it. 'variant' changes the pitch and the sparkles.</summary>
+    public static AudioClip StarFall(int variant)
+    {
+        const int rate = 22050;
+        float length = 1.25f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rnd = new System.Random(900 + variant * 31);
+        float top = variant == 1 ? 3300f : 3700f, bottom = variant == 1 ? 760f : 840f;
+        float phase = 0f;
+        // Sparkle ticks: short high pings scattered through the fall, getting sparser.
+        int pings = 16;
+        float[] pingAt = new float[pings], pingFreq = new float[pings], pingAmp = new float[pings];
+        for (int k = 0; k < pings; k++)
+        {
+            pingAt[k] = Mathf.Pow((float)rnd.NextDouble(), 0.8f) * length * 0.95f;
+            pingFreq[k] = 2800f + (float)rnd.NextDouble() * 4200f;
+            pingAmp[k] = 0.1f + (float)rnd.NextDouble() * 0.16f;
+        }
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float k01 = sec / length;
+            float freq = bottom + (top - bottom) * Mathf.Exp(-sec * 3.2f);
+            freq *= 1f + 0.012f * Mathf.Sin(sec * 38f);
+            phase += freq / rate;
+            float env = Mathf.Clamp01(sec / 0.015f) * Mathf.Exp(-sec * 1.9f) * Mathf.Clamp01((length - sec) / 0.25f);
+            float v = (Mathf.Sin(phase * Mathf.PI * 2f) + 0.25f * Mathf.Sin(phase * 2f * Mathf.PI * 2f)) * env * 0.5f;
+            for (int p = 0; p < pings; p++)
+            {
+                float t = sec - pingAt[p];
+                if (t < 0f || t > 0.25f) continue;
+                v += Mathf.Sin(t * pingFreq[p] * Mathf.PI * 2f) * Mathf.Exp(-t * 28f) * pingAmp[p] * (1f - k01 * 0.6f);
+            }
+            data[i] = v;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.55f;
+        AudioClip clip = AudioClip.Create("StarFall" + variant, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A short rising three-note chime for collecting a fallen star.</summary>
+    public static AudioClip StarChime()
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.7f);
+        float[] data = new float[n];
+        float[] notes = { 1046.5f, 1568f, 2093f };   // C6, G6, C7
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float v = 0f;
+            for (int k = 0; k < notes.Length; k++)
+            {
+                float t = sec - k * 0.07f;
+                if (t < 0f) continue;
+                v += (Mathf.Sin(t * notes[k] * Mathf.PI * 2f) + 0.2f * Mathf.Sin(t * notes[k] * 2.01f * Mathf.PI * 2f)) * Mathf.Exp(-t * 6f) * 0.5f;
+            }
+            data[i] = v * Mathf.Clamp01(sec / 0.003f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.55f;
+        AudioClip clip = AudioClip.Create("StarChime", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

@@ -503,3 +503,4 @@
 [2026-10-11 23:23 UTC] Fitted floors no longer repeat over the floor during the camera swing: the picture spreads once over the whole floor on the title screen and eases into the fitted view, and animated floors redraw less while the camera moves.
 [2026-10-11 23:29 UTC] Rocky pixels (Obsidian, Meteor, Rock and the ores) lost their outlines and now have chipped, jagged edges and corners.
 [2026-10-11 23:33 UTC] Old Solar pixels last 1.6x longer and a complete group of 5 gets a faint yellow aura; the Obsidian sheen now follows its jagged edges; Obsidian hits and breaks puff black/grey dust instead of white crack lines.
+[2026-10-11 23:35 UTC] Fallen stars now make a falling-star sound, shed magical dust while they fall and move, and twinkle white while they lie still (collecting one also has a chime).

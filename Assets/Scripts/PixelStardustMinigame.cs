@@ -121,12 +121,39 @@ public class PixelStardustMinigame : PixelMinigame
         public Renderer[] renderers;
         public float age;
         public bool landed;
+        public ParticleSystem dust;      // magical dust shed while it falls / moves
+        public SpriteRenderer twinkle;   // a white four-point twinkle while it lies still
     }
 
     private readonly List<Star> stars = new List<Star>();
     private int pending; // stars announced (waiting for their delay) but not yet created
     private static Mesh starMesh;
     private static Material starMaterial;
+    private static Sprite twinkleSprite;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { twinkleSprite = null; }
+
+    /// <summary>A soft white four-pointed twinkle (0.64 world units across).</summary>
+    private static Sprite TwinkleSprite()
+    {
+        if (twinkleSprite != null) return twinkleSprite;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        float c = (n - 1) * 0.5f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x - c) / c, dy = (y - c) / c;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float glow = Mathf.Pow(Mathf.Clamp01(1f - r), 2.5f);
+                float cross = Mathf.Clamp01(1f - Mathf.Min(Mathf.Abs(dx), Mathf.Abs(dy)) * 9f) * Mathf.Clamp01(1f - r);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(glow * 0.55f + cross)));
+            }
+        tex.Apply(false, true);
+        twinkleSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        return twinkleSprite;
+    }
 
     public override string Id => "stardust";
     public override string DisplayName => "Stardust";
@@ -296,7 +323,32 @@ public class PixelStardustMinigame : PixelMinigame
             light.shadows = LightShadows.None;
         }
 
-        Star star = new Star { root = root, visual = visual.transform, body = rb, renderers = new Renderer[] { mr } };
+        // Magical dust: little golden / lavender sparkles shed behind the star while it falls or moves (the rate is set each frame).
+        ParticleSystem dust = null;
+        SpriteRenderer twinkle = null;
+        if (PixelFx.Material != null)
+        {
+            dust = PixelFx.Make(root.transform, "Magic Dust", new PixelFx.Spec
+            {
+                lifetime = new Vector2(0.6f, 1.3f), speed = new Vector2(0.05f, 0.35f) * starSize, size = new Vector2(0.08f, 0.2f) * starSize, gravity = 0.05f,
+                colorA = new Color(1f, 0.9f, 0.5f, 1f), colorB = new Color(0.82f, 0.76f, 1f, 1f), rate = 0f, loop = true,
+                shape = ParticleSystemShapeType.Sphere, shapeRadius = starSize * 0.25f, randomDirection = 0.4f,
+                sizeOverLife = new Vector2(1f, 0f), maxParticles = 120,
+                overLife = PixelFx.FadeGradient(Color.white, new Color(1f, 0.95f, 0.7f), new Color(0.7f, 0.6f, 1f), 0.95f),
+            });
+            dust.Play();
+
+            GameObject tw = new GameObject("Twinkle", typeof(SpriteRenderer));
+            tw.transform.SetParent(root.transform, false);
+            twinkle = tw.GetComponent<SpriteRenderer>();
+            twinkle.sprite = TwinkleSprite();
+            twinkle.sharedMaterial = PixelFx.Material;
+            twinkle.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            twinkle.receiveShadows = false;
+            twinkle.color = new Color(1f, 1f, 1f, 0f);
+        }
+
+        Star star = new Star { root = root, visual = visual.transform, body = rb, renderers = new Renderer[] { mr }, dust = dust, twinkle = twinkle };
         stars.Add(star);
         Report(MinigameEvent.Spawned);
         PixelAudio.Play("stardust_fall");
@@ -350,6 +402,23 @@ public class PixelStardustMinigame : PixelMinigame
             float blink = life < 4f && life > 1f ? (Mathf.Sin(Time.time * 14f) > 0f ? 1f : 0.4f) : 1f; // blinks when about to go
             s.visual.localScale = Vector3.one * (starSize * pulse * fade * blink);
             if (s.landed && life <= 0f) { Destroy(s.root); stars.RemoveAt(i); continue; }
+
+            // Magic dust while it falls / moves; a white twinkle now and then while it lies still.
+            if (s.dust != null)
+            {
+                bool moving = !s.landed && s.body != null && Speed(s.body) > 0.3f;
+                ParticleSystem.EmissionModule em = s.dust.emission;
+                em.rateOverTime = moving ? 60f : 0f;
+            }
+            if (s.twinkle != null)
+            {
+                float tw = s.landed ? Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Time.time * 2.6f + i * 1.7f)), 10f) : 0f;
+                Color tc = s.twinkle.color; tc.a = tw * fade; s.twinkle.color = tc;
+                Transform tt = s.twinkle.transform;
+                tt.position = s.root.transform.position - cam.transform.forward * 0.15f;
+                tt.rotation = cam.transform.rotation * Quaternion.Euler(0f, 0f, 20f * tw);
+                tt.localScale = Vector3.one * (starSize * (1.2f + 1.4f * tw) / 0.64f);
+            }
 
             if (click)
             {
