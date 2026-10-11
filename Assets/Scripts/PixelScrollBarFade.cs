@@ -74,7 +74,7 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
             if (scroll != null && scroll.GetComponentInParent<TMPro.TMP_Dropdown>() == null)
             {
                 RectTransform vp = scroll.viewport != null ? scroll.viewport : scroll.transform as RectTransform;
-                softMask = vp.GetComponent<RectMask2D>();
+                softMask = vp.GetComponent<RectMask2D>();   // only used to confirm this is a masked list
                 if (softMask != null) BuildChevron(vp);
             }
         }
@@ -85,13 +85,7 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
         bool more = scrolls && scroll.verticalNormalizedPosition > 0.02f;
         fadeAmount = Mathf.MoveTowards(fadeAmount, more ? 1f : 0f, Time.unscaledDeltaTime / 0.2f);
 
-        int soft = Mathf.RoundToInt(fadeHeight * fadeAmount);
-        if (soft != appliedSoft)
-        {
-            appliedSoft = soft;
-            softMask.softness = new Vector2Int(0, soft);
-            softMask.padding = new Vector4(0f, 0f, 0f, -soft);   // widened upwards (z = right, w = top): nothing is faded at the top edge
-        }
+        ApplyRowFade(view);
 
         if (chevron != null)
         {
@@ -104,6 +98,52 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
                 chevronGroup.alpha = fadeAmount;
                 chevron.position = new Vector3((corners[0].x + corners[2].x) * 0.5f, corners[0].y + (16f + Mathf.Sin(Time.unscaledTime * 3.2f) * 5f) * scale, corners[0].z);
             }
+        }
+    }
+
+    private readonly System.Collections.Generic.List<CanvasGroup> rowGroups = new System.Collections.Generic.List<CanvasGroup>();
+    private readonly System.Collections.Generic.HashSet<GameObject> ownGroups = new System.Collections.Generic.HashSet<GameObject>();
+    private readonly Vector3[] rowCorners = new Vector3[4];
+    private bool rowsFaded;
+
+    /// <summary>
+    /// Rows (the direct children of the list's content) fade out as they near the bottom of the view: each row's alpha follows how far its centre is above the bottom edge.
+    /// Only rows this script added a CanvasGroup to are touched. Nothing is drawn over the window, so it works on any backdrop.
+    /// </summary>
+    private void ApplyRowFade(RectTransform view)
+    {
+        Transform content = scroll.content;
+        if (fadeAmount <= 0.001f)
+        {
+            if (rowsFaded) { foreach (CanvasGroup g in rowGroups) if (g != null) g.alpha = 1f; rowsFaded = false; }
+            return;
+        }
+        rowsFaded = true;
+        view.GetWorldCorners(rowCorners);
+        float bottom = rowCorners[0].y, topY = rowCorners[1].y;
+        float scale = view.lossyScale.y;
+        float span = Mathf.Max(1f, fadeHeight * 1.6f * scale);
+        for (int i = 0; i < content.childCount; i++)
+        {
+            Transform child = content.GetChild(i);
+            if (!child.gameObject.activeSelf) continue;
+            CanvasGroup g = child.GetComponent<CanvasGroup>();
+            if (g == null)
+            {
+                g = child.gameObject.AddComponent<CanvasGroup>();
+                g.blocksRaycasts = true; g.interactable = true;
+                ownGroups.Add(child.gameObject);
+                rowGroups.Add(g);
+            }
+            else if (!ownGroups.Contains(child.gameObject)) continue;   // someone else drives this one
+
+            RectTransform rt = child as RectTransform;
+            if (rt == null) continue;
+            rt.GetWorldCorners(rowCorners);
+            float centre = (rowCorners[0].y + rowCorners[1].y) * 0.5f;
+            float k = Mathf.Clamp01((centre - bottom) / span);                  // 0 at the bottom edge, 1 once a full fade-length above it
+            float a = Mathf.SmoothStep(0.05f, 1f, k);
+            g.alpha = Mathf.Lerp(1f, a, fadeAmount);
         }
     }
 
