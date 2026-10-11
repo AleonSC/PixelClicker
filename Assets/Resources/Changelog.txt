@@ -441,3 +441,4 @@
 [2026-10-11 11:31 UTC] New animated floor: Laser Corridor (teal metal panels with red security lasers sweeping and blinking across).
 [2026-10-11 11:34 UTC] Obsidian reworked: violet glow, sweeping light, drifting sparks, glass shards on hits and a shattering burst on the break; its click sound is a glassy ping that starts low and rises with every click.
 [2026-10-11 11:43 UTC] Fixed Ultra Holes never opening after the first round (old area claims blocked every corner), god-mode pixels now drop where the cursor points, the on-screen spawner hides while any window is open, and Despawn clears all minigames when the selected one isn't on screen.
+[2026-10-11 11:44 UTC] Added a search box to the top left of the shop window: typing lists every matching pack from all tabs (name, description or reward pixel); clicking a tab clears it.

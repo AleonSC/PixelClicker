@@ -315,6 +315,10 @@ public partial class PixelShop : MonoBehaviour
     [Header("Shop Panel")]
     [Tooltip("Title shown at the top of the panel.")]
     [SerializeField] private string panelTitle = "Shop";
+    [Tooltip("Placeholder text of the search box at the top left of the shop window.")]
+    [SerializeField] private string searchPlaceholder = "Search...";
+    [Tooltip("Width of the search box at the top left of the shop window (canvas units).")]
+    [SerializeField] private float searchWidth = 300f;
 
     [Tooltip("Panel width (canvas units).")]
     [SerializeField] private float panelWidth = 900f;

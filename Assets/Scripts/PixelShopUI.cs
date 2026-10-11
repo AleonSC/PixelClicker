@@ -161,6 +161,19 @@ public partial class PixelShop
         helpTip.onEnter = () => hoverTip = helpText;
         helpTip.onExit = () => { if (hoverTip == helpText) hoverTip = null; };
 
+        // Search box (top left): lists every matching pack from all tabs while it has text.
+        searchField = PixelUIKit.CreateInputField(font, panelObject.transform, "Search", new Vector2(Mathf.Max(120f, searchWidth), 70f),
+                                                  disabledColor, textColor, tabFontSize, searchPlaceholder);
+        RectTransform sr = searchField.GetComponent<RectTransform>();
+        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
+        sr.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f - 5f);
+        searchField.onValueChanged.AddListener(text =>
+        {
+            shopSearch = (text ?? "").Trim().ToLowerInvariant();
+            if (contentRect != null) contentRect.anchoredPosition = Vector2.zero;
+            if (rows != null) RefreshRows();
+        });
+
         BuildTabs(panelObject.transform);
         BuildScrollArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f,
                         out contentRect, out scrollRect, out emptyLabel);
@@ -525,9 +538,25 @@ public partial class PixelShop
         RefreshCurrency();
     }
 
+    private TMP_InputField searchField;
+    private string shopSearch = "";
+
+    /// <summary>Does this pack match the search text (its name, description or reward pixel names)?</summary>
+    private bool MatchesSearch(ShopPack pack)
+    {
+        if (shopSearch.Length == 0) return true;
+        if ((pack.displayName ?? "").ToLowerInvariant().Contains(shopSearch)) return true;
+        if ((ResolveDescription(pack) ?? "").ToLowerInvariant().Contains(shopSearch)) return true;
+        if (pack.rewardTiers != null)
+            foreach (PixelClicker.PixelTier t in pack.rewardTiers)
+                if (t != null && (t.displayName ?? "").ToLowerInvariant().Contains(shopSearch)) return true;
+        return false;
+    }
+
     public void SelectTab(ShopTab tab)
     {
         if (tab == ShopTab.Automatic) tab = ShopTab.Pixels;
+        if (shopSearch.Length > 0) { shopSearch = ""; if (searchField != null) searchField.SetTextWithoutNotify(""); }
         currentTab = tab;
         if (contentRect != null) contentRect.anchoredPosition = Vector2.zero;
         if (scrollRect != null) scrollRect.StopMovement();
@@ -857,11 +886,12 @@ public partial class PixelShop
         int visibleCount = 0, subVisibleCount = 0;
 
         // Tab buttons: highlight the open one.
+        bool searching = shopSearch.Length > 0;
         if (tabImages != null)
         {
             ShopTab[] order = { ShopTab.Pixels, ShopTab.Upgrades, ShopTab.Consumables, ShopTab.Minigames };
             for (int t = 0; t < tabImages.Length; t++)
-                tabImages[t].color = order[t] == currentTab ? tabActiveColor : tabInactiveColor;
+                tabImages[t].color = !searching && order[t] == currentTab ? tabActiveColor : tabInactiveColor;
         }
 
         // The upgrades window only makes sense while its pack is owned.
@@ -872,14 +902,14 @@ public partial class PixelShop
         foreach (var pair in trackers)
         {
             PixelMinigame m = pair.Key;
-            bool show = showMinigameTrackersInShop && currentTab == ShopTab.Minigames && m != null &&
+            bool show = !searching && showMinigameTrackersInShop && currentTab == ShopTab.Minigames && m != null &&
                         (m.Running || m.TrackerCount > 0d);
             PlaceTracker(pair.Value, show, m != null ? m.TrackerCount : 0d, m != null ? m.TrackerGoal : 1d,
                          ref y, ref visibleCount);
         }
 
         // Upgrades tab: the "Upgrades | Pixel" sub-tab buttons come first.
-        bool onUpgrades = currentTab == ShopTab.Upgrades;
+        bool onUpgrades = !searching && currentTab == ShopTab.Upgrades;
         if (subTabRow != null)
         {
             if (subTabRow.gameObject.activeSelf != onUpgrades) subTabRow.gameObject.SetActive(onUpgrades);
@@ -899,7 +929,7 @@ public partial class PixelShop
         foreach (Button oldHeader in sectionHeaders) if (oldHeader.gameObject.activeSelf) oldHeader.gameObject.SetActive(false);
         int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
         for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
-        bool grouped = currentTab == ShopTab.Pixels;
+        bool grouped = !searching && currentTab == ShopTab.Pixels;
         if (grouped) System.Array.Sort(packOrder, (a, b) => { int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b])); return d != 0 ? d : a.CompareTo(b); });
         int lastSection = -1;
 
@@ -916,7 +946,7 @@ public partial class PixelShop
             bool listed = IsPackRequirementMet(i) || showLockedPacks || HasPack(i);
             bool visible = child
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
-                : TabOf(pack) == currentTab && listed && showGeneral && !HiddenAsPurchased(i);
+                : (searching ? MatchesSearch(pack) : TabOf(pack) == currentTab && showGeneral) && listed && !HiddenAsPurchased(i);
 
             if (visible && grouped && !child)
             {
@@ -976,7 +1006,7 @@ public partial class PixelShop
         }
 
         // Consumables tab: the two purchase cards replace the scrolling list.
-        if (consumables != null) RefreshConsumablesTab(currentTab == ShopTab.Consumables);
+        if (consumables != null) RefreshConsumablesTab(!searching && currentTab == ShopTab.Consumables);
 
         // Upgrades > Value: one row per unlocked pixel type, paid for with that pixel's own currency.
         EnsureValueRows();
