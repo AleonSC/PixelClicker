@@ -237,6 +237,9 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
     [SerializeField] private string popupsLabel = "Number popups (+N)";
     [SerializeField] private string popupSizeLabel = "Popup size";
+    [Tooltip("Label of the Settings choice for the small click particle effects (Off / Light / Normal).")]
+    [SerializeField] private string clickFxLabel = "Click effects";
+
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
@@ -1711,6 +1714,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
         AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
+        AddChoiceRow(list, clickFxLabel, PixelBasicFx.LevelNames, () => PixelBasicFx.Level, v => PixelBasicFx.Level = v, ref y);
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);

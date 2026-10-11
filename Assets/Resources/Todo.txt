@@ -11,3 +11,5 @@
 [x] Solar pixel makes Seed pixels grow faster (old Solar pixels near a sprout speed it up)
 [x] Rework the Seed pixel's visuals and mechanics (shell, sprout, random grown pixel)
 [x] Farmer visitor that sells pixel seeds
+[ ] Combo tiers change the click particle effects of the early pixels (e.g. more / brighter pops as the combo tier rises).
+[ ] Skill system: swappable base-cube packs (Prospector = mining XP); the shell of the system is built, the XP / perks / spawn swap are not.

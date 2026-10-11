@@ -494,6 +494,13 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How fast other old pixels inside the radiation age, in seconds of age per real second. 0 = 40 (a pixel with a minute left is gone in about a second and a half).")]
     [SerializeField] private float nuclearAgeRate = 0f;
 
+    [Header("Early Pixel Click Effects")]
+    [Tooltip("Tick to turn off the small particle pops on the early pixels (White, Gray, Black, Red, Green, Blue, Glass, Luminescent). Players can also change them in Settings > Interface > Click effects.")]
+    [SerializeField] private bool disableClickPops = false;
+
+    [Tooltip("How strong the click pops are (0 = 1). 0.5 = half as many particles, 2 = twice as many.")]
+    [SerializeField] private float clickPopStrength = 0f;
+
     [Header("Fire Pixel / Prospector Ores")]
     [Tooltip("Tick to turn off the Fire pixel's burst of flames when it is clicked and its burning old pixels (the pixel itself stays).")]
     [SerializeField] private bool disableFireFx = false;
@@ -1577,6 +1584,7 @@ public class PixelClicker : MonoBehaviour
                 hitPunchTimer = hitPunchDuration;
                 SetLiveDamage(tier, hitsOnCurrentPixel);
                 PlayClickEffects(tier);
+                if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
                 if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
@@ -1639,6 +1647,7 @@ public class PixelClicker : MonoBehaviour
         }
 
         PlayClickEffects(tier);
+        if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 1f, clickPopStrength);
         if (tier.type == PixelType.Fire && !disableFireFx) FireBurstFx.Play(pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (IsOre(tier.type) && !disableProspectorFx)
