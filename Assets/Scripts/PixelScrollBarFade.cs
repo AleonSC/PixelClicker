@@ -48,6 +48,15 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
         hovering = pressed = false;
     }
 
+    private void OnDisable()
+    {
+        // A list that stops scrolling has its bar switched off, which also stops this script: clear the row fade and the chevron it left behind.
+        fadeAmount = 0f;
+        foreach (CanvasGroup g in rowGroups) if (g != null) g.alpha = 1f;
+        rowsFaded = false;
+        if (chevron != null) chevron.gameObject.SetActive(false);
+    }
+
     private void Update()
     {
         if (group == null) return;
@@ -80,7 +89,7 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
         if (softMask == null || scroll == null || scroll.content == null) return;
 
         RectTransform view = scroll.viewport != null ? scroll.viewport : scroll.transform as RectTransform;
-        bool scrolls = scroll.content.rect.height > view.rect.height + 1f;
+        bool scrolls = view.gameObject.activeInHierarchy && scroll.content.rect.height > view.rect.height + 1f;   // a hidden list has no size to judge
         bool more = scrolls && scroll.verticalNormalizedPosition > 0.02f;
         fadeAmount = Mathf.MoveTowards(fadeAmount, more ? 1f : 0f, Time.unscaledDeltaTime / 0.2f);
 
