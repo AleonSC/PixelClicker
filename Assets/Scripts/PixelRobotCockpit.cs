@@ -78,6 +78,7 @@ public partial class PixelRobotWorker
     private bool abducting;
     private Coroutine abductRoutine;
     private int enterFrame;
+    private bool reportedCockpit;
     private readonly object cockpitKey = new object();
 
     private bool CanPilot()
@@ -166,7 +167,29 @@ public partial class PixelRobotWorker
         Piloting = true;
         PixelWindows.Register(cockpitKey, 125, () => Piloting, ExitCockpit);
         enterFrame = Time.frameCount;
+        reportedCockpit = false;
         PixelAudio.Play("ui_click");
+    }
+
+    /// <summary>One-off diagnostic line (editor / dev builds) so a missing or mis-sized cabin can be traced.</summary>
+    private void ReportCockpit()
+    {
+        reportedCockpit = true;
+        System.Text.StringBuilder sb = new System.Text.StringBuilder("UFO cockpit: ");
+        sb.Append("unit=").Append(UnitScale).Append(" pixelBase=").Append(clicker.PixelBaseSize);
+        sb.Append(" rig=").Append(cockpitRig.transform.position).Append(" head=").Append(headT.position);
+        sb.Append(" camMask=").Append(cockpitCamera.cullingMask).Append(" savedMask=").Append(savedMask);
+        sb.Append(" near=").Append(cockpitCamera.nearClipPlane).Append(" far=").Append(cockpitCamera.farClipPlane);
+        sb.Append(" fov=").Append(cockpitCamera.fieldOfView).Append(" camScale=").Append(cockpitCamera.transform.lossyScale);
+        sb.Append(" screen=").Append(screenT != null ? screenT.position.ToString() : "null");
+        Renderer[] rs = cockpitRig.GetComponentsInChildren<Renderer>(true);
+        int on = 0; foreach (Renderer r in rs) if (r.enabled && r.gameObject.activeInHierarchy) on++;
+        sb.Append(" cabinRenderers=").Append(rs.Length).Append(" enabled=").Append(on);
+        if (rs.Length > 0 && rs[0].sharedMaterial != null)
+            sb.Append(" firstMat=").Append(rs[0].sharedMaterial.name).Append(" shader=").Append(rs[0].sharedMaterial.shader != null ? rs[0].sharedMaterial.shader.name : "null");
+        sb.Append(" mainCam=").Append(mainCam != null ? mainCam.name : "null").Append(" mainPos=").Append(mainCam != null ? mainCam.transform.position.ToString() : "-");
+        PixelDebug.Info(sb.ToString(), this);
+        Debug.Log(sb.ToString());
     }
 
     private void ExitCockpit()
@@ -290,6 +313,7 @@ public partial class PixelRobotWorker
         downCamera.transform.SetPositionAndRotation(UnderSide(), Quaternion.Euler(90f, pilotYaw, 0f));
 
         UpdateConsole(playable);
+        if (!reportedCockpit && Time.frameCount > enterFrame + 5) ReportCockpit();
 
         beamWanted = abducting || beamHold > 0f;
         if (beamHold > 0f) beamHold -= dt;
