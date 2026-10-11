@@ -165,8 +165,11 @@ public class PixelCrafting : MonoBehaviour
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "Crafting";
 
-    [Tooltip("Shown until two items are in the boxes. (An older text that says 'from below' is shown as 'from the list on the left'.)")]
-    [SerializeField] private string hintText = "Drag two items from the list on the left into the boxes (or click them). Right-click a box to empty it.";
+    [Tooltip("Tooltip shown while the mouse is over one of the two crafting boxes.")]
+    [SerializeField] private string slotTipText = "Click a material or drag it here to craft. Right click to remove.";
+
+    [Tooltip("Tooltip shown while the mouse is over a material in the list on the left.")]
+    [SerializeField] private string materialTipText = "Click to use in crafting.";
 
     [Tooltip("Shown when the two items don't make anything.")]
     [SerializeField] private string noRecipeText = "These two can't be crafted together.";
@@ -300,6 +303,9 @@ public class PixelCrafting : MonoBehaviour
 
     private class Slot
     {
+        public Outline outline;
+        public TMP_Text emptyMark;
+        public bool hover;
         public RectTransform rect;
         public GameObject iconHost;
         public GameObject icon;
@@ -333,7 +339,7 @@ public class PixelCrafting : MonoBehaviour
     private float RowHeight => cellSize * 0.7f;   // one line of the Materials list
     private RectTransform bodyRect, materialsRect;
     private float bodyHeight;
-    private string HintText => string.IsNullOrEmpty(hintText) ? "" : hintText.Replace("from below", "from the list on the left");
+    private string HintText => "";   // the how-to text now lives in the hover tooltips
     private float fittedHeight = -1f;
     private ScrollRect listScroll;
     private GameObject listBar;
@@ -472,7 +478,9 @@ public class PixelCrafting : MonoBehaviour
         bool othersOpen = PixelWindows.AnyOpenExcept(this);
         if (PixelPop.IsOpen(windowObject) && othersOpen && !otherWindowWasOpen) Close(); // opening any other window closes Crafting
         otherWindowWasOpen = othersOpen;
-        if (!windowObject.activeSelf) return;
+        if (!windowObject.activeSelf) { craftTip = null; if (tipRoot != null && tipRoot.activeSelf) tipRoot.SetActive(false); return; }
+        AnimateSlots();
+        UpdateTip();
 
         refreshTimer -= Time.unscaledDeltaTime;
         if (refreshTimer <= 0f)
@@ -480,6 +488,75 @@ public class PixelCrafting : MonoBehaviour
             refreshTimer = 0.2f;
             Refresh();
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Hover tooltip and the crafting boxes' idle animation
+    // ------------------------------------------------------------------
+
+    private string craftTip;
+    private GameObject tipRoot;
+    private RectTransform tipRect;
+    private TMP_Text tipLabel;
+
+    /// <summary>The empty boxes breathe (a faint plus and a glowing rim); a box under the mouse lights up, a filled one glows steadily.</summary>
+    private void AnimateSlots()
+    {
+        float t = Time.unscaledTime;
+        for (int i = 0; i < slots.Length; i++)
+        {
+            Slot s = slots[i];
+            if (s == null || s.emptyMark == null) continue;
+            bool empty = !s.has;
+            if (s.emptyMark.gameObject.activeSelf != empty) s.emptyMark.gameObject.SetActive(empty);
+            float breathe = 0.5f + 0.5f * Mathf.Sin(t * 2.2f + i * 1.7f);
+            if (empty)
+            {
+                Color m = textColor; m.a = 0.12f + 0.16f * breathe + (s.hover ? 0.2f : 0f);
+                s.emptyMark.color = m;
+                s.emptyMark.rectTransform.localScale = Vector3.one * (1f + 0.06f * breathe);
+            }
+            if (s.outline != null)
+            {
+                Color glow = empty ? new Color(0.4f, 0.8f, 1f) : new Color(0.55f, 1f, 0.6f);
+                glow.a = (empty ? 0.18f + 0.22f * breathe : 0.55f) + (s.hover ? 0.25f : 0f);
+                s.outline.effectColor = glow;
+            }
+        }
+    }
+
+    private void UpdateTip()
+    {
+        if (string.IsNullOrEmpty(craftTip) || dragGhost != null) { if (tipRoot != null && tipRoot.activeSelf) tipRoot.SetActive(false); return; }
+        if (tipRoot == null)
+        {
+            tipRoot = new GameObject("Craft Tip", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            tipRoot.transform.SetParent(canvasRoot.transform, false);
+            tipRoot.GetComponent<CanvasGroup>().blocksRaycasts = false;
+            Image bg = tipRoot.GetComponent<Image>();
+            bg.color = new Color(0.07f, 0.09f, 0.13f, 0.97f);
+            bg.raycastTarget = false;
+            PixelUIKit.StyleBox(bg);
+            tipRect = tipRoot.GetComponent<RectTransform>();
+            tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            tipLabel = MakeLabel(tipRoot.transform, "Text", "", fontSize * 0.75f, TextAlignmentOptions.Center, FontStyles.Normal);
+            tipLabel.raycastTarget = false;
+            tipLabel.rectTransform.anchorMin = Vector2.zero; tipLabel.rectTransform.anchorMax = Vector2.one;
+            tipLabel.rectTransform.offsetMin = new Vector2(14f, 8f); tipLabel.rectTransform.offsetMax = new Vector2(-14f, -8f);
+            tipRoot.transform.SetAsLastSibling();
+        }
+        if (!tipRoot.activeSelf) tipRoot.SetActive(true);
+        tipRoot.transform.SetAsLastSibling();
+        if (tipLabel.text != craftTip) tipLabel.text = craftTip;
+        float width = 380f;
+        float height = Mathf.Ceil(tipLabel.GetPreferredValues(craftTip, width - 28f, 0f).y) + 18f;
+        tipRect.sizeDelta = new Vector2(width, height);
+
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
+        bool rightHalf = local.x > 0f;
+        tipRect.pivot = new Vector2(rightHalf ? 1f : 0f, local.y < -canvasRect.rect.height * 0.25f ? 0f : 1f);
+        tipRect.anchoredPosition = local + new Vector2(rightHalf ? -18f : 18f, tipRect.pivot.y > 0.5f ? -24f : 24f);
     }
 
     // ------------------------------------------------------------------
@@ -550,6 +627,10 @@ public class PixelCrafting : MonoBehaviour
             box.transform.SetParent(body.transform, false);
             Image bi = box.GetComponent<Image>();
             bi.color = slotColor;
+            PixelUIKit.StyleBox(bi, true);   // a sunken, rounded well
+            slot.outline = box.AddComponent<Outline>();
+            slot.outline.effectColor = new Color(0.4f, 0.8f, 1f, 0.3f);
+            slot.outline.effectDistance = new Vector2(2.5f, 2.5f);
             slot.rect = box.GetComponent<RectTransform>();
             slot.rect.anchorMin = slot.rect.anchorMax = slot.rect.pivot = new Vector2(0.5f, 1f);
             slot.rect.sizeDelta = new Vector2(slotSize, slotSize);
@@ -560,6 +641,16 @@ public class PixelCrafting : MonoBehaviour
             {
                 if (e.button == PointerEventData.InputButton.Right) ClearSlot(captured); // right-click empties the box
             };
+
+            // A faint plus in the empty box that breathes, so it reads as somewhere to drop something.
+            slot.emptyMark = MakeLabel(box.transform, "Empty Mark", "+", slotSize * 0.55f, TextAlignmentOptions.Center, FontStyles.Bold);
+            slot.emptyMark.raycastTarget = false;
+            RectTransform emr = slot.emptyMark.rectTransform;
+            emr.anchorMin = Vector2.zero; emr.anchorMax = Vector2.one; emr.offsetMin = emr.offsetMax = Vector2.zero;
+            int slotIndex = i;
+            PixelHoverTip slotHover = box.AddComponent<PixelHoverTip>();
+            slotHover.onEnter = () => { slots[slotIndex].hover = true; craftTip = slotTipText; };
+            slotHover.onExit = () => { slots[slotIndex].hover = false; if (craftTip == slotTipText) craftTip = null; };
 
             slot.iconHost = new GameObject("Icon Host", typeof(RectTransform));
             slot.iconHost.transform.SetParent(box.transform, false);
@@ -1344,6 +1435,10 @@ public class PixelCrafting : MonoBehaviour
         cr.anchorMax = new Vector2(1f, 0.58f);
         cr.offsetMin = new Vector2(icon + 24f, 3f);
         cr.offsetMax = new Vector2(-8f, 0f);
+
+        PixelHoverTip cellHover = go.AddComponent<PixelHoverTip>();
+        cellHover.onEnter = () => { if (!cell.disabled) craftTip = materialTipText; };
+        cellHover.onExit = () => { if (craftTip == materialTipText) craftTip = null; };
 
         PixelCraftDrag drag = go.GetComponent<PixelCraftDrag>();
         drag.onBegin = e => { if (!cell.disabled) BeginDrag(cell.item, e); };

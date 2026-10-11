@@ -1001,7 +1001,7 @@ public class PixelDevTools : MonoBehaviour
         PixelFadeOnIdle fade = selectorRoot.AddComponent<PixelFadeOnIdle>();
         fade.Setup(selectorRoot.GetComponent<CanvasGroup>(), selectorHideSeconds > 0f ? selectorHideSeconds : 2.5f,
                    selectorFadeSeconds > 0f ? selectorFadeSeconds : 0.35f, SelectorActive);
-        fade.hideWhen = () => PixelWindows.AnyOpen() || PixelPauseMenu.IsPaused;
+        fade.hideWhen = () => PixelWindows.AnyOpen() || PixelPauseMenu.IsPaused || (PixelUI.Compact && PixelUI.InventoryOpen);   // the pinned Inventory is not a registered window, so it is checked by hand
     }
 
     /// <summary>The selector counts as 'in use' while the mouse is over it, a drop-down is open or a button is held.</summary>
