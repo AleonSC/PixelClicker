@@ -4,11 +4,12 @@ using UnityEngine;
 /// <summary>
 /// Electric old pixels link up. Every Electric pixel lying around arcs to the nearest placed device (vacuum device, fan, sorter...)
 /// or to a nearer already-linked Electric pixel, so they form chains, within <see cref="linkRange"/>. Electric pixels that
-/// are not near a device still arc to each other in chains of their own. Every pixel that is part of a chain gets
-/// <see cref="chainLifeSeconds"/> extra seconds before it despawns (once per pixel), which helps players gather electricity.
-/// Pixels linked to a device also add <see cref="secondsPerPixel"/> seconds to it (once per pixel) and don't age while linked;
-/// when the device runs out (or is removed) every pixel linked to it ends too. The arcs are drawn as crackling bolts.
-/// Added by PixelClicker.Awake.
+/// are not near a device still arc to each other (just for looks).
+/// Pixels linked to a timed device POWER it: the device runs on batteries, so its countdown pauses while any are linked. Every linked
+/// pixel carries <see cref="pixelCharge"/> charge and the group of a device holds the total; the group drains it
+/// (<see cref="drainPerSecond"/>) one pixel at a time, the OLDEST first, which fizzles out and vanishes when empty. New pixels add to the
+/// total without interrupting the drain. A device holds at most <see cref="maxPerDevice"/> pixels: beyond that the oldest are despawned.
+/// Linked pixels never despawn on their own; they stay when the device ends (they just stop being held). Added by PixelClicker.Awake.
 /// </summary>
 public class PixelElectricLinks : MonoBehaviour
 {
@@ -24,21 +25,25 @@ public class PixelElectricLinks : MonoBehaviour
     [Tooltip("How far (in main-pixel widths) an Electric pixel reaches to link to a device or another linked Electric pixel.")]
     [SerializeField] private float linkRange = 3f;
 
-    [Min(0f)]
-    [Tooltip("Seconds added to a device for every Electric pixel that links to it (each pixel counts once).")]
-    [SerializeField] private float secondsPerPixel = 1f;
+    [Min(1f)]
+    [Tooltip("Charge every Electric pixel brings when it links to a device. A group of 5 holds 5x this.")]
+    [SerializeField] private float pixelCharge = 100f;
 
-    [Min(0f)]
-    [Tooltip("Seconds added to an Electric pixel's despawn timer when it becomes part of a chain of Electric pixels (once per pixel). Chains need no device.")]
-    [SerializeField] private float chainLifeSeconds = 10f;
+    [Min(0.1f)]
+    [Tooltip("Charge the group of a device drains per second while it powers the device (taken from one pixel at a time, the oldest first). With 100 charge per pixel, 25 = 4 seconds of power per pixel.")]
+    [SerializeField] private float drainPerSecond = 25f;
+
+    [Range(0.05f, 0.9f)]
+    [Tooltip("A pixel below this fraction of its charge fizzles: extra sparks and a flickering arc.")]
+    [SerializeField] private float fizzleFraction = 0.3f;
 
     [Min(0.02f)]
     [Tooltip("How often (seconds) the links are recalculated.")]
     [SerializeField] private float scanInterval = 0.15f;
 
     [Min(1)]
-    [Tooltip("At most this many Electric pixels are linked at once.")]
-    [SerializeField] private int maxLinks = 30;
+    [Tooltip("At most this many Electric pixels power one device. When more link up, the OLDEST ones are despawned (out with the old, in with the new).")]
+    [SerializeField] private int maxPerDevice = 30;
 
     [Header("Look")]
     [Tooltip("Colour of the bright centre of each arc.")]
@@ -81,9 +86,11 @@ public class PixelElectricLinks : MonoBehaviour
     }
 
     private readonly Dictionary<Rigidbody, Link> links = new Dictionary<Rigidbody, Link>();
-    private readonly HashSet<Rigidbody> credited = new HashSet<Rigidbody>();      // already added their second to a device
-    private readonly HashSet<Rigidbody> lifeCredited = new HashSet<Rigidbody>();  // already got the chain's extra despawn time
-    private readonly HashSet<PixelPlacedDevice> watched = new HashSet<PixelPlacedDevice>();
+    private const int ScanCeiling = 150;                                          // most pixels linked in one scan (a safety limit)
+    private readonly Dictionary<Rigidbody, float> charge = new Dictionary<Rigidbody, float>();  // charge left in each pixel that ever linked to a device
+    private readonly Dictionary<Rigidbody, int> order = new Dictionary<Rigidbody, int>();       // when it first linked (lower = older)
+    private readonly HashSet<Rigidbody> fizzling = new HashSet<Rigidbody>();
+    private int orderCounter;
     private readonly List<Rigidbody> scratch = new List<Rigidbody>();
     private float scanTimer, redrawTimer;
     private GameObject boltObject;
@@ -112,13 +119,7 @@ public class PixelElectricLinks : MonoBehaviour
             Scan();
         }
 
-        // Pixels linked to a device don't age while linked (chains without a device only get the extra time).
-        foreach (KeyValuePair<Rigidbody, Link> kv in links)
-        {
-            if (kv.Key == null || (kv.Value.device == null && kv.Value.anchor == null)) continue;
-            OldPixelDespawn d = kv.Key.GetComponent<OldPixelDespawn>();
-            if (d != null) d.KeepAlive();
-        }
+        DrainAndHold();
 
         redrawTimer -= Time.unscaledDeltaTime;
         if (redrawTimer <= 0f)
@@ -126,6 +127,56 @@ public class PixelElectricLinks : MonoBehaviour
             redrawTimer = redrawInterval;
             Redraw();
         }
+    }
+
+    /// <summary>Linked pixels don't age; every powered device's group drains its oldest pixel and holds the device's countdown.</summary>
+    private void DrainAndHold()
+    {
+        fizzling.Clear();
+        // Pet-linked pixels never despawn; device-linked ones are held while the device can use power.
+        foreach (KeyValuePair<Rigidbody, Link> kv in links)
+        {
+            if (kv.Key == null) continue;
+            Link l = kv.Value;
+            bool held = l.anchor != null || (l.device != null && !l.device.UsesMode);
+            if (!held) continue;
+            OldPixelDespawn d = kv.Key.GetComponent<OldPixelDespawn>();
+            if (d != null) d.KeepAlive();
+        }
+
+        // One focus pixel per powered device: the oldest member.
+        Dictionary<PixelPlacedDevice, Rigidbody> focus = new Dictionary<PixelPlacedDevice, Rigidbody>();
+        foreach (KeyValuePair<Rigidbody, Link> kv in links)
+        {
+            PixelPlacedDevice dev = kv.Value.device;
+            if (kv.Key == null || dev == null || dev.UsesMode || dev.IsRemoving || !dev.Armed) continue;
+            if (!focus.TryGetValue(dev, out Rigidbody cur) || order[kv.Key] < order[cur]) focus[dev] = kv.Key;
+        }
+        List<Rigidbody> empty = null;
+        foreach (KeyValuePair<PixelPlacedDevice, Rigidbody> kv in focus)
+        {
+            kv.Key.HoldPower();
+            Rigidbody body = kv.Value;
+            float left = charge.TryGetValue(body, out float c) ? c : pixelCharge;
+            left -= drainPerSecond * Time.deltaTime;
+            charge[body] = left;
+            if (left <= pixelCharge * fizzleFraction) fizzling.Add(body);
+            if (left <= 0f) { if (empty == null) empty = new List<Rigidbody>(); empty.Add(body); }
+        }
+        if (empty != null)
+            foreach (Rigidbody body in empty) Dissipate(body);
+    }
+
+    /// <summary>A pixel's charge ran out (or it was pushed out by newer ones): it swells and vanishes.</summary>
+    private void Dissipate(Rigidbody body)
+    {
+        if (body == null) return;
+        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+        if (d != null) d.Begin();
+        links.Remove(body);
+        charge.Remove(body);
+        order.Remove(body);
+        fizzling.Remove(body);
     }
 
     private static Vector3 DeviceAnchor(PixelPlacedDevice d)
@@ -170,9 +221,6 @@ public class PixelElectricLinks : MonoBehaviour
         links.Clear();
         if (scratch.Count == 0) { PruneCredits(); return; }
 
-        foreach (PixelPlacedDevice d in devices)
-            if (watched.Add(d)) d.Ended += OnDeviceEnded;
-
         float range = linkRange * Mathf.Max(0.1f, clicker.PixelBaseSize);
         float rangeSqr = range * range;
 
@@ -181,7 +229,7 @@ public class PixelElectricLinks : MonoBehaviour
         List<Rigidbody> unlinked = new List<Rigidbody>(scratch);
         foreach (PixelPlacedDevice device in devices)
         {
-            while (unlinked.Count > 0 && links.Count < maxLinks)
+            while (unlinked.Count > 0 && links.Count < ScanCeiling)
             {
                 int index = NearestUnlinked(DeviceAnchor(device), null, device, unlinked, previous, rangeSqr);
                 if (index < 0) break;
@@ -192,7 +240,7 @@ public class PixelElectricLinks : MonoBehaviour
                     continue;
                 }
                 Rigidbody tail = Attach(unlinked, index, null, device, device);
-                while (links.Count < maxLinks)
+                while (links.Count < ScanCeiling)
                 {
                     index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
                     if (index < 0) break;
@@ -201,17 +249,17 @@ public class PixelElectricLinks : MonoBehaviour
             }
         }
 
-        // The Electric pet is a perpetual source: daisy chains run out from it to every Electric pixel that fits (up to maxLinks), and
+        // The Electric pet is a perpetual source: daisy chains run out from it to every Electric pixel that fits (up to the scan ceiling), and
         // pixels linked to it never despawn. Devices got their pick of the pixels first.
         if (PixelPets.TryGetActivePetBody(PixelClicker.PixelType.Electric, out Transform petBody))
         {
-            while (unlinked.Count > 0 && links.Count < maxLinks)
+            while (unlinked.Count > 0 && links.Count < ScanCeiling)
             {
                 int index = NearestUnlinked(petBody.position, null, null, unlinked, previous, rangeSqr, petBody);
                 if (index < 0) break;
                 Rigidbody tail = Attach(unlinked, index, null, null, null, petBody, petBody);
                 PetConnected = true;
-                while (links.Count < maxLinks)
+                while (links.Count < ScanCeiling)
                 {
                     index = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
                     if (index < 0) break;
@@ -221,13 +269,11 @@ public class PixelElectricLinks : MonoBehaviour
         }
 
         // Electric pixels out of reach of any device still daisy-chain to each other: a chain grows from both of its ends.
-        List<Rigidbody> chainSeeds = new List<Rigidbody>();
-        while (unlinked.Count > 0 && links.Count < maxLinks)
+        while (unlinked.Count > 0 && links.Count < ScanCeiling)
         {
             Rigidbody seed = unlinked[0], head = seed, tail = seed;
             unlinked.RemoveAt(0);
-            int length = 1;
-            while (links.Count < maxLinks)
+            while (links.Count < ScanCeiling)
             {
                 int tailIndex = NearestUnlinked(tail.position, tail, null, unlinked, previous, rangeSqr);
                 int headIndex = head == tail ? -1 : NearestUnlinked(head.position, head, null, unlinked, previous, rangeSqr);
@@ -236,14 +282,10 @@ public class PixelElectricLinks : MonoBehaviour
                     (unlinked[headIndex].position - head.position).sqrMagnitude < (unlinked[tailIndex].position - tail.position).sqrMagnitude);
                 if (useHead) head = Attach(unlinked, headIndex, head, null, null);
                 else tail = Attach(unlinked, tailIndex, tail, null, null);
-                length++;
             }
-            if (length >= 2) chainSeeds.Add(seed); // a lone pixel is not a chain
         }
 
-        // Everything that is part of a chain (linked to a device or to another Electric pixel) gets extra despawn time, once.
-        foreach (KeyValuePair<Rigidbody, Link> kv in links) GiveChainLife(kv.Key);
-        foreach (Rigidbody seed in chainSeeds) GiveChainLife(seed);
+        EvictOldest();
         PruneCredits();
     }
 
@@ -277,10 +319,10 @@ public class PixelElectricLinks : MonoBehaviour
         links[body] = new Link { body = body, device = root, parentBody = parentBody, parentDevice = parentDevice, parentPoint = point,
                                  anchor = rootAnchor, parentAnchor = parentAnchor };
 
-        if (root != null && credited.Add(body) && secondsPerPixel > 0f)
+        if (root != null)
         {
-            root.AddSeconds(secondsPerPixel); // +1 s for every electric pixel that links up
-            PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f);
+            if (!order.ContainsKey(body)) { order[body] = ++orderCounter; PixelAudio.PlayScaled("pixel_bounce_electric", 0.35f); }
+            if (!charge.ContainsKey(body)) charge[body] = pixelCharge;
         }
         return body;
     }
@@ -297,35 +339,32 @@ public class PixelElectricLinks : MonoBehaviour
         return true;
     }
 
-    private void GiveChainLife(Rigidbody body)
+    /// <summary>A device may be powered by at most maxPerDevice pixels: when more are linked the oldest ones are despawned.</summary>
+    private void EvictOldest()
     {
-        if (body == null || chainLifeSeconds <= 0f || !lifeCredited.Add(body)) return;
-        OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
-        if (d != null) d.AddLifetime(chainLifeSeconds);
+        Dictionary<PixelPlacedDevice, List<Rigidbody>> groups = new Dictionary<PixelPlacedDevice, List<Rigidbody>>();
+        foreach (KeyValuePair<Rigidbody, Link> kv in links)
+        {
+            PixelPlacedDevice dev = kv.Value.device;
+            if (kv.Key == null || dev == null || dev.UsesMode || !order.ContainsKey(kv.Key)) continue;
+            if (!groups.TryGetValue(dev, out List<Rigidbody> list)) groups[dev] = list = new List<Rigidbody>();
+            list.Add(kv.Key);
+        }
+        foreach (KeyValuePair<PixelPlacedDevice, List<Rigidbody>> kv in groups)
+        {
+            int extra = kv.Value.Count - maxPerDevice;
+            if (extra <= 0) continue;
+            kv.Value.Sort((x, y) => order[x].CompareTo(order[y]));
+            for (int i = 0; i < extra; i++) Dissipate(kv.Value[i]);
+        }
     }
 
-    /// <summary>Forgets credits of pixels that no longer exist.</summary>
+    /// <summary>Forgets the charge / order of pixels that no longer exist.</summary>
     private void PruneCredits()
     {
-        credited.RemoveWhere(b => b == null);
-        lifeCredited.RemoveWhere(b => b == null);
-        watched.RemoveWhere(d => d == null);
-    }
-
-    /// <summary>A device ran out: every Electric pixel linked to it ends too.</summary>
-    private void OnDeviceEnded(PixelPlacedDevice device)
-    {
-        watched.Remove(device);
-        List<Rigidbody> ending = new List<Rigidbody>();
-        foreach (KeyValuePair<Rigidbody, Link> kv in links)
-            if (kv.Value.device == device && kv.Key != null) ending.Add(kv.Key);
-        foreach (Rigidbody body in ending)
-        {
-            OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
-            if (d != null) d.Begin();
-            links.Remove(body);
-        }
-        Redraw();
+        List<Rigidbody> dead = null;
+        foreach (Rigidbody b in charge.Keys) if (b == null) { if (dead == null) dead = new List<Rigidbody>(); dead.Add(b); }
+        if (dead != null) foreach (Rigidbody b in dead) { charge.Remove(b); order.Remove(b); }
     }
 
     /// <summary>A little burst of short bright lines where an arc attaches, so the connection reads clearly.</summary>
@@ -370,6 +409,8 @@ public class PixelElectricLinks : MonoBehaviour
         {
             Link link = kv.Value;
             if (kv.Key == null) continue;
+            bool fizzle = fizzling.Contains(kv.Key);
+            if (fizzle && Random.value < 0.45f) continue;   // a fizzling pixel's arc flickers
             Vector3 from = kv.Key.position;
             Vector3 to = link.parentBody != null ? link.parentBody.position
                        : link.parentDevice != null ? DeviceAnchor(link.parentDevice)
@@ -378,6 +419,7 @@ public class PixelElectricLinks : MonoBehaviour
             int segments = Mathf.Clamp(Mathf.CeilToInt(length / (unit * 0.25f)), 3, 8);
             float pixelSize = Mathf.Max(0.05f, kv.Key.transform.lossyScale.x); // the arcs are as thick as the old pixels they join, not the big cube
             PixelBolts.Jagged(builder, from, to, segments, length * arcWander, pixelSize * 0.09f, pixelSize * 0.3f, true, coreColor, glowColor);
+            if (fizzle) Spark(from, pixelSize * 0.9f, pixelSize);
             if (endSparkSize > 0f)
             {
                 Spark(from, pixelSize * endSparkSize * 1.6f, pixelSize);

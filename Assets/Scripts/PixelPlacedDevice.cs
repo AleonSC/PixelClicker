@@ -182,6 +182,14 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         if (!dying && !usesMode) remaining += seconds;
     }
 
+    private float powerUntil = -1f;
+
+    /// <summary>Called every frame by the Electric links while a group of charged Electric pixels powers this device: its countdown pauses (it runs on 'batteries').</summary>
+    public void HoldPower() { powerUntil = Time.time + 0.3f; }
+
+    /// <summary>Is the device being powered by Electric pixels right now (its countdown is paused)?</summary>
+    public bool Powered => Time.time < powerUntil;
+
     /// <summary>Removes the device now (it shrinks away like when its time runs out). No refund.</summary>
     public void RemoveNow()
     {
@@ -225,7 +233,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
             return;
         }
 
-        remaining -= Time.deltaTime;
+        if (!Powered) remaining -= Time.deltaTime;   // powered by Electric pixels: the countdown waits
         if (remaining <= 0f)
         {
             StartCoroutine(ShrinkAway());
@@ -233,7 +241,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         }
 
         OnTick();
-        if (timerText != null) timerText.text = string.Format(timerFormat, Mathf.CeilToInt(remaining));
+        if (timerText != null) timerText.text = string.Format(timerFormat, Mathf.CeilToInt(remaining)) + (Powered ? "\n<color=#7FD4FF>POWERED</color>" : "");
     }
 
     private void LateUpdate()

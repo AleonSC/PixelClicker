@@ -398,3 +398,4 @@
 [2026-10-11 06:40 UTC] Fixed the UFO cockpit camera ending up 10 units above the cabin (its position is now set every frame).
 [2026-10-11 06:41 UTC] Minigames and visitors no longer overlap: only one can have something on screen at a time (Inspector option 'Allow Overlap' on Pixel Minigame Limits restores the old limit).
 [2026-10-11 06:46 UTC] Dev tools: new 'Middle click' drop-down in the on-screen spawn selector; middle-clicking swaps the pixel on the cube for the chosen type at once.
+[2026-10-11 07:08 UTC] Electric pixels now work like batteries: linked pixels pause a device's timer and drain charge (100 each, oldest first, fizzling out), pixels no longer vanish with the device, and a device holds at most 30 (the oldest despawn first); the Electric 'box' idea is on the to-do.
