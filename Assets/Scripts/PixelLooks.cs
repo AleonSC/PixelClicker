@@ -439,8 +439,8 @@ public static class PixelLooks
 
             // Obsidian: sheer polished black metal with white streaks; cracks spread with every click.
             new PixelLook { type = PixelClicker.PixelType.Obsidian, useColor = true, color = Color.white,
-                            metallic = 1f, smoothness = 0.97f, emission = 0.22f, streakTexture = true, damageCracks = true, shine = true, obsidianFx = true,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.55f, outlineStrength = 0.9f },
+                            metallic = 1f, smoothness = 0.97f, streakTexture = true, damageCracks = true, shine = true, obsidianFx = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.03f, outlineShadeOfTier = false, outlineShade = -0.82f, outlineStrength = 0.6f },
 
             // Electric: a faint dark-blue glass box held together by crackling lightning.
             new PixelLook { type = PixelClicker.PixelType.Electric, useColor = true, color = new Color(0.04f, 0.12f, 0.28f, 0.22f),

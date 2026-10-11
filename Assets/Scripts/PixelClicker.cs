@@ -1429,6 +1429,17 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 29;
         }
 
+        if (looksVersion < 31)
+        {
+            // Obsidian: natural black glass (no violet rim or glow); the look is replaced once more.
+            PixelLook def31 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Obsidian);
+            System.Collections.Generic.List<PixelLook> list31 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            int at31 = list31.FindIndex(l => l != null && l.type == PixelType.Obsidian);
+            if (def31 != null) { if (at31 >= 0) list31[at31] = def31; else list31.Add(def31); }
+            looks = list31.ToArray();
+            looksVersion = 31;
+        }
+
         if (looksVersion < 30)
         {
             // Obsidian got a fancier look (violet glow, light sweep, sparks): replace the saved one with the new default.
