@@ -19,6 +19,26 @@ public class PixelPop : MonoBehaviour
     private Mode mode = Mode.Idle;
     private float t;
     private GameObject hideTarget;
+    private float fit = 1f;   // < 1 when a fixed-size window is bigger than the room between the black bars (high UI scale): it is shrunk to fit
+
+    /// <summary>
+    /// The scale that makes a fixed-size window fit on screen (between the black bars, inside the canvas width). Stretched windows
+    /// (anchored to both top and bottom) are left alone: they already follow the screen.
+    /// </summary>
+    private float ComputeFit()
+    {
+        RectTransform rt = transform as RectTransform;
+        if (rt == null || !Mathf.Approximately(rt.anchorMin.y, rt.anchorMax.y) || !Mathf.Approximately(rt.anchorMin.x, rt.anchorMax.x)) return 1f;
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) return 1f;
+        RectTransform root = canvas.rootCanvas.transform as RectTransform;
+        if (root == null) return 1f;
+        float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight * 2f : 0f;
+        float availH = root.rect.height - bars, availW = root.rect.width - 20f;
+        Vector2 size = rt.rect.size;
+        if (size.x < 1f || size.y < 1f || availH < 50f) return 1f;
+        return Mathf.Clamp(Mathf.Min(1f, availH / size.y, availW / size.x), 0.4f, 1f);
+    }
 
     /// <summary>True while the window is shown and not on its way out.</summary>
     public static bool IsOpen(GameObject go)
@@ -58,11 +78,19 @@ public class PixelPop : MonoBehaviour
         transform.localScale = Vector3.one;
     }
 
+    private void LateUpdate()
+    {
+        if (mode != Mode.Idle) return;
+        float f = ComputeFit();
+        if (!Mathf.Approximately(f, fit) || !Mathf.Approximately(transform.localScale.x, f)) { fit = f; transform.localScale = Vector3.one * f; }
+    }
+
     private void StartGrow()
     {
         mode = Mode.Grow;
         t = 0f;
         hideTarget = null;
+        fit = ComputeFit();
         transform.localScale = Vector3.one * smallScale;
     }
 
@@ -76,13 +104,13 @@ public class PixelPop : MonoBehaviour
             float k = Mathf.Clamp01(t / Mathf.Max(0.01f, growSeconds));
             float c = 1.4f;                                   // gentle overshoot, then settles
             float back = 1f + (c + 1f) * Mathf.Pow(k - 1f, 3f) + c * Mathf.Pow(k - 1f, 2f);
-            transform.localScale = Vector3.one * Mathf.Max(smallScale, Mathf.Lerp(smallScale, 1f, back));
-            if (k >= 1f) { mode = Mode.Idle; transform.localScale = Vector3.one; }
+            transform.localScale = Vector3.one * Mathf.Max(smallScale, Mathf.Lerp(smallScale, fit, back));
+            if (k >= 1f) { mode = Mode.Idle; transform.localScale = Vector3.one * fit; }
         }
         else
         {
             float k = Mathf.Clamp01(t / Mathf.Max(0.01f, shrinkSeconds));
-            transform.localScale = Vector3.one * Mathf.Lerp(1f, smallScale, k * k);
+            transform.localScale = Vector3.one * Mathf.Lerp(fit, smallScale, k * k);
             if (k >= 1f)
             {
                 mode = Mode.Idle;
