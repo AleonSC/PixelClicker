@@ -907,7 +907,10 @@ public partial class PixelShop : MonoBehaviour
                                              // The visitors (Wizard, Tinkerer, Pixel Entrepreneur) are no longer bought: Cubie's guide starts them.
                                              || string.Equals(pack.unlocksMinigame, "wizard", StringComparison.OrdinalIgnoreCase)
                                              || string.Equals(pack.unlocksMinigame, "tinkerer", StringComparison.OrdinalIgnoreCase)
-                                             || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase));
+                                             || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase)
+                                             // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
+                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
+                                                 && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water)));
                 if (!pong) continue;
                 System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
                 kept.RemoveAt(i);
@@ -1671,6 +1674,7 @@ public partial class PixelShop : MonoBehaviour
                 foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
                 {
                     if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
+                    if (PixelClicker.IsFarm(reward.type) && reward.type != PixelClicker.PixelType.Dirt) continue;   // and one for the Farmer's Pack
                     PixelHints.Trigger("pixel_" + reward.type);
                 }
 

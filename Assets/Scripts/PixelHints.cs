@@ -191,6 +191,9 @@ public class PixelHints : MonoBehaviour
             case "pixel_Nuclear": return "You unlocked Nuclear Pixels!";
             case "pixel_Treasure": return "You unlocked Treasure Pixels!";
             case "pixel_Copper": return "You unlocked the Prospector's ores!";
+            case "pixel_Dirt": return "You unlocked the Farmer's Pack!";
+            case "pixel_Wood": return "You unlocked Wood Pixels!";
+            case "pixel_Rock": return "You unlocked Rock Pixels!";
             case "dragon_first": return "You found a Dragon Cube!";
             case "pixel_Red": return "You unlocked Red, Green and Blue Pixels!";
             case "bank_hose": return "Hose equipped!";
@@ -244,6 +247,9 @@ public class PixelHints : MonoBehaviour
         H("pixel_Treasure", "Treasure Pixels unlocked! A chest takes a random 1 to 20 clicks to open, and you can't tell how many. The more clicks it took, the bigger the reward - and when it bursts open, a pile of other pixels pours out."),
         H("pixel_Nuclear", "Nuclear Pixels unlocked! (A testing pixel.) Its old pixel is radioactive: every old pixel lying near it despawns almost at once."),
         H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls."),
+        H("pixel_Dirt", "Farmer's Pack unlocked! Eight farm blocks for the Farming skill: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. Switch on Farming mode in the Toggles window (or Train it in the Skills window) to make them replace the basic pixels. Beware of weevils: click them before they eat your sprouts!"),
+        H("pixel_Wood", "Wood Pixels unlocked! A plain block that spawns in every rotation."),
+        H("pixel_Rock", "Rock Pixels unlocked! A plain tough block (two clicks) that spawns in every rotation."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Lead, Zinc and Nickel are tough rocks: hit them a few times to crack them open. A glittering one is a rich vein and pays 5x. The ores do not spawn on their own: turn on Prospector mode in the Toggles window and they spawn in place of the monochrome, RGB, Glass and Luminescent pixels."),
         H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!"),
         H("pixel_Seed", "Seed Pixels unlocked! Old Seed pixels slowly grow bigger and worth more. Vacuum them, hose them up or click a ripe one to harvest."),

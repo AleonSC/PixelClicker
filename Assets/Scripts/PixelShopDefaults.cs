@@ -562,6 +562,91 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Wood Pixel pack (Pixels tab): a basic block that fits every rotation (it is not part of a skill pack).</summary>
+    private static ShopPack CreateWoodPixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Wood Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Wood pixel: a plain wooden block. A basic block that spawns in every rotation, whatever skill you are training.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 300 } },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Wood, displayName = "Wood Pixels",
+                    color = new Color(0.6f, 0.4f, 0.22f, 1f),
+                    amountPerClick = 2,
+                    spawnWeight = 0.7f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>Default Rock Pixel pack (Pixels tab): a basic tough block that fits every rotation.</summary>
+    private static ShopPack CreateRockPixelPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Rock Pixel",
+            tab = ShopTab.Pixels,
+            description = "Adds the Rock pixel: a plain grey rock that takes two clicks to break. A basic block that spawns in every rotation, whatever skill you are training.",
+            requirements = Needs(-1),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.White, amount = 800 },
+                new PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
+            },
+            rewardTiers = new[]
+            {
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Rock, displayName = "Rock Pixels",
+                    color = new Color(0.55f, 0.55f, 0.58f, 1f),
+                    amountPerClick = 4, clicksToCollect = 2,
+                    spawnWeight = 0.5f,
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
+            }
+        };
+    }
+
+    /// <summary>
+    /// Default Farmer's Pack (Pixels tab): a TESTING price (10 White, no requirements). Eight farm blocks for the Farming skill: Dirt, Seed, Water,
+    /// Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles / Skills window), unless a
+    /// Farming skill tree node turned one on as a guest for other rotations.
+    /// </summary>
+    private static ShopPack CreateFarmerPack()
+    {
+        PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
+        return new ShopPack
+        {
+            displayName = "Farmer's Pack",
+            tab = ShopTab.Pixels,
+            description = "TEST: Adds eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles or Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            rewardTiers = new[]
+            {
+                Block(PixelClicker.PixelType.Dirt, "Dirt Pixels", new Color(0.42f, 0.28f, 0.16f, 1f), 1, 1, 1.0f),
+                Block(PixelClicker.PixelType.Seed, "Seed Pixels", new Color(0.55f, 0.38f, 0.18f, 1f), 8, 15, 0.3f),
+                Block(PixelClicker.PixelType.Water, "Water Pixels", new Color(0.3f, 0.62f, 1f, 1f), 1, 3, 0.4f),
+                Block(PixelClicker.PixelType.Fertilizer, "Fertilizer Pixels", new Color(0.5f, 0.66f, 0.25f, 1f), 1, 2, 0.5f),
+                Block(PixelClicker.PixelType.Pollen, "Pollen Pixels", new Color(1f, 0.9f, 0.3f, 1f), 1, 2, 0.4f),
+                Block(PixelClicker.PixelType.Wheat, "Wheat Pixels", new Color(0.93f, 0.76f, 0.3f, 1f), 2, 4, 0.5f),
+                Block(PixelClicker.PixelType.Weevil, "Weevil Pixels", new Color(0.22f, 0.15f, 0.11f, 1f), 2, 3, 0.4f),
+                Block(PixelClicker.PixelType.GoldenFruit, "Golden Fruit Pixels", new Color(1f, 0.82f, 0.22f, 1f), 1, 40, 0.03f),
+            }
+        };
+    }
+
     /// <summary>Default Mirror Pixel pack (Pixels tab): listed after Electric and before Vacuum, needs the Electric pack. Clicking a Mirror also counts as a click on the last other pixel type.</summary>
     private static ShopPack CreateMirrorPixelPack(int requiresElectricIndex)
     {
@@ -906,10 +991,12 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateAutoClickerPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Glass),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
-        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Seed),
-                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSeedPixelPack },
-        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Water),
-                          requires = null, create = i => CreateWaterPixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Wood),
+                          requires = null, create = i => CreateWoodPixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Rock),
+                          requires = null, create = i => CreateRockPixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Dirt),
+                          requires = null, create = i => CreateFarmerPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),
                           requires = null, create = i => CreateFirePixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Nuclear),

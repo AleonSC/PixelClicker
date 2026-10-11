@@ -49,6 +49,23 @@ public class SeedSprout : MonoBehaviour
         }
     }
 
+    /// <summary>A weevil bites a random growing sprout: it withers away. False when there is none to eat.</summary>
+    public static bool EatOne(out Vector3 at)
+    {
+        at = default;
+        System.Collections.Generic.List<SeedSprout> candidates = new System.Collections.Generic.List<SeedSprout>();
+        foreach (SeedSprout s in all)
+            if (s != null && (s.stage == Stage.Growing || s.stage == Stage.Holding)) candidates.Add(s);
+        if (candidates.Count == 0) return false;
+        SeedSprout victim = candidates[Random.Range(0, candidates.Count)];
+        at = victim.transform.position;
+        if (victim.pixel != null) { Destroy(victim.pixel); victim.pixel = null; }
+        if (victim.sunRay != null) victim.sunRay.SetAmount(0f);
+        victim.stage = Stage.Shrinking;
+        victim.stageTime = 0f;
+        return true;
+    }
+
     private float StemTop => unit * sproutScale * PixelLooks.SproutStemTop;
 
     /// <summary>Is a planted (not tumbling or withering) sprout other than 'ignore' within 'radius' of the point (sideways distance)?</summary>
@@ -283,7 +300,10 @@ public class SeedSprout : MonoBehaviour
         bool dragon = PixelClicker.IsDragonCube(clicker.Tiers[tier].type);
         // A Dragon Cube is not a floor pixel to collect later: it is yours the moment it pops off (the pixel that flies out is only for show).
         if (dragon) { clicker.AddCurrency(tier, 1d); PixelDragonFind.Play(tier, at); }
-        clicker.SpawnStoredPixel(tier, dragon ? 0d : amount, at, new Vector3(side.x, Random.Range(2.5f, 4f), side.y));
+        double pay = amount;
+        if (!dragon && clicker.PollenNear(at)) pay *= 2d;   // pollinated: it pays double
+        clicker.SpawnStoredPixel(tier, dragon ? 0d : pay, at, new Vector3(side.x, Random.Range(2.5f, 4f), side.y));
+        PixelSkills.GrewSprout();
         PixelAudio.Play("click");
         SeedDigFx.Play(at, unit, 0.4f);
         PixelStats.Count("seed.grown");

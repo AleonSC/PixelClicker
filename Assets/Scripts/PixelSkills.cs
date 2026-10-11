@@ -38,6 +38,8 @@ public partial class PixelSkills : MonoBehaviour
         public int cost = 1;
         [Tooltip("Off = shown as 'coming soon' (the effect is not built yet).")]
         public bool implemented = false;
+        [Tooltip("A pixel type (name) this node unlocks as a toggle: once bought, that skill-only block can be switched on in the Toggles window so it also spawns in other rotations.")]
+        public string guestType = "";
     }
 
     [Serializable]
@@ -61,6 +63,8 @@ public partial class PixelSkills : MonoBehaviour
         public float baseXp = 100f;
         [Tooltip("Each following level needs this many times more XP than the one before.")]
         public float xpGrowth = 1.6f;
+        [Tooltip("The pixel types this pack puts in. The FIRST one must be unlocked (bought in the Shop) for the pack to be available. They only spawn while the pack is in play, unless turned on as guests.")]
+        public PixelClicker.PixelType[] types = new PixelClicker.PixelType[0];
         public Perk[] perks = new Perk[0];
         [Tooltip("The skill tree: nodes you buy with skill points (one point per level above 1).")]
         public TreeNode[] nodes = new TreeNode[0];
@@ -69,6 +73,7 @@ public partial class PixelSkills : MonoBehaviour
     public const string StandardId = "standard";
     public const string MiningId = "mining";
     public const string OfflineId = "offline";
+    public const string FarmingId = "farming";
 
     [Header("Skill Packs")]
     [Tooltip("The packs, in the order they are listed. Missing built-in ones (by id) are added automatically.")]
@@ -90,7 +95,7 @@ public partial class PixelSkills : MonoBehaviour
     public event Action Changed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; offlineCache = -1; }
+    private static void ResetStatics() { Instance = null; offlineCache = -1; packCache = null; guestCache = null; }
 
     private void Awake()
     {
@@ -131,6 +136,7 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
+                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel },
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Richer veins: a higher chance of a rich vein" },
@@ -138,6 +144,23 @@ public partial class PixelSkills : MonoBehaviour
                     new Perk { level = 6, text = "Prospector's eye: rich veins glitter from further away" },
                     new Perk { level = 8, text = "Motherlode: rich veins pay more" },
                     new Perk { level = 10, text = "Mastery: a small permanent bonus to every pixel" },
+                },
+            });
+        if (!packs.Exists(p => p.id == FarmingId))
+            packs.Insert(Mathf.Min(packs.Count, 2), new SkillPack
+            {
+                id = FarmingId, displayName = "Farming", accent = new Color(0.45f, 0.78f, 0.3f),
+                description = "Swap the basic cubes for eight farm blocks: dirt, seeds, water, fertilizer, pollen, wheat, weevils and golden fruit. Grow sprouts for farming XP.",
+                replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit",
+                xpFrom = "Collecting farm blocks and growing sprouts",
+                unlockHint = "Buy Farmer's Pack in the Shop",
+                baseXp = 100f, xpGrowth = 1.6f,
+                types = new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
+                                PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit },
+                perks = new[]
+                {
+                    new Perk { level = 2, text = "Green thumb: sprouts grow a little faster" },
+                    new Perk { level = 5, text = "Bumper crop: sprouts pay a little more" },
                 },
             });
         if (!packs.Exists(p => p.id == OfflineId))
@@ -155,7 +178,16 @@ public partial class PixelSkills : MonoBehaviour
                 },
             });
         foreach (SkillPack pack in packs)
-            if ((pack.nodes == null || pack.nodes.Length == 0) && (pack.id == MiningId || pack.id == OfflineId)) pack.nodes = DefaultNodes(pack.id);
+        {
+            if (pack.id == MiningId && (pack.types == null || pack.types.Length == 0))
+                pack.types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel };
+            // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
+            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId) continue;
+            System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
+            foreach (TreeNode def in DefaultNodes(pack.id))
+                if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
+            pack.nodes = merged.ToArray();
+        }
     }
 
     private static TreeNode[] DefaultNodes(string id)
@@ -168,6 +200,17 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "eye", displayName = "Prospector's eye", description = "Rich veins glitter from further away.", requires = "veins", row = 2 },
                 new TreeNode { id = "lode", displayName = "Motherlode", description = "Rich veins pay more.", requires = "hands", row = 0, cost = 2 },
                 new TreeNode { id = "mastery", displayName = "Mastery", description = "A small permanent bonus to every pixel.", requires = "eye", row = 2, cost = 2 },
+                new TreeNode { id = "iron", displayName = "Iron samples", description = "Iron Ore can be switched on in the Toggles window to spawn in any rotation.", requires = "lode", row = 0, cost = 2, implemented = true, guestType = "Iron" },
+                new TreeNode { id = "copper", displayName = "Copper samples", description = "Copper Ore can be switched on in the Toggles window to spawn in any rotation.", requires = "mastery", row = 2, cost = 2, implemented = true, guestType = "Copper" },
+            };
+        if (id == FarmingId)
+            return new[]
+            {
+                new TreeNode { id = "seeds", displayName = "Heirloom seeds", description = "Seed blocks can be switched on in the Toggles window to spawn in any rotation.", row = 1, implemented = true, guestType = "Seed" },
+                new TreeNode { id = "rain", displayName = "Rain barrel", description = "Water blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "seeds", row = 0, implemented = true, guestType = "Water" },
+                new TreeNode { id = "compost", displayName = "Compost heap", description = "Fertilizer blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "seeds", row = 2, implemented = true, guestType = "Fertilizer" },
+                new TreeNode { id = "hive", displayName = "Beehive", description = "Pollen blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "rain", row = 0, cost = 2, implemented = true, guestType = "Pollen" },
+                new TreeNode { id = "thumb", displayName = "Green thumb", description = "Sprouts grow a little faster.", requires = "compost", row = 2, cost = 2 },
             };
         return new[]
         {
@@ -185,13 +228,23 @@ public partial class PixelSkills : MonoBehaviour
     {
         if (pack == null) return false;
         if (pack.id == StandardId) return true;
-        if (pack.id == MiningId) return PixelProspector.AnyOreUnlocked(clicker);
         if (pack.id == OfflineId)
         {
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
             return autoClicker != null && autoClicker.Running;   // needs the Auto Clicker, like offline progress itself
         }
+        if (pack.types != null && pack.types.Length > 0 && clicker != null) return clicker.IsUnlocked(pack.types[0]);   // bought in the Shop
         return false;
+    }
+
+    /// <summary>Is at least one pixel pack (Mining, Farming...) bought? The Toggles window shows its pack switches then.</summary>
+    public bool AnyPackAvailable
+    {
+        get
+        {
+            foreach (SkillPack p in packs) if (p.id != StandardId && p.id != OfflineId && IsAvailable(p)) return true;
+            return false;
+        }
     }
 
     /// <summary>True once there is something besides Standard to choose (the Skills tab appears then).</summary>
@@ -205,8 +258,112 @@ public partial class PixelSkills : MonoBehaviour
         }
     }
 
-    /// <summary>The pack in use. Mining IS Prospector mode, so the Toggles switch and the Skills window never disagree.</summary>
-    public string ActiveId => PixelProspector.Setting && IsAvailable(Find(MiningId)) ? MiningId : StandardId;
+    private const string PackPref = "PixelClicker.Setting.SkillPack";
+    private static string packCache;
+
+    /// <summary>The pixel pack the player chose (saved per save file; '' / 'standard' = the usual rotation). Older saves with Prospector mode on read as Mining.</summary>
+    public static string PackSetting
+    {
+        get
+        {
+            if (packCache == null)
+            {
+                packCache = PlayerPrefs.GetString(PackPref, "");
+                if (string.IsNullOrEmpty(packCache) && PlayerPrefs.GetInt("PixelClicker.Setting.Prospector", 0) != 0) packCache = MiningId;
+            }
+            return packCache;
+        }
+        set { packCache = value ?? ""; PlayerPrefs.SetString(PackPref, packCache); }
+    }
+
+    /// <summary>The pixel pack in play (a bought, chosen pack, else Standard). The Toggles switches and the Skills window share this one setting.</summary>
+    public string ActiveId
+    {
+        get
+        {
+            string id = PackSetting;
+            SkillPack p = Find(id);
+            return p != null && id != StandardId && id != OfflineId && IsAvailable(p) ? id : StandardId;
+        }
+    }
+
+    /// <summary>The pack that owns a pixel type (null for the basic pixels and everything outside the skill packs).</summary>
+    public SkillPack PackOfType(PixelClicker.PixelType type)
+    {
+        foreach (SkillPack p in packs)
+            if (p.types != null && Array.IndexOf(p.types, type) >= 0) return p;
+        return null;
+    }
+
+    /// <summary>Is this pixel type kept out of the random spawns right now? Pack pixels only spawn while their pack is in play (or as guests); the basic pixels step aside while a pack is in play.</summary>
+    public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
+    {
+        PixelSkills s = Instance;
+        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type);
+        SkillPack owner = s.PackOfType(type);
+        string active = s.ActiveId;
+        if (owner != null) return owner.id != active && !s.GuestOn(type);
+        return active != StandardId && PixelProspector.IsBase(type);
+    }
+
+    // ---- Guests: skill-only blocks a skill tree node lets the player switch on for other rotations ----
+
+    private const string GuestPref = "PixelClicker.Setting.SkillGuests";
+    private static System.Collections.Generic.HashSet<string> guestCache;
+
+    private static System.Collections.Generic.HashSet<string> GuestSet
+    {
+        get
+        {
+            if (guestCache == null)
+            {
+                guestCache = new System.Collections.Generic.HashSet<string>();
+                foreach (string part in PlayerPrefs.GetString(GuestPref, "").Split(',')) if (part.Length > 0) guestCache.Add(part);
+            }
+            return guestCache;
+        }
+    }
+
+    /// <summary>Has a skill tree node that unlocks this block as a toggle been bought?</summary>
+    public bool GuestUnlocked(PixelClicker.PixelType type)
+    {
+        string name = type.ToString();
+        foreach (SkillPack p in packs)
+            if (p.nodes != null)
+                foreach (TreeNode n in p.nodes)
+                    if (n.guestType == name && NodeUnlocked(p, n)) return true;
+        return false;
+    }
+
+    /// <summary>Is the guest block unlocked and switched on (it spawns in every rotation)?</summary>
+    public bool GuestOn(PixelClicker.PixelType type) => GuestSet.Contains(type.ToString()) && GuestUnlocked(type);
+
+    public void SetGuest(PixelClicker.PixelType type, bool on)
+    {
+        if (on) GuestSet.Add(type.ToString()); else GuestSet.Remove(type.ToString());
+        PlayerPrefs.SetString(GuestPref, string.Join(",", GuestSet));
+        Changed?.Invoke();
+    }
+
+    /// <summary>The guest blocks the player has unlocked (shown as switches in the Toggles window).</summary>
+    public System.Collections.Generic.List<PixelClicker.PixelType> UnlockedGuests()
+    {
+        System.Collections.Generic.List<PixelClicker.PixelType> list = new System.Collections.Generic.List<PixelClicker.PixelType>();
+        foreach (SkillPack p in packs)
+            if (p.nodes != null)
+                foreach (TreeNode n in p.nodes)
+                    if (!string.IsNullOrEmpty(n.guestType) && NodeUnlocked(p, n) && Enum.TryParse(n.guestType, out PixelClicker.PixelType t) && !list.Contains(t)) list.Add(t);
+        return list;
+    }
+
+    /// <summary>Growing a sprout in the Farming pack earns farming XP (called when a sprout pops its pixel off).</summary>
+    public static void GrewSprout()
+    {
+        PixelSkills s = Instance;
+        if (s == null) return;
+        SkillPack farming = s.Find(FarmingId);
+        if (farming != null && s.TrainingId == FarmingId) s.AddXp(farming, 2d);
+    }
 
     // ---- Offline Progression mode: you play with some pack's pixels but only the Offline Progression skill earns XP ----
 
@@ -225,7 +382,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>
-    public static void ReloadSettingsFromPrefs() { offlineCache = -1; }
+    public static void ReloadSettingsFromPrefs() { offlineCache = -1; packCache = null; guestCache = null; }
 
     /// <summary>The skill that earns the XP right now: Offline Progression while it is chosen, else the pack in play.</summary>
     public string TrainingId => OfflineMode && IsAvailable(Find(OfflineId)) ? OfflineId : ActiveId;
@@ -240,7 +397,7 @@ public partial class PixelSkills : MonoBehaviour
         else
         {
             if (OfflineMode) { OfflineMode = false; changed = true; }
-            if (id != ActiveId) { PixelProspector.Setting = id == MiningId; changed = true; }   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected
+            if (id != ActiveId) { PackSetting = id; changed = true; }   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected
         }
         if (changed) Changed?.Invoke();
     }
@@ -250,7 +407,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         SkillPack pack = Find(id);
         if (pack == null || pack.id == OfflineId || !IsAvailable(pack) || id == ActiveId) return;
-        PixelProspector.Setting = id == MiningId;
+        PackSetting = id;
         Changed?.Invoke();
     }
 
@@ -327,7 +484,8 @@ public partial class PixelSkills : MonoBehaviour
     private SkillPack PackForTier(int tierIndex)
     {
         if (clicker == null || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return null;
-        return PixelClicker.IsOre(clicker.Tiers[tierIndex].type) ? Find(MiningId) : null;
+        SkillPack owner = PackOfType(clicker.Tiers[tierIndex].type);
+        return owner != null && owner.id != StandardId ? owner : null;
     }
 
     private void OnCollected(int tierIndex, double amount, bool automatic)

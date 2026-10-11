@@ -17,12 +17,12 @@ public static class PixelProspector
     /// <summary>The player's switch: the ores replace the basic pixels while it is on (and at least one ore is unlocked).</summary>
     public static bool Setting
     {
-        get
+        get => PixelSkills.PackSetting == PixelSkills.MiningId;   // one shared choice of pixel pack (see PixelSkills)
+        set
         {
-            if (cache < 0) cache = PlayerPrefs.GetInt(Pref, 0) != 0 ? 1 : 0;
-            return cache != 0;
+            if (value) PixelSkills.PackSetting = PixelSkills.MiningId;
+            else if (PixelSkills.PackSetting == PixelSkills.MiningId) PixelSkills.PackSetting = PixelSkills.StandardId;
         }
-        set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); }
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>

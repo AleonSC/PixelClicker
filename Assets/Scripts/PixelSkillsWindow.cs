@@ -440,7 +440,8 @@ public partial class PixelSkills
         bool own = NodeUnlocked(p, sel);
         TreeNode par = ParentOf(p, sel);
         string soon = sel.implemented ? "" : "  <color=#ffffff80>(coming soon)</color>";
-        PixelUIKit.SetText(nodeInfoLabel, "<b>" + sel.displayName + "</b>" + soon + "\n" + sel.description);
+        string guest = string.IsNullOrEmpty(sel.guestType) ? "" : "\n<color=#9be08c>Unlocks " + sel.guestType + " as a toggle for every rotation (Toggles window).</color>";
+        PixelUIKit.SetText(nodeInfoLabel, "<b>" + sel.displayName + "</b>" + soon + "\n" + sel.description + guest);
         unlockButton.gameObject.SetActive(true);
         bool canUnlock = CanUnlock(p, sel);
         unlockButton.interactable = canUnlock;

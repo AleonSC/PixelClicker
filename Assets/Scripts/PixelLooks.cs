@@ -464,6 +464,19 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Treasure, useColor = true, color = Color.white, metallic = 0.25f, smoothness = 0.4f,
                             damageCracks = true, chestTexture = true },
 
+            // Wood and Rock: plain basic blocks that fit any rotation.
+            new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = new Color(0.6f, 0.4f, 0.22f, 1f), metallic = 0f, smoothness = 0.2f, basicSurface = PixelLook.BasicSurface.Brushed },
+            new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = new Color(0.55f, 0.55f, 0.58f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Mosaic },
+
+            // The farming blocks.
+            new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = new Color(0.42f, 0.28f, 0.16f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain },
+            new PixelLook { type = PixelClicker.PixelType.Fertilizer, useColor = true, color = new Color(0.5f, 0.66f, 0.25f, 1f), metallic = 0f, smoothness = 0.15f, emission = 0.12f, basicSurface = PixelLook.BasicSurface.Grain },
+            new PixelLook { type = PixelClicker.PixelType.Pollen, useColor = true, color = new Color(1f, 0.9f, 0.3f, 0.8f), forceTranslucent = true, metallic = 0f, smoothness = 0.3f, emission = 0.5f,
+                            customPhysics = true, bounce = 0.6f, friction = 0.4f, gravityMultiplier = 0.3f },
+            new PixelLook { type = PixelClicker.PixelType.Wheat, useColor = true, color = new Color(0.93f, 0.76f, 0.3f, 1f), metallic = 0.1f, smoothness = 0.35f, basicSurface = PixelLook.BasicSurface.Brushed },
+            new PixelLook { type = PixelClicker.PixelType.Weevil, useColor = true, color = new Color(0.22f, 0.15f, 0.11f, 1f), metallic = 0.05f, smoothness = 0.5f, basicSurface = PixelLook.BasicSurface.Mosaic },
+            new PixelLook { type = PixelClicker.PixelType.GoldenFruit, useColor = true, color = new Color(1f, 0.82f, 0.22f, 1f), metallic = 0.9f, smoothness = 0.9f, emission = 0.6f, shine = true },
+
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
                             forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true },

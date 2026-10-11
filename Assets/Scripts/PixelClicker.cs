@@ -79,13 +79,24 @@ public class PixelClicker : MonoBehaviour
         Nickel = 31,
         Treasure = 32,
         Nuclear = 33,
+        Wood = 34,
+        Rock = 35,
+        Dirt = 36,
+        Fertilizer = 37,
+        Pollen = 38,
+        Wheat = 39,
+        Weevil = 40,
+        GoldenFruit = 41,
     }
+
+    /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
+    public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
 
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
     public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.GoldenFruit);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1382,6 +1393,21 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 27;
         }
 
+        if (looksVersion < 28)
+        {
+            // The Wood, Rock and farming looks are new.
+            System.Collections.Generic.List<PixelLook> list28 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults28 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Wood, PixelType.Rock, PixelType.Dirt, PixelType.Fertilizer, PixelType.Pollen, PixelType.Wheat, PixelType.Weevil, PixelType.GoldenFruit })
+            {
+                if (PixelLooks.Find(list28.ToArray(), t) != null) continue;
+                PixelLook def = PixelLooks.Find(defaults28, t);
+                if (def != null) list28.Add(def);
+            }
+            looks = list28.ToArray();
+            looksVersion = 28;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1469,6 +1495,7 @@ public class PixelClicker : MonoBehaviour
 
         CleanOldPixels();
         UpdateSolarClusters();
+        if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) UpdateWeevil();
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
@@ -1613,6 +1640,7 @@ public class PixelClicker : MonoBehaviour
 
         double basePayout = tier.amountPerClick * breaks;
         if (tier.randomClicks) basePayout *= TreasureMultiplier(need);   // the more clicks the chest took, the bigger the reward
+        if (tier.type == PixelType.Wheat) basePayout *= 1d + Mathf.Min(wheatMaxSprouts > 0 ? wheatMaxSprouts : 8, SeedSprout.Count) * (wheatPerSprout > 0f ? wheatPerSprout : 0.25f);   // a busy field feeds the wheat
         bool richBreak = liveRich && IsOre(tier.type);
         if (richBreak) basePayout *= richVeinMultiplier > 0f ? richVeinMultiplier : 5f;   // a rich vein pays big
         if (tier.randomPayout)
@@ -1652,6 +1680,7 @@ public class PixelClicker : MonoBehaviour
         if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 1f, clickPopStrength);
         if (tier.type == PixelType.Fire && !disableFireFx) FireBurstFx.Play(pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
+        if (tier.type == PixelType.Fertilizer) Fertilize();
         if (IsOre(tier.type) && !disableProspectorFx)
         {
             OreFx.Break(pixelTransform.position, PixelBaseSize, tier.color, richBreak);
@@ -2123,19 +2152,18 @@ public class PixelClicker : MonoBehaviour
             return pick;
         }
 
-        // Prospector mode: the ores replace the basic pixels (White..Blue, Glass) in what spawns.
-        bool prospecting = PixelProspector.Setting && PixelProspector.AnyOreUnlocked(this);
-
+        // A skill pack in play (Mining, Farming): its pixels replace the basic pixels (White..Blue, Glass, Luminescent) in what spawns; the pixels of
+        // packs that are not in play stay out unless the player turned them on as guests (a skill tree unlock).
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn && !PixelProspector.LeftOut(tiers[i].type, prospecting)) total += SpawnWeightOf(i);
+            if (tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
         float roll = UnityEngine.Random.value * total;
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (!tiers[i].CanSpawn || PixelProspector.LeftOut(tiers[i].type, prospecting)) continue;
+            if (!tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) continue;
             roll -= SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }
@@ -2300,6 +2328,10 @@ public class PixelClicker : MonoBehaviour
         int singularity = IndexOf(PixelType.Singularity);
         if (singularity >= 0 && tiers[singularity].unlocked && UnityEngine.Random.value < seedSingularityChance) return singularity;
 
+        // Golden Fruit: a rare treat from a fully grown sprout (once that type is unlocked).
+        int fruit = IndexOf(PixelType.GoldenFruit);
+        if (fruit >= 0 && tiers[fruit].unlocked && UnityEngine.Random.value < (fruitSproutChance > 0f ? fruitSproutChance : 0.03f)) return fruit;
+
         // Rarer types (lower spawn weight) are likelier: chance ~ 1 / weight^bias.
         System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
         System.Collections.Generic.List<float> weights = new System.Collections.Generic.List<float>();
@@ -2326,17 +2358,81 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Extra growth speed (0 = none) a sprout or Seed pet at 'position' gets from old Solar pixels lying close to it.</summary>
     public float SolarSeedBoostAt(Vector3 position)
     {
-        int solar = IndexOf(PixelType.Solar);
-        if (solar < 0 || seedSolarBoostEach <= 0f) return 0f;
+        int solar = IndexOf(PixelType.Solar), dirt = IndexOf(PixelType.Dirt);
+        float solarEach = solar >= 0 ? seedSolarBoostEach : 0f;
+        float dirtEach = dirt >= 0 ? (dirtSeedBoost > 0f ? dirtSeedBoost : 0.2f) : 0f;   // old Dirt pixels help sprouts a little too
+        if (solarEach <= 0f && dirtEach <= 0f) return 0f;
         float reach = OldPixelWorldSize * seedSolarReach, reachSqr = reach * reach;
-        int near = 0;
+        float boost = 0f;
         foreach (Rigidbody rb in oldPixels)
         {
             if (rb == null || (rb.position - position).sqrMagnitude > reachSqr) continue;
             OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
-            if (info != null && info.tierIndex == solar) near++;
+            if (info == null) continue;
+            if (info.tierIndex == solar) boost += solarEach;
+            else if (info.tierIndex == dirt) boost += dirtEach;
         }
-        return Mathf.Min(seedSolarBoostMax, near * seedSolarBoostEach);
+        return Mathf.Min(seedSolarBoostMax, boost);
+    }
+
+    // ---- Farming pixels ----
+
+    [Header("Farming Pixels")]
+    [Tooltip("Growth speed an old Dirt pixel near a sprout adds (counts towards the same cap as Solar pixels). 0 = 0.2.")]
+    [SerializeField] private float dirtSeedBoost = 0f;
+
+    [Tooltip("Wheat: extra payout per growing sprout when you click it (0.25 = +25% each). 0 = 0.25.")]
+    [SerializeField] private float wheatPerSprout = 0f;
+
+    [Tooltip("Wheat: at most this many sprouts count. 0 = 8.")]
+    [SerializeField] private int wheatMaxSprouts = 0;
+
+    [Tooltip("Pollen: an old Pollen pixel within this many main-pixel widths of a sprout makes its grown pixel pay double. 0 = 3.")]
+    [SerializeField] private float pollenReachPixels = 0f;
+
+    [Tooltip("Golden Fruit: chance that a sprout grows a Golden Fruit instead of a random pixel (once Golden Fruit is unlocked). 0 = 3%.")]
+    [SerializeField] private float fruitSproutChance = 0f;
+
+    [Tooltip("Weevil: seconds between bites while a Weevil is on the cube (each bite eats one growing sprout until you click it). 0 = 2.5.")]
+    [SerializeField] private float weevilBiteSeconds = 0f;
+
+    private float weevilTimer;
+    private bool weevilTold;
+
+    /// <summary>Is an old Pollen pixel lying close to this spot (a sprout popping off here pays double)?</summary>
+    public bool PollenNear(Vector3 position)
+    {
+        int pollen = IndexOf(PixelType.Pollen);
+        if (pollen < 0) return false;
+        float reach = PixelBaseSize * (pollenReachPixels > 0f ? pollenReachPixels : 3f), reachSqr = reach * reach;
+        foreach (Rigidbody rb in oldPixels)
+        {
+            if (rb == null || (rb.position - position).sqrMagnitude > reachSqr) continue;
+            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            if (info != null && info.tierIndex == pollen) return true;
+        }
+        return false;
+    }
+
+    /// <summary>While a Weevil is the pixel on the cube it bites a growing sprout every few seconds until you click it.</summary>
+    private void UpdateWeevil()
+    {
+        if (!IsValidTier(currentTierIndex) || tiers[currentTierIndex].type != PixelType.Weevil || isSpawning || pixelTransform == null) { weevilTimer = 0f; return; }
+        weevilTimer += Time.deltaTime;
+        if (weevilTimer < (weevilBiteSeconds > 0f ? weevilBiteSeconds : 2.5f)) return;
+        weevilTimer = 0f;
+        if (SeedSprout.EatOne(out Vector3 at))
+        {
+            SeedDigFx.Play(at, PixelBaseSize * 0.6f, 0.5f);
+            if (!weevilTold) { weevilTold = true; PixelHints.Announce("A weevil is eating your sprouts! Click it!"); }
+        }
+    }
+
+    /// <summary>Fertilizer: every growing sprout and Seed pet on the field jumps ahead at once.</summary>
+    private void Fertilize()
+    {
+        WaterSplashAt(pixelTransform.position, 1000f);
+        SeedDigFx.Play(pixelTransform.position, PixelBaseSize, 0.8f);
     }
 
     /// <summary>How long a sprout / Seed pet stays sun soaked after old Solar pixels were last near it.</summary>

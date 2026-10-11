@@ -232,7 +232,7 @@ public class PixelToggles : MonoBehaviour
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
             bool show = !hideUntilAutoClicker || (autoClicker != null && (autoClicker.Running || autoClicker.UserDisabled))
                         || (PixelPets.Instance != null && PixelPets.Instance.OwnedCount > 0) // a pet also opens the window
-                        || PixelProspector.AnyOreUnlocked(clicker); // so does the Prospector mode switch
+                        || (PixelSkills.Instance != null && PixelSkills.Instance.AnyPackAvailable); // so do the skill pack switches
             if (openObject.activeSelf != show) openObject.SetActive(show);
             if (!show && windowObject != null && windowObject.activeSelf) windowObject.SetActive(false);
         }
@@ -262,15 +262,35 @@ public class PixelToggles : MonoBehaviour
 
         if (group == Group.Pixels)
         {
-            // Prospector mode: the ores replace the basic pixels in what spawns (only once an ore is unlocked).
-            if (PixelProspector.AnyOreUnlocked(clicker))
-                list.Add(new Entry
+            // Skill pack modes (Mining, Farming): the pack's pixels replace the basic pixels in what spawns. One pack at a time.
+            PixelSkills skills = PixelSkills.Instance;
+            if (skills != null)
+            {
+                foreach (PixelSkills.SkillPack pack in skills.Packs)
                 {
-                    label = "Prospector mode",
-                    skipAll = true,   // it swaps which pixels spawn, so 'Toggle all' leaves it alone
-                    on = PixelProspector.Setting,
-                    setter = on => { PixelProspector.Setting = on; clicker.RefreshSpawnTier(); },
-                });
+                    if (pack.id == PixelSkills.StandardId || pack.id == PixelSkills.OfflineId || !skills.IsAvailable(pack)) continue;
+                    string packId = pack.id;
+                    list.Add(new Entry
+                    {
+                        label = pack.displayName + " mode",
+                        skipAll = true,   // it swaps which pixels spawn, so 'Toggle all' leaves it alone
+                        on = skills.ActiveId == packId,
+                        setter = on => { skills.SetActive(on ? packId : PixelSkills.StandardId); clicker.RefreshSpawnTier(); },
+                    });
+                }
+                // Skill-only blocks unlocked in a skill tree can be switched on for every rotation.
+                foreach (PixelClicker.PixelType guest in skills.UnlockedGuests())
+                {
+                    PixelClicker.PixelType type = guest;
+                    PixelSkills.SkillPack owner = skills.PackOfType(type);
+                    list.Add(new Entry
+                    {
+                        label = ShortPixelName(type.ToString()) + " (" + (owner != null ? owner.displayName : "skill") + ")",
+                        on = skills.GuestOn(type),
+                        setter = on => skills.SetGuest(type, on),
+                    });
+                }
+            }
             for (int i = 0; i < clicker.Tiers.Length; i++)
             {
                 PixelClicker.PixelTier t = clicker.Tiers[i];

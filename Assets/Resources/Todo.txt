@@ -15,3 +15,4 @@
 [ ] Skill system: swappable base-cube packs (Prospector = mining XP); the shell of the system is built, the XP / perks / spawn swap are not.
 [ ] Electric 'box' consumable / upgrade: place Electric pixels in a box so falling pixels can't break the chain; placing the box near a device arcs from the box to the device (box pixels should count toward the device's 30-pixel cap; fill it by spitting from the Bank).
 [ ] Build the real effects for the skill tree nodes and the Offline Progression skill (offline efficiency, longer offline cap, pack earns a little offline); more skill packs.
+[ ] Basic blocks (Wood, Rock...) give a little XP in other skills while you are not training them, so you can mix and match what you train (figure out the amounts / rules).
