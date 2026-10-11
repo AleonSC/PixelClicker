@@ -540,6 +540,12 @@ public class PixelStats : MonoBehaviour
             double fastest = Counter("sort.fastest");
             Row("Fastest sorting race", fastest > 0d ? FormatTime(fastest) : "-");
         }
+        if (Seen("dash", "dash.rounds", "dash.clicks"))
+        {
+            Cnt("Cube Dash rounds", "dash.rounds");
+            Cnt("Cube Dash clicks", "dash.clicks");
+            Row("Best Cube Dash", PixelClicker.FormatNumber(Counter("dash.best")) + " clicks");
+        }
         if (Seen("breakout", "breakout.win", "breakout.loss"))
         {
             Cnt("Breakout games won", "breakout.win");

@@ -20,6 +20,7 @@ public abstract class PixelMinigame : MonoBehaviour
     {
         Happened = null;
         TakeoverActive = false;
+        AutoClickerPaused = false;
         claims.Clear();
         registry.Clear();
     }
@@ -68,6 +69,9 @@ public abstract class PixelMinigame : MonoBehaviour
     /// and while it does cube clicks and Pixel Grabbing are off.
     /// </summary>
     public virtual bool Takeover => false;
+
+    /// <summary>True while a minigame wants the auto clicker switched off (Cube Dash: only your own clicks count). The cube stays clickable.</summary>
+    public static bool AutoClickerPaused { get; protected set; }
 
     /// <summary>True while any takeover minigame has a round going. Takeover minigames set it when their round starts / ends.</summary>
     public static bool TakeoverActive { get; protected set; }

@@ -159,6 +159,7 @@ public class PixelHints : MonoBehaviour
             case "minigame_snake": return "Snake time!";
             case "minigame_sort": return "Sorting race!";
             case "minigame_breakout": return "Breakout!";
+            case "minigame_dash": return "Cube Dash!";
             case "minigame_bomb": return "A bomb appeared!";
             case "minigame_pad": return "An Ultra Pad appeared!";
             case "potion": return "You drank a potion!";
@@ -211,6 +212,7 @@ public class PixelHints : MonoBehaviour
 
     private static List<Hint> DefaultHints() => new List<Hint>
     {
+        H("minigame_dash", "Cube Dash! The cube is dashing around the screen and the auto clicker is switched off. Click it as many times as you can before time runs out: you get a bonus of 10x its worth for every click you landed."),
         H("minigame_breakout", "Breakout! The old pixels on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop."),
         H("minigame_sort", "Sorting race! Some old pixels froze in a jumbled grid. Click one pixel, then another, to swap them. Get every colour together in one unbroken group before the timer runs out - finishing early pays extra."),
         H("minigame_snake", "Snake! Every old pixel froze and stopped despawning. Steer the snake with the arrow keys (or the on-screen arrows) and eat every pixel without biting yourself - you are paid 10x their worth. Run out of time or bite yourself and they just drop."),

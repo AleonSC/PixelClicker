@@ -2632,11 +2632,17 @@ public class PixelClicker : MonoBehaviour
     {
         float time = Time.time;
 
+        Vector3 dashOffset = cubeOffsetActive ? cubeOffset : Vector3.zero;
         if (suspendInMidair && hoverBob)
         {
-            pixelTransform.position = basePosition +
+            pixelTransform.position = basePosition + dashOffset +
                 Vector3.up * (Mathf.Sin(time * hoverSpeed * Mathf.PI * 2f) * hoverAmplitude);
         }
+        else if (cubeOffsetActive || cubeOffsetWasActive)
+        {
+            pixelTransform.position = basePosition + dashOffset;
+        }
+        cubeOffsetWasActive = cubeOffsetActive;
 
         if (idleSpin != Vector3.zero && allowRotation)
             pixelTransform.Rotate(idleSpin * AnimDelta, Space.Self);
@@ -2721,6 +2727,22 @@ public class PixelClicker : MonoBehaviour
         }
     }
 
+
+    private Vector3 cubeOffset;
+    private bool cubeOffsetActive, cubeOffsetWasActive;
+
+    /// <summary>Moves the clickable cube by a world offset from its home spot (Cube Dash); null puts it back.</summary>
+    public void SetCubeOffset(Vector3? offset)
+    {
+        cubeOffsetActive = offset.HasValue;
+        cubeOffset = offset ?? Vector3.zero;
+    }
+
+    /// <summary>The cube's home position (without any minigame offset or bobbing).</summary>
+    public Vector3 CubeBasePosition => basePosition;
+
+    /// <summary>The tier index of the pixel on the cube right now.</summary>
+    public int CurrentClickTierIndex => GetClickTierIndex();
 
     private float cubeShrinkCurrent = 1f, cubeShrinkTarget = 1f, cubeShrinkSeconds = 0.5f;
 

@@ -306,6 +306,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Cube Dash pack (Minigames tab): switches on the dash minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateDashPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Cube Dash",
+            tab = ShopTab.Minigames,
+            description = "Now and then the cube dashes around the screen, hanging in one spot before zipping to the next. The auto clicker switches off: click it as often as you can. At the end you get a bonus of 10x the pixel's worth for every click you landed.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(50000),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "dash",
+        };
+    }
+
     /// <summary>Default Breakout pack (Minigames tab): switches on the breakout minigame. Needs the RGB pack first.</summary>
     private static ShopPack CreateBreakoutPack(int requiresRgbIndex)
     {
@@ -1083,6 +1098,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
+        new DefaultPack { isThis = p => Unlocks(p, "dash"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateDashPack },
         new DefaultPack { isThis = p => Unlocks(p, "breakout"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBreakoutPack },
         new DefaultPack { isThis = p => Unlocks(p, "sort"),
