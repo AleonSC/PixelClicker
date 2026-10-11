@@ -44,6 +44,7 @@ public class PixelMenuKeys : MonoBehaviour
         {
             if (PixelKeys.Get(action) == KeyCode.None || !PixelKeys.Pressed(action)) continue;
             if (!buttons.TryGetValue(action, out Button b) || b == null || !b.gameObject.activeInHierarchy || !b.interactable) continue;
+            if (action == PixelAction.Inventory && PixelUI.InventoryKeyCycle()) return;
             b.onClick.Invoke();
             return;
         }

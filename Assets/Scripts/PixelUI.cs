@@ -1682,6 +1682,17 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Hover tip on the switch button while the simplified Inventory shows the consumables.")]
     [SerializeField] private string switchToCurrencyTip = "Show your currency";
 
+    /// <summary>The Inventory key in the pinned view: while it shows the currency, the key switches to the consumables first; the next press closes it. Returns true when it handled the press.</summary>
+    public static bool InventoryKeyCycle()
+    {
+        PixelUI ui = inventoryInstance;
+        if (ui == null || !Compact || !InventoryOpen || CompactMode != 1) return false;
+        CompactMode = 2;
+        if (ui.listContent != null) ui.listContent.anchoredPosition = Vector2.zero;
+        ui.Refresh();
+        return true;
+    }
+
     private static void IconRect(Transform parent, Color color, float w, float h, float x, float y)
     {
         GameObject go = new GameObject("Part", typeof(RectTransform), typeof(Image));
