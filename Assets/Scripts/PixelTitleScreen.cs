@@ -222,6 +222,7 @@ public class PixelTitleScreen : MonoBehaviour
         public System.Func<IPixelLookSource> source;
         public RawImage icon;
         public TMP_Text name;
+        public string shownName = "";
         public int shownIndex = -2;
         public bool shownUsable;
     }
@@ -361,6 +362,7 @@ public class PixelTitleScreen : MonoBehaviour
         if (foreground != null && foreground.activeSelf == menuOpen) foreground.SetActive(!menuOpen);
 
         if (!menuOpen) foreach (LookPicker p in lookPickers) RefreshPicker(p, false);
+        UpdateLookTip(lookFont);
 
         if (logoRect != null && !playing)
         {
@@ -468,9 +470,11 @@ public class PixelTitleScreen : MonoBehaviour
 
         // Play on top, Load + Settings side by side under it (together exactly as wide as Play).
         Vector2 centre = new Vector2(0.5f, 0.5f);
-        float groupHeight = buttonSize.y + buttonGap + smallButtonHeight;
+        float quitHeight = Mathf.Min(quitSize.y, 34f);   // Quit is a thin red bar under the two grey buttons, as wide as Play
+        float quitGap = Mathf.Max(8f, buttonGap - 2f);
+        float groupHeight = buttonSize.y + buttonGap + smallButtonHeight + (showQuit ? quitGap + quitHeight : 0f);
         float playY = groupHeight * 0.5f - buttonSize.y * 0.5f;
-        float smallY = -groupHeight * 0.5f + smallButtonHeight * 0.5f;
+        float smallY = playY - buttonSize.y * 0.5f - buttonGap - smallButtonHeight * 0.5f;
         float smallWidth = (buttonSize.x - buttonGap) * 0.5f;
         Vector2 smallSize = new Vector2(smallWidth, smallButtonHeight);
         float smallX = (smallWidth + buttonGap) * 0.5f;
@@ -489,13 +493,14 @@ public class PixelTitleScreen : MonoBehaviour
         }
 
         if (showQuit)
-            MakeButton(font, "Quit Button", quitText, quitSize, quitColor, quitFontSize, new Vector2(0.5f, 0f),
-                       new Vector2(0f, quitSize.y * 0.5f + 12f), OnQuit);
+            MakeButton(font, "Quit Button", quitText, new Vector2(buttonSize.x, quitHeight), quitColor, Mathf.Min(quitFontSize, quitHeight * 0.6f), centre,
+                       new Vector2(0f, smallY - smallButtonHeight * 0.5f - quitGap - quitHeight * 0.5f), OnQuit);
     }
 
     /// <summary>A picture of the current look with an arrow either side (and its name under it).</summary>
     private void BuildLookPicker(TMP_FontAsset font, string objectName, string caption, System.Func<IPixelLookSource> source, Vector2 position)
     {
+        lookFont = font;
         float width = lookArrowWidth * 2f + lookIconSize + 16f;
         GameObject root = new GameObject(objectName, typeof(RectTransform));
         root.transform.SetParent(foreground.transform, false);
@@ -506,13 +511,16 @@ public class PixelTitleScreen : MonoBehaviour
         shrinkRects.Add(rr);
 
         LookPicker picker = new LookPicker { source = source };
+        PixelHoverTip hoverTip = root.AddComponent<PixelHoverTip>();
+        hoverTip.onEnter = () => hoveredPicker = picker;
+        hoverTip.onExit = () => { if (hoveredPicker == picker) hoveredPicker = null; };
 
         // Frame, then the picture inside it.
         GameObject frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
         frame.transform.SetParent(root.transform, false);
         Image frameImage = frame.GetComponent<Image>();
         frameImage.color = lookFrameColor;
-        frameImage.raycastTarget = false;
+        frameImage.raycastTarget = true;   // so hovering the picture shows its name
         RectTransform fr = frame.GetComponent<RectTransform>();
         fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0.5f, 0.5f);
         fr.sizeDelta = new Vector2(lookIconSize, lookIconSize);
@@ -546,37 +554,44 @@ public class PixelTitleScreen : MonoBehaviour
             buttons.Add(arrow);
         }
 
-        if (!string.IsNullOrEmpty(caption))
-        {
-            TMP_Text cap = PixelUIKit.CreateText(font, root.transform, "Caption", caption, Mathf.Max(14f, lookNameFontSize * 0.9f),
-                                                 TextAlignmentOptions.Bottom, FontStyles.Bold, new Color(1f, 1f, 1f, 0.7f));
-            RectTransform cr = cap.rectTransform;
-            cr.anchorMin = new Vector2(0f, 1f);
-            cr.anchorMax = new Vector2(1f, 1f);
-            cr.pivot = new Vector2(0.5f, 0f);
-            cr.sizeDelta = new Vector2(0f, lookNameFontSize * 1.4f);
-            cr.anchoredPosition = new Vector2(0f, 2f);
-            cap.raycastTarget = false;
-        }
-
-        if (lookNameFontSize > 0f)
-        {
-            picker.name = PixelUIKit.CreateText(font, root.transform, "Name", "", lookNameFontSize, TextAlignmentOptions.Top,
-                                                FontStyles.Normal, buttonTextColor);
-            RectTransform nr = picker.name.rectTransform;
-            nr.anchorMin = new Vector2(0f, 0f);
-            nr.anchorMax = new Vector2(1f, 0f);
-            nr.pivot = new Vector2(0.5f, 1f);
-            nr.sizeDelta = new Vector2(40f, lookNameFontSize * 1.4f);
-            nr.anchoredPosition = new Vector2(0f, -4f);
-            picker.name.raycastTarget = false;
-            picker.name.enableAutoSizing = true;
-            picker.name.fontSizeMax = lookNameFontSize;
-            picker.name.fontSizeMin = 12f;
-        }
-
         lookPickers.Add(picker);
         RefreshPicker(picker, true);
+    }
+
+    // ---- the picker's name shows in a small tooltip while the mouse is over it ----
+    private LookPicker hoveredPicker;
+    private TMP_FontAsset lookFont;
+    private GameObject lookTip;
+    private TMP_Text lookTipLabel;
+
+    private void UpdateLookTip(TMP_FontAsset font)
+    {
+        bool show = hoveredPicker != null && !playing && foreground != null && foreground.activeInHierarchy && !string.IsNullOrEmpty(hoveredPicker.shownName);
+        if (!show) { if (lookTip != null && lookTip.activeSelf) lookTip.SetActive(false); return; }
+        if (lookTip == null)
+        {
+            lookTip = new GameObject("Look Tip", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            lookTip.transform.SetParent(foreground.transform, false);
+            lookTip.GetComponent<CanvasGroup>().blocksRaycasts = false;
+            Image bg = lookTip.GetComponent<Image>();
+            bg.color = new Color(0.05f, 0.07f, 0.12f, 0.95f);
+            bg.raycastTarget = false;
+            PixelUIKit.StyleBox(bg);
+            lookTipLabel = PixelUIKit.CreateText(font, lookTip.transform, "Text", "", Mathf.Max(16f, lookNameFontSize), TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+            lookTipLabel.raycastTarget = false;
+            PixelUIKit.Stretch(lookTipLabel.rectTransform);
+        }
+        if (!lookTip.activeSelf) lookTip.SetActive(true);
+        lookTip.transform.SetAsLastSibling();
+        string name = hoveredPicker.shownName.ToUpperInvariant();
+        if (lookTipLabel.text != name) lookTipLabel.text = name;
+        RectTransform rt = lookTip.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.sizeDelta = new Vector2(Mathf.Ceil(lookTipLabel.GetPreferredValues(name).x) + 36f, Mathf.Max(16f, lookNameFontSize) * 1.5f + 12f);
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
+            rt.anchoredPosition = local + new Vector2(0f, 26f);
     }
 
     /// <summary>Updates a picker's picture and name when the look changed (from here, Settings, or the look waking up).</summary>
@@ -592,7 +607,8 @@ public class PixelTitleScreen : MonoBehaviour
         p.icon.texture = usable ? look.PreviewTexture(index) : null;
         p.icon.color = usable ? look.PreviewColor(index) : new Color(1f, 1f, 1f, 0.15f);
         p.icon.uvRect = usable ? look.PreviewRect : new Rect(0f, 0f, 1f, 1f);
-        if (p.name != null) p.name.text = usable ? look.StyleName(index) : "";
+        p.shownName = usable ? look.StyleName(index) : "";
+        if (p.name != null) p.name.text = p.shownName;
     }
 
     private RawImage MakeRaw(string objectName)
