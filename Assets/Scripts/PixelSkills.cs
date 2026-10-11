@@ -88,6 +88,7 @@ public partial class PixelSkills : MonoBehaviour
 
     private PixelClicker clicker;
     private PixelAutoClicker autoClicker;
+    private PixelShop shop;
 
     public static PixelSkills Instance { get; private set; }
     public IReadOnlyList<SkillPack> Packs => packs;
@@ -190,7 +191,7 @@ public partial class PixelSkills : MonoBehaviour
                 description = "Swap the basic cubes for Electric pixels only. Every Electric click trains the skill and can set off an Overcharge; link the pixels you drop to power your devices.",
                 replaces = "Monochrome, RGB, Glass, Luminescent", spawns = "Electric",
                 xpFrom = "Collecting Electric pixels",
-                unlockHint = "Buy the Electric Pixel pack in the Shop",
+                unlockHint = "Buy the Electrician's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
                 types = new[] { PixelClicker.PixelType.Electric },
                 perks = new[]
@@ -279,6 +280,11 @@ public partial class PixelSkills : MonoBehaviour
         {
             if (autoClicker == null) autoClicker = PixelFind.First<PixelAutoClicker>();
             return autoClicker != null && autoClicker.Running;   // needs the Auto Clicker, like offline progress itself
+        }
+        if (pack.id == ElectricianId)   // bought as the Electrician's Pack (and needs the Electric pixel itself)
+        {
+            if (shop == null) shop = PixelFind.First<PixelShop>();
+            return shop != null && shop.IsSkillPackBought(ElectricianId) && clicker != null && clicker.IsUnlocked(PixelClicker.PixelType.Electric);
         }
         if (pack.types != null && pack.types.Length > 0 && clicker != null) return clicker.IsUnlocked(pack.types[0]);   // bought in the Shop
         return false;

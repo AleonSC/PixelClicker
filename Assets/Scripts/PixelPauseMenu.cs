@@ -572,6 +572,13 @@ public class PixelPauseMenu : MonoBehaviour
 
     private const string SlotNamePref = "PixelClicker.SlotName.";
 
+    /// <summary>How messages refer to a slot: its number, or its custom name in quotes ("slot {0}" reads 'slot 2' or 'slot "My run"').</summary>
+    private string SlotRef(int slot)
+    {
+        string custom = PlayerPrefs.GetString(SlotNamePref + slot, "");
+        return string.IsNullOrWhiteSpace(custom) ? slot.ToString() : "\"" + custom + "\"";
+    }
+
     /// <summary>The player's name for a save slot, or the default 'Slot N'.</summary>
     private string SlotNameOf(int slot)
     {
@@ -1390,7 +1397,7 @@ public class PixelPauseMenu : MonoBehaviour
             overwriteOverlay.SetActive(false);
             bool saved = saveGame.SaveToSlot(selectedSlot, false);
             RefreshSlots();
-            ShowResult(saved ? string.Format(savedResultFormat, selectedSlot) : saveFailedResultText);
+            ShowResult(saved ? string.Format(savedResultFormat, SlotRef(selectedSlot)) : saveFailedResultText);
         });
         cancel.onClick.AddListener(() => overwriteOverlay.SetActive(false));
 
@@ -1584,14 +1591,14 @@ public class PixelPauseMenu : MonoBehaviour
         {
             bool saved = saveGame.SaveToSlot(selectedSlot, false);
             RefreshSlots();
-            ShowResult(saved ? string.Format(savedResultFormat, selectedSlot) : saveFailedResultText);
+            ShowResult(saved ? string.Format(savedResultFormat, SlotRef(selectedSlot)) : saveFailedResultText);
             return;
         }
 
         // Saving over an existing save: ask first.
         saveGame.TryGetSlotInfo(selectedSlot, out string savedAt, out double _);
-        overwriteTitleLabel.text = string.Format(overwriteTitle, selectedSlot);
-        overwriteText.text = string.Format(overwriteMessage, selectedSlot, savedAt);
+        overwriteTitleLabel.text = string.Format(overwriteTitle, SlotRef(selectedSlot));
+        overwriteText.text = string.Format(overwriteMessage, SlotRef(selectedSlot), savedAt);
         overwriteOverlay.SetActive(true);
     }
 
@@ -1600,7 +1607,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (saveGame == null) return;
         bool loaded = saveGame.LoadSlot(selectedSlot, false);
         RefreshSlots();
-        ShowResult(loaded ? string.Format(loadedResultFormat, selectedSlot) : loadFailedResultText);
+        ShowResult(loaded ? string.Format(loadedResultFormat, SlotRef(selectedSlot)) : loadFailedResultText);
     }
 
     /// <summary>"This deletes everything" screen: the player has to HOLD the red button to confirm.</summary>

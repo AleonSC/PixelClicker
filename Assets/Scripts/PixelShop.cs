@@ -148,6 +148,9 @@ public partial class PixelShop : MonoBehaviour
             }
         }
 
+        [Tooltip("A skill pack: buying this makes the skill with this id available (e.g. 'electrician'). It is listed under 'Skill packs' on the Pixels tab.")]
+        public string skillId = "";
+
         [Tooltip("Buying this pack switches on the auto clicker.")]
         public bool unlocksAutoClicker = false;
 
@@ -1278,6 +1281,14 @@ public partial class PixelShop : MonoBehaviour
 
     /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
     public PixelConsumables Consumables => consumables;
+
+    /// <summary>Has the shop pack that unlocks this skill (by <see cref="ShopPack.skillId"/>) been bought?</summary>
+    public bool IsSkillPackBought(string skillId)
+    {
+        for (int i = 0; i < packs.Length; i++)
+            if (packs[i] != null && packs[i].skillId == skillId && IsPurchased(i)) return true;
+        return false;
+    }
 
     public bool IsPurchased(int packIndex)
     {

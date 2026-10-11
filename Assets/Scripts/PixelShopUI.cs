@@ -1121,6 +1121,7 @@ public partial class PixelShop
     /// <summary>Which Pixels-tab section a pack belongs to: 0 = base pixels (RGB, Glass, Luminescent), 1 = single toggleable pixels, 2 = skill packs (many pixels at once).</summary>
     private static int SectionOf(ShopPack pack)
     {
+        if (!string.IsNullOrEmpty(pack.skillId)) return 2;   // a skill pack, even without reward pixels of its own
         if (pack.rewardTiers == null || pack.rewardTiers.Length == 0) return 1;
         if (pack.rewardTiers.Length >= 4) return 2;
         foreach (PixelClicker.PixelTier t in pack.rewardTiers)

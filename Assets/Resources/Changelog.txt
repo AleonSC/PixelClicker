@@ -457,3 +457,4 @@
 [2026-10-11 12:21 UTC] Pause menu search results now fit inside the panel: the lines shrink to fit and extra settings are summarised as '+ N more'.
 [2026-10-11 12:21 UTC] Fixed the Crafting window briefly showing at the wrong size when opened at high UI scale (it is now sized before it opens).
 [2026-10-11 12:24 UTC] Save slots are compact: just the name, a Rename button (opens a text box; empty goes back to 'Slot N') and the date, time played and pixels in a hover box.
+[2026-10-11 12:26 UTC] Added the Electrician's Pack to the shop (Pixels tab, Skill packs; needs the Electric Pixel pack, 1,500 Electric) - buying it makes the Electrician skill available; save messages (overwrite warning, saved / loaded) now use a slot's custom name.

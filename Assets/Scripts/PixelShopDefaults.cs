@@ -388,6 +388,23 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>
+    /// Default Electrician's Pack (Pixels tab, Skill packs): needs the Electric Pixel pack. Buying it makes the Electrician skill available: Electric
+    /// pixels replace the basic cubes while the skill is in play.
+    /// </summary>
+    private static ShopPack CreateElectricianPack(int requiresElectricIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Electrician's Pack",
+            tab = ShopTab.Pixels,
+            skillId = PixelSkills.ElectricianId,
+            description = "Unlocks the Electrician skill. While it is in play (Toggles or Skills window) Electric pixels replace the basic cubes: every click trains the skill and can set off an Overcharge, and the pixels you drop link up to power your devices.",
+            requirements = Needs(requiresElectricIndex),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.Electric, amount = 1500 } },
+        };
+    }
+
     /// <summary>Default Seed Pixel pack (Pixels tab): an early unlock listed before Electric, needs the RGB pack. A brown shell that cracks; a sprout grows a random old pixel.</summary>
     private static ShopPack CreateSeedPixelPack(int requiresRgbIndex)
     {
@@ -1007,6 +1024,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateProspectorPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
                           requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
+        new DefaultPack { isThis = p => p.skillId == PixelSkills.ElectricianId,
+                          requires = p => Rewards(p, PixelClicker.PixelType.Electric), create = CreateElectricianPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Mirror),
                           requires = p => Rewards(p, PixelClicker.PixelType.Electric), create = CreateMirrorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Vacuum),
