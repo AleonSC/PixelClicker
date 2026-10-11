@@ -167,6 +167,7 @@ public class PixelHints : MonoBehaviour
             case "device_Sorter": return "You placed a Sorter!";
             case "device_Sprinkler": return "You placed a Sprinkler!";
             case "device_Magnet": return "You placed a Magnet!";
+            case "device_MagnetSorter": return "You placed a Magnetized Sorter!";
             case "craft": return "You crafted something!";
             case "combo": return "Combo started!";
             case "ultra": return "You earned an Ultra pixel!";
@@ -227,6 +228,7 @@ public class PixelHints : MonoBehaviour
         H("device_Vacuum", "Vacuum Device placed! It is grey and asleep: left-click it to switch it on. Then it pulls in old pixels and collects them again for a few seconds. Hold right-click on a placed device to remove it."),
         H("device_Fan", "Fan placed! It is grey and asleep: left-click it to switch it on. Then it blows old pixels along the floor in front of it until its timer runs out."),
         H("device_Sprinkler", "Sprinkler placed! It is grey and asleep: left-click it to switch it on. Then it waters every growing seed and Seed pet within its reach about once a second, so they grow much faster."),
+        H("device_MagnetSorter", "Magnetized Sorter placed! Left-click it to switch it on. It sucks loose old pixels from the arc in front of its magnet into the box. Click an exit pipe to grab it, click again to put it down; scroll over a pipe to choose which stored pixel type it shoots out."),
         H("device_Magnet", "Magnet placed! It is grey and asleep: left-click it to switch it on. Then it pulls loose old pixels in around it and holds them in a heap without collecting them."),
         H("device_Sorter", "Sorter placed! It is grey and asleep: left-click its ring or pipe to switch it on. Then click its buttons to change how hard old pixels are pushed out of the pipe."),
         H("craft", "Crafted! The new item is in your Inventory under Consumables."),

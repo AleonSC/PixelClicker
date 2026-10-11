@@ -917,7 +917,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Something else (a minigame, the hose, a hovered pet, first person mode) has the mouse: the cube ignores ordinary clicks.</summary>
     public static bool ExternalClickBlock
     {
-        get => externalClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
+        get => externalClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
         set => externalClickBlock = value;
     }
 
@@ -3673,8 +3673,16 @@ public class PixelClicker : MonoBehaviour
         return true;
     }
 
+    /// <summary>Like <see cref="SpawnStoredPixel"/> but the pixel is 'magnetized' (a Sorter's stream: no collisions while it flies, solid once it lands). Returns its body, or null.</summary>
+    public Rigidbody SpawnStreamedPixel(int tierIndex, double amount, Vector3 position, Vector3 velocity)
+    {
+        if (!IsValidTier(tierIndex) || tiers[tierIndex].flyAway || pixelTransform == null) return null;
+        SpawnFallingCopy(tierIndex, amount, true, position, velocity, true);
+        return oldPixels.Count > 0 ? oldPixels[oldPixels.Count - 1] : null;
+    }
+
     private void SpawnFallingCopy(int tierIndex, double amount, bool stored = false, Vector3 storedPosition = default,
-                                  Vector3 storedVelocity = default)
+                                  Vector3 storedVelocity = default, bool streamed = false)
     {
         // Skip if the pixel is mid-materialize and basically invisible.
         if (!stored && pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
@@ -3888,7 +3896,7 @@ public class PixelClicker : MonoBehaviour
             OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
-            if (!stored)
+            if (!stored || streamed)
             {
                 // A Sorter's stream: no collisions while the pixel is in the air, solid again once it has landed (see OldPixelStream).
                 OldPixelStream stream = copy.AddComponent<OldPixelStream>();

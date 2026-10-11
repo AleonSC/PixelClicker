@@ -103,6 +103,8 @@ public class PixelConsumables : MonoBehaviour
         Sprinkler = 9,
         /// <summary>Placed: like the Vacuum Device it pulls old pixels in, but it never consumes them: it holds them in a heap.</summary>
         Magnet = 10,
+        /// <summary>Placed, craft-only (Sorter + Magnet): sucks pixels from an arc in front into a box and shoots chosen types out of three movable pipes.</summary>
+        MagnetSorter = 11,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -231,6 +233,26 @@ public class PixelConsumables : MonoBehaviour
         [TextArea(1, 2)]
         [Tooltip("Sorter: message while bending the pipe (second placing step). {0} = device name.")]
         public string sorterBendMessage = "Click inside the cone to bend the {0}'s pipe  (right-click to go back)";
+
+        [Header("Magnetized Sorter only")]
+        [Tooltip("Craft-only: never sold in the shop or by visitors (you make it in the Crafting window).")]
+        public bool craftOnly = false;
+
+        [Range(20f, 170f)]
+        [Tooltip("Magnetized Sorter: opening angle (degrees) of the arc in front of the magnet that pulls pixels in. Its length is 'Radius'.")]
+        public float arcDegrees = 110f;
+
+        [Min(1)]
+        [Tooltip("Magnetized Sorter: how many pixels the box holds in total.")]
+        public int boxCapacity = 60;
+
+        [Min(0.05f)]
+        [Tooltip("Magnetized Sorter: seconds between two pixels shot from one exit pipe.")]
+        public float shootInterval = 0.45f;
+
+        [Min(2f)]
+        [Tooltip("Magnetized Sorter: how far from the box an exit pipe's end can be put down (world units).")]
+        public float pipeReach = 7f;
 
         [Header("Look and placing")]
         [TextArea(1, 2)]
@@ -525,6 +547,29 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultMagnetSorter()
+    {
+        return new Device
+        {
+            kind = DeviceKind.MagnetSorter,
+            displayName = "Magnetized Sorter",
+            description = "Craft it from a Sorter and a Magnet. Its magnet pulls loose old pixels from an arc in front of it into a box. Click an exit pipe to grab it and click again to put it down anywhere; scroll over a pipe to choose which stored pixel type it shoots out.",
+            requiredType = PixelClicker.PixelType.Electric,
+            costs = new PixelShop.PackCost[0],
+            craftOnly = true,
+            maxHeld = 3,
+            durationSeconds = 180f,
+            radius = 5.5f,
+            pullAcceleration = 26f,
+            absorbDistance = 0.9f,
+            sorterExitSpeed = 6f,
+            color = new Color(0.55f, 0.35f, 0.85f, 1f),
+            bodyDiameter = 1.2f,
+            bodyHeight = 0.9f,
+            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultSprinkler()
     {
         return new Device
@@ -767,6 +812,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.LightningRod, CreateDefaultLightningRod),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Sprinkler, CreateDefaultSprinkler),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Magnet, CreateDefaultMagnet),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.MagnetSorter, CreateDefaultMagnetSorter),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -922,6 +968,9 @@ public class PixelConsumables : MonoBehaviour
 
     /// <summary>True for a combo potion (craft-only, never in the shop).</summary>
     public bool ItemCraftOnly(int item) => !IsDevice(item) && potions[item].craftOnly;
+
+    /// <summary>True for a device that is only made by crafting (never sold in the shop or by a visitor).</summary>
+    public bool ItemNotSold(int item) => IsDevice(item) && devices[item - potions.Length].craftOnly;
 
     /// <summary>The second pixel type of a combo potion.</summary>
     public PixelClicker.PixelType ItemSecondType(int item) => potions[item].secondType;
@@ -1439,6 +1488,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.Vacuum:
                 case DeviceKind.Sprinkler:
                 case DeviceKind.Magnet:
+                case DeviceKind.MagnetSorter:
                     root = BuildDeviceObject(d, false, out _, out _);
                     break;
                 case DeviceKind.ChargeBooster:
@@ -1563,6 +1613,9 @@ public class PixelConsumables : MonoBehaviour
     }
 
     /// <summary>The kind of device an item index refers to (items past the potions are devices).</summary>
+    /// <summary>The colour of a device item (used for crafting icons).</summary>
+    public Color DeviceColorOf(int item) => devices[item - potions.Length].color;
+
     public DeviceKind DeviceKindOf(int item) => devices[item - potions.Length].kind;
 
     /// <summary>True for a seed item (a "device" of kind Seed: planted, not placed).</summary>
@@ -1677,7 +1730,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The placeable kinds (the ones that stand in the world): the Robot Worker can keep any of these going.</summary>
     public static bool IsPlaceableKind(DeviceKind kind) =>
         kind == DeviceKind.Vacuum || kind == DeviceKind.Fan || kind == DeviceKind.Sorter ||
-        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler || kind == DeviceKind.Magnet;
+        kind == DeviceKind.ChargeBooster || kind == DeviceKind.LightningRod || kind == DeviceKind.Sprinkler || kind == DeviceKind.Magnet; // (the craft-only Magnetized Sorter is not robot-placed)
 
     /// <summary>How many of a device you hold (huge with infinite resources).</summary>
     public int DeviceOwned(int deviceIndex) => Inf ? 99999 : devices[deviceIndex].owned;
@@ -1800,7 +1853,7 @@ public class PixelConsumables : MonoBehaviour
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter)
         {
             placingYaw += TurnInput();
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
@@ -1979,6 +2032,14 @@ public class PixelConsumables : MonoBehaviour
                 result = rod;
             }
         }
+        else if (d.kind == DeviceKind.MagnetSorter)
+        {
+            GameObject root = BuildDeviceObject(d, false, out _, out TextMeshPro timer);
+            root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+            PixelMagnetSorterDevice sorter = root.AddComponent<PixelMagnetSorterDevice>();
+            sorter.Init(clicker, cam, d, timer, timerFormat, duration, shrinkSeconds, root.transform.Find("Mouth"), d.bodyDiameter, d.bodyHeight);
+            result = sorter;
+        }
         else if (d.kind == DeviceKind.Magnet)
         {
             GameObject root = BuildDeviceObject(d, false, out Transform topPoint, out TextMeshPro timer);
@@ -2030,6 +2091,7 @@ public class PixelConsumables : MonoBehaviour
         public int force;
         public float forceValue;   // the exact force set with the slider (0 = use the force button index)
         public bool disarmed;   // placed but never switched on yet
+        public string extra;    // device-specific text (the Magnetized Sorter's box contents and pipes)
     }
 
     /// <summary>The devices currently standing in the world (those not already shrinking away).</summary>
@@ -2048,6 +2110,7 @@ public class PixelConsumables : MonoBehaviour
                 disarmed = !placed.Armed,
             };
             if (placed is PixelChargeBooster booster) state.aim = booster.Charge;
+            if (placed is PixelMagnetSorterDevice magSorter) state.extra = magSorter.ExportState();
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
@@ -2076,6 +2139,7 @@ public class PixelConsumables : MonoBehaviour
         PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
         if (restored != null && state.disarmed) restored.Disarm();
         if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
+        if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
     }
 
     /// <summary>Starts a potion again with the time it had left (no sound, nothing used up). Used when loading a save.</summary>
@@ -2140,6 +2204,10 @@ public class PixelConsumables : MonoBehaviour
         {
             BuildMagnetBody(root, d, isPreview);
         }
+        else if (d.kind == DeviceKind.MagnetSorter)
+        {
+            BuildMagnetSorterBody(root, d, isPreview);
+        }
         else
         {
             // Cylinder body (Unity's cylinder is 2 units tall, hence the halved Y scale).
@@ -2158,7 +2226,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         // Flat disc showing the reach.
-        if (showRange && !displayOnly)
+        if (showRange && !displayOnly && d.kind != DeviceKind.MagnetSorter)
         {
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "Range";
@@ -2271,6 +2339,83 @@ public class PixelConsumables : MonoBehaviour
         }
         Part(PrimitiveType.Cube, "Arch", new Vector3(0f, H - leg * 0.5f, 0f), new Vector3(D * 0.8f + leg, leg, leg), red);
         Part(PrimitiveType.Cube, "Arch Cap", new Vector3(0f, H + leg * 0.02f, 0f), new Vector3(D * 0.8f + leg * 0.6f, leg * 0.25f, leg * 0.7f), silver);
+    }
+
+    /// <summary>A grey box, a short tube and a red horseshoe magnet head at the front (+Z, with an empty 'Mouth' child at its gap) and, unless it is only a picture, the translucent arc it pulls from.</summary>
+    private void BuildMagnetSorterBody(GameObject root, Device d, bool isPreview)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        Color boxColor = d.color; boxColor.a = opacity;
+        Color metal = new Color(0.6f, 0.63f, 0.7f, opacity);
+        Color red = new Color(0.85f, 0.2f, 0.2f, opacity);
+        Color silver = new Color(0.82f, 0.84f, 0.9f, opacity);
+        float D = d.bodyDiameter, H = d.bodyHeight;
+
+        GameObject Part(PrimitiveType type, string name, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(type);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(root.transform, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            return g;
+        }
+
+        Part(PrimitiveType.Cube, "Box", new Vector3(0f, H * 0.5f, 0f), new Vector3(D, H, D), boxColor);
+        Part(PrimitiveType.Cube, "Lid", new Vector3(0f, H + 0.03f, 0f), new Vector3(D * 1.06f, 0.07f, D * 1.06f), metal);
+        for (int i = 0; i < 3; i++)   // the three exit ports on the back
+            Part(PrimitiveType.Cylinder, "Port", new Vector3((i - 1) * D * 0.3f, H * 0.55f, -D * 0.5f), new Vector3(0.2f, 0.04f, 0.2f), metal).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+        // Tube from the box to the magnet head.
+        float tubeLen = D * 0.55f;
+        Part(PrimitiveType.Cylinder, "Intake Tube", new Vector3(0f, H * 0.45f, D * 0.5f + tubeLen * 0.5f), new Vector3(0.24f, tubeLen * 0.5f, 0.24f), metal).transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+        // Horseshoe head (lying on its side, opening forward): two legs reaching forward with silver tips, an arch behind them.
+        float z = D * 0.5f + tubeLen;
+        float y = H * 0.45f, gap = 0.34f, leg = 0.2f;
+        for (int s = -1; s <= 1; s += 2)
+        {
+            Part(PrimitiveType.Cube, "Magnet Leg", new Vector3(s * gap, y, z + 0.2f), new Vector3(leg, leg, 0.55f), red);
+            Part(PrimitiveType.Cube, "Magnet Tip", new Vector3(s * gap, y, z + 0.52f), new Vector3(leg * 1.05f, leg * 1.05f, 0.14f), silver);
+        }
+        Part(PrimitiveType.Cube, "Magnet Arch", new Vector3(0f, y, z - 0.1f), new Vector3(gap * 2f + leg, leg, leg), red);
+
+        GameObject mouth = new GameObject("Mouth");
+        mouth.transform.SetParent(root.transform, false);
+        mouth.transform.localPosition = new Vector3(0f, y, z + 0.55f);
+
+        if (displayOnly) return;
+
+        // The pull arc on the floor: a flat fan in front of the magnet.
+        GameObject arc = new GameObject("Range", typeof(MeshFilter), typeof(MeshRenderer));
+        arc.transform.SetParent(root.transform, false);
+        arc.transform.localPosition = new Vector3(0f, 0.03f, z + 0.55f);
+        Mesh mesh = new Mesh { name = "Pull Arc" };
+        int steps = 24;
+        float half = Mathf.Clamp(d.arcDegrees, 20f, 170f) * 0.5f * Mathf.Deg2Rad;
+        Vector3[] v = new Vector3[steps + 2];
+        int[] t = new int[steps * 3];
+        v[0] = Vector3.zero;
+        for (int i = 0; i <= steps; i++)
+        {
+            float a = Mathf.Lerp(-half, half, i / (float)steps);
+            v[i + 1] = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a)) * d.radius;
+        }
+        for (int i = 0; i < steps; i++) { t[i * 3] = 0; t[i * 3 + 1] = i + 2; t[i * 3 + 2] = i + 1; }
+        mesh.vertices = v;
+        mesh.triangles = t;
+        mesh.RecalculateNormals();
+        arc.GetComponent<MeshFilter>().sharedMesh = mesh;
+        Color fan = d.color; fan.a = rangeOpacity;
+        Renderer ar = arc.GetComponent<Renderer>();
+        Material fanMat = clicker.CreateVisualMaterial(fan, true);
+        if (fanMat != null) ar.sharedMaterial = fanMat;
+        ar.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        ar.receiveShadows = false;
     }
 
     private void BuildVacuumBody(GameObject root, Device d, bool isPreview)

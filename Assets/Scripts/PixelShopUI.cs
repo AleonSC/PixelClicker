@@ -570,7 +570,7 @@ public partial class PixelShop
         for (int i = 0; i < consumables.ItemCount; i++)
         {
             bool match = false;
-            if (!consumables.ItemCraftOnly(i) && !consumables.IsDragonSeed(i))
+            if (!consumables.ItemCraftOnly(i) && !consumables.ItemNotSold(i) && !consumables.IsDragonSeed(i))
             {
                 string name = consumables.ItemName(i);
                 match = TextMatches(name) || TextMatches(consumables.ItemDescription(i)) || TextMatches(CategoryWords[Mathf.Clamp(consumables.CategoryOf(i), 0, 3)]);

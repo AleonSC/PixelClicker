@@ -466,3 +466,5 @@
 [2026-10-11 13:41 UTC] The pinned Inventory now follows the same window hierarchy as the normal one (opening Crafting, the Shop, Log, Bank, Skills or Toggles puts it away) and comes back by itself when those windows close.
 [2026-10-11 13:56 UTC] Added blank rebindable keys for opening the Inventory, Shop, Log, Crafting, Toggles, Pixel Bank and Skills windows (Settings > Key Bindings, Backspace clears a key).
 [2026-10-11 13:56 UTC] The simplified (pinned) Inventory is never narrower than its two top buttons.
+[2026-10-11 14:02 UTC] Added the Magnetized Sorter: craft a Sorter with a Magnet; it sucks pixels from an arc in front into a box and three grabbable exit pipes shoot out the stored pixel type you scroll-select.
+[2026-10-11 14:02 UTC] Crafting can now use devices as ingredients (and craft-only devices are never sold in the shop).

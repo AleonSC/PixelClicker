@@ -24,7 +24,7 @@ public class PixelCrafting : MonoBehaviour
         Crafted = null;
     }
 
-    public enum ItemKind { Pixel = 0, Potion = 1 }
+    public enum ItemKind { Pixel = 0, Potion = 1, Device = 2 }
     public enum ResultKind { Potion = 0, Device = 1, Combo = 2, Triple = 3 }
 
     /// <summary>One ingredient: an amount of a pixel type's currency, or of a potion.</summary>
@@ -36,6 +36,9 @@ public class PixelCrafting : MonoBehaviour
 
         [Tooltip("The pixel type (for a potion: the pixel type the potion is for).")]
         public PixelClicker.PixelType type = PixelClicker.PixelType.White;
+
+        [Tooltip("For a Device ingredient: which device (a Sorter, a Magnet...).")]
+        public PixelConsumables.DeviceKind device = PixelConsumables.DeviceKind.Sorter;
 
         [Min(1)]
         [Tooltip("How many it costs.")]
@@ -54,6 +57,13 @@ public class PixelCrafting : MonoBehaviour
         public double Amount => amountOverride >= 0d ? amountOverride : amount;
 
         public Ingredient() { }
+
+        public Ingredient(PixelConsumables.DeviceKind device, int amount)
+        {
+            kind = ItemKind.Device;
+            this.device = device;
+            this.amount = amount;
+        }
 
         public Ingredient(ItemKind kind, PixelClicker.PixelType type, int amount)
         {
@@ -276,6 +286,7 @@ public class PixelCrafting : MonoBehaviour
         public PixelClicker.PixelType second;
         public bool hasThird;                    // a 3-type combo potion (type + second + third)
         public PixelClicker.PixelType third;
+        public PixelConsumables.DeviceKind device;   // for kind Device
 
         public Item(ItemKind k, PixelClicker.PixelType t, bool isCombo = false, PixelClicker.PixelType secondType = PixelClicker.PixelType.White,
                     bool withThird = false, PixelClicker.PixelType thirdType = PixelClicker.PixelType.White)
@@ -290,15 +301,15 @@ public class PixelCrafting : MonoBehaviour
     }
 
     private static bool SameItem(Item a, Item b) =>
-        a.kind == b.kind && a.type == b.type && a.combo == b.combo && (!a.combo || (a.second == b.second && a.hasThird == b.hasThird && (!a.hasThird || a.third == b.third)));
+        a.kind == b.kind && (a.kind != ItemKind.Device || a.device == b.device) && a.type == b.type && a.combo == b.combo && (!a.combo || (a.second == b.second && a.hasThird == b.hasThird && (!a.hasThird || a.third == b.third)));
 
     /// <summary>The item an ingredient stands for (a pixel, a plain potion or a combo potion).</summary>
-    private static Item ItemOf(Ingredient ing) => new Item(ing.kind, ing.type, ing.combo, ing.second, ing.hasThird, ing.third);
+    private static Item ItemOf(Ingredient ing) => new Item(ing.kind, ing.type, ing.combo, ing.second, ing.hasThird, ing.third) { device = ing.device };
 
     /// <summary>An ingredient of this item.</summary>
     private static Ingredient IngredientOf(Item item, int amount) => new Ingredient(item.kind, item.type, amount)
     {
-        combo = item.combo, second = item.second, hasThird = item.hasThird, third = item.third,
+        device = item.device, combo = item.combo, second = item.second, hasThird = item.hasThird, third = item.third,
     };
 
     private class Slot
@@ -407,6 +418,18 @@ public class PixelCrafting : MonoBehaviour
                 b = new Ingredient(ItemKind.Pixel, PixelClicker.PixelType.Glass, defaultGlassCost),
                 resultKind = ResultKind.Potion,
                 resultPotion = type,
+            });
+            changed = true;
+        }
+        if (!recipes.Exists(r => r != null && r.resultKind == ResultKind.Device && r.resultDevice == PixelConsumables.DeviceKind.MagnetSorter))
+        {
+            recipes.Add(new Recipe
+            {
+                label = "Magnetized Sorter",
+                a = new Ingredient(PixelConsumables.DeviceKind.Sorter, 1),
+                b = new Ingredient(PixelConsumables.DeviceKind.Magnet, 1),
+                resultKind = ResultKind.Device,
+                resultDevice = PixelConsumables.DeviceKind.MagnetSorter,
             });
             changed = true;
         }
@@ -1103,6 +1126,11 @@ public class PixelCrafting : MonoBehaviour
             int i = clicker.IndexOf(item.type);
             return i >= 0 ? clicker.Tiers[i].displayName : item.type.ToString();
         }
+        if (item.kind == ItemKind.Device)
+        {
+            int dv = FindDevice(item.device);
+            return dv >= 0 ? consumables.ItemName(dv) : item.device.ToString();
+        }
         int p = PotionIndexOf(item);
         return p >= 0 ? consumables.ItemName(p) : item.type + " Potion";
     }
@@ -1157,7 +1185,14 @@ public class PixelCrafting : MonoBehaviour
         }
 
         Color c = TierColor(item.type);
-        if (item.kind == ItemKind.Pixel)
+        if (item.kind == ItemKind.Device)
+        {
+            int dv = FindDevice(item.device);
+            Color dc = dv >= 0 ? consumables.DeviceColorOf(dv) : Color.grey;
+            MakeCube(root.transform, "Cube", new Color(dc.r, dc.g, dc.b, 1f), 0.62f);
+            MakeCube(root.transform, "Frame", new Color(0.95f, 0.8f, 0.3f, 0.35f), 0.7f);   // a gold rim marks it as a device, not a pixel
+        }
+        else if (item.kind == ItemKind.Pixel)
         {
             MakeCube(root.transform, "Cube", c, 0.62f);
         }
@@ -1320,6 +1355,11 @@ public class PixelCrafting : MonoBehaviour
     private double Have(Item item)
     {
         if (item.kind == ItemKind.Pixel) return PixelClicker.InfiniteResources ? 1e9 : Math.Floor(clicker.GetCount(item.type));
+        if (item.kind == ItemKind.Device)
+        {
+            int dv = FindDevice(item.device);
+            return dv >= 0 ? consumables.ItemOwned(dv) : 0;
+        }
         int p = PotionIndexOf(item);
         return p >= 0 ? consumables.ItemOwned(p) : 0;
     }
@@ -1345,6 +1385,19 @@ public class PixelCrafting : MonoBehaviour
         bodyRect.anchoredPosition = new Vector2(0f, -spare * 0.35f);
     }
 
+    /// <summary>The device kinds some recipe uses as an ingredient (only those are listed among the materials).</summary>
+    private IEnumerable<PixelConsumables.DeviceKind> DeviceIngredientKinds()
+    {
+        HashSet<PixelConsumables.DeviceKind> kinds = new HashSet<PixelConsumables.DeviceKind>();
+        foreach (Recipe r in recipes)
+        {
+            if (r == null) continue;
+            if (r.a.kind == ItemKind.Device) kinds.Add(r.a.device);
+            if (r.b.kind == ItemKind.Device) kinds.Add(r.b.device);
+        }
+        return kinds;
+    }
+
     private void RefreshList()
     {
         FitWindow();
@@ -1357,6 +1410,13 @@ public class PixelCrafting : MonoBehaviour
                     items.Add(consumables.ItemCraftOnly(i)
                         ? new Item(ItemKind.Potion, consumables.ItemRequiredType(i), true, consumables.ItemSecondType(i), consumables.ItemHasThird(i), consumables.ItemThirdType(i))
                         : new Item(ItemKind.Potion, consumables.ItemRequiredType(i)));
+
+        if (consumables != null)
+            foreach (PixelConsumables.DeviceKind kind in DeviceIngredientKinds())
+            {
+                int dv = FindDevice(kind);
+                if (dv >= 0 && consumables.ItemOwned(dv) > 0) items.Add(new Item(ItemKind.Device, PixelClicker.PixelType.White) { device = kind });
+            }
 
         while (cells.Count < items.Count) cells.Add(BuildCell());
 
@@ -1459,7 +1519,7 @@ public class PixelCrafting : MonoBehaviour
     // Recipes
     // ------------------------------------------------------------------
 
-    private static bool Matches(Ingredient ing, Item item) => !item.combo && !ing.combo && ing.kind == item.kind && ing.type == item.type;
+    private static bool Matches(Ingredient ing, Item item) => !item.combo && !ing.combo && ing.kind == item.kind && (ing.kind == ItemKind.Device ? ing.device == item.device : ing.type == item.type);
 
     private Recipe FindRecipe(Item x, Item y)
     {
@@ -1488,7 +1548,7 @@ public class PixelCrafting : MonoBehaviour
         {
             Ingredient copy = new Ingredient(ing.kind, ing.type, ing.amount)
             {
-                combo = ing.combo, second = ing.second, hasThird = ing.hasThird, third = ing.third,
+                combo = ing.combo, second = ing.second, hasThird = ing.hasThird, third = ing.third, device = ing.device,
             };
             if (ing.kind != ItemKind.Pixel) return copy;
             if ((isPotion || isCombo) && !pricedDone && ing.type == priced)
@@ -1680,6 +1740,11 @@ public class PixelCrafting : MonoBehaviour
     private bool Spend(Ingredient ing)
     {
         if (ing.kind == ItemKind.Pixel) return clicker.TrySpend(ing.type, ing.Amount);
+        if (ing.kind == ItemKind.Device)
+        {
+            int dv = FindDevice(ing.device);
+            return dv >= 0 && consumables.TryRemoveItem(dv, (int)ing.Amount);
+        }
         int p = PotionIndexOf(ItemOf(ing));
         return p >= 0 && consumables.TryRemoveItem(p, (int)ing.Amount);
     }

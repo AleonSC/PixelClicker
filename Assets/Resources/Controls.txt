@@ -71,3 +71,7 @@ Q (when ticked in Dev Tools) | Clear all old pixels
 
 # Menu shortcuts
 (blank until you pick one in Settings > Key Bindings) | Open / close Inventory, Shop, Log, Crafting, Toggles, Pixel Bank and Skills (Backspace in the binding screen clears a key)
+
+# Magnetized Sorter
+Click an exit pipe, move, click again | Grab the pipe and put its end down anywhere in reach (right-click puts it back)
+Mouse wheel over an exit pipe | Choose which stored pixel type that pipe shoots out

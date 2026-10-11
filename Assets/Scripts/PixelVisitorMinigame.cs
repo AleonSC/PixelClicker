@@ -368,7 +368,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         List<int> list = new List<int>();
         if (consumables == null) return list;
         for (int i = 0; i < consumables.ItemCount; i++)
-            if (!consumables.ItemCraftOnly(i) && IsWare(i)) list.Add(i);
+            if (!consumables.ItemCraftOnly(i) && !consumables.ItemNotSold(i) && IsWare(i)) list.Add(i);
         return list;
     }
 
