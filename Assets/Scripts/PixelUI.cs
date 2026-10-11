@@ -1300,7 +1300,7 @@ public class PixelUI : MonoBehaviour
         if (autoMode && compact)
         {
             HideMaterialWidgets();
-            HideConsumableWidgets();
+            HideConsumableWidgets(keepRows: CompactMode == 2);   // the pinned consumable rows stay active: switching them off and on each refresh would kill their hover and clicks
             if (CompactMode == 2) y = RefreshCompactConsumables(y);
         }
         else if (autoMode)
@@ -1765,13 +1765,13 @@ public class PixelUI : MonoBehaviour
     }
 
     /// <summary>Hides everything that belongs to the Consumables tab.</summary>
-    private void HideConsumableWidgets()
+    private void HideConsumableWidgets(bool keepRows = false)
     {
         if (activeLabel != null) activeLabel.gameObject.SetActive(false);
         if (categoryDropdown != null && categoryDropdown.gameObject.activeSelf) categoryDropdown.gameObject.SetActive(false);
         if (noConsumablesLabel != null) noConsumablesLabel.gameObject.SetActive(false);
         if (hintLabel != null) hintLabel.gameObject.SetActive(false);
-        if (potionRowObjects != null)
+        if (potionRowObjects != null && !keepRows)
             foreach (GameObject row in potionRowObjects)
                 if (row != null) row.SetActive(false);
     }
