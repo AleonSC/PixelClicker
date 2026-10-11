@@ -122,6 +122,7 @@ public class PixelGuideVendor : MonoBehaviour
     public static void EndNarration() { if (instance != null) instance.StopNarration(); }
 
     private bool narrating;
+    private RectTransform armL, pointer;
     private Coroutine narrateRoutine;
     private const float NarratorScale = 0.85f;
     private float reactTime = -10f;
@@ -134,6 +135,18 @@ public class PixelGuideVendor : MonoBehaviour
         if (disableGuide || visiting || narrating) return;
         narrating = true;
         narrateRoutine = StartCoroutine(NarrateRoutine());
+    }
+
+    /// <summary>Where the stick points: the middle of the shop window as it is on screen (screen pixels = overlay world units).</summary>
+    private Vector3 ShopPointTarget()
+    {
+        if (shop != null && shop.PanelRect != null && shop.PanelRect.gameObject.activeInHierarchy)
+        {
+            Vector3[] c = new Vector3[4];
+            shop.PanelRect.GetWorldCorners(c);
+            return (c[0] + c[2]) * 0.5f;
+        }
+        return new Vector3(Screen.width * 0.4f, Screen.height * 0.6f, 0f);
     }
 
     private void StopNarration()
@@ -157,26 +170,32 @@ public class PixelGuideVendor : MonoBehaviour
             Glance();
             yield return null;
         }
-        float nextHop = Time.unscaledTime + 1.2f;
-        float hopStart = -10f;
+        // He stands still and points at the shop with a stick (no hopping); on a new step he taps the stick.
+        if (armL != null) armL.gameObject.SetActive(false);
+        if (pointer != null) pointer.gameObject.SetActive(true);
         while (narrating)
         {
             float now = Time.unscaledTime;
-            if (now >= nextHop) { hopStart = now; nextHop = now + Random.Range(1.8f, 3.2f); }
-            if (reactTime > hopStart) { hopStart = reactTime; nextHop = Mathf.Max(nextHop, reactTime + 1.5f); }
-            bool excited = now - reactTime < 1.4f;
-            float hopLen = excited ? 0.55f : 0.45f, hopHeight = excited ? 70f : 36f;
-            float k = (now - hopStart) / hopLen;
-            float lift = k >= 0f && k <= 1f ? Mathf.Sin(k * Mathf.PI) * hopHeight : 0f;
-            // Squash on the ground, stretch in the air.
-            float stretch = k >= 0f && k <= 1f ? 1f + Mathf.Sin(k * Mathf.PI) * 0.1f : 1f + Mathf.Sin(now * 3f) * 0.015f;
-            float squash = k >= 0f && k <= 1f ? 1f / stretch : 1f / stretch;
-            characterRect.localScale = new Vector3(NarratorScale * squash, NarratorScale * stretch, 1f);
-            characterRect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(now * 2.2f) * 3.5f + (excited ? Mathf.Sin(now * 14f) * 5f : 0f));
-            characterRect.anchoredPosition = new Vector2(restX + Mathf.Sin(now * 1.3f) * 10f, y + lift + Mathf.Sin(now * 3f) * 3f);
+            float sinceReact = now - reactTime;
+            bool tapping = sinceReact >= 0f && sinceReact < 0.9f;
+            float breathe = 1f + Mathf.Sin(now * 2.4f) * 0.012f;
+            characterRect.localScale = new Vector3(NarratorScale, NarratorScale * breathe, 1f);
+            characterRect.localRotation = Quaternion.identity;
+            characterRect.anchoredPosition = new Vector2(restX, y);
+            if (pointer != null)
+            {
+                Vector3 target = ShopPointTarget();
+                Vector2 dir = (Vector2)(target - pointer.position);
+                float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f;
+                ang += Mathf.Sin(now * 1.6f) * 2f + (tapping ? Mathf.Sin(sinceReact * 22f) * 5f * (1f - sinceReact / 0.9f) : 0f);
+                pointer.rotation = Quaternion.Euler(0f, 0f, ang);
+                pointer.localScale = new Vector3(1f, tapping ? 1f + Mathf.Sin(sinceReact * 22f) * 0.05f : 1f, 1f);
+            }
             Glance();
             yield return null;
         }
+        if (pointer != null) pointer.gameObject.SetActive(false);
+        if (armL != null) armL.gameObject.SetActive(true);
         characterRect.localRotation = Quaternion.identity;
         float from = characterRect != null ? characterRect.anchoredPosition.x : restX;
         for (float t = 0f; t < slideSeconds * 0.7f && characterRect != null; t += Time.unscaledDeltaTime)
@@ -573,7 +592,7 @@ public class PixelGuideVendor : MonoBehaviour
         Block(a, "Leg R", side, new Vector2(40f, 50f), new Vector2(45f, 28f));
         Block(a, "Shoe L", dark, new Vector2(58f, 20f), new Vector2(-48f, 10f));
         Block(a, "Shoe R", dark, new Vector2(58f, 20f), new Vector2(48f, 10f));
-        Block(a, "Arm L", side, new Vector2(34f, 100f), new Vector2(-122f, 150f), 8f);
+        armL = Block(a, "Arm L", side, new Vector2(34f, 100f), new Vector2(-122f, 150f), 8f);
         Block(a, "Arm R", side, new Vector2(34f, 100f), new Vector2(122f, 150f), -8f);
         Block(a, "Side", side, new Vector2(200f, 200f), new Vector2(12f, 190f));
         Block(a, "Face", face, new Vector2(200f, 200f), new Vector2(0f, 180f));
@@ -591,6 +610,18 @@ public class PixelGuideVendor : MonoBehaviour
         Block(a, "Brow R", dark, new Vector2(70f, 10f), new Vector2(42f, 228f), 14f);
         Block(a, "Mouth", dark, new Vector2(70f, 9f), new Vector2(-6f, 140f), 6f);
         Block(a, "Smirk", dark, new Vector2(10f, 18f), new Vector2(34f, 150f));
+
+        // The pointing arm + stick he uses while narrating the shop tutorial (hidden otherwise; turned towards the shop every frame).
+        GameObject ptr = new GameObject("Pointer", typeof(RectTransform));
+        ptr.transform.SetParent(a, false);
+        pointer = ptr.GetComponent<RectTransform>();
+        pointer.anchorMin = pointer.anchorMax = new Vector2(0.5f, 0f);
+        pointer.sizeDelta = Vector2.zero;
+        pointer.anchoredPosition = new Vector2(-118f, 205f);
+        Block(pointer, "Pointing Arm", side, new Vector2(32f, 120f), new Vector2(0f, 60f));
+        Block(pointer, "Stick", new Color(0.55f, 0.36f, 0.16f), new Vector2(10f, 360f), new Vector2(0f, 230f));
+        Block(pointer, "Stick Tip", gold, new Vector2(24f, 24f), new Vector2(0f, 410f), 45f);
+        pointer.gameObject.SetActive(false);
 
         // The gift he holds up on visit 2.
         GameObject gift = new GameObject("Gift", typeof(RectTransform));

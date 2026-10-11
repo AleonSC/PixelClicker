@@ -136,7 +136,14 @@ public class PixelNoticeBox : MonoBehaviour
             float textHeightB = Mathf.Ceil(label.GetPreferredValues(message, width - 60f, 0f).y);
             boxRect.sizeDelta = new Vector2(width, Mathf.Max(minHeight, textHeightB + 130f));   // minHeight keeps a series of tips the same size
             float x = corners[2].x * toUnits + 24f;
-            x = Mathf.Min(x, canvasRect.rect.width - width - 10f); // stays on screen
+            float room = canvasRect.rect.width - 10f - x;
+            if (room < width)   // not enough room to the right of the window (high UI scale): the box gets narrower instead of covering the window
+            {
+                width = Mathf.Max(260f, room);
+                float th = Mathf.Ceil(label.GetPreferredValues(message, width - (small ? 36f : 60f), 0f).y);
+                boxRect.sizeDelta = new Vector2(width, Mathf.Max(minHeight, th + 130f));
+                x = Mathf.Min(x, canvasRect.rect.width - width - 10f);
+            }
             boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
             if (besideBottom)
             {
@@ -251,8 +258,10 @@ public class PixelNoticeBox : MonoBehaviour
     /// <summary>The window's corners at full size: a window that is still growing in (PixelPop) would otherwise put the box on top of it.</summary>
     private static void FullSizeCorners(RectTransform window, Vector3[] corners)
     {
+        // At full size, but shrunk by the fit a PixelPop window gets when it is bigger than the screen (high UI scale).
         Vector3 scale = window.localScale;
-        window.localScale = Vector3.one;
+        PixelPop pop = window.GetComponent<PixelPop>();
+        window.localScale = Vector3.one * (pop != null ? pop.Fit : 1f);
         window.GetWorldCorners(corners);
         window.localScale = scale;
     }
