@@ -16,6 +16,7 @@ public partial class PixelShop
     {
         public bool utilities;
         public bool seeds;     // the Seeds card: lists only seed items
+        public bool supplies;  // the Supplies card: lists only instant-use items
         public bool blank;     // a spare card with nothing on it yet
         public RectTransform rect;
         public TMP_Dropdown dropdown;
@@ -29,7 +30,7 @@ public partial class PixelShop
         public int count = 1;
     }
 
-    private PurchaseCard potionCard, utilityCard, seedCard, spareCard;
+    private PurchaseCard potionCard, utilityCard, seedCard, supplyCard, spareCard;
     private GameObject consumablesArea;
 
     // ------------------------------------------------------------------
@@ -51,7 +52,7 @@ public partial class PixelShop
         utilityCard = BuildCard(consumablesArea.transform, true, utilitiesCardTitle, width + cardGap, width, 0f);
         float row2 = cardRowHeight + cardGap;
         seedCard = BuildCard(consumablesArea.transform, false, seedsCardTitle, 0f, width, row2, seeds: true);
-        spareCard = BuildCard(consumablesArea.transform, false, "", width + cardGap, width, row2, blank: true);
+        supplyCard = BuildCard(consumablesArea.transform, false, suppliesCardTitle, width + cardGap, width, row2, supplies: true);
         consumablesArea.SetActive(false);
     }
 
@@ -62,11 +63,11 @@ public partial class PixelShop
         rt.anchoredPosition = new Vector2(x, -y);
     }
 
-    private PurchaseCard BuildCard(Transform parent, bool utilities, string title, float x, float width, float top, bool seeds = false, bool blank = false)
+    private PurchaseCard BuildCard(Transform parent, bool utilities, string title, float x, float width, float top, bool seeds = false, bool blank = false, bool supplies = false)
     {
-        PurchaseCard card = new PurchaseCard { utilities = utilities, seeds = seeds, blank = blank };
+        PurchaseCard card = new PurchaseCard { utilities = utilities, seeds = seeds, blank = blank, supplies = supplies };
 
-        GameObject go = new GameObject(blank ? "Spare Card" : seeds ? "Seeds Card" : utilities ? "Utilities Card" : "Potions Card", typeof(RectTransform), typeof(Image));
+        GameObject go = new GameObject(blank ? "Spare Card" : supplies ? "Supplies Card" : seeds ? "Seeds Card" : utilities ? "Utilities Card" : "Potions Card", typeof(RectTransform), typeof(Image));
         go.transform.SetParent(parent, false);
         go.GetComponent<Image>().color = rowColor;
         PixelUIKit.StyleBox(go.GetComponent<Image>());
@@ -188,7 +189,9 @@ public partial class PixelShop
         {
             if (consumables.ItemCraftOnly(i)) continue;             // combo potions can only be crafted
             bool seedItem = consumables.IsSeedItem(i);
-            if (card.seeds) { if (seedItem && !consumables.IsDragonSeed(i)) list.Add(i); }          // the Seeds card: seeds only
+            if (card.supplies) { if (consumables.IsSupplyItem(i)) list.Add(i); }                     // the Supplies card: instant-use items only
+            else if (consumables.IsSupplyItem(i)) continue;                                           // supplies are not on the Utilities card any more
+            else if (card.seeds) { if (seedItem && !consumables.IsDragonSeed(i)) list.Add(i); }          // the Seeds card: seeds only
             else if (!seedItem && consumables.IsDevice(i) == card.utilities) list.Add(i);
         }
 
@@ -288,5 +291,6 @@ public partial class PixelShop
         RefreshCard(potionCard);
         RefreshCard(utilityCard);
         RefreshCard(seedCard);
+        RefreshCard(supplyCard);
     }
 }

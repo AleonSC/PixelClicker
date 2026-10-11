@@ -497,6 +497,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Title of the Seeds purchase card.")]
     [SerializeField] private string seedsCardTitle = "Seeds";
 
+    [Tooltip("Title of the Supplies card (Combo Fuel, Ghost Bait, Pet Treat).")]
+    [SerializeField] private string suppliesCardTitle = "Supplies";
+
     [Min(0f)]
     [Tooltip("Gap between the two cards.")]
     [SerializeField] private float cardGap = 20f;

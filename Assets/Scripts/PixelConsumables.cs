@@ -1566,6 +1566,17 @@ public class PixelConsumables : MonoBehaviour
     public DeviceKind DeviceKindOf(int item) => devices[item - potions.Length].kind;
 
     /// <summary>True for a seed item (a "device" of kind Seed: planted, not placed).</summary>
+    /// <summary>Instant-use items (Combo Fuel, Ghost Bait, Pet Treat): they are not placed, so they live in the Supplies category.</summary>
+    public bool IsSupplyItem(int item)
+    {
+        if (!IsDevice(item)) return false;
+        DeviceKind k = devices[item - potions.Length].kind;
+        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat;
+    }
+
+    /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
+    public int CategoryOf(int item) => IsSeedItem(item) ? 2 : IsSupplyItem(item) ? 3 : IsDevice(item) ? 1 : 0;
+
     public bool IsSeedItem(int item) => IsDevice(item) && devices[item - potions.Length].kind == DeviceKind.Seed;
 
     /// <summary>True for the rare Dragon Seed (typed prices, offered only by the Farmer, grows a Dragon Cube the player lacks).</summary>
