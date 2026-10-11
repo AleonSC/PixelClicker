@@ -26,6 +26,9 @@ public class PixelShopTutorial : MonoBehaviour
     [Tooltip("Seconds after the Shop becomes available (and nothing else is on screen) before the tutorial starts.")]
     [SerializeField] private float startDelay = 2f;
 
+    [Tooltip("Every tutorial box is at least this tall (UI units), so the Got it button stays in the same place from step to step. Raise it if a long text makes a box grow.")]
+    [SerializeField] private float boxHeight = 260f;
+
     [Tooltip("The steps, in order. Each shows its text in a small box beside the shop and opens its tab. Empty = the built-in steps.")]
     [SerializeField] private List<Step> steps = new List<Step>();
 
@@ -94,6 +97,6 @@ public class PixelShopTutorial : MonoBehaviour
 
         Step step = steps[index];
         shop.TutorialOpen(step.tab, step.subTab);
-        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1));
+        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: boxHeight);
     }
 }

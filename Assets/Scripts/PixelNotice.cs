@@ -29,10 +29,10 @@ public static class PixelNotice
     /// <summary>'nearScreen' = the box follows a point on screen (pixels; null = nowhere), sitting beside it, e.g. next to the ghost. 'freezeTime' = Time.timeScale is 0 until the box is closed.</summary>
     /// <summary>'beside' = a window (Inventory, Log): the box sits right next to it, to its right, never overlapping it. 'besideBottom' aligns the bottoms (for a window at the bottom of the screen), else the tops.</summary>
     public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false)
+                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime, minHeight); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -105,7 +105,7 @@ public class PixelNoticeBox : MonoBehaviour
     private const float BesideWidth = 640f;
 
     public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false)
+                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f)
     {
         closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
         Unfreeze();
@@ -134,7 +134,7 @@ public class PixelNoticeBox : MonoBehaviour
             RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
             float toUnits = canvasRect.rect.width / Mathf.Max(1f, Screen.width);
             float textHeightB = Mathf.Ceil(label.GetPreferredValues(message, width - 60f, 0f).y);
-            boxRect.sizeDelta = new Vector2(width, textHeightB + 130f);
+            boxRect.sizeDelta = new Vector2(width, Mathf.Max(minHeight, textHeightB + 130f));   // minHeight keeps a series of tips the same size
             float x = corners[2].x * toUnits + 24f;
             x = Mathf.Min(x, canvasRect.rect.width - width - 10f); // stays on screen
             boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0f);
