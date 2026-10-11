@@ -1726,12 +1726,12 @@ public class PixelPauseMenu : MonoBehaviour
         foreach (SettingsItem item in settingsItems)
         {
             if (item.isHeader || !item.wasActive) continue;
-            string text = RowText(item);
-            if (!text.ToLowerInvariant().Contains(menuSearch)) continue;
+            string rowLabel = RowText(item);
+            if (!rowLabel.ToLowerInvariant().Contains(menuSearch)) continue;
             totalSettings++;
             if (shownSettings >= 6) continue;
             shownSettings++;
-            AddResult(settingsText + " > " + text, tickBoxColor, () => OpenFilteredSettings());
+            AddResult(settingsText + " > " + rowLabel, tickBoxColor, () => OpenFilteredSettings());
         }
         if (totalSettings > shownSettings) AddResult("+ " + (totalSettings - shownSettings) + " more in " + settingsText, tickBoxColor, () => OpenFilteredSettings());
         found += totalSettings;

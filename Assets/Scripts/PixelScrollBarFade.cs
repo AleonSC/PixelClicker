@@ -26,7 +26,6 @@ public class PixelScrollBarFade : MonoBehaviour, IPointerEnterHandler, IPointerE
     private ScrollRect scroll;
     private bool lookedForScroll;
     private RectMask2D softMask;
-    private int appliedSoft = -1;
     private float fadeAmount;
     private RectTransform chevron;
     private CanvasGroup chevronGroup;
