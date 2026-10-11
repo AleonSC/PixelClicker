@@ -411,3 +411,4 @@
 [2026-10-11 07:54 UTC] Wood and Rock are no longer part of the base rotation: each is an opt-in switch in the Toggles window (off until you turn it on).
 [2026-10-11 07:59 UTC] Ultra Pad reworked into Ultra Holes: four round black holes open near the screen corners, the marked one (spinning wanted pixel in its centre) pays out and can give Ultra pixels, wrong drops are just lost, and the marker jumps after each correct drop or after 12 s idle.
 [2026-10-11 08:11 UTC] Fixed a compile error in the Ultra Holes minigame and two unused-field warnings.
+[2026-10-11 08:21 UTC] Seed and Water are no longer spawn switches in Toggles (they come with the Farmer's Pack); farm blocks are all unlocked together; farming pixels got bevelled looks, ambient particles (pollen, dew, crumbs, spores, chaff, bugs, golden sparkles), hit/break bursts and their own synthesized sounds.

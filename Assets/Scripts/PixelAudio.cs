@@ -241,6 +241,8 @@ public class PixelAudio : MonoBehaviour
             Make("fire_crackle", 0.15f, 0.85f, 1.15f),
             Make("ore_chip", 0.04f, 0.8f, 1.3f),
             Make("ore_gleam", 0.3f, 0.95f, 1.05f),
+            Make("farm_hit", 0.04f, 0.85f, 1.2f),
+            Make("farm_gleam", 0.3f, 0.95f, 1.05f),
         };
         foreach (PixelClicker.PixelType ore in Enum.GetValues(typeof(PixelClicker.PixelType)))
             if (PixelClicker.IsOre(ore)) list.Add(Make("pixel_bounce_" + ore.ToString().ToLowerInvariant(), 0.04f, 0.9f, 1.15f)); // ore clinks when an old ore lands
@@ -286,6 +288,14 @@ public class PixelAudio : MonoBehaviour
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
             case "ore_gleam": return new[] { PixelSynth.OreGleam() };
+            case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
+            case "farm_gleam": return new[] { PixelSynth.Farm(9, 1) };
+            case "pixel_dirt": return new[] { PixelSynth.Farm(1, 1), PixelSynth.Farm(1, 2), PixelSynth.Farm(1, 3) };
+            case "pixel_fertilizer": return new[] { PixelSynth.Farm(2, 1), PixelSynth.Farm(2, 2), PixelSynth.Farm(2, 3) };
+            case "pixel_pollen": return new[] { PixelSynth.Farm(3, 1), PixelSynth.Farm(3, 2), PixelSynth.Farm(3, 3) };
+            case "pixel_wheat": return new[] { PixelSynth.Farm(4, 1), PixelSynth.Farm(4, 2), PixelSynth.Farm(4, 3) };
+            case "pixel_weevil": return new[] { PixelSynth.Farm(5, 1), PixelSynth.Farm(5, 2), PixelSynth.Farm(5, 3) };
+            case "pixel_goldenfruit": return new[] { PixelSynth.Farm(6, 1), PixelSynth.Farm(6, 2) };
         }
         // Each ore's own click is the sound of it breaking; its landing is a metallic clink.
         foreach (PixelClicker.PixelType ore in System.Enum.GetValues(typeof(PixelClicker.PixelType)))
@@ -721,6 +731,54 @@ public static class PixelSynth
     }
 
     /// <summary>A short splashy click for a Water pixel: a quick droplet "plip" with a little splash hiss around it. 'seed' picks a variant.</summary>
+    /// <summary>Farming sounds. kind: 0 soft hit, 1 dirt thud, 2 wet squelch, 3 airy puff, 4 dry rustle, 5 squeaky crunch, 6 golden chime, 9 gleam.</summary>
+    public static AudioClip Farm(int kind, int seed)
+    {
+        const int rate = 22050;
+        float len = kind == 6 ? 0.55f : kind == 9 ? 0.9f : 0.22f;
+        int n = (int)(rate * len);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(1300 + kind * 101 + seed * 17);
+        float lp = 0f;
+        float baseHz = 180f + seed * 25f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            float v = 0f;
+            switch (kind)
+            {
+                case 0: lp += (noise - lp) * 0.3f; v = lp * Mathf.Exp(-t * 40f) + Mathf.Sin(t * 260f * Mathf.PI * 2f) * Mathf.Exp(-t * 35f) * 0.5f; break;
+                case 1: lp += (noise - lp) * 0.12f; v = lp * Mathf.Exp(-t * 22f) * 1.4f + Mathf.Sin(t * baseHz * 0.5f * Mathf.PI * 2f) * Mathf.Exp(-t * 28f); break;
+                case 2: lp += (noise - lp) * 0.18f; v = lp * Mathf.Exp(-t * 14f) + Mathf.Sin(t * (140f + 90f * Mathf.Sin(t * 30f)) * Mathf.PI * 2f) * Mathf.Exp(-t * 16f) * 0.7f; break;
+                case 3: lp += (noise - lp) * 0.5f; v = (noise - lp) * Mathf.Sin(Mathf.Clamp01(t / 0.2f) * Mathf.PI) * 0.6f; break;
+                case 4: v = (rng.NextDouble() < 0.12 ? noise : 0f) * Mathf.Exp(-t * 12f) + (noise - lp) * 0.2f * Mathf.Exp(-t * 18f); lp += (noise - lp) * 0.4f; break;
+                case 5: v = Mathf.Sin(t * (1400f + seed * 200f) * (1f + t * 6f) * Mathf.PI * 2f) * Mathf.Exp(-t * 30f) * 0.5f + noise * Mathf.Exp(-t * 45f) * 0.5f; break;
+                case 6:
+                    {
+                        float f = 880f + seed * 220f;
+                        v = (Mathf.Sin(t * f * Mathf.PI * 2f) + 0.5f * Mathf.Sin(t * f * 2.01f * Mathf.PI * 2f) + 0.25f * Mathf.Sin(t * f * 3.02f * Mathf.PI * 2f)) * Mathf.Exp(-t * 7f) * 0.5f;
+                        break;
+                    }
+                default:
+                    {
+                        float f1 = 1046f, f2 = 1568f, f3 = 2093f;
+                        v = Mathf.Sin(t * f1 * Mathf.PI * 2f) * Mathf.Exp(-t * 4f) + (t > 0.12f ? Mathf.Sin((t - 0.12f) * f2 * Mathf.PI * 2f) * Mathf.Exp(-(t - 0.12f) * 4f) : 0f)
+                            + (t > 0.24f ? Mathf.Sin((t - 0.24f) * f3 * Mathf.PI * 2f) * Mathf.Exp(-(t - 0.24f) * 4f) : 0f);
+                        v *= 0.4f;
+                        break;
+                    }
+            }
+            data[i] = v * Mathf.Clamp01(t / 0.002f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("Farm " + kind + "-" + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
     public static AudioClip WaterClick(int seed)
     {
         const int rate = 22050;

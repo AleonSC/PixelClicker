@@ -97,6 +97,25 @@ public partial class PixelSkills : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Instance = null; offlineCache = -1; packCache = null; guestCache = null; }
 
+    private float bundleCheckTimer;
+
+    /// <summary>Safety net: the Farmer's Pack gives every farm block at once, so if the first one is unlocked (an old save, a half-applied purchase) the rest are unlocked too.</summary>
+    private void Update()
+    {
+        bundleCheckTimer -= Time.unscaledDeltaTime;
+        if (bundleCheckTimer > 0f || clicker == null) return;
+        bundleCheckTimer = 3f;
+        foreach (SkillPack p in packs)
+        {
+            if (p.id != FarmingId || p.types == null || p.types.Length == 0 || !clicker.IsUnlocked(p.types[0])) continue;
+            foreach (PixelClicker.PixelType t in p.types)
+            {
+                int i = clicker.IndexOf(t);
+                if (i >= 0 && !clicker.Tiers[i].unlocked) clicker.UnlockTier(i);
+            }
+        }
+    }
+
     private void Awake()
     {
         Instance = this;

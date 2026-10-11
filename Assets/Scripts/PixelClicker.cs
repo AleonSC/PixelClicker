@@ -257,7 +257,7 @@ public class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Seed || t == PixelType.Water || t == PixelType.Fire || t == PixelType.Treasure || t == PixelType.Nuclear;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Electric || t == PixelType.Mirror || t == PixelType.Fire || t == PixelType.Treasure || t == PixelType.Nuclear;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -1408,6 +1408,27 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 28;
         }
 
+        if (looksVersion < 29)
+        {
+            // The farming looks got bevelled rims and ambient particles: new ones are replaced by the fancier defaults, Seed / Water only gain the particles.
+            System.Collections.Generic.List<PixelLook> list29 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults29 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Dirt, PixelType.Fertilizer, PixelType.Pollen, PixelType.Wheat, PixelType.Weevil, PixelType.GoldenFruit })
+            {
+                PixelLook def = PixelLooks.Find(defaults29, t);
+                if (def == null) continue;
+                int at = list29.FindIndex(l => l != null && l.type == t);
+                if (at >= 0) list29[at] = def; else list29.Add(def);
+            }
+            foreach (PixelType t in new[] { PixelType.Seed, PixelType.Water })
+            {
+                PixelLook existing = PixelLooks.Find(list29.ToArray(), t), def = PixelLooks.Find(defaults29, t);
+                if (existing != null && def != null && existing.farmFx == PixelLook.FarmAmbient.None) existing.farmFx = def.farmFx;
+            }
+            looks = list29.ToArray();
+            looksVersion = 29;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1615,6 +1636,7 @@ public class PixelClicker : MonoBehaviour
                 PlayClickEffects(tier);
                 if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
                 if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)need);
+                else if (IsFarm(tier.type) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, shownNeed, automatic);
@@ -1681,6 +1703,7 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Fire && !disableFireFx) FireBurstFx.Play(pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
+        if (IsFarm(tier.type) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
         if (IsOre(tier.type) && !disableProspectorFx)
         {
             OreFx.Break(pixelTransform.position, PixelBaseSize, tier.color, richBreak);
@@ -2380,6 +2403,9 @@ public class PixelClicker : MonoBehaviour
     [Header("Farming Pixels")]
     [Tooltip("Growth speed an old Dirt pixel near a sprout adds (counts towards the same cap as Solar pixels). 0 = 0.2.")]
     [SerializeField] private float dirtSeedBoost = 0f;
+
+    [Tooltip("Tick to turn off the farming blocks' hit and break particles (the ambient particles come from their looks).")]
+    [SerializeField] private bool disableFarmFx = false;
 
     [Tooltip("Wheat: extra payout per growing sprout when you click it (0.25 = +25% each). 0 = 0.25.")]
     [SerializeField] private float wheatPerSprout = 0f;

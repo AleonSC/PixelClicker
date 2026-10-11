@@ -250,6 +250,12 @@ public class PixelLook
     [Tooltip("Nuclear: radioactive motes drift off the pixel, and the OLD pixel makes every other old pixel near it age extremely fast (they vanish within a second or two).")]
     public bool radiation = false;
 
+    /// <summary>The ambient particle effects of the farming blocks.</summary>
+    public enum FarmAmbient { None = 0, Pollen = 1, Dew = 2, Crumbs = 3, Spores = 4, Chaff = 5, Sparkle = 6, Bugs = 7 }
+
+    [Tooltip("Farming blocks: a loop of little particles around the cube (pollen motes, dew drips, crumbs, spores, chaff, golden sparkles, scurrying bugs).")]
+    public FarmAmbient farmFx = FarmAmbient.None;
+
     [Tooltip("Fire: old pixels of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
     public bool burn = false;
 
@@ -257,7 +263,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => flames || radiation || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => flames || radiation || farmFx != FarmAmbient.None || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
@@ -441,7 +447,7 @@ public static class PixelLooks
 
             // Seed: a brown shell that cracks as you click it; a sprout comes out and grows a pixel.
             new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = Color.white,
-                            metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true,
+                            metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true, farmFx = PixelLook.FarmAmbient.Crumbs,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.85f },
 
             // Fire (testing pixel): a glowing orange cube with flames rising off it; the old pixel burns away.
@@ -468,18 +474,28 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = new Color(0.6f, 0.4f, 0.22f, 1f), metallic = 0f, smoothness = 0.2f, basicSurface = PixelLook.BasicSurface.Brushed },
             new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = new Color(0.55f, 0.55f, 0.58f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Mosaic },
 
-            // The farming blocks.
-            new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = new Color(0.42f, 0.28f, 0.16f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain },
-            new PixelLook { type = PixelClicker.PixelType.Fertilizer, useColor = true, color = new Color(0.5f, 0.66f, 0.25f, 1f), metallic = 0f, smoothness = 0.15f, emission = 0.12f, basicSurface = PixelLook.BasicSurface.Grain },
-            new PixelLook { type = PixelClicker.PixelType.Pollen, useColor = true, color = new Color(1f, 0.9f, 0.3f, 0.8f), forceTranslucent = true, metallic = 0f, smoothness = 0.3f, emission = 0.5f,
-                            customPhysics = true, bounce = 0.6f, friction = 0.4f, gravityMultiplier = 0.3f },
-            new PixelLook { type = PixelClicker.PixelType.Wheat, useColor = true, color = new Color(0.93f, 0.76f, 0.3f, 1f), metallic = 0.1f, smoothness = 0.35f, basicSurface = PixelLook.BasicSurface.Brushed },
-            new PixelLook { type = PixelClicker.PixelType.Weevil, useColor = true, color = new Color(0.22f, 0.15f, 0.11f, 1f), metallic = 0.05f, smoothness = 0.5f, basicSurface = PixelLook.BasicSurface.Mosaic },
-            new PixelLook { type = PixelClicker.PixelType.GoldenFruit, useColor = true, color = new Color(1f, 0.82f, 0.22f, 1f), metallic = 0.9f, smoothness = 0.9f, emission = 0.6f, shine = true },
+            // The farming blocks: each has a bevelled rim in a shade of its own colour and an ambient particle effect.
+            new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = new Color(0.42f, 0.28f, 0.16f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.45f, outlineStrength = 0.8f,
+                            farmFx = PixelLook.FarmAmbient.Crumbs },
+            new PixelLook { type = PixelClicker.PixelType.Fertilizer, useColor = true, color = new Color(0.5f, 0.66f, 0.25f, 1f), metallic = 0f, smoothness = 0.2f, emission = 0.2f, basicSurface = PixelLook.BasicSurface.Grain,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.35f, outlineStrength = 0.7f,
+                            farmFx = PixelLook.FarmAmbient.Spores },
+            new PixelLook { type = PixelClicker.PixelType.Pollen, useColor = true, color = new Color(1f, 0.9f, 0.3f, 0.8f), forceTranslucent = true, metallic = 0f, smoothness = 0.3f, emission = 0.6f,
+                            customPhysics = true, bounce = 0.6f, friction = 0.4f, gravityMultiplier = 0.3f, wobble = true, farmFx = PixelLook.FarmAmbient.Pollen },
+            new PixelLook { type = PixelClicker.PixelType.Wheat, useColor = true, color = new Color(0.93f, 0.76f, 0.3f, 1f), metallic = 0.1f, smoothness = 0.4f, basicSurface = PixelLook.BasicSurface.Brushed,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.35f, outlineStrength = 0.75f,
+                            farmFx = PixelLook.FarmAmbient.Chaff },
+            new PixelLook { type = PixelClicker.PixelType.Weevil, useColor = true, color = new Color(0.22f, 0.15f, 0.11f, 1f), metallic = 0.1f, smoothness = 0.6f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.5f, outlineStrength = 0.7f,
+                            farmFx = PixelLook.FarmAmbient.Bugs },
+            new PixelLook { type = PixelClicker.PixelType.GoldenFruit, useColor = true, color = new Color(1f, 0.82f, 0.22f, 1f), metallic = 0.9f, smoothness = 0.9f, emission = 0.9f, shine = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = 0.5f, outlineStrength = 0.9f,
+                            farmFx = PixelLook.FarmAmbient.Sparkle },
 
             // Water: a see-through blue jelly cube that wobbles.
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
-                            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true },
+                            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true, farmFx = PixelLook.FarmAmbient.Dew },
 
             // Mirror: polished chrome that reflects the sky.
             new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = Color.white,
@@ -718,6 +734,7 @@ public static class PixelLooks
 
         if (look.flames) PixelFlames.Attach(root.transform, centre, size);
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
+        if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);
 
         if (look.outline)
         {
