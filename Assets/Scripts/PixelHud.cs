@@ -98,8 +98,11 @@ public class PixelHud : MonoBehaviour
         return instance;
     }
 
-    public Vector2 ButtonSize => buttonSize;
-    public float ButtonFontSize => buttonFontSize;
+    /// <summary>The docked buttons shrink a little when the bar is too thin for them (a big UI scale makes the bar thinner in canvas units), so they never stick out past it.</summary>
+    private float ButtonScale => barsEnabled ? Mathf.Clamp((BarHeight - 8f) / Mathf.Max(1f, buttonSize.y), 0.5f, 1f) : 1f;
+
+    public Vector2 ButtonSize => buttonSize * ButtonScale;
+    public float ButtonFontSize => buttonFontSize * ButtonScale;
     public float SideMargin => sideMargin;
 
     /// <summary>Thickness of the bar along the screen edge (0 when the bars are off).</summary>
@@ -116,7 +119,7 @@ public class PixelHud : MonoBehaviour
     public float WindowOffset => BandThickness + windowGap;
 
     /// <summary>Thickness of the band along the screen edge that the docked buttons occupy (the bar, or the button plus margin).</summary>
-    public float BandThickness => barsEnabled ? barHeight / PixelDisplaySettings.UIScale : buttonSize.y + sideMargin;
+    public float BandThickness => barsEnabled ? barHeight / PixelDisplaySettings.UIScale : ButtonSize.y + sideMargin;
 
     private GameObject canvasRoot;
 
@@ -250,13 +253,13 @@ public class PixelHud : MonoBehaviour
     public void Dock(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY = 0f, float widthScale = 1f)
     {
         button.anchorMin = button.anchorMax = button.pivot = anchor;
-        button.sizeDelta = new Vector2(buttonSize.x * widthScale, buttonSize.y);
+        button.sizeDelta = new Vector2(ButtonSize.x * widthScale, ButtonSize.y);
 
         TMP_Text label = button.GetComponentInChildren<TMP_Text>();
         if (label != null)
         {
             label.enableAutoSizing = true;
-            label.fontSizeMax = buttonFontSize;
+            label.fontSizeMax = ButtonFontSize;
             label.fontSizeMin = 12f;
             PixelUIKit.Caps(label); // every docked button (Inventory, Shop, Log, Crafting, Toggles, Bank, Hose...) reads in capitals
         }
@@ -269,7 +272,7 @@ public class PixelHud : MonoBehaviour
         // A button anchored at the vertical middle (anchor.y = 0.5) docks to the left / right edge instead of the top / bottom.
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
-        dock.Setup(this, button, anchor, keepOut, sideOffsetY, (buttonSize.x - button.sizeDelta.x) * 0.5f);
+        dock.Setup(this, button, anchor, keepOut, sideOffsetY, (ButtonSize.x - button.sizeDelta.x) * 0.5f);
     }
 
     /// <summary>
@@ -280,7 +283,7 @@ public class PixelHud : MonoBehaviour
     public void DockInGroup(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY, float width, float leftOffset, float groupWidth)
     {
         Dock(button, anchor, keepOut, sideOffsetY);
-        button.sizeDelta = new Vector2(width, buttonSize.y);
+        button.sizeDelta = new Vector2(width, ButtonSize.y);
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         dock.Setup(this, button, anchor, keepOut, sideOffsetY, leftOffset, groupWidth);
     }
@@ -288,17 +291,17 @@ public class PixelHud : MonoBehaviour
     internal float Sliver => sliver;
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
-    internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - buttonSize.y) * 0.5f * (1f - (buttonEdgeBias > 0f ? buttonEdgeBias : 0.55f))) : sideMargin * 0.5f;
-    internal float HiddenInset => -(buttonSize.y - sliver);
+    internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - ButtonSize.y) * 0.5f * (1f - (buttonEdgeBias > 0f ? buttonEdgeBias : 0.55f))) : sideMargin * 0.5f;
+    internal float HiddenInset => -(ButtonSize.y - sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
     internal float SideShownInset => sideMargin * 0.35f;
-    internal float SideHiddenInset => -(buttonSize.x - sliver);
+    internal float SideHiddenInset => -(ButtonSize.x - sliver);
     internal bool SlideButtons => slideButtons;
     internal float SlideSeconds => slideSeconds;
     internal float TriggerPadding => triggerPadding;
     internal float SideTriggerDepth => sideTriggerDepth;
-    internal float BandHeight => barsEnabled ? BarHeight : buttonSize.y + sideMargin;
+    internal float BandHeight => barsEnabled ? BarHeight : ButtonSize.y + sideMargin;
 }
 
 /// <summary>Slides one docked button out when the mouse is near and away when it isn't.</summary>
