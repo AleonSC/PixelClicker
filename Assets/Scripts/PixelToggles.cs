@@ -262,22 +262,10 @@ public class PixelToggles : MonoBehaviour
 
         if (group == Group.Pixels)
         {
-            // Skill pack modes (Mining, Farming): the pack's pixels replace the basic pixels in what spawns. One pack at a time.
+            // (Skill packs are NOT listed here: the Skills window chooses the pack in play. Do not add skill-pack switches to the Toggles window.)
             PixelSkills skills = PixelSkills.Instance;
             if (skills != null)
             {
-                foreach (PixelSkills.SkillPack pack in skills.Packs)
-                {
-                    if (pack.id == PixelSkills.StandardId || pack.id == PixelSkills.OfflineId || !skills.IsAvailable(pack)) continue;
-                    string packId = pack.id;
-                    list.Add(new Entry
-                    {
-                        label = pack.displayName + " mode",
-                        skipAll = true,   // it swaps which pixels spawn, so 'Toggle all' leaves it alone
-                        on = skills.ActiveId == packId,
-                        setter = on => { skills.SetActive(on ? packId : PixelSkills.StandardId); clicker.RefreshSpawnTier(); },
-                    });
-                }
                 // The basic shop blocks (Wood, Rock) are not in the base rotation: each is a switch, off until you turn it on.
                 foreach (PixelClicker.PixelTier t in clicker.Tiers)
                 {

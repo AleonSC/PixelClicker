@@ -402,6 +402,14 @@ public partial class PixelShop
         };
         return new[]
         {
+            new PixelClicker.PixelTier
+            {
+                type = PixelClicker.PixelType.Electric, displayName = "Electric Pixels",
+                color = new Color(0.4f, 0.85f, 1f, 1f), glow = true, glowIntensity = 3.5f,
+                amountPerClick = 8, randomPayout = true, payoutMin = 1, payoutMax = 15,   // 1-15 every harvest (8 = the average)
+                spawnWeight = 0.2f,
+                unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+            },
             Block(PixelClicker.PixelType.Wire, "Wire Pixels", new Color(0.86f, 0.5f, 0.26f, 1f), 1, 2, 1.0f),
             Block(PixelClicker.PixelType.Battery, "Battery Pixels", new Color(0.5f, 0.9f, 0.3f, 1f), 3, 12, 0.4f),
             Block(PixelClicker.PixelType.Capacitor, "Capacitor Pixels", new Color(0.3f, 0.55f, 0.95f, 1f), 1, 6, 0.35f),
@@ -412,16 +420,23 @@ public partial class PixelShop
         };
     }
 
-    private static ShopPack CreateElectricianPack(int requiresElectricIndex)
+    private static PackCost[] ElectricianCosts() => new[]
+    {
+        new PackCost { type = PixelClicker.PixelType.Red,   amount = 8000 },
+        new PackCost { type = PixelClicker.PixelType.Green, amount = 8000 },
+        new PackCost { type = PixelClicker.PixelType.Blue,  amount = 8000 },
+    };
+
+    private static ShopPack CreateElectricianPack(int requiresAutoClickerIndex)
     {
         return new ShopPack
         {
             displayName = "Electrician's Pack",
             tab = ShopTab.Pixels,
             skillId = PixelSkills.ElectricianId,
-            description = "Unlocks the Electrician skill and seven new pixels: Wire, Battery, Capacitor, Resistor, Transistor, Fuse and Bulb. While the skill is in play (Toggles or Skills window) these and Electric replace the basic cubes. Wire, Battery and Resistor carry your device links, a Battery also sets off an Overcharge, a Capacitor stores charge from every other click, a Transistor doubles your next click, a Fuse pays big if you click it fast and a Bulb shines brighter the more wired pixels lie around.",
-            requirements = Needs(requiresElectricIndex),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.Electric, amount = 1500 } },
+            description = "Unlocks the Electrician skill and its eight pixels: Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse and Bulb. While the skill is in play (Toggles or Skills window) they replace the basic cubes. Wire, Battery and Resistor carry your device links, a Battery also sets off an Overcharge, a Capacitor stores charge from every other click, a Transistor doubles your next click, a Fuse pays big if you click it fast and a Bulb shines brighter the more wired pixels lie around.",
+            requirements = Needs(requiresAutoClickerIndex),
+            costs = ElectricianCosts(),
             rewardTiers = ElectricianTiers(),
         };
     }
@@ -1043,10 +1058,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateTreasurePixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Copper),
                           requires = null, create = i => CreateProspectorPack() },
-        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Electric),
-                          requires = p => p.unlocksAutoClicker, create = CreateElectricPixelPack },
         new DefaultPack { isThis = p => p.skillId == PixelSkills.ElectricianId,
-                          requires = p => Rewards(p, PixelClicker.PixelType.Electric), create = CreateElectricianPack },
+                          requires = p => p.unlocksAutoClicker, create = CreateElectricianPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Mirror),
                           requires = p => Rewards(p, PixelClicker.PixelType.Electric), create = CreateMirrorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Vacuum),

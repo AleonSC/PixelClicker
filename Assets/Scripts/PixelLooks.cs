@@ -255,6 +255,8 @@ public class PixelLook
 
     [Tooltip("Farming blocks: a loop of little particles around the cube (pollen motes, dew drips, crumbs, spores, chaff, golden sparkles, scurrying bugs).")]
     public FarmAmbient farmFx = FarmAmbient.None;
+    public enum ElectricAmbient { None = 0, Wire = 1, Battery = 2, Capacitor = 3, Resistor = 4, Transistor = 5, Fuse = 6, Bulb = 7 }
+    [Tooltip("Ambient particles of an Electrician pixel (Wire, Battery, Capacitor...).")] public ElectricAmbient electricFx = ElectricAmbient.None;
     [Tooltip("Violet sparks drift off the cube (Obsidian).")] public bool obsidianFx = false;
 
     [Tooltip("Fire: old pixels of this type burn - they fall while slowly shrinking away into embers, then vanish (no payout).")]
@@ -264,7 +266,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => flames || radiation || farmFx != FarmAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => flames || radiation || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
@@ -495,21 +497,21 @@ public static class PixelLooks
                             farmFx = PixelLook.FarmAmbient.Sparkle },
 
             // Electrician pixels: copper Wire, a green Battery and a blue Capacitor.
-            new PixelLook { type = PixelClicker.PixelType.Wire, useColor = true, color = new Color(0.86f, 0.5f, 0.26f, 1f), metallic = 1f, smoothness = 0.65f, basicSurface = PixelLook.BasicSurface.Brushed,
+            new PixelLook { type = PixelClicker.PixelType.Wire, electricFx = PixelLook.ElectricAmbient.Wire, useColor = true, color = new Color(0.86f, 0.5f, 0.26f, 1f), metallic = 1f, smoothness = 0.65f, basicSurface = PixelLook.BasicSurface.Brushed,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = true, outlineShade = 0.4f, outlineStrength = 0.8f },
-            new PixelLook { type = PixelClicker.PixelType.Battery, useColor = true, color = new Color(0.5f, 0.9f, 0.3f, 1f), metallic = 0.3f, smoothness = 0.75f, emission = 0.35f, shine = true,
+            new PixelLook { type = PixelClicker.PixelType.Battery, electricFx = PixelLook.ElectricAmbient.Battery, useColor = true, color = new Color(0.5f, 0.9f, 0.3f, 1f), metallic = 0.3f, smoothness = 0.75f, emission = 0.35f, shine = true,
                             damageCracks = false,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.5f, outlineStrength = 0.85f },
-            new PixelLook { type = PixelClicker.PixelType.Capacitor, useColor = true, color = new Color(0.3f, 0.55f, 0.95f, 1f), metallic = 0.8f, smoothness = 0.85f, emission = 0.3f, shine = true,
+            new PixelLook { type = PixelClicker.PixelType.Capacitor, electricFx = PixelLook.ElectricAmbient.Capacitor, useColor = true, color = new Color(0.3f, 0.55f, 0.95f, 1f), metallic = 0.8f, smoothness = 0.85f, emission = 0.3f, shine = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.5f, outlineStrength = 0.8f },
 
-            new PixelLook { type = PixelClicker.PixelType.Resistor, useColor = true, color = new Color(0.82f, 0.68f, 0.45f, 1f), metallic = 0.1f, smoothness = 0.4f, basicSurface = PixelLook.BasicSurface.Grain,
+            new PixelLook { type = PixelClicker.PixelType.Resistor, electricFx = PixelLook.ElectricAmbient.Resistor, useColor = true, color = new Color(0.82f, 0.68f, 0.45f, 1f), metallic = 0.1f, smoothness = 0.4f, basicSurface = PixelLook.BasicSurface.Grain,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = true, outlineShade = -0.45f, outlineStrength = 0.8f },
-            new PixelLook { type = PixelClicker.PixelType.Transistor, useColor = true, color = new Color(0.18f, 0.2f, 0.26f, 1f), metallic = 0.85f, smoothness = 0.8f, emission = 0.15f, shine = true,
+            new PixelLook { type = PixelClicker.PixelType.Transistor, electricFx = PixelLook.ElectricAmbient.Transistor, useColor = true, color = new Color(0.18f, 0.2f, 0.26f, 1f), metallic = 0.85f, smoothness = 0.8f, emission = 0.15f, shine = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.55f, outlineStrength = 0.85f },
-            new PixelLook { type = PixelClicker.PixelType.Fuse, useColor = true, color = new Color(0.95f, 0.45f, 0.2f, 1f), metallic = 0.2f, smoothness = 0.5f, emission = 0.5f,
+            new PixelLook { type = PixelClicker.PixelType.Fuse, electricFx = PixelLook.ElectricAmbient.Fuse, useColor = true, color = new Color(0.95f, 0.45f, 0.2f, 1f), metallic = 0.2f, smoothness = 0.5f, emission = 0.5f,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.8f },
-            new PixelLook { type = PixelClicker.PixelType.Bulb, useColor = true, color = new Color(1f, 0.95f, 0.6f, 0.9f), forceTranslucent = true, metallic = 0f, smoothness = 0.95f, emission = 1.2f, shine = true,
+            new PixelLook { type = PixelClicker.PixelType.Bulb, electricFx = PixelLook.ElectricAmbient.Bulb, useColor = true, color = new Color(1f, 0.95f, 0.6f, 0.9f), forceTranslucent = true, metallic = 0f, smoothness = 0.95f, emission = 1.2f, shine = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = 0.4f, outlineStrength = 0.7f },
 
             // Water: a see-through blue jelly cube that wobbles.
@@ -755,6 +757,7 @@ public static class PixelLooks
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
         if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);
         if (look.obsidianFx) PixelObsidianFx.Attach(root.transform, centre, size);
+        if (look.electricFx != PixelLook.ElectricAmbient.None) PixelElectricFx.Attach(root.transform, centre, size, look.electricFx);
 
         if (look.outline)
         {

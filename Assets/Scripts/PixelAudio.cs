@@ -288,13 +288,13 @@ public class PixelAudio : MonoBehaviour
             case "fire_crackle": return new[] { PixelSynth.FireCrackle(1), PixelSynth.FireCrackle(2), PixelSynth.FireCrackle(3) };
             case "ore_chip": return new[] { PixelSynth.OreChip(1), PixelSynth.OreChip(2), PixelSynth.OreChip(3), PixelSynth.OreChip(4) };
             case "ore_gleam": return new[] { PixelSynth.OreGleam() };
-            case "pixel_wire": return new[] { PixelSynth.Zap(11), PixelSynth.Zap(12) };
-            case "pixel_battery": return new[] { PixelSynth.Zap(21), PixelSynth.Zap(22) };
-            case "pixel_resistor": return new[] { PixelSynth.Zap(41), PixelSynth.Zap(42) };
-            case "pixel_transistor": return new[] { PixelSynth.Zap(51), PixelSynth.Zap(52) };
-            case "pixel_fuse": return new[] { PixelSynth.Zap(61), PixelSynth.Zap(62) };
-            case "pixel_bulb": return new[] { PixelSynth.Zap(71), PixelSynth.Zap(72) };
-            case "pixel_capacitor": return new[] { PixelSynth.Zap(31), PixelSynth.Zap(32) };
+            case "pixel_wire": return new[] { PixelSynth.Elec(0, 1), PixelSynth.Elec(0, 2), PixelSynth.Elec(0, 3) };
+            case "pixel_battery": return new[] { PixelSynth.Elec(1, 1), PixelSynth.Elec(1, 2), PixelSynth.Elec(1, 3) };
+            case "pixel_resistor": return new[] { PixelSynth.Elec(3, 1), PixelSynth.Elec(3, 2), PixelSynth.Elec(3, 3) };
+            case "pixel_transistor": return new[] { PixelSynth.Elec(4, 1), PixelSynth.Elec(4, 2), PixelSynth.Elec(4, 3) };
+            case "pixel_fuse": return new[] { PixelSynth.Elec(5, 1), PixelSynth.Elec(5, 2) };
+            case "pixel_bulb": return new[] { PixelSynth.Elec(6, 1), PixelSynth.Elec(6, 2), PixelSynth.Elec(6, 3) };
+            case "pixel_capacitor": return new[] { PixelSynth.Elec(2, 1), PixelSynth.Elec(2, 2) };
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
             case "farm_gleam": return new[] { PixelSynth.Farm(9, 1) };
@@ -814,6 +814,106 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
         AudioClip clip = AudioClip.Create("Obsidian " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>
+    /// The Electrician pixels' own click sounds: 0 Wire (a metallic twang), 1 Battery (a low thunk with a hum), 2 Capacitor (a rising charge whine ending in a snap),
+    /// 3 Resistor (a dull buzz), 4 Transistor (a two-tone digital blip), 5 Fuse (a hiss that ends in a pop), 6 Bulb (a glassy ting).
+    /// </summary>
+    public static AudioClip Elec(int kind, int seed)
+    {
+        const int rate = 22050;
+        float[] lengths = { 0.28f, 0.38f, 0.5f, 0.3f, 0.2f, 0.5f, 0.55f };
+        int n = (int)(rate * lengths[Mathf.Clamp(kind, 0, 6)]);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(3300 + kind * 131 + seed * 19);
+        float detune = 1f + 0.06f * (seed - 2);
+        float phase = 0f, lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            float v = 0f;
+            switch (kind)
+            {
+                case 0:   // Wire: frequency-modulated twang that dips
+                {
+                    float f = 880f * detune;
+                    v = Mathf.Sin(t * f * Mathf.PI * 2f + 4f * Mathf.Sin(t * f * 1.5f * Mathf.PI * 2f) * Mathf.Exp(-t * 18f)) * Mathf.Exp(-t * 15f);
+                    v += noise * Mathf.Exp(-t * 90f) * 0.3f;
+                    break;
+                }
+                case 1:   // Battery: a deep thunk and a settling hum
+                {
+                    float f = (120f - 50f * Mathf.Min(1f, t / 0.12f)) * detune;
+                    phase += f / rate;
+                    v = Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-t * 9f) + 0.35f * Mathf.Sin(t * 55f * Mathf.PI * 2f) * Mathf.Exp(-t * 5f);
+                    v += noise * Mathf.Exp(-t * 110f) * 0.4f;
+                    break;
+                }
+                case 2:   // Capacitor: charge sweep up, then a snap
+                {
+                    float charge = 0.32f;
+                    if (t < charge)
+                    {
+                        float k = t / charge;
+                        phase += (350f + 2300f * k * k) * detune / rate;
+                        v = Mathf.Sin(phase * Mathf.PI * 2f) * (0.2f + 0.6f * k);
+                    }
+                    else
+                    {
+                        float d = t - charge;
+                        lp += (noise - lp) * 0.5f;
+                        v = lp * Mathf.Exp(-d * 35f) * 1.3f + Mathf.Sin(d * 170f * Mathf.PI * 2f) * Mathf.Exp(-d * 30f);
+                    }
+                    break;
+                }
+                case 3:   // Resistor: a rough 100 Hz buzz
+                {
+                    float saw = 2f * Mathf.Repeat(t * 105f * detune, 1f) - 1f;
+                    lp += (noise - lp) * 0.25f;
+                    v = saw * Mathf.Exp(-t * 11f) * 0.55f + lp * Mathf.Exp(-t * 16f) * 0.6f;
+                    break;
+                }
+                case 4:   // Transistor: two quick square blips
+                {
+                    float f = (t < 0.085f ? 1250f : 1870f) * detune;
+                    float local = t < 0.085f ? t : t - 0.085f;
+                    float sq = Mathf.Sin(t * f * Mathf.PI * 2f) >= 0f ? 1f : -1f;
+                    v = sq * 0.45f * Mathf.Exp(-local * 22f);
+                    break;
+                }
+                case 5:   // Fuse: a hiss that thins out, then a pop
+                {
+                    float pop = 0.36f;
+                    if (t < pop)
+                    {
+                        lp += (noise - lp) * 0.8f;
+                        v = (noise - lp) * (0.25f + 0.2f * Mathf.Sin(t * 60f)) * (1f - t / pop * 0.5f);   // high-passed noise
+                    }
+                    else
+                    {
+                        float d = t - pop;
+                        v = Mathf.Sin(d * 190f * detune * Mathf.PI * 2f) * Mathf.Exp(-d * 45f) + noise * Mathf.Exp(-d * 70f) * 0.7f;
+                    }
+                    break;
+                }
+                default:  // Bulb: a glassy ting
+                {
+                    float f = 2200f * detune;
+                    v = (Mathf.Sin(t * f * Mathf.PI * 2f) + 0.5f * Mathf.Sin(t * f * 1.5f * Mathf.PI * 2f) + 0.3f * Mathf.Sin(t * f * 2.3f * Mathf.PI * 2f)) * Mathf.Exp(-t * 8f);
+                    v += noise * Mathf.Exp(-t * 120f) * 0.35f;
+                    break;
+                }
+            }
+            data[i] = v * Mathf.Clamp01(t / 0.002f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.6f;
+        AudioClip clip = AudioClip.Create("Elec " + kind + "-" + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

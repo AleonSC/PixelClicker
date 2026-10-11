@@ -913,14 +913,6 @@ public partial class PixelShop : MonoBehaviour
             foreach (ShopPack rp in packs)
                 if (rp != null && rp.unlocksRobot && rp.displayName == "Robot Worker") { rp.displayName = "UFO Helper"; renamed = true; }
 
-        // A saved Electrician's Pack from before it had its own pixels gets them.
-        if (packs != null)
-            foreach (ShopPack ep in packs)
-                if (ep != null && ep.skillId == PixelSkills.ElectricianId && (ep.rewardTiers == null || ep.rewardTiers.Length < 7))
-                {
-                    ep.rewardTiers = ElectricianTiers();
-                    renamed = true;
-                }
 
         // The short-lived Pong pack (replaced by Breakout) may still be saved in the scene's pack list: take it out, and fix the
         // pack numbers the other packs' requirements point at.
@@ -937,7 +929,10 @@ public partial class PixelShop : MonoBehaviour
                                              || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase)
                                              // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
                                              || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
-                                                 && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water)));
+                                                 && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
+                                             // Electric is part of the Electrician's Pack now, no longer sold on its own.
+                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Electric
+                                                 && string.IsNullOrEmpty(pack.skillId)));
                 if (!pong) continue;
                 System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
                 kept.RemoveAt(i);
@@ -958,6 +953,40 @@ public partial class PixelShop : MonoBehaviour
                     other.requirements = reqs.ToArray();
                 }
                 renamed = true;
+            }
+        }
+
+        // A saved Electrician's Pack from before it held every electrical pixel (and Electric itself) is brought up to date: its pixels, price and the Auto Clicker requirement;
+        // the Mirror pixel then needs it (it used to need the Electric Pixel pack, which is gone).
+        if (packs != null)
+        {
+            int electricianAt = Array.FindIndex(packs, p => p != null && p.skillId == PixelSkills.ElectricianId);
+            int autoAt = Array.FindIndex(packs, p => p != null && p.unlocksAutoClicker);
+            if (electricianAt >= 0)
+            {
+                ShopPack ep = packs[electricianAt];
+                if (ep.rewardTiers == null || ep.rewardTiers.Length < 8)
+                {
+                    ep.rewardTiers = ElectricianTiers();
+                    ep.costs = ElectricianCosts();
+                    ep.requirements = Needs(autoAt);
+                    ep.description = CreateElectricianPack(autoAt).description;
+                    renamed = true;
+                }
+                int mirrorAt = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Mirror));
+                if (mirrorAt >= 0)
+                {
+                    ShopPack mp = packs[mirrorAt];
+                    bool hasPackReq = false;
+                    if (mp.requirements != null) foreach (PackRequirement r in mp.requirements) if (r.kind == RequirementKind.Pack && r.packIndex >= 0) hasPackReq = true;
+                    if (!hasPackReq)
+                    {
+                        System.Collections.Generic.List<PackRequirement> reqs = new System.Collections.Generic.List<PackRequirement>(mp.requirements ?? new PackRequirement[0]);
+                        reqs.Add(new PackRequirement { kind = RequirementKind.Pack, packIndex = electricianAt });
+                        mp.requirements = reqs.ToArray();
+                        renamed = true;
+                    }
+                }
             }
         }
 

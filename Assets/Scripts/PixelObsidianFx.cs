@@ -87,11 +87,15 @@ public class FractureFx : MonoBehaviour
 {
     private Vector3 centre, right, up;
     private float reach, seconds, age, unit;
+    private Color coreColor = new Color(0.97f, 0.98f, 1f, 1f), glowColor = new Color(0.8f, 0.86f, 0.95f, 1f);
     private float[] angles, lengths;
     private Mesh mesh;
     private readonly PixelBolts.Builder builder = new PixelBolts.Builder();
 
-    public static void Play(Vector3 centre, float size, int lines, float reachInSizes, float seconds)
+    public static void Play(Vector3 centre, float size, int lines, float reachInSizes, float seconds) => Play(centre, size, lines, reachInSizes, seconds, new Color(0.97f, 0.98f, 1f, 1f), new Color(0.8f, 0.86f, 0.95f, 1f));
+
+    /// <summary>The same crack / arc flash in other colours (the Electrician pixels use it for their lightning).</summary>
+    public static void Play(Vector3 centre, float size, int lines, float reachInSizes, float seconds, Color core, Color glow)
     {
         Camera cam = Camera.main;
         if (cam == null || PixelFx.Material == null) return;
@@ -99,6 +103,7 @@ public class FractureFx : MonoBehaviour
         go.transform.position = centre;
         FractureFx fx = go.AddComponent<FractureFx>();
         fx.centre = centre; fx.right = cam.transform.right; fx.up = cam.transform.up;
+        fx.coreColor = core; fx.glowColor = glow;
         fx.unit = size; fx.reach = size * reachInSizes; fx.seconds = Mathf.Max(0.1f, seconds);
         fx.angles = new float[lines]; fx.lengths = new float[lines];
         float offset = Random.value * Mathf.PI * 2f;
@@ -125,7 +130,7 @@ public class FractureFx : MonoBehaviour
         float alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((k - 0.3f) / 0.7f));
         builder.Clear();
         Bounds bounds = new Bounds(centre, Vector3.one * reach * 2f);
-        Color core = new Color(0.97f, 0.98f, 1f, 1f), glow = new Color(0.8f, 0.86f, 0.95f, 1f);
+        Color core = coreColor, glow = glowColor;
         for (int i = 0; i < angles.Length; i++)
         {
             Vector3 dir = right * Mathf.Cos(angles[i]) + up * Mathf.Sin(angles[i]);

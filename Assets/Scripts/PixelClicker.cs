@@ -1460,7 +1460,7 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 30;
         }
 
-        if (looksVersion < 33)
+        if (looksVersion < 34)
         {
             // The Electrician pixels (Wire, Battery, Capacitor) got their looks.
             System.Collections.Generic.List<PixelLook> list32 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
@@ -1473,7 +1473,7 @@ public class PixelClicker : MonoBehaviour
                 if (at >= 0) list32[at] = def; else list32.Add(def);
             }
             looks = list32.ToArray();
-            looksVersion = 33;
+            looksVersion = 34;
         }
 
         if (pixelRenderer != null)
@@ -1684,6 +1684,7 @@ public class PixelClicker : MonoBehaviour
                 if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
                 if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)need);
                 else if (IsFarm(tier.type) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
@@ -1764,6 +1765,7 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
         if (IsFarm(tier.type) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
+        if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Break(tier.type, pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Break(pixelTransform.position, PixelBaseSize);
         if (IsOre(tier.type) && !disableProspectorFx)
         {
@@ -3086,6 +3088,9 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Electric, Wire, Battery and Resistor pixels carry the Electrician's current.</summary>
+    /// <summary>The Electrician pack's own pixels (Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb).</summary>
+    public static bool IsElectricalBlock(PixelType t) => t >= PixelType.Wire && t <= PixelType.Bulb;
+
     public static bool IsConductorType(PixelType t) =>
         t == PixelType.Electric || t == PixelType.Wire || t == PixelType.Battery || t == PixelType.Resistor;
 
