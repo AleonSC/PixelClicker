@@ -110,6 +110,9 @@ public class PixelLog : MonoBehaviour
     [SerializeField] private float goalRowHeight = 100f;
 
     [Header("Achievements Tab")]
+    [Tooltip("Placeholder of the search box above the achievements.")]
+    [SerializeField] private string searchPlaceholder = "Search achievements...";
+
     [Tooltip("The achievements to list. Found automatically (or added to this GameObject) if left empty.")]
     [SerializeField] private PixelAchievements achievements;
 
@@ -308,6 +311,8 @@ public class PixelLog : MonoBehaviour
     private RectTransform achievementsContent, goalsContent;
     private TMP_Text noGoalsLabel;
     private TMP_Text achievementSummary;
+    private TMP_InputField achievementSearchField;
+    private string achievementSearch = "";
     private Image achievementSummaryFill;
     private RectTransform achievementSummaryFillRect;
     private TMP_Text noAchievementsLabel;
@@ -874,6 +879,26 @@ public class PixelLog : MonoBehaviour
         }
 
         float viewTop = withSummary ? ContentTop + summaryHeight + 6f : ContentTop;
+        if (withSummary)
+        {
+            // A search box between the total bar and the first heading, exactly as wide as the bar.
+            float searchHeight = rowFontSize * 1.3f;
+            achievementSearchField = PixelUIKit.CreateInputField(font, group.transform, "Search", new Vector2(0f, searchHeight),
+                                                                 achievementRowColor, textColor, rowFontSize * 0.75f, searchPlaceholder);
+            RectTransform sfr = achievementSearchField.GetComponent<RectTransform>();
+            sfr.anchorMin = new Vector2(0f, 1f);
+            sfr.anchorMax = new Vector2(1f, 1f);
+            sfr.pivot = new Vector2(0.5f, 1f);
+            sfr.sizeDelta = new Vector2(-panelPadding * 2f, searchHeight);
+            sfr.anchoredPosition = new Vector2(0f, -viewTop);
+            achievementSearchField.onValueChanged.AddListener(text =>
+            {
+                achievementSearch = (text ?? "").Trim().ToLowerInvariant();
+                if (achievementsContent != null) achievementsContent.anchoredPosition = Vector2.zero;
+                if (currentTab == 1) RefreshAchievementsTab();
+            });
+            viewTop += searchHeight + 6f;
+        }
 
         // Scroll view (also the viewport; the transparent image lets empty space take wheel/drag input).
         GameObject view = new GameObject("List", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
@@ -1515,6 +1540,13 @@ public class PixelLog : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             string name = AchievementSection(achievements.GetKind(achievementGroups[i][0]), achievements.GetId(achievementGroups[i][0]));
+            if (achievementSearch.Length > 0)
+            {
+                int ach = achievementGroups[i][0];
+                if (!(achievements.GetTitle(ach) ?? "").ToLowerInvariant().Contains(achievementSearch) &&
+                    !(achievements.GetDescription(ach) ?? "").ToLowerInvariant().Contains(achievementSearch) &&
+                    !name.ToLowerInvariant().Contains(achievementSearch)) continue;
+            }
             int s = sectionNames.IndexOf(name);
             if (s < 0) { sectionNames.Add(name); sectionRows.Add(new List<int>()); s = sectionNames.Count - 1; }
             sectionRows[s].Add(i);
@@ -1532,7 +1564,7 @@ public class PixelLog : MonoBehaviour
         {
             int sIndex = order[n];
             string name = sectionNames[sIndex];
-            bool collapsed = collapsedAchievementSections.Contains(name);
+            bool collapsed = achievementSearch.Length == 0 && collapsedAchievementSections.Contains(name);   // a search shows its matches expanded
             int earned = 0, total = sectionRows[sIndex].Count;
             foreach (int r in sectionRows[sIndex]) if (achievements.IsComplete(achievementGroups[r][0])) earned++;
 
@@ -1596,7 +1628,7 @@ public class PixelLog : MonoBehaviour
         }
 
         achievementsContent.sizeDelta = new Vector2(0f, Mathf.Max(0f, y - achievementSpacing));
-        noAchievementsLabel.gameObject.SetActive(count == 0);
+        noAchievementsLabel.gameObject.SetActive(count == 0 || (achievementSearch.Length > 0 && order.Length == 0));
         int earnedTotal = achievements != null ? achievements.EarnedTierTotal : 0, tierTotal = achievements != null ? achievements.TierTotal : 0;
         PixelUIKit.SetText(achievementSummary, string.Format(achievementSummaryFormat, earnedTotal, tierTotal));
         if (achievementSummaryFillRect != null) achievementSummaryFillRect.anchorMax = new Vector2(tierTotal > 0 ? Mathf.Clamp01(earnedTotal / (float)tierTotal) : 0f, 1f);

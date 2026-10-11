@@ -450,3 +450,4 @@
 [2026-10-11 12:07 UTC] Crafting window: livelier boxes (sunken frame, glowing rim, breathing plus), the how-to text replaced by hover tooltips on the boxes and the materials; the on-screen spawner now also hides while the pinned Inventory is open.
 [2026-10-11 12:08 UTC] Fixed Circuit Flow lag: the spark glow is only worked out in cells next to a spark, the background noise is cached, and the floor now redraws a smaller texture 15 times a second.
 [2026-10-11 12:09 UTC] The on-screen spawner's open drop-down lists now close when it hides (pause menu or any window), instead of staying on screen.
+[2026-10-11 12:12 UTC] Added a search box to the Achievements tab of the Log, between the total bar and the first heading; matches show expanded.
