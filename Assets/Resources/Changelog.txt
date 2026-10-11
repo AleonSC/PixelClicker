@@ -418,3 +418,4 @@
 [2026-10-11 08:58 UTC] The shop's Pixels tab is now split into collapsible sections: Base pixels, Toggleables and Skill packs.
 [2026-10-11 09:00 UTC] Fixed a compile error (duplicate PixelHoldButton class); the shop help button reuses the existing one.
 [2026-10-11 09:12 UTC] Fixed a compile error in the shop (duplicate variable name).
+[2026-10-11 09:13 UTC] Removed two unused fields to clear the yellow compiler warnings.

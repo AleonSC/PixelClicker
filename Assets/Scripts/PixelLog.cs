@@ -162,9 +162,6 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Mouse wheel scroll speed.")]
     [SerializeField] private float achievementScrollSpeed = 60f;
 
-    [Tooltip("Width of the scrollbar.")]
-    [SerializeField] private float scrollbarWidth = 20f;
-
     [Tooltip("Scrollbar track colour.")]
     [SerializeField] private Color scrollbarTrackColor = new Color(0.16f, 0.16f, 0.2f, 1f);
 

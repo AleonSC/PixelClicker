@@ -245,7 +245,6 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [SerializeField] private string autoSaveLabel = "Autosave every";
     [SerializeField] private string autoSaveMessageLabel = "Show autosave message";
-    [SerializeField] private string qualityLabel = "Graphics quality";
     [SerializeField] private string vsyncLabel = "VSync";
     [SerializeField] private string fullscreenLabel = "Fullscreen";
     [SerializeField] private string resolutionLabel = "Resolution";
