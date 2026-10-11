@@ -490,3 +490,4 @@
 [2026-10-11 15:57 UTC] Added two very rare one-off vendors: Egg (an orange cat who gives an egg you click 1-50 times to hatch a new pet) and Bean (a grey tabby cat who gives Magic Beans that grow a beanstalk with a Dragon Cube among other cubes). Neither returns after showing up once.
 [2026-10-11 16:00 UTC] Egg and Bean now give the egg / Magic Beans only on their first appearance; they can return afterwards and bring a random present of pixels instead.
 [2026-10-11 16:02 UTC] The title screen's floor and sky pickers only show while the mouse is over them.
+[2026-10-11 16:05 UTC] Title screen: Load is a floppy disk, Settings a cog and Quit an open door, all in one row under the Play button (hover shows their names).

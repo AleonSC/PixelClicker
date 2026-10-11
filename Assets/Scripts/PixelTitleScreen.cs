@@ -474,18 +474,20 @@ public class PixelTitleScreen : MonoBehaviour
 
         // Play on top, Load + Settings side by side under it (together exactly as wide as Play).
         Vector2 centre = new Vector2(0.5f, 0.5f);
-        float quitHeight = Mathf.Min(quitSize.y, 34f);   // Quit is a thin red bar under the two grey buttons, as wide as Play
-        float quitGap = Mathf.Max(8f, buttonGap - 2f);
-        float groupHeight = buttonSize.y + buttonGap + smallButtonHeight + (showQuit ? quitGap + quitHeight : 0f);
+        // Load (a floppy disk), Settings (a cog) and Quit (an open door) share one row under Play, together as wide as Play.
+        int iconCount = showQuit ? 3 : 2;
+        float groupHeight = buttonSize.y + buttonGap + smallButtonHeight;
         float playY = groupHeight * 0.5f - buttonSize.y * 0.5f;
         float smallY = playY - buttonSize.y * 0.5f - buttonGap - smallButtonHeight * 0.5f;
-        float smallWidth = (buttonSize.x - buttonGap) * 0.5f;
-        Vector2 smallSize = new Vector2(smallWidth, smallButtonHeight);
-        float smallX = (smallWidth + buttonGap) * 0.5f;
+        float iconWidth = (buttonSize.x - buttonGap * (iconCount - 1)) / iconCount;
+        Vector2 iconSize = new Vector2(iconWidth, smallButtonHeight);
+        float iconStep = iconWidth + buttonGap;
+        float firstX = -iconStep * (iconCount - 1) * 0.5f;
 
         playButton = MakeButton(font, "Play Button", playText, buttonSize, buttonColor, playFontSize, centre, new Vector2(0f, playY), OnPlay);
-        MakeButton(font, "Load Button", loadText, smallSize, smallButtonColor, smallFontSize, centre, new Vector2(-smallX, smallY), OnLoad);
-        MakeButton(font, "Settings Button", settingsText, smallSize, smallButtonColor, smallFontSize, centre, new Vector2(smallX, smallY), OnSettings);
+        MakeIconButton(font, "Load Button", PixelMenuIcons.Floppy, loadText, iconSize, smallButtonColor, centre, new Vector2(firstX, smallY), OnLoad);
+        MakeIconButton(font, "Settings Button", PixelMenuIcons.Cog, settingsText, iconSize, smallButtonColor, centre, new Vector2(firstX + iconStep, smallY), OnSettings);
+        if (showQuit) MakeIconButton(font, "Quit Button", PixelMenuIcons.Door, quitText, iconSize, quitColor, centre, new Vector2(firstX + iconStep * 2f, smallY), OnQuit);
 
         // Quick floor / sky pickers either side of the button group.
         if (showLookPickers)
@@ -496,9 +498,29 @@ public class PixelTitleScreen : MonoBehaviour
             BuildLookPicker(font, "Floor Picker", floorPickerCaption, () => PixelFloor.Instance, new Vector2(pickerX, 0f));
         }
 
-        if (showQuit)
-            MakeButton(font, "Quit Button", quitText, new Vector2(buttonSize.x, quitHeight), quitColor, Mathf.Min(quitFontSize, quitHeight * 0.6f), centre,
-                       new Vector2(0f, smallY - smallButtonHeight * 0.5f - quitGap - quitHeight * 0.5f), OnQuit);
+    }
+
+    private string hoveredText;
+
+    /// <summary>A button with a picture instead of a label; its name shows in a small tip while the mouse is over it.</summary>
+    private Button MakeIconButton(TMP_FontAsset font, string objectName, Texture2D icon, string tip, Vector2 size, Color color, Vector2 anchor, Vector2 position,
+                                  UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = MakeButton(font, objectName, "", size, color, smallFontSize, anchor, position, onClick);
+        GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
+        iconGo.transform.SetParent(b.transform, false);
+        RawImage raw = iconGo.GetComponent<RawImage>();
+        raw.texture = icon;
+        raw.raycastTarget = false;
+        RectTransform ir = iconGo.GetComponent<RectTransform>();
+        float side = Mathf.Min(size.x, size.y) * 0.78f;
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
+        ir.sizeDelta = new Vector2(side, side);
+        ir.anchoredPosition = Vector2.zero;
+        PixelHoverTip hover = b.gameObject.AddComponent<PixelHoverTip>();
+        hover.onEnter = () => hoveredText = tip;
+        hover.onExit = () => { if (hoveredText == tip) hoveredText = null; };
+        return b;
     }
 
     /// <summary>A picture of the current look with an arrow either side (and its name under it).</summary>
@@ -591,7 +613,8 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void UpdateLookTip(TMP_FontAsset font)
     {
-        bool show = hoveredPicker != null && !playing && foreground != null && foreground.activeInHierarchy && !string.IsNullOrEmpty(hoveredPicker.shownName);
+        string tipText = !string.IsNullOrEmpty(hoveredText) ? hoveredText : (hoveredPicker != null ? hoveredPicker.shownName : null);
+        bool show = !string.IsNullOrEmpty(tipText) && !playing && foreground != null && foreground.activeInHierarchy;
         if (!show) { if (lookTip != null && lookTip.activeSelf) lookTip.SetActive(false); return; }
         if (lookTip == null)
         {
@@ -608,7 +631,7 @@ public class PixelTitleScreen : MonoBehaviour
         }
         if (!lookTip.activeSelf) lookTip.SetActive(true);
         lookTip.transform.SetAsLastSibling();
-        string name = hoveredPicker.shownName.ToUpperInvariant();
+        string name = tipText.ToUpperInvariant();
         if (lookTipLabel.text != name) lookTipLabel.text = name;
         RectTransform rt = lookTip.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
