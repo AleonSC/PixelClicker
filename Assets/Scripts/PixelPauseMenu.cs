@@ -554,6 +554,30 @@ public class PixelPauseMenu : MonoBehaviour
     private TMP_Text overwriteText;
     private Button[] slotButtons;
     private TMP_Text[] slotLabels;
+    private string[] slotDetails;
+    private GameObject renameOverlay, slotTip;
+    private TMP_InputField renameInput;
+    private TMP_Text renameTitleLabel, slotTipLabel;
+    private int renameSlot = 1, hoverSlot = -1;
+
+    [Tooltip("Rename button on each save slot.")]
+    [SerializeField] private string renameButtonText = "Rename";
+    [Tooltip("Title of the rename box. {0} = slot number.")]
+    [SerializeField] private string renameTitle = "Rename slot {0}";
+    [Tooltip("Placeholder of the rename box's text field.")]
+    [SerializeField] private string renamePlaceholder = "Save name...";
+    [Min(4)]
+    [Tooltip("Longest name a save slot can have.")]
+    [SerializeField] private int slotNameMaxLength = 24;
+
+    private const string SlotNamePref = "PixelClicker.SlotName.";
+
+    /// <summary>The player's name for a save slot, or the default 'Slot N'.</summary>
+    private string SlotNameOf(int slot)
+    {
+        string custom = PlayerPrefs.GetString(SlotNamePref + slot, "");
+        return string.IsNullOrWhiteSpace(custom) ? string.Format(slotNameFormat, slot) : custom;
+    }
     private Button slotSaveButton, slotLoadButton;
     private ScrollRect slotScroll;
     private GameObject slotBar;
@@ -642,6 +666,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void Update()
     {
+        UpdateSlotTip();
         if (IsPaused && UpdateKeyCapture()) return;
 
         if (EscapePressed())
@@ -653,7 +678,8 @@ public class PixelPauseMenu : MonoBehaviour
             else if (IsPaused)
             {
                 // Inside Stats / Settings, Escape steps back; from the main view it resumes.
-                if (resultOverlay != null && resultOverlay.activeSelf) resultOverlay.SetActive(false);
+                if (renameOverlay != null && renameOverlay.activeSelf) renameOverlay.SetActive(false);
+                else if (resultOverlay != null && resultOverlay.activeSelf) resultOverlay.SetActive(false);
                 else if (overwriteOverlay != null && overwriteOverlay.activeSelf) overwriteOverlay.SetActive(false);
                 else if (mainPanel != null && !mainPanel.activeSelf) ShowView(mainPanel);
                 else SetPaused(false);
@@ -1232,7 +1258,7 @@ public class PixelPauseMenu : MonoBehaviour
         saveLoadPanel = BuildSectionPanel("Save Load Panel", saveLoadText, out float y);
 
         // The slot list (scrolls when there are more slots than rows).
-        float rowH = Mathf.Max(slotHeight, 150f);   // name + date + pixels + time played
+        float rowH = Mathf.Clamp(slotHeight * 0.65f, 56f, 76f);   // compact: just the name (the details show on hover)
         float rowStep = rowH + 8f;
         float viewHeight = FitViewHeight(Mathf.Min(count, visibleSlotRows) * rowStep, y + menuButtonSize.y + 14f);   // leaves room for the Save / Load buttons
         slotScroll = PixelUIKit.CreateScrollView(saveLoadPanel.transform, "Slot List", scrollbarColor, 12f, rowStep,
@@ -1246,6 +1272,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         slotButtons = new Button[count];
         slotLabels = new TMP_Text[count];
+        slotDetails = new string[count];
         for (int i = 0; i < count; i++)
         {
             int slot = i + 1;
@@ -1254,6 +1281,9 @@ public class PixelPauseMenu : MonoBehaviour
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(-8f, -(i * rowStep));
             b.onClick.AddListener(() => SelectSlot(slot));
+            PixelHoverTip hover = b.gameObject.AddComponent<PixelHoverTip>();
+            hover.onEnter = () => hoverSlot = slot;
+            hover.onExit = () => { if (hoverSlot == slot) hoverSlot = -1; };
 
             TMP_Text label = b.GetComponentInChildren<TMP_Text>();
             label.alignment = TextAlignmentOptions.MidlineLeft;
@@ -1262,8 +1292,16 @@ public class PixelPauseMenu : MonoBehaviour
             label.fontSizeMax = rowFontSize * 0.85f;
             label.fontSizeMin = 10f;
             label.overflowMode = TextOverflowModes.Ellipsis;
+            float renameWidth = Mathf.Max(150f, rowH * 2f);
             label.rectTransform.offsetMin = new Vector2(20f, 6f);
-            label.rectTransform.offsetMax = new Vector2(-12f, -6f);
+            label.rectTransform.offsetMax = new Vector2(-(renameWidth + 24f), -6f);
+
+            // A Rename button at the right end of the row.
+            Button rename = MakeButton(b.transform, "Rename", renameButtonText, new Vector2(renameWidth, rowH - 20f), menuButtonColor, rowFontSize * 0.75f);
+            RectTransform rr = rename.GetComponent<RectTransform>();
+            rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0.5f);
+            rr.anchoredPosition = new Vector2(-10f, 0f);
+            rename.onClick.AddListener(() => OpenRename(slot));
             slotButtons[i] = b;
             slotLabels[i] = label;
         }
@@ -1286,8 +1324,10 @@ public class PixelPauseMenu : MonoBehaviour
 
         BuildOverwriteOverlay(saveLoadPanel.transform);
         BuildResultOverlay(saveLoadPanel.transform);
+        BuildRenameOverlay(saveLoadPanel.transform);
         FinishSectionPanel(saveLoadPanel, y);
         overwriteOverlay.transform.SetAsLastSibling(); // above the Back button too
+        renameOverlay.transform.SetAsLastSibling();
         resultOverlay.transform.SetAsLastSibling();
     }
 
@@ -1402,11 +1442,114 @@ public class PixelPauseMenu : MonoBehaviour
         resultOverlay.transform.SetAsLastSibling();
     }
 
+    /// <summary>The rename box: a dimmed Save / Load menu with a text field, OK and Cancel.</summary>
+    private void BuildRenameOverlay(Transform parent)
+    {
+        renameOverlay = new GameObject("Rename Slot", typeof(RectTransform), typeof(Image));
+        renameOverlay.transform.SetParent(parent, false);
+        renameOverlay.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.7f);
+        PixelUIKit.Stretch(renameOverlay.GetComponent<RectTransform>());
+
+        GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image), typeof(PixelPop));
+        box.transform.SetParent(renameOverlay.transform, false);
+        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
+        RectTransform br = box.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0.5f);
+        br.sizeDelta = new Vector2(panelSize.x - 60f, 120f + menuButtonSize.y * 2f + 80f);
+
+        renameTitleLabel = MakeText(box.transform, "Title", "", titleFontSize * 0.75f, FontStyles.Bold);
+        RectTransform tr = renameTitleLabel.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(0f, titleFontSize * 1.2f);
+        tr.anchoredPosition = new Vector2(0f, -20f);
+
+        renameInput = PixelUIKit.CreateInputField(font, box.transform, "Name Field", new Vector2(br.sizeDelta.x - 60f, menuButtonSize.y),
+                                                  tickBoxColor, textColor, menuButtonFontSize * 0.9f, renamePlaceholder);
+        renameInput.characterLimit = Mathf.Max(4, slotNameMaxLength);
+        RectTransform ir = renameInput.GetComponent<RectTransform>();
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 1f);
+        ir.anchoredPosition = new Vector2(0f, -(30f + titleFontSize * 1.2f));
+
+        float gap = 12f;
+        Vector2 half = new Vector2((br.sizeDelta.x - 60f - gap) * 0.5f, menuButtonSize.y);
+        Button ok = MakeButton(box.transform, "Rename OK", "OK", half, menuButtonColor, menuButtonFontSize);
+        Button cancel = MakeButton(box.transform, "Rename Cancel", overwriteCancelText, half, tickBoxColor, menuButtonFontSize);
+        RectTransform okr = ok.GetComponent<RectTransform>(), cr = cancel.GetComponent<RectTransform>();
+        okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
+        okr.anchoredPosition = new Vector2(-(half.x + gap) * 0.5f, 24f);
+        cr.anchoredPosition = new Vector2((half.x + gap) * 0.5f, 24f);
+        ok.onClick.AddListener(ConfirmRename);
+        cancel.onClick.AddListener(() => renameOverlay.SetActive(false));
+        renameInput.onSubmit.AddListener(_ => ConfirmRename());
+        renameOverlay.SetActive(false);
+    }
+
+    private void OpenRename(int slot)
+    {
+        if (renameOverlay == null) return;
+        renameSlot = slot;
+        renameTitleLabel.text = string.Format(renameTitle, slot);
+        renameInput.text = PlayerPrefs.GetString(SlotNamePref + slot, "");
+        renameOverlay.SetActive(true);
+        renameOverlay.transform.SetAsLastSibling();
+        renameInput.Select();
+        renameInput.ActivateInputField();
+    }
+
+    private void ConfirmRename()
+    {
+        string name = (renameInput.text ?? "").Trim();
+        if (name.Length == 0) PlayerPrefs.DeleteKey(SlotNamePref + renameSlot);   // empty = back to 'Slot N'
+        else PlayerPrefs.SetString(SlotNamePref + renameSlot, name);
+        PlayerPrefs.Save();
+        renameOverlay.SetActive(false);
+        RefreshSlots();
+    }
+
+    /// <summary>The hover box over a save slot: when it was saved, time played and pixels. Follows the mouse.</summary>
+    private void UpdateSlotTip()
+    {
+        bool show = IsPaused && hoverSlot > 0 && saveLoadPanel != null && saveLoadPanel.activeInHierarchy && slotDetails != null && hoverSlot <= slotDetails.Length
+                    && !(renameOverlay != null && renameOverlay.activeSelf) && !(overwriteOverlay != null && overwriteOverlay.activeSelf) && !(resultOverlay != null && resultOverlay.activeSelf);
+        if (!show) { if (slotTip != null && slotTip.activeSelf) slotTip.SetActive(false); return; }
+        if (slotTip == null)
+        {
+            slotTip = new GameObject("Slot Tip", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            slotTip.transform.SetParent(canvasRoot.transform, false);
+            slotTip.GetComponent<CanvasGroup>().blocksRaycasts = false;
+            Image bg = slotTip.GetComponent<Image>();
+            bg.color = new Color(0.07f, 0.09f, 0.13f, 0.97f);
+            bg.raycastTarget = false;
+            PixelUIKit.StyleBox(bg);
+            slotTipLabel = MakeText(slotTip.transform, "Text", "", rowFontSize * 0.8f, FontStyles.Normal);
+            slotTipLabel.raycastTarget = false;
+            slotTipLabel.alignment = TextAlignmentOptions.Left;
+            RectTransform lr = slotTipLabel.rectTransform;
+            lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+            lr.offsetMin = new Vector2(16f, 8f); lr.offsetMax = new Vector2(-16f, -8f);
+        }
+        if (!slotTip.activeSelf) slotTip.SetActive(true);
+        slotTip.transform.SetAsLastSibling();
+        string text = slotDetails[hoverSlot - 1];
+        if (slotTipLabel.text != text) slotTipLabel.text = text;
+        RectTransform rt = slotTip.GetComponent<RectTransform>();
+        Vector2 size = new Vector2(520f, Mathf.Ceil(slotTipLabel.GetPreferredValues(text, 488f, 0f).y) + 20f);
+        rt.sizeDelta = size;
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
+        bool rightHalf = local.x > 0f;
+        rt.pivot = new Vector2(rightHalf ? 1f : 0f, local.y < -canvasRect.rect.height * 0.25f ? 0f : 1f);
+        rt.anchoredPosition = local + new Vector2(rightHalf ? -18f : 18f, rt.pivot.y > 0.5f ? -22f : 22f);
+    }
+
     private void OpenSaveLoad()
     {
         selectedSlot = saveGame != null ? saveGame.CurrentSlot : 1;
         if (overwriteOverlay != null) overwriteOverlay.SetActive(false);
         if (resultOverlay != null) resultOverlay.SetActive(false);
+        if (renameOverlay != null) renameOverlay.SetActive(false);
         RefreshSlots();
     }
 
@@ -1424,11 +1567,11 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < slotButtons.Length; i++)
         {
             int slot = i + 1;
-            string name = string.Format(slotNameFormat, slot) + (slot == current ? currentSlotTag : "");
-            string detail = saveGame.TryGetSlotInfo(slot, out string savedAt, out double pixels, out double played)
+            string name = SlotNameOf(slot) + (slot == current ? currentSlotTag : "");
+            slotDetails[i] = saveGame.TryGetSlotInfo(slot, out string savedAt, out double pixels, out double played)
                 ? savedAt + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played)) + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels))
                 : emptySlotText;
-            slotLabels[i].text = "<b>" + name + "</b>\n<size=78%>" + detail + "</size>";
+            slotLabels[i].text = "<b>" + name + "</b>";
             slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;
         }
         slotLoadButton.interactable = saveGame.SlotHasSave(selectedSlot);

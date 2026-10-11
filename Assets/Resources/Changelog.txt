@@ -456,3 +456,4 @@
 [2026-10-11 12:19 UTC] Fixed the pause menu search compile error (duplicate name) and removed an unused field warning.
 [2026-10-11 12:21 UTC] Pause menu search results now fit inside the panel: the lines shrink to fit and extra settings are summarised as '+ N more'.
 [2026-10-11 12:21 UTC] Fixed the Crafting window briefly showing at the wrong size when opened at high UI scale (it is now sized before it opens).
+[2026-10-11 12:24 UTC] Save slots are compact: just the name, a Rename button (opens a text box; empty goes back to 'Slot N') and the date, time played and pixels in a hover box.
