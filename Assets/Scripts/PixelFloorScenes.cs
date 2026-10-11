@@ -269,7 +269,7 @@ public partial class PixelFloor
         int wi = Wrap(ci, cells), wj = Wrap(cj, cells);
         int wl = Wrap(ci - 1, cells), wd = Wrap(cj - 1, cells);
 
-        Color c = s.colorA * (0.9f + 0.15f * Fbm(u, v, 5, 3, s.seed));
+        Color c = s.colorA * (0.9f + 0.15f * CircuitGround(u, v, n, s.seed));
         float trace = 0f, pulse = 0f;
         float wTrace = 1.3f * texel;
 
@@ -295,7 +295,9 @@ public partial class PixelFloor
 
         // The bright sparks wandering across the circuits (positions worked out once per frame in PrepareSparks).
         float spark = 0f, sparkGlow = 0f;
-        for (int k = 0; k < sparkCount; k++)
+        // Only the cells next to a spark need the (comparatively costly) glow maths; sparkNear is filled once per frame.
+        bool near = sparkNear != null && sparkNear.Length == cells * cells && sparkNear[Wrap(cj, cells) * cells + Wrap(ci, cells)];
+        for (int k = 0; near && k < sparkCount; k++)
         {
             float w = k % SparkTrail == 0 ? 1f : Mathf.Pow(0.72f, k % SparkTrail);
             float dx = Mathf.Abs(Mathf.Repeat(gu - sparkX[k] + cells * 0.5f, cells) - cells * 0.5f);
@@ -311,10 +313,33 @@ public partial class PixelFloor
         return c;
     }
 
+    // ---- cached background noise (it never changes, so it is worked out once per size / seed) ----
+    private static float[] circuitNoise;
+    private static int circuitNoiseN, circuitNoiseSeed;
+
+    private static float CircuitGround(float u, float v, int n, int seed)
+    {
+        if (circuitNoise == null || circuitNoiseN != n || circuitNoiseSeed != seed)
+        {
+            circuitNoise = new float[n * n];
+            for (int yy = 0; yy < n; yy++)
+                for (int xx = 0; xx < n; xx++)
+                    circuitNoise[yy * n + xx] = Fbm((xx + 0.5f) / n, (yy + 0.5f) / n, 5, 3, seed);
+            circuitNoiseN = n; circuitNoiseSeed = seed;
+        }
+        int ix = Mathf.Clamp(Mathf.FloorToInt(u * n), 0, n - 1), iy = Mathf.Clamp(Mathf.FloorToInt(v * n), 0, n - 1);
+        return circuitNoise[iy * n + ix];
+    }
+
+    private static bool[] sparkNear;
+
     // ---- the wandering sparks of Circuit Flow ----
     private const int SparkTrail = 7, SparkWalkers = 2, SparkSteps = 120;
     private static int sparkCount;
     private static readonly float[] sparkX = new float[SparkTrail * SparkWalkers], sparkY = new float[SparkTrail * SparkWalkers];
+
+    private static readonly int[] sparkDirs = new int[4], sparkPick = new int[4];
+    private static readonly int[] sparkNi = new int[SparkSteps + 3], sparkNj = new int[SparkSteps + 3];
 
     private static bool RightEdge(int i, int j, int cells, int seed) { return Hash(Wrap(i, cells), Wrap(j, cells), seed) > 0.42f; }
     private static bool UpEdge(int i, int j, int cells, int seed) { return Hash(Wrap(i, cells), Wrap(j, cells), seed + 5) > 0.42f; }
@@ -324,7 +349,7 @@ public partial class PixelFloor
     {
         int cells = Mathf.Max(2, s.cells);
         const float edgesPerSecond = 3.2f, epochSeconds = 22f;
-        int[] ni = new int[SparkSteps + 3], nj = new int[SparkSteps + 3];
+        int[] ni = sparkNi, nj = sparkNj;
         sparkCount = 0;
         for (int w = 0; w < SparkWalkers; w++)
         {
@@ -339,14 +364,14 @@ public partial class PixelFloor
             for (int k = 1; k <= steps; k++)
             {
                 int i = ni[k - 1], j = nj[k - 1];
-                int[] dirs = new int[4]; int count = 0;
+                int[] dirs = sparkDirs; int count = 0;
                 if (RightEdge(i, j, cells, s.seed)) dirs[count++] = 0;
                 if (RightEdge(i - 1, j, cells, s.seed)) dirs[count++] = 1;
                 if (UpEdge(i, j, cells, s.seed)) dirs[count++] = 2;
                 if (UpEdge(i, j - 1, cells, s.seed)) dirs[count++] = 3;
                 // Don't turn straight back unless it is a dead end.
                 int back = prevDir == 0 ? 1 : prevDir == 1 ? 0 : prevDir == 2 ? 3 : prevDir == 3 ? 2 : -1;
-                int usable = 0; int[] pick = new int[4];
+                int usable = 0; int[] pick = sparkPick;
                 for (int d = 0; d < count; d++) if (dirs[d] != back) pick[usable++] = dirs[d];
                 int chosen;
                 if (usable > 0) chosen = pick[Mathf.Min(usable - 1, Mathf.FloorToInt(Hash(i + epoch * 13, j + k, seed + 9) * usable))];
@@ -367,6 +392,17 @@ public partial class PixelFloor
                 sparkY[slot] = Mathf.Lerp(nj[idx], nj[idx + 1], f) + 0.5f;
             }
             sparkCount += SparkTrail;
+        }
+
+        // Flag every cell within one cell of a spark point.
+        if (sparkNear == null || sparkNear.Length != cells * cells) sparkNear = new bool[cells * cells];
+        else System.Array.Clear(sparkNear, 0, sparkNear.Length);
+        for (int k = 0; k < sparkCount; k++)
+        {
+            int ci = Mathf.FloorToInt(sparkX[k]), cj = Mathf.FloorToInt(sparkY[k]);
+            for (int oy = -1; oy <= 1; oy++)
+                for (int ox = -1; ox <= 1; ox++)
+                    sparkNear[Wrap(cj + oy, cells) * cells + Wrap(ci + ox, cells)] = true;
         }
     }
 

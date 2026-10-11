@@ -2051,6 +2051,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                 if (st != null && st.name == "Circuit Flow") { st.animateFps = 20f; st.cells = Mathf.Max(8, st.cells); }
             defaultsVersion = 6;
         }
+        // Circuit Flow with its sparks was heavy: a smaller texture redrawn a little less often.
+        if (defaultsVersion < 7)
+        {
+            foreach (FloorStyle st in styles)
+                if (st != null && st.name == "Circuit Flow") { st.resolution = 192; st.animateFps = 15f; }
+            defaultsVersion = 7;
+        }
 
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
@@ -2273,7 +2280,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return St("Red Planet", FloorPattern.Craters, new Color(0.7f, 0.35f, 0.2f), new Color(0.55f, 0.26f, 0.15f), new Color(0.25f, 0.1f, 0.06f), 256, 8f, 5, 0f, false, 0f, 0.1f);
         // ---- Digital / tech ----
         yield return St("Data Streams", FloorPattern.DataStream, new Color(0.01f, 0.02f, 0.05f), new Color(0.1f, 0.8f, 1f), new Color(1f, 0.3f, 0.7f), 192, 8f, 16, 20f, true, 1f);
-        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 256, 6f, 12, 20f, false, 0.8f);
+        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 192, 6f, 12, 15f, false, 0.8f);
         yield return St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 256, 6f, 8, 16f, false, 0.9f);
         yield return St("Glitch", FloorPattern.Glitch, new Color(0.03f, 0.03f, 0.05f), new Color(0.9f, 0.2f, 0.6f), new Color(0.2f, 1f, 0.9f), 192, 8f, 1, 14f, true, 0.4f);
         // ---- Trippy ----
