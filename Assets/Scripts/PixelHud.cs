@@ -233,10 +233,10 @@ public class PixelHud : MonoBehaviour
         return PixelBarGlow.EdgeColor(GlowHue, time, GlowCycle ? cycleSpeed : 0f, edgeOffset, saturation);
     }
 
-    public static void ReloadGlowFromPrefs() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
+    public static void ReloadGlowFromPrefs() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetGlowStatics() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
+    private static void ResetGlowStatics() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
 
     [Min(0f)]
     [Tooltip("Seconds the black bars (and the docked buttons) take to slide in when the game starts and out when quitting to the main menu. 0 = 0.9.")]
@@ -346,16 +346,34 @@ public class PixelHud : MonoBehaviour
         dock.Setup(this, button, anchor, keepOut, sideOffsetY, leftOffset, groupWidth);
     }
 
-    internal float Sliver => sliver;
+    internal float Sliver => ButtonMode == 2 ? 0f : sliver;
+
+    private const string PrefButtonMode = "PixelClicker.Setting.ButtonMode";
+    private static int buttonModeCache = -1;
+
+    /// <summary>How the docked buttons behave: 0 = peek (a sliver shows at the edge, the default), 1 = always showing, 2 = completely hidden until the mouse comes near.</summary>
+    public static int ButtonMode
+    {
+        get
+        {
+            if (buttonModeCache < 0) buttonModeCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefButtonMode, 0), 0, 2);
+            return buttonModeCache;
+        }
+        set
+        {
+            buttonModeCache = Mathf.Clamp(value, 0, 2);
+            PlayerPrefs.SetInt(PrefButtonMode, buttonModeCache);
+        }
+    }
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
     internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - ButtonSize.y) * 0.5f * (1f - (buttonEdgeBias > 0f ? buttonEdgeBias : 0.55f))) : sideMargin * 0.5f;
-    internal float HiddenInset => -(ButtonSize.y - sliver);
+    internal float HiddenInset => -(ButtonSize.y - Sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
     internal float SideShownInset => sideMargin * 0.35f;
-    internal float SideHiddenInset => -(ButtonSize.x - sliver);
-    internal bool SlideButtons => slideButtons;
+    internal float SideHiddenInset => -(ButtonSize.x - Sliver);
+    internal bool SlideButtons => slideButtons && ButtonMode != 1;
     internal float SlideSeconds => slideSeconds;
     internal float TriggerPadding => triggerPadding;
     internal float SideTriggerDepth => sideTriggerDepth;

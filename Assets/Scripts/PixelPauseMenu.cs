@@ -244,6 +244,9 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
     [SerializeField] private string popupsLabel = "Number popups (+N)";
     [SerializeField] private string popupSizeLabel = "Popup size";
+    [Tooltip("Label of the Settings choice for how the docked menu buttons behave.")]
+    [SerializeField] private string buttonModeLabel = "Menu buttons";
+
     [Tooltip("Label of the Settings choice for the small click particle effects (Off / Light / Normal).")]
     [SerializeField] private string clickFxLabel = "Click effects";
 
@@ -2174,6 +2177,7 @@ public class PixelPauseMenu : MonoBehaviour
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
+        AddChoiceRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
 
         // ---- Saving ----
         if (saveGame != null)
@@ -2360,6 +2364,8 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>A tick box that reads / writes a setting; it re-reads the setting whenever the screen is shown.</summary>
+    private static string[] ButtonModeNames() => new[] { "Peeking", "Always showing", "Hidden" };
+
     private void AddSettingToggle(Transform parent, string label, System.Func<bool> get, System.Action<bool> set, ref float y)
     {
         Toggle toggle = AddToggleRow(parent, label, get(), on => set(on), ref y);
