@@ -679,6 +679,7 @@ public class PixelToggles : MonoBehaviour
         else
         {
             CloseHint(); // the player found the window
+            PixelPixelGuide.CloseWindowIfOpen();
             PixelPop.Show(windowObject);
             refreshTimer = 0f;
             Refresh();
@@ -686,6 +687,12 @@ public class PixelToggles : MonoBehaviour
     }
 
     private void Close() => PixelPop.Hide(windowObject);
+
+    /// <summary>Closes the window if it is open (the Pixel Guide takes the same spot on the right).</summary>
+    public static void CloseWindowIfOpen()
+    {
+        if (instance != null && instance.windowObject != null && PixelPop.IsOpen(instance.windowObject)) instance.Close();
+    }
 
     /// <summary>Keeps a text on one line, shrinking it to fit the width.</summary>
     private static void OneLine(TMP_Text t, float maxSize, float minSize)

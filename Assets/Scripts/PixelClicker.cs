@@ -1057,6 +1057,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
         if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
+        if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
@@ -2287,6 +2288,24 @@ public class PixelClicker : MonoBehaviour
 
     /// <summary>Weighted random pick among unlocked tiers (or the forced tier while a potion is active).</summary>
     /// <summary>A tier's spawn weight, multiplied while its pet is active (PixelPets).</summary>
+    /// <summary>True when this pixel type can come up on the cube right now (unlocked, not switched off, and in the rotation of the skill pack in play).</summary>
+    public bool InRotation(int i)
+    {
+        if (!IsValidTier(i)) return false;
+        if (tiers[i].rareDrop) return tiers[i].count > 0d || tiers[i].totalCollected > 0d;   // a rare drop is listed once found
+        return tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type);
+    }
+
+    /// <summary>The share (0..1) of the cube's pixels that are this type; 0 when it is not in the rotation.</summary>
+    public float SpawnShare(int i)
+    {
+        if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
+        float total = 0f;
+        for (int k = 0; k < tiers.Length; k++)
+            if (tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += SpawnWeightOf(k);
+        return total > 0f ? SpawnWeightOf(i) / total : 0f;
+    }
+
     private float SpawnWeightOf(int i) => Mathf.Max(0f, tiers[i].spawnWeight) * PixelPets.SpawnMultiplier(tiers[i].type);
 
     private int PickSpawnTier()

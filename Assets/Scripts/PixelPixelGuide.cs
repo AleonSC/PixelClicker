@@ -1,0 +1,545 @@
+using System.Collections.Generic;
+using System.Text;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// The Pixel Guide: a docked button on the right edge (under Toggles) that slides out a window like the Toggles window (and docks with the shop the same
+/// way). It lists every pixel in the current rotation - the ones that can come up on the cube right now - each with a turning 3D picture of the real pixel
+/// and an orange '!' box whose tooltip explains exactly what the pixel does.
+/// </summary>
+public class PixelPixelGuide : MonoBehaviour
+{
+    [Header("References")]
+    [Tooltip("The PixelClicker whose pixels are listed. Found automatically if left empty.")]
+    [SerializeField] private PixelClicker clicker;
+
+    [Header("Button")]
+    [Tooltip("Text on the button under Toggles.")]
+    [SerializeField] private string buttonText = "Pixel Guide";
+
+    [Tooltip("Button colour.")]
+    [SerializeField] private Color buttonColor = new Color(0.2f, 0.55f, 0.6f, 1f);
+
+    [Tooltip("Keep the button hidden until a second pixel type is unlocked.")]
+    [SerializeField] private bool hideUntilSecondPixel = true;
+
+    [Header("Window")]
+    [Tooltip("Window title.")]
+    [SerializeField] private string windowTitle = "Pixel Guide";
+
+    [Tooltip("Window size (canvas units) when it stands alone.")]
+    [SerializeField] private Vector2 windowSize = new Vector2(640f, 720f);
+
+    [Tooltip("Height of one pixel row.")]
+    [SerializeField] private float rowHeight = 118f;
+
+    [Tooltip("Size of the turning 3D picture on each row.")]
+    [SerializeField] private float pictureSize = 96f;
+
+    [Tooltip("Seconds per full turn of the 3D pictures. 0 = 8.")]
+    [SerializeField] private float spinSeconds = 0f;
+
+    [Tooltip("Text shown when no pixel is in the rotation.")]
+    [SerializeField] private string emptyText = "No pixels yet.";
+
+    [Tooltip("Window background colour.")]
+    [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
+
+    [Tooltip("Text colour.")]
+    [SerializeField] private Color textColor = Color.white;
+
+    [Tooltip("Seconds the button takes to fade back in (already tucked away) after its window closes.")]
+    [SerializeField] private float buttonFadeSeconds = 1.2f;
+
+    [Header("Canvas")]
+    [Tooltip("Sorting order of the canvas (just above the Toggles window).")]
+    [SerializeField] private int sortingOrder = 131;
+
+    private static PixelPixelGuide instance;
+
+    private GameObject canvasRoot, openObject, windowObject;
+    private PixelDockedButton dock;
+    private CanvasGroup buttonGroup;
+    private ScrollRect scroll;
+    private RectTransform content;
+    private GameObject bar, emptyObject;
+    private TMP_Text emptyLabel;
+    private PixelShop shopRef;
+    private bool built;
+    private float refreshTimer;
+    private string rowsKey = "";
+
+    private class Row
+    {
+        public RectTransform rect;
+        public RawImage picture;
+        public int tier;
+    }
+
+    private readonly List<Row> rows = new List<Row>();
+
+    private class Studio
+    {
+        public GameObject root;
+        public Camera cam;
+        public Transform model;
+        public RenderTexture rt;
+    }
+
+    private readonly Dictionary<int, Studio> studios = new Dictionary<int, Studio>();
+    private const float StudioHeight = -4300f;
+
+    // The tooltip shared by every row's '!' box.
+    private RectTransform tipRect;
+    private TMP_Text tipText;
+    private System.Func<string> hoverTip;
+
+    private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { instance = null; }
+
+    /// <summary>Closes the window if it is open (Toggles takes the same spot on the right).</summary>
+    public static void CloseWindowIfOpen()
+    {
+        if (instance != null && instance.windowObject != null && PixelPop.IsOpen(instance.windowObject)) instance.Close();
+    }
+
+    private void Awake()
+    {
+        if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) { enabled = false; return; }
+        instance = this;
+    }
+
+    private void Start()
+    {
+        PixelUIKit.EnsureEventSystem();
+        BuildUI();
+        built = true;
+    }
+
+    private void OnDestroy()
+    {
+        if (instance == this) instance = null;
+        PixelWindows.Unregister(this);
+        foreach (Studio st in studios.Values)
+        {
+            if (st.rt != null) { st.rt.Release(); Destroy(st.rt); }
+            if (st.root != null) Destroy(st.root);
+        }
+        studios.Clear();
+        if (canvasRoot != null) Destroy(canvasRoot);
+    }
+
+    private bool ShowButton()
+    {
+        if (!hideUntilSecondPixel) return true;
+        int unlocked = 0;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers) if (t.unlocked && ++unlocked >= 2) return true;
+        return false;
+    }
+
+    // ------------------------------------------------------------------
+    // Building the UI
+    // ------------------------------------------------------------------
+
+    private void BuildUI()
+    {
+        canvasRoot = PixelUIKit.CreateCanvas("PixelGuide Canvas", sortingOrder, new Vector2(1920f, 1080f), true);
+
+        // The button, docked on the middle of the right edge directly under the Toggles button.
+        Button open = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Pixel Guide Button", buttonText, new Vector2(230f, 64f), buttonColor, Color.white, 30f);
+        PixelHud hud = PixelHud.Ensure(gameObject);
+        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), () => windowObject != null && windowObject.activeSelf, -(hud.ButtonSize.y + 14f));
+        open.onClick.AddListener(Toggle);
+        openObject = open.gameObject;
+        dock = openObject.GetComponent<PixelDockedButton>();
+        buttonGroup = openObject.AddComponent<CanvasGroup>();
+
+        // The window, in the spot the button slides out to.
+        windowObject = new GameObject("Pixel Guide Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
+        windowObject.transform.SetParent(canvasRoot.transform, false);
+        PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
+        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 0.5f);
+        wr.sizeDelta = windowSize;
+        wr.anchoredPosition = new Vector2(-(hud.SideMargin * 0.35f), 0f);
+
+        PixelShop layoutShop = PixelFind.First<PixelShop>();
+        float headerH = layoutShop != null ? layoutShop.HeaderHeightValue : 100f;
+        float sidePad = layoutShop != null ? layoutShop.PanelPaddingValue : 20f;
+        float listTop = headerH + 10f;
+
+        TMP_Text title = PixelUIKit.CreateText(Font, windowObject.transform, "Title", windowTitle, 44f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
+        PixelUIKit.Caps(title);
+        title.enableAutoSizing = true;
+        title.fontSizeMax = 44f;
+        title.fontSizeMin = 14f;
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(-170f, 44f * 1.4f);
+        tr.anchoredPosition = new Vector2(0f, -16f);
+
+        Button close = PixelUIKit.CreateButton(Font, windowObject.transform, "Close", "X", new Vector2(64f, 64f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+        cr.anchoredPosition = new Vector2(-14f, -12f);
+        close.onClick.AddListener(Close);
+
+        scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pixel List", new Color(1f, 1f, 1f, 0.35f), 12f, rowHeight, out content, out bar);
+        PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;
+        if (barFade != null) barFade.hideBar = true;
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = Vector2.zero;
+        vr.anchorMax = Vector2.one;
+        vr.offsetMin = new Vector2(sidePad, sidePad);
+        vr.offsetMax = new Vector2(-sidePad, -listTop);
+
+        TMP_Text empty = PixelUIKit.CreateText(Font, windowObject.transform, "Empty", emptyText.ToUpperInvariant(), 27f, TextAlignmentOptions.Center, FontStyles.Bold,
+                                               new Color(textColor.r, textColor.g, textColor.b, 0.6f));
+        PixelUIKit.Stretch(empty.rectTransform);
+        emptyObject = empty.gameObject;
+        emptyLabel = empty;
+
+        BuildTip();
+        windowObject.SetActive(false);
+        PixelWindows.Register(this, 15, () => windowObject != null && PixelPop.IsOpen(windowObject), Close);
+    }
+
+    private void BuildTip()
+    {
+        GameObject go = new GameObject("Pixel Guide Tip", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(canvasRoot.transform, false);
+        Image bg = go.GetComponent<Image>();
+        bg.color = new Color(0.05f, 0.05f, 0.08f, 0.97f);
+        bg.raycastTarget = false;
+        PixelUIKit.StyleBox(bg);
+        tipRect = go.GetComponent<RectTransform>();
+        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0.5f);
+        tipRect.pivot = new Vector2(0f, 1f);
+        tipText = PixelUIKit.CreateText(Font, go.transform, "Text", "", 22f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
+        tipText.richText = true;
+        tipText.raycastTarget = false;
+        RectTransform t = tipText.rectTransform;
+        t.anchorMin = t.anchorMax = new Vector2(0f, 1f);
+        t.pivot = new Vector2(0f, 1f);
+        t.anchoredPosition = new Vector2(14f, -10f);
+        go.SetActive(false);
+    }
+
+    private void UpdateTip()
+    {
+        if (tipRect == null) return;
+        string text = windowObject != null && windowObject.activeSelf && hoverTip != null ? hoverTip() : null;
+        bool show = !string.IsNullOrEmpty(text);
+        if (tipRect.gameObject.activeSelf != show) tipRect.gameObject.SetActive(show);
+        if (!show) return;
+        const float wrap = 480f;
+        PixelUIKit.SetText(tipText, text);
+        Vector2 pref = tipText.GetPreferredValues(text, wrap, 0f);
+        tipText.rectTransform.sizeDelta = new Vector2(wrap, pref.y);
+        Vector2 size = new Vector2(wrap + 28f, pref.y + 20f);
+        tipRect.sizeDelta = size;
+        RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
+        Vector2 half = canvasRect.rect.size * 0.5f;
+        Vector2 pos = local + new Vector2(-size.x - 18f, -18f);   // the window is on the right edge: the box opens to the left of the pointer
+        if (pos.x < -half.x) pos.x = local.x + 18f;
+        if (pos.y - size.y < -half.y) pos.y = local.y + size.y + 18f;
+        tipRect.anchoredPosition = pos;
+        tipRect.SetAsLastSibling();
+    }
+
+    private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source)
+    {
+        GameObject info = new GameObject("Info", typeof(RectTransform), typeof(Image));
+        info.transform.SetParent(parent, false);
+        info.GetComponent<Image>().color = new Color(0.95f, 0.55f, 0.12f, 1f);
+        PixelUIKit.StyleButton(info.GetComponent<Image>());
+        Shadow dropShadow = info.AddComponent<Shadow>();
+        dropShadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+        dropShadow.effectDistance = new Vector2(0f, -2f);
+        RectTransform rect = info.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(size, size);
+        TMP_Text mark = PixelUIKit.CreateText(Font, info.transform, "Mark", "!", size * 0.75f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        mark.raycastTarget = false;
+        PixelUIKit.Stretch(mark.rectTransform);
+        PixelHoverTip tip = info.AddComponent<PixelHoverTip>();
+        tip.onEnter = () => hoverTip = source;
+        tip.onExit = () => { if (hoverTip == source) hoverTip = null; };
+        return rect;
+    }
+
+    private void Toggle()
+    {
+        if (PixelPop.IsOpen(windowObject)) Close();
+        else
+        {
+            PixelToggles.CloseWindowIfOpen();   // they share the right edge
+            PixelPop.Show(windowObject);
+            refreshTimer = 0f;
+            Refresh();
+        }
+    }
+
+    private void Close() => PixelPop.Hide(windowObject);
+
+    // ------------------------------------------------------------------
+    // The list
+    // ------------------------------------------------------------------
+
+    private static string ShortName(string name)
+    {
+        return name != null && name.EndsWith(" Pixels") ? name.Substring(0, name.Length - 7) : name;
+    }
+
+    private string SubLine(int index)
+    {
+        PixelClicker.PixelTier t = clicker.Tiers[index];
+        StringBuilder sb = new StringBuilder();
+        if (t.rareDrop) sb.Append("Pays 1");
+        else if (t.randomPayout) sb.Append("Pays ").Append(t.payoutMin).Append("-").Append(t.payoutMax);
+        else sb.Append("Pays ").Append(PixelClicker.FormatNumber(t.amountPerClick));
+        if (t.randomClicks) sb.Append("  -  ").Append(t.randomClicksMin).Append("-").Append(t.randomClicksMax).Append(" clicks");
+        else if (t.clicksToCollect > 1) sb.Append("  -  ").Append(t.clicksToCollect).Append(" clicks");
+        float share = clicker.SpawnShare(index);
+        if (t.rareDrop) sb.Append("  -  rare drop");
+        else if (share > 0f) sb.Append("  -  ").Append(share >= 0.1f ? Mathf.RoundToInt(share * 100f).ToString() : (share * 100f).ToString("0.#")).Append("% of pixels");
+        return sb.ToString();
+    }
+
+    private void Refresh()
+    {
+        if (content == null) return;
+        // Which pixels, and their shares (a share changes when something unlocks).
+        StringBuilder key = new StringBuilder();
+        List<int> list = new List<int>();
+        for (int i = 0; i < clicker.Tiers.Length; i++)
+        {
+            if (!clicker.InRotation(i)) continue;
+            list.Add(i);
+            key.Append(i).Append(':').Append(Mathf.RoundToInt(clicker.SpawnShare(i) * 1000f)).Append(';');
+        }
+        string newKey = key.ToString();
+        if (newKey != rowsKey)
+        {
+            rowsKey = newKey;
+            foreach (Row r in rows) if (r.rect != null) Destroy(r.rect.gameObject);
+            rows.Clear();
+            for (int n = 0; n < list.Count; n++) rows.Add(BuildRow(list[n], n));
+        }
+        emptyObject.SetActive(rows.Count == 0);
+        float contentHeight = rows.Count * (rowHeight + 8f) - 8f;
+        float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
+        PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight, 0f), viewHeight);
+    }
+
+    private Row BuildRow(int tierIndex, int order)
+    {
+        PixelClicker.PixelTier t = clicker.Tiers[tierIndex];
+        GameObject go = new GameObject("Pixel " + t.type, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(content, false);
+        Image bg = go.GetComponent<Image>();
+        bg.color = new Color(0.17f, 0.17f, 0.21f, 1f);
+        PixelUIKit.StyleBox(bg);
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(0f, rowHeight);
+        rt.anchoredPosition = new Vector2(0f, -order * (rowHeight + 8f));
+
+        // The turning 3D picture, in a sunken frame.
+        GameObject frame = new GameObject("Picture Frame", typeof(RectTransform), typeof(Image));
+        frame.transform.SetParent(go.transform, false);
+        Image frameImage = frame.GetComponent<Image>();
+        frameImage.color = new Color(0.07f, 0.08f, 0.11f, 1f);
+        frameImage.raycastTarget = false;
+        PixelUIKit.StyleBox(frameImage, true);
+        RectTransform fr = frame.GetComponent<RectTransform>();
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0f, 0.5f);
+        fr.sizeDelta = new Vector2(pictureSize + 12f, pictureSize + 12f);
+        fr.anchoredPosition = new Vector2(12f, 0f);
+
+        GameObject picObj = new GameObject("Picture", typeof(RectTransform), typeof(RawImage));
+        picObj.transform.SetParent(frame.transform, false);
+        RawImage pic = picObj.GetComponent<RawImage>();
+        pic.raycastTarget = false;
+        pic.texture = StudioTexture(tierIndex);
+        RectTransform pr = picObj.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(pictureSize, pictureSize);
+
+        float infoSize = 44f;
+        float textLeft = 12f + pictureSize + 12f + 14f;
+
+        TMP_Text name = PixelUIKit.CreateText(Font, go.transform, "Name", ShortName(t.displayName), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, t.color);
+        name.raycastTarget = false;
+        PixelUIKit.Caps(name);
+        name.enableAutoSizing = true;
+        name.fontSizeMax = 32f;
+        name.fontSizeMin = 12f;
+        name.overflowMode = TextOverflowModes.Truncate;
+        RectTransform nr = name.rectTransform;
+        nr.anchorMin = new Vector2(0f, 0.5f);
+        nr.anchorMax = new Vector2(1f, 1f);
+        nr.offsetMin = new Vector2(textLeft, 0f);
+        nr.offsetMax = new Vector2(-(infoSize + 24f), -8f);
+
+        TMP_Text sub = PixelUIKit.CreateText(Font, go.transform, "Sub", SubLine(tierIndex), 22f, TextAlignmentOptions.MidlineLeft, FontStyles.Normal,
+                                             new Color(textColor.r, textColor.g, textColor.b, 0.75f));
+        sub.raycastTarget = false;
+        sub.enableAutoSizing = true;
+        sub.fontSizeMax = 22f;
+        sub.fontSizeMin = 10f;
+        sub.overflowMode = TextOverflowModes.Truncate;
+        RectTransform sr = sub.rectTransform;
+        sr.anchorMin = new Vector2(0f, 0f);
+        sr.anchorMax = new Vector2(1f, 0.5f);
+        sr.offsetMin = new Vector2(textLeft, 8f);
+        sr.offsetMax = new Vector2(-(infoSize + 24f), 0f);
+
+        int captured = tierIndex;
+        RectTransform info = CreateInfoBox(go.transform, infoSize, () => TipFor(captured));
+        info.anchorMin = info.anchorMax = info.pivot = new Vector2(1f, 0.5f);
+        info.anchoredPosition = new Vector2(-14f, 0f);
+
+        return new Row { rect = rt, picture = pic, tier = tierIndex };
+    }
+
+    private string TipFor(int tierIndex)
+    {
+        PixelClicker.PixelTier t = clicker.Tiers[tierIndex];
+        return "<b>" + ShortName(t.displayName) + "</b>\n\n" + PixelGuideTexts.Describe(t.type, t);
+    }
+
+    // ------------------------------------------------------------------
+    // The 3D pictures
+    // ------------------------------------------------------------------
+
+    private Texture StudioTexture(int tier)
+    {
+        if (studios.TryGetValue(tier, out Studio existing) && existing.rt != null) return existing.rt;
+        studios.Remove(tier);
+
+        GameObject studio = new GameObject("Pixel Guide Studio " + tier);
+        studio.transform.position = new Vector3(tier * 60f, StudioHeight, 0f);
+        GameObject model = clicker.CreateDisplayPixel(tier, studio.transform, 1f);
+        if (model == null) { Destroy(studio); return null; }
+        model.transform.localPosition = Vector3.zero;
+
+        Studio st = new Studio { root = studio, model = model.transform };
+        st.rt = new RenderTexture(192, 192, 24, RenderTextureFormat.ARGB32) { name = "Pixel Guide " + tier };
+        GameObject camGo = new GameObject("Guide Camera");
+        camGo.transform.SetParent(studio.transform, false);
+        st.cam = camGo.AddComponent<Camera>();
+        st.cam.enabled = false;
+        st.cam.clearFlags = CameraClearFlags.SolidColor;
+        st.cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+        st.cam.orthographic = true;
+        st.cam.orthographicSize = 0.85f;
+        st.cam.nearClipPlane = 0.1f;
+        st.cam.farClipPlane = 30f;
+        st.cam.allowHDR = false;
+        st.cam.targetTexture = st.rt;
+        camGo.transform.localPosition = new Vector3(0f, 0f, 4.4f);
+        camGo.transform.LookAt(studio.transform.position);
+
+        GameObject lightGo = new GameObject("Guide Light");
+        lightGo.transform.SetParent(studio.transform, false);
+        lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
+        Light studioLight = lightGo.AddComponent<Light>();
+        studioLight.type = LightType.Point;
+        studioLight.range = 25f;
+        studioLight.intensity = 6f;
+        studioLight.shadows = LightShadows.None;
+
+        studios[tier] = st;
+        return st.rt;
+    }
+
+    /// <summary>Turns and re-renders the pictures of the rows that are in view.</summary>
+    private void RenderVisible()
+    {
+        if (content == null || rows.Count == 0) return;
+        RectTransform viewport = content.parent as RectTransform;
+        if (viewport == null) return;
+        Vector3[] vc = new Vector3[4], rc = new Vector3[4];
+        viewport.GetWorldCorners(vc);
+        float spin = 360f / (spinSeconds > 0.5f ? spinSeconds : 8f);
+        foreach (Row row in rows)
+        {
+            if (row.rect == null) continue;
+            row.rect.GetWorldCorners(rc);
+            if (rc[2].y < vc[0].y || rc[0].y > vc[2].y) continue;   // scrolled out of view
+            if (!studios.TryGetValue(row.tier, out Studio st) || st.rt == null) continue;
+            st.model.localRotation = Quaternion.Euler(25f, 0f, 0f) * Quaternion.Euler(0f, Time.unscaledTime * spin, 0f);
+            st.cam.Render();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Per frame
+    // ------------------------------------------------------------------
+
+    private void Update()
+    {
+        if (!built || openObject == null) return;
+        bool show = ShowButton();
+        if (openObject.activeSelf != show) openObject.SetActive(show);
+        if (!show && windowObject.activeSelf) windowObject.SetActive(false);
+        if (!windowObject.activeSelf) return;
+
+        refreshTimer -= Time.unscaledDeltaTime;
+        if (refreshTimer <= 0f)
+        {
+            refreshTimer = 0.5f;
+            Refresh();
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (!built || windowObject == null) return;
+        bool open = windowObject.activeSelf;
+        if (open) { FitBesideShop(); RenderVisible(); }
+        UpdateTip();
+        if (buttonGroup == null) return;
+        if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f;   // tucked away while the window is up and as the fade starts
+        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
+        buttonGroup.blocksRaycasts = true;
+        buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
+    }
+
+    /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, on its right (mirrors the Toggles window).</summary>
+    private void FitBesideShop()
+    {
+        RectTransform wr = windowObject.GetComponent<RectTransform>();
+        if (shopRef == null) shopRef = PixelFind.First<PixelShop>();
+        RectTransform shopRect = shopRef != null ? shopRef.PanelRect : null;
+        Canvas canvas = windowObject.GetComponentInParent<Canvas>();
+        float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
+        PixelHud hud = PixelHud.Instance;
+        float inset = hud != null ? hud.SideMargin * 0.35f : 0f;
+
+        if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
+        {
+            wr.sizeDelta = windowSize;
+            wr.anchoredPosition = new Vector2(-inset, 0f);
+            return;
+        }
+        Vector3[] c = new Vector3[4];
+        shopRect.GetWorldCorners(c);
+        float shopRight = c[2].x, shopTop = c[2].y, shopBottom = c[0].y;
+        float width = shopRef.CurrencyPanelWidth;
+        float gap = shopRef.CurrencyPanelGap;
+        float rightEdge = (Screen.width - shopRight) / scale - gap - width;
+        wr.sizeDelta = new Vector2(width, (shopTop - shopBottom) / scale);
+        wr.anchoredPosition = new Vector2(-Mathf.Max(0f, rightEdge), ((shopTop + shopBottom) * 0.5f - Screen.height * 0.5f) / scale);
+    }
+}
