@@ -237,7 +237,7 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
         if (shader == null)
         {
             // Builds only keep shaders something references: the keep-alive material (made by the Editor script) carries it.
-            Material keep = Resources.Load<Material>("PixelShaderKeep/Skybox_Panoramic");
+            Material keep = Resources.Load<Material>("PixelShaderKeep/Skybox_PanoramicLL");
             if (keep != null) shader = keep.shader;
         }
         if (shader == null)

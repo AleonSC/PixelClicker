@@ -529,3 +529,4 @@
 [2026-10-12 01:14 UTC] Fixed a MissingReferenceException when the floor is destroyed on exit, and removed an unused pause-menu text field (compiler warning).
 [2026-10-12 01:16 UTC] Camera intro / outro: replaced the late rotation blend with a smoothly sliding aim point, which removes the odd spin of the cube at the end of the intro and start of the outro.
 [2026-10-12 01:33 UTC] Built games now keep the sky shader (a keep-alive material for Skybox/Panoramic), so sky styles show instead of a flat colour; run Pixel Clicker > Rebuild Shader Keep-Alive Materials once in the editor.
+[2026-10-12 01:37 UTC] Camera intro pull-back now measures distance from the cube's nearest extent (no little zoom-in as the box turns corner-on), and the sky-shader keep-alive material now carries the lat-long keyword so builds keep that shader variant.

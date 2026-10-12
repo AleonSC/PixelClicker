@@ -66,6 +66,15 @@ public class PixelCameraIntro : MonoBehaviour
     private Quaternion finalRotation;
     private float finalFov, finalOrtho;
     private Vector3 pivot;
+    private Transform cubeRotation;
+    private float cubeSize = 1f;
+
+    /// <summary>How far the cube reaches from its middle towards a camera in direction 'dir' (the box's support function; 'inv' = the inverse of the cube's rotation).</summary>
+    private float BoxReach(Quaternion inv, Vector3 dir)
+    {
+        Vector3 l = inv * dir.normalized;
+        return 0.5f * cubeSize * (Mathf.Abs(l.x) + Mathf.Abs(l.y) + Mathf.Abs(l.z));
+    }
     private Vector3 startOffset, finalOffset;
     private float startOrtho, startFov;
     private bool prepared, done, canReverse, reversing;
@@ -93,6 +102,8 @@ public class PixelCameraIntro : MonoBehaviour
 
         pivot = clicker.PixelTransform.position;
         float cube = Mathf.Max(0.1f, clicker.PixelBaseSize);
+        cubeSize = cube;
+        cubeRotation = clicker.PixelTransform;
 
         // Start to one side of the cube (horizontally), a little above its middle, looking at it.
         Vector3 right = Vector3.ProjectOnPlane(cam.transform.right, Vector3.up);
@@ -217,8 +228,14 @@ public class PixelCameraIntro : MonoBehaviour
         float pitch0 = Mathf.Asin(Mathf.Clamp(startOffset.y / startLen, -1f, 1f)) * Mathf.Rad2Deg, pitch1 = Mathf.Asin(Mathf.Clamp(finalOffset.y / endLen, -1f, 1f)) * Mathf.Rad2Deg;
         float yaw = (yaw0 + Mathf.DeltaAngle(yaw0, yaw1) * k) * Mathf.Deg2Rad;
         float pitch = Mathf.Lerp(pitch0, pitch1, k) * Mathf.Deg2Rad;
-        float len = Mathf.Lerp(startLen, endLen, k);
-        Vector3 offset = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), Mathf.Sin(pitch), Mathf.Cos(yaw) * Mathf.Cos(pitch)) * len;
+        // The distance is measured from the cube's NEAREST EXTENT, not its middle: a box seen corner-on reaches further towards the camera than
+        // one seen face-on, so with a swing round it the picture used to swell a little. Stepping the surface distance evenly (plus the box's reach
+        // in the viewing direction) keeps the pull-back clean.
+        Quaternion inv = cubeRotation != null ? Quaternion.Inverse(cubeRotation.rotation) : Quaternion.identity;
+        float reachStart = BoxReach(inv, startOffset), reachEnd = BoxReach(inv, finalOffset);
+        Vector3 dirNow = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), Mathf.Sin(pitch), Mathf.Cos(yaw) * Mathf.Cos(pitch));
+        float len = Mathf.Lerp(startLen - reachStart, endLen - reachEnd, k) + BoxReach(inv, dirNow);
+        Vector3 offset = dirNow * len;
         cam.transform.position = pivot + offset;
 
         // Aim at a point that slides from the cube to the spot the scene's own view axis passes at the cube's depth: the cube stays near the middle

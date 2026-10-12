@@ -87,7 +87,7 @@ public static class PixelShaderKeepAlive
             AssetDatabase.StopAssetEditing();
         }
         any |= MakeSpriteMaterial(force);
-        any |= MakeSimpleMaterial("Skybox_Panoramic", "Skybox/Panoramic", force);   // (the sky styles need it in builds)
+        any |= MakeSimpleMaterial("Skybox_PanoramicLL", "Skybox/Panoramic", force, "_MAPPING_LATITUDE_LONGITUDE_LAYOUT");   // (the sky styles need it in builds)
         any |= MakeProjectCopies(force);
         if (any) AssetDatabase.SaveAssets();
     }
@@ -162,7 +162,7 @@ public static class PixelShaderKeepAlive
     }
 
     /// <summary>A material that simply uses the named shader, so it is included in builds (loaded from Resources at runtime).</summary>
-    private static bool MakeSimpleMaterial(string name, string shaderName, bool force)
+    private static bool MakeSimpleMaterial(string name, string shaderName, bool force, string keyword = null)
     {
         string path = Folder + "/" + name + ".mat";
         bool exists = AssetDatabase.LoadAssetAtPath<Material>(path) != null;
@@ -172,7 +172,9 @@ public static class PixelShaderKeepAlive
         if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
         if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets/Resources", "PixelShaderKeep");
         if (exists) AssetDatabase.DeleteAsset(path);
-        AssetDatabase.CreateAsset(new Material(shader) { name = name }, path);
+        Material made = new Material(shader) { name = name };
+        if (!string.IsNullOrEmpty(keyword)) made.EnableKeyword(keyword);   // (builds keep only the shader variants some saved material uses)
+        AssetDatabase.CreateAsset(made, path);
         return true;
     }
 
