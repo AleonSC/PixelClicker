@@ -681,3 +681,4 @@
 [2026-10-12 14:18 UTC] After Cubie's second visit time stays frozen until the player opens the shop: the 'Buy the RGB Pack' line pulses gold, chevrons flow to a pulsing Shop button, and opening the shop starts the shop tutorial at once.
 [2026-10-12 14:20 UTC] Loading a save from the pause menu now resumes the game straight away in the loaded save.
 [2026-10-12 15:00 UTC] Main menu: while 'Blur background' is ticked its label is replaced by a blur-strength slider (text returns when unticked).
+[2026-10-12 17:46 UTC] Toggles window lists are alphabetical; switching cube rotation off resets the cube to its default pose; Settings has a new Accessibility section (rotation, pulsing, colour-blind marks, click effects, popup/log size, UI scale).

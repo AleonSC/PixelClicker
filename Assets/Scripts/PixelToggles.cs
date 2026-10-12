@@ -381,6 +381,7 @@ public class PixelToggles : MonoBehaviour
         ApplyGroupControl();
 
         List<Entry> entries = Collect(current);
+        entries.Sort((a, b) => string.Compare(a.label, b.label, System.StringComparison.OrdinalIgnoreCase));   // alphabetical
         List<Entry> switchable = entries.FindAll(e => !e.skipAll);
         if (switchable.Count >= 2)
         {

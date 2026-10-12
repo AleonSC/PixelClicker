@@ -232,6 +232,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Header("Settings Screen Rows")]
     [SerializeField] private string headerGameplay = "Gameplay";
     [SerializeField] private string headerInterface = "Interface";
+
+    [Tooltip("Heading of the accessibility section in Settings.")]
+    [SerializeField] private string headerAccessibility = "Accessibility";
     [SerializeField] private string headerSaving = "Saving";
     [SerializeField] private string headerDisplay = "Display";
     [SerializeField] private string headerAudio = "Audio";
@@ -2211,10 +2214,6 @@ public class PixelPauseMenu : MonoBehaviour
             SetPaused(false); // so the tips show over the game
         }, ref y);
 
-        rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
-                                      on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
-        pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
-                                     on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         abbreviateToggle = AddToggleRow(list, abbreviateLabel.Replace(" (1.2K)", ""), PixelClicker.AbbreviateNumbers,
                                         on => PixelClicker.AbbreviateNumbers = on, ref y);
         hidePurchasedToggle = AddToggleRow(list, hidePurchasedLabel, PixelShop.HidePurchased,
@@ -2237,14 +2236,21 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
         AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
+        AddChoiceRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
+
+        // ---- Accessibility ----
+        AddSettingsSectionHeader(list, headerAccessibility, ref y);
+        rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
+                                      on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
+        pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
+                                     on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
-        AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
-        AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
         AddChoiceRow(list, clickFxLabel, PixelBasicFx.LevelNames, () => PixelBasicFx.Level, v => PixelBasicFx.Level = v, ref y);
+        AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
+        AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
-        AddChoiceRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
 
         // ---- Saving ----
         if (saveGame != null)

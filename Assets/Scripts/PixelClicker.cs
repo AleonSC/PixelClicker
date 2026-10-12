@@ -989,13 +989,19 @@ public class PixelClicker : MonoBehaviour
     private const string PrefPulsing = "PixelClicker.Setting.Pulsing";
     private const string PrefBackground = "PixelClicker.Setting.RunInBackground";
     private bool allowRotation = true;
+    private Quaternion startRotation = Quaternion.identity;   // the cube's pose in the scene, restored when rotation is switched off
     private bool allowPulsing = true;
 
     /// <summary>Player setting (accessibility): turns the cube's idle rotation on or off. Remembered between sessions.</summary>
     public bool AllowRotation
     {
         get => allowRotation;
-        set { allowRotation = value; PlayerPrefs.SetInt(PrefRotation, value ? 1 : 0); }
+        set
+        {
+            allowRotation = value;
+            PlayerPrefs.SetInt(PrefRotation, value ? 1 : 0);
+            if (!value && pixelTransform != null) pixelTransform.rotation = startRotation;   // back to the default pose
+        }
     }
 
     /// <summary>Reads the rotation / pulsing / background / abbreviate settings from PlayerPrefs again (a save file with its own settings was loaded).</summary>
@@ -1749,6 +1755,7 @@ public class PixelClicker : MonoBehaviour
 
         baseScale = pixelTransform.localScale;
         basePosition = pixelTransform.position;
+        startRotation = pixelTransform.rotation;
 
         if (suspendInMidair)
         {
