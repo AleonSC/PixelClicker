@@ -148,6 +148,7 @@ public class PixelHints : MonoBehaviour
     {
         switch (id)
         {
+            case "event_log": return "This is the Event Log - click this line to read about it";
             case "crafting": return "You unlocked Crafting!";
             case "grab": return "You unlocked Pixel Grabbing!";
             case "timestop": return "You unlocked Time Stop! (press T)";
@@ -480,6 +481,7 @@ public class PixelHints : MonoBehaviour
         MarkSeen(id);
         string full = hint.text;
         Announce(hint.shortText, full);
+        if (id == "event_log") return; // the log's own intro is just a line: clicking it opens the Got it box
         if (!TipsEnabled) return; // the event log line is kept, the tip box is not shown
         if (!autoOpenTips) return;
         queue.Enqueue(hint);
@@ -879,10 +881,9 @@ public class PixelHints : MonoBehaviour
         Hint hint = hints != null ? hints.Find(h => h != null && h.id == "event_log") : null;
         if (hint == null || !hint.enabled || string.IsNullOrEmpty(hint.text)) return;
         MarkSeen("event_log"); // so the first pixel unlock doesn't repeat it
+        Announce(hint.shortText, hint.text); // a line in the log; clicking it opens the tip
         DisplayOverlay(true);
-        overlayTimer = Mathf.Max(overlayTimer, 20f); // keep the log up while the tip is read
-        PixelNotice.Show(hint.text, autoCloseSeconds, nearLog: true);
-        wasShowing = true;
+        overlayTimer = Mathf.Max(overlayTimer, 20f); // keep the log up so the line can be seen
     }
 
     private bool windowWasOpen;
@@ -933,7 +934,7 @@ public class PixelHints : MonoBehaviour
             return;
         }
         PixelNotice.Show(next.text, autoCloseSeconds, small: next.id != null && (next.id.StartsWith("device_") || next.id.StartsWith("minigame_") || next.id.StartsWith("timestop_") || next.id.StartsWith("bank_")),
-                         aboveCombo: next.id == "combo", nearLog: next.id == "event_log"); // the first combo tip sits just above the combo meter
+                         aboveCombo: next.id == "combo", nearLog: false); // the first combo tip sits just above the combo meter
         wasShowing = true;
     }
 }
