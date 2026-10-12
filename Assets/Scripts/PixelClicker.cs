@@ -110,7 +110,22 @@ public class PixelClicker : MonoBehaviour
         Truffle = 60,
         Weeds = 61,       // Foraging's filler block
         Toadstool = 62,   // Foraging's hazard block
+        Silver = 63,      // Mining
+        Gold = 64,
+        Bedrock = 65,
+        Fish = 66,        // Fishing
+        Seaweed = 67,
+        Shell = 68,
+        Pearl = 69,
+        Driftwood = 70,   // Fishing's filler block
+        Jellyfish = 71,   // Fishing's hazard block
     }
+
+    /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
+    public static bool IsFishBlock(PixelType type) => type >= PixelType.Fish && type <= PixelType.Driftwood;
+
+    /// <summary>The old Prospector ores that were dropped (Lead, Zinc, Nickel): they never spawn any more.</summary>
+    public static bool IsRetiredOre(PixelType type) => type == PixelType.Lead || type == PixelType.Zinc || type == PixelType.Nickel;
 
     /// <summary>The Foraging skill pack's blocks: Berry, Mushroom, Herb, Truffle and the filler Weeds (the Toadstool is its hazard).</summary>
     public static bool IsForageBlock(PixelType type) => type >= PixelType.Berry && type <= PixelType.Weeds;
@@ -122,13 +137,13 @@ public class PixelClicker : MonoBehaviour
     public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
 
     /// <summary>A HAZARD block (the Pest in Farming, the Gas Pocket in Mining): hit it too many times and it goes off.</summary>
-    public static bool IsHazard(PixelType type) => type == PixelType.Pest || type == PixelType.GasPocket || type == PixelType.HornetNest || type == PixelType.Toadstool;
+    public static bool IsHazard(PixelType type) => type == PixelType.Pest || type == PixelType.GasPocket || type == PixelType.HornetNest || type == PixelType.Toadstool || type == PixelType.Jellyfish;
 
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
-    public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
+    public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Toadstool);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Jellyfish);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -288,7 +303,7 @@ public class PixelClicker : MonoBehaviour
 
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
-            t == PixelType.Vacuum || t == PixelType.Obsidian || t == PixelType.Singularity ||
+            t == PixelType.Vacuum || t == PixelType.Singularity ||
             t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Mirror || t == PixelType.Fire || t == PixelType.Treasure || t == PixelType.Nuclear;
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
@@ -1650,6 +1665,20 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 45;
         }
 
+        if (looksVersion < 46)
+        {
+            // New ores (Silver, Gold, Bedrock) and the Fishing blocks got looks.
+            System.Collections.Generic.List<PixelLook> list46 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults46 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Silver, PixelType.Gold, PixelType.Bedrock, PixelType.Fish, PixelType.Seaweed, PixelType.Shell, PixelType.Pearl, PixelType.Driftwood, PixelType.Jellyfish })
+            {
+                PixelLook def = PixelLooks.Find(defaults46, t);
+                if (def != null && PixelLooks.Find(list46.ToArray(), t) == null) list46.Add(def);
+            }
+            looks = list46.ToArray();
+            looksVersion = 46;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1862,7 +1891,7 @@ public class PixelClicker : MonoBehaviour
                 PlayClickEffects(tier);
                 if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
                 if (tier.type == PixelType.Seed || tier.type == PixelType.Dirt) SeedDigEffect(Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // digging noises + falling dirt
-                if (tier.type != PixelType.Seed && (IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || tier.type == PixelType.HornetNest || tier.type == PixelType.Toadstool) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type != PixelType.Seed && (IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type) || tier.type == PixelType.HornetNest || tier.type == PixelType.Toadstool || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Dirt) digShrinkTarget = Mathf.Lerp(1f, oldPixelScale, Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // each dig shrinks it towards old-pixel size
                 if ((tier.type == PixelType.Pest || tier.type == PixelType.HornetNest) && !disablePestSwarm) PixelPestSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // bugs spill out of it
                 if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
@@ -1948,7 +1977,7 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Solar) PixelDaylight.OnSolarClick();
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
-        if ((IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type)) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
+        if ((IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type)) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
         if (tier.type == PixelType.Dirt) PixelAudio.Play("seed_dig");   // the last dig
         if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Break(tier.type, pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Break(pixelTransform.position, PixelBaseSize);
@@ -3606,10 +3635,10 @@ public class PixelClicker : MonoBehaviour
             what = killed > 0 ? (disablePestSwarm ? "The pests ate " : "A swarm of pests is going for ") + killed + " sprout" + (killed == 1 ? "" : "s") + "!" : "The pests swarm out!";
             if (!disableFarmFx) PixelFarmFx.Break(PixelType.Weevil, pos, PixelBaseSize, tier.color);
         }
-        else if (tier.type == PixelType.Toadstool)
+        else if (tier.type == PixelType.Toadstool || tier.type == PixelType.Jellyfish)
         {
-            what = "The toadstool burst in a cloud of poison spores!";
-            if (!disableFarmFx) PixelFarmFx.Break(PixelType.Toadstool, pos, PixelBaseSize, tier.color);
+            what = tier.type == PixelType.Jellyfish ? "The jellyfish stung everything around it!" : "The toadstool burst in a cloud of poison spores!";
+            if (!disableFarmFx) PixelFarmFx.Break(tier.type, pos, PixelBaseSize, tier.color);
             float sporeReach = OldPixelWorldSize * (gasBlastWidths > 0f ? gasBlastWidths : 4f);
             for (int i = oldPixels.Count - 1; i >= 0; i--)
             {

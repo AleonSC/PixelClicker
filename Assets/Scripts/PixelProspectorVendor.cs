@@ -82,7 +82,7 @@ public class PixelProspectorVendor : PixelVisitorMinigame
         List<int> pure = new List<int>();       // pure pixel types he pays in
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (PixelClicker.IsOre(tiers[i].type) && tiers[i].count >= minHeld) sellable.Add(i);
+            if ((PixelClicker.IsOre(tiers[i].type) || tiers[i].type == PixelClicker.PixelType.Obsidian) && tiers[i].count >= minHeld) sellable.Add(i);
             if (IsPure(tiers[i].type) && tiers[i].unlocked) pure.Add(i);
         }
         if (sellable.Count == 0 || pure.Count == 0) return result;

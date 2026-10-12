@@ -510,6 +510,24 @@ public static class PixelLooks
             OreLook(PixelClicker.PixelType.Lead, new Color(0.46f, 0.52f, 0.66f, 1f)),
             OreLook(PixelClicker.PixelType.Zinc, new Color(0.7f, 0.88f, 0.95f, 1f)),
             OreLook(PixelClicker.PixelType.Nickel, new Color(0.82f, 0.76f, 0.58f, 1f)),
+            OreLook(PixelClicker.PixelType.Silver, new Color(0.88f, 0.9f, 0.95f, 1f)),
+            OreLook(PixelClicker.PixelType.Gold, new Color(1f, 0.82f, 0.25f, 1f)),
+            OreLook(PixelClicker.PixelType.Bedrock, new Color(0.32f, 0.33f, 0.4f, 1f)),
+
+            // The Fishing blocks: Fish (a silvery wobbling blob), Seaweed (green see-through jelly), Shell (pink and glossy), Pearl (rare, white, shining),
+            // Driftwood (the grey filler) and the Jellyfish (a glowing translucent hazard).
+            new PixelLook { type = PixelClicker.PixelType.Fish, useColor = true, color = new Color(0.45f, 0.65f, 0.85f, 1f), metallic = 0.5f, smoothness = 0.85f, basicSurface = PixelLook.BasicSurface.Sheen,
+                            blob = true, wobble = true, wobbleAmount = 0.09f, farmFx = PixelLook.FarmAmbient.Dew },
+            new PixelLook { type = PixelClicker.PixelType.Seaweed, useColor = true, color = new Color(0.2f, 0.6f, 0.4f, 0.75f), metallic = 0f, smoothness = 0.7f, forceTranslucent = true,
+                            wobble = true, wobbleAmount = 0.1f, customPhysics = true, bounce = 0.2f, friction = 0.8f, gravityMultiplier = 0.4f, farmFx = PixelLook.FarmAmbient.Dew },
+            new PixelLook { type = PixelClicker.PixelType.Shell, useColor = true, color = new Color(0.95f, 0.7f, 0.75f, 1f), metallic = 0.1f, smoothness = 0.9f, basicSurface = PixelLook.BasicSurface.Sheen,
+                            blob = true, shine = true, farmFx = PixelLook.FarmAmbient.Sparkle },
+            new PixelLook { type = PixelClicker.PixelType.Pearl, useColor = true, color = new Color(0.97f, 0.97f, 1f, 1f), metallic = 0.2f, smoothness = 1f, emission = 0.2f,
+                            blob = true, shine = true, farmFx = PixelLook.FarmAmbient.Sparkle },
+            new PixelLook { type = PixelClicker.PixelType.Driftwood, useColor = true, color = new Color(0.62f, 0.58f, 0.5f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Grain,
+                            jagged = true, farmFx = PixelLook.FarmAmbient.Crumbs },
+            new PixelLook { type = PixelClicker.PixelType.Jellyfish, useColor = true, color = new Color(0.9f, 0.45f, 0.8f, 0.6f), metallic = 0f, smoothness = 0.9f, emission = 0.5f, forceTranslucent = true,
+                            blob = true, wobble = true, wobbleAmount = 0.14f, wobbleSpeed = 6f, farmFx = PixelLook.FarmAmbient.Spores },
 
             // Treasure: a wooden chest with gold bands and a lock; light leaks from the lid as you hit it.
             new PixelLook { type = PixelClicker.PixelType.Treasure, useColor = true, color = Color.white, metallic = 0.25f, smoothness = 0.4f,

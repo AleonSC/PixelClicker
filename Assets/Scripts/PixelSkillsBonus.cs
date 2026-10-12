@@ -55,7 +55,8 @@ public partial class PixelSkills
         }
         switch (pack.id)
         {
-            case MiningId: return PixelClicker.IsOre(type);
+            case MiningId: return PixelClicker.IsOre(type) || type == PixelClicker.PixelType.Obsidian;
+            case FishingId: return PixelClicker.IsFishBlock(type) && type != PixelClicker.PixelType.Driftwood;
             case FarmingId: return PixelClicker.IsPlant(type);
             case WoodcuttingId: return PixelClicker.IsWoodBlock(type) && type != PixelClicker.PixelType.Twig;
             case ForagingId: return PixelClicker.IsForageBlock(type) && type != PixelClicker.PixelType.Weeds;

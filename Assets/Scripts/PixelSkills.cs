@@ -100,6 +100,7 @@ public partial class PixelSkills : MonoBehaviour
     public const string MiningId = "mining";
     public const string WoodcuttingId = "woodcutting";
     public const string ForagingId = "foraging";
+    public const string FishingId = "fishing";
     public const string OfflineId = "offline";
     public const string FarmingId = "farming";
     public const string ElectricianId = "electrician";
@@ -149,7 +150,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (shop == null) shop = PixelFind.First<PixelShop>();
                 if (shop == null || !shop.IsSkillPackBought(ElectricianId)) continue;   // bought: every one of its pixels is unlocked
             }
-            else if ((p.id != FarmingId && p.id != MiningId && p.id != WoodcuttingId && p.id != ForagingId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
+            else if ((p.id != FarmingId && p.id != MiningId && p.id != WoodcuttingId && p.id != ForagingId && p.id != FishingId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
             foreach (PixelClicker.PixelType t in p.types)
             {
                 int i = clicker.IndexOf(t);
@@ -228,15 +229,34 @@ public partial class PixelSkills : MonoBehaviour
                     new Perk { level = 6, text = "Truffle nose: truffles show up more often" },
                 },
             });
+        if (!packs.Exists(p => p.id == FishingId))
+            packs.Insert(Mathf.Min(packs.Count, 3), new SkillPack
+            {
+                id = FishingId, displayName = "Fishing", accent = new Color(0.3f, 0.6f, 0.9f),
+                description = "Swap the basic cubes for fished goods: fish, seaweed, shells and rare pearls. Driftwood is a useless filler block that is most of what you see at first; as your fishing level rises it gets rarer and the good catches show up more. Watch out for the stinging jellyfish. Reel in blocks for fishing XP: a cheap early skill that leads on towards cooking.",
+                replaces = "Monochrome, RGB", spawns = "Driftwood, Fish, Seaweed, Shell, Pearl",
+                xpFrom = "Collecting fished blocks",
+                unlockHint = "Buy the Angler's Pack in the Shop",
+                baseXp = 60f, xpGrowth = 1.45f,
+                types = new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell, PixelClicker.PixelType.Pearl,
+                                PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Jellyfish },
+                fillerType = "Driftwood", hazardType = "Jellyfish",
+                perks = new[]
+                {
+                    new Perk { level = 2, text = "Good bait: fish show up more often" },
+                    new Perk { level = 4, text = "Shell collector: shells show up more often" },
+                    new Perk { level = 6, text = "Pearl diver: pearls show up more often" },
+                },
+            });
         if (!packs.Exists(p => p.id == MiningId))
             packs.Add(new SkillPack
             {
                 id = MiningId, displayName = "Mining", accent = new Color(0.86f, 0.46f, 0.26f),
-                description = "Swap the basic cubes for six tough ores and plain Stone. Stone is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Break ores for mining XP; some are rich veins that pay big.",
-                replaces = "Monochrome, RGB", spawns = "Stone, Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
+                description = "Swap the basic cubes for tough ores and plain Stone. Stone is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Copper, tin, iron, silver and gold break in a few clicks; obsidian and bedrock take 15-20 clicks but pay a lot. Break ores for mining XP; some are rich veins that pay big.",
+                replaces = "Monochrome, RGB", spawns = "Stone, Copper, Tin, Iron, Silver, Gold, Obsidian, Bedrock", xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
-                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel, PixelClicker.PixelType.Rock, PixelClicker.PixelType.GasPocket },
+                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Silver, PixelClicker.PixelType.Gold, PixelClicker.PixelType.Obsidian, PixelClicker.PixelType.Bedrock, PixelClicker.PixelType.Rock, PixelClicker.PixelType.GasPocket },
                 fillerType = "Rock", hazardType = "GasPocket",
                 perks = new[]
                 {
@@ -339,6 +359,30 @@ public partial class PixelSkills : MonoBehaviour
                 pack.types = wood.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.HornetNest.ToString();
+            }
+            if (pack.id == FishingId)
+            {
+                System.Collections.Generic.List<PixelClicker.PixelType> fish = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
+                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell,
+                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Jellyfish })
+                    if (!fish.Contains(t)) fish.Add(t);
+                pack.types = fish.ToArray();
+                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Driftwood.ToString();
+                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.Jellyfish.ToString();
+            }
+            if (pack.id == MiningId && pack.types != null)
+            {
+                // The ores changed: Lead / Zinc / Nickel are gone, Silver / Gold / Obsidian / Bedrock joined.
+                System.Collections.Generic.List<PixelClicker.PixelType> mine = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types);
+                mine.RemoveAll(PixelClicker.IsRetiredOre);
+                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Silver, PixelClicker.PixelType.Gold, PixelClicker.PixelType.Obsidian, PixelClicker.PixelType.Bedrock })
+                    if (!mine.Contains(t)) mine.Add(t);
+                pack.types = mine.ToArray();
+                if (pack.spawns != null && pack.spawns.Contains("Lead"))
+                {
+                    pack.spawns = "Stone, Copper, Tin, Iron, Silver, Gold, Obsidian, Bedrock";
+                    pack.description = "Swap the basic cubes for tough ores and plain Stone. Stone is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Copper, tin, iron, silver and gold break in a few clicks; obsidian and bedrock take 15-20 clicks but pay a lot. Break ores for mining XP; some are rich veins that pay big.";
+                }
             }
             if (pack.id == ForagingId)
             {
@@ -609,8 +653,9 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
+        if (PixelClicker.IsRetiredOre(type)) return true;   // the dropped Lead / Zinc / Nickel never spawn
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
-        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool;
+        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool;
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
         if (owner != null) return owner.id != active && !s.GuestOn(type);

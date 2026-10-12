@@ -667,7 +667,7 @@ public partial class PixelShop
         {
             displayName = "Prospector's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds six base-metal ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. The ores only spawn while Prospector mode is on (Toggles window); then they replace the monochrome, RGB, Glass and Luminescent pixels.",
+            description = "Adds the Mining skill and seven ore pixels (Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Obsidian and Bedrock take 15-20 clicks but pay a lot. The ores only spawn while Mining is the skill in play (Skills window), plus plain Stone as filler and a Gas Pocket to watch out for.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]
@@ -681,9 +681,11 @@ public partial class PixelShop
                 Ore(PixelClicker.PixelType.Copper, "Copper Ore", new Color(0.86f, 0.46f, 0.26f, 1f), 2, 3, 1.0f),
                 Ore(PixelClicker.PixelType.Tin, "Tin Ore", new Color(0.75f, 0.8f, 0.84f, 1f), 2, 3, 0.9f),
                 Ore(PixelClicker.PixelType.Iron, "Iron Ore", new Color(0.62f, 0.36f, 0.3f, 1f), 3, 5, 0.8f),
-                Ore(PixelClicker.PixelType.Lead, "Lead Ore", new Color(0.46f, 0.52f, 0.66f, 1f), 3, 5, 0.7f),
-                Ore(PixelClicker.PixelType.Zinc, "Zinc Ore", new Color(0.7f, 0.88f, 0.95f, 1f), 4, 7, 0.5f),
-                Ore(PixelClicker.PixelType.Nickel, "Nickel Ore", new Color(0.82f, 0.76f, 0.58f, 1f), 5, 10, 0.4f),
+                Ore(PixelClicker.PixelType.Silver, "Silver Ore", new Color(0.88f, 0.9f, 0.95f, 1f), 4, 9, 0.5f),
+                Ore(PixelClicker.PixelType.Gold, "Gold Ore", new Color(1f, 0.82f, 0.25f, 1f), 5, 14, 0.35f),
+                // The two big rocks: 15-20 clicks each, but a good chunk of currency (and skill XP) when they finally break.
+                Ore(PixelClicker.PixelType.Obsidian, "Obsidian Pixels", new Color(0.22f, 0.1f, 0.35f, 1f), 15, 80, 0.15f),
+                Ore(PixelClicker.PixelType.Bedrock, "Bedrock", new Color(0.32f, 0.33f, 0.4f, 1f), 20, 150, 0.08f),
                 // The Gas Pocket: a hazard (hit it too often and it explodes; it pays nothing).
                 new PixelClicker.PixelTier
                 {
@@ -753,6 +755,37 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Weeds, "Weeds", new Color(0.55f, 0.62f, 0.35f, 1f), 1, 1, 1.0f),
                 // The Toadstool: a hazard (hit it too often and it bursts in poison spores that clear the old pixels around the cube; it pays nothing).
                 Block(PixelClicker.PixelType.Toadstool, "Toadstool", new Color(0.62f, 0.25f, 0.65f, 1f), 5, 0, 0.05f),
+            }
+        };
+    }
+
+    /// <summary>
+    /// Default Angler's Pack (Pixels tab): cheap, a base skill. Five fished blocks for the Fishing skill: Fish, Seaweed, Shell, Pearl (rare) and the
+    /// filler Driftwood, plus the Jellyfish hazard. They only spawn while Fishing is the pack in play (Skills window).
+    /// </summary>
+    private static ShopPack CreateAnglerPack()
+    {
+        PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
+        return new ShopPack
+        {
+            displayName = "Angler's Pack",
+            tab = ShopTab.Pixels,
+            description = "Adds the Fishing skill and five fished blocks: Fish, Seaweed, Shell, Pearl (rare) and Driftwood, plus a stinging Jellyfish to watch out for. They only spawn while Fishing is the pack in play (Skills window). Driftwood is a useless filler that is most of what you see at first; as your fishing level rises it gets rarer and the good catches show up more.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
+            rewardTiers = new[]
+            {
+                Block(PixelClicker.PixelType.Fish, "Fish Pixels", new Color(0.45f, 0.65f, 0.85f, 1f), 2, 4, 1.0f),
+                Block(PixelClicker.PixelType.Seaweed, "Seaweed Pixels", new Color(0.2f, 0.6f, 0.4f, 1f), 1, 2, 0.9f),
+                Block(PixelClicker.PixelType.Shell, "Shell Pixels", new Color(0.95f, 0.7f, 0.75f, 1f), 1, 4, 0.6f),
+                Block(PixelClicker.PixelType.Pearl, "Pearl Pixels", new Color(0.97f, 0.97f, 1f, 1f), 4, 35, 0.08f),
+                Block(PixelClicker.PixelType.Driftwood, "Driftwood", new Color(0.62f, 0.58f, 0.5f, 1f), 1, 1, 1.0f),
+                // The Jellyfish: a hazard (hit it too often and it stings everything around the cube; it pays nothing).
+                Block(PixelClicker.PixelType.Jellyfish, "Jellyfish", new Color(0.9f, 0.45f, 0.8f, 1f), 5, 0, 0.05f),
             }
         };
     }
@@ -1114,6 +1147,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateWoodPixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Berry),
                           requires = null, create = i => CreateForagerPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fish),
+                          requires = null, create = i => CreateAnglerPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Dirt),
                           requires = null, create = i => CreateFarmerPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),
@@ -1134,8 +1169,7 @@ public partial class PixelShop
                           requires = p => p.unlocksAutoClicker, create = CreateIntervalUpgradePack },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.AutoClickerClicks,
                           requires = p => p.unlocksAutoClicker, create = CreateClicksUpgradePack },
-        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Obsidian),
-                          requires = p => Rewards(p, PixelClicker.PixelType.Glass), create = CreateObsidianPack },
+        // (The Obsidian pixel is part of the Prospector's Pack now.)
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Luminescent),
                           requires = p => Rewards(p, PixelClicker.PixelType.Obsidian), create = CreateLuminescentPack },
         new DefaultPack { isThis = p => Unlocks(p, "ghost"),

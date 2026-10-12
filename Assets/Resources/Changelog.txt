@@ -624,3 +624,4 @@
 [2026-10-12 08:18 UTC] Added the Lumberjack, a cube vendor in a plaid shirt who buys wood goods for pure pixels and only visits while you train Woodcutting.
 [2026-10-12 08:22 UTC] Added the Foraging skill: a cheap Forager's Pack (150 White) with Berry, Mushroom, Herb, rare Truffle, Weeds filler and a poisonous Toadstool hazard, with looks, particle effects, sounds, guide texts and a tip.
 [2026-10-12 08:25 UTC] Breakout's court background is transparent again (new backOpacity setting, 0 by default).
+[2026-10-12 08:32 UTC] Added the Fishing skill (Angler's Pack: Fish, Seaweed, Shell, rare Pearl, Driftwood filler, stinging Jellyfish hazard); the Obsidian pixel now comes with the Prospector's Pack; the ores are now Copper, Tin, Iron, Silver and Gold plus the 15-20 click Obsidian and Bedrock that pay a lot (Lead, Zinc and Nickel are gone).

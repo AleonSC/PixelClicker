@@ -51,7 +51,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Vacuum:
                 return "Clicking it sucks up every old pixel lying around: they swirl into it and their stored value is paid out at once. The old Vacuum pixel then keeps those pixels floating inside its glass body. While a Vacuum potion is running only every 10th click vacuums.";
             case PixelClicker.PixelType.Obsidian:
-                return "Black volcanic glass that cracks more with every hit; the click sound rises in pitch as it breaks. Breaking it throws dust and glass shards.";
+                return "A Mining ore: black volcanic glass that takes " + t.clicksToCollect + " clicks and cracks more with every hit, but pays a lot; the click sound rises in pitch as it breaks. Breaking it throws dust and glass shards.";
             case PixelClicker.PixelType.Luminescent:
                 return "A glowing pixel. Its old pixel stays bright as it falls and leaves a fading trail of light.";
             case PixelClicker.PixelType.Singularity:
@@ -78,7 +78,23 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Lead:
             case PixelClicker.PixelType.Zinc:
             case PixelClicker.PixelType.Nickel:
+            case PixelClicker.PixelType.Silver:
+            case PixelClicker.PixelType.Gold:
                 return "A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein</b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.";
+            case PixelClicker.PixelType.Bedrock:
+                return "The toughest rock: " + t.clicksToCollect + " clicks to break, but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
+            case PixelClicker.PixelType.Fish:
+                return "Fishing block: a silvery fish. A couple of reels and it pays well. It splashes.";
+            case PixelClicker.PixelType.Seaweed:
+                return "Fishing block: see-through seaweed. One click, pays little. An old Seaweed pixel sinks slowly instead of dropping.";
+            case PixelClicker.PixelType.Shell:
+                return "Fishing block: a glossy shell. One click, pays a fair amount.";
+            case PixelClicker.PixelType.Pearl:
+                return "Fishing block, rare: a shining pearl. It takes " + t.clicksToCollect + " clicks but pays a lot.";
+            case PixelClicker.PixelType.Driftwood:
+                return "Fishing's filler block. One click, almost no pay. At low fishing level it is most of what appears; as you level up it gets rarer and the good catches show up more.";
+            case PixelClicker.PixelType.Jellyfish:
+                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and it stings everything around it, wiping out the old pixels near the cube, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.";
             case PixelClicker.PixelType.Treasure:
                 return "A chest that needs a random 1-20 hits, decided when it appears. Opening it pays the pixel's value x the hits x (1 + 0.15 x hits) and pours out a pile of random unlocked pixels at once: 2 plus one per hit, up to 24.";
             case PixelClicker.PixelType.Nuclear:

@@ -249,6 +249,7 @@ public class PixelAudio : MonoBehaviour
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("wood_chop", 0.04f, 0.9f, 1.15f),
             Make("forage_pick", 0.04f, 0.9f, 1.15f),
+            Make("fish_splash", 0.04f, 0.9f, 1.15f),
             Make("chipper_feed", 0.08f, 0.95f, 1.05f),
             Make("rack_store", 0.05f, 0.9f, 1.1f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
@@ -322,6 +323,13 @@ public class PixelAudio : MonoBehaviour
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "chipper_feed": return new[] { PixelSynth.Chipper(1), PixelSynth.Chipper(2), PixelSynth.Chipper(3) };
             case "rack_store": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(4, 2) };
+            case "fish_splash": return new[] { PixelSynth.Fishing(0, 1), PixelSynth.Fishing(0, 2), PixelSynth.Fishing(0, 3) };
+            case "pixel_fish": return new[] { PixelSynth.Fishing(0, 4), PixelSynth.Fishing(0, 5), PixelSynth.Fishing(0, 6) };
+            case "pixel_seaweed": return new[] { PixelSynth.Fishing(1, 1), PixelSynth.Fishing(1, 2), PixelSynth.Fishing(1, 3) };
+            case "pixel_shell": return new[] { PixelSynth.Fishing(2, 1), PixelSynth.Fishing(2, 2), PixelSynth.Fishing(2, 3) };
+            case "pixel_pearl": return new[] { PixelSynth.Fishing(3, 1), PixelSynth.Fishing(3, 2) };
+            case "pixel_driftwood": return new[] { PixelSynth.Fishing(4, 1), PixelSynth.Fishing(4, 2), PixelSynth.Fishing(4, 3) };
+            case "pixel_jellyfish": return new[] { PixelSynth.Fishing(5, 1), PixelSynth.Fishing(5, 2) };
             case "forage_pick": return new[] { PixelSynth.Forage(2, 1), PixelSynth.Forage(2, 2), PixelSynth.Forage(2, 3) };
             case "pixel_berry": return new[] { PixelSynth.Forage(0, 1), PixelSynth.Forage(0, 2), PixelSynth.Forage(0, 3) };
             case "pixel_mushroom": return new[] { PixelSynth.Forage(1, 1), PixelSynth.Forage(1, 2), PixelSynth.Forage(1, 3) };
@@ -1050,6 +1058,55 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
         AudioClip clip = AudioClip.Create("Chipper " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>Fishing sounds. kind: 0 fish splash + flop, 1 seaweed slap, 2 shell clack, 3 pearl chime, 4 driftwood knock, 5 jellyfish squelch + zap.</summary>
+    public static AudioClip Fishing(int kind, int seed)
+    {
+        const int rate = 22050;
+        float len = kind == 3 ? 0.55f : kind == 5 ? 0.4f : 0.25f;
+        int n = (int)(rate * len);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(3400 + kind * 83 + seed * 17);
+        float lp = 0f, phase = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            float v = 0f;
+            switch (kind)
+            {
+                case 0: // a splash of water then a wet flop
+                    lp += (noise - lp) * 0.3f;
+                    v = (noise - lp) * Mathf.Exp(-t * 14f) * 0.8f + Mathf.Sin(t * (140f + seed * 15f) * Mathf.PI * 2f) * Mathf.Exp(-t * 18f) * 0.6f * (t > 0.05f ? 1f : 0f);
+                    break;
+                case 1: // a wet slap
+                    lp += (noise - lp) * 0.2f;
+                    v = lp * Mathf.Exp(-t * 20f) * 1.4f + Mathf.Sin(t * (110f + seed * 10f) * Mathf.PI * 2f) * Mathf.Exp(-t * 26f) * 0.5f;
+                    break;
+                case 2: // a hard clack
+                    v = Mathf.Sin(t * (1400f + seed * 160f) * Mathf.PI * 2f) * Mathf.Exp(-t * 60f) + noise * Mathf.Exp(-t * 90f) * 0.5f;
+                    break;
+                case 3: // a soft pearly chime
+                    phase += (1040f + seed * 130f) / rate;
+                    v = Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-t * 6f) * 0.7f + Mathf.Sin(phase * Mathf.PI * 3f) * Mathf.Exp(-t * 9f) * 0.25f + noise * Mathf.Exp(-t * 80f) * 0.2f;
+                    break;
+                case 4: // a dry wooden knock
+                    v = Mathf.Sin(t * (190f + seed * 25f) * Mathf.PI * 2f) * Mathf.Exp(-t * 35f) + noise * Mathf.Exp(-t * 70f) * 0.4f;
+                    break;
+                default: // a squelch with an electric crackle
+                    lp += (noise - lp) * 0.15f;
+                    v = lp * Mathf.Exp(-t * 9f) + (rng.NextDouble() < 0.1 ? noise : 0f) * Mathf.Exp(-t * 7f) * 0.8f;
+                    break;
+            }
+            data[i] = v * Mathf.Clamp01(t / 0.003f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("Fishing " + kind + "_" + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

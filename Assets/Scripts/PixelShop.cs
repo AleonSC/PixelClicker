@@ -1030,6 +1030,61 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 19)
+        {
+            // New Angler's Pack (Fishing skill), and the Prospector's Pack changes its ores: Lead / Zinc / Nickel are out, Silver / Gold / Obsidian / Bedrock are in.
+            if (packs != null && !System.Array.Exists(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Fish)))
+            {
+                System.Collections.Generic.List<ShopPack> withAngler = new System.Collections.Generic.List<ShopPack>(packs) { CreateAnglerPack() };
+                packs = withAngler.ToArray();
+            }
+            int prospectorAt = packs == null ? -1 : System.Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Copper) && !Rewards(p, PixelClicker.PixelType.Fish));
+            if (prospectorAt >= 0)
+            {
+                ShopPack prospector = packs[prospectorAt];
+                ShopPack fresh = CreateProspectorPack();
+                prospector.description = fresh.description;
+                System.Collections.Generic.List<PixelClicker.PixelTier> ores = new System.Collections.Generic.List<PixelClicker.PixelTier>();
+                foreach (PixelClicker.PixelTier t in prospector.rewardTiers)
+                    if (!PixelClicker.IsRetiredOre(t.type)) ores.Add(t);
+                foreach (PixelClicker.PixelTier t in fresh.rewardTiers)
+                    if (!ores.Exists(x => x.type == t.type)) ores.Add(t);
+                prospector.rewardTiers = ores.ToArray();
+                // The old Obsidian Pixel pack goes: anything that needed it now needs the Prospector's Pack.
+                int obsidianAt = System.Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Obsidian) && !Rewards(p, PixelClicker.PixelType.Copper));
+                if (obsidianAt >= 0)
+                {
+                    System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
+                    kept.RemoveAt(obsidianAt);
+                    packs = kept.ToArray();
+                    int newProspector = prospectorAt > obsidianAt ? prospectorAt - 1 : prospectorAt;
+                    foreach (ShopPack other in packs)
+                    {
+                        if (other == null || other.requirements == null) continue;
+                        foreach (PackRequirement r in other.requirements)
+                        {
+                            if (r.kind != RequirementKind.Pack) continue;
+                            if (r.packIndex == obsidianAt) r.packIndex = newProspector;
+                            else if (r.packIndex > obsidianAt) r.packIndex--;
+                        }
+                    }
+                }
+                // Obsidian is a 15-click rock now (and the ores' payouts follow the new pack).
+                ShopPack source = CreateProspectorPack();
+                foreach (PixelClicker.PixelTier def in source.rewardTiers)
+                {
+                    if (def.type != PixelClicker.PixelType.Obsidian) continue;
+                    foreach (PixelClicker.PixelTier t in packs[System.Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Copper))].rewardTiers)
+                        if (t.type == def.type) { t.clicksToCollect = def.clicksToCollect; t.amountPerClick = def.amountPerClick; t.spawnWeight = def.spawnWeight; }
+                    if (clicker != null)
+                        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                            if (t.type == def.type) { t.clicksToCollect = def.clicksToCollect; t.amountPerClick = def.amountPerClick; t.spawnWeight = def.spawnWeight; }
+                }
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 19);
+            changed = true;
+        }
+
         return changed;
     }
 
@@ -1949,6 +2004,8 @@ public partial class PixelShop : MonoBehaviour
                     if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
                     if (PixelClicker.IsFarm(reward.type) && reward.type != PixelClicker.PixelType.Dirt) continue;   // and one for the Farmer's Pack
                     if (PixelClicker.IsWoodBlock(reward.type) && reward.type != PixelClicker.PixelType.Wood) continue;   // and one for the Woodcutter's Pack
+                    if (PixelClicker.IsFishBlock(reward.type) && reward.type != PixelClicker.PixelType.Fish) continue;   // and one for the Angler's Pack
+                    if (reward.type == PixelClicker.PixelType.Obsidian && Rewards(pack, PixelClicker.PixelType.Copper)) continue;   // Obsidian comes with the Prospector's Pack
                     if (PixelClicker.IsForageBlock(reward.type) && reward.type != PixelClicker.PixelType.Berry) continue;   // and one for the Forager's Pack
                     if (PixelClicker.IsHazard(reward.type)) continue;   // the hazard blocks (Pest, Gas Pocket, Hornet Nest) have no tip of their own
                     if (reward.type == PixelClicker.PixelType.Glass)
