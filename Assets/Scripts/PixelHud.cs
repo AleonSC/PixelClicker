@@ -431,7 +431,7 @@ public class PixelHud : MonoBehaviour
     }
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
-    internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - ButtonSize.y) * 0.5f * (1f - (buttonEdgeBias > 0f ? buttonEdgeBias : 0.55f))) : sideMargin * 0.5f;
+    internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - ButtonSize.y) * 0.5f) : sideMargin * 0.5f;   // exactly centred in the black margin
     internal float HiddenInset => -(ButtonSize.y - Sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
