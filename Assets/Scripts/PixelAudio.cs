@@ -643,6 +643,8 @@ public class PixelAudio : MonoBehaviour
     }
 
     private bool musicHeldByFocus;
+    private AudioClip musicLastClip;
+    private float musicLastTime;
     private float musicHeldTime;
 
     /// <summary>Alt-tabbing stops the audio engine, which used to make the music pick a NEW track. Hold the current one and carry on where it was.</summary>
@@ -683,7 +685,24 @@ public class PixelAudio : MonoBehaviour
             if (musicSource.isPlaying) musicSource.Stop();
             return;
         }
-        if (musicSource.isPlaying || AudioListener.pause || musicHeldByFocus) return; // paused audio also stops isPlaying; don't restart then
+        if (musicSource.isPlaying)
+        {
+            // Remember where the track is, so a stop that was not the track ending (alt-tab) can be resumed there.
+            musicLastClip = musicSource.clip;
+            musicLastTime = musicSource.time;
+            return;
+        }
+        if (AudioListener.pause || musicHeldByFocus || !Application.isFocused) return; // paused audio also stops isPlaying; don't restart then
+
+        // Stopped in the middle of a track (the audio engine stops when the window loses focus): carry on with it instead of picking a new one.
+        if (musicLastClip != null && musicLastClip == musicSource.clip && musicLastTime > 0.05f && musicLastTime < musicLastClip.length - 0.75f)
+        {
+            musicSource.time = musicLastTime;
+            musicSource.Play();
+            return;
+        }
+        musicLastClip = null;
+        musicLastTime = 0f;
 
         int next;
         if (shuffleMusic && musicTracks.Length > 1)
