@@ -603,3 +603,4 @@
 [2026-10-12 07:14 UTC] The main-menu UFO now randomly abducts a walking vendor or hopping pet with a green beam.
 [2026-10-12 07:17 UTC] Added the UFO abduction beam sound and redrew the Wizard, Tinkerer, Farmer, Pixel Entrepreneur and the Egg and Bean cats as cube characters like Cubie.
 [2026-10-12 07:22 UTC] Added skill pack shop gating and the base-skill design question to the to-do.
+[2026-10-12 07:29 UTC] Added the three base gathering skills (Woodcutting, Foraging, Fishing) to the to-do.
