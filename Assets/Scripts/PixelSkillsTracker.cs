@@ -22,6 +22,7 @@ public partial class PixelSkills
     private GameObject trackerShackleClosed, trackerShackleOpen;
     private TMP_Text trackerSizeLabel;
     private PixelPopoutDrag trackerDrag;
+    private Vector2 trackerDesired;   // where the player put it; the real position is this pushed back on screen, so resizing never loses it
     private bool trackerOn, trackerSmall, trackerStuck, trackerBuilt;
     private float trackerTimer;
 
@@ -104,7 +105,8 @@ public partial class PixelSkills
         trackerDrag = trackerPanel.AddComponent<PixelPopoutDrag>();
         trackerDrag.target = trackerRect;
         trackerDrag.canvas = trackerCanvas.GetComponent<Canvas>();
-        trackerDrag.onMoved = () => { PlayerPrefs.SetFloat(TrackerXPref, trackerRect.anchoredPosition.x); PlayerPrefs.SetFloat(TrackerYPref, trackerRect.anchoredPosition.y); };
+        trackerDesired = trackerRect.anchoredPosition;
+        trackerDrag.onMoved = () => { trackerDesired = trackerRect.anchoredPosition; KeepTrackerOnScreen(); trackerDesired = trackerRect.anchoredPosition; PlayerPrefs.SetFloat(TrackerXPref, trackerDesired.x); PlayerPrefs.SetFloat(TrackerYPref, trackerDesired.y); };
 
         trackerName = PixelUIKit.CreateText(Font, trackerPanel.transform, "Name", "", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         trackerName.raycastTarget = false;
@@ -256,7 +258,7 @@ public partial class PixelSkills
         RectTransform canvasRect = trackerCanvas.GetComponent<RectTransform>();
         float bars = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         Vector2 half = canvasRect.rect.size * 0.5f, size = trackerRect.sizeDelta * 0.5f;
-        Vector2 p = trackerRect.anchoredPosition;
+        Vector2 p = trackerDesired;
         p.x = Mathf.Clamp(p.x, -half.x + size.x, half.x - size.x);
         p.y = Mathf.Clamp(p.y, -half.y + bars + size.y, half.y - bars - size.y);
         trackerRect.anchoredPosition = p;

@@ -1648,6 +1648,7 @@ public class PixelUI : MonoBehaviour
     private GameObject compactLockClosed, compactLockOpen;
     private PixelPopoutDrag compactDrag;
     private bool compactSmall, compactStuck, compactPrefsLoaded, compactPlaced;
+    private Vector2 compactDesired;   // where the player put the window; the real position is this pushed back on screen, so resizing never loses it
     private Vector2 normalBoxPosition;
 
     private void LoadCompactPrefs()
@@ -1666,7 +1667,7 @@ public class PixelUI : MonoBehaviour
         compactDrag = boxObject.AddComponent<PixelPopoutDrag>();
         compactDrag.target = boxRect;
         compactDrag.canvas = autoRoot.GetComponent<Canvas>();
-        compactDrag.onMoved = () => { KeepCompactOnScreen(); SaveCompactPosition(); };
+        compactDrag.onMoved = () => { KeepCompactOnScreen(); compactDesired = boxRect.anchoredPosition; SaveCompactPosition(); };
 
         float small = size * 0.5f;
         compactSmallButton = MakeButton(boxObject.transform, "Compact Minimise", "", new Vector2(small, small), closeButtonColor, headerTextColor, small * 0.7f);
@@ -1745,8 +1746,8 @@ public class PixelUI : MonoBehaviour
 
     private void SaveCompactPosition()
     {
-        PlayerPrefs.SetFloat(PrefCompactX, boxRect.anchoredPosition.x);
-        PlayerPrefs.SetFloat(PrefCompactY, boxRect.anchoredPosition.y);
+        PlayerPrefs.SetFloat(PrefCompactX, compactDesired.x);
+        PlayerPrefs.SetFloat(PrefCompactY, compactDesired.y);
     }
 
     /// <summary>Keeps the pinned window fully on screen, between the black bars.</summary>
@@ -1775,8 +1776,9 @@ public class PixelUI : MonoBehaviour
         if (compact && !compactPlaced)
         {
             compactPlaced = true;
-            if (PlayerPrefs.HasKey(PrefCompactX))
-                boxRect.anchoredPosition = new Vector2(PlayerPrefs.GetFloat(PrefCompactX), PlayerPrefs.GetFloat(PrefCompactY));
+            compactDesired = PlayerPrefs.HasKey(PrefCompactX)
+                ? new Vector2(PlayerPrefs.GetFloat(PrefCompactX), PlayerPrefs.GetFloat(PrefCompactY))
+                : boxRect.anchoredPosition;
         }
         else if (!compact && compactPlaced)
         {
@@ -1785,6 +1787,7 @@ public class PixelUI : MonoBehaviour
         }
         compactDrag.locked = !compact || compactStuck;
         if (!compact) return;
+        boxRect.anchoredPosition = compactDesired;   // always back to the chosen spot (maximising may have pushed it up to fit on screen)
         KeepCompactOnScreen();
         if (compactStickImage != null) compactStickImage.color = compactStuck ? new Color(0.2f, 0.55f, 0.3f, 1f) : closeButtonColor;
         if (compactLockClosed != null && compactLockClosed.activeSelf != compactStuck) compactLockClosed.SetActive(compactStuck);
