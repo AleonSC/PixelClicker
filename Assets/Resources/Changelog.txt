@@ -669,3 +669,4 @@
 [2026-10-12 12:47 UTC] Pause menu: How To Play is now Game Guide, its Game Guide tab is How To Play, and the Database opens from a new Database tab (its docked button is gone).
 [2026-10-12 12:57 UTC] Rearranged the docked buttons: top row Inventory / Bank / Toggles / Shop, bottom row Log / Pixel Guide / Crafting / Skills (evenly spaced, sliding from their own edge); My Window now opens from a button in the Toggles window; buttons share one colour unless Distinct button colours is on.
 [2026-10-12 13:02 UTC] Undid the top-row move of Bank and Toggles and the shared button colour setting; the bottom row (Log, Pixel Guide, Crafting, Skills) and My Window in Toggles stay.
+[2026-10-12 13:04 UTC] Fixed a compile error in the Toggles window (duplicate variable names).

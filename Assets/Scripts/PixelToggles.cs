@@ -565,15 +565,15 @@ public class PixelToggles : MonoBehaviour
         mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(0f, 1f);
         mr.anchoredPosition = new Vector2(14f, -12f);
         myWindowButton.onClick.AddListener(PixelMyWindow.ToggleOpen);
-        GameObject icon = new GameObject("Window Icon", typeof(RectTransform));
-        icon.transform.SetParent(myWindowButton.transform, false);
-        RectTransform ir = icon.GetComponent<RectTransform>();
-        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
-        ir.sizeDelta = new Vector2(38f, 32f);
+        GameObject winIcon = new GameObject("Window Icon", typeof(RectTransform));
+        winIcon.transform.SetParent(myWindowButton.transform, false);
+        RectTransform winIr = winIcon.GetComponent<RectTransform>();
+        winIr.anchorMin = winIr.anchorMax = winIr.pivot = new Vector2(0.5f, 0.5f);
+        winIr.sizeDelta = new Vector2(38f, 32f);
         void Part(Vector2 size, Vector2 at, Color c)
         {
             GameObject g = new GameObject("Part", typeof(RectTransform), typeof(Image));
-            g.transform.SetParent(icon.transform, false);
+            g.transform.SetParent(winIcon.transform, false);
             g.GetComponent<Image>().color = c;
             g.GetComponent<Image>().raycastTarget = false;
             RectTransform r = g.GetComponent<RectTransform>();
