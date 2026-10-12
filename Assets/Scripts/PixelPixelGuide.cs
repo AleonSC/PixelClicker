@@ -153,7 +153,7 @@ public class PixelPixelGuide : MonoBehaviour
         // The button, docked on the middle of the right edge directly under the Toggles button.
         Button open = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Pixel Guide Button", buttonText, new Vector2(230f, 64f), buttonColor, Color.white, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
-        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f / 3f, 0f), () => windowObject != null && windowObject.activeSelf);
+        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), () => windowObject != null && windowObject.activeSelf, -(hud.ButtonSize.y + 14f));
         open.onClick.AddListener(Toggle);
         openObject = open.gameObject;
         dock = openObject.GetComponent<PixelDockedButton>();
@@ -510,9 +510,10 @@ public class PixelPixelGuide : MonoBehaviour
         if (open) { FitBesideShop(); RenderVisible(); }
         UpdateTip();
         if (buttonGroup == null) return;
-        if (dock != null) dock.ForceHidden = false;   // the button lives in the bottom row now and stays put while the window is open
-        buttonGroup.alpha = 1f;
+        if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f;   // tucked away while the window is up and as the fade starts
+        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
         buttonGroup.blocksRaycasts = true;
+        buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
     }
 
     /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, on its right (mirrors the Toggles window).</summary>

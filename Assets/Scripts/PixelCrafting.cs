@@ -637,7 +637,7 @@ public class PixelCrafting : MonoBehaviour
         RectTransform br = buttonObject.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0f);
         br.anchoredPosition = new Vector2(-buttonMargin.x, buttonMargin.y);
-        PixelHud.Ensure(gameObject).Dock(br, new Vector2(1f, 0f), () => windowObject != null && windowObject.activeSelf);
+        PixelHud.Ensure(gameObject).Dock(br, new Vector2(0.5f, 0f), () => windowObject != null && windowObject.activeSelf);
         open.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Crafting, open);
 

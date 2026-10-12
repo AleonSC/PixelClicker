@@ -670,3 +670,4 @@
 [2026-10-12 12:57 UTC] Rearranged the docked buttons: top row Inventory / Bank / Toggles / Shop, bottom row Log / Pixel Guide / Crafting / Skills (evenly spaced, sliding from their own edge); My Window now opens from a button in the Toggles window; buttons share one colour unless Distinct button colours is on.
 [2026-10-12 13:02 UTC] Undid the top-row move of Bank and Toggles and the shared button colour setting; the bottom row (Log, Pixel Guide, Crafting, Skills) and My Window in Toggles stay.
 [2026-10-12 13:04 UTC] Fixed a compile error in the Toggles window (duplicate variable names).
+[2026-10-12 13:07 UTC] Skills button no longer hides under Crafting (bottom row is now Log, Crafting, Skills); Pixel Guide is back directly under Toggles.
