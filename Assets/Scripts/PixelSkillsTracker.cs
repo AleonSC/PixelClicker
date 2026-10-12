@@ -1,11 +1,3 @@
-        {
-            int level = LevelOf(pack, out double into, out double need);
-            PixelUIKit.SetText(trackerName, pack.displayName + "   Lv " + level);
-            double bonus = Bonus(pack);
-            PixelUIKit.SetText(trackerXp, PixelClicker.FormatNumberShort(into) + " / " + PixelClicker.FormatNumberShort(need) + " XP"
-                + (bonus >= 1d ? "   <color=#ffd54a>Bonus " + PixelClicker.FormatNumberShort(bonus) + "</color>" : ""));
-            trackerBarFill.anchorMax = new Vector2(Mathf.Clamp01((float)(into / System.Math.Max(1d, need))), 1f);
-        }
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;

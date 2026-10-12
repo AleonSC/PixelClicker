@@ -570,3 +570,4 @@
 [2026-10-12 04:50 UTC] Seedlings from a cracked Seed shell now take 40 seconds to grow (was 6).
 [2026-10-12 04:46 UTC] Settings: section headers are now larger and the rows under them smaller.
 [2026-10-12 05:05 UTC] Standard is now a real skill: it levels from your first click (full XP while it is the pack in play, 5% while another skill trains) and its perks apply in every rotation - old pixels last 2 seconds longer per level and the floor holds 5 more old pixels per level from level 4.
+[2026-10-12 05:12 UTC] Fixed a compile error in the skill tracker file (stray lines at the top).
