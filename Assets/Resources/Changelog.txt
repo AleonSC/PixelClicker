@@ -679,3 +679,4 @@
 [2026-10-12 13:49 UTC] Block tooltip shows the clicks left; Weak Spots now sit on the cube's real surface so rounded blocks (shells, ghosts) no longer hide them.
 [2026-10-12 14:06 UTC] Fishing special blocks: the Message in a Bottle (4 clicks, right-click ignores it; breaking it unrolls an animated treasure map, an X appears on the ground and digging it up pays a haul of good fishing pixels) and the Whale (hooks on the first click, yanks and runs from the mouse, a fading fishing line follows the cursor, 15-100 clicks, bigger fights pay more); new code-made sounds for glass, paper, digging and whales.
 [2026-10-12 14:18 UTC] After Cubie's second visit time stays frozen until the player opens the shop: the 'Buy the RGB Pack' line pulses gold, chevrons flow to a pulsing Shop button, and opening the shop starts the shop tutorial at once.
+[2026-10-12 14:20 UTC] Loading a save from the pause menu now resumes the game straight away in the loaded save.

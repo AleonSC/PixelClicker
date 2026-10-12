@@ -1816,7 +1816,7 @@ public class PixelPauseMenu : MonoBehaviour
         }
         bool loaded = saveGame.LoadSlot(selectedSlot, false);
         RefreshSlots();
-        if (loaded) { ShowView(mainPanel); return; }   // a successful load closes the Save / Load window (back to the menu, or the title screen when opened from there)
+        if (loaded) { if (openedFromTitle) ShowView(mainPanel); else SetPaused(false); return; }   // from the title: back to the title screen; in a game: resume straight into the loaded save   // a successful load closes the Save / Load window (back to the menu, or the title screen when opened from there)
         ShowResult(loadFailedResultText);
     }
 
