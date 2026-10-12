@@ -2847,9 +2847,32 @@ public class PixelHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHan
     public void Setup(RectTransform fillRect, float holdSeconds, System.Action complete)
     {
         fill = fillRect;
+        ClipFillToButton(fillRect);
         seconds = Mathf.Max(0.05f, holdSeconds);
         onComplete = complete;
         ResetProgress();
+    }
+
+    /// <summary>
+    /// A rounded (fancy) button has rounded corners, but the fill is a plain rectangle that would poke out past them. The fill is moved into a mask
+    /// drawn with the button's own sprite, so it is cut to the exact rounded shape.
+    /// </summary>
+    private void ClipFillToButton(RectTransform fillRect)
+    {
+        Image face = GetComponent<Image>();
+        if (face == null || face.sprite == null || fillRect == null || fillRect.parent != transform) return;
+        GameObject clip = new GameObject("Hold Clip", typeof(RectTransform), typeof(Image), typeof(Mask));
+        clip.transform.SetParent(transform, false);
+        clip.transform.SetSiblingIndex(fillRect.GetSiblingIndex());
+        Image mask = clip.GetComponent<Image>();
+        mask.sprite = face.sprite;
+        mask.type = face.type;
+        mask.pixelsPerUnitMultiplier = face.pixelsPerUnitMultiplier;
+        mask.color = Color.white;
+        mask.raycastTarget = false;
+        clip.GetComponent<Mask>().showMaskGraphic = false;
+        PixelUIKit.Stretch(clip.GetComponent<RectTransform>());
+        fillRect.SetParent(clip.transform, false);
     }
 
     public void ResetProgress()
