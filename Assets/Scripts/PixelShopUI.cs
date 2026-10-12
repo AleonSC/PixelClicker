@@ -92,6 +92,7 @@ public partial class PixelShop
 
         button.onClick.AddListener(() =>
         {
+            if (PixelShopTutorial.Active) return; // the shop buttons are locked until the tutorial is over
             if (PixelPop.IsOpen(panelObject)) PixelPop.Hide(panelObject); else PixelPop.Show(panelObject);
             if (PixelPop.IsOpen(panelObject)) RefreshRows();
         });

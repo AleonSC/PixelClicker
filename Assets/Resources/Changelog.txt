@@ -595,3 +595,4 @@
 [2026-10-12 06:31 UTC] Every search box now shows a visible flashing cursor when clicked, hides its example text while focused, and has a magnifying glass like the pause menu.
 [2026-10-12 06:41 UTC] Rewrote Cubie's two intro visits to fit the pixels-are-money lore (arbitrary currency, the click grind, goods vs coin).
 [2026-10-12 06:49 UTC] The Event Log intro is now a line in the log that you click to open its Got it box, instead of a box that pops up by itself.
+[2026-10-12 06:51 UTC] The shop tutorial now fades the screen a little darker and pauses the game first, and the shop buttons ignore clicks until the tutorial is over.

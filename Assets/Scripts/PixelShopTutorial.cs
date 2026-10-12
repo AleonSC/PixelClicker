@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// The shop tutorial: the first time the Shop button is available, a series of small "Got it" boxes walks through the shop. Each box
@@ -32,9 +33,33 @@ public class PixelShopTutorial : MonoBehaviour
     [Tooltip("The steps, in order. Each shows its text in a small box beside the shop and opens its tab. Empty = the built-in steps.")]
     [SerializeField] private List<Step> steps = new List<Step>();
 
+    [Header("Dim and pause")]
+    [Range(0f, 1f)]
+    [Tooltip("How dark the screen gets before the tutorial starts (0 = 0.4). The game is paused meanwhile.")]
+    [SerializeField] private float dimAmount = 0f;
+
+    [Min(0f)]
+    [Tooltip("Seconds the screen takes to fade darker before the first box (0 = 0.7) and to fade back at the end.")]
+    [SerializeField] private float dimSeconds = 0f;
+
     private PixelShop shop;
     private bool running;
     private float readyTimer;
+
+    // Dim overlay (blocks clicks on the shop and everything else below the tip boxes while the tutorial runs).
+    private GameObject dimRoot;
+    private Image dimImage;
+    private float dimLevel;           // 0..1 of the full dim
+    private bool dimTarget;           // fading towards dark
+    private bool startAfterFade;
+    private bool pausedByUs;
+    private float savedScale = 1f;
+
+    /// <summary>True from the first dim-down until the last box is closed: the shop buttons ignore clicks meanwhile.</summary>
+    public static bool Active { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { Active = false; }
 
     private void Awake()
     {
@@ -60,8 +85,60 @@ public class PixelShopTutorial : MonoBehaviour
         };
     }
 
+    private void UpdateDim()
+    {
+        float seconds = dimSeconds > 0f ? dimSeconds : 0.7f;
+        float goal = dimTarget ? 1f : 0f;
+        if (!Mathf.Approximately(dimLevel, goal))
+            dimLevel = Mathf.MoveTowards(dimLevel, goal, Time.unscaledDeltaTime / seconds);
+        if (dimImage != null)
+            dimImage.color = new Color(0f, 0f, 0f, dimLevel * (dimAmount > 0f ? dimAmount : 0.4f));
+        if (dimRoot != null && !dimTarget && dimLevel <= 0f) { Destroy(dimRoot); dimRoot = null; dimImage = null; }
+        if (startAfterFade && dimTarget && dimLevel >= 1f)
+        {
+            startAfterFade = false;
+            ShowStep(0);
+        }
+    }
+
+    private void BeginRun()
+    {
+        running = true;
+        Active = true;
+        if (dimRoot == null)
+        {
+            dimRoot = PixelUIKit.CreateCanvas("Shop Tutorial Dim", 600, new Vector2(1920f, 1080f), true);
+            GameObject go = new GameObject("Dim", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(dimRoot.transform, false);
+            dimImage = go.GetComponent<Image>();
+            dimImage.color = new Color(0f, 0f, 0f, 0f);
+            dimImage.raycastTarget = true;   // clicks on the shop (and everything under the tip boxes) do nothing
+            PixelUIKit.Stretch(go.GetComponent<RectTransform>());
+        }
+        if (Time.timeScale > 0f) { savedScale = Time.timeScale; Time.timeScale = 0f; pausedByUs = true; }
+        dimTarget = true;
+        startAfterFade = true;
+    }
+
+    private void EndRun()
+    {
+        running = false;
+        Active = false;
+        dimTarget = false;
+        startAfterFade = false;
+        if (pausedByUs) { if (Time.timeScale <= 0f) Time.timeScale = savedScale; pausedByUs = false; }
+    }
+
+    private void OnDestroy()
+    {
+        if (pausedByUs && Time.timeScale <= 0f) Time.timeScale = savedScale;
+        Active = false;
+        if (dimRoot != null) Destroy(dimRoot);
+    }
+
     private void Update()
     {
+        UpdateDim();
         if (running || !enableTutorial || shop == null || !shop.ShopAvailable) { readyTimer = 0f; return; }
         if (PixelStats.Total(DoneKey) >= 1d || !PixelHints.TipsEnabled) return;   // remembered per save (the tip flag in PlayerPrefs is global, so a new game never replayed it)
 
@@ -76,8 +153,7 @@ public class PixelShopTutorial : MonoBehaviour
         if (readyTimer < startDelay) return;
 
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
-        running = true;
-        ShowStep(0);
+        BeginRun();
     }
 
     /// <summary>Plays the tutorial again now (the shop's blue ? button), whether or not it was seen.</summary>
@@ -86,8 +162,7 @@ public class PixelShopTutorial : MonoBehaviour
         if (running || shop == null) return;
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
         PixelNotice.Hide();
-        running = true;
-        ShowStep(0);
+        BeginRun();
     }
 
     /// <summary>One height for every box: tall enough for the longest step (a rough characters-per-line estimate), never under boxHeight, so Got it never moves.</summary>
@@ -103,7 +178,7 @@ public class PixelShopTutorial : MonoBehaviour
     {
         if (index >= steps.Count || shop == null)
         {
-            running = false;
+            EndRun();
             PixelGuideVendor.EndNarration();
             PixelHints.SetTipSeen(SeenId);
             PixelStats.Best(DoneKey, 1d);
