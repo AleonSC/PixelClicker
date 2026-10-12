@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
@@ -198,6 +199,41 @@ public class PixelCrafting : MonoBehaviour
 
     [Tooltip("Text of the Craft button.")]
     [SerializeField] private string craftText = "Craft";
+
+    [Header("Crafting Level (XP from crafting; a placeholder for now)")]
+    [Min(0f)]
+    [Tooltip("XP needed for level 2. 0 = 40.")]
+    [SerializeField] private float xpFirstLevel = 0f;
+
+    [Min(0f)]
+    [Tooltip("Each level needs this many times the XP of the one before. 0 = 1.35.")]
+    [SerializeField] private float xpGrowth = 0f;
+
+    [Min(0)]
+    [Tooltip("XP for crafting a plain potion (per craft). 0 = 5.")]
+    [SerializeField] private int xpPotion = 0;
+
+    [Min(0)]
+    [Tooltip("XP for crafting a 2-type combo potion. 0 = 12.")]
+    [SerializeField] private int xpCombo = 0;
+
+    [Min(0)]
+    [Tooltip("XP for crafting a 3-type combo potion. 0 = 25.")]
+    [SerializeField] private int xpTriple = 0;
+
+    [Min(0)]
+    [Tooltip("XP for crafting a device. 0 = 30.")]
+    [SerializeField] private int xpDevice = 0;
+
+    [Min(0)]
+    [Tooltip("Extra XP the first time you craft a recipe. 0 = 20.")]
+    [SerializeField] private int xpDiscovery = 0;
+
+    [Tooltip("Colour of the level bar's fill.")]
+    [SerializeField] private Color levelBarColor = new Color(0.3f, 0.75f, 0.95f, 1f);
+
+    [Tooltip("Colour of the '+n XP' popup.")]
+    [SerializeField] private Color xpPopupColor = new Color(0.45f, 0.9f, 1f, 1f);
 
     [Tooltip("Message after crafting. {0} = item name, {1} = amount.")]
     [SerializeField] private string craftedFormat = "Crafted {0} x{1}!";
@@ -756,6 +792,8 @@ public class PixelCrafting : MonoBehaviour
         bodyHeight = y;
 
         BuildMaterialsPanel();
+
+        BuildLevelBar();
 
         BuildBookButton();
         BuildBook();
@@ -1647,6 +1685,7 @@ public class PixelCrafting : MonoBehaviour
 
     private void Refresh()
     {
+        RefreshLevelBar();
         // An item that's used up leaves its box.
         for (int i = 0; i < slots.Length; i++)
             if (slots[i].has && !slots[i].pinned && Have(slots[i].item) < 1d)
@@ -1729,13 +1768,139 @@ public class PixelCrafting : MonoBehaviour
             made++;
         }
         if (made <= 0) return;
+        bool firstTime = PixelStats.Total(RecipeKey(r)) <= 0d && PixelStats.Total(LegacyRecipeKey(r)) <= 0d;
         PixelStats.Count(RecipeKey(r), made); // the recipe goes into the recipe book
+        AddCraftingXp(XpPerCraft(r) * made + (firstTime ? (xpDiscovery > 0 ? xpDiscovery : 20) : 0));
 
         statusLabel.text = string.Format(craftedFormat, consumables.ItemName(result), r.resultAmount * made);
         statusTimer = 2.5f;
         Crafted?.Invoke();
         PlaySound();
         Refresh();
+    }
+
+    // ------------------------------------------------------------------
+    // Crafting level
+    // ------------------------------------------------------------------
+
+    private const string XpKey = "crafting.xp";
+    private TMP_Text levelLabel;
+    private RectTransform levelFill;
+
+    /// <summary>The crafting level (1 and up). Not used for anything yet.</summary>
+    public int CraftingLevel => LevelOf(PixelStats.Total(XpKey), out _, out _);
+
+    private int LevelOf(double xp, out double into, out double need)
+    {
+        double first = xpFirstLevel > 0.5f ? xpFirstLevel : 40d, growth = xpGrowth > 1.001f ? xpGrowth : 1.35d;
+        int level = 1;
+        need = first;
+        into = xp;
+        while (into >= need && level < 999)
+        {
+            into -= need;
+            level++;
+            need *= growth;
+        }
+        return level;
+    }
+
+    private int XpPerCraft(Recipe r)
+    {
+        switch (r.resultKind)
+        {
+            case ResultKind.Combo: return xpCombo > 0 ? xpCombo : 12;
+            case ResultKind.Triple: return xpTriple > 0 ? xpTriple : 25;
+            case ResultKind.Device: return xpDevice > 0 ? xpDevice : 30;
+            default: return xpPotion > 0 ? xpPotion : 5;
+        }
+    }
+
+    private void AddCraftingXp(int amount)
+    {
+        if (amount <= 0) return;
+        int before = CraftingLevel;
+        PixelStats.Count(XpKey, amount);
+        int after = CraftingLevel;
+        if (after > before) PixelHints.Announce("Crafting level " + after + "!", "Your crafting level went up to " + after + ".");
+        ShowXpPopup(amount);
+        RefreshLevelBar();
+    }
+
+    /// <summary>The level bar along the bottom of the window: 'Level N' and the XP into the level, with a filling bar.</summary>
+    private void BuildLevelBar()
+    {
+        GameObject track = new GameObject("Level Bar", typeof(RectTransform), typeof(Image));
+        track.transform.SetParent(windowObject.transform, false);
+        Image trackImage = track.GetComponent<Image>();
+        trackImage.color = new Color(0.05f, 0.05f, 0.08f, 1f);
+        trackImage.raycastTarget = false;
+        PixelUIKit.StyleBox(trackImage, true);
+        RectTransform tr = track.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0f, 0f);
+        tr.anchorMax = new Vector2(1f, 0f);
+        tr.pivot = new Vector2(0.5f, 0f);
+        tr.offsetMin = new Vector2(28f, 22f);
+        tr.offsetMax = new Vector2(-28f, 22f + 46f);
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fill.transform.SetParent(track.transform, false);
+        Image fillImage = fill.GetComponent<Image>();
+        fillImage.color = levelBarColor;
+        fillImage.raycastTarget = false;
+        levelFill = fill.GetComponent<RectTransform>();
+        levelFill.anchorMin = Vector2.zero;
+        levelFill.anchorMax = new Vector2(0f, 1f);
+        levelFill.pivot = new Vector2(0f, 0.5f);
+        levelFill.offsetMin = new Vector2(3f, 3f);
+        levelFill.offsetMax = new Vector2(-3f, -3f);
+
+        levelLabel = MakeLabel(track.transform, "Text", "", fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Bold);
+        levelLabel.raycastTarget = false;
+        PixelUIKit.Caps(levelLabel);
+        PixelUIKit.Stretch(levelLabel.rectTransform);
+        RefreshLevelBar();
+    }
+
+    private void RefreshLevelBar()
+    {
+        if (levelLabel == null) return;
+        int level = LevelOf(PixelStats.Total(XpKey), out double into, out double need);
+        PixelUIKit.SetText(levelLabel, "Crafting level " + level + "   -   " + PixelClicker.FormatNumberShort(Math.Floor(into)) + " / " + PixelClicker.FormatNumberShort(Math.Ceiling(need)) + " XP");
+        levelFill.anchorMax = new Vector2(Mathf.Clamp01((float)(into / Math.Max(1d, need))), 1f);
+        levelFill.offsetMax = new Vector2(-3f, -3f);
+    }
+
+    /// <summary>A '+n XP' that rises over the level bar in its own colour, apart from every other +n in the game.</summary>
+    private void ShowXpPopup(int amount)
+    {
+        if (windowObject == null || !windowObject.activeInHierarchy) return;
+        TMP_Text t = MakeLabel(windowObject.transform, "XP Popup", "+" + amount + " XP", fontSize * 1.4f, TextAlignmentOptions.Center, FontStyles.Bold);
+        t.color = xpPopupColor;
+        t.raycastTarget = false;
+        RectTransform r = t.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0f);
+        r.sizeDelta = new Vector2(300f, fontSize * 1.8f);
+        r.anchoredPosition = new Vector2(UnityEngine.Random.Range(-70f, 70f), 76f);
+        StartCoroutine(RiseXpPopup(t, r));
+    }
+
+    private IEnumerator RiseXpPopup(TMP_Text t, RectTransform r)
+    {
+        Vector2 start = r.anchoredPosition;
+        float time = 0f;
+        const float life = 1.4f;
+        while (time < life && t != null)
+        {
+            time += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(time / life);
+            r.anchoredPosition = start + new Vector2(0f, 120f * (1f - (1f - k) * (1f - k)));
+            Color c = t.color;
+            c.a = k < 0.55f ? 1f : 1f - (k - 0.55f) / 0.45f;
+            t.color = c;
+            yield return null;
+        }
+        if (t != null) Destroy(t.gameObject);
     }
 
     private bool Spend(Ingredient ing)
