@@ -5,13 +5,13 @@
 //   spawn, BuildPotion); clicking it drops the potion (DropPotion: rigidbody, shatters on first hit or after dropMaxSeconds, glass
 //   shards like the glass pixel, sound glass_shatter) and the free buff starts then (PixelConsumables.ApplyBuff; GrantRandomBuff is
 //   the fallback when no potion could be picked); counts toward GhostsCaught (saved); extends PixelMinigame (id ghost); the Ghost
-//   Pixel pack has a MinigameGoal requirement for ghost. PixelShop finds/adds this component. Backpack (needs Pixel Grabbing bought +
-//   on, PixelGrab.CanGrab): the falling potion has air drag (grabFallDrag) and can be grabbed with the mouse (potionGrabRadius,
-//   kinematic follow, throw on release); a semi-transparent pixel-art backpack icon (bottom right above the bar,
-//   backpackSize/Margin/Alpha) shows while it falls; releasing over the icon keeps the potion (KeepPotion, PixelConsumables.AddKept,
-//   no shatter, no buff) and, if that potion is already at its limit, raises that potion's bonusCap by one (permanent, saved as
-//   PotionSave.bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives ItemRoom/ClampHeld(index, n)/the shop's Full text), so e.g.
-//   16 held can be used down to 6 and re-bought to 16.
+//   Pixel pack has a MinigameGoal requirement for ghost. PixelShop finds/adds this component. Backpack (needs Pixel Grabbing switched
+//   on in Toggles - it is unlocked from the start, no purchase, PixelGrab.CanGrab): the falling potion has air drag (grabFallDrag) and
+//   can be grabbed with the mouse (potionGrabRadius, kinematic follow, throw on release); a semi-transparent pixel-art backpack icon
+//   (bottom right above the bar, backpackSize/Margin/Alpha) shows while it falls; releasing over the icon keeps the potion
+//   (KeepPotion, PixelConsumables.AddKept, no shatter, no buff) and, if that potion is already at its limit, raises that potion's
+//   bonusCap by one (permanent, saved as PotionSave.bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives
+//   ItemRoom/ClampHeld(index, n)/the shop's Full text), so e.g. 16 held can be used down to 6 and re-bought to 16.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -144,7 +144,7 @@ public class PixelGhostMinigame : PixelMinigame
     [SerializeField] private float dropMaxSeconds = 3f;
 
     [Header("Backpack (needs Pixel Grabbing)")]
-    [Tooltip("With Pixel Grabbing bought, the falling potion can be grabbed and dropped on a backpack icon to keep it in your inventory.")]
+    [Tooltip("With Pixel Grabbing switched on (it is unlocked from the start), the falling potion can be grabbed and dropped on a backpack icon to keep it in your inventory.")]
     [SerializeField] private bool allowBackpack = true;
 
     [Min(0f)]

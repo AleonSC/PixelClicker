@@ -2,10 +2,10 @@
 // PixelPauseMenu.cs
 //   Pause menu (main menu = mainColumns-column button grid LayoutMainButtons, mainPanelWidth wide; fitBetweenBars keeps it and the
 //   text screens between the black bars via AvailableHeight/FitViewHeight) (Esc; the on-screen Pause button is off by default -
-//   showPauseButtonOnScreen): sets Time.timeScale = 0, Resume (alone) / Save-Load + Stats / Settings + Controls / How to Play +
-//   Changelog / Quit (alone; opens a 'Quit to...' box with Desktop and Main menu - Main menu saves, then
-//   PixelTitleScreen.ReturnToMenu()) (MenuEntry.fullRow) (Restart now lives on the Stats screen, Report Folder moved to the Dev Tools
-//   panel; the Stats screen shows one total "Potions used" row instead of the potions drop-down) (Settings: tick boxes for cube
+//   showPauseButtonOnScreen): sets Time.timeScale = 0, Resume (alone) / Save-Load + Stats / Settings + Game Guide (Controls, How To
+//   Play, Database tabs) / Give feedback (alone) / Quit (alone; opens a 'Quit to...' box with Desktop and Main menu - Main menu saves,
+//   then PixelTitleScreen.ReturnToMenu()) (MenuEntry.fullRow) (Restart now lives on the Stats screen, Report Folder moved to the Dev
+//   Tools panel; the Stats screen shows one total "Potions used" row instead of the potions drop-down) (Settings: tick boxes for cube
 //   rotation, pulsing, "Abbreviate numbers" and "Hide purchased shop items" (static PixelShop.HidePurchased, PlayerPrefs;
 //   HiddenAsPurchased in the shop list keeps a bought pack listed while it still has upgrades to buy) ->
 //   PixelClicker.AllowRotation/AllowPulsing and static PixelClicker.AbbreviateNumbers (read by FormatNumber, PixelUI, PixelLog and the
