@@ -647,3 +647,4 @@
 [2026-10-12 10:52 UTC] The floor now fades out in a circle round the player (edges and seams hidden) with a glowing digital wireframe in the fading rim; first person player is three times bigger, can carry cubes (right-click pick up / drop, left-click throw) and only nudges cubes instead of sending them flying.
 [2026-10-12 11:06 UTC] Music: a track that was cut off mid-way (alt-tab) now resumes where it was instead of the game picking a new track.
 [2026-10-12 11:13 UTC] Floor styles saved in a scene with old tile sizes now take the current built-in tile size, grid and fit settings (defaultsVersion 8).
+[2026-10-12 11:15 UTC] Weak spots now stay stuck to the cube's face when it turns or bobs instead of drifting through it.

@@ -138,7 +138,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     {
         public Transform root, ring;
         public Material mat, ringMat;
-        public Vector3 pos;
+        public Vector3 pos, local;
         public float born;
         public int kind;                 // 0 still, 1 drifts, 2 pulses, 3 flickers
         public Vector2 vp, vel;          // viewport position / velocity of a drifting spot
@@ -401,6 +401,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     {
         EnsureTextures();
         Spot s = new Spot { pos = pos, born = Time.unscaledTime };
+        if (clicker.PixelTransform != null) s.local = clicker.PixelTransform.InverseTransformPoint(pos);
         GameObject root = new GameObject("Weak Spot");
         root.transform.SetParent(transform, false);
         Track(root);
@@ -469,13 +470,18 @@ public class PixelWeakspotMinigame : PixelMinigame
                 continue;
             }
 
+            if (clicker.PixelTransform != null)   // the cube turns / bobs: the spot stays stuck to its face
+            {
+                s.pos = clicker.PixelTransform.TransformPoint(s.local);
+                s.root.position = s.pos;
+            }
             if (s.kind == 1 && phase == Phase.Hunt && zoomCam != null)
             {
                 Vector2 np = s.vp + s.vel * dt;
                 if (np.x < 0.28f || np.x > 0.72f) { s.vel.x = -s.vel.x; np.x = Mathf.Clamp(np.x, 0.28f, 0.72f); }
                 if (np.y < 0.28f || np.y > 0.72f) { s.vel.y = -s.vel.y; np.y = Mathf.Clamp(np.y, 0.28f, 0.72f); }
                 Vector3 np3;
-                if (Project(np, out np3)) { s.vp = np; s.pos = np3; s.root.position = np3; }
+                if (Project(np, out np3)) { s.vp = np; s.pos = np3; s.root.position = np3; if (clicker.PixelTransform != null) s.local = clicker.PixelTransform.InverseTransformPoint(np3); }
                 else s.vel = -s.vel;   // slid off the cube: turn round
             }
             s.sizeK = s.kind == 2 ? Mathf.Lerp(pulseMin, 1f, 0.5f + 0.5f * Mathf.Sin(t * 6.283f / Mathf.Max(0.2f, pulseSeconds) + s.phase)) : 1f;
