@@ -526,6 +526,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     [SerializeField] private float floorFadeSeconds = 0f;
 
     private bool HidesOnTitle => !keepFloorOnTitle;
+    private const float FadeInFactor = 2.5f;   // the floor texture fades IN this much slower than it fades out
     private float FadeTime => floorFadeSeconds > 0.05f ? floorFadeSeconds : 1f;
 
     private float visibility = 1f;
@@ -556,7 +557,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (hide && exitHold && propsK > 0.001f) hide = false;   // (the floor stays until the props are gone)
         float target = hide ? 0f : 1f;
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
-        else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / FadeTime);
+        else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / (target > visibility ? FadeTime * FadeInFactor : FadeTime));
         ApplyVisibility();
         if (exitDone != null && visibility <= 0.001f)
         {
@@ -623,7 +624,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         int thin = ext.x <= ext.y && ext.x <= ext.z ? 0 : (ext.y <= ext.z ? 1 : 2);
         Vector3 wide = fs * flatBaseSpread;
         flatBase.transform.localScale = new Vector3(thin == 0 ? fs.x : wide.x, thin == 1 ? fs.y : wide.y, thin == 2 ? fs.z : wide.z);
-        flatMat.color = AverageColor();
+        // The sky's horizon colour, so the sky seems to fill the whole menu view (the floor picked in the menu only decides what loads in).
+        Color flat;
+        if (PixelSkybox.Instance != null && PixelSkybox.Instance.TryGetHorizonColor(out Color sky)) flat = sky;
+        else if (Camera.main != null && Camera.main.clearFlags == CameraClearFlags.SolidColor) flat = Camera.main.backgroundColor;
+        else flat = AverageColor();
+        flat.a = 1f;
+        flatMat.color = flat;
         flatBase.SetActive(true);
     }
 

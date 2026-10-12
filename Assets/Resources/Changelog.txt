@@ -522,3 +522,4 @@
 [2026-10-12 00:53 UTC] Blur background off now shows the sharp live scene; with live background the menu shows a flat floor-coloured base under the hidden floor that the textured floor fades in from.
 [2026-10-12 00:54 UTC] Old pixels and devices now fade (shrink) away before the floor and the camera when quitting to the main menu, and fade back in after the floor when a game starts or a save is loaded.
 [2026-10-12 00:58 UTC] The flat floor-coloured menu base is now much wider than the floor so it fills the whole ground area the camera sees.
+[2026-10-12 01:04 UTC] With live background the menu ground is now the sky's horizon colour (so the sky fills the view, whatever floor is picked) and the floor texture fades in more gradually.
