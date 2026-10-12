@@ -144,26 +144,24 @@ public class PixelTitleScreen : MonoBehaviour
     [SerializeField] private Color quitColor = new Color(0.45f, 0.18f, 0.18f, 0.9f);
 
     [Header("Floor and Sky Pickers")]
-    [Tooltip("Show the small floor picker (right of Play) and sky picker (left of Play): a picture of the look with arrows either side. A quick version of the Settings rows.")]
+    [Tooltip("Show the floor picker (right of Play) and sky picker (left of Play): a drop-down listing every look. A quick version of the Settings rows.")]
     [SerializeField] private bool showLookPickers = true;
 
-    [Tooltip("Size of the picture in each picker.")]
-    [SerializeField] private float lookIconSize = 96f;
+    [Tooltip("Height of each picker drop-down.")]
+    [SerializeField] private float lookBoxHeight = 56f;
 
-    [Tooltip("Width of the picker arrows (they are as tall as the picture).")]
-    [SerializeField] private float lookArrowWidth = 40f;
+    [Min(0f)]
+    [Tooltip("Width of each picker drop-down. 0 = the default (300).")]
+    [SerializeField] private float lookDropdownWidth = 0f;
 
     [Tooltip("Space between the Play / Load / Settings buttons and each picker.")]
     [SerializeField] private float lookGap = 40f;
 
-    [Tooltip("Font size of the look's name under the picture (0 = no name).")]
+    [Tooltip("Font size of the look's name in the drop-down.")]
     [SerializeField] private float lookNameFontSize = 22f;
 
-    [Tooltip("Colour of the picker arrows.")]
+    [Tooltip("Colour of the picker drop-down boxes.")]
     [SerializeField] private Color lookArrowColor = new Color(0.25f, 0.3f, 0.4f, 1f);
-
-    [Tooltip("Colour of the thin frame around each picture.")]
-    [SerializeField] private Color lookFrameColor = new Color(1f, 1f, 1f, 0.8f);
 
     [Tooltip("Small caption above the floor picker (empty = none).")]
     [SerializeField] private string floorPickerCaption = "Floor";
@@ -227,8 +225,9 @@ public class PixelTitleScreen : MonoBehaviour
     private class LookPicker
     {
         public System.Func<IPixelLookSource> source;
-        public RawImage icon;
-        public TMP_Text name;
+        public TMP_Dropdown dropdown;
+        public int optionCount = -1;
+        public bool refreshing;
         public string shownName = "";
         public int shownIndex = -2;
         public bool shownUsable;
@@ -555,7 +554,7 @@ public class PixelTitleScreen : MonoBehaviour
         // Quick floor / sky pickers either side of the button group.
         if (showLookPickers)
         {
-            float pickerWidth = lookArrowWidth * 2f + lookIconSize + 16f;
+            float pickerWidth = LookDropdownWidth;
             float pickerX = buttonSize.x * 0.5f + lookGap + pickerWidth * 0.5f;
             BuildLookPicker(font, "Sky Picker", skyPickerCaption, () => PixelSkybox.Instance, new Vector2(-pickerX, 0f));
             BuildLookPicker(font, "Floor Picker", floorPickerCaption, () => PixelFloor.Instance, new Vector2(pickerX, 0f));
@@ -586,16 +585,18 @@ public class PixelTitleScreen : MonoBehaviour
         return b;
     }
 
-    /// <summary>A picture of the current look with an arrow either side (and its name under it).</summary>
+    private float LookDropdownWidth => lookDropdownWidth > 1f ? lookDropdownWidth : 300f;
+
+    /// <summary>A drop-down listing every look of the floor / sky (with a small caption above it).</summary>
     private void BuildLookPicker(TMP_FontAsset font, string objectName, string caption, System.Func<IPixelLookSource> source, Vector2 position)
     {
         lookFont = font;
-        float width = lookArrowWidth * 2f + lookIconSize + 16f;
+        float width = LookDropdownWidth;
         GameObject root = new GameObject(objectName, typeof(RectTransform));
         root.transform.SetParent(foreground.transform, false);
         RectTransform rr = root.GetComponent<RectTransform>();
         rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 0.5f);
-        rr.sizeDelta = new Vector2(width, lookIconSize);
+        rr.sizeDelta = new Vector2(width, lookBoxHeight);
         rr.anchoredPosition = position;
         shrinkRects.Add(rr);
 
@@ -605,43 +606,32 @@ public class PixelTitleScreen : MonoBehaviour
         hoverTip.onEnter = () => hoveredPicker = picker;
         hoverTip.onExit = () => { if (hoveredPicker == picker) hoveredPicker = null; };
 
-        // Frame, then the picture inside it.
-        GameObject frame = new GameObject("Frame", typeof(RectTransform), typeof(Image));
-        frame.transform.SetParent(root.transform, false);
-        Image frameImage = frame.GetComponent<Image>();
-        frameImage.color = lookFrameColor;
-        frameImage.raycastTarget = true;   // so hovering the picture shows its name
-        RectTransform fr = frame.GetComponent<RectTransform>();
-        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(0.5f, 0.5f);
-        fr.sizeDelta = new Vector2(lookIconSize, lookIconSize);
-
-        GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
-        iconGo.transform.SetParent(frame.transform, false);
-        picker.icon = iconGo.GetComponent<RawImage>();
-        picker.icon.raycastTarget = false;
-        RectTransform ir = iconGo.GetComponent<RectTransform>();
-        ir.anchorMin = Vector2.zero;
-        ir.anchorMax = Vector2.one;
-        ir.offsetMin = new Vector2(3f, 3f);
-        ir.offsetMax = new Vector2(-3f, -3f);
-
-        for (int side = -1; side <= 1; side += 2)
+        float fontSize = Mathf.Max(16f, lookNameFontSize);
+        TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, root.transform, "Dropdown", new Vector2(width, lookBoxHeight), lookArrowColor,
+                                                    new Color(0.1f, 0.12f, 0.18f, 1f), buttonTextColor, fontSize);
+        RectTransform dr = dd.GetComponent<RectTransform>();
+        dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 0.5f);
+        dr.anchoredPosition = Vector2.zero;
+        picker.dropdown = dd;
+        dd.onValueChanged.AddListener(value =>
         {
-            int direction = side;
-            Button arrow = PixelUIKit.CreateButton(font, root.transform, side < 0 ? "Previous" : "Next", side < 0 ? "<" : ">",
-                                                   new Vector2(lookArrowWidth, lookIconSize), lookArrowColor, buttonTextColor, smallFontSize);
-            RectTransform ar = arrow.GetComponent<RectTransform>();
-            ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(side < 0 ? 0f : 1f, 0.5f);
-            ar.anchoredPosition = Vector2.zero;
-            PixelUIKit.UseArrowGlyph(arrow, side < 0);
-            arrow.onClick.AddListener(() =>
-            {
-                if (playing) return;
-                IPixelLookSource look = picker.source();
-                if (look != null && look.Usable) look.Step(direction);
-                RefreshPicker(picker, true);
-            });
-            buttons.Add(arrow);
+            if (playing || picker.refreshing) return;
+            IPixelLookSource look = picker.source();
+            if (look != null && look.Usable && value >= 0 && value < look.StyleCount) look.SetStyle(value);
+            RefreshPicker(picker, true);
+        });
+
+        if (!string.IsNullOrEmpty(caption))
+        {
+            TMP_Text cap = PixelUIKit.CreateText(font, root.transform, "Caption", caption.ToUpperInvariant(), Mathf.Max(14f, fontSize * 0.7f),
+                                                 TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.75f));
+            cap.raycastTarget = false;
+            RectTransform cr = cap.rectTransform;
+            cr.anchorMin = new Vector2(0f, 1f);
+            cr.anchorMax = new Vector2(1f, 1f);
+            cr.pivot = new Vector2(0.5f, 0f);
+            cr.sizeDelta = new Vector2(0f, fontSize * 1.3f);
+            cr.anchoredPosition = new Vector2(0f, lookBoxHeight * 0.5f + 2f);
         }
 
         lookPickers.Add(picker);
@@ -663,8 +653,9 @@ public class PixelTitleScreen : MonoBehaviour
         {
             if (p.rect == null || p.group == null) continue;
             p.rect.GetWorldCorners(corners);   // overlay canvas: world = screen pixels
-            bool over = !playing && pointer.x >= corners[0].x - pickerHoverMargin && pointer.x <= corners[2].x + pickerHoverMargin
-                        && pointer.y >= corners[0].y - pickerHoverMargin && pointer.y <= corners[2].y + pickerHoverMargin;
+            bool open = p.dropdown != null && p.dropdown.IsExpanded;
+            bool over = !playing && (open || pointer.x >= corners[0].x - pickerHoverMargin && pointer.x <= corners[2].x + pickerHoverMargin
+                        && pointer.y >= corners[0].y - pickerHoverMargin && pointer.y <= corners[2].y + pickerHoverMargin);
             p.alpha = Mathf.MoveTowards(p.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.35f));
             p.group.alpha = p.alpha;
             p.group.blocksRaycasts = p.alpha > 0.05f;
@@ -715,11 +706,22 @@ public class PixelTitleScreen : MonoBehaviour
         p.shownIndex = index;
         p.shownUsable = usable;
 
-        p.icon.texture = usable ? look.PreviewTexture(index) : null;
-        p.icon.color = usable ? look.PreviewColor(index) : new Color(1f, 1f, 1f, 0.15f);
-        p.icon.uvRect = usable ? look.PreviewRect : new Rect(0f, 0f, 1f, 1f);
         p.shownName = usable ? look.StyleName(index) : "";
-        if (p.name != null) p.name.text = p.shownName;
+        if (p.dropdown == null) return;
+        p.refreshing = true;
+        int count = usable ? look.StyleCount : 0;
+        if (p.optionCount != count)
+        {
+            p.optionCount = count;
+            List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>(count);
+            for (int i = 0; i < count; i++) options.Add(new TMP_Dropdown.OptionData(look.StyleName(i)));
+            p.dropdown.ClearOptions();
+            p.dropdown.AddOptions(options);
+        }
+        if (usable) p.dropdown.SetValueWithoutNotify(index);
+        p.dropdown.RefreshShownValue();
+        p.dropdown.interactable = usable;
+        p.refreshing = false;
     }
 
     private RawImage MakeRaw(string objectName)

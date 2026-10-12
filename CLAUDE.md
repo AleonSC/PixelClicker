@@ -87,6 +87,7 @@
 | `PixelSkybox.cs` | Sky styles (added by PixelClicker.Awake, implements IPixelLookSource): | `docs/systems/PixelSkybox.md` |
 | `PixelLookSource.cs` / `PixelNoise.cs` | IPixelLookSource = anything with looks to step through (Usable, Current, StyleName, PreviewTexture/Color/Rect, Step); | in the header comment of `PixelLookSource.cs` |
 | `PixelOrbitCamera.cs` | Orbital camera (added by PixelClicker.Awake; | in the header comment of `PixelOrbitCamera.cs` |
+| `PixelZoom.cs` | Zoom key (rebindable PixelAction.Zoom, default X): press steps through three zoom levels, hold + mouse wheel zooms smoothly between the closest and furthest; the camera slides along the line to the cube and a hidden HomeCamera keeps the view bounds on the normal view. | in the header comment of `PixelZoom.cs` |
 | `PixelFirstPerson.cs` | First person mode (added by PixelClicker.Awake; | `docs/systems/PixelFirstPerson.md` |
 | `PixelPlacedDevice.cs` | Abstract base of placed devices: countdown, timer text facing the camera, shrink-away (InitCommon, OnTick, IsDying). | in the header comment of `PixelPlacedDevice.cs` |
 | `PixelPop.cs` | Open / close animation for windows and tip boxes (component on the Inventory box, the Log panel, the Got-it box, the Shop panel, the Crafting window, the Toggles window and every pause-menu screen: | in the header comment of `PixelPop.cs` |

@@ -1143,6 +1143,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
+        if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
         if (PixelFind.First<PixelOrbitCamera>() == null) gameObject.AddComponent<PixelOrbitCamera>();   // orbital camera (third step of the view key)
         if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window

@@ -174,6 +174,7 @@ public class PixelFirstPerson : MonoBehaviour
 
     private void Enter()
     {
+        PixelZoom.ResetNow();
         mainCamera = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (mainCamera == null) return;
         PixelWindows.CloseAllExcept(this);

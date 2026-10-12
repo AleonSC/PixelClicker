@@ -33,6 +33,7 @@ public enum PixelAction
     Bank = 12,
     Skills = 13,
     Feedback = 14,
+    Zoom = 15,
 }
 
 /// <summary>
@@ -59,6 +60,7 @@ public static class PixelKeys
         KeyCode.None,     // Bank
         KeyCode.None,     // Skills
         KeyCode.F8,       // Feedback (the Give feedback window)
+        KeyCode.X,        // Zoom (press: next of the zoom levels; hold + mouse wheel: any zoom)
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";

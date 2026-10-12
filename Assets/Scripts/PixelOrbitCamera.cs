@@ -68,10 +68,11 @@ public class PixelOrbitCamera : MonoBehaviour
     public static PixelOrbitCamera Instance { get; private set; }
 
     /// <summary>A hidden, disabled copy of the camera at its normal pose while orbiting (null otherwise): the view bounds and fitted floors read it.</summary>
-    public static Camera HomeCamera { get; private set; }
+    public static Camera HomeCamera => orbitHome != null ? orbitHome : PixelZoom.HomeCamera;   // (the zoom key's copy counts too)
+    private static Camera orbitHome;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Active = false; Instance = null; HomeCamera = null; }
+    private static void ResetStatics() { Active = false; Instance = null; orbitHome = null; }
 
     private PixelClicker clicker;
     private Camera cam;
@@ -104,6 +105,7 @@ public class PixelOrbitCamera : MonoBehaviour
     public bool Enter()
     {
         if (disableOrbit || Active || clicker == null || clicker.PixelTransform == null) return false;
+        PixelZoom.ResetNow();   // (the orbit starts from the normal view, not a zoomed one)
         if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) return false;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.Takeover) return false;
         cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
@@ -128,9 +130,9 @@ public class PixelOrbitCamera : MonoBehaviour
 
         GameObject go = new GameObject("Orbit Home Camera");
         go.hideFlags = HideFlags.HideAndDontSave;
-        HomeCamera = go.AddComponent<Camera>();
-        HomeCamera.CopyFrom(cam);
-        HomeCamera.enabled = false;
+        orbitHome = go.AddComponent<Camera>();
+        orbitHome.CopyFrom(cam);
+        orbitHome.enabled = false;
         go.transform.SetPositionAndRotation(homePos, homeRot);
 
         returning = false;
@@ -153,8 +155,8 @@ public class PixelOrbitCamera : MonoBehaviour
     private void Finish(bool snap)
     {
         if (cam != null && snap) { cam.transform.SetPositionAndRotation(homePos, homeRot); cam.fieldOfView = homeFov; if (cam.orthographic) cam.orthographicSize = homeOrtho; }
-        if (HomeCamera != null) Destroy(HomeCamera.gameObject);
-        HomeCamera = null;
+        if (orbitHome != null) Destroy(orbitHome.gameObject);
+        orbitHome = null;
         Active = false;
         returning = false;
         HideHint();
@@ -166,7 +168,7 @@ public class PixelOrbitCamera : MonoBehaviour
         if (cam == null || clicker == null || clicker.PixelTransform == null) { Finish(true); return; }
         if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) { Finish(true); return; }
         if (!returning) foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.Takeover) { Exit(); break; }   // (a round that moves the cube about on screen needs the normal view)
-        if (HomeCamera != null) HomeCamera.aspect = cam.aspect;
+        if (orbitHome != null) orbitHome.aspect = cam.aspect;
         if (hintRoot != null)
         {
             hintTimer -= Time.unscaledDeltaTime;

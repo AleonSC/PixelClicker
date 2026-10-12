@@ -754,14 +754,19 @@ public class PixelPauseMenu : MonoBehaviour
     // ------------------------------------------------------------------
 
     private GameObject floorPopout;
+    private System.Func<IPixelLookSource> popSource;   // what the box restyles: the floor or the sky
+    private string popTitle;
     private RawImage floorPopPreview;
     private TMP_Text floorPopName;
     private static Vector2 floorPopPosition = new Vector2(520f, 120f);
 
     /// <summary>Hides the menu and shows a small box you can drag around whose only option is the floor style. Closing it brings the menu back.</summary>
-    private void OpenFloorPopout()
+    private void OpenLookPopout(System.Func<IPixelLookSource> source, string title)
     {
-        if (floorPopout != null || PixelFloor.Instance == null || !PixelFloor.Instance.Usable) return;
+        IPixelLookSource first = source();
+        if (floorPopout != null || first == null || !first.Usable) return;
+        popSource = source;
+        popTitle = title;
         CloseLookList();
         if (menuRoot != null) menuRoot.SetActive(false);
 
@@ -788,7 +793,7 @@ public class PixelPauseMenu : MonoBehaviour
         drag.canvas = canvasRoot.GetComponent<Canvas>();
         drag.onMoved = () => floorPopPosition = box.anchoredPosition;
 
-        TMP_Text title = MakeText(handle.transform, "Title", floorStyleLabel.ToUpperInvariant(), rowFontSize * 0.8f, FontStyles.Bold);
+        TMP_Text title = MakeText(handle.transform, "Title", popTitle.ToUpperInvariant(), rowFontSize * 0.8f, FontStyles.Bold);
         title.alignment = TextAlignmentOptions.Center;
         title.raycastTarget = false;
         PixelUIKit.Stretch(title.rectTransform);
@@ -820,7 +825,7 @@ public class PixelPauseMenu : MonoBehaviour
             ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 0.5f);
             ar.anchoredPosition = new Vector2(side * 140f, -18f);
             PixelUIKit.UseArrowGlyph(arrow, side < 0);
-            arrow.onClick.AddListener(() => { if (PixelFloor.Instance != null) PixelFloor.Instance.Step(dir); });
+            arrow.onClick.AddListener(() => { IPixelLookSource src = popSource != null ? popSource() : null; if (src != null) src.Step(dir); });
         }
 
         floorPopName = MakeText(box, "Name", "", rowFontSize * 0.7f, FontStyles.Normal);
@@ -841,7 +846,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void UpdateFloorPopout()
     {
-        IPixelLookSource look = PixelFloor.Instance;
+        IPixelLookSource look = popSource != null ? popSource() : null;
         if (look == null || floorPopName == null) return;
         PixelUIKit.SetText(floorPopName, look.StyleName(look.Current));
         floorPopPreview.texture = look.PreviewTexture(look.Current);
@@ -2278,7 +2283,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingsSectionHeader(list, headerDisplay, ref y);
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true);
         AddSettingToggle(list, displayFloorLabel, () => PixelTitleWanderers.DisplayFloor, on => PixelTitleWanderers.DisplayFloor = on, ref y);
-        AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
+        AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y, popout: true);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
         AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
         Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
@@ -2579,6 +2584,7 @@ public class PixelPauseMenu : MonoBehaviour
             case PixelAction.Bank: return "Open Pixel Bank";
             case PixelAction.Skills: return "Open Skills";
             case PixelAction.Feedback: return "Give feedback";
+            case PixelAction.Zoom: return "Zoom (hold + wheel for any level)";
         }
         return action.ToString();
     }
@@ -2628,9 +2634,9 @@ public class PixelPauseMenu : MonoBehaviour
 
         if (popout)
         {
-            // A small 'pop-out' button right of the picker: closes the settings and opens a draggable floor-style box.
+            // A small 'pop-out' button right of the picker: closes the settings and opens a draggable box for this look (floor or sky).
             pr.offsetMax = new Vector2(-(rowHeight * 0.8f + 10f), 0f);
-            Button pop = MakeButton(row, "Floor Popout Button", "", new Vector2(rowHeight * 0.8f, rowHeight * 0.88f), menuButtonColor, rowFontSize * 0.7f);
+            Button pop = MakeButton(row, "Look Popout Button", "", new Vector2(rowHeight * 0.8f, rowHeight * 0.88f), menuButtonColor, rowFontSize * 0.7f);
             RectTransform pbr = pop.GetComponent<RectTransform>();
             pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 0.5f);
             pbr.anchoredPosition = Vector2.zero;
@@ -2649,7 +2655,7 @@ public class PixelPauseMenu : MonoBehaviour
             float s = rowHeight * 0.3f;
             Square(s * 1.5f, new Vector2(-s * 0.25f, -s * 0.2f), new Color(1f, 1f, 1f, 0.55f));
             Square(s, new Vector2(s * 0.35f, s * 0.3f), Color.white);
-            pop.onClick.AddListener(OpenFloorPopout);
+            pop.onClick.AddListener(() => OpenLookPopout(source, labelText));
         }
 
         float icon = rowHeight * 0.7f;

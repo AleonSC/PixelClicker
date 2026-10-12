@@ -693,3 +693,4 @@
 [2026-10-12 20:34 UTC] Added console lines that say when a big floor starts and finishes drawing
 [2026-10-12 20:37 UTC] Fixed single-picture floors (Radar, Battle Crater, Marble, Ice, moons...) showing only a flat edge colour on floors wider than two pictures
 [2026-10-12 20:40 UTC] Added a to-do: move noise floors to world-space shaders
+[2026-10-12 20:45 UTC] Added the X zoom key (press for 3 zoom levels, hold + wheel for any), a pop-out window for the sky style in Settings, and drop-downs for the main menu's sky and floor pickers
