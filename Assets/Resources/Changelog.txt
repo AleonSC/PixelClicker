@@ -602,3 +602,4 @@
 [2026-10-12 07:09 UTC] Added the Prospector, a cube vendor like Cubie who buys mining ores for pure pixels and only visits while you train Mining.
 [2026-10-12 07:14 UTC] The main-menu UFO now randomly abducts a walking vendor or hopping pet with a green beam.
 [2026-10-12 07:17 UTC] Added the UFO abduction beam sound and redrew the Wizard, Tinkerer, Farmer, Pixel Entrepreneur and the Egg and Bean cats as cube characters like Cubie.
+[2026-10-12 07:22 UTC] Added skill pack shop gating and the base-skill design question to the to-do.
