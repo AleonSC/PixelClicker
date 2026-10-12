@@ -74,7 +74,7 @@ public class PixelTitleWanderers : MonoBehaviour
     [SerializeField] private float abductSeconds = 0f;
 
     [Tooltip("Text on the pets toggle (above the 'display floor' one).")]
-    [SerializeField] private string petsText = "Pets";
+    [SerializeField] private string petsWanderText = "Pets Wander";
 
     [Header("Toggle")]
     [Tooltip("Size of the toggle at the bottom left.")]
@@ -90,7 +90,6 @@ public class PixelTitleWanderers : MonoBehaviour
     [SerializeField] private string blurText = "Blur background";
 
     [Tooltip("Text on the 'display floor' toggle (above the blur one).")]
-    [SerializeField] private string floorText = "Display floor";
 
     private const string Pref = "PixelClicker.Setting.TitleWanderers";
     private const string LivePref = "PixelClicker.Setting.TitleLiveBackground";
@@ -167,6 +166,7 @@ public class PixelTitleWanderers : MonoBehaviour
         public int stopsLeft;
         public bool leaving, staying, abducted;
         public float exitX;
+        public int key;
     }
 
     private readonly List<Walker> walkers = new List<Walker>();
@@ -200,10 +200,9 @@ public class PixelTitleWanderers : MonoBehaviour
         layerGroup.blocksRaycasts = false;
 
         MakeToggle(font, "Wander Toggle", toggleText, 24f, () => on, v => { on = v; Enabled = v; });
-        MakeToggle(font, "Live Background Toggle", liveText, 24f + toggleSize.y + 10f, () => LiveBackground, v => LiveBackground = v);
-        MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 2f, () => BlurBackground, v => BlurBackground = v);
-        MakeToggle(font, "Display Floor Toggle", floorText, 24f + (toggleSize.y + 10f) * 3f, () => DisplayFloor, v => DisplayFloor = v);
-        MakeToggle(font, "Pets Toggle", petsText, 24f + (toggleSize.y + 10f) * 4f, () => PetsEnabled, v => PetsEnabled = v);
+        MakeToggle(font, "Pets Toggle", petsWanderText, 24f + toggleSize.y + 10f, () => PetsEnabled, v => PetsEnabled = v);
+        MakeToggle(font, "Live Background Toggle", liveText, 24f + (toggleSize.y + 10f) * 2f, () => LiveBackground, v => LiveBackground = v);
+        MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 3f, () => BlurBackground, v => BlurBackground = v);
         built = true;
         Refresh();
         nextArrival = Time.unscaledTime + 1.5f;
@@ -315,20 +314,30 @@ public class PixelTitleWanderers : MonoBehaviour
     private void Spawn(float half)
     {
         List<System.Func<float, RectTransform>> makers = new List<System.Func<float, RectTransform>>();
+        List<int> keys = new List<int>();
         PixelGuideVendor guide = PixelFind.First<PixelGuideVendor>();
-        if (guide != null) makers.Add(h => guide.BuildWalker(layer, h));
+        if (guide != null) { makers.Add(h => guide.BuildWalker(layer, h)); keys.Add(-1); }
         foreach (PixelMinigame m in PixelMinigame.All)
         {
             PixelVisitorMinigame v = m as PixelVisitorMinigame;
             if (v == null) continue;
-            string id = v.Id;
             makers.Add(h => v.BuildWalker(layer, h));
+            keys.Add(v.Id.GetHashCode());
         }
-        if (makers.Count == 0) return;
-        RectTransform rect = makers[Random.Range(0, makers.Count)](walkerHeight);
+        // the same NPC never walks twice at once: only those not already on screen are candidates
+        List<int> free = new List<int>();
+        for (int i = 0; i < makers.Count; i++)
+        {
+            bool busy = false;
+            foreach (Walker o in walkers) if (o.key == keys[i]) { busy = true; break; }
+            if (!busy) free.Add(i);
+        }
+        if (free.Count == 0) return;
+        int pick = free[Random.Range(0, free.Count)];
+        RectTransform rect = makers[pick](walkerHeight);
         if (rect == null) return;
 
-        Walker w = new Walker { rect = rect, art = rect.GetChild(0) as RectTransform };
+        Walker w = new Walker { rect = rect, art = rect.GetChild(0) as RectTransform, key = keys[pick] };
         bool fromLeft = Random.value < 0.5f;
         w.x = fromLeft ? -half - 200f : half + 200f;
         w.exitX = w.x;

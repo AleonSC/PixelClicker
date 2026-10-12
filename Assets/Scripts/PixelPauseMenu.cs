@@ -286,6 +286,8 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Label of the floor style picker (arrows step through the styles of the Pixel Floor component).")]
     [SerializeField] private string floorStyleLabel = "Floor style";
+    [Tooltip("Label of the Display floor tick box under the floor style row.")]
+    [SerializeField] private string displayFloorLabel = "Display floor";
 
     [Tooltip("Label of the sky picker (arrows step through the skies of the Pixel Skybox component).")]
     [SerializeField] private string skyStyleLabel = "Sky";
@@ -2232,6 +2234,7 @@ public class PixelPauseMenu : MonoBehaviour
         // ---- Display ----
         AddSettingsSectionHeader(list, headerDisplay, ref y);
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true);
+        AddSettingToggle(list, displayFloorLabel, () => PixelTitleWanderers.DisplayFloor, on => PixelTitleWanderers.DisplayFloor = on, ref y);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
         AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
