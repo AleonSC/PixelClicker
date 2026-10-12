@@ -46,7 +46,7 @@ public class PixelLook
     public enum BasicSurface { None = 0, Grain = 1, Brushed = 2, Sheen = 3, Mosaic = 4 }
 
     /// <summary>Crisp drawn surfaces for the skill packs' base blocks (PixelBlockTextures.cs). The look's colour should be white.</summary>
-    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3 }
+    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3, Seed = 4 }
 
     [Tooltip("Wood, Dirt or Stone: a crisp 64 px pixel-art surface drawn on every face (set the look's colour to white).")]
     public BlockSurface blockSurface = BlockSurface.None;
@@ -481,9 +481,10 @@ public static class PixelLooks
                             forceTranslucent = true, smoothness = 0.9f, metallic = 0f, emission = 0.6f, lightning = true },
 
             // Seed: a brown shell that cracks as you click it; a sprout comes out and grows a pixel.
+            // A glossy, ridged seed pod (a rounded block): cracks spread over it as you dig and a green light leaks out of them.
             new PixelLook { type = PixelClicker.PixelType.Seed, useColor = true, color = Color.white,
-                            metallic = 0f, smoothness = 0.1f, damageCracks = true, shellTexture = true, farmFx = PixelLook.FarmAmbient.Crumbs,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.045f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.85f },
+                            metallic = 0.05f, smoothness = 0.6f, damageCracks = true, blockSurface = PixelLook.BlockSurface.Seed, blob = true,
+                            farmFx = PixelLook.FarmAmbient.Sparkle },
 
             // Fire (testing pixel): a glowing orange cube with flames rising off it; the old pixel burns away.
             new PixelLook { type = PixelClicker.PixelType.Fire, useColor = true, color = new Color(1f, 0.42f, 0.08f, 1f),
@@ -515,8 +516,7 @@ public static class PixelLooks
                             damageCracks = true, chestTexture = true },
 
             // Wood and Rock: plain basic blocks that fit any rotation.
-            new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.15f, blockSurface = PixelLook.BlockSurface.Wood,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = true, outlineShade = -0.5f, outlineStrength = 0.8f },
+            new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Wood, blob = true },
             new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Stone, jagged = true },
 
             // The farming blocks: each has a bevelled rim in a shade of its own colour and an ambient particle effect.

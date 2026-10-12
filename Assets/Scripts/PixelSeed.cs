@@ -133,6 +133,11 @@ public class SeedSprout : MonoBehaviour
     /// <summary>A planted seed of a known pixel type: the sprout grows exactly that type (-1 = a random one as usual).</summary>
     public void ForceTier(int tierIndex) => forceTier = tierIndex;
 
+    private bool plantsOnly;
+
+    /// <summary>This seedling grows only a plant pixel (Wheat, Pollen, Golden Fruit, Wood), not any random pixel.</summary>
+    public void PlantsOnly() => plantsOnly = true;
+
     private float ghostLeft, lifetime;
 
     /// <summary>This seed's own despawn timer: seconds since it dropped after which it withers away if its pixel hasn't popped off yet (0 = never).</summary>
@@ -281,7 +286,7 @@ public class SeedSprout : MonoBehaviour
         if (dirt != null) mr.sharedMaterial = dirt; else mr.material.color = new Color(0.36f, 0.23f, 0.12f, 1f);
         mound = m.transform;
 
-        tier = forceTier >= 0 ? forceTier : clicker.RandomSeedPixelTier();
+        tier = forceTier >= 0 ? forceTier : plantsOnly ? clicker.RandomPlantPixelTier() : clicker.RandomSeedPixelTier();
         if (tier < 0) { stage = Stage.Shrinking; stageTime = 0f; return; }
         amount = clicker.RollOldPixelAmount(tier);
         pixel = clicker.CreateDisplayPixel(tier, transform, unit);

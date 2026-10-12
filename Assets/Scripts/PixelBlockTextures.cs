@@ -38,29 +38,27 @@ public static class PixelBlockTextures
 
     private static float H(int x, int y, int seed) => PixelNoise.Hash(x, y, seed);
 
-    // ---- Wood: four planks across, each with its own tone, long grain streaks, a knot and a nail at each end ----
+    // ---- Wood: rough bark with vertical ridges, deep splits, pale flecks and patches of moss ----
     private static Color WoodPixel(int x, int y)
     {
-        const int plankH = 16;
-        int plank = y / plankH, py = y % plankH;
-        float tone = 0.82f + H(plank, 3, 41) * 0.3f;
-        Color baseA = new Color(0.62f, 0.42f, 0.22f), baseB = new Color(0.46f, 0.29f, 0.14f);
-        // Grain: streaks that run along the plank and wander a little.
-        float wander = Mathf.Sin(x * 0.11f + plank * 2.3f) * 1.2f;
-        float streak = H(Mathf.FloorToInt(x / 10f), Mathf.FloorToInt(py + wander), 17 + plank);
-        Color c = Color.Lerp(baseB, baseA, 0.35f + streak * 0.5f) * tone;
-        if (H(x / 3, py, 5 + plank) > 0.86f) c *= 0.82f;                       // a few dark fibres
-        // A knot with growth rings.
-        int kx = 14 + plank * 13 % 36, ky = plankH / 2;
-        float kd = Mathf.Sqrt((x - kx - plank * 9) * (x - kx - plank * 9) * 0.35f + (py - ky) * (py - ky));
-        if (plank % 2 == 0 && kd < 4.6f) c = Color.Lerp(baseB * 0.55f, baseA * 0.8f, Mathf.Abs(Mathf.Sin(kd * 1.7f)));
-        // Plank edges: a dark seam above, a light lip below it.
-        if (py == 0) c = baseB * 0.38f;
-        else if (py == 1) c *= 1.18f;
-        else if (py == plankH - 1) c *= 0.8f;
-        // Nails near both ends.
-        if ((x == 4 || x == 59) && py == 7) c = new Color(0.16f, 0.14f, 0.13f);
-        if ((x == 3 || x == 58) && py == 6) c = new Color(0.78f, 0.7f, 0.58f);
+        // Ridges wander sideways as they go down; each has its own tone.
+        float wob = Mathf.Sin(y * 0.09f + x * 0.03f) * 2.2f + (H(x / 12, y / 16, 71) - 0.5f) * 3f;
+        float fx = (x + wob) / 5.5f;
+        int ridge = Mathf.FloorToInt(fx);
+        float across = fx - ridge;                          // 0..1 across the ridge
+        float tone = 0.75f + H(ridge, 2, 73) * 0.4f;
+        Color bark = new Color(0.4f, 0.27f, 0.16f);
+        Color c = bark * tone;
+        // Relief: lit on the left of each ridge, dark in the groove between two.
+        c *= across < 0.2f ? 0.55f : across < 0.45f ? 1.18f : across > 0.85f ? 0.7f : 1f;
+        // Splits across the ridges and darker patches along them.
+        int seg = y / 11;
+        if (H(ridge, seg, 75) > 0.82f && y % 11 < 2) c *= 0.5f;
+        c *= 0.88f + H(x, y / 2, 77) * 0.2f;
+        // Pale flecks where the bark has flaked, and moss on the shadier side.
+        if (H(x, y, 79) > 0.972f) c = Color.Lerp(c, new Color(0.72f, 0.58f, 0.4f), 0.8f);
+        float moss = H(x / 6, y / 6, 81) * 0.55f + H(x / 3, y / 3, 83) * 0.45f;
+        if (moss > 0.66f && H(x, y, 85) > 0.35f) c = Color.Lerp(c, new Color(0.34f, 0.46f, 0.2f) * (0.8f + H(x, y, 87) * 0.4f), 0.75f);
         return c;
     }
 
@@ -85,27 +83,97 @@ public static class PixelBlockTextures
         return c;
     }
 
-    // ---- Stone: rows of chiselled blocks in three greys, mortar lines, lit top-left edges and chips ----
+    // ---- Stone: natural rock - irregular fracture planes (a jittered Voronoi), mineral flecks and lichen ----
     private static Color StonePixel(int x, int y)
     {
-        const int rowH = 16;
-        int row = y / rowH, py = y % rowH;
-        int shifted = x + (row % 2) * 16;
-        int col = shifted / 32, px = shifted % 32;
-        float tone = 0.72f + H(col, row, 51) * 0.3f;
-        Color baseGrey = new Color(0.56f, 0.57f, 0.6f);
+        const float cell = 21f;
+        float gx = x / cell, gy = y / cell;
+        int cx = Mathf.FloorToInt(gx), cy = Mathf.FloorToInt(gy);
+        float d1 = 9f, d2 = 9f;
+        int id = 0;
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = cx + ox, iy = cy + oy;
+                float px = ix + 0.15f + H(ix, iy, 91) * 0.7f, py = iy + 0.15f + H(ix, iy, 93) * 0.7f;
+                float d = Mathf.Sqrt((gx - px) * (gx - px) + (gy - py) * (gy - py));
+                if (d < d1) { d2 = d1; d1 = d; id = ix * 31 + iy * 17; }
+                else if (d < d2) d2 = d;
+            }
+        float tone = 0.68f + H(id, 5, 95) * 0.4f;                                    // each fracture plane its own grey
+        Color baseGrey = Color.Lerp(new Color(0.5f, 0.5f, 0.52f), new Color(0.58f, 0.55f, 0.5f), H(id, 9, 97));
         Color c = baseGrey * tone;
-        // Speckle and darker veins.
-        float r = H(x, y, 7);
-        if (r > 0.93f) c *= 1.15f;
-        else if (r < 0.07f) c *= 0.8f;
-        c *= 0.94f + H(x / 3, y / 3, 9) * 0.12f;
-        // A chip knocked out of some blocks.
-        if (H(col, row, 61) > 0.7f && px > 18 && px < 27 && py > 3 && py < 8 && (px + py) % 5 != 0) c *= 0.72f;
-        // Mortar around every block, a bright bevel on the top / left edge and a dark one on the bottom / right.
-        if (py == 0 || px == 0) c = new Color(0.2f, 0.2f, 0.22f);
-        else if (py == 1 || px == 1) c *= 1.28f;
-        else if (py == rowH - 1 || px == 31) c *= 0.7f;
+        c *= 0.9f + H(x / 2, y / 2, 99) * 0.2f + (H(x / 8, y / 8, 101) - 0.5f) * 0.18f;   // weathered mottling
+        float edge = (d2 - d1) * cell;                                                    // distance to the nearest fracture, in px
+        if (edge < 1.2f) c *= 0.38f;                                                      // the crack itself
+        else if (edge < 2.6f) c *= 0.82f;                                                 // darker where the planes meet
+        // Mineral flecks and pits.
+        float r = H(x, y, 103);
+        if (r > 0.975f) c = Color.Lerp(c, new Color(0.9f, 0.9f, 0.86f), 0.8f);
+        else if (r < 0.025f) c *= 0.55f;
+        // Lichen: yellow-green speckle in patches.
+        float patch = H(x / 7, y / 7, 105) * 0.6f + H(x / 3, y / 3, 107) * 0.4f;
+        if (patch > 0.7f && H(x, y, 109) > 0.45f) c = Color.Lerp(c, new Color(0.62f, 0.66f, 0.3f), 0.6f);
         return c;
+    }
+
+    // ---- Seed pod: a glossy, ridged husk with dimples; cracks spread as it is dug open and a green light leaks out of them ----
+    private static readonly System.Collections.Generic.Dictionary<int, Texture2D> seeds = new System.Collections.Generic.Dictionary<int, Texture2D>();
+
+    public static Texture2D SeedShell(int level, int maxLevel)
+    {
+        maxLevel = Mathf.Max(1, maxLevel);
+        level = Mathf.Clamp(level, 0, maxLevel);
+        int key = level * 100 + maxLevel;
+        if (seeds.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+        float k = level / (float)maxLevel;                       // 0 whole .. 1 about to crack open
+        // Crack branches: wandering polylines out of the middle, built once.
+        const int branches = 6, steps = 12;
+        Vector2[][] pts = new Vector2[branches][];
+        for (int b = 0; b < branches; b++)
+        {
+            pts[b] = new Vector2[steps + 1];
+            Vector2 p = new Vector2(0.5f, 0.5f);
+            float angle = b * 6.2832f / branches + (H(b, 1, 111) - 0.5f) * 0.8f;
+            pts[b][0] = p;
+            for (int s = 1; s <= steps; s++)
+            {
+                angle += (H(b, s, 113) - 0.5f) * 0.9f;
+                p += new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 0.055f;
+                pts[b][s] = p;
+            }
+        }
+        int reach = Mathf.RoundToInt(k * steps);                  // how many segments of each branch exist so far
+
+        Texture2D tex = Make("Seed Shell " + level, (x, y) =>
+        {
+            // The husk: long vertical ridges with a lit edge and a dark groove, a pale seam round the middle and little dimples.
+            float u = x / (float)N, v = y / (float)N;
+            float ridge = Mathf.Abs(Mathf.Sin(u * 6.2832f * 6f + Mathf.Sin(v * 6.2832f) * 0.8f));
+            Color c = Color.Lerp(new Color(0.26f, 0.15f, 0.07f), new Color(0.58f, 0.36f, 0.16f), Mathf.Pow(ridge, 0.6f));
+            c *= 0.9f + H(x / 2, y / 2, 121) * 0.2f;
+            if (ridge > 0.9f) c = Color.Lerp(c, new Color(0.85f, 0.62f, 0.34f), 0.45f);         // a glossy highlight along each ridge
+            if (Mathf.Abs(v - 0.5f) < 0.018f) c = new Color(0.78f, 0.66f, 0.46f);                // the seam
+            if (H(x / 4, y / 4, 123) > 0.93f) c *= 0.7f;                                         // dimples
+            // Cracks with a green glow that grows as they open.
+            if (level > 0)
+            {
+                float best = 9f;
+                for (int b = 0; b < branches; b++)
+                    for (int s = 0; s < reach && s < steps; s++)
+                    {
+                        Vector2 a = pts[b][s], d = pts[b][s + 1] - a, q = new Vector2(u, v) - a;
+                        float t = Mathf.Clamp01(Vector2.Dot(q, d) / d.sqrMagnitude);
+                        best = Mathf.Min(best, (q - d * t).magnitude);
+                    }
+                float w = 0.011f + 0.007f * k;
+                if (best < w) c = new Color(0.05f, 0.07f, 0.02f) + new Color(0.4f, 0.85f, 0.2f) * (0.25f + k * 0.55f);
+                else if (best < w + 0.035f) c = Color.Lerp(c, new Color(0.45f, 0.95f, 0.3f), (1f - (best - w) / 0.035f) * (0.25f + k * 0.45f));
+            }
+            return c;
+        });
+        seeds[key] = tex;
+        return tex;
     }
 }

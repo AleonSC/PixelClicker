@@ -356,6 +356,7 @@ public class PixelEgg : MonoBehaviour
     {
         int n = Mathf.Max(2, divisions);
         List<Vector3> verts = new List<Vector3>(), normals = new List<Vector3>();
+        List<Vector2> uvs = new List<Vector2>();   // each face maps the whole texture (so a drawn surface wraps the rounded block)
         List<int> tris = new List<int>();
         float inner = 1f - radius * 2f;   // half-extent of the flat part, in the [-1, 1] cube
         for (int axis = 0; axis < 3; axis++)
@@ -375,6 +376,7 @@ public class PixelEgg : MonoBehaviour
                         Vector3 normal = d.sqrMagnitude > 1e-8f ? d.normalized : p.normalized;
                         verts.Add((core + normal * (radius * 2f)) * 0.5f);
                         normals.Add(normal);
+                        uvs.Add(new Vector2(i / (float)n, j / (float)n));
                     }
                 for (int j = 0; j < n; j++)
                     for (int i = 0; i < n; i++)
@@ -387,6 +389,7 @@ public class PixelEgg : MonoBehaviour
         Mesh mesh = new Mesh { name = "Rounded Cube" };
         mesh.SetVertices(verts);
         mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateBounds();
         return mesh;

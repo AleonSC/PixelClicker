@@ -766,8 +766,12 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private int seedSproutCap = 36;
 
     [Min(0)]
-    [Tooltip("How many seeds (sprouts) a cracked Seed shell drops. 0 = the coded default (3).")]
-    [SerializeField] private int seedsPerShell = 0;
+    [Tooltip("The fewest seedlings a cracked Seed shell plants. 0 = the coded default (1).")]
+    [SerializeField] private int seedlingsMin = 0;
+
+    [Min(0)]
+    [Tooltip("The most seedlings a cracked Seed shell plants (a random number between the two). 0 = the coded default (5).")]
+    [SerializeField] private int seedlingsMax = 0;
 
     [Min(0f)]
     [Tooltip("Each seed has its own despawn timer: seconds from the moment it drops until it withers away if it hasn't popped its pixel yet. 0 = the coded default (45). The pixel it grows is an ordinary old pixel with its own normal despawn timer.")]
@@ -1550,6 +1554,22 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 40;
         }
 
+        if (looksVersion < 41)
+        {
+            // Wood and Stone look more natural (bark, fractured rock) and the Seed became a ridged seed pod.
+            System.Collections.Generic.List<PixelLook> list41 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults41 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Wood, PixelType.Rock, PixelType.Seed })
+            {
+                PixelLook def = PixelLooks.Find(defaults41, t);
+                if (def == null) continue;
+                int at = list41.FindIndex(l => l != null && l.type == t);
+                if (at >= 0) list41[at] = def; else list41.Add(def);
+            }
+            looks = list41.ToArray();
+            looksVersion = 41;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1849,7 +1869,7 @@ public class PixelClicker : MonoBehaviour
             if (richBreak) { liveRich = false; if (richGlitter != null) { Destroy(richGlitter); richGlitter = null; } }
         }
         if (tier.vacuum && VacuumThisClick(tierIndex)) Vacuum(tierIndex); // before this pixel's own old copy spawns, so it isn't sucked up too
-        if (tier.type == PixelType.Seed) { SeedDigEffect(1f); for (int s = 0, n = seedsPerShell > 0 ? seedsPerShell : 3; s < n; s++) SpawnSeedSprout(); } // the shell cracked: several seeds (sprouts) come out instead of an old pixel
+        if (tier.type == PixelType.Seed) { SeedDigEffect(1f); for (int s = 0, n = UnityEngine.Random.Range(Mathf.Max(1, seedlingsMin), Mathf.Max(Mathf.Max(1, seedlingsMin), seedlingsMax > 0 ? seedlingsMax : 5) + 1); s < n; s++) SpawnSeedSprout(); } // the shell cracked: 1-5 seedlings (they grow plant pixels) come out instead of an old pixel
         else if (spawnFallingCopy) SpawnFallingCopy(tierIndex, amount);
 
         // Roll the next pixel AFTER the click so a freshly unlocked tier can appear immediately.
@@ -2537,6 +2557,28 @@ public class PixelClicker : MonoBehaviour
     /// <summary>The edge length of an old pixel in world units.</summary>
     public float OldPixelWorldSize => PixelBaseSize * oldPixelScale;
 
+    /// <summary>The 'plant' pixels: what the seedlings of a cracked Seed shell grow (Wheat, Pollen, Golden Fruit and Wood).</summary>
+    public static bool IsPlant(PixelType type) => type == PixelType.Wheat || type == PixelType.Pollen || type == PixelType.GoldenFruit || type == PixelType.Wood;
+
+    /// <summary>A random unlocked plant pixel (by spawn weight, so Golden Fruit stays rare); falls back to any growable type when no plant is unlocked yet. -1 if none.</summary>
+    public int RandomPlantPixelTier()
+    {
+        float total = 0f;
+        for (int i = 0; i < tiers.Length; i++)
+            if (tiers[i].unlocked && IsPlant(tiers[i].type)) total += Mathf.Max(0.01f, tiers[i].spawnWeight);
+        if (total <= 0f) return RandomSeedPixelTier();
+        float pick = UnityEngine.Random.value * total;
+        int last = -1;
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            if (!tiers[i].unlocked || !IsPlant(tiers[i].type)) continue;
+            last = i;
+            pick -= Mathf.Max(0.01f, tiers[i].spawnWeight);
+            if (pick <= 0f) return i;
+        }
+        return last;
+    }
+
     /// <summary>A random pixel type a Seed sprout can grow: unlocked, not a rare drop, not a fly-away type, not a Seed itself and never a Vacuum or Singularity pixel (those can still be planted from bought seeds). -1 if none.</summary>
     public int RandomSeedPixelTier()
     {
@@ -2751,6 +2793,7 @@ public class PixelClicker : MonoBehaviour
         sprout.Setup(this, unit, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
         sprout.SetGhost(popNoCollisionSeconds + 0.15f);
         sprout.SetLifetime(seedSproutLifetime > 0f ? seedSproutLifetime : 45f);
+        sprout.PlantsOnly();   // a cracked shell's seedlings grow plant pixels only
     }
 
     private void AnimatePixel()
@@ -2938,7 +2981,8 @@ public class PixelClicker : MonoBehaviour
     {
         if (look == null || !look.HasSurfaceTexture) return;
         bool onlyBasic = look.blockSurface == PixelLook.BlockSurface.None && !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture && !look.meteorTexture && !look.sunTexture;
-        Texture2D tex = look.blockSurface != PixelLook.BlockSurface.None ? PixelBlockTextures.Get(look.blockSurface)
+        Texture2D tex = look.blockSurface == PixelLook.BlockSurface.Seed ? PixelBlockTextures.SeedShell(look.damageCracks ? level : 0, max)
+                      : look.blockSurface != PixelLook.BlockSurface.None ? PixelBlockTextures.Get(look.blockSurface)
                       : onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
                       : look.meteorTexture ? PixelStarTextures.Meteor(look.damageCracks ? level : 0, max)
                       : look.sunTexture ? PixelStarTextures.Sun()
