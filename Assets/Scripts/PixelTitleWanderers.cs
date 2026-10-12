@@ -170,10 +170,11 @@ public class PixelTitleWanderers : MonoBehaviour
         GameObject fill = new GameObject("Tick", typeof(RectTransform), typeof(Image));
         fill.transform.SetParent(box.transform, false);
         toggle.tick = fill.GetComponent<Image>();
+        toggle.tick.sprite = PixelUIKit.TickSprite();
         toggle.tick.color = new Color(0.35f, 0.85f, 0.5f, 1f);
         toggle.tick.raycastTarget = false;
         RectTransform fr = fill.GetComponent<RectTransform>();
-        fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one; fr.offsetMin = new Vector2(6f, 6f); fr.offsetMax = new Vector2(-6f, -6f);
+        fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one; fr.offsetMin = new Vector2(3f, 3f); fr.offsetMax = new Vector2(-3f, -3f);
 
         TMP_Text label = PixelUIKit.CreateText(font, t.transform, "Label", text, 26f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
         PixelUIKit.Caps(label);

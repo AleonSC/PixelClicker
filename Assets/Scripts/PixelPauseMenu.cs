@@ -1306,13 +1306,14 @@ public class PixelPauseMenu : MonoBehaviour
 
         GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
         tick.transform.SetParent(box.transform, false);
+        tick.GetComponent<Image>().sprite = PixelUIKit.TickSprite();
         tick.GetComponent<Image>().color = tickColor;
         tick.GetComponent<Image>().raycastTarget = false;
         RectTransform tkr = tick.GetComponent<RectTransform>();
         tkr.anchorMin = Vector2.zero;
         tkr.anchorMax = Vector2.one;
-        tkr.offsetMin = new Vector2(tickBoxSize * 0.2f, tickBoxSize * 0.2f);
-        tkr.offsetMax = new Vector2(-tickBoxSize * 0.2f, -tickBoxSize * 0.2f);
+        tkr.offsetMin = new Vector2(tickBoxSize * 0.1f, tickBoxSize * 0.1f);
+        tkr.offsetMax = new Vector2(-tickBoxSize * 0.1f, -tickBoxSize * 0.1f);
 
         Toggle toggle = box.GetComponent<Toggle>();
         toggle.targetGraphic = bg;

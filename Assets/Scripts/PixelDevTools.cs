@@ -1283,12 +1283,13 @@ public class PixelDevTools : MonoBehaviour
         GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
         tick.transform.SetParent(boxGo.transform, false);
         Image tickImage = tick.GetComponent<Image>();
+        tickImage.sprite = PixelUIKit.TickSprite();
         tickImage.color = tickColor;
         tickImage.raycastTarget = false;
         RectTransform kr = tick.GetComponent<RectTransform>();
         PixelUIKit.Stretch(kr);
-        kr.offsetMin = new Vector2(rowHeight * 0.2f, rowHeight * 0.2f);
-        kr.offsetMax = new Vector2(-rowHeight * 0.2f, -rowHeight * 0.2f);
+        kr.offsetMin = new Vector2(rowHeight * 0.1f, rowHeight * 0.1f);
+        kr.offsetMax = new Vector2(-rowHeight * 0.1f, -rowHeight * 0.1f);
 
         Toggle toggle = boxGo.GetComponent<Toggle>();
         toggle.targetGraphic = bg;

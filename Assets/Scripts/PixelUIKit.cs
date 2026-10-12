@@ -408,6 +408,43 @@ public static class PixelUIKit
         return closeCross;
     }
 
+    private static Sprite tickMark;
+
+    /// <summary>A white, smooth-edged check mark with rounded ends (drawn once in code) for the fill of tick boxes.</summary>
+    public static Sprite TickSprite()
+    {
+        if (tickMark != null) return tickMark;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Tick Mark", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        Vector2 a = new Vector2(0.14f, 0.52f), b = new Vector2(0.40f, 0.24f), c = new Vector2(0.86f, 0.78f);
+        const float half = 0.085f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cover = 0f;
+                for (int sy = 0; sy < 4; sy++)
+                    for (int sx = 0; sx < 4; sx++)
+                    {
+                        Vector2 p = new Vector2((x + (sx + 0.5f) / 4f) / n, (y + (sy + 0.5f) / 4f) / n);
+                        if (Mathf.Min(SegDist(p, a, b), SegDist(p, b, c)) <= half) cover += 1f / 16f;
+                    }
+                px[y * n + x] = new Color(1f, 1f, 1f, cover);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        tickMark = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        tickMark.name = "Tick Mark";
+        return tickMark;
+    }
+
+    private static float SegDist(Vector2 p, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+        return (p - (a + ab * t)).magnitude;
+    }
+
     /// <summary>Swaps a button's text for a drawn triangle pointing right (the down triangle turned a quarter), tinted with 'color'.</summary>
     public static void UseRightTriangle(GameObject button, TMP_Text label, Color color, Vector2 buttonSize)
     {
