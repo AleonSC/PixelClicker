@@ -1488,7 +1488,6 @@ public class PixelUI : MonoBehaviour
         if (t >= PixelClicker.PixelType.White && t <= PixelClicker.PixelType.Blue) return "pure";
         PixelSkills skills = PixelSkills.Instance;
         PixelSkills.SkillPack pack = skills != null ? skills.PackOfType(t) : null;
-        if (pack == null && t == PixelClicker.PixelType.Wood && skills != null) pack = skills.Find(PixelSkills.FarmingId);   // wood is grown by the Farming skill
         if (pack != null && pack.id != PixelSkills.StandardId)
         {
             title = "Composite: " + pack.displayName;

@@ -990,6 +990,30 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        // The Wood Pixel pack becomes the Woodcutter's Pack (Woodcutting skill): six wood blocks and a hazard.
+        if (packDataVersion < 17)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Wood) || Rewards(pack, PixelClicker.PixelType.Dirt)) continue;
+                    ShopPack def = CreateWoodPixelPack();
+                    pack.displayName = def.displayName;
+                    pack.description = def.description;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
+                    foreach (PixelClicker.PixelTier t in def.rewardTiers)
+                        if (!list.Exists(x => x.type == t.type)) list.Add(t);
+                    foreach (PixelClicker.PixelTier t in list)
+                        if (t.type == PixelClicker.PixelType.Wood && t.clicksToCollect <= 1) { t.clicksToCollect = 2; t.amountPerClick = 3; t.spawnWeight = 1f; }
+                    pack.rewardTiers = list.ToArray();
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                    if (t.type == PixelClicker.PixelType.Wood && t.clicksToCollect <= 1) { t.clicksToCollect = 2; t.amountPerClick = 3; t.spawnWeight = 1f; }
+            packDataVersion = Mathf.Max(packDataVersion, 17);
+            changed = true;
+        }
+
         return changed;
     }
 

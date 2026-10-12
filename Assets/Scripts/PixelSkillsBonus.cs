@@ -57,6 +57,7 @@ public partial class PixelSkills
         {
             case MiningId: return PixelClicker.IsOre(type);
             case FarmingId: return PixelClicker.IsPlant(type);
+            case WoodcuttingId: return PixelClicker.IsWoodBlock(type) && type != PixelClicker.PixelType.Twig;
             case ElectricianId: return PixelClicker.IsConductorType(type);
             default: return false;
         }

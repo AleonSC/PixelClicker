@@ -48,6 +48,20 @@ public static class PixelFarmFx
                 s.sizeOverLife = new Vector2(1f, 0f); s.maxParticles = 80;
                 s.overLife = PixelFx.FadeGradient(Color.white, new Color(1f, 0.9f, 0.4f), new Color(1f, 0.65f, 0.1f), 1f);
                 break;
+            case PixelLook.FarmAmbient.Leaves:
+                s.lifetime = new Vector2(1.2f, 2f); s.speed = new Vector2(0.03f, 0.14f) * unit; s.size = new Vector2(0.07f, 0.13f) * unit;
+                s.gravity = 0.25f; s.colorA = new Color(0.5f, 0.88f, 0.35f, 1f); s.colorB = new Color(0.25f, 0.62f, 0.2f, 1f); s.rate = 6f;
+                break;
+            case PixelLook.FarmAmbient.Sap:
+                s.lifetime = new Vector2(0.7f, 1.1f); s.speed = new Vector2(0.01f, 0.08f) * unit; s.size = new Vector2(0.05f, 0.1f) * unit;
+                s.gravity = 0.9f; s.colorA = new Color(1f, 0.78f, 0.25f, 0.95f); s.colorB = new Color(0.9f, 0.55f, 0.1f, 0.95f); s.rate = 4f;
+                break;
+            case PixelLook.FarmAmbient.Hornets:
+                // Yellow and dark specks buzzing round the nest.
+                s.lifetime = new Vector2(0.5f, 1f); s.speed = new Vector2(0.6f, 1.5f) * unit; s.size = new Vector2(0.05f, 0.09f) * unit;
+                s.gravity = 0f; s.colorA = new Color(1f, 0.85f, 0.15f, 1f); s.colorB = new Color(0.12f, 0.1f, 0.05f, 1f); s.rate = 12f;
+                boxScale = size * 1.4f;
+                break;
             case PixelLook.FarmAmbient.Bugs:
                 // Tiny dark specks scurrying about along the bottom of the cube.
                 s.lifetime = new Vector2(0.5f, 1f); s.speed = new Vector2(0.3f, 0.8f) * unit; s.size = new Vector2(0.05f, 0.09f) * unit;
@@ -80,7 +94,7 @@ public static class PixelFarmFx
             gravity = 2.2f, colorA = color, colorB = Color.Lerp(color, Color.black, 0.4f), burst = Mathf.RoundToInt(Mathf.Lerp(4f, 9f, progress)),
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.5f, randomDirection = 0.1f, maxParticles = 20,
         }).Play();
-        PixelAudio.Play("farm_hit");
+        PixelAudio.Play(PixelClicker.IsWoodBlock(type) ? "wood_chop" : "farm_hit");
     }
 
     /// <summary>The burst when a farm block breaks: a mix of bits, puffs and glints that suits the block.</summary>
@@ -126,6 +140,31 @@ public static class PixelFarmFx
             case PixelClicker.PixelType.Weevil:
                 Burst("Legs", new Vector2(0.5f, 0.9f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.1f), 2.2f, new Color(0.15f, 0.1f, 0.07f), new Color(0.32f, 0.22f, 0.12f), 24, 0.5f, false).Play();
                 Burst("Splat", new Vector2(0.6f, 1.1f), new Vector2(0.4f, 1.6f), new Vector2(0.12f, 0.26f), 0.4f, new Color(0.7f, 0.75f, 0.25f, 0.8f), new Color(0.5f, 0.55f, 0.15f, 0.7f), 8, 0.5f, true, new Vector2(1f, 1.4f)).Play();
+                break;
+            case PixelClicker.PixelType.Wood:
+            case PixelClicker.PixelType.Twig:
+                Burst("Chips", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.06f, 0.14f), 2.6f, new Color(0.7f, 0.5f, 0.3f), new Color(0.45f, 0.3f, 0.16f), 26, 0.5f, false).Play();
+                Burst("Splinters", new Vector2(0.5f, 0.9f), new Vector2(1.8f, 4.4f), new Vector2(0.03f, 0.06f), 2.2f, new Color(0.9f, 0.75f, 0.5f), new Color(0.7f, 0.5f, 0.3f), 14, 0.5f, false).Play();
+                break;
+            case PixelClicker.PixelType.Bark:
+                Burst("Shards", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3.2f), new Vector2(0.07f, 0.16f), 2.8f, new Color(0.45f, 0.33f, 0.24f), new Color(0.3f, 0.2f, 0.14f), 24, 0.5f, false).Play();
+                Burst("Dust", new Vector2(0.9f, 1.4f), new Vector2(0.2f, 0.9f), new Vector2(0.2f, 0.4f), -0.04f, new Color(0.55f, 0.45f, 0.35f, 0.5f), new Color(0.45f, 0.36f, 0.28f, 0.4f), 8, 0.5f, true, new Vector2(0.6f, 1.5f)).Play();
+                break;
+            case PixelClicker.PixelType.Sap:
+                Burst("Drops", new Vector2(0.6f, 1.2f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 2f, new Color(1f, 0.8f, 0.3f), new Color(0.9f, 0.55f, 0.1f), 24, 0.45f, false, new Vector2(1f, 0.5f)).Play();
+                PixelFxRing.Spawn(centre, new Color(1f, 0.75f, 0.25f, 0.7f), size * 0.4f, size * 2f, 0.5f, 0f);
+                break;
+            case PixelClicker.PixelType.Leaf:
+                Burst("Leaves", new Vector2(1.2f, 2.2f), new Vector2(0.8f, 2.4f), new Vector2(0.08f, 0.16f), 0.3f, new Color(0.55f, 0.9f, 0.35f), new Color(0.25f, 0.62f, 0.2f), 22, 0.5f, false).Play();
+                break;
+            case PixelClicker.PixelType.Heartwood:
+                Burst("Glints", new Vector2(0.9f, 1.7f), new Vector2(1f, 3.8f), new Vector2(0.06f, 0.14f), -0.1f, new Color(1f, 0.85f, 0.6f), new Color(1f, 0.5f, 0.3f), 44, 0.55f, true, new Vector2(1f, 0f)).Play();
+                Burst("Chips", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.07f, 0.15f), 2.4f, new Color(0.85f, 0.45f, 0.32f), new Color(0.55f, 0.25f, 0.18f), 22, 0.5f, false).Play();
+                PixelFxRing.Spawn(centre, new Color(1f, 0.6f, 0.4f, 0.85f), size * 0.4f, size * 3f, 0.6f, 2f);
+                break;
+            case PixelClicker.PixelType.HornetNest:
+                Burst("Hornets", new Vector2(0.8f, 1.5f), new Vector2(1.5f, 4.2f), new Vector2(0.06f, 0.11f), 0f, new Color(1f, 0.85f, 0.15f), new Color(0.12f, 0.1f, 0.05f), 40, 0.5f, false).Play();
+                Burst("Paper", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 1.6f, new Color(0.9f, 0.84f, 0.6f), new Color(0.7f, 0.62f, 0.4f), 18, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.GoldenFruit:
                 Burst("Glints", new Vector2(0.9f, 1.8f), new Vector2(1f, 4.2f), new Vector2(0.06f, 0.15f), -0.1f, new Color(1f, 0.98f, 0.7f), new Color(1f, 0.78f, 0.2f), 60, 0.6f, true, new Vector2(1f, 0f)).Play();

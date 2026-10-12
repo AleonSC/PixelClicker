@@ -247,6 +247,7 @@ public class PixelAudio : MonoBehaviour
             Make("ufo_beam", 0.3f, 1f, 1f),
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
+            Make("wood_chop", 0.04f, 0.9f, 1.15f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
             Make("traffic_start", 0.2f, 1f, 1f),
             Make("traffic_green", 0.2f, 1f, 1f),
@@ -316,6 +317,14 @@ public class PixelAudio : MonoBehaviour
             case "pixel_bulb": return new[] { PixelSynth.Elec(6, 1), PixelSynth.Elec(6, 2), PixelSynth.Elec(6, 3) };
             case "pixel_capacitor": return new[] { PixelSynth.Elec(2, 1), PixelSynth.Elec(2, 2) };
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
+            case "wood_chop": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
+            case "pixel_wood": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
+            case "pixel_bark": return new[] { PixelSynth.Wood(1, 1), PixelSynth.Wood(1, 2), PixelSynth.Wood(1, 3) };
+            case "pixel_sap": return new[] { PixelSynth.Wood(2, 1), PixelSynth.Wood(2, 2), PixelSynth.Wood(2, 3) };
+            case "pixel_leaf": return new[] { PixelSynth.Wood(3, 1), PixelSynth.Wood(3, 2), PixelSynth.Wood(3, 3) };
+            case "pixel_heartwood": return new[] { PixelSynth.Wood(4, 1), PixelSynth.Wood(4, 2) };
+            case "pixel_twig": return new[] { PixelSynth.Wood(5, 1), PixelSynth.Wood(5, 2), PixelSynth.Wood(5, 3) };
+            case "pixel_hornetnest": return new[] { PixelSynth.Wood(6, 1), PixelSynth.Wood(6, 2) };
             case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
             case "farm_gleam": return new[] { PixelSynth.Farm(9, 1) };
             case "traffic_start": return new[] { PixelTrafficSynth.Start() };
@@ -1000,6 +1009,63 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
         AudioClip clip = AudioClip.Create("Crunch " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>Woodcutting sounds. kind: 0 chop, 1 bark crack, 2 sap squelch, 3 leaf rustle, 4 heartwood knock + ring, 5 twig snap, 6 hornet buzz.</summary>
+    public static AudioClip Wood(int kind, int seed)
+    {
+        const int rate = 22050;
+        float len = kind == 4 ? 0.5f : kind == 6 ? 0.45f : 0.22f;
+        int n = (int)(rate * len);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(2100 + kind * 97 + seed * 19);
+        float lp = 0f, lp2 = 0f, phase = 0f;
+        float knockHz = 150f + seed * 22f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            float v = 0f;
+            switch (kind)
+            {
+                case 0: // a woody chop: a low thock with a short crack on top
+                    lp += (noise - lp) * 0.25f;
+                    v = Mathf.Sin(t * knockHz * Mathf.PI * 2f) * Mathf.Exp(-t * 28f) + lp * Mathf.Exp(-t * 55f) * 0.9f;
+                    break;
+                case 1: // bark: a dry crackle
+                    v = (rng.NextDouble() < 0.18 ? noise : 0f) * Mathf.Exp(-t * 16f) + Mathf.Sin(t * 110f * Mathf.PI * 2f) * Mathf.Exp(-t * 30f) * 0.6f;
+                    break;
+                case 2: // sap: a wet squelch
+                    lp += (noise - lp) * 0.15f;
+                    v = lp * Mathf.Exp(-t * 14f) + Mathf.Sin(t * (170f + 120f * Mathf.Sin(t * 26f)) * Mathf.PI * 2f) * Mathf.Exp(-t * 15f) * 0.7f;
+                    break;
+                case 3: // leaf: a soft rustle
+                    lp += (noise - lp) * 0.5f;
+                    v = (noise - lp) * Mathf.Sin(Mathf.Clamp01(t / 0.2f) * Mathf.PI) * 0.55f;
+                    break;
+                case 4: // heartwood: a deep knock with a ringing tail
+                    phase += (210f + seed * 18f) / rate;
+                    v = Mathf.Sin(t * 95f * Mathf.PI * 2f) * Mathf.Exp(-t * 14f) + Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-t * 6f) * 0.5f;
+                    break;
+                case 5: // twig: a sharp snap
+                    lp += (noise - lp) * 0.6f;
+                    v = (noise - lp) * Mathf.Exp(-t * 70f) + Mathf.Sin(t * (1800f + seed * 220f) * Mathf.PI * 2f) * Mathf.Exp(-t * 90f) * 0.4f;
+                    break;
+                default: // hornets: an angry buzz
+                    phase += (230f + 40f * Mathf.Sin(t * 40f)) / rate;
+                    lp += (noise - lp) * 0.3f;
+                    v = (Mathf.Sin(phase * Mathf.PI * 2f) * 0.6f + Mathf.Sign(Mathf.Sin(phase * Mathf.PI * 2f)) * 0.2f + lp * 0.25f) * Mathf.Exp(-t * 5f) * (0.7f + 0.3f * Mathf.Sin(t * 90f));
+                    break;
+            }
+            lp2 += (v - lp2) * 0.7f;
+            data[i] = lp2 * Mathf.Clamp01(t / 0.003f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("Wood " + kind + "_" + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

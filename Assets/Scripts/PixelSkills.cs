@@ -98,6 +98,7 @@ public partial class PixelSkills : MonoBehaviour
     public const string StandardId = "standard";
     private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. While you train another skill it still gains a tiny 5% of the XP.";
     public const string MiningId = "mining";
+    public const string WoodcuttingId = "woodcutting";
     public const string OfflineId = "offline";
     public const string FarmingId = "farming";
     public const string ElectricianId = "electrician";
@@ -147,7 +148,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (shop == null) shop = PixelFind.First<PixelShop>();
                 if (shop == null || !shop.IsSkillPackBought(ElectricianId)) continue;   // bought: every one of its pixels is unlocked
             }
-            else if ((p.id != FarmingId && p.id != MiningId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
+            else if ((p.id != FarmingId && p.id != MiningId && p.id != WoodcuttingId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
             foreach (PixelClicker.PixelType t in p.types)
             {
                 int i = clicker.IndexOf(t);
@@ -187,6 +188,25 @@ public partial class PixelSkills : MonoBehaviour
                 baseXp = 80f, xpGrowth = 1.5f, perks = StandardPerks(),
                 description = StandardDescription,
                 replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "Every pixel you collect (5% while another skill is trained)",
+            });
+        if (!packs.Exists(p => p.id == WoodcuttingId))
+            packs.Insert(Mathf.Min(packs.Count, 1), new SkillPack
+            {
+                id = WoodcuttingId, displayName = "Woodcutting", accent = new Color(0.62f, 0.42f, 0.24f),
+                description = "Swap the basic cubes for six wood blocks: wood, bark, sap, leaves, rare heartwood and twigs. Twig is a useless filler block that is most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more. Watch out for the hornet nest. Chop blocks for woodcutting XP: the simple first skill.",
+                replaces = "Monochrome, RGB", spawns = "Twig, Wood, Bark, Sap, Leaf, Heartwood",
+                xpFrom = "Collecting wood blocks",
+                unlockHint = "Buy the Woodcutter's Pack in the Shop",
+                baseXp = 60f, xpGrowth = 1.45f,
+                types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
+                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest },
+                fillerType = "Twig", hazardType = "HornetNest",
+                perks = new[]
+                {
+                    new Perk { level = 2, text = "Sharp axe: wood blocks take a little less effort" },
+                    new Perk { level = 4, text = "Sap collector: sap shows up more often" },
+                    new Perk { level = 6, text = "Heart of the forest: heartwood shows up more often" },
+                },
             });
         if (!packs.Exists(p => p.id == MiningId))
             packs.Add(new SkillPack
@@ -288,7 +308,18 @@ public partial class PixelSkills : MonoBehaviour
                     if (!farm.Contains(t)) farm.Add(t);
                 pack.types = farm.ToArray();
             }
-            // Hazard blocks: Farming's Pest and Mining's Gas Pocket (part of their packs' pixel lists).
+            // Hazard blocks: Farming's Pest, Mining's Gas Pocket and Woodcutting's Hornet Nest (part of their packs' pixel lists).
+            if (pack.id == WoodcuttingId)
+            {
+                // A saved Woodcutting pack could lack a block: make sure every one is in the rotation.
+                System.Collections.Generic.List<PixelClicker.PixelType> wood = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
+                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
+                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest })
+                    if (!wood.Contains(t)) wood.Add(t);
+                pack.types = wood.ToArray();
+                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();
+                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.HornetNest.ToString();
+            }
             if (pack.id == MiningId || pack.id == FarmingId)
             {
                 PixelClicker.PixelType hazard = pack.id == MiningId ? PixelClicker.PixelType.GasPocket : PixelClicker.PixelType.Pest;
@@ -546,7 +577,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         PixelSkills s = Instance;
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
-        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type);
+        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || type == PixelClicker.PixelType.HornetNest;
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
         if (owner != null) return owner.id != active && !s.GuestOn(type);
@@ -572,7 +603,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>The basic shop blocks (Wood, Rock) are never part of a rotation by themselves: they spawn only while the player has switched them on (the same switch set as the guests).</summary>
-    public static bool IsOptIn(PixelClicker.PixelType type) => type == PixelClicker.PixelType.Wood;
+    public static bool IsOptIn(PixelClicker.PixelType type) => false;   // (Wood used to be an opt-in block; it is part of the Woodcutting pack now)
 
     /// <summary>Is the opt-in block (Wood, Rock) switched on?</summary>
     public static bool OptInOn(PixelClicker.PixelType type) => !OffSet.Contains(type.ToString());

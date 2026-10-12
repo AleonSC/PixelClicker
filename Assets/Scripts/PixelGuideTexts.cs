@@ -88,7 +88,19 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.GasPocket:
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the gas explodes, blowing away the old pixels around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your mining level rises.";
             case PixelClicker.PixelType.Wood:
-                return "A basic block of wood. It only comes up if you switch it on in Toggles > Pixels.";
+                return "Woodcutting block: a solid log. A couple of chops and it pays a fair amount.";
+            case PixelClicker.PixelType.Bark:
+                return "Woodcutting block: rough bark. One chop, pays a little.";
+            case PixelClicker.PixelType.Sap:
+                return "Woodcutting block: a blob of sticky sap. It pays well for one chop, and an old Sap pixel does not bounce when it lands.";
+            case PixelClicker.PixelType.Leaf:
+                return "Woodcutting block that flutters. One chop, pays little. An old Leaf pixel drifts down slowly instead of dropping.";
+            case PixelClicker.PixelType.Heartwood:
+                return "Woodcutting block, rare: the glowing red core of a tree. It takes " + t.clicksToCollect + " chops but pays a lot.";
+            case PixelClicker.PixelType.Twig:
+                return "Woodcutting's filler block. One click, almost no pay. At low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.";
+            case PixelClicker.PixelType.HornetNest:
+                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the hornets swarm out and chase off the old pixels around the cube, and Woodcutting XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your woodcutting level rises.";
             case PixelClicker.PixelType.Rock:
                 return "Stone: Mining's filler block. One click, almost no pay. At low mining level it is most of what appears; as you level up it gets rarer and the ores show up more.";
             case PixelClicker.PixelType.Dirt:

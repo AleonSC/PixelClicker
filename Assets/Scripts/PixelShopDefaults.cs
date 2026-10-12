@@ -694,26 +694,34 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Wood Pixel pack (Pixels tab): a basic block that fits every rotation (it is not part of a skill pack).</summary>
+    /// <summary>
+    /// Default Woodcutter's Pack (Pixels tab): cheap, the intro skill. Six wood blocks for the Woodcutting skill: Wood, Bark, Sap, Leaf, Heartwood and
+    /// the filler Twig, plus the Hornet Nest hazard. They only spawn while Woodcutting is the pack in play (Skills window).
+    /// </summary>
     private static ShopPack CreateWoodPixelPack()
     {
+        PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
         return new ShopPack
         {
-            displayName = "Wood Pixel",
+            displayName = "Woodcutter's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Wood pixel: a plain wooden block. A basic block that is not in the base rotation: switch it on in the Toggles window to have it spawn.",
+            description = "Adds the Woodcutting skill and six wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and Twig, plus a Hornet Nest to watch out for. They only spawn while Woodcutting is the pack in play (Skills window). Twig is a useless filler that is most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
             requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 300 } },
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
             {
-                new PixelClicker.PixelTier
-                {
-                    type = PixelClicker.PixelType.Wood, displayName = "Wood Pixels",
-                    color = new Color(0.6f, 0.4f, 0.22f, 1f),
-                    amountPerClick = 2,
-                    spawnWeight = 0.7f,
-                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
-                },
+                Block(PixelClicker.PixelType.Wood, "Wood Pixels", new Color(0.6f, 0.4f, 0.22f, 1f), 2, 3, 1.0f),
+                Block(PixelClicker.PixelType.Bark, "Bark Pixels", new Color(0.42f, 0.32f, 0.24f, 1f), 1, 2, 0.8f),
+                Block(PixelClicker.PixelType.Sap, "Sap Pixels", new Color(1f, 0.72f, 0.2f, 1f), 1, 4, 0.5f),
+                Block(PixelClicker.PixelType.Leaf, "Leaf Pixels", new Color(0.35f, 0.78f, 0.3f, 1f), 1, 1, 0.9f),
+                Block(PixelClicker.PixelType.Heartwood, "Heartwood Pixels", new Color(0.78f, 0.35f, 0.28f, 1f), 4, 25, 0.1f),
+                Block(PixelClicker.PixelType.Twig, "Twig Pixels", new Color(0.82f, 0.72f, 0.52f, 1f), 1, 1, 1.0f),
+                // The Hornet Nest: a hazard (hit it too often and the hornets chase off the old pixels around the cube; it pays nothing).
+                Block(PixelClicker.PixelType.HornetNest, "Hornet Nest", new Color(0.85f, 0.78f, 0.5f, 1f), 5, 0, 0.05f),
             }
         };
     }

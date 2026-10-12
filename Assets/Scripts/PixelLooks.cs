@@ -284,7 +284,7 @@ public class PixelLook
     public bool radiation = false;
 
     /// <summary>The ambient particle effects of the farming blocks.</summary>
-    public enum FarmAmbient { None = 0, Pollen = 1, Dew = 2, Crumbs = 3, Spores = 4, Chaff = 5, Sparkle = 6, Bugs = 7 }
+    public enum FarmAmbient { None = 0, Pollen = 1, Dew = 2, Crumbs = 3, Spores = 4, Chaff = 5, Sparkle = 6, Bugs = 7, Leaves = 8, Sap = 9, Hornets = 10 }
 
     [Tooltip("Farming blocks: a loop of little particles around the cube (pollen motes, dew drips, crumbs, spores, chaff, golden sparkles, scurrying bugs).")]
     public FarmAmbient farmFx = FarmAmbient.None;
@@ -526,6 +526,23 @@ public static class PixelLooks
             // Wood and Rock: plain basic blocks that fit any rotation.
             new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Wood, blob = true },
             new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Stone, jagged = true },
+
+            // The Woodcutting blocks: Bark (rough dark wood), Sap (sticky amber blob), Leaf (floaty green flake), Heartwood (rare glowing red-brown core),
+            // Twig (the pale filler) and the Hornet Nest (a papery, twitching hazard).
+            new PixelLook { type = PixelClicker.PixelType.Bark, useColor = true, color = new Color(0.62f, 0.5f, 0.42f, 1f), metallic = 0f, smoothness = 0.05f,
+                            blockSurface = PixelLook.BlockSurface.Wood, jagged = true, farmFx = PixelLook.FarmAmbient.Crumbs },
+            new PixelLook { type = PixelClicker.PixelType.Sap, useColor = true, color = new Color(1f, 0.72f, 0.2f, 0.75f), forceTranslucent = true, metallic = 0f, smoothness = 0.95f, emission = 0.25f,
+                            customPhysics = true, bounce = 0f, friction = 1.4f, gravityMultiplier = 1f, wobble = true, wobbleAmount = 0.08f, farmFx = PixelLook.FarmAmbient.Sap },
+            new PixelLook { type = PixelClicker.PixelType.Leaf, useColor = true, color = new Color(0.35f, 0.78f, 0.3f, 1f), metallic = 0f, smoothness = 0.3f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.35f, outlineStrength = 0.7f,
+                            customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.25f, wobble = true, wobbleAmount = 0.06f, farmFx = PixelLook.FarmAmbient.Leaves },
+            new PixelLook { type = PixelClicker.PixelType.Heartwood, useColor = true, color = new Color(1f, 0.62f, 0.5f, 1f), metallic = 0.15f, smoothness = 0.55f, emission = 0.35f, shine = true,
+                            blockSurface = PixelLook.BlockSurface.Wood, blob = true,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.8f,
+                            farmFx = PixelLook.FarmAmbient.Sparkle },
+            new PixelLook { type = PixelClicker.PixelType.Twig, useColor = true, color = new Color(0.95f, 0.88f, 0.7f, 1f), metallic = 0f, smoothness = 0.05f, blockSurface = PixelLook.BlockSurface.Wood },
+            new PixelLook { type = PixelClicker.PixelType.HornetNest, useColor = true, color = new Color(0.85f, 0.78f, 0.5f, 1f), metallic = 0f, smoothness = 0.3f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            jagged = true, wobble = true, wobbleAmount = 0.06f, wobbleSpeed = 8f, farmFx = PixelLook.FarmAmbient.Hornets },
 
             // The farming blocks: each has a bevelled rim in a shade of its own colour and an ambient particle effect.
             new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.05f, blockSurface = PixelLook.BlockSurface.Dirt,
