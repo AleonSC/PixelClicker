@@ -16,7 +16,7 @@ public partial class PixelSkills
 
     private GameObject trackerCanvas, trackerPanel;
     private RectTransform trackerRect, trackerBarFill;
-    private TMP_Text trackerName, trackerXp;
+    private TMP_Text trackerName, trackerXp, trackerPenalty;
     private Image trackerPanelImage, trackerPinImage;
     private Button trackerClose, trackerSize, trackerStick, trackerPrev, trackerNext;
     private Image trackerSizeImage, trackerStickImage;
@@ -114,6 +114,17 @@ public partial class PixelSkills
         trackerName.enableAutoSizing = true;
         trackerName.fontSizeMin = 12f;
         trackerName.alignment = TextAlignmentOptions.Center;   // between the two arrows
+
+        // The hazard XP penalty: a red line just under the tracker while it runs ('XP -20%  0:42').
+        trackerPenalty = PixelUIKit.CreateText(Font, trackerPanel.transform, "Penalty", "", 24f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.45f, 0.4f, 1f));
+        trackerPenalty.raycastTarget = false;
+        RectTransform penaltyRect = trackerPenalty.rectTransform;
+        penaltyRect.anchorMin = new Vector2(0f, 0f);
+        penaltyRect.anchorMax = new Vector2(1f, 0f);
+        penaltyRect.pivot = new Vector2(0.5f, 1f);
+        penaltyRect.sizeDelta = new Vector2(0f, 34f);
+        penaltyRect.anchoredPosition = new Vector2(0f, -4f);
+        trackerPenalty.gameObject.SetActive(false);
 
         GameObject track = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(trackerPanel.transform, false);
@@ -313,6 +324,17 @@ public partial class PixelSkills
             trackerBarFill.anchorMax = new Vector2(Mathf.Clamp01((float)(into / System.Math.Max(1d, need))), 1f);
         }
         trackerBarFill.offsetMax = new Vector2(-2f, -2f);
+
+        bool penalised = PenaltyPercent > 0;
+        if (trackerPenalty != null)
+        {
+            if (trackerPenalty.gameObject.activeSelf != penalised) trackerPenalty.gameObject.SetActive(penalised);
+            if (penalised)
+            {
+                int left = Mathf.CeilToInt(PenaltySecondsLeft);
+                PixelUIKit.SetText(trackerPenalty, "XP -" + PenaltyPercent + "%   " + (left / 60) + ":" + (left % 60).ToString("00"));
+            }
+        }
     }
 
     private void ApplyTrackerVisibility()

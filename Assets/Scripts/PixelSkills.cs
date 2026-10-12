@@ -506,6 +506,12 @@ public partial class PixelSkills : MonoBehaviour
         }
     }
 
+    /// <summary>The XP penalty running now, in percent (0 = none).</summary>
+    public static int PenaltyPercent => PenaltyFactor < 1f ? Mathf.RoundToInt((1f - PenaltyFactor) * 100f) : 0;
+
+    /// <summary>Seconds left on the XP penalty.</summary>
+    public static float PenaltySecondsLeft => Mathf.Max(0f, penaltyUntil - Time.time);
+
     /// <summary>A hazard went off: one more step of penalty (a new one when none is running) and the timer starts over. Returns text describing it.</summary>
     public static string ApplyHazardPenalty()
     {
