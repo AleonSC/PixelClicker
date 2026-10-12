@@ -702,3 +702,4 @@
 [2026-10-12 21:17 UTC] Shape placer: a see-through ghost shows where a shape will be placed, the mouse wheel now turns smoothly, Ctrl + wheel resizes, and the Size -/+ and Turn 45 buttons are gone
 [2026-10-12 21:23 UTC] Main menu look pickers now log how many looks they list (to find why floors were missing)
 [2026-10-12 21:25 UTC] Zoom key can now zoom out further (hold + wheel up to 2.2x); the orbit camera zooms with the plain wheel and + / - buttons and has an AUTO button that turns it slowly by itself
+[2026-10-12 21:32 UTC] The floor finder no longer picks the shape placer's shapes, falls back to the biggest flat mesh below the cube, and keeps looking every second if the floor was not found at start

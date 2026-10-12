@@ -296,14 +296,23 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void AddMissingDefaultsMenu() => EnsureDefaultStyles();
 #endif
 
-    private void Start()
+    private bool floorReady;
+    private float floorRetry;
+
+    private void Start() { InitFloor(); }
+
+    /// <summary>Finds the floor and applies the saved style. Called at start and, while no floor was found, once a second (the scene may not have been ready).</summary>
+    private void InitFloor()
     {
+        if (floorReady) return;
         if (floorRenderer == null) floorRenderer = FindFloor();
         if (floorRenderer == null)
         {
-            Debug.LogWarning("PixelFloor: no floor found. Assign the floor renderer on the Pixel Floor component to use floor styles.");
+            if (!floorWarned) Debug.LogWarning("PixelFloor: no floor found (looking again every second). Assign the floor renderer on the Pixel Floor component to use floor styles.");
+            floorWarned = true;
             return;
         }
+        floorReady = true;
         originalMaterials = floorRenderer.sharedMaterials;
         BuildUvMap();
 
@@ -328,6 +337,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // Finding the floor
     // ------------------------------------------------------------------
 
+    /// <summary>The dev shape placer's shapes are never the floor.</summary>
+    private static bool IsDevShape(Transform t)
+    {
+        for (; t != null; t = t.parent) if (t.name == "Dev Shapes" || t.name.StartsWith("Dev Shape ")) return true;
+        return false;
+    }
+
     private Renderer FindFloor()
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
@@ -339,7 +355,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             foreach (RaycastHit hit in hits)
             {
-                if (hit.collider.transform.IsChildOf(clicker.transform)) continue;
+                if (hit.collider.transform.IsChildOf(clicker.transform) || IsDevShape(hit.collider.transform)) continue;
                 if (hit.rigidbody != null && !hit.rigidbody.isKinematic) continue;
                 Renderer r = hit.collider.GetComponent<Renderer>();
                 if (r != null) return r;
@@ -352,6 +368,28 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             GameObject go = GameObject.Find(n);
             Renderer r = go != null ? go.GetComponent<Renderer>() : null;
             if (r != null) return r;
+        }
+
+        // Last resort: the biggest wide, flat mesh in the scene that lies below the cube.
+        if (clicker != null)
+        {
+            Renderer best = null;
+            float bestArea = 0f;
+#if UNITY_2023_1_OR_NEWER
+            Renderer[] everything = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+#else
+            Renderer[] everything = FindObjectsOfType<Renderer>();
+#endif
+            foreach (Renderer r in everything)
+            {
+                if (r == null || !r.enabled || !r.gameObject.activeInHierarchy || !(r is MeshRenderer) || IsDevShape(r.transform)) continue;
+                if (r.transform.IsChildOf(clicker.transform)) continue;
+                Bounds b = r.bounds;
+                if (b.size.y > Mathf.Max(2f, Mathf.Min(b.size.x, b.size.z) * 0.15f) || b.max.y > clicker.transform.position.y + 0.5f) continue;
+                float area = b.size.x * b.size.z;
+                if (area > bestArea) { bestArea = area; best = r; }
+            }
+            if (best != null && bestArea > 16f) return best;
         }
         return null;
     }
@@ -455,8 +493,16 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         activeTexture = null;
     }
 
+    private bool floorWarned;
+
     private void Update()
     {
+        if (!floorReady)
+        {
+            floorRetry -= Time.unscaledDeltaTime;
+            if (floorRetry <= 0f) { floorRetry = 1f; InitFloor(); }
+            return;
+        }
         if (activeMaterial == null || current < 0 || current >= styles.Count) return;
         FloorStyle style = styles[current];
         float dt = PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime; // keeps moving on the title screen, freezes in Time Stop
