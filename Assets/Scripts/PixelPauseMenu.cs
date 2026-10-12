@@ -244,6 +244,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string eventLogLabel = "Event log";
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
     [SerializeField] private string popupsLabel = "Number popups (+N)";
+    [SerializeField] private string blockTipsLabel = "Block tooltips (hover a block)";
     [SerializeField] private string popupSizeLabel = "Popup size";
     [Tooltip("Label of the Settings choice for how the docked menu buttons behave.")]
     [SerializeField] private string buttonModeLabel = "Menu buttons";
@@ -2232,6 +2233,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, tipsLabel, () => PixelHints.TipsEnabled, on => PixelHints.TipsEnabled = on, ref y);
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
+        AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
         AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);

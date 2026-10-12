@@ -1110,6 +1110,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelMinigameLimits>() == null) gameObject.AddComponent<PixelMinigameLimits>(); // how many minigames run at once
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
         if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
+        if (PixelFind.First<PixelBlockTooltip>() == null) gameObject.AddComponent<PixelBlockTooltip>();   // hover tooltip for blocks
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelOrbitCamera>() == null) gameObject.AddComponent<PixelOrbitCamera>();   // orbital camera (third step of the view key)
@@ -1828,6 +1829,47 @@ public class PixelClicker : MonoBehaviour
             }
             return; // first non-ignored hit decides
         }
+    }
+
+    /// <summary>
+    /// What block is under the pointer? The nearest of the clickable cube and the old pixels lying around (used by the hover tooltip).
+    /// isLive = the clickable cube; otherwise 'body' is the old pixel.
+    /// </summary>
+    public bool TryGetBlockAt(Vector2 screen, out int tierIndex, out bool isLive, out Rigidbody body)
+    {
+        tierIndex = -1; isLive = false; body = null;
+        if (targetCamera == null || pixelTransform == null || tiers == null || tiers.Length == 0) return false;
+        Ray ray = targetCamera.ScreenPointToRay(screen);
+        RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (RaycastHit hit in hits)
+        {
+            if (PixelRobotWorker.BelongsToUfo(hit.transform)) continue;
+            if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
+            {
+                if (isSpawning || CubeHidden) return false;
+                tierIndex = GetClickTierIndex();
+                isLive = true;
+                return true;
+            }
+            Rigidbody rb = hit.rigidbody;
+            if (rb != null && oldPixels.Contains(rb))
+            {
+                OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+                if (info == null || info.tierIndex < 0 || info.tierIndex >= tiers.Length) return false;
+                tierIndex = info.tierIndex;
+                body = rb;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>Hits already put into the pixel on the cube, and how many it needs (for the hover tooltip).</summary>
+    public void GetLiveProgress(out int hits, out int needed)
+    {
+        hits = hitsOnCurrentPixel;
+        needed = tiers != null && tiers.Length > 0 ? NeededClicks(GetClickTier()) : 1;
     }
 
     // ------------------------------------------------------------------

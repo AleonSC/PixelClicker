@@ -18,7 +18,7 @@ public static class PixelGuideTexts
         return sb.ToString();
     }
 
-    private static string OldPixel(PixelClicker.PixelType type)
+    public static string OldPixel(PixelClicker.PixelType type)
     {
         switch (type)
         {
