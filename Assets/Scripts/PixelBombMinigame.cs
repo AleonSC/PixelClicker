@@ -355,7 +355,7 @@ public class PixelBombMinigame : PixelMinigame
 
         // The bomb is a metal rectangle. Keep all of it inside the view.
         float bw = bombSize * 1.6f, bh = bombSize * 1.25f, bd = bombSize * 0.35f;
-        float viewHeight = 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float viewHeight = PixelUIKit.ViewHeightAt(cam, depth);
         float viewWidth = viewHeight * cam.aspect;
         float halfW = (bw * 0.6f) / viewWidth, halfDown = (bh * 0.65f) / viewHeight, halfUp = (bh * 0.65f + bombSize * 0.5f) / viewHeight;
         vx = Mathf.Clamp(vx, 0.04f + halfW, 0.96f - halfW);

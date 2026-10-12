@@ -566,7 +566,7 @@ public class PixelGhostMinigame : PixelMinigame
         if (v.z <= 0.01f) return position;
 
         // How big the view is at that distance, to turn the text's size into screen fractions.
-        float viewHeight = 2f * v.z * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float viewHeight = PixelUIKit.ViewHeightAt(cam, v.z);
         float viewWidth = viewHeight * cam.aspect;
         text.ForceMeshUpdate();
         float halfW = Mathf.Min(0.5f, text.preferredWidth * 0.5f / Mathf.Max(0.01f, viewWidth));

@@ -72,7 +72,8 @@ public class PixelViewBounds : MonoBehaviour
     private struct Entry { public OldPixelInfo info; public BoxCollider box; }
     private readonly Dictionary<Rigidbody, Entry> infoCache = new Dictionary<Rigidbody, Entry>();
     private Vector3 planesPosition, planesForward;
-    private float planesFov = -1f, planesAspect, planesBars = -1f;
+    private float planesFov = -1f, planesAspect, planesBars = -1f, planesOrtho;
+    private bool planesIsOrtho;
     private int planesWidth, planesHeight;
 
     private void Awake()
@@ -98,13 +99,15 @@ public class PixelViewBounds : MonoBehaviour
         float barNow = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight : 0f;
         Transform ct = cam.transform;
         if (planesFov < 0f || ct.position != planesPosition || ct.forward != planesForward || cam.fieldOfView != planesFov ||
-            cam.aspect != planesAspect || Screen.width != planesWidth || Screen.height != planesHeight || barNow != planesBars)
+            cam.aspect != planesAspect || cam.orthographic != planesIsOrtho || cam.orthographicSize != planesOrtho || Screen.width != planesWidth || Screen.height != planesHeight || barNow != planesBars)
         {
             BuildPlanes(cam);
             planesPosition = ct.position;
             planesForward = ct.forward;
             planesFov = cam.fieldOfView;
             planesAspect = cam.aspect;
+            planesIsOrtho = cam.orthographic;
+            planesOrtho = cam.orthographicSize;
             planesWidth = Screen.width;
             planesHeight = Screen.height;
             planesBars = barNow;
@@ -192,9 +195,17 @@ public class PixelViewBounds : MonoBehaviour
     /// <summary>A plane through the camera along a screen edge, facing the middle of the screen.</summary>
     private static Plane EdgePlane(Camera cam, Vector3 origin, Vector2 edgeMid, Vector2 edgeA, Vector2 edgeB, Vector2 centre)
     {
-        Vector3 a = cam.ViewportPointToRay(edgeA).direction;
-        Vector3 b = cam.ViewportPointToRay(edgeB).direction;
-        Vector3 normal = Vector3.Cross(a, b).normalized;
+        Ray rayA = cam.ViewportPointToRay(edgeA);
+        Ray rayB = cam.ViewportPointToRay(edgeB);
+        if (cam.orthographic)
+        {
+            // Flat view: the rays are parallel, so the edge is a plane along the view direction through the edge's line.
+            Vector3 flatNormal = Vector3.Cross(rayA.direction, rayB.origin - rayA.origin).normalized;
+            Vector3 centreOrigin = cam.ViewportPointToRay(centre).origin;
+            if (Vector3.Dot(flatNormal, centreOrigin - rayA.origin) < 0f) flatNormal = -flatNormal;
+            return new Plane(flatNormal, rayA.origin);
+        }
+        Vector3 normal = Vector3.Cross(rayA.direction, rayB.direction).normalized;
         Vector3 toCentre = cam.ViewportPointToRay(centre).direction;
         if (Vector3.Dot(normal, toCentre) < 0f) normal = -normal;
         return new Plane(normal, origin);
