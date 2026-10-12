@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -116,6 +117,7 @@ public class PixelElectricLinks : MonoBehaviour
     private Material meterBack, meterFront;
     private readonly List<Rigidbody> scratch = new List<Rigidbody>();
     private float scanTimer, redrawTimer;
+    private static readonly ProfilerMarker scanMarker = new ProfilerMarker("Pixel.ElectricLinks.Scan");
     private GameObject boltObject;
     private Mesh boltMesh;
     private readonly PixelBolts.Builder builder = new PixelBolts.Builder();
@@ -142,7 +144,7 @@ public class PixelElectricLinks : MonoBehaviour
         if (scanTimer <= 0f)
         {
             scanTimer = scanInterval;
-            Scan();
+            using (scanMarker.Auto()) Scan();
         }
 
         UpdatePet();

@@ -1,3 +1,4 @@
+using Unity.Profiling;
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelClicker.cs
 //   Core. Click-me hint: while the Inventory UI's guide text ("Click N more...") shows and nothing has been collected yet
@@ -1056,6 +1057,7 @@ public class PixelClicker : MonoBehaviour
 
     // Old pixels currently in the scene (used for the cap and kill height).
     private readonly System.Collections.Generic.List<Rigidbody> oldPixels = new System.Collections.Generic.List<Rigidbody>();
+    private static readonly ProfilerMarker solarMarker = new ProfilerMarker("Pixel.SolarClusters");
 
     /// <summary>C# event version of onCurrencyChanged, handy for other scripts.</summary>
     public event Action CurrencyChanged;
@@ -1838,8 +1840,9 @@ public class PixelClicker : MonoBehaviour
     {
         AnimatePixel();
 
+
         CleanOldPixels();
-        UpdateSolarClusters();
+        using (solarMarker.Auto()) UpdateSolarClusters();
         if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) { UpdateWeevil(); UpdateHazardExpiry(); }
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked

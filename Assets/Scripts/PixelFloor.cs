@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -493,7 +494,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             {
                 animTimer = 0f;
                 shadeAspect = style.fitToView ? viewAspect : 1f;
-                Fill(activeTexture, style, animClock, true);
+                using (redrawMarker.Auto()) Fill(activeTexture, style, animClock, true);
             }
         }
 
@@ -513,6 +514,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // Fit to view: one copy of the pattern exactly covers what the camera sees of the floor
     // ------------------------------------------------------------------
 
+    private static readonly ProfilerMarker redrawMarker = new ProfilerMarker("Pixel.FloorRedraw");
     private float lastBlend = 1f;
 
     /// <summary>1 = the picture is fitted to the view (normal); less while the camera is away from its normal view: a fitted style then spreads over the WHOLE floor once instead of repeating.</summary>

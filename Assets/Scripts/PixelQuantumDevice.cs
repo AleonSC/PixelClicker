@@ -1,3 +1,4 @@
+using Unity.Profiling;
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelQuantumDevice.cs
 //   (extends PixelPlacedDevice) Quantum Organizer (DeviceKind.QuantumOrganizer 12, auto-added like the fan by EnsureDefaultPotions,
@@ -133,10 +134,11 @@ public class PixelQuantumDevice : PixelPlacedDevice
         if (Time.time >= nextScan)
         {
             nextScan = Time.time + 0.1f;
-            Scan();
+            using (scanMarker.Auto()) Scan();
         }
     }
 
+    private static readonly ProfilerMarker scanMarker = new ProfilerMarker("Pixel.QuantumScan");
     private void Scan()
     {
         IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
