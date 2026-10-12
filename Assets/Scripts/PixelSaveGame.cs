@@ -571,14 +571,14 @@ public class PixelSaveGame : MonoBehaviour
     // Load
     // ------------------------------------------------------------------
 
-    /// <summary>Reads the save file and applies it. Returns false if there is none or it can't be read.</summary>
-    [ContextMenu("Load Now")]
     /// <summary>True once a save was loaded or written this run (the main menu's button says 'Play' then, 'New Game' before).</summary>
     public static bool HasLoadedSave { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetLoadedFlag() { HasLoadedSave = false; }
 
+    /// <summary>Reads the save file and applies it. Returns false if there is none or it can't be read.</summary>
+    [ContextMenu("Load Now")]
     public bool Load() => Load(true);
 
     /// <summary>Loads the save. 'grantOffline' also pays out what the auto clicker earned while the game was closed (startup only).</summary>

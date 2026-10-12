@@ -663,3 +663,4 @@
 [2026-10-12 12:24 UTC] The top and bottom corner buttons are now centred in the black margins.
 [2026-10-12 12:26 UTC] The Inventory and Log windows line up with their corner buttons again.
 [2026-10-12 12:31 UTC] The main menu's Play button says New Game until a save has been loaded (or written).
+[2026-10-12 12:32 UTC] Fixed a compile error in PixelSaveGame (a misplaced ContextMenu attribute).
