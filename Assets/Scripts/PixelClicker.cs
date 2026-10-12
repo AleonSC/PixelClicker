@@ -3510,6 +3510,11 @@ public class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Hides / shows every old pixel on the floor (renderers only; they keep existing). Used while the floor is faded out on the main menu.</summary>
+    public void CollectOldPixelTransforms(List<Transform> into)
+    {
+        foreach (Rigidbody rb in oldPixels) if (rb != null) into.Add(rb.transform);
+    }
+
     public void SetOldPixelsHidden(bool hidden)
     {
         foreach (Rigidbody rb in oldPixels)

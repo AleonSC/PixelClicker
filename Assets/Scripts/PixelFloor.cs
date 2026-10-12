@@ -529,7 +529,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private float FadeTime => floorFadeSeconds > 0.05f ? floorFadeSeconds : 1f;
 
     private float visibility = 1f;
-    private bool visibilityInit, exitHold, oldPixelsHidden;
+    private bool visibilityInit, exitHold;
     private Material[] realMats, proxyMats;
     private System.Action exitDone;
 
@@ -550,6 +550,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (floorRenderer == null) return;
         if (exitHold && PixelTitleScreen.Showing) exitHold = false;
         bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
+        // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
+        float propsTarget = !HidesOnTitle ? 1f : (hide ? 0f : (visibility >= 0.999f ? 1f : 0f));
+        propsK = Mathf.MoveTowards(propsK, propsTarget, Time.unscaledDeltaTime / FadeTime);
+        if (hide && exitHold && propsK > 0.001f) hide = false;   // (the floor stays until the props are gone)
         float target = hide ? 0f : 1f;
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
         else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / FadeTime);
@@ -618,8 +622,43 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         flatBase.SetActive(true);
     }
 
+    private float propsK = 1f;
+    private readonly Dictionary<Transform, Vector3> propScales = new Dictionary<Transform, Vector3>();
+    private readonly List<Transform> propList = new List<Transform>();
+
+    /// <summary>Old pixels and devices start hidden and fade in (a game was just loaded).</summary>
+    public void PropsFadeIn() { if (HidesOnTitle) propsK = 0f; }
+
+    /// <summary>Shrinks every old pixel and placed device to 'propsK' of its size (a quick fade away / back); restores them exactly at 1.</summary>
+    private void ApplyProps()
+    {
+        if (propsK >= 0.999f && propScales.Count == 0) return;
+        propList.Clear();
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker != null) clicker.CollectOldPixelTransforms(propList);
+        IReadOnlyList<PixelPlacedDevice> devices = PixelPlacedDevice.All;
+        for (int i = 0; i < devices.Count; i++) if (devices[i] != null) propList.Add(devices[i].transform);
+
+        bool done = propsK >= 0.999f;
+        float k = Mathf.Max(0.001f, propsK);
+        foreach (Transform t in propList)
+        {
+            if (t == null) continue;
+            if (!propScales.TryGetValue(t, out Vector3 baseScale)) { baseScale = t.localScale; propScales[t] = baseScale; }
+            t.localScale = done ? baseScale : baseScale * k;
+        }
+        if (done) propScales.Clear();
+        else
+        {
+            List<Transform> gone = null;
+            foreach (Transform t in propScales.Keys) if (t == null) (gone ?? (gone = new List<Transform>())).Add(t);
+            if (gone != null) foreach (Transform t in gone) propScales.Remove(t);
+        }
+    }
+
     private void ApplyVisibility()
     {
+        ApplyProps();
         UpdateFlatBase();
         floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
         // Any other renderers on the floor object (a second mesh, trim) go with it.
@@ -635,15 +674,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                     if (m.HasProperty("_BaseColor")) { Color c = m.GetColor("_BaseColor"); c.a = visibility; m.SetColor("_BaseColor", c); }
                     if (m.HasProperty("_Color")) { Color c = m.GetColor("_Color"); c.a = visibility; m.SetColor("_Color", c); }
                 }
-        }
-
-        // The old pixels lying on the floor are hidden with it (they would float in the air), and come back once the floor is mostly there.
-        bool hidePixels = visibility < 0.6f;
-        if (hidePixels != oldPixelsHidden)
-        {
-            oldPixelsHidden = hidePixels;
-            PixelClicker clicker = PixelFind.First<PixelClicker>();
-            if (clicker != null) clicker.SetOldPixelsHidden(hidePixels);
         }
     }
 

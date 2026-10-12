@@ -694,6 +694,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             clicker.FinishLoad();
+            if (PixelFloor.Instance != null && !PixelTitleScreen.Showing) PixelFloor.Instance.PropsFadeIn();   // pixels and devices fade in after a load
             if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
             if (bank != null) bank.SetState(data.bank);

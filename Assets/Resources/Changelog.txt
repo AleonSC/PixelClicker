@@ -520,3 +520,4 @@
 [2026-10-12 00:38 UTC] The Welcome back window now waits for the camera intro; with the live background on, the main menu shows only the sky and the floor fades in after the camera settles (and fades out before the camera swings back when you leave); with it off there is no camera intro and the game just fades in.
 [2026-10-12 00:44 UTC] Added a hidden 'Blur background' toggle to the main menu, made the camera intro smoother, fixed the floor not disappearing on the menu with the live background on, and the wandering vendors now fade away the moment you press Play.
 [2026-10-12 00:53 UTC] Blur background off now shows the sharp live scene; with live background the menu shows a flat floor-coloured base under the hidden floor that the textured floor fades in from.
+[2026-10-12 00:54 UTC] Old pixels and devices now fade (shrink) away before the floor and the camera when quitting to the main menu, and fade back in after the floor when a game starts or a save is loaded.
