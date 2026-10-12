@@ -1,0 +1,260 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// Floor edge fade (partial class PixelFloor): the floor fades out in a circle round the player (the clicker cube; in first person mode the player
+/// walking about), so its edges and seams are never seen. Nothing about the floor itself changes - a flat disc with a hole, coloured like the
+/// sky's horizon, lies just over it and goes from see-through at the inner radius to solid at the outer one (and keeps going far beyond the floor).
+/// In the outer rim a glowing digital wireframe (a world-aligned grid and a few rings) shows and fades away with the floor.
+/// </summary>
+public partial class PixelFloor
+{
+    [Header("Floor edge fade (the floor fades out round the player)")]
+    [Tooltip("Turn the circular fade-out of the floor off (the floor then simply ends at its edges).")]
+    [SerializeField] private bool disableEdgeFade = false;
+
+    [Min(0f)]
+    [Tooltip("Where the fade starts, in main-pixel widths from the player. 0 = automatic (about half the way to the nearest edge of the floor).")]
+    [SerializeField] private float fadeStartCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("How wide the fading rim is, in main-pixel widths. 0 = automatic (a bit less than half of the start distance).")]
+    [SerializeField] private float fadeWidthCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("Distance between the grid lines of the wireframe rim, in main-pixel widths. 0 = the default (1.25).")]
+    [SerializeField] private float wireSpacingCubes = 0f;
+
+    [Tooltip("Colour of the wireframe. Leave the alpha at 0 for the default (a digital cyan).")]
+    [SerializeField] private Color wireColor = new Color(0f, 0f, 0f, 0f);
+
+    [Min(0f)]
+    [Tooltip("How bright the wireframe is (0 = the default, 0.9).")]
+    [SerializeField] private float wireStrength = 0f;
+
+    private GameObject edgeRoot, ringObject, wireObject;
+    private Mesh ringMesh, wireMesh;
+    private Material ringMat, wireMat;
+    private float ringR0, ringR1, wireY, edgeColorTimer;
+    private Vector2 wireCenter = new Vector2(float.MaxValue, 0f);
+    private PixelClicker edgeClicker;
+    private readonly List<Vector3> wireVerts = new List<Vector3>();
+    private readonly List<Color32> wireCols = new List<Color32>();
+    private readonly List<int> wireTris = new List<int>();
+
+    private const int RingSegments = 96;
+
+    private void UpdateEdgeFade()
+    {
+        bool want = !disableEdgeFade && floorRenderer != null && visibility > 0.001f && !FloorOff;
+        if (!want)
+        {
+            if (edgeRoot != null && edgeRoot.activeSelf) edgeRoot.SetActive(false);
+            return;
+        }
+        if (edgeClicker == null) edgeClicker = PixelFind.First<PixelClicker>();
+        if (edgeClicker == null || edgeClicker.PixelTransform == null) return;
+
+        float unit = Mathf.Max(0.05f, edgeClicker.PixelBaseSize);
+        Bounds fb = floorRenderer.bounds;
+        float half = Mathf.Max(unit, Mathf.Min(fb.extents.x, fb.extents.z));
+        float r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
+        float r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.4f));
+        if (edgeRoot == null || !Mathf.Approximately(r0, ringR0) || !Mathf.Approximately(r1, ringR1)) BuildEdgeFade(r0, r1, fb);
+        if (edgeRoot == null) return;
+        if (!edgeRoot.activeSelf) edgeRoot.SetActive(true);
+
+        Vector3 center = edgeClicker.CubeBasePosition;
+        if (PixelFirstPerson.TryGetPlayerPosition(out Vector3 playerPos)) center = playerPos;
+        float y = fb.max.y + unit * 0.012f;
+        ringObject.transform.position = new Vector3(center.x, y, center.z);
+
+        Vector2 c2 = new Vector2(center.x, center.z);
+        float moved = unit * 0.05f;
+        if ((c2 - wireCenter).sqrMagnitude > moved * moved || !Mathf.Approximately(y, wireY)) RebuildWire(c2, y, r0, r1, unit);
+
+        edgeColorTimer -= Time.unscaledDeltaTime;
+        if (edgeColorTimer <= 0f)
+        {
+            edgeColorTimer = 0.3f;
+            Color flat = EdgeFadeColor();
+            ringBase = flat;
+        }
+        ringMat.color = new Color(ringBase.r, ringBase.g, ringBase.b, visibility);
+        Color wc = wireColor.a > 0f ? wireColor : new Color(0.25f, 1f, 0.9f, 1f);
+        wireMat.color = new Color(wc.r, wc.g, wc.b, visibility * (wireStrength > 0f ? wireStrength : 0.9f));
+    }
+
+    private Color ringBase = new Color(0.5f, 0.55f, 0.6f);
+
+    /// <summary>The colour the floor fades into: the sky's horizon colour (so the circle melts into the sky), else the scene's sky tint / background, else the floor's own average.</summary>
+    private Color EdgeFadeColor()
+    {
+        Color flat;
+        if (PixelSkybox.Instance != null && PixelSkybox.Instance.TryGetHorizonColor(out Color sky)) flat = sky;
+        else if (PixelSkybox.Instance != null && PixelSkybox.Instance.Usable && PixelSkybox.Instance.Current >= 0) flat = PixelSkybox.Instance.PreviewColor(PixelSkybox.Instance.Current);
+        else if (Camera.main != null && Camera.main.clearFlags == CameraClearFlags.SolidColor) flat = Camera.main.backgroundColor;
+        else flat = AverageColor();
+        flat.a = 1f;
+        return flat;
+    }
+
+    private void BuildEdgeFade(float r0, float r1, Bounds floorBounds)
+    {
+        DestroyEdgeFade();
+        Shader shader = PixelShaders.SpriteDefault();
+        if (shader == null) return;
+        ringR0 = r0; ringR1 = r1;
+        edgeRoot = new GameObject("Floor Edge Fade");
+        edgeRoot.hideFlags = HideFlags.DontSave;
+
+        // The ring: see-through inside r0, solid from r1, then solid out far past the floor's edges.
+        float outer = Mathf.Max(r1 * 3f, floorBounds.size.magnitude * 2f);
+        List<Vector3> v = new List<Vector3>();
+        List<Color32> c = new List<Color32>();
+        List<int> t = new List<int>();
+        const int steps = 10;
+        float[] radii = new float[steps + 2];
+        float[] alphas = new float[steps + 2];
+        for (int i = 0; i <= steps; i++)
+        {
+            float k = i / (float)steps;
+            radii[i] = Mathf.Lerp(r0, r1, k);
+            alphas[i] = k * k * (3f - 2f * k);   // smooth from 0 to 1
+        }
+        radii[steps + 1] = outer; alphas[steps + 1] = 1f;
+        for (int ring = 0; ring < radii.Length; ring++)
+            for (int s = 0; s < RingSegments; s++)
+            {
+                float a = s / (float)RingSegments * Mathf.PI * 2f;
+                v.Add(new Vector3(Mathf.Cos(a) * radii[ring], 0f, Mathf.Sin(a) * radii[ring]));
+                c.Add(new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alphas[ring] * 255f)));
+            }
+        for (int ring = 0; ring < radii.Length - 1; ring++)
+            for (int s = 0; s < RingSegments; s++)
+            {
+                int a0 = ring * RingSegments + s, a1 = ring * RingSegments + (s + 1) % RingSegments;
+                int b0 = (ring + 1) * RingSegments + s, b1 = (ring + 1) * RingSegments + (s + 1) % RingSegments;
+                t.Add(a0); t.Add(b0); t.Add(a1);
+                t.Add(a1); t.Add(b0); t.Add(b1);
+            }
+        ringMesh = new Mesh { name = "Floor Fade Ring" };
+        ringMesh.SetVertices(v);
+        ringMesh.SetColors(c);
+        ringMesh.SetTriangles(t, 0);
+        ringMesh.bounds = new Bounds(Vector3.zero, new Vector3(outer * 2f, 1f, outer * 2f));
+
+        ringObject = new GameObject("Ring", typeof(MeshFilter), typeof(MeshRenderer));
+        ringObject.transform.SetParent(edgeRoot.transform, false);
+        ringObject.GetComponent<MeshFilter>().sharedMesh = ringMesh;
+        ringMat = new Material(shader) { name = "Floor Fade Ring", renderQueue = 3000 };
+        MeshRenderer rr = ringObject.GetComponent<MeshRenderer>();
+        rr.sharedMaterial = ringMat;
+        rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        rr.receiveShadows = false;
+
+        wireObject = new GameObject("Wireframe", typeof(MeshFilter), typeof(MeshRenderer));
+        wireObject.transform.SetParent(edgeRoot.transform, false);
+        wireMesh = new Mesh { name = "Floor Fade Wireframe" };
+        wireMesh.MarkDynamic();
+        wireObject.GetComponent<MeshFilter>().sharedMesh = wireMesh;
+        wireMat = new Material(shader) { name = "Floor Fade Wireframe", renderQueue = 3001 };
+        MeshRenderer wr = wireObject.GetComponent<MeshRenderer>();
+        wr.sharedMaterial = wireMat;
+        wr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        wr.receiveShadows = false;
+
+        wireCenter = new Vector2(float.MaxValue, 0f);
+        edgeColorTimer = 0f;
+    }
+
+    /// <summary>The digital wireframe: grid lines on the ground (fixed in the world) and a few rings, only inside the fading rim, brightest in the middle of it.</summary>
+    private void RebuildWire(Vector2 centre, float y, float r0, float r1, float unit)
+    {
+        wireCenter = centre;
+        wireY = y;
+        wireVerts.Clear(); wireCols.Clear(); wireTris.Clear();
+        float spacing = unit * (wireSpacingCubes > 0f ? wireSpacingCubes : 1.25f);
+        float lineW = Mathf.Max(unit * 0.03f, spacing * 0.03f);
+        float piece = Mathf.Max(unit * 0.5f, (r1 - r0) / 6f);
+
+        // lines at constant x, then at constant z
+        for (int axis = 0; axis < 2; axis++)
+        {
+            float c = axis == 0 ? centre.x : centre.y;      // the coordinate the lines are fixed in
+            float o = axis == 0 ? centre.y : centre.x;      // the other one (along the line)
+            int first = Mathf.CeilToInt((c - r1) / spacing), last = Mathf.FloorToInt((c + r1) / spacing);
+            for (int i = first; i <= last; i++)
+            {
+                float g = i * spacing, d = g - c;
+                if (Mathf.Abs(d) >= r1) continue;
+                float zo = Mathf.Sqrt(r1 * r1 - d * d);
+                float zi = Mathf.Abs(d) < r0 ? Mathf.Sqrt(r0 * r0 - d * d) : 0f;
+                AddInterval(axis, g, o, d, zi, zo, y, r0, r1, piece, lineW);
+                AddInterval(axis, g, o, d, -zo, -zi, y, r0, r1, piece, lineW);
+            }
+        }
+        // rings
+        for (int k = 1; k <= 3; k++)
+        {
+            float r = Mathf.Lerp(r0, r1, k / 4f);
+            float t = (r - r0) / (r1 - r0);
+            float a = WireAlpha(t);
+            for (int s = 0; s < RingSegments; s++)
+            {
+                float a0 = s / (float)RingSegments * Mathf.PI * 2f, a1 = (s + 1) / (float)RingSegments * Mathf.PI * 2f;
+                AddSegment(new Vector3(centre.x + Mathf.Cos(a0) * r, y, centre.y + Mathf.Sin(a0) * r), new Vector3(centre.x + Mathf.Cos(a1) * r, y, centre.y + Mathf.Sin(a1) * r), a, a, lineW * 1.3f);
+            }
+        }
+        wireMesh.Clear();
+        wireMesh.SetVertices(wireVerts);
+        wireMesh.SetColors(wireCols);
+        wireMesh.SetTriangles(wireTris, 0);
+        wireMesh.RecalculateBounds();
+    }
+
+    private static float WireAlpha(float t) => Mathf.Pow(Mathf.Sin(Mathf.PI * Mathf.Clamp01(t)), 0.8f);
+
+    /// <summary>A stretch of a grid line (offsets zFrom..zTo along it, measured from the centre), cut into pieces so its brightness follows the distance.</summary>
+    private void AddInterval(int axis, float g, float o, float d, float zFrom, float zTo, float y, float r0, float r1, float piece, float width)
+    {
+        if (zTo - zFrom < 0.001f) return;
+        int n = Mathf.Max(1, Mathf.CeilToInt((zTo - zFrom) / piece));
+        for (int i = 0; i < n; i++)
+        {
+            float za = Mathf.Lerp(zFrom, zTo, i / (float)n), zb = Mathf.Lerp(zFrom, zTo, (i + 1) / (float)n);
+            float ra = Mathf.Sqrt(d * d + za * za), rb = Mathf.Sqrt(d * d + zb * zb);
+            float aa = WireAlpha((ra - r0) / (r1 - r0)), ab = WireAlpha((rb - r0) / (r1 - r0));
+            Vector3 pa = axis == 0 ? new Vector3(g, y, o + za) : new Vector3(o + za, y, g);
+            Vector3 pb = axis == 0 ? new Vector3(g, y, o + zb) : new Vector3(o + zb, y, g);
+            AddSegment(pa, pb, aa, ab, width);
+        }
+    }
+
+    private void AddSegment(Vector3 a, Vector3 b, float alphaA, float alphaB, float width)
+    {
+        Vector3 dir = b - a;
+        if (dir.sqrMagnitude < 1e-8f) return;
+        dir.Normalize();
+        Vector3 side = new Vector3(-dir.z, 0f, dir.x) * (width * 0.5f);
+        int i = wireVerts.Count;
+        wireVerts.Add(a - side); wireVerts.Add(a + side); wireVerts.Add(b - side); wireVerts.Add(b + side);
+        Color32 ca = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.Clamp01(alphaA) * 255f));
+        Color32 cb = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(Mathf.Clamp01(alphaB) * 255f));
+        wireCols.Add(ca); wireCols.Add(ca); wireCols.Add(cb); wireCols.Add(cb);
+        wireTris.Add(i); wireTris.Add(i + 2); wireTris.Add(i + 1);
+        wireTris.Add(i + 1); wireTris.Add(i + 2); wireTris.Add(i + 3);
+    }
+
+    private void DestroyEdgeFade()
+    {
+        if (edgeRoot != null) Destroy(edgeRoot);
+        if (ringMesh != null) Destroy(ringMesh);
+        if (wireMesh != null) Destroy(wireMesh);
+        if (ringMat != null) Destroy(ringMat);
+        if (wireMat != null) Destroy(wireMat);
+        edgeRoot = ringObject = wireObject = null;
+        ringMesh = wireMesh = null;
+        ringMat = wireMat = null;
+    }
+}

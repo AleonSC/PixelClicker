@@ -266,6 +266,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         DropProxies(true);
         if (flatBase != null) Destroy(flatBase);
         if (flatMat != null) Destroy(flatMat);
+        DestroyEdgeFade();
         ReleaseActive();
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
         previews.Clear();
@@ -567,6 +568,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
         else visibility = Mathf.MoveTowards(visibility, target, fadeDt / (target > visibility ? FadeTime * FadeInFactor : FadeTime * FadeOutFactor));
         ApplyVisibility();
+        UpdateEdgeFade();
         if (exitDone != null && visibility <= 0.001f)
         {
             System.Action done = exitDone;
