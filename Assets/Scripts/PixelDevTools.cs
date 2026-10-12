@@ -797,8 +797,8 @@ public class PixelDevTools : MonoBehaviour
         Place(changelogTab.GetComponent<RectTransform>(), 40f + tabW + 10f + halfW + 10f, y, halfW);
         foreach (Button b in new[] { todoTab, changelogTab })
         {
-            TMP_Text t = b.GetComponentInChildren<TMP_Text>();
-            if (t != null) { t.enableAutoSizing = true; t.fontSizeMax = fontSize; t.fontSizeMin = 10f; }   // the shorter buttons shrink their text to fit
+            TMP_Text tabLabel = b.GetComponentInChildren<TMP_Text>();
+            if (tabLabel != null) { tabLabel.enableAutoSizing = true; tabLabel.fontSizeMax = fontSize; tabLabel.fontSizeMin = 10f; }   // the shorter buttons shrink their text to fit
         }
         toolsTabImage = toolsTab.GetComponent<Image>();
         todoTabImage = todoTab.GetComponent<Image>();

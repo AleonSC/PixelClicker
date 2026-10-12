@@ -340,9 +340,6 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private Color scrollbarColor = new Color(1f, 1f, 1f, 0.35f);
 
     [Header("Changelog")]
-    [Tooltip("Show the Changelog button in the pause menu.")]
-    [SerializeField] private bool showChangelog = true;
-
     [Tooltip("Text of the Changelog button and the title of its screen.")]
     [SerializeField] private string changelogText = "Changelog";
 
