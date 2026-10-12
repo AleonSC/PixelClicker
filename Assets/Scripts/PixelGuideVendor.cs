@@ -327,16 +327,20 @@ public class PixelGuideVendor : MonoBehaviour
 
     private string[] DefaultOne => new[]
     {
-        "Psst... over here. The name's Cubie. I run a little shop. A very legitimate little shop.",
-        "But I only let customers in if they can prove they've got money. So go on: click those pixels and collect some. Come and find me when you're loaded.",
+        "Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation.",
+        "See, pixels are money around here. The white, gray and black ones, then red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.",
+        "Now, how do you get them? You click. And click. And click some more. Same thing, all day. Don't look at me like that, everybody starts at the bottom.",
+        "Think of it as paying your dues. Tedious? Absolutely. But grind long enough and the good stuff opens up. Come find me when you've got a pile worth my time.",
     };
 
     private string[] DefaultTwo => new[]
     {
-        "Well, well... you actually did it. You've got money! Welcome to my shop. You'll find the Shop button at the top right of the screen. Don't worry, I'm not watching your pockets. Much.",
-        "Here, a welcome gift. Nothing suspicious about it, I promise.\n\n{gift}",
-        "A word of advice: more vendors will pass through as you progress. If you'd rather not be bothered, you can switch any of them off in the Toggles menu (it opens up once you get the Auto Clicker).",
-        "Oh, and my friend the Wizard might be coming by soon. Don't let him near my stock, he turns things into frogs. Be seeing you...",
+        "Well, well... look at that pile. Real, official, everybody-agrees-it's-worth-something pixels. All that clicking paid off, huh? Welcome to my shop. The Shop button's at the top right. Don't worry, I'm not counting your pockets. Much.",
+        "Here, a little starter gift. Nothing suspicious about it. Don't ask what it's backed by.\n\n{gift}",
+        "Here's the secret nobody tells you: the clicking never really stops. It just gets better pay. Spend your pure pixels on upgrades and gadgets, and soon the work starts doing itself while you do the clever bits.",
+        "The fancy pixels, ore, crops and sparks, are goods, not coin. Worth plenty to the right buyer, worthless to the wrong one. Learn a skill and you'll meet the buyers.",
+        "More vendors will wander through as you grow. Where from? Nobody asks. They pay in the same pixels, and that's good enough for everyone. You can switch them off in the Toggles menu (it opens up once you get the Auto Clicker).",
+        "My friend the Wizard might drop by soon. Keep him away from my stock, he turns things into frogs. Be seeing you...",
     };
 
     private IEnumerator Visit(bool second)
