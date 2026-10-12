@@ -204,6 +204,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>Label of a trade's button.</summary>
     protected virtual string TradeText => "Trade";
 
+    /// <summary>The word before what a trade costs you in its row ("Pay 20 Copper"); a buyer says "Sell".</summary>
+    protected virtual string TradePayWord => "Pay";
+
     private List<Trade> trades;
 
     /// <summary>How many different wares this visitor brings per visit (0 = everything it can sell).</summary>
@@ -512,7 +515,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         string payName = clicker.Tiers[t.payTier].displayName;
         bool afford = clicker.CanAfford(clicker.Tiers[t.payTier].type, t.pay);
         Color col = afford ? new Color(0.55f, 1f, 0.6f) : new Color(1f, 0.45f, 0.45f);
-        PixelUIKit.SetText(row.cost, "Pay <color=#" + ColorUtility.ToHtmlStringRGB(col) + ">" + PixelClicker.FormatNumberShort(t.pay) + " " + payName + "</color>");
+        PixelUIKit.SetText(row.cost, TradePayWord + " <color=#" + ColorUtility.ToHtmlStringRGB(col) + ">" + PixelClicker.FormatNumberShort(t.pay) + " " + payName + "</color>");
         PixelUIKit.SetText(row.owned, "You own " + PixelClicker.FormatNumberShort(clicker.GetCount(clicker.Tiers[t.payTier].type)));
         PixelUIKit.SetText(row.stockLabel, "");
         row.buy.interactable = !t.done && afford;
