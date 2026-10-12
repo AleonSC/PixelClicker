@@ -346,7 +346,7 @@ public partial class PixelSkills
         er.anchoredPosition = new Vector2(14f, -12f);
         PixelUIKit.UseArrowGlyph(treeExpandButton, true);
         treeExpandGlyph = treeExpandButton.transform.Find("Triangle");
-        treeExpandButton.onClick.AddListener(() => { treeExpanded = !treeExpanded; ApplyTreeExpandGlyph(); RefreshWindow(); });
+        treeExpandButton.onClick.AddListener(() => { treeExpanded = !treeExpanded; ApplyTreeExpandGlyph(); UpdateTreeLayout(); if (nodeScroll != null) nodeScroll.horizontalNormalizedPosition = 0f; RefreshWindow(); });   // re-laid out in the same frame, so nothing jumps
 
         pointsLabel = PixelUIKit.CreateText(Font, treeWindow.transform, "Points", "", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, perkUnlockedColor);
         Place(pointsLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(34f, -150f), new Vector2(-34f, -100f));
@@ -777,7 +777,16 @@ public partial class PixelSkills
         float designW = Mathf.Max(300f, (parentW - leftVisual - rightVisual) / s);
         treeRect.offsetMin = new Vector2(leftVisual, -windowSize.y * 0.5f);
         treeRect.offsetMax = new Vector2(leftVisual + designW - parentW, windowSize.y * 0.5f);
+        // The window changed width (expanded, collapsed, screen resized): lay the nodes out for the new width at once instead of at the next timed refresh.
+        float viewW = nodeView != null ? nodeView.rect.width : 0f;
+        if (Mathf.Abs(viewW - lastTreeViewW) > 1f)
+        {
+            lastTreeViewW = viewW;
+            if (built && WindowOpen) RefreshWindow();
+        }
     }
+
+    private float lastTreeViewW = -1f;
 
     private void Update()
     {

@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Vendors wandering the main menu (added to the title screen by <see cref="PixelTitleScreen"/>): while the small toggle at the bottom left is ON,
-/// the game's vendors (Cubie, the Wizard, Tinkerer, Farmer, Entrepreneur and, once met, the Egg and Bean cats) walk in from either side along the bottom
+/// the game's vendors (Cubie, the Wizard, Tinkerer, Farmer, Entrepreneur and the Egg and Bean cats) walk in from either side along the bottom
 /// of the screen, wander back and forth with a pause here and there, and wander off again; now and then one stays for a good while. The toggle is
 /// invisible until the mouse is over it. Drawn with each vendor's own block art (<c>BuildWalker</c>); unscaled time.
 /// </summary>
@@ -36,6 +36,34 @@ public class PixelTitleWanderers : MonoBehaviour
 
     [Tooltip("Distance from the bottom edge of the screen to the vendors' feet (canvas units).")]
     [SerializeField] private float feetHeight = 14f;
+
+    [Header("Pets and UFO")]
+    [Tooltip("Size of a pet hopping along the bottom of the screen (canvas units).")]
+    [SerializeField] private float petSize = 150f;
+
+    [Tooltip("Most pets shown at once (a random few of the save's pets).")]
+    [SerializeField] private int maxPets = 6;
+
+    [Tooltip("Seconds a pet rests between hops (min, max).")]
+    [SerializeField] private Vector2 petRest = new Vector2(0.5f, 2.2f);
+
+    [Tooltip("How far a hop carries a pet sideways (min, max, canvas units).")]
+    [SerializeField] private Vector2 petHopDistance = new Vector2(90f, 300f);
+
+    [Tooltip("How high a hop goes (canvas units).")]
+    [SerializeField] private float petHopHeight = 110f;
+
+    [Tooltip("Width of the UFO helper flying along the top of the screen (canvas units).")]
+    [SerializeField] private float ufoWidth = 280f;
+
+    [Tooltip("Flying speed of the UFO helper (canvas units per second).")]
+    [SerializeField] private float ufoSpeed = 150f;
+
+    [Tooltip("How far below the top of the screen the UFO flies (min, max, canvas units).")]
+    [SerializeField] private Vector2 ufoHeightRange = new Vector2(70f, 250f);
+
+    [Tooltip("Text on the pets toggle (above the 'display floor' one).")]
+    [SerializeField] private string petsText = "Pets & UFO";
 
     [Header("Toggle")]
     [Tooltip("Size of the toggle at the bottom left.")]
@@ -89,6 +117,15 @@ public class PixelTitleWanderers : MonoBehaviour
             blurCache = value ? 1 : 0;
             PlayerPrefs.SetInt(BlurPref, blurCache);
         }
+    }
+
+    private const string PetsPref = "PixelClicker.Setting.TitlePets";
+
+    /// <summary>On = the current save's pets hop along the bottom of the main menu and its UFO helper (if bought and switched on) flies along the top.</summary>
+    public static bool PetsEnabled
+    {
+        get { return PlayerPrefs.GetInt(PetsPref, 0) == 1; }
+        set { PlayerPrefs.SetInt(PetsPref, value ? 1 : 0); }
     }
 
     private const string FloorPref = "PixelClicker.Setting.DisplayFloor";
@@ -155,6 +192,7 @@ public class PixelTitleWanderers : MonoBehaviour
         MakeToggle(font, "Live Background Toggle", liveText, 24f + toggleSize.y + 10f, () => LiveBackground, v => LiveBackground = v);
         MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 2f, () => BlurBackground, v => BlurBackground = v);
         MakeToggle(font, "Display Floor Toggle", floorText, 24f + (toggleSize.y + 10f) * 3f, () => DisplayFloor, v => DisplayFloor = v);
+        MakeToggle(font, "Pets Toggle", petsText, 24f + (toggleSize.y + 10f) * 4f, () => PetsEnabled, v => PetsEnabled = v);
         built = true;
         Refresh();
         nextArrival = Time.unscaledTime + 1.5f;
@@ -213,6 +251,8 @@ public class PixelTitleWanderers : MonoBehaviour
         if (!PixelTitleScreen.Showing)
         {
             if (walkers.Count > 0) ClearAll();
+            if (hoppers.Count > 0) ClearPets();
+            if (ufoArt != null) ClearUfo();
             fadingOut = false;
             if (layerGroup != null) layerGroup.alpha = 1f;
             return;
@@ -232,6 +272,8 @@ public class PixelTitleWanderers : MonoBehaviour
         foreach (Toggle t in toggles) t.group.alpha = Mathf.MoveTowards(t.group.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.4f));
 
         if (!on && walkers.Count > 0) ClearAll();   // switched off: everyone goes
+        UpdatePets(Time.unscaledDeltaTime);
+        UpdateUfo(Time.unscaledDeltaTime);
 
         float dt = Time.unscaledDeltaTime;
         float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
@@ -258,7 +300,7 @@ public class PixelTitleWanderers : MonoBehaviour
         walkers.Clear();
     }
 
-    /// <summary>Everyone who can walk in: Cubie always, the other vendors if they exist, the cats only once met.</summary>
+    /// <summary>Everyone who can walk in: Cubie, the other vendors and the Egg and Bean cats (whether or not you have met them).</summary>
     private void Spawn(float half)
     {
         List<System.Func<float, RectTransform>> makers = new List<System.Func<float, RectTransform>>();
@@ -269,7 +311,6 @@ public class PixelTitleWanderers : MonoBehaviour
             PixelVisitorMinigame v = m as PixelVisitorMinigame;
             if (v == null) continue;
             string id = v.Id;
-            if ((id == "egg" || id == "bean") && PixelStats.Total(id + ".met") < 1d) continue;
             makers.Add(h => v.BuildWalker(layer, h));
         }
         if (makers.Count == 0) return;
@@ -337,5 +378,300 @@ public class PixelTitleWanderers : MonoBehaviour
         w.rect.localRotation = Quaternion.Euler(0f, 0f, sway);
         w.rect.localScale = new Vector3(w.facing, 1f, 1f);
         return false;
+    }
+
+    // ------------------------------------------------------------------
+    // Pets hopping along the bottom and the UFO helper flying along the top (current save, behind the 'Pets & UFO' toggle)
+    // ------------------------------------------------------------------
+
+    private class Hopper
+    {
+        public RectTransform rect;
+        public RawImage image;
+        public RenderTexture texture;
+        public Camera camera;
+        public Transform pivot;
+        public GameObject studio;
+        public float x, y, vy, vx, rest, facing = 1f, squash, hopT, hopLen, phase, appear;
+        public bool inAir;
+    }
+
+    private readonly List<Hopper> hoppers = new List<Hopper>();
+    private string petSignature = "";
+    private float petCheckTimer;
+    private const float StudioHeight = -5200f;
+    private int studioCount;
+
+    private static string SignatureOf(List<PixelPets.TitlePet> list)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (PixelPets.TitlePet p in list) sb.Append((int)p.type).Append(':').Append(p.outfit).Append(',');
+        return sb.ToString();
+    }
+
+    private void UpdatePets(float dt)
+    {
+        bool want = PetsEnabled && !fadingOut;
+        if (!want) { if (hoppers.Count > 0) ClearPets(); return; }
+
+        // (Re)build whenever the save's pets change (a slot was loaded from the menu, the first frames after start...).
+        petCheckTimer -= dt;
+        if (petCheckTimer <= 0f)
+        {
+            petCheckTimer = 0.5f;
+            PixelPets pets = PixelPets.Instance;
+            List<PixelPets.TitlePet> owned = pets != null ? pets.TitlePets() : new List<PixelPets.TitlePet>();
+            string sig = SignatureOf(owned);
+            if (sig != petSignature || (owned.Count > 0 && hoppers.Count == 0))
+            {
+                petSignature = sig;
+                ClearPets();
+                BuildPets(pets, owned);
+            }
+        }
+
+        float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
+        foreach (Hopper h in hoppers) StepHopper(h, dt, half);
+    }
+
+    private void BuildPets(PixelPets pets, List<PixelPets.TitlePet> owned)
+    {
+        if (pets == null || owned.Count == 0) return;
+        // A random few (every pet if there are not many).
+        List<PixelPets.TitlePet> pool = new List<PixelPets.TitlePet>(owned);
+        float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
+        for (int n = 0; n < Mathf.Max(1, maxPets) && pool.Count > 0; n++)
+        {
+            int pick = Random.Range(0, pool.Count);
+            PixelPets.TitlePet pet = pool[pick];
+            pool.RemoveAt(pick);
+            Hopper h = MakeHopper(pets, pet);
+            if (h == null) continue;
+            h.x = Random.Range(-half * 0.8f, half * 0.8f);
+            h.rest = Random.Range(0f, petRest.y);
+            h.phase = Random.value * 6.28f;
+            hoppers.Add(h);
+        }
+    }
+
+    /// <summary>One pet: a hidden studio (its model and outfit under a pivot, an orthographic camera into a transparent RenderTexture) shown by a RawImage on the title.</summary>
+    private Hopper MakeHopper(PixelPets pets, PixelPets.TitlePet pet)
+    {
+        GameObject studio = new GameObject("Title Pet Studio");
+        studio.transform.position = new Vector3(studioCount++ * 40f, StudioHeight, 0f);
+        GameObject pivotGo = new GameObject("Pivot");
+        pivotGo.transform.SetParent(studio.transform, false);
+        GameObject model = pets.BuildTitleModel(pet, pivotGo.transform);
+        if (model == null) { Destroy(studio); return null; }
+
+        Hopper h = new Hopper { studio = studio, pivot = pivotGo.transform };
+        h.texture = new RenderTexture(256, 256, 24, RenderTextureFormat.ARGB32) { name = "Title Pet" };
+        GameObject camGo = new GameObject("Camera");
+        camGo.transform.SetParent(studio.transform, false);
+        h.camera = camGo.AddComponent<Camera>();
+        h.camera.enabled = false;
+        h.camera.clearFlags = CameraClearFlags.SolidColor;
+        h.camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+        h.camera.orthographic = true;
+        h.camera.orthographicSize = 1.15f;           // room for hats and capes round the unit cube
+        h.camera.nearClipPlane = 0.1f;
+        h.camera.farClipPlane = 30f;
+        h.camera.allowHDR = false;
+        h.camera.targetTexture = h.texture;
+        camGo.transform.localPosition = new Vector3(0f, 0.28f, 4.4f);
+        camGo.transform.rotation = Quaternion.LookRotation(Vector3.back, Vector3.up);   // the camera sits in front (+Z) of the pet and looks back at it
+
+        GameObject lightGo = new GameObject("Light");
+        lightGo.transform.SetParent(studio.transform, false);
+        lightGo.transform.localPosition = new Vector3(2f, 3f, 5f);
+        Light l = lightGo.AddComponent<Light>();
+        l.type = LightType.Point;
+        l.range = 25f;
+        l.intensity = 6f;
+        l.shadows = LightShadows.None;
+
+        GameObject img = new GameObject("Title Pet", typeof(RectTransform), typeof(RawImage));
+        img.transform.SetParent(layer, false);
+        h.image = img.GetComponent<RawImage>();
+        h.image.texture = h.texture;
+        h.image.raycastTarget = false;
+        h.rect = img.GetComponent<RectTransform>();
+        h.rect.anchorMin = h.rect.anchorMax = new Vector2(0.5f, 0f);
+        h.rect.pivot = new Vector2(0.5f, 0.16f);                      // the cube's bottom edge sits 16% up the picture
+        h.rect.sizeDelta = Vector2.one * petSize * 2.3f;              // the picture spans 2.3 world units for a 1 unit cube
+        return h;
+    }
+
+    private void StepHopper(Hopper h, float dt, float half)
+    {
+        if (h.rect == null) return;
+        h.appear = Mathf.MoveTowards(h.appear, 1f, dt / 0.4f);
+        const float flight = 0.55f;
+        if (!h.inAir)
+        {
+            h.rest -= dt;
+            h.squash = Mathf.Lerp(h.squash, 0f, dt * 12f);
+            if (h.rest <= 0f)
+            {
+                float dist = Random.Range(petHopDistance.x, Mathf.Max(petHopDistance.x, petHopDistance.y)) * (Random.value < 0.5f ? -1f : 1f);
+                if (h.x + dist > half * 0.88f || h.x + dist < -half * 0.88f) dist = -dist;   // never off the edge
+                h.facing = Mathf.Sign(dist);
+                h.vx = dist / flight;
+                h.vy = 4f * petHopHeight / flight;     // up and back down in 'flight' seconds: g = 8 H / t^2
+                h.inAir = true;
+                h.hopT = 0f;
+                h.squash = -0.18f;                      // stretches as it leaves
+            }
+        }
+        else
+        {
+            h.hopT += dt;
+            float g = 8f * petHopHeight / (flight * flight);
+            h.vy -= g * dt;
+            h.y += h.vy * dt;
+            h.x += h.vx * dt;
+            if (h.y <= 0f && h.vy < 0f)
+            {
+                h.y = 0f;
+                h.inAir = false;
+                h.squash = 0.3f;                        // lands with a squash
+                h.rest = Random.Range(petRest.x, Mathf.Max(petRest.x, petRest.y));
+            }
+        }
+
+        float tilt = h.inAir ? Mathf.Clamp(h.vy / (4f * petHopHeight / flight), -1f, 1f) : 0f;
+        h.pivot.localRotation = Quaternion.Euler(14f - tilt * 14f, h.facing * 28f + Mathf.Sin(Time.unscaledTime * 1.6f + h.phase) * 4f, -h.facing * tilt * 8f);
+        h.rect.localScale = new Vector3(h.appear * (1f + h.squash * 0.5f), h.appear * (1f - h.squash * 0.5f), 1f);
+        h.rect.anchoredPosition = new Vector2(h.x, feetHeight + h.y);
+        h.camera.Render();
+    }
+
+    private void ClearPets()
+    {
+        foreach (Hopper h in hoppers)
+        {
+            if (h.rect != null) Destroy(h.rect.gameObject);
+            if (h.studio != null) Destroy(h.studio);
+            if (h.texture != null) { h.texture.Release(); Destroy(h.texture); }
+        }
+        hoppers.Clear();
+        petSignature = "";
+        petCheckTimer = 0f;
+    }
+
+    // ---- The UFO helper: a block-built flying saucer drifting about the top of the screen ----
+
+    private RectTransform ufoArt;
+    private readonly List<Image> ufoLights = new List<Image>();
+    private float ufoX, ufoY, ufoVx, ufoVy, ufoTargetX, ufoTargetY, ufoPause, ufoPhase, ufoAppear;
+    private float ufoCheckTimer;
+
+    private static Image UfoBlock(Transform parent, string name, Vector2 centre, Vector2 size, Color color)
+    {
+        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(parent, false);
+        Image im = g.GetComponent<Image>();
+        im.color = color;
+        im.raycastTarget = false;
+        RectTransform r = g.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+        r.anchoredPosition = centre;
+        r.sizeDelta = size;
+        return im;
+    }
+
+    /// <summary>Is the UFO helper bought in the current save and not switched off in its Toggles window?</summary>
+    private static bool UfoAvailable()
+    {
+        PixelRobotWorker robot = PixelFind.First<PixelRobotWorker>();
+        return robot != null && robot.Active;
+    }
+
+    private void UpdateUfo(float dt)
+    {
+        bool want = PetsEnabled && !fadingOut;
+        if (!want) { if (ufoArt != null) ClearUfo(); return; }
+        ufoCheckTimer -= dt;
+        if (ufoCheckTimer <= 0f)
+        {
+            ufoCheckTimer = 0.5f;
+            bool available = UfoAvailable();
+            if (available && ufoArt == null) BuildUfoArt();
+            else if (!available && ufoArt != null) ClearUfo();
+        }
+        if (ufoArt == null) return;
+
+        float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
+        ufoAppear = Mathf.MoveTowards(ufoAppear, 1f, dt / 0.6f);
+        ufoPause -= dt;
+        float dx = ufoTargetX - ufoX, dy = ufoTargetY - ufoY;
+        if (ufoPause <= 0f && dx * dx + dy * dy < 40f * 40f)
+        {
+            ufoPause = Random.Range(0.8f, 2.8f);
+            ufoTargetX = Random.Range(-half * 0.85f, half * 0.85f);
+            ufoTargetY = -Random.Range(ufoHeightRange.x, Mathf.Max(ufoHeightRange.x, ufoHeightRange.y));
+        }
+        Vector2 want2 = ufoPause > 0f ? Vector2.zero : new Vector2(dx, dy).normalized * ufoSpeed;
+        ufoVx = Mathf.Lerp(ufoVx, want2.x, dt * 1.6f);
+        ufoVy = Mathf.Lerp(ufoVy, want2.y, dt * 1.6f);
+        ufoX += ufoVx * dt;
+        ufoY += ufoVy * dt;
+
+        float t = Time.unscaledTime + ufoPhase;
+        ufoArt.anchoredPosition = new Vector2(ufoX, ufoY + Mathf.Sin(t * 2.2f) * 7f);
+        ufoArt.localRotation = Quaternion.Euler(0f, 0f, -ufoVx * 0.06f);   // leans into its flight
+        ufoArt.localScale = Vector3.one * ((ufoWidth / 280f) * ufoAppear);
+        for (int i = 0; i < ufoLights.Count; i++)
+            ufoLights[i].color = Color.Lerp(new Color(0.25f, 0.2f, 0.05f), new Color(1f, 0.9f, 0.3f), Mathf.Clamp01(Mathf.Sin(t * 7f - i * 0.9f) * 0.5f + 0.5f));
+    }
+
+    private void BuildUfoArt()
+    {
+        GameObject g = new GameObject("Title UFO", typeof(RectTransform));
+        g.transform.SetParent(layer, false);
+        ufoArt = g.GetComponent<RectTransform>();
+        ufoArt.anchorMin = ufoArt.anchorMax = new Vector2(0.5f, 1f);
+        ufoArt.pivot = new Vector2(0.5f, 0.5f);
+        ufoArt.sizeDelta = new Vector2(280f, 170f);
+        Transform t = ufoArt;
+        // The dome and the alien under it.
+        UfoBlock(t, "Dome Top", new Vector2(0f, 62f), new Vector2(76f, 26f), new Color(0.6f, 0.95f, 1f, 0.55f));
+        UfoBlock(t, "Dome", new Vector2(0f, 40f), new Vector2(112f, 30f), new Color(0.6f, 0.95f, 1f, 0.5f));
+        UfoBlock(t, "Alien", new Vector2(0f, 38f), new Vector2(44f, 36f), new Color(0.45f, 0.85f, 0.4f, 1f));
+        UfoBlock(t, "Eye L", new Vector2(-10f, 40f), new Vector2(10f, 15f), Color.black);
+        UfoBlock(t, "Eye R", new Vector2(10f, 40f), new Vector2(10f, 15f), Color.black);
+        // The hull: stepped like pixel art.
+        UfoBlock(t, "Hull Top", new Vector2(0f, 14f), new Vector2(190f, 22f), new Color(0.62f, 0.66f, 0.74f, 1f));
+        UfoBlock(t, "Hull", new Vector2(0f, -8f), new Vector2(262f, 28f), new Color(0.5f, 0.54f, 0.62f, 1f));
+        UfoBlock(t, "Rim", new Vector2(0f, -8f), new Vector2(280f, 8f), new Color(0.95f, 0.62f, 0.2f, 1f));
+        UfoBlock(t, "Underside", new Vector2(0f, -32f), new Vector2(150f, 22f), new Color(0.3f, 0.32f, 0.4f, 1f));
+        UfoBlock(t, "Emitter", new Vector2(0f, -48f), new Vector2(64f, 8f), new Color(0.95f, 0.62f, 0.2f, 1f));
+        ufoLights.Clear();
+        for (int i = 0; i < 7; i++)
+            ufoLights.Add(UfoBlock(t, "Light " + i, new Vector2(-96f + i * 32f, -8f), new Vector2(14f, 14f), new Color(1f, 0.9f, 0.3f, 1f)));
+
+        float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
+        ufoX = Random.value < 0.5f ? -half - 200f : half + 200f;   // flies in from a side
+        ufoY = -Random.Range(ufoHeightRange.x, Mathf.Max(ufoHeightRange.x, ufoHeightRange.y));
+        ufoTargetX = Random.Range(-half * 0.6f, half * 0.6f);
+        ufoTargetY = ufoY;
+        ufoVx = ufoVy = 0f;
+        ufoPause = 0f;
+        ufoPhase = Random.value * 6.28f;
+        ufoAppear = 1f;
+        ufoArt.anchoredPosition = new Vector2(ufoX, ufoY);
+    }
+
+    private void ClearUfo()
+    {
+        if (ufoArt != null) Destroy(ufoArt.gameObject);
+        ufoArt = null;
+        ufoLights.Clear();
+    }
+
+    private void OnDestroy()
+    {
+        ClearPets();
+        ClearUfo();
     }
 }
