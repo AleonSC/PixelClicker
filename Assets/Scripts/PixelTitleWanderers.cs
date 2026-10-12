@@ -127,6 +127,15 @@ public class PixelTitleWanderers : MonoBehaviour
         }
     }
 
+    private const string BlurAmountPref = "PixelClicker.Setting.TitleBlurAmount";
+
+    /// <summary>How strong the title blur is, 0 (barely blurred) .. 1 (the full strong blur, the default).</summary>
+    public static float BlurAmount
+    {
+        get { return PlayerPrefs.GetFloat(BlurAmountPref, 1f); }
+        set { PlayerPrefs.SetFloat(BlurAmountPref, Mathf.Clamp01(value)); }
+    }
+
     private const string PetsPref = "PixelClicker.Setting.TitlePets";
 
     /// <summary>On = the current save's pets hop along the bottom of the main menu and its UFO helper (if bought and switched on) flies along the top.</summary>
@@ -169,7 +178,7 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private readonly List<Walker> walkers = new List<Walker>();
     private Transform layer;
-    private class Toggle { public RectTransform rect; public CanvasGroup group; public Image tick; public System.Func<bool> get; public System.Action<bool> set; }
+    private class Toggle { public RectTransform rect; public CanvasGroup group; public Image tick; public System.Func<bool> get; public System.Action<bool> set; public TMP_Text label; public Slider slider; }
     private readonly List<Toggle> toggles = new List<Toggle>();
     private bool on, built;
     private float nextArrival;
@@ -200,7 +209,7 @@ public class PixelTitleWanderers : MonoBehaviour
         MakeToggle(font, "Wander Toggle", toggleText, 24f, () => on, v => { on = v; Enabled = v; });
         MakeToggle(font, "Pets Toggle", petsWanderText, 24f + toggleSize.y + 10f, () => PetsEnabled, v => PetsEnabled = v);
         MakeToggle(font, "Live Background Toggle", liveText, 24f + (toggleSize.y + 10f) * 2f, () => LiveBackground, v => LiveBackground = v);
-        MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 3f, () => BlurBackground, v => BlurBackground = v);
+        MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 3f, () => BlurBackground, v => BlurBackground = v, true);
         built = true;
         Refresh();
         nextArrival = Time.unscaledTime + 1.5f;
@@ -208,10 +217,20 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private void Refresh()
     {
-        foreach (Toggle t in toggles) if (t.tick != null) t.tick.gameObject.SetActive(t.get());
+        foreach (Toggle t in toggles)
+        {
+            if (t.tick != null) t.tick.gameObject.SetActive(t.get());
+            // a toggle with a slider shows the slider instead of its text while it is ticked
+            if (t.slider != null)
+            {
+                bool slide = t.get();
+                t.slider.gameObject.SetActive(slide);
+                if (t.label != null) t.label.gameObject.SetActive(!slide);
+            }
+        }
     }
 
-    private void MakeToggle(TMP_FontAsset font, string name, string text, float y, System.Func<bool> get, System.Action<bool> set)
+    private void MakeToggle(TMP_FontAsset font, string name, string text, float y, System.Func<bool> get, System.Action<bool> set, bool withSlider = false)
     {
         GameObject t = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup), typeof(Button));
         t.transform.SetParent(layer.parent, false);
@@ -250,6 +269,18 @@ public class PixelTitleWanderers : MonoBehaviour
         RectTransform lrr = label.rectTransform;
         lrr.anchorMin = Vector2.zero; lrr.anchorMax = Vector2.one;
         lrr.offsetMin = new Vector2(58f, 0f); lrr.offsetMax = new Vector2(-10f, 0f);
+        toggle.label = label;
+        if (withSlider)
+        {
+            Slider sl = PixelUIKit.CreateSlider(t.transform, "Blur Slider", new Color(0.02f, 0.03f, 0.05f, 1f), new Color(0.35f, 0.85f, 0.5f, 1f), Color.white);
+            RectTransform sr = sl.GetComponent<RectTransform>();
+            sr.anchorMin = Vector2.zero; sr.anchorMax = Vector2.one;
+            sr.offsetMin = new Vector2(58f, 6f); sr.offsetMax = new Vector2(-10f, -6f);
+            sl.minValue = 0f; sl.maxValue = 1f;
+            sl.SetValueWithoutNotify(BlurAmount);
+            sl.onValueChanged.AddListener(v => BlurAmount = v);
+            toggle.slider = sl;
+        }
         toggles.Add(toggle);
     }
 

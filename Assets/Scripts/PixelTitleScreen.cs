@@ -966,7 +966,15 @@ public class PixelTitleScreen : MonoBehaviour
         // (also switches the layers back on / to the blurred pictures after the blur was off)
         lightImage.enabled = strongImage.enabled = true;
         lightImage.texture = PickChain(lightBlurDivisor);
-        strongImage.texture = PickChain(strongBlurDivisor);
+        strongImage.texture = PickChain(StrongDivisorForAmount());
+    }
+
+    /// <summary>The strong layer's divisor scaled by the menu's blur slider (1 = the full strong blur, 0 = the weakest copy in the chain).</summary>
+    private int StrongDivisorForAmount()
+    {
+        float a = PixelTitleWanderers.BlurAmount;
+        if (a >= 0.999f || chainDivisors.Count == 0) return strongBlurDivisor;
+        return Mathf.Max(1, Mathf.RoundToInt(Mathf.Lerp(chainDivisors[0], strongBlurDivisor, a)));
     }
 
     // ------------------------------------------------------------------
