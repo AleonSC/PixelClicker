@@ -36,9 +36,6 @@ public class PixelMyWindow : MonoBehaviour
     [Tooltip("Show the docked 'My Window' button from the start. Off = it appears once two pixel types are unlocked (like the Pixel Guide).")]
     [SerializeField] private bool showFromStart = false;
 
-    [Tooltip("Text on the docked button.")]
-    [SerializeField] private string buttonText = "My Window";
-
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "My Window";
 

@@ -162,7 +162,7 @@ public partial class PixelPets
     private Camera studioCam;
     private Transform studioModel;
     private float studioYaw = 20f, studioPitch = 10f, studioZoom = 4.6f;
-    private bool studioDragging, studioUpdating;
+    private bool studioUpdating;
     private int studioDummy = -1;       // -1 = the plain dummy, else a PixelType number
     private int studioOutfit = -1;      // index into the custom outfits
     private int studioPiece = -1;
@@ -310,8 +310,6 @@ public partial class PixelPets
         view.GetComponent<RawImage>().texture = studioRT;
         Put(view.GetComponent<RectTransform>(), 30f, 100f, 800f, 620f);
         EventTrigger trig = view.GetComponent<EventTrigger>();
-        AddTrigger(trig, EventTriggerType.BeginDrag, _ => studioDragging = true);
-        AddTrigger(trig, EventTriggerType.EndDrag, _ => studioDragging = false);
         AddTrigger(trig, EventTriggerType.Drag, data =>
         {
             Vector2 d = ((PointerEventData)data).delta;
