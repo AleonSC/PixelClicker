@@ -61,7 +61,7 @@ public partial class PixelFloor
     private void StartSlicedFill(Texture2D tex, FloorStyle s)
     {
         StopSlicedFill();
-        FillFlat(tex, Color.Lerp(s.colorA, s.colorB, 0.35f));
+        FillPreview(tex, s);   // a soft version of the finished picture shows at once; the sharp one replaces it when it is done
         fillRoutine = StartCoroutine(FillSliced(tex, s));
     }
 
@@ -78,6 +78,52 @@ public partial class PixelFloor
         Color32 c32 = c;
         for (int i = 0; i < flat.Length; i++) flat[i] = c32;
         tex.SetPixels32(flat);
+        tex.Apply(false);
+    }
+
+    /// <summary>Fills the texture at once with a soft, blurred version of the finished picture (the style sampled on a coarse grid and smoothly enlarged), so the floor never shows a flat colour while the sharp picture is drawn.</summary>
+    private void FillPreview(Texture2D tex, FloorStyle s)
+    {
+        int n = tex.width, q = 96, cells = Mathf.Max(1, s.cells);
+        ResumeShade(s, IsOverlayPattern(s.pattern));
+        Color[] sm = new Color[q * q];
+        for (int y = 0; y < q; y++)
+        {
+            for (int x = 0; x < q; x++)
+            {
+                float u = (x + 0.5f) / q, v = (y + 0.5f) / q;
+                Color c = Shade(s, u, v, Mathf.Min(n - 1, (int)(u * n)), Mathf.Min(n - 1, (int)(v * n)), n, cells);
+                c.a = 1f;
+                sm[y * q + x] = c;
+            }
+        }
+        int[] x0 = new int[n], x1 = new int[n];
+        float[] tx = new float[n];
+        for (int x = 0; x < n; x++)
+        {
+            float fx = (x + 0.5f) / n * q - 0.5f;
+            x0[x] = Mathf.Clamp(Mathf.FloorToInt(fx), 0, q - 1);
+            x1[x] = Mathf.Min(q - 1, x0[x] + 1);
+            tx[x] = Mathf.Clamp01(fx - x0[x]);
+        }
+        Color32[] full = new Color32[n * n];
+        for (int y = 0; y < n; y++)
+        {
+            float fy = (y + 0.5f) / n * q - 0.5f;
+            int y0 = Mathf.Clamp(Mathf.FloorToInt(fy), 0, q - 1), y1 = Mathf.Min(q - 1, y0 + 1);
+            float ty = Mathf.Clamp01(fy - y0);
+            int r0 = y0 * q, r1 = y1 * q;
+            for (int x = 0; x < n; x++)
+            {
+                float a = tx[x];
+                Color c00 = sm[r0 + x0[x]], c10 = sm[r0 + x1[x]], c01 = sm[r1 + x0[x]], c11 = sm[r1 + x1[x]];
+                float r = Mathf.Lerp(Mathf.Lerp(c00.r, c10.r, a), Mathf.Lerp(c01.r, c11.r, a), ty);
+                float g = Mathf.Lerp(Mathf.Lerp(c00.g, c10.g, a), Mathf.Lerp(c01.g, c11.g, a), ty);
+                float b = Mathf.Lerp(Mathf.Lerp(c00.b, c10.b, a), Mathf.Lerp(c01.b, c11.b, a), ty);
+                full[y * n + x] = new Color32((byte)(Mathf.Clamp01(r) * 255f), (byte)(Mathf.Clamp01(g) * 255f), (byte)(Mathf.Clamp01(b) * 255f), 255);
+            }
+        }
+        tex.SetPixels32(full);
         tex.Apply(false);
     }
 

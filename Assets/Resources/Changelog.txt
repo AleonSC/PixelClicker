@@ -687,3 +687,4 @@
 [2026-10-12 20:11 UTC] Animated floors are redrawn at most 10 times a second and not at all while the floor is hidden, so they cost much less CPU.
 [2026-10-12 20:15 UTC] Removed three unused fields (console warnings).
 [2026-10-12 20:18 UTC] Added Unity Profiler markers (Pixel.FloorRedraw, ElectricLinks.Scan, SolarClusters, QuantumScan) so slow spots can be measured.
+[2026-10-12 20:20 UTC] Big floors now show a soft blurred version of their picture while the sharp one is drawn, instead of a flat colour.
