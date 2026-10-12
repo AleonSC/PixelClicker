@@ -403,6 +403,11 @@ public partial class PixelShop
         cr.anchorMin = Vector2.zero; cr.anchorMax = Vector2.one;
         cr.offsetMin = new Vector2(12f, 6f); cr.offsetMax = new Vector2(-12f, -6f);
         row.costLabel.alignment = TextAlignmentOptions.MidlineLeft;
+#if UNITY_2023_1_OR_NEWER
+        row.costLabel.textWrappingMode = TextWrappingModes.NoWrap;   // lines are broken by the text itself; the size shrinks to fit instead
+#else
+        row.costLabel.enableWordWrapping = false;
+#endif
     }
 
     private void BuildTabs(Transform parent)
@@ -749,7 +754,7 @@ public partial class PixelShop
 
         bool hasChildren = !potion && HasChildren(index);
         float textRightInset = buyButtonSize.x + 40f; // keep text clear of the Buy button
-        if (hasChildren) textRightInset += upgradesArrowSize.x + 10f;
+        // (a pack's upgrade arrow now sits under the Buy button, so every row's boxes end at the same place)
 
         TMP_Text name = CreateText(rowGo.transform, "Name", rowName, nameFontSize,
                                    TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
@@ -797,12 +802,16 @@ public partial class PixelShop
 
         if (hasChildren)
         {
-            row.arrowButton = CreateButton(rowGo.transform, "Upgrades Arrow", upgradesArrowText, upgradesArrowSize,
+            // Buy on top, the orange upgrades arrow right under it, both in the same column.
+            Vector2 arrowSize = new Vector2(buyButtonSize.x, buyButtonSize.y * 0.8f);
+            float dy = Mathf.Max(buyButtonSize.y, arrowSize.y) * 0.55f;
+            row.arrowButton = CreateButton(rowGo.transform, "Upgrades Arrow", upgradesArrowText, arrowSize,
                                            upgradesArrowColor, textColor, buyFontSize, out _, out _);
-            PixelUIKit.UseRightTriangle(row.arrowButton.gameObject, row.arrowButton.GetComponentInChildren<TMP_Text>(true), textColor, upgradesArrowSize);
+            PixelUIKit.UseRightTriangle(row.arrowButton.gameObject, row.arrowButton.GetComponentInChildren<TMP_Text>(true), textColor, arrowSize);
             RectTransform ar = row.arrowButton.GetComponent<RectTransform>();
             ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(1f, 0.5f);
-            ar.anchoredPosition = new Vector2(-(20f + buyButtonSize.x + 10f), 0f);
+            ar.anchoredPosition = new Vector2(-20f, -dy);
+            br.anchoredPosition = new Vector2(-20f, dy);
             row.arrowButton.onClick.AddListener(() => OpenUpgradesWindow(captured));
         }
 
