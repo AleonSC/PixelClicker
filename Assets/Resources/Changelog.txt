@@ -552,3 +552,4 @@
 [2026-10-12 03:13 UTC] Every sky style now fills the whole view (the part below the horizon mirrors the sky instead of showing a flat ground colour or grid), like Nebula.
 [2026-10-12 03:14 UTC] Fixed console issues: traffic light field no longer hides Component.light, shop RefreshRows null error before the panel exists, and the missing-ellipsis font warning (text now truncates).
 [2026-10-12 03:17 UTC] Settings: the Replay tutorial button is now narrower than the Gameplay header.
+[2026-10-12 03:20 UTC] Settings: rows are now the same width as the section headers.

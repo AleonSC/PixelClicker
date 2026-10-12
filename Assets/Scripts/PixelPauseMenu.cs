@@ -1197,7 +1197,7 @@ public class PixelPauseMenu : MonoBehaviour
         row.anchorMin = new Vector2(0f, 1f);
         row.anchorMax = new Vector2(1f, 1f);
         row.pivot = new Vector2(0.5f, 1f);
-        row.sizeDelta = new Vector2(-80f, rowHeight);
+        row.sizeDelta = new Vector2(-96f, rowHeight);
         row.anchoredPosition = new Vector2(0f, -y);
 
         TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize * 0.65f, FontStyles.Normal);   // one size for every row so they line up
