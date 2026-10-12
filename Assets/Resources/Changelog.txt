@@ -609,3 +609,4 @@
 [2026-10-12 07:38 UTC] Fixed a compile error (duplicate levelLabel) in the shop rows.
 [2026-10-12 07:42 UTC] Every shop button now sends a neon outline in its own colour out from under it when pressed.
 [2026-10-12 07:44 UTC] Every shop row (packs, potions, Operation, search results) now uses the boxed layout: name box and level box beside the info button, cost box underneath.
+[2026-10-12 07:47 UTC] Fixed the shop pack rows: they keep the boxed layout with the Buy button on the right instead of the old wide bar along the bottom.

@@ -806,7 +806,7 @@ public partial class PixelShop
             row.arrowButton.onClick.AddListener(() => OpenUpgradesWindow(captured));
         }
 
-        if (!potion) LayoutPackRowLikeCards(row, hasChildren);
+        // (The old card-style layout - a wide Buy bar along the bottom - is not used any more: every row is boxed, see StyleBoxedRow.)
         return row;
     }
 
