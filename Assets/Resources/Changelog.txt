@@ -561,3 +561,4 @@
 [2026-10-12 03:52 UTC] Fixed a compile error in the save script (missing using for List).
 [2026-10-12 03:59 UTC] Skill packs get a filler block: Farming's Dirt and Mining's Stone (the old Rock, now part of the Prospector's Pack) are 60% of spawns at level 1 and fade to 10% by level 20; new crisp pixel-art textures for Wood, Dirt and Stone.
 [2026-10-12 04:06 UTC] Wood is now rough bark and Stone natural fractured rock; the Seed block is a glossy ridged pod that cracks with a green glow and plants 1-5 seedlings that grow only plant pixels (Wheat, Pollen, Golden Fruit, Wood).
+[2026-10-12 04:13 UTC] Hazard blocks: Farming's Pest (hit it too often and it eats every sprout) and Mining's Gas Pocket (explodes); both cost skill XP (-10% per hazard, cumulative, 1 minute timer that restarts), leave by themselves, and the auto clicker never touches them.

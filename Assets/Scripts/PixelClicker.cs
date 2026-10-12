@@ -96,16 +96,21 @@ public class PixelClicker : MonoBehaviour
         Transistor = 46,
         Fuse = 47,
         Bulb = 48,
+        Pest = 49,        // Farming's hazard block
+        GasPocket = 50,   // Mining's hazard block
     }
 
     /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
     public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
 
+    /// <summary>A HAZARD block (the Pest in Farming, the Gas Pocket in Mining): hit it too many times and it goes off.</summary>
+    public static bool IsHazard(PixelType type) => type == PixelType.Pest || type == PixelType.GasPocket;
+
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
     public static bool IsOre(PixelType type) => type >= PixelType.Copper && type <= PixelType.Nickel;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Bulb);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.GasPocket);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1570,6 +1575,20 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 41;
         }
 
+        if (looksVersion < 42)
+        {
+            // The hazard blocks (Pest, Gas Pocket) got looks.
+            System.Collections.Generic.List<PixelLook> list42 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults42 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Pest, PixelType.GasPocket })
+            {
+                PixelLook def = PixelLooks.Find(defaults42, t);
+                if (def != null && PixelLooks.Find(list42.ToArray(), t) == null) list42.Add(def);
+            }
+            looks = list42.ToArray();
+            looksVersion = 42;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1657,7 +1676,7 @@ public class PixelClicker : MonoBehaviour
 
         CleanOldPixels();
         UpdateSolarClusters();
-        if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) UpdateWeevil();
+        if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) { UpdateWeevil(); UpdateHazardExpiry(); }
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
@@ -1762,6 +1781,7 @@ public class PixelClicker : MonoBehaviour
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
+        if (automatic && IsHazard(tier.type) && !HazardAutoClear) return;   // the auto clicker never touches a hazard: it waits until you deal with it (or it goes away)
 
         // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
         int breaks = 1; // pixels broken by this click (more than 1 only with the dev click count)
@@ -1788,6 +1808,7 @@ public class PixelClicker : MonoBehaviour
                 return;
             }
         }
+        if (IsHazard(tier.type)) { TriggerHazard(tierIndex, tier); return; }   // hit one too often: it goes off (no payout)
         if (need > 1)
         {
             SetLiveDamage(tier, need); // the pieces that fall away are fully cracked
@@ -2332,33 +2353,38 @@ public class PixelClicker : MonoBehaviour
     public float SpawnShare(int i)
     {
         if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
-        FillerInfo(out int fillerIndex, out float fillerWeight);
+        SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += k == fillerIndex ? fillerWeight : SpawnWeightOf(k);
-        float mine = i == fillerIndex ? fillerWeight : SpawnWeightOf(i);
+            if (tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += k == fillerIndex ? fillerWeight : k == hazardIndex ? hazardWeight : SpawnWeightOf(k);
+        float mine = i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
         return total > 0f ? mine / total : 0f;
     }
 
     private float SpawnWeightOf(int i) => Mathf.Max(0f, tiers[i].spawnWeight) * PixelPets.SpawnMultiplier(tiers[i].type);
 
     /// <summary>
-    /// The skill pack in play may have a FILLER block (Dirt, Stone) that makes up a set share of the spawns, bigger at low skill level.
-    /// Returns its tier index (or -1) and the weight that gives it that share next to everything else in the rotation.
+    /// The skill pack in play may have a FILLER block (Dirt, Stone: a set share of the spawns, bigger at low skill level) and a HAZARD block
+    /// (Pest, Gas Pocket: a small share that grows with level). Returns their tier indexes (or -1) and the weights that give them those shares.
     /// </summary>
-    private void FillerInfo(out int index, out float weight)
+    private void SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight)
     {
-        index = -1;
-        weight = 0f;
-        if (!PixelSkills.TryGetFiller(out PixelType type, out float share) || share <= 0f) return;
-        int f = IndexOf(type);
-        if (f < 0 || !tiers[f].CanSpawn || PixelSkills.LeftOutOfSpawns(type)) return;
+        fillerIndex = hazardIndex = -1;
+        fillerWeight = hazardWeight = 0f;
+        int f = -1, h = -1;
+        float fShare = 0f, hShare = 0f;
+        if (PixelSkills.TryGetFiller(out PixelType ft, out float fs) && fs > 0f) { f = IndexOf(ft); fShare = fs; }
+        if (PixelSkills.TryGetHazard(out PixelType ht, out float hs) && hs > 0f) { h = IndexOf(ht); hShare = hs; }
+        if (f >= 0 && (!tiers[f].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[f].type))) f = -1;
+        if (h >= 0 && (!tiers[h].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[h].type))) h = -1;
+        if (f < 0 && h < 0) return;
         float others = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (k != f && tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) others += SpawnWeightOf(k);
+            if (k != f && k != h && tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) others += SpawnWeightOf(k);
         if (others <= 0f) return;
-        index = f;
-        weight = others * share / (1f - share);
+        float basis = others;
+        if (f >= 0) { fillerIndex = f; fillerWeight = others * fShare / (1f - fShare); basis += fillerWeight; }
+        if (h >= 0) { hazardIndex = h; hazardWeight = basis * hShare / (1f - hShare); }
     }
 
     private int PickSpawnTier()
@@ -2375,10 +2401,10 @@ public class PixelClicker : MonoBehaviour
 
         // A skill pack in play (Mining, Farming): its pixels replace the basic pixels (White..Blue, Glass, Luminescent) in what spawns; the pixels of
         // packs that are not in play stay out unless the player turned them on as guests (a skill tree unlock).
-        FillerInfo(out int fillerIndex, out float fillerWeight);
+        SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += i == fillerIndex ? fillerWeight : SpawnWeightOf(i);
+            if (tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
@@ -2386,7 +2412,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             if (!tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) continue;
-            roll -= i == fillerIndex ? fillerWeight : SpawnWeightOf(i);
+            roll -= i == fillerIndex ? fillerWeight : i == hazardIndex ? hazardWeight : SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }
         return GetHighestUnlockedIndex();
@@ -3391,8 +3417,68 @@ public class PixelClicker : MonoBehaviour
     private bool liveRich;          // the ore on the cube is a rich vein
     private GameObject richGlitter;
 
+    // ------------------------------------------------------------------
+    // Hazard blocks (Pest, Gas Pocket)
+    // ------------------------------------------------------------------
+
+    /// <summary>When true the auto clicker clicks hazard blocks too and clears them safely (a future upgrade). Off: it leaves them alone.</summary>
+    public static bool HazardAutoClear = false;
+
+    [Min(0f)]
+    [Tooltip("How long a hazard block (Pest, Gas Pocket) stays on the cube before it goes away by itself, in seconds. 0 = the coded default (7).")]
+    [SerializeField] private float hazardSeconds = 0f;
+
+    [Min(0f)]
+    [Tooltip("Gas Pocket blast: old pixels within this many old-pixel widths of the cube are blown away (no payout). 0 = the coded default (4).")]
+    [SerializeField] private float gasBlastWidths = 0f;
+
+    /// <summary>A hazard block that sat on the cube too long leaves by itself (the cube rolls a new pixel).</summary>
+    private void UpdateHazardExpiry()
+    {
+        if (pixelTransform == null || isSpawning || tiers == null || tiers.Length == 0) return;
+        PixelTier t = GetClickTier();
+        if (!IsHazard(t.type) || Time.time - liveSince < (hazardSeconds > 0f ? hazardSeconds : 7f)) return;
+        hitsOnCurrentPixel = 0;
+        if (!disableClickPops) PixelBasicFx.Play(t.type, t.color, pixelTransform.position, PixelBaseSize, true, 1f, clickPopStrength);
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+    }
+
+    /// <summary>The hazard block was hit too many times: the Pest kills every sprout, the Gas Pocket explodes. Either way the skill earns less XP for a while.</summary>
+    private void TriggerHazard(int tierIndex, PixelTier tier)
+    {
+        hitsOnCurrentPixel = 0;
+        Vector3 pos = pixelTransform.position;
+        string what;
+        if (tier.type == PixelType.Pest)
+        {
+            int killed = SeedSprout.KillAll();
+            what = killed > 0 ? "The pests ate " + killed + " sprout" + (killed == 1 ? "" : "s") + "!" : "The pests swarm out!";
+            if (!disableFarmFx) PixelFarmFx.Break(PixelType.Weevil, pos, PixelBaseSize, tier.color);
+        }
+        else
+        {
+            what = "The gas pocket exploded!";
+            if (!disableFireFx) FireBurstFx.Play(pos, PixelBaseSize);
+            float reach = OldPixelWorldSize * (gasBlastWidths > 0f ? gasBlastWidths : 4f);
+            for (int i = oldPixels.Count - 1; i >= 0; i--)
+            {
+                Rigidbody b = oldPixels[i];
+                if (b != null && (b.position - pos).sqrMagnitude <= reach * reach) ReleaseOldPixel(b, false);
+            }
+        }
+        PixelStats.Count("hazards.triggered", 1);
+        string penalty = PixelSkills.ApplyHazardPenalty();
+        PixelHints.Announce(what, what + " " + penalty);
+        PlayClickEffects(tier);
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+        onPixelClicked?.Invoke();
+    }
+
     private void Materialize(PixelTier tier)
     {
+        if (IsHazard(tier.type)) PixelHints.Trigger("hazard");
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
         liveSince = Time.time;
         liveNeed = tier.randomClicks ? RollNeededClicks(tier) : 0;   // a treasure chest needs a random number of clicks

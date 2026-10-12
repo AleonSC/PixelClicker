@@ -79,6 +79,17 @@ public partial class PixelSkills : MonoBehaviour
         [Min(0)]
         [Tooltip("The skill level where the filler's share reaches its end value. 0 = the default (20).")]
         public int fillerFadeLevel = 0;
+        [Tooltip("Name of this pack's HAZARD block (Pest for Farming, GasPocket for Mining): hit it too many times and it goes off (kills every sprout / explodes) and the skill earns less XP for a minute. Empty = none.")]
+        public string hazardType = "";
+        [Range(0f, 0.5f)]
+        [Tooltip("The hazard's share of all spawns at level 1. 0 = the default (0.03).")]
+        public float hazardBaseShare = 0f;
+        [Range(0f, 0.05f)]
+        [Tooltip("How much its share grows with every skill level. 0 = the default (0.002).")]
+        public float hazardPerLevelShare = 0f;
+        [Range(0f, 0.5f)]
+        [Tooltip("The most its share can reach. 0 = the default (0.08).")]
+        public float hazardMaxShare = 0f;
         public Perk[] perks = new Perk[0];
         [Tooltip("The skill tree: nodes you buy with skill points (one point per level above 1).")]
         public TreeNode[] nodes = new TreeNode[0];
@@ -117,7 +128,7 @@ public partial class PixelSkills : MonoBehaviour
     public event Action Changed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
+    private static void ResetStatics() { penaltyLevel = 0; penaltyUntil = 0f; Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
 
     private float bundleCheckTimer;
 
@@ -183,8 +194,8 @@ public partial class PixelSkills : MonoBehaviour
                 replaces = "Monochrome, RGB", spawns = "Stone, Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
-                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel, PixelClicker.PixelType.Rock },
-                fillerType = "Rock",
+                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel, PixelClicker.PixelType.Rock, PixelClicker.PixelType.GasPocket },
+                fillerType = "Rock", hazardType = "GasPocket",
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Richer veins: a higher chance of a rich vein" },
@@ -204,8 +215,8 @@ public partial class PixelSkills : MonoBehaviour
                 unlockHint = "Buy Farmer's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
                 types = new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
-                                PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit },
-                fillerType = "Dirt",
+                                PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit, PixelClicker.PixelType.Pest },
+                fillerType = "Dirt", hazardType = "Pest",
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Green thumb: sprouts grow a little faster" },
@@ -266,6 +277,17 @@ public partial class PixelSkills : MonoBehaviour
                 if (pack.spawns != null && !pack.spawns.Contains("Stone")) pack.spawns = "Stone, " + pack.spawns;
             }
             if (pack.id == FarmingId && string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Dirt.ToString();
+            // Hazard blocks: Farming's Pest and Mining's Gas Pocket (part of their packs' pixel lists).
+            if (pack.id == MiningId || pack.id == FarmingId)
+            {
+                PixelClicker.PixelType hazard = pack.id == MiningId ? PixelClicker.PixelType.GasPocket : PixelClicker.PixelType.Pest;
+                if (pack.types != null && System.Array.IndexOf(pack.types, hazard) < 0)
+                {
+                    System.Collections.Generic.List<PixelClicker.PixelType> withHazard = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types) { hazard };
+                    pack.types = withHazard.ToArray();
+                }
+                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = hazard.ToString();
+            }
             // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
             if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId) continue;
             System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
@@ -442,6 +464,56 @@ public partial class PixelSkills : MonoBehaviour
         float k = Mathf.Clamp01((s.LevelOf(pack) - 1) / (float)(fade - 1));
         share = Mathf.Clamp(Mathf.Lerp(start, end, k), 0f, 0.95f);
         return true;
+    }
+
+    /// <summary>The hazard block of the pack in play and its share of the spawns now (grows a little with level). False when there is none.</summary>
+    public static bool TryGetHazard(out PixelClicker.PixelType type, out float share)
+    {
+        type = PixelClicker.PixelType.White;
+        share = 0f;
+        PixelSkills s = Instance;
+        if (s == null) return false;
+        SkillPack pack = s.Find(s.ActiveId);
+        if (pack == null || string.IsNullOrEmpty(pack.hazardType) || !Enum.TryParse(pack.hazardType, out type)) return false;
+        float start = pack.hazardBaseShare > 0f ? pack.hazardBaseShare : 0.03f;
+        float per = pack.hazardPerLevelShare > 0f ? pack.hazardPerLevelShare : 0.002f;
+        float max = pack.hazardMaxShare > 0f ? pack.hazardMaxShare : 0.08f;
+        share = Mathf.Clamp(start + per * (s.LevelOf(pack) - 1), 0f, max);
+        return true;
+    }
+
+    // ---- The hazard XP penalty: -10% per hazard set off inside the last minute (cumulative, the minute restarts each time) ----
+
+    private static int penaltyLevel;
+    private static float penaltyUntil;
+
+    [Min(0f)]
+    [Tooltip("How long the hazard XP penalty lasts, in seconds, restarting each time another hazard goes off. 0 = the coded default (60).")]
+    [SerializeField] private float penaltySeconds = 0f;
+
+    [Range(0f, 0.5f)]
+    [Tooltip("How much XP each hazard takes off (cumulative while the penalty is running). 0 = the coded default (0.1 = 10%).")]
+    [SerializeField] private float penaltyStep = 0f;
+
+    /// <summary>The XP multiplier right now (1 = no penalty).</summary>
+    public static float PenaltyFactor
+    {
+        get
+        {
+            if (penaltyLevel <= 0 || Time.time >= penaltyUntil) return 1f;
+            float step = Instance != null && Instance.penaltyStep > 0f ? Instance.penaltyStep : 0.1f;
+            return Mathf.Max(0.1f, 1f - penaltyLevel * step);
+        }
+    }
+
+    /// <summary>A hazard went off: one more step of penalty (a new one when none is running) and the timer starts over. Returns text describing it.</summary>
+    public static string ApplyHazardPenalty()
+    {
+        float seconds = Instance != null && Instance.penaltySeconds > 0f ? Instance.penaltySeconds : 60f;
+        float step = Instance != null && Instance.penaltyStep > 0f ? Instance.penaltyStep : 0.1f;
+        penaltyLevel = Time.time < penaltyUntil ? Mathf.Min(penaltyLevel + 1, Mathf.RoundToInt(0.9f / step)) : 1;
+        penaltyUntil = Time.time + seconds;
+        return "Skill XP -" + Mathf.RoundToInt(penaltyLevel * step * 100f) + "% for " + Mathf.RoundToInt(seconds) + " seconds.";
     }
 
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
@@ -688,6 +760,7 @@ public partial class PixelSkills : MonoBehaviour
     public void AddXp(SkillPack pack, double xp)
     {
         if (pack == null || xp <= 0d) return;
+        xp *= PenaltyFactor;   // a hazard went off recently
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
         QueueXpPopup(pack, xp);

@@ -49,6 +49,22 @@ public class SeedSprout : MonoBehaviour
         }
     }
 
+    /// <summary>The Pest block went off: every sprout dies (the growing and holding ones lose their pixel). Returns how many plants were lost.</summary>
+    public static int KillAll()
+    {
+        int lost = 0;
+        foreach (SeedSprout s in all)
+        {
+            if (s == null || s.stage == Stage.Shrinking) continue;
+            if (s.stage == Stage.Growing || s.stage == Stage.Holding) lost++;
+            if (s.pixel != null) { Destroy(s.pixel); s.pixel = null; }
+            if (s.sunRay != null) s.sunRay.SetAmount(0f);
+            s.stage = Stage.Shrinking;
+            s.stageTime = 0f;
+        }
+        return lost;
+    }
+
     /// <summary>A weevil bites a random growing sprout: it withers away. False when there is none to eat.</summary>
     public static bool EatOne(out Vector3 at)
     {

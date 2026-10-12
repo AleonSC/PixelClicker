@@ -684,6 +684,12 @@ public partial class PixelShop
                 Ore(PixelClicker.PixelType.Lead, "Lead Ore", new Color(0.46f, 0.52f, 0.66f, 1f), 3, 5, 0.7f),
                 Ore(PixelClicker.PixelType.Zinc, "Zinc Ore", new Color(0.7f, 0.88f, 0.95f, 1f), 4, 7, 0.5f),
                 Ore(PixelClicker.PixelType.Nickel, "Nickel Ore", new Color(0.82f, 0.76f, 0.58f, 1f), 5, 10, 0.4f),
+                // The Gas Pocket: a hazard (hit it too often and it explodes; it pays nothing).
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.GasPocket, displayName = "Gas Pocket", color = new Color(0.78f, 0.85f, 0.25f, 1f),
+                    clicksToCollect = 5, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
             }
         };
     }
@@ -741,6 +747,8 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Wheat, "Wheat Pixels", new Color(0.93f, 0.76f, 0.3f, 1f), 2, 4, 0.5f),
                 Block(PixelClicker.PixelType.Weevil, "Weevil Pixels", new Color(0.22f, 0.15f, 0.11f, 1f), 2, 3, 0.4f),
                 Block(PixelClicker.PixelType.GoldenFruit, "Golden Fruit Pixels", new Color(1f, 0.82f, 0.22f, 1f), 1, 40, 0.03f),
+                // The Pest: a hazard (hit it too often and it eats every sprout; it pays nothing).
+                Block(PixelClicker.PixelType.Pest, "Pest", new Color(0.4f, 0.45f, 0.14f, 1f), 6, 0, 0.05f),
             }
         };
     }

@@ -12,7 +12,7 @@ public static class PixelGuideTexts
         sb.Append(Mechanics(type, t));
 
         // What every pixel shares, in short.
-        if (t.clicksToCollect > 1 && !t.randomClicks)
+        if (t.clicksToCollect > 1 && !t.randomClicks && !PixelClicker.IsHazard(type))
             sb.Append("\n\n<b>Tough:</b> it takes ").Append(t.clicksToCollect).Append(" clicks; only the last click pays.");
         sb.Append("\n\n<b>Old pixel:</b> ").Append(OldPixel(type));
         return sb.ToString();
@@ -83,6 +83,10 @@ public static class PixelGuideTexts
                 return "A chest that needs a random 1-20 hits, decided when it appears. Opening it pays the pixel's value x the hits x (1 + 0.15 x hits) and pours out a pile of random unlocked pixels at once: 2 plus one per hit, up to 24.";
             case PixelClicker.PixelType.Nuclear:
                 return "A radioactive pixel with a toxic glow. Its old pixel ages every other old pixel within about 4 pixel-widths 40 times faster, so they disappear without paying - clear space before it lands.";
+            case PixelClicker.PixelType.Pest:
+                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the pests eat every sprout you have growing, and Farming XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it flies off by itself after a few seconds. The auto clicker never touches it. They get a bit more common as your farming level rises.";
+            case PixelClicker.PixelType.GasPocket:
+                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the gas explodes, blowing away the old pixels around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. They get a bit more common as your mining level rises.";
             case PixelClicker.PixelType.Wood:
                 return "A basic block of wood. It only comes up if you switch it on in Toggles > Pixels.";
             case PixelClicker.PixelType.Rock:

@@ -908,6 +908,26 @@ public partial class PixelShop : MonoBehaviour
             packDataVersion = Mathf.Max(packDataVersion, 12);
             changed = true;
         }
+        // The hazard blocks (Gas Pocket for Mining, Pest for Farming) join the Prospector's and Farmer's Packs.
+        if (packDataVersion < 14)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null) continue;
+                    PixelClicker.PixelTier add = null;
+                    if (Rewards(pack, PixelClicker.PixelType.Copper) && !Rewards(pack, PixelClicker.PixelType.GasPocket))
+                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.GasPocket, displayName = "Gas Pocket", color = new Color(0.78f, 0.85f, 0.25f, 1f), clicksToCollect = 5, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
+                    else if (Rewards(pack, PixelClicker.PixelType.Dirt) && !Rewards(pack, PixelClicker.PixelType.Pest))
+                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.Pest, displayName = "Pest", color = new Color(0.4f, 0.45f, 0.14f, 1f), clicksToCollect = 6, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
+                    if (add == null) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers) { add };
+                    pack.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 14);
+            changed = true;
+        }
+
         // Stone (the old Rock block) is Mining's filler: one click, tiny pay, and part of the Prospector's Pack.
         if (packDataVersion < 13)
         {

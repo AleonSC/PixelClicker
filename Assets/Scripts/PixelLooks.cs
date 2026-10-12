@@ -515,6 +515,12 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Treasure, useColor = true, color = Color.white, metallic = 0.25f, smoothness = 0.4f,
                             damageCracks = true, chestTexture = true },
 
+            // Hazard blocks: the Pest (a dark, buzzing lump that cracks as you hit it) and the Gas Pocket (a wobbling yellow-green bubble of gas).
+            new PixelLook { type = PixelClicker.PixelType.Pest, useColor = true, color = new Color(0.55f, 0.6f, 0.25f, 1f), metallic = 0f, smoothness = 0.3f, emission = 0.15f, damageCracks = true,
+                            farmFx = PixelLook.FarmAmbient.Bugs },
+            new PixelLook { type = PixelClicker.PixelType.GasPocket, useColor = true, color = new Color(0.78f, 0.85f, 0.25f, 0.55f), forceTranslucent = true, metallic = 0f, smoothness = 0.8f, emission = 0.7f,
+                            wobble = true, wobbleAmount = 0.1f, farmFx = PixelLook.FarmAmbient.Spores },
+
             // Wood and Rock: plain basic blocks that fit any rotation.
             new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Wood, blob = true },
             new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Stone, jagged = true },

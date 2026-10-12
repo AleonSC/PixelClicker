@@ -187,6 +187,7 @@ public class PixelHints : MonoBehaviour
             case "pixel_Obsidian": return "You unlocked Obsidian Pixels!";
             case "pixel_Luminescent": return "You unlocked Luminescent Pixels!";
             case "pixel_Singularity": return "You unlocked Singularity Pixels!";
+            case "hazard": return "Hazard block!";
             case "pixel_Ghost": return "You unlocked Ghost Pixels!";
             case "pixel_Meteor": return "You unlocked Meteor Pixels!";
             case "pixel_Electric": return "You unlocked Electric Pixels!";
@@ -260,6 +261,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Nuclear", "Nuclear Pixels unlocked! (A testing pixel.) Its old pixel is radioactive: every old pixel lying near it despawns almost at once."),
         H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls."),
         H("pixel_Dirt", "Farmer's Pack unlocked! Eight farm blocks for the Farming skill: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. Switch on Farming mode in the Toggles window (or Train it in the Skills window) to make them replace the basic pixels. Beware of weevils: click them before they eat your sprouts!"),
+        H("hazard", "A hazard block! Pests and gas pockets pay nothing: a few taps are harmless, but hit one too many times and it goes off (pests eat every sprout, gas explodes) and your skill XP drops for a minute. Wait it out - it leaves by itself, and the auto clicker leaves it alone."),
         H("pixel_Wood", "Wood Pixels unlocked! A plain block. It is not in the base rotation: switch it on in the Toggles window (Pixels tab) to make it spawn."),
         H("pixel_Rock", "Stone Pixels unlocked! Stone is Mining's filler block: plain and almost worthless, and most of what appears at first. As your mining level rises it gets rarer."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Lead, Zinc and Nickel are tough rocks: hit them a few times to crack them open. A glittering one is a rich vein and pays 5x. The ores do not spawn on their own: turn on Prospector mode in the Toggles window and they spawn in place of the monochrome, RGB, Glass and Luminescent pixels."),
