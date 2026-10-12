@@ -649,3 +649,4 @@
 [2026-10-12 11:13 UTC] Floor styles saved in a scene with old tile sizes now take the current built-in tile size, grid and fit settings (defaultsVersion 8).
 [2026-10-12 11:15 UTC] Weak spots now stay stuck to the cube's face when it turns or bobs instead of drifting through it.
 [2026-10-12 11:19 UTC] Scroll wheel now raises and lowers an old pixel you are holding with Pixel Grabbing.
+[2026-10-12 11:24 UTC] Inverted the scroll wheel direction for raising and lowering a held pixel.

@@ -157,7 +157,7 @@ public class PixelGrab : MonoBehaviour
             if (wheel != 0f)
             {
                 float cap = maxWheelLift > 0f ? maxWheelLift : 6f;
-                liftOffset = Mathf.Clamp(liftOffset + Mathf.Sign(wheel) * Mathf.Min(Mathf.Abs(wheel), 3f) * (wheelLift > 0f ? wheelLift : 0.4f), -cap, cap);
+                liftOffset = Mathf.Clamp(liftOffset - Mathf.Sign(wheel) * Mathf.Min(Mathf.Abs(wheel), 3f) * (wheelLift > 0f ? wheelLift : 0.4f), -cap, cap);
             }
             return;
         }
