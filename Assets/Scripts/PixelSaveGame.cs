@@ -289,6 +289,41 @@ public class PixelSaveGame : MonoBehaviour
         }
     }
 
+    /// <summary>The slot whose save file was written last (false when there are no saves at all).</summary>
+    public bool TryGetMostRecentSlot(out int slot)
+    {
+        slot = 0;
+        DateTime best = DateTime.MinValue;
+        for (int i = 1; i <= SlotCount; i++)
+        {
+            if (!SlotHasSave(i)) continue;
+            DateTime t = File.GetLastWriteTimeUtc(PathFor(i));
+            if (slot == 0 || t > best) { best = t; slot = i; }
+        }
+        return slot > 0;
+    }
+
+    /// <summary>Main menu 'Continue': loads the most recent save (and pays the time away). False if there is none or it can't be read.</summary>
+    public bool ContinueMostRecent()
+    {
+        if (!TryGetMostRecentSlot(out int slot)) return false;
+        CurrentSlot = slot;
+        return Load(false, true);
+    }
+
+    /// <summary>Main menu 'New Game': from now on autosave and quit-save write into this slot.</summary>
+    public void UseSlotForNewGame(int slot) { CurrentSlot = slot; }
+
+    /// <summary>The first slot with no save (0 = every slot is taken).</summary>
+    public int FirstEmptySlot()
+    {
+        for (int i = 1; i <= SlotCount; i++) if (!SlotHasSave(i)) return i;
+        return 0;
+    }
+
+    /// <summary>Set when a New Game is started after the game has already been played this run: the scene reloads fresh and the title screen presses Play by itself.</summary>
+    public static bool AutoStartNewGame;
+
     /// <summary>Saves into this slot (it becomes the current slot). The Save / Load window asks before overwriting.</summary>
     public bool SaveToSlot(int slot, bool message = true)
     {
@@ -327,7 +362,8 @@ public class PixelSaveGame : MonoBehaviour
 
         // One frame later, so every other script has finished its own startup first.
         yield return null;
-        if (loadOnStart && HasSave) Load(false, true);
+        // With the main menu showing, nothing loads by itself: its Continue button (or the Load window) does.
+        if (loadOnStart && HasSave && !PixelTitleScreen.Showing) Load(false, true);
     }
 
     private const string PrefAutoSave = "PixelClicker.Setting.AutoSave";
@@ -572,7 +608,7 @@ public class PixelSaveGame : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>True once a save was loaded or written this run (the main menu's button says 'Play' then, 'New Game' before).</summary>
-    public static bool HasLoadedSave { get; private set; }
+    public static bool HasLoadedSave { get; internal set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetLoadedFlag() { HasLoadedSave = false; }

@@ -96,7 +96,10 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("Text on the Play button.")]
     [SerializeField] private string playText = "Play";
 
-    [Tooltip("Text of the main button until a save has been loaded (or written): a fresh game. Empty = the Play text always.")]
+    [Tooltip("Main button text when there are saves and none has been loaded yet: pressing it loads the most recent one.")]
+    [SerializeField] private string continueText = "Continue";
+
+    [Tooltip("Main button text when there are no saves at all: a fresh game. Empty = the Play text always.")]
     [SerializeField] private string newGameText = "New Game";
 
     [Tooltip("Font size of the Play button.")]
@@ -370,14 +373,44 @@ public class PixelTitleScreen : MonoBehaviour
     }
 
     private int titleBarVersion = -1;
+    private float nextSaveCheck;
+    private bool anySave;
+    private PixelSaveGame saveGame;
+
+    /// <summary>True once Play has been pressed this run (a New Game after that has to reload the scene).</summary>
+    public static bool PlayedOnce { get; private set; }
+
+    /// <summary>Starts a brand-new game in this slot (from the Load window on an empty slot).</summary>
+    public static void StartNewGame(int slot)
+    {
+        PixelTitleScreen title = PixelFind.First<PixelTitleScreen>();
+        PixelSaveGame save = PixelFind.First<PixelSaveGame>();
+        if (title == null || save == null) return;
+        save.UseSlotForNewGame(slot);
+        PixelSaveGame.HasLoadedSave = false;
+        if (!PlayedOnce) { title.OnPlay(); return; }
+        // The game has been played already: reload the scene fresh, the title presses Play by itself.
+        PixelSaveGame.AutoStartNewGame = true;
+        PixelHints.ResetSeen();
+        PixelAchievements.ResetOnNextStart = true;
+        PixelCrashLog.EndSessionCleanly();
+        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+    }
 
     private void Update()
     {
         if (!Showing || canvas == null) return;
         UpdateBarGlow();
+        if (PixelSaveGame.AutoStartNewGame && !playing && playButton != null) { OnPlay(); return; }
         if (playButton != null)
         {
-            string want = PixelSaveGame.HasLoadedSave || string.IsNullOrEmpty(newGameText) ? playText : newGameText;
+            if (Time.unscaledTime >= nextSaveCheck)
+            {
+                nextSaveCheck = Time.unscaledTime + 1f;
+                if (saveGame == null) saveGame = PixelFind.First<PixelSaveGame>();
+                anySave = saveGame != null && saveGame.TryGetMostRecentSlot(out int _);
+            }
+            string want = PixelSaveGame.HasLoadedSave ? playText : anySave ? continueText : string.IsNullOrEmpty(newGameText) ? playText : newGameText;
             TMP_Text playLabel = playButton.GetComponentInChildren<TMP_Text>();
             if (playLabel != null) PixelUIKit.SetText(playLabel, want);
         }
@@ -963,6 +996,14 @@ public class PixelTitleScreen : MonoBehaviour
     private void OnPlay()
     {
         if (playing) return;
+        // 'Continue': nothing is loaded yet, so load the most recent save first. (Play after a load, a save or a visit to the game just resumes.)
+        if (!PixelSaveGame.HasLoadedSave)
+        {
+            if (saveGame == null) saveGame = PixelFind.First<PixelSaveGame>();
+            if (saveGame != null && saveGame.TryGetMostRecentSlot(out int _) && !PixelSaveGame.AutoStartNewGame) saveGame.ContinueMostRecent();
+        }
+        PixelSaveGame.AutoStartNewGame = false;
+        PlayedOnce = true;
         playing = true;
         PixelTitleWanderers wander = GetComponent<PixelTitleWanderers>();
         if (wander != null) wander.FadeOut();   // the wandering vendors vanish at once

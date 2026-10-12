@@ -199,6 +199,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Load button text.")]
     [SerializeField] private string loadText = "Load";
 
+    [Tooltip("The Load button's text on the main menu's slot window while an EMPTY slot is selected: pressing it starts a new game in that slot.")]
+    [SerializeField] private string newGameButtonText = "New Game";
+
     [Tooltip("Restart also deletes the save file, so it starts a brand-new game. Off = Restart reloads the scene and then loads your save again.")]
     [SerializeField] private bool restartDeletesSave = true;
 
@@ -966,6 +969,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void Restart()
     {
+        PixelSaveGame.HasLoadedSave = false;   // after the reload the main menu's Continue loads a save again
         if (saveGame != null && restartDeletesSave)
         {
             saveGame.SuppressSaving(); // so autosave / quit can't write the old game back
@@ -1770,7 +1774,11 @@ public class PixelPauseMenu : MonoBehaviour
             slotLabels[i].text = "<b>" + name + "</b>";
             slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;
         }
-        slotLoadButton.interactable = saveGame.SlotHasSave(selectedSlot);
+        bool hasSave = saveGame.SlotHasSave(selectedSlot);
+        bool newGame = openedFromTitle && !hasSave;   // from the main menu an empty slot starts a new game there
+        slotLoadButton.interactable = hasSave || newGame;
+        TMP_Text loadLabel = slotLoadButton.GetComponentInChildren<TMP_Text>();
+        if (loadLabel != null) loadLabel.text = newGame ? newGameButtonText : loadText;
     }
 
     private void OnSlotSave()
@@ -1795,6 +1803,13 @@ public class PixelPauseMenu : MonoBehaviour
     private void OnSlotLoad()
     {
         if (saveGame == null) return;
+        if (openedFromTitle && !saveGame.SlotHasSave(selectedSlot))
+        {
+            int slot = selectedSlot;
+            ShowView(mainPanel);   // closes the window (back to the title screen)
+            PixelTitleScreen.StartNewGame(slot);
+            return;
+        }
         bool loaded = saveGame.LoadSlot(selectedSlot, false);
         RefreshSlots();
         if (loaded) { ShowView(mainPanel); return; }   // a successful load closes the Save / Load window (back to the menu, or the title screen when opened from there)
