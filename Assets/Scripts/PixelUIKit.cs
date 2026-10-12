@@ -456,6 +456,39 @@ public static class PixelUIKit
         return eyedropper;
     }
 
+    private static Sprite magnifier;
+
+    /// <summary>A white magnifying glass (a ring with a handle), drawn once in code, for search boxes.</summary>
+    public static Sprite MagnifierSprite()
+    {
+        if (magnifier != null) return magnifier;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Magnifier", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        Vector2 centre = new Vector2(0.4f, 0.6f);
+        const float ringRadius = 0.27f, ringHalf = 0.065f;
+        Vector2 handleA = centre + new Vector2(0.19f, -0.19f), handleB = new Vector2(0.88f, 0.12f);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cover = 0f;
+                for (int sy = 0; sy < 3; sy++)
+                    for (int sx = 0; sx < 3; sx++)
+                    {
+                        Vector2 p = new Vector2((x + (sx + 0.5f) / 3f) / n, (y + (sy + 0.5f) / 3f) / n);
+                        bool ring = Mathf.Abs(Vector2.Distance(p, centre) - ringRadius) <= ringHalf;
+                        bool handle = SegDist(p, handleA, handleB) <= 0.075f;
+                        if (ring || handle) cover += 1f / 9f;
+                    }
+                px[y * n + x] = new Color(1f, 1f, 1f, cover);
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        magnifier = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        magnifier.name = "Magnifier";
+        return magnifier;
+    }
+
     private static Sprite tickMark;
 
     /// <summary>A white, smooth-edged check mark with rounded ends (drawn once in code) for the fill of tick boxes.</summary>
@@ -552,7 +585,7 @@ public static class PixelUIKit
     private static Sprite downTriangle;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { downTriangle = null; closeCross = null; }
+    private static void ResetStatics() { downTriangle = null; closeCross = null; eyedropper = null; magnifier = null; }
 
     /// <summary>A white, smooth-edged downward triangle (drawn once in code) for drop-down arrows.</summary>
     private static Sprite DownTriangleSprite()
