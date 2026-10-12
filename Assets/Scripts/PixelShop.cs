@@ -1190,6 +1190,23 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 24)
+        {
+            // Fishing's fixed spawn table brings Driftwood back (5% of the pixels) as a second filler.
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier driftDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers) if (t.type == PixelClicker.PixelType.Driftwood) driftDef = t;
+            if (packs != null && driftDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish) || Rewards(p, PixelClicker.PixelType.Driftwood)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { driftDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 24);
+            changed = true;
+        }
+
         return changed;
     }
 

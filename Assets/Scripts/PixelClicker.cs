@@ -38,7 +38,7 @@ using UnityEngine.InputSystem;
 /// (e.g. R, G, B) later is just a matter of adding an entry in the Inspector
 /// and, optionally, a new value at the end of <see cref="PixelType"/>.
 /// </summary>
-public class PixelClicker : MonoBehaviour
+public partial class PixelClicker : MonoBehaviour
 {
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -2141,6 +2141,7 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
         if (tier.type == PixelType.Bait) PixelBait.Drop(this, pixelTransform.position);
+        QueueBaitAfter(tier.type);   // (Fishing: a Water pixel may make the next one Bait)
         if (tier.type == PixelType.Bottle) PixelTreasureMap.Begin(this, pixelTransform.position);   // the glass breaks and a treasure map unrolls
         if (tier.type == PixelType.Whale) PixelWhaleFight.OnCaught(this, need, amount);
         if ((IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type)) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
@@ -2616,6 +2617,7 @@ public class PixelClicker : MonoBehaviour
     public float SpawnShare(int i)
     {
         if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
+        if (TryFishingShare(i, out float fishShare)) return fishShare;
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int k = 0; k < tiers.Length; k++)
@@ -2664,6 +2666,7 @@ public class PixelClicker : MonoBehaviour
 
         // A skill pack in play (Mining, Farming): its pixels replace the basic pixels (White..Blue, Glass, Luminescent) in what spawns; the pixels of
         // packs that are not in play stay out unless the player turned them on as guests (a skill tree unlock).
+        if (TryPickFishing(out int fishPick)) return fishPick;   // Fishing has its own fixed table
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)

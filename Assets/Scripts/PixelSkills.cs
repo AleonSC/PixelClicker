@@ -239,7 +239,7 @@ public partial class PixelSkills : MonoBehaviour
                 unlockHint = "Buy the Angler's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell, PixelClicker.PixelType.Pearl,
-                                PixelClicker.PixelType.Water, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
+                                PixelClicker.PixelType.Water, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
                                 PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale },
                 fillerType = "Water", hazardType = "Jellyfish", fillerStartShare = 0.75f, fillerEndShare = 0.5f,
                 perks = new[]
@@ -364,9 +364,8 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == FishingId)
             {
                 System.Collections.Generic.List<PixelClicker.PixelType> fish = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
-                fish.Remove(PixelClicker.PixelType.Driftwood);   // Water is the filler now
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell,
-                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Water, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
+                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Water, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
                                                              PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale })
                     if (!fish.Contains(t)) fish.Add(t);
                 pack.types = fish.ToArray();
@@ -662,7 +661,7 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
-        if (PixelClicker.IsRetiredOre(type) || type == PixelClicker.PixelType.Driftwood) return true;   // the dropped Lead / Zinc / Nickel and Fishing's old Driftwood never spawn
+        if (PixelClicker.IsRetiredOre(type)) return true;   // the dropped Lead / Zinc / Nickel never spawn
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool;
         SkillPack owner = s.PackOfType(type);

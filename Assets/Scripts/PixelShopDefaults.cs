@@ -799,6 +799,7 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Shell, "Shell Pixels", new Color(0.95f, 0.7f, 0.75f, 1f), 1, 4, 0.6f),
                 Block(PixelClicker.PixelType.Pearl, "Pearl Pixels", new Color(0.97f, 0.97f, 1f, 1f), 4, 35, 0.08f),
                 Block(PixelClicker.PixelType.Water, "Water Pixels", new Color(0.3f, 0.62f, 1f, 1f), 1, 3, 0.4f),   // the filler: very common (the same Water pixel as Farming)
+                Block(PixelClicker.PixelType.Driftwood, "Driftwood Pixels", new Color(0.62f, 0.58f, 0.5f, 1f), 1, 1, 0.05f),   // a second, rarer filler (5% of Fishing's pixels; weights are in PixelFishingSpawns)
                 // The Jellyfish: a hazard (hit it too often and it stings everything around the cube; it pays nothing).
                 Block(PixelClicker.PixelType.Jellyfish, "Jellyfish", new Color(0.9f, 0.45f, 0.8f, 1f), 9, 0, 0.05f),
                 // Bait: drops bait pellets round the cube; fish show up more while they lie there (a Jellyfish going off zaps them all).

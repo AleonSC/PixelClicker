@@ -124,6 +124,7 @@
 | `PixelPestSwarm.cs` (Pest rework) | The Pest block (PixelLook.blockSurface Pest, PixelBlockTextures.PestHide(level,max): | in the header comment of `PixelPestSwarm.cs` |
 | Foraging pixels / Forager's Pack | Foraging (PixelSkills.ForagingId, second base gathering skill after Woodcutting; | `docs/systems/SkillBlocks.md` |
 | Fishing / ore rework | Fishing (PixelSkills.FishingId, third base gathering skill; | `docs/systems/SkillBlocks.md` |
+| `PixelFishingSpawns.cs` | Fishing's fixed spawn table (partial class PixelClicker): Water 80%, Driftwood 5%, Seaweed 7%, Jellyfish 4%, Shell 3%, Fish 1%, plus replacement rolls (Fish -> Whale 10%, Seaweed / Shell -> Bottle, Shell -> Pearl) and Bait after a Water pixel. | in the header comment of `PixelFishingSpawns.cs` |
 | `PixelTreasureMap.cs` / `PixelWhaleFight.cs` / `PixelOceanSynth.cs` | Fishing's SPECIAL blocks (a rarer tier beside the base blocks; | `docs/systems/PixelTreasureMap.md` |
 | `PixelFarmFx.cs` | Farming pixel particles: PixelFarmFx.Attach (ambient loop per PixelLook.farmFx: | in the header comment of `PixelFarmFx.cs` |
 | `PixelShopTutorial.cs` | Shop tutorial (added by PixelShop): the first time the Shop button is available (PixelShop.ShopAvailable) and the screen is calm (title screen over, PixelHints.IntroHoldsGuide false, no other tip, no takeover minigame, not paused; | in the header comment of `PixelShopTutorial.cs` |
