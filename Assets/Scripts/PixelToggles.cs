@@ -515,7 +515,7 @@ public class PixelToggles : MonoBehaviour
         Button open = PixelUIKit.CreateButton(font, canvasRoot.transform, "Toggles Button", buttonText, new Vector2(230f, 64f),
                                               buttonColor, buttonTextColor, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
-        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(2f / 3f, 1f),
+        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f),
                  () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)); // stays out while its hint is showing
         open.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Toggles, open);
@@ -863,8 +863,9 @@ public class PixelToggles : MonoBehaviour
         bool open = windowObject.activeSelf;
         if (open) FitBesideShop();
         if (myWindowButton != null && myWindowButton.gameObject.activeSelf != PixelMyWindow.Available) myWindowButton.gameObject.SetActive(PixelMyWindow.Available);   // My Window shows up once two pixel types are unlocked
-        if (dock != null) dock.ForceHidden = false;   // the button lives in the top row now and stays put while the window is open
-        buttonGroup.alpha = 1f;
+        if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f; // tucked away while the window is up and as the fade starts
+        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
         buttonGroup.blocksRaycasts = true;
+        buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
     }
 }
