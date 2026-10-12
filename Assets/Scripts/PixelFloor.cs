@@ -2394,6 +2394,19 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 7;
         }
 
+        // A scene saved with older tile sizes kept them forever: copy the layout numbers of every built-in style from the current defaults.
+        if (defaultsVersion < 8)
+        {
+            foreach (FloorStyle def in DefaultStyles())
+            {
+                FloorStyle old = styles.Find(s => s != null && s.name == def.name);
+                if (old == null) continue;
+                old.tileWorldSize = def.tileWorldSize; old.tileAspect = def.tileAspect; old.cells = def.cells;
+                old.fitToView = def.fitToView; old.stretchToFloor = def.stretchToFloor;
+            }
+            defaultsVersion = 8;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
