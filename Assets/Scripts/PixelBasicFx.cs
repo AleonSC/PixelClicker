@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Small, quiet click feedback for the early pixels (White, Gray, Black, Red, Green, Blue, Glass, Luminescent): a handful of tiny squares pop off the
+/// Small, quiet click feedback for EVERY pixel type (the early pixels have their own colours and extras; the rest use their tier colour): a handful of tiny squares pop off the
 /// cube in the pixel's own colour. Manual clicks get the full little burst, auto-clicker clicks a much lighter one (fewer, shorter, rate-limited), and
 /// tough pixels only pop on the final break. Luminescent gets just a light touch. Player setting: Settings > Interface > Click effects (Off / Light / Normal).
 /// Uses the shared <see cref="PixelFx"/> particle helper (unlit little squares), so nothing needs a texture or a prefab.
@@ -36,18 +36,8 @@ public static class PixelBasicFx
     /// <summary>Re-reads the setting after a save with different settings was loaded.</summary>
     public static void ReloadFromPrefs() { levelCache = -1; }
 
-    /// <summary>True for the pixel types this system draws.</summary>
-    public static bool Handles(PixelClicker.PixelType type)
-    {
-        switch (type)
-        {
-            case PixelClicker.PixelType.White: case PixelClicker.PixelType.Gray: case PixelClicker.PixelType.Black:
-            case PixelClicker.PixelType.Red: case PixelClicker.PixelType.Green: case PixelClicker.PixelType.Blue:
-            case PixelClicker.PixelType.Glass: case PixelClicker.PixelType.Luminescent:
-                return true;
-        }
-        return false;
-    }
+    /// <summary>True for the pixel types this system draws: every one of them now (the early pixels have their own colours and extras, the rest use their tier colour).</summary>
+    public static bool Handles(PixelClicker.PixelType type) => true;
 
     /// <summary>
     /// One pop. 'amountScale' = 1 for the full effect (a break), smaller for a chip of a tough pixel. 'strength' is the Inspector multiplier (0 = 1).
@@ -78,6 +68,9 @@ public static class PixelBasicFx
             case PixelClicker.PixelType.Glass: baseColor = new Color(0.75f, 0.9f, 1f); light = Color.white; break;
             case PixelClicker.PixelType.Luminescent: baseColor = Color.Lerp(baseColor, new Color(1f, 1f, 0.7f), 0.5f); light = new Color(1f, 1f, 0.85f); break;
         }
+
+        // A pixel with its own dark colour (Obsidian, Pest, some ores...) gets lighter flecks so the pop shows against the floor.
+        if (Mathf.Max(baseColor.r, Mathf.Max(baseColor.g, baseColor.b)) < 0.35f) baseColor = Color.Lerp(baseColor, new Color(0.6f, 0.62f, 0.68f), 0.6f);
 
         GameObject root = new GameObject("Click Fx");
         root.transform.position = centre;
