@@ -2619,6 +2619,15 @@ public class PixelConsumables : MonoBehaviour
         Part("Divider", new Vector3(0f, H * 0.45f, 0f), new Vector3(W, H * 0.9f, t * 0.7f), trim);
         for (int i = 1; i < 5; i++)
             Part("Divider", new Vector3(-W * 0.5f + i * cell, H * 0.45f, 0f), new Vector3(t * 0.7f, H * 0.9f, Dp), trim);
+        // A carrying handle on each short end (the +X / -X sides): two posts and a grip bar. Click and drag one to move the crate.
+        Color grip = new Color(0.25f, 0.25f, 0.3f, opacity), gripLight = new Color(0.7f, 0.72f, 0.78f, opacity);
+        for (int sx = -1; sx <= 1; sx += 2)
+        {
+            float outer = sx * (W * 0.5f + t + 0.34f);
+            Part("Handle", new Vector3(sx * (W * 0.5f + t + 0.17f), H * 0.55f, -Dp * 0.22f), new Vector3(0.34f, 0.07f, 0.07f), grip);
+            Part("Handle", new Vector3(sx * (W * 0.5f + t + 0.17f), H * 0.55f, Dp * 0.22f), new Vector3(0.34f, 0.07f, 0.07f), grip);
+            Part("Handle", new Vector3(outer, H * 0.55f, 0f), new Vector3(0.09f, 0.09f, Dp * 0.44f + 0.09f), gripLight);
+        }
         Part("Rim N", new Vector3(0f, H + 0.012f, oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
         Part("Rim S", new Vector3(0f, H + 0.012f, -oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
         Part("Rim E", new Vector3(ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);

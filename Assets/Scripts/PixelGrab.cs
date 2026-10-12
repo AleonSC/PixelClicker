@@ -166,6 +166,9 @@ public class PixelGrab : MonoBehaviour
         TryGrab();
     }
 
+    /// <summary>The old pixel being dragged right now (null when none).</summary>
+    public Rigidbody HeldBody => held;
+
     /// <summary>Puts an old pixel straight into the mouse's hand (the left button must be held), as if it had just been grabbed. Used by the Storage Crate.</summary>
     public void BeginHold(Rigidbody body)
     {

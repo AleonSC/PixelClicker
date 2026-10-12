@@ -32,6 +32,11 @@ public class PixelStorageCrate : PixelPlacedDevice
     private readonly Section[] sections = new Section[Sections];
     private readonly Dictionary<Rigidbody, float> ignoreUntil = new Dictionary<Rigidbody, float>();
     private float width, depth, wallHeight, cell;
+    private readonly List<Renderer> handles = new List<Renderer>();
+    private PixelGrab grab;
+    private Rigidbody lastHeld;
+    private bool dragging;
+    private Vector3 dragOffset;
 
     public void Init(PixelClicker owner, Camera camera, PixelConsumables.Device settings, float shrinkTime)
     {
@@ -41,6 +46,7 @@ public class PixelStorageCrate : PixelPlacedDevice
         depth = cell * Rows;
         wallHeight = settings.bodyHeight;
         for (int i = 0; i < Sections; i++) sections[i] = new Section();
+        foreach (Renderer r in GetComponentsInChildren<Renderer>()) if (r.name == "Handle") handles.Add(r);
         Ended += _ => ReleaseAll();
     }
 
@@ -124,8 +130,9 @@ public class PixelStorageCrate : PixelPlacedDevice
     {
         if (IsDying || clicker == null || cam == null) return false;
         Vector2 pointer = PixelInput.PointerPosition();
-        if (PickSection(pointer) >= 0) return true;
         Ray ray = cam.ScreenPointToRay(pointer);
+        if (dragging || OverHandle(ray)) return true;
+        if (PickSection(pointer) >= 0) return true;
         return HitTest(ray, out _) && FreeCount() > 0 && FindLoose().Count > 0;
     }
 
@@ -138,10 +145,40 @@ public class PixelStorageCrate : PixelPlacedDevice
         if (cam == null) cam = Camera.main;
         float spin = 35f * Time.deltaTime;
         foreach (Section s in sections) if (s.model != null) s.model.Rotate(0f, spin, 0f, Space.Self);
-        if (Time.timeScale <= 0f || IsDying || cam == null || PixelInput.PointerOverUI()) return;
+        if (Time.timeScale <= 0f || IsDying || cam == null) return;
+
+        // A pixel you were holding and just let go of over the crate goes into the next free section.
+        if (grab == null) grab = PixelFind.First<PixelGrab>();
+        Rigidbody heldNow = grab != null ? grab.HeldBody : null;
+        if (lastHeld != null && heldNow != lastHeld) TryStoreReleased(lastHeld);
+        lastHeld = heldNow;
+
+        if (dragging)
+        {
+            if (!PixelInput.LeftHeld()) dragging = false;
+            else
+            {
+                hotFrame = Time.frameCount;
+                PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
+                DragTo(cam.ScreenPointToRay(PixelInput.PointerPosition()));
+                return;
+            }
+        }
+        if (PixelInput.PointerOverUI()) return;
 
         Vector2 pointer = PixelInput.PointerPosition();
         Ray ray = cam.ScreenPointToRay(pointer);
+        if (OverHandle(ray))
+        {
+            hotFrame = Time.frameCount;
+            PixelHandCursor.Request(PixelHandCursor.Shape.Open);
+            if (PixelInput.LeftPressed() && FloorPoint(ray, out Vector3 hit))
+            {
+                dragging = true;
+                dragOffset = transform.position - hit;
+            }
+            return;
+        }
         int picked = PickSection(pointer);
         bool over = picked >= 0 || HitTest(ray, out _);
         if (!over) return;
@@ -152,24 +189,70 @@ public class PixelStorageCrate : PixelPlacedDevice
         else StoreLoose();
     }
 
+    private bool OverHandle(Ray ray)
+    {
+        foreach (Renderer r in handles)
+            if (r != null && r.enabled && r.bounds.IntersectRay(ray, out _)) return true;
+        return false;
+    }
+
+    private bool FloorPoint(Ray ray, out Vector3 point)
+    {
+        point = default;
+        Plane plane = new Plane(Vector3.up, transform.position);
+        if (!plane.Raycast(ray, out float enter)) return false;
+        point = ray.GetPoint(enter);
+        return true;
+    }
+
+    private void DragTo(Ray ray)
+    {
+        if (!FloorPoint(ray, out Vector3 hit)) return;
+        Vector3 target = hit + dragOffset;
+        target.y = transform.position.y;
+        Vector3 vp = cam.WorldToViewportPoint(target);
+        if (vp.z <= 0f || vp.x < 0.04f || vp.x > 0.96f || vp.y < 0.1f || vp.y > 0.9f) return;   // never off the screen
+        transform.position = target;
+    }
+
+    /// <summary>A held pixel was let go: if it is above the crate's top, store it.</summary>
+    private void TryStoreReleased(Rigidbody body)
+    {
+        if (body == null || NextFree() < 0) return;
+        bool listed = false;
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        for (int i = 0; i < pixels.Count && !listed; i++) listed = pixels[i] == body;
+        if (!listed) return;
+        Vector3 local = transform.InverseTransformPoint(body.position);
+        if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f || local.y > 3.2f) return;
+        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) return;
+        StoreBody(body, info);
+    }
+
+    private void StoreBody(Rigidbody body, OldPixelInfo info)
+    {
+        int slot = NextFree();
+        if (slot < 0) return;
+        GameObject go = body.gameObject;
+        int tier = info.tierIndex;
+        double amount = info.amount;
+        if (!clicker.ReleaseOldPixel(body, false)) return;
+        Section s = sections[slot];
+        s.tier = tier;
+        s.amount = amount;
+        MakeModel(s, slot);
+        StartCoroutine(FlyIn(go, s.model));
+        PixelAudio.Play("device_place");
+    }
+
     private void StoreLoose()
     {
         foreach (Rigidbody body in FindLoose())
         {
-            int slot = NextFree();
-            if (slot < 0) break;
+            if (NextFree() < 0) break;
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
-            if (info == null) continue;
-            GameObject go = body.gameObject;
-            int tier = info.tierIndex;
-            double amount = info.amount;
-            if (!clicker.ReleaseOldPixel(body, false)) continue;
-            Section s = sections[slot];
-            s.tier = tier;
-            s.amount = amount;
-            MakeModel(s, slot);
-            StartCoroutine(FlyIn(go, s.model));
-            PixelAudio.Play("device_place");
+            if (info != null) StoreBody(body, info);
         }
     }
 
