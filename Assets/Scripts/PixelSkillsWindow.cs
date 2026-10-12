@@ -124,6 +124,15 @@ public partial class PixelSkills
         PixelMenuKeys.Register(PixelAction.Skills, tabButton);
         tabObject.SetActive(false);
 
+        // TEMPORARY: the Game Database (a search engine over everything in the game) has its own docked button right under Skills.
+        Button databaseButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Database Button", "Database", hud.ButtonSize, new Color(0.2f, 0.4f, 0.65f, 1f), textColor, 30f);
+        PixelDockedButton[] dbDock = new PixelDockedButton[1];
+        hud.DockInGroup(databaseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), () => PixelDatabaseWindow.IsOpen || (dbDock[0] != null && dbDock[0].PointerNear()),
+                        -(hud.ButtonSize.y + tabGap) * 2f, groupWidth, 0f, groupWidth);
+        dbDock[0] = databaseButton.GetComponent<PixelDockedButton>();
+        dbDock[0].blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
+        databaseButton.onClick.AddListener(PixelDatabaseWindow.Toggle);
+
         // ---- The window. ----
         windowObject = new GameObject("Skills Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         windowObject.transform.SetParent(canvasRoot.transform, false);
@@ -143,13 +152,6 @@ public partial class PixelSkills
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(() => PixelPop.Hide(windowObject));
         BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
-        // TEMPORARY: the Game Database (a search engine over everything in the game) opens from here.
-        Button database = PixelUIKit.CreateButton(Font, windowObject.transform, "Database Button", "Database", new Vector2(190f, 70f), new Color(0.2f, 0.4f, 0.65f, 1f), textColor, 28f);
-        RectTransform dbr = database.GetComponent<RectTransform>();
-        dbr.anchorMin = dbr.anchorMax = dbr.pivot = new Vector2(0f, 1f);
-        dbr.anchoredPosition = new Vector2(94f, -12f);
-        database.onClick.AddListener(PixelDatabaseWindow.Toggle);
-
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         Place(headerLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(30f, -158f), new Vector2(-30f, -100f));

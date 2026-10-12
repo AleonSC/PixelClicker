@@ -382,6 +382,7 @@ public class PixelHud : MonoBehaviour
             label.enableAutoSizing = true;
             label.fontSizeMax = ButtonFontSize;
             label.fontSizeMin = 12f;
+            label.margin = new Vector4(12f, 0f, 12f, 0f);   // padding, so a long name (PIXEL GUIDE) shrinks to fit instead of touching the edges
             PixelUIKit.Caps(label); // every docked button (Inventory, Shop, Log, Crafting, Toggles, Bank, Hose...) reads in capitals
         }
 
@@ -525,7 +526,7 @@ public class PixelDockedButton : MonoBehaviour
         float shown = hud.ShownInset, hidden = hud.HiddenInset;
         float inset = Mathf.Lerp(hidden, shown, Mathf.SmoothStep(0f, 1f, slide));
         bool top = anchor.y > 0.5f;
-        float x = Mathf.Approximately(anchor.x, 0.5f) ? 0f : anchor.x > 0.5f ? -hud.SideMargin : hud.SideMargin; // 0.5 = centred
+        float x = Mathf.Approximately(anchor.x, 0.5f) ? 0f : anchor.x > 0.5f ? -hud.SideShownInset : hud.SideShownInset; // 0.5 = centred; the corner buttons share their outer edge with the side buttons
         float push = (1f - PixelHud.RevealEased) * (hud.BandHeight + hud.ButtonSize.y + 40f);
         rect.anchoredPosition = new Vector2(x, top ? -inset + push : inset - push);
     }

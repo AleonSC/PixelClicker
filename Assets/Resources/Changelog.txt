@@ -659,3 +659,4 @@
 [2026-10-12 12:07 UTC] With Menu buttons set to always showing, every window now draws over the docked buttons.
 [2026-10-12 12:13 UTC] Storage Crate: a held pixel let go above it is stored in the next free slot; it has handles on its short ends you can drag to move it, with a grabbing-hand cursor.
 [2026-10-12 12:19 UTC] Added a Custom bar colour setting with an eyedropper (Settings > Display) for the black bars in the game and the main menu.
+[2026-10-12 12:21 UTC] Corner buttons (Inventory, Log, Shop, Crafting) now line up with the side buttons' outer edges; Database has its own docked button under Skills; docked button labels got padding so PIXEL GUIDE fits.
