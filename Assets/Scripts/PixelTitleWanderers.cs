@@ -208,6 +208,8 @@ public class PixelTitleWanderers : MonoBehaviour
         foreach (Toggle t in toggles) if (RectTransformUtility.RectangleContainsScreenPoint(t.rect, PixelInput.PointerPosition(), null)) over = true;
         foreach (Toggle t in toggles) t.group.alpha = Mathf.MoveTowards(t.group.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.4f));
 
+        if (!on && walkers.Count > 0) ClearAll();   // switched off: everyone goes
+
         float dt = Time.unscaledDeltaTime;
         float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
         for (int i = walkers.Count - 1; i >= 0; i--)
@@ -262,6 +264,8 @@ public class PixelTitleWanderers : MonoBehaviour
         w.facing = fromLeft ? 1f : -1f;
         w.targetX = PickStop(half, w.x);
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(w.x, feetHeight);   // placed at once: left where the builder made him he would show in the screen's middle for a frame
+        rect.localScale = new Vector3(w.facing, 1f, 1f);
         walkers.Add(w);
     }
 
