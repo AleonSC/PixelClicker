@@ -26,6 +26,7 @@ public class PixelClicker : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         ExternalClickBlock = false;
+        DevClickBlock = false;
         ClickHint = false;
         GodMode = false;
         InfiniteResources = false;
@@ -964,9 +965,12 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Something else (a minigame, the hose, a hovered pet, first person mode) has the mouse: the cube ignores ordinary clicks.</summary>
     public static bool ExternalClickBlock
     {
-        get => externalClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
+        get => externalClickBlock || DevClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
         set => externalClickBlock = value;
     }
+
+    /// <summary>Dev tools: the shape placer is open and uses the mouse (the cube ignores clicks).</summary>
+    public static bool DevClickBlock;
 
     /// <summary>Dev tools "god pixel" mode: the mouse spawns / destroys pixels instead of clicking the cube.</summary>
     public static bool GodMode;

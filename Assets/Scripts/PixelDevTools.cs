@@ -342,7 +342,7 @@ public class PixelDevTools : MonoBehaviour
 
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle shapesToggle, mockupToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -915,6 +915,14 @@ public class PixelDevTools : MonoBehaviour
         godToggle = BuildToggleRow(content, godModeLabel, y, inner, godMode, SetGodMode, godTipText);
         y += rowHeight + 24f;
 
+        // Rows: the shape placer and the UI mockup builder (layout helpers for describing exact placements in screenshots)
+        shapesToggle = BuildToggleRow(content, "Shape placer", y, inner, PixelDevShapes.SavedActive, PixelDevShapes.SetActive,
+                                      "Click the floor to drop cubes, spheres, ramps and more; drag them, rotate, scale, copy the layout. Saved. Has a RESET ALL button.");
+        y += rowHeight + 24f;
+        mockupToggle = BuildToggleRow(content, "UI mockup builder", y, inner, PixelDevMockup.SavedActive, PixelDevMockup.SetActive,
+                                      "Drag out windows, boxes, buttons, text and temporary images; layer them, change opacity and colour, copy the exact layout. Saved. Has a RESET ALL button.");
+        y += rowHeight + 24f;
+
         // Row: how many clicks one click counts as (payouts, tough-pixel hits and the combo all scale with it)
         TMP_Text clickLabel = PixelUIKit.CreateText(font, content, "Click Count Label", clickCountText, fontSize,
                                                     TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
@@ -954,6 +962,11 @@ public class PixelDevTools : MonoBehaviour
         panel.SetActive(false);
         if (spawnSelectorEnabled) SetSelector(true);
         if (godMode) SetGodMode(true);
+        // Saved shapes / mockup pieces come back even while their panels are closed.
+        PixelDevShapes.Boot();
+        PixelDevMockup.Boot();
+        if (PixelDevShapes.SavedActive) PixelDevShapes.SetActive(true);
+        if (PixelDevMockup.SavedActive) PixelDevMockup.SetActive(true);
     }
 
     // ------------------------------------------------------------------
