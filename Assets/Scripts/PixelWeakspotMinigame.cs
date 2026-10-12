@@ -375,16 +375,40 @@ public class PixelWeakspotMinigame : PixelMinigame
         Transform cubeT = clicker.PixelTransform;
         Ray ray = zoomCam.ViewportPointToRay(new Vector3(vp.x, vp.y, 0f));
         RaycastHit[] hits = Physics.RaycastAll(ray, 100f, ~0, QueryTriggerInteraction.Collide);
-        float best = float.MaxValue;
-        RaycastHit pick = default;
+        EnsureSurface();
+        float best = float.MaxValue, bestSurface = float.MaxValue;
+        RaycastHit pick = default, pickSurface = default;
         foreach (RaycastHit h in hits)
         {
+            if (surface != null && h.collider == surface)
+            {
+                if (h.distance < bestSurface) { bestSurface = h.distance; pickSurface = h; }
+                continue;
+            }
             if (h.transform != cubeT && !h.transform.IsChildOf(cubeT) && (clicker.HitboxTransform == null || h.transform != clicker.HitboxTransform)) continue;
             if (h.distance < best) { best = h.distance; pick = h; }
         }
+        // The cube's real shape wins over its box: a rounded block (shell, ghost) bulges past the box and would hide a spot placed on the box.
+        if (bestSurface < float.MaxValue) { best = bestSurface; pick = pickSurface; }
         if (best == float.MaxValue) return false;
-        pos = pick.point + pick.normal * (clicker.PixelBaseSize * 0.04f);
+        pos = pick.point + pick.normal * (clicker.PixelBaseSize * 0.05f);
         return true;
+    }
+
+    private MeshCollider surface;
+
+    /// <summary>A hidden convex collider with the cube's actual mesh (the hit box is always a plain cube), so weak spots sit on what the player sees.</summary>
+    private void EnsureSurface()
+    {
+        if (surface != null || clicker == null || clicker.PixelTransform == null) return;
+        MeshFilter mf = clicker.PixelTransform.GetComponentInChildren<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return;
+        GameObject go = new GameObject("Weak Spot Surface");
+        go.transform.SetParent(mf.transform, false);
+        surface = go.AddComponent<MeshCollider>();
+        surface.sharedMesh = mf.sharedMesh;
+        surface.convex = true;
+        surface.isTrigger = true;
     }
 
     private int RollKind()
@@ -637,6 +661,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     private void FinishRound()
     {
+        if (surface != null) { Destroy(surface.gameObject); surface = null; }
         foreach (Spot s in spots) if (s.root != null) Destroy(s.root.gameObject);
         spots.Clear();
         if (slowed || !Mathf.Approximately(Time.timeScale, 1f) && !PixelPauseMenu.IsPaused && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed)

@@ -279,10 +279,11 @@ public class PixelBlockTooltip : MonoBehaviour
             {
                 showBar = true;
                 frac = Mathf.Clamp01(hits / (float)needed);
-                barLabel = hits + " / " + needed + " clicks";
-                stats += "\nTough: " + needed + " clicks to break";
+                int left = Mathf.Max(1, needed - hits);
+                barLabel = left + (left == 1 ? " click left" : " clicks left");
+                stats += "\nClicks left: <b>" + left + "</b> of " + needed;
             }
-            else stats += "\nClick it to collect";
+            else stats += "\nClicks left: <b>1</b>";
         }
         else if (shownBody != null)
         {
