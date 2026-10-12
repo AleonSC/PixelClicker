@@ -763,6 +763,10 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float seedGrowSeconds = 6f;
 
     [Min(0f)]
+    [Tooltip("Seconds a seedling from a cracked Seed shell takes to grow its plant pixel (bought seeds and the Seed pet use 'Seed Grow Seconds'). 0 = the coded default (40).")]
+    [SerializeField] private float seedlingGrowSeconds = 0f;
+
+    [Min(0f)]
     [Tooltip("Seconds the grown pixel waits (wobbling) on its sprout before it pops off.")]
     [SerializeField] private float seedHoldSeconds = 1f;
 
@@ -1589,6 +1593,17 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 42;
         }
 
+        if (looksVersion < 43)
+        {
+            // The Pest got a dangerous new look (hazard stripes, red eyes, twitching spiky carapace).
+            System.Collections.Generic.List<PixelLook> list43 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook def43 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Pest);
+            int at43 = list43.FindIndex(l => l != null && l.type == PixelType.Pest);
+            if (def43 != null) { if (at43 >= 0) list43[at43] = def43; else list43.Add(def43); }
+            looks = list43.ToArray();
+            looksVersion = 43;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1796,8 +1811,10 @@ public class PixelClicker : MonoBehaviour
                 SetLiveDamage(tier, hitsOnCurrentPixel);
                 PlayClickEffects(tier);
                 if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
-                if (tier.type == PixelType.Seed) SeedDigEffect(hitsOnCurrentPixel / (float)need);
-                else if (IsFarm(tier.type) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Seed || tier.type == PixelType.Dirt) SeedDigEffect(Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // digging noises + falling dirt
+                if (tier.type != PixelType.Seed && IsFarm(tier.type) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Dirt) digShrinkTarget = Mathf.Lerp(1f, oldPixelScale, Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // each dig shrinks it towards old-pixel size
+                if (tier.type == PixelType.Pest && !disablePestSwarm) PixelPestSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // bugs spill out of it
                 if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
@@ -1882,6 +1899,7 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
         if (IsFarm(tier.type) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
+        if (tier.type == PixelType.Dirt) PixelAudio.Play("seed_dig");   // the last dig
         if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Break(tier.type, pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Break(pixelTransform.position, PixelBaseSize);
         if (IsOre(tier.type) && !disableProspectorFx)
@@ -2816,9 +2834,10 @@ public class PixelClicker : MonoBehaviour
         rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y), ForceMode.VelocityChange);
 
         SeedSprout sprout = go.AddComponent<SeedSprout>();
-        sprout.Setup(this, unit, seedGrowSeconds, seedHoldSeconds, seedSproutScale);
+        float grow = seedlingGrowSeconds > 0f ? seedlingGrowSeconds : 40f;   // seedlings from a shell grow slowly
+        sprout.Setup(this, unit, grow, seedHoldSeconds, seedSproutScale);
         sprout.SetGhost(popNoCollisionSeconds + 0.15f);
-        sprout.SetLifetime(seedSproutLifetime > 0f ? seedSproutLifetime : 45f);
+        sprout.SetLifetime((seedSproutLifetime > 0f ? seedSproutLifetime : 45f) + Mathf.Max(0f, grow - seedGrowSeconds));   // the despawn timer waits for the longer growth
         sprout.PlantsOnly();   // a cracked shell's seedlings grow plant pixels only
     }
 
@@ -2863,7 +2882,8 @@ public class PixelClicker : MonoBehaviour
             liveBase = Vector3.Scale(baseScale, PixelWobble.Scale(time, activeLook.wobbleAmount, activeLook.wobbleSpeed, 0f));
         cubeShrinkCurrent = Mathf.MoveTowards(cubeShrinkCurrent, cubeShrinkTarget, Time.unscaledDeltaTime / Mathf.Max(0.05f, cubeShrinkSeconds));
         float hintPulse = ClickHintPulse(time);
-        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount) * (1f + hintPulse * clickHintAmount) * cubeShrinkCurrent);
+        digShrinkCurrent = Mathf.MoveTowards(digShrinkCurrent, digShrinkTarget, Time.unscaledDeltaTime * 3f);
+        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount) * (1f + hintPulse * clickHintAmount) * cubeShrinkCurrent * digShrinkCurrent);
 
         if (pulseEnabled && allowPulsing && pulseBrightness)
         {
@@ -2939,6 +2959,7 @@ public class PixelClicker : MonoBehaviour
     public int CurrentClickTierIndex => GetClickTierIndex();
 
     private float cubeShrinkCurrent = 1f, cubeShrinkTarget = 1f, cubeShrinkSeconds = 0.5f;
+    private float digShrinkCurrent = 1f, digShrinkTarget = 1f;   // a Dirt block gets smaller with every dig, down to old-pixel size
 
     /// <summary>
     /// Smoothly shrinks the clickable cube to 'scale' times its size (1 = normal) over 'seconds'. Minigames that need the screen
@@ -3008,6 +3029,7 @@ public class PixelClicker : MonoBehaviour
         if (look == null || !look.HasSurfaceTexture) return;
         bool onlyBasic = look.blockSurface == PixelLook.BlockSurface.None && !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture && !look.meteorTexture && !look.sunTexture;
         Texture2D tex = look.blockSurface == PixelLook.BlockSurface.Seed ? PixelBlockTextures.SeedShell(look.damageCracks ? level : 0, max)
+                      : look.blockSurface == PixelLook.BlockSurface.Pest ? PixelBlockTextures.PestHide(look.damageCracks ? level : 0, max)
                       : look.blockSurface != PixelLook.BlockSurface.None ? PixelBlockTextures.Get(look.blockSurface)
                       : onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
                       : look.meteorTexture ? PixelStarTextures.Meteor(look.damageCracks ? level : 0, max)
@@ -3428,6 +3450,30 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How long a hazard block (Pest, Gas Pocket) stays on the cube before it goes away by itself, in seconds. 0 = the coded default (7).")]
     [SerializeField] private float hazardSeconds = 0f;
 
+    [Tooltip("Turns off the Pest's bug swarm (a Pest that goes off just kills every sprout at once, as before).")]
+    [SerializeField] private bool disablePestSwarm = false;
+
+    [Min(0)]
+    [Tooltip("Bugs the Pest sends at every sprout in your field. 0 = the coded default (6).")]
+    [SerializeField] private int pestBugsPerSprout = 0;
+
+    [Min(0)]
+    [Tooltip("Bugs a Pest releases even when there is nothing to eat. 0 = the coded default (8).")]
+    [SerializeField] private int pestBugsMin = 0;
+
+    [Min(0f)]
+    [Tooltip("How fast the pest bugs run, in old-pixel widths per second. 0 = the coded default (3.5).")]
+    [SerializeField] private float pestBugSpeed = 0f;
+
+    [Min(0f)]
+    [Tooltip("Seconds one bug needs to gnaw through a sprout (more bugs on it are faster). 0 = the coded default (4).")]
+    [SerializeField] private float pestChewSeconds = 0f;
+
+    public int PestBugsPerSprout => pestBugsPerSprout > 0 ? pestBugsPerSprout : 6;
+    public int PestBugsMin => pestBugsMin > 0 ? pestBugsMin : 8;
+    public float PestBugSpeed => pestBugSpeed > 0f ? pestBugSpeed : 3.5f;
+    public float PestChewSeconds => pestChewSeconds > 0f ? pestChewSeconds : 4f;
+
     [Min(0f)]
     [Tooltip("Gas Pocket blast: old pixels within this many old-pixel widths of the cube are blown away (no payout). 0 = the coded default (4).")]
     [SerializeField] private float gasBlastWidths = 0f;
@@ -3452,8 +3498,8 @@ public class PixelClicker : MonoBehaviour
         string what;
         if (tier.type == PixelType.Pest)
         {
-            int killed = SeedSprout.KillAll();
-            what = killed > 0 ? "The pests ate " + killed + " sprout" + (killed == 1 ? "" : "s") + "!" : "The pests swarm out!";
+            int killed = disablePestSwarm ? SeedSprout.KillAll() : PixelPestSwarm.Release(this, pos);
+            what = killed > 0 ? (disablePestSwarm ? "The pests ate " : "A swarm of pests is going for ") + killed + " sprout" + (killed == 1 ? "" : "s") + "!" : "The pests swarm out!";
             if (!disableFarmFx) PixelFarmFx.Break(PixelType.Weevil, pos, PixelBaseSize, tier.color);
         }
         else
@@ -3480,6 +3526,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (IsHazard(tier.type)) PixelHints.Trigger("hazard");
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
+        digShrinkTarget = digShrinkCurrent = 1f;
         liveSince = Time.time;
         liveNeed = tier.randomClicks ? RollNeededClicks(tier) : 0;   // a treasure chest needs a random number of clicks
 

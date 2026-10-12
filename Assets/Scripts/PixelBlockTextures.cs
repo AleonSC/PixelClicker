@@ -176,4 +176,68 @@ public static class PixelBlockTextures
         seeds[key] = tex;
         return tex;
     }
+
+    // ---- Pest: a black carapace in plates, hazard stripes round every face, and red eyes that multiply (and cracks that glow) as it is hit ----
+    private static readonly System.Collections.Generic.Dictionary<int, Texture2D> pests = new System.Collections.Generic.Dictionary<int, Texture2D>();
+
+    public static Texture2D PestHide(int level, int maxLevel)
+    {
+        maxLevel = Mathf.Max(1, maxLevel);
+        level = Mathf.Clamp(level, 0, maxLevel);
+        int key = level * 100 + maxLevel;
+        if (pests.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+        float k = level / (float)maxLevel;
+        // Eye positions on a face (the same on all six): 3 to start, up to 7 as it gets angrier.
+        Vector2[] eyes = { new Vector2(0.3f, 0.58f), new Vector2(0.7f, 0.58f), new Vector2(0.5f, 0.38f), new Vector2(0.25f, 0.32f), new Vector2(0.75f, 0.32f), new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.2f) };
+        int visible = 3 + Mathf.RoundToInt(k * 4f);
+
+        Texture2D tex = Make("Pest Hide " + level, (x, y) =>
+        {
+            float u = x / (float)N, v = y / (float)N;
+            // Carapace plates: dark cells with lighter rims.
+            const float cell = 11f;
+            float gx = x / cell, gy = y / cell;
+            int cx = Mathf.FloorToInt(gx), cy = Mathf.FloorToInt(gy);
+            float d1 = 9f, d2 = 9f;
+            for (int oy = -1; oy <= 1; oy++)
+                for (int ox = -1; ox <= 1; ox++)
+                {
+                    int ix = cx + ox, iy = cy + oy;
+                    float px = ix + 0.2f + H(ix, iy, 141) * 0.6f, py = iy + 0.2f + H(ix, iy, 143) * 0.6f;
+                    float d = Mathf.Sqrt((gx - px) * (gx - px) + (gy - py) * (gy - py));
+                    if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+                }
+            float rim = (d2 - d1) * cell;
+            Color c = Color.Lerp(new Color(0.05f, 0.06f, 0.04f), new Color(0.16f, 0.18f, 0.1f), Mathf.Clamp01(d1 * 0.9f));
+            if (rim < 1.2f) c = new Color(0.3f, 0.34f, 0.12f);                                   // a lit seam between the plates
+            c *= 0.9f + H(x, y, 145) * 0.2f;
+
+            // Warning stripes along all four borders.
+            float edge = Mathf.Min(Mathf.Min(u, 1f - u), Mathf.Min(v, 1f - v));
+            if (edge < 0.15f)
+            {
+                bool yellow = Mathf.FloorToInt((x + y) / 6f) % 2 == 0;
+                c = yellow ? new Color(0.95f, 0.78f, 0.08f) : new Color(0.05f, 0.04f, 0.03f);
+                if (edge < 0.025f) c = new Color(0.04f, 0.03f, 0.02f);                         // a dark outer line
+            }
+
+            // Red eyes: a glowing disc with a dark slit; more of them (and a hotter glow) the angrier it is.
+            for (int e = 0; e < visible; e++)
+            {
+                float dx = (u - eyes[e].x) * 1.0f, dy = (v - eyes[e].y) * 1.0f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float radius = 0.07f + 0.012f * k;
+                if (r < radius)
+                {
+                    c = Color.Lerp(new Color(1f, 0.15f, 0.05f), new Color(1f, 0.7f, 0.2f), (1f - r / radius) * (0.4f + k * 0.5f));
+                    if (Mathf.Abs(dx) < 0.012f && Mathf.Abs(dy) < radius * 0.8f) c = new Color(0.05f, 0f, 0f);   // slit pupil
+                }
+                else if (r < radius + 0.03f) c = Color.Lerp(c, new Color(1f, 0.2f, 0.05f), (1f - (r - radius) / 0.03f) * (0.35f + k * 0.4f));
+            }
+            return c;
+        });
+        pests[key] = tex;
+        return tex;
+    }
 }

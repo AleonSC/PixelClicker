@@ -739,7 +739,7 @@ public partial class PixelShop
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]
             {
-                Block(PixelClicker.PixelType.Dirt, "Dirt Pixels", new Color(0.42f, 0.28f, 0.16f, 1f), 1, 1, 1.0f),
+                Block(PixelClicker.PixelType.Dirt, "Dirt Pixels", new Color(0.42f, 0.28f, 0.16f, 1f), 3, 1, 1.0f),
                 Block(PixelClicker.PixelType.Seed, "Seed Pixels", new Color(0.55f, 0.38f, 0.18f, 1f), 8, 15, 0.3f),
                 Block(PixelClicker.PixelType.Water, "Water Pixels", new Color(0.3f, 0.62f, 1f, 1f), 1, 3, 0.4f),
                 Block(PixelClicker.PixelType.Fertilizer, "Fertilizer Pixels", new Color(0.5f, 0.66f, 0.25f, 1f), 1, 2, 0.5f),

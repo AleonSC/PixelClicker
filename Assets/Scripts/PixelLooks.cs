@@ -46,7 +46,7 @@ public class PixelLook
     public enum BasicSurface { None = 0, Grain = 1, Brushed = 2, Sheen = 3, Mosaic = 4 }
 
     /// <summary>Crisp drawn surfaces for the skill packs' base blocks (PixelBlockTextures.cs). The look's colour should be white.</summary>
-    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3, Seed = 4 }
+    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3, Seed = 4, Pest = 5 }
 
     [Tooltip("Wood, Dirt or Stone: a crisp 64 px pixel-art surface drawn on every face (set the look's colour to white).")]
     public BlockSurface blockSurface = BlockSurface.None;
@@ -516,7 +516,9 @@ public static class PixelLooks
                             damageCracks = true, chestTexture = true },
 
             // Hazard blocks: the Pest (a dark, buzzing lump that cracks as you hit it) and the Gas Pocket (a wobbling yellow-green bubble of gas).
-            new PixelLook { type = PixelClicker.PixelType.Pest, useColor = true, color = new Color(0.55f, 0.6f, 0.25f, 1f), metallic = 0f, smoothness = 0.3f, emission = 0.15f, damageCracks = true,
+            // The Pest: a spiky black carapace in hazard stripes with glowing red eyes that multiply as you hit it; it twitches and bugs crawl over it.
+            new PixelLook { type = PixelClicker.PixelType.Pest, useColor = true, color = Color.white, metallic = 0.35f, smoothness = 0.75f, damageCracks = true,
+                            blockSurface = PixelLook.BlockSurface.Pest, jagged = true, wobble = true, wobbleAmount = 0.07f, wobbleSpeed = 9f,
                             farmFx = PixelLook.FarmAmbient.Bugs },
             new PixelLook { type = PixelClicker.PixelType.GasPocket, useColor = true, color = new Color(0.78f, 0.85f, 0.25f, 0.55f), forceTranslucent = true, metallic = 0f, smoothness = 0.8f, emission = 0.7f,
                             wobble = true, wobbleAmount = 0.1f, farmFx = PixelLook.FarmAmbient.Spores },

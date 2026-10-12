@@ -84,7 +84,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Nuclear:
                 return "A radioactive pixel with a toxic glow. Its old pixel ages every other old pixel within about 4 pixel-widths 40 times faster, so they disappear without paying - clear space before it lands.";
             case PixelClicker.PixelType.Pest:
-                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the pests eat every sprout you have growing, and Farming XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it flies off by itself after a few seconds. The auto clicker never touches it. They get a bit more common as your farming level rises.";
+                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and a swarm of bugs pours out and eats the sprouts you have growing (the more bugs on a sprout, the faster it goes), and Farming XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it flies off by itself after a few seconds. The auto clicker never touches it. They get a bit more common as your farming level rises.";
             case PixelClicker.PixelType.GasPocket:
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the gas explodes, blowing away the old pixels around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. They get a bit more common as your mining level rises.";
             case PixelClicker.PixelType.Wood:
@@ -92,7 +92,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Rock:
                 return "Stone: Mining's filler block. One click, almost no pay. At low mining level it is most of what appears; as you level up it gets rarer and the ores show up more.";
             case PixelClicker.PixelType.Dirt:
-                return "Farming's filler block: one click, almost no pay. At low farming level it is most of what appears; as you level up it gets rarer and the other farm blocks show up more. Old Dirt pixels lying near a growing sprout also make it grow faster.";
+                return "Farming's filler block: it takes a few digs (shrinking each time, with digging noises) and pays almost nothing. At low farming level it is most of what appears; as you level up it gets rarer and the other farm blocks show up more. Old Dirt pixels lying near a growing sprout also make it grow faster.";
             case PixelClicker.PixelType.Fertilizer:
                 return "Farming block. Clicking it gives every growing sprout and Seed pet on the field an instant jump in growth.";
             case PixelClicker.PixelType.Pollen:

@@ -277,6 +277,15 @@ public partial class PixelSkills : MonoBehaviour
                 if (pack.spawns != null && !pack.spawns.Contains("Stone")) pack.spawns = "Stone, " + pack.spawns;
             }
             if (pack.id == FarmingId && string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Dirt.ToString();
+            if (pack.id == FarmingId)
+            {
+                // A saved Farming pack could lack a farm block (Seed and Water used to be sold on their own): make sure every one is in the rotation.
+                System.Collections.Generic.List<PixelClicker.PixelType> farm = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
+                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
+                                                             PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit })
+                    if (!farm.Contains(t)) farm.Add(t);
+                pack.types = farm.ToArray();
+            }
             // Hazard blocks: Farming's Pest and Mining's Gas Pocket (part of their packs' pixel lists).
             if (pack.id == MiningId || pack.id == FarmingId)
             {

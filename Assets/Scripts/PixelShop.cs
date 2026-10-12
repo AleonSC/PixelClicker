@@ -908,26 +908,6 @@ public partial class PixelShop : MonoBehaviour
             packDataVersion = Mathf.Max(packDataVersion, 12);
             changed = true;
         }
-        // The hazard blocks (Gas Pocket for Mining, Pest for Farming) join the Prospector's and Farmer's Packs.
-        if (packDataVersion < 14)
-        {
-            if (packs != null)
-                foreach (ShopPack pack in packs)
-                {
-                    if (pack == null || pack.rewardTiers == null) continue;
-                    PixelClicker.PixelTier add = null;
-                    if (Rewards(pack, PixelClicker.PixelType.Copper) && !Rewards(pack, PixelClicker.PixelType.GasPocket))
-                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.GasPocket, displayName = "Gas Pocket", color = new Color(0.78f, 0.85f, 0.25f, 1f), clicksToCollect = 5, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
-                    else if (Rewards(pack, PixelClicker.PixelType.Dirt) && !Rewards(pack, PixelClicker.PixelType.Pest))
-                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.Pest, displayName = "Pest", color = new Color(0.4f, 0.45f, 0.14f, 1f), clicksToCollect = 6, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
-                    if (add == null) continue;
-                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers) { add };
-                    pack.rewardTiers = list.ToArray();
-                }
-            packDataVersion = Mathf.Max(packDataVersion, 14);
-            changed = true;
-        }
-
         // Stone (the old Rock block) is Mining's filler: one click, tiny pay, and part of the Prospector's Pack.
         if (packDataVersion < 13)
         {
@@ -955,6 +935,47 @@ public partial class PixelShop : MonoBehaviour
             packDataVersion = Mathf.Max(packDataVersion, 13);
             changed = true;
         }
+        // The hazard blocks (Gas Pocket for Mining, Pest for Farming) join the Prospector's and Farmer's Packs.
+        if (packDataVersion < 14)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null) continue;
+                    PixelClicker.PixelTier add = null;
+                    if (Rewards(pack, PixelClicker.PixelType.Copper) && !Rewards(pack, PixelClicker.PixelType.GasPocket))
+                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.GasPocket, displayName = "Gas Pocket", color = new Color(0.78f, 0.85f, 0.25f, 1f), clicksToCollect = 5, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
+                    else if (Rewards(pack, PixelClicker.PixelType.Dirt) && !Rewards(pack, PixelClicker.PixelType.Pest))
+                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.Pest, displayName = "Pest", color = new Color(0.4f, 0.45f, 0.14f, 1f), clicksToCollect = 6, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
+                    if (add == null) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers) { add };
+                    pack.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 14);
+            changed = true;
+        }
+
+        // The Farmer's Pack keeps every farm block (a saved list could lack Seed or Water, which used to be sold alone) and Dirt takes a few digs.
+        if (packDataVersion < 15)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Dirt)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
+                    foreach (PixelClicker.PixelTier def in CreateFarmerPack().rewardTiers)
+                        if (!list.Exists(t => t.type == def.type)) list.Add(def);
+                    foreach (PixelClicker.PixelTier t in list)
+                        if (t.type == PixelClicker.PixelType.Dirt && t.clicksToCollect <= 1) t.clicksToCollect = 3;
+                    pack.rewardTiers = list.ToArray();
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                    if (t.type == PixelClicker.PixelType.Dirt && t.clicksToCollect <= 1) t.clicksToCollect = 3;
+            packDataVersion = Mathf.Max(packDataVersion, 15);
+            changed = true;
+        }
+
         return changed;
     }
 

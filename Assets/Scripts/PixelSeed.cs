@@ -65,6 +65,34 @@ public class SeedSprout : MonoBehaviour
         return lost;
     }
 
+    /// <summary>Adds every sprout a pest can still eat (growing or holding a pixel) to 'into'.</summary>
+    public static void GetEdible(System.Collections.Generic.List<SeedSprout> into)
+    {
+        foreach (SeedSprout s in all)
+            if (s != null && s.IsEdible) into.Add(s);
+    }
+
+    /// <summary>Is this sprout still growing (or holding) a pixel, i.e. worth eating?</summary>
+    public bool IsEdible => stage == Stage.Growing || stage == Stage.Holding;
+
+    /// <summary>How tall the stem is (world units), so bugs know how high to climb.</summary>
+    public float StemHeight => StemTop;
+
+    private float gnaw;
+
+    /// <summary>Bugs are chewing on it: 0..1, makes it shake.</summary>
+    public void Gnaw(float amount) => gnaw = Mathf.Clamp01(amount);
+
+    /// <summary>The sprout is eaten: its pixel is lost and it shrinks away.</summary>
+    public void Devour()
+    {
+        if (stage == Stage.Shrinking) return;
+        if (pixel != null) { Destroy(pixel); pixel = null; }
+        if (sunRay != null) sunRay.SetAmount(0f);
+        stage = Stage.Shrinking;
+        stageTime = 0f;
+    }
+
     /// <summary>A weevil bites a random growing sprout: it withers away. False when there is none to eat.</summary>
     public static bool EatOne(out Vector3 at)
     {
@@ -255,7 +283,7 @@ public class SeedSprout : MonoBehaviour
     /// <summary>Sway, the mound pushing up and the glow (warmer and brighter while Solar pixels speed it up).</summary>
     private void AnimatePlant(float t, float rate)
     {
-        transform.rotation = Quaternion.Euler(Mathf.Sin(t * 3f) * 3f, yaw, Mathf.Cos(t * 2.3f) * 3f);
+        transform.rotation = Quaternion.Euler(Mathf.Sin(t * 3f) * 3f + Mathf.Sin(Time.time * 41f) * gnaw * 7f, yaw, Mathf.Cos(t * 2.3f) * 3f + Mathf.Cos(Time.time * 37f) * gnaw * 7f);
         if (mound != null)
         {
             float push = Mathf.Clamp01(t / 0.6f);
