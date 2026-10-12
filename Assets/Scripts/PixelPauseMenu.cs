@@ -234,7 +234,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string headerSaving = "Saving";
     [SerializeField] private string headerDisplay = "Display";
     [SerializeField] private string headerAudio = "Audio";
-    [SerializeField] private string headerControls = "Controls";
+    [SerializeField] private string headerHowToPlay = "How to play";
     [SerializeField] private string tipsLabel = "Show first-time tips";
     [SerializeField] private string replayTutorialText = "Replay tutorial";
 
@@ -258,8 +258,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string vsyncLabel = "VSync";
     [SerializeField] private string fullscreenLabel = "Fullscreen";
     [SerializeField] private string resolutionLabel = "Resolution";
-    [SerializeField] private string keyBindingsText = "Key bindings...";
-    [SerializeField] private string keyBindingsTitle = "Key Bindings";
+    [SerializeField] private string controlsButtonText = "Controls";
+    [SerializeField] private string keyBindingsPanelTitle = "Controls";
     [SerializeField] private string resetKeysText = "Reset keys to default";
     [SerializeField] private string pressAKeyText = "Press a key...";
 
@@ -367,11 +367,11 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private float changelogFontSize = 28f;
 
     [Header("How to Play and Controls")]
-    [Tooltip("Show the How to Play button in the pause menu.")]
+    [Tooltip("Show the Game Guide button (under the 'How to play' header in Settings).")]
     [SerializeField] private bool showHowToPlay = true;
 
-    [Tooltip("Text of the How to Play button and the title of its screen.")]
-    [SerializeField] private string howToPlayText = "How to Play";
+    [Tooltip("Text of the Game Guide button and the title of its screen.")]
+    [SerializeField] private string gameGuideText = "Game Guide";
 
     [Tooltip("Name of the text file in a Resources folder that holds the How to Play text (Assets/Resources/HowToPlay.txt). Edit that file to change what the screen says.")]
     [SerializeField] private string howToPlayResource = "HowToPlay";
@@ -1074,7 +1074,7 @@ public class PixelPauseMenu : MonoBehaviour
         BuildQuitPanel();
         BuildChangelogPanel();
         BuildRestartPanel();
-        if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", howToPlayText, howToPlayResource, emptyHowToPlayText);
+        if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", gameGuideText, howToPlayResource, emptyHowToPlayText);
         if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", controlsText, controlsResource, emptyControlsText);
 
         // Resume on top, alone
@@ -1086,7 +1086,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
         if (controlsScreen != null) entries.Add(new MenuEntry { label = controlsText, color = menuButtonColor, action = () => ShowView(controlsScreen.panel) });
         // How to Play | Changelog
-        if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
         if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
         // Give feedback: a long green button right above Quit
         entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, color = new Color(0.2f, 0.62f, 0.32f, 1f), action = () => PixelFeedback.OpenWindow(), fullRow = true });
@@ -2251,8 +2250,9 @@ public class PixelPauseMenu : MonoBehaviour
         }
 
         // ---- Controls ----
-        AddSettingsSectionHeader(list, headerControls, ref y);
-        AddWideButtonRow(list, keyBindingsText, () => ShowView(keysPanel), ref y);
+        AddSettingsSectionHeader(list, headerHowToPlay, ref y);
+        AddWideButtonRow(list, controlsButtonText, () => ShowView(keysPanel), ref y);   // the key bindings
+        if (showHowToPlay) AddWideButtonRow(list, gameGuideText, () => { if (howToPlayScreen != null) ShowView(howToPlayScreen.panel); }, ref y);   // the Game Guide (HowToPlay.txt)
 
         settingsScroll = scroll;
         settingsBar = bar;
@@ -2455,7 +2455,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void BuildKeysPanel()
     {
-        keysPanel = BuildSectionPanel("Key Bindings Panel", keyBindingsTitle, out float y);
+        keysPanel = BuildSectionPanel("Key Bindings Panel", keyBindingsPanelTitle, out float y);
         int count = PixelKeys.Count;
         keyButtonLabels = new TMP_Text[count];
 
