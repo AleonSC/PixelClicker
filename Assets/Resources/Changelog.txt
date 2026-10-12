@@ -606,3 +606,4 @@
 [2026-10-12 07:29 UTC] Added the three base gathering skills (Woodcutting, Foraging, Fishing) to the to-do.
 [2026-10-12 07:34 UTC] Built the Woodcutting skill: the Woodcutter's Pack (150 White) adds Wood, Bark, Sap, Leaf, rare Heartwood, the Twig filler and a Hornet Nest hazard, with looks, particles, sounds and Pixel Guide texts.
 [2026-10-12 07:37 UTC] Boxed the shop's Value rows: the pixel name and the level now sit in their own boxes beside the info button, with the cost lines in a larger box underneath.
+[2026-10-12 07:38 UTC] Fixed a compile error (duplicate levelLabel) in the shop rows.

@@ -24,7 +24,7 @@ public partial class PixelShop
     private class PackRow
     {
         public RectTransform rect;
-        public TMP_Text nameLabel, levelLabel;
+        public TMP_Text nameLabel;
         public TMP_Text descLabel;
         public Button buyButton;
         public Image buyImage;
