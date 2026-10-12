@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -239,10 +240,57 @@ public class PixelHud : MonoBehaviour
         return PixelBarGlow.EdgeColor(GlowHue, time, GlowCycle ? cycleSpeed : 0f, edgeOffset, saturation);
     }
 
-    public static void ReloadGlowFromPrefs() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
+    // ---- Bar colour: the black margins (and the main menu's bar) in a colour picked with the eyedropper (Settings > Display) ----
+
+    private const string PrefBarColorOn = "PixelClicker.Setting.BarColorOn", PrefBarColor = "PixelClicker.Setting.BarColor";
+    private static int barColorOnCache = -1;
+    private static string barColorCache;
+    private static Color barColorParsed = Color.black;
+
+    /// <summary>Counts every change of the bar colour setting; the bars and the menu bar repaint when it moves.</summary>
+    public static int BarColorVersion { get; private set; }
+
+    private static void ReadBarColor()
+    {
+        if (barColorCache != null) return;
+        barColorCache = PlayerPrefs.GetString(PrefBarColor, "");
+        barColorOnCache = PlayerPrefs.GetInt(PrefBarColorOn, 0);
+        barColorParsed = ParseGlowColor(barColorCache) ?? Color.black;
+    }
+
+    /// <summary>Use the picked colour for the black bars (game and main menu)?</summary>
+    public static bool BarColorOn
+    {
+        get { ReadBarColor(); return barColorOnCache == 1; }
+        set { ReadBarColor(); barColorOnCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefBarColorOn, barColorOnCache); BarColorVersion++; }
+    }
+
+    /// <summary>The picked bar colour (black until one is picked).</summary>
+    public static Color BarColorPicked { get { ReadBarColor(); return barColorParsed; } }
+
+    /// <summary>Picks one exact colour for the bars and switches the custom colour on.</summary>
+    public static void SetBarColorFromColor(Color c)
+    {
+        ReadBarColor();
+        barColorCache = ColorUtility.ToHtmlStringRGB(c);
+        barColorParsed = new Color(c.r, c.g, c.b, 1f);
+        PlayerPrefs.SetString(PrefBarColor, barColorCache);
+        BarColorOn = true;
+        PlayerPrefs.Save();
+    }
+
+    /// <summary>A bar's colour: the picked colour (keeping the bar's own opacity) while the custom colour is on, else the colour it came with.</summary>
+    public static Color BarTint(Color baseColor)
+    {
+        if (!BarColorOn) return baseColor;
+        Color p = BarColorPicked;
+        return new Color(p.r, p.g, p.b, baseColor.a);
+    }
+
+    public static void ReloadGlowFromPrefs() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion++; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetGlowStatics() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
+    private static void ResetGlowStatics() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion = 0; }
 
     [Min(0f)]
     [Tooltip("Seconds the black bars (and the docked buttons) take to slide in when the game starts and out when quitting to the main menu. 0 = 0.9.")]
@@ -254,8 +302,16 @@ public class PixelHud : MonoBehaviour
     /// <summary>0 = the bars and docked buttons are slid off screen (main menu), 1 = in place. Eased.</summary>
     public static float RevealEased => instance == null || instance.reveal < 0f ? 1f : Mathf.SmoothStep(0f, 1f, instance.reveal);
 
+    private readonly List<Image> barImages = new List<Image>();
+    private int appliedBarVersion = -1;
+
     private void Update()
     {
+        if (appliedBarVersion != BarColorVersion)
+        {
+            appliedBarVersion = BarColorVersion;
+            foreach (Image im in barImages) if (im != null) im.color = BarTint(barColor);
+        }
         // The margins are away while the title screen shows and while the camera swings back to it; they slide in as the camera moves on Play.
         bool away = PixelTitleScreen.Showing || PixelTitleScreen.Reversing;
         if (reveal < 0f) reveal = away ? 0f : 1f;
@@ -285,7 +341,8 @@ public class PixelHud : MonoBehaviour
             bool top = i == 0;
             GameObject bar = new GameObject(top ? "Top Bar" : "Bottom Bar", typeof(RectTransform), typeof(Image));
             bar.transform.SetParent(canvasRoot.transform, false);
-            bar.GetComponent<Image>().color = barColor; // raycast target on: clicks on a bar don't reach the cube behind it
+            barImages.Add(bar.GetComponent<Image>());
+            bar.GetComponent<Image>().color = BarTint(barColor); // raycast target on: clicks on a bar don't reach the cube behind it
             RectTransform r = bar.GetComponent<RectTransform>();
             r.anchorMin = new Vector2(0f, top ? 1f : 0f);
             r.anchorMax = new Vector2(1f, top ? 1f : 0f);

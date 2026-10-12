@@ -366,10 +366,13 @@ public class PixelTitleScreen : MonoBehaviour
         PixelBarGlow.Colorize(glowImages[2], glowImages[3], glowImages[5], PixelHud.GlowColourNow(Time.unscaledTime, glowColorSpeed, PixelHud.GlowCustomColor.HasValue && !PixelHud.GlowCycle ? 0f : glowEdgeOffset, glowSaturation), a);
     }
 
+    private int titleBarVersion = -1;
+
     private void Update()
     {
         if (!Showing || canvas == null) return;
         UpdateBarGlow();
+        if (bar != null && titleBarVersion != PixelHud.BarColorVersion) { titleBarVersion = PixelHud.BarColorVersion; bar.color = PixelHud.BarTint(barColor); }
 
         // While the pause menu's views are open on top of the title, hide the title's own widgets and drop below the menu.
         bool menuOpen = PixelPauseMenu.IsPaused;
@@ -471,7 +474,8 @@ public class PixelTitleScreen : MonoBehaviour
         GameObject barGo = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         barGo.transform.SetParent(foreground.transform, false);
         bar = barGo.GetComponent<Image>();
-        bar.color = barColor;
+        bar.color = PixelHud.BarTint(barColor);
+        titleBarVersion = PixelHud.BarColorVersion;
         bar.raycastTarget = false;
         barRect = barGo.GetComponent<RectTransform>();
         barRect.anchorMin = new Vector2(0f, 0.5f);
