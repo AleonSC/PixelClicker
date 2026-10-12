@@ -14,7 +14,7 @@ public partial class PixelSkills
     [SerializeField] private float standardSideXp = 0f;
 
     [Min(0f)]
-    [Tooltip("Perk 'Lingering pixels': seconds every old pixel lasts longer for each Standard level above 1. 0 = the coded default (2).")]
+    [Tooltip("Perk 'Lingering pixels': seconds every old pixel lasts longer for each Standard level above 1. 0 = the coded default (5: level 2 = 20 s with the 15 s base).")]
     [SerializeField] private float lifetimePerLevel = 0f;
 
     [Min(0)]
@@ -44,7 +44,7 @@ public partial class PixelSkills
         {
             PixelSkills s = Instance;
             if (s == null || s.disableSkills) return 0f;
-            return (s.StandardLevel - 1) * (s.lifetimePerLevel > 0f ? s.lifetimePerLevel : 2f);
+            return (s.StandardLevel - 1) * (s.lifetimePerLevel > 0f ? s.lifetimePerLevel : 5f);
         }
     }
 
@@ -63,7 +63,7 @@ public partial class PixelSkills
 
     private static Perk[] StandardPerks() => new[]
     {
-        new Perk { level = 2, text = "Lingering pixels: old pixels last 2 seconds longer for every level", implemented = true },
+        new Perk { level = 2, text = "Lingering pixels: old pixels last 5 seconds longer for every level", implemented = true },
         new Perk { level = 4, text = "Roomy floor: room for 5 more old pixels for every level", implemented = true },
         new Perk { level = 7, text = "Sharper clicks: a small bonus to every pixel" },
     };

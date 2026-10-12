@@ -578,8 +578,8 @@ public class PixelClicker : MonoBehaviour
     [SerializeField] private float vacuumContentSize = 0f;
 
     [Header("Old Pixel Physics")]
-    [Tooltip("Seconds before an old pixel is destroyed. 0 = never.")]
-    [SerializeField] private float fallingCopyLifetime = 6f;
+    [Tooltip("Seconds before an old pixel is destroyed. 0 = never. (Renamed so the old saved 6 s is dropped: the default is 15 s now.)")]
+    [SerializeField] private float oldPixelLifetime = 15f;
 
     [Header("Click Limit")]
     [Min(0f)]
@@ -602,7 +602,7 @@ public class PixelClicker : MonoBehaviour
     public int PotionVacuumEvery => Mathf.Max(1, potionVacuumEvery);
 
     /// <summary>Seconds an old pixel lies around before it despawns.</summary>
-    public float FallingCopyLifetime => fallingCopyLifetime > 0f ? fallingCopyLifetime + PixelSkills.StandardLifetimeBonus : 0f;   // + the Standard skill's 'Lingering pixels' perk
+    public float FallingCopyLifetime => oldPixelLifetime > 0f ? oldPixelLifetime + PixelSkills.StandardLifetimeBonus : 0f;   // + the Standard skill's 'Lingering pixels' perk
 
     [Header("Value Upgrades")]
     [Min(0f)]
@@ -4669,7 +4669,7 @@ public class PixelClicker : MonoBehaviour
         if (tiers != null && tiers.Length > 0)
             activeTierIndex = Mathf.Clamp(activeTierIndex, 0, tiers.Length - 1);
         materializeDuration = Mathf.Max(0f, materializeDuration);
-        fallingCopyLifetime = Mathf.Max(0f, fallingCopyLifetime);
+        oldPixelLifetime = Mathf.Max(0f, oldPixelLifetime);
         baseOldPixelCap = Mathf.Max(0, baseOldPixelCap);
     }
 #endif

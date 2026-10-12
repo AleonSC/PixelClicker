@@ -352,6 +352,9 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == StandardId)
             {
                 if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
+                if (pack.perks != null)
+                    foreach (Perk perk in pack.perks)
+                        if (perk != null && perk.text != null && perk.text.Contains("last 2 seconds longer")) perk.text = perk.text.Replace("last 2 seconds longer", "last 5 seconds longer");
                 if (pack.description != null && pack.description.Contains("No skill is trained")) pack.description = StandardDescription;
                 if (pack.xpFrom == "Nothing") pack.xpFrom = "Every pixel you collect (5% while another skill is trained)";
                 if (pack.description != null && pack.description.StartsWith("The usual rotation: monochrome, RGB, Glass and Luminescent"))
