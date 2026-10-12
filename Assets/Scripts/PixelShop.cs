@@ -1934,6 +1934,8 @@ public partial class PixelShop : MonoBehaviour
                 {
                     if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
                     if (PixelClicker.IsFarm(reward.type) && reward.type != PixelClicker.PixelType.Dirt) continue;   // and one for the Farmer's Pack
+                    if (PixelClicker.IsWoodBlock(reward.type) && reward.type != PixelClicker.PixelType.Wood) continue;   // and one for the Woodcutter's Pack
+                    if (PixelClicker.IsHazard(reward.type)) continue;   // the hazard blocks (Pest, Gas Pocket, Hornet Nest) have no tip of their own
                     if (reward.type == PixelClicker.PixelType.Glass)
                     {
                         // Glass is switched on by default: a box beside the Toggles tab says where to switch it off.

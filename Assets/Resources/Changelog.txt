@@ -617,3 +617,4 @@
 [2026-10-12 07:59 UTC] Rebuilt the button click outline as a thin neon ring drawn in code, so every shop button gets the same clean outline (tabs use their new bright colour).
 [2026-10-12 08:04 UTC] Value rows: the orange box now explains what a level does, and the Shift-click tip shows when you hover the Upgrade button.
 [2026-10-12 08:07 UTC] The Value Upgrade button tooltip now just says to Shift-click to buy as many as you can.
+[2026-10-12 08:08 UTC] Fixed the console warnings when buying the Woodcutter's Pack: only one unlock tip is triggered for the pack.
