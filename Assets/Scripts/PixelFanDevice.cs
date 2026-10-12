@@ -53,7 +53,7 @@ public class PixelFanDevice : PixelPlacedDevice
         for (int i = 0; i < pixels.Count; i++)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic) continue;
+            if (body == null || body.isKinematic || !Accepts(body)) continue;
 
             Vector3 to = body.position - origin;
             if (to.y < -0.3f || to.y > height) continue; // above / below the wedge

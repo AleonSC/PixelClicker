@@ -557,3 +557,4 @@
 [2026-10-12 03:30 UTC] 15 new skies: Rainy Day, Thunderstorm, Snowfall, Foggy Morning, Sandstorm, Rainbow Sky, Ringed Planet, Spiral Galaxy, Black Hole, Binary Suns, Blocky Day / Night / Ember / Void, and the Watcher (pitch black, an eye opens, follows the cursor, then vanishes for a while).
 [2026-10-12 03:28 UTC] To-do added: rebalance skilling with 'dead blocks' (Dirt for Farming, Stone for Mining) that appear less as you level up.
 [2026-10-12 03:38 UTC] Settings > Interface: 'Menu buttons' choice - peeking (a sliver shows), always showing, or hidden until the mouse comes near (saved per save).
+[2026-10-12 03:49 UTC] Crafting: a Vacuum Device, Fan or Magnet crafted with a pixel potion makes an attuned version that only affects that pixel type.

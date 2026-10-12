@@ -47,7 +47,7 @@ public class PixelVacuumDevice : PixelPlacedDevice
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody body = pixels[i];
-            if (body == null) continue;
+            if (body == null || !Accepts(body)) continue;
 
             Vector3 to = target - body.position;
             float distance = to.magnitude;

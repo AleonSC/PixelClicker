@@ -1886,7 +1886,7 @@ public class PixelUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int owned = consumables.ItemOwned(i);
-            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0);
+            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0) && (!consumables.ItemAttuned(i) || consumables.GetDevice(i - consumables.Count).owned > 0);
             if (potionRowObjects[i] == null)
             {
                 if (!visible) continue;
@@ -2102,7 +2102,7 @@ public class PixelUI : MonoBehaviour
         {
             int owned = consumables.ItemOwned(i);
             // Combo potions only count when really held (Infinite resources would otherwise list over a thousand).
-            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0) && InConsumableCategory(i, onDevices, onSeeds); // this sub-tab's kind only
+            bool visible = owned > 0 && (!consumables.ItemCraftOnly(i) || consumables.Get(i).owned > 0) && (!consumables.ItemAttuned(i) || consumables.GetDevice(i - consumables.Count).owned > 0) && InConsumableCategory(i, onDevices, onSeeds); // this sub-tab's kind only
             if (potionRowObjects[i] == null)
             {
                 if (!visible) continue;

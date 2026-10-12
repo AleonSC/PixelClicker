@@ -26,7 +26,7 @@ public class PixelCrafting : MonoBehaviour
     }
 
     public enum ItemKind { Pixel = 0, Potion = 1, Device = 2 }
-    public enum ResultKind { Potion = 0, Device = 1, Combo = 2, Triple = 3 }
+    public enum ResultKind { Potion = 0, Device = 1, Combo = 2, Triple = 3, Attuned = 4 }
 
     /// <summary>One ingredient: an amount of a pixel type's currency, or of a potion.</summary>
     [Serializable]
@@ -1434,6 +1434,9 @@ public class PixelCrafting : MonoBehaviour
             if (r.a.kind == ItemKind.Device) kinds.Add(r.a.device);
             if (r.b.kind == ItemKind.Device) kinds.Add(r.b.device);
         }
+        kinds.Add(PixelConsumables.DeviceKind.Vacuum);   // (attuning: a device + a potion)
+        kinds.Add(PixelConsumables.DeviceKind.Fan);
+        kinds.Add(PixelConsumables.DeviceKind.Magnet);
         return kinds;
     }
 
@@ -1567,7 +1570,28 @@ public class PixelCrafting : MonoBehaviour
             if (r == null) continue;
             if ((Matches(r.a, x) && Matches(r.b, y)) || (Matches(r.a, y) && Matches(r.b, x))) return ScaleRecipe(r);
         }
+        Recipe attune = FindAttuneRecipe(x, y);
+        if (attune != null) return attune;
         return comboCraftingEnabled ? ScaleRecipe(FindComboRecipe(x, y)) : null;
+    }
+
+    /// <summary>A Vacuum Device, Fan or Magnet plus a (single-type) potion makes an ATTUNED device that only affects that pixel type.</summary>
+    private Recipe FindAttuneRecipe(Item x, Item y)
+    {
+        Item device, potion;
+        if (x.kind == ItemKind.Device && y.kind == ItemKind.Potion) { device = x; potion = y; }
+        else if (y.kind == ItemKind.Device && x.kind == ItemKind.Potion) { device = y; potion = x; }
+        else return null;
+        if (potion.combo || !PixelConsumables.CanAttune(device.device)) return null;
+        return new Recipe
+        {
+            label = "Attuned Device",
+            a = new Ingredient(device.device, 1),
+            b = new Ingredient(ItemKind.Potion, potion.type, 1),
+            resultKind = ResultKind.Attuned,
+            resultDevice = device.device,
+            resultPotion = potion.type,
+        };
     }
 
     /// <summary>
@@ -1661,6 +1685,7 @@ public class PixelCrafting : MonoBehaviour
     private int ResultIndex(Recipe r) =>
         r.resultKind == ResultKind.Potion ? FindPotion(r.resultPotion)
         : r.resultKind == ResultKind.Combo ? (consumables != null ? consumables.FindComboPotion(r.resultPotion, r.resultSecond) : -1)
+        : r.resultKind == ResultKind.Attuned ? (consumables != null ? consumables.FindAttunedDevice(r.resultDevice, r.resultPotion) : -1)
         : r.resultKind == ResultKind.Triple ? (consumables != null ? consumables.FindComboPotion(r.resultPotion, r.resultSecond, r.resultThird) : -1)
         : FindDevice(r.resultDevice);
 
@@ -1811,7 +1836,8 @@ public class PixelCrafting : MonoBehaviour
         {
             case ResultKind.Combo: return xpCombo > 0 ? xpCombo : 12;
             case ResultKind.Triple: return xpTriple > 0 ? xpTriple : 25;
-            case ResultKind.Device: return xpDevice > 0 ? xpDevice : 30;
+            case ResultKind.Device:
+            case ResultKind.Attuned: return xpDevice > 0 ? xpDevice : 30;
             default: return xpPotion > 0 ? xpPotion : 5;
         }
     }

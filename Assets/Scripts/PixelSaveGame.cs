@@ -488,13 +488,14 @@ public class PixelSaveGame : MonoBehaviour
 
             if (consumables != null)
             {
-                data.devices = new DeviceSave[consumables.DeviceCount];
-                for (int i = 0; i < data.devices.Length; i++)
-                    data.devices[i] = new DeviceSave
-                    {
-                        name = consumables.GetDevice(i).displayName,
-                        owned = consumables.GetDevice(i).owned,
-                    };
+                List<DeviceSave> deviceSaves = new List<DeviceSave>();
+                for (int i = 0; i < consumables.DeviceCount; i++)
+                {
+                    PixelConsumables.Device devToSave = consumables.GetDevice(i);
+                    if (devToSave.attuned && devToSave.owned <= 0) continue;   // (there is an attuned device for every pixel type: only the ones you hold are saved)
+                    deviceSaves.Add(new DeviceSave { name = devToSave.displayName, owned = devToSave.owned });
+                }
+                data.devices = deviceSaves.ToArray();
             }
 
             if (consumables != null && consumables.IsActive)

@@ -34,7 +34,7 @@ public class PixelMagnetDevice : PixelPlacedDevice
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody body = pixels[i];
-            if (body == null || body.isKinematic || clicker.IsFlyingPixel(body)) continue;
+            if (body == null || body.isKinematic || !Accepts(body) || clicker.IsFlyingPixel(body)) continue;
             OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
             if (d != null && (d.Held || d.IsDespawning)) continue;
 

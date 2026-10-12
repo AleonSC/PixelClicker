@@ -33,6 +33,17 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     /// <summary>Which entry of the consumables' device list this is (set when it is placed; used by the save system).</summary>
     public int DeviceIndex { get; set; } = -1;
 
+    /// <summary>Tier index of the only pixel type this device affects (an attuned device), or -1 = every type.</summary>
+    public int AttuneTier { get; set; } = -1;
+
+    /// <summary>Does this device act on that old pixel? (Always true unless the device is attuned to one pixel type.)</summary>
+    public bool Accepts(Rigidbody body)
+    {
+        if (AttuneTier < 0) return true;
+        OldPixelInfo info = body != null ? body.GetComponent<OldPixelInfo>() : null;
+        return info != null && info.tierIndex == AttuneTier;
+    }
+
     private bool usesMode;
     private int usesLeft;
 

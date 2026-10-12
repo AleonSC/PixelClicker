@@ -256,6 +256,13 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("Magnetized Sorter: how far from the box an exit pipe's end can be put down (world units).")]
         public float pipeReach = 7f;
 
+        [Header("Attuned (made by crafting a device with a potion)")]
+        [Tooltip("Runtime: this is an attuned copy of a Vacuum / Fan / Magnet that only affects old pixels of 'Attune Type'.")]
+        public bool attuned = false;
+
+        [Tooltip("Runtime: the pixel type an attuned device works on.")]
+        public PixelClicker.PixelType attuneType = PixelClicker.PixelType.White;
+
         [Header("Look and placing")]
         [TextArea(1, 2)]
         [Tooltip("Message while placing. {0} = device name. Empty = the default message from Pixel UI.")]
@@ -950,6 +957,7 @@ public class PixelConsumables : MonoBehaviour
 
         EnsureDefaultPotions();
         AppendComboPotions();
+        AppendAttunedDevices();
     }
 
     /// <summary>
@@ -1009,6 +1017,52 @@ public class PixelConsumables : MonoBehaviour
         potions = all.ToArray();
     }
 
+    /// <summary>The device kinds that can be attuned to a pixel type by crafting them with a potion.</summary>
+    public static bool CanAttune(DeviceKind kind) => kind == DeviceKind.Vacuum || kind == DeviceKind.Fan || kind == DeviceKind.Magnet;
+
+    /// <summary>
+    /// Adds the craft-only ATTUNED devices: a Vacuum Device, Fan and Magnet for every pixel type that has a potion. They only affect old
+    /// pixels of that one type. Runtime only (not in the Inspector list), appended after every normal device so indexes never shift;
+    /// saved by name like every device.
+    /// </summary>
+    private void AppendAttunedDevices()
+    {
+        System.Collections.Generic.List<Device> all = new System.Collections.Generic.List<Device>(devices);
+        foreach (Potion p in potions)
+        {
+            if (p == null || p.craftOnly) continue;
+            int tierIndex = clicker.IndexOf(p.type);
+            Color tint = tierIndex >= 0 ? clicker.Tiers[tierIndex].color : Color.white;
+            foreach (DeviceKind kind in new[] { DeviceKind.Vacuum, DeviceKind.Fan, DeviceKind.Magnet })
+            {
+                Device src = FindDeviceOfKind(kind);
+                if (src == null) continue;
+                string name = "Attuned " + src.displayName + " (" + p.type + ")";
+                if (all.Exists(x => x != null && x.displayName == name)) continue;
+                Device d = src.Clone();
+                d.attuned = true;
+                d.attuneType = p.type;
+                d.displayName = name;
+                d.description = "Works like the " + src.displayName + ", but only affects " + p.type + " pixels. Made by crafting a " + src.displayName + " with a " + p.type + " potion.";
+                d.craftOnly = true;
+                d.costs = new PixelShop.PackCost[0];
+                d.owned = 0;
+                d.maxHeld = 0;
+                d.color = Color.Lerp(src.color, tint, 0.7f);
+                all.Add(d);
+            }
+        }
+        devices = all.ToArray();
+    }
+
+    /// <summary>Item index of the attuned version of a device kind for a pixel type, or -1.</summary>
+    public int FindAttunedDevice(DeviceKind kind, PixelClicker.PixelType type)
+    {
+        for (int i = 0; i < devices.Length; i++)
+            if (devices[i] != null && devices[i].attuned && devices[i].kind == kind && devices[i].attuneType == type) return potions.Length + i;
+        return -1;
+    }
+
     private readonly System.Collections.Generic.Dictionary<long, int> comboLookup = new System.Collections.Generic.Dictionary<long, int>();
     private static long Bit(PixelClicker.PixelType type) => 1L << (int)type;
     private static long ComboMask(Potion p) => Bit(p.type) | Bit(p.secondType) | (p.hasThird ? Bit(p.thirdType) : 0L);
@@ -1025,6 +1079,9 @@ public class PixelConsumables : MonoBehaviour
     public bool ItemCraftOnly(int item) => !IsDevice(item) && potions[item].craftOnly;
 
     /// <summary>True for a device that is only made by crafting (never sold in the shop or by a visitor).</summary>
+    /// <summary>True for an attuned device (only affects one pixel type; made by crafting).</summary>
+    public bool ItemAttuned(int item) => IsDevice(item) && devices[item - potions.Length].attuned;
+
     public bool ItemNotSold(int item) => IsDevice(item) && devices[item - potions.Length].craftOnly;
 
     /// <summary>The second pixel type of a combo potion.</summary>
@@ -1451,7 +1508,7 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>The first device of a kind (null if there is none).</summary>
     public Device FindDeviceOfKind(DeviceKind kind)
     {
-        foreach (Device x in devices) if (x != null && x.kind == kind) return x;
+        foreach (Device x in devices) if (x != null && !x.attuned && x.kind == kind) return x;
         return null;
     }
 
@@ -2157,6 +2214,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         result.DeviceIndex = index;
+        result.AttuneTier = d.attuned ? clicker.IndexOf(d.attuneType) : -1;
         return result;
     }
 
