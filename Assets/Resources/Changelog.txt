@@ -665,3 +665,4 @@
 [2026-10-12 12:31 UTC] The main menu's Play button says New Game until a save has been loaded (or written).
 [2026-10-12 12:32 UTC] Fixed a compile error in PixelSaveGame (a misplaced ContextMenu attribute).
 [2026-10-12 12:40 UTC] Simpler save flow on the main menu: the big button is Continue (loads the latest save) or New Game (no saves), Play once a save is loaded; an empty slot in the Load window starts a new game; nothing loads by itself at startup.
+[2026-10-12 12:43 UTC] Added modding support to the to-do list.
