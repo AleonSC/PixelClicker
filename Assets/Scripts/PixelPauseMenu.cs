@@ -290,9 +290,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the sky picker (arrows step through the skies of the Pixel Skybox component).")]
     [SerializeField] private string skyStyleLabel = "Sky";
 
-    [Tooltip("Label of the tick box that softens the floor's far edge with fog.")]
-    [SerializeField] private string horizonFogLabel = "Horizon fog";
-
     [Tooltip("Label of the Settings tick box for the bevelled button look (takes effect for windows built after the next start).")]
     [SerializeField] private string fancyButtonsLabel = "Fancy buttons (next start)";
 
@@ -2228,7 +2225,6 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingsSectionHeader(list, headerDisplay, ref y);
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y);
-        AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
         AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
         Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);

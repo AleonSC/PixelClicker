@@ -585,3 +585,4 @@
 [2026-10-12 08:30 UTC] Pause menu search box: added a magnifying glass icon and made the text smaller (one line, shrinks to fit) so the placeholder stays inside the box.
 [2026-10-12 08:50 UTC] Give feedback moved from Settings to a long green button on the pause menu, right above Quit.
 [2026-10-12 09:05 UTC] The Click effects setting (Off / Light / Normal) now applies to every pixel type, not only the early ones; dark pixels get lighter flecks so the pop shows.
+[2026-10-12 09:20 UTC] Removed the outdated Horizon fog feature and its Settings tick box.
