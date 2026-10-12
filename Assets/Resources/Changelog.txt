@@ -513,3 +513,4 @@
 [2026-10-12 00:06 UTC] Minimising or maximising the pinned Inventory and the skill tracker no longer moves them: they always return to the spot you put them in, even if maximising had to nudge them up to fit on screen.
 [2026-10-12 00:13 UTC] Overwriting a save now needs a short hold on the red button, and loading a save closes the Save / Load window.
 [2026-10-12 00:16 UTC] The Save / Load slot rows now line up with the Save and Load buttons, and Cubie randomly peeks out from behind the window when it has been idle for a second.
+[2026-10-12 00:18 UTC] Cubie now peeks out from behind the Save / Load box instead of in front of it, and fades in and out as he moves.

@@ -34,6 +34,7 @@ public class PixelCubiePeek : MonoBehaviour
     [SerializeField] private float slideSeconds = 0.35f;
 
     private RectTransform panel, holder, art, pupilL, pupilR;
+    private CanvasGroup group;
     private Func<bool> active;
     private Vector2 lastMouse;
     private float lastActivity, nextPeekAt, peekStart, peekLength, glanceTimer, retreatFrom = -1f;
@@ -52,8 +53,11 @@ public class PixelCubiePeek : MonoBehaviour
 
         GameObject h = new GameObject("Cubie Peek", typeof(RectTransform));
         h.transform.SetParent(panel.parent, false);
-        h.transform.SetSiblingIndex(panel.GetSiblingIndex());   // directly under the window
         holder = h.GetComponent<RectTransform>();
+        group = h.AddComponent<CanvasGroup>();
+        group.blocksRaycasts = false;
+        group.interactable = false;
+        PlaceUnderPanel();
         holder.anchorMin = panel.anchorMin; holder.anchorMax = panel.anchorMin;
         holder.pivot = new Vector2(0.5f, 0.5f);
         holder.sizeDelta = new Vector2(300f, 300f);
@@ -145,9 +149,17 @@ public class PixelCubiePeek : MonoBehaviour
         tilt = UnityEngine.Random.Range(6f, 14f);
         outAmount = 0f;
         holder.gameObject.SetActive(true);
-        holder.SetSiblingIndex(Mathf.Max(0, panel.GetSiblingIndex()));
+        PlaceUnderPanel();
         Place(0f, now);
         PixelAudio.Play("pixel_land");
+    }
+
+    /// <summary>Keeps Cubie directly BELOW the window in the canvas order (SetSiblingIndex counts the holder's own old slot, hence the correction).</summary>
+    private void PlaceUnderPanel()
+    {
+        int target = panel.GetSiblingIndex();
+        if (holder.GetSiblingIndex() < target) target -= 1;
+        holder.SetSiblingIndex(Mathf.Max(0, target));
     }
 
     /// <summary>Puts the head on the chosen edge: hidden inside the window at 0, 'showFraction' of it outside at 1.</summary>
@@ -171,6 +183,7 @@ public class PixelCubiePeek : MonoBehaviour
         pos += new Vector2(0f, Mathf.Sin(now * 5f) * 3f * amount);   // a little bob
         holder.localPosition = pos;
         holder.localRotation = Quaternion.Euler(0f, 0f, rot);
+        if (group != null) group.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(amount * 1.6f));   // fades in as he slides out and fades away as he ducks, so he never visibly vanishes behind the box
     }
 
     private void Glance(float now)
