@@ -907,6 +907,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         if (pack == null || xp <= 0d) return;
         xp *= PenaltyFactor(pack.id);   // a hazard went off recently in this skill
+        xp *= MinigameXpMultiplier;   // every enabled minigame adds to all XP
         xp += DrawBonus(pack, xp);   // bonus bank: doubles the gain, the extra comes out of the bank
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
