@@ -137,7 +137,7 @@ public class PixelCameraIntro : MonoBehaviour
     /// </summary>
     public bool PlayReverse(System.Action onDone)
     {
-        if (!canReverse || reversing || cam == null || !Enabled) return false;
+        if (!canReverse || reversing || cam == null || !Enabled || !PixelTitleWanderers.LiveBackground) return false;   // no live background: no camera swing back
         reversing = true;
         reverseTime = 0f;
         reverseDone = onDone;
@@ -147,6 +147,16 @@ public class PixelCameraIntro : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (!PixelTitleWanderers.LiveBackground && prepared)
+        {
+            // Without the live background the title shows a picture of the floor instead of the scene, so there is no camera intro: the game simply fades in at its normal view.
+            if (reversing) { reversing = false; ClicksLocked = false; System.Action callback = reverseDone; reverseDone = null; callback?.Invoke(); }
+            if (!done) Finish();
+            Moving = false;
+            Progress = 1f;
+            ClicksLocked = false;
+            return;
+        }
         Moving = reversing || !done;
         if (reversing)
         {

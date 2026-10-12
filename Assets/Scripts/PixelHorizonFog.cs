@@ -109,7 +109,8 @@ public class PixelHorizonFog : MonoBehaviour
     {
         Renderer floor = PixelFloor.Instance != null ? PixelFloor.Instance.FloorRenderer : null;
         Camera cam = Camera.main;
-        bool show = Enabled && floor != null && floor.enabled && floor.gameObject.activeInHierarchy && cam != null;
+        float vis = PixelFloor.Instance != null ? PixelFloor.Instance.FloorVisibility : 1f;
+        bool show = Enabled && floor != null && floor.enabled && floor.gameObject.activeInHierarchy && cam != null && vis > 0.001f;
         if (!show)
         {
             if (root != null && root.activeSelf) root.SetActive(false);
@@ -120,6 +121,7 @@ public class PixelHorizonFog : MonoBehaviour
         if (root == null || !SameBounds(b, builtFor) || !Mathf.Approximately(cam.farClipPlane, builtFarClip)) Build(b, cam);
         if (root == null) return;
         if (!root.activeSelf) root.SetActive(true);
+        if (material != null) material.color = new Color(1f, 1f, 1f, vis);   // fades with the floor
 
         float end = FullFogDistance(b, cam);
         Color c = FogColor(cam);

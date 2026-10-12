@@ -259,6 +259,14 @@ public class PixelTitleScreen : MonoBehaviour
         for (int i = 0; i < 10 && PixelWindows.CloseTopmost(); i++) { } // close shop / inventory / log first
         returning = true;
         PixelTimeStop.EndAll(); // no frozen / slowed time on the title screen
+        // With the live background the floor fades away FIRST, then the camera swings back to the close-up.
+        PixelFloor floor = PixelFloor.Instance;
+        if (PixelTitleWanderers.LiveBackground && floor != null && floor.FadeOutThen(ReverseCamera)) return;
+        ReverseCamera();
+    }
+
+    private void ReverseCamera()
+    {
         PixelCameraIntro intro = PixelFind.First<PixelCameraIntro>();
         if (intro != null && intro.PlayReverse(FinishReturn)) return;
         FinishReturn();

@@ -3140,7 +3140,7 @@ public class PixelClicker : MonoBehaviour
         glowLight.intensity = glowLightIntensity * tier.glowIntensity;
     }
 
-    private static Material BuildTransparentMaterial(Material source)
+    public static Material BuildTransparentMaterial(Material source)
     {
         Material m = new Material(source) { name = source.name + " (Transparent)" };
 
@@ -3507,6 +3507,16 @@ public class PixelClicker : MonoBehaviour
 
         StartCoroutine(SuckRoutine(body, target));
         return true;
+    }
+
+    /// <summary>Hides / shows every old pixel on the floor (renderers only; they keep existing). Used while the floor is faded out on the main menu.</summary>
+    public void SetOldPixelsHidden(bool hidden)
+    {
+        foreach (Rigidbody rb in oldPixels)
+        {
+            if (rb == null) continue;
+            foreach (Renderer r in rb.GetComponentsInChildren<Renderer>(true)) r.forceRenderingOff = hidden;
+        }
     }
 
     /// <summary>Stops and clears every particle system on an old pixel (its look's ambient effects) - used when something takes the pixel away.</summary>

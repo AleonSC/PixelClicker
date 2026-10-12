@@ -53,9 +53,22 @@ public class PixelTitleWanderers : MonoBehaviour
     /// <summary>True (the default) = the title screen shows the live, blurred game scene behind it; false = the floor style's picture fills the background, blurred.</summary>
     public static bool LiveBackground
     {
-        get { return PlayerPrefs.GetInt(LivePref, 1) == 1; }
-        set { PlayerPrefs.SetInt(LivePref, value ? 1 : 0); }
+        get
+        {
+            if (liveCache < 0) liveCache = PlayerPrefs.GetInt(LivePref, 1);
+            return liveCache == 1;
+        }
+        set
+        {
+            liveCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(LivePref, liveCache);
+        }
     }
+
+    private static int liveCache = -1;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { liveCache = -1; }
 
     private class Walker
     {

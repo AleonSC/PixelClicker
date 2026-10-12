@@ -263,6 +263,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         if (fitCam != null) Destroy(fitCam.gameObject);
         if (Instance == this) Instance = null;
+        DropProxies(true);
         ReleaseActive();
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
         previews.Clear();
@@ -364,6 +365,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void Apply(FloorStyle style)
     {
         if (floorRenderer == null) return;
+        DropProxies(false);   // the style sets the real materials itself; the fade rebuilds its copies if it is still going
         ReleaseActive();
         offset = Vector2.zero;
         beatTimer = 0f;
@@ -499,8 +501,107 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void ApplyTiling(Material m, FloorStyle style)
     {
         float e = FitBlend(style);
-        if (e >= 0.9999f || !TryWholeFloorTiling(out Vector2 wt, out Vector2 wo)) { SetTiling(m, baseTiling, baseOffset + offset); return; }
-        SetTiling(m, Vector2.Lerp(wt, baseTiling, e), Vector2.Lerp(wo, baseOffset, e) + offset);
+        Vector2 tiling = baseTiling, off = baseOffset + offset;
+        if (e < 0.9999f && TryWholeFloorTiling(out Vector2 wt, out Vector2 wo))
+        {
+            tiling = Vector2.Lerp(wt, baseTiling, e);
+            off = Vector2.Lerp(wo, baseOffset, e) + offset;
+        }
+        SetTiling(m, tiling, off);
+        if (proxyMats != null) foreach (Material p in proxyMats) if (p != null) SetTiling(p, tiling, off);   // the fading copies follow
+    }
+
+    // ------------------------------------------------------------------
+    // Fading the floor in and out (the main menu has no floor, only the sky)
+    // ------------------------------------------------------------------
+
+    [Header("Fade")]
+    [Tooltip("With 'Live background' on, the main menu and the camera swing show only the sky: the floor fades in once the camera has settled and fades out before it swings back. Untick to keep the floor always visible.")]
+    [SerializeField] private bool hideFloorOnTitle = true;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the floor takes to fade in or out.")]
+    [SerializeField] private float fadeSeconds = 1f;
+
+    private float visibility = 1f;
+    private bool visibilityInit, exitHold, oldPixelsHidden;
+    private Material[] realMats, proxyMats;
+    private System.Action exitDone;
+
+    /// <summary>0 = the floor is hidden, 1 = fully shown (the fog sheet follows it).</summary>
+    public float FloorVisibility => visibility;
+
+    /// <summary>Fades the floor out, then calls 'onDone' (the main menu return waits for it before the camera swings back). Returns false (without calling it) if there is nothing to fade.</summary>
+    public bool FadeOutThen(System.Action onDone)
+    {
+        if (floorRenderer == null || !hideFloorOnTitle || visibility <= 0.001f) return false;
+        exitHold = true;
+        exitDone = onDone;
+        return true;
+    }
+
+    private void LateUpdate()
+    {
+        if (floorRenderer == null) return;
+        if (exitHold && PixelTitleScreen.Showing) exitHold = false;
+        bool hide = hideFloorOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
+        float target = hide ? 0f : 1f;
+        if (!visibilityInit) { visibilityInit = true; visibility = target; }
+        else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / Mathf.Max(0.05f, fadeSeconds));
+        ApplyVisibility();
+        if (exitDone != null && visibility <= 0.001f)
+        {
+            System.Action done = exitDone;
+            exitDone = null;
+            done();
+        }
+    }
+
+    private void ApplyVisibility()
+    {
+        floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
+        if (visibility >= 0.999f) DropProxies(true);
+        else if (visibility > 0.001f)
+        {
+            EnsureProxies();
+            if (proxyMats != null)
+                foreach (Material m in proxyMats)
+                {
+                    if (m == null) continue;
+                    if (m.HasProperty("_BaseColor")) { Color c = m.GetColor("_BaseColor"); c.a = visibility; m.SetColor("_BaseColor", c); }
+                    if (m.HasProperty("_Color")) { Color c = m.GetColor("_Color"); c.a = visibility; m.SetColor("_Color", c); }
+                }
+        }
+
+        // The old pixels lying on the floor are hidden with it (they would float in the air), and come back once the floor is mostly there.
+        bool hidePixels = visibility < 0.6f;
+        if (hidePixels != oldPixelsHidden)
+        {
+            oldPixelsHidden = hidePixels;
+            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            if (clicker != null) clicker.SetOldPixelsHidden(hidePixels);
+        }
+    }
+
+    /// <summary>While fading the floor is drawn with see-through copies of its materials.</summary>
+    private void EnsureProxies()
+    {
+        if (proxyMats != null) return;
+        realMats = floorRenderer.sharedMaterials;
+        proxyMats = new Material[realMats.Length];
+        for (int i = 0; i < realMats.Length; i++)
+            proxyMats[i] = realMats[i] != null ? PixelClicker.BuildTransparentMaterial(realMats[i]) : null;
+        floorRenderer.sharedMaterials = proxyMats;
+    }
+
+    /// <summary>Removes the see-through copies; 'restore' puts the real materials back first.</summary>
+    private void DropProxies(bool restore)
+    {
+        if (proxyMats == null) return;
+        if (restore && realMats != null) floorRenderer.sharedMaterials = realMats;
+        foreach (Material m in proxyMats) if (m != null) Destroy(m);
+        proxyMats = null;
+        realMats = null;
     }
 
     /// <summary>The tiling / offset that maps one copy of the texture over the floor's whole UV range.</summary>
