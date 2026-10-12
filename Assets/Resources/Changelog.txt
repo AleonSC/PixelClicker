@@ -608,3 +608,4 @@
 [2026-10-12 07:37 UTC] Boxed the shop's Value rows: the pixel name and the level now sit in their own boxes beside the info button, with the cost lines in a larger box underneath.
 [2026-10-12 07:38 UTC] Fixed a compile error (duplicate levelLabel) in the shop rows.
 [2026-10-12 07:42 UTC] Every shop button now sends a neon outline in its own colour out from under it when pressed.
+[2026-10-12 07:44 UTC] Every shop row (packs, potions, Operation, search results) now uses the boxed layout: name box and level box beside the info button, cost box underneath.

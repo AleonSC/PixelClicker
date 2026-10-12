@@ -25,6 +25,8 @@ public partial class PixelShop
     {
         public RectTransform rect;
         public TMP_Text nameLabel;
+        public RectTransform costBox;                                 // the boxed layout's cost box (set by StyleBoxedRow)
+        public bool boxed;
         public TMP_Text descLabel;
         public Button buyButton;
         public Image buyImage;
@@ -316,10 +318,17 @@ public partial class PixelShop
     /// The Value rows are boxed: next to the orange '!' button a box holds the pixel's name and a second box of the same height holds its level;
     /// a larger box underneath holds the cost lines, and the Upgrade button stays on the right.
     /// </summary>
-    private void StyleValueRow(PackRow row)
+    private void StyleValueRow(PackRow row) => StyleBoxedRow(row, buyButtonSize.x + 40f, true);
+
+    /// <summary>
+    /// The boxed row layout every shop row uses: the orange '!' button, a name box beside it (and a level box of the same height when 'hasLevel'),
+    /// a larger cost box underneath, and the button(s) on the right ('rightInset' keeps the boxes clear of them). Call it after the picture was added.
+    /// </summary>
+    private void StyleBoxedRow(PackRow row, float rightInset, bool hasLevel)
     {
+        if (row == null || row.boxed || row.nameLabel == null || row.costLabel == null) return;
+        row.boxed = true;
         float s = Mathf.Min(52f, rowHeight * 0.22f);                       // the orange button's size
-        float rightInset = buyButtonSize.x + 40f;
         Transform info = row.rect.Find("Info");
         float x0 = info != null ? info.GetComponent<RectTransform>().anchoredPosition.x : 20f;
         float topY = rowHeight * 0.4f * 0.5f - s * 0.5f;                   // the orange button's distance from the top
@@ -345,15 +354,20 @@ public partial class PixelShop
         }
 
         float nameLeft = x0 + s + gap;
-        RectTransform nameBox = Box("Name Box", nameLeft, rightInset + levelW + gap, topY, s);
-        RectTransform levelBox = Box("Level Box", 0f, rightInset, topY, s);
-        levelBox.anchorMin = new Vector2(1f, 1f);
-        levelBox.anchorMax = new Vector2(1f, 1f);
-        levelBox.pivot = new Vector2(1f, 1f);
-        levelBox.sizeDelta = new Vector2(levelW, s);
-        levelBox.anchoredPosition = new Vector2(-rightInset, -topY);
+        RectTransform nameBox = Box("Name Box", nameLeft, rightInset + (hasLevel ? levelW + gap : 0f), topY, s);
+        RectTransform levelBox = null;
+        if (hasLevel)
+        {
+            levelBox = Box("Level Box", 0f, rightInset, topY, s);
+            levelBox.anchorMin = new Vector2(1f, 1f);
+            levelBox.anchorMax = new Vector2(1f, 1f);
+            levelBox.pivot = new Vector2(1f, 1f);
+            levelBox.sizeDelta = new Vector2(levelW, s);
+            levelBox.anchoredPosition = new Vector2(-rightInset, -topY);
+        }
         float costTop = topY + s + gap;
         RectTransform costBox = Box("Cost Box", x0, rightInset, costTop, Mathf.Max(30f, rowHeight - costTop - 14f));
+        row.costBox = costBox;
 
         // Name inside its box.
         row.nameLabel.transform.SetParent(nameBox, false);
@@ -364,16 +378,24 @@ public partial class PixelShop
         row.nameLabel.enableAutoSizing = true;
         row.nameLabel.fontSizeMax = Mathf.Max(18f, s * 0.7f);
         row.nameLabel.fontSizeMin = 12f;
+#if UNITY_2023_1_OR_NEWER
+        row.nameLabel.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        row.nameLabel.enableWordWrapping = false;
+#endif
 
         // Level inside its own box.
-        row.levelLabel = CreateText(levelBox, "Level", "", Mathf.Max(18f, s * 0.6f), TextAlignmentOptions.Center, FontStyles.Bold);
-        row.levelLabel.color = levelColor;
-        row.levelLabel.enableAutoSizing = true;
-        row.levelLabel.fontSizeMax = Mathf.Max(18f, s * 0.6f);
-        row.levelLabel.fontSizeMin = 12f;
-        RectTransform lr = row.levelLabel.rectTransform;
-        lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-        lr.offsetMin = new Vector2(8f, 0f); lr.offsetMax = new Vector2(-8f, 0f);
+        if (hasLevel) row.levelLabel = CreateText(levelBox, "Level", "", Mathf.Max(18f, s * 0.6f), TextAlignmentOptions.Center, FontStyles.Bold);
+        if (hasLevel)
+        {
+            row.levelLabel.color = levelColor;
+            row.levelLabel.enableAutoSizing = true;
+            row.levelLabel.fontSizeMax = Mathf.Max(18f, s * 0.6f);
+            row.levelLabel.fontSizeMin = 12f;
+            RectTransform lr = row.levelLabel.rectTransform;
+            lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
+            lr.offsetMin = new Vector2(8f, 0f); lr.offsetMax = new Vector2(-8f, 0f);
+        }
 
         // Cost lines inside the big box.
         row.costLabel.transform.SetParent(costBox, false);
@@ -656,6 +678,7 @@ public partial class PixelShop
                 row = BuildPlainRow(contentRect, "Search Item " + i);
                 int captured = i;
                 AddRowPicture(row, () => captured < consumables.ItemCount ? "item:" + consumables.ItemName(captured) : null);
+                StyleBoxedRow(row, buyButtonSize.x + 40f, false);
                 row.buyButton.onClick.AddListener(() => { TryBuyItems(captured, 1); RefreshRows(); });
                 searchItemRows[i] = row;
             }
@@ -766,6 +789,7 @@ public partial class PixelShop
 
         LayoutRowHeader(row, textRightInset);
         if (!potion) AddPackPicture(row, index);
+        StyleBoxedRow(row, textRightInset, !potion && IsLeveled(packs[index]));
 
         int captured = index;
         if (potion) row.buyButton.onClick.AddListener(() => TryBuyPotion(captured));
@@ -1254,6 +1278,19 @@ public partial class PixelShop
     private void ApplyLevelWidgets(PackRow row, int level, int max)
     {
         float w = max > 10 ? 10f : 18f, h = 34f, gap = 6f;
+        if (row.boxed && row.levelLabel != null && row.markerRoot == null && row.costBox != null)
+        {
+            // Boxed rows: "LEVEL 2/5" is in the level box; the little level boxes sit at the right end of the cost box.
+            float markersWidth = max * (w + gap);
+            GameObject rootGo = new GameObject("Level Markers", typeof(RectTransform));
+            rootGo.transform.SetParent(row.costBox, false);
+            row.markerRoot = rootGo.GetComponent<RectTransform>();
+            row.markerRoot.anchorMin = row.markerRoot.anchorMax = new Vector2(1f, 0.5f);
+            row.markerRoot.pivot = new Vector2(1f, 0.5f);
+            row.markerRoot.anchoredPosition = new Vector2(-12f, 0f);
+            row.markerRoot.sizeDelta = new Vector2(markersWidth, h);
+            row.costLabel.rectTransform.offsetMax = new Vector2(-(markersWidth + 24f), -6f);
+        }
         if (row.levelLabel == null)
         {
             float markersWidth = max * (w + gap);

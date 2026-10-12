@@ -141,6 +141,7 @@ public partial class PixelShop
                 o.row.costLabel.rectTransform.offsetMin += new Vector2(shift, 0f);
                 Transform info = o.row.rect.Find("Info");
                 if (info != null) info.GetComponent<RectTransform>().anchoredPosition += new Vector2(shift, 0f);
+                StyleBoxedRow(o.row, upgradesArrowSize.x + 40f, false);
 
                 // The orange upgrade arrow on the right.
                 o.arrow = CreateButton(o.row.rect, "Upgrades Arrow", upgradesArrowText, upgradesArrowSize, upgradesArrowColor, textColor, buyFontSize, out _, out _);
@@ -163,6 +164,7 @@ public partial class PixelShop
             for (int i = 0; i < operationUpgradeRows.Length; i++)
             {
                 PackRow row = BuildPlainRow(subContentRect, "Operation Upgrade " + i);
+                StyleBoxedRow(row, buyButtonSize.x + 40f, true);
                 PixelOperationUpgrade u = operationUpgrades[i];
                 row.buyButton.onClick.AddListener(() => { if (TryBuyOperation(u)) RefreshRows(); });
                 operationUpgradeRows[i] = row;
