@@ -37,7 +37,7 @@ public class PixelTitleWanderers : MonoBehaviour
     [Tooltip("Distance from the bottom edge of the screen to the vendors' feet (canvas units).")]
     [SerializeField] private float feetHeight = 14f;
 
-    [Header("Pets and UFO")]
+    [Header("Pets")]
     [Tooltip("Size of a pet hopping along the bottom of the screen (canvas units).")]
     [SerializeField] private float petSize = 150f;
 
@@ -63,7 +63,7 @@ public class PixelTitleWanderers : MonoBehaviour
     [SerializeField] private Vector2 ufoHeightRange = new Vector2(70f, 250f);
 
     [Tooltip("Text on the pets toggle (above the 'display floor' one).")]
-    [SerializeField] private string petsText = "Pets & UFO";
+    [SerializeField] private string petsText = "Pets";
 
     [Header("Toggle")]
     [Tooltip("Size of the toggle at the bottom left.")]
@@ -589,7 +589,7 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private void UpdateUfo(float dt)
     {
-        bool want = PetsEnabled && !fadingOut;
+        bool want = !fadingOut;   // the UFO depends only on the save: bought, and not switched off in its own Toggles tab
         if (!want) { if (ufoArt != null) ClearUfo(); return; }
         ufoCheckTimer -= dt;
         if (ufoCheckTimer <= 0f)
