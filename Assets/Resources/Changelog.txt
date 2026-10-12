@@ -692,3 +692,4 @@
 [2026-10-12 20:31 UTC] Fixed big floors staying a flat colour: the soft preview now rebuilds mip levels, the sharp draw checks its time budget every row, and a drawing error is logged instead of silently stopping
 [2026-10-12 20:34 UTC] Added console lines that say when a big floor starts and finishes drawing
 [2026-10-12 20:37 UTC] Fixed single-picture floors (Radar, Battle Crater, Marble, Ice, moons...) showing only a flat edge colour on floors wider than two pictures
+[2026-10-12 20:40 UTC] Added a to-do: move noise floors to world-space shaders
