@@ -1047,7 +1047,7 @@ public class PixelUI : MonoBehaviour
         boxRect = boxObject.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = anchor;
         boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + LinePitch * count);
-        boxRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * (hud.BandThickness + gapBelowButton)); // the inventory's own gap below the bar
+        boxRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * (hud.BandThickness + gapBelowButton)); // the inventory's own gap below the bar
 
         // Header: title and close button (same look as the Pixel Log)
         if (showHeader)

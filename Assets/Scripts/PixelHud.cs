@@ -435,7 +435,7 @@ public class PixelHud : MonoBehaviour
     internal float HiddenInset => -(ButtonSize.y - Sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
-    internal float SideShownInset => sideMargin * 0.35f;
+    public float SideShownInset => sideMargin * 0.35f;
     internal float SideHiddenInset => -(ButtonSize.x - Sliver);
     internal bool SlideButtons => slideButtons && ButtonMode != 1;
     internal float SlideSeconds => slideSeconds;

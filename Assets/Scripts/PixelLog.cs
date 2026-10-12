@@ -714,7 +714,7 @@ public class PixelLog : MonoBehaviour
         PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
-        panelRect.anchoredPosition = new Vector2(sx * hud.SideMargin, sy * (hud.BandThickness + gapAboveButton)); // the log's own gap beyond the bar
+        panelRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * (hud.BandThickness + gapAboveButton)); // the log's own gap beyond the bar
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
