@@ -566,6 +566,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         }
     }
 
+    private const float flatBaseSpread = 30f;
     private GameObject flatBase;
     private Material flatMat;
     private readonly Dictionary<int, Color> averageColors = new Dictionary<int, Color>();
@@ -617,7 +618,11 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         }
         Transform ft = floorRenderer.transform;
         flatBase.transform.SetPositionAndRotation(ft.position + Vector3.down * 0.004f, ft.rotation);
-        flatBase.transform.localScale = ft.lossyScale;
+        Vector3 fs = ft.lossyScale;
+        Vector3 ext = Vector3.Scale(mf.sharedMesh.bounds.size, fs);   // (only the two biggest directions are widened, the thickness stays)
+        int thin = ext.x <= ext.y && ext.x <= ext.z ? 0 : (ext.y <= ext.z ? 1 : 2);
+        Vector3 wide = fs * flatBaseSpread;
+        flatBase.transform.localScale = new Vector3(thin == 0 ? fs.x : wide.x, thin == 1 ? fs.y : wide.y, thin == 2 ? fs.z : wide.z);
         flatMat.color = AverageColor();
         flatBase.SetActive(true);
     }
