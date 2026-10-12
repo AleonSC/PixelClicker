@@ -109,6 +109,8 @@ public class PixelConsumables : MonoBehaviour
         QuantumOrganizer = 12,
         /// <summary>Placed, permanent, needs no switching on: a crate with two rows of five compartments. Click it to store the loose pixels lying on it; click a stored pixel to pick it up.</summary>
         StorageCrate = 13,
+        /// <summary>Not placed by hand: right-click in the inventory (Fishing only) and a bucket stands on the floor until you stop Fishing. Drop Fish / Water pixels in; stored fish make more fish spawn.</summary>
+        BaitBucket = 14,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -727,6 +729,24 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultBaitBucket()
+    {
+        return new Device
+        {
+            kind = DeviceKind.BaitBucket,
+            displayName = "Bait Bucket",
+            description = "Right-click to set it out (needs Fishing as the skill in play). A bucket stands on the floor until you stop Fishing. Drag Fish and Water pixels into it (Pixel Grabbing): they are stored with their value instead of splashing or fading, and every stored fish makes more fish show up. Click the bucket to take a pixel out again. You can only hold one.",
+            requiredType = PixelClicker.PixelType.Fish,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Water, amount = 150 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Seaweed, amount = 25 },
+            },
+            maxHeld = 1,
+            color = new Color(0.8f, 0.22f, 0.22f, 1f),
+        };
+    }
+
     private static Device CreateDefaultPetTreat()
     {
         return new Device
@@ -833,7 +853,7 @@ public class PixelConsumables : MonoBehaviour
     private static Device[] CreateDefaultDevices() => new[]
     {
         CreateDefaultDevice(), CreateDefaultFan(), CreateDefaultSorter(),
-        CreateDefaultComboFuel(), CreateDefaultGhostBait(), CreateDefaultPetTreat(),
+        CreateDefaultComboFuel(), CreateDefaultGhostBait(), CreateDefaultPetTreat(), CreateDefaultBaitBucket(),
         CreateDefaultChargeBooster(), CreateDefaultLightningRod(),
     };
 
@@ -894,6 +914,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.MagnetSorter, CreateDefaultMagnetSorter),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.QuantumOrganizer, CreateDefaultQuantumOrganizer),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1650,6 +1671,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.ComboFuel:
                 case DeviceKind.GhostBait:
                 case DeviceKind.PetTreat:
+                case DeviceKind.BaitBucket:
                     root = BuildItemModel(kind, d);
                     break;
             }
@@ -1720,6 +1742,21 @@ public class PixelConsumables : MonoBehaviour
             tail.transform.localScale = new Vector3(0.4f, 0.12f, 0.4f);
             tail.transform.localPosition = new Vector3(0f, 0.12f, 0f);
         }
+        else if (kind == DeviceKind.BaitBucket)
+        {
+            GameObject body = MakePrimitive(PrimitiveType.Cylinder, "Bucket", root.transform, main, false);
+            body.transform.localScale = new Vector3(0.7f, 0.3f, 0.7f);
+            body.transform.localPosition = new Vector3(0f, 0.3f, 0f);
+            GameObject rim = MakePrimitive(PrimitiveType.Cylinder, "Rim", root.transform, bright, false);
+            rim.transform.localScale = new Vector3(0.76f, 0.025f, 0.76f);
+            rim.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+            GameObject water = MakePrimitive(PrimitiveType.Cylinder, "Water", root.transform, new Color(0.3f, 0.62f, 1f, 1f), false);
+            water.transform.localScale = new Vector3(0.64f, 0.02f, 0.64f);
+            water.transform.localPosition = new Vector3(0f, 0.56f, 0f);
+            GameObject handle = MakePrimitive(PrimitiveType.Cube, "Handle", root.transform, dark, false);
+            handle.transform.localScale = new Vector3(0.74f, 0.03f, 0.03f);
+            handle.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+        }
         else
         {
             GameObject shaft = MakePrimitive(PrimitiveType.Cylinder, "Shaft", root.transform, main, false);
@@ -1772,7 +1809,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return false;
         DeviceKind k = devices[item - potions.Length].kind;
-        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat;
+        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket;
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
@@ -1828,6 +1865,13 @@ public class PixelConsumables : MonoBehaviour
                 if (!Inf) devices[index].owned--;
                 PixelStats.Count("treat.used");
                 PixelHints.Announce("Your pets are hyper!");
+                return true;
+            }
+            case DeviceKind.BaitBucket:
+            {
+                if (!PixelBaitBucket.TryPlace(out string bucketMessage)) { if (!string.IsNullOrEmpty(bucketMessage)) PixelHints.Announce(bucketMessage); return false; }
+                if (!Inf) devices[index].owned--;
+                if (!string.IsNullOrEmpty(bucketMessage)) PixelHints.Announce(bucketMessage);
                 return true;
             }
             default: // placeable devices, and seeds (planted with a click on the floor)

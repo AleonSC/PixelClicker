@@ -987,7 +987,7 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>Something else (a minigame, the hose, a hovered pet, first person mode) has the mouse: the cube ignores ordinary clicks.</summary>
     public static bool ExternalClickBlock
     {
-        get => externalClickBlock || DevClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelStorageCrate.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelTreasureMap.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
+        get => externalClickBlock || DevClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelStorageCrate.HandleHot || PixelBaitBucket.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelTreasureMap.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
         set => externalClickBlock = value;
     }
 
@@ -1143,6 +1143,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
+        if (PixelFind.First<PixelBaitBucket>() == null) gameObject.AddComponent<PixelBaitBucket>();   // Fishing's bait bucket consumable
         if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
         if (PixelFind.First<PixelOrbitCamera>() == null) gameObject.AddComponent<PixelOrbitCamera>();   // orbital camera (third step of the view key)
         if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)

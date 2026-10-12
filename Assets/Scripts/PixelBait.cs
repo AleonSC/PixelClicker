@@ -22,7 +22,7 @@ public static class PixelBait
     private static float perPellet = 0.35f;
 
     /// <summary>The factor on a Fish block's spawn weight: 1 with no bait, more with every pellet.</summary>
-    public static float FishMultiplier => pellets.Count == 0 ? 1f : 1f + pellets.Count * perPellet;
+    public static float FishMultiplier => 1f + pellets.Count * perPellet + PixelBaitBucket.FishBonus;   // (pellets on the floor + what the Bait Bucket holds)
 
     /// <summary>Scatters pellets round 'from' (the cube). Returns how many were dropped.</summary>
     public static int Drop(PixelClicker clicker, Vector3 from)
