@@ -410,31 +410,45 @@ public static class PixelUIKit
 
     private static Sprite eyedropper;
 
-    /// <summary>A small white pixel-art eyedropper (pipette), drawn once in code.</summary>
+    /// <summary>
+    /// A white eyedropper (pipette) drawn once in code: a thin glass tip at the bottom left, a see-through tube with a little liquid in it, a collar and a
+    /// rubber squeeze bulb at the top right. Edges are smooth; the glass is semi-transparent so it reads as glass.
+    /// </summary>
     public static Sprite EyedropperSprite()
     {
         if (eyedropper != null) return eyedropper;
-        string[] rows =
-        {
-            ".......###..",
-            "......#####.",
-            "......#####.",
-            ".....#####..",
-            "....####....",
-            "...####.....",
-            "..####......",
-            ".####.......",
-            ".###........",
-            "##..........",
-            "#...........",
-            "............",
-        };
-        int n = rows.Length;
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Eyedropper", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Eyedropper", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
         Color[] px = new Color[n * n];
+        Vector2 a = new Vector2(0.1f, 0.1f), b = new Vector2(0.9f, 0.9f);
+        Vector2 axis = (b - a).normalized, perp = new Vector2(-axis.y, axis.x);
         for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
-                px[(n - 1 - y) * n + x] = rows[y][x] == '#' ? Color.white : new Color(1f, 1f, 1f, 0f);
+            {
+                float alpha = 0f;
+                for (int sy = 0; sy < 3; sy++)
+                    for (int sx = 0; sx < 3; sx++)
+                    {
+                        Vector2 q = new Vector2((x + (sx + 0.5f) / 3f) / n, (y + (sy + 0.5f) / 3f) / n) - a;
+                        float along = Vector2.Dot(q, axis), across = Mathf.Abs(Vector2.Dot(q, perp));
+                        float v = 0f;
+                        if (along >= 0f && along < 0.22f) v = across <= Mathf.Lerp(0.012f, 0.05f, along / 0.22f) ? 1f : 0f;              // the thin tip
+                        else if (along >= 0.22f && along < 0.66f)                                                                      // the glass tube
+                        {
+                            if (across <= 0.058f) v = across > 0.042f ? 1f : (along < 0.4f ? 0.95f : 0.28f);                           // wall, liquid, empty glass
+                        }
+                        else if (along >= 0.66f && along < 0.73f) v = across <= 0.09f ? 1f : 0f;                                      // the collar
+                        else if (along >= 0.73f)                                                                                      // the squeeze bulb
+                        {
+                            float ex = (along - 0.93f) / 0.19f, ey = across / 0.125f;
+                            if (ex * ex + ey * ey <= 1f) v = 1f;
+                            float hx = (along - 0.9f) / 0.05f, hy = (Vector2.Dot(q, perp) + 0.05f) / 0.035f;
+                            if (v > 0f && hx * hx + hy * hy <= 1f) v = 0.62f;                                                          // a highlight on the bulb
+                        }
+                        alpha += v / 9f;
+                    }
+                px[y * n + x] = new Color(1f, 1f, 1f, alpha);
+            }
         tex.SetPixels(px);
         tex.Apply();
         eyedropper = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);

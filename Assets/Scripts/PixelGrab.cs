@@ -98,6 +98,7 @@ public class PixelGrab : MonoBehaviour
 
     private void Awake()
     {
+        grabbingActive = true;   // Pixel Grabbing is unlocked from the start now (it still has its switch in the Toggles window)
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
         {

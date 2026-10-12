@@ -1187,6 +1187,9 @@ public class PixelPauseMenu : MonoBehaviour
         panel.SetActive(false);
     }
 
+    /// <summary>How much narrower than the list every row under a section header is (the Replay tutorial button's width): toggles, choices, sliders and buttons all line up.</summary>
+    private const float SettingsRowInset = 112f;
+
     private TMP_Text AddRowLabel(Transform parent, string text, float y, out RectTransform row)
     {
         // "(after restart)" / "(next start)" / "(requires restart)" is taken off the name and shown as a hover tip instead.
@@ -1200,7 +1203,7 @@ public class PixelPauseMenu : MonoBehaviour
         row.anchorMin = new Vector2(0f, 1f);
         row.anchorMax = new Vector2(1f, 1f);
         row.pivot = new Vector2(0.5f, 1f);
-        row.sizeDelta = new Vector2(-96f, rowHeight);
+        row.sizeDelta = new Vector2(-SettingsRowInset, rowHeight);   // every row under a header is as wide as the Replay tutorial button
         row.anchoredPosition = new Vector2(0f, -y);
 
         TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize * 0.55f, FontStyles.Normal);   // one size for every row so they line up
@@ -2145,7 +2148,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             PixelHints.ReplayTutorial();
             SetPaused(false); // so the tips show over the game
-        }, ref y, 112f);   // a little narrower than the section header (-96)
+        }, ref y);
 
         rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
@@ -2406,7 +2409,7 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>A full-width button row (an action rather than a setting).</summary>
-    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = 80f)
+    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = SettingsRowInset)
     {
         Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.7f);
         RectTransform rt = b.GetComponent<RectTransform>();

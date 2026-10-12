@@ -36,8 +36,11 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog", "BarGlow", "ButtonMode", "GlowHue", "GlowCycle", "GlowColor", "UiColor", "UiHue", "Prospector", "SkillPack", "SkillGuests", "OptInOff", "SkillOffline", "ClickFx",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "HorizonFog", "BarGlow", "ButtonMode", "GlowCycle", "UiColor", "Prospector", "SkillOffline", "ClickFx",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
+        // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
+        foreach (string k in new[] { "GlowHue", "UiHue" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
+        foreach (string k in new[] { "GlowColor", "SkillPack", "SkillGuests", "OptInOff" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
         known.Add(new Known("PixelAudio.Effects", 1));
@@ -80,7 +83,7 @@ public static class PixelSettingsSync
 
         foreach (Known k in Known_())
         {
-            if (!byKey.TryGetValue(k.key, out Entry e)) { PlayerPrefs.DeleteKey(k.key); continue; } // not stored = this file uses the default
+            if (!byKey.TryGetValue(k.key, out Entry e) || e.kind != k.kind) { PlayerPrefs.DeleteKey(k.key); continue; } // not stored (or stored in the old, wrong form) = this file uses the default
             try
             {
                 if (k.kind == 0) PlayerPrefs.SetInt(k.key, int.Parse(e.value));

@@ -1032,6 +1032,8 @@ public partial class PixelShop : MonoBehaviour
                                              // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
                                              || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
                                                  && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
+                                             // Pixel Grabbing is unlocked from the start now (it keeps its switch in the Toggles window).
+                                             || pack.unlocksGrabbing
                                              // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
                                              || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
                                              // Stone (the old Rock block) is Mining's filler now: it comes with the Prospector's Pack, no longer sold on its own.
@@ -1434,7 +1436,6 @@ public partial class PixelShop : MonoBehaviour
         if (pack.upgradeEffect == UpgradeEffect.ComboMeter || pack.upgradeEffect == UpgradeEffect.BankCapacity || pack.upgradeEffect == UpgradeEffect.OldPixelCap) ApplyUpgrade(pack); // not stored anywhere else, so re-apply on load
 
         if (pack.unlocksCrafting && crafting != null && !purchased) crafting.Deactivate();
-        if (pack.unlocksGrabbing && grab != null && !purchased) grab.Deactivate();
         if (pack.unlocksTimeStop && timeStop != null && !purchased) timeStop.Deactivate();
         if (pack.unlocksTimeSlow && timeStop != null && !purchased) timeStop.DeactivateSlow();
         if (pack.unlocksBank && bank != null && !purchased) bank.Deactivate();

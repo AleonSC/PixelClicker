@@ -223,6 +223,7 @@ public class PixelHud : MonoBehaviour
         GlowHue = h;                      // (clears any older custom colour)
         GlowCustomColor = new Color(c.r, c.g, c.b, 1f);
         GlowCycle = false;
+        PlayerPrefs.Save();
     }
 
     /// <summary>The glow colour of one edge: the picked colour while it is static, else the hue (drifting with time while cycling).</summary>

@@ -871,20 +871,6 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Pixel Grabbing upgrade (Upgrades tab): old pixels can be clicked and dragged.</summary>
-    private static ShopPack CreateGrabbingPack()
-    {
-        return new ShopPack
-        {
-            displayName = "Pixel Grabbing",
-            tab = ShopTab.Upgrades,
-            description = "Click and drag old pixels around. Let go to drop or throw them.",
-            costs = AllSix(2500),
-            rewardTiers = new PixelClicker.PixelTier[0],
-            unlocksGrabbing = true,
-        };
-    }
-
     /// <summary>Default Pixel Bank upgrade (Upgrades tab): a hose that stores old pixels and spits them back out.</summary>
     private static ShopPack CreateBankPack()
     {
@@ -1143,8 +1129,6 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateSnakePack },
         new DefaultPack { isThis = p => Unlocks(p, "bomb"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBombPack },
-        new DefaultPack { isThis = p => p.unlocksGrabbing,
-                          requires = null, create = i => CreateGrabbingPack() },
         new DefaultPack { isThis = p => p.unlocksTimeStop,
                           requires = null, create = i => CreateTimeStopPack() },
         new DefaultPack { isThis = p => p.unlocksTimeSlow,
