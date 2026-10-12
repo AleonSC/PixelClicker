@@ -97,7 +97,7 @@ public class PixelGuideVendor : MonoBehaviour
     private static PixelGuideVendor instance;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; }
+    private static void ResetStatics() { instance = null; PointOverride = null; }
 
     private const string Stage1Key = "guide.stage1";
     private const string Stage2Key = "guide.stage2";
@@ -112,6 +112,7 @@ public class PixelGuideVendor : MonoBehaviour
         PixelStats.Clear(Stage1Key);
         PixelStats.Clear(Stage2Key);
         PixelStats.Clear(PixelShopTutorial.DoneKey);
+        PixelStats.Clear(PixelSkills.TutorialDoneKey);
         instance.replaying = true;
         instance.calmTimer = 0f;
     }
@@ -139,8 +140,12 @@ public class PixelGuideVendor : MonoBehaviour
     }
 
     /// <summary>Where the stick points: the middle of the shop window as it is on screen (screen pixels = overlay world units).</summary>
+    /// <summary>A tutorial can aim the stick at something else than the shop window (screen pixels); null = the shop.</summary>
+    public static System.Func<Vector3?> PointOverride;
+
     private Vector3 ShopPointTarget()
     {
+        if (PointOverride != null) { Vector3? o = PointOverride(); if (o.HasValue) return o.Value; }
         if (shop != null && shop.PanelRect != null && shop.PanelRect.gameObject.activeInHierarchy)
         {
             Vector3[] c = new Vector3[4];

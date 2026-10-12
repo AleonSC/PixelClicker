@@ -39,10 +39,6 @@ public partial class PixelSkills
     [Tooltip("Height of the area the skill tree nodes are laid out in (canvas units).")]
     [SerializeField] private float treeAreaHeight = 400f;
 
-    [TextArea(2, 6)]
-    [Tooltip("The first-time explanation shown beside the window.")]
-    [SerializeField] private string introText = "Skill packs swap the basic cubes in your rotation for a new set. Pick a pack on the left and press Train: its pixels start to spawn and you earn XP for that skill. XP is kept per pack, so you can switch back and forth whenever you like. Offline Progression lets you play with any pack while only that skill earns XP, and every skill has a skill tree: spend the point you earn each level on its nodes.";
-
     [Tooltip("Colours.")]
     [SerializeField] private Color panelColor = new Color(0.1f, 0.1f, 0.13f, 0.97f);
     [SerializeField] private Color tabColor = new Color(0.22f, 0.3f, 0.45f, 1f);
@@ -739,6 +735,7 @@ public partial class PixelSkills
 
     private void Toggle()
     {
+        if (PixelTutorialDim.Active) return;   // the Skills tab is locked until the tutorial is over
         if (WindowOpen) PixelPop.Hide(windowObject);
         else OpenWindow();
     }
@@ -751,11 +748,6 @@ public partial class PixelSkills
         selected = Mathf.Max(0, packs.FindIndex(p => p.id == TrainingId));
         PixelPop.Show(windowObject);
         RefreshWindow();
-        if (!PixelHints.IsTipSeen("skills_intro"))
-        {
-            PixelHints.SetTipSeen("skills_intro");
-            PixelNotice.Show(introText, 0f, compact: true, beside: windowRect);
-        }
     }
 
     /// <summary>
@@ -809,10 +801,8 @@ public partial class PixelSkills
             tabGroup.alpha = Mathf.MoveTowards(tabGroup.alpha, 1f, Time.unscaledDeltaTime / 1.2f);
         }
 
-        // The first time a skill pack becomes available the window opens by itself and explains the idea (once the screen is calm).
-        if (available && !open && !PixelHints.IsTipSeen("skills_intro") && Time.timeScale > 0f && !PixelTitleScreen.Showing
-            && !PixelPauseMenu.IsPaused && !PixelNotice.IsShowing)
-            OpenWindow();
+        // The first time a skill pack becomes available Cubie walks through the window (the screen dims and the game pauses meanwhile).
+        UpdateTutorialStart(available, open);
 
         UpdateTip();
         if (!open && TreeOpen) PixelPop.Hide(treeWindow);   // the tree belongs to the Skills window

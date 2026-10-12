@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// The shop tutorial: the first time the Shop button is available, a series of small "Got it" boxes walks through the shop. Each box
@@ -46,21 +45,6 @@ public class PixelShopTutorial : MonoBehaviour
     private bool running;
     private float readyTimer;
 
-    // Dim overlay (blocks clicks on the shop and everything else below the tip boxes while the tutorial runs).
-    private GameObject dimRoot;
-    private Image dimImage;
-    private float dimLevel;           // 0..1 of the full dim
-    private bool dimTarget;           // fading towards dark
-    private bool startAfterFade;
-    private bool pausedByUs;
-    private float savedScale = 1f;
-
-    /// <summary>True from the first dim-down until the last box is closed: the shop buttons ignore clicks meanwhile.</summary>
-    public static bool Active { get; private set; }
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Active = false; }
-
     private void Awake()
     {
         shop = GetComponent<PixelShop>();
@@ -85,60 +69,20 @@ public class PixelShopTutorial : MonoBehaviour
         };
     }
 
-    private void UpdateDim()
-    {
-        float seconds = dimSeconds > 0f ? dimSeconds : 0.7f;
-        float goal = dimTarget ? 1f : 0f;
-        if (!Mathf.Approximately(dimLevel, goal))
-            dimLevel = Mathf.MoveTowards(dimLevel, goal, Time.unscaledDeltaTime / seconds);
-        if (dimImage != null)
-            dimImage.color = new Color(0f, 0f, 0f, dimLevel * (dimAmount > 0f ? dimAmount : 0.4f));
-        if (dimRoot != null && !dimTarget && dimLevel <= 0f) { Destroy(dimRoot); dimRoot = null; dimImage = null; }
-        if (startAfterFade && dimTarget && dimLevel >= 1f)
-        {
-            startAfterFade = false;
-            ShowStep(0);
-        }
-    }
-
     private void BeginRun()
     {
         running = true;
-        Active = true;
-        if (dimRoot == null)
-        {
-            dimRoot = PixelUIKit.CreateCanvas("Shop Tutorial Dim", 600, new Vector2(1920f, 1080f), true);
-            GameObject go = new GameObject("Dim", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(dimRoot.transform, false);
-            dimImage = go.GetComponent<Image>();
-            dimImage.color = new Color(0f, 0f, 0f, 0f);
-            dimImage.raycastTarget = true;   // clicks on the shop (and everything under the tip boxes) do nothing
-            PixelUIKit.Stretch(go.GetComponent<RectTransform>());
-        }
-        if (Time.timeScale > 0f) { savedScale = Time.timeScale; Time.timeScale = 0f; pausedByUs = true; }
-        dimTarget = true;
-        startAfterFade = true;
+        PixelTutorialDim.Begin(() => ShowStep(0), dimAmount, dimSeconds);
     }
 
     private void EndRun()
     {
         running = false;
-        Active = false;
-        dimTarget = false;
-        startAfterFade = false;
-        if (pausedByUs) { if (Time.timeScale <= 0f) Time.timeScale = savedScale; pausedByUs = false; }
-    }
-
-    private void OnDestroy()
-    {
-        if (pausedByUs && Time.timeScale <= 0f) Time.timeScale = savedScale;
-        Active = false;
-        if (dimRoot != null) Destroy(dimRoot);
+        PixelTutorialDim.End();
     }
 
     private void Update()
     {
-        UpdateDim();
         if (running || !enableTutorial || shop == null || !shop.ShopAvailable) { readyTimer = 0f; return; }
         if (PixelStats.Total(DoneKey) >= 1d || !PixelHints.TipsEnabled) return;   // remembered per save (the tip flag in PlayerPrefs is global, so a new game never replayed it)
 
