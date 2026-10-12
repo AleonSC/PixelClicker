@@ -1197,7 +1197,10 @@ public partial class PixelShop
             double now = clicker.ValueMultiplierAt(tier.valueLevel);
             double next = clicker.ValueMultiplierAt(tier.valueLevel + 1);
 
-            row.nameLabel.text = string.Format(valueRowNameFormat, tier.displayName);
+            string shortName = tier.displayName ?? "";
+            if (shortName.EndsWith(" Pixels")) shortName = shortName.Substring(0, shortName.Length - 7);
+            else if (shortName.EndsWith(" Pixel")) shortName = shortName.Substring(0, shortName.Length - 6);
+            row.nameLabel.text = shortName;   // just the pixel's name ("White"), the row is on the Value tab already
             if (row.levelLabel != null) row.levelLabel.text = string.Format(ultraLevelFormat, tier.valueLevel);
             row.descLabel.text = string.Format(valueRowDescFormat, tier.displayName, PixelClicker.FormatNumberShort(now),
                                                PixelClicker.FormatNumberShort(maxed ? now : next));
