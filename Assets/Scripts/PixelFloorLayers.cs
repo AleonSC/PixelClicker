@@ -62,6 +62,7 @@ public partial class PixelFloor
         StopSlicedFill();
         FillPreview(tex, s);   // a soft version of the finished picture shows at once; the sharp one replaces it when it is done
         fillRoutine = StartCoroutine(FillSliced(tex, s));
+        PixelDebug.Info("PixelFloor: drawing '" + s.name + "' (" + tex.width + " px) over several frames.", this);
     }
 
     private void StopSlicedFill()
@@ -154,6 +155,7 @@ public partial class PixelFloor
         tex.SetPixels(px);
         tex.Apply(tex.mipmapCount > 1);
         fillRoutine = null;
+        PixelDebug.Info("PixelFloor: finished drawing '" + s.name + "' in " + (watch.ElapsedMilliseconds / 1000f).ToString("0.0") + " s of work.", this);
         if (overlay) BuildLayers(tex);
     }
 
