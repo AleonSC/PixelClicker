@@ -735,6 +735,7 @@ public partial class PixelSkills
     private void Update()
     {
         UpdateTracker();
+        UpdateXpPopups();
         CheckFarmBundle();
         UpdateTreeLayout();
         if (!built) return;

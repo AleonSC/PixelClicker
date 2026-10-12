@@ -642,6 +642,7 @@ public partial class PixelSkills : MonoBehaviour
         if (pack == null || xp <= 0d) return;
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
+        QueueXpPopup(pack, xp);
         int after = LevelOf(pack);
         if (after > before)
             PixelHints.Announce(pack.displayName + " level " + after, "Your " + pack.displayName + " skill reached level " + after + " (+" + (after - before) + " skill point" + (after - before == 1 ? "" : "s") + ").");
