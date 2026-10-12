@@ -619,3 +619,4 @@
 [2026-10-12 08:07 UTC] The Value Upgrade button tooltip now just says to Shift-click to buy as many as you can.
 [2026-10-12 08:08 UTC] Fixed the console warnings when buying the Woodcutter's Pack: only one unlock tip is triggered for the pack.
 [2026-10-12 08:10 UTC] Old pixels now last 15 seconds by default, and each Standard level adds 5 seconds (level 2 = 20 seconds).
+[2026-10-12 08:16 UTC] Added the woodchipper and log storage rack: they set up on the floor while you train Woodcutting, and dragging old wood blocks into them fills the bonus XP bank.

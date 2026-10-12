@@ -1077,6 +1077,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
+        if (PixelFind.First<PixelWoodworking>() == null) gameObject.AddComponent<PixelWoodworking>();   // Woodcutting's woodchipper and log rack
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
         if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors

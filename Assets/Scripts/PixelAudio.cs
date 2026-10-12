@@ -248,6 +248,8 @@ public class PixelAudio : MonoBehaviour
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("wood_chop", 0.04f, 0.9f, 1.15f),
+            Make("chipper_feed", 0.08f, 0.95f, 1.05f),
+            Make("rack_store", 0.05f, 0.9f, 1.1f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
             Make("traffic_start", 0.2f, 1f, 1f),
             Make("traffic_green", 0.2f, 1f, 1f),
@@ -317,6 +319,8 @@ public class PixelAudio : MonoBehaviour
             case "pixel_bulb": return new[] { PixelSynth.Elec(6, 1), PixelSynth.Elec(6, 2), PixelSynth.Elec(6, 3) };
             case "pixel_capacitor": return new[] { PixelSynth.Elec(2, 1), PixelSynth.Elec(2, 2) };
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
+            case "chipper_feed": return new[] { PixelSynth.Chipper(1), PixelSynth.Chipper(2), PixelSynth.Chipper(3) };
+            case "rack_store": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(4, 2) };
             case "wood_chop": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
             case "pixel_wood": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
             case "pixel_bark": return new[] { PixelSynth.Wood(1, 1), PixelSynth.Wood(1, 2), PixelSynth.Wood(1, 3) };
@@ -1009,6 +1013,35 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
         AudioClip clip = AudioClip.Create("Crunch " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The woodchipper taking a block in: a motor whine that revs up, a grinding crunch of chips, then a rattle as they spit out.</summary>
+    public static AudioClip Chipper(int seed)
+    {
+        const int rate = 22050;
+        float len = 0.7f;
+        int n = (int)(rate * len);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(3300 + seed * 31);
+        float phase = 0f, lp = 0f, lp2 = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float env = Mathf.Clamp01(t / 0.03f) * Mathf.Exp(-t * 3.2f);
+            phase += (150f + 160f * Mathf.Min(1f, t * 3f) + 12f * seed) / rate;
+            float motor = (Mathf.Sin(phase * Mathf.PI * 2f) + 0.5f * Mathf.Sin(phase * 3f * Mathf.PI * 2f)) * 0.3f;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.22f;
+            lp2 += (lp - lp2) * 0.5f;
+            float crunch = (rng.NextDouble() < 0.28 ? noise : lp2) * (0.6f + 0.4f * Mathf.Sin(t * 70f)) * Mathf.Exp(-t * 5f);
+            data[i] = (motor * 0.8f + crunch * 0.9f) * env;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
+        AudioClip clip = AudioClip.Create("Chipper " + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

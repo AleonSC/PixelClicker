@@ -149,6 +149,7 @@ public class PixelHints : MonoBehaviour
         switch (id)
         {
             case "event_log": return "This is the Event Log - click this line to read about it";
+            case "woodworking": return "The woodchipper and log rack are set up!";
             case "crafting": return "You unlocked Crafting!";
             case "grab": return "You unlocked Pixel Grabbing!";
             case "timestop": return "You unlocked Time Stop! (press T)";
@@ -263,6 +264,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Fire", "Fire Pixels unlocked! (A testing pixel.) Click one and a ring of flames bursts out of the cube; the old pixel burns away as it falls."),
         H("pixel_Dirt", "Farmer's Pack unlocked! Eight farm blocks for the Farming skill: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. Switch on Farming mode in the Toggles window (or Train it in the Skills window) to make them replace the basic pixels. Beware of weevils: click them before they eat your sprouts!"),
         H("hazard", "A hazard block! Pests and gas pockets pay nothing: a few taps are harmless, but hit one too many times and it goes off (pests swarm out and eat your sprouts, gas explodes) and your skill XP drops for a minute. Wait it out - it leaves by itself - or RIGHT-click it to work it away safely (it takes as many right clicks as it takes to break, plus the hits you already made). The auto clicker leaves it alone."),
+        H("woodworking", "Your woodchipper and log rack are set up! While you train Woodcutting they stand at the sides of the screen. Drag old blocks into them with Pixel Grabbing for bonus XP: scraps (Bark, Sap, Leaf and Twig) go in the chipper, logs (Wood and Heartwood) on the rack. The blocks are used up, but they fill your bonus XP bank, which doubles the XP of your next chops."),
         H("pixel_Wood", "Woodcutter's Pack unlocked! The Woodcutting skill: six wood blocks (Wood, Bark, Sap, Leaf, Heartwood and Twig) plus a Hornet Nest to avoid. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Twig is a useless filler that gets rarer as you level."),
         H("pixel_Rock", "Stone Pixels unlocked! Stone is Mining's filler block: plain and almost worthless, and most of what appears at first. As your mining level rises it gets rarer."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Lead, Zinc and Nickel are tough rocks: hit them a few times to crack them open. A glittering one is a rich vein and pays 5x. The ores do not spawn on their own: turn on Prospector mode in the Toggles window and they spawn in place of the monochrome, RGB, Glass and Luminescent pixels."),
