@@ -124,7 +124,7 @@
 | `PixelPestSwarm.cs` (Pest rework) | The Pest block (PixelLook.blockSurface Pest, PixelBlockTextures.PestHide(level,max): | in the header comment of `PixelPestSwarm.cs` |
 | Foraging pixels / Forager's Pack | Foraging (PixelSkills.ForagingId, second base gathering skill after Woodcutting; | `docs/systems/SkillBlocks.md` |
 | Fishing / ore rework | Fishing (PixelSkills.FishingId, third base gathering skill; | `docs/systems/SkillBlocks.md` |
-| `PixelFishingSpawns.cs` | Fishing's fixed spawn table (partial class PixelClicker): Water 80%, Driftwood 5%, Seaweed 7%, Jellyfish 4%, Shell 3%, Fish 1%, plus replacement rolls (Fish -> Whale 10%, Seaweed / Shell -> Bottle, Shell -> Pearl) and Bait after a Water pixel. | in the header comment of `PixelFishingSpawns.cs` |
+| `PixelFishingSpawns.cs` | Fishing's fixed spawn table (partial class PixelClicker): Water 80.5%, Driftwood 5%, Seaweed 7.5%, Jellyfish 3%, Shell 3%, Fish 1%, plus replacement rolls (Fish -> Whale 5%, Seaweed / Shell -> Bottle 2%, Shell -> Pearl) and Bait after a Water pixel. | in the header comment of `PixelFishingSpawns.cs` |
 | `PixelBaitBucket.cs` | Bait Bucket consumable (DeviceKind.BaitBucket, Supplies): right-click it in Fishing and a bucket stands at a fixed floor spot until you stop Fishing; it stores Fish / Water old pixels dropped in (stored fish raise Fish's spawn weight via PixelBait.FishMultiplier). | in the header comment of `PixelBaitBucket.cs` |
 | `PixelTreasureMap.cs` / `PixelWhaleFight.cs` / `PixelOceanSynth.cs` | Fishing's SPECIAL blocks (a rarer tier beside the base blocks; | `docs/systems/PixelTreasureMap.md` |
 | `PixelFarmFx.cs` | Farming pixel particles: PixelFarmFx.Attach (ambient loop per PixelLook.farmFx: | in the header comment of `PixelFarmFx.cs` |

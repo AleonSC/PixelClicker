@@ -1,10 +1,10 @@
 // ---- System notes ----
 // PixelFishingSpawns.cs
 //   Fishing's FIXED spawn table (part of partial class PixelClicker; used by PickSpawnTier and SpawnShare while Fishing is the skill in
-//   play, `disableFishingTable` = the old filler / hazard weights): Water 80%, Driftwood 5%, Seaweed 7%, Jellyfish 4%, Shell 3%, Fish 1%
+//   play, `disableFishingTable` = the old filler / hazard weights): Water 80.5%, Driftwood 5%, Seaweed 7.5%, Jellyfish 3%, Shell 3%, Fish 1%
 //   (`fishWaterShare` ... `fishFishShare`, 0 = these defaults; they are weights, so they are normalised if one block is missing). Everything
-//   else comes from a replacement roll: a rolled Fish becomes a WHALE `whaleChance` (0 = 10%) of the time, a rolled Seaweed or Shell
-//   becomes a message in a BOTTLE `bottleChance` (0 = 8%), a rolled Shell can instead become a PEARL `pearlChance` (0 = 6%), and
+//   else comes from a replacement roll: a rolled Fish becomes a WHALE `whaleChance` (0 = 5%) of the time, a rolled Seaweed or Shell
+//   becomes a message in a BOTTLE `bottleChance` (0 = 2%), a rolled Shell can instead become a PEARL `pearlChance` (0 = 6%), and
 //   collecting a Water pixel makes the NEXT pixel a Bait block with `baitChance` (0 = 10%, QueueBaitAfter). Bait pellets still raise Fish's
 //   weight (PixelBait.FishMultiplier) and active pets their type's (PixelPets.SpawnMultiplier). SpawnShare (the Pixel Guide) works out
 //   the same numbers, bait included.
@@ -18,21 +18,21 @@ public partial class PixelClicker
     [Tooltip("Use the old filler / hazard weights for Fishing instead of the fixed table.")]
     [SerializeField] private bool disableFishingTable = false;
 
-    [Min(0f)] [Tooltip("Water's share of the rolls (it is a weight; 0 = 0.80).")]
+    [Min(0f)] [Tooltip("Water's share of the rolls (it is a weight; 0 = 0.805).")]
     [SerializeField] private float fishWaterShare = 0f;
     [Min(0f)] [Tooltip("Driftwood's share (0 = 0.05).")]
     [SerializeField] private float fishDriftwoodShare = 0f;
-    [Min(0f)] [Tooltip("Seaweed's share (0 = 0.07).")]
+    [Min(0f)] [Tooltip("Seaweed's share (0 = 0.075).")]
     [SerializeField] private float fishSeaweedShare = 0f;
-    [Min(0f)] [Tooltip("Jellyfish's share (0 = 0.04).")]
+    [Min(0f)] [Tooltip("Jellyfish's share (0 = 0.03).")]
     [SerializeField] private float fishJellyShare = 0f;
     [Min(0f)] [Tooltip("Shell's share (0 = 0.03).")]
     [SerializeField] private float fishShellShare = 0f;
     [Min(0f)] [Tooltip("Fish's share (0 = 0.01).")]
     [SerializeField] private float fishFishShare = 0f;
-    [Range(0f, 1f)] [Tooltip("Chance a rolled Fish is a Whale instead (0 = 0.10).")]
+    [Range(0f, 1f)] [Tooltip("Chance a rolled Fish is a Whale instead (0 = 0.05).")]
     [SerializeField] private float whaleChance = 0f;
-    [Range(0f, 1f)] [Tooltip("Chance a rolled Seaweed or Shell is a message in a Bottle instead (0 = 0.08).")]
+    [Range(0f, 1f)] [Tooltip("Chance a rolled Seaweed or Shell is a message in a Bottle instead (0 = 0.02).")]
     [SerializeField] private float bottleChance = 0f;
     [Range(0f, 1f)] [Tooltip("Chance a rolled Shell is a Pearl instead (0 = 0.06).")]
     [SerializeField] private float pearlChance = 0f;
@@ -41,8 +41,8 @@ public partial class PixelClicker
 
     private bool baitNext;
 
-    private float WhaleP => whaleChance > 0f ? whaleChance : 0.10f;
-    private float BottleP => bottleChance > 0f ? bottleChance : 0.08f;
+    private float WhaleP => whaleChance > 0f ? whaleChance : 0.05f;
+    private float BottleP => bottleChance > 0f ? bottleChance : 0.02f;
     private float PearlP => pearlChance > 0f ? pearlChance : 0.06f;
     private float BaitP => baitChance > 0f ? baitChance : 0.10f;
 
@@ -63,11 +63,11 @@ public partial class PixelClicker
             int i = IndexOf(type);
             if (FishAvailable(i)) list.Add(new KeyValuePair<int, float>(i, (share > 0f ? share : fallback) * PixelPets.SpawnMultiplier(type) * mult));
         }
-        Add(PixelType.Water, fishWaterShare, 0.80f);
+        Add(PixelType.Water, fishWaterShare, 0.805f);
         if (list.Count == 0) return false;
         Add(PixelType.Driftwood, fishDriftwoodShare, 0.05f);
-        Add(PixelType.Seaweed, fishSeaweedShare, 0.07f);
-        Add(PixelType.Jellyfish, fishJellyShare, 0.04f);
+        Add(PixelType.Seaweed, fishSeaweedShare, 0.075f);
+        Add(PixelType.Jellyfish, fishJellyShare, 0.03f);
         Add(PixelType.Shell, fishShellShare, 0.03f);
         Add(PixelType.Fish, fishFishShare, 0.01f, PixelBait.FishMultiplier);
         return true;
