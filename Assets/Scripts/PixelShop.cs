@@ -908,6 +908,33 @@ public partial class PixelShop : MonoBehaviour
             packDataVersion = Mathf.Max(packDataVersion, 12);
             changed = true;
         }
+        // Stone (the old Rock block) is Mining's filler: one click, tiny pay, and part of the Prospector's Pack.
+        if (packDataVersion < 13)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Copper) || Rewards(pack, PixelClicker.PixelType.Rock)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> withStone = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
+                    withStone.Insert(0, new PixelClicker.PixelTier
+                    {
+                        type = PixelClicker.PixelType.Rock, displayName = "Stone Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
+                        clicksToCollect = 1, amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                    });
+                    pack.rewardTiers = withStone.ToArray();
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type != PixelClicker.PixelType.Rock) continue;
+                    t.displayName = "Stone Pixels";
+                    t.clicksToCollect = 1;
+                    t.amountPerClick = 1;
+                    t.spawnWeight = 1f;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 13);
+            changed = true;
+        }
         return changed;
     }
 
@@ -966,6 +993,8 @@ public partial class PixelShop : MonoBehaviour
                                                  && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
                                              // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
                                              || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
+                                             // Stone (the old Rock block) is Mining's filler now: it comes with the Prospector's Pack, no longer sold on its own.
+                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Rock)
                                              // Electric is part of the Electrician's Pack now, no longer sold on its own.
                                              || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Electric
                                                  && string.IsNullOrEmpty(pack.skillId)));

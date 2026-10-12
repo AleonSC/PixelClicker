@@ -86,9 +86,9 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Wood:
                 return "A basic block of wood. It only comes up if you switch it on in Toggles > Pixels.";
             case PixelClicker.PixelType.Rock:
-                return "A basic chipped rock. It only comes up if you switch it on in Toggles > Pixels.";
+                return "Stone: Mining's filler block. One click, almost no pay. At low mining level it is most of what appears; as you level up it gets rarer and the ores show up more.";
             case PixelClicker.PixelType.Dirt:
-                return "Farming block. Old Dirt pixels lying near a growing sprout make it grow faster.";
+                return "Farming's filler block: one click, almost no pay. At low farming level it is most of what appears; as you level up it gets rarer and the other farm blocks show up more. Old Dirt pixels lying near a growing sprout also make it grow faster.";
             case PixelClicker.PixelType.Fertilizer:
                 return "Farming block. Clicking it gives every growing sprout and Seed pet on the field an instant jump in growth.";
             case PixelClicker.PixelType.Pollen:

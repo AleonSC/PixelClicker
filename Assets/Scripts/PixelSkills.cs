@@ -68,6 +68,17 @@ public partial class PixelSkills : MonoBehaviour
         public int levelCap = 0;
         [Tooltip("The pixel types this pack puts in. The FIRST one must be unlocked (bought in the Shop) for the pack to be available. They only spawn while the pack is in play, unless turned on as guests.")]
         public PixelClicker.PixelType[] types = new PixelClicker.PixelType[0];
+        [Tooltip("Name of this pack's FILLER block (a pixel type, e.g. Dirt for Farming, Rock = Stone for Mining): a 'useless' base block that makes up a large share of the spawns at low skill level and fades as the skill levels up. Empty = none.")]
+        public string fillerType = "";
+        [Range(0f, 0.95f)]
+        [Tooltip("The filler's share of all spawns at level 1. 0 = the default (0.6).")]
+        public float fillerStartShare = 0f;
+        [Range(0f, 0.95f)]
+        [Tooltip("The filler's share of all spawns at the fade level and above. 0 = the default (0.1).")]
+        public float fillerEndShare = 0f;
+        [Min(0)]
+        [Tooltip("The skill level where the filler's share reaches its end value. 0 = the default (20).")]
+        public int fillerFadeLevel = 0;
         public Perk[] perks = new Perk[0];
         [Tooltip("The skill tree: nodes you buy with skill points (one point per level above 1).")]
         public TreeNode[] nodes = new TreeNode[0];
@@ -124,7 +135,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (shop == null) shop = PixelFind.First<PixelShop>();
                 if (shop == null || !shop.IsSkillPackBought(ElectricianId)) continue;   // bought: every one of its pixels is unlocked
             }
-            else if (p.id != FarmingId || !clicker.IsUnlocked(p.types[0])) continue;
+            else if ((p.id != FarmingId && p.id != MiningId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
             foreach (PixelClicker.PixelType t in p.types)
             {
                 int i = clicker.IndexOf(t);
@@ -168,11 +179,12 @@ public partial class PixelSkills : MonoBehaviour
             packs.Add(new SkillPack
             {
                 id = MiningId, displayName = "Mining", accent = new Color(0.86f, 0.46f, 0.26f),
-                description = "Swap the basic cubes for six tough ores. Break them for mining XP; some are rich veins that pay big.",
-                replaces = "Monochrome, RGB", spawns = "Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
+                description = "Swap the basic cubes for six tough ores and plain Stone. Stone is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Break ores for mining XP; some are rich veins that pay big.",
+                replaces = "Monochrome, RGB", spawns = "Stone, Copper, Tin, Iron, Lead, Zinc, Nickel", xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
-                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel },
+                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel, PixelClicker.PixelType.Rock },
+                fillerType = "Rock",
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Richer veins: a higher chance of a rich vein" },
@@ -186,13 +198,14 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(Mathf.Min(packs.Count, 2), new SkillPack
             {
                 id = FarmingId, displayName = "Farming", accent = new Color(0.45f, 0.78f, 0.3f),
-                description = "Swap the basic cubes for eight farm blocks: dirt, seeds, water, fertilizer, pollen, wheat, weevils and golden fruit. Grow sprouts for farming XP.",
+                description = "Swap the basic cubes for eight farm blocks: dirt, seeds, water, fertilizer, pollen, wheat, weevils and golden fruit. Dirt is a useless filler block that is most of what you see at first; as your farming level rises it gets rarer and the other blocks show up more. Grow sprouts for farming XP.",
                 replaces = "Monochrome, RGB", spawns = "Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit",
                 xpFrom = "Collecting farm blocks and growing sprouts",
                 unlockHint = "Buy Farmer's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
                 types = new[] { PixelClicker.PixelType.Dirt, PixelClicker.PixelType.Seed, PixelClicker.PixelType.Water, PixelClicker.PixelType.Fertilizer,
                                 PixelClicker.PixelType.Pollen, PixelClicker.PixelType.Wheat, PixelClicker.PixelType.Weevil, PixelClicker.PixelType.GoldenFruit },
+                fillerType = "Dirt",
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Green thumb: sprouts grow a little faster" },
@@ -241,6 +254,18 @@ public partial class PixelSkills : MonoBehaviour
             }
             if (pack.id == MiningId && (pack.types == null || pack.types.Length == 0))
                 pack.types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel };
+            // Stone (the old Rock block) is Mining's filler; Dirt is Farming's.
+            if (pack.id == MiningId)
+            {
+                if (System.Array.IndexOf(pack.types, PixelClicker.PixelType.Rock) < 0)
+                {
+                    System.Collections.Generic.List<PixelClicker.PixelType> withStone = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types) { PixelClicker.PixelType.Rock };
+                    pack.types = withStone.ToArray();
+                }
+                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Rock.ToString();
+                if (pack.spawns != null && !pack.spawns.Contains("Stone")) pack.spawns = "Stone, " + pack.spawns;
+            }
+            if (pack.id == FarmingId && string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Dirt.ToString();
             // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
             if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId) continue;
             System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
@@ -399,6 +424,26 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>Is this pixel type kept out of the random spawns right now? Pack pixels only spawn while their pack is in play (or as guests); the basic pixels step aside while a pack is in play.</summary>
+    /// <summary>
+    /// The filler block of the skill pack in play (Dirt for Farming, Stone for Mining) and the share (0..1) of all spawns it should make up now:
+    /// 'fillerStartShare' at level 1, fading evenly to 'fillerEndShare' at 'fillerFadeLevel'. False when the pack in play has no filler.
+    /// </summary>
+    public static bool TryGetFiller(out PixelClicker.PixelType type, out float share)
+    {
+        type = PixelClicker.PixelType.White;
+        share = 0f;
+        PixelSkills s = Instance;
+        if (s == null) return false;
+        SkillPack pack = s.Find(s.ActiveId);
+        if (pack == null || string.IsNullOrEmpty(pack.fillerType) || !Enum.TryParse(pack.fillerType, out type)) return false;
+        float start = pack.fillerStartShare > 0f ? pack.fillerStartShare : 0.6f;
+        float end = pack.fillerEndShare > 0f ? pack.fillerEndShare : 0.1f;
+        int fade = pack.fillerFadeLevel > 1 ? pack.fillerFadeLevel : 20;
+        float k = Mathf.Clamp01((s.LevelOf(pack) - 1) / (float)(fade - 1));
+        share = Mathf.Clamp(Mathf.Lerp(start, end, k), 0f, 0.95f);
+        return true;
+    }
+
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
@@ -429,7 +474,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     /// <summary>The basic shop blocks (Wood, Rock) are never part of a rotation by themselves: they spawn only while the player has switched them on (the same switch set as the guests).</summary>
-    public static bool IsOptIn(PixelClicker.PixelType type) => type == PixelClicker.PixelType.Wood || type == PixelClicker.PixelType.Rock;
+    public static bool IsOptIn(PixelClicker.PixelType type) => type == PixelClicker.PixelType.Wood;
 
     /// <summary>Is the opt-in block (Wood, Rock) switched on?</summary>
     public static bool OptInOn(PixelClicker.PixelType type) => !OffSet.Contains(type.ToString());

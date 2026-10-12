@@ -672,6 +672,12 @@ public partial class PixelShop
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
             rewardTiers = new[]
             {
+                // Stone: Mining's filler block (one click, pays almost nothing; most of what spawns at low mining level).
+                new PixelClicker.PixelTier
+                {
+                    type = PixelClicker.PixelType.Rock, displayName = "Stone Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
+                    clicksToCollect = 1, amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                },
                 Ore(PixelClicker.PixelType.Copper, "Copper Ore", new Color(0.86f, 0.46f, 0.26f, 1f), 2, 3, 1.0f),
                 Ore(PixelClicker.PixelType.Tin, "Tin Ore", new Color(0.75f, 0.8f, 0.84f, 1f), 2, 3, 0.9f),
                 Ore(PixelClicker.PixelType.Iron, "Iron Ore", new Color(0.62f, 0.36f, 0.3f, 1f), 3, 5, 0.8f),
@@ -700,34 +706,6 @@ public partial class PixelShop
                     color = new Color(0.6f, 0.4f, 0.22f, 1f),
                     amountPerClick = 2,
                     spawnWeight = 0.7f,
-                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
-                },
-            }
-        };
-    }
-
-    /// <summary>Default Rock Pixel pack (Pixels tab): a basic tough block that fits every rotation.</summary>
-    private static ShopPack CreateRockPixelPack()
-    {
-        return new ShopPack
-        {
-            displayName = "Rock Pixel",
-            tab = ShopTab.Pixels,
-            description = "Adds the Rock pixel: a plain grey rock that takes two clicks to break. A basic block that is not in the base rotation: switch it on in the Toggles window to have it spawn.",
-            requirements = Needs(-1),
-            costs = new[]
-            {
-                new PackCost { type = PixelClicker.PixelType.White, amount = 800 },
-                new PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
-            },
-            rewardTiers = new[]
-            {
-                new PixelClicker.PixelTier
-                {
-                    type = PixelClicker.PixelType.Rock, displayName = "Rock Pixels",
-                    color = new Color(0.55f, 0.55f, 0.58f, 1f),
-                    amountPerClick = 4, clicksToCollect = 2,
-                    spawnWeight = 0.5f,
                     unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
             }
@@ -1099,8 +1077,6 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Wood),
                           requires = null, create = i => CreateWoodPixelPack() },
-        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Rock),
-                          requires = null, create = i => CreateRockPixelPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Dirt),
                           requires = null, create = i => CreateFarmerPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),

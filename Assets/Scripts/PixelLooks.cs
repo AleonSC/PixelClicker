@@ -45,6 +45,12 @@ public class PixelLook
     /// <summary>A gentle built-in surface for the basic pixels (the texture is near-white, so the colour shows through it).</summary>
     public enum BasicSurface { None = 0, Grain = 1, Brushed = 2, Sheen = 3, Mosaic = 4 }
 
+    /// <summary>Crisp drawn surfaces for the skill packs' base blocks (PixelBlockTextures.cs). The look's colour should be white.</summary>
+    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3 }
+
+    [Tooltip("Wood, Dirt or Stone: a crisp 64 px pixel-art surface drawn on every face (set the look's colour to white).")]
+    public BlockSurface blockSurface = BlockSurface.None;
+
     [Header("Surface texture")]
     [Tooltip("A subtle drawn surface: Grain (fine chalky speckle), Brushed (horizontal brushed-metal streaks), Sheen (soft diagonal highlights on dark pixels), Mosaic (a faint pixel-art mosaic with a lighter top edge on every face). Used by White, Gray, Black, Red, Green and Blue.")]
     public BasicSurface basicSurface = BasicSurface.None;
@@ -296,7 +302,7 @@ public class PixelLook
     public bool HasExtras => gelFx || windFx || flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
-    public bool HasSurfaceTexture => meteorTexture || sunTexture || streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || basicSurface != BasicSurface.None;
+    public bool HasSurfaceTexture => meteorTexture || sunTexture || streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || blockSurface != BlockSurface.None || basicSurface != BasicSurface.None;
 }
 
 /// <summary>Helpers that build the runtime-drawn parts of a look: neon edges, the dark-matter core, shatter shards.</summary>
@@ -509,11 +515,12 @@ public static class PixelLooks
                             damageCracks = true, chestTexture = true },
 
             // Wood and Rock: plain basic blocks that fit any rotation.
-            new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = new Color(0.6f, 0.4f, 0.22f, 1f), metallic = 0f, smoothness = 0.2f, basicSurface = PixelLook.BasicSurface.Brushed },
-            new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = new Color(0.55f, 0.55f, 0.58f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Mosaic, jagged = true },
+            new PixelLook { type = PixelClicker.PixelType.Wood, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.15f, blockSurface = PixelLook.BlockSurface.Wood,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.035f, outlineShadeOfTier = true, outlineShade = -0.5f, outlineStrength = 0.8f },
+            new PixelLook { type = PixelClicker.PixelType.Rock, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.1f, blockSurface = PixelLook.BlockSurface.Stone, jagged = true },
 
             // The farming blocks: each has a bevelled rim in a shade of its own colour and an ambient particle effect.
-            new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = new Color(0.42f, 0.28f, 0.16f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain,
+            new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.05f, blockSurface = PixelLook.BlockSurface.Dirt,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.45f, outlineStrength = 0.8f,
                             farmFx = PixelLook.FarmAmbient.Crumbs },
             new PixelLook { type = PixelClicker.PixelType.Fertilizer, useColor = true, color = new Color(0.5f, 0.66f, 0.25f, 1f), metallic = 0f, smoothness = 0.2f, emission = 0.2f, basicSurface = PixelLook.BasicSurface.Grain,

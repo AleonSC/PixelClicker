@@ -1534,6 +1534,22 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 39;
         }
 
+        if (looksVersion < 40)
+        {
+            // Wood, Stone (was Rock) and Dirt got crisp drawn surfaces.
+            System.Collections.Generic.List<PixelLook> list37 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults37 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Wood, PixelType.Rock, PixelType.Dirt })
+            {
+                PixelLook def = PixelLooks.Find(defaults37, t);
+                if (def == null) continue;
+                int at = list37.FindIndex(l => l != null && l.type == t);
+                if (at >= 0) list37[at] = def; else list37.Add(def);
+            }
+            looks = list37.ToArray();
+            looksVersion = 40;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2296,13 +2312,34 @@ public class PixelClicker : MonoBehaviour
     public float SpawnShare(int i)
     {
         if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
+        FillerInfo(out int fillerIndex, out float fillerWeight);
         float total = 0f;
         for (int k = 0; k < tiers.Length; k++)
-            if (tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += SpawnWeightOf(k);
-        return total > 0f ? SpawnWeightOf(i) / total : 0f;
+            if (tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) total += k == fillerIndex ? fillerWeight : SpawnWeightOf(k);
+        float mine = i == fillerIndex ? fillerWeight : SpawnWeightOf(i);
+        return total > 0f ? mine / total : 0f;
     }
 
     private float SpawnWeightOf(int i) => Mathf.Max(0f, tiers[i].spawnWeight) * PixelPets.SpawnMultiplier(tiers[i].type);
+
+    /// <summary>
+    /// The skill pack in play may have a FILLER block (Dirt, Stone) that makes up a set share of the spawns, bigger at low skill level.
+    /// Returns its tier index (or -1) and the weight that gives it that share next to everything else in the rotation.
+    /// </summary>
+    private void FillerInfo(out int index, out float weight)
+    {
+        index = -1;
+        weight = 0f;
+        if (!PixelSkills.TryGetFiller(out PixelType type, out float share) || share <= 0f) return;
+        int f = IndexOf(type);
+        if (f < 0 || !tiers[f].CanSpawn || PixelSkills.LeftOutOfSpawns(type)) return;
+        float others = 0f;
+        for (int k = 0; k < tiers.Length; k++)
+            if (k != f && tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[k].type)) others += SpawnWeightOf(k);
+        if (others <= 0f) return;
+        index = f;
+        weight = others * share / (1f - share);
+    }
 
     private int PickSpawnTier()
     {
@@ -2318,9 +2355,10 @@ public class PixelClicker : MonoBehaviour
 
         // A skill pack in play (Mining, Farming): its pixels replace the basic pixels (White..Blue, Glass, Luminescent) in what spawns; the pixels of
         // packs that are not in play stay out unless the player turned them on as guests (a skill tree unlock).
+        FillerInfo(out int fillerIndex, out float fillerWeight);
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
-            if (tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += SpawnWeightOf(i);
+            if (tiers[i].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[i].type)) total += i == fillerIndex ? fillerWeight : SpawnWeightOf(i);
 
         if (total <= 0f) return GetHighestUnlockedIndex();
 
@@ -2328,7 +2366,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             if (!tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) continue;
-            roll -= SpawnWeightOf(i);
+            roll -= i == fillerIndex ? fillerWeight : SpawnWeightOf(i);
             if (roll <= 0f) return i;
         }
         return GetHighestUnlockedIndex();
@@ -2899,8 +2937,9 @@ public class PixelClicker : MonoBehaviour
     private static void ApplyLookTexture(MaterialPropertyBlock block, PixelLook look, int level, int max)
     {
         if (look == null || !look.HasSurfaceTexture) return;
-        bool onlyBasic = !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture && !look.meteorTexture && !look.sunTexture;
-        Texture2D tex = onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
+        bool onlyBasic = look.blockSurface == PixelLook.BlockSurface.None && !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture && !look.meteorTexture && !look.sunTexture;
+        Texture2D tex = look.blockSurface != PixelLook.BlockSurface.None ? PixelBlockTextures.Get(look.blockSurface)
+                      : onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
                       : look.meteorTexture ? PixelStarTextures.Meteor(look.damageCracks ? level : 0, max)
                       : look.sunTexture ? PixelStarTextures.Sun()
                       : look.chestTexture ? PixelLooks.ChestTexture(max > 0 ? Mathf.RoundToInt(Mathf.Clamp01(level / (float)max) * 8f) : 0)
