@@ -1082,6 +1082,14 @@ public class PixelConsumables : MonoBehaviour
     /// <summary>True for an attuned device (only affects one pixel type; made by crafting).</summary>
     public bool ItemAttuned(int item) => IsDevice(item) && devices[item - potions.Length].attuned;
 
+    /// <summary>False for the craft-only combo potions you don't hold (there are about a thousand of them): the player's window only lists the rest.</summary>
+    public bool ItemListable(int item)
+    {
+        if (item < 0 || item >= ItemCount) return false;
+        if (IsDevice(item)) { Device d = devices[item - potions.Length]; return d != null && (!d.craftOnly || d.owned > 0); }
+        return potions[item] != null && (!potions[item].craftOnly || potions[item].owned > 0);
+    }
+
     public bool ItemNotSold(int item) => IsDevice(item) && devices[item - potions.Length].craftOnly;
 
     /// <summary>The second pixel type of a combo potion.</summary>

@@ -31,6 +31,15 @@ public class PixelMenuKeys : MonoBehaviour
         }
     }
 
+    /// <summary>True when that window's docked button exists and is available (the player's own window uses this for its tool buttons).</summary>
+    public static bool CanClick(PixelAction action) => buttons.TryGetValue(action, out Button b) && b != null && b.gameObject.activeInHierarchy && b.interactable;
+
+    /// <summary>Clicks that window's docked button (opens / closes the window).</summary>
+    public static void Click(PixelAction action)
+    {
+        if (CanClick(action)) buttons[action].onClick.Invoke();
+    }
+
     private static readonly PixelAction[] MenuActions =
     {
         PixelAction.Inventory, PixelAction.Shop, PixelAction.LogWindow, PixelAction.Crafting,

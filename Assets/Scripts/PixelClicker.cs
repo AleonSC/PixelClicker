@@ -1104,6 +1104,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
+        if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
         if (PixelFind.First<PixelWoodworking>() == null) gameObject.AddComponent<PixelWoodworking>();   // Woodcutting's woodchipper and log rack
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show

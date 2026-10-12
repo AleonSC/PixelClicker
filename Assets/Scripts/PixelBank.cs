@@ -480,6 +480,9 @@ public class PixelBank : MonoBehaviour
                es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null;
     }
 
+    /// <summary>The player's own window can switch the hose on / off (same as the hose key).</summary>
+    public void ToggleHose() => SetHose(!HoseOn);
+
     private void SetHose(bool on)
     {
         if (on && !bankActive) return;

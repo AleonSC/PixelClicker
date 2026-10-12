@@ -1382,6 +1382,15 @@ public class PixelLog : MonoBehaviour
     }
 
     /// <summary>The progress bars: the next pixel unlock, then every minigame tracker that is in play (ghosts caught, singularity, stardust...).</summary>
+    /// <summary>The goals the Goals tab shows right now (the player's own window pins them): title, current count, goal.</summary>
+    public List<(string title, double count, double goal)> CurrentGoals()
+    {
+        List<(string, double, double)> list = new List<(string, double, double)>();
+        if (clicker == null) return list;
+        foreach (Goal g in CollectGoals()) list.Add((g.title, g.count, g.goal));
+        return list;
+    }
+
     private List<Goal> CollectGoals()
     {
         List<Goal> goals = new List<Goal>();
