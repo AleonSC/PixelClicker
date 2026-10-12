@@ -385,7 +385,9 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
 
         Vector3 sun = Direction(s.sunElevation, s.sunAzimuth);
         Color[] px = new Color[w * h];
-        for (int y = 0; y < h; y++)
+        // Rows are independent and Shade is pure (no Unity objects, no random state), so they are worked out on all CPU cores:
+        // swapping skies in the editor / menu used to freeze for a moment while a big panorama was drawn on one core.
+        System.Threading.Tasks.Parallel.For(0, h, y =>
         {
             // Same mapping as the Skybox/Panoramic shader: v = 1 is straight up, u = 0.25 is +z.
             float v = (y + 0.5f) / h;
@@ -400,7 +402,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
                 c.a = 1f;
                 px[y * w + x] = c;
             }
-        }
+        });
         tex.SetPixels(px);
         tex.Apply(false);
         return tex;
@@ -427,7 +429,8 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         float half = Mathf.Tan(55f * Mathf.Deg2Rad);   // 110 degrees across
         const int virtualWidth = 1024;
         Color[] px = new Color[size * size];
-        for (int y = 0; y < size; y++)
+        System.Threading.Tasks.Parallel.For(0, size, y =>
+        {
             for (int x = 0; x < size; x++)
             {
                 float fx = ((x + 0.5f) / size * 2f - 1f) * half, fy = ((y + 0.5f) / size * 2f - 1f) * half;
@@ -441,6 +444,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
                 c.a = 1f;
                 px[y * size + x] = c;
             }
+        });
         tex.SetPixels(px);
         tex.Apply(false);
         return tex;
@@ -456,7 +460,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     {
         // The sky fills the whole view (the main menu shows no floor): below the horizon it is the same sky mirrored,
         // never a flat ground colour.
-        if (dir.y < 0f && s.pattern != SkyPattern.TestGrid) dir.y = -dir.y;
+        if (dir.y < 0f && s.pattern != SkyPattern.TestGrid && s.pattern != SkyPattern.Synthwave) dir.y = -dir.y;   // (the test grid and the synthwave neon ground live below the horizon)
         float d = Vector3.Dot(dir, sun);
         float res = w / 1024f; // so stars look about the same at any size
 
