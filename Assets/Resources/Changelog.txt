@@ -672,3 +672,4 @@
 [2026-10-12 13:04 UTC] Fixed a compile error in the Toggles window (duplicate variable names).
 [2026-10-12 13:07 UTC] Skills button no longer hides under Crafting (bottom row is now Log, Crafting, Skills); Pixel Guide is back directly under Toggles.
 [2026-10-12 13:10 UTC] Skills is back under Bank, Crafting is back on the bottom right (Dev Tools centred again), and every docked menu button now shares one colour.
+[2026-10-12 13:13 UTC] My Window is now a square button beside the Toggles tab (like the Bank's hose button) instead of a button inside the Toggles window.

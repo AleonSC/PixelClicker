@@ -515,8 +515,18 @@ public class PixelToggles : MonoBehaviour
         Button open = PixelUIKit.CreateButton(font, canvasRoot.transform, "Toggles Button", buttonText, new Vector2(230f, 64f),
                                               buttonColor, buttonTextColor, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
-        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f),
-                 () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)); // stays out while its hint is showing
+        // The tab is narrower, with a square My Window button on its inner side (the Bank tab and its hose button work the same way on the left edge).
+        float squareSize = hud.ButtonSize.y, tabWidth = hud.ButtonSize.x - squareSize, groupWidth = hud.ButtonSize.x;
+        myWindowButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "My Window Button", "", new Vector2(squareSize, squareSize),
+                                                 buttonColor, buttonTextColor, 20f);
+        System.Func<bool> keepOut = () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)   // stays out while its hint is showing
+                                          || (dock != null && dock.PointerNear()) || (myDock != null && myDock.PointerNear());
+        hud.DockInGroup(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), keepOut, 0f, tabWidth, 0f, groupWidth);
+        hud.DockInGroup(myWindowButton.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), keepOut, 0f, squareSize, tabWidth, groupWidth);
+        myDock = myWindowButton.GetComponent<PixelDockedButton>();
+        myGroup = myWindowButton.gameObject.AddComponent<CanvasGroup>();
+        BuildMyWindowIcon(myWindowButton, squareSize);
+        myWindowButton.onClick.AddListener(PixelMyWindow.ToggleOpen);
         open.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Toggles, open);
         openObject = open.gameObject;
@@ -558,53 +568,6 @@ public class PixelToggles : MonoBehaviour
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(Close);
 
-        // A small button at the top left opens / closes My Window (it used to have its own docked button).
-        myWindowButton = PixelUIKit.CreateButton(font, windowObject.transform, "My Window Button", "", new Vector2(64f, 64f),
-                                                  new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 20f);
-        RectTransform mr = myWindowButton.GetComponent<RectTransform>();
-        mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(0f, 1f);
-        mr.anchoredPosition = new Vector2(14f, -12f);
-        myWindowButton.onClick.AddListener(PixelMyWindow.ToggleOpen);
-        GameObject winIcon = new GameObject("Window Icon", typeof(RectTransform));
-        winIcon.transform.SetParent(myWindowButton.transform, false);
-        RectTransform winIr = winIcon.GetComponent<RectTransform>();
-        winIr.anchorMin = winIr.anchorMax = winIr.pivot = new Vector2(0.5f, 0.5f);
-        winIr.sizeDelta = new Vector2(38f, 32f);
-        void Part(Vector2 size, Vector2 at, Color c)
-        {
-            GameObject g = new GameObject("Part", typeof(RectTransform), typeof(Image));
-            g.transform.SetParent(winIcon.transform, false);
-            g.GetComponent<Image>().color = c;
-            g.GetComponent<Image>().raycastTarget = false;
-            RectTransform r = g.GetComponent<RectTransform>();
-            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
-            r.sizeDelta = size;
-            r.anchoredPosition = at;
-        }
-        Part(new Vector2(38f, 32f), Vector2.zero, new Color(0.85f, 0.9f, 1f));                 // the window frame
-        Part(new Vector2(32f, 20f), new Vector2(0f, -4f), new Color(0.12f, 0.14f, 0.2f));     // its inside
-        Part(new Vector2(38f, 7f), new Vector2(0f, 12.5f), new Color(0.35f, 0.6f, 1f));        // the title bar
-        Part(new Vector2(22f, 3f), new Vector2(-2f, 0f), new Color(0.85f, 0.9f, 1f));          // a couple of lines
-        Part(new Vector2(16f, 3f), new Vector2(-5f, -7f), new Color(0.85f, 0.9f, 1f));
-        // Hover: a small name box under the button.
-        GameObject tip = new GameObject("My Window Tip", typeof(RectTransform), typeof(Image));
-        tip.transform.SetParent(myWindowButton.transform, false);
-        Image tipBg = tip.GetComponent<Image>();
-        tipBg.color = new Color(0.04f, 0.05f, 0.09f, 0.96f);
-        tipBg.raycastTarget = false;
-        PixelUIKit.StyleBox(tipBg);
-        RectTransform tipRect = tip.GetComponent<RectTransform>();
-        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0f);
-        tipRect.pivot = new Vector2(0f, 1f);
-        tipRect.sizeDelta = new Vector2(230f, fontSize * 1.9f);
-        tipRect.anchoredPosition = new Vector2(-20f, -6f);
-        TMP_Text tipLabel = PixelUIKit.CreateText(font, tip.transform, "Text", "My Window", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.88f, 0.4f, 1f));
-        PixelUIKit.Caps(tipLabel);
-        PixelUIKit.Stretch(tipLabel.rectTransform);
-        tip.SetActive(false);
-        PixelHoverTip myTip = myWindowButton.gameObject.AddComponent<PixelHoverTip>();
-        myTip.onEnter = () => { tip.transform.SetAsLastSibling(); tip.SetActive(true); };
-        myTip.onExit = () => tip.SetActive(false);
         y = headerH;   // same y as the shop's tab row
 
         // --- The group drop-down (Pixels / Upgrades / Minigames / Vendors / Pets).
@@ -852,9 +815,56 @@ public class PixelToggles : MonoBehaviour
 
     private PixelDockedButton dock;
     private Button myWindowButton;
+    private PixelDockedButton myDock;
+    private CanvasGroup myGroup;
     private CanvasGroup buttonGroup;
     [Tooltip("Seconds the Toggles button takes to fade back in (already tucked away) after its window closes.")]
     [SerializeField] private float buttonFadeSeconds = 1.2f;
+
+    /// <summary>The window picture on the square My Window button, plus a small name box that shows while the mouse is over it.</summary>
+    private void BuildMyWindowIcon(Button button, float size)
+    {
+        float k = size / 64f;
+        GameObject winIcon = new GameObject("Window Icon", typeof(RectTransform));
+        winIcon.transform.SetParent(button.transform, false);
+        RectTransform winIr = winIcon.GetComponent<RectTransform>();
+        winIr.anchorMin = winIr.anchorMax = winIr.pivot = new Vector2(0.5f, 0.5f);
+        winIr.sizeDelta = new Vector2(38f, 32f) * k;
+        void Part(Vector2 sz, Vector2 at, Color c)
+        {
+            GameObject g = new GameObject("Part", typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(winIcon.transform, false);
+            g.GetComponent<Image>().color = c;
+            g.GetComponent<Image>().raycastTarget = false;
+            RectTransform r = g.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+            r.sizeDelta = sz * k;
+            r.anchoredPosition = at * k;
+        }
+        Part(new Vector2(38f, 32f), Vector2.zero, new Color(0.85f, 0.9f, 1f));                 // the window frame
+        Part(new Vector2(32f, 20f), new Vector2(0f, -4f), new Color(0.12f, 0.14f, 0.2f));     // its inside
+        Part(new Vector2(38f, 7f), new Vector2(0f, 12.5f), new Color(0.35f, 0.6f, 1f));        // the title bar
+        Part(new Vector2(22f, 3f), new Vector2(-2f, 0f), new Color(0.85f, 0.9f, 1f));          // a couple of lines
+        Part(new Vector2(16f, 3f), new Vector2(-5f, -7f), new Color(0.85f, 0.9f, 1f));
+        GameObject tip = new GameObject("My Window Tip", typeof(RectTransform), typeof(Image));
+        tip.transform.SetParent(button.transform, false);
+        Image tipBg = tip.GetComponent<Image>();
+        tipBg.color = new Color(0.04f, 0.05f, 0.09f, 0.96f);
+        tipBg.raycastTarget = false;
+        PixelUIKit.StyleBox(tipBg);
+        RectTransform tipRect = tip.GetComponent<RectTransform>();
+        tipRect.anchorMin = tipRect.anchorMax = new Vector2(0.5f, 0f);
+        tipRect.pivot = new Vector2(1f, 1f);
+        tipRect.sizeDelta = new Vector2(230f, fontSize * 1.9f);
+        tipRect.anchoredPosition = new Vector2(size * 0.5f, -6f);
+        TMP_Text tipLabel = PixelUIKit.CreateText(font, tip.transform, "Text", "My Window", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.88f, 0.4f, 1f));
+        PixelUIKit.Caps(tipLabel);
+        PixelUIKit.Stretch(tipLabel.rectTransform);
+        tip.SetActive(false);
+        PixelHoverTip hover = button.gameObject.AddComponent<PixelHoverTip>();
+        hover.onEnter = () => { tip.transform.SetAsLastSibling(); tip.SetActive(true); };
+        hover.onExit = () => tip.SetActive(false);
+    }
 
     private void LateUpdate()
     {
@@ -864,8 +874,10 @@ public class PixelToggles : MonoBehaviour
         if (open) FitBesideShop();
         if (myWindowButton != null && myWindowButton.gameObject.activeSelf != PixelMyWindow.Available) myWindowButton.gameObject.SetActive(PixelMyWindow.Available);   // My Window shows up once two pixel types are unlocked
         if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f; // tucked away while the window is up and as the fade starts
-        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
+        if (myDock != null) myDock.ForceHidden = dock != null && dock.ForceHidden;
+        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; if (myGroup != null) { myGroup.alpha = 0f; myGroup.blocksRaycasts = false; } return; }
         buttonGroup.blocksRaycasts = true;
         buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
+        if (myGroup != null) { myGroup.blocksRaycasts = true; myGroup.alpha = buttonGroup.alpha; }
     }
 }
