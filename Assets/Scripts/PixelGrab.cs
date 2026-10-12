@@ -52,6 +52,13 @@ public class PixelGrab : MonoBehaviour
     [Tooltip("Fastest a thrown pixel can leave your hand (world units per second).")]
     [SerializeField] private float maxThrowSpeed = 25f;
 
+    [Tooltip("Turns off the pass-through: normally a pixel you carry or throw ghosts through the other old pixels (so it never knocks a pile about) until it is clear of them.")]
+    [SerializeField] private bool disablePassThrough = false;
+
+    [Min(0f)]
+    [Tooltip("Longest a thrown pixel stays pass-through after you let go (seconds). 0 = the coded default (4).")]
+    [SerializeField] private float passThroughMaxSeconds = 0f;
+
     private Rigidbody held;
     private OldPixelDespawn heldDespawn;
     private ScaledGravity heldGravity;
@@ -208,10 +215,57 @@ public class PixelGrab : MonoBehaviour
         heldShatter = body.GetComponent<OldPixelShatter>();
         if (heldShatter != null) heldShatter.Grabbed(); // can't break while carried
 
+        if (!disablePassThrough) StartCoroutine(PassThrough(body));
+
         PixelAudio.Play("grab");
     }
 
     private OldPixelShatter heldShatter;
+
+    /// <summary>
+    /// A carried pixel passes through the other old pixels (so grouping them up never sends the back ones flying); the collisions come back
+    /// pair by pair once it has been let go and no longer overlaps that pixel.
+    /// </summary>
+    private System.Collections.IEnumerator PassThrough(Rigidbody body)
+    {
+        Collider[] mine = body != null ? body.GetComponentsInChildren<Collider>() : null;
+        if (mine == null || mine.Length == 0) yield break;
+        System.Collections.Generic.List<Collider> ignored = new System.Collections.Generic.List<Collider>();
+        System.Collections.Generic.List<Rigidbody> others = new System.Collections.Generic.List<Rigidbody>(clicker.OldPixels);
+        foreach (Rigidbody other in others)
+        {
+            if (other == null || other == body) continue;
+            foreach (Collider theirs in other.GetComponentsInChildren<Collider>())
+            {
+                if (theirs == null || theirs.isTrigger) continue;
+                foreach (Collider m in mine) Physics.IgnoreCollision(m, theirs, true);
+                ignored.Add(theirs);
+            }
+        }
+
+        float limit = passThroughMaxSeconds > 0f ? passThroughMaxSeconds : 4f;
+        float letGoAt = -1f;
+        while (ignored.Count > 0)
+        {
+            yield return new WaitForSeconds(0.1f);
+            if (body == null) yield break;
+            if (held != body)
+            {
+                if (letGoAt < 0f) letGoAt = Time.time;
+                bool timeUp = Time.time - letGoAt > limit;
+                for (int i = ignored.Count - 1; i >= 0; i--)
+                {
+                    Collider theirs = ignored[i];
+                    if (theirs == null) { ignored.RemoveAt(i); continue; }
+                    bool touching = false;
+                    foreach (Collider m in mine) if (m != null && m.bounds.Intersects(theirs.bounds)) { touching = true; break; }
+                    if (touching && !timeUp) continue;
+                    foreach (Collider m in mine) if (m != null) Physics.IgnoreCollision(m, theirs, false);
+                    ignored.RemoveAt(i);
+                }
+            }
+        }
+    }
 
     private void FixedUpdate()
     {

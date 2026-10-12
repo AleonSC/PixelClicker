@@ -64,7 +64,7 @@ public partial class PixelSkills
     private RectTransform windowRect, listContent, headerFill;
     private ScrollRect listScroll;
     private GameObject listBar;
-    private TMP_Text headerLabel, detailName, detailDesc, detailInfo, trainLabel;
+    private TMP_Text minigameBonusLabel, headerLabel, detailName, detailDesc, detailInfo, trainLabel;
     private readonly List<Card> cards = new List<Card>();
     private readonly List<Button> perkHeads = new List<Button>();
     private readonly List<TMP_Text> perkHeadLabels = new List<TMP_Text>();
@@ -147,6 +147,10 @@ public partial class PixelSkills
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         Place(headerLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(30f, -158f), new Vector2(-30f, -100f));
+        // Right side of the header: the XP multiplier from the minigames that are switched on.
+        minigameBonusLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Minigame Bonus", "", 28f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
+        Place(minigameBonusLabel.rectTransform, 0.4f, 1f, 1f, 1f, new Vector2(0f, -158f), new Vector2(-30f, -100f));
+        minigameBonusLabel.raycastTarget = false;
         GameObject track = new GameObject("XP Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(windowObject.transform, false);
         Image trackImage = track.GetComponent<Image>();
@@ -823,6 +827,9 @@ public partial class PixelSkills
         string header = string.Format(trainingFormat, active.displayName, level);
         if (active.id == OfflineId) header += "   (pixels: " + Find(ActiveId).displayName + ")";
         PixelUIKit.SetText(headerLabel, header);
+        int minigames = EnabledMinigames;
+        float multiplier = MinigameXpMultiplier;
+        PixelUIKit.SetText(minigameBonusLabel, multiplier > 1.0001f ? "Minigames: x" + multiplier.ToString("0.##") + " XP (" + minigames + " on)" : "");
         RefreshMastery();
         headerFill.anchorMax = new Vector2(Mathf.Clamp01((float)(into / need)), 1f);
         headerFill.offsetMax = new Vector2(-3f, -3f);
