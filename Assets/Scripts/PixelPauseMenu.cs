@@ -251,6 +251,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
+    [SerializeField] private string dayNightLabel = "Day / night cycle";
+    [SerializeField] private string dayNightLengthLabel = "Length of a day";
     [SerializeField] private string autoSaveLabel = "Autosave every";
     [SerializeField] private string autoSaveMessageLabel = "Show autosave message";
     [SerializeField] private string vsyncLabel = "VSync";
@@ -2207,6 +2209,8 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
+        AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
+        AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
         AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
