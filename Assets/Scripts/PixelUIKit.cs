@@ -134,9 +134,9 @@ public static class PixelUIKit
     /// a vertical light-to-dark gradient and a bright strip just inside the top edge, so a button reads as a raised key.
     /// </summary>
     private const string PrefFancyWindows = "PixelClicker.Setting.FancyWindows";
-    private const string PrefUiColor = "PixelClicker.Setting.UiColor", PrefUiHue = "PixelClicker.Setting.UiHue";
+    private const string PrefUiColor = "PixelClicker.Setting.UiColor", PrefUiHue = "PixelClicker.Setting.UiHue", PrefUiSat = "PixelClicker.Setting.UiSat";
     private static int fancyWindowCache = -1, uiColorCache = -1;
-    private static float uiHueCache = -1f;
+    private static float uiHueCache = -1f, uiSatCache = -1f;
     private static readonly System.Collections.Generic.Dictionary<Color32, Sprite> windowSprites = new System.Collections.Generic.Dictionary<Color32, Sprite>();
     private struct WindowEntry { public Image image; public Color color; }
     private static readonly System.Collections.Generic.List<WindowEntry> windowImages = new System.Collections.Generic.List<WindowEntry>();
@@ -188,21 +188,45 @@ public static class PixelUIKit
         }
     }
 
+    /// <summary>How colourful the windows are while UI colour is on (0.2 - 1; the eyedropper sets it from the picked colour).</summary>
+    public static float UiSat
+    {
+        get
+        {
+            if (uiSatCache < 0f) uiSatCache = Mathf.Clamp(PlayerPrefs.GetFloat(PrefUiSat, 0.55f), 0.2f, 1f);
+            return uiSatCache;
+        }
+    }
+
+    /// <summary>Makes the windows take on the colour of 'c' (its hue and how colourful it is) and switches the custom UI colour on. Used by the eyedropper in Settings.</summary>
+    public static void SetUiColorFromColor(Color c)
+    {
+        Color.RGBToHSV(c, out float h, out float s, out _);
+        uiHueCache = Mathf.Round(Mathf.Clamp01(h) * 96f) / 96f;
+        uiSatCache = Mathf.Clamp(Mathf.Round(s * 24f) / 24f, 0.2f, 1f);
+        uiColorCache = 1;
+        PlayerPrefs.SetFloat(PrefUiHue, uiHueCache);
+        PlayerPrefs.SetFloat(PrefUiSat, uiSatCache);
+        PlayerPrefs.SetInt(PrefUiColor, 1);
+        PlayerPrefs.Save();
+        RefreshWindows();
+    }
+
     public static void ReloadColorFromPrefs()
     {
-        uiColorCache = -1; uiHueCache = -1f; fancyWindowCache = -1;
+        uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; fancyWindowCache = -1;
         RefreshWindows();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetWindowStatics() { fancyWindowCache = -1; uiColorCache = -1; uiHueCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
+    private static void ResetWindowStatics() { fancyWindowCache = -1; uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
 
     /// <summary>A window colour with the player's UI hue applied (dark colours stay dark but pick up a clear tint).</summary>
     public static Color Tinted(Color c)
     {
         if (!UiColorOn) return c;
         Color.RGBToHSV(c, out _, out float s, out float v);
-        Color o = Color.HSVToRGB(UiHue, Mathf.Max(s, 0.55f), Mathf.Min(1f, v * 1.5f + 0.05f));
+        Color o = Color.HSVToRGB(UiHue, Mathf.Max(s, UiSat), Mathf.Min(1f, v * 1.5f + 0.05f));
         o.a = c.a;
         return o;
     }

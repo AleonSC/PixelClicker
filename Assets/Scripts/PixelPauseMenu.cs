@@ -302,9 +302,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings tick box that switches on your own window colour.")]
     [SerializeField] private string uiColorLabel = "Custom UI colour";
 
-    [Tooltip("Label of the Settings slider that picks the hue of the windows.")]
-    [SerializeField] private string uiHueLabel = "UI colour";
-
     [Tooltip("Label of the Settings tick box for the neon glow along the black bars.")]
     [SerializeField] private string barGlowLabel = "Neon bar glow";
 
@@ -2231,8 +2228,9 @@ public class PixelPauseMenu : MonoBehaviour
         settingsRefreshers.Add(() => glowToggle.SetIsOnWithoutNotify(PixelHud.BarGlow));
         AddEyedropperButton(glowToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }));
         AddSettingToggle(list, glowCycleLabel, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on, ref y);
-        AddSettingToggle(list, uiColorLabel, () => PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
-        AddSliderRow(list, uiHueLabel, PixelUIKit.UiHue, v => PixelUIKit.UiHue = v, ref y);
+        Toggle uiColorToggle = AddToggleRow(list, uiColorLabel, PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
+        settingsRefreshers.Add(() => uiColorToggle.SetIsOnWithoutNotify(PixelUIKit.UiColorOn));
+        AddEyedropperButton(uiColorToggle, () => PixelEyedropper.Begin(c => { PixelUIKit.SetUiColorFromColor(c); settingsRefreshersRun(); }));   // pick the windows' colour from anywhere on screen
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         List<Vector2Int> resolutions = PixelDisplaySettings.Resolutions;
