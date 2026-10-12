@@ -204,7 +204,7 @@ public class PixelStorageCrate : PixelPlacedDevice
     private void ReleaseAll()
     {
         if (clicker == null) return;
-        for (int i = 0; i < Sections.Length; i++)
+        for (int i = 0; i < Sections; i++)
         {
             Section s = sections[i];
             if (s.tier < 0) continue;
