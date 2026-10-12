@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelFarmFx.cs
+//   Farming pixel particles: PixelFarmFx.Attach (ambient loop per PixelLook.farmFx: Pollen, Dew, Crumbs, Spores, Chaff, Sparkle, Bugs;
+//   attached in PixelLooks.AddExtras), Hit (non-final hit) and Break (per-type burst, gold ring for Golden Fruit) called from
+//   CollectInternal (disableFarmFx); sounds are PixelSynth.Farm(kind, seed) (pixel_dirt/fertilizer/pollen/wheat/weevil/goldenfruit,
+//   farm_hit, farm_gleam); looksVersion 29. Seed / Water are no longer in IsSpecialType (no Toggles spawn switch). PixelSkills.Update
+//   unlocks every Farming type once the first is unlocked.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

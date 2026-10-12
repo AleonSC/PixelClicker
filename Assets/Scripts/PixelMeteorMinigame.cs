@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMeteorMinigame.cs
+//   Meteor minigame (pack unlocksMinigame = "meteor", Minigames tab): a large glowing meteor (runtime-built: lumpy noise-displaced
+//   rock mesh lumpiness, lava-crack albedo/emission textures lavaCracks, a camera-facing glow sprite haloOpacity, a two-layer tail
+//   incl. a white-hot hotCoreTail, a particle-system ember stream embersPerSecond, flickering light) drifts slowly across the screen;
+//   each click gives chunksPerClick meteor chunks but never destroys it. Tracker "Meteor Chunks" (saved generically); the Meteor Pixel
+//   pack has a MinigameGoal requirement for meteor. Extends PixelMinigame (id meteor).
+// ---------------------------------------------------
 using System.Collections;
 using TMPro;
 using UnityEngine;

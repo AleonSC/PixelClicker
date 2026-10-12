@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelObsidianFx.cs
+//   Obsidian flair: natural black glass (dark neutral bevel rim, no emission / violet; looksVersion 31) with PixelLook.obsidianFx = a
+//   few pale glints (Attach, from AddExtras), Hit (shards + glints, stronger with progress) and Break (glass spray + glints) called
+//   from CollectInternal (disableFarmFx), plus FractureFx (jagged white crack lines racing outward in the camera plane, flickering and
+//   fading; more / longer with progress; replaces the old rings) and shine. Obsidian's hit / break no longer use the white FractureFx
+//   lines: they throw black / grey dust that poofs sideways (PixelObsidianFx.Dust: a flat ring of swelling, fading puffs plus a few
+//   drifting up) along with the glass shards. The Obsidian sheen (PixelLook.shine) follows the jagged mesh (ShineMesh(size, jagged,
+//   seed) displaces its grid with PixelRockMesh.Displace) so it never sticks out past the chipped edges. Obsidian clicks play
+//   PixelSynth.ObsidianPing (while pixel_obsidian has no clips) with a pitch that rises per hit (PixelAudio.OnHit 0.6 -> 1.45, break
+//   1.6).
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

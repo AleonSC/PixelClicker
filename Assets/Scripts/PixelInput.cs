@@ -1,3 +1,8 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelInput.cs
+//   Static input helpers for both input systems (PointerPosition, LeftPressed, RightPressed, PointerOverUI); minigames/consumables use
+//   using static PixelInput;.
+// ---------------------------------------------------
 using UnityEngine;
 using UnityEngine.EventSystems;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER

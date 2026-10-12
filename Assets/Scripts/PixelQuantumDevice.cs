@@ -1,3 +1,20 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelQuantumDevice.cs
+//   (extends PixelPlacedDevice) Quantum Organizer (DeviceKind.QuantumOrganizer 12, auto-added like the fan by EnsureDefaultPotions,
+//   Utilities card; needs Electric unlocked, 60 Electric, hold 3, durationSeconds 600, radius 9 = reach, boxCapacity 60 stored pixels,
+//   bodyDiameter 2.4 = the pad's inner side, bodyHeight 0.5 = wall height; model PixelConsumables.BuildQuantumBody: a glowing pad
+//   inside four low walls with corner posts). Placed like the Magnet, starts disarmed (click to switch on). While working, every 0.1 s
+//   it scans the old pixels: a loose pixel lying on the pad binds its type (up to 3 types, MaxTypes); every loose old pixel of a bound
+//   type within reach (not held / flying / despawning / kinematic, not one it just released) is taken out of the old-pixel list
+//   (ReleaseOldPixel(body, false)) and dematerialized with a glitch (GlitchOut: scripts and colliders off, jittering, stretching
+//   slivers, flickering, then destroyed) while a small display model of that type glitches into the box (GlitchIn, AddModel: up to
+//   MaxVisible 18 models per type on a lane of the pad; the stored COUNT and total payout per type are kept in Slot). A floating label
+//   shows the bound types and counts (or 'Drop a pixel on the pad'). Left-click the organizer (HandleHot blocks cube clicks via
+//   ExternalClickBlock) to release ReleasePerClick (6) stored pixels as ordinary old pixels with the average stored payout
+//   (SpawnStoredPixel, ignored by the organizer for 10 s); when its time runs out or it is removed (Ended) everything stored comes
+//   out. Saved in PlacedState.extra (ExportState/ImportState, 'Q,tier,count,total;'). It must not define its own Update / LateUpdate:
+//   per-frame work runs in OnTick. Tip device_QuantumOrganizer. Not part of the Operation tab or the UFO's placeable list yet.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;

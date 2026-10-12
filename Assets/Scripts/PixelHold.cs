@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelHold.cs
+//   PixelHold.Update(caller, target, seconds, label, colour): hold-the-right-mouse-button helper with a filling bar next to the
+//   pointer (PixelHoldMeter, built lazily); true when the hold completes. Used by PixelConsumables.UpdateRemoval (hold on a placed
+//   device -> PixelPlacedDevice.RemoveNow(), no refund; hit-test = renderer bounds, ignoring the range disc / blow area) and
+//   PixelUI.UpdateActiveHud (hold on the active-potion line -> PixelConsumables.CancelActive). Settings (removeHoldSeconds, texts,
+//   colour) are in PixelConsumables; sound device_remove.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

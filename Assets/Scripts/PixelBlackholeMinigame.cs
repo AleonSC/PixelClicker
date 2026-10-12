@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelBlackholeMinigame.cs
+//   Black hole minigame (Minigames tab, a pack with unlocksMinigame = "blackhole"): random-size swirling hole (runtime-drawn spiral
+//   textures) opens on the floor; old pixels inside are taken via PixelClicker.ReleaseOldPixel and spiral in (SpiralIn: eased start,
+//   angular speed grows as it falls, rotates to the path and stretches into a curved streak, darkens, fading trail, AbsorbFlash at the
+//   centre). While a hole is open it sets OldPixelDespawn.Frozen (old pixels stop ageing, time dilation; freezeOldPixels). A live
+//   counter (TextMeshPro, showHoleCounter) floats above each hole but is hidden until a pixel is consumed or the mouse hovers the hole
+//   (counterShowOnHover), stays counterVisibleSeconds then fades (counterFadeSeconds), and the first hole ever shows a tip box
+//   (PixelNotice, firstHoleMessage, PlayerPrefs PixelClicker.Hint.BlackHole). The shop row text is requirementLine ("Feed {1} pixels
+//   to black holes: {0} / {1}") and the Minigames-tab description is trackerHelp. Owns the singularity tracker (SingularityCount /
+//   SingularityThreshold, saved); extends PixelMinigame (id blackhole); the Singularity Pixel pack has a MinigameGoal requirement for
+//   blackhole. Shop shows the tracker row on the Minigames tab.
+// ---------------------------------------------------
 using System.Collections;
 using TMPro;
 using UnityEngine;

@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelViewBounds.cs
+//   Keeps old pixels inside the camera's view with no scene objects: each FixedUpdate builds planes through the camera along the
+//   left/right/top/bottom screen edges (top/bottom inside the black bars) plus a near limit; a pixel past a plane is pushed back and
+//   its velocity reflected (bounciness, friction). The border follows each pixel's real size: the distance to a plane is compared with
+//   the pixel's reach towards it (box support function: the sum of |normal . axis| x half size along the pixel's own axes, from its
+//   BoxCollider and lossyScale), plus extraEdgeMargin (default 0), so a pixel's outer surface - not its centre - meets the screen edge
+//   (the old fixed 0.15 margin let big pixels poke off screen and kept small ones too far in). Skips kinematic pixels and fly-away
+//   tiers (Meteor). Added by PixelClicker.Awake if missing. (An earlier version with big invisible wall slabs was reverted: the slabs
+//   tinted the screen and acted as a false floor.)
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

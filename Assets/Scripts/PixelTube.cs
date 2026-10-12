@@ -1,3 +1,8 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelTube.cs
+//   Static PixelTube.Build(points, radius, sides, mesh): smooth round tube mesh along any 3D path (rotation-minimising frames, no
+//   caps). Used by the bank hose.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

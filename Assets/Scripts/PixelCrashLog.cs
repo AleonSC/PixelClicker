@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelCrashLog.cs
+//   Local crash / error reports (added by PixelClicker.Awake). One text file per session in
+//   <persistentDataPath>/CrashReports/report_<date>.txt (header with versions + hardware, then every Error / Exception / Assert as it
+//   happens via Application.logMessageReceivedThreaded: message, stack trace, a cached game-state summary and the last recentLines log
+//   lines; repeated errors are counted; size and file count capped). A running.marker file is created at start and deleted on a clean
+//   quit; if it is still there at the next start the previous session crashed / froze, the new report says so and a notice box
+//   appears. The pause menu has a Report Folder button (PixelCrashLog.OpenFolder). Testers just send the .txt files. Also writes
+//   rendering_report.txt (GPU, render pipeline, quality levels, which shaders Shader.Find can see, glow setup via
+//   PixelClicker.DebugGlowReport) at start and on F10.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.IO;

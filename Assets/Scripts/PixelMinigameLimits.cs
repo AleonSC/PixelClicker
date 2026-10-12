@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMinigameLimits.cs
+//   Limits how many minigames have something on screen together (minAtOnce 2 / maxAtOnce 3, limitAtOnce, quietSecondsAfterPlay 30
+//   (nothing spawns that soon after Play; PixelTitleScreen.PlayTime), retrySeconds; added by PixelClicker.Awake). Each minigame
+//   overrides PixelMinigame.Busy and asks PixelMinigameLimits.AllowAnother(this) before its timer spawns something (by default only
+//   ONE minigame / visitor may be busy at a time; the allowOverlap tick box brings back the min..max numbers, a number between them is
+//   rolled each time); SpawnNow (dev tools) ignores the limit. A new minigame must do the same. Minigames that take over the floor's
+//   old pixels (Snake, Sorting Race) override PixelMinigame.Takeover and set PixelMinigame.TakeoverActive; AllowAnother refuses every
+//   minigame (takeover or not, and the Stardust stars) while a takeover round is Busy, and Pixel Grabbing / cube clicks are off
+//   meanwhile. The Ultra Pad and Black Hole never spawn on top of each other: PixelMinigame.ClaimArea / AreaFree keep a list of the
+//   round floor areas in use, and each one's TryPickSpot rejects spots that overlap the other's.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelAchievements.cs
+//   Modular achievements: Inspector list of Achievement (id, title, description, Kind, pixelType, target). New goal types = add a Kind
+//   value + a case in GetProgress; or Register(achievement, Func<double>) from code. One "{Pixel} Pet" achievement per pixel type
+//   (RegisterPetAchievements, ids pet_<Type>, single-tier custom, earned when PixelPets.IsOwned; addPetAchievements). Three more code-
+//   registered achievements (RegisterUsageAchievements / RegisterFeedAchievements: "Event Horizon" = feed a Singularity pixel to a
+//   black hole (PixelBlackholeMinigame.PixelSwallowed event -> PixelStats.SingularitiesFed); "Potion Taster" = every buyable potion
+//   drunk once, "Gadgeteer" = every device kind placed once; progress from PixelStats PotionsUsed / FansUsed / VacuumDevicesUsed /
+//   SortersUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
+//   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
+//   Kind.ClickPixelType). Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using TMPro;

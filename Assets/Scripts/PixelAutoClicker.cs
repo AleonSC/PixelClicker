@@ -1,3 +1,9 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelAutoClicker.cs
+//   Timer that calls clicker.AutoCollect() (paused while a takeover minigame runs or the cube is shrunk away:
+//   PixelMinigame.TakeoverActive / PixelClicker.CubeHidden); Interval / ClicksPerTick properties; Activate() from shop; startRunning
+//   for testing.
+// ---------------------------------------------------
 using UnityEngine;
 using UnityEngine.Events;
 

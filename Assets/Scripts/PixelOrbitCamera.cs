@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelOrbitCamera.cs
+//   Orbital camera (added by PixelClicker.Awake; the THIRD step of the perspective key PixelAction.FirstPerson: normal -> first person
+//   -> orbital -> normal, driven from PixelFirstPerson.Update; disableOrbit): the REAL camera swings round the cube (Enter captures
+//   the home pose; yaw / pitch / distance round CubeBasePosition, rotation = look-at-cube x aimOffset so the cube keeps its on-screen
+//   spot): middle-mouse drag (PixelInput.MiddleHeld, dragDegreesPerPixel 0 = 0.25) or arrow keys (keyDegreesPerSecond 0 = 90) turn /
+//   tilt (pitch min minPitch 0 = 6 so it never looks from under the floor), Shift + wheel zooms (minDistanceFraction 0 = 0.35,
+//   maxDistanceFraction 0 = 2), followSharpness smoothing, a hint line for hintSeconds. Clicks need no change (raycasts go through
+//   TargetCamera). While PixelOrbitCamera.Active, PixelOrbitCamera.HomeCamera (a hidden disabled copy at the home pose) is what
+//   PixelViewBounds and PixelFloor.FitToView read, so old pixels stay inside the NORMAL view and fitted floors don't re-fit. Leaving
+//   glides back over returnSeconds (0 = 0.7); the title screen, the camera intro and takeover / zooming minigames (any Busy + Takeover
+//   one) end it or block it.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

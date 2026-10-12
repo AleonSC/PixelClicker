@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelStardustMinigame.cs
+//   Stardust minigame (id stardust, passive: Running = the Meteor pixel is unlocked, no pack of its own; added by PixelShop like the
+//   others): every meteor pixel that shoots off (PixelClicker.FlyAwayLaunched static event) has starChance of knocking a star down;
+//   after fallDelaySeconds a runtime-built five-pointed star (vertex-coloured mesh, Sprites/Default, trail, point light) falls beside
+//   the cube onto the old-pixel floor (rigidbody, gravityScale), waits starLifetime s (blinks then shrinks away) and is collected by
+//   clicking within clickRadiusPixels of it (+stardustPerStar stardust, rising text). Tracker "Stardust" (saved generically, goal
+//   stardustGoal); the Solar Pixel pack (PixelType.Solar, Pixels tab, needs the Meteor Pixel pack + the stardust MinigameGoal) is
+//   gated by it. Tip minigame_stardust, sounds stardust_fall/_collect (code-synthesized while their clip lists are empty:
+//   PixelSynth.StarFall a falling glassy whistle with tinkling sparkles, StarChime a rising three-note chime; + the automatic
+//   stardust_spawn/_click). Magic dust (a world-space PixelFx particle system, gold / lavender sparkles, ~60 per second while the star
+//   falls or moves, none once it lies still) trails the star, and a white twinkle (a four-point sprite that pulses every ~2.4 s) shows
+//   while it is still (Star.dust / Star.twinkle). Has a Toggles-window switch and dev Spawn/Despawn like every minigame.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;

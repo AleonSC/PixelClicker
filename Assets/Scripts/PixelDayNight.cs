@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelDayNight.cs
+//   Day / night cycle (added by PixelClicker.Awake; disableDayNight): TimeOfDay 0..1 (0 midnight, 0.5 noon; a new game starts at 0.38)
+//   advances with SCALED time (stops while paused / Time Stop) over LengthMinutes (Settings > Interface 'Length of a day': 4 / 8 / 15
+//   / 30, default 8; switch 'Day / night cycle', default on; PlayerPrefs PixelClicker.Setting.DayNight / DayNightLength, per save) and
+//   drives the scene's sun (RenderSettings.sun or the first directional light: pitch / yaw swing sunSweepDegrees 140, warm near the
+//   horizon, moonColor at night, intensity down to minSunIntensity 0.3), the ambient light (minAmbient 0.55) and the sky material's
+//   _Tint / _SkyTint (nightSkyColor, duskSkyColor); everything is restored when switched off. Night never goes fully dark.
+//   PixelDayNight.Level (0 night .. 1 day) is there for other systems (not used yet). The time of day is the saved stat counter
+//   daynight.time (x10000).
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

@@ -1,3 +1,10 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelVacuumDevice.cs
+//   (extends PixelPlacedDevice) Runtime behaviour of a placed vacuum device (lathe-turned body PixelConsumables.BuildVacuumBody /
+//   VacuumLatheMesh: flared base, waist, funnel mouth with a lip, two glowing bands, a glowing core and a small spinning turbine
+//   'Spinner' turned in OnTick; it lasts only vacuumDeviceSeconds (0 = 5 s), DeviceSeconds(d)): pulls old pixels in its radius,
+//   PixelClicker.AbsorbOldPixel, timer text above it, shrinks away at 0. Built by PixelConsumables.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

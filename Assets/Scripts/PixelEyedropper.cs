@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelEyedropper.cs
+//   Eyedropper (created on demand by PixelEyedropper.Begin(callback)): hides the pause menu (PixelPauseMenu.SetMenuVisible(false)),
+//   waits for the end of the frame, grabs a screenshot (ScreenCapture.CaptureScreenshotAsTexture), shows it frozen full-screen on its
+//   own canvas (950) with a small loupe (colour swatch + hex code) following the pointer; left-click hands that colour to the
+//   callback, right-click / Escape (PixelWindows 175) cancels, then the menu comes back. Used by the small eyedropper button next to
+//   the 'Neon bar glow' tick box in Settings > Display (PixelPauseMenu.AddEyedropperButton, PixelUIKit.EyedropperSprite(); the 'Bar
+//   glow colour' hue slider is gone): PixelHud.SetGlowFromColor(colour) stores an exact colour (PixelHud.GlowCustomColor, PlayerPrefs
+//   PixelClicker.Setting.GlowColor, hex, per save via PixelSettingsSync), sets the hue slider to its hue and switches 'Cycle glow
+//   colour' OFF; the neon bar glow of the game's black margins (PixelHud.Update) and the main menu's bar (PixelTitleScreen) read
+//   PixelHud.GlowColourNow(...) = the picked colour while static, else the hue (drifting while cycling). Moving the hue slider clears
+//   the picked colour; switching Cycle on drifts on from the picked colour's hue.
+// ---------------------------------------------------
 using System;
 using System.Collections;
 using TMPro;

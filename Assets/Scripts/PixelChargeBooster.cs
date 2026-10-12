@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelChargeBooster.cs / PixelLightningRod.cs
+//   Electric devices (DeviceKind.ChargeBooster / LightningRod, defaults auto-added like the fan, cost Electric pixels; Device.uses /
+//   chargeCapacity / superChargeSeconds / superClicksPerSecond / strikeSeconds). Both last a number of uses, not time:
+//   PixelPlacedDevice.InitUses / SpendUse / UsesLabel (uses mode: no countdown, AddSeconds ignored, Remaining = uses left so saves
+//   store it; PixelConsumables.UsesKind). Charge Booster: spends one use per auto-clicker click (PixelClicker.PixelCollected, its own
+//   super-charge clicks excluded); PixelElectricLinks.ConsumeForBooster feeds each Electric pixel that links straight to it into
+//   AddCharge and dissipates the pixel (no +1 s, no chain through it); full meter (tall meter beside the body) = click it
+//   (PixelClicker.ExternalClickBlock while hovered) to start a super charge: superClicksPerSecond extra AutoCollect() calls for
+//   superChargeSeconds with crackling bolts and a light; charge is saved in PlacedState.aim. Lightning Rod: every strikeSeconds, if
+//   non-Electric old pixels lie within its radius, a bolt hits the tip and every one becomes an Electric pixel (same payout,
+//   ReleaseOldPixel + SpawnStoredPixel); one strike = one use. PixelBoltLayer (in PixelChargeBooster.cs) = shared unparented dynamic
+//   bolt mesh. Stats booster.supercharges, rod.strikes/converted.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using static PixelInput;

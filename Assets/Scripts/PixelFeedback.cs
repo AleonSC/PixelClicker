@@ -1,3 +1,19 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelFeedback.cs
+//   Give feedback (for testers): the pause menu's long green Give feedback button (right above Quit; no longer in Settings) or the
+//   rebindable PixelAction.Feedback key (default F8; PixelKeys enum value 14, label 'Give feedback') opens a 1400x960 window (own
+//   canvas 800, above the pause menu, PixelPop): a multi-line text box, Take screenshot (CaptureRoutine: hides this window's canvas
+//   and the pause menu's (PixelPauseMenu.SetMenuVisible(false)) for a frame, WaitForEndOfFrame,
+//   ScreenCapture.CaptureScreenshotAsTexture = the game without any menu; up to maxShots 4, selected with small numbered buttons in
+//   the drawing area), a pencil (8 colours, fixed width pencilWidthFraction of the picture; strokes are drawn straight into the
+//   texture's pixel array by PixelFeedbackCanvas pointer events), Undo (removes the last stroke and replays the rest over the clean
+//   screenshot, maxStrokes), Remove shot, Open feedback folder, Cancel and Save feedback: everything is appended to ONE text file
+//   <persistentDataPath>/Feedback/feedback.txt (a block per entry: date / time, game version, Unity version, platform, session
+//   minutes, the text, the screenshot file names) and each (drawn) screenshot is saved next to it as feedback_<timestamp>_<n>.png.
+//   While it is open the game is paused (restored on close; the pause menu already pauses) and PixelKeys.Typing reads true so the
+//   game's keys do nothing; Escape closes it (PixelFeedback.Open / ClosedThisFrame keep the pause menu from also stepping back). Added
+//   to the pause menu's object by PixelPauseMenu.BuildUI.
+// ---------------------------------------------------
 using System;
 using System.Collections;
 using System.Collections.Generic;

@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelProspectorVendor.cs
+//   The Prospector (id prospector, 'Pip the Prospector'; a visitor drawn as a CUBE like Cubie - orange earth tones, hard hat with a
+//   lamp, pickaxe, grin - the test for turning vendors into cube characters): he BUYS mining goods for pure currency (RollTrades: up
+//   to offerCount 3 different ores you hold >= minHeld, each asks minSellFraction..maxSellFraction of your stock and pays a random
+//   unlocked pure pixel (White..Blue) at the rarity-based rate (UnitValue) x sellRate (0 = 0.8) x luck; the base trade rows say 'Sell'
+//   via TradePayWord / TradeText). He only visits while Mining is the skill in training (CanVisit = PixelSkills.TrainingId ==
+//   MiningId; a failed check just waits for the next visit timer) and is started by PixelGuideVendor.StartVendors as soon as Mining is
+//   available (first visit after about otherFirstVisitSeconds x 0.5-1). Counter prospector.bought. Mining's whole 'sink' for now is
+//   selling to him; the Sell tab / skill upgrades are on the to-do.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

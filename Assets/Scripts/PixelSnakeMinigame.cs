@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSnakeMinigame.cs
+//   Snake minigame (pack unlocksMinigame = "snake", Minigames tab, needs the RGB pack; every minInterval..maxInterval s when at least
+//   minPixels old pixels lie around and AllowAnother): snapshots the old pixels on the floor (not flying / vanishing / held; up to
+//   maxPixels), hides the cube (SetCubeShrink), shrinks away every old pixel that is not part of the round (they grow back afterwards)
+//   and freezes the chosen ones (isKinematic, gravity-well / float behaviours off, OldPixelDespawn.HoldAll so nothing despawns; the
+//   area is cut to the part of the floor that is in view and any pixel outside it or in the air is moved onto the floor inside it) and
+//   spawns a code-built head (green cube with eyes) that glides at speed pixel-widths/s on the floor plane (camera-relative arrow
+//   directions, no 180° turns, the area's edges just stop it); arrow keys (both input systems) or the on-screen arrow buttons steer.
+//   Touching a pixel (eatDistance) appends it to the body, laid along the head's trail (PlaceBody, segmentSpacing); biting the body
+//   past safeSegments or running out of timeLimit ends the round (pixels drop and age again); eating all pays rewardMultiplier (10) x
+//   each eaten pixel's OldPixelInfo.amount via PixelClicker.AddCurrency and shrinks them away. While PixelSnakeMinigame.Active cube
+//   clicks (ExternalClickBlock) and Pixel Grabbing are off. Sounds snake_start/_eat/_win/_lose, tip minigame_snake. Extends
+//   PixelMinigame (id snake; dev Spawn/Despawn work, Despawn ends the round cleanly).
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;

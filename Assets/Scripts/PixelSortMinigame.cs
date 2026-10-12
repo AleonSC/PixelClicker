@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSortMinigame.cs
+//   Sorting Race minigame (id sort, pack unlocksMinigame = "sort", Minigames tab, needs the RGB pack; takeover minigame like Snake):
+//   every minInterval..maxInterval s, with at least minPixels old pixels of 2+ types lying around, up to maxPixels of them (types
+//   taken in turn so groups are similar in size) are frozen (kinematic, OldPixelDespawn.HoldAll), shuffled and slide into a grid
+//   centred on the screen's floor (shrunk to fit the view); the old pixels that are not in the race shrink away and come back
+//   afterwards (shrinkOthers, bystanderSeconds); the cube shrinks out of the way during the race (cubeShrinkScale,
+//   PixelClicker.SetCubeShrink) and the grid never takes more than maxScreenFraction of the screen; a timer (baseSeconds +
+//   secondsPerPixel * n) starts once they are in place; click one pixel then another (screen-distance pick, clickRadiusPixels) to swap
+//   them (swapSeconds); sorted = every type forms exactly ONE unbroken run in reading order (Runs() == distinct types) -> each pixel
+//   pays amount * (rewardMultiplier + speedBonusMultiplier * timeLeftFraction) via PixelClicker.AddCurrency and shrinks away; timeout
+//   = they drop and age again. Sounds sort_start/_ready/_pick/_swap/_win/_lose, tip minigame_sort.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;

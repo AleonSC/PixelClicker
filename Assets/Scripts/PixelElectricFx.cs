@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelElectricFx.cs
+//   Looks / effects of the Electrician pixels: PixelLook.electricFx (ElectricAmbient) attaches per-type ambient particles (Wire copper
+//   sparks along the edges, Battery rising green bubbles, Capacitor crackling blue static, Resistor red heat embers, Transistor cold
+//   blips, Fuse a spark fountain on top, Bulb warm motes), Hit / Break (called from CollectInternal for IsElectricalBlock types,
+//   disableFarmFx) throw sparks plus coloured arcs (FractureFx.Play(..., core, glow); smoke for Resistor / Fuse), and each pixel has
+//   its own synthesized click sound (PixelSynth.Elec(kind, seed): twang, thunk + hum, charge whine + snap, buzz, digital blip, hiss +
+//   pop, glassy ting; used while the pixel_<type> clip list is empty); looksVersion 34.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

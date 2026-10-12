@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelWindows.cs
+//   CloseAllExcept(owner) closes every open window with priority < 100 (Crafting calls it when it opens, and closes itself when
+//   AnyOpenExcept(this) turns true; the event log fades out whenever any registered window opens, see PixelHints.Update). Static
+//   registry of closable windows (placing a device 100, shop upgrades window 40, shop 30, log 20, inventory 10). Escape closes the
+//   topmost one; the pause menu only opens on Escape when none is open. New windows should PixelWindows.Register(this, priority,
+//   isOpen, close) and Unregister(this) in OnDestroy.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 

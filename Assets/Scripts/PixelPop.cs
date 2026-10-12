@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelPop.cs
+//   Open / close animation for windows and tip boxes (component on the Inventory box, the Log panel, the Got-it box, the Shop panel,
+//   the Crafting window, the Toggles window and every pause-menu screen: PixelPauseMenu.SetView pops the screen in, resuming shrinks
+//   the open one): it grows from smallScale to full size on enable (growSeconds, small overshoot, unscaled time, scales around the
+//   rect's pivot) and PixelPop.Hide(go[, deactivate]) shrinks it (shrinkSeconds) before deactivating; PixelPop.Show(go) also cancels a
+//   shrink under way; PixelPop.IsOpen(go) = shown and not closing. Open / close such windows through Show / Hide / IsOpen, not
+//   SetActive / activeSelf. Fit to screen: a fixed-size window (not stretched in x / y) that is bigger than the canvas between the
+//   black bars is scaled down by PixelPop.ComputeFit (UI scale 130% makes the canvas only ~830 units tall, so the 880-tall shop would
+//   be cut off).
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

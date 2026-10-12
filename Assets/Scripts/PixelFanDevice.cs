@@ -1,3 +1,9 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelFanDevice.cs
+//   (extends PixelPlacedDevice) Runtime behaviour of a placed fan (device kind = Fan): pushes old pixels inside a floor wedge (cone
+//   angle/length/height) along its forward, spinning blades, timer. Placed like the vacuum, turned with scroll wheel or Q/E while
+//   placing.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

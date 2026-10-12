@@ -1,3 +1,13 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelNuclearPixel.cs
+//   Nuclear pixel (PixelType.Nuclear 33, IsStandalone (no potions / seeds / crafting / pets / achievements / Value upgrades), spawn
+//   switch in Toggles; testing pack 'Nuclear Pixel': 10 White, no requirements, spawn weight 0.3, pays 8; looksVersion 27): glowing
+//   toxic-green look with PixelLook.radiation (PixelRadiationFx.Attach: drifting green motes). Its OLD pixel gets OldPixelRadiation
+//   (added in SpawnFallingCopy; nuclearRadiusPixels 0 = 4 main-pixel widths, nuclearAgeRate 0 = 40 age-seconds per real second,
+//   disableNuclearFx): every 0.15 s it calls OldPixelDespawn.Hasten(seconds) on every other old pixel in range (not other Nuclear
+//   pixels; held pixels, black holes, takeover minigames and the dev no-despawn switch still protect; gravity-well keep-alive does
+//   NOT), so they vanish (no payout) within a second or two; a pulsing green ring (PixelFxRing) and light show the reach.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelOfflineProgress.cs
+//   Offline progress: PixelSaveGame stores savedAtTicks (UTC) on every save and, on the startup load only, calls Grant(lastSaved).
+//   Rare drops (Dragon Cubes) are not averaged but rolled with a Poisson count of pixels x weight / total weight (RollPoisson). If the
+//   auto clicker is running it pays the average earnings for the (capped, scaled) time away - clicks = time x efficiency / interval x
+//   clicks-per-tick, split across unlocked tiers by spawn weight, tough pixels needing several clicks - and shows a "Welcome back"
+//   window (held back until the title screen is gone, Update + pendingGains; any later load - another slot - Dismiss()es it).
+//   Settings: max hours, efficiency, minimum away time.
+// ---------------------------------------------------
 using System;
 using System.Text;
 using TMPro;

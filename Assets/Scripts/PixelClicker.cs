@@ -1,3 +1,20 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelClicker.cs
+//   Core. Click-me hint: while the Inventory UI's guide text ("Click N more...") shows and nothing has been collected yet
+//   (PixelClicker.ClickHint, set by PixelUI.UpdateGuide; ClickHintPulse), the cube pulses bigger / brighter
+//   (clickHintAmount/Brightness/Speed, disableClickHint). Manual clicks on the cube are rate-limited by minClickInterval (0.07 s;
+//   ignores clicks that come sooner; auto clicker, hose and minigames are exempt). Owns the PixelTier[] list, currency counts/totals,
+//   click handling (raycast), spawn/materialize/pulse/hover/spin animation, old-pixel "falling copy" physics (half-size copies, pop in
+//   tiny + no collision, swell-and-shrink despawn), vacuum suction (sucked-up pixels swirl round the Vacuum pixel while shrinking into
+//   it: SuckRoutine turns each pixel's offset round the vertical axis, vacuumSwirlTurns 0 = 0.6 turns, scaled down for pixels that
+//   start close to the target, lazy tumble, disableVacuumSwirl; also used by Vacuum devices) (the old Vacuum pixel that drops after a
+//   vacuum click shows the pixels it sucked up as very small, drifting, spinning versions inside its see-through body: Vacuum()
+//   collects their tiers in vacuumContents, SpawnFallingCopy adds PixelVacuumContents (PixelVacuumContents.cs, CreateDisplayPixel
+//   children) - hideVacuumContents (off), vacuumContentsMax (0 = 16), vacuumContentSize (0 = 0.26 of the cube's edge): new fields use
+//   'off' / 0 = default so a scene saved before they existed still gets the feature), bright falling pixels (brightOldPixelTypes =
+//   Luminescent: extra emission oldPixelGlowBoost + a fading light trail, lightTrail* settings), shared UI font (UIFont), FormatNumber
+//   (public static). Also defines helper MonoBehaviours ScaledGravity and OldPixelInfo at the bottom of the file.
+// ---------------------------------------------------
 using System;
 using System.Collections;
 using System.Collections.Generic;

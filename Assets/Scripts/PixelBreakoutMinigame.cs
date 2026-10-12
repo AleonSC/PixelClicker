@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelBreakoutMinigame.cs
+//   Breakout minigame (id breakout, pack unlocksMinigame = "breakout", Minigames tab, needs the RGB pack; takeover minigame): every
+//   minInterval..maxInterval s with at least minPixels (30) old pixels around, up to maxBricks of them (random) become the bricks:
+//   frozen (kinematic, colliders off, OldPixelDespawn.HoldAll), scaled to fit and glided (slideSeconds) into a wall in a court plane
+//   facing the camera (flat Sprites/Default blocks under a root, depthFraction of the way to the cube so it is in front of the old
+//   pixels; courtWidth/Height/CentreY, wallHeightFraction, brickColumns); all other old pixels shrink away and come back after the
+//   game (bystanderSeconds, same as Sorting Race) and the cube shrinks away (hideCube); the court's background is transparent by
+//   default (backOpacity 0..1, colour backColor). Mouse (projected onto the court plane) or Left/Right arrows move the paddle; the
+//   ball is a spinning CreateDisplayPixel of a random brick's type, speeds up per brick (speedUpPerBrick, maxBallSpeed); lives balls;
+//   every broken brick pays amount * brickMultiplier (10) immediately via AddCurrency and shrinks away (OldPixelDespawn.Begin); bricks
+//   left when the game ends (out of balls / timeLimit) go back to where they were and drop. Sounds
+//   breakout_start/_hit/_brick/_miss/_win/_lose, tip minigame_breakout.
+// ---------------------------------------------------
 using System.Collections;
 using TMPro;
 using UnityEngine;

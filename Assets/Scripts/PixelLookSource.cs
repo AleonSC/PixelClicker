@@ -1,3 +1,9 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelLookSource.cs / PixelNoise.cs
+//   IPixelLookSource = anything with looks to step through (Usable, Current, StyleName, PreviewTexture/Color/Rect, Step); the pause
+//   menu's AddLookRow and the title screen's BuildLookPicker only use this. PixelNoise = shared tileable noise (Hash, TileNoise, Fbm
+//   incl. separate u/v periods, Voronoi) used by floor textures.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

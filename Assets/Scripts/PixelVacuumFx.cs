@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelVacuumFx.cs
+//   The Vacuum pixel's look (looksVersion 38 replaced the saved look; thick solid violet bevel outline (outlineThickness 0.055,
+//   strength 1) so it never reads as the plain Glass pixel; the old six-faced vortex marks are no longer used by it, faceCircles /
+//   faceRing still exist for other looks): PixelLook.vacuumContainer draws a clear lavender glass container - a hollow box with thin
+//   walls (PixelVacuumMesh: outer skin, inner surfaces facing the hollow, a round opening (HoleRadius 0.21 of the edge, Wall 0.07) in
+//   each of the FOUR side faces (+/-X, +/-Z) with a tube through each wall; the top and bottom are plain walls; PixelClicker.MeshFor
+//   swaps the mesh like the jagged rock mesh) and PixelLook.windFx adds a glowing lavender lip round every opening (overlay ring) and
+//   a suction wind at each one (rate ~26 per second per opening) (PixelVacuumFx.Attach: a local-space ConeVolume particle system
+//   (narrow 26 degree cone, 1.05 cube-widths long) whose +Z points out of the opening: stretched streaks with a RADIAL velocity
+//   towards the emitter origin (the opening's centre) so they funnel into the hole, a slight orbital curl, shrinking away as they
+//   arrive, ~46 per second). Both live cube and old pixels get them (old pixels keep the sucked-up pixels floating inside the glass
+//   via PixelVacuumContents).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

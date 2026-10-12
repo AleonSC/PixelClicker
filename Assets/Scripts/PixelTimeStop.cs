@@ -1,3 +1,19 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelTimeStop.cs
+//   Time Stop (shop pack with unlocksTimeStop, Upgrades tab): press T to set Time.timeScale = 0 (everything incl. countdowns) and
+//   again to resume. Has an energy meter (maxStopSeconds, refillSeconds, minStartFraction, hideDelaySeconds): drains (unscaled time)
+//   only while stopped, auto-resumes at 0, refills immediately after resuming, shown at the top only while stopped / refilling /
+//   briefly after full. Static PixelTimeStop.IsStopped: PixelClicker still takes cube clicks while it is true, animates the cube with
+//   AnimDelta (unscaled), and uses timeStopStockpileMax instead of maxFallingCopies, so spawned old pixels hang at the cube (no
+//   physics step) and burst out on resume (payouts are immediate). Switch in the Toggles window (UserDisabled, saved). A screen haze
+//   (radial tint + vignette, showHaze, hazeColor/hazeEdgeColor, fades in/out, canvas below other UI) shows while stopped. Sounds
+//   time_stop/time_resume/time_denied plus the looping hum time_stop_loop (loopSoundId; started/stopped via
+//   PixelAudio.StartLoop/StopLoop). PixelShop finds/adds it. Time Slow (shop pack unlocksTimeSlow, Upgrades tab, needs Time Stop;
+//   ActivateSlow/DeactivateSlow): press S (PixelAction.TimeSlow) to set Time.timeScale = slowTimeScale (0.15; Time.fixedDeltaTime
+//   scaled too) using the same energy meter at slowDrainFactor of the stop drain, lighter haze (slowHazeStrength), sounds
+//   time_slow/_end/_loop, tips timeslow / timestop_slow. Static PixelTimeStop.IsSlowed / SlowFactor / EndAll() (called before
+//   returning to the main menu); PixelClicker.AnimDelta is unscaled while slowed so the cube still feels normal.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

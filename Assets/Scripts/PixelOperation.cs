@@ -1,3 +1,21 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelOperation.cs / PixelShopOperation.cs
+//   Upgrades > Operation (the third sub-tab of the shop's Upgrades tab, operationSubTabText; upgradesSubTab 2): one row per consumable
+//   (Vacuum Device, Fan, Sorter, Charge Booster, Lightning Rod, Combo Fuel, Ghost Bait, Pet Treat - listed once the pixel type it
+//   needs is unlocked or you hold one, PixelConsumables.OperationListed) with a rotating 3D picture on the left (a hidden studio per
+//   consumable far below the scene OperationStudioHeight, a camera rendering into a RenderTexture shown by a RawImage, re-rendered
+//   each frame only for visible rows, UpdateOperationPictures; the model comes from PixelConsumables.CreateDisplayModel = the real
+//   device builders with displayOnly (no timer / range) or simple item models), an orange '!' box with the consumable's description
+//   and an orange upgrade arrow that opens the shared upgrades window (OpenOperationWindow, openOperation) listing that consumable's
+//   upgrades as plain rows (name + level, cost coloured by affordability, Upgrade button) whose orange '!' tooltip shows the
+//   statistics (OperationStatText: now / next level / at max, from PixelConsumables.OperationBase). Upgrades are PixelOperationUpgrade
+//   entries (PixelOperation.cs: id, name, description, device, stat (PixelOperationStat), maxLevel, perLevel, baseCost x
+//   costGrowth^level paid in the pixel the consumable itself needs, unit) in PixelShop.operationUpgrades (the built-ins are added by
+//   id, EnsureDefaultOperationUpgrades); the level is the stat counter op.<id> (PixelStats.Best, saved generically). Effects:
+//   PixelConsumables.EffectiveDevice(d) (a clone with Duration / Radius / Pull / Blow / Sorter max force / Uses / Charge needed /
+//   Super charge / Strike interval applied, used for placing, previewing and descriptions), Storage in ItemCapacity, Pet Treat length
+//   (PixelPets.TryUseTreat) and extra Ghost Bait ghosts (PixelGhostMinigame.UseBait).
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;

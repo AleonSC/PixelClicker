@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelPetsStudio.cs
+//   Part of partial class PixelPets: the Outfit Studio (button 'Design outfits' in the Customize Pet window, own canvas
+//   customizeSortingOrder + 20, PixelWindows 170). The player builds custom outfits from basic shapes (CPiece: cube / sphere /
+//   cylinder / capsule / cone, position, size, turn, colour (16 StudioColors), opacity, optional mirror = a second copy on the other
+//   side) on a dummy: a plain grey cube or the real-look model of ANY pet they own (studioDummy; some pets look different), in a
+//   hidden studio (StudioStageHeight) shown by a RawImage (drag to turn, wheel to zoom; a yellow marker shows the selected shape's
+//   centre). Outfits (COutfit: name, forType = one pet type or -1 any) are edited live (every change saved) with a piece list, nine
+//   sliders, swatches, duplicate / delete, New / Delete outfit, and 'Wear this outfit'. Outfit numbers 10000 + n are custom outfits
+//   (CustomBase; BuildOutfit handles them, so live pets, title-screen pets and previews all use them; deleting one renumbers / clears
+//   pets wearing it); the outfit arrows cycle OutfitChoices(type) = built-ins then the custom ones that fit that pet. Saved as JSON in
+//   PlayerPrefs PixelClicker.Setting.PetOutfits (per save file via PixelSettingsSync, reloaded by PixelPets.ReloadOutfitsFromPrefs).
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using TMPro;

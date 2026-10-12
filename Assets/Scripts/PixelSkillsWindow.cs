@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// Skill tree window (PixelSkillsWindow.cs, PixelScrollFadeX.cs)
+//   The tree's nodes sit in a SIDEWAYS scroll view (nodeView + nodeScroll, wheel / drag; RefreshTree widens nodeArea when the tree is
+//   wider than the view) whose left / right edges fade out while there is more to see (PixelScrollFadeX: a CanvasGroup on every node
+//   and connector line, alpha by distance to the edge). A button at the tree window's TOP LEFT (treeExpandButton, arrow glyph) makes
+//   the tree cover the Skills window (treeExpanded: UpdateTreeLayout starts the tree at the window's left edge); pressing again,
+//   closing the tree or the window gives the window back.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;

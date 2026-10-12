@@ -1,3 +1,13 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelKeys.cs
+//   Rebindable keys: PixelAction enum (TimeStop, Hose, RotateLeft, RotateRight, EventLog, TimeSlow, FirstPerson), defaults + the
+//   player's choices (PlayerPrefs PixelClicker.Key.*), PixelKeys.Pressed/Held(action) (both input systems; KeyCode <-> Key mapping),
+//   TryCapture (rebinding screen), Name, Replace(text) (fills {key:TimeStop} style placeholders in Controls.txt, tip boxes, device
+//   placing messages; also rewrites old literal "Q / E", "Press T to freeze time", "press B for the hose"). A key already used by
+//   another action swaps. Other scripts must call PixelKeys instead of checking fixed keys. While a text box has the keyboard
+//   (PixelKeys.Typing, once per frame) every Pressed / Held / KeyPressed / KeyHeld returns false, so typing in the recipe search or
+//   other input fields never triggers Time Stop, the hose, first person and so on. Escape (pause / close window) is not rebindable.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;

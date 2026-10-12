@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelGrab.cs
+//   Pixel Grabbing (unlocked from the start - Awake sets grabbingActive; the shop pack was removed by MigrateOldPackData; it keeps its
+//   on / off switch in Toggles > Upgrades, on by default): hold left mouse on an old pixel (sphere-cast, grabRadius) to drag it on the
+//   camera-facing plane through it (rigidbody velocity follows the mouse, so it still collides), release to throw (throwStrength,
+//   maxThrowSpeed); a held pixel's OldPixelDespawn.Held freezes its lifetime (a held glass pixel can't shatter; releasing slower than
+//   gentleReleaseSpeed = a soft set-down: no break, speed damped, gentleLifetimeBonus seconds added via OldPixelDespawn.AddLifetime)
+//   and its ScaledGravity is paused. While time is slowed a still-flying meteor pixel (OldPixelFlight, trigger collider) can be
+//   grabbed too: PixelClicker.LandFlyingPixel turns it into an ordinary old pixel (solid, gravity, view bounds, normal lifetime);
+//   grabbing / throwing divide / multiply velocities by PixelTimeStop.SlowFactor so it still follows the mouse normally. Gentle
+//   collisions: a carried pixel is light (carriedMassFactor 0 = 0.2 of its mass, stays light lightSecondsAfterThrow 1.5 s after the
+//   throw) and every old pixel within ~1.7 widths of a light one has its speed capped to hitReactionSpeedLimit (0 = 5) for 0.7 s
+//   (LimitReactions, MakeLight), so piles react less and nothing flies far; physics still applies (disableGentleHits). Sets
+//   PixelClicker.GrabEnabled so clicks on old pixels no longer pass through to the cube. Sounds grab/drop. PixelShop finds/adds it.
+// ---------------------------------------------------
 using UnityEngine;
 using static PixelInput;
 

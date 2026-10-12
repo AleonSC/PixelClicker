@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMinigame.cs
+//   Abstract base for minigames (registry PixelMinigame.All/Find(id), Id, Running, Activate/Deactivate, optional goal tracker:
+//   HasTracker, TrackerTitle/Description/Count/Goal, RequirementFormat, GoalReached). Skill XP bonus: every
+//   Report(MinigameEvent.Clicked) (each success: ghost caught, meteor click, star collected, bomb defused, Ultra Hole drop, Snake /
+//   Sorting / Breakout win, Dash round) calls GrantSkillXp(), which gives bonus XP to the skill in training (none while Standard is
+//   trained) via PixelSkills.AddXp (so the XP popup shows too); defaults in DefaultSkillXp by id (meteor 1, black hole 1 per swallowed
+//   pixel, pad 6, stardust 8, ghost 12, dash 15, bomb 20, snake / sort / breakout 25, others 5); per minigame skillXpReward (0 =
+//   default) and disableSkillXp in the Inspector. Bought minigames get an on/off row in the Toggles window
+//   (PixelMinigame.UserDisabled, saved per minigame; the shop never auto-starts a disabled one). Shop packs refer to minigames by id
+//   (unlocksMinigame; goals via a PackRequirement of kind MinigameGoal); the shop shows tracker rows and the save system stores counts
+//   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
+//   call Track(go) on everything it puts in the scene (roots, messages, effects) and override OnDespawned() to reset its busy flag /
+//   spawn timer (DespawnNow() stops its coroutines and destroys the tracked objects).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

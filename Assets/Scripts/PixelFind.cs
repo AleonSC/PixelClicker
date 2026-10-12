@@ -1,3 +1,8 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelFind.cs
+//   PixelFind.First<T>() / Count<T>(): the only place with the FindFirstObjectByType / FindObjectOfType version check. Use it instead
+//   of calling Unity's Find methods directly.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

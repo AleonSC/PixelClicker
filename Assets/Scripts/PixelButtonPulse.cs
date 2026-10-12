@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelButtonPulse.cs
+//   Button pulse: every shop button (the shop's own CreateButton adds PixelButtonPulse) sends a clean neon outline out from under it
+//   when pressed - a thin glowing ring (a code-drawn 9-sliced rounded-rectangle outline sprite, RingSprite, the same on every button)
+//   is placed directly behind the button, centred on it whatever its anchors / pivot are (PixelButtonPulseRunner: grows 12 units
+//   beyond the edge on every side and fades over 0.45 s on unscaled time). The colour is the button's colour stretched to a neon
+//   (Neon); a button that turns from dark grey to bright when clicked (a tab) uses the bright colour one frame later.
+//   PixelButtonPulse.Disabled switches it off. Other windows' buttons (PixelUIKit.CreateButton) don't have it yet.
+// ---------------------------------------------------
 using UnityEngine;
 using UnityEngine.UI;
 

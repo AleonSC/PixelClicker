@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelLumberjackVendor.cs
+//   The Lumberjack (id lumberjack, 'Big Tim the Lumberjack'; a cube like Cubie in a red plaid shirt with a big beard, a green beanie
+//   and an axe): the Prospector's twin for Woodcutting - he BUYS wood goods (Wood, Bark, Sap, Leaf, Heartwood; not Twig) for pure
+//   currency with the same offer rules (RollTrades, sellRate 0 = 0.8, luck, 'Sell' buttons) and only visits while Woodcutting is the
+//   skill in training (CanVisit); started by PixelGuideVendor.StartVendors as soon as Woodcutting is available; counter
+//   lumberjack.bought.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

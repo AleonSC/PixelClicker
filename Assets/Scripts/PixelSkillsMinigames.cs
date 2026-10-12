@@ -1,3 +1,10 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsMinigames.cs
+//   Part of partial class PixelSkills: the minigame XP multiplier. AddXp multiplies every gain by MinigameXpMultiplier = 1 +
+//   EnabledMinigames x xpPerMinigame (0 = 0.1, i.e. +10% each), capped by maxMinigameXpBonus (0 = no cap), disableMinigameXpBonus.
+//   EnabledMinigames counts PixelMinigames that are Running and not UserDisabled (Toggles > Minigames); visitor vendors don't count.
+//   Recomputed once a second. Shown in the Skills window header (right side, gold 'Minigames: x1.3 XP (3 on)').
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

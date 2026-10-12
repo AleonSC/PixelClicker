@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelBlinkMinigame.cs
+//   Cube Blink minigame (id blink, pack unlocksMinigame = "blink", Minigames tab, needs the RGB pack, 60K each; like Cube Dash:
+//   Takeover => true but the cube stays clickable, AutoClickerPaused meanwhile): every minInterval..maxInterval s a round of
+//   roundSeconds (30) starts: the cube SHRINKS to nothing (SetCubeShrink(0.02)), TELEPORTS while hidden (PickSpot inside the area*
+//   fractions, at least minHop away, SetCubeOffset), stays hidden hiddenMin..Max (1-2 s), grows back and stays visible visibleMin..Max
+//   (3-8 s), then vanishes and teleports again (Phase Vanish / Hidden / Appear / Visible / Return). Only manual clicks made while the
+//   cube shows count; at the end it pays rewardMultiplier (10) x the pixel's worth per click via AddCurrency (the clicks still pay
+//   normally); stats blink.rounds/clicks/best, tip minigame_blink, sounds blink_start/_vanish/_appear/_win/_lose (silent until clips
+//   are assigned), picture case in BuildMinigameModel. A success reports Clicked (bonus skill XP 15).
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

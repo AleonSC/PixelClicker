@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsStandard.cs
+//   Part of partial class PixelSkills: Standard is a real skill. Every collected pixel gives it XP (full while Standard is the pack in
+//   play, standardSideXp 5% while another skill / Offline is trained; popups only when Standard is the one trained and the Skills tab
+//   exists; level-up log lines only once AnyTrainable). Its perks apply in EVERY rotation: Lingering pixels (StandardLifetimeBonus =
+//   (level-1) x lifetimePerLevel 5 s (old pixels last oldPixelLifetime 15 s by default, so Standard level 2 = 20 s; the field was
+//   renamed from fallingCopyLifetime so the old saved 6 s is dropped), added in PixelClicker.FallingCopyLifetime, which all old-pixel
+//   despawn timers read) and Roomy floor (StandardCapacityBonus = (level-3) x capacityPerLevel 5 from level 4, added to
+//   PixelClicker.OldPixelCap); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
+//   and the tracker like any skill, has no bonus bank, filler, hazard or tree and does not count towards Mastery. Minigame bonus XP
+//   still skips Standard.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

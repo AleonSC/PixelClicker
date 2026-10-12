@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelEvadeMinigame.cs
+//   Cube Evasion minigame (id evade, pack unlocksMinigame = "evade", Minigames tab, needs the RGB pack, 70K each; like Cube Dash /
+//   Blink: Takeover => true, cube stays clickable, AutoClickerPaused meanwhile): every minInterval..maxInterval s a round of
+//   roundSeconds (25) starts and the cube RUNS FROM THE MOUSE (Steer, in viewport space measured in screen heights): inside fleeRadius
+//   (0.22) it accelerates (agility) directly away from the pointer at up to fleeSpeed (0.5 screen heights per second, faster the
+//   closer the mouse is), slides along the wall when it runs into the area's edge (edgeMargin, area* fractions) and, cornered on both
+//   axes, breaks back across the middle; away from the mouse it just coasts to a stop. Clicks (manual only) count; at the end it
+//   returns home and pays rewardMultiplier (10) x the pixel's worth per click via AddCurrency; stats evade.rounds/clicks/best, tip
+//   minigame_evade, sounds evade_start/_win/_lose (silent until clips are assigned), picture case in BuildMinigameModel; a success
+//   reports Clicked (bonus skill XP 15).
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

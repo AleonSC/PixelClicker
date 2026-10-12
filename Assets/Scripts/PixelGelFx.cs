@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelGelFx.cs
+//   The Ghost pixel's look (looksVersion 39 replaced the saved look): a gray, translucent, gelatinous blob - PixelLook.blob swaps the
+//   cube for a very rounded one (PixelGelFx.BlobMesh, PixelEgg.RoundedCubeMesh(0.32) scaled 1.1x so it doesn't look smaller than the
+//   other pixels, via PixelClicker.MeshFor; hit box still a cube), PixelLook.gelFx adds a darker nucleus that drifts, turns and
+//   breathes inside (PixelGelCore, unlit vertex-coloured rounded cube) and a few tiny bubbles rising through it; stronger jelly wobble
+//   (wobbleAmount 0.2, speed 2.8); colour gray (0.62, 0.66, 0.71, alpha 0.4), glossy 0.92. Old behaviour unchanged (bounces slowly,
+//   floats off screen). Sounds (code-synthesized while their clip lists are empty): click pixel_ghost = PixelSynth.GhostClick (a wet
+//   gloopy bloop with a second bubble, a squelch and a breathy tail, 3 variants), landing pixel_bounce_ghost = GhostBounce (soft
+//   squishy splut), and ghost_float (played by OldPixelFloat.StartFloating) = GhostFloat (a hollow breathy rising 'whoo').
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

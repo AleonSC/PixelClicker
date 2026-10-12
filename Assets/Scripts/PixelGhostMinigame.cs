@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelGhostMinigame.cs
+//   Ghost minigame (bought in the shop's Minigames tab via a pack with unlocksMinigame = "ghost"): a faint wobbling cube floats across
+//   the screen at random intervals; the ghost carries a small glass cube with the chosen potion's pixel cube inside (PickRandomBuff at
+//   spawn, BuildPotion); clicking it drops the potion (DropPotion: rigidbody, shatters on first hit or after dropMaxSeconds, glass
+//   shards like the glass pixel, sound glass_shatter) and the free buff starts then (PixelConsumables.ApplyBuff; GrantRandomBuff is
+//   the fallback when no potion could be picked); counts toward GhostsCaught (saved); extends PixelMinigame (id ghost); the Ghost
+//   Pixel pack has a MinigameGoal requirement for ghost. PixelShop finds/adds this component. Backpack (needs Pixel Grabbing bought +
+//   on, PixelGrab.CanGrab): the falling potion has air drag (grabFallDrag) and can be grabbed with the mouse (potionGrabRadius,
+//   kinematic follow, throw on release); a semi-transparent pixel-art backpack icon (bottom right above the bar,
+//   backpackSize/Margin/Alpha) shows while it falls; releasing over the icon keeps the potion (KeepPotion, PixelConsumables.AddKept,
+//   no shatter, no buff) and, if that potion is already at its limit, raises that potion's bonusCap by one (permanent, saved as
+//   PotionSave.bonus; ItemCapacity(item) = maxPotionsHeld + bonus drives ItemRoom/ClampHeld(index, n)/the shop's Full text), so e.g.
+//   16 held can be used down to 6 and re-bought to 16.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;

@@ -1,3 +1,13 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMagnetDevice.cs
+//   (extends PixelPlacedDevice) Magnet (DeviceKind.Magnet 10, auto-added like the fan by EnsureDefaultPotions, Utilities card; needs
+//   Electric unlocked, 20 Electric pixels, durationSeconds 30, radius 5, pullAcceleration 24, absorbDistance 0.9 = the 'settle'
+//   distance): like the Vacuum Device it pulls loose old pixels in radius towards a point in the gap of its horseshoe
+//   (BuildMagnetBody: red arch + legs, silver tips, base plate), but never collects them: pixels inside the settle distance just get
+//   their speed damped, so they sit in a heap (held / flying / vanishing / kinematic pixels are skipped, ageing is unchanged); placed
+//   like the vacuum (starts disarmed, click to switch on), robot-placeable (IsPlaceableKind), tip device_Magnet, stat
+//   device.placed.Magnet, not part of the Operation tab yet.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// Editor/PixelShaderKeepAlive.cs
+//   Editor-only ([InitializeOnLoad], menu Pixel Clicker > Rebuild Shader Keep-Alive Materials): creates tiny materials in
+//   Assets/Resources/PixelShaderKeep with _EMISSION / transparent keywords switched on (URP Lit, Simple Lit, Standard). Needed because
+//   builds strip shader variants no saved material uses, which killed every glow / lava crack that is switched on from code with
+//   EnableKeyword (Luminescent, Solar, Meteor, bomb / pad lights). Any new runtime keyword toggle needs a matching keep-alive
+//   material. Because that alone did not fix builds, glow no longer relies on keywords only: PixelLooks.AddGlowShell draws a thin
+//   unlit coloured copy of the mesh (Sprites/Default, OverlayMaterial) over every glowing / emissive non-translucent pixel (plus a
+//   separate soft billboard halo AddGlowHalo, hidden with hideGlowHalo) (live cube UpdateGlowShell, falling copies,
+//   CreateDisplayPixel; disableGlowShell, glowShellExtra on PixelClicker - stored as "off" / "extra" so a scene serialized before the
+//   fields existed still gets the shell) and over the meteor rock (lava-crack overlay texture rockLavaOverlay). Face marks (Vacuum
+//   circles, colour-blind shapes) use PixelLooks.OverlayMaterial (render queue after the pixel).
+// ---------------------------------------------------
 using UnityEditor;
 using UnityEngine;
 

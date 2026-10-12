@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelPixelGuide.cs / PixelGuideTexts.cs
+//   Pixel Guide (added by PixelClicker.Awake): a docked 'Pixel Guide' button on the right edge directly under Toggles (PixelHud.Dock
+//   with a negative sideOffsetY; shows once two pixel types are unlocked, hideUntilSecondPixel) that slides out a window like Toggles
+//   (same spot, docks beside the open shop with the Currency panel's width and the shop's height via FitBesideShop; opening one closes
+//   the other: PixelToggles.CloseWindowIfOpen / PixelPixelGuide.CloseWindowIfOpen; Escape closes it, PixelWindows 15). It lists every
+//   pixel IN THE ROTATION (PixelClicker.InRotation(i) = can spawn now and not left out by the skill pack in play; found Dragon Cubes
+//   too; SpawnShare(i) = its share of spawns) as a row: a turning real-look 3D picture (a hidden studio per tier, CreateDisplayPixel,
+//   a camera rendering into a RenderTexture, re-rendered only for rows in view), the name in its colour, a line 'Pays N - clicks - X%
+//   of pixels' and an orange '!' box whose tooltip is PixelGuideTexts.Describe(type, tier) (the exact mechanics + what its old pixel
+//   does). A new pixel type needs a case in PixelGuideTexts.Mechanics (and OldPixel if its old pixel behaves differently).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using System.Text;
 using TMPro;

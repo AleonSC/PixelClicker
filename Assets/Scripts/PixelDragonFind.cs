@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelDragonFind.cs
+//   Dragon Cube find show (component added by PixelClicker.Awake; PixelDragonFind.Play(tierIndex, worldPos), queued): called from
+//   PixelClicker.CollectInternal (a click, manual or auto) and SeedSprout.PopOff (a grown Dragon Seed) - never from offline progress
+//   (AddCurrency alone does not play it). A canvas (690, blocks clicks) darkens the screen (darkness), the cube is drawn by a hidden
+//   studio camera into a RenderTexture on a RawImage (so nothing in the scene can dim it), zooms up from where it was found
+//   (zoomInSeconds), dances about (danceSeconds, danceRange, golden UI sparkle pool sparklesPerSecond), then hops into the backpack
+//   icon (PixelGhostMinigame.BuildBackpackSprite, same place as the Ghost's; stashSeconds) with a sparkle burst and a bump, then the
+//   screen brightens (fadeOutSeconds). Escape skips the show (a PixelWindows entry, priority 165, so it never opens the pause menu: it
+//   jumps to the backpack landing + fade and drops queued shows); heading foundFormat; sounds dragon_find / dragon_stash (code-made
+//   PixelSynth.DragonFind/DragonStash); disableShow. Under Infinite resources the Dragon Seed (always held) grows any of the seven
+//   even if you hold it (PixelClicker.PickAnyDragonCube).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;

@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelPestSwarm.cs (Pest rework)
+//   The Pest block (PixelLook.blockSurface Pest, PixelBlockTextures.PestHide(level,max): black carapace plates, hazard stripes round
+//   every face, red eyes that multiply and glow with hits; jagged mesh + twitching wobble, bugs crawl over it via farmFx Bugs;
+//   looksVersion 43). Every non-final hit spills a few bugs (PixelPestSwarm.Scatter); when it GOES OFF PixelPestSwarm.Release sends a
+//   swarm of code-built bugs (body, head, red eyes, legs, feelers; max 80 at once) over the floor to every edible planted sprout
+//   (SeedSprout.GetEdible/IsEdible), they climb it and gnaw (Gnaw shakes it, more bugs = faster, pestChewSeconds 4), then
+//   SeedSprout.Devour() kills it (pixel lost) and the bugs run off; with no sprouts they just scatter. Tuning on PixelClicker:
+//   pestBugsPerSprout (0 = 6), pestBugsMin (8), pestBugSpeed (3.5), pestChewSeconds (4), disablePestSwarm (old instant KillAll). Dirt
+//   now takes 3 digs (packDataVersion 15): each hit plays seed_dig + SeedDigFx and shrinks the live cube towards old-pixel size
+//   (digShrinkTarget, reset in Materialize). Seedlings from a cracked Seed shell grow seedlingGrowSeconds (0 = 40 s; the sprout's
+//   despawn timer is extended to match). Migration 15 also adds any missing farm block (Seed, Water...) to a saved Farmer's Pack, and
+//   PixelSkills.EnsureDefaults makes sure Farming's types list has every farm block (a missing Seed was why it never spawned);
+//   migrations 13 and 14 now run in order.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

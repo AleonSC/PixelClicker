@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelWoodworking.cs
+//   Woodchipper + log rack (component added by PixelClicker.Awake; disableWoodworking): while Woodcutting is the skill in play
+//   (ActiveId, not on the title screen / camera intro / takeover minigames) two code-built machines grow in on the floor at the
+//   screen's sides (chipperScreenSpot default (0.12, 0.3), rackScreenSpot (0.88, 0.3), machineScale; placed on the floor under the
+//   cube by PlaceMachines, rotated to face the camera, labels billboard) and shrink away when you switch skills. Drag old blocks into
+//   them with Pixel Grabbing (or throw them): ScanPixels (every 0.08 s) takes any loose, un-held old pixel inside a machine's
+//   footprint (InZone): the chipper takes the scraps Bark / Sap / Leaf / Twig (blades spin faster, wood chips spit out of the chute,
+//   chipper_feed), the rack takes the logs Wood / Heartwood (a log appears on the shelves, rack_store; rackCapacity 0 = 15 then a
+//   truck takes them all). The block is used up with NO payout (ReleaseOldPixel(body, false) + a fly-in) and fills the Woodcutting
+//   bonus XP bank (PixelSkills.OldPixelConsumed, which now returns the change; a Twig adds a flat twigBonus (0 = 1) via
+//   PixelSkills.AddBonusXp), with a rising gold '+N bonus XP'. Counters wood.chipped / wood.stored; tip woodworking.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;

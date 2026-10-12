@@ -1,3 +1,16 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelDashMinigame.cs
+//   Cube Dash minigame (id dash, pack unlocksMinigame = "dash", Minigames tab, needs the RGB pack, 50K each; NOT a TakeoverActive
+//   minigame - the cube must stay clickable - but Takeover => true so the limiter keeps every other minigame from starting while it
+//   runs): every minInterval..maxInterval s the cube dashes (PixelClicker.SetCubeOffset(world offset) / CubeBasePosition, applied in
+//   AnimatePixel) between random spots inside the area* screen fractions: dashSeconds dash, dwellMin..Max s hanging at the spot
+//   drifting in a Perlin wiggle (wiggleRadius), then the next spot (at least minHop away); after roundSeconds it zips home and pays
+//   rewardMultiplier (10) x the pixel's worth per click (amountPerClick x PayoutMultiplier x ClickMultiplier / clicksToCollect) via
+//   AddCurrency on top of the clicks' normal pay. Only manual clicks count (PixelCollected / PixelHit with automatic false); the auto
+//   clicker is off meanwhile (PixelMinigame.AutoClickerPaused, read by PixelAutoClicker). The cube stays the pixel it was
+//   (SetForcedSpawnTier, skipped when a potion already forces one; a Dragon Cube / meteor falls back to White). Stats
+//   dash.rounds/clicks/best, tip minigame_dash, sounds dash_start/_win/_lose (silent until clips are assigned).
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

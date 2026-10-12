@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelFloorFade.cs
+//   Floor edge fade (partial class PixelFloor, UpdateEdgeFade from LateUpdate; disableEdgeFade): the floor fades out in a circle round
+//   the player (the cube, or the first person player via PixelFirstPerson.TryGetPlayerPosition) so its edges / seams are never seen: a
+//   flat annulus mesh with vertex alpha (BuildEdgeFade: see-through inside r0, solid from r1 and far past the floor's edges, coloured
+//   like the sky's horizon (EdgeFadeColor: TryGetHorizonColor, else the scene sky tint / background / the floor's average),
+//   Sprites/Default, a hair above the floor top) plus a digital wireframe in the rim (RebuildWire: a world-aligned grid every
+//   wireSpacingCubes (0 = 1.25 pixel widths) and three rings, clipped to the rim, brightness bell-shaped across it, wireColor (alpha 0
+//   = cyan), wireStrength 0 = 0.9; rebuilt when the centre moves). fadeStartCubes / fadeWidthCubes 0 = automatic from the floor's size
+//   (start about half the way to the nearest edge). Scaled by the floor's own fade-in visibility; hidden with the floor / FloorOff.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

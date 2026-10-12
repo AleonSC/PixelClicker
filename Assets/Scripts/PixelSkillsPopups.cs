@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsPopups.cs
+//   Part of partial class PixelSkills: '+n <Skill> XP' popups while a skill trains (AddXp calls QueueXpPopup; XP is gathered
+//   xpPopupGatherSeconds (0 = 0.6 s) and shown as whole numbers, fractions of auto clicks carry over; UpdateXpPopups runs from the
+//   window's Update; XP from the auto clicker is gathered separately and appears beside the cube instead (xpFromAuto set by
+//   OnCollected, FlushAutoXpPopup, CubeScreenPoint, rises beside the cube and follows it); text in the pack's accent colour, hangs
+//   just under the mouse cursor and follows it (drifting a little further down as it fades), on its own canvas 106 so it never mixes
+//   with the other +n texts; hideXpPopups, xpPopupSize).
+// ---------------------------------------------------
 using System.Collections;
 using TMPro;
 using UnityEngine;

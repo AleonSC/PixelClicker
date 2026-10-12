@@ -1,3 +1,20 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelStorageCrate.cs
+//   (extends PixelPlacedDevice) Storage Crate (DeviceKind.StorageCrate 13, auto-added like the fan, Utilities card; 300 Gray, hold 3,
+//   bodyDiameter 2.5 = width, bodyHeight 0.3; model PixelConsumables.BuildCrateBody: a wooden tray with two rows of five
+//   compartments): permanent and never disarmed (no countdown: duration 1e9, timer text hidden; PlaceDevice / RestorePlacedDevice skip
+//   Disarm). Drag old pixels over it with Pixel Grabbing and left-click the crate: loose old pixels lying within its footprint
+//   (FindLoose, nearest first) are stored in the next free section (row 1 left to right, then row 2; ReleaseOldPixel + FlyIn, their
+//   payout is kept, a spinning CreateDisplayPixel model sits in the compartment). Left-click a stored pixel (PickSection, screen
+//   distance) to take it out: SpawnStoredPixel at the compartment and PixelGrab.BeginHold puts it in the mouse's hand. A pixel you
+//   hold and let go of above the crate is stored at once (TryStoreReleased: PixelGrab.HeldBody was a pixel last frame and is not now,
+//   and it is inside the footprint and below ~3 units above it). Two grip handles on the short (+/-X) ends (Handle parts built by
+//   BuildCrateBody): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
+//   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
+//   (DragTo, kept on screen) with the fist cursor. PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
+//   to the crate; HandleHot blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
+//   ('S,slot,tier,amount;'). Tip device_StorageCrate.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;

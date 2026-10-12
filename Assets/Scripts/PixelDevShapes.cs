@@ -1,3 +1,21 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelDevShapes.cs / PixelDevMockup.cs
+//   Layout dev tools (tick boxes 'Shape placer' / 'UI mockup builder' at the bottom of the Dev Tools Tools tab; both components are
+//   created by PixelDevTools at start (Boot) so saved layouts reappear, the panels open with SetActive; state in PlayerPrefs
+//   PixelClicker.Dev.*, not in the game save). Shape placer: left panel; click the floor to drop the brush shape (ShapeKind Cube /
+//   Sphere / Cylinder / Capsule / Ramp (runtime wedge mesh) / Wall / Disc, sizes in main-pixel widths), click a shape to select + drag
+//   it on the floor plane, Q / E (PixelAction.RotateLeft/Right) turn, wheel scales, Delete removes; ShapeMode Solid (static collider)
+//   / Dynamic (rigidbody) / Ghost (no collider); colour cycle button; every shape has a billboard number label, the panel lists id /
+//   kind / mode / x z y / rotation / size and 'Copy layout' puts the text on the clipboard; 'RESET ALL SHAPES' deletes everything (one
+//   click). While open PixelClicker.DevClickBlock (part of ExternalClickBlock) keeps the cube from taking the clicks. UI mockup
+//   builder: right panel; right-click on a piece deletes it; resize grips are a drawn corner grip (PixelUIKit.GripSprite, also on My
+//   Window); add Window / Box / Button / Text / Image pieces (own canvas 540, 1920 x 1080 units, origin top-left, no UI-scale
+//   division) - drag to move, yellow corner handle to resize, number badge, exact X / Y / W / H fields, text box, font size, opacity
+//   slider, hex colour, layer Front / Up / Down / Back, duplicate, delete; Image pieces show PNG / JPG files from
+//   <persistentDataPath>/Mockups (Folder button opens it, Refresh rescans; a checker placeholder otherwise); 'Show when closed' keeps
+//   the pieces visible after the panel is closed, 'Hide' hides them; 'Copy layout' lists every piece back to front; 'RESET ALL'
+//   deletes all.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Text;

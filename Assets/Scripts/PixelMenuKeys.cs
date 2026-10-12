@@ -1,3 +1,11 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMenuKeys.cs
+//   Blank-by-default keyboard shortcuts for the docked menu buttons: PixelAction.Inventory/Shop/LogWindow/Crafting/Toggles/Bank/Skills
+//   (default KeyCode.None, shown as '-', Backspace / Delete in the binding screen clears a key; PixelKeys.Pressed/Held return false
+//   for None and Set never swaps None). Each window calls PixelMenuKeys.Register(action, button) after making its dock button; the
+//   component clicks that button when its key is pressed (only if the button is active and the game isn't paused / on the title screen
+//   / typing). A new docked menu should register too.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;

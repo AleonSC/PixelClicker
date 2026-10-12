@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsTutorial.cs / PixelTutorialDim.cs
+//   Skills tutorial (part of partial class PixelSkills, started from the window's Update by UpdateTutorialStart the first time a skill
+//   pack is available and the screen is calm: not while the shop tutorial is still due, no tip / visitor / pause / takeover;
+//   enableTutorial, tutorialStartDelay 0 = 2 s, tutorialSteps empty = the built-ins): same format as the shop tutorial -
+//   PixelTutorialDim.Begin fades the screen darker and pauses the game (a click-blocking overlay on canvas 600;
+//   PixelTutorialDim.Active is true meanwhile and the Skills tab / Shop button ignore clicks), Cubie narrates
+//   (PixelGuideVendor.BeginNarration) and his stick points at the part each step describes (PixelGuideVendor.PointOverride,
+//   TutorialFocus Window / Header / Cards / Train / Tree / Mastery / Pin), each step is a small Got it box beside the Skills window
+//   (PixelNotice beside: windowRect); the Train / Tree steps look at the first real pack with a tree and the player's own selection
+//   comes back at the end. Remembered per save as stat guide.skillsTutorial (TutorialDoneKey, cleared by Settings > Replay tutorial).
+//   It replaced the old one-box introText / skills_intro tip. PixelTutorialDim is shared with the shop tutorial (dimAmount /
+//   dimSeconds still live on PixelShopTutorial).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

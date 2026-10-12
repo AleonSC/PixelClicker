@@ -1,3 +1,9 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelShopConsumables.cs
+//   Third-and-a-half part of partial class PixelShop: the Consumables tab = two purchase cards (Potions, Utilities/devices) side by
+//   side, each with an item drop-down (locked items shown in grey text), a count box with -/+ and a Buy button; TryBuyItems(item,
+//   count). Hides the scrolling list while that tab is open. Craft-only combo potions are never listed. Settings are in PixelShop.cs.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using System.Text;
 using TMPro;

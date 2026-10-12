@@ -1,3 +1,10 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelShaders.cs
+//   PixelShaders.SpriteDefault(): the only place that looks up the Sprites/Default shader (unlit, alpha-blended, vertex colours -
+//   trails, glow shells, face marks, arrows, stars, hole trails). Shader.Find only finds shaders that are in the build, and a URP
+//   project often leaves Sprites/Default out, so it falls back to the shader of Resources/PixelShaderKeep/Sprites_Default (made by the
+//   Editor keep-alive script). Use it instead of Shader.Find("Sprites/Default").
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

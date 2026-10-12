@@ -1,3 +1,13 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelCameraIntro.cs
+//   Camera intro (added by PixelClicker.Awake): the camera holds a close-up side view of the cube (closeDistance (1.8 cubes),
+//   closeHeightInCubes, side, optional startFieldOfView) while the title screen shows - the blurred title picture is that view - then
+//   after startDelay it swings round the cube on an arc and settles into the scene's own camera pose over introSeconds (the end pose
+//   is whatever the camera has in the scene, nothing to set up; orthographic cameras zoom instead). A mouse click skips it
+//   (skipOnClick, off by default); clicks are locked during the zoom-out of a brand-new game (ClicksLocked, lockClicksOnNewGame).
+//   PlayReverse(onDone) plays the zoom backwards (reverseSeconds) for Quit > Main menu. Player switch: Settings > Camera intro
+//   (PixelCameraIntro.Enabled, applies next start).
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelShopNudge.cs (+ PixelGuideVendor.ShopHold)
+//   Shop hold after Cubie's second visit (added by PixelClicker.Awake): if the shop tutorial is still due (PixelShopTutorial.DoneKey,
+//   tips on) the visit does NOT unfreeze time when he leaves: PixelGuideVendor.ShopHold keeps Time.timeScale 0 (UpdateHold re-freezes
+//   after a pause-menu resume) until the shop window opens (PixelShop.WindowOpen), then time resumes and
+//   PixelShopTutorial.RequestStart() starts the tutorial without its start delay (leaves the hold on the title screen / tips off).
+//   While held the Shop dock button stays slid out (ShopHold in its keep-out lambda), the tier guide line (PixelUI.UpdateGuide, forced
+//   to shopGuideText) pulses gold and PixelShopNudge (canvas 640) draws a pulsing gold frame with spreading rings round the Shop
+//   button (PixelShop.ShopButtonRect), a bobbing 'Open the Shop!' label and chevrons (7) flowing from the guide line
+//   (PixelUI.GuideRect) to the button; disableNudge.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

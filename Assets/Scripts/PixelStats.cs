@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelStats.cs
+//   Play stats. Typed fields (manual/auto clicks, play time, pixels spent, ghosts/meteors clicked, meteors/black holes spawned,
+//   fans/vacuum devices/sorters placed, singularities fed, potions used per name, highest combo) plus generic counters: any script
+//   calls static PixelStats.Count("key", n) / Best("key", v) (keeps the max) / Fastest("key", v) (keeps the min); they are saved in
+//   ExtraData.counterKeys/counterValues and need no other wiring. Counters in use: shop.purchases/items, snake/sort/breakout.win/loss,
+//   snake.length, sort.fastest, bomb.defused/exploded, ultra.<minigame id> (PixelMinigame.UltraRoll + the Pad), ghost.kept,
+//   combo.tier, old.vacuumed/banked/grabbed/shattered, crafts, holes.fed, sessions, session.longest, rate.best (best pixels per
+//   minute, sampled each second), timestop/timeslow.seconds/uses. GetLines(number) builds the Stats screen's rows (headings General /
+//   Pixels / Old pixels / Combo and time / Minigames; per-pixel-type earned rows; a minigame's rows only once it runs or has data;
+//   Ultra earned, stardust, bomb parts and achievements are read from their owners); the pause menu's Stats screen just renders that
+//   list (RebuildStatRows, rebuilt only when the row list changes). To add a stat: record it with PixelStats.Count/Best/Fastest and
+//   add a row in GetLines. Saved by PixelSaveGame (ExtraData).
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;

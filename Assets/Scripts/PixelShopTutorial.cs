@@ -1,3 +1,21 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelShopTutorial.cs
+//   Shop tutorial (added by PixelShop): the first time the Shop button is available (PixelShop.ShopAvailable) and the screen is calm
+//   (title screen over, PixelHints.IntroHoldsGuide false, no other tip, no takeover minigame, not paused; startDelay 2 s) a series of
+//   small "Got it" boxes (PixelNotice.Show(small: true, beside: shop.PanelRect), 440 wide, just right of the shop window) walks
+//   through the shop, each step opening its tab via PixelShop.TutorialOpen(tab, subTab): the currency list + overview, Pixels,
+//   Upgrades > Features, Upgrades > Value, Operation, Consumables, Minigames, closing hint. Before the first box the screen fades
+//   darker and the game pauses (BeginRun: a click-blocking black overlay on canvas 600, below the tip boxes, dimAmount 0 = 0.4 /
+//   dimSeconds 0 = 0.7; time is restored and the overlay fades out at the end) and PixelShopTutorial.Active makes the Shop button (and
+//   its key) ignore clicks until the tutorial is over. Steps are an Inspector list (steps, empty = the built-in ones, enableTutorial);
+//   Cubie narrates it (PixelGuideVendor.BeginNarration/EndNarration: he slides in at the bottom right at 0.85 scale, stands still and
+//   points at the shop window with a stick (pointer: arm + stick + gold tip turned towards the shop's on-screen centre every frame,
+//   ShopPointTarget; his left arm hides meanwhile) and taps it on each new step (NarratorReact), no speech box, and leaves when the
+//   tutorial ends); every box has one height (UniformHeight, from the longest step, min boxHeight) so Got it never moves; the shop
+//   window has a blue '?' hold button left of its X (the pause menu's PixelHoldButton with a fill bar, helpHoldSeconds 0.7 on
+//   PixelShop) that calls Replay(); remembered as hint id shop_tutorial (PixelHints.IsTipSeen/SetTipSeen; Settings > Replay tutorial
+//   clears it, so it replays after the intro if the shop is unlocked).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

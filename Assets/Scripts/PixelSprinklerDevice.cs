@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSprinklerDevice.cs
+//   (extends PixelPlacedDevice) Sprinkler (DeviceKind.Sprinkler 9, auto-added like the fan by EnsureDefaultPotions, Utilities card;
+//   needs Water unlocked, 40 Water pixels, durationSeconds 45, radius 4.5, Device.sprayInterval 1): BuildSprinklerBody (base, post,
+//   spinning 'Spinner' head with 'Nozzle 0/1'), droplet jets (PixelFx.Make per nozzle) and every sprayInterval s
+//   PixelClicker.WaterSplashAt(point, reachOverride) - the same instant growth jump a splashing Water pixel gives every sprout /
+//   planted Seed pet in reach (each target still accepts water only every seedWaterCooldown); placed like the vacuum (starts disarmed,
+//   click to switch on), robot-placeable (IsPlaceableKind), tip device_Sprinkler, not part of the Operation tab yet.
+// ---------------------------------------------------
 using UnityEngine;
 using TMPro;
 

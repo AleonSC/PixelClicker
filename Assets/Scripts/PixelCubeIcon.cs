@@ -1,3 +1,7 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelCubeIcon.cs
+//   UI MaskableGraphic drawing a tiny spinning shaded 3D cube (no camera/render texture) - achievement icons.
+// ---------------------------------------------------
 using UnityEngine;
 using UnityEngine.UI;
 

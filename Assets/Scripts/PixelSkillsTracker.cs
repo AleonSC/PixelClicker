@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsTracker.cs
+//   Part of partial class PixelSkills: the pinned skill tracker. A pin button at the top left of the Skills window (BuildPinButton,
+//   green while pinned) closes the window and shows a small draggable window (own canvas sortingOrder - 1 (below the Skills window and
+//   its tooltip), dragged by PixelPopoutDrag, which now has a locked flag) with the training skill's name, level and an XP bar
+//   (RefreshTracker: TrainingId, LevelOf; Standard shows 'No skill in training'). Left / right arrows either side of the skill name
+//   (trackerPrev/Next, CycleTrainedSkill) switch the skill in training through Standard and every available pack. Its buttons: a
+//   padlock stick (trackerStuck: can't be dragged), downsize ('-' / '+': a one-line small version) and X (closes it; the Skills menu
+//   is NOT reopened). Open / small / stuck / position are PlayerPrefs PixelClicker.Skills.Tracker* (global, not per save); hidden on
+//   the title screen and when no skill is trainable.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;

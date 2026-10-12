@@ -1,3 +1,13 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsMastery.cs
+//   Part of partial class PixelSkills: Mastery, one bar for the progress of ALL skills together, along the bottom of the Skills window
+//   (BuildMasteryBar, RefreshMastery, gold fill, 'Mastery 12.5% - x / y XP', tooltip). Every skill has a level cap
+//   (SkillPack.levelCap, 0 = defaultLevelCap on the component, 0 = 30; the caps only measure mastery for now - a skill keeps earning
+//   XP past its cap) worth CapXp(pack) = the XP from level 1 to the cap (baseXp x xpGrowth^n summed); MasteryProgress = sum over EVERY
+//   pack except Standard (Mining, Farming, Electrician, Offline Progression and any pack added later; skills not unlocked yet count as
+//   0) of min(skill XP, its cap XP) / sum of all cap XP, so it only reaches 100% when every skill is at its cap. An event-log line at
+//   every 10% (counter mastery.step, saved) and 'Mastery complete!' at 100%. Not shown on the pinned tracker yet.
+// ---------------------------------------------------
 using System;
 using TMPro;
 using UnityEngine;

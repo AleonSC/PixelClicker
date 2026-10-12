@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelTrafficMinigame.cs / PixelTrafficSynth.cs
+//   Red Light Green Light minigame (id traffic, pack unlocksMinigame = "traffic", Minigames tab, needs the RGB pack, 80K each; like
+//   Cube Dash: Takeover => true, cube stays clickable, AutoClickerPaused meanwhile): every minInterval..maxInterval s a round of
+//   roundSeconds (30) starts. A code-built traffic light (dark housing, red / yellow / green lamps with halos, unlit Sprites/Default
+//   materials, billboarded to the camera each frame, lightOffsetCubes 1.9 cube sizes to the right of the cube) cycles Green
+//   (greenMin..Max 2-5 s) -> Yellow (3-5 s) -> Red (1.5-3 s) -> Green...; Judge() scores every manual click (PixelCollected / PixelHit
+//   with automatic false): green +1, red -1; yellow: a click within hitWindow (0.22 s) of the moment the closing ring meets the cube
+//   is +1 (once per beat, lastGoodBeat), any other click -1. During yellow a LineRenderer circle closes round the cube once every
+//   beatSeconds (0.9, starts ringStartScale 3.2 cube sizes out, brightens / turns white as it nears; a tick sounds on the beat). The
+//   status line is coloured like the light and flashes white on a mistake. At the end it pays rewardMultiplier (10) x the pixel's
+//   worth x max(0, points) via AddCurrency (the clicks still pay normally); stats traffic.rounds / traffic.best, tip minigame_traffic;
+//   a round with points > 0 reports Clicked (bonus skill XP 20). Sounds are code-made (PixelTrafficSynth, filled in by
+//   PixelAudio.SynthFor while the clip lists are empty): traffic_start/_green/_yellow/_red/_tick/_good/_bad/_win/_lose.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

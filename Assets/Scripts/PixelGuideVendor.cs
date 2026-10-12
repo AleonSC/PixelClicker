@@ -1,3 +1,21 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelGuideVendor.cs
+//   Cubie, the suspicious cube guide / shopkeeper (added by PixelClicker.Awake; code-drawn teal cube with darting sideways eyes, hat,
+//   smirk; slides in like the visitors, time stops, a paged speech box, Next button or Escape = next page). Visit 1 (new game, after
+//   the intro tips, calmSeconds (1.5) of calm): a shady dealer's pitch - pixels are money 'because that's what we're all told' (a
+//   fiat-currency joke), clicking is the monotonous grind you endure until the good stuff opens up - then he leaves and you click
+//   pixels (4 pages; visit 2 has 6 and ends on the same theme: the clicking never stops, it just pays better). Visit 2 (when
+//   PixelShop.ShopAvailable): introduces the shop, hands over a gift (giftTypes random unlocked pixel types, giftMin..giftMax each,
+//   given when the page containing {gift} shows, a gift box appears in his hand), says more vendors will come and can be switched off
+//   in the Toggles menu, mentions the Wizard. Progress = stat counters guide.stage1/2 (saved with the game); a save that already has
+//   the shop gets no visits and no gift (stages set silently). PixelGuideVendor.Pending/Visiting hold back the shop tutorial; Settings
+//   > Replay tutorial calls PixelGuideVendor.Replay() (clears the stage counters, both visits play again, no second gift). The vendors
+//   are free now: the Wizard / Tinkerer / Pixel Entrepreneur packs were removed from the shop (MigrateOldPackData drops them from
+//   saved lists); the guide starts them (StartVendors: Wizard right after visit 2 with a first visit in wizardFirstVisitMin..Max s,
+//   Farmer at farmerAtTiers (5), Tinkerer at tinkererAtTiers (6) unlocked pixel types, Entrepreneur at entrepreneurAtTiers (8); a
+//   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
+//   Inspector fields (disableGuide turns it all off).
+// ---------------------------------------------------
 using System.Collections;
 using System.Text;
 using TMPro;

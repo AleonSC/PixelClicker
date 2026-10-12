@@ -1,3 +1,17 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelCubiePeek.cs
+//   Cubie peeks out from behind the Save / Load window (component added to the pause menu by PixelPauseMenu.BuildSaveLoadPanel,
+//   Setup(panelRect, isActive)): his head (a trimmed copy of the guide's drawing) is a sibling placed directly UNDER the window in the
+//   canvas order, so the box covers the rest of him; while the window is open and quiet (no rename / overwrite / result overlay) and
+//   there has been no mouse movement or click for idleSeconds (1, to be tuned later) plus a random extraDelay, he slides out of a
+//   random edge (left / right / top, random spot along it, showFraction of his head visible, slideSeconds), his pupils dart about
+//   (Glance) for stayRange seconds, then he ducks back; any mouse movement / click makes him duck at once; cooldownRange seconds
+//   before the next peek. Unscaled time. The slot rows in that window are now exactly as wide as the Save / Load buttons (the scroll
+//   bar sits in the margin).
+// PixelCubiePeek.cs (more)
+//   The Cubie peek is now also on the Settings screen and the Key Bindings screen (PixelPauseMenu.AddCubiePeek(panel): one
+//   PixelCubiePeek component per panel, active while that panel is open).
+// ---------------------------------------------------
 using System;
 using UnityEngine;
 using UnityEngine.UI;

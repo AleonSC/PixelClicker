@@ -1,3 +1,21 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelHud.cs
+//   Screen frame: black bar along the top and bottom (barHeight) and the docked buttons. PixelHud.Ensure(gameObject) then
+//   hud.Dock(buttonRect, anchor(0|1,0|1), keepOutWhile) gives a button the standard ButtonSize and makes it slide off screen (only a
+//   sliver shows) until the mouse is near (PixelDockedButton); it stays out while its window is open. Windows that open from a docked
+//   button use hud.SideMargin / hud.WindowOffset for position; top/bottom-anchored overlays add PixelHud.Instance.BarHeight. Used by
+//   Inventory, Shop, Log and Crafting buttons. Menu buttons setting (PixelHud.ButtonMode, PlayerPrefs PixelClicker.Setting.ButtonMode,
+//   per save, Settings > Interface 'Menu buttons'): 0 peeking (sliver shows, default), 1 always showing (SlideButtons false), 2 hidden
+//   (Sliver 0 until the mouse is near). While 'always showing' (mode 1) each docked button gets its own nested canvas with
+//   overrideSorting at alwaysOutSortingOrder (0 = 90, PixelDockedButton.UpdateSorting, plus a GraphicRaycaster), below every window
+//   canvas (100+), so windows overlay the buttons; other modes use the window's own canvas order again. Bar colour: Settings > Display
+//   'Custom bar colour' tick box + an eyedropper button beside it (PixelHud.BarColorOn / BarColorPicked / SetBarColorFromColor,
+//   PlayerPrefs PixelClicker.Setting.BarColorOn + BarColor (hex), per save via PixelSettingsSync); the game's top / bottom margins
+//   (PixelHud.barImages) and the main menu's middle bar (PixelTitleScreen.bar) repaint when PixelHud.BarColorVersion changes, using
+//   PixelHud.BarTint(base) (the picked colour with the bar's own opacity; the menu bar stays 92% opaque). The docked buttons sit
+//   towards the screen edge, not centred in the bar (buttonEdgeBias, 0 = 0.55), to stay clear of the neon bar glow. The pause menu
+//   adds this component if missing.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using TMPro;

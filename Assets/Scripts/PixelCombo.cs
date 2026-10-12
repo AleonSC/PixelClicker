@@ -1,3 +1,19 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelCombo.cs
+//   Combo meter (shop upgrade "Combo Meter", UpgradeEffect.ComboMeter, 5 levels; level value = that tier's multiplier): quick manual
+//   clicks build a combo (breaks after 1.2 s idle). Tiered multiplier: tierCombos {10, 50, 200, 500, 1000} / tierMultipliers {1.5, 2,
+//   3, 4, 5}; the highest tier whose combo count is reached (and that the upgrade level unlocked: UnlockedTiers = tiers whose
+//   multiplier <= maxMultiplier) sets Multiplier (x1 below tier 1; Tier); sets PixelClicker.ManualClickBonus every frame (manual
+//   payouts only); meter at the bottom-centre shows the next milestone (nextFormat). Fades out after hideAfterSeconds without manual
+//   clicks. It is the last thing to arrive after entering the game (UpdateEntrance: waits for the title screen, the camera intro and
+//   the sliding margins / buttons to finish plus entranceDelaySeconds (0 = 0.6 s), then fades in over entranceFadeSeconds (0 = 1.2 s);
+//   disableEntranceFade). Tier effects (by reached tier, cumulative, runtime-drawn UI sprites): 1 mild shake, 2 yellow flame aura
+//   (UpdateFlames, pooled sprites around the edges), 3 yellow glow, 4 violent shake (violentShakeFactor) + lightning bolts
+//   (UpdateLightning), 5 explosion (flash + sparks, repeats every explosionRepeatSeconds) + super-saiyan hair spikes (UpdateHair);
+//   when the combo breaks the effects wind down over breakSeconds (shake amplitude falls, glow / flames fade, the hair drops, the
+//   meter flashes white: breakFlash*), then the meter fades out as usual; tuned in the 'Combo Effects (by tier)' Inspector group.
+//   PixelShop finds/adds it and applies it via SetUpgrade.
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

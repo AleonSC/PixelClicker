@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelTreasure.cs
+//   Treasure pixel (PixelType.Treasure 32, IsStandalone, spawn switch in Toggles; pack 'Treasure Pixel': 50K White + 25K Black, spawn
+//   weight 0.1, clicksToCollect 10 = the average for estimates): a tough pixel with a RANDOM click count - PixelTier.randomClicks /
+//   randomClicksMin..Max (1-20), rolled per fresh pixel in Materialize (liveNeed, NeededClicks(tier) replaces tier.clicksToCollect in
+//   CollectInternal, SetLiveDamage and the live texture). The hit popup shows only the hit number (PixelHit gets needed = -1; the
+//   final hit shows n/n). Payout = amountPerClick x need x (1 + need x treasureRewardGrowth (0 = 0.15)) (TreasureMultiplier). Opening
+//   (PixelClicker.OpenTreasure): TreasureFx.Open (coins, glitter, splinters, gold ring + flash, sound chest_open) and a pile of
+//   treasureBasePixels (2) + need (max treasureMaxPixels 24) pixels of random unlocked types (not rare drops / fly-aways / Singularity
+//   / Treasure) is PAID at once (RollOldPixelAmount x (1 + need/10), one AddCurrency per type) while the same number of old pixels
+//   fountain out for show with amount 0 (TreasureFountain); stats treasure.opened, treasure.most_clicks; disableTreasureFx. Each non-
+//   final hit: TreasureFx.Hit (splinters + sparks, chest_hit). Look: PixelLook.chestTexture + damageCracks
+//   (PixelLooks.ChestTexture(step 0-8): 64 px planks, gold straps / frame / lock plate / rivets, a lid seam that leaks more light per
+//   step; looksVersion 26).
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

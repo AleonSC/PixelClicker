@@ -1,3 +1,8 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelAudio.cs (UFO beam)
+//   The main-menu UFO's abduction plays ufo_beam (code-made PixelSynth.UfoBeam: a rising wobbling hum with a shimmer and a pop at the
+//   end, ~2.6 s; stopped if the abduction is aborted).
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;

@@ -1,3 +1,19 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelWeakspotMinigame.cs
+//   Weak Spots (id weakspot, the skills' minigame; no shop pack, Running = any skill pack other than Standard is the pixel pack in
+//   play (startRunning for testing), Toggles > Minigames switch like the others; Takeover => true so nothing else starts meanwhile):
+//   every minInterval..maxInterval (120-240 s, first after firstRoundDelay 60 s) a round zooms a SECOND camera (CopyFrom of the main
+//   one, which draws nothing meanwhile, like first person mode) in on the cube (zoomDistance 2.6 cube widths, zoomSeconds), drops
+//   Time.timeScale to slowScale (0.1, fixedDeltaTime scaled) and 3-5 glowing weak spots (code-textured camera-facing quads with a
+//   shrinking timer ring, found by raycasting the zoom camera onto the cube's hit box, spaced spotGap apart) appear; the cube ignores
+//   ordinary clicks (ExternalClickBlock, PixelClicker.HoldSpin stops its spin, auto clicker paused). Variations per spot (RollKind,
+//   disableVariants): still (red/orange), drifting (blue, bounces round the cube face in viewport space, re-raycast each frame,
+//   driftChance 0 = 0.3, driftSpeed), pulsing (green, shrinks to pulseMin and swells every pulseSeconds, its click radius shrinks with
+//   it, pulseChance 0 = 0.3) and flickering (yellow, shows flickerOn s then vanishes flickerOff s, can't be hit while gone,
+//   flickerChance 0 = 0.2). Click all of them within huntSeconds (4 real seconds) for baseXp + speedXp x time left of XP for the skill
+//   in training via GrantSkillXp; running out of time pays nothing. Time Stop / Time Slow / the title screen end the round at once.
+//   Stats weakspot.rounds/wins, tip minigame_weakspot, sounds weakspot_start/_hit/_win/_lose (silent until clips are assigned).
+// ---------------------------------------------------
 using TMPro;
 using UnityEngine;
 

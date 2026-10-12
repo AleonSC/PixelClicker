@@ -1,3 +1,14 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelSkillsBonus.cs
+//   Part of partial class PixelSkills: the bonus XP bank. Per skill, stat counter skill.<id>.bonus (starts 0, floored at 0).
+//   PixelSkills.OldPixelConsumed(tierIndex) is called when an old pixel is CONSUMED (PixelClicker.Vacuum and AbsorbOldPixel = Vacuum
+//   pixel / Vacuum Device, the black hole swallowing, the Pet Vacuum; the currency payout is unchanged) and works on the pack in play
+//   (none for Standard): a GOOD pixel (IsGood: Mining = ores, Farming = plants, Electrician = conductors; goodTypeOverrides
+//   'packId:Type,Type') adds goodBonusXp (0 = 3) x a rarity factor (1..4, from 1/sqrt(spawn weight)); every other pixel (junk AND
+//   neutral) takes badBonusXp (0 = 1) off. In AddXp, DrawBonus DOUBLES each gain while the bank holds anything - the extra comes out
+//   of the bank (after the hazard penalty). Shown as a gold 'Bonus N' after the XP on the skill tracker; disableBonusXp. Not on the
+//   Skills window yet; other consumers (magnet sorter, quantum organizer, bank, UFO) don't count.
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

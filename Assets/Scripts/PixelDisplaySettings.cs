@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelDisplaySettings.cs
+//   Player display / accessibility settings (PlayerPrefs PixelClicker.Setting.*, applied before the first scene): graphics quality
+//   preset (QualitySettings), VSync, fullscreen + resolution, UI scale (SavedUIScale takes effect on the next start; UIScale = the
+//   value in use: PixelUIKit.CreateCanvas divides the reference resolution by it; the black bars' canvas is not scaled, so
+//   PixelHud.BarHeight is in scaled-canvas units and RawBarHeight in bar units), and colour-blind marks (ColorBlind /
+//   ColorBlindChanged: PixelLook.colorBlindSides draws a triangle / square / circle on the faces of the red / green / blue pixels,
+//   PixelBombMinigame adds R/G/B letters under the wires).
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

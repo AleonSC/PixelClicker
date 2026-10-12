@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelDatabase.cs / PixelDatabaseWindow.cs
+//   Game Database (opened by the Database tab of the pause menu's Game Guide screen, PixelPauseMenu.BuildGuideScreen ->
+//   PixelDatabaseWindow.Toggle(); the window's canvas (520) sits above the pause menu and Escape closes it first, CloseIfOpen): a
+//   search engine over the live game data. PixelDatabase.Build() (run each time the window opens) makes one Entry per pixel (name +
+//   the Pixel Guide text + pay / clicks / weight), shop pack (PixelShop.AllPacks), skill (perks + tree nodes), consumable
+//   (PixelConsumables.ItemName/ItemDescription/ItemCosts), defined recipe (PixelCrafting.DefinedRecipes), minigame / vendor
+//   (PixelMinigame.All), achievement and tip (PixelHints.AllHints + the lines of Resources/HowToPlay.txt and Controls.txt), and TWO-
+//   WAY References between them (pack rewards / costs / requirements / unlocks, skill blocks / filler / hazard, recipe ingredients,
+//   achievement pixel, and 'mentioned in tip' by whole-word name match). PixelDatabase.Search(query, max): every word must appear in
+//   the entry's name / category / description / reference text; ranked name-exact > starts-with > contains > category > text. The
+//   window (canvas 108, PixelWindows 16, PixelPop): search box + results list on the left, the selected entry's description and its
+//   references on the right (click a reference to jump to it, '< Back' returns). Not covered yet: floors / skies / pets / vendors'
+//   wares. A new kind of game data should be added to PixelDatabase.Build.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using UnityEngine;

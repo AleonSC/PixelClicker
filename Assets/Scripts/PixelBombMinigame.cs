@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelBombMinigame.cs
+//   Bomb Defusal minigame (pack unlocksMinigame = "bomb", Minigames tab, needs the RGB pack): every 2-4 min a code-built rectangular
+//   bomb (casing, darker front panel, end blocks, blinking indicator light, timer low on the front; the red/green/blue wires run
+//   straight across the top of the panel, each as two pieces hanging from pivots at its ends plus one wide invisible click box)
+//   appears beside the cube, kept fully in view (PixelUIKit.KeepOnScreen also keeps the hint / rising texts and the black hole counter
+//   on screen); cutting a wire only snaps that wire in two (CutWire: the pieces swing down); click the wire of the RGB pixel with the
+//   highest count at click time (CorrectWire) before timeLimit to defuse (+partsMin..partsMax bomb parts: bombParts = held (spent on
+//   Bank Storage via TrySpendParts), bombPartsEarned = ever earned = the tracker bar TrackerCount, like the Ultra bar; held parts are
+//   saved through PixelMinigame.ExtraValue / MinigameSave.extra); wrong wire or timeout = explosion flash +
+//   PixelClicker.ClearOldPixels(). Extends PixelMinigame (id bomb); sounds bomb_spawn/_click/_tick/_explode.
+// ---------------------------------------------------
 using System.Collections;
 using TMPro;
 using UnityEngine;

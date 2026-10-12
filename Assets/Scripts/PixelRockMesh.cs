@@ -1,3 +1,12 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelRockMesh.cs
+//   Jagged rocky pixels: PixelLook.jagged (Obsidian, Meteor, Rock, the six ores; looksVersion 36 replaced their saved looks and
+//   removed the Obsidian bevel rim - rocky pixels have no outline) draws a chipped cube mesh (PixelRockMesh.Get(baseCube, type): 8x8
+//   quads per face, flat shaded, only edge / corner vertices pulled inwards by a position hash so shared vertices match; faces stay
+//   flat, never bigger than the cube, same per-face UVs). PixelClicker.MeshFor(look) / BaseMesh() pick the mesh: the live cube swaps
+//   its MeshFilter mesh in ApplyTierLook, old pixel copies, display pixels and their extras / glow shells use MeshFor of their own
+//   tier (never srcFilter.sharedMesh, which may be another type's jagged mesh). The hit box is still a cube.
+// ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 

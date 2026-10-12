@@ -1,3 +1,22 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMagnetSorterDevice.cs
+//   (extends PixelPlacedDevice) Magnetized Sorter (DeviceKind.MagnetSorter 11, Device.craftOnly = never sold:
+//   PixelConsumables.ItemNotSold is checked by the shop cards / search / TryBuyItems and the visitors' wares; made in Crafting from a
+//   Sorter + Magnet: ItemKind.Device ingredients (Ingredient.device, Item.device, listed among the materials only for device kinds
+//   some recipe uses, gold-rimmed cube icon), default recipe added by EnsureDefaultRecipes; settings arcDegrees 110, radius (arc
+//   length), boxCapacity 60, shootInterval, pipeReach, sorterExitSpeed, durationSeconds 180). Placed like the fan (turn with scroll /
+//   Q / E, starts disarmed). A grey box with a red horseshoe magnet on a short tube at the front (+Z): loose old pixels inside the
+//   floor arc in front (BuildMagnetSorterBody, translucent fan named 'Range') are pulled to the magnet mouth and, within
+//   absorbDistance, swallowed (ReleaseOldPixel(body,false), fly-in) and stored per type with their payout (Stock: count + total
+//   amount; shot pixels carry the average). Three exit pipes (cubic-Bezier PixelTube from ports on the box's back to a nozzle on the
+//   floor, Rebuild): hover one (screen distance to its points), left-click grabs it, it follows the mouse on the floor plane (clamped
+//   to pipeReach, never inside the box), left-click puts it down, right-click puts it back; the mouse wheel over a pipe cycles which
+//   stored type it carries (floating model + 'xN'); every shootInterval a pipe with stock fires one pixel of its type from the nozzle
+//   (PixelClicker.SpawnStreamedPixel = SpawnStoredPixel with the Sorter's no-collision OldPixelStream); shot pixels are ignored by the
+//   magnet for 6 s. HandleHot (hovering / grabbing a pipe) blocks cube clicks via ExternalClickBlock. Saved in PlacedState.extra
+//   (ExportState/ImportState). NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs
+//   in OnTick.
+// ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;

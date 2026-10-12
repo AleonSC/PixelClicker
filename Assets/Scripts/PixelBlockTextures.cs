@@ -1,3 +1,15 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// Filler blocks / base block textures (PixelSkills.TryGetFiller, PixelClicker.FillerInfo, PixelBlockTextures.cs)
+//   Each skill pack can have a 'useless' FILLER block (SkillPack.fillerType = a pixel type name; Farming = Dirt, Mining = Stone, the
+//   old Rock block (enum PixelType.Rock kept for saves, now called Stone everywhere in the UI), which is now part of Mining's pixel
+//   list, unlocked with the first ore, IsOptIn is Wood only, and comes with the Prospector's Pack instead of its own pack
+//   (packDataVersion 13 migrates saved packs: drops the single-reward Rock pack, adds Stone to Prospector's, sets it to 1 click / pay
+//   1)). While the pack is in play the filler makes up fillerStartShare (0 = 60%) of all spawns at level 1, fading evenly to
+//   fillerEndShare (0 = 10%) at fillerFadeLevel (0 = level 20): PickSpawnTier and SpawnShare (the Pixel Guide's percentages) give it
+//   the weight others x share / (1 - share) instead of its own spawn weight. Farming / Mining skill by level, so unlocked pixels come
+//   up more as you level. Wood, Dirt and Stone have crisp 64 px pixel-art surfaces (PixelLook.blockSurface Wood / Dirt / Stone,
+//   PixelBlockTextures.Get, look colour white; looksVersion 40).
+// ---------------------------------------------------
 using UnityEngine;
 
 /// <summary>

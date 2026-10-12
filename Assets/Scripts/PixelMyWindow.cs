@@ -1,3 +1,18 @@
+// ---- System notes (moved here from CLAUDE.md) ----
+// PixelMyWindow.cs
+//   My Window (the player's own window; component added by PixelClicker.Awake): a docked 'My Window' button on the right edge under
+//   the Pixel Guide (shows once two pixel types are unlocked, showFromStart) opens ONE free window (canvas 107, not registered with
+//   PixelWindows, not closed by other windows) that is dragged by its header, resized by the corner handle (position / size / open
+//   state are global PlayerPrefs PixelClicker.MyWindow.*) and holds a vertical LIST of rows chosen in Edit mode (an add bar: type +
+//   target dropdowns + Add; each row gets ^ v x buttons, currencies a '/min' toggle). Row types (Entry.type): currency (one pixel
+//   type, optional per-minute rate sampled over 60 s), skill (a chosen skill, 'training' = follows the skill in training, 'all' = one
+//   row per available skill), goal ('next', 'all' = every row of the Log's Goals tab via PixelLog.CurrentGoals(), or mg:<id> a
+//   minigame tracker), achievement (PixelAchievements id), note (an input field) and fav (a button: item:<name> uses a consumable
+//   through PixelConsumables.TryUseItem, tool:<id> = the Pixel hose (PixelBank.ToggleHose) or opens a window via PixelMenuKeys.Click).
+//   The rows are saved per save file (JSON in PlayerPrefs PixelClicker.Setting.MyWindow, listed in PixelSettingsSync.Known_, reloaded
+//   by PixelMyWindow.ReloadFromPrefs). Values refresh every refreshSeconds (0 = 0.4); rows are rebuilt when what an 'all' row expands
+//   to changes.
+// ---------------------------------------------------
 using System;
 using System.Collections.Generic;
 using System.Text;
