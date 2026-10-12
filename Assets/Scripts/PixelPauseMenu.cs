@@ -131,7 +131,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private bool showSaveLoad = true;
 
     [Tooltip("Text of the main menu button that opens the save slots, and the title of that window.")]
-    [SerializeField] private string saveLoadText = "Save / Load";
+    [SerializeField] private string saveLoadMenuText = "Save/Load";
 
     [Tooltip("Slot name. {0} = the slot number.")]
     [SerializeField] private string slotNameFormat = "Slot {0}";
@@ -215,8 +215,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Settings button text.")]
     [SerializeField] private string settingsText = "Settings";
 
-    [Tooltip("Text on the Back button of the Stats and Settings sections.")]
-    [SerializeField] private string backText = "Back";
 
     [Tooltip("Title of the Stats section.")]
     [SerializeField] private string statsTitle = "Stats";
@@ -545,7 +543,7 @@ public class PixelPauseMenu : MonoBehaviour
     private RectTransform statsContent;
     private readonly List<TMP_Text> statValueTexts = new List<TMP_Text>();
     private string statsSignature = "";
-    private RectTransform statsPanelRect, statsRestartRect, statsBackRect;
+    private RectTransform statsPanelRect, statsRestartRect;
     private float statsContentHeight, statsListTop;
     private GameObject keysPanel;
     private readonly List<System.Action> settingsRefreshers = new List<System.Action>();
@@ -1079,7 +1077,7 @@ public class PixelPauseMenu : MonoBehaviour
         // Resume on top, alone
         entries.Add(new MenuEntry { label = resumeText, color = menuButtonColor, action = () => SetPaused(false), fullRow = true });
         // Save / Load | Stats
-        if (saveLoadPanel != null) entries.Add(new MenuEntry { label = saveLoadText, color = menuButtonColor, action = () => ShowView(saveLoadPanel) });
+        if (saveLoadPanel != null) entries.Add(new MenuEntry { label = saveLoadMenuText, color = menuButtonColor, action = () => ShowView(saveLoadPanel) });
         if (showStats) entries.Add(new MenuEntry { label = statsText, color = menuButtonColor, action = () => ShowView(statsPanel) });
         // Settings | Controls
         if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
@@ -1170,11 +1168,21 @@ public class PixelPauseMenu : MonoBehaviour
         return panel;
     }
 
-    /// <summary>Adds the Back button, grows the panel to fit and hides it until it is opened.</summary>
+    /// <summary>An X at the top right of a section window that goes back (to the main menu, or to 'backTo').</summary>
+    private void AddCloseX(GameObject panel, GameObject backTo = null)
+    {
+        Button close = MakeButton(panel.transform, "Close Button", "X", new Vector2(60f, 60f), new Color(0.3f, 0.3f, 0.35f, 1f), menuButtonFontSize * 0.8f);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+        cr.sizeDelta = new Vector2(60f, 60f);
+        cr.anchoredPosition = new Vector2(-24f, -24f);
+        close.onClick.AddListener(() => ShowView(backTo != null ? backTo : mainPanel));
+    }
+
+    /// <summary>Adds the X (top right), grows the panel to fit and hides it until it is opened.</summary>
     private void FinishSectionPanel(GameObject panel, float y, GameObject backTo = null)
     {
-        y += 10f;
-        AddMenuButton(panel.transform, backText, menuButtonColor, ref y, () => ShowView(backTo != null ? backTo : mainPanel));
+        AddCloseX(panel, backTo);
 
         RectTransform rect = panel.GetComponent<RectTransform>();
         float needed = y + 30f;
@@ -1385,17 +1393,14 @@ public class PixelPauseMenu : MonoBehaviour
         // Restart lives here now (it opens the hold-to-confirm screen).
         if (showRestart)
         {
-            Button restart = MakeButton(statsPanel.transform, "Restart Button", restartText, menuButtonSize, quitButtonColor, menuButtonFontSize);
+            Vector2 restartSize = new Vector2(menuButtonSize.x * 0.5f, menuButtonSize.y * 0.7f);   // a small button at the bottom
+            Button restart = MakeButton(statsPanel.transform, "Restart Button", restartText, restartSize, quitButtonColor, menuButtonFontSize * 0.7f);
             statsRestartRect = restart.GetComponent<RectTransform>();
             statsRestartRect.anchorMin = statsRestartRect.anchorMax = statsRestartRect.pivot = new Vector2(0.5f, 1f);
             restart.onClick.AddListener(() => ShowView(restartPanel));
         }
 
-        // Back button (moves with the section)
-        Button back = MakeButton(statsPanel.transform, "Back Button", backText, menuButtonSize, menuButtonColor, menuButtonFontSize);
-        statsBackRect = back.GetComponent<RectTransform>();
-        statsBackRect.anchorMin = statsBackRect.anchorMax = statsBackRect.pivot = new Vector2(0.5f, 1f);
-        back.onClick.AddListener(() => ShowView(mainPanel));
+        AddCloseX(statsPanel);   // the X at the top right replaces the Back button
 
         LayoutStats();
         statsPanel.SetActive(false);
@@ -1408,11 +1413,9 @@ public class PixelPauseMenu : MonoBehaviour
         if (statsRestartRect != null)
         {
             statsRestartRect.anchoredPosition = new Vector2(0f, -y);
-            y += menuButtonSize.y + menuButtonSpacing;
+            y += statsRestartRect.sizeDelta.y;
         }
-
-        statsBackRect.anchoredPosition = new Vector2(0f, -y);
-        y += menuButtonSize.y + 30f;
+        y += 30f;
         statsPanelRect.sizeDelta = new Vector2(panelSize.x, Mathf.Max(panelSize.y, y));
     }
 
@@ -1423,7 +1426,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void BuildSaveLoadPanel()
     {
         int count = saveGame.SlotCount;
-        saveLoadPanel = BuildSectionPanel("Save Load Panel", saveLoadText, out float y);
+        saveLoadPanel = BuildSectionPanel("Save Load Panel", saveLoadMenuText, out float y);
 
         // The slot list (scrolls when there are more slots than rows).
         float rowH = Mathf.Clamp(slotHeight * 0.65f, 56f, 76f);   // compact: just the name (the details show on hover)
@@ -2928,7 +2931,7 @@ public class PixelPauseMenu : MonoBehaviour
     private float FitViewHeight(float desired, float yTop)
     {
         if (!fitBetweenBars) return desired;
-        float below = 10f + menuButtonSize.y + menuButtonSpacing + 30f; // Back button block
+        float below = 30f; // room under the list (the Back button is now an X at the top)
         return Mathf.Max(120f, Mathf.Min(desired, AvailableHeight() - yTop - below));
     }
 
