@@ -24,6 +24,10 @@ public class PixelZoom : MonoBehaviour
     [SerializeField] private float[] zoomLevels = { };
 
     [Min(0f)]
+    [Tooltip("How far OUT the hold-the-key + wheel zoom may go, as a fraction of the normal camera distance (2 = twice as far). The press-to-step levels above are not affected. 0 = the default (2.2).")]
+    [SerializeField] private float maxZoomOut = 0f;
+
+    [Min(0f)]
     [Tooltip("How quickly the camera follows the zoom (bigger = snappier). 0 = the default (10).")]
     [SerializeField] private float followSharpness = 0f;
 
@@ -70,7 +74,7 @@ public class PixelZoom : MonoBehaviour
     }
 
     private float Closest { get { float m = float.MaxValue; foreach (float f in Levels()) m = Mathf.Min(m, f); return m; } }
-    private float Furthest { get { float m = 0f; foreach (float f in Levels()) m = Mathf.Max(m, f); return m; } }
+    private float Furthest { get { float m = maxZoomOut > 0f ? maxZoomOut : 2.2f; foreach (float f in Levels()) m = Mathf.Max(m, f); return m; } }
 
     private float[] Levels() => zoomLevels != null && zoomLevels.Length >= 2 ? zoomLevels : new[] { 1f, 0.6f, 0.35f };
 
