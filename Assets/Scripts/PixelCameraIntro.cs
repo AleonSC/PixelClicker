@@ -221,10 +221,15 @@ public class PixelCameraIntro : MonoBehaviour
         Vector3 offset = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), Mathf.Sin(pitch), Mathf.Cos(yaw) * Mathf.Cos(pitch)) * len;
         cam.transform.position = pivot + offset;
 
-        // Keep the cube in the middle of the picture for as long as possible: it is looked at all the way, and only in the last stretch does the
-        // view ease into the scene's own direction (where the cube may sit off-centre).
-        Quaternion lookAtCube = Quaternion.LookRotation(pivot - cam.transform.position, Vector3.up);
-        cam.transform.rotation = Quaternion.Slerp(lookAtCube, finalRotation, Smoother(Mathf.Clamp01((k - 0.78f) / 0.22f)));
+        // Aim at a point that slides from the cube to the spot the scene's own view axis passes at the cube's depth: the cube stays near the middle
+        // for most of the swing and the end is exactly the scene's view, with no sudden turn (blending two rotations spun the picture).
+        float depth = Mathf.Max(0.01f, finalOffset.magnitude);
+        Vector3 finalAim = finalPosition + finalRotation * Vector3.forward * depth;
+        float w = Smoother(k);
+        w *= w;
+        Vector3 aim = Vector3.Lerp(pivot, finalAim, w);
+        Vector3 dir = aim - cam.transform.position;
+        cam.transform.rotation = k >= 0.9999f ? finalRotation : Quaternion.LookRotation(dir.sqrMagnitude > 1e-6f ? dir : Vector3.forward, Vector3.up);
 
         cam.fieldOfView = Mathf.Lerp(startFov, finalFov, k);
         if (cam.orthographic) cam.orthographicSize = Mathf.Lerp(startOrtho, finalOrtho, k);
