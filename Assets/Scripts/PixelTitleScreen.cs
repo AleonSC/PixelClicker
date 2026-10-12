@@ -816,19 +816,36 @@ public class PixelTitleScreen : MonoBehaviour
 
     private void UpdateBlur()
     {
+        bool live = PixelTitleWanderers.LiveBackground || PixelFloor.Instance == null;
         Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();
-        if (cam == null) return;
+        if (live && cam == null) return;
         EnsureChain();
 
-        RenderTexture previous = cam.targetTexture;
-        try
+        if (live)
         {
-            cam.targetTexture = liveTexture;
-            cam.Render();
+            RenderTexture previous = cam.targetTexture;
+            try
+            {
+                cam.targetTexture = liveTexture;
+                cam.Render();
+            }
+            finally
+            {
+                cam.targetTexture = previous;
+            }
         }
-        finally
+        else
         {
-            cam.targetTexture = previous;
+            // No live scene: the floor style's picture fills the whole background (then it is blurred like the scene would be).
+            if (PixelFloor.Instance.TryGetTitlePicture(out Texture floorPicture, out Vector2 tiles, out Color tint) && floorPicture != null)
+                Graphics.Blit(floorPicture, liveTexture, tiles, Vector2.zero);
+            else
+            {
+                RenderTexture keep = RenderTexture.active;
+                RenderTexture.active = liveTexture;
+                GL.Clear(true, true, tint);
+                RenderTexture.active = keep;
+            }
         }
 
         RenderTexture source = liveTexture;

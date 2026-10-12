@@ -515,3 +515,4 @@
 [2026-10-12 00:16 UTC] The Save / Load slot rows now line up with the Save and Load buttons, and Cubie randomly peeks out from behind the window when it has been idle for a second.
 [2026-10-12 00:18 UTC] Cubie now peeks out from behind the Save / Load box instead of in front of it, and fades in and out as he moves.
 [2026-10-12 00:22 UTC] Cubie now also peeks out from behind the Settings and Key Bindings screens, and the main menu has a hover-only toggle at the bottom left that makes the vendors walk in along the bottom of the screen, wander about and leave.
+[2026-10-12 00:27 UTC] Added a hover-only 'Live background' toggle above the vendors toggle on the main menu: off fills the background with a blurred picture of the floor style instead of the live scene.

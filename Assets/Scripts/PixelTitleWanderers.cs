@@ -41,10 +41,21 @@ public class PixelTitleWanderers : MonoBehaviour
     [Tooltip("Size of the toggle at the bottom left.")]
     [SerializeField] private Vector2 toggleSize = new Vector2(300f, 56f);
 
-    [Tooltip("Text on the toggle.")]
+    [Tooltip("Text on the vendors toggle.")]
     [SerializeField] private string toggleText = "Vendors wander";
 
+    [Tooltip("Text on the live background toggle (above the vendors one).")]
+    [SerializeField] private string liveText = "Live background";
+
     private const string Pref = "PixelClicker.Setting.TitleWanderers";
+    private const string LivePref = "PixelClicker.Setting.TitleLiveBackground";
+
+    /// <summary>True (the default) = the title screen shows the live, blurred game scene behind it; false = the floor style's picture fills the background, blurred.</summary>
+    public static bool LiveBackground
+    {
+        get { return PlayerPrefs.GetInt(LivePref, 1) == 1; }
+        set { PlayerPrefs.SetInt(LivePref, value ? 1 : 0); }
+    }
 
     private class Walker
     {
@@ -57,9 +68,8 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private readonly List<Walker> walkers = new List<Walker>();
     private Transform layer;
-    private RectTransform toggleRect;
-    private CanvasGroup toggleGroup;
-    private Image tickFill;
+    private class Toggle { public RectTransform rect; public CanvasGroup group; public Image tick; public System.Func<bool> get; public System.Action<bool> set; }
+    private readonly List<Toggle> toggles = new List<Toggle>();
     private bool on, built;
     private float nextArrival;
     private RectTransform canvasRect;
@@ -82,17 +92,32 @@ public class PixelTitleWanderers : MonoBehaviour
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one; lr.offsetMin = lr.offsetMax = Vector2.zero;
         layer = l.transform;
 
-        GameObject t = new GameObject("Wander Toggle", typeof(RectTransform), typeof(Image), typeof(CanvasGroup), typeof(Button));
-        t.transform.SetParent(foreground, false);
+        MakeToggle(font, "Wander Toggle", toggleText, 24f, () => on, v => { on = v; Enabled = v; });
+        MakeToggle(font, "Live Background Toggle", liveText, 24f + toggleSize.y + 10f, () => LiveBackground, v => LiveBackground = v);
+        built = true;
+        Refresh();
+        nextArrival = Time.unscaledTime + 1.5f;
+    }
+
+    private void Refresh()
+    {
+        foreach (Toggle t in toggles) if (t.tick != null) t.tick.gameObject.SetActive(t.get());
+    }
+
+    private void MakeToggle(TMP_FontAsset font, string name, string text, float y, System.Func<bool> get, System.Action<bool> set)
+    {
+        GameObject t = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(CanvasGroup), typeof(Button));
+        t.transform.SetParent(layer.parent, false);
         Image bg = t.GetComponent<Image>();
         bg.color = new Color(0.08f, 0.1f, 0.14f, 0.85f);
-        toggleRect = t.GetComponent<RectTransform>();
-        toggleRect.anchorMin = toggleRect.anchorMax = toggleRect.pivot = new Vector2(0f, 0f);
-        toggleRect.sizeDelta = toggleSize;
-        toggleRect.anchoredPosition = new Vector2(24f, 24f);
-        toggleGroup = t.GetComponent<CanvasGroup>();
-        toggleGroup.alpha = 0f;
-        t.GetComponent<Button>().onClick.AddListener(() => { on = !on; Enabled = on; Refresh(); });
+        RectTransform rect = t.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 0f);
+        rect.sizeDelta = toggleSize;
+        rect.anchoredPosition = new Vector2(24f, y);
+        CanvasGroup group = t.GetComponent<CanvasGroup>();
+        group.alpha = 0f;
+        Toggle toggle = new Toggle { rect = rect, group = group, get = get, set = set };
+        t.GetComponent<Button>().onClick.AddListener(() => { toggle.set(!toggle.get()); Refresh(); });
 
         // A tick box and the text.
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
@@ -105,26 +130,19 @@ public class PixelTitleWanderers : MonoBehaviour
         br.anchoredPosition = new Vector2(14f, 0f);
         GameObject fill = new GameObject("Tick", typeof(RectTransform), typeof(Image));
         fill.transform.SetParent(box.transform, false);
-        tickFill = fill.GetComponent<Image>();
-        tickFill.color = new Color(0.35f, 0.85f, 0.5f, 1f);
-        tickFill.raycastTarget = false;
+        toggle.tick = fill.GetComponent<Image>();
+        toggle.tick.color = new Color(0.35f, 0.85f, 0.5f, 1f);
+        toggle.tick.raycastTarget = false;
         RectTransform fr = fill.GetComponent<RectTransform>();
         fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one; fr.offsetMin = new Vector2(6f, 6f); fr.offsetMax = new Vector2(-6f, -6f);
 
-        TMP_Text label = PixelUIKit.CreateText(font, t.transform, "Label", toggleText, 26f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
+        TMP_Text label = PixelUIKit.CreateText(font, t.transform, "Label", text, 26f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
         PixelUIKit.Caps(label);
         label.raycastTarget = false;
         RectTransform lrr = label.rectTransform;
         lrr.anchorMin = Vector2.zero; lrr.anchorMax = Vector2.one;
         lrr.offsetMin = new Vector2(58f, 0f); lrr.offsetMax = new Vector2(-10f, 0f);
-        built = true;
-        Refresh();
-        nextArrival = Time.unscaledTime + 1.5f;
-    }
-
-    private void Refresh()
-    {
-        if (tickFill != null) tickFill.gameObject.SetActive(on);
+        toggles.Add(toggle);
     }
 
     private void Update()
@@ -137,8 +155,10 @@ public class PixelTitleWanderers : MonoBehaviour
         }
 
         // The toggle is invisible until the mouse is over it.
-        bool over = RectTransformUtility.RectangleContainsScreenPoint(toggleRect, PixelInput.PointerPosition(), null);
-        toggleGroup.alpha = Mathf.MoveTowards(toggleGroup.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.4f));
+        // Both toggles appear while the mouse is over either of them (they stack in one corner).
+        bool over = false;
+        foreach (Toggle t in toggles) if (RectTransformUtility.RectangleContainsScreenPoint(t.rect, PixelInput.PointerPosition(), null)) over = true;
+        foreach (Toggle t in toggles) t.group.alpha = Mathf.MoveTowards(t.group.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.4f));
 
         float dt = Time.unscaledDeltaTime;
         float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;

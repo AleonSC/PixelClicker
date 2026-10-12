@@ -656,6 +656,26 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         return tex;
     }
 
+    /// <summary>
+    /// The picture the title screen shows when its background is not the live scene: the current style's texture (animated ones keep moving), how many times
+    /// to repeat it across the screen (1 = the whole picture, for fitted / stretched styles that must not repeat) and a tint for a plain Classic floor.
+    /// False when there is no floor to show.
+    /// </summary>
+    public bool TryGetTitlePicture(out Texture texture, out Vector2 tiles, out Color tint)
+    {
+        texture = null; tiles = Vector2.one; tint = Color.white;
+        if (!Usable || current < 0 || current >= styles.Count) return false;
+        bool classic = styles[current].pattern == FloorPattern.Classic;
+        texture = !classic && activeTexture != null ? activeTexture : PreviewTexture(current);
+        if (classic) tint = PreviewColor(current);
+        if (texture != null && texture.wrapMode == TextureWrapMode.Repeat)
+        {
+            float across = 6f;
+            tiles = new Vector2(across, across * Screen.height / Mathf.Max(1f, Screen.width));   // square cells
+        }
+        return true;
+    }
+
     /// <summary>Tint for the preview of style i (the floor's own colour for Classic, else white).</summary>
     public Color PreviewColor(int index)
     {
