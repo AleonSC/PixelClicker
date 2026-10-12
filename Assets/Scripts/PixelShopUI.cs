@@ -309,6 +309,16 @@ public partial class PixelShop
             AddRowPicture(row, () => captured < clicker.Tiers.Length ? TierKey(clicker.Tiers[captured].type) : null);
             StyleValueRow(row);
             row.buyButton.onClick.AddListener(() => { TryBuyValueUpgrade(captured, PixelInput.ShiftHeld()); RefreshRows(); });
+            // Hovering the Upgrade button explains clicking and Shift-clicking (the orange '!' box explains what a level does).
+            System.Func<string> upgradeTip = () =>
+            {
+                if (captured >= clicker.Tiers.Length) return "";
+                int lvl = clicker.Tiers[captured].valueLevel;
+                return string.Format(valueUpgradeTipFormat, PixelClicker.FormatNumberShort(clicker.ValueMultiplierAt(lvl)), PixelClicker.FormatNumberShort(clicker.ValueMultiplierAt(lvl + 1)));
+            };
+            PixelHoverTip buyTip = row.buyButton.gameObject.AddComponent<PixelHoverTip>();
+            buyTip.onEnter = () => hoverTip = upgradeTip;
+            buyTip.onExit = () => { if (hoverTip == upgradeTip) hoverTip = null; };
             bigger[i] = row;
         }
         valueRows = bigger;
@@ -1202,8 +1212,7 @@ public partial class PixelShop
             else if (shortName.EndsWith(" Pixel")) shortName = shortName.Substring(0, shortName.Length - 6);
             row.nameLabel.text = shortName;   // just the pixel's name ("White"), the row is on the Value tab already
             if (row.levelLabel != null) row.levelLabel.text = string.Format(ultraLevelFormat, tier.valueLevel);
-            row.descLabel.text = string.Format(valueRowDescFormat, tier.displayName, PixelClicker.FormatNumberShort(now),
-                                               PixelClicker.FormatNumberShort(maxed ? now : next));
+            row.descLabel.text = valueInfoText;
 
             bool enough = PixelClicker.InfiniteResources || tier.count >= cost;
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +

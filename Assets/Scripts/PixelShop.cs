@@ -564,8 +564,11 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Name of a Value row. {0} = pixel name.")]
     [SerializeField] private string valueRowNameFormat = "{0} Value";
 
-    [Tooltip("Description of a Value row. {0} = pixel name, {1} = Value multiplier now, {2} = after the next level.")]
-    [SerializeField] private string valueRowDescFormat = "Each {0} click pays x{1}  →  x{2}   (Shift-click: buy as many as you can)";
+    [Tooltip("The orange '!' box of a Value row.")]
+    [SerializeField] private string valueInfoText = "Each level multiplies this pixel's worth per click by that level.";
+
+    [Tooltip("Shown when the mouse is over a Value row's Upgrade button. {0} = Value multiplier now, {1} = after the next level.")]
+    [SerializeField] private string valueUpgradeTipFormat = "Click: buy one level (x{0}  →  x{1}).\nShift-click: buy as many as you can afford.";
 
     [Tooltip("Cost line of a Value row. {0} = cost, {1} = pixel name,")]
     [SerializeField] private string valueCostFormat = "Cost: {0} {1}";
