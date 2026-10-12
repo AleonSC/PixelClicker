@@ -96,6 +96,9 @@ public class PixelTitleScreen : MonoBehaviour
     [Tooltip("Text on the Play button.")]
     [SerializeField] private string playText = "Play";
 
+    [Tooltip("Text of the main button until a save has been loaded (or written): a fresh game. Empty = the Play text always.")]
+    [SerializeField] private string newGameText = "New Game";
+
     [Tooltip("Font size of the Play button.")]
     [SerializeField] private float playFontSize = 64f;
 
@@ -372,6 +375,12 @@ public class PixelTitleScreen : MonoBehaviour
     {
         if (!Showing || canvas == null) return;
         UpdateBarGlow();
+        if (playButton != null)
+        {
+            string want = PixelSaveGame.HasLoadedSave || string.IsNullOrEmpty(newGameText) ? playText : newGameText;
+            TMP_Text playLabel = playButton.GetComponentInChildren<TMP_Text>();
+            if (playLabel != null) PixelUIKit.SetText(playLabel, want);
+        }
         if (bar != null && titleBarVersion != PixelHud.BarColorVersion) { titleBarVersion = PixelHud.BarColorVersion; bar.color = PixelHud.BarTint(barColor); }
 
         // While the pause menu's views are open on top of the title, hide the title's own widgets and drop below the menu.

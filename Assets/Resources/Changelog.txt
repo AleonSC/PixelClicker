@@ -662,3 +662,4 @@
 [2026-10-12 12:21 UTC] Corner buttons (Inventory, Log, Shop, Crafting) now line up with the side buttons' outer edges; Database has its own docked button under Skills; docked button labels got padding so PIXEL GUIDE fits.
 [2026-10-12 12:24 UTC] The top and bottom corner buttons are now centred in the black margins.
 [2026-10-12 12:26 UTC] The Inventory and Log windows line up with their corner buttons again.
+[2026-10-12 12:31 UTC] The main menu's Play button says New Game until a save has been loaded (or written).

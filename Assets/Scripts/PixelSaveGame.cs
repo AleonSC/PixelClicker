@@ -553,6 +553,7 @@ public class PixelSaveGame : MonoBehaviour
             File.WriteAllText(temp, JsonUtility.ToJson(data, true));
             if (File.Exists(path)) File.Delete(path);
             File.Move(temp, path);
+            HasLoadedSave = true;
 
             if (logToConsole) Debug.Log("PixelSaveGame: saved (slot " + CurrentSlot + ").", this);
             if (showMessage) { if (autoSaveCall) ShowAutoNote(); else ShowMessage("Saved to slot " + CurrentSlot); }
@@ -572,6 +573,12 @@ public class PixelSaveGame : MonoBehaviour
 
     /// <summary>Reads the save file and applies it. Returns false if there is none or it can't be read.</summary>
     [ContextMenu("Load Now")]
+    /// <summary>True once a save was loaded or written this run (the main menu's button says 'Play' then, 'New Game' before).</summary>
+    public static bool HasLoadedSave { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetLoadedFlag() { HasLoadedSave = false; }
+
     public bool Load() => Load(true);
 
     /// <summary>Loads the save. 'grantOffline' also pays out what the auto clicker earned while the game was closed (startup only).</summary>
@@ -696,6 +703,7 @@ public class PixelSaveGame : MonoBehaviour
             }
 
             clicker.FinishLoad();
+            HasLoadedSave = true;
             if (PixelFloor.Instance != null && !PixelTitleScreen.Showing) PixelFloor.Instance.PropsFadeIn();   // pixels and devices fade in after a load
             if (data.oldPixels != null) clicker.RestoreOldPixels(data.oldPixels); // older saves leave the pixels alone
 
@@ -741,6 +749,7 @@ public class PixelSaveGame : MonoBehaviour
         try
         {
             if (File.Exists(FilePath)) File.Delete(FilePath);
+            HasLoadedSave = false;
             if (logToConsole) Debug.Log("PixelSaveGame: save deleted.", this);
         }
         catch (Exception e)
