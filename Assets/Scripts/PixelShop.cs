@@ -732,6 +732,7 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelFarmerMinigame>();
         EnsureMinigame<PixelEntrepreneurMinigame>();
         EnsureMinigame<PixelProspectorVendor>();
+        EnsureMinigame<PixelLumberjackVendor>();
         EnsureMinigame<PixelEggMinigame>();
         EnsureMinigame<PixelBeanMinigame>();
         if (PixelFind.First<PixelShopTutorial>() == null) gameObject.AddComponent<PixelShopTutorial>();
@@ -1338,6 +1339,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelFarmerMinigame>();
             EditorEnsureComponent<PixelEntrepreneurMinigame>();
             EditorEnsureComponent<PixelProspectorVendor>();
+            EditorEnsureComponent<PixelLumberjackVendor>();
             EditorEnsureComponent<PixelEggMinigame>();
             EditorEnsureComponent<PixelBeanMinigame>();
             EditorEnsureComponent<PixelShopTutorial>();

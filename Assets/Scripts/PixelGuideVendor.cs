@@ -314,6 +314,7 @@ public class PixelGuideVendor : MonoBehaviour
         TryStart("entrepreneur", UnlockedTypes() >= entrepreneurAtTiers, Random.Range(otherFirstVisitSeconds, otherFirstVisitSeconds * 2f));
         // The Prospector buys mining goods and only visits while Mining is the skill in training (he is started as soon as Mining is available).
         PixelSkills skills = PixelSkills.Instance;
+        TryStart("lumberjack", skills != null && skills.IsAvailable(skills.Find(PixelSkills.WoodcuttingId)), Random.Range(otherFirstVisitSeconds * 0.5f, otherFirstVisitSeconds));   // the Lumberjack buys wood goods and only visits while Woodcutting is trained
         TryStart("prospector", skills != null && skills.IsAvailable(skills.Find(PixelSkills.MiningId)), Random.Range(otherFirstVisitSeconds * 0.5f, otherFirstVisitSeconds));
         // Two very rare cat visitors, Egg and Bean: a special gift the first time, a random present of pixels on later visits.
         TryStart("egg", UnlockedTypes() >= 4, Random.Range(600f, 1200f));
