@@ -1194,8 +1194,9 @@ public class PixelBank : MonoBehaviour
         hoseButtonImage = hoseButton.GetComponent<Image>();
 
         float tabWidth = hud.ButtonSize.x * bankTabWidthFraction, hoseSize = hud.ButtonSize.y, groupWidth = tabWidth + hoseSize;
-        hud.DockInGroup(bank.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, tabWidth, 0f, groupWidth);
-        hud.DockInGroup(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, hoseSize, tabWidth, groupWidth);
+        hud.DockInGroup(bank.GetComponent<RectTransform>(), new Vector2(1f / 3f, 1f), KeepButtonsOut, 0f, tabWidth, 0f, groupWidth);
+        hud.DockInGroup(hoseButton.GetComponent<RectTransform>(), new Vector2(1f / 3f, 1f), KeepButtonsOut, 0f, hoseSize, tabWidth, groupWidth);
+        hoseButton.GetComponent<PixelDockedButton>().useOwnColor = true;
         DrawHoseIcon(hoseButton.transform, hoseSize / 64f);
         BuildTip();
         AddHoseTip(hoseButton.gameObject);
@@ -1203,8 +1204,7 @@ public class PixelBank : MonoBehaviour
         hoseDock = hoseButton.GetComponent<PixelDockedButton>();
         // The tabs only slide out when both left-edge windows (Bank and Skills) are closed.
         System.Func<bool> otherOpen = () => (PixelSkills.Instance != null && PixelSkills.Instance.WindowOpen) || (windowObject != null && windowObject.activeSelf);
-        bankDock.blockPointer = otherOpen;
-        hoseDock.blockPointer = otherOpen;
+        // (the buttons are in the top row now, nothing covers their strip: no pointer block)
         bankGroup = bank.gameObject.AddComponent<CanvasGroup>();
         hoseGroup = hoseButton.gameObject.AddComponent<CanvasGroup>();
 
@@ -1374,6 +1374,9 @@ public class PixelBank : MonoBehaviour
     /// <summary>The tab is tucked away and invisible while the window is up; when it closes the tab fades back in (already tucked away), like the Toggles tab.</summary>
     private void FadeTab(PixelDockedButton dock, CanvasGroup group, bool windowOpen)
     {
+        if (dock != null) dock.ForceHidden = false;   // the buttons live in the top row now and stay put while the window is open
+        group.alpha = 1f; group.blocksRaycasts = true;
+        return;
         if (dock != null) dock.ForceHidden = windowOpen || group.alpha < 0.05f;
         if (windowOpen) { group.alpha = 0f; group.blocksRaycasts = false; return; }
         group.blocksRaycasts = true;

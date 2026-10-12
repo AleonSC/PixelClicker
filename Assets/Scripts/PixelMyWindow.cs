@@ -80,6 +80,20 @@ public class PixelMyWindow : MonoBehaviour
     private static void ResetStatics() { instance = null; }
 
     /// <summary>Called after a save is loaded: the rows belong to the save file.</summary>
+    /// <summary>Opens My Window, or closes it when it is open (the button in the Toggles window).</summary>
+    public static void ToggleOpen()
+    {
+        if (instance == null || instance.canvasRoot == null) return;
+        instance.open = !instance.open;
+        instance.ApplyOpen();
+    }
+
+    /// <summary>Is the window available yet (it shows up once two pixel types are unlocked)?</summary>
+    public static bool Available => instance != null && instance.buttonAvailable;
+
+    /// <summary>Is the window open right now?</summary>
+    public static bool IsOpen => instance != null && instance.open;
+
     public static void ReloadFromPrefs()
     {
         if (instance != null) instance.LoadEntries();
@@ -102,7 +116,7 @@ public class PixelMyWindow : MonoBehaviour
     private bool open, editing;
     private float refreshTimer, saveTimer, hudTimer;
     private bool geometryDirty;
-    private PixelDockedButton dock;
+    private bool buttonAvailable;
 
     private static readonly string[] TypeNames = { "Currency", "Skill", "Goal", "Achievement", "Favorite", "Note" };
     private static readonly string[] TypeKeys = { "currency", "skill", "goal", "achievement", "fav", "note" };
@@ -192,13 +206,7 @@ public class PixelMyWindow : MonoBehaviour
         canvas = canvasRoot.GetComponent<Canvas>();
         canvasRect = canvasRoot.GetComponent<RectTransform>();
 
-        // The docked button on the right edge, under the Pixel Guide.
-        Button openButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "My Window Button", buttonText, new Vector2(230f, 64f), buttonColor, Color.white, 30f);
-        PixelHud hud = PixelHud.Ensure(gameObject);
-        hud.Dock(openButton.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), () => open, -2f * (hud.ButtonSize.y + 14f));
-        openButton.onClick.AddListener(() => { open = !open; ApplyOpen(); });
-        openButtonObject = openButton.gameObject;
-        dock = openButtonObject.GetComponent<PixelDockedButton>();
+        // (No docked button any more: it is opened from the small button at the top left of the Toggles window, see PixelMyWindow.ToggleOpen.)
 
         windowObject = new GameObject("My Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         windowObject.transform.SetParent(canvasRoot.transform, false);
@@ -843,7 +851,7 @@ public class PixelMyWindow : MonoBehaviour
         {
             hudTimer = 0.5f;
             bool show = ShowButton();
-            if (openButtonObject.activeSelf != show) openButtonObject.SetActive(show);
+            buttonAvailable = show;
             if (PixelTitleScreen.Showing != !canvasRoot.activeSelf) canvasRoot.SetActive(!PixelTitleScreen.Showing);
         }
         saveTimer -= Time.unscaledDeltaTime;

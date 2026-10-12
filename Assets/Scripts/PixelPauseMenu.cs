@@ -304,6 +304,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings tick box that lets the neon bar glow slowly change colour by itself.")]
     [SerializeField] private string glowCycleLabel = "Cycle glow colour";
 
+    [Tooltip("Label of the Settings tick box that gives every docked menu button its own colour (off = they all share one).")]
+    [SerializeField] private string distinctColorsLabel = "Distinct button colours";
+
     [Tooltip("Label of the Settings tick box that switches on your own colour for the black bars (game and main menu).")]
     [SerializeField] private string barColorLabel = "Custom bar colour";
 
@@ -2267,6 +2270,7 @@ public class PixelPauseMenu : MonoBehaviour
         Toggle uiColorToggle = AddToggleRow(list, uiColorLabel, PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
         settingsRefreshers.Add(() => uiColorToggle.SetIsOnWithoutNotify(PixelUIKit.UiColorOn));
         AddEyedropperButton(uiColorToggle, () => PixelEyedropper.Begin(c => { PixelUIKit.SetUiColorFromColor(c); settingsRefreshersRun(); }));   // pick the windows' colour from anywhere on screen
+        AddSettingToggle(list, distinctColorsLabel, () => PixelHud.DistinctButtonColors, on => PixelHud.DistinctButtonColors = on, ref y);
         Toggle barColorToggle = AddToggleRow(list, barColorLabel, PixelHud.BarColorOn, on => PixelHud.BarColorOn = on, ref y);
         settingsRefreshers.Add(() => barColorToggle.SetIsOnWithoutNotify(PixelHud.BarColorOn));
         AddEyedropperButton(barColorToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetBarColorFromColor(c); settingsRefreshersRun(); }));   // pick the black bars' colour from anywhere on screen

@@ -287,10 +287,27 @@ public class PixelHud : MonoBehaviour
         return new Color(p.r, p.g, p.b, baseColor.a);
     }
 
-    public static void ReloadGlowFromPrefs() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion++; }
+    // ---- Button colours: every docked button shares one colour, unless 'Distinct button colours' is on (Settings > Display) ----
+
+    private const string PrefDistinct = "PixelClicker.Setting.DistinctButtonColors";
+    private static int distinctCache = -1;
+
+    /// <summary>Show every docked button in its own colour (a visual reference)? Off = they all share one colour.</summary>
+    public static bool DistinctButtonColors
+    {
+        get { if (distinctCache < 0) distinctCache = PlayerPrefs.GetInt(PrefDistinct, 0); return distinctCache == 1; }
+        set { distinctCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefDistinct, distinctCache); }
+    }
+
+    [Tooltip("The one colour all docked buttons share while 'Distinct button colours' is off.")]
+    [SerializeField] private Color sharedButtonColor = new Color(0.2f, 0.3f, 0.45f, 1f);
+
+    internal Color SharedButtonColor => sharedButtonColor.a < 0.01f ? new Color(0.2f, 0.3f, 0.45f, 1f) : sharedButtonColor;
+
+    public static void ReloadGlowFromPrefs() { distinctCache = -1; buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion++; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetGlowStatics() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion = 0; }
+    private static void ResetGlowStatics() { distinctCache = -1; buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion = 0; }
 
     [Min(0f)]
     [Tooltip("Seconds the black bars (and the docked buttons) take to slide in when the game starts and out when quitting to the main menu. 0 = 0.9.")]
@@ -406,6 +423,7 @@ public class PixelHud : MonoBehaviour
     {
         Dock(button, anchor, keepOut, sideOffsetY);
         button.sizeDelta = new Vector2(width, ButtonSize.y);
+        if (!Mathf.Approximately(anchor.y, 0.5f)) button.pivot = new Vector2(0f, anchor.y);   // a group on the top / bottom edge is placed by its left edge
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         dock.Setup(this, button, anchor, keepOut, sideOffsetY, leftOffset, groupWidth);
     }
@@ -482,6 +500,22 @@ public class PixelDockedButton : MonoBehaviour
     }
 
     private Canvas sortCanvas;
+    private UnityEngine.UI.Image image;
+    private Color ownColor, appliedColor;
+    private bool ownColorKnown;
+
+    /// <summary>The button keeps whatever colour its owner gives it (the hose button turns green while the hose is on).</summary>
+    public bool useOwnColor;
+
+    private void ApplyColor()
+    {
+        if (useOwnColor) return;
+        if (image == null) image = GetComponent<UnityEngine.UI.Image>();
+        if (image == null) return;
+        if (!ownColorKnown) { ownColor = image.color; ownColorKnown = true; appliedColor = ownColor; }
+        Color want = PixelHud.DistinctButtonColors ? ownColor : hud.SharedButtonColor;
+        if (want != appliedColor) { image.color = want; appliedColor = want; }
+    }
 
     /// <summary>With the buttons always showing, each one gets its own canvas below every window, so windows overlay the buttons instead of the other windows' buttons showing on top.</summary>
     private void UpdateSorting()
@@ -504,6 +538,7 @@ public class PixelDockedButton : MonoBehaviour
     {
         if (hud == null) return;
         UpdateSorting();
+        ApplyColor();
 
         if (ForceHidden) { slide = 0f; Apply(); return; }
         float target = !hud.SlideButtons || (keepOut != null && keepOut()) || PointerNear() ? 1f : 0f;
@@ -526,7 +561,10 @@ public class PixelDockedButton : MonoBehaviour
         float shown = hud.ShownInset, hidden = hud.HiddenInset;
         float inset = Mathf.Lerp(hidden, shown, Mathf.SmoothStep(0f, 1f, slide));
         bool top = anchor.y > 0.5f;
-        float x = Mathf.Approximately(anchor.x, 0.5f) ? 0f : anchor.x > 0.5f ? -hud.SideShownInset : hud.SideShownInset; // 0.5 = centred; the corner buttons share their outer edge with the side buttons
+        // anchor.x is the button's place along the edge as a fraction (0 = left corner, 1 = right corner, buttons in between are spread evenly); the corner ones share their outer edge with the side buttons.
+        float f = Mathf.Clamp01(anchor.x);
+        float x = Mathf.Lerp(hud.SideShownInset, -hud.SideShownInset, f);
+        if (groupWidth > 0f) x += -f * groupWidth + sideOffsetX;   // one of a group: the whole group is spread like one button, this member sits at its offset
         float push = (1f - PixelHud.RevealEased) * (hud.BandHeight + hud.ButtonSize.y + 40f);
         rect.anchoredPosition = new Vector2(x, top ? -inset + push : inset - push);
     }
@@ -551,9 +589,9 @@ public class PixelDockedButton : MonoBehaviour
             return fromSide <= depth && Mathf.Abs(p.y / scale - (Screen.height / scale * 0.5f + sideOffsetY)) <= sh * 0.5f + pad;
         }
 
-        float w = hud.ButtonSize.x, margin = hud.SideMargin;
-        float x0 = Mathf.Approximately(anchor.x, 0.5f) ? (Screen.width / scale - w) * 0.5f
-                 : anchor.x > 0.5f ? Screen.width / scale - margin - w : margin;
+        float w = rect.sizeDelta.x;
+        float f = Mathf.Clamp01(anchor.x), screenW = Screen.width / scale;
+        float x0 = (groupWidth > 0f ? f * (screenW - groupWidth) + sideOffsetX : f * (screenW - w)) + Mathf.Lerp(hud.SideShownInset, -hud.SideShownInset, f);
         float x1 = x0 + w;
         float px = p.x / scale, py = p.y / scale;
         float fromEdge = anchor.y > 0.5f ? Screen.height / scale - py : py; // distance of the mouse from the button's screen edge
