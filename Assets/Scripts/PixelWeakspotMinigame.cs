@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// Weak Spots (id "weakspot"), the Mining skill's own minigame. It needs no shop pack: it runs by itself while Mining is the pixel pack in play.
+/// Weak Spots (id "weakspot"), the skills' minigame. It needs no shop pack: it runs by itself while any skill pack (Mining, Woodcutting, Farming...) is the pixel pack in play.
 /// Every few minutes the camera zooms in on the cube, time slows right down and a handful of glowing weak spots appear on the cube's face.
 /// Click every one of them before the time runs out and the Mining skill gets bonus XP (more the faster you were).
 /// The zoom uses a second camera (like first person mode), so the real camera and everything that reads it stay put.
@@ -14,7 +14,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     [SerializeField] private PixelClicker clicker;
 
     [Header("State")]
-    [Tooltip("Run even when Mining is not the pixel pack in play (testing).")]
+    [Tooltip("Run even while no skill pack is in play (testing).")]
     [SerializeField] private bool startRunning = false;
 
     [Header("When it starts")]
@@ -48,7 +48,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     [SerializeField] private float slowScale = 0.1f;
 
     [Min(0f)]
-    [Tooltip("Mining XP for clearing every weak spot.")]
+    [Tooltip("XP for clearing every weak spot (goes to the skill in training).")]
     [SerializeField] private float baseXp = 30f;
 
     [Min(0f)]
@@ -88,8 +88,8 @@ public class PixelWeakspotMinigame : PixelMinigame
     [Tooltip("Status line while hunting. {0} = spots hit, {1} = spots in total, {2} = seconds left.")]
     [SerializeField] private string statusFormat = "WEAK SPOTS   {0} / {1}   {2}s";
 
-    [Tooltip("Shown when every spot was hit. {0} = the bonus XP.")]
-    [SerializeField] private string winFormat = "Perfect!  +{0} Mining XP";
+    [Tooltip("Shown when every spot was hit. {0} = the bonus XP, {1} = the skill name.")]
+    [SerializeField] private string winFormat = "Perfect!  +{0} {1} XP";
 
     [Tooltip("Shown when time ran out.")]
     [SerializeField] private string loseText = "Too slow...";
@@ -125,7 +125,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     public override string Id => "weakspot";
     public override string DisplayName => "Weak Spots";
-    public override bool Running => startRunning || (PixelSkills.Instance != null && PixelSkills.Instance.ActiveId == PixelSkills.MiningId);
+    public override bool Running => startRunning || (PixelSkills.Instance != null && PixelSkills.Instance.ActiveId != PixelSkills.StandardId);
     public override bool Busy => phase != Phase.Idle;
     public override bool Takeover => true;   // nothing else starts meanwhile (the cube is not 'taken over': TakeoverActive stays off)
 
@@ -464,7 +464,9 @@ public class PixelWeakspotMinigame : PixelMinigame
             GrantSkillXp(Mathf.Max(0.01f, xp));
             PixelStats.Count("weakspot.wins");
             PixelAudio.Play("weakspot_win");
-            line = string.Format(winFormat, xp);
+            PixelSkills sk = PixelSkills.Instance;
+            PixelSkills.SkillPack pk = sk != null ? sk.Find(sk.TrainingId) : null;
+            line = string.Format(winFormat, xp, pk != null ? pk.displayName : "skill");
             PixelHints.Announce(line);
         }
         else

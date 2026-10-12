@@ -642,6 +642,37 @@ public class PixelAudio : MonoBehaviour
         musicSource.volume = muted ? 0f : musicVolume * masterVolume * musicTrackVolume;
     }
 
+    private bool musicHeldByFocus;
+    private float musicHeldTime;
+
+    /// <summary>Alt-tabbing stops the audio engine, which used to make the music pick a NEW track. Hold the current one and carry on where it was.</summary>
+    private void OnApplicationFocus(bool focus)
+    {
+        if (musicSource == null) return;
+        if (!focus)
+        {
+            if (musicSource.isPlaying && musicSource.clip != null)
+            {
+                musicHeldTime = musicSource.time;
+                musicHeldByFocus = true;
+                musicSource.Pause();
+            }
+        }
+        else if (musicHeldByFocus)
+        {
+            musicHeldByFocus = false;
+            if (musicSource.clip != null && playMusic)
+            {
+                musicSource.UnPause();
+                if (!musicSource.isPlaying)
+                {
+                    musicSource.time = Mathf.Min(musicHeldTime, Mathf.Max(0f, musicSource.clip.length - 0.05f));
+                    musicSource.Play();
+                }
+            }
+        }
+    }
+
     private void UpdateMusic()
     {
         if (musicSource == null) return;
@@ -652,7 +683,7 @@ public class PixelAudio : MonoBehaviour
             if (musicSource.isPlaying) musicSource.Stop();
             return;
         }
-        if (musicSource.isPlaying || AudioListener.pause) return; // paused audio also stops isPlaying; don't restart then
+        if (musicSource.isPlaying || AudioListener.pause || musicHeldByFocus) return; // paused audio also stops isPlaying; don't restart then
 
         int next;
         if (shuffleMusic && musicTracks.Length > 1)

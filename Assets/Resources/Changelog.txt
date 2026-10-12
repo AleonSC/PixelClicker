@@ -637,3 +637,4 @@
 [2026-10-12 09:22 UTC] Added a day / night cycle: the sun swings across the scene and changes colour and strength, the ambient light and the sky tint follow, night stays readable; the time of day is saved, and Settings > Interface can switch it off or set the length of a day (4 / 8 / 15 / 30 minutes).
 [2026-10-12 09:59 UTC] 'Display floor' moved from the main menu to Settings > Display under Floor style; the menu's pets toggle now reads 'Pets Wander' and sits above the wanderers toggle; the same NPC can no longer wander the menu twice at once.
 [2026-10-12 10:02 UTC] New Mining minigame 'Weak Spots': every few minutes the camera zooms in on the cube, time slows right down and glowing weak spots appear - click them all in time for bonus Mining XP.
+[2026-10-12 10:04 UTC] Weak Spots now run for every skill pack (bonus XP goes to the skill in training); alt-tabbing no longer switches the music track.
