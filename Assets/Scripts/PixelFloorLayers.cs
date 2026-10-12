@@ -123,7 +123,7 @@ public partial class PixelFloor
             }
         }
         tex.SetPixels32(full);
-        tex.Apply(false);
+        tex.Apply(tex.mipmapCount > 1);   // (rebuild the mip levels too, else far-away ground reads blank until the sharp picture lands)
     }
 
     private IEnumerator FillSliced(Texture2D tex, FloorStyle s)
@@ -133,16 +133,34 @@ public partial class PixelFloor
         int cells = Mathf.Max(1, s.cells);
         bool overlay = IsOverlayPattern(s.pattern);
         System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+        bool failed = false;
         ResumeShade(s, overlay);
         for (int y = 0; y < n; y++)
         {
-            if ((y & 3) == 0 && watch.ElapsedMilliseconds >= 7)
+            if (watch.ElapsedMilliseconds >= 7)
             {
                 yield return null;
                 if (tex == null) yield break;
                 watch.Restart();
                 ResumeShade(s, overlay);   // (something else may have drawn a texture meanwhile and changed the shared state)
             }
+            if (!FillRow(px, s, y, n, cells)) { failed = true; break; }
+        }
+        ResumeShade(s, overlay);
+        System.Random rng = new System.Random(s.seed);
+        if (s.pattern == FloorPattern.Space) AddStars(px, n, s, rng);
+        if (s.pattern == FloorPattern.PixelGrass) AddFlowers(px, n, s, rng);
+        if (failed) { fillRoutine = null; yield break; }   // (the soft preview stays up)
+        tex.SetPixels(px);
+        tex.Apply(tex.mipmapCount > 1);
+        fillRoutine = null;
+        if (overlay) BuildLayers(tex);
+    }
+
+    private bool FillRow(Color[] px, FloorStyle s, int y, int n, int cells)
+    {
+        try
+        {
             for (int x = 0; x < n; x++)
             {
                 float u = (x + 0.5f) / n, v = (y + 0.5f) / n;
@@ -150,15 +168,13 @@ public partial class PixelFloor
                 c.a = 1f;
                 px[y * n + x] = c;
             }
+            return true;
         }
-        ResumeShade(s, overlay);
-        System.Random rng = new System.Random(s.seed);
-        if (s.pattern == FloorPattern.Space) AddStars(px, n, s, rng);
-        if (s.pattern == FloorPattern.PixelGrass) AddFlowers(px, n, s, rng);
-        tex.SetPixels(px);
-        tex.Apply(tex.mipmapCount > 1);
-        fillRoutine = null;
-        if (overlay) BuildLayers(tex);
+        catch (System.Exception e)
+        {
+            Debug.LogError("Floor '" + s.name + "' failed to draw at row " + y + ": " + e);
+            return false;
+        }
     }
 
     private void ResumeShade(FloorStyle s, bool overlay)
