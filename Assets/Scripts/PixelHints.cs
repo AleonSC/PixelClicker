@@ -163,6 +163,7 @@ public class PixelHints : MonoBehaviour
             case "minigame_breakout": return "Breakout!";
             case "minigame_dash": return "Cube Dash!";
             case "minigame_blink": return "Cube Blink!";
+            case "minigame_weakspot": return "Weak Spots!";
             case "minigame_evade": return "Cube Evasion!";
             case "minigame_traffic": return "Red light, green light!";
             case "minigame_bomb": return "A bomb appeared!";
@@ -223,6 +224,7 @@ public class PixelHints : MonoBehaviour
     {
         H("minigame_traffic", "Red light, green light! Click on GREEN to score. Never click on RED: it costs you a point. On YELLOW click slowly, only when the circle closes on the cube; any other click costs a point. The auto clicker is switched off."),
         H("minigame_evade", "Cube Evasion! The cube runs away from your mouse and the auto clicker is switched off. Corner it against an edge and click it; at the end you get a bonus for every click."),
+        H("minigame_weakspot", "Weak Spots! The camera zooms in and time slows down. Glowing weak spots appear on the cube: click every one before the time runs out for bonus Mining XP."),
         H("minigame_blink", "Cube Blink! The cube keeps shrinking away and teleporting, and the auto clicker is switched off. Click it whenever it shows to land clicks; at the end you get a bonus for every click."),
         H("minigame_dash", "Cube Dash! The cube is dashing around the screen and the auto clicker is switched off. Click it as many times as you can before time runs out: you get a bonus of 10x its worth for every click you landed."),
         H("minigame_breakout", "Breakout! The old pixels on screen turned into a wall of bricks (the rest shrank away) and the cube stepped aside. Move the paddle along the bottom with the mouse or the Left / Right arrows to bounce the ball into them. Every brick you break pays 10x that pixel's worth; run out of balls and the rest simply drop."),

@@ -26,6 +26,7 @@ public class PixelClicker : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         ExternalClickBlock = false;
+        HoldSpin = false;
         DevClickBlock = false;
         ClickHint = false;
         GodMode = false;
@@ -968,6 +969,12 @@ public class PixelClicker : MonoBehaviour
         get => externalClickBlock || DevClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
         set => externalClickBlock = value;
     }
+
+    /// <summary>A minigame (Weak Spots) holds the cube still: no idle spin.</summary>
+    public static bool HoldSpin;
+
+    /// <summary>The cube's hit box (a full-size trigger).</summary>
+    public Transform HitboxTransform => hitbox;
 
     /// <summary>Dev tools: the shape placer is open and uses the mouse (the cube ignores clicks).</summary>
     public static bool DevClickBlock;
@@ -2942,7 +2949,7 @@ public class PixelClicker : MonoBehaviour
         }
         cubeOffsetWasActive = cubeOffsetActive;
 
-        if (idleSpin != Vector3.zero && allowRotation)
+        if (idleSpin != Vector3.zero && allowRotation && !HoldSpin)
             pixelTransform.Rotate(idleSpin * AnimDelta, Space.Self);
 
         if (hitbox != null) hitbox.SetPositionAndRotation(pixelTransform.position, pixelTransform.rotation);

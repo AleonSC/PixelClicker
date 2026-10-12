@@ -725,6 +725,7 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelBreakoutMinigame>();
         EnsureMinigame<PixelDashMinigame>();
         EnsureMinigame<PixelBlinkMinigame>();
+        EnsureMinigame<PixelWeakspotMinigame>();
         EnsureMinigame<PixelEvadeMinigame>();
         EnsureMinigame<PixelTrafficMinigame>();
         EnsureMinigame<PixelTinkererMinigame>();
