@@ -110,6 +110,17 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True while any keyboard key or mouse button is held down.</summary>
+    public static bool AnyInputHeld()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return (Keyboard.current != null && Keyboard.current.anyKey.isPressed) ||
+               (Mouse.current != null && (Mouse.current.leftButton.isPressed || Mouse.current.rightButton.isPressed || Mouse.current.middleButton.isPressed));
+#else
+        return Input.anyKey;
+#endif
+    }
+
     /// <summary>True while the mouse is over a UI element (so clicks on UI don't also hit the game).</summary>
     public static bool PointerOverUI() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }

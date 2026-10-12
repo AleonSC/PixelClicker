@@ -179,6 +179,7 @@ public partial class PixelRobotWorker : MonoBehaviour
         set
         {
             userDisabled = value;
+            ResetSaver();   // switching off and on again brings it back onto the screen
             if (userDisabled) { Hovering = false; HideAll(); CloseWindow(); }
         }
     }
@@ -252,6 +253,7 @@ public partial class PixelRobotWorker : MonoBehaviour
         }
 
         UpdateFloor();
+        UpdateSaver();
         UpdateMovement();
         UpdateHoverAndClick();
         UpdateJob();
@@ -367,7 +369,8 @@ public partial class PixelRobotWorker : MonoBehaviour
     {
         float pb = clicker.PixelBaseSize;
         bool working = WorkingSpot();
-        if (!working && (Time.time >= nextWander || wanderTarget == Vector3.zero))
+        bool saver = SaverSteer(out Vector3 saverGoal, out float speedMul);
+        if (!working && !saver && (Time.time >= nextWander || wanderTarget == Vector3.zero))
         {
             nextWander = Time.time + UnityEngine.Random.Range(wanderMinSeconds, Mathf.Max(wanderMinSeconds, wanderMaxSeconds));
             PickWander();
@@ -381,11 +384,11 @@ public partial class PixelRobotWorker : MonoBehaviour
             velocity = Vector3.zero;
         }
 
-        Vector3 target = WantedSpot();
+        Vector3 target = saver ? saverGoal : WantedSpot();
         if (target == Vector3.zero) target = pos;
         Vector3 delta = target - pos;
         float dist = delta.magnitude;
-        Vector3 desired = dist > 0.001f ? delta / dist * Mathf.Min(flySpeed * pb, dist * 2.5f) : Vector3.zero;
+        Vector3 desired = dist > 0.001f ? delta / dist * Mathf.Min(flySpeed * pb * speedMul, dist * 2.5f) : Vector3.zero;
         if (hovering) desired = Vector3.zero;   // hold still so it can be clicked
         velocity = Vector3.Lerp(velocity, desired, 1f - Mathf.Exp(-4f * Time.deltaTime));
         pos += velocity * Time.deltaTime;
@@ -797,10 +800,11 @@ public partial class PixelRobotWorker : MonoBehaviour
         Camera cam = Cam;
         bool windowOpen = windowRoot != null && windowRoot.activeSelf;
         if (cam == null || windowOpen) { if (bubbleCanvas.activeSelf) bubbleCanvas.SetActive(false); return; }
-        if (!bubbleCanvas.activeSelf) bubbleCanvas.SetActive(true);
 
         Vector3 world = root.transform.position + Vector3.up * (0.8f * UnitScale);
         Vector3 sp = cam.WorldToScreenPoint(world);
+        if (SaverOffScreen(sp)) { if (bubbleCanvas.activeSelf) bubbleCanvas.SetActive(false); return; }
+        if (!bubbleCanvas.activeSelf) bubbleCanvas.SetActive(true);
         float scaleFactor = bubbleCanvasComponent.scaleFactor > 0f ? bubbleCanvasComponent.scaleFactor : 1f;
         Vector2 canvasSize = new Vector2(Screen.width, Screen.height) / scaleFactor;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;

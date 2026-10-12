@@ -674,3 +674,4 @@
 [2026-10-12 13:10 UTC] Skills is back under Bank, Crafting is back on the bottom right (Dev Tools centred again), and every docked menu button now shares one colour.
 [2026-10-12 13:13 UTC] My Window is now a square button beside the Toggles tab (like the Bank's hose button) instead of a button inside the Toggles window.
 [2026-10-12 13:34 UTC] First-time minigame tip boxes now freeze time and darken the screen until you press Got it.
+[2026-10-12 13:39 UTC] UFO Helper screen saver: after a few minutes without input it flies up above the camera, checks in every few minutes with a fly-by or a short visit, returns on any input, and switching it off and on in Toggles puts it back on screen.
