@@ -106,6 +106,18 @@ public class PixelCombo : MonoBehaviour
     [Tooltip("Seconds without clicking the pixel before the meter fades away completely (0 = never hides). It shows again on the next click.")]
     [SerializeField] private float hideAfterSeconds = 5f;
 
+    [Header("Entrance")]
+    [Tooltip("Don't fade the meter in after the game starts (it is shown at once).")]
+    [SerializeField] private bool disableEntranceFade = false;
+
+    [Min(0f)]
+    [Tooltip("Seconds to wait after everything else has arrived (title screen gone, camera settled, black margins and buttons in place) before the meter starts to fade in. 0 = 0.6.")]
+    [SerializeField] private float entranceDelaySeconds = 0f;
+
+    [Min(0f)]
+    [Tooltip("Seconds the meter takes to fade in. 0 = 1.2.")]
+    [SerializeField] private float entranceFadeSeconds = 0f;
+
     [Min(0.01f)]
     [Tooltip("Seconds the meter takes to fade away.")]
     [SerializeField] private float fadeSeconds = 1f;
@@ -416,9 +428,25 @@ public class PixelCombo : MonoBehaviour
     private double shownMultiplier = -1d;
     private bool shownAtMax;
 
+    private float entranceWait, entranceK = 0f, baseAlpha = -1f;
+
+    /// <summary>The meter is the last thing to arrive after entering the game: it waits for the title screen, the camera swing and the sliding margins, then fades in.</summary>
+    private float UpdateEntrance()
+    {
+        if (disableEntranceFade) { entranceK = 1f; return 1f; }
+        bool settled = !PixelTitleScreen.Showing && !PixelTitleScreen.Reversing && !PixelCameraIntro.Moving && PixelHud.RevealEased >= 0.999f;
+        if (!settled) { entranceWait = 0f; entranceK = 0f; return 0f; }
+        entranceWait += Time.unscaledDeltaTime;
+        float delay = entranceDelaySeconds > 0f ? entranceDelaySeconds : 0.6f;
+        if (entranceWait > delay)
+            entranceK = Mathf.MoveTowards(entranceK, 1f, Time.unscaledDeltaTime / (entranceFadeSeconds > 0f ? entranceFadeSeconds : 1.2f));
+        return Mathf.SmoothStep(0f, 1f, entranceK);
+    }
+
     private void Apply()
     {
         if (canvasRoot == null) return;
+        float entrance = UpdateEntrance();
         bool visible = Working && showMeter;
         if (canvasRoot.activeSelf != visible) canvasRoot.SetActive(visible);
         if (!visible) return;
@@ -446,7 +474,9 @@ public class PixelCombo : MonoBehaviour
         // Fully visible while a combo runs, dimmed when idle, then faded out after a while without clicks.
         bool hidden = combo <= 0 && hideAfterSeconds > 0f && idleSeconds >= hideAfterSeconds;
         float targetAlpha = combo > 0 ? 1f : hidden ? 0f : idleAlpha;
-        group.alpha = targetAlpha > group.alpha ? targetAlpha : Mathf.MoveTowards(group.alpha, targetAlpha, Time.unscaledDeltaTime / fadeSeconds);
+        if (baseAlpha < 0f) baseAlpha = group.alpha;
+        baseAlpha = targetAlpha > baseAlpha ? targetAlpha : Mathf.MoveTowards(baseAlpha, targetAlpha, Time.unscaledDeltaTime / fadeSeconds);
+        group.alpha = baseAlpha * entrance;
         // Always sit just above the bottom black bar (it may not have existed yet when the meter was built, or its size may change).
         boxBasePosition = new Vector2(horizontalOffset, meterBottomMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f));
         UpdateEffects();
