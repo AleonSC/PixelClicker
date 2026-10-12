@@ -4,7 +4,7 @@
 //   created by PixelDevTools at start (Boot) so saved layouts reappear, the panels open with SetActive; state in PlayerPrefs
 //   PixelClicker.Dev.*, not in the game save). Shape placer: left panel; click the floor to drop the brush shape (ShapeKind Cube /
 //   Sphere / Cylinder / Capsule / Ramp (runtime wedge mesh) / Wall / Disc, sizes in main-pixel widths), click a shape to select + drag
-//   it on the floor plane, Q / E (PixelAction.RotateLeft/Right) turn, wheel scales, Delete removes; ShapeMode Solid (static collider)
+//   it on the floor plane, Q / E (PixelAction.RotateLeft/Right) turn, the wheel turns smoothly and Ctrl + wheel resizes (the hovered / dragged shape, else the brush), a see-through GHOST of the brush follows the mouse over the floor (UpdateGhost) and the shape is dropped with the brush's size / turn, Delete removes; ShapeMode Solid (static collider)
 //   / Dynamic (rigidbody) / Ghost (no collider); colour cycle button; every shape has a billboard number label, the panel lists id /
 //   kind / mode / x z y / rotation / size and 'Copy layout' puts the text on the clipboard; 'RESET ALL SHAPES' deletes everything (one
 //   click). While open PixelClicker.DevClickBlock (part of ExternalClickBlock) keeps the cube from taking the clicks. UI mockup
@@ -26,7 +26,7 @@ using static PixelInput;
 
 /// <summary>
 /// Dev tool: a SHAPE PLACER. Click the floor to drop a shape (cube, sphere, cylinder, capsule, ramp, wall, disc), click a shape to select and
-/// drag it, Q / E rotate it, the mouse wheel scales it, Delete removes it. Every shape carries a number label so a screenshot can say "move #3
+/// drag it, the wheel rotates it smoothly, Ctrl + wheel scales it, Delete removes it. Every shape carries a number label so a screenshot can say "move #3
 /// next to #5"; the panel lists each shape's exact position / rotation / size and can copy the whole layout as text. Shapes are SOLID (a static
 /// collider), DYNAMIC (a rigidbody that falls and gets pushed) or GHOST (no collider). The layout is saved (PlayerPrefs, dev settings are not
 /// part of the game save) and restored on the next start; <b>Reset all</b> deletes every shape. Opened from the Dev Tools tick box.
@@ -135,6 +135,8 @@ public class PixelDevShapes : MonoBehaviour
     {
         if (instance == this) { instance = null; Active = false; }
         PixelClicker.DevClickBlock = false;
+        if (ghost != null) Destroy(ghost);
+        if (ghostMat != null) Destroy(ghostMat);
     }
 
     private void Apply(bool on)
@@ -142,7 +144,7 @@ public class PixelDevShapes : MonoBehaviour
         Active = on;
         canvasRoot.SetActive(on);
         foreach (Shape s in shapes) if (s.label != null) s.label.gameObject.SetActive(on);
-        if (!on) { dragging = false; PixelClicker.DevClickBlock = false; }
+        if (!on) { dragging = false; PixelClicker.DevClickBlock = false; if (ghost != null) ghost.SetActive(false); }
         Refresh();
     }
 
@@ -302,6 +304,7 @@ public class PixelDevShapes : MonoBehaviour
             mode = modeDropdown != null ? modeDropdown.value : 0,
             color = brushColor,
             size = brushSize,
+            yaw = brushYaw,
             pos = floorPoint,
         };
         blob.shapes.Add(data);
@@ -316,10 +319,16 @@ public class PixelDevShapes : MonoBehaviour
 
     private int brushColor;
     private float brushSize = 1f;
+    private float brushYaw, brushYawTarget;   // the brush's turn (the ghost and the next shape placed)
+    private float selYawTarget;               // where the selected shape is turning to (smooth wheel / key turning)
+    private GameObject ghost;
+    private MeshFilter ghostFilter;
+    private Material ghostMat;
 
     private void Select(Shape s)
     {
         selected = s;
+        if (s != null) selYawTarget = s.data.yaw;
         if (s != null && kindDropdown != null)
         {
             buildingUi = true;
@@ -426,6 +435,7 @@ public class PixelDevShapes : MonoBehaviour
         bool free = !PixelKeys.Typing && Time.timeScale > 0f && !PixelPauseMenu.IsPaused && !PixelTitleScreen.Showing;
         bool overUi = PointerOverUI();
         PixelClicker.DevClickBlock = free;   // the cube ignores clicks while the placer is open
+        Shape hoverShape = free && !overUi ? PickShape() : null;
 
         if (free && !overUi)
         {
@@ -456,26 +466,53 @@ public class PixelDevShapes : MonoBehaviour
                     dirty = true;
                 }
             }
+            // Wheel: turns smoothly; Ctrl + wheel resizes. It acts on the shape under the mouse (or the one being dragged), else on the brush (the ghost).
             float scroll = ScrollY();
-            if (selected != null && Mathf.Abs(scroll) > 0.01f)
+            Shape target = dragging ? selected : hoverShape;
+            if (Mathf.Abs(scroll) > 0.01f)
             {
-                selected.data.size = Mathf.Clamp(selected.data.size * (scroll > 0f ? 1.1f : 1f / 1.1f), 0.1f, 40f);
-                brushSize = selected.data.size;
-                Rebuild(selected);
-                dirty = true;
+                if (target != null && target != selected) Select(target);
+                if (ControlHeld())
+                {
+                    float factor = Mathf.Pow(1.1f, scroll);
+                    if (target != null)
+                    {
+                        target.data.size = Mathf.Clamp(target.data.size * factor, 0.1f, 40f);
+                        brushSize = target.data.size;
+                        Rebuild(target);
+                        dirty = true;
+                    }
+                    else brushSize = Mathf.Clamp(brushSize * factor, 0.1f, 40f);
+                }
+                else if (target != null) selYawTarget += scroll * 15f;
+                else brushYawTarget += scroll * 15f;
             }
         }
         if (!LeftHeld()) dragging = false;
 
-        if (free && selected != null)
+        if (free)
         {
+            // Q / E turn too; the turning itself is smoothed towards its target.
             float turn = (PixelKeys.Held(PixelAction.RotateRight) ? 1f : 0f) - (PixelKeys.Held(PixelAction.RotateLeft) ? 1f : 0f);
+            bool onShape = selected != null && (dragging || hoverShape == selected);
             if (Mathf.Abs(turn) > 0.1f)
             {
-                selected.data.yaw += turn * 120f * Time.unscaledDeltaTime;
+                if (onShape) selYawTarget += turn * 120f * Time.unscaledDeltaTime;
+                else brushYawTarget += turn * 120f * Time.unscaledDeltaTime;
+            }
+            float k = 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime);
+            brushYaw = Mathf.Lerp(brushYaw, brushYawTarget, k);
+            if (selected != null && !Mathf.Approximately(selected.data.yaw, selYawTarget))
+            {
+                selected.data.yaw = Mathf.Abs(selected.data.yaw - selYawTarget) < 0.05f ? selYawTarget : Mathf.Lerp(selected.data.yaw, selYawTarget, k);
                 Rebuild(selected);
                 dirty = true;
             }
+        }
+        UpdateGhost(free && !overUi && !dragging && hoverShape == null);
+
+        if (free && selected != null)
+        {
             if (PixelKeys.KeyPressed(KeyCode.Delete) || PixelKeys.KeyPressed(KeyCode.Backspace)) DeleteSelected();
         }
 
@@ -532,7 +569,7 @@ public class PixelDevShapes : MonoBehaviour
         modeDropdown.onValueChanged.AddListener(v => { if (!buildingUi && selected != null) { selected.data.mode = v; Rebuild(selected); dirty = true; } });
         y += 62f;
 
-        // Colour / size / turn
+        // Colour / delete / copy
         Button colour = PixelUIKit.CreateButton(font, windowGo.transform, "Colour", "Colour", new Vector2(140f, 46f), btn, text, 24f);
         PlaceTL(colour.GetComponent<RectTransform>(), 20f, y, 140f, 46f);
         colourLabel = colour.GetComponentInChildren<TMP_Text>();
@@ -542,17 +579,7 @@ public class PixelDevShapes : MonoBehaviour
             if (selected != null) { selected.data.color = brushColor; Rebuild(selected); dirty = true; }
             Refresh();
         });
-        Button smaller = PixelUIKit.CreateButton(font, windowGo.transform, "Smaller", "Size -", new Vector2(140f, 46f), btn, text, 24f);
-        PlaceTL(smaller.GetComponent<RectTransform>(), 170f, y, 140f, 46f);
-        smaller.onClick.AddListener(() => ChangeSize(1f / 1.25f));
-        Button bigger = PixelUIKit.CreateButton(font, windowGo.transform, "Bigger", "Size +", new Vector2(140f, 46f), btn, text, 24f);
-        PlaceTL(bigger.GetComponent<RectTransform>(), 320f, y, 130f, 46f);
-        bigger.onClick.AddListener(() => ChangeSize(1.25f));
-        y += 58f;
 
-        Button turn = PixelUIKit.CreateButton(font, windowGo.transform, "Turn", "Turn 45", new Vector2(140f, 46f), btn, text, 24f);
-        PlaceTL(turn.GetComponent<RectTransform>(), 20f, y, 140f, 46f);
-        turn.onClick.AddListener(() => { if (selected != null) { selected.data.yaw += 45f; Rebuild(selected); dirty = true; } });
         Button delete = PixelUIKit.CreateButton(font, windowGo.transform, "Delete", "Delete", new Vector2(140f, 46f), new Color(0.65f, 0.25f, 0.25f, 1f), text, 24f);
         PlaceTL(delete.GetComponent<RectTransform>(), 170f, y, 140f, 46f);
         delete.onClick.AddListener(DeleteSelected);
@@ -566,10 +593,10 @@ public class PixelDevShapes : MonoBehaviour
         reset.onClick.AddListener(ResetAll);
         y += 58f;
 
-        TMP_Text hint = PixelUIKit.CreateText(font, windowGo.transform, "Hint", "Click floor: place   Click shape: select / drag\nQ / E: rotate   Wheel: size   Delete: remove",
+        TMP_Text hint = PixelUIKit.CreateText(font, windowGo.transform, "Hint", "Click floor: place (ghost shows where)   Click shape: select / drag\nWheel or Q / E: rotate   Ctrl + wheel: size   Delete: remove",
                                               20f, TextAlignmentOptions.TopLeft, FontStyles.Normal, new Color(0.7f, 0.75f, 0.85f, 1f));
-        PlaceTL(hint.rectTransform, 20f, y, 430f, 56f);
-        y += 64f;
+        PlaceTL(hint.rectTransform, 20f, y, 430f, 84f);
+        y += 92f;
 
         readout = PixelUIKit.CreateText(font, windowGo.transform, "Readout", "", 19f, TextAlignmentOptions.TopLeft, FontStyles.Normal, text);
         PlaceTL(readout.rectTransform, 20f, y, 430f, 760f - y - 12f);
@@ -577,11 +604,40 @@ public class PixelDevShapes : MonoBehaviour
         Refresh();
     }
 
-    private void ChangeSize(float factor)
+    /// <summary>A see-through copy of the brush shape follows the mouse over the floor, showing what a click would place (kind, size, turn, colour).</summary>
+    private void UpdateGhost(bool show)
     {
-        brushSize = Mathf.Clamp(brushSize * factor, 0.1f, 40f);
-        if (selected != null) { selected.data.size = brushSize; Rebuild(selected); dirty = true; }
-        Refresh();
+        if (!show || cam == null || kindDropdown == null)
+        {
+            if (ghost != null && ghost.activeSelf) ghost.SetActive(false);
+            return;
+        }
+        if (!FloorPoint(cam.ScreenPointToRay(PointerPosition()), out Vector3 point))
+        {
+            if (ghost != null && ghost.activeSelf) ghost.SetActive(false);
+            return;
+        }
+        if (ghost == null)
+        {
+            ghost = new GameObject("Shape Ghost");
+            ghostFilter = ghost.AddComponent<MeshFilter>();
+            MeshRenderer mr = ghost.AddComponent<MeshRenderer>();
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            Shader shader = PixelShaders.SpriteDefault();
+            ghostMat = new Material(shader != null ? shader : Shader.Find("Sprites/Default"));
+            mr.sharedMaterial = ghostMat;
+        }
+        ShapeKind kind = (ShapeKind)Mathf.Clamp(kindDropdown.value, 0, Enum.GetValues(typeof(ShapeKind)).Length - 1);
+        ghostFilter.sharedMesh = MeshOf(kind);
+        ghost.transform.rotation = Quaternion.Euler(0f, brushYaw, 0f);
+        ghost.transform.localScale = BaseScale(kind) * (Unit * Mathf.Max(0.05f, brushSize));
+        ghost.transform.position = point;
+        Renderer r = ghost.GetComponent<Renderer>();
+        ghost.transform.position = point + Vector3.up * r.bounds.extents.y;   // sits on the floor like the placed shape will
+        Color c = Palette[Mathf.Abs(brushColor) % Palette.Length];
+        ghostMat.color = new Color(c.r, c.g, c.b, 0.45f);
+        if (!ghost.activeSelf) ghost.SetActive(true);
     }
 
     private void Refresh()
@@ -589,7 +645,7 @@ public class PixelDevShapes : MonoBehaviour
         if (readout == null) return;
         if (colourLabel != null) PixelUIKit.SetText(colourLabel, ColorNames[brushColor % ColorNames.Length]);
         StringBuilder sb = new StringBuilder();
-        sb.Append("Shapes: ").Append(shapes.Count).Append("   brush size ").Append(brushSize.ToString("0.00")).Append('\n');
+        sb.Append("Shapes: ").Append(shapes.Count).Append("   brush size ").Append(brushSize.ToString("0.00")).Append("  turn ").Append(Mathf.Round(((brushYaw % 360f) + 360f) % 360f)).Append('\n');
         int max = 16;
         for (int i = 0; i < shapes.Count && i < max; i++) sb.Append(Line(shapes[i], shapes[i] == selected)).Append('\n');
         if (shapes.Count > max) sb.Append("... and ").Append(shapes.Count - max).Append(" more (Copy layout lists them all)");

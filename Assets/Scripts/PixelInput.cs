@@ -115,6 +115,16 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True while a Control key is held.</summary>
+    public static bool ControlHeld()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Keyboard.current != null && (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed);
+#else
+        return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+#endif
+    }
+
     /// <summary>True while any keyboard key or mouse button is held down.</summary>
     public static bool AnyInputHeld()
     {

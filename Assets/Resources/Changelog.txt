@@ -699,3 +699,4 @@
 [2026-10-12 21:04 UTC] Fixed a compile error in the sky pop-out (duplicate variable name)
 [2026-10-12 21:07 UTC] Fishing spawns: whale chance 5%, bottle chance 2%, jellyfish 3%, with water (80.5%) and seaweed (7.5%) taking up the difference
 [2026-10-12 21:05 UTC] New Settings > Display 'Flat view' tick box: switches the camera to an orthographic view with no depth shrinking (blends in after the intro; zoom and orbit still work; screen-edge limits and floor fitting adjusted).
+[2026-10-12 21:17 UTC] Shape placer: a see-through ghost shows where a shape will be placed, the mouse wheel now turns smoothly, Ctrl + wheel resizes, and the Size -/+ and Turn 45 buttons are gone
