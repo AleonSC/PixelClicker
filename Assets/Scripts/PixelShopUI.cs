@@ -997,6 +997,7 @@ public partial class PixelShop
         Button button = go.GetComponent<Button>();
         button.targetGraphic = image;
         button.onClick.AddListener(() => PixelAudio.Play("ui_click")); // the shop builds its own buttons, so it adds the sound itself
+        go.AddComponent<PixelButtonPulse>();   // a neon rim in the button's colour comes out from under it on every press
 
         labelText = CreateText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center, FontStyles.Bold);
         labelText.color = labelColor;
