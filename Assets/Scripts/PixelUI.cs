@@ -1346,6 +1346,8 @@ public class PixelUI : MonoBehaviour
             y += 12f;
         }
 
+        // Pass 1: which rows show, and what they say.
+        bool[] shown = new bool[tierLabels.Length];
         for (int i = 0; i < tierLabels.Length && i < tiers.Length; i++)
         {
             TMP_Text label = tierLabels[i];
@@ -1356,16 +1358,52 @@ public class PixelUI : MonoBehaviour
             bool visible = (tier.unlocked || holding || (showLockedTiers && !tier.rareDrop)) && showCurrency;
             if (label.gameObject.activeSelf != visible) label.gameObject.SetActive(visible);
             if (!visible) continue;
+            shown[i] = true;
 
             string amount = (tier.unlocked || holding) ? FormatAmount(tier.count) : lockedText;
             if (names) SetRow(label, ShortName(tier.displayName), amount, tier.UIColor, !tier.unlocked && !holding);
             else SetRow(label, amount, "", tier.UIColor, !tier.unlocked && !holding);   // swatch + number; the name is in the hover tip
+        }
 
-            if (autoMode)
+        // Pass 2 (automatic mode): lay the rows out in groups - Pure, Composite (one per skill), Exotic - each under a header you can fold.
+        if (autoMode)
+        {
+            List<string> groupOrder = new List<string> { "pure" };
+            Dictionary<string, string> groupTitles = new Dictionary<string, string> { { "pure", "Pure" }, { "exotic", "Exotic" } };
+            Dictionary<string, List<int>> groupRows = new Dictionary<string, List<int>> { { "pure", new List<int>() }, { "exotic", new List<int>() } };
+            for (int i = 0; i < shown.Length && i < tiers.Length; i++)
             {
-                label.rectTransform.anchoredPosition = new Vector2(0f, -y);
-                y += LinePitch;
+                if (!shown[i]) continue;
+                string key = CurrencyGroup(tiers[i], out string title);
+                if (!groupRows.ContainsKey(key)) { groupRows[key] = new List<int>(); groupTitles[key] = title; groupOrder.Add(key); }
+                groupRows[key].Add(i);
             }
+            groupOrder.Add("exotic");
+
+            int header = 0;
+            foreach (string key in groupOrder)
+            {
+                List<int> rows = groupRows[key];
+                if (rows.Count == 0) continue;
+                bool folded = !compact && CurrencyFolded(key);
+                if (!compact)
+                {
+                    TMP_Text h = CurrencyHeader(header++);
+                    h.gameObject.SetActive(true);
+                    PixelUIKit.SetText(h, (folded ? "+ " : "- ") + groupTitles[key]);
+                    h.rectTransform.anchoredPosition = new Vector2(0f, -y);
+                    currencyHeaderKeys[header - 1] = key;
+                    y += LinePitch * 0.85f;
+                }
+                foreach (int i in rows)
+                {
+                    TMP_Text label = tierLabels[i];
+                    if (folded) { if (label.gameObject.activeSelf) label.gameObject.SetActive(false); continue; }
+                    label.rectTransform.anchoredPosition = new Vector2(0f, -y);
+                    y += LinePitch;
+                }
+            }
+            for (int k = header; k < currencyHeaders.Count; k++) if (currencyHeaders[k].gameObject.activeSelf) currencyHeaders[k].gameObject.SetActive(false);
         }
 
         if (autoMode && compact)
@@ -1413,6 +1451,75 @@ public class PixelUI : MonoBehaviour
             ScrollRect sr = listViewport.GetComponent<ScrollRect>();
             if (sr != null) sr.enabled = !compact || scrolls;   // a pinned list that doesn't scroll lets the drag through, so the whole window can be moved
         }
+    }
+
+    // ---- Currency groups: Pure (the base colours), Composite (a skill's mixed goods, one group per skill) and Exotic (everything else) ----
+
+    private readonly List<TMP_Text> currencyHeaders = new List<TMP_Text>();
+    private string[] currencyHeaderKeys = new string[16];
+    private const string PrefFolded = "PixelClicker.Setting.InventoryFolded";
+    private static HashSet<string> foldedGroups;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetFoldedGroups() { foldedGroups = null; }
+
+    private static bool CurrencyFolded(string key)
+    {
+        if (foldedGroups == null)
+        {
+            foldedGroups = new HashSet<string>();
+            foreach (string part in PlayerPrefs.GetString(PrefFolded, "").Split(',')) if (part.Length > 0) foldedGroups.Add(part);
+        }
+        return foldedGroups.Contains(key);
+    }
+
+    private static void ToggleCurrencyFolded(string key)
+    {
+        CurrencyFolded(key);   // loads the set
+        if (!foldedGroups.Remove(key)) foldedGroups.Add(key);
+        PlayerPrefs.SetString(PrefFolded, string.Join(",", foldedGroups));
+    }
+
+    /// <summary>Which group a pixel type's row is listed under: 'pure' = White..Blue, 'composite.&lt;skill&gt;' = a skill pack's goods, else 'exotic'.</summary>
+    private static string CurrencyGroup(PixelClicker.PixelTier tier, out string title)
+    {
+        PixelClicker.PixelType t = tier.type;
+        title = "Pure";
+        if (t >= PixelClicker.PixelType.White && t <= PixelClicker.PixelType.Blue) return "pure";
+        PixelSkills skills = PixelSkills.Instance;
+        PixelSkills.SkillPack pack = skills != null ? skills.PackOfType(t) : null;
+        if (pack == null && t == PixelClicker.PixelType.Wood && skills != null) pack = skills.Find(PixelSkills.FarmingId);   // wood is grown by the Farming skill
+        if (pack != null && pack.id != PixelSkills.StandardId)
+        {
+            title = "Composite: " + pack.displayName;
+            return "composite." + pack.id;
+        }
+        title = "Exotic";
+        return "exotic";
+    }
+
+    private TMP_Text CurrencyHeader(int index)
+    {
+        while (currencyHeaders.Count <= index)
+        {
+            int slot = currencyHeaders.Count;
+            TMP_Text h = MakeText(ListParent, "Group Header " + slot, "", fontSize * 0.68f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, new Color(0.62f, 0.72f, 0.88f, 1f));
+            PixelUIKit.Caps(h);
+            RectTransform rt = h.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(-panelPadding * 2f, LinePitch * 0.85f);
+            h.margin = new Vector4(6f, 0f, 0f, 0f);
+            h.raycastTarget = true;
+            h.gameObject.AddComponent<PixelClickable>().onClick = () =>
+            {
+                if (slot < currencyHeaderKeys.Length && currencyHeaderKeys[slot] != null) { ToggleCurrencyFolded(currencyHeaderKeys[slot]); Refresh(); }
+            };
+            currencyHeaders.Add(h);
+            if (currencyHeaderKeys.Length <= slot) System.Array.Resize(ref currencyHeaderKeys, slot + 8);
+        }
+        return currencyHeaders[index];
     }
 
     /// <summary>Hides / shows the parts the simplified Inventory drops (title, X, tabs, category list) and tints the toggle.</summary>

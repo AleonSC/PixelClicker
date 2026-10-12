@@ -578,3 +578,4 @@
 [2026-10-12 06:30 UTC] Wood now looks like real tree bark: tall uneven ridges split by deep dark furrows, vertical fibres, flaking and patches of moss.
 [2026-10-12 06:45 UTC] Right-clicking a hazard block (Pest, Gas Pocket) now works it away safely: it takes as many right clicks as the block needs to break plus the hits you already made (5 to break and 2 hits in = 7), with a rising count like 3/7; no explosion, swarm or XP penalty.
 [2026-10-12 07:10 UTC] Added the skill economy idea (pure currency, skill resources, per-skill vendors that buy / sell, a Sell tab in the Skills window) to the to-do list.
+[2026-10-12 07:40 UTC] Inventory currency tab: the pixel rows are now grouped under foldable headers - Pure (the base colours), Composite (one group per skill: its goods) and Exotic (everything else), with Ultra still on top.
