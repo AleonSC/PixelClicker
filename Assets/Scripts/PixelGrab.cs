@@ -68,6 +68,15 @@ public class PixelGrab : MonoBehaviour
     [Tooltip("Fastest a pixel that was hit by a carried / thrown pixel may fly away (world units per second). 0 = the coded default (5).")]
     [SerializeField] private float hitReactionSpeedLimit = 0f;
 
+    [Min(0f)]
+    [Tooltip("How far one notch of the mouse wheel raises or lowers a pixel you are holding (world units). 0 = the coded default (0.4).")]
+    [SerializeField] private float wheelLift = 0f;
+
+    [Min(0f)]
+    [Tooltip("Highest the wheel can lift a held pixel above where you grabbed it (world units). 0 = the coded default (6).")]
+    [SerializeField] private float maxWheelLift = 0f;
+
+    private float liftOffset;
     private Rigidbody held;
     private OldPixelDespawn heldDespawn;
     private ScaledGravity heldGravity;
@@ -143,7 +152,13 @@ public class PixelGrab : MonoBehaviour
 
         if (held != null)
         {
-            if (!LeftHeld() || Time.timeScale <= 0f) Release();
+            if (!LeftHeld() || Time.timeScale <= 0f) { Release(); return; }
+            float wheel = PixelInput.ScrollY();
+            if (wheel != 0f)
+            {
+                float cap = maxWheelLift > 0f ? maxWheelLift : 6f;
+                liftOffset = Mathf.Clamp(liftOffset + Mathf.Sign(wheel) * Mathf.Min(Mathf.Abs(wheel), 3f) * (wheelLift > 0f ? wheelLift : 0.4f), -cap, cap);
+            }
             return;
         }
 
@@ -211,6 +226,7 @@ public class PixelGrab : MonoBehaviour
         PixelStats.Count("old.grabbed");
         clicker.LandFlyingPixel(body); // a caught meteor becomes an ordinary old pixel (solid, falls when let go)
         held = body;
+        liftOffset = 0f;
         heldDespawn = despawn;
         if (heldDespawn != null) heldDespawn.Held = true; // frozen lifetime while held
 
@@ -295,7 +311,7 @@ public class PixelGrab : MonoBehaviour
 
         Ray ray = cam.ScreenPointToRay(PointerPosition());
         if (!dragPlane.Raycast(ray, out float enter)) return;
-        Vector3 target = ray.GetPoint(enter) + grabOffset;
+        Vector3 target = ray.GetPoint(enter) + grabOffset + Vector3.up * liftOffset;
 
         // While time is slowed, velocities are per slowed second: scale so the pixel still follows the mouse at normal speed.
         float slow = PixelTimeStop.SlowFactor;

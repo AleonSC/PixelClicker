@@ -23,6 +23,7 @@ Arrow keys | Steer the snake during a Snake round (or use the on-screen arrows)
 {key:EventLog} | Open the whole event log (a new event only shows its newest line); press it again (or right-click) to hide it. Left-click a line to reopen its tip, mouse wheel scrolls
 {key:RotateLeft} or {key:RotateRight} | Turn a fan or sorter while placing it
 Mouse wheel | Turn a fan or sorter while placing it
+Mouse wheel while holding a pixel | Raise or lower it
 
 # Placing a Device
 Left-click the floor | Place a Vacuum Device or Fan
