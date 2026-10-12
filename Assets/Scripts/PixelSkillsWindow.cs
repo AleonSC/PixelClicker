@@ -80,7 +80,11 @@ public partial class PixelSkills
     private int selected, selectedNode;
     private Button treeToggle, unlockButton;
     private TMP_Text treeToggleLabel, pointsLabel, nodeInfoLabel, unlockLabel, treeTitle, tipText;
-    private RectTransform nodeArea, treeRect, tipRect;
+    private RectTransform nodeArea, nodeView, treeRect, tipRect;
+    private ScrollRect nodeScroll;
+    private Button treeExpandButton;
+    private Transform treeExpandGlyph;
+    private bool treeExpanded;   // the tree covers the Skills window for a bigger view
     private GameObject treeWindow;
     private System.Func<string> hoverTip;   // set while the mouse is over a card's orange '!' box
     private readonly object treeKey = new object();
@@ -335,21 +339,50 @@ public partial class PixelSkills
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(() => PixelPop.Hide(treeWindow));
 
+        // Top left: makes the tree cover the Skills window for a bigger view; pressing it again gives the window back.
+        treeExpandButton = PixelUIKit.CreateButton(Font, treeWindow.transform, "Expand", "<", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
+        RectTransform er = treeExpandButton.GetComponent<RectTransform>();
+        er.anchorMin = er.anchorMax = er.pivot = new Vector2(0f, 1f);
+        er.anchoredPosition = new Vector2(14f, -12f);
+        PixelUIKit.UseArrowGlyph(treeExpandButton, true);
+        treeExpandGlyph = treeExpandButton.transform.Find("Triangle");
+        treeExpandButton.onClick.AddListener(() => { treeExpanded = !treeExpanded; ApplyTreeExpandGlyph(); RefreshWindow(); });
+
         pointsLabel = PixelUIKit.CreateText(Font, treeWindow.transform, "Points", "", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, perkUnlockedColor);
         Place(pointsLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(34f, -150f), new Vector2(-34f, -100f));
 
+        // The nodes live in a sideways scroll view (wheel / drag) whose left and right edges fade out while there is more to see.
+        GameObject view = new GameObject("Node View", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect), typeof(PixelScrollFadeX));
+        view.transform.SetParent(treeWindow.transform, false);
+        view.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);   // invisible, but takes wheel / drag input
+        nodeView = view.GetComponent<RectTransform>();
+        nodeView.anchorMin = new Vector2(0f, 1f);
+        nodeView.anchorMax = new Vector2(1f, 1f);
+        nodeView.pivot = new Vector2(0f, 1f);
+        nodeView.offsetMin = new Vector2(34f, -150f - treeAreaHeight);
+        nodeView.offsetMax = new Vector2(-34f, -150f);
+
         GameObject area = new GameObject("Nodes", typeof(RectTransform));
-        area.transform.SetParent(treeWindow.transform, false);
+        area.transform.SetParent(view.transform, false);
         nodeArea = area.GetComponent<RectTransform>();
-        nodeArea.anchorMin = new Vector2(0f, 1f);
-        nodeArea.anchorMax = new Vector2(1f, 1f);
-        nodeArea.pivot = new Vector2(0f, 1f);
-        nodeArea.offsetMin = new Vector2(34f, -150f - treeAreaHeight);
-        nodeArea.offsetMax = new Vector2(-34f, -150f);
+        nodeArea.anchorMin = nodeArea.anchorMax = nodeArea.pivot = new Vector2(0f, 1f);
+        nodeArea.anchoredPosition = Vector2.zero;
+        nodeArea.sizeDelta = new Vector2(100f, treeAreaHeight);
+
+        nodeScroll = view.GetComponent<ScrollRect>();
+        nodeScroll.viewport = nodeView;
+        nodeScroll.content = nodeArea;
+        nodeScroll.horizontal = true;
+        nodeScroll.vertical = false;
+        nodeScroll.movementType = ScrollRect.MovementType.Clamped;
+        nodeScroll.scrollSensitivity = 40f;
+        PixelScrollFadeX fadeX = view.GetComponent<PixelScrollFadeX>();
+        fadeX.view = nodeView;
+        fadeX.content = nodeArea;
 
         for (int i = 0; i < 30; i++)   // connector lines first so the nodes draw over them
         {
-            GameObject g = new GameObject("Line " + i, typeof(RectTransform), typeof(Image));
+            GameObject g = new GameObject("Line " + i, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             g.transform.SetParent(nodeArea, false);
             Image im = g.GetComponent<Image>();
             im.raycastTarget = false;
@@ -361,6 +394,7 @@ public partial class PixelSkills
         for (int i = 0; i < 8; i++)
         {
             Button b = PixelUIKit.CreateButton(Font, nodeArea, "Node " + i, "", nodeSize, cardColor, textColor, 26f);
+            b.gameObject.AddComponent<CanvasGroup>();
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
             TMP_Text label = b.GetComponentInChildren<TMP_Text>();
@@ -406,10 +440,17 @@ public partial class PixelSkills
 
     public bool TreeOpen => treeWindow != null && PixelPop.IsOpen(treeWindow);
 
+    private void ApplyTreeExpandGlyph()
+    {
+        if (treeExpandGlyph != null) treeExpandGlyph.localRotation = Quaternion.Euler(0f, 0f, treeExpanded ? 90f : -90f);   // points left = grow over the window, right = give it back
+    }
+
     private void ToggleTreeWindow()
     {
         if (TreeOpen) { PixelPop.Hide(treeWindow); return; }
         selectedNode = 0;
+        treeExpanded = false;
+        ApplyTreeExpandGlyph();
         PixelPop.Show(treeWindow);
         RefreshWindow();
     }
@@ -424,11 +465,14 @@ public partial class PixelSkills
 
         int maxDepth = 0;
         for (int i = 0; i < count; i++) maxDepth = Mathf.Max(maxDepth, Depth(p, p.nodes[i]));
-        float areaW = nodeArea.rect.width, areaH = nodeArea.rect.height;
-        float colStep = maxDepth > 0 ? Mathf.Clamp((areaW - nodeSize.x) / maxDepth, nodeSize.x + 20f, nodeSize.x + 220f) : 0f;
+        float viewW = nodeView.rect.width, areaH = nodeView.rect.height;
+        float colStep = maxDepth > 0 ? Mathf.Clamp((viewW - nodeSize.x) / maxDepth, nodeSize.x + 20f, nodeSize.x + 220f) : 0f;
         float rowStep = Mathf.Max(nodeSize.y + 14f, (areaH - nodeSize.y) / 2f);
         float usedW = maxDepth * colStep + nodeSize.x;
-        float offX = Mathf.Max(0f, (areaW - usedW) * 0.5f);
+        const float pad = 20f;
+        float areaW = Mathf.Max(viewW, usedW + pad * 2f);   // wider than the view = the tree scrolls sideways
+        nodeArea.sizeDelta = new Vector2(areaW, areaH);
+        float offX = usedW + pad * 2f > viewW ? pad : (viewW - usedW) * 0.5f;
 
         Vector2[] pos = new Vector2[count];
         for (int i = 0; i < count; i++)
@@ -720,6 +764,7 @@ public partial class PixelSkills
     /// </summary>
     private void UpdateTreeLayout()
     {
+        if (treeExpanded && (treeWindow == null || !TreeOpen)) { treeExpanded = false; ApplyTreeExpandGlyph(); }
         if (treeRect == null || windowObject == null || treeWindow == null || !treeWindow.activeSelf) return;
         PixelPop pop = windowObject.GetComponent<PixelPop>();
         float s = pop != null ? Mathf.Max(0.3f, pop.Fit) : 1f;
@@ -727,7 +772,7 @@ public partial class PixelSkills
         if (parent == null) return;
         PixelHud hud = PixelHud.Ensure(gameObject);
         float parentW = parent.rect.width;
-        float leftVisual = windowRect.anchoredPosition.x + windowSize.x * s + 14f;
+        float leftVisual = treeExpanded ? windowRect.anchoredPosition.x : windowRect.anchoredPosition.x + windowSize.x * s + 14f;   // expanded: it covers the Skills window
         float rightVisual = gapToButton + hud.SideMargin * 0.35f;
         float designW = Mathf.Max(300f, (parentW - leftVisual - rightVisual) / s);
         treeRect.offsetMin = new Vector2(leftVisual, -windowSize.y * 0.5f);

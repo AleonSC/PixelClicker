@@ -572,3 +572,4 @@
 [2026-10-12 05:05 UTC] Standard is now a real skill: it levels from your first click (full XP while it is the pack in play, 5% while another skill trains) and its perks apply in every rotation - old pixels last 2 seconds longer per level and the floor holds 5 more old pixels per level from level 4.
 [2026-10-12 05:12 UTC] Fixed a compile error in the skill tracker file (stray lines at the top).
 [2026-10-12 05:20 UTC] The hazard XP penalty now only hits the skill it went off in (Mining or Farming) and its red indicator only shows on that skill's tracker; other skills, including Standard, are unaffected.
+[2026-10-12 05:40 UTC] Skill tree window: a top-left button expands the tree over the Skills window (press again to go back), and the tree now scrolls sideways with soft faded left/right edges.
