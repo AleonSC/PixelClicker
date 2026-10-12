@@ -97,6 +97,12 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Seconds the player must keep the mouse button held on the confirm button.")]
     [SerializeField] private float restartHoldSeconds = 2f;
 
+    [Tooltip("Seconds the red Overwrite button must be held down to overwrite an existing save.")]
+    [SerializeField] private float overwriteHoldSeconds = 0.6f;
+
+    [Tooltip("Text on the Overwrite button (it is a hold button). Empty = the normal confirm text.")]
+    [SerializeField] private string overwriteHoldText = "Hold to overwrite";
+
     [Tooltip("Colour of the confirm button.")]
     [SerializeField] private Color restartHoldColor = new Color(0.8f, 0.25f, 0.25f, 1f);
 
@@ -1512,8 +1518,22 @@ public class PixelPauseMenu : MonoBehaviour
         xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(0.5f, 0f);
         cr.anchoredPosition = new Vector2(-(half.x + gap) * 0.5f, 24f);
         xr.anchoredPosition = new Vector2((half.x + gap) * 0.5f, 24f);
-        confirm.onClick.AddListener(() =>
+        // Overwriting needs a short HOLD on the red button (a fill grows across it), so it can't happen by an accidental click.
+        TMP_Text confirmLabel = confirm.GetComponentInChildren<TMP_Text>();
+        if (!string.IsNullOrEmpty(overwriteHoldText)) confirmLabel.text = overwriteHoldText;
+        confirmLabel.transform.SetAsLastSibling();
+        GameObject holdFill = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+        holdFill.transform.SetParent(confirm.transform, false);
+        holdFill.transform.SetSiblingIndex(1);   // above the button's face, under its label
+        Image holdImage = holdFill.GetComponent<Image>();
+        holdImage.color = new Color(1f, 1f, 1f, 0.4f);
+        holdImage.raycastTarget = false;
+        RectTransform holdRect = holdFill.GetComponent<RectTransform>();
+        holdRect.anchorMin = Vector2.zero; holdRect.anchorMax = new Vector2(0f, 1f); holdRect.offsetMin = holdRect.offsetMax = Vector2.zero;
+        overwriteHold = confirm.gameObject.AddComponent<PixelHoldButton>();
+        overwriteHold.Setup(holdRect, overwriteHoldSeconds, () =>
         {
+            overwriteHold.ResetProgress();
             overwriteOverlay.SetActive(false);
             bool saved = saveGame.SaveToSlot(selectedSlot, false);
             RefreshSlots();
@@ -1525,6 +1545,7 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     private TMP_Text overwriteTitleLabel;
+    private PixelHoldButton overwriteHold;
     private GameObject resultOverlay;
     private TMP_Text resultLabel;
 
@@ -1719,6 +1740,7 @@ public class PixelPauseMenu : MonoBehaviour
         saveGame.TryGetSlotInfo(selectedSlot, out string savedAt, out double _);
         overwriteTitleLabel.text = string.Format(overwriteTitle, SlotRef(selectedSlot));
         overwriteText.text = string.Format(overwriteMessage, SlotRef(selectedSlot), savedAt);
+        if (overwriteHold != null) overwriteHold.ResetProgress();
         overwriteOverlay.SetActive(true);
     }
 
@@ -1727,7 +1749,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (saveGame == null) return;
         bool loaded = saveGame.LoadSlot(selectedSlot, false);
         RefreshSlots();
-        ShowResult(loaded ? string.Format(loadedResultFormat, SlotRef(selectedSlot)) : loadFailedResultText);
+        if (loaded) { ShowView(mainPanel); return; }   // a successful load closes the Save / Load window (back to the menu, or the title screen when opened from there)
+        ShowResult(loadFailedResultText);
     }
 
     /// <summary>"This deletes everything" screen: the player has to HOLD the red button to confirm.</summary>

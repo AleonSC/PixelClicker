@@ -511,3 +511,4 @@
 [2026-10-11 23:53 UTC] The Vacuum pixel now has an opening (with lip and suction wind) on each of its four sides instead of one, and the Ghost blob is a bit bigger.
 [2026-10-12 00:00 UTC] The fill on hold-to-confirm buttons (shop help, Restart) is now clipped to the button's rounded shape instead of showing hard rectangular edges.
 [2026-10-12 00:06 UTC] Minimising or maximising the pinned Inventory and the skill tracker no longer moves them: they always return to the spot you put them in, even if maximising had to nudge them up to fit on screen.
+[2026-10-12 00:13 UTC] Overwriting a save now needs a short hold on the red button, and loading a save closes the Save / Load window.
