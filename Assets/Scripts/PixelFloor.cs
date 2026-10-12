@@ -704,7 +704,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void DropProxies(bool restore)
     {
         if (proxyMats == null) return;
-        if (restore && realMats != null) floorRenderer.sharedMaterials = realMats;
+        if (restore && realMats != null && floorRenderer != null) floorRenderer.sharedMaterials = realMats;
         foreach (Material m in proxyMats) if (m != null) Destroy(m);
         proxyMats = null;
         realMats = null;

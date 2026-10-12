@@ -189,8 +189,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Result text when saving failed.")]
     [SerializeField] private string saveFailedResultText = "Save failed";
 
-    [Tooltip("Result text after a load. {0} = the slot number.")]
-    [SerializeField] private string loadedResultFormat = "Loaded slot {0}";
 
     [Tooltip("Result text when loading failed.")]
     [SerializeField] private string loadFailedResultText = "Load failed";

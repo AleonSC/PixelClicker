@@ -526,3 +526,4 @@
 [2026-10-12 01:09 UTC] The black top / bottom margins and docked buttons now slide in as the camera swings on Play (before the floor fades in), and slide out as the camera swings back after the floor fades when quitting to the main menu.
 [2026-10-12 01:12 UTC] Wandering vendors vanish when the toggle is switched off, and no longer flash in the middle of the screen just before they walk in.
 [2026-10-12 01:13 UTC] The camera intro / outro now keeps the cube centred for almost the whole swing, only easing into the scene's own view at the very end.
+[2026-10-12 01:14 UTC] Fixed a MissingReferenceException when the floor is destroyed on exit, and removed an unused pause-menu text field (compiler warning).
