@@ -575,6 +575,9 @@ public partial class PixelSkills
         r.offsetMax = offsetMax;
     }
 
+    private int lastCardClick = -1;
+    private float lastCardClickTime;
+
     private Card BuildCard(int index)
     {
         Card c = new Card { pack = packs[index] };
@@ -674,7 +677,17 @@ public partial class PixelSkills
         fr.pivot = new Vector2(0f, 0.5f);
 
         int captured = index;
-        c.button.onClick.AddListener(() => { selected = captured; selectedNode = 0; RefreshWindow(); });
+        c.button.onClick.AddListener(() =>
+        {
+            // A second click on the same card within a moment chooses that skill (same as the Train button).
+            bool doubleClick = lastCardClick == captured && Time.unscaledTime - lastCardClickTime < 0.4f;
+            lastCardClick = doubleClick ? -1 : captured;
+            lastCardClickTime = Time.unscaledTime;
+            selected = captured;
+            selectedNode = 0;
+            if (doubleClick && captured >= 0 && captured < packs.Count) SetActive(packs[captured].id);
+            RefreshWindow();
+        });
         return c;
     }
 
