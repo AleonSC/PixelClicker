@@ -80,6 +80,42 @@ public class PixelWeakspotMinigame : PixelMinigame
     [Tooltip("Colour of the weak spots.")]
     [SerializeField] private Color spotColor = new Color(1f, 0.45f, 0.1f, 1f);
 
+    [Header("Variations")]
+    [Tooltip("Turn off the variations: every weak spot just sits still.")]
+    [SerializeField] private bool disableVariants = false;
+
+    [Range(0f, 1f)]
+    [Tooltip("Chance a weak spot DRIFTS across the cube's face, bouncing off the edges of the play area. 0 = the default (0.3).")]
+    [SerializeField] private float driftChance = 0f;
+
+    [Range(0f, 1f)]
+    [Tooltip("Chance a weak spot PULSES: it shrinks and swells, and is harder to hit while small. 0 = the default (0.3).")]
+    [SerializeField] private float pulseChance = 0f;
+
+    [Range(0f, 1f)]
+    [Tooltip("Chance a weak spot FLICKERS: it keeps vanishing and reappearing, and can only be hit while it shows. 0 = the default (0.2).")]
+    [SerializeField] private float flickerChance = 0f;
+
+    [Min(0.05f)]
+    [Tooltip("How fast a drifting spot moves (screen widths per real second). 0.05 minimum; the default ~0.12.")]
+    [SerializeField] private float driftSpeed = 0.12f;
+
+    [Min(0.2f)]
+    [Tooltip("Seconds for one shrink-and-swell of a pulsing spot.")]
+    [SerializeField] private float pulseSeconds = 1.3f;
+
+    [Range(0.1f, 0.9f)]
+    [Tooltip("How small a pulsing spot gets (fraction of its full size).")]
+    [SerializeField] private float pulseMin = 0.35f;
+
+    [Min(0.1f)]
+    [Tooltip("How long a flickering spot shows each time (real seconds).")]
+    [SerializeField] private float flickerOn = 0.9f;
+
+    [Min(0.1f)]
+    [Tooltip("How long a flickering spot is gone each time (real seconds).")]
+    [SerializeField] private float flickerOff = 0.5f;
+
     [Header("Look")]
     [Min(10)]
     [Tooltip("Size of the status text at the top of the screen.")]
@@ -104,6 +140,11 @@ public class PixelWeakspotMinigame : PixelMinigame
         public Material mat, ringMat;
         public Vector3 pos;
         public float born;
+        public int kind;                 // 0 still, 1 drifts, 2 pulses, 3 flickers
+        public Vector2 vp, vel;          // viewport position / velocity of a drifting spot
+        public float phase;              // random offset of the pulse / flicker
+        public float sizeK = 1f;         // current size (pulsing)
+        public bool shown = true;        // flickering: visible right now
         public bool hit;
         public float hitT = -1f;
     }
@@ -299,30 +340,59 @@ public class PixelWeakspotMinigame : PixelMinigame
         phaseT = 0f;
     }
 
+    /// <summary>The point on the cube's face the zoom camera sees through a viewport position (false when it misses the cube).</summary>
+    private bool Project(Vector2 vp, out Vector3 pos)
+    {
+        pos = Vector3.zero;
+        Transform cubeT = clicker.PixelTransform;
+        Ray ray = zoomCam.ViewportPointToRay(new Vector3(vp.x, vp.y, 0f));
+        RaycastHit[] hits = Physics.RaycastAll(ray, 100f, ~0, QueryTriggerInteraction.Collide);
+        float best = float.MaxValue;
+        RaycastHit pick = default;
+        foreach (RaycastHit h in hits)
+        {
+            if (h.transform != cubeT && !h.transform.IsChildOf(cubeT) && (clicker.HitboxTransform == null || h.transform != clicker.HitboxTransform)) continue;
+            if (h.distance < best) { best = h.distance; pick = h; }
+        }
+        if (best == float.MaxValue) return false;
+        pos = pick.point + pick.normal * (clicker.PixelBaseSize * 0.04f);
+        return true;
+    }
+
+    private int RollKind()
+    {
+        if (disableVariants) return 0;
+        float d = driftChance > 0f ? driftChance : 0.3f, p = pulseChance > 0f ? pulseChance : 0.3f, f = flickerChance > 0f ? flickerChance : 0.2f;
+        float r = Random.value;
+        if (r < d) return 1;
+        if (r < d + p) return 2;
+        if (r < d + p + f) return 3;
+        return 0;
+    }
+
     /// <summary>Finds a spot on the face of the cube that the camera sees, away from the others.</summary>
     private Spot MakeSpot()
     {
-        Transform cubeT = clicker.PixelTransform;
         float size = clicker.PixelBaseSize;
         for (int attempt = 0; attempt < 30; attempt++)
         {
-            Vector3 vp = new Vector3(Random.Range(0.3f, 0.7f), Random.Range(0.3f, 0.7f), 0f);
-            Ray ray = zoomCam.ViewportPointToRay(vp);
-            RaycastHit[] hits = Physics.RaycastAll(ray, 100f, ~0, QueryTriggerInteraction.Collide);
-            float best = float.MaxValue;
-            RaycastHit pick = default;
-            foreach (RaycastHit h in hits)
-            {
-                if (h.transform != cubeT && !h.transform.IsChildOf(cubeT) && (clicker.HitboxTransform == null || h.transform != clicker.HitboxTransform)) continue;
-                if (h.distance < best) { best = h.distance; pick = h; }
-            }
-            if (best == float.MaxValue) continue;
-            Vector3 pos = pick.point + pick.normal * (size * 0.04f);
+            Vector2 vp = new Vector2(Random.Range(0.3f, 0.7f), Random.Range(0.3f, 0.7f));
+            Vector3 pos;
+            if (!Project(vp, out pos)) continue;
             bool apart = true;
             foreach (Spot o in spots)
-                if (Vector2.Distance(zoomCam.WorldToViewportPoint(pos), zoomCam.WorldToViewportPoint(o.pos)) < spotGap) { apart = false; break; }
+                if (Vector2.Distance(vp, o.vp) < spotGap) { apart = false; break; }
             if (!apart) continue;
-            return BuildSpot(pos, size * spotSize);
+            Spot s = BuildSpot(pos, size * spotSize);
+            s.vp = vp;
+            s.kind = RollKind();
+            s.phase = Random.value * 6.28f;
+            if (s.kind == 1)
+            {
+                float a = Random.value * 6.28f;
+                s.vel = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * Mathf.Max(0.05f, driftSpeed);
+            }
+            return s;
         }
         return null;
     }
@@ -387,6 +457,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     private void UpdateSpots()
     {
         float t = Time.unscaledTime;
+        float dt = Time.unscaledDeltaTime;
         foreach (Spot s in spots)
         {
             if (s.root == null) continue;
@@ -397,15 +468,36 @@ public class PixelWeakspotMinigame : PixelMinigame
                 s.root.localScale = Vector3.one * Mathf.Lerp(1.2f, 0f, k);
                 continue;
             }
+
+            if (s.kind == 1 && phase == Phase.Hunt && zoomCam != null)
+            {
+                Vector2 np = s.vp + s.vel * dt;
+                if (np.x < 0.28f || np.x > 0.72f) { s.vel.x = -s.vel.x; np.x = Mathf.Clamp(np.x, 0.28f, 0.72f); }
+                if (np.y < 0.28f || np.y > 0.72f) { s.vel.y = -s.vel.y; np.y = Mathf.Clamp(np.y, 0.28f, 0.72f); }
+                Vector3 np3;
+                if (Project(np, out np3)) { s.vp = np; s.pos = np3; s.root.position = np3; }
+                else s.vel = -s.vel;   // slid off the cube: turn round
+            }
+            s.sizeK = s.kind == 2 ? Mathf.Lerp(pulseMin, 1f, 0.5f + 0.5f * Mathf.Sin(t * 6.283f / Mathf.Max(0.2f, pulseSeconds) + s.phase)) : 1f;
+            if (s.kind == 3)
+            {
+                float cycle = flickerOn + flickerOff;
+                s.shown = (t + s.phase) % cycle < flickerOn;
+            }
+
             float pop = Mathf.Clamp01((t - s.born) / 0.18f);
             float pulse = 1f + Mathf.Sin(t * 9f) * 0.08f;
-            s.root.localScale = Vector3.one * (Mathf.Sin(pop * Mathf.PI * 0.5f) * pulse);
+            float vis = s.shown ? 1f : 0.0f;
+            s.root.localScale = Vector3.one * (Mathf.Sin(pop * Mathf.PI * 0.5f) * pulse * s.sizeK * vis);
             if (s.ring != null)
             {
                 float left = Mathf.Clamp01(huntLeft / Mathf.Max(0.1f, huntSeconds));
                 s.ring.localScale = Vector3.one * Mathf.Lerp(1f, 1.9f, left) * (s.root.childCount > 0 ? s.root.GetChild(0).localScale.x : 1f);
             }
             Color c = Color.Lerp(Color.red, spotColor, Mathf.Clamp01(huntLeft / Mathf.Max(0.1f, huntSeconds) + 0.2f));
+            if (s.kind == 1) c = Color.Lerp(c, new Color(0.4f, 0.8f, 1f, 1f), 0.6f);       // drifting: blue-ish
+            else if (s.kind == 2) c = Color.Lerp(c, new Color(0.7f, 1f, 0.4f, 1f), 0.6f);  // pulsing: green-ish
+            else if (s.kind == 3) c = Color.Lerp(c, new Color(1f, 0.9f, 0.3f, 1f), 0.6f);  // flickering: yellow
             if (s.mat != null) s.mat.color = c;
             if (s.ringMat != null) s.ringMat.color = c;
         }
@@ -419,7 +511,7 @@ public class PixelWeakspotMinigame : PixelMinigame
         float bestD = float.MaxValue;
         foreach (Spot s in spots)
         {
-            if (s.hit) continue;
+            if (s.hit || !s.shown) continue;
             Vector3 sp = zoomCam.WorldToScreenPoint(s.pos);
             if (sp.z <= 0f) continue;
             float d = Vector2.Distance(p, new Vector2(sp.x, sp.y));
@@ -429,7 +521,7 @@ public class PixelWeakspotMinigame : PixelMinigame
         // projected radius of the spot (world size -> pixels), never smaller than the forgiveness
         Vector3 a = zoomCam.WorldToScreenPoint(nearest.pos);
         Vector3 b = zoomCam.WorldToScreenPoint(nearest.pos + zoomCam.transform.right * (clicker.PixelBaseSize * spotSize * 0.5f));
-        float radius = Mathf.Max(clickPixels, Vector2.Distance(a, b) * 1.25f);
+        float radius = Mathf.Max(clickPixels * Mathf.Lerp(0.5f, 1f, nearest.sizeK), Vector2.Distance(a, b) * 1.25f * nearest.sizeK);
         if (bestD > radius) return;
         nearest.hit = true;
         nearest.hitT = Time.unscaledTime;
