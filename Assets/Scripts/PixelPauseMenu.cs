@@ -1459,8 +1459,7 @@ public class PixelPauseMenu : MonoBehaviour
         BuildResultOverlay(saveLoadPanel.transform);
         BuildRenameOverlay(saveLoadPanel.transform);
         FinishSectionPanel(saveLoadPanel, y);
-        PixelCubiePeek peekCubie = GetComponent<PixelCubiePeek>();
-        if (peekCubie == null) peekCubie = gameObject.AddComponent<PixelCubiePeek>();
+        PixelCubiePeek peekCubie = gameObject.AddComponent<PixelCubiePeek>();
         peekCubie.Setup(saveLoadPanel.GetComponent<RectTransform>(), () => IsPaused && saveLoadPanel != null && saveLoadPanel.activeSelf
             && !(renameOverlay != null && renameOverlay.activeSelf) && !(overwriteOverlay != null && overwriteOverlay.activeSelf) && !(resultOverlay != null && resultOverlay.activeSelf));
         overwriteOverlay.transform.SetAsLastSibling(); // above the Back button too
@@ -1817,6 +1816,14 @@ public class PixelPauseMenu : MonoBehaviour
         y += menuButtonSize.y + menuButtonSpacing;
 
         FinishSectionPanel(restartPanel, y, statsPanel);
+    }
+
+    /// <summary>Cubie may peek out from behind this panel while it is open and idle (see PixelCubiePeek).</summary>
+    private void AddCubiePeek(GameObject panelObject)
+    {
+        if (panelObject == null) return;
+        PixelCubiePeek p = gameObject.AddComponent<PixelCubiePeek>();
+        p.Setup(panelObject.GetComponent<RectTransform>(), () => IsPaused && panelObject != null && panelObject.activeSelf);
     }
 
     private void BuildChangelogPanel()
@@ -2182,6 +2189,8 @@ public class PixelPauseMenu : MonoBehaviour
         LayoutSettings();
         BuildKeysPanel();
         FinishSectionPanel(settingsPanel, top + viewHeight);
+        AddCubiePeek(settingsPanel);
+        AddCubiePeek(keysPanel);
     }
 
     // ---- Settings sections: a heading you click folds / unfolds the rows under it (all start folded) ----

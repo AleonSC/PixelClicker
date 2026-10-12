@@ -503,6 +503,30 @@ public class PixelGuideVendor : MonoBehaviour
         return r;
     }
 
+    /// <summary>Draws Cubie (for a menu to walk about) under 'parent' at the given height: a holder anchored at the bottom centre with his art as the first child.</summary>
+    public RectTransform BuildWalker(Transform parent, float height)
+    {
+        GameObject holder = new GameObject("Cubie Walker", typeof(RectTransform));
+        holder.transform.SetParent(parent, false);
+        RectTransform r = holder.GetComponent<RectTransform>();
+        float scale = height / 400f;
+        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
+        r.pivot = new Vector2(0.5f, 0f);
+        r.sizeDelta = new Vector2(300f * scale, 400f * scale);
+        GameObject art = new GameObject("Art", typeof(RectTransform));
+        art.transform.SetParent(holder.transform, false);
+        RectTransform ar = art.GetComponent<RectTransform>();
+        ar.anchorMin = ar.anchorMax = new Vector2(0.5f, 0f);
+        ar.pivot = new Vector2(0.5f, 0f);
+        ar.sizeDelta = new Vector2(300f, 400f);
+        ar.localScale = Vector3.one * scale;
+        // DrawCharacter fills the visit's own references (pupils, arm, gift...): keep those as they were.
+        RectTransform sArm = armL, sPointer = pointer, sGift = giftBox, sPL = pupilL, sPR = pupilR;
+        DrawCharacter(art.transform);
+        armL = sArm; pointer = sPointer; giftBox = sGift; pupilL = sPL; pupilR = sPR;
+        return r;
+    }
+
     private void BuildUI()
     {
         if (canvasRoot != null) Destroy(canvasRoot);

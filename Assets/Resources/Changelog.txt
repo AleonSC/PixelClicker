@@ -514,3 +514,4 @@
 [2026-10-12 00:13 UTC] Overwriting a save now needs a short hold on the red button, and loading a save closes the Save / Load window.
 [2026-10-12 00:16 UTC] The Save / Load slot rows now line up with the Save and Load buttons, and Cubie randomly peeks out from behind the window when it has been idle for a second.
 [2026-10-12 00:18 UTC] Cubie now peeks out from behind the Save / Load box instead of in front of it, and fades in and out as he moves.
+[2026-10-12 00:22 UTC] Cubie now also peeks out from behind the Settings and Key Bindings screens, and the main menu has a hover-only toggle at the bottom left that makes the vendors walk in along the bottom of the screen, wander about and leave.

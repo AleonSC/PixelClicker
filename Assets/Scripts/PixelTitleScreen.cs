@@ -467,6 +467,11 @@ public class PixelTitleScreen : MonoBehaviour
 
         if (barGlow) BuildBarGlow();
 
+        // The wandering vendors and their (hover-only) toggle at the bottom left.
+        PixelTitleWanderers wanderers = GetComponent<PixelTitleWanderers>();
+        if (wanderers == null) wanderers = gameObject.AddComponent<PixelTitleWanderers>();
+        wanderers.Setup(foreground.transform, font, canvasRoot.GetComponent<RectTransform>());
+
         if (showLogo) BuildLogo();
 
         // Play on top, Load + Settings side by side under it (together exactly as wide as Play).
