@@ -233,14 +233,14 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(Mathf.Min(packs.Count, 3), new SkillPack
             {
                 id = FishingId, displayName = "Fishing", accent = new Color(0.3f, 0.6f, 0.9f),
-                description = "Swap the basic cubes for fished goods: fish, seaweed, shells and rare pearls. Driftwood is a useless filler block that is most of what you see at first; as your fishing level rises it gets rarer and the good catches show up more. Watch out for the stinging jellyfish. Reel in blocks for fishing XP: a cheap early skill that leads on towards cooking.",
-                replaces = "Monochrome, RGB", spawns = "Driftwood, Fish, Seaweed, Shell, Pearl",
+                description = "Swap the basic cubes for fished goods: very common Water, seaweed, shells, rare pearls and rare fish. Click a fish and a Weak Spots round starts: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises. Watch out for the stinging jellyfish. A cheap early skill that leads on towards cooking.",
+                replaces = "Monochrome, RGB", spawns = "Water, Fish, Seaweed, Shell, Pearl",
                 xpFrom = "Collecting fished blocks",
                 unlockHint = "Buy the Angler's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell, PixelClicker.PixelType.Pearl,
-                                PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Jellyfish },
-                fillerType = "Driftwood", hazardType = "Jellyfish",
+                                PixelClicker.PixelType.Water, PixelClicker.PixelType.Jellyfish },
+                fillerType = "Water", hazardType = "Jellyfish", fillerStartShare = 0.75f, fillerEndShare = 0.5f,
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Good bait: fish show up more often" },
@@ -363,11 +363,18 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == FishingId)
             {
                 System.Collections.Generic.List<PixelClicker.PixelType> fish = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
+                fish.Remove(PixelClicker.PixelType.Driftwood);   // Water is the filler now
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell,
-                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Driftwood, PixelClicker.PixelType.Jellyfish })
+                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Water, PixelClicker.PixelType.Jellyfish })
                     if (!fish.Contains(t)) fish.Add(t);
                 pack.types = fish.ToArray();
-                if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Driftwood.ToString();
+                if (string.IsNullOrEmpty(pack.fillerType) || pack.fillerType == PixelClicker.PixelType.Driftwood.ToString())
+                {
+                    pack.fillerType = PixelClicker.PixelType.Water.ToString();
+                    pack.fillerStartShare = 0.75f; pack.fillerEndShare = 0.5f;
+                    pack.spawns = "Water, Fish, Seaweed, Shell, Pearl";
+                    pack.description = "Swap the basic cubes for fished goods: very common Water, seaweed, shells, rare pearls and rare fish. Click a fish and a Weak Spots round starts: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises. Watch out for the stinging jellyfish. A cheap early skill that leads on towards cooking.";
+                }
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.Jellyfish.ToString();
             }
             if (pack.id == MiningId && pack.types != null)
@@ -653,12 +660,17 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
-        if (PixelClicker.IsRetiredOre(type)) return true;   // the dropped Lead / Zinc / Nickel never spawn
+        if (PixelClicker.IsRetiredOre(type) || type == PixelClicker.PixelType.Driftwood) return true;   // the dropped Lead / Zinc / Nickel and Fishing's old Driftwood never spawn
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool;
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
-        if (owner != null) return owner.id != active && !s.GuestOn(type);
+        if (owner != null)
+        {
+            foreach (SkillPack p in s.packs)   // a block can belong to several packs (Water: Farming and Fishing)
+                if (p.id == active && p.types != null && Array.IndexOf(p.types, type) >= 0) return false;
+            return !s.GuestOn(type);
+        }
         return active != StandardId && PixelProspector.IsBase(type);
     }
 
@@ -870,7 +882,10 @@ public partial class PixelSkills : MonoBehaviour
     private SkillPack PackForTier(int tierIndex)
     {
         if (clicker == null || tierIndex < 0 || tierIndex >= clicker.Tiers.Length) return null;
-        SkillPack owner = PackOfType(clicker.Tiers[tierIndex].type);
+        PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
+        SkillPack owner = PackOfType(type);
+        foreach (SkillPack p in packs)   // a block shared by two packs counts for the one in play
+            if (p.id == ActiveId && p.types != null && Array.IndexOf(p.types, type) >= 0) { owner = p; break; }
         return owner != null && owner.id != StandardId ? owner : null;
     }
 

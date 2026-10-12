@@ -781,16 +781,16 @@ public partial class PixelShop
         {
             displayName = "Angler's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Fishing skill and five fished blocks: Fish, Seaweed, Shell, Pearl (rare) and Driftwood, plus a stinging Jellyfish to watch out for. They only spawn while Fishing is the pack in play (Skills window). Driftwood is a useless filler that is most of what you see at first; as your fishing level rises it gets rarer and the good catches show up more.",
+            description = "Adds the Fishing skill: Water (very common), Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to watch out for. They only spawn while Fishing is the pack in play (Skills window). Clicking a Fish starts a Weak Spots round: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
             {
-                Block(PixelClicker.PixelType.Fish, "Fish Pixels", new Color(0.45f, 0.65f, 0.85f, 1f), 2, 4, 1.0f),
+                Block(PixelClicker.PixelType.Fish, "Fish Pixels", new Color(0.45f, 0.65f, 0.85f, 1f), 1, 12, 0.15f),   // rare; clicking one starts a Weak Spots round (pass = caught)
                 Block(PixelClicker.PixelType.Seaweed, "Seaweed Pixels", new Color(0.2f, 0.6f, 0.4f, 1f), 1, 2, 0.9f),
                 Block(PixelClicker.PixelType.Shell, "Shell Pixels", new Color(0.95f, 0.7f, 0.75f, 1f), 1, 4, 0.6f),
                 Block(PixelClicker.PixelType.Pearl, "Pearl Pixels", new Color(0.97f, 0.97f, 1f, 1f), 4, 35, 0.08f),
-                Block(PixelClicker.PixelType.Driftwood, "Driftwood", new Color(0.62f, 0.58f, 0.5f, 1f), 1, 1, 1.0f),
+                Block(PixelClicker.PixelType.Water, "Water Pixels", new Color(0.3f, 0.62f, 1f, 1f), 1, 3, 0.4f),   // the filler: very common (the same Water pixel as Farming)
                 // The Jellyfish: a hazard (hit it too often and it stings everything around the cube; it pays nothing).
                 Block(PixelClicker.PixelType.Jellyfish, "Jellyfish", new Color(0.9f, 0.45f, 0.8f, 1f), 5, 0, 0.05f),
             }

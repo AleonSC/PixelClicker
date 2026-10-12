@@ -652,3 +652,4 @@
 [2026-10-12 11:24 UTC] Inverted the scroll wheel direction for raising and lowering a held pixel.
 [2026-10-12 11:30 UTC] Added the Storage Crate consumable: a placeable crate with 2 rows of 5 compartments (no switching on); click it to store pixels lying on it, click a stored pixel to pick it up.
 [2026-10-12 11:33 UTC] Fixed a compile error in the Storage Crate.
+[2026-10-12 11:35 UTC] Fishing rework: Water is now Fishing's very common filler (replaces Driftwood), Fish is rare and clicking one starts a Weak Spots round (pass = caught and paid, fail = it gets away).

@@ -84,7 +84,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Bedrock:
                 return "The toughest rock: it takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks to break (decided when it appears), but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
             case PixelClicker.PixelType.Fish:
-                return "Fishing block: a silvery fish. A couple of reels and it pays well. It splashes.";
+                return "Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you.";
             case PixelClicker.PixelType.Seaweed:
                 return "Fishing block: see-through seaweed. One click, pays little. An old Seaweed pixel sinks slowly instead of dropping.";
             case PixelClicker.PixelType.Shell:

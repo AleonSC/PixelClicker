@@ -1107,6 +1107,36 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 21)
+        {
+            // Fishing: Water replaces Driftwood as the filler, and Fish is a rare one-click catch (a Weak Spots round decides it).
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier fishDef = null, waterDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers)
+            {
+                if (t.type == PixelClicker.PixelType.Fish) fishDef = t;
+                if (t.type == PixelClicker.PixelType.Water) waterDef = t;
+            }
+            void ApplyFish(PixelClicker.PixelTier t)
+            {
+                if (t == null || t.type != PixelClicker.PixelType.Fish || fishDef == null) return;
+                t.clicksToCollect = fishDef.clicksToCollect; t.amountPerClick = fishDef.amountPerClick; t.spawnWeight = fishDef.spawnWeight;
+            }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers);
+                    list.RemoveAll(t => t != null && t.type == PixelClicker.PixelType.Driftwood);
+                    if (waterDef != null && !list.Exists(t => t != null && t.type == PixelClicker.PixelType.Water)) list.Add(waterDef.Clone());
+                    p.rewardTiers = list.ToArray();
+                    foreach (PixelClicker.PixelTier t in p.rewardTiers) ApplyFish(t);
+                }
+            if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) ApplyFish(t);
+            packDataVersion = Mathf.Max(packDataVersion, 21);
+            changed = true;
+        }
+
         return changed;
     }
 

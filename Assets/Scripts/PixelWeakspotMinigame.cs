@@ -149,6 +149,27 @@ public class PixelWeakspotMinigame : PixelMinigame
         public float hitT = -1f;
     }
 
+    private System.Action<bool> onFinished;   // set by a fishing round: told whether every spot was hit
+    private bool fishing;
+
+    /// <summary>Starts a round for a fish on the cube (Fishing). 'done' gets true when every spot was hit, false otherwise. False = could not start (the caller catches the fish the plain way).</summary>
+    public static bool TryStartFishing(System.Action<bool> done)
+    {
+        PixelWeakspotMinigame m = PixelFind.First<PixelWeakspotMinigame>();
+        return m != null && m.BeginFishing(done);
+    }
+
+    private bool BeginFishing(System.Action<bool> done)
+    {
+        if (phase != Phase.Idle || UserDisabled || !CanStartNow()) return false;
+        onFinished = done;
+        fishing = true;
+        if (TryStart()) return true;
+        onFinished = null;
+        fishing = false;
+        return false;
+    }
+
     private enum Phase { Idle, ZoomIn, Hunt, Result, ZoomOut }
 
     private readonly System.Collections.Generic.List<Spot> spots = new System.Collections.Generic.List<Spot>();
@@ -183,6 +204,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     protected override void OnDestroy()
     {
+        onFinished = null;
         base.OnDestroy();
         if (phase != Phase.Idle) Finish();
     }
@@ -555,7 +577,20 @@ public class PixelWeakspotMinigame : PixelMinigame
         ApplySlow(false);   // normal speed again for the result and the zoom out
         slowed = false;
         string line;
-        if (won)
+        if (won && fishing)
+        {
+            float frac = Mathf.Clamp01(huntLeft / Mathf.Max(0.1f, huntSeconds));
+            GrantSkillXp(Mathf.Max(0.01f, Mathf.Round(baseXp + speedXp * frac)));
+            PixelStats.Count("weakspot.wins");
+            PixelAudio.Play("weakspot_win");
+            line = "Caught it!";
+        }
+        else if (!won && fishing)
+        {
+            PixelAudio.Play("weakspot_lose");
+            line = "It got away...";
+        }
+        else if (won)
         {
             float frac = Mathf.Clamp01(huntLeft / Mathf.Max(0.1f, huntSeconds));
             float xp = Mathf.Round(baseXp + speedXp * frac);
@@ -585,6 +620,16 @@ public class PixelWeakspotMinigame : PixelMinigame
     }
 
     private void Finish()
+    {
+        bool caught = won && (phase == Phase.Result || phase == Phase.ZoomOut);
+        System.Action<bool> callback = onFinished;
+        onFinished = null;
+        fishing = false;
+        FinishRound();
+        callback?.Invoke(caught);
+    }
+
+    private void FinishRound()
     {
         foreach (Spot s in spots) if (s.root != null) Destroy(s.root.gameObject);
         spots.Clear();

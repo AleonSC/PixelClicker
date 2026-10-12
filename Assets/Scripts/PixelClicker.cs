@@ -1882,6 +1882,25 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Dev tools: how many clicks one click counts as (1 = normal). Multiplies payouts, tough-pixel hits and the combo.</summary>
     public static int DevClickCount = 1;
 
+    private bool fishingBusy, fishingPass;
+
+    /// <summary>The Weak Spots round for a fish ended: caught = pay it like a normal click, otherwise it got away (no payout, the next pixel comes).</summary>
+    private void FishingDone(bool caught)
+    {
+        fishingBusy = false;
+        if (caught)
+        {
+            fishingPass = true;
+            try { CollectInternal(false); }
+            finally { fishingPass = false; }
+            return;
+        }
+        PixelHints.Announce("The fish got away!");
+        hitsOnCurrentPixel = 0;
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+    }
+
     private void CollectInternal(bool automatic)
     {
         if (blockClicksWhileSpawning && isSpawning) return;
@@ -1890,6 +1909,13 @@ public class PixelClicker : MonoBehaviour
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
         if (automatic && IsHazard(tier.type) && !HazardAutoClear) return;   // the auto clicker never touches a hazard: it waits until you deal with it (or it goes away)
+
+        // A Fish is caught in a Weak Spots round: your click starts it, and only a clean run pays (the auto clicker waits for you).
+        if (tier.type == PixelType.Fish && !fishingPass)
+        {
+            if (fishingBusy || automatic) return;
+            if (PixelWeakspotMinigame.TryStartFishing(FishingDone)) { fishingBusy = true; PlayClickEffects(tier); return; }
+        }
 
         // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
         int breaks = 1; // pixels broken by this click (more than 1 only with the dev click count)
