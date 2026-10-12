@@ -236,6 +236,12 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
         Shader shader = panoramicShader != null ? panoramicShader : Shader.Find("Skybox/Panoramic");
         if (shader == null)
         {
+            // Builds only keep shaders something references: the keep-alive material (made by the Editor script) carries it.
+            Material keep = Resources.Load<Material>("PixelShaderKeep/Skybox_Panoramic");
+            if (keep != null) shader = keep.shader;
+        }
+        if (shader == null)
+        {
             // No panoramic shader in this build: at least give the camera the sky's colour.
             if (!warnedNoShader) Debug.LogWarning("PixelSkybox: the Skybox/Panoramic shader is missing. Select the Pixel Skybox component in the editor once (it fills the shader in), or add the shader to Always Included Shaders.", this);
             warnedNoShader = true;
