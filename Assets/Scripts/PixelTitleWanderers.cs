@@ -89,8 +89,6 @@ public class PixelTitleWanderers : MonoBehaviour
     [Tooltip("Text on the blur toggle (above the live background one).")]
     [SerializeField] private string blurText = "Blur background";
 
-    [Tooltip("Text on the 'display floor' toggle (above the blur one).")]
-
     private const string Pref = "PixelClicker.Setting.TitleWanderers";
     private const string LivePref = "PixelClicker.Setting.TitleLiveBackground";
 
