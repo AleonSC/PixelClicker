@@ -656,3 +656,4 @@
 [2026-10-12 11:40 UTC] Water click: a pool of 12 randomised deep, smooth water sounds (and a softer splash sound), and a splash (crown, jet, bubbles, mist) instead of a round ring.
 [2026-10-12 11:45 UTC] Fishing: the Jellyfish is electric and much more dangerous (9 clicks, lightning look, zap sounds, wider blast, fries bait); new Bait block drops pellets that make Fish appear more; fish take 7-25 clicks when the Weak Spots minigame is off.
 [2026-10-12 12:05 UTC] Added a temporary Game Database window (Database button in the Skills window): search every pixel, pack, skill, consumable, recipe, minigame, achievement and tip, and see everywhere in the game that refers to it.
+[2026-10-12 12:07 UTC] With Menu buttons set to always showing, every window now draws over the docked buttons.

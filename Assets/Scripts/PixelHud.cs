@@ -27,6 +27,11 @@ public class PixelHud : MonoBehaviour
     [Tooltip("Sorting order of the bars' canvas. It must be BELOW every other UI canvas (the buttons' canvases are 100+), so it is kept at -1 or lower whatever you type.")]
     [SerializeField] private int barsSortingOrder = -10;
 
+    [Tooltip("Canvas sorting order the docked buttons get while 'Menu buttons' is set to always showing: below every window (the lowest window canvas is 100), so every window covers them. 0 = the default (90).")]
+    [SerializeField] private int alwaysOutSortingOrder = 0;
+
+    internal int AlwaysOutOrder => alwaysOutSortingOrder != 0 ? alwaysOutSortingOrder : 90;
+
     [Header("Bar Glow")]
     [Tooltip("Neon LED-strip glow along the inner edges of the top and bottom bars that slowly changes colour. The player can switch it off in Settings (Display).")]
     [SerializeField] private bool barGlowAllowed = true;
@@ -418,9 +423,29 @@ public class PixelDockedButton : MonoBehaviour
         Apply();
     }
 
+    private Canvas sortCanvas;
+
+    /// <summary>With the buttons always showing, each one gets its own canvas below every window, so windows overlay the buttons instead of the other windows' buttons showing on top.</summary>
+    private void UpdateSorting()
+    {
+        if (PixelHud.ButtonMode == 1)
+        {
+            if (sortCanvas == null)
+            {
+                sortCanvas = gameObject.GetComponent<Canvas>();
+                if (sortCanvas == null) sortCanvas = gameObject.AddComponent<Canvas>();
+                if (gameObject.GetComponent<UnityEngine.UI.GraphicRaycaster>() == null) gameObject.AddComponent<UnityEngine.UI.GraphicRaycaster>();   // a nested canvas needs its own raycaster for clicks
+            }
+            sortCanvas.overrideSorting = true;
+            sortCanvas.sortingOrder = hud.AlwaysOutOrder;
+        }
+        else if (sortCanvas != null) sortCanvas.overrideSorting = false;
+    }
+
     private void Update()
     {
         if (hud == null) return;
+        UpdateSorting();
 
         if (ForceHidden) { slide = 0f; Apply(); return; }
         float target = !hud.SlideButtons || (keepOut != null && keepOut()) || PointerNear() ? 1f : 0f;
