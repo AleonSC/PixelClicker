@@ -761,12 +761,12 @@ public class PixelPauseMenu : MonoBehaviour
     private static Vector2 floorPopPosition = new Vector2(520f, 120f);
 
     /// <summary>Hides the menu and shows a small box you can drag around whose only option is the floor style. Closing it brings the menu back.</summary>
-    private void OpenLookPopout(System.Func<IPixelLookSource> source, string title)
+    private void OpenLookPopout(System.Func<IPixelLookSource> source, string popoutTitle)
     {
         IPixelLookSource first = source();
         if (floorPopout != null || first == null || !first.Usable) return;
         popSource = source;
-        popTitle = title;
+        popTitle = popoutTitle;
         CloseLookList();
         if (menuRoot != null) menuRoot.SetActive(false);
 
