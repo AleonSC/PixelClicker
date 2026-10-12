@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,7 +18,7 @@ public partial class PixelSkills
     private RectTransform trackerRect, trackerBarFill;
     private TMP_Text trackerName, trackerXp;
     private Image trackerPanelImage, trackerPinImage;
-    private Button trackerClose, trackerSize, trackerStick;
+    private Button trackerClose, trackerSize, trackerStick, trackerPrev, trackerNext;
     private Image trackerSizeImage, trackerStickImage;
     private GameObject trackerShackleClosed, trackerShackleOpen;
     private TMP_Text trackerSizeLabel;
@@ -112,6 +113,7 @@ public partial class PixelSkills
         trackerName.raycastTarget = false;
         trackerName.enableAutoSizing = true;
         trackerName.fontSizeMin = 12f;
+        trackerName.alignment = TextAlignmentOptions.Center;   // between the two arrows
 
         GameObject track = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(trackerPanel.transform, false);
@@ -161,6 +163,15 @@ public partial class PixelSkills
             RectTransform r = b.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 1f);
         }
+        // Arrows either side of the skill name: switch the skill in training.
+        trackerPrev = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Previous", "<", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 26f);
+        PixelUIKit.UseArrowGlyph(trackerPrev, true);
+        trackerPrev.onClick.AddListener(() => CycleTrainedSkill(-1));
+        trackerNext = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Next", ">", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 26f);
+        PixelUIKit.UseArrowGlyph(trackerNext, false);
+        trackerNext.onClick.AddListener(() => CycleTrainedSkill(1));
+        AddTrackerTip(trackerPrev, () => "Previous skill");
+        AddTrackerTip(trackerNext, () => "Next skill");
         AddTrackerTip(trackerClose, () => "Close (the Skills menu stays closed)");
         AddTrackerTip(trackerSize, () => trackerSmall ? "Bigger" : "Downsize");
         AddTrackerTip(trackerStick, () => trackerStuck ? "Stuck in place - click to let it move again" : "Stick it in place so it can't be moved");
@@ -227,12 +238,19 @@ public partial class PixelSkills
             x -= bs + 4f;
         }
         float buttonsWidth = -x + 4f;
+        RectTransform pr = trackerPrev.GetComponent<RectTransform>(), xr2 = trackerNext.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0f, 1f);
+        pr.sizeDelta = new Vector2(bs, bs);
+        pr.anchoredPosition = new Vector2(8f, small ? -6f : -8f);
+        xr2.anchorMin = xr2.anchorMax = xr2.pivot = new Vector2(1f, 1f);
+        xr2.sizeDelta = new Vector2(bs, bs);
+        xr2.anchoredPosition = new Vector2(-buttonsWidth, small ? -6f : -8f);
         RectTransform nr = trackerName.rectTransform;
         nr.anchorMin = new Vector2(0f, 1f);
         nr.anchorMax = new Vector2(1f, 1f);
         nr.pivot = new Vector2(0.5f, 1f);
-        nr.offsetMin = new Vector2(16f, small ? -h + 28f : -50f);
-        nr.offsetMax = new Vector2(-buttonsWidth - 4f, small ? -4f : -8f);
+        nr.offsetMin = new Vector2(8f + bs + 6f, small ? -h + 28f : -50f);
+        nr.offsetMax = new Vector2(-buttonsWidth - bs - 6f, small ? -4f : -8f);
         trackerName.fontSizeMax = small ? 22f : 30f;
         trackerBar.anchorMin = new Vector2(0f, 0f);
         trackerBar.anchorMax = new Vector2(1f, 0f);
@@ -249,6 +267,18 @@ public partial class PixelSkills
         trackerShackleOpen.SetActive(!trackerStuck);
         trackerDrag.locked = trackerStuck;
         KeepTrackerOnScreen();
+        RefreshTracker();
+    }
+
+    /// <summary>Switches the skill in training to the next (+1) or previous (-1) one you can train (Standard and every available pack).</summary>
+    private void CycleTrainedSkill(int direction)
+    {
+        List<SkillPack> usable = new List<SkillPack>();
+        foreach (SkillPack p in packs) if (IsAvailable(p)) usable.Add(p);
+        if (usable.Count < 2) return;
+        int at = usable.FindIndex(p => p.id == TrainingId);
+        int next = ((at < 0 ? 0 : at) + direction + usable.Count) % usable.Count;
+        SetActive(usable[next].id);
         RefreshTracker();
     }
 

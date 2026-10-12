@@ -535,3 +535,4 @@
 [2026-10-12 01:51 UTC] Added the Pixel Guide: a button under Toggles opens a slide-out window (docks with the shop) listing every pixel in your rotation with a turning 3D picture and an orange ! box explaining its exact mechanics.
 [2026-10-12 01:52 UTC] With 'Live background' off the menu's floor picture now keeps scrolling styles (Matrix Rain...) moving, and Seed pixels / the Seed pet no longer grow Vacuum or Singularity pixels (bought seeds of those still work).
 [2026-10-12 02:02 UTC] Added the Quantum Organizer consumable: a walled pad that binds the pixel types dropped on it, glitch-dematerializes loose old pixels of those types and stores them in the box (click it to let some out).
+[2026-10-12 02:03 UTC] The pinned skill tracker now has left / right arrows beside the skill name to switch the skill in training.
