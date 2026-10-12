@@ -1933,7 +1933,7 @@ public class PixelUI : MonoBehaviour
         hintLabel.enableAutoSizing = true; // shrinks to fit the box instead of wrapping
         hintLabel.fontSizeMax = hintFontSize;
         hintLabel.fontSizeMin = 12f;
-        hintLabel.overflowMode = TextOverflowModes.Ellipsis;
+        hintLabel.overflowMode = TextOverflowModes.Truncate;
         PlaceLine(hintLabel.rectTransform);
         hintLabel.gameObject.SetActive(false);
     }

@@ -108,7 +108,7 @@ public class PixelTrafficMinigame : PixelMinigame
     private float spawnTimer, timeLeft, lightTimer, yellowStart, resultTimer, flash;
     private bool activeRound, forcedByMe;
     private int points, tierIndex, lastGoodBeat, lastTickBeat;
-    private Light light;
+    private Light lightState;
     private Camera cam;
     private GameObject uiRoot, lightRoot, ringObject;
     private TMP_Text statusLabel;
@@ -212,7 +212,7 @@ public class PixelTrafficMinigame : PixelMinigame
 
     private void Judge()
     {
-        switch (light)
+        switch (lightState)
         {
             case Light.Green:
                 points++;
@@ -286,7 +286,7 @@ public class PixelTrafficMinigame : PixelMinigame
 
     private void SetLight(Light next)
     {
-        light = next;
+        lightState = next;
         switch (next)
         {
             case Light.Green:
@@ -318,7 +318,7 @@ public class PixelTrafficMinigame : PixelMinigame
         if (timeLeft <= 0f) { EndRound(true); return; }
 
         lightTimer -= dt;
-        if (lightTimer <= 0f) SetLight(light == Light.Green ? Light.Yellow : light == Light.Yellow ? Light.Red : Light.Green);
+        if (lightTimer <= 0f) SetLight(lightState == Light.Green ? Light.Yellow : lightState == Light.Yellow ? Light.Red : Light.Green);
 
         flash = Mathf.MoveTowards(flash, 0f, dt * 4f);
         UpdateRing();
@@ -447,7 +447,7 @@ public class PixelTrafficMinigame : PixelMinigame
     {
         for (int i = 0; i < 3; i++)
         {
-            bool on = (i == 0 && light == Light.Red) || (i == 1 && light == Light.Yellow) || (i == 2 && light == Light.Green);
+            bool on = (i == 0 && lightState == Light.Red) || (i == 1 && lightState == Light.Yellow) || (i == 2 && lightState == Light.Green);
             Color baseColor = i == 0 ? RedColor : i == 1 ? YellowColor : GreenColor;
             if (lampMaterials[i] != null) lampMaterials[i].color = on ? baseColor : baseColor * 0.22f + new Color(0f, 0f, 0f, 0.78f);
             if (haloMaterials[i] != null) haloMaterials[i].color = new Color(baseColor.r, baseColor.g, baseColor.b, on ? 0.35f : 0f);
@@ -458,7 +458,7 @@ public class PixelTrafficMinigame : PixelMinigame
     private void UpdateRing()
     {
         if (ring == null) return;
-        bool show = light == Light.Yellow;
+        bool show = lightState == Light.Yellow;
         if (ringObject.activeSelf != show) ringObject.SetActive(show);
         if (!show) return;
 
@@ -507,7 +507,7 @@ public class PixelTrafficMinigame : PixelMinigame
     {
         if (statusLabel == null || !activeRound) return;
         PixelUIKit.SetText(statusLabel, string.Format(statusFormat, points, Mathf.CeilToInt(Mathf.Max(0f, timeLeft))));
-        Color target = light == Light.Green ? GreenColor : light == Light.Yellow ? YellowColor : RedColor;
+        Color target = lightState == Light.Green ? GreenColor : lightState == Light.Yellow ? YellowColor : RedColor;
         statusLabel.color = Color.Lerp(target, Color.white, flash);   // flashes white on a mistake
     }
 }

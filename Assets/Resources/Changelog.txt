@@ -550,3 +550,4 @@
 [2026-10-12 02:58 UTC] Settings: collapsible headers are slightly narrower than the buttons, and Replay tutorial moved to the top of Gameplay.
 [2026-10-12 03:11 UTC] Settings: removed the 'Bar glow colour' slider and the wide eyedropper button; a small eyedropper button now sits next to the 'Neon bar glow' tick box.
 [2026-10-12 03:13 UTC] Every sky style now fills the whole view (the part below the horizon mirrors the sky instead of showing a flat ground colour or grid), like Nebula.
+[2026-10-12 03:14 UTC] Fixed console issues: traffic light field no longer hides Component.light, shop RefreshRows null error before the panel exists, and the missing-ellipsis font warning (text now truncates).

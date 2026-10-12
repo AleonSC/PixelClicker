@@ -1458,7 +1458,7 @@ public class PixelPauseMenu : MonoBehaviour
             label.enableAutoSizing = true; // two lines always fit the row: the text shrinks instead of overflowing
             label.fontSizeMax = rowFontSize * 0.85f;
             label.fontSizeMin = 10f;
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            label.overflowMode = TextOverflowModes.Truncate;
             float renameWidth = Mathf.Max(150f, rowH * 2f);
             label.rectTransform.offsetMin = new Vector2(20f, 6f);
             label.rectTransform.offsetMax = new Vector2(-(renameWidth + 24f), -6f);
@@ -1536,7 +1536,7 @@ public class PixelPauseMenu : MonoBehaviour
         overwriteText.enableAutoSizing = true; // the message shrinks to fit its area
         overwriteText.fontSizeMax = rowFontSize * 0.9f;
         overwriteText.fontSizeMin = 14f;
-        overwriteText.overflowMode = TextOverflowModes.Ellipsis;
+        overwriteText.overflowMode = TextOverflowModes.Truncate;
 
         float gap = 12f;
         Vector2 half = new Vector2((br.sizeDelta.x - 60f - gap) * 0.5f, menuButtonSize.y);
@@ -1549,7 +1549,7 @@ public class PixelPauseMenu : MonoBehaviour
             bl.enableAutoSizing = true; // "Overwrite" never wraps
             bl.fontSizeMax = menuButtonFontSize * 0.8f;
             bl.fontSizeMin = 12f;
-            bl.overflowMode = TextOverflowModes.Ellipsis;
+            bl.overflowMode = TextOverflowModes.Truncate;
         }
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0f);
         xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(0.5f, 0f);
@@ -2381,7 +2381,7 @@ public class PixelPauseMenu : MonoBehaviour
         text.enableAutoSizing = true;
         text.fontSizeMax = rowFontSize * 0.8f;
         text.fontSizeMin = 12f;
-        text.overflowMode = TextOverflowModes.Ellipsis;
+        text.overflowMode = TextOverflowModes.Truncate;
 
         System.Action refresh = () =>
         {
@@ -2572,7 +2572,7 @@ public class PixelPauseMenu : MonoBehaviour
         nameText.enableAutoSizing = true;
         nameText.fontSizeMax = rowFontSize * 0.7f;
         nameText.fontSizeMin = 12f;
-        nameText.overflowMode = TextOverflowModes.Ellipsis;
+        nameText.overflowMode = TextOverflowModes.Truncate;
         RectTransform nr = nameText.rectTransform;
         nr.anchorMin = Vector2.zero;
         nr.anchorMax = Vector2.one;
@@ -2678,7 +2678,7 @@ public class PixelPauseMenu : MonoBehaviour
             t.enableAutoSizing = true;
             t.fontSizeMax = rowFontSize * 0.7f;
             t.fontSizeMin = 12f;
-            t.overflowMode = TextOverflowModes.Ellipsis;
+            t.overflowMode = TextOverflowModes.Truncate;
             t.rectTransform.offsetMin = new Vector2(icon + 18f, 0f);
             t.rectTransform.offsetMax = new Vector2(-6f, 0f);
 

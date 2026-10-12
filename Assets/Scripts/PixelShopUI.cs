@@ -986,7 +986,7 @@ public partial class PixelShop
 
         // Pixels tab: the packs are grouped into collapsible sections (base pixels, toggleables, skill packs).
         EnsureSectionHeaders();
-        foreach (Button oldHeader in sectionHeaders) if (oldHeader.gameObject.activeSelf) oldHeader.gameObject.SetActive(false);
+        if (sectionHeaders != null) foreach (Button oldHeader in sectionHeaders) if (oldHeader != null && oldHeader.gameObject.activeSelf) oldHeader.gameObject.SetActive(false);
         int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
         for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
         bool grouped = !searching && currentTab == ShopTab.Pixels;
@@ -1009,7 +1009,7 @@ public partial class PixelShop
                 : (searching ? MatchesSearch(pack) : TabOf(pack) == currentTab && showGeneral) && listed && !HiddenAsPurchased(i);
 
             if (visible && grouped && !child && SectionOf(pack) == 0 && owned) visible = false;   // the RGB pack disappears once bought, whatever the 'hide purchased' setting says
-            if (visible && grouped && !child && SectionOf(pack) != 0)
+            if (visible && grouped && sectionHeaders != null && !child && SectionOf(pack) != 0)
             {
                 int sec = SectionOf(pack);
                 if (sec != lastSection)

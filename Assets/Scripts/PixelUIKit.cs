@@ -583,7 +583,7 @@ public static class PixelUIKit
         label.enableAutoSizing = true; // a long name shrinks to fit instead of wrapping over the arrow
         label.fontSizeMax = fontSize;
         label.fontSizeMin = 10f;
-        label.overflowMode = TextOverflowModes.Ellipsis;
+        label.overflowMode = TextOverflowModes.Truncate;
         RectTransform lr = label.rectTransform;
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
         lr.offsetMin = new Vector2(14f, 2f); lr.offsetMax = new Vector2(-size.y, -2f);
@@ -655,7 +655,7 @@ public static class PixelUIKit
         itemLabel.enableAutoSizing = true;
         itemLabel.fontSizeMax = fontSize;
         itemLabel.fontSizeMin = 10f;
-        itemLabel.overflowMode = TextOverflowModes.Ellipsis;
+        itemLabel.overflowMode = TextOverflowModes.Truncate;
         RectTransform ilr = itemLabel.rectTransform;
         ilr.anchorMin = Vector2.zero; ilr.anchorMax = Vector2.one;
         ilr.offsetMin = new Vector2(14f, 2f); ilr.offsetMax = new Vector2(-8f, -2f);
