@@ -22,6 +22,7 @@ public enum PixelAction
     Toggles = 11,
     Bank = 12,
     Skills = 13,
+    Feedback = 14,
 }
 
 /// <summary>
@@ -47,6 +48,7 @@ public static class PixelKeys
         KeyCode.None,     // Toggles
         KeyCode.None,     // Bank
         KeyCode.None,     // Skills
+        KeyCode.F8,       // Feedback (the Give feedback window)
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";
@@ -204,7 +206,7 @@ public static class PixelKeys
             UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
             GameObject selected = es != null ? es.currentSelectedGameObject : null;
             TMPro.TMP_InputField field = selected != null ? selected.GetComponent<TMPro.TMP_InputField>() : null;
-            typingCached = field != null && field.isFocused;
+            typingCached = (field != null && field.isFocused) || PixelFeedback.Open;   // the feedback window mutes the game's keys while it is open
             return typingCached;
         }
     }

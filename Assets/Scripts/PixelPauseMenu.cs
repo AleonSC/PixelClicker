@@ -239,6 +239,9 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string headerControls = "Controls";
     [SerializeField] private string tipsLabel = "Show first-time tips";
     [SerializeField] private string replayTutorialText = "Replay tutorial";
+
+    [Tooltip("Text of the Settings button that opens the feedback window.")]
+    [SerializeField] private string feedbackText = "Give feedback";
     [SerializeField] private string eventLogLabel = "Event log";
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
     [SerializeField] private string popupsLabel = "Number popups (+N)";
@@ -689,7 +692,7 @@ public class PixelPauseMenu : MonoBehaviour
             return;
         }
 
-        if (EscapePressed())
+        if (EscapePressed() && !PixelFeedback.Open && !PixelFeedback.ClosedThisFrame)
         {
             if (IsPaused && PixelDevTools.ClosePanel())
             {
@@ -998,9 +1001,19 @@ public class PixelPauseMenu : MonoBehaviour
     private Button MakeButton(Transform parent, string objectName, string label, Vector2 size, Color color, float labelSize)
         => PixelUIKit.CreateButton(font, parent, objectName, label, size, color, textColor, labelSize);
 
+    /// <summary>Shows / hides the whole pause menu canvas (the feedback window hides it for a frame to take a clean screenshot).</summary>
+    public static void SetMenuVisible(bool visible)
+    {
+        PixelPauseMenu menu = PixelFind.First<PixelPauseMenu>();
+        if (menu == null || menu.canvasRoot == null) return;
+        Canvas c = menu.canvasRoot.GetComponent<Canvas>();
+        if (c != null) c.enabled = visible;
+    }
+
     private void BuildUI()
     {
         canvasRoot = PixelUIKit.CreateCanvas("PixelPauseMenu Canvas", sortingOrder, referenceResolution, true);
+        if (PixelFind.First<PixelFeedback>() == null) gameObject.AddComponent<PixelFeedback>();   // the Give feedback window
 
         // On-screen Pause button
         if (showPauseButtonOnScreen)
@@ -2098,6 +2111,9 @@ public class PixelPauseMenu : MonoBehaviour
         Transform list = content;
         float y = 0f;
 
+        // Give feedback sits above Replay tutorial.
+        AddWideButtonRow(list, feedbackText, () => PixelFeedback.OpenWindow(), ref y);
+
         // Replay tutorial sits at the very top.
         AddWideButtonRow(list, replayTutorialText, () =>
         {
@@ -2444,6 +2460,7 @@ public class PixelPauseMenu : MonoBehaviour
             case PixelAction.Toggles: return "Open Toggles";
             case PixelAction.Bank: return "Open Pixel Bank";
             case PixelAction.Skills: return "Open Skills";
+            case PixelAction.Feedback: return "Give feedback";
         }
         return action.ToString();
     }
