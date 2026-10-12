@@ -526,6 +526,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     [SerializeField] private float floorFadeSeconds = 0f;
 
     private bool HidesOnTitle => !keepFloorOnTitle;
+
+    /// <summary>The 'Display floor' switch is off: the floor is never drawn (its collider stays so pixels still land).</summary>
+    private static bool FloorOff => !PixelTitleWanderers.DisplayFloor;
     private const float FadeOutFactor = 0.5f;   // leaving (quit to the main menu) is quicker than arriving
     private const float FadeInFactor = 2.5f;   // the floor texture fades IN this much slower than it fades out
     private float FadeTime => floorFadeSeconds > 0.05f ? floorFadeSeconds : 1f;
@@ -539,7 +542,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     public float FloorVisibility => visibility;
 
     /// <summary>True while the floor or the old pixels / devices are still fading (either way).</summary>
-    public bool Settling => visibilityInit && (visibility < 0.999f || propsK < 0.999f) && HidesOnTitle;
+    public bool Settling => visibilityInit && ((visibility < 0.999f && !FloorOff) || propsK < 0.999f) && HidesOnTitle;
 
     /// <summary>Fades the floor out, then calls 'onDone' (the main menu return waits for it before the camera swings back). Returns false (without calling it) if there is nothing to fade.</summary>
     public bool FadeOutThen(System.Action onDone)
@@ -556,11 +559,11 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (exitHold && PixelTitleScreen.Showing) exitHold = false;
         bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
         // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
-        float propsTarget = !HidesOnTitle ? 1f : (hide ? 0f : (visibility >= 0.999f ? 1f : 0f));
+        float propsTarget = !HidesOnTitle ? 1f : (hide ? 0f : ((visibility >= 0.999f || FloorOff) ? 1f : 0f));
         float fadeDt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);   // (a long frame, e.g. while a report is built, must not make the fade jump)
         propsK = Mathf.MoveTowards(propsK, propsTarget, fadeDt / (propsTarget < propsK ? FadeTime * FadeOutFactor : FadeTime));
         if (hide && exitHold && propsK > 0.001f) hide = false;   // (the floor stays until the props are gone)
-        float target = hide ? 0f : 1f;
+        float target = (hide || FloorOff) ? 0f : 1f;
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
         else visibility = Mathf.MoveTowards(visibility, target, fadeDt / (target > visibility ? FadeTime * FadeInFactor : FadeTime * FadeOutFactor));
         ApplyVisibility();
@@ -604,7 +607,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     /// <summary>While the textured floor is hidden / fading, a flat floor-coloured copy of the floor mesh sits just under it, so the menu background is the floor's colour instead of the sky's lower half.</summary>
     private void UpdateFlatBase()
     {
-        bool want = HidesOnTitle && visibility < 0.999f;
+        bool want = HidesOnTitle && visibility < 0.999f && !FloorOff;
         if (!want)
         {
             if (flatBase != null) flatBase.SetActive(false);

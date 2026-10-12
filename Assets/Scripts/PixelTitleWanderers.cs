@@ -50,6 +50,9 @@ public class PixelTitleWanderers : MonoBehaviour
     [Tooltip("Text on the blur toggle (above the live background one).")]
     [SerializeField] private string blurText = "Blur background";
 
+    [Tooltip("Text on the 'display floor' toggle (above the blur one).")]
+    [SerializeField] private string floorText = "Display floor";
+
     private const string Pref = "PixelClicker.Setting.TitleWanderers";
     private const string LivePref = "PixelClicker.Setting.TitleLiveBackground";
 
@@ -88,8 +91,26 @@ public class PixelTitleWanderers : MonoBehaviour
         }
     }
 
+    private const string FloorPref = "PixelClicker.Setting.DisplayFloor";
+    private static int floorCache = -1;
+
+    /// <summary>True (the default) = the floor is drawn in the game; false = only the sky shows and an invisible floor (its collider) lets pixels land.</summary>
+    public static bool DisplayFloor
+    {
+        get
+        {
+            if (floorCache < 0) floorCache = PlayerPrefs.GetInt(FloorPref, 1);
+            return floorCache == 1;
+        }
+        set
+        {
+            floorCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(FloorPref, floorCache);
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { liveCache = -1; blurCache = -1; }
+    private static void ResetStatics() { liveCache = -1; blurCache = -1; floorCache = -1; }
 
     private class Walker
     {
@@ -133,6 +154,7 @@ public class PixelTitleWanderers : MonoBehaviour
         MakeToggle(font, "Wander Toggle", toggleText, 24f, () => on, v => { on = v; Enabled = v; });
         MakeToggle(font, "Live Background Toggle", liveText, 24f + toggleSize.y + 10f, () => LiveBackground, v => LiveBackground = v);
         MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 2f, () => BlurBackground, v => BlurBackground = v);
+        MakeToggle(font, "Display Floor Toggle", floorText, 24f + (toggleSize.y + 10f) * 3f, () => DisplayFloor, v => DisplayFloor = v);
         built = true;
         Refresh();
         nextArrival = Time.unscaledTime + 1.5f;

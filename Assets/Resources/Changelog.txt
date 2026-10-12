@@ -553,3 +553,4 @@
 [2026-10-12 03:14 UTC] Fixed console issues: traffic light field no longer hides Component.light, shop RefreshRows null error before the panel exists, and the missing-ellipsis font warning (text now truncates).
 [2026-10-12 03:17 UTC] Settings: the Replay tutorial button is now narrower than the Gameplay header.
 [2026-10-12 03:20 UTC] Settings: rows are now the same width as the section headers.
+[2026-10-12 03:23 UTC] Main menu: new 'Display floor' toggle (bottom left, with the other menu toggles); unticked, the game shows only the sky and an invisible floor lets pixels land.
