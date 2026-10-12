@@ -2046,21 +2046,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>A magnifying glass on the left of the search box, and smaller one-line text so the placeholder fits inside it.</summary>
     private static void StyleSearchBox(TMP_InputField field)
     {
-        RectTransform root = field.GetComponent<RectTransform>();
-        float height = root.sizeDelta.y;
-        GameObject icon = new GameObject("Search Icon", typeof(RectTransform), typeof(Image));
-        icon.transform.SetParent(root, false);
-        Image im = icon.GetComponent<Image>();
-        im.sprite = PixelUIKit.MagnifierSprite();
-        im.color = new Color(1f, 1f, 1f, 0.7f);
-        im.raycastTarget = false;
-        im.preserveAspect = true;
-        RectTransform ir = icon.GetComponent<RectTransform>();
-        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
-        ir.sizeDelta = new Vector2(height * 0.62f, height * 0.62f);
-        ir.anchoredPosition = new Vector2(10f, 0f);
-
-        if (field.textViewport != null) field.textViewport.offsetMin = new Vector2(10f + height * 0.62f + 8f, 4f);
+        PixelUIKit.AddSearchIcon(field);
         foreach (TMP_Text t in new[] { field.textComponent, field.placeholder as TMP_Text })
         {
             if (t == null) continue;

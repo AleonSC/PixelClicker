@@ -592,3 +592,4 @@
 [2026-10-12 10:30 UTC] Fixed a compile error in the Dev Tools Changelog tab and removed an unused pause menu field.
 [2026-10-12 11:00 UTC] Pause menu: a new How To Play screen with two tabs (Controls and Game Guide) replaces the separate Controls button; Settings now ends with a Keybinds header with one button for changing key bindings.
 [2026-10-12 11:30 UTC] Pause menu windows (Stats, Settings, Save/Load, How To Play, Keybinds, Quit...) now close with an X at the top right instead of a Back button; the Stats window's Restart button is smaller; the menu button reads Save/Load.
+[2026-10-12 06:31 UTC] Every search box now shows a visible flashing cursor when clicked, hides its example text while focused, and has a magnifying glass like the pause menu.

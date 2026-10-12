@@ -886,6 +886,7 @@ public class PixelLog : MonoBehaviour
             float searchHeight = rowFontSize * 1.3f;
             achievementSearchField = PixelUIKit.CreateInputField(font, group.transform, "Search", new Vector2(0f, searchHeight),
                                                                  achievementRowColor, textColor, rowFontSize * 0.75f, searchPlaceholder);
+            PixelUIKit.AddSearchIcon(achievementSearchField);
             RectTransform sfr = achievementSearchField.GetComponent<RectTransform>();
             sfr.anchorMin = new Vector2(0f, 1f);
             sfr.anchorMax = new Vector2(1f, 1f);

@@ -1006,6 +1006,7 @@ public class PixelCrafting : MonoBehaviour
         // Search box under the title
         float searchH = 56f;
         bookSearchField = PixelUIKit.CreateInputField(font, bookObject.transform, "Search", new Vector2(0f, searchH), slotColor, textColor, fontSize * 0.8f, "Search recipes...");
+        PixelUIKit.AddSearchIcon(bookSearchField);
         RectTransform sr = bookSearchField.GetComponent<RectTransform>();
         sr.anchorMin = new Vector2(0f, 1f);
         sr.anchorMax = new Vector2(1f, 1f);

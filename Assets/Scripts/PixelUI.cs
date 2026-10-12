@@ -1681,6 +1681,7 @@ public class PixelUI : MonoBehaviour
         dr.anchoredPosition = new Vector2(-innerWidth * 0.5f, -(tabTop + subTabHeight + subTabGap));
         consumableSearchField = PixelUIKit.CreateInputField(font, boxObject.transform, "Consumable Search", new Vector2(half, categoryDropdownHeight),
                                                             subTabInactiveColor, subTabTextColor, subTabFontSize > 0f ? subTabFontSize * 0.9f : 26f, consumableSearchPlaceholder);
+        PixelUIKit.AddSearchIcon(consumableSearchField);
         RectTransform csr = consumableSearchField.GetComponent<RectTransform>();
         csr.anchorMin = csr.anchorMax = new Vector2(0.5f, 1f);
         csr.pivot = new Vector2(1f, 1f);

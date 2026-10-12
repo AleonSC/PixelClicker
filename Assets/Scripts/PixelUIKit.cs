@@ -803,7 +803,37 @@ public static class PixelUIKit
         input.textViewport = areaRect;
         input.textComponent = text;
         input.placeholder = hint;
+
+        // Clicking the box puts a flashing cursor in it and the example text goes away (the default caret is dark grey, invisible on a dark box).
+        input.customCaretColor = true;
+        input.caretColor = Color.white;
+        input.caretWidth = 3;
+        input.caretBlinkRate = 0.85f;
+        input.selectionColor = new Color(0.3f, 0.55f, 1f, 0.45f);
+        input.onSelect.AddListener(_ => { if (input.placeholder != null) input.placeholder.gameObject.SetActive(false); });
+        input.onDeselect.AddListener(_ => { if (input.placeholder != null) input.placeholder.gameObject.SetActive(string.IsNullOrEmpty(input.text)); });
         return input;
+    }
+
+    /// <summary>A magnifying glass inside the left end of a search box (the text starts to the right of it).</summary>
+    public static void AddSearchIcon(TMP_InputField field)
+    {
+        if (field == null) return;
+        const float iconWidth = 34f;
+        GameObject icon = new GameObject("Search Icon", typeof(RectTransform), typeof(Image));
+        icon.transform.SetParent(field.transform, false);
+        Image im = icon.GetComponent<Image>();
+        im.sprite = MagnifierSprite();
+        im.color = new Color(1f, 1f, 1f, 0.7f);
+        im.raycastTarget = false;
+        im.preserveAspect = true;
+        RectTransform ir = icon.GetComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0f, 0.15f);
+        ir.anchorMax = new Vector2(0f, 0.85f);
+        ir.pivot = new Vector2(0f, 0.5f);
+        ir.sizeDelta = new Vector2(iconWidth, 0f);
+        ir.anchoredPosition = new Vector2(8f, 0f);
+        if (field.textViewport != null) field.textViewport.offsetMin = new Vector2(8f + iconWidth + 6f, field.textViewport.offsetMin.y);
     }
 
     /// <summary>

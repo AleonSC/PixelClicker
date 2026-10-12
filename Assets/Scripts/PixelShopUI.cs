@@ -165,6 +165,7 @@ public partial class PixelShop
         // Search box (top left): lists every matching pack from all tabs while it has text.
         searchField = PixelUIKit.CreateInputField(font, panelObject.transform, "Search", new Vector2(Mathf.Max(120f, searchWidth), 70f),
                                                   disabledColor, textColor, tabFontSize, searchPlaceholder);
+        PixelUIKit.AddSearchIcon(searchField);
         RectTransform sr = searchField.GetComponent<RectTransform>();
         sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
         sr.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f - 5f);
