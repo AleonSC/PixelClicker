@@ -175,6 +175,7 @@ public class PixelHud : MonoBehaviour
         {
             glowHueCache = Mathf.Clamp01(value);
             PlayerPrefs.SetFloat(PrefGlowHue, glowHueCache);
+            if (glowColorCache != "") { glowColorCache = ""; glowColorParsed = null; PlayerPrefs.SetString(PrefGlowColor, ""); }   // the slider takes over from a picked colour
         }
     }
 
@@ -193,10 +194,49 @@ public class PixelHud : MonoBehaviour
         }
     }
 
-    public static void ReloadGlowFromPrefs() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; }
+    private const string PrefGlowColor = "PixelClicker.Setting.GlowColor";
+    private static string glowColorCache;   // null = not read yet, "" = none
+    private static Color? glowColorParsed;
+
+    private static Color? ParseGlowColor(string hex) => !string.IsNullOrEmpty(hex) && ColorUtility.TryParseHtmlString("#" + hex, out Color c) ? c : (Color?)null;
+
+    /// <summary>An exact colour picked with the eyedropper (Settings > Display), used while the glow is NOT cycling. Null = none (the hue slider decides). Moving the hue slider clears it.</summary>
+    public static Color? GlowCustomColor
+    {
+        get
+        {
+            if (glowColorCache == null) { glowColorCache = PlayerPrefs.GetString(PrefGlowColor, ""); glowColorParsed = ParseGlowColor(glowColorCache); }
+            return glowColorParsed;
+        }
+        set
+        {
+            glowColorCache = value.HasValue ? ColorUtility.ToHtmlStringRGB(value.Value) : "";
+            glowColorParsed = ParseGlowColor(glowColorCache);
+            PlayerPrefs.SetString(PrefGlowColor, glowColorCache);
+        }
+    }
+
+    /// <summary>Sets the glow to one exact colour: it stops cycling (cycling afterwards continues from this colour's hue).</summary>
+    public static void SetGlowFromColor(Color c)
+    {
+        Color.RGBToHSV(c, out float h, out _, out _);
+        GlowHue = h;                      // (clears any older custom colour)
+        GlowCustomColor = new Color(c.r, c.g, c.b, 1f);
+        GlowCycle = false;
+    }
+
+    /// <summary>The glow colour of one edge: the picked colour while it is static, else the hue (drifting with time while cycling).</summary>
+    public static Color GlowColourNow(float time, float cycleSpeed, float edgeOffset, float saturation)
+    {
+        Color? custom = GlowCustomColor;
+        if (!GlowCycle && custom.HasValue) return custom.Value;
+        return PixelBarGlow.EdgeColor(GlowHue, time, GlowCycle ? cycleSpeed : 0f, edgeOffset, saturation);
+    }
+
+    public static void ReloadGlowFromPrefs() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetGlowStatics() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; }
+    private static void ResetGlowStatics() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; }
 
     [Min(0f)]
     [Tooltip("Seconds the black bars (and the docked buttons) take to slide in when the game starts and out when quitting to the main menu. 0 = 0.9.")]
@@ -225,7 +265,7 @@ public class PixelHud : MonoBehaviour
             if (g[0].gameObject.activeSelf != on) { g[0].gameObject.SetActive(on); g[1].gameObject.SetActive(on); g[2].gameObject.SetActive(on); }
             if (!on) continue;
             float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);
-            Color c = PixelBarGlow.EdgeColor(GlowHue, Time.unscaledTime, GlowCycle ? glowColorSpeed : 0f, i == 0 ? 0f : glowEdgeOffset, glowSaturation);
+            Color c = GlowColourNow(Time.unscaledTime, glowColorSpeed, GlowCustomColor.HasValue && !GlowCycle ? 0f : (i == 0 ? 0f : glowEdgeOffset), glowSaturation);
             PixelBarGlow.Colorize(g[0], g[1], g[2], c, Mathf.Clamp01(glowStrength) * shimmer);
         }
     }

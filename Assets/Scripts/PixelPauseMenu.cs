@@ -299,6 +299,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings slider that picks the colour (hue) of the neon bar glow.")]
     [SerializeField] private string glowHueLabel = "Bar glow colour";
 
+    [Tooltip("Label of the Settings button that picks the neon bar glow's colour from the screen with an eyedropper. Empty = the default text.")]
+    [SerializeField] private string glowPickLabel = "";
+
     [Tooltip("Label of the Settings tick box that lets the neon bar glow slowly change colour by itself.")]
     [SerializeField] private string glowCycleLabel = "Cycle glow colour";
 
@@ -2171,6 +2174,8 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, barGlowLabel, () => PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
         AddSliderRow(list, glowHueLabel, PixelHud.GlowHue, v => PixelHud.GlowHue = v, ref y);
         AddSettingToggle(list, glowCycleLabel, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on, ref y);
+        AddWideButtonRow(list, string.IsNullOrEmpty(glowPickLabel) ? "Pick glow colour from screen" : glowPickLabel,
+                         () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }), ref y);
         AddSettingToggle(list, uiColorLabel, () => PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
         AddSliderRow(list, uiHueLabel, PixelUIKit.UiHue, v => PixelUIKit.UiHue = v, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);

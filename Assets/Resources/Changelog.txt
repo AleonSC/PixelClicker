@@ -545,3 +545,4 @@
 [2026-10-12 02:37 UTC] Added the Cube Evasion minigame: the cube runs away from your mouse (sliding along edges and slipping out of corners) and pays a bonus per click like Cube Dash.
 [2026-10-12 02:42 UTC] Added the Red Light Green Light minigame with a traffic light, a closing yellow-light circle and code-made sound effects.
 [2026-10-12 02:43 UTC] Added Mastery: a bar along the bottom of the Skills window showing your combined progress across every skill (only 100% once all skills are at their level cap).
+[2026-10-12 02:55 UTC] Settings > Display has a 'Pick glow colour from screen' eyedropper: click any colour on the game or main menu to make the neon margin glow that exact static colour (the cycle toggle still makes it drift between colours).
