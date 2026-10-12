@@ -1409,10 +1409,10 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int slot = i + 1;
-            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 100f, rowH), slotColor, rowFontSize);
+            Button b = MakeButton(content, "Slot " + slot, "", new Vector2(panelSize.x - 80f, rowH), slotColor, rowFontSize);   // exactly as wide as the Save / Load buttons below (the scroll bar sits in the margin)
             RectTransform rt = b.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-            rt.anchoredPosition = new Vector2(-8f, -(i * rowStep));
+            rt.anchoredPosition = new Vector2(0f, -(i * rowStep));
             b.onClick.AddListener(() => SelectSlot(slot));
             PixelHoverTip hover = b.gameObject.AddComponent<PixelHoverTip>();
             hover.onEnter = () => hoverSlot = slot;
@@ -1459,6 +1459,10 @@ public class PixelPauseMenu : MonoBehaviour
         BuildResultOverlay(saveLoadPanel.transform);
         BuildRenameOverlay(saveLoadPanel.transform);
         FinishSectionPanel(saveLoadPanel, y);
+        PixelCubiePeek peekCubie = GetComponent<PixelCubiePeek>();
+        if (peekCubie == null) peekCubie = gameObject.AddComponent<PixelCubiePeek>();
+        peekCubie.Setup(saveLoadPanel.GetComponent<RectTransform>(), () => IsPaused && saveLoadPanel != null && saveLoadPanel.activeSelf
+            && !(renameOverlay != null && renameOverlay.activeSelf) && !(overwriteOverlay != null && overwriteOverlay.activeSelf) && !(resultOverlay != null && resultOverlay.activeSelf));
         overwriteOverlay.transform.SetAsLastSibling(); // above the Back button too
         renameOverlay.transform.SetAsLastSibling();
         resultOverlay.transform.SetAsLastSibling();
