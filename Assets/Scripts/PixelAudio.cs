@@ -244,6 +244,7 @@ public class PixelAudio : MonoBehaviour
             Make("stardust_fall", 0.3f, 0.97f, 1.03f),
             Make("pixel_bounce_ghost", 0.05f, 0.9f, 1.15f),
             Make("ghost_float", 0.3f, 0.95f, 1.05f),
+            Make("ufo_beam", 0.3f, 1f, 1f),
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
@@ -304,6 +305,7 @@ public class PixelAudio : MonoBehaviour
             case "pixel_ghost": return new[] { PixelSynth.GhostClick(1), PixelSynth.GhostClick(2), PixelSynth.GhostClick(3) };
             case "pixel_bounce_ghost": return new[] { PixelSynth.GhostBounce(1), PixelSynth.GhostBounce(2), PixelSynth.GhostBounce(3) };
             case "ghost_float": return new[] { PixelSynth.GhostFloat() };
+            case "ufo_beam": return new[] { PixelSynth.UfoBeam() };
             case "stardust_fall": return new[] { PixelSynth.StarFall(1), PixelSynth.StarFall(2) };
             case "stardust_collect": return new[] { PixelSynth.StarChime() };
             case "pixel_wire": return new[] { PixelSynth.Elec(0, 1), PixelSynth.Elec(0, 2), PixelSynth.Elec(0, 3) };
@@ -1432,6 +1434,40 @@ public static class PixelSynth
         }
         Normalize(data, 0.45f);
         AudioClip clip = AudioClip.Create("GhostFloat", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The UFO's abduction beam: a rising, wobbling hum with a shimmer on top that sweeps up, then a soft pop as the victim arrives (about 2.6 s).</summary>
+    public static AudioClip UfoBeam()
+    {
+        const int rate = 22050;
+        float length = 2.7f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rnd = new System.Random(4242);
+        float phase = 0f, phase2 = 0f, lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float k = Mathf.Clamp01(t / 2.4f);
+            float env = Mathf.Clamp01(t / 0.12f) * (t < 2.4f ? 1f : 0f);
+            // The hum climbs while a vibrato widens; a second, detuned voice beats against it.
+            float f = Mathf.Lerp(140f, 520f, k * k) * (1f + 0.06f * Mathf.Sin(t * (7f + 22f * k)));
+            phase += f / rate;
+            phase2 += f * 1.012f / rate;
+            float v = (Mathf.Sin(phase * Mathf.PI * 2f) + 0.8f * Mathf.Sin(phase2 * Mathf.PI * 2f)) * 0.3f;
+            v += Mathf.Sin(phase * 3f * Mathf.PI * 2f) * 0.07f;
+            // A glassy shimmer: filtered noise whose level pulses faster and louder towards the top.
+            lp += (((float)rnd.NextDouble() * 2f - 1f) - lp) * Mathf.Lerp(0.1f, 0.4f, k);
+            v += lp * (0.18f + 0.3f * k) * (0.6f + 0.4f * Mathf.Sin(t * (18f + 30f * k)));
+            data[i] = v * env;
+            // The pop when it arrives.
+            float tp = t - 2.42f;
+            if (tp > 0f) data[i] += Mathf.Sin(tp * 640f * Mathf.PI * 2f * (1f - tp * 2.2f)) * Mathf.Exp(-tp * 26f) * 0.9f;
+        }
+        Normalize(data, 0.5f);
+        AudioClip clip = AudioClip.Create("UfoBeam", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

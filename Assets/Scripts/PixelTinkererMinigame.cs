@@ -35,35 +35,38 @@ public class PixelTinkererMinigame : PixelVisitorMinigame
 
     protected override void DrawVisitor(Transform art)
     {
-        Color coat = new Color(0.55f, 0.33f, 0.15f), dark = new Color(0.16f, 0.1f, 0.07f), skin = new Color(0.95f, 0.78f, 0.6f);
-        Color metal = new Color(0.58f, 0.62f, 0.68f), yellow = new Color(1f, 0.82f, 0.25f), orange = new Color(0.92f, 0.5f, 0.12f);
+        // A copper cube tinkerer: goggles over his eyes, an orange cap, a backpack of gears and a wrench.
+        Color face = new Color(0.72f, 0.45f, 0.22f), top = new Color(0.9f, 0.66f, 0.4f), side = new Color(0.46f, 0.27f, 0.12f);
+        Color dark = new Color(0.14f, 0.09f, 0.06f), metal = new Color(0.58f, 0.62f, 0.68f), yellow = new Color(1f, 0.82f, 0.25f), orange = new Color(0.92f, 0.5f, 0.12f);
         Transform a = art;
-        Block(a, "Pack", new Color(0.33f, 0.36f, 0.42f), new Vector2(110f, 140f), new Vector2(-72f, 170f));
-        Block(a, "Antenna", metal, new Vector2(8f, 60f), new Vector2(-100f, 275f));
-        Block(a, "Antenna Knob", yellow, new Vector2(20f, 20f), new Vector2(-100f, 308f), 45f);
-        Block(a, "Gear 1", orange, new Vector2(34f, 34f), new Vector2(-84f, 195f), 45f);
-        Block(a, "Gear 2", yellow, new Vector2(24f, 24f), new Vector2(-62f, 150f), 20f);
-        Block(a, "Leg L", new Color(0.25f, 0.2f, 0.28f), new Vector2(46f, 80f), new Vector2(-34f, 50f));
-        Block(a, "Leg R", new Color(0.25f, 0.2f, 0.28f), new Vector2(46f, 80f), new Vector2(34f, 50f));
-        Block(a, "Boot L", dark, new Vector2(62f, 26f), new Vector2(-38f, 13f));
-        Block(a, "Boot R", dark, new Vector2(62f, 26f), new Vector2(38f, 13f));
-        Block(a, "Arm L", coat, new Vector2(38f, 120f), new Vector2(-98f, 165f), 8f);
-        Block(a, "Body", coat, new Vector2(150f, 170f), new Vector2(0f, 175f));
-        Block(a, "Pocket", new Color(0.45f, 0.26f, 0.11f), new Vector2(54f, 40f), new Vector2(-30f, 150f));
-        Block(a, "Belt", dark, new Vector2(150f, 20f), new Vector2(0f, 118f));
-        Block(a, "Buckle", yellow, new Vector2(28f, 20f), new Vector2(0f, 118f));
-        Block(a, "Arm R", coat, new Vector2(38f, 120f), new Vector2(100f, 185f), -28f);
-        Block(a, "Hand R", skin, new Vector2(34f, 34f), new Vector2(128f, 238f));
-        Block(a, "Wrench Handle", metal, new Vector2(14f, 100f), new Vector2(148f, 285f), -28f);
-        Block(a, "Wrench Head", metal, new Vector2(46f, 26f), new Vector2(172f, 335f), -28f);
-        Block(a, "Head", skin, new Vector2(112f, 100f), new Vector2(0f, 292f));
-        Block(a, "Hat Brim", orange, new Vector2(138f, 20f), new Vector2(0f, 346f));
-        Block(a, "Hat Top", orange, new Vector2(96f, 44f), new Vector2(0f, 372f));
-        Block(a, "Strap", dark, new Vector2(118f, 16f), new Vector2(0f, 322f));
-        Block(a, "Lens L Frame", dark, new Vector2(46f, 46f), new Vector2(-28f, 322f));
-        Block(a, "Lens R Frame", dark, new Vector2(46f, 46f), new Vector2(28f, 322f));
-        Block(a, "Lens L", new Color(0.55f, 0.88f, 1f), new Vector2(34f, 34f), new Vector2(-28f, 322f));
-        Block(a, "Lens R", new Color(0.55f, 0.88f, 1f), new Vector2(34f, 34f), new Vector2(28f, 322f));
-        Block(a, "Mouth", dark, new Vector2(38f, 8f), new Vector2(0f, 262f));
+        // Backpack behind him.
+        Block(a, "Pack", new Color(0.33f, 0.36f, 0.42f), new Vector2(90f, 150f), new Vector2(-130f, 190f));
+        Block(a, "Antenna", metal, new Vector2(8f, 70f), new Vector2(-142f, 295f));
+        Block(a, "Antenna Knob", yellow, new Vector2(20f, 20f), new Vector2(-142f, 336f), 45f);
+        Block(a, "Gear 1", orange, new Vector2(34f, 34f), new Vector2(-132f, 215f), 45f);
+        Block(a, "Gear 2", yellow, new Vector2(24f, 24f), new Vector2(-126f, 160f), 20f);
+        CubeBody(a, face, top, side, dark, arms: false);
+        Block(a, "Arm L", side, new Vector2(34f, 100f), new Vector2(-122f, 150f), 8f);
+        // The wrench held up in his right hand.
+        Block(a, "Wrench Handle", metal, new Vector2(14f, 130f), new Vector2(150f, 210f), -10f);
+        Block(a, "Wrench Head", metal, new Vector2(46f, 26f), new Vector2(160f, 285f), -10f);
+        Block(a, "Wrench Gap", dark, new Vector2(14f, 14f), new Vector2(161f, 292f), -10f);
+        Block(a, "Arm R", side, new Vector2(34f, 100f), new Vector2(122f, 150f), -8f);
+        // Goggles instead of plain eyes.
+        Block(a, "Strap", dark, new Vector2(204f, 16f), new Vector2(0f, 206f));
+        Block(a, "Lens L Frame", dark, new Vector2(66f, 62f), new Vector2(-42f, 206f));
+        Block(a, "Lens R Frame", dark, new Vector2(66f, 62f), new Vector2(42f, 206f));
+        Block(a, "Lens L", new Color(0.55f, 0.88f, 1f), new Vector2(52f, 48f), new Vector2(-42f, 206f));
+        Block(a, "Lens R", new Color(0.55f, 0.88f, 1f), new Vector2(52f, 48f), new Vector2(42f, 206f));
+        Block(a, "Pupil L", dark, new Vector2(14f, 20f), new Vector2(-40f, 204f));
+        Block(a, "Pupil R", dark, new Vector2(14f, 20f), new Vector2(44f, 204f));
+        Block(a, "Glint L", Color.white, new Vector2(10f, 10f), new Vector2(-54f, 218f));
+        Block(a, "Glint R", Color.white, new Vector2(10f, 10f), new Vector2(30f, 218f));
+        Block(a, "Mouth", dark, new Vector2(60f, 9f), new Vector2(-4f, 140f), 4f);
+        Block(a, "Smirk", dark, new Vector2(10f, 16f), new Vector2(28f, 148f));
+        // Orange cap.
+        Block(a, "Cap Brim", orange, new Vector2(150f, 16f), new Vector2(0f, 304f));
+        Block(a, "Cap Top", orange, new Vector2(110f, 40f), new Vector2(0f, 328f));
+        Block(a, "Cap Bolt", yellow, new Vector2(18f, 18f), new Vector2(0f, 330f), 45f);
     }
 }

@@ -90,34 +90,35 @@ public class PixelEntrepreneurMinigame : PixelVisitorMinigame
 
     protected override void DrawVisitor(Transform art)
     {
-        Color suit = new Color(0.16f, 0.2f, 0.3f), suitDark = new Color(0.1f, 0.13f, 0.2f), skin = new Color(0.95f, 0.78f, 0.6f);
-        Color shirt = new Color(0.95f, 0.95f, 0.98f), tie = new Color(0.85f, 0.2f, 0.25f), gold = new Color(1f, 0.82f, 0.25f);
-        Color hair = new Color(0.2f, 0.14f, 0.1f), leather = new Color(0.45f, 0.28f, 0.14f), green = new Color(0.4f, 0.95f, 0.5f);
+        // A navy cube in a suit: slicked hair, a smug smile, a red tie down the front, a briefcase and a green coin cube held up.
+        Color face = new Color(0.2f, 0.28f, 0.45f), top = new Color(0.36f, 0.46f, 0.66f), side = new Color(0.12f, 0.17f, 0.3f);
+        Color dark = new Color(0.06f, 0.07f, 0.12f), white = new Color(0.97f, 0.97f, 1f), tie = new Color(0.85f, 0.2f, 0.25f), gold = new Color(1f, 0.82f, 0.25f);
+        Color leather = new Color(0.45f, 0.28f, 0.14f), green = new Color(0.4f, 0.95f, 0.5f);
         Transform a = art;
-        Block(a, "Leg L", suitDark, new Vector2(48f, 90f), new Vector2(-34f, 52f));
-        Block(a, "Leg R", suitDark, new Vector2(48f, 90f), new Vector2(34f, 52f));
-        Block(a, "Shoe L", new Color(0.05f, 0.05f, 0.07f), new Vector2(64f, 24f), new Vector2(-38f, 12f));
-        Block(a, "Shoe R", new Color(0.05f, 0.05f, 0.07f), new Vector2(64f, 24f), new Vector2(38f, 12f));
-        Block(a, "Arm L", suit, new Vector2(38f, 130f), new Vector2(-98f, 170f), 6f);
-        Block(a, "Body", suit, new Vector2(150f, 180f), new Vector2(0f, 180f));
-        Block(a, "Shirt", shirt, new Vector2(46f, 150f), new Vector2(0f, 190f));
-        Block(a, "Tie", tie, new Vector2(18f, 100f), new Vector2(0f, 180f));
-        Block(a, "Tie Knot", tie, new Vector2(24f, 22f), new Vector2(0f, 236f));
-        Block(a, "Pocket Square", gold, new Vector2(22f, 14f), new Vector2(-48f, 222f), 10f);
-        Block(a, "Hand L", skin, new Vector2(34f, 34f), new Vector2(-104f, 100f));
-        Block(a, "Briefcase", leather, new Vector2(110f, 76f), new Vector2(-110f, 62f));
-        Block(a, "Briefcase Strap", suitDark, new Vector2(110f, 10f), new Vector2(-110f, 74f));
-        Block(a, "Briefcase Lock", gold, new Vector2(16f, 16f), new Vector2(-110f, 74f));
-        Block(a, "Arm R", suit, new Vector2(38f, 120f), new Vector2(100f, 195f), -30f);
-        Block(a, "Hand R", skin, new Vector2(34f, 34f), new Vector2(130f, 250f));
-        Block(a, "Coin Cube", green, new Vector2(44f, 44f), new Vector2(150f, 300f), 25f);
-        Block(a, "Coin Shine", shirt, new Vector2(12f, 12f), new Vector2(160f, 312f), 25f);
-        Block(a, "Head", skin, new Vector2(104f, 98f), new Vector2(0f, 296f));
-        Block(a, "Hair", hair, new Vector2(112f, 30f), new Vector2(0f, 340f));
-        Block(a, "Eye L", suitDark, new Vector2(12f, 14f), new Vector2(-22f, 304f));
-        Block(a, "Eye R", suitDark, new Vector2(12f, 14f), new Vector2(22f, 304f));
-        Block(a, "Smile", suitDark, new Vector2(44f, 8f), new Vector2(0f, 270f));
-        Block(a, "Smile Edge L", suitDark, new Vector2(8f, 12f), new Vector2(-24f, 276f));
-        Block(a, "Smile Edge R", suitDark, new Vector2(8f, 12f), new Vector2(24f, 276f));
+        CubeBody(a, face, top, side, dark, arms: false);
+        // Briefcase in the left hand.
+        Block(a, "Arm L", side, new Vector2(34f, 100f), new Vector2(-122f, 150f), 8f);
+        Block(a, "Briefcase", leather, new Vector2(80f, 60f), new Vector2(-132f, 50f));
+        Block(a, "Briefcase Strap", dark, new Vector2(80f, 8f), new Vector2(-132f, 58f));
+        Block(a, "Briefcase Lock", gold, new Vector2(14f, 14f), new Vector2(-132f, 58f));
+        // The coin cube raised in the right hand.
+        Block(a, "Arm R", side, new Vector2(34f, 100f), new Vector2(122f, 170f), -26f);
+        Block(a, "Coin Cube", green, new Vector2(48f, 48f), new Vector2(150f, 260f), 25f);
+        Block(a, "Coin Shine", white, new Vector2(12f, 12f), new Vector2(160f, 274f), 25f);
+        // Face: confident eyes, a wide smile, a collar and tie.
+        CubeEyes(a, white, dark, 208f, 42f, 8f, 0.9f);
+        Block(a, "Brow L", dark, new Vector2(58f, 8f), new Vector2(-42f, 238f), -6f);
+        Block(a, "Brow R", dark, new Vector2(58f, 8f), new Vector2(42f, 238f), 8f);
+        Block(a, "Smile", dark, new Vector2(80f, 8f), new Vector2(0f, 156f));
+        Block(a, "Smile Edge L", dark, new Vector2(8f, 14f), new Vector2(-40f, 162f));
+        Block(a, "Smile Edge R", dark, new Vector2(8f, 14f), new Vector2(40f, 162f));
+        Block(a, "Collar L", white, new Vector2(50f, 30f), new Vector2(-24f, 112f), 30f);
+        Block(a, "Collar R", white, new Vector2(50f, 30f), new Vector2(24f, 112f), -30f);
+        Block(a, "Tie Knot", tie, new Vector2(24f, 22f), new Vector2(0f, 118f));
+        Block(a, "Tie", tie, new Vector2(20f, 70f), new Vector2(0f, 84f));
+        // Slicked-back hair and a gold pin on the lapel.
+        Block(a, "Hair", dark, new Vector2(204f, 26f), new Vector2(0f, 300f));
+        Block(a, "Hair Quiff", dark, new Vector2(110f, 22f), new Vector2(-24f, 322f), 4f);
+        Block(a, "Pin", gold, new Vector2(12f, 12f), new Vector2(-70f, 120f), 45f);
     }
 }

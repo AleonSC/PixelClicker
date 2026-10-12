@@ -557,6 +557,35 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     // Building the visitor and the boxes (all drawn in code)
     // ------------------------------------------------------------------
 
+    /// <summary>
+    /// The shared cube body of every vendor (Cubie's shape): legs, shoes, arms, and a cube drawn as a shaded side, a front face and a top.
+    /// Each vendor adds their own face, hat and props on top. The front face is 200 x 200 centred at (0, 180).
+    /// </summary>
+    protected void CubeBody(Transform a, Color face, Color top, Color side, Color shoe, bool arms = true)
+    {
+        Block(a, "Leg L", side, new Vector2(40f, 50f), new Vector2(-45f, 28f));
+        Block(a, "Leg R", side, new Vector2(40f, 50f), new Vector2(45f, 28f));
+        Block(a, "Shoe L", shoe, new Vector2(58f, 20f), new Vector2(-48f, 10f));
+        Block(a, "Shoe R", shoe, new Vector2(58f, 20f), new Vector2(48f, 10f));
+        if (arms)
+        {
+            Block(a, "Arm L", side, new Vector2(34f, 100f), new Vector2(-122f, 150f), 8f);
+            Block(a, "Arm R", side, new Vector2(34f, 100f), new Vector2(122f, 150f), -8f);
+        }
+        Block(a, "Side", side, new Vector2(200f, 200f), new Vector2(12f, 190f));
+        Block(a, "Face", face, new Vector2(200f, 200f), new Vector2(0f, 180f));
+        Block(a, "Top", top, new Vector2(200f, 26f), new Vector2(6f, 290f));
+    }
+
+    /// <summary>Two round-ish eyes on a cube's face: white blocks with dark pupils ('look' shifts the pupils sideways).</summary>
+    protected void CubeEyes(Transform a, Color white, Color pupil, float y = 200f, float spread = 42f, float look = 0f, float size = 1f)
+    {
+        Block(a, "Eye L", white, new Vector2(52f, 40f) * size, new Vector2(-spread, y));
+        Block(a, "Eye R", white, new Vector2(52f, 40f) * size, new Vector2(spread, y));
+        Block(a, "Pupil L", pupil, new Vector2(18f, 26f) * size, new Vector2(-spread + look, y - 2f));
+        Block(a, "Pupil R", pupil, new Vector2(18f, 26f) * size, new Vector2(spread + look, y - 2f));
+    }
+
     protected RectTransform Block(Transform parent, string name, Color color, Vector2 size, Vector2 pos, float rotation = 0f)
     {
         GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));

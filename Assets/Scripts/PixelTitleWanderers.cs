@@ -774,6 +774,7 @@ public class PixelTitleWanderers : MonoBehaviour
     private void BuildBeam()
     {
         if (beamRect != null) return;
+        PixelAudio.Play("ufo_beam");
         GameObject g = new GameObject("Abduction Beam", typeof(RectTransform), typeof(Image));
         g.transform.SetParent(ufoArt, false);
         g.transform.SetAsFirstSibling();   // behind the saucer's parts
@@ -826,6 +827,7 @@ public class PixelTitleWanderers : MonoBehaviour
     /// <summary>Cancels an abduction in progress (the victim walks / hops on again).</summary>
     private void AbortAbduction()
     {
+        PixelAudio.Stop("ufo_beam");
         if (abWalker != null) { abWalker.abducted = false; if (abWalker.rect != null) { abWalker.rect.localScale = new Vector3(abWalker.facing, 1f, 1f); abWalker.rect.localRotation = Quaternion.identity; } }
         if (abHopper != null) { abHopper.abducted = false; if (abHopper.rect != null) abHopper.rect.localRotation = Quaternion.identity; }
         EndAbduction();

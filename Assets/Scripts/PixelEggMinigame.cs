@@ -92,58 +92,49 @@ public class PixelEggMinigame : PixelVisitorMinigame
 
     protected override void DrawVisitor(Transform art)
     {
-        Color fur = new Color(0.98f, 0.58f, 0.16f), furDark = new Color(0.82f, 0.4f, 0.08f), cream = new Color(1f, 0.9f, 0.72f);
-        Color pink = new Color(1f, 0.6f, 0.65f), dark = new Color(0.14f, 0.08f, 0.05f), iris = new Color(0.85f, 0.92f, 0.25f);
+        // An orange cube cat: pointed ears, forehead stripes, a cream muzzle, whiskers, a curling tail, and the egg held in front.
+        Color fur = new Color(0.98f, 0.58f, 0.16f), furTop = new Color(1f, 0.76f, 0.4f), furSide = new Color(0.78f, 0.4f, 0.08f);
+        Color cream = new Color(1f, 0.9f, 0.72f), pink = new Color(1f, 0.6f, 0.65f), dark = new Color(0.14f, 0.08f, 0.05f), iris = new Color(0.85f, 0.92f, 0.25f);
         Color shell = new Color(0.99f, 0.99f, 0.97f), shellShade = new Color(0.9f, 0.9f, 0.86f);
+        Transform a = art;
 
-        // Tail curling up on the right.
-        Block(art, "Tail 1", fur, new Vector2(30f, 90f), new Vector2(112f, 70f), -20f);
-        Block(art, "Tail 2", fur, new Vector2(30f, 70f), new Vector2(132f, 128f), 10f);
-        Block(art, "Tail Tip", furDark, new Vector2(30f, 36f), new Vector2(128f, 176f), 25f);
-        // Body, belly, feet.
-        Block(art, "Body", fur, new Vector2(150f, 160f), new Vector2(0f, 100f));
-        Block(art, "Belly", cream, new Vector2(84f, 110f), new Vector2(0f, 96f));
-        Block(art, "Stripe L1", furDark, new Vector2(10f, 40f), new Vector2(-62f, 120f), 8f);
-        Block(art, "Stripe L2", furDark, new Vector2(10f, 40f), new Vector2(-62f, 80f), -6f);
-        Block(art, "Stripe R1", furDark, new Vector2(10f, 40f), new Vector2(62f, 120f), -8f);
-        Block(art, "Stripe R2", furDark, new Vector2(10f, 40f), new Vector2(62f, 80f), 6f);
-        Block(art, "Foot L", fur, new Vector2(56f, 26f), new Vector2(-38f, 14f));
-        Block(art, "Foot R", fur, new Vector2(56f, 26f), new Vector2(38f, 14f));
-        Block(art, "Toe L", cream, new Vector2(40f, 10f), new Vector2(-38f, 10f));
-        Block(art, "Toe R", cream, new Vector2(40f, 10f), new Vector2(38f, 10f));
-        // Head with ears.
-        Block(art, "Head", fur, new Vector2(160f, 124f), new Vector2(0f, 236f));
-        Block(art, "Ear L", fur, new Vector2(46f, 46f), new Vector2(-56f, 306f), 45f);
-        Block(art, "Ear R", fur, new Vector2(46f, 46f), new Vector2(56f, 306f), 45f);
-        Block(art, "Ear In L", pink, new Vector2(24f, 24f), new Vector2(-56f, 304f), 45f);
-        Block(art, "Ear In R", pink, new Vector2(24f, 24f), new Vector2(56f, 304f), 45f);
-        Block(art, "Forehead 1", furDark, new Vector2(10f, 30f), new Vector2(-20f, 284f));
-        Block(art, "Forehead 2", furDark, new Vector2(10f, 36f), new Vector2(0f, 286f));
-        Block(art, "Forehead 3", furDark, new Vector2(10f, 30f), new Vector2(20f, 284f));
-        Block(art, "Muzzle", cream, new Vector2(80f, 46f), new Vector2(0f, 212f));
-        // Eyes with slit pupils, nose, mouth, whiskers.
-        Block(art, "Eye L", iris, new Vector2(34f, 36f), new Vector2(-38f, 248f));
-        Block(art, "Eye R", iris, new Vector2(34f, 36f), new Vector2(38f, 248f));
-        Block(art, "Pupil L", dark, new Vector2(9f, 30f), new Vector2(-38f, 248f));
-        Block(art, "Pupil R", dark, new Vector2(9f, 30f), new Vector2(38f, 248f));
-        Block(art, "Glint L", Color.white, new Vector2(8f, 8f), new Vector2(-46f, 258f));
-        Block(art, "Glint R", Color.white, new Vector2(8f, 8f), new Vector2(30f, 258f));
-        Block(art, "Nose", pink, new Vector2(18f, 14f), new Vector2(0f, 226f));
-        Block(art, "Mouth 1", dark, new Vector2(4f, 14f), new Vector2(0f, 212f));
-        Block(art, "Mouth 2", dark, new Vector2(24f, 4f), new Vector2(-12f, 204f), -12f);
-        Block(art, "Mouth 3", dark, new Vector2(24f, 4f), new Vector2(12f, 204f), 12f);
+        // Tail curling up behind on the right.
+        Block(a, "Tail 1", fur, new Vector2(26f, 90f), new Vector2(128f, 60f), -20f);
+        Block(a, "Tail 2", fur, new Vector2(26f, 70f), new Vector2(148f, 118f), 10f);
+        Block(a, "Tail Tip", furSide, new Vector2(26f, 34f), new Vector2(144f, 166f), 25f);
+        CubeBody(a, fur, furTop, furSide, cream);
+        // Ears on top.
+        Block(a, "Ear L", fur, new Vector2(46f, 46f), new Vector2(-66f, 312f), 45f);
+        Block(a, "Ear R", fur, new Vector2(46f, 46f), new Vector2(66f, 312f), 45f);
+        Block(a, "Ear In L", pink, new Vector2(22f, 22f), new Vector2(-66f, 310f), 45f);
+        Block(a, "Ear In R", pink, new Vector2(22f, 22f), new Vector2(66f, 310f), 45f);
+        // Face: forehead stripes, slit-pupil eyes, cream muzzle, nose, mouth, whiskers.
+        Block(a, "Forehead 1", furSide, new Vector2(10f, 30f), new Vector2(-24f, 268f));
+        Block(a, "Forehead 2", furSide, new Vector2(10f, 36f), new Vector2(0f, 270f));
+        Block(a, "Forehead 3", furSide, new Vector2(10f, 30f), new Vector2(24f, 268f));
+        Block(a, "Eye L", iris, new Vector2(44f, 44f), new Vector2(-46f, 214f));
+        Block(a, "Eye R", iris, new Vector2(44f, 44f), new Vector2(46f, 214f));
+        Block(a, "Pupil L", dark, new Vector2(10f, 38f), new Vector2(-46f, 214f));
+        Block(a, "Pupil R", dark, new Vector2(10f, 38f), new Vector2(46f, 214f));
+        Block(a, "Glint L", Color.white, new Vector2(9f, 9f), new Vector2(-56f, 228f));
+        Block(a, "Glint R", Color.white, new Vector2(9f, 9f), new Vector2(36f, 228f));
+        Block(a, "Muzzle", cream, new Vector2(96f, 56f), new Vector2(0f, 156f));
+        Block(a, "Nose", pink, new Vector2(20f, 14f), new Vector2(0f, 178f));
+        Block(a, "Mouth 1", dark, new Vector2(4f, 14f), new Vector2(0f, 164f));
+        Block(a, "Mouth 2", dark, new Vector2(26f, 4f), new Vector2(-13f, 156f), -12f);
+        Block(a, "Mouth 3", dark, new Vector2(26f, 4f), new Vector2(13f, 156f), 12f);
         for (int w = 0; w < 3; w++)
         {
-            Block(art, "Whisker L" + w, dark, new Vector2(54f, 3f), new Vector2(-104f, 218f - w * 10f), 8f - w * 8f);
-            Block(art, "Whisker R" + w, dark, new Vector2(54f, 3f), new Vector2(104f, 218f - w * 10f), -(8f - w * 8f));
+            Block(a, "Whisker L" + w, dark, new Vector2(46f, 3f), new Vector2(-112f, 168f - w * 10f), 8f - w * 8f);
+            Block(a, "Whisker R" + w, dark, new Vector2(46f, 3f), new Vector2(112f, 168f - w * 10f), -(8f - w * 8f));
         }
-        // The egg, held in both paws: a white pixel with softly rounded corners (a few overlapping blocks).
-        Block(art, "Egg Shade", shellShade, new Vector2(80f, 88f), new Vector2(0f, 118f));
-        Block(art, "Egg", shell, new Vector2(74f, 82f), new Vector2(-2f, 122f));
-        Block(art, "Egg Round A", shell, new Vector2(60f, 94f), new Vector2(-2f, 122f));
-        Block(art, "Egg Round B", shell, new Vector2(86f, 66f), new Vector2(-2f, 122f));
-        Block(art, "Paw L", fur, new Vector2(32f, 30f), new Vector2(-44f, 108f));
-        Block(art, "Paw R", fur, new Vector2(32f, 30f), new Vector2(40f, 108f));
+        // The egg, held in both paws in front of his chin: a white pixel with softly rounded corners.
+        Block(a, "Egg Shade", shellShade, new Vector2(78f, 86f), new Vector2(0f, 88f));
+        Block(a, "Egg", shell, new Vector2(72f, 80f), new Vector2(-2f, 92f));
+        Block(a, "Egg Round A", shell, new Vector2(58f, 92f), new Vector2(-2f, 92f));
+        Block(a, "Egg Round B", shell, new Vector2(84f, 64f), new Vector2(-2f, 92f));
+        Block(a, "Paw L", fur, new Vector2(30f, 28f), new Vector2(-46f, 80f));
+        Block(a, "Paw R", fur, new Vector2(30f, 28f), new Vector2(42f, 80f));
     }
 }
 

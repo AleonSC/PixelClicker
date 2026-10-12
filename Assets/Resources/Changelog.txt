@@ -601,3 +601,4 @@
 [2026-10-12 07:05 UTC] Added Goals for buying the Combo Meter (after the RGB Pack) and then the Auto Clicker, and listed the Combo Meter above the Auto Clicker in the shop.
 [2026-10-12 07:09 UTC] Added the Prospector, a cube vendor like Cubie who buys mining ores for pure pixels and only visits while you train Mining.
 [2026-10-12 07:14 UTC] The main-menu UFO now randomly abducts a walking vendor or hopping pet with a green beam.
+[2026-10-12 07:17 UTC] Added the UFO abduction beam sound and redrew the Wizard, Tinkerer, Farmer, Pixel Entrepreneur and the Egg and Bean cats as cube characters like Cubie.
