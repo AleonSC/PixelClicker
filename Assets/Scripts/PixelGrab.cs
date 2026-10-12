@@ -52,12 +52,21 @@ public class PixelGrab : MonoBehaviour
     [Tooltip("Fastest a thrown pixel can leave your hand (world units per second).")]
     [SerializeField] private float maxThrowSpeed = 25f;
 
-    [Tooltip("Turns off the pass-through: normally a pixel you carry or throw ghosts through the other old pixels (so it never knocks a pile about) until it is clear of them.")]
-    [SerializeField] private bool disablePassThrough = false;
+    [Header("Gentle collisions")]
+    [Tooltip("Turns off the gentle-collision rules below (a carried / thrown pixel hits the others with its full weight and they fly as far as physics says).")]
+    [SerializeField] private bool disableGentleHits = false;
+
+    [Range(0f, 1f)]
+    [Tooltip("How heavy a pixel you carry or throw is compared to normal (0.2 = a fifth of the weight, so it only nudges the others). 0 = the coded default (0.2).")]
+    [SerializeField] private float carriedMassFactor = 0f;
 
     [Min(0f)]
-    [Tooltip("Longest a thrown pixel stays pass-through after you let go (seconds). 0 = the coded default (4).")]
-    [SerializeField] private float passThroughMaxSeconds = 0f;
+    [Tooltip("Seconds a thrown pixel stays light after you let go. 0 = the coded default (1.5).")]
+    [SerializeField] private float lightSecondsAfterThrow = 0f;
+
+    [Min(0f)]
+    [Tooltip("Fastest a pixel that was hit by a carried / thrown pixel may fly away (world units per second). 0 = the coded default (5).")]
+    [SerializeField] private float hitReactionSpeedLimit = 0f;
 
     private Rigidbody held;
     private OldPixelDespawn heldDespawn;
@@ -215,60 +224,72 @@ public class PixelGrab : MonoBehaviour
         heldShatter = body.GetComponent<OldPixelShatter>();
         if (heldShatter != null) heldShatter.Grabbed(); // can't break while carried
 
-        if (!disablePassThrough) StartCoroutine(PassThrough(body));
+        if (!disableGentleHits) MakeLight(body);
 
         PixelAudio.Play("grab");
     }
 
     private OldPixelShatter heldShatter;
 
-    /// <summary>
-    /// A carried pixel passes through the other old pixels (so grouping them up never sends the back ones flying); the collisions come back
-    /// pair by pair once it has been let go and no longer overlaps that pixel.
-    /// </summary>
-    private System.Collections.IEnumerator PassThrough(Rigidbody body)
+    // ---- Gentle collisions: a carried / thrown pixel is light, and anything it hits is kept from flying far ----
+    private readonly System.Collections.Generic.Dictionary<Rigidbody, float> normalMass = new System.Collections.Generic.Dictionary<Rigidbody, float>();
+    private readonly System.Collections.Generic.Dictionary<Rigidbody, float> lightUntil = new System.Collections.Generic.Dictionary<Rigidbody, float>();
+    private readonly System.Collections.Generic.Dictionary<Rigidbody, float> limitedUntil = new System.Collections.Generic.Dictionary<Rigidbody, float>();
+    private readonly System.Collections.Generic.List<Rigidbody> scratch = new System.Collections.Generic.List<Rigidbody>();
+
+    private void MakeLight(Rigidbody body)
     {
-        Collider[] mine = body != null ? body.GetComponentsInChildren<Collider>() : null;
-        if (mine == null || mine.Length == 0) yield break;
-        System.Collections.Generic.List<Collider> ignored = new System.Collections.Generic.List<Collider>();
-        System.Collections.Generic.List<Rigidbody> others = new System.Collections.Generic.List<Rigidbody>(clicker.OldPixels);
-        foreach (Rigidbody other in others)
+        if (body == null) return;
+        if (!normalMass.ContainsKey(body)) normalMass[body] = body.mass;
+        body.mass = Mathf.Max(0.0001f, normalMass[body] * (carriedMassFactor > 0f ? carriedMassFactor : 0.2f));
+        lightUntil[body] = float.MaxValue;   // until it is let go
+    }
+
+    /// <summary>Marks the pixels near the carried / thrown ones as 'hit' and keeps their speed down for a moment.</summary>
+    private void LimitReactions()
+    {
+        if (disableGentleHits || clicker == null || lightUntil.Count == 0 && limitedUntil.Count == 0) return;
+        float now = Time.time;
+        float reach = clicker.OldPixelWorldSize * 1.7f;
+        float limit = hitReactionSpeedLimit > 0f ? hitReactionSpeedLimit : 5f;
+
+        scratch.Clear();
+        foreach (var pair in lightUntil)
         {
-            if (other == null || other == body) continue;
-            foreach (Collider theirs in other.GetComponentsInChildren<Collider>())
+            if (pair.Key == null) { scratch.Add(pair.Key); continue; }
+            if (pair.Value < now)
             {
-                if (theirs == null || theirs.isTrigger) continue;
-                foreach (Collider m in mine) Physics.IgnoreCollision(m, theirs, true);
-                ignored.Add(theirs);
+                scratch.Add(pair.Key);   // light time over: back to normal weight
+                continue;
             }
+            foreach (Rigidbody other in clicker.OldPixels)
+            {
+                if (other == null || other == pair.Key || other.isKinematic) continue;
+                if ((other.worldCenter - pair.Key.worldCenter).sqrMagnitude < reach * reach) limitedUntil[other] = now + 0.7f;
+            }
+        }
+        foreach (Rigidbody done in scratch)
+        {
+            lightUntil.Remove(done);
+            if (done != null && normalMass.TryGetValue(done, out float mass)) done.mass = mass;
+            normalMass.Remove(done);
         }
 
-        float limit = passThroughMaxSeconds > 0f ? passThroughMaxSeconds : 4f;
-        float letGoAt = -1f;
-        while (ignored.Count > 0)
+        scratch.Clear();
+        foreach (var pair in limitedUntil)
         {
-            yield return new WaitForSeconds(0.1f);
-            if (body == null) yield break;
-            if (held != body)
-            {
-                if (letGoAt < 0f) letGoAt = Time.time;
-                bool timeUp = Time.time - letGoAt > limit;
-                for (int i = ignored.Count - 1; i >= 0; i--)
-                {
-                    Collider theirs = ignored[i];
-                    if (theirs == null) { ignored.RemoveAt(i); continue; }
-                    bool touching = false;
-                    foreach (Collider m in mine) if (m != null && m.bounds.Intersects(theirs.bounds)) { touching = true; break; }
-                    if (touching && !timeUp) continue;
-                    foreach (Collider m in mine) if (m != null) Physics.IgnoreCollision(m, theirs, false);
-                    ignored.RemoveAt(i);
-                }
-            }
+            Rigidbody other = pair.Key;
+            if (other == null || pair.Value < now || other == held) { scratch.Add(other); continue; }
+            Vector3 v = GetVelocity(other);
+            if (v.magnitude > limit) SetVelocity(other, v.normalized * limit);
+            if (other.angularVelocity.magnitude > limit * 2f) other.angularVelocity = other.angularVelocity.normalized * limit * 2f;
         }
+        foreach (Rigidbody done in scratch) limitedUntil.Remove(done);
     }
 
     private void FixedUpdate()
     {
+        LimitReactions();
         if (held == null) return;
         if (cam == null) { Release(); return; }
 
@@ -292,6 +313,7 @@ public class PixelGrab : MonoBehaviour
         if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
         SetVelocity(held, v);
 
+        if (lightUntil.ContainsKey(held)) lightUntil[held] = Time.time + (lightSecondsAfterThrow > 0f ? lightSecondsAfterThrow : 1.5f);   // stays light for a moment after the throw
         if (heldShatter != null) heldShatter.Released(v.magnitude <= gentleReleaseSpeed, gentleLifetimeBonus);
         heldShatter = null;
 
