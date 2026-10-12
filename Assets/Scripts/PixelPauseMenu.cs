@@ -2142,7 +2142,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             PixelHints.ReplayTutorial();
             SetPaused(false); // so the tips show over the game
-        }, ref y);
+        }, ref y, 112f);   // a little narrower than the section header (-96)
 
         rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
@@ -2400,14 +2400,14 @@ public class PixelPauseMenu : MonoBehaviour
     }
 
     /// <summary>A full-width button row (an action rather than a setting).</summary>
-    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y)
+    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = 80f)
     {
         Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.9f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(-80f, rowHeight);
+        rt.sizeDelta = new Vector2(-inset, rowHeight);
         rt.anchoredPosition = new Vector2(0f, -y);
         b.onClick.AddListener(onClick);
         y += rowHeight + 6f;
