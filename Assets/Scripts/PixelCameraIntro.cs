@@ -246,7 +246,13 @@ public class PixelCameraIntro : MonoBehaviour
         w *= w;
         Vector3 aim = Vector3.Lerp(pivot, finalAim, w);
         Vector3 dir = aim - cam.transform.position;
-        cam.transform.rotation = k >= 0.9999f ? finalRotation : Quaternion.LookRotation(dir.sqrMagnitude > 1e-6f ? dir : Vector3.forward, Vector3.up);
+        // The 'up' the camera is turned against: world up at the start, the scene camera's own up at the end. With a camera that looks straight
+        // down (a top-down view) world up is useless there - the roll comes out arbitrary and the whole picture used to flip 180 degrees
+        // in the last moment, when the camera snapped to its real pose. Blending to the final up makes the end of the swing exactly that pose.
+        Vector3 upRef = Vector3.Slerp(Vector3.up, finalRotation * Vector3.up, Smoother(k));
+        Vector3 lookDir = dir.sqrMagnitude > 1e-6f ? dir : Vector3.forward;
+        if (Mathf.Abs(Vector3.Dot(lookDir.normalized, upRef.normalized)) > 0.9999f) upRef = finalRotation * Vector3.right;   // (never parallel to the view direction)
+        cam.transform.rotation = k >= 0.9999f ? finalRotation : Quaternion.LookRotation(lookDir, upRef);
 
         cam.fieldOfView = Mathf.Lerp(startFov, finalFov, k);
         if (cam.orthographic) cam.orthographicSize = Mathf.Lerp(startOrtho, finalOrtho, k);
