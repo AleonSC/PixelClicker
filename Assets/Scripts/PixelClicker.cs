@@ -121,10 +121,11 @@ public class PixelClicker : MonoBehaviour
         Pearl = 69,
         Driftwood = 70,   // Fishing's filler block
         Jellyfish = 71,   // Fishing's hazard block
+        Bait = 72,        // Fishing: drops bait pellets that make fish appear more often
     }
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
-    public static bool IsFishBlock(PixelType type) => type >= PixelType.Fish && type <= PixelType.Driftwood;
+    public static bool IsFishBlock(PixelType type) => (type >= PixelType.Fish && type <= PixelType.Driftwood) || type == PixelType.Bait;
 
     /// <summary>The old Prospector ores that were dropped (Lead, Zinc, Nickel): they never spawn any more.</summary>
     public static bool IsRetiredOre(PixelType type) => type == PixelType.Lead || type == PixelType.Zinc || type == PixelType.Nickel;
@@ -145,7 +146,7 @@ public class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Jellyfish);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Bait);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1693,6 +1694,21 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 46;
         }
 
+        if (looksVersion < 47)
+        {
+            // The Jellyfish became electric (lightning look) and the Bait block got a look.
+            System.Collections.Generic.List<PixelLook> list47 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            list47.RemoveAll(l => l != null && l.type == PixelType.Jellyfish);
+            PixelLook[] defaults47 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Jellyfish, PixelType.Bait })
+            {
+                PixelLook def = PixelLooks.Find(defaults47, t);
+                if (def != null && PixelLooks.Find(list47.ToArray(), t) == null) list47.Add(def);
+            }
+            looks = list47.ToArray();
+            looksVersion = 47;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1882,8 +1898,6 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Dev tools: how many clicks one click counts as (1 = normal). Multiplies payouts, tough-pixel hits and the combo.</summary>
     public static int DevClickCount = 1;
 
-    private bool fishingBusy, fishingPass;
-
     /// <summary>The Weak Spots round for a fish ended: caught = pay it like a normal click, otherwise it got away (no payout, the next pixel comes).</summary>
     private void FishingDone(bool caught)
     {
@@ -1913,8 +1927,26 @@ public class PixelClicker : MonoBehaviour
         // A Fish is caught in a Weak Spots round: your click starts it, and only a clean run pays (the auto clicker waits for you).
         if (tier.type == PixelType.Fish && !fishingPass)
         {
-            if (fishingBusy || automatic) return;
-            if (PixelWeakspotMinigame.TryStartFishing(FishingDone)) { fishingBusy = true; PlayClickEffects(tier); return; }
+            if (fishingBusy) return;
+            if (PixelWeakspotMinigame.FishingAvailable)
+            {
+                if (automatic) return;   // reeling a fish in is up to you
+                if (PixelWeakspotMinigame.TryStartFishing(FishingDone)) { fishingBusy = true; PlayClickEffects(tier); }
+                return;
+            }
+            // The Weak Spots minigame is switched off: a fish takes a random 7-25 clicks to reel in (the last one pays).
+            if (fishNeed == 0) fishNeed = UnityEngine.Random.Range(7, 26);
+            fishReel += clickCount;
+            if (fishReel < fishNeed)
+            {
+                hitPunchTimer = hitPunchDuration;
+                PlayClickEffects(tier);
+                if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);
+                if (!disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, fishReel / (float)fishNeed);
+                PixelHit?.Invoke(tierIndex, fishReel, fishNeed, automatic);
+                onPixelClicked?.Invoke();
+                return;
+            }
         }
 
         // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
@@ -1934,7 +1966,7 @@ public class PixelClicker : MonoBehaviour
                 if (tier.type != PixelType.Seed && (IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type) || tier.type == PixelType.HornetNest || tier.type == PixelType.Toadstool || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Dirt) digShrinkTarget = Mathf.Lerp(1f, oldPixelScale, Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // each dig shrinks it towards old-pixel size
                 if ((tier.type == PixelType.Pest || tier.type == PixelType.HornetNest) && !disablePestSwarm) PixelPestSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // bugs spill out of it
-                if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
+                if ((IsElectricalBlock(tier.type) || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Meteor && !disableMeteorFx) PixelCometFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
@@ -2017,9 +2049,10 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Solar) PixelDaylight.OnSolarClick();
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
+        if (tier.type == PixelType.Bait) PixelBait.Drop(this, pixelTransform.position);
         if ((IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type)) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
         if (tier.type == PixelType.Dirt) PixelAudio.Play("seed_dig");   // the last dig
-        if (IsElectricalBlock(tier.type) && !disableFarmFx) PixelElectricFx.Break(tier.type, pixelTransform.position, PixelBaseSize);
+        if ((IsElectricalBlock(tier.type) || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelElectricFx.Break(tier.type, pixelTransform.position, PixelBaseSize);
         if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Break(pixelTransform.position, PixelBaseSize);
         if (IsOre(tier.type) && !disableProspectorFx)
         {
@@ -2498,7 +2531,7 @@ public class PixelClicker : MonoBehaviour
         return total > 0f ? mine / total : 0f;
     }
 
-    private float SpawnWeightOf(int i) => Mathf.Max(0f, tiers[i].spawnWeight) * PixelPets.SpawnMultiplier(tiers[i].type);
+    private float SpawnWeightOf(int i) => Mathf.Max(0f, tiers[i].spawnWeight) * PixelPets.SpawnMultiplier(tiers[i].type) * (tiers[i].type == PixelType.Fish ? PixelBait.FishMultiplier : 1f);
 
     /// <summary>
     /// The skill pack in play may have a FILLER block (Dirt, Stone: a set share of the spawns, bigger at low skill level) and a HAZARD block
@@ -3597,6 +3630,39 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("Gas Pocket blast: old pixels within this many old-pixel widths of the cube are blown away (no payout). 0 = the coded default (4).")]
     [SerializeField] private float gasBlastWidths = 0f;
 
+    [Header("Fishing")]
+    [Tooltip("Turn off the bait pellets a Bait block drops (and their effect on fish).")]
+    [SerializeField] private bool disableBait = false;
+
+    [Min(0)]
+    [Tooltip("Pellets one Bait block drops. 0 = the default (6).")]
+    [SerializeField] private int baitPellets = 0;
+
+    [Min(0f)]
+    [Tooltip("How much each pellet lying around adds to a Fish block's spawn weight (0.35 = +35% each). 0 = the default (0.35).")]
+    [SerializeField] private float baitPerPellet = 0f;
+
+    [Min(0f)]
+    [Tooltip("Seconds a pellet lies there before it rots away. 0 = the default (60).")]
+    [SerializeField] private float baitLifetime = 0f;
+
+    [Min(0)]
+    [Tooltip("Most pellets that can lie around at once (the oldest go first). 0 = the default (24).")]
+    [SerializeField] private int baitMaxPellets = 0;
+
+    [Min(0f)]
+    [Tooltip("How many times wider than a normal hazard blast a going-off Jellyfish stings (and it also zaps every bait pellet). 0 = the default (1.5).")]
+    [SerializeField] private float jellyfishBlastFactor = 0f;
+
+    public bool DisableBait => disableBait;
+    public int BaitPellets => baitPellets > 0 ? baitPellets : 6;
+    public float BaitPerPellet => baitPerPellet > 0f ? baitPerPellet : 0.35f;
+    public float BaitLifetime => baitLifetime > 0f ? baitLifetime : 60f;
+    public int BaitMaxPellets => baitMaxPellets > 0 ? baitMaxPellets : 24;
+
+    private bool fishingBusy, fishingPass;
+    private int fishNeed, fishReel;   // reeling a fish in the long way (the Weak Spots minigame is switched off)
+
     /// <summary>A hazard block that sat on the cube too long leaves by itself (the cube rolls a new pixel).</summary>
     private void UpdateHazardExpiry()
     {
@@ -3680,6 +3746,15 @@ public class PixelClicker : MonoBehaviour
             what = tier.type == PixelType.Jellyfish ? "The jellyfish stung everything around it!" : "The toadstool burst in a cloud of poison spores!";
             if (!disableFarmFx) PixelFarmFx.Break(tier.type, pos, PixelBaseSize, tier.color);
             float sporeReach = OldPixelWorldSize * (gasBlastWidths > 0f ? gasBlastWidths : 4f);
+            if (tier.type == PixelType.Jellyfish)
+            {
+                sporeReach *= jellyfishBlastFactor > 0f ? jellyfishBlastFactor : 1.5f;
+                int pellets = PixelBait.Count;
+                PixelBait.DestroyAll(true);   // the shock fries every bait pellet
+                if (pellets > 0) what += " The bait pellets were fried!";
+                if (!disableFarmFx) FractureFx.Play(pos, PixelBaseSize, 16, 3.4f, 0.55f, new Color(1f, 0.9f, 1f, 1f), new Color(0.95f, 0.4f, 1f, 1f));
+                PixelAudio.Play("jelly_sting");
+            }
             for (int i = oldPixels.Count - 1; i >= 0; i--)
             {
                 Rigidbody b = oldPixels[i];
@@ -3722,6 +3797,7 @@ public class PixelClicker : MonoBehaviour
     {
         if (IsHazard(tier.type)) PixelHints.Trigger("hazard");
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
+        fishNeed = fishReel = 0;
         digShrinkTarget = digShrinkCurrent = 1f;
         defuseClicks = 0;
         liveSince = Time.time;

@@ -233,6 +233,7 @@ public class PixelAudio : MonoBehaviour
             Make("seed_dig", 0.04f, 0.9f, 1.1f),
             Make("seed_plant", 0.05f, 0.9f, 1.1f),
             Make("water_splash", 0.05f, 0.9f, 1.1f),
+            Make("jelly_sting", 0.1f, 0.95f, 1.05f),
             Make("fire_burst", 0.1f, 0.92f, 1.08f),
             Make("dragon_find", 0.1f, 1f, 1f),
             Make("chest_hit", 0.1f, 0.92f, 1.08f),
@@ -329,7 +330,9 @@ public class PixelAudio : MonoBehaviour
             case "pixel_shell": return new[] { PixelSynth.Fishing(2, 1), PixelSynth.Fishing(2, 2), PixelSynth.Fishing(2, 3) };
             case "pixel_pearl": return new[] { PixelSynth.Fishing(3, 1), PixelSynth.Fishing(3, 2) };
             case "pixel_driftwood": return new[] { PixelSynth.Fishing(4, 1), PixelSynth.Fishing(4, 2), PixelSynth.Fishing(4, 3) };
-            case "pixel_jellyfish": return new[] { PixelSynth.Fishing(5, 1), PixelSynth.Fishing(5, 2) };
+            case "pixel_jellyfish": return new[] { PixelSynth.Zap(4), PixelSynth.Zap(5), PixelSynth.Zap(6) };
+            case "jelly_sting": return new[] { PixelSynth.Zap(7), PixelSynth.Charge() };
+            case "pixel_bait": return new[] { PixelSynth.Farm(4, 1), PixelSynth.Farm(4, 2), PixelSynth.Farm(4, 3) };
             case "forage_pick": return new[] { PixelSynth.Forage(2, 1), PixelSynth.Forage(2, 2), PixelSynth.Forage(2, 3) };
             case "pixel_berry": return new[] { PixelSynth.Forage(0, 1), PixelSynth.Forage(0, 2), PixelSynth.Forage(0, 3) };
             case "pixel_mushroom": return new[] { PixelSynth.Forage(1, 1), PixelSynth.Forage(1, 2), PixelSynth.Forage(1, 3) };

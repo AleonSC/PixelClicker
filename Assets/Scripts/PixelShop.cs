@@ -1137,6 +1137,36 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 22)
+        {
+            // Fishing: the Jellyfish takes 9 clicks and the Bait block joins the pack.
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier jellyDef = null, baitDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers)
+            {
+                if (t.type == PixelClicker.PixelType.Jellyfish) jellyDef = t;
+                if (t.type == PixelClicker.PixelType.Bait) baitDef = t;
+            }
+            void ApplyJelly(PixelClicker.PixelTier t)
+            {
+                if (t != null && t.type == PixelClicker.PixelType.Jellyfish && jellyDef != null) t.clicksToCollect = jellyDef.clicksToCollect;
+            }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish)) continue;
+                    if (baitDef != null && !Rewards(p, PixelClicker.PixelType.Bait))
+                    {
+                        System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { baitDef.Clone() };
+                        p.rewardTiers = list.ToArray();
+                    }
+                    foreach (PixelClicker.PixelTier t in p.rewardTiers) ApplyJelly(t);
+                }
+            if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) ApplyJelly(t);
+            packDataVersion = Mathf.Max(packDataVersion, 22);
+            changed = true;
+        }
+
         return changed;
     }
 

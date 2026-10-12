@@ -527,7 +527,11 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Driftwood, useColor = true, color = new Color(0.62f, 0.58f, 0.5f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Grain,
                             jagged = true, farmFx = PixelLook.FarmAmbient.Crumbs },
             new PixelLook { type = PixelClicker.PixelType.Jellyfish, useColor = true, color = new Color(0.9f, 0.45f, 0.8f, 0.6f), metallic = 0f, smoothness = 0.9f, emission = 0.5f, forceTranslucent = true,
-                            blob = true, wobble = true, wobbleAmount = 0.14f, wobbleSpeed = 6f, farmFx = PixelLook.FarmAmbient.Spores },
+                            blob = true, wobble = true, wobbleAmount = 0.14f, wobbleSpeed = 6f, farmFx = PixelLook.FarmAmbient.Spores,
+                            lightning = true, lightningCoreColor = new Color(1f, 0.92f, 1f, 1f), lightningGlowColor = new Color(0.95f, 0.4f, 1f, 1f), lightningJitter = 0.1f },
+            // Bait: small brown-orange pellets pressed into a lump.
+            new PixelLook { type = PixelClicker.PixelType.Bait, useColor = true, color = new Color(0.8f, 0.55f, 0.28f, 1f), metallic = 0f, smoothness = 0.3f, basicSurface = PixelLook.BasicSurface.Grain,
+                            blob = true, farmFx = PixelLook.FarmAmbient.Crumbs },
 
             // Treasure: a wooden chest with gold bands and a lock; light leaks from the lid as you hit it.
             new PixelLook { type = PixelClicker.PixelType.Treasure, useColor = true, color = Color.white, metallic = 0.25f, smoothness = 0.4f,

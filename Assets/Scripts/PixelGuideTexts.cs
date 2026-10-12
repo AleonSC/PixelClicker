@@ -84,7 +84,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Bedrock:
                 return "The toughest rock: it takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks to break (decided when it appears), but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
             case PixelClicker.PixelType.Fish:
-                return "Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you.";
+                return "Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you. With the Weak Spots minigame switched off in Toggles, a fish takes a random 7-25 clicks to reel in instead.";
             case PixelClicker.PixelType.Seaweed:
                 return "Fishing block: see-through seaweed. One click, pays little. An old Seaweed pixel sinks slowly instead of dropping.";
             case PixelClicker.PixelType.Shell:
@@ -93,8 +93,10 @@ public static class PixelGuideTexts
                 return "Fishing block, rare: a shining pearl. It takes " + t.clicksToCollect + " clicks but pays a lot.";
             case PixelClicker.PixelType.Driftwood:
                 return "Fishing's filler block. One click, almost no pay. At low fishing level it is most of what appears; as you level up it gets rarer and the good catches show up more.";
+            case PixelClicker.PixelType.Bait:
+                return "Fishing block: a lump of bait. One click, pays a little, and drops a handful of bait pellets round the cube. While pellets lie there Fish show up much more often (+35% each). They rot away after a minute, and a Jellyfish going off fries every one of them.";
             case PixelClicker.PixelType.Jellyfish:
-                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and it stings everything around it, wiping out the old pixels near the cube, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.";
+                return "A HAZARD, and an electric one. Never worth clicking: hit it " + t.clicksToCollect + " times and it discharges, stinging everything around it (a wide blast that wipes out the old pixels near the cube), frying every bait pellet, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.";
             case PixelClicker.PixelType.Treasure:
                 return "A chest that needs a random 1-20 hits, decided when it appears. Opening it pays the pixel's value x the hits x (1 + 0.15 x hits) and pours out a pile of random unlocked pixels at once: 2 plus one per hit, up to 24.";
             case PixelClicker.PixelType.Nuclear:

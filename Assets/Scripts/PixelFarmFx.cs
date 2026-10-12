@@ -207,6 +207,9 @@ public static class PixelFarmFx
                 Burst("Drops", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.4f), new Vector2(0.05f, 0.12f), 2.6f, new Color(0.6f, 0.8f, 1f), new Color(0.35f, 0.55f, 0.85f), 28, 0.5f, false).Play();
                 Burst("Scales", new Vector2(0.7f, 1.2f), new Vector2(0.8f, 2.2f), new Vector2(0.06f, 0.12f), 1.4f, new Color(0.85f, 0.92f, 1f), new Color(0.6f, 0.7f, 0.85f), 12, 0.5f, false).Play();
                 break;
+            case PixelClicker.PixelType.Bait:
+                Burst("Crumbs", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.6f, new Color(0.9f, 0.65f, 0.35f), new Color(0.6f, 0.38f, 0.18f), 22, 0.5f, false).Play();
+                break;
             case PixelClicker.PixelType.Seaweed:
                 Burst("Strands", new Vector2(0.9f, 1.6f), new Vector2(0.6f, 2f), new Vector2(0.06f, 0.14f), 0.6f, new Color(0.25f, 0.7f, 0.4f), new Color(0.15f, 0.45f, 0.3f), 22, 0.5f, false).Play();
                 Burst("Drops", new Vector2(0.6f, 1f), new Vector2(1f, 2.6f), new Vector2(0.04f, 0.09f), 2.4f, new Color(0.6f, 0.85f, 1f), new Color(0.4f, 0.65f, 0.9f), 12, 0.5f, false).Play();

@@ -152,6 +152,12 @@ public class PixelWeakspotMinigame : PixelMinigame
     private System.Action<bool> onFinished;   // set by a fishing round: told whether every spot was hit
     private bool fishing;
 
+    /// <summary>Is the minigame there and switched on? (If not, fish are reeled in with 7-25 plain clicks.)</summary>
+    public static bool FishingAvailable
+    {
+        get { PixelWeakspotMinigame m = PixelFind.First<PixelWeakspotMinigame>(); return m != null && !m.UserDisabled; }
+    }
+
     /// <summary>Starts a round for a fish on the cube (Fishing). 'done' gets true when every spot was hit, false otherwise. False = could not start (the caller catches the fish the plain way).</summary>
     public static bool TryStartFishing(System.Action<bool> done)
     {

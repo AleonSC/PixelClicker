@@ -78,6 +78,7 @@ public static class PixelElectricFx
             case PixelClicker.PixelType.Resistor: a = new Color(1f, 0.6f, 0.25f); b = new Color(0.7f, 0.18f, 0.1f); arcCore = new Color(1f, 0.8f, 0.5f); arcGlow = new Color(0.9f, 0.3f, 0.1f); break;
             case PixelClicker.PixelType.Transistor: a = Color.white; b = new Color(0.45f, 0.8f, 1f); arcCore = Color.white; arcGlow = new Color(0.5f, 0.8f, 1f); break;
             case PixelClicker.PixelType.Fuse: a = new Color(1f, 0.95f, 0.6f); b = new Color(1f, 0.45f, 0.1f); arcCore = new Color(1f, 1f, 0.8f); arcGlow = new Color(1f, 0.55f, 0.15f); break;
+            case PixelClicker.PixelType.Jellyfish: a = new Color(1f, 0.8f, 1f); b = new Color(0.9f, 0.35f, 1f); arcCore = new Color(1f, 0.92f, 1f); arcGlow = new Color(0.95f, 0.4f, 1f); break;
             default: a = new Color(1f, 1f, 0.8f); b = new Color(1f, 0.85f, 0.3f); arcCore = Color.white; arcGlow = new Color(1f, 0.9f, 0.4f); break;   // Bulb
         }
     }
@@ -109,6 +110,7 @@ public static class PixelElectricFx
         int arcs = 7; float reach = 2f, arcSeconds = 0.35f;
         switch (type)
         {
+            case PixelClicker.PixelType.Jellyfish: arcs = 12; count = 36; reach = 2.8f; arcSeconds = 0.4f; gravity = 0.3f; break;                   // a violent pink-violet discharge
             case PixelClicker.PixelType.Wire: arcs = 4; reach = 2.6f; arcSeconds = 0.25f; gravity = 1.8f; break;          // snipped copper zips off
             case PixelClicker.PixelType.Battery: arcs = 8; count = 36; reach = 2.2f; gravity = 0.4f; break;                 // a swelling green discharge
             case PixelClicker.PixelType.Capacitor: arcs = 12; reach = 3.2f; arcSeconds = 0.45f; gravity = 0.2f; break;      // the stored charge arcs out

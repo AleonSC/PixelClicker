@@ -654,3 +654,4 @@
 [2026-10-12 11:33 UTC] Fixed a compile error in the Storage Crate.
 [2026-10-12 11:35 UTC] Fishing rework: Water is now Fishing's very common filler (replaces Driftwood), Fish is rare and clicking one starts a Weak Spots round (pass = caught and paid, fail = it gets away).
 [2026-10-12 11:40 UTC] Water click: a pool of 12 randomised deep, smooth water sounds (and a softer splash sound), and a splash (crown, jet, bubbles, mist) instead of a round ring.
+[2026-10-12 11:45 UTC] Fishing: the Jellyfish is electric and much more dangerous (9 clicks, lightning look, zap sounds, wider blast, fries bait); new Bait block drops pellets that make Fish appear more; fish take 7-25 clicks when the Weak Spots minigame is off.
