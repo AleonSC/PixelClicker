@@ -71,6 +71,7 @@ public class PixelMyWindow : MonoBehaviour
         public bool first;
     }
 
+    private static readonly Vector2 MinSize = new Vector2(400f, 300f);
     private const string PrefEntries = "PixelClicker.Setting.MyWindow";
     private const string PrefPrefix = "PixelClicker.MyWindow.";
     private static PixelMyWindow instance;
@@ -205,7 +206,7 @@ public class PixelMyWindow : MonoBehaviour
         windowRect = windowObject.GetComponent<RectTransform>();
         windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(0f, 1f);
         Vector2 size = defaultSize.x > 100f && defaultSize.y > 100f ? defaultSize : new Vector2(470f, 640f);
-        windowRect.sizeDelta = new Vector2(PlayerPrefs.GetFloat(PrefPrefix + "W", size.x), PlayerPrefs.GetFloat(PrefPrefix + "H", size.y));
+        windowRect.sizeDelta = new Vector2(Mathf.Max(MinSize.x, PlayerPrefs.GetFloat(PrefPrefix + "W", size.x)), Mathf.Max(MinSize.y, PlayerPrefs.GetFloat(PrefPrefix + "H", size.y)));
         windowRect.anchoredPosition = new Vector2(PlayerPrefs.GetFloat(PrefPrefix + "X", 60f), PlayerPrefs.GetFloat(PrefPrefix + "Y", -170f));
 
         // Header: title (drag handle), Edit, close.
@@ -222,6 +223,10 @@ public class PixelMyWindow : MonoBehaviour
 
         TMP_Text title = PixelUIKit.CreateText(Font, header.transform, "Title", windowTitle, 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         PixelUIKit.Caps(title);
+        title.textWrappingMode = TextWrappingModes.NoWrap;
+        title.enableAutoSizing = true;
+        title.fontSizeMax = 30f;
+        title.fontSizeMin = 14f;
         title.rectTransform.anchorMin = Vector2.zero; title.rectTransform.anchorMax = Vector2.one;
         title.rectTransform.offsetMin = new Vector2(18f, 0f); title.rectTransform.offsetMax = new Vector2(-170f, 0f);
 
@@ -245,23 +250,25 @@ public class PixelMyWindow : MonoBehaviour
         PixelUIKit.StyleBox(bar.GetComponent<Image>(), true);
         addBar = bar.GetComponent<RectTransform>();
         addBar.anchorMin = new Vector2(0f, 1f); addBar.anchorMax = new Vector2(1f, 1f); addBar.pivot = new Vector2(0.5f, 1f);
-        addBar.sizeDelta = new Vector2(-24f, 112f);
+        addBar.sizeDelta = new Vector2(-24f, 164f);
         addBar.anchoredPosition = new Vector2(0f, -64f);
 
         Color box = new Color(0.16f, 0.2f, 0.3f, 1f);
         typeDropdown = PixelUIKit.CreateDropdown(Font, bar.transform, "Type", new Vector2(170f, 40f), box, box, textColor, 21f);
         typeDropdown.ClearOptions();
         typeDropdown.AddOptions(new List<string>(TypeNames));
-        SetRect(typeDropdown.GetComponent<RectTransform>(), 8f, 8f, 150f, 40f);
+        SetRect(typeDropdown.GetComponent<RectTransform>(), 8f, 8f, 0f, 42f);
+        typeDropdown.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
+        typeDropdown.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -8f);
         targetDropdown = PixelUIKit.CreateDropdown(Font, bar.transform, "Target", new Vector2(250f, 40f), box, box, textColor, 21f);
-        SetRect(targetDropdown.GetComponent<RectTransform>(), 166f, 8f, 0f, 40f);
+        SetRect(targetDropdown.GetComponent<RectTransform>(), 8f, 58f, 0f, 42f);
         targetDropdown.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
-        targetDropdown.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -8f);
+        targetDropdown.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -58f);
         typeDropdown.onValueChanged.AddListener(_ => FillTargets());
         Button add = PixelUIKit.CreateButton(Font, bar.transform, "Add", "+ Add to my window", new Vector2(300f, 44f), new Color(0.25f, 0.6f, 0.4f, 1f), Color.white, 22f);
-        SetRect(add.GetComponent<RectTransform>(), 8f, 58f, 0f, 44f);
+        SetRect(add.GetComponent<RectTransform>(), 8f, 110f, 0f, 44f);
         add.GetComponent<RectTransform>().anchorMax = new Vector2(1f, 1f);
-        add.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -58f);
+        add.GetComponent<RectTransform>().offsetMax = new Vector2(-8f, -110f);
         add.onClick.AddListener(AddSelected);
 
         // The list.
@@ -297,8 +304,8 @@ public class PixelMyWindow : MonoBehaviour
     internal void ResizeBy(Vector2 delta)
     {
         Vector2 size = windowRect.sizeDelta + new Vector2(delta.x, -delta.y);
-        size.x = Mathf.Clamp(size.x, 320f, 1200f);
-        size.y = Mathf.Clamp(size.y, 220f, 1000f);
+        size.x = Mathf.Clamp(size.x, MinSize.x, 1200f);
+        size.y = Mathf.Clamp(size.y, MinSize.y, 1000f);
         windowRect.sizeDelta = size;
         ClampToScreen();
         Layout();
@@ -328,7 +335,7 @@ public class PixelMyWindow : MonoBehaviour
     private void Layout()
     {
         if (scroll == null) return;
-        float top = 64f + (editing ? 118f : 0f);
+        float top = 64f + (editing ? 170f : 0f);
         RectTransform vr = scroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
@@ -475,7 +482,7 @@ public class PixelMyWindow : MonoBehaviour
         up.onClick.AddListener(() => MoveEntry(row.entry, -1));
         if (row.entry.type == "currency")
         {
-            Button rate = MiniButton(row.rt, "/min", ref x, new Color(0.25f, 0.5f, 0.45f, 1f), 70f);
+            Button rate = MiniButton(row.rt, "/min", ref x, new Color(0.25f, 0.5f, 0.45f, 1f), 62f);
             rate.onClick.AddListener(() => { row.entry.flag = !row.entry.flag; SaveEntries(); RefreshValues(); });
         }
         // Make room: the row's own texts stop before the buttons.
@@ -483,9 +490,9 @@ public class PixelMyWindow : MonoBehaviour
             if (t.name == "Amount" || t.name == "Detail") t.rectTransform.offsetMax = new Vector2(x - 4f, t.rectTransform.offsetMax.y);
     }
 
-    private Button MiniButton(RectTransform parent, string label, ref float x, Color colour, float width = 38f)
+    private Button MiniButton(RectTransform parent, string label, ref float x, Color colour, float width = 34f)
     {
-        Button b = PixelUIKit.CreateButton(Font, parent, "Edit " + label, label, new Vector2(width, 38f), colour, Color.white, 20f);
+        Button b = PixelUIKit.CreateButton(Font, parent, "Edit " + label, label, new Vector2(width, 34f), colour, Color.white, 18f);
         RectTransform r = b.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(1f, 0.5f);
         r.anchoredPosition = new Vector2(x, 0f);
@@ -684,7 +691,7 @@ public class PixelMyWindow : MonoBehaviour
         RectTransform fr = field.GetComponent<RectTransform>();
         fr.anchorMin = Vector2.zero; fr.anchorMax = Vector2.one;
         fr.offsetMin = new Vector2(8f, 8f);
-        fr.offsetMax = new Vector2(editing ? -170f : -8f, -8f);
+        fr.offsetMax = new Vector2(editing ? -128f : -8f, -8f);
         field.SetTextWithoutNotify(e.text);
         field.onEndEdit.AddListener(s => { e.text = s; SaveEntries(); });
         return row;
@@ -699,8 +706,12 @@ public class PixelMyWindow : MonoBehaviour
         RectTransform br = button.GetComponent<RectTransform>();
         br.anchorMin = Vector2.zero; br.anchorMax = Vector2.one;
         br.offsetMin = new Vector2(8f, 7f);
-        br.offsetMax = new Vector2(editing ? -170f : -8f, -7f);
+        br.offsetMax = new Vector2(editing ? -128f : -8f, -7f);
         TMP_Text label = button.GetComponentInChildren<TMP_Text>();
+        label.textWrappingMode = TextWrappingModes.NoWrap;
+        label.enableAutoSizing = true;
+        label.fontSizeMax = 22f;
+        label.fontSizeMin = 11f;
         Image image = button.GetComponent<Image>();
 
         if (tool)
