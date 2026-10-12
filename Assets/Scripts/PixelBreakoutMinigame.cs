@@ -142,6 +142,8 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private Color lineColor = new Color(1f, 1f, 1f, 0.55f);
     [Tooltip("Colour of the court's background. It is always drawn fully solid (its alpha is ignored), so nothing shows through it.")]
     [SerializeField] private Color backColor = new Color(0f, 0f, 0f, 1f);
+    [Tooltip("How solid the court's background is (0 = fully transparent, the default; 1 = solid backdrop in the colour above).")]
+    [SerializeField, Range(0f, 1f)] private float backOpacity = 0f;
 
     [Min(10)]
     [Tooltip("Size of the score text.")]
@@ -434,7 +436,7 @@ public class PixelBreakoutMinigame : PixelMinigame
         padY = -halfH + padH * 3f;
         ballR = halfH * ballSize * 0.5f;
 
-        Block("Back", Vector2.zero, new Vector2(halfW * 2f, halfH * 2f), new Color(backColor.r, backColor.g, backColor.b, 1f), halfH * 0.2f);   // well behind the bricks: see-through pixels are drawn back to front, so a nearer backdrop would cover them
+        Block("Back", Vector2.zero, new Vector2(halfW * 2f, halfH * 2f), new Color(backColor.r, backColor.g, backColor.b, backOpacity), halfH * 0.2f);   // well behind the bricks: see-through pixels are drawn back to front, so a nearer backdrop would cover them
         Block("Top", new Vector2(0f, halfH), new Vector2(halfW * 2f, line), lineColor, 0f);
         Block("Left", new Vector2(-halfW, 0f), new Vector2(line, halfH * 2f), lineColor, 0f);
         Block("Right", new Vector2(halfW, 0f), new Vector2(line, halfH * 2f), lineColor, 0f);

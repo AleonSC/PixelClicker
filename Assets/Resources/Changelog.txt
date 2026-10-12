@@ -623,3 +623,4 @@
 [2026-10-12 08:17 UTC] Skill XP popups from the auto clicker now appear beside the cube instead of at the mouse.
 [2026-10-12 08:18 UTC] Added the Lumberjack, a cube vendor in a plaid shirt who buys wood goods for pure pixels and only visits while you train Woodcutting.
 [2026-10-12 08:22 UTC] Added the Foraging skill: a cheap Forager's Pack (150 White) with Berry, Mushroom, Herb, rare Truffle, Weeds filler and a poisonous Toadstool hazard, with looks, particle effects, sounds, guide texts and a tip.
+[2026-10-12 08:25 UTC] Breakout's court background is transparent again (new backOpacity setting, 0 by default).
