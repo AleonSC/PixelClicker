@@ -434,6 +434,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         float aspect = style.tileAspect > 0.01f ? style.tileAspect : 1f;
         baseTiling = new Vector2(Mathf.Max(0.02f, size.x / (tile * aspect)), Mathf.Max(0.02f, size.z / tile));
         baseOffset = new Vector2(0.5f - Frac(0.5f * baseTiling.x), 0.5f - Frac(0.5f * baseTiling.y));
+        // A single clamped copy must sit exactly on the floor's middle: the repeating formula above jumps a whole copy away once the floor is 2+ pictures wide, which showed only the picture's edge colour.
+        if (style.stretchToFloor) baseOffset = new Vector2(0.5f - 0.5f * baseTiling.x, 0.5f - 0.5f * baseTiling.y);
         animTimer = animClock = 0f;
         if (style.fitToView) FitToView(true);
         ApplyTiling(m, style);
