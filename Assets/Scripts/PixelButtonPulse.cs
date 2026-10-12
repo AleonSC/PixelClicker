@@ -16,7 +16,7 @@ public class PixelButtonPulse : MonoBehaviour
     private static void ResetStatics() { Disabled = false; }
 
     private const float Seconds = 0.4f;
-    private const float Grow = 0.22f;     // the rim ends up this much bigger than the button (each side, as a fraction of its size)
+    private const float Thickness = 10f;  // how far the rim ends up beyond the button's edge, on every side (canvas units)
 
     private Button button;
     private Image source;
@@ -45,11 +45,13 @@ public class PixelButtonPulse : MonoBehaviour
         go.transform.SetParent(parent, false);
         go.GetComponent<LayoutElement>().ignoreLayout = true;
         RectTransform r = go.GetComponent<RectTransform>();
-        r.anchorMin = rect.anchorMin; r.anchorMax = rect.anchorMax; r.pivot = rect.pivot;
-        r.anchoredPosition = rect.anchoredPosition;
-        r.sizeDelta = rect.sizeDelta;
+        // Centred on the button whatever its anchors / pivot are: the rim grows evenly all the way round.
+        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
+        r.pivot = new Vector2(0.5f, 0.5f);
+        r.sizeDelta = rect.rect.size;
         r.localRotation = rect.localRotation;
         r.localScale = rect.localScale;
+        r.position = rect.TransformPoint(rect.rect.center);
         go.transform.SetSiblingIndex(rect.GetSiblingIndex());   // directly behind the button
         Image im = go.GetComponent<Image>();
         im.sprite = source.sprite;
@@ -59,24 +61,22 @@ public class PixelButtonPulse : MonoBehaviour
         im.color = new Color(neon.r, neon.g, neon.b, 0.9f);
 
         PixelButtonPulseRunner run = go.AddComponent<PixelButtonPulseRunner>();
-        run.Begin(im, rect, neon, Seconds, Grow);
+        run.Begin(im, rect, neon, Seconds, Thickness);
     }
 }
 
-/// <summary>Plays one pulse: grows the rim and fades it, then destroys itself. Lives on the pulse object so it ends with it.</summary>
+/// <summary>Plays one pulse: grows the rim evenly round the button and fades it, then destroys itself. Lives on the pulse object so it ends with it.</summary>
 public class PixelButtonPulseRunner : MonoBehaviour
 {
     private Image image;
     private RectTransform rect, follow;
     private Color colour;
-    private float seconds, grow, t;
-    private Vector2 baseSize;
+    private float seconds, thickness, t;
 
-    public void Begin(Image im, RectTransform buttonRect, Color neon, float duration, float growth)
+    public void Begin(Image im, RectTransform buttonRect, Color neon, float duration, float thick)
     {
-        image = im; follow = buttonRect; colour = neon; seconds = duration; grow = growth;
+        image = im; follow = buttonRect; colour = neon; seconds = duration; thickness = thick;
         rect = (RectTransform)transform;
-        baseSize = rect.sizeDelta;
     }
 
     private void Update()
@@ -84,8 +84,11 @@ public class PixelButtonPulseRunner : MonoBehaviour
         t += Time.unscaledDeltaTime;
         float k = Mathf.Clamp01(t / seconds);
         float e = 1f - (1f - k) * (1f - k);                    // eases out
-        if (follow != null) { rect.anchoredPosition = follow.anchoredPosition; }   // stays under the button if it moves (a scrolling list)
-        rect.sizeDelta = baseSize + new Vector2(baseSize.x, baseSize.y) * (grow * e * 2f) * 0.5f + Vector2.one * (10f * e);
+        if (follow != null)
+        {
+            rect.position = follow.TransformPoint(follow.rect.center);   // stays under the button if it moves (a scrolling list)
+            rect.sizeDelta = follow.rect.size + Vector2.one * (2f * thickness * e);
+        }
         image.color = new Color(colour.r, colour.g, colour.b, 0.9f * (1f - k) * (1f - k));
         if (k >= 1f) Destroy(gameObject);
     }

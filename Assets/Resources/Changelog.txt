@@ -611,3 +611,4 @@
 [2026-10-12 07:44 UTC] Every shop row (packs, potions, Operation, search results) now uses the boxed layout: name box and level box beside the info button, cost box underneath.
 [2026-10-12 07:47 UTC] Fixed the shop pack rows: they keep the boxed layout with the Buy button on the right instead of the old wide bar along the bottom.
 [2026-10-12 07:49 UTC] The combo meter now waits until everything else has arrived after entering the game, then fades in last.
+[2026-10-12 07:50 UTC] Fixed the shop button pulse so every button gets the same clean neon outline all the way round instead of a big shape from one corner.
