@@ -12,7 +12,7 @@ public partial class PixelSkybox
     [SerializeField] private bool disableRain = false;
 
     [Min(0f)]
-    [Tooltip("Rain drops per second in a light rain. 0 = the default (650); a style with lightning gets twice as many.")]
+    [Tooltip("Rain drops per second in a light rain. 0 = automatic (about 4500 drops in the air at once over the whole view, 8000 in a storm); a style with lightning gets twice as many.")]
     [SerializeField] private float rainPerSecond = 0f;
 
     private GameObject rainRoot;
@@ -37,19 +37,31 @@ public partial class PixelSkybox
         Vector3 eye = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera.transform.position : cam.transform.position;
         float reach = Mathf.Max(3f, Vector3.Distance(eye, target));
 
-        rainRoot.transform.position = target + Vector3.up * reach * 0.9f;
+        // The rain is one big sheet high above the area in FRONT OF THE CAMERA (not just above the cube), so it covers the whole view: the ground out to the
+        // horizon and the sky. It follows the camera; drops already falling stay where they are.
+        Transform ct = cam.transform;
+        Vector3 fwd = Vector3.ProjectOnPlane(ct.forward, Vector3.up);
+        if (fwd.sqrMagnitude < 0.04f) fwd = Vector3.ProjectOnPlane(ct.up, Vector3.up);
+        fwd = fwd.sqrMagnitude > 0.0001f ? fwd.normalized : Vector3.forward;
+        float floorY = PixelFloor.Instance != null && PixelFloor.Instance.FloorRenderer != null ? PixelFloor.Instance.FloorRenderer.bounds.max.y : target.y - reach * 0.2f;
+        float sheetY = Mathf.Max(ct.position.y, floorY + reach * 0.5f) + reach * 0.8f;
+        rainRoot.transform.position = new Vector3(ct.position.x + fwd.x * reach * 2f, sheetY, ct.position.z + fwd.z * reach * 2f);
         rainRoot.transform.rotation = Quaternion.identity;
 
         bool storm = styles[current].flashesPerMinute > 0f;
         float speed = reach * 2.6f;
+        float fall = Mathf.Max(reach * 0.5f, sheetY - floorY + reach * 0.1f);
+        float lifetime = Mathf.Max(0.2f, fall / speed);
         ParticleSystem.MainModule main = rainSystem.main;
         main.startSpeed = speed;
-        main.startLifetime = Mathf.Max(0.2f, (reach * 1.0f) / speed);
+        main.startLifetime = lifetime;
         main.startSize = reach * 0.008f;
         ParticleSystem.EmissionModule emission = rainSystem.emission;
-        emission.rateOverTime = (rainPerSecond > 0f ? rainPerSecond : 650f) * (storm ? 2f : 1f);
+        // About 4500 drops in the air in a light rain (8000 in a storm) over the whole sheet, however big the scene is.
+        float perSecond = rainPerSecond > 0f ? rainPerSecond * (storm ? 2f : 1f) : (storm ? 8000f : 4500f) / lifetime;
+        emission.rateOverTime = perSecond;
         ParticleSystem.ShapeModule shape = rainSystem.shape;
-        shape.scale = new Vector3(reach * 2.6f, reach * 2.6f, 0.1f);   // (the box is turned flat: local X / Y spread the drops sideways, local Z is the thin fall direction)
+        shape.scale = new Vector3(reach * 5.2f, reach * 5.2f, 0.1f);   // (the box is turned flat: local X / Y spread the drops sideways, local Z is the thin fall direction)
         ParticleSystem.VelocityOverLifetimeModule vel = rainSystem.velocityOverLifetime;
         vel.x = new ParticleSystem.MinMaxCurve(reach * (storm ? 0.45f : 0.15f));
         ParticleSystemRenderer pr = rainSystem.GetComponent<ParticleSystemRenderer>();
@@ -70,7 +82,7 @@ public partial class PixelSkybox
         main.playOnAwake = true;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.useUnscaledTime = true;
-        main.maxParticles = 4000;
+        main.maxParticles = 16000;
         main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.75f, 0.85f, 1f, 0.3f), new Color(0.9f, 0.95f, 1f, 0.55f));
         main.gravityModifier = 0f;
 

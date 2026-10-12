@@ -13,9 +13,9 @@ public partial class PixelFloor
     {
         switch (s.pattern)
         {
-            case FloorPattern.BattleCrater: return ShadeBattleCrater(s, u, v, x, y, n, cells);
-            case FloorPattern.Galaxy: return ShadeGalaxy(s, u, v, x, y);
-            case FloorPattern.BlackHole: return ShadeBlackHole(s, u, v);
+            case FloorPattern.BattleCrater: return ShadeCraterField(s, u, v, x, y, n);
+            case FloorPattern.Galaxy: return ShadeGalaxyHQ(s, u, v, x, y, n);
+            case FloorPattern.BlackHole: return ShadeBlackHoleHQ(s, u, v, x, y, n);
             case FloorPattern.Hyperspace: return ShadeHyperspace(s, u, v, cells);
             case FloorPattern.DataStream: return ShadeDataStream(s, u, v, cells);
             case FloorPattern.CircuitFlow: return ShadeCircuitFlow(s, u, v, n, cells);
@@ -82,121 +82,9 @@ public partial class PixelFloor
     // Battle crater (reworked): scorched, cracked ground with shaded bowls, burnt halos, rocks and glowing embers. Tiles.
     // ------------------------------------------------------------------
 
-    private static Color ShadeBattleCrater(FloorStyle s, float u, float v, int x, int y, int n, int cells)
-    {
-        Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 6, 4, s.seed));
-        c *= 0.86f + 0.26f * Hash(x, y, s.seed);
-
-        float e = 1.5f / n;
-        Voronoi(u, v, cells, s.seed + 1, out float f1, out _, out int id);
-        float d = f1 * cells;
-        bool hasCrater = HashId(id, s.seed) > 0.22f;
-        float radius = 0.2f + 0.2f * HashId(id, s.seed + 2);
-
-        if (hasCrater)
-        {
-            // Burnt ground around the crater, fading outwards.
-            float burn = Mathf.Clamp01(1f - (d - radius) / (radius * 1.7f));
-            c = ScMix(c, s.colorC, burn * 0.5f);
-
-            // Light from the upper left: the slope of the distance field tells which way the wall faces.
-            Voronoi(u + e, v, cells, s.seed + 1, out float fx, out _, out _);
-            Voronoi(u, v + e, cells, s.seed + 1, out float fy, out _, out _);
-            float slopeX = (fx - f1) / e, slopeY = (fy - f1) / e;
-            float lit = Mathf.Clamp(-slopeX * -0.6f + slopeY * -0.8f, -1f, 1f);
-
-            if (d < radius)
-            {
-                float depth = d / radius;                                     // 0 at the middle, 1 at the rim
-                Color bowl = Color.Lerp(s.colorC * 0.45f, s.colorB * 0.7f, depth);
-                c = bowl * (1f + lit * 0.5f * Sstep(0.15f, 0.95f, depth));
-            }
-            else if (d < radius * 1.28f)
-            {
-                float rim = 1f - (d - radius) / (radius * 0.28f);              // raised lip
-                c = ScMix(c, c * (1.25f - lit * 0.4f) + new Color(0.08f, 0.06f, 0.04f), rim);
-            }
-        }
-
-        // Cracks in the scorched earth, a few of them glowing.
-        Voronoi(u, v, cells * 2, s.seed + 5, out float g1, out float g2, out int cid);
-        float crack = (g2 - g1) * cells * 2f;
-        if (crack < 0.05f && d > radius * 1.1f)
-        {
-            float k = 1f - crack / 0.05f;
-            c = ScMix(c, new Color(0.04f, 0.03f, 0.03f), k * 0.8f);
-            if (HashId(cid, s.seed + 9) > 0.88f)
-            {
-                float flick = 0.7f + 0.3f * Mathf.Sin(shadeTime * 2f + cid);
-                c = ScMix(c, new Color(1f, 0.45f, 0.1f), k * 0.9f * flick);
-            }
-        }
-
-        // Scattered small rocks.
-        if (Hash(x / 3, y / 3, s.seed + 11) > 0.965f) c = ScMix(c, s.colorB * 1.25f, 0.8f);
-        return c;
-    }
-
     // ------------------------------------------------------------------
     // Space
     // ------------------------------------------------------------------
-
-    private static Color ShadeGalaxy(FloorStyle s, float u, float v, int x, int y)
-    {
-        float A = ViewAspect();
-        float px = (u - 0.5f) * A, py = v - 0.5f;
-        float r = Mathf.Sqrt(px * px + py * py);
-        float ang = Mathf.Atan2(py, px);
-        float t = shadeTime;
-
-        float phase = ang * 2f - Mathf.Log(r + 0.02f) * 5.5f + t * 0.06f;
-        float arm = Mathf.Pow(0.5f + 0.5f * Mathf.Cos(phase), 2.2f);
-        float falloff = Mathf.Exp(-r * 3.4f);
-        float dust = Fbm(u, v, 6, 4, s.seed);
-        float body = arm * falloff * (0.55f + 0.9f * dust);
-
-        Color c = s.colorA * (0.7f + 0.3f * Fbm(u, v, 3, 3, s.seed + 3));
-        c += s.colorB * body * 1.6f;
-        c += s.colorC * Mathf.Exp(-r * 11f) * 1.3f;
-        if (Hash(x, y, s.seed + 5) > 0.992f) c += Color.white * (0.4f + 0.6f * Hash(y, x, s.seed));       // stars
-        else if (Hash(x, y, s.seed + 6) > 0.9f && body > 0.12f) c += s.colorB * 0.35f;                     // bright knots in the arms
-        c.a = 1f;
-        return c;
-    }
-
-    private static Color ShadeBlackHole(FloorStyle s, float u, float v)
-    {
-        float A = ViewAspect();
-        float px = (u - 0.5f) * A, py = v - 0.5f;
-        float r = Mathf.Sqrt(px * px + py * py);
-        float t = shadeTime;
-
-        // Background stars, bent outwards around the hole.
-        float lens = 0.02f / (r * r + 0.01f);
-        float lx = px + px / (r + 0.001f) * lens * 0.1f, ly = py + py / (r + 0.001f) * lens * 0.1f;
-        int sx = Mathf.FloorToInt((lx + 1.5f) * 190f), sy = Mathf.FloorToInt((ly + 1.5f) * 190f);
-        Color c = s.colorA;
-        float star = Hash(sx, sy, s.seed);
-        if (star > 0.985f) c += Color.white * (0.3f + 0.7f * Hash(sy, sx, s.seed + 1));
-
-        // The tilted accretion disk (an ellipse) and the lensed copy of its far side arching over the hole.
-        float er = Mathf.Sqrt(px * px + (py * 3.3f) * (py * 3.3f));
-        float swirl = Frac(Mathf.Atan2(py * 3.3f, px) / (Mathf.PI * 2f) + t * 0.05f / (er + 0.15f));
-        float tex = Fbm(swirl, er * 3f, 6, 3, s.seed + 2);
-        Color diskColor = Color.Lerp(s.colorC, s.colorB, Sstep(0.18f, 0.5f, er)) * (0.5f + 0.9f * tex);
-        diskColor *= 1f + 0.5f * Mathf.Clamp(-px / 0.4f, -1f, 1f);   // the side turning towards us is brighter
-        float diskMask = Sstep(0.15f, 0.21f, er) * (1f - Sstep(0.42f, 0.52f, er));
-
-        float arch = Mathf.Exp(-Mathf.Pow((r - 0.14f) / 0.035f, 2f)) * (py > 0f ? 1f : 0f) * (0.6f + 0.6f * tex);
-        c += diskColor * arch * 1.4f;
-        if (py < 0f || r > 0.11f) c = ScMix(c, diskColor, diskMask);
-
-        float ring = Mathf.Exp(-Mathf.Pow((r - 0.098f) / 0.011f, 2f));
-        c += s.colorC * ring * 1.2f;
-        c = ScMix(c, Color.black, 1f - Sstep(0.082f, 0.092f, r));   // the shadow itself
-        c.a = 1f;
-        return c;
-    }
 
     private static Color ShadeHyperspace(FloorStyle s, float u, float v, int cells)
     {
@@ -319,6 +207,7 @@ public partial class PixelFloor
 
     private static float CircuitGround(float u, float v, int n, int seed)
     {
+        if (shadeBase) return Fbm(u, v, 5, 3, seed);   // (the still picture is drawn once, a frame at a time: no big cache to build in one go)
         if (circuitNoise == null || circuitNoiseN != n || circuitNoiseSeed != seed)
         {
             circuitNoise = new float[n * n];
@@ -427,8 +316,11 @@ public partial class PixelFloor
         c += s.colorC * glowCell * 0.55f;
         float line = Mathf.Clamp01(1f - edge / 0.09f);
         c = ScMix(c, s.colorB, line * (0.55f + 0.45f * glowCell));
-        float scan = Mathf.Clamp01(1f - Mathf.Abs(Frac(v - t * 0.07f) - 0.5f) / 0.03f);                 // a bright band sweeping across
-        c += s.colorB * scan * 0.18f * (0.5f + line);
+        if (s.animateFps > 0f)
+        {
+            float scan = Mathf.Clamp01(1f - Mathf.Abs(Frac(v - t * 0.07f) - 0.5f) / 0.03f);             // a bright band sweeping across
+            c += s.colorB * scan * 0.18f * (0.5f + line);
+        }
         c.a = 1f;
         return c;
     }
@@ -531,18 +423,16 @@ public partial class PixelFloor
         float t = shadeTime;
         int cx = Mathf.FloorToInt(u * cells), cy = Mathf.FloorToInt(v * cells);
         Color c = ((cx + cy) & 1) == 0 ? s.colorA : s.colorB;
-        float grime = Fbm(u, v, 5, 4, s.seed);
+        float grime = Fbm(u, v, 5 * shadeDetail, 4, s.seed);
         c *= 0.55f + 0.6f * grime;
         float fu = Frac(u * cells), fv = Frac(v * cells);
         if (Mathf.Min(Mathf.Min(fu, 1f - fu), Mathf.Min(fv, 1f - fv)) < 0.02f) c *= 0.4f;     // grout
         Voronoi(u, v, cells, s.seed + 3, out float f1, out float f2, out int id);
         if ((f2 - f1) * cells < 0.03f && HashId(id, s.seed) > 0.55f) c *= 0.3f;                // cracks in some tiles
         // Dried stains.
-        float stain = Sstep(0.62f, 0.7f, Fbm(u, v, 3, 3, s.seed + 8));
+        float stain = Sstep(0.62f, 0.7f, Fbm(u, v, 3 * shadeDetail, 3, s.seed + 8));
         c = ScMix(c, s.colorC * 0.6f, stain * 0.7f);
-        // The light flickers now and then.
-        float flicker = Hash(Mathf.FloorToInt(t * 9f), 1, s.seed) > 0.93f ? 0.45f : 1f;
-        c *= flicker * (0.9f + 0.1f * Mathf.Sin(t * 2f));
+        // (the light flickers now and then: PixelFloor.UpdateHauntedFlicker dims the whole material)
         c.a = 1f;
         return c;
     }
@@ -550,48 +440,12 @@ public partial class PixelFloor
     private static Color ShadeGraveyard(FloorStyle s, float u, float v, int x, int y)
     {
         float t = shadeTime;
-        Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 6, 4, s.seed));
+        Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 6 * shadeDetail, 4, s.seed));
         c *= 0.82f + 0.3f * Hash(x, y, s.seed);
         if (Hash(x, y, s.seed + 3) > 0.965f) c = ScMix(c, new Color(0.36f, 0.34f, 0.16f), 0.8f);          // dead grass
         if (Hash(x / 2, y / 2, s.seed + 5) > 0.992f) c = ScMix(c, new Color(0.8f, 0.78f, 0.7f), 0.8f);   // bits of bone
-        float fog = Sstep(0.42f, 0.82f, Fbm(u + t * 0.012f, v - t * 0.008f, 3, 4, s.seed + 8));
+        float fog = Sstep(0.42f, 0.82f, Fbm(u, v, 3 * shadeDetail, 4, s.seed + 8));
         c = ScMix(c, s.colorC, fog * 0.6f);
-        c.a = 1f;
-        return c;
-    }
-
-    private static Color ShadeEyes(FloorStyle s, float u, float v, int cells)
-    {
-        float t = shadeTime;
-        float gu = u * cells, gv = v * cells;
-        int ci = Mathf.FloorToInt(gu), cj = Mathf.FloorToInt(gv);
-        float fu = gu - ci, fv = gv - cj;
-        int wi = Wrap(ci, cells), wj = Wrap(cj, cells);
-
-        Color c = s.colorA * (0.7f + 0.6f * Fbm(u + t * 0.01f, v, 4, 3, s.seed));
-        float h = Hash(wi, wj, s.seed);
-        if (h > 0.4f)
-        {
-            float cx = 0.5f + (Hash(wi, wj, s.seed + 1) - 0.5f) * 0.3f;
-            float cy = 0.5f + (Hash(wi, wj, s.seed + 2) - 0.5f) * 0.3f;
-            float ph = Frac(t * 0.07f + h * 3f);
-            float open = Mathf.Clamp01(Mathf.Min(ph / 0.04f, (0.86f - ph) / 0.04f));
-            if (open > 0f)
-            {
-                float best = 99f;
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    float dx = (fu - (cx + side * 0.13f)) / 0.075f, dy = (fv - cy) / (0.04f * open + 0.001f);
-                    // Almond-ish eye: the vertical radius shrinks towards the corners.
-                    float d = Mathf.Sqrt(dx * dx + dy * dy * (1f + Mathf.Abs(dx) * 0.8f));
-                    if (d < best) best = d;
-                    if (d < 1f && Mathf.Abs(fu - (cx + side * 0.13f)) < 0.01f) best = 0.99f + 0.0f;
-                }
-                float core = 1f - Sstep(0.65f, 1f, best);
-                float halo = Mathf.Exp(-best * best * 1.6f) * 0.4f;
-                c += s.colorC * (core + halo);
-            }
-        }
         c.a = 1f;
         return c;
     }

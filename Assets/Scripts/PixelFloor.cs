@@ -171,6 +171,14 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         [Tooltip("Fit ONE copy of the pattern to the part of the floor the camera sees (between the black bars), following the camera as it moves. Tile World Size is ignored.")]
         public bool fitToView = false;
+
+        [Tooltip("Big textures that cover a large area with one copy: multiplies the noise lattices so features keep their size (0 / 1 = off).")]
+        public int detail = 0;
+
+        [Tooltip("Pattern variation (crater floors: 0 = battle, 1 = moon, 2 = red planet).")]
+        public int variant = 0;
+
+        public FloorStyle Clone() => (FloorStyle)MemberwiseClone();
     }
 
     [Header("Floor")]
@@ -388,7 +396,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (source == null) return;
 
         shadeAspect = style.fitToView ? viewAspect : 1f;
-        activeTexture = BuildTexture(style, 0);
+        SetCraterFocus(style);
+        bool sliced = UsesSlicedFill(style);
+        activeTexture = BuildTexture(style, 0, sliced);
+        if (sliced) StartSlicedFill(activeTexture, style);
         activeMaterial = new Material(source) { name = "Floor (" + style.name + ")" };
         Material m = activeMaterial;
         SetColor(m, "_BaseColor", Color.white);
@@ -433,6 +444,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private void ReleaseActive()
     {
+        StopSlicedFill();
+        ClearLayers();
         if (activeMaterial != null) Destroy(activeMaterial);
         if (activeTexture != null) Destroy(activeTexture);
         activeMaterial = null;
@@ -465,7 +478,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             activeMaterial.SetColor("_EmissionColor", Color.white * style.glow * (1f - style.pulseAmount * wave));
         }
 
-        if (style.animateFps > 0f && dt > 0f && activeTexture != null)
+        if (style.pattern == FloorPattern.HauntedTiles && dt > 0f) UpdateHauntedFlicker();
+
+        if (style.animateFps > 0f && dt > 0f && activeTexture != null && fillRoutine == null)
         {
             animClock += dt * style.animSpeed;
             animTimer += dt;
@@ -890,7 +905,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         {
             float keepAspect = shadeAspect;
             shadeAspect = 1f; // square menu icon
-            tex = BuildTexture(styles[index], 0);
+            FloorStyle small = styles[index].Clone();
+            small.resolution = Mathf.Min(small.resolution, 160);   // a menu icon never needs the big picture
+            small.detail = Mathf.Max(1, small.detail / 3);
+            Vector2 keepFocus = craterFocus;
+            craterFocus = new Vector2(0.5f, 0.56f);
+            tex = BuildTexture(small, 0);
+            craterFocus = keepFocus;
             shadeAspect = keepAspect;
             previews[index] = tex;
         }
@@ -914,7 +935,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (classic) tint = PreviewColor(current);
         if (texture != null && texture.wrapMode == TextureWrapMode.Repeat)
         {
-            float across = 6f;
+            float across = styles[current].detail > 1 ? 1.5f : 6f;   // a big non-repeating texture is shown (nearly) once
             tiles = new Vector2(across, across * Screen.height / Mathf.Max(1f, Screen.width));   // square cells
         }
         return true;
@@ -937,7 +958,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // Drawing the textures
     // ------------------------------------------------------------------
 
-    private static Texture2D BuildTexture(FloorStyle s, int step)
+    private static Texture2D BuildTexture(FloorStyle s, int step, bool deferFill = false)
     {
         int n = Mathf.Clamp(s.resolution, 8, 1024);
         Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false)
@@ -948,6 +969,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             anisoLevel = 4
         };
         if (s.pattern == FloorPattern.Disco) { DrawDisco(tex, s, step); return tex; }
+        if (deferFill) return tex;   // the caller draws it over several frames (UsesSlicedFill)
         Fill(tex, s, 0f, false);
         return tex;
     }
@@ -962,12 +984,14 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private static Color[] fillBuffer; // reused by animated floors so redrawing doesn't allocate every frame
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { fillBuffer = null; pacPath = null; pacPathIndex = null; shadeTime = 0f; shadeAspect = 1f; }
+    private static void ResetStatics() { fillBuffer = null; pacPath = null; pacPathIndex = null; shadeTime = 0f; shadeAspect = 1f; shadeDetail = 1; shadeBase = false; craters = null; radarDots = null; ClearLayers(); }
 
     /// <summary>Draws the pattern into 'tex' at animation time 'time' (0 for still patterns). 'reuse' = keep the pixel buffer for the next frame.</summary>
     private static void Fill(Texture2D tex, FloorStyle s, float time, bool reuse)
     {
         int n = tex.width;
+        if (IsOverlayPattern(s.pattern) && layerCur32 != null && layerN == n) { OverlayFrame(tex, s, time); return; }   // only the moving parts are repainted
+        shadeBase = false;
         Color[] px;
         if (reuse)
         {
@@ -976,8 +1000,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         }
         else px = new Color[n * n];
         int cells = Mathf.Max(1, s.cells);
-        shadeTime = time;
-        if (s.pattern == FloorPattern.Fighter) PrepareFighter(time, s.seed); // works out the fight once per frame
+        BeginShade(s, time);
         if (s.pattern == FloorPattern.CircuitFlow) PrepareSparks(s, time);   // and the wandering sparks
 
         for (int y = 0; y < n; y++)
@@ -1202,55 +1225,55 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
             case FloorPattern.Marble:
             {
-                float turb = Fbm(u, v, 4, 5, s.seed);
-                float veins = Mathf.Abs(Mathf.Sin((u * cells + v * cells * 0.5f + turb * 4f) * Mathf.PI));
-                float fine = Mathf.Abs(Mathf.Sin((v * cells * 2f - u * cells + Fbm(u, v, 8, 4, s.seed + 3) * 5f) * Mathf.PI));
+                int D = shadeDetail;
+                float turb = Fbm(u, v, 3 * D, 5, s.seed);                                   // slow swirls over the whole floor
+                float veins = Mathf.Abs(Mathf.Sin((u * cells + v * cells + turb * 5f) * Mathf.PI));
+                float fine = Mathf.Abs(Mathf.Sin((v * cells * 2f - u * cells + Fbm(u, v, 6 * D, 4, s.seed + 3) * 6f) * Mathf.PI));
                 Color c = s.colorA;
                 c = Color.Lerp(s.colorB, c, Mathf.Pow(veins, 0.35f));
                 c = Color.Lerp(s.colorC, c, Mathf.Clamp01(Mathf.Pow(fine, 0.18f) + 0.15f));
                 c.a = 1f;
                 return c;
             }
-
             case FloorPattern.Lava:
             {
+                int D = shadeDetail;
                 Voronoi(u, v, cells, s.seed, out float f1, out float f2, out int id);
                 float edge = (f2 - f1) * cells;
                 float heat = Mathf.Clamp01(1f - edge / 0.35f);
                 heat = heat * heat;
-                float n2 = Fbm(u, v, 4, 4, s.seed);
+                float n2 = Fbm(u, v, 4 * D, 4, s.seed);
                 Color crust = s.colorA * (0.6f + 0.6f * n2);
                 Color glow = Color.Lerp(s.colorB, s.colorC, Mathf.Clamp01(heat * 1.4f - 0.3f));
                 Color c = Color.Lerp(crust, glow, Mathf.Clamp01(heat + (n2 - 0.6f) * 0.5f));
                 c.a = 1f;
                 return c;
             }
-
             case FloorPattern.Space:
             {
-                float neb = Fbm(u, v, 3, 5, s.seed);
-                float neb2 = Fbm(u + 0.37f, v + 0.11f, 4, 5, s.seed + 9);
+                int D = shadeDetail;
+                float neb = Fbm(u, v, 3 * D, 5, s.seed);
+                float neb2 = Fbm(u + 0.37f, v + 0.11f, 4 * D, 5, s.seed + 9);
                 Color c = s.colorA;
                 c = Color.Lerp(c, s.colorB, Mathf.Clamp01((neb - 0.45f) * 1.6f) * 0.7f);
                 c = Color.Lerp(c, s.colorC, Mathf.Clamp01((neb2 - 0.55f) * 1.8f) * 0.55f);
                 c.a = 1f;
                 return c;
             }
-
             case FloorPattern.Ice:
             {
+                int D = shadeDetail;
                 Voronoi(u, v, cells, s.seed, out float f1, out float f2, out int id);
                 float edge = (f2 - f1) * cells;
                 float crack = Mathf.Clamp01(1f - edge / 0.06f);
                 Voronoi(u, v, cells * 3, s.seed + 1, out float g1, out float g2, out _);
                 float small = Mathf.Clamp01(1f - (g2 - g1) * cells * 3 / 0.05f) * 0.45f;
-                float frost = Fbm(u, v, 4, 4, s.seed);
+                float frost = Fbm(u, v, 4 * D, 4, s.seed);
                 Color c = Color.Lerp(s.colorA, s.colorB, frost * 0.6f + HashId(id, s.seed) * 0.25f);
                 c = Color.Lerp(c, s.colorC, Mathf.Max(crack, small));
                 c.a = 1f;
                 return c;
             }
-
             case FloorPattern.Honeycomb:
             {
                 HexCells(u, v, cells, s.seed, out float f1, out float f2, out int id);
@@ -1394,9 +1417,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                 int glyph = Mathf.Max(4, n / cols);
                 int col = x / glyph, row = y / glyph;
                 int gx = x % glyph, gy = y % glyph;
-                // Each column has its own trail: brightest at the head, fading upward.
+                // Each column has its own trail: brightest at the head, fading upward (a few trails per texture height, so the columns never line up).
                 float head = Hash(col, 0, s.seed);
-                float trail = Frac(head - v * 1.0f + Hash(col, 1, s.seed) * 0.3f);
+                float trail = Frac(head - v * shadeDetail + Hash(col, 1, s.seed) * 0.3f);
                 trail = Mathf.Pow(1f - trail, 2.5f);
                 bool lit = gx >= 1 && gx < glyph - 2 && gy >= 1 && gy < glyph - 1 &&
                            Hash(col * 97 + gx, row * 53 + gy, s.seed + 5) > 0.45f;
@@ -1409,7 +1432,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                 }
                 return c;
             }
-
             case FloorPattern.Hazard:
             {
                 bool stripe = Frac((u + v) * cells) < 0.5f;
@@ -1441,25 +1463,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             }
 
             case FloorPattern.DragonRadar:
-            {
-                Color c = s.colorA * (0.9f + 0.15f * Fbm(u, v, 4, 2, s.seed));
-                float cu = Frac(u * cells), cv = Frac(v * cells);
-                float line = Mathf.Min(Mathf.Min(cu, 1f - cu), Mathf.Min(cv, 1f - cv)) * n / cells;
-                c = Color.Lerp(c, s.colorB, Mathf.Clamp01(1.3f - line) * 0.8f);
-                if ((y % 3) == 0) c *= 0.85f;                              // screen lines
-                // Seven blips at fixed random spots (wrapping, so the texture tiles).
-                for (int i = 0; i < 7; i++)
-                {
-                    float px = Hash(i, 1, s.seed), py = Hash(i, 2, s.seed);
-                    float dx = Mathf.Abs(u - px); dx = Mathf.Min(dx, 1f - dx);
-                    float dy = Mathf.Abs(v - py); dy = Mathf.Min(dy, 1f - dy);
-                    float d = Mathf.Sqrt(dx * dx + dy * dy) * n;           // in texels
-                    if (d < 3.2f) c = Color.Lerp(s.colorC, new Color(1f, 0.95f, 0.6f), Mathf.Clamp01(1.5f - d));
-                    else if (d < 9f) c = Color.Lerp(c, s.colorC, (1f - (d - 3.2f) / 5.8f) * 0.45f); // glow
-                }
-                return c;
-            }
-
+                return ShadeRadar(s, u, v, x, y, n, cells);
             case FloorPattern.DragonBalls:
             {
                 // Staggered rows of balls; each ball has 1-7 stars.
@@ -1501,37 +1505,20 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
             case FloorPattern.KiAura:
             {
-                // Tall streaks (stretched noise) that scroll upward like flames.
-                float warp = Fbm(u, v, 3, 3, s.seed) * 0.15f;
-                float flame = Fbm(u + warp, v, 10, 2, 4, s.seed + 1);
-                float flicker = Fbm(u, v, 4, 4, 3, s.seed + 2);
+                // Tall streaks (stretched noise) that scroll upward like flames; the lattices are scaled up so the streaks keep their width on a big texture.
+                int D = shadeDetail;
+                float warp = Fbm(u, v, 3 * D, 3, s.seed) * 0.15f;
+                float flame = Fbm(u + warp, v, 10 * D, 2 * D, 3, s.seed + 1);
+                float flicker = Fbm(u, v, 4 * D, 4 * D, 3, s.seed + 2);
                 float k = Mathf.Clamp01((flame * 0.75f + flicker * 0.35f - 0.35f) * 2f);
                 k = k * k;
                 Color c = Color.Lerp(s.colorA, s.colorB, Mathf.Clamp01(k * 1.6f));
                 c = Color.Lerp(c, s.colorC, Mathf.Clamp01(k * 2.2f - 1.1f));
-                if (Hash(x, y, s.seed + 9) > 0.996f) c = s.colorC;            // sparks
+                if (Hash(x, y, s.seed + 9) > 0.998f) c = s.colorC;            // sparks
                 return c;
             }
-
             case FloorPattern.Craters:
-            {
-                Color c = Color.Lerp(s.colorA, s.colorB, Fbm(u, v, 5, 5, s.seed));
-                c *= 0.9f + 0.2f * Hash(x, y, s.seed);
-                Voronoi(u, v, cells, s.seed + 1, out float f1, out _, out int id);
-                if (HashId(id, s.seed) > 0.3f)
-                {
-                    float d = f1 * cells;
-                    float r = 0.18f + 0.22f * HashId(id, s.seed + 2);
-                    if (d < r)
-                    {
-                        float depth = 1f - d / r;
-                        c = Color.Lerp(c, s.colorC, 0.25f + depth * 0.55f);        // darker bowl
-                    }
-                    else if (d < r * 1.3f) c = Color.Lerp(c, Color.white, 0.18f * (1f - (d - r) / (r * 0.3f))); // raised rim
-                }
-                return c;
-            }
-
+                return ShadeCraterField(s, u, v, x, y, n);
             case FloorPattern.GravityRoom:
             {
                 float pu = Frac(u * cells), pv = Frac(v * cells);
@@ -1607,18 +1594,17 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
             case FloorPattern.Liquid:
             {
-                // Two layers of warped waves drifting against each other; bright ridges where they meet.
-                float t = shadeTime;
-                float w1 = Fbm(u + t * 0.03f, v - t * 0.02f, 3, 3, s.seed);
-                float w2 = Fbm(u - t * 0.025f + w1 * 0.4f, v + t * 0.035f + w1 * 0.4f, 3, 3, s.seed + 1);
-                float a = Mathf.Sin((u * cells + w2 * 3f) * Mathf.PI * 2f + t * 1.4f);
-                float b = Mathf.Sin((v * cells - w1 * 3f) * Mathf.PI * 2f - t * 1.1f);
+                // Warped waves with bright ridges where two wave sets meet (drawn once over a big area; the whole picture drifts).
+                int D = shadeDetail;
+                float w1 = Fbm(u, v, 3 * D, 3, s.seed);
+                float w2 = Fbm(u + w1 * 0.4f, v + w1 * 0.4f, 3 * D, 3, s.seed + 1);
+                float a = Mathf.Sin((u * cells + w2 * 3f) * Mathf.PI * 2f);
+                float b = Mathf.Sin((v * cells - w1 * 3f) * Mathf.PI * 2f);
                 float k = Mathf.Clamp01(0.5f + 0.25f * (a + b));
                 Color c = Color.Lerp(s.colorA, s.colorB, k);
                 float ridge = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(a - b) * 1.6f), 6f);  // thin shiny streaks
                 return Color.Lerp(c, s.colorC, ridge * 0.8f);
             }
-
             case FloorPattern.CloudSea:
             {
                 float d = Fbm(u, v, 3, 5, s.seed);
@@ -1651,26 +1637,21 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                 return Color.Lerp(s.colorA, c, Mathf.Clamp01(1.1f - r * 0.4f));
             }
 
-            case FloorPattern.Fighter:
-                return ShadeFighter(s, u, v);
-
-            case FloorPattern.RoadRacer:
-                return ShadeRoadRacer(s, u, v);
-
             case FloorPattern.PacMan:
                 return ShadePacMan(s, u, v);
 
             case FloorPattern.EnergyWisps:
             {
-                // Domain-warped noise: swirling wisps.
-                float q = Fbm(u, v, 3, 4, s.seed);
-                float r = Fbm(u + q * 0.6f, v + q * 0.6f, 3, 4, s.seed + 1);
-                float w = Fbm(u + r * 0.8f, v - r * 0.8f, 4, 4, s.seed + 2);
+                // Domain-warped noise: swirling wisps (lattices scaled up for the big texture).
+                int D = shadeDetail;
+                float q = Fbm(u, v, 3 * D, 4, s.seed);
+                float r = Fbm(u + q * 0.6f, v + q * 0.6f, 3 * D, 4, s.seed + 1);
+                float w = Fbm(u + r * 0.8f, v - r * 0.8f, 4 * D, 4, s.seed + 2);
                 float k = Mathf.Clamp01((w - 0.45f) * 2.5f);
                 k = k * k * (3f - 2f * k);
                 Color c = Color.Lerp(s.colorA, s.colorB, k);
                 c = Color.Lerp(c, s.colorC, Mathf.Clamp01(k * k * 1.6f - 0.5f));
-                if (Hash(x, y, s.seed + 4) > 0.997f) c = s.colorC;           // sparks
+                if (Hash(x, y, s.seed + 4) > 0.9985f) c = s.colorC;           // sparks
                 return c;
             }
         }
@@ -1834,330 +1815,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             }
         }
         return s.colorC;
-    }
-
-    // ------------------------------------------------------------------
-    // 8-bit road racer: the road scrolls down the screen while a car weaves along it, overtaking traffic
-    // ------------------------------------------------------------------
-
-    // Top-down car sprite, front at the top. R = body, W = windows, K = tyres, Y = racing stripe, L = tail lights.
-    private static readonly string[] CarSprite =
-    {
-        "..RRRR..",
-        ".RRRRRR.",
-        "KRWWWWRK",
-        "KRWWWWRK",
-        ".RRRRRR.",
-        ".RRYYRR.",
-        ".RRYYRR.",
-        ".RRYYRR.",
-        ".RRRRRR.",
-        "KRRRRRRK",
-        "KRWWWWRK",
-        ".RRRRRR.",
-        ".LRRRRL.",
-    };
-
-    private static readonly Color[] TrafficColors =
-    {
-        new Color(0.15f, 0.35f, 0.95f), new Color(0.98f, 0.85f, 0.1f), new Color(0.2f, 0.8f, 0.3f), new Color(0.7f, 0.25f, 0.9f),
-    };
-
-    private static Color ShadeRoadRacer(FloorStyle s, float u, float v)
-    {
-        const float P = 96f;            // virtual pixels from the bottom to the top of the picture
-        const float speed = 70f;        // road scroll, virtual pixels per second
-        float t = shadeTime;
-        float aspect = Mathf.Max(0.2f, shadeAspect);
-        // Square virtual pixels whatever the picture's shape: x counted from the middle, y from the bottom.
-        int px = Mathf.FloorToInt((u - 0.5f) * aspect * P);
-        int py = Mathf.FloorToInt(v * P);
-        float scroll = t * speed;
-        int wy = py + Mathf.FloorToInt(scroll);   // road position under this pixel ("world" y)
-
-        const int roadHalf = 22, kerb = 3;
-        int ax = Mathf.Abs(px);
-
-        // Cars first.
-        // Player: middle lane, weaving gently, near the bottom.
-        int carX = Mathf.RoundToInt(Mathf.Sin(t * 0.9f) * 3f + Mathf.Sin(t * 2.3f) * 1f);
-        if (CarPixel(px - (carX - 4), (18 + 12) - py, s.colorC, out Color car)) return car;
-        // Traffic in the side lanes, slower than the player, so they slide down the screen and get overtaken.
-        for (int i = 0; i < TrafficColors.Length; i++)
-        {
-            int lane = (i % 2 == 0) ? -15 : 15;
-            float rel = 22f + 9f * Hash(i, 3, s.seed) ;            // how much slower than the player (px/s)
-            float span = P + 40f;
-            float y = Mathf.Repeat(Hash(i, 5, s.seed) * span - t * rel, span) - 20f;
-            int ty = Mathf.RoundToInt(y);
-            if (CarPixel(px - (lane - 4), (ty + 12) - py, TrafficColors[i], out Color other)) return other;
-        }
-
-        // Road.
-        if (ax <= roadHalf)
-        {
-            // Dashed lane lines between the three lanes.
-            if ((px == -8 || px == 7) && Wrap(wy, 12) < 6) return new Color(0.95f, 0.95f, 0.9f);
-            // Edge lines.
-            if (ax == roadHalf) return new Color(0.95f, 0.95f, 0.9f);
-            float grain = Hash(px, wy, s.seed) > 0.93f ? 0.9f : 1f;    // a few darker specks in the tarmac
-            return s.colorB * grain;
-        }
-        // Red / white kerbs.
-        if (ax <= roadHalf + kerb) return Wrap(wy, 8) < 4 ? new Color(0.9f, 0.12f, 0.1f) : new Color(0.95f, 0.95f, 0.95f);
-
-        // Grass with darker bands and trees.
-        Color grass = Wrap(wy, 16) < 8 ? s.colorA : s.colorA * 0.85f;
-        if (ax > roadHalf + kerb + 3)
-        {
-            int cx = Mathf.FloorToInt(px / 12f), cy = Mathf.FloorToInt(wy / 12f);
-            for (int oy = -1; oy <= 1; oy++)
-                for (int ox = -1; ox <= 1; ox++)
-                {
-                    int gx = cx + ox, gy = cy + oy;
-                    if (Hash(gx, gy, s.seed + 7) < 0.72f) continue;
-                    float tx = gx * 12 + 3 + Hash(gx, gy, s.seed + 8) * 6f, tyy = gy * 12 + 3 + Hash(gx, gy, s.seed + 9) * 6f;
-                    if (Mathf.Abs(tx) < roadHalf + kerb + 6) continue;          // keep trees off the road
-                    float dx = px + 0.5f - tx, dy = wy + 0.5f - tyy;
-                    float d = dx * dx + dy * dy;
-                    if (d < 20f)
-                    {
-                        if (d > 14f) return new Color(0.05f, 0.25f, 0.05f);   // dark outline
-                        return (dx < -0.5f && dy > 0.5f) ? new Color(0.35f, 0.75f, 0.3f) : new Color(0.1f, 0.45f, 0.12f); // highlight
-                    }
-                }
-        }
-        return grass;
-    }
-
-    /// <summary>The car sprite's colour at (column, row from the front), with 'body' as its paint; false if empty there.</summary>
-    private static bool CarPixel(int col, int row, Color body, out Color c)
-    {
-        c = Color.clear;
-        if (row < 0 || row >= CarSprite.Length || col < 0 || col >= CarSprite[0].Length) return false;
-        switch (CarSprite[row][col])
-        {
-            case 'R': c = body; return true;
-            case 'W': c = new Color(0.55f, 0.85f, 1f); return true;
-            case 'K': c = new Color(0.05f, 0.05f, 0.05f); return true;
-            case 'Y': c = new Color(0.95f, 0.95f, 0.95f); return true;
-            case 'L': c = new Color(1f, 0.85f, 0.2f); return true;
-        }
-        return false;
-    }
-
-    // ------------------------------------------------------------------
-    // 8-bit fighter: side view of a stage where two fighters trade blows until one is knocked out, then a new round
-    // ------------------------------------------------------------------
-
-    private const float FightBeat = 0.55f;   // seconds per exchange
-    private const int FightGround = 22;      // virtual pixel row of the stage floor
-    private enum FPose { Idle, Punch, Kick, Hit, Down, Victory }
-
-    // The fight at the frame being drawn (worked out once per frame by PrepareFighter).
-    private static readonly float[] fX = new float[2];
-    private static readonly float[] fHp = new float[2];
-    private static readonly FPose[] fPose = new FPose[2];
-    private static float fBob;
-    private static bool fKo, fSpark;
-    private static Vector2 fSparkPos;
-
-    private static void PrepareFighter(float time, int seed)
-    {
-        float cycle = Mathf.Repeat(time, 900f);
-        int beatIndex = Mathf.FloorToInt(cycle / FightBeat);
-        float phase = cycle / FightBeat - beatIndex;
-        fBob = Mathf.Repeat(time, 0.8f) < 0.4f ? 0f : -1f;
-
-        // Replay the exchanges so far: who hit whom, health, knock-outs and new rounds.
-        float hp0 = 100f, hp1 = 100f;
-        int round = 0, koLeft = 0, loser = -1;
-        for (int i = 0; i < beatIndex; i++)
-        {
-            if (koLeft > 0)
-            {
-                if (--koLeft == 0) { hp0 = hp1 = 100f; round++; loser = -1; }
-                continue;
-            }
-            int attacker = Hash(i, round, seed) > 0.5f ? 0 : 1;
-            bool blocked = Hash(i, round + 90, seed) < 0.25f;
-            float dmg = 9f + Hash(i, round + 50, seed) * 9f;
-            if (blocked) continue;
-            if (attacker == 0) hp1 -= dmg; else hp0 -= dmg;
-            if (hp0 <= 0f || hp1 <= 0f) { koLeft = 5; loser = hp0 <= 0f ? 0 : 1; }
-        }
-
-        fX[0] = -12f; fX[1] = 12f;
-        fPose[0] = fPose[1] = FPose.Idle;
-        fSpark = false;
-        fKo = koLeft > 0;
-        if (fKo)
-        {
-            fPose[loser] = FPose.Down;
-            fPose[1 - loser] = FPose.Victory;
-            fHp[0] = Mathf.Max(0f, hp0); fHp[1] = Mathf.Max(0f, hp1);
-            return;
-        }
-
-        int att = Hash(beatIndex, round, seed) > 0.5f ? 0 : 1, def = 1 - att;
-        bool block = Hash(beatIndex, round + 90, seed) < 0.25f;
-        bool kick = Hash(beatIndex, round + 20, seed) > 0.5f;
-        float dir = att == 0 ? 1f : -1f;
-        if (phase > 0.2f && phase < 0.62f)
-        {
-            fPose[att] = kick ? FPose.Kick : FPose.Punch;
-            fX[att] += dir * 2f;                                   // step in
-        }
-        if (!block && phase > 0.35f)
-        {
-            float dmg = 9f + Hash(beatIndex, round + 50, seed) * 9f;
-            if (def == 0) hp0 -= dmg; else hp1 -= dmg;
-            if (phase < 0.75f) fPose[def] = FPose.Hit;
-            fX[def] += dir * 3f * Mathf.Clamp01(1f - (phase - 0.35f) / 0.5f);   // knocked back
-            if (phase < 0.5f)
-            {
-                fSpark = true;
-                fSparkPos = new Vector2(fX[att] + dir * 10f, FightGround + (kick ? 13f : 18f));
-            }
-        }
-        fHp[0] = Mathf.Max(0f, hp0); fHp[1] = Mathf.Max(0f, hp1);
-    }
-
-    private static Color ShadeFighter(FloorStyle s, float u, float v)
-    {
-        const float P = 96f;
-        float aspect = Mathf.Max(0.4f, shadeAspect);
-        float halfW = aspect * P * 0.5f;
-        int px = Mathf.FloorToInt((u - 0.5f) * aspect * P);
-        int py = Mathf.FloorToInt(v * P);
-
-        // HUD: health bars and the K.O. sign.
-        if (py >= 82 && py <= 87)
-        {
-            float barLen = Mathf.Max(10f, halfW - 10f);
-            for (int f = 0; f < 2; f++)
-            {
-                float inner = f == 0 ? -6f : 6f, outer = f == 0 ? -6f - barLen : 6f + barLen;
-                float lo = Mathf.Min(inner, outer), hi = Mathf.Max(inner, outer);
-                if (px < lo - 1 || px > hi + 1) continue;
-                if (py == 82 || py == 87 || px < lo || px > hi) return new Color(0.05f, 0.05f, 0.05f);   // border
-                float filledTo = outer + (inner - outer) * (fHp[f] / 100f);                              // drains towards the outside
-                bool full = f == 0 ? px <= filledTo : px >= filledTo;
-                return full ? new Color(1f, 0.85f, 0.1f) : new Color(0.75f, 0.1f, 0.1f);
-            }
-        }
-        if (fKo && Mathf.Repeat(shadeTime, 0.5f) < 0.35f && KoText(px, py - 70)) return new Color(1f, 0.2f, 0.15f);
-
-        // Hit spark.
-        if (fSpark)
-        {
-            float dx = px + 0.5f - fSparkPos.x, dy = py + 0.5f - fSparkPos.y;
-            float d = Mathf.Abs(dx) + Mathf.Abs(dy);
-            if (d < 2.5f) return Color.white;
-            if ((Mathf.Abs(dx) < 0.6f || Mathf.Abs(dy) < 0.6f || Mathf.Abs(Mathf.Abs(dx) - Mathf.Abs(dy)) < 0.6f) && d < 6f)
-                return new Color(1f, 0.9f, 0.3f);
-        }
-
-        // Fighters (left one faces right, right one faces left).
-        for (int f = 0; f < 2; f++)
-        {
-            float facing = f == 0 ? 1f : -1f;
-            float lx = (px + 0.5f - fX[f]) * facing;
-            float ly = py + 0.5f - FightGround - (fPose[f] == FPose.Idle ? fBob : 0f);
-            if (Mathf.Abs(lx) > 28f || ly < -1f || ly > 30f) continue; // wide enough for a fighter lying down
-            Color gi = f == 0 ? s.colorA : s.colorB;
-            Color band = f == 0 ? new Color(0.9f, 0.1f, 0.1f) : new Color(1f, 0.85f, 0.1f);
-            if (FighterPixel(lx, ly, fPose[f], gi, band, out Color c)) return c;
-        }
-
-        // Stage.
-        if (py < FightGround)
-        {
-            if (py == FightGround - 1) return Color.Lerp(s.colorC, Color.white, 0.25f);
-            int row = (FightGround - 1 - py) / 5;
-            int seam = Mathf.FloorToInt((px + row * 7) / 14f);
-            if ((FightGround - 1 - py) % 5 == 0) return s.colorC * 0.6f;                       // plank edge
-            if (Wrap(px + row * 7, 14) == 0) return s.colorC * 0.7f;                          // plank end
-            return s.colorC * (0.85f + 0.2f * Hash(seam, row, 3));
-        }
-
-        // Mountains and sunset sky.
-        float x = px;
-        float far = 40f + 7f * Mathf.Sin(x * 0.07f) + 4f * Mathf.Sin(x * 0.19f + 1f);
-        float near = 31f + 5f * Mathf.Sin(x * 0.11f + 2f) + 3f * Mathf.Sin(x * 0.29f);
-        if (py < near) return new Color(0.2f, 0.1f, 0.25f);
-        if (py < far) return new Color(0.38f, 0.2f, 0.4f);
-        float sx = px - halfW * 0.45f, sy = py - 58f;
-        if (sx * sx + sy * sy < 81f && !(sy < 0f && Wrap(py, 3) == 0)) return new Color(1f, 0.85f, 0.35f);   // striped sun
-        float k = Mathf.Clamp01((py - far) / (P - far));
-        float band8 = Mathf.Floor(k * 6f) / 6f;
-        if (((px + py) & 1) == 0 && k * 6f - Mathf.Floor(k * 6f) > 0.5f) band8 += 1f / 6f;          // 8-bit dither between bands
-        return Color.Lerp(new Color(1f, 0.55f, 0.3f), new Color(0.25f, 0.15f, 0.45f), Mathf.Clamp01(band8));
-    }
-
-    /// <summary>One fighter, in its own coordinates: x forward, y up from its feet.</summary>
-    private static bool FighterPixel(float x, float y, FPose pose, Color gi, Color band, out Color c)
-    {
-        c = Color.clear;
-        if (pose == FPose.Down) { float sxp = y - 1f; y = -x; x = sxp; }   // lying flat on its back
-        Color skin = new Color(0.95f, 0.75f, 0.55f), hair = new Color(0.12f, 0.08f, 0.05f);
-        Color giBack = gi * 0.75f; giBack.a = 1f;
-
-        Vector2 hand1, hand2, foot1, foot2;   // 1 = front limb, 2 = back limb
-        float lean = 0f;
-        switch (pose)
-        {
-            case FPose.Punch: hand1 = new Vector2(12f, 18f); hand2 = new Vector2(1f, 15f); foot1 = new Vector2(6f, 0f); foot2 = new Vector2(-5f, 0f); break;
-            case FPose.Kick: hand1 = new Vector2(4f, 20f); hand2 = new Vector2(-3f, 16f); foot1 = new Vector2(12f, 13f); foot2 = new Vector2(-3f, 0f); lean = -2f; break;
-            case FPose.Hit: hand1 = new Vector2(-2f, 23f); hand2 = new Vector2(-6f, 20f); foot1 = new Vector2(3f, 0f); foot2 = new Vector2(-5f, 0f); lean = -3f; break;
-            case FPose.Victory: hand1 = new Vector2(3f, 29f); hand2 = new Vector2(-3f, 29f); foot1 = new Vector2(3f, 0f); foot2 = new Vector2(-3f, 0f); break;
-            default: hand1 = new Vector2(6f, 19f); hand2 = new Vector2(3f, 16f); foot1 = new Vector2(4f, 0f); foot2 = new Vector2(-4f, 0f); break;
-        }
-        // Upper body leans (hips stay put).
-        float ux = x - (y > 11f ? lean * (y - 11f) / 12f : 0f);
-        Vector2 p = new Vector2(x, y), pu = new Vector2(ux, y);
-        Vector2 shoulder1 = new Vector2(1f, 18f), shoulder2 = new Vector2(-2f, 18f);
-        Vector2 hip1 = new Vector2(1f, 11f), hip2 = new Vector2(-2f, 11f);
-        hand1.x += lean; hand2.x += lean;
-
-        // Back limbs first (darker), then body and head, then front limbs.
-        if (SegDist(pu, shoulder2, hand2 - new Vector2(lean, 0f)) < 1.2f) { c = skin * 0.85f; c.a = 1f; return true; }
-        if (SegDist(p, hip2, foot2) < 1.4f) { c = (p - foot2).magnitude < 1.5f ? skin * 0.85f : giBack; c.a = 1f; return true; }
-        if (pu.x >= -3f && pu.x <= 2.99f && y >= 11f && y < 20f) { c = Mathf.FloorToInt(y) == 12 ? new Color(0.08f, 0.08f, 0.08f) : gi; return true; }
-        if (pu.x >= -3f && pu.x <= 2.99f && y >= 20f && y < 26f)
-        {
-            int hy = Mathf.FloorToInt(y), hx = Mathf.FloorToInt(pu.x);
-            if (hy >= 24) c = hair;
-            else if (hy == 23) c = band;
-            else if (hy == 22 && hx == 1) c = new Color(0.05f, 0.05f, 0.05f);
-            else c = skin;
-            return true;
-        }
-        if (SegDist(p, hip1, foot1) < 1.4f) { c = (p - foot1).magnitude < 1.5f ? skin : gi; return true; }
-        if ((pu - (hand1 - new Vector2(lean, 0f))).magnitude < 1.8f) { c = band; return true; }       // glove
-        if (SegDist(pu, shoulder1, hand1 - new Vector2(lean, 0f)) < 1.2f) { c = skin; return true; }
-        return false;
-    }
-
-    private static float SegDist(Vector2 p, Vector2 a, Vector2 b)
-    {
-        Vector2 ab = b - a;
-        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / Mathf.Max(1e-4f, ab.sqrMagnitude));
-        return (p - (a + ab * t)).magnitude;
-    }
-
-    // "K.O." in a 3x5 pixel font, doubled, centred on (0, 0) of the given coordinates.
-    private static readonly string[] KoGlyphs = { "#.#", "#.#", "##.", "#.#", "#.#",   "###", "#.#", "#.#", "#.#", "###" };
-    private static bool KoText(int x, int y)
-    {
-        const int scale = 2;
-        int gx = (x + 8) / scale, gy = 4 - y / scale;
-        if (x + 8 < 0 || y < 0 || gy < 0 || gy > 4) return false;
-        if (gx >= 0 && gx < 3) return KoGlyphs[gy][gx] == '#';                  // K
-        if (gx == 3) return gy == 4;                                           // dot
-        if (gx >= 4 && gx < 7) return KoGlyphs[5 + gy][gx - 4] == '#';         // O
-        if (gx == 7) return gy == 4;                                           // dot
-        return false;
     }
 
     private static int Wrap(int i, int m) => ((i % m) + m) % m;
@@ -2407,6 +2064,26 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 8;
         }
 
+        // The 8-bit floors are gone, and these styles were redrawn as big non-repeating pictures: take the new definitions over the saved ones.
+        if (defaultsVersion < 9)
+        {
+            styles.RemoveAll(x => x != null && (x.name.StartsWith("8-Bit ") || x.pattern == FloorPattern.RoadRacer || x.pattern == FloorPattern.Fighter ||
+                (x.pattern >= FloorPattern.Platformer && x.pattern <= FloorPattern.Crossing)));
+            string[] reworked =
+            {
+                "Marble", "Lava", "Deep Space", "Ice", "Matrix Rain", "Radar", "Battle Crater", "Super Aura", "Blue Aura", "Divine Aura", "God Aura",
+                "Death Energy", "Laser Corridor", "Liquid Flow", "Spiral Galaxy", "Black Hole", "Moon Surface", "Red Planet", "Circuit Flow", "Cyber Hex",
+                "Haunted Tiles", "Graveyard", "Watching Eyes",
+            };
+            foreach (FloorStyle def in DefaultStyles())
+            {
+                if (System.Array.IndexOf(reworked, def.name) < 0) continue;
+                int at = styles.FindIndex(x => x != null && x.name == def.name);
+                if (at >= 0) styles[at] = def;
+            }
+            defaultsVersion = 9;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2450,21 +2127,26 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return S("Cobblestone", FloorPattern.Cobblestone, new Color(0.55f, 0.55f, 0.58f), new Color(0.42f, 0.4f, 0.38f),
                        new Color(0.12f, 0.12f, 0.13f), 128, true, 5f, 6, 0.15f);
 
-        yield return S("Marble", FloorPattern.Marble, new Color(0.95f, 0.94f, 0.92f), new Color(0.55f, 0.55f, 0.6f),
-                       new Color(0.78f, 0.66f, 0.42f), 256, false, 8f, 3, 0.9f);
+        // The big floors below are ONE huge picture (about 40 world units wide, drawn a few milliseconds per frame) instead of a small tile repeated many times.
+        FloorStyle marble = S("Marble", FloorPattern.Marble, new Color(0.95f, 0.94f, 0.92f), new Color(0.55f, 0.55f, 0.6f),
+                              new Color(0.78f, 0.66f, 0.42f), 1024, false, 40f, 14, 0.9f);
+        marble.stretchToFloor = true; marble.detail = 5;
+        yield return marble;
 
         FloorStyle lava = S("Lava", FloorPattern.Lava, new Color(0.12f, 0.05f, 0.04f), new Color(1f, 0.25f, 0.02f),
-                            new Color(1f, 0.85f, 0.3f), 128, true, 6f, 5, 0.35f, 1.4f);
-        lava.pulseSpeed = 0.5f; lava.pulseAmount = 0.4f; lava.scrollSpeed = new Vector2(0.01f, 0.006f);
+                            new Color(1f, 0.85f, 0.3f), 768, true, 40f, 36, 0.35f, 1.4f);
+        lava.pulseSpeed = 0.5f; lava.pulseAmount = 0.4f; lava.scrollSpeed = new Vector2(0.0015f, 0.0009f); lava.detail = 8;
         yield return lava;
 
         FloorStyle space = S("Deep Space", FloorPattern.Space, new Color(0.01f, 0.01f, 0.04f), new Color(0.35f, 0.1f, 0.55f),
-                             new Color(0.1f, 0.45f, 0.8f), 256, false, 10f, 1, 0.6f, 1.1f);
-        space.scrollSpeed = new Vector2(0.004f, 0.012f);
+                             new Color(0.1f, 0.45f, 0.8f), 1024, false, 40f, 1, 0.6f, 1.1f);
+        space.scrollSpeed = new Vector2(0.001f, 0.003f); space.detail = 2;
         yield return space;
 
-        yield return S("Ice", FloorPattern.Ice, new Color(0.7f, 0.85f, 0.95f), new Color(0.5f, 0.7f, 0.9f),
-                       new Color(0.97f, 0.99f, 1f), 256, false, 7f, 4, 0.95f);
+        FloorStyle ice = S("Ice", FloorPattern.Ice, new Color(0.7f, 0.85f, 0.95f), new Color(0.5f, 0.7f, 0.9f),
+                           new Color(0.97f, 0.99f, 1f), 1024, false, 40f, 28, 0.95f);
+        ice.stretchToFloor = true; ice.detail = 6;
+        yield return ice;
 
         FloorStyle disco = S("Disco", FloorPattern.Disco, new Color(0.05f, 0.05f, 0.07f), Color.white, Color.white,
                              64, true, 6f, 4, 0.8f, 1.3f);
@@ -2513,8 +2195,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return crystal;
 
         FloorStyle matrix = S("Matrix Rain", FloorPattern.MatrixRain, new Color(0.0f, 0.03f, 0.0f), new Color(0.15f, 1f, 0.35f),
-                              new Color(0.85f, 1f, 0.9f), 128, true, 6f, 16, 0.5f, 1.3f);
-        matrix.scrollSpeed = new Vector2(0f, 0.25f);
+                              new Color(0.85f, 1f, 0.9f), 1024, true, 40f, 128, 0.5f, 1.3f);
+        matrix.scrollSpeed = new Vector2(0f, 0.0375f); matrix.detail = 6;
         yield return matrix;
 
         yield return S("Hazard Stripes", FloorPattern.Hazard, new Color(0.98f, 0.8f, 0.05f), new Color(0.08f, 0.08f, 0.08f),
@@ -2525,8 +2207,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                        new Color(0.3f, 0.28f, 0.26f), 256, false, 6f, 4, 0.25f);
 
         FloorStyle radar = S("Radar", FloorPattern.DragonRadar, new Color(0.04f, 0.2f, 0.08f), new Color(0.3f, 0.8f, 0.35f),
-                             new Color(1f, 0.55f, 0.05f), 256, false, 8f, 8, 0.7f, 0.9f);
-        radar.pulseSpeed = 0.8f; radar.pulseAmount = 0.45f;
+                             new Color(1f, 0.55f, 0.05f), 512, false, 36f, 18, 0.7f, 0.9f);
+        radar.stretchToFloor = true; radar.animateFps = 8f; radar.pulseSpeed = 0.5f; radar.pulseAmount = 0.2f;   // (one big radar screen; its blips glow and ping)
         yield return radar;
 
 
@@ -2535,8 +2217,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                        new Color(0.95f, 0.85f, 0.3f), 48, true, 4f, 1, 0.05f);
 
 
-        yield return S("Battle Crater", FloorPattern.BattleCrater, new Color(0.5f, 0.4f, 0.3f), new Color(0.36f, 0.29f, 0.22f),
-                       new Color(0.12f, 0.09f, 0.07f), 256, false, 8f, 5, 0.1f, 0.1f);
+        FloorStyle battle = S("Battle Crater", FloorPattern.BattleCrater, new Color(0.5f, 0.4f, 0.3f), new Color(0.36f, 0.29f, 0.22f),
+                              new Color(0.12f, 0.09f, 0.07f), 1024, false, 40f, 7, 0.1f, 0.1f);
+        battle.stretchToFloor = true; battle.detail = 6;   // (cells = how many smaller craters)
+        yield return battle;
 
         yield return S("Chamber Tiles", FloorPattern.Checker, new Color(0.98f, 0.98f, 0.97f), new Color(0.93f, 0.93f, 0.92f),
                        Color.white, 64, false, 6f, 2, 0.9f);
@@ -2549,38 +2233,38 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         FloorStyle ssj = S("Super Aura", FloorPattern.KiAura, new Color(0.35f, 0.18f, 0.0f), new Color(1f, 0.78f, 0.1f),
                            new Color(1f, 1f, 0.85f), 256, false, 6f, 1, 0.6f, 1.3f);
-        ssj.scrollSpeed = new Vector2(0f, 0.35f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f;
+        ssj.scrollSpeed = new Vector2(0f, 0.0525f); ssj.pulseSpeed = 1.5f; ssj.pulseAmount = 0.3f; ssj.detail = 7; ssj.tileWorldSize = 40f; ssj.resolution = 1024;
         yield return ssj;
 
         FloorStyle ui = S("Divine Aura", FloorPattern.KiAura, new Color(0.12f, 0.14f, 0.25f), new Color(0.65f, 0.75f, 1f),
                           new Color(1f, 1f, 1f), 256, false, 6f, 1, 0.8f, 1.2f);
-        ui.scrollSpeed = new Vector2(0f, 0.25f); ui.pulseSpeed = 0.7f; ui.pulseAmount = 0.35f; ui.seed = 91;
+        ui.scrollSpeed = new Vector2(0f, 0.0375f); ui.pulseSpeed = 0.7f; ui.pulseAmount = 0.35f; ui.seed = 91; ui.detail = 7; ui.tileWorldSize = 40f; ui.resolution = 1024;
         yield return ui;
 
         FloorStyle blue = S("Blue Aura", FloorPattern.KiAura, new Color(0.0f, 0.12f, 0.3f), new Color(0.1f, 0.7f, 1f),
                             new Color(0.85f, 1f, 1f), 256, false, 6f, 1, 0.7f, 1.3f);
-        blue.scrollSpeed = new Vector2(0f, 0.35f); blue.pulseSpeed = 1.2f; blue.pulseAmount = 0.3f; blue.seed = 57;
+        blue.scrollSpeed = new Vector2(0f, 0.0525f); blue.pulseSpeed = 1.2f; blue.pulseAmount = 0.3f; blue.seed = 57; blue.detail = 7; blue.tileWorldSize = 40f; blue.resolution = 1024;
         yield return blue;
 
         FloorStyle god = S("God Aura", FloorPattern.KiAura, new Color(0.3f, 0.02f, 0.05f), new Color(1f, 0.25f, 0.3f),
                            new Color(1f, 0.85f, 0.75f), 256, false, 6f, 1, 0.6f, 1.3f);
-        god.scrollSpeed = new Vector2(0f, 0.3f); god.pulseSpeed = 1f; god.pulseAmount = 0.3f; god.seed = 73;
+        god.scrollSpeed = new Vector2(0f, 0.045f); god.pulseSpeed = 1f; god.pulseAmount = 0.3f; god.seed = 73; god.detail = 7; god.tileWorldSize = 40f; god.resolution = 1024;
         yield return god;
 
         FloorStyle hakai = S("Death Energy", FloorPattern.EnergyWisps, new Color(0.04f, 0.0f, 0.08f), new Color(0.55f, 0.1f, 0.85f),
                              new Color(1f, 0.7f, 1f), 256, false, 7f, 1, 0.6f, 1.2f);
-        hakai.scrollSpeed = new Vector2(0.02f, 0.035f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f;
+        hakai.scrollSpeed = new Vector2(0.0035f, 0.006f); hakai.pulseSpeed = 0.5f; hakai.pulseAmount = 0.4f; hakai.detail = 6; hakai.tileWorldSize = 40f; hakai.resolution = 1024;
         yield return hakai;
 
         // ---- Animated ----
         FloorStyle lasers = S("Laser Corridor", FloorPattern.LaserHall, new Color(0.2f, 0.34f, 0.36f), new Color(0.6f, 0.95f, 1f),
-                              new Color(1f, 0.08f, 0.05f), 128, false, 8f, 8, 0.8f, 1.1f);
-        lasers.animateFps = 20f; lasers.metallic = 0.3f;
+                              new Color(1f, 0.08f, 0.05f), 128, false, 18f, 8, 0.8f, 1.1f);   // (scaled up: bigger panels and beams)
+        lasers.animateFps = 14f; lasers.metallic = 0.3f;
         yield return lasers;
 
         FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
-                              new Color(0.85f, 1f, 1f), 128, false, 3f, 2, 0.95f, 0.25f);
-        liquid.animateFps = 15f;
+                              new Color(0.85f, 1f, 1f), 768, false, 40f, 30, 0.95f, 0.25f);
+        liquid.detail = 7; liquid.scrollSpeed = new Vector2(0.004f, 0.006f); liquid.pulseSpeed = 0.3f; liquid.pulseAmount = 0.15f;   // (one big picture that drifts)
         yield return liquid;
 
         FloorStyle clouds = S("Moving Clouds", FloorPattern.CloudSea, new Color(0.35f, 0.6f, 0.9f), new Color(0.72f, 0.78f, 0.88f),
@@ -2598,15 +2282,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         pac.animateFps = 20f; pac.tileAspect = 19f / 21f; pac.fitToView = true;
         yield return pac;
 
-        FloorStyle racer = S("8-Bit Road Racer", FloorPattern.RoadRacer, new Color(0.22f, 0.62f, 0.18f), new Color(0.33f, 0.33f, 0.36f),
-                             new Color(0.92f, 0.1f, 0.1f), 256, true, 8f, 1, 0.3f);
-        racer.animateFps = 24f; racer.fitToView = true;
-        yield return racer;
-
-        FloorStyle fight = S("8-Bit Fighter", FloorPattern.Fighter, new Color(0.95f, 0.95f, 0.92f), new Color(0.2f, 0.35f, 0.9f),
-                             new Color(0.55f, 0.35f, 0.18f), 256, true, 8f, 1, 0.3f);
-        fight.animateFps = 20f; fight.fitToView = true;
-        yield return fight;
 
         foreach (FloorStyle extra in ExtraStyles()) yield return extra;
         foreach (FloorStyle retro in RetroStyles()) yield return retro;
@@ -2622,15 +2297,27 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             return f;
         }
         // ---- Space ----
-        yield return St("Spiral Galaxy", FloorPattern.Galaxy, new Color(0.01f, 0.01f, 0.04f), new Color(0.35f, 0.5f, 1f), new Color(1f, 0.8f, 0.55f), 192, 8f, 1, 12f, true, 0.8f);
-        yield return St("Black Hole", FloorPattern.BlackHole, new Color(0.005f, 0.005f, 0.02f), new Color(1f, 0.45f, 0.1f), new Color(1f, 0.9f, 0.7f), 256, 8f, 1, 12f, true, 1f);
+        // (Galaxy and Black Hole are drawn once at 1024 px - much sharper than the old 192 / 256 px animated pictures - and only glow.)
+        FloorStyle galaxy = St("Spiral Galaxy", FloorPattern.Galaxy, new Color(0.01f, 0.01f, 0.04f), new Color(0.35f, 0.5f, 1f), new Color(1f, 0.8f, 0.55f), 1024, 8f, 1, 0f, true, 0.8f);
+        galaxy.pulseSpeed = 0.15f; galaxy.pulseAmount = 0.15f;
+        yield return galaxy;
+        FloorStyle hole = St("Black Hole", FloorPattern.BlackHole, new Color(0.005f, 0.005f, 0.02f), new Color(1f, 0.45f, 0.1f), new Color(1f, 0.9f, 0.7f), 1024, 8f, 1, 0f, true, 1f);
+        hole.pulseSpeed = 0.2f; hole.pulseAmount = 0.2f;
+        yield return hole;
         yield return St("Hyperspace", FloorPattern.Hyperspace, new Color(0f, 0f, 0.03f), new Color(0.5f, 0.7f, 1f), new Color(0.9f, 0.5f, 1f), 192, 8f, 6, 24f, true, 1f);
-        yield return St("Moon Surface", FloorPattern.Craters, new Color(0.55f, 0.55f, 0.57f), new Color(0.4f, 0.4f, 0.43f), new Color(0.15f, 0.15f, 0.17f), 256, 8f, 6, 0f, false, 0f, 0.1f);
-        yield return St("Red Planet", FloorPattern.Craters, new Color(0.7f, 0.35f, 0.2f), new Color(0.55f, 0.26f, 0.15f), new Color(0.25f, 0.1f, 0.06f), 256, 8f, 5, 0f, false, 0f, 0.1f);
+        // (Moon Surface and Red Planet: one big picture with a big crater, smaller ones and pits, like Battle Crater; cells = how many smaller craters.)
+        FloorStyle moon = St("Moon Surface", FloorPattern.Craters, new Color(0.55f, 0.55f, 0.57f), new Color(0.4f, 0.4f, 0.43f), new Color(0.15f, 0.15f, 0.17f), 1024, 40f, 10, 0f, false, 0f, 0.1f);
+        moon.stretchToFloor = true; moon.detail = 6; moon.variant = 1;
+        yield return moon;
+        FloorStyle red = St("Red Planet", FloorPattern.Craters, new Color(0.7f, 0.35f, 0.2f), new Color(0.55f, 0.26f, 0.15f), new Color(0.25f, 0.1f, 0.06f), 1024, 40f, 8, 0f, false, 0f, 0.1f);
+        red.stretchToFloor = true; red.detail = 6; red.variant = 2;
+        yield return red;
         // ---- Digital / tech ----
         yield return St("Data Streams", FloorPattern.DataStream, new Color(0.01f, 0.02f, 0.05f), new Color(0.1f, 0.8f, 1f), new Color(1f, 0.3f, 0.7f), 192, 8f, 16, 20f, true, 1f);
-        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 192, 6f, 12, 15f, false, 0.8f);
-        yield return St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 256, 6f, 8, 16f, false, 0.9f);
+        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 768, 36f, 24, 8f, false, 0.8f);   // (the circuit board is drawn once; only the sparks move)
+        FloorStyle hex = St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 1024, 36f, 26, 0f, false, 0.9f);
+        hex.pulseSpeed = 0.5f; hex.pulseAmount = 0.3f;
+        yield return hex;
         yield return St("Glitch", FloorPattern.Glitch, new Color(0.03f, 0.03f, 0.05f), new Color(0.9f, 0.2f, 0.6f), new Color(0.2f, 1f, 0.9f), 192, 8f, 1, 14f, true, 0.4f);
         // ---- Trippy ----
         yield return St("Psychedelic", FloorPattern.Psychedelic, new Color(0.3f, 0.1f, 0.5f), Color.white, Color.white, 192, 8f, 1, 20f, true, 0.6f);
@@ -2638,9 +2325,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return St("Plasma", FloorPattern.Plasma, new Color(0.1f, 0f, 0.4f), new Color(1f, 0.2f, 0.5f), new Color(1f, 0.9f, 0.2f), 128, 8f, 1, 20f, true, 0.7f);
         yield return St("Op Art", FloorPattern.OpArt, Color.black, Color.white, Color.gray, 192, 8f, 6, 20f, true, 0f);
         // ---- Horror ----
-        yield return St("Haunted Tiles", FloorPattern.HauntedTiles, new Color(0.1f, 0.1f, 0.11f), new Color(0.55f, 0.55f, 0.52f), new Color(0.35f, 0.05f, 0.04f), 128, 6f, 6, 12f, false, 0f, 0.25f);
-        yield return St("Graveyard", FloorPattern.Graveyard, new Color(0.1f, 0.08f, 0.06f), new Color(0.2f, 0.17f, 0.12f), new Color(0.55f, 0.65f, 0.7f), 128, 8f, 1, 8f, false, 0f, 0.1f);
-        yield return St("Watching Eyes", FloorPattern.WatchingEyes, new Color(0.02f, 0.02f, 0.03f), Color.black, new Color(1f, 0.1f, 0.05f), 192, 8f, 7, 20f, false, 1.2f);
+        FloorStyle haunted = St("Haunted Tiles", FloorPattern.HauntedTiles, new Color(0.1f, 0.1f, 0.11f), new Color(0.55f, 0.55f, 0.52f), new Color(0.35f, 0.05f, 0.04f), 1024, 36f, 26, 0f, false, 0f, 0.25f);
+        haunted.detail = 5;   // (drawn once; the lights flicker by dimming the material)
+        yield return haunted;
+        FloorStyle yard = St("Graveyard", FloorPattern.Graveyard, new Color(0.1f, 0.08f, 0.06f), new Color(0.2f, 0.17f, 0.12f), new Color(0.55f, 0.65f, 0.7f), 1024, 40f, 1, 0f, false, 0f, 0.1f);
+        yard.detail = 6;
+        yield return yard;
+        yield return St("Watching Eyes", FloorPattern.WatchingEyes, new Color(0.02f, 0.02f, 0.03f), Color.black, new Color(1f, 0.1f, 0.05f), 1024, 36f, 22, 10f, false, 1.2f);   // (the ground is drawn once; only the eyes that blink are repainted)
         // ---- Scenes ----
         yield return St("City Skyline", FloorPattern.Skyline, new Color(0.02f, 0.03f, 0.12f), new Color(0.55f, 0.25f, 0.45f), new Color(0.06f, 0.05f, 0.12f), 256, 8f, 1, 8f, true, 0.3f);
         yield return St("Meadow Horizon", FloorPattern.GroundSky, new Color(0.25f, 0.5f, 0.9f), new Color(0.75f, 0.88f, 0.98f), new Color(0.3f, 0.62f, 0.2f), 256, 8f, 1, 0f, true, 0f, 0.15f);
