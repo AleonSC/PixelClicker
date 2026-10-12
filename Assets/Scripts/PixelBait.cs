@@ -79,7 +79,7 @@ public static class PixelBait
         pellets.Clear();
     }
 
-    private static bool FindGround(PixelClicker clicker, Vector3 from, float size, out Vector3 point)
+    internal static bool FindGround(PixelClicker clicker, Vector3 from, float size, out Vector3 point)
     {
         point = default;
         RaycastHit[] hits = Physics.RaycastAll(from + Vector3.up * size * 4f, Vector3.down, size * 60f, ~0, QueryTriggerInteraction.Ignore);

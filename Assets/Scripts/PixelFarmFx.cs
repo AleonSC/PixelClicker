@@ -94,6 +94,7 @@ public static class PixelFarmFx
             gravity = 2.2f, colorA = color, colorB = Color.Lerp(color, Color.black, 0.4f), burst = Mathf.RoundToInt(Mathf.Lerp(4f, 9f, progress)),
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.5f, randomDirection = 0.1f, maxParticles = 20,
         }).Play();
+        if (type == PixelClicker.PixelType.Bottle || type == PixelClicker.PixelType.Whale) return;   // their own click sounds are enough
         PixelAudio.Play(PixelClicker.IsWoodBlock(type) ? "wood_chop" : PixelClicker.IsForageBlock(type) || type == PixelClicker.PixelType.Toadstool ? "forage_pick" : PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Jellyfish ? "fish_splash" : "farm_hit");
     }
 
@@ -234,6 +235,17 @@ public static class PixelFarmFx
             case PixelClicker.PixelType.HornetNest:
                 Burst("Hornets", new Vector2(0.8f, 1.5f), new Vector2(1.5f, 4.2f), new Vector2(0.06f, 0.11f), 0f, new Color(1f, 0.85f, 0.15f), new Color(0.12f, 0.1f, 0.05f), 40, 0.5f, false).Play();
                 Burst("Paper", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 1.6f, new Color(0.9f, 0.84f, 0.6f), new Color(0.7f, 0.62f, 0.4f), 18, 0.5f, false).Play();
+                break;
+            case PixelClicker.PixelType.Bottle:
+                Burst("Shards", new Vector2(0.7f, 1.3f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.13f), 2.6f, new Color(0.7f, 0.95f, 0.9f, 0.9f), new Color(0.25f, 0.65f, 0.5f, 0.9f), 34, 0.5f, false).Play();
+                Burst("Glints", new Vector2(0.6f, 1.1f), new Vector2(0.8f, 2.6f), new Vector2(0.04f, 0.1f), -0.05f, new Color(1f, 1f, 1f), new Color(0.8f, 1f, 0.95f), 20, 0.5f, true).Play();
+                Burst("Cork", new Vector2(0.8f, 1.2f), new Vector2(2.5f, 4.5f), new Vector2(0.08f, 0.14f), 2.4f, new Color(0.62f, 0.42f, 0.22f), new Color(0.46f, 0.3f, 0.14f), 3, 0.2f, false).Play();
+                break;
+            case PixelClicker.PixelType.Whale:
+                // A big spout and a crown of spray.
+                Burst("Spout", new Vector2(0.9f, 1.6f), new Vector2(3f, 6.5f), new Vector2(0.06f, 0.14f), 2.4f, new Color(0.85f, 0.95f, 1f), new Color(0.5f, 0.75f, 1f), 70, 0.25f, false).Play();
+                Burst("Mist", new Vector2(1f, 1.8f), new Vector2(0.4f, 1.6f), new Vector2(0.3f, 0.6f), -0.03f, new Color(0.85f, 0.95f, 1f, 0.5f), new Color(0.6f, 0.8f, 1f, 0.4f), 16, 0.6f, true, new Vector2(0.6f, 1.8f)).Play();
+                PixelFxRing.Spawn(centre, new Color(0.6f, 0.85f, 1f, 0.9f), size * 0.5f, size * 4.5f, 0.8f, 2f);
                 break;
             case PixelClicker.PixelType.GoldenFruit:
                 Burst("Glints", new Vector2(0.9f, 1.8f), new Vector2(1f, 4.2f), new Vector2(0.06f, 0.15f), -0.1f, new Color(1f, 0.98f, 0.7f), new Color(1f, 0.78f, 0.2f), 60, 0.6f, true, new Vector2(1f, 0f)).Play();

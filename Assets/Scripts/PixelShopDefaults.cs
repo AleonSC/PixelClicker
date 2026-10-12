@@ -770,6 +770,14 @@ public partial class PixelShop
     /// Default Angler's Pack (Pixels tab): cheap, a base skill. Five fished blocks for the Fishing skill: Fish, Seaweed, Shell, Pearl (rare) and the
     /// filler Driftwood, plus the Jellyfish hazard. They only spawn while Fishing is the pack in play (Skills window).
     /// </summary>
+    /// <summary>The Whale: a rare block that takes a random 15-100 clicks (it fights the line) and pays more the longer the fight.</summary>
+    private static PixelClicker.PixelTier AnglerWhale() => new PixelClicker.PixelTier
+    {
+        type = PixelClicker.PixelType.Whale, displayName = "Whale", color = new Color(0.3f, 0.5f, 0.75f, 1f), clicksToCollect = 58, amountPerClick = 20, spawnWeight = 0.015f,
+        randomClicks = true, randomClicksMin = 15, randomClicksMax = 100,
+        unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+    };
+
     private static ShopPack CreateAnglerPack()
     {
         PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight) => new PixelClicker.PixelTier
@@ -781,7 +789,7 @@ public partial class PixelShop
         {
             displayName = "Angler's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Fishing skill: Water (very common), Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to watch out for. They only spawn while Fishing is the pack in play (Skills window). Clicking a Fish starts a Weak Spots round: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises.",
+            description = "Adds the Fishing skill: Water (very common), Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to watch out for, and two special finds: a message in a bottle (a treasure map!) and a mighty whale. They only spawn while Fishing is the pack in play (Skills window). Clicking a Fish starts a Weak Spots round: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
@@ -795,6 +803,9 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Jellyfish, "Jellyfish", new Color(0.9f, 0.45f, 0.8f, 1f), 9, 0, 0.05f),
                 // Bait: drops bait pellets round the cube; fish show up more while they lie there (a Jellyfish going off zaps them all).
                 Block(PixelClicker.PixelType.Bait, "Bait Pixels", new Color(0.8f, 0.55f, 0.28f, 1f), 1, 1, 0.5f),
+                // The SPECIAL blocks (rarer than the base ones): a message in a bottle (4 clicks; breaking it unrolls a treasure map) and the whale.
+                Block(PixelClicker.PixelType.Bottle, "Message in a Bottle", new Color(0.4f, 0.75f, 0.65f, 1f), 4, 8, 0.05f),
+                AnglerWhale(),
             }
         };
     }

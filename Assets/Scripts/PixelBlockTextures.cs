@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public static class PixelBlockTextures
 {
-    private static Texture2D wood, dirt, stone;
+    private static Texture2D wood, dirt, stone, whale;
 
     public static Texture2D Get(PixelLook.BlockSurface surface)
     {
@@ -15,6 +15,7 @@ public static class PixelBlockTextures
             case PixelLook.BlockSurface.Wood: return wood != null ? wood : (wood = Make("Wood Surface", WoodPixel));
             case PixelLook.BlockSurface.Dirt: return dirt != null ? dirt : (dirt = Make("Dirt Surface", DirtPixel));
             case PixelLook.BlockSurface.Stone: return stone != null ? stone : (stone = Make("Stone Surface", StonePixel));
+            case PixelLook.BlockSurface.Whale: return whale != null ? whale : (whale = Make("Whale Surface", WhalePixel));
         }
         return null;
     }
@@ -253,6 +254,122 @@ public static class PixelBlockTextures
             return c;
         });
         pests[key] = tex;
+        return tex;
+    }
+
+    // ---- Whale: a blue whale swimming left on every face - deep sea behind it, a pale ribbed belly, a fin, an eye, a smile, a tail and a spout ----
+    private static float Seg(float px, float py, float ax, float ay, float bx, float by)
+    {
+        float abx = bx - ax, aby = by - ay;
+        float t = Mathf.Clamp01(((px - ax) * abx + (py - ay) * aby) / Mathf.Max(1e-6f, abx * abx + aby * aby));
+        float dx = px - (ax + abx * t), dy = py - (ay + aby * t);
+        return Mathf.Sqrt(dx * dx + dy * dy);
+    }
+
+    private static Color WhalePixel(int x, int y)
+    {
+        float u = x / (float)(N - 1), v = y / (float)(N - 1);
+        // The sea: dark at the bottom, bright at the top, with soft bands of light.
+        Color c = Color.Lerp(new Color(0.04f, 0.17f, 0.36f), new Color(0.2f, 0.52f, 0.8f), v);
+        c *= 0.92f + 0.08f * Mathf.Sin(u * 11f + v * 7f) + (H(x, y, 211) - 0.5f) * 0.05f;
+
+        // The body: a long ellipse, fatter at the head (left), tapering to the tail stalk (right).
+        float bx = (u - 0.44f) / 0.37f, by = (v - 0.42f) / (0.2f * (1.15f - 0.35f * Mathf.Clamp01((u - 0.2f) / 0.6f)));
+        float body = bx * bx + by * by;
+        // The tail stalk rises to the right and ends in two flukes.
+        float stalk = Seg(u, v, 0.74f, 0.45f, 0.88f, 0.62f);
+        float fluke = Mathf.Min(Seg(u, v, 0.88f, 0.62f, 0.97f, 0.76f), Seg(u, v, 0.88f, 0.62f, 0.78f, 0.78f));
+        bool inBody = body < 1f || stalk < 0.065f - 0.035f * Mathf.Clamp01((u - 0.74f) / 0.14f) || fluke < 0.045f;
+        if (inBody)
+        {
+            Color skin = Color.Lerp(new Color(0.18f, 0.32f, 0.5f), new Color(0.35f, 0.52f, 0.72f), v);
+            // The belly: a pale underside with ribs.
+            float bellyLine = 0.38f - 0.03f * Mathf.Sin(u * 9f);
+            if (v < bellyLine && body < 1f)
+            {
+                skin = Color.Lerp(new Color(0.78f, 0.84f, 0.9f), new Color(0.9f, 0.93f, 0.95f), v * 2f);
+                if (Mathf.Repeat(u * 22f, 1f) < 0.18f && v > 0.22f) skin *= 0.82f;   // the throat pleats
+            }
+            skin *= 0.94f + (H(x, y, 213) - 0.5f) * 0.1f;
+            if (body > 0.82f && body < 1f) skin *= 0.7f;                               // a dark outline
+            c = skin;
+        }
+        // Pectoral fin.
+        if (Seg(u, v, 0.4f, 0.34f, 0.5f, 0.2f) < 0.04f && v < 0.38f) c = new Color(0.14f, 0.26f, 0.44f);
+        // The eye, with a bright glint, and a smiling mouth line.
+        float ex = u - 0.2f, ey = v - 0.47f;
+        float er = Mathf.Sqrt(ex * ex + ey * ey);
+        if (er < 0.032f) c = new Color(0.04f, 0.05f, 0.08f);
+        if (Mathf.Sqrt((ex + 0.008f) * (ex + 0.008f) + (ey - 0.01f) * (ey - 0.01f)) < 0.01f) c = Color.white;
+        float mouth = Mathf.Abs(v - (0.37f + 0.05f * Mathf.Pow(Mathf.Clamp01((u - 0.1f) / 0.22f), 2f)));
+        if (u > 0.1f && u < 0.34f && mouth < 0.012f && body < 1f) c = new Color(0.08f, 0.14f, 0.24f);
+        // The spout: a fountain of white drops from the blowhole.
+        float sx = u - 0.3f;
+        if (v > 0.6f && v < 0.95f && Mathf.Abs(sx) < 0.012f + (v - 0.6f) * 0.12f && H(x, y, 215) > 0.42f) c = Color.Lerp(c, Color.white, 0.9f);
+        if (v > 0.62f && v < 0.9f && H(x, y, 216) > 0.965f) c = Color.white;
+        return c;
+    }
+
+    // ---- Message in a bottle: a green glass bottle with a cork and a rolled-up message inside, floating in pale water; cracks spread as it is hit ----
+    private static readonly System.Collections.Generic.Dictionary<int, Texture2D> bottles = new System.Collections.Generic.Dictionary<int, Texture2D>();
+
+    public static Texture2D BottleGlass(int level, int maxLevel)
+    {
+        maxLevel = Mathf.Max(1, maxLevel);
+        level = Mathf.Clamp(level, 0, maxLevel);
+        int key = level * 100 + maxLevel;
+        if (bottles.TryGetValue(key, out Texture2D cached) && cached != null) return cached;
+
+        float k = level / (float)maxLevel;
+        int cracks = Mathf.RoundToInt(k * 8f);
+        Texture2D tex = Make("Bottle " + level, (x, y) =>
+        {
+            float u = x / (float)(N - 1), v = y / (float)(N - 1);
+            Color c = Color.Lerp(new Color(0.34f, 0.66f, 0.7f), new Color(0.62f, 0.88f, 0.86f), v);   // pale water behind
+            c *= 0.95f + (H(x, y, 221) - 0.5f) * 0.06f;
+            if (H(x / 3, y / 3, 222) > 0.96f) c = Color.Lerp(c, Color.white, 0.6f);                    // a few bubbles
+
+            // The bottle's outline: a rounded body, a neck, a lip and a cork.
+            float cx = Mathf.Abs(u - 0.5f);
+            bool body = cx < 0.22f && v > 0.07f && v < 0.56f && !(cx > 0.1f && (v < 0.17f || v > 0.46f) && (cx - 0.1f) * (cx - 0.1f) + Mathf.Pow(Mathf.Max(0f, (v < 0.17f ? 0.17f - v : v - 0.46f)), 2f) > 0.012f);
+            float neckHalf = 0.075f + 0.14f * Mathf.Clamp01((0.62f - v) / 0.1f);
+            bool neck = v >= 0.54f && v < 0.8f && cx < neckHalf;
+            bool lip = v >= 0.78f && v < 0.85f && cx < 0.11f;
+            bool cork = v >= 0.85f && v < 0.95f && cx < 0.085f;
+            if (cork)
+            {
+                c = Color.Lerp(new Color(0.62f, 0.42f, 0.22f), new Color(0.46f, 0.3f, 0.14f), H(x, y, 223));
+                if (v > 0.93f) c *= 0.8f;
+            }
+            else if (body || neck || lip)
+            {
+                Color glass = Color.Lerp(new Color(0.12f, 0.42f, 0.3f), new Color(0.3f, 0.7f, 0.52f), 0.5f + 0.5f * Mathf.Sin(u * 9f));
+                c = Color.Lerp(c, glass, 0.78f);
+                if (u > 0.3f && u < 0.35f && v > 0.14f && v < 0.5f) c = Color.Lerp(c, Color.white, 0.55f);   // a glossy streak
+                if (cx > 0.2f || (v > 0.052f && v < 0.085f)) c *= 0.7f;                                      // glass edge
+                // The rolled-up message with a red ribbon.
+                if (cx < 0.135f && v > 0.17f && v < 0.44f)
+                {
+                    float shade = 0.82f + 0.18f * Mathf.Cos((u - 0.5f) * 14f);
+                    c = new Color(0.95f, 0.86f, 0.62f) * shade;
+                    if (Mathf.Abs(v - 0.305f) < 0.022f) c = new Color(0.78f, 0.12f, 0.1f);
+                    if (H(x, y, 224) > 0.9f) c *= 0.85f;
+                }
+            }
+
+            // Cracks: dark lines with a pale edge, more of them the more it is hit.
+            for (int i = 0; i < cracks; i++)
+            {
+                float a = H(i, 1, 225) * 6.28f;
+                float len = 0.22f + H(i, 2, 226) * 0.3f;
+                float ox = 0.5f + (H(i, 3, 227) - 0.5f) * 0.3f, oy = 0.34f + (H(i, 4, 228) - 0.5f) * 0.25f;
+                float dd = Seg(u, v, ox, oy, ox + Mathf.Cos(a) * len, oy + Mathf.Sin(a) * len);
+                if (dd < 0.011f) c = new Color(0.05f, 0.1f, 0.1f);
+                else if (dd < 0.02f) c = Color.Lerp(c, Color.white, 0.4f);
+            }
+            return c;
+        });
+        bottles[key] = tex;
         return tex;
     }
 }

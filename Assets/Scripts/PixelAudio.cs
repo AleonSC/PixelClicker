@@ -264,6 +264,7 @@ public class PixelAudio : MonoBehaviour
             Make("traffic_win", 0.3f, 1f, 1f),
             Make("traffic_lose", 0.3f, 1f, 1f),
         };
+        foreach (string oceanId in PixelOceanSynth.Ids) list.Add(Make(oceanId, 0.05f, 0.95f, 1.05f));   // the bottle / treasure map / whale sounds
         foreach (PixelClicker.PixelType ore in Enum.GetValues(typeof(PixelClicker.PixelType)))
             if (PixelClicker.IsOre(ore)) list.Add(Make("pixel_bounce_" + ore.ToString().ToLowerInvariant(), 0.04f, 0.9f, 1.15f)); // ore clinks when an old ore lands
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
@@ -291,6 +292,8 @@ public class PixelAudio : MonoBehaviour
     /// <summary>The code-made clips of a sound id (null = this sound has none).</summary>
     private static AudioClip[] SynthFor(string id)
     {
+        AudioClip[] ocean = PixelOceanSynth.For(id);
+        if (ocean != null) return ocean;
         switch (id)
         {
             case "pixel_bounce_electric": return new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };

@@ -122,10 +122,12 @@ public class PixelClicker : MonoBehaviour
         Driftwood = 70,   // Fishing's filler block
         Jellyfish = 71,   // Fishing's hazard block
         Bait = 72,        // Fishing: drops bait pellets that make fish appear more often
+        Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
+        Whale = 74,       // Fishing's special block: a whale that fights the line
     }
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
-    public static bool IsFishBlock(PixelType type) => (type >= PixelType.Fish && type <= PixelType.Driftwood) || type == PixelType.Bait;
+    public static bool IsFishBlock(PixelType type) => (type >= PixelType.Fish && type <= PixelType.Driftwood) || type == PixelType.Bait || type == PixelType.Bottle || type == PixelType.Whale;
 
     /// <summary>The old Prospector ores that were dropped (Lead, Zinc, Nickel): they never spawn any more.</summary>
     public static bool IsRetiredOre(PixelType type) => type == PixelType.Lead || type == PixelType.Zinc || type == PixelType.Nickel;
@@ -146,7 +148,7 @@ public class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Bait);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale);
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -967,7 +969,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Something else (a minigame, the hose, a hovered pet, first person mode) has the mouse: the cube ignores ordinary clicks.</summary>
     public static bool ExternalClickBlock
     {
-        get => externalClickBlock || DevClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelStorageCrate.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
+        get => externalClickBlock || DevClickBlock || PixelFirstPerson.Active || PixelConsumables.HoveringDisarmed || PixelSorterDevice.HandleHot || PixelMagnetSorterDevice.HandleHot || PixelQuantumDevice.HandleHot || PixelStorageCrate.HandleHot || PixelEgg.Hot || PixelBeanstalk.Hot || PixelTreasureMap.Hot || PixelRobotWorker.Hovering || PixelRobotWorker.Piloting;
         set => externalClickBlock = value;
     }
 
@@ -1111,6 +1113,8 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
         if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
         if (PixelFind.First<PixelBlockTooltip>() == null) gameObject.AddComponent<PixelBlockTooltip>();   // hover tooltip for blocks
+        if (PixelFind.First<PixelTreasureMap>() == null) gameObject.AddComponent<PixelTreasureMap>();   // Fishing: the treasure map from a message in a bottle
+        if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelOrbitCamera>() == null) gameObject.AddComponent<PixelOrbitCamera>();   // orbital camera (third step of the view key)
@@ -1710,6 +1714,20 @@ public class PixelClicker : MonoBehaviour
             looksVersion = 47;
         }
 
+        if (looksVersion < 48)
+        {
+            // Fishing's special blocks (the bottle and the whale) got looks.
+            System.Collections.Generic.List<PixelLook> list48 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults48 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Bottle, PixelType.Whale })
+            {
+                PixelLook def = PixelLooks.Find(defaults48, t);
+                if (def != null && PixelLooks.Find(list48.ToArray(), t) == null) list48.Add(def);
+            }
+            looks = list48.ToArray();
+            looksVersion = 48;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1803,7 +1821,7 @@ public class PixelClicker : MonoBehaviour
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
         bool leftClick = WasClickedThisFrame();
         // A RIGHT click on a hazard block (Pest, Gas Pocket) works it away safely (see DefuseHazard).
-        bool rightClick = !leftClick && pixelTransform != null && !isSpawning && PixelInput.RightPressed() && IsHazard(GetClickTier().type);
+        bool rightClick = !leftClick && pixelTransform != null && !isSpawning && PixelInput.RightPressed() && (IsHazard(GetClickTier().type) || GetClickTier().type == PixelType.Bottle);
         if ((!leftClick && !rightClick) || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
@@ -1823,7 +1841,7 @@ public class PixelClicker : MonoBehaviour
                 if (Time.unscaledTime - lastManualClickTime >= minClickInterval)
                 {
                     lastManualClickTime = Time.unscaledTime;
-                    if (rightClick) DefuseHazard();
+                    if (rightClick) { if (GetClickTier().type == PixelType.Bottle) DismissBottle(); else DefuseHazard(); }
                     else Collect();
                 }
             }
@@ -2013,6 +2031,7 @@ public class PixelClicker : MonoBehaviour
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Meteor && !disableMeteorFx) PixelCometFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Whale) PixelWhaleFight.OnHit(this, automatic, hitsOnCurrentPixel, need);   // the first manual hit hooks it: it starts to fight the line
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, shownNeed, automatic);
                 onPixelClicked?.Invoke();
                 return;
@@ -2049,6 +2068,7 @@ public class PixelClicker : MonoBehaviour
         }
         else capacitorCharge = Mathf.Min(capacitorChargeCap > 0 ? capacitorChargeCap : 40, capacitorCharge + breaks);
         if (tier.randomClicks && tier.type == PixelType.Treasure) basePayout *= TreasureMultiplier(need);   // the more clicks the chest took, the bigger the reward
+        if (tier.randomClicks && tier.type == PixelType.Whale) basePayout *= PixelWhaleFight.RewardMultiplier(need);   // so does a whale: the longer the fight, the bigger the catch
         if (tier.type == PixelType.Wheat) basePayout *= 1d + Mathf.Min(wheatMaxSprouts > 0 ? wheatMaxSprouts : 8, SeedSprout.Count) * (wheatPerSprout > 0f ? wheatPerSprout : 0.25f);   // a busy field feeds the wheat
         bool richBreak = liveRich && IsOre(tier.type);
         if (richBreak) basePayout *= richVeinMultiplier > 0f ? richVeinMultiplier : 5f;   // a rich vein pays big
@@ -2092,6 +2112,8 @@ public class PixelClicker : MonoBehaviour
         if (tier.type == PixelType.Treasure) OpenTreasure(tierIndex, need);
         if (tier.type == PixelType.Fertilizer) Fertilize();
         if (tier.type == PixelType.Bait) PixelBait.Drop(this, pixelTransform.position);
+        if (tier.type == PixelType.Bottle) PixelTreasureMap.Begin(this, pixelTransform.position);   // the glass breaks and a treasure map unrolls
+        if (tier.type == PixelType.Whale) PixelWhaleFight.OnCaught(this, need, amount);
         if ((IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type)) && tier.type != PixelType.Seed && !disableFarmFx) PixelFarmFx.Break(tier.type, pixelTransform.position, PixelBaseSize, tier.color);
         if (tier.type == PixelType.Dirt) PixelAudio.Play("seed_dig");   // the last dig
         if ((IsElectricalBlock(tier.type) || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelElectricFx.Break(tier.type, pixelTransform.position, PixelBaseSize);
@@ -3152,6 +3174,64 @@ public class PixelClicker : MonoBehaviour
     /// <summary>The tier index of the pixel on the cube right now.</summary>
     public int CurrentClickTierIndex => GetClickTierIndex();
 
+    /// <summary>The pixel type on the cube right now.</summary>
+    public PixelType LiveType => tiers != null && tiers.Length > 0 ? tiers[GetClickTierIndex()].type : PixelType.White;
+
+    /// <summary>Hits already put into the pixel on the cube.</summary>
+    public int LiveHits => hitsOnCurrentPixel;
+
+    /// <summary>A right click on a message in a bottle: you let it drift away (no payout, no map) and the next pixel comes.</summary>
+    private void DismissBottle()
+    {
+        PixelAudio.Play("fish_splash");
+        PixelHints.Announce("You let the bottle drift away");
+        hitsOnCurrentPixel = 0;
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+    }
+
+    /// <summary>The whale tore itself off the hook (the fight ran out of time): no payout, the next pixel comes.</summary>
+    public void WhaleGotAway()
+    {
+        PixelHints.Announce("The whale broke the line and swam away!");
+        hitsOnCurrentPixel = 0;
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+    }
+
+    /// <summary>
+    /// Buried treasure: 'count' good fishing pixels (bait most often, then seaweed, shells, fish and pearls - whichever are unlocked) are paid at once
+    /// and the same number of old pixels fountain out of the hole for show. Returns how many pixels it was.
+    /// </summary>
+    public int GiveFishingHaul(Vector3 origin, int count)
+    {
+        System.Collections.Generic.List<int> pool = new System.Collections.Generic.List<int>();
+        System.Collections.Generic.List<float> weights = new System.Collections.Generic.List<float>();
+        for (int i = 0; i < tiers.Length; i++)
+        {
+            PixelTier t = tiers[i];
+            if (!t.unlocked || !IsFishBlock(t.type) || t.type == PixelType.Driftwood || t.type == PixelType.Bottle || t.type == PixelType.Whale) continue;
+            pool.Add(i);
+            weights.Add(t.type == PixelType.Bait ? 3f : t.type == PixelType.Pearl ? 0.8f : t.type == PixelType.Fish ? 1.2f : 2f);
+        }
+        if (pool.Count == 0 || count <= 0) return 0;
+        float total = 0f;
+        foreach (float w in weights) total += w;
+        int[] picks = new int[count];
+        double[] paid = new double[tiers.Length];
+        for (int n = 0; n < count; n++)
+        {
+            float r = UnityEngine.Random.value * total;
+            int k = 0;
+            while (k < pool.Count - 1 && r > weights[k]) { r -= weights[k]; k++; }
+            picks[n] = pool[k];
+            paid[pool[k]] += RollOldPixelAmount(pool[k]) * 1.5d;
+        }
+        for (int t = 0; t < paid.Length; t++) if (paid[t] > 0d) AddCurrency(t, paid[t]);
+        StartCoroutine(TreasureFountain(picks, origin));
+        return count;
+    }
+
     private float cubeShrinkCurrent = 1f, cubeShrinkTarget = 1f, cubeShrinkSeconds = 0.5f;
     private float digShrinkCurrent = 1f, digShrinkTarget = 1f;   // a Dirt block gets smaller with every dig, down to old-pixel size
 
@@ -3224,6 +3304,7 @@ public class PixelClicker : MonoBehaviour
         bool onlyBasic = look.blockSurface == PixelLook.BlockSurface.None && !look.streakTexture && !look.damageCracks && !look.chromeTexture && !look.oreTexture && !look.chestTexture && !look.meteorTexture && !look.sunTexture;
         Texture2D tex = look.blockSurface == PixelLook.BlockSurface.Seed ? PixelBlockTextures.SeedShell(look.damageCracks ? level : 0, max)
                       : look.blockSurface == PixelLook.BlockSurface.Pest ? PixelBlockTextures.PestHide(look.damageCracks ? level : 0, max)
+                      : look.blockSurface == PixelLook.BlockSurface.Bottle ? PixelBlockTextures.BottleGlass(look.damageCracks ? level : 0, max)
                       : look.blockSurface != PixelLook.BlockSurface.None ? PixelBlockTextures.Get(look.blockSurface)
                       : onlyBasic ? PixelLooks.BasicTexture(look.basicSurface)
                       : look.meteorTexture ? PixelStarTextures.Meteor(look.damageCracks ? level : 0, max)

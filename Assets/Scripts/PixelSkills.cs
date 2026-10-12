@@ -234,12 +234,13 @@ public partial class PixelSkills : MonoBehaviour
             {
                 id = FishingId, displayName = "Fishing", accent = new Color(0.3f, 0.6f, 0.9f),
                 description = "Swap the basic cubes for fished goods: very common Water, seaweed, shells, rare pearls and rare fish. Click a fish and a Weak Spots round starts: hit every spot to catch it, miss and it gets away. Water is a plain filler that gets rarer as your fishing level rises. Watch out for the stinging jellyfish. A cheap early skill that leads on towards cooking.",
-                replaces = "Monochrome, RGB", spawns = "Water, Fish, Seaweed, Shell, Pearl, Bait",
+                replaces = "Monochrome, RGB", spawns = "Water, Fish, Seaweed, Shell, Pearl, Bait, Bottle, Whale",
                 xpFrom = "Collecting fished blocks",
                 unlockHint = "Buy the Angler's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell, PixelClicker.PixelType.Pearl,
-                                PixelClicker.PixelType.Water, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish },
+                                PixelClicker.PixelType.Water, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
+                                PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale },
                 fillerType = "Water", hazardType = "Jellyfish", fillerStartShare = 0.75f, fillerEndShare = 0.5f,
                 perks = new[]
                 {
@@ -365,7 +366,8 @@ public partial class PixelSkills : MonoBehaviour
                 System.Collections.Generic.List<PixelClicker.PixelType> fish = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
                 fish.Remove(PixelClicker.PixelType.Driftwood);   // Water is the filler now
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Fish, PixelClicker.PixelType.Seaweed, PixelClicker.PixelType.Shell,
-                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Water, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish })
+                                                             PixelClicker.PixelType.Pearl, PixelClicker.PixelType.Water, PixelClicker.PixelType.Bait, PixelClicker.PixelType.Jellyfish,
+                                                             PixelClicker.PixelType.Bottle, PixelClicker.PixelType.Whale })
                     if (!fish.Contains(t)) fish.Add(t);
                 pack.types = fish.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType) || pack.fillerType == PixelClicker.PixelType.Driftwood.ToString())

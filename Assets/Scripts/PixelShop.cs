@@ -1167,6 +1167,29 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 23)
+        {
+            // Fishing's special blocks: the message in a bottle and the whale join the Angler's Pack.
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier bottleDef = null, whaleDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers)
+            {
+                if (t.type == PixelClicker.PixelType.Bottle) bottleDef = t;
+                if (t.type == PixelClicker.PixelType.Whale) whaleDef = t;
+            }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers);
+                    if (bottleDef != null && !Rewards(p, PixelClicker.PixelType.Bottle)) list.Add(bottleDef.Clone());
+                    if (whaleDef != null && !Rewards(p, PixelClicker.PixelType.Whale)) list.Add(whaleDef.Clone());
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 23);
+            changed = true;
+        }
+
         return changed;
     }
 

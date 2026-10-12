@@ -46,7 +46,7 @@ public class PixelLook
     public enum BasicSurface { None = 0, Grain = 1, Brushed = 2, Sheen = 3, Mosaic = 4 }
 
     /// <summary>Crisp drawn surfaces for the skill packs' base blocks (PixelBlockTextures.cs). The look's colour should be white.</summary>
-    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3, Seed = 4, Pest = 5 }
+    public enum BlockSurface { None = 0, Wood = 1, Dirt = 2, Stone = 3, Seed = 4, Pest = 5, Whale = 6, Bottle = 7 }
 
     [Tooltip("Wood, Dirt or Stone: a crisp 64 px pixel-art surface drawn on every face (set the look's colour to white).")]
     public BlockSurface blockSurface = BlockSurface.None;
@@ -529,6 +529,11 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Jellyfish, useColor = true, color = new Color(0.9f, 0.45f, 0.8f, 0.6f), metallic = 0f, smoothness = 0.9f, emission = 0.5f, forceTranslucent = true,
                             blob = true, wobble = true, wobbleAmount = 0.14f, wobbleSpeed = 6f, farmFx = PixelLook.FarmAmbient.Spores,
                             lightning = true, lightningCoreColor = new Color(1f, 0.92f, 1f, 1f), lightningGlowColor = new Color(0.95f, 0.4f, 1f, 1f), lightningJitter = 0.1f },
+            // Fishing's special blocks: a message in a bottle (cracks as you hit it) and a whale (a cube with a whale drawn on every face).
+            new PixelLook { type = PixelClicker.PixelType.Bottle, useColor = true, color = Color.white, metallic = 0.1f, smoothness = 0.95f, damageCracks = true,
+                            blockSurface = PixelLook.BlockSurface.Bottle, blob = true, wobble = true, wobbleAmount = 0.05f, wobbleSpeed = 2.2f, farmFx = PixelLook.FarmAmbient.Sparkle },
+            new PixelLook { type = PixelClicker.PixelType.Whale, useColor = true, color = Color.white, metallic = 0.05f, smoothness = 0.6f,
+                            blockSurface = PixelLook.BlockSurface.Whale, blob = true, wobble = true, wobbleAmount = 0.07f, wobbleSpeed = 3.2f, farmFx = PixelLook.FarmAmbient.Dew },
             // Bait: small brown-orange pellets pressed into a lump.
             new PixelLook { type = PixelClicker.PixelType.Bait, useColor = true, color = new Color(0.8f, 0.55f, 0.28f, 1f), metallic = 0f, smoothness = 0.3f, basicSurface = PixelLook.BasicSurface.Grain,
                             blob = true, farmFx = PixelLook.FarmAmbient.Crumbs },
