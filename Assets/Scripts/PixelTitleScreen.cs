@@ -825,19 +825,32 @@ public class PixelTitleScreen : MonoBehaviour
 
     private RenderTexture sharpTexture;
 
-    /// <summary>Blur switched off: the live scene is simply left unblurred (the blur layers are hidden); without the live scene the floor picture is shown sharp.</summary>
+    /// <summary>Blur switched off: the live scene is drawn at full size, unblurred; without the live scene the floor picture is shown sharp.</summary>
     private void UpdateSharp(bool live)
     {
-        if (live || PixelFloor.Instance == null)
+        if (live)
         {
-            lightImage.enabled = strongImage.enabled = false;
+            // The real scene, unblurred, drawn at full size into its own picture.
+            Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();
+            if (cam == null) return;
+            if (sharpTexture == null || sharpTexture.width != Screen.width || sharpTexture.height != Screen.height)
+            {
+                if (sharpTexture != null) { sharpTexture.Release(); Destroy(sharpTexture); }
+                sharpTexture = NewTexture(Screen.width, Screen.height, 24, FilterMode.Bilinear);
+            }
+            RenderTexture previous = cam.targetTexture;
+            try { cam.targetTexture = sharpTexture; cam.Render(); }
+            finally { cam.targetTexture = previous; }
+            strongImage.texture = sharpTexture;
+            strongImage.enabled = true;
+            lightImage.enabled = false;
         }
         else
         {
             if (sharpTexture == null || sharpTexture.width != Screen.width || sharpTexture.height != Screen.height)
             {
                 if (sharpTexture != null) { sharpTexture.Release(); Destroy(sharpTexture); }
-                sharpTexture = NewTexture(Screen.width, Screen.height, 0, FilterMode.Bilinear);
+                sharpTexture = NewTexture(Screen.width, Screen.height, 24, FilterMode.Bilinear);
             }
             if (PixelFloor.Instance.TryGetTitlePicture(out Texture floorPicture, out Vector2 tiles, out Color tint) && floorPicture != null)
                 Graphics.Blit(floorPicture, sharpTexture, tiles, Vector2.zero);

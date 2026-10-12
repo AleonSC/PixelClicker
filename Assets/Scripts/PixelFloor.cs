@@ -264,6 +264,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (fitCam != null) Destroy(fitCam.gameObject);
         if (Instance == this) Instance = null;
         DropProxies(true);
+        if (flatBase != null) Destroy(flatBase);
+        if (flatMat != null) Destroy(flatMat);
         ReleaseActive();
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
         previews.Clear();
@@ -560,8 +562,65 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         }
     }
 
+    private GameObject flatBase;
+    private Material flatMat;
+    private readonly Dictionary<int, Color> averageColors = new Dictionary<int, Color>();
+
+    /// <summary>The floor style's overall colour (Classic: its own colour; else the average of the style's picture).</summary>
+    private Color AverageColor()
+    {
+        if (current < 0 || current >= styles.Count) return new Color(0.4f, 0.4f, 0.4f, 1f);
+        if (styles[current].pattern == FloorPattern.Classic) return PreviewColor(current);
+        if (averageColors.TryGetValue(current, out Color cached)) return cached;
+        Color result = new Color(0.4f, 0.4f, 0.4f, 1f);
+        try
+        {
+            Texture2D tex = PreviewTexture(current) as Texture2D;
+            if (tex != null)
+            {
+                int step = Mathf.Max(1, Mathf.Min(tex.width, tex.height) / 12);
+                float r = 0, g = 0, b = 0; int n = 0;
+                for (int y = 0; y < tex.height; y += step)
+                    for (int x = 0; x < tex.width; x += step) { Color c = tex.GetPixel(x, y); r += c.r; g += c.g; b += c.b; n++; }
+                if (n > 0) result = new Color(r / n, g / n, b / n, 1f);
+            }
+        }
+        catch (System.Exception) { }   // (unreadable texture: keep the grey)
+        averageColors[current] = result;
+        return result;
+    }
+
+    /// <summary>While the textured floor is hidden / fading, a flat floor-coloured copy of the floor mesh sits just under it, so the menu background is the floor's colour instead of the sky's lower half.</summary>
+    private void UpdateFlatBase()
+    {
+        bool want = HidesOnTitle && visibility < 0.999f;
+        if (!want)
+        {
+            if (flatBase != null) flatBase.SetActive(false);
+            return;
+        }
+        MeshFilter mf = floorRenderer.GetComponent<MeshFilter>();
+        if (mf == null || mf.sharedMesh == null) return;
+        if (flatBase == null)
+        {
+            flatBase = new GameObject("Floor Flat Colour");
+            flatBase.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+            MeshRenderer mr = flatBase.AddComponent<MeshRenderer>();
+            flatMat = new Material(PixelShaders.SpriteDefault()) { renderQueue = 1990 };
+            mr.sharedMaterial = flatMat;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+        }
+        Transform ft = floorRenderer.transform;
+        flatBase.transform.SetPositionAndRotation(ft.position + Vector3.down * 0.004f, ft.rotation);
+        flatBase.transform.localScale = ft.lossyScale;
+        flatMat.color = AverageColor();
+        flatBase.SetActive(true);
+    }
+
     private void ApplyVisibility()
     {
+        UpdateFlatBase();
         floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
         // Any other renderers on the floor object (a second mesh, trim) go with it.
         foreach (Renderer extra in floorRenderer.GetComponentsInChildren<Renderer>(true)) if (extra != floorRenderer) extra.forceRenderingOff = visibility < 0.999f;
