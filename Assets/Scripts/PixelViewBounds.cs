@@ -82,6 +82,7 @@ public class PixelViewBounds : MonoBehaviour
         if (PixelCameraIntro.Moving) return; // the close-up view is tiny: don't squeeze loaded / resting pixels into it
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (PixelOrbitCamera.HomeCamera != null) cam = PixelOrbitCamera.HomeCamera;   // orbiting: pixels stay inside the NORMAL view
         if (cam == null) return;
         float barNow = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight : 0f;
         Transform ct = cam.transform;

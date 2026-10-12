@@ -640,3 +640,4 @@
 [2026-10-12 10:04 UTC] Weak Spots now run for every skill pack (bonus XP goes to the skill in training); alt-tabbing no longer switches the music track.
 [2026-10-12 10:08 UTC] Weak spots now come in variations: drifting (blue), pulsing (green) and flickering (yellow) spots mixed in with the still ones.
 [2026-10-12 10:19 UTC] Resize corner grips redrawn (My Window and UI mockup); right-click deletes mockup pieces and placed shapes; new 'Test Grid' sky with labelled lines for screenshots; sky icons now show a proper wide view of each sky instead of a cropped corner.
+[2026-10-12 10:21 UTC] New orbital camera: the view key now cycles normal > first person > orbital; in orbital mode the camera swings round the cube (middle-mouse drag or arrow keys, Shift+wheel zoom) so it can be clicked from any side.

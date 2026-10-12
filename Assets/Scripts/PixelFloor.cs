@@ -813,6 +813,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         Camera cam = Camera.main;
         if (cam == null || floorRenderer == null) return false;
+        if (PixelOrbitCamera.HomeCamera != null) cam = PixelOrbitCamera.HomeCamera;   // orbiting: keep the fit of the normal view
         // While the camera intro moves the camera, fit to the pose it settles into instead of the live (close-up) one.
         if (intro == null) intro = PixelFind.First<PixelCameraIntro>();
         if (intro != null && intro.TryGetFinalPose(out Vector3 fp, out Quaternion fr, out float ffov, out float fortho))

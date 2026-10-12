@@ -106,13 +106,23 @@ public class PixelFirstPerson : MonoBehaviour
     {
         if (!Active)
         {
-            if (!Typing() && PixelKeys.Pressed(PixelAction.FirstPerson) && CanEnter()) Enter();
+            if (!Typing() && PixelKeys.Pressed(PixelAction.FirstPerson))
+            {
+                // The view key cycles: normal -> first person -> orbital -> normal.
+                if (PixelOrbitCamera.Active) PixelOrbitCamera.Instance?.Exit();
+                else if (CanEnter()) Enter();
+            }
             return;
         }
 
         if (player == null || fpCamera == null) { Exit(); return; }
         if (PixelMinigame.TakeoverActive || PixelTitleScreen.Showing) { Exit(); return; }
-        if (!Typing() && PixelKeys.Pressed(PixelAction.FirstPerson)) { Exit(); return; }
+        if (!Typing() && PixelKeys.Pressed(PixelAction.FirstPerson))
+        {
+            Exit();
+            if (PixelOrbitCamera.Instance == null || !PixelOrbitCamera.Instance.Enter()) { }   // (no orbital camera: back to the normal view)
+            return;
+        }
 
         // Paused, a popup, a visitor... : give the mouse back until play resumes.
         bool playable = !PixelPauseMenu.IsPaused && (Time.timeScale > 0f || PixelTimeStop.IsStopped) && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting;

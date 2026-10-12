@@ -16,7 +16,7 @@ Hold right-click ("Active:" line) | Cancel the potion
 Esc | Pause menu / close the top window
 {key:TimeStop} | Stop and resume time (Time Stop; uses an energy meter, you can still click the cube)
 Arrow keys | Steer the snake during a Snake round (or use the on-screen arrows)
-{key:FirstPerson} | First person mode: run about at half an old pixel's size (WASD, mouse, Space, Shift; Esc leaves)
+{key:FirstPerson} | Switch view: normal > first person (WASD, mouse, Space, Shift; Esc leaves) > orbital camera (middle mouse drag or arrow keys turn round the cube, Shift + wheel zooms) > normal
 {key:Feedback} | Give feedback (opens a window with a text box and screenshots you can draw on; saved to the Feedback folder). Also in Settings.
 {key:TimeSlow} | Slow time and back to normal (Time Slow upgrade; shares the Time Stop meter; slowed meteor pixels can be grabbed)
 {key:Hose} | Equip / put away the hose (Pixel Bank)

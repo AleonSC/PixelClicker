@@ -70,6 +70,16 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True while the middle button is held down.</summary>
+    public static bool MiddleHeld()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return Mouse.current != null && Mouse.current.middleButton.isPressed;
+#else
+        return Input.GetMouseButton(2);
+#endif
+    }
+
     /// <summary>True on the frame the middle button went down.</summary>
     public static bool MiddlePressed()
     {

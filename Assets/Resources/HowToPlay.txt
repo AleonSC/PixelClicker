@@ -76,8 +76,8 @@ Cubie | A suspicious cube who greets you at the start, shows you the shop once y
 Seeds | Buy seeds in the shop's Consumables tab (or from the Farmer). Right-click a seed in the Inventory (Consumables > Seeds), then click the floor to plant it: it grows that pixel type. Rare pixels cost more seeds.
 Vendors | The Wizard, Tinkerer, Farmer (seeds) and Pixel Entrepreneur drop by as you progress. Switch any of them off in the Toggles menu (Vendors tab).
 
-# First person mode
-First person | Press {key:FirstPerson} to shrink to half the size of an old pixel and run about on the floor. The game keeps running: old pixels still fall and you can shove them. Aim the crosshair at the clicker cube (any distance) and click to click it.
+# Camera views
+First person | Press {key:FirstPerson} to shrink to half the size of an old pixel and run about on the floor. The game keeps running: old pixels still fall and you can shove them. Aim the crosshair at the clicker cube (any distance) and click to click it. Press {key:FirstPerson} again for the orbital camera: drag with the middle mouse button (or use the arrow keys) to swing round the cube and click it from any side, Shift + wheel zooms, and one more press returns to the normal view.
 
 # UFO Helper (Robot Worker upgrade)
 UFO Helper | Buy the Robot Worker upgrade and a little UFO hovers about the map (never right over the cube) with a bubble showing an alien face. Click it, choose a device (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod, Sprinkler) and place its ghost like you would the real one. Whenever that device runs out the UFO flies over and beams a new one down onto the ghost, already switched on, as long as you have one left. Or pick "Abduct a pixel into the bank" and it beams loose pixels of one type into your Pixel Bank. Click it again to change or stop the job.
