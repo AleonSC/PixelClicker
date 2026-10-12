@@ -625,3 +625,4 @@
 [2026-10-12 08:22 UTC] Added the Foraging skill: a cheap Forager's Pack (150 White) with Berry, Mushroom, Herb, rare Truffle, Weeds filler and a poisonous Toadstool hazard, with looks, particle effects, sounds, guide texts and a tip.
 [2026-10-12 08:25 UTC] Breakout's court background is transparent again (new backOpacity setting, 0 by default).
 [2026-10-12 08:32 UTC] Added the Fishing skill (Angler's Pack: Fish, Seaweed, Shell, rare Pearl, Driftwood filler, stinging Jellyfish hazard); the Obsidian pixel now comes with the Prospector's Pack; the ores are now Copper, Tin, Iron, Silver and Gold plus the 15-20 click Obsidian and Bedrock that pay a lot (Lead, Zinc and Nickel are gone).
+[2026-10-12 08:39 UTC] Bedrock now needs a random 20-30 clicks (rolled per pixel); only the Treasure chest still scales its payout with the click count.

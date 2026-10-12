@@ -1085,6 +1085,27 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 20)
+        {
+            // Bedrock needs a random 20-30 clicks now.
+            PixelClicker.PixelTier def = null;
+            foreach (PixelClicker.PixelTier t in CreateProspectorPack().rewardTiers) if (t.type == PixelClicker.PixelType.Bedrock) def = t;
+            if (def != null)
+            {
+                void Apply(PixelClicker.PixelTier t)
+                {
+                    if (t == null || t.type != PixelClicker.PixelType.Bedrock) return;
+                    t.clicksToCollect = def.clicksToCollect; t.randomClicks = true; t.randomClicksMin = def.randomClicksMin; t.randomClicksMax = def.randomClicksMax;
+                }
+                if (packs != null)
+                    foreach (ShopPack p in packs)
+                        if (p != null && p.rewardTiers != null) foreach (PixelClicker.PixelTier t in p.rewardTiers) Apply(t);
+                if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) Apply(t);
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 20);
+            changed = true;
+        }
+
         return changed;
     }
 

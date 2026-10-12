@@ -82,7 +82,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Gold:
                 return "A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein</b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.";
             case PixelClicker.PixelType.Bedrock:
-                return "The toughest rock: " + t.clicksToCollect + " clicks to break, but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
+                return "The toughest rock: it takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks to break (decided when it appears), but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
             case PixelClicker.PixelType.Fish:
                 return "Fishing block: a silvery fish. A couple of reels and it pays well. It splashes.";
             case PixelClicker.PixelType.Seaweed:

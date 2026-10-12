@@ -656,6 +656,13 @@ public partial class PixelShop
     /// chips as you hit them, break in a shower of nuggets and are sometimes a glittering RICH VEIN that pays 5x. No other integration; a switch
     /// in the Toggles window (Prospector mode, off by default) brings them into what spawns in place of the monochrome, RGB, Glass and Luminescent pixels.
     /// </summary>
+    /// <summary>Bedrock: needs a random 20-30 clicks (rolled per pixel) and pays a big chunk.</summary>
+    private static PixelClicker.PixelTier BedrockTier() => new PixelClicker.PixelTier
+    {
+        type = PixelClicker.PixelType.Bedrock, displayName = "Bedrock", color = new Color(0.32f, 0.33f, 0.4f, 1f), clicksToCollect = 25, amountPerClick = 150, spawnWeight = 0.08f,
+        randomClicks = true, randomClicksMin = 20, randomClicksMax = 30, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+    };
+
     private static ShopPack CreateProspectorPack()
     {
         PixelClicker.PixelTier Ore(PixelClicker.PixelType type, string name, Color color, int hits, int pay, float weight) => new PixelClicker.PixelTier
@@ -685,7 +692,7 @@ public partial class PixelShop
                 Ore(PixelClicker.PixelType.Gold, "Gold Ore", new Color(1f, 0.82f, 0.25f, 1f), 5, 14, 0.35f),
                 // The two big rocks: 15-20 clicks each, but a good chunk of currency (and skill XP) when they finally break.
                 Ore(PixelClicker.PixelType.Obsidian, "Obsidian Pixels", new Color(0.22f, 0.1f, 0.35f, 1f), 15, 80, 0.15f),
-                Ore(PixelClicker.PixelType.Bedrock, "Bedrock", new Color(0.32f, 0.33f, 0.4f, 1f), 20, 150, 0.08f),
+                BedrockTier(),
                 // The Gas Pocket: a hazard (hit it too often and it explodes; it pays nothing).
                 new PixelClicker.PixelTier
                 {

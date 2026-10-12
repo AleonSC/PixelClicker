@@ -1880,7 +1880,7 @@ public class PixelClicker : MonoBehaviour
         // Tough pixels (Clicks To Collect > 1) take several clicks; only the last one pays out.
         int breaks = 1; // pixels broken by this click (more than 1 only with the dev click count)
         int need = NeededClicks(tier);                 // a Treasure chest needs a random number of clicks
-        int shownNeed = tier.randomClicks ? -1 : need;  // (the chest doesn't tell you how many it needs)
+        int shownNeed = tier.randomClicks && tier.type == PixelType.Treasure ? -1 : need;  // (the chest doesn't tell you how many it needs)
         if (need > 1)
         {
             hitsOnCurrentPixel += clickCount;
@@ -1934,7 +1934,7 @@ public class PixelClicker : MonoBehaviour
             capacitorCharge = 0;
         }
         else capacitorCharge = Mathf.Min(capacitorChargeCap > 0 ? capacitorChargeCap : 40, capacitorCharge + breaks);
-        if (tier.randomClicks) basePayout *= TreasureMultiplier(need);   // the more clicks the chest took, the bigger the reward
+        if (tier.randomClicks && tier.type == PixelType.Treasure) basePayout *= TreasureMultiplier(need);   // the more clicks the chest took, the bigger the reward
         if (tier.type == PixelType.Wheat) basePayout *= 1d + Mathf.Min(wheatMaxSprouts > 0 ? wheatMaxSprouts : 8, SeedSprout.Count) * (wheatPerSprout > 0f ? wheatPerSprout : 0.25f);   // a busy field feeds the wheat
         bool richBreak = liveRich && IsOre(tier.type);
         if (richBreak) basePayout *= richVeinMultiplier > 0f ? richVeinMultiplier : 5f;   // a rich vein pays big
