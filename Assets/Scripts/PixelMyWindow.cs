@@ -279,11 +279,13 @@ public class PixelMyWindow : MonoBehaviour
         // Resize handle (bottom-right).
         GameObject handle = new GameObject("Resize", typeof(RectTransform), typeof(Image), typeof(PixelMyWindowResizer));
         handle.transform.SetParent(windowObject.transform, false);
-        handle.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.35f);
+        Image gi = handle.GetComponent<Image>();
+        gi.sprite = PixelUIKit.GripSprite();
+        gi.color = new Color(1f, 1f, 1f, 0.55f);
         RectTransform rr = handle.GetComponent<RectTransform>();
         rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(1f, 0f);
-        rr.sizeDelta = new Vector2(26f, 26f);
-        rr.anchoredPosition = new Vector2(-4f, 4f);
+        rr.sizeDelta = new Vector2(30f, 30f);
+        rr.anchoredPosition = new Vector2(-6f, 6f);
         PixelMyWindowResizer resizer = handle.GetComponent<PixelMyWindowResizer>();
         resizer.owner = this;
 

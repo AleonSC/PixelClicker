@@ -639,3 +639,4 @@
 [2026-10-12 10:02 UTC] New Mining minigame 'Weak Spots': every few minutes the camera zooms in on the cube, time slows right down and glowing weak spots appear - click them all in time for bonus Mining XP.
 [2026-10-12 10:04 UTC] Weak Spots now run for every skill pack (bonus XP goes to the skill in training); alt-tabbing no longer switches the music track.
 [2026-10-12 10:08 UTC] Weak spots now come in variations: drifting (blue), pulsing (green) and flickering (yellow) spots mixed in with the still ones.
+[2026-10-12 10:19 UTC] Resize corner grips redrawn (My Window and UI mockup); right-click deletes mockup pieces and placed shapes; new 'Test Grid' sky with labelled lines for screenshots; sky icons now show a proper wide view of each sky instead of a cropped corner.

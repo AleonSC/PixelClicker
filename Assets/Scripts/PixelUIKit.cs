@@ -543,6 +543,39 @@ public static class PixelUIKit
         return tickMark;
     }
 
+    private static Sprite gripSprite;
+
+    /// <summary>A resize grip for a window's bottom-right corner: three short diagonal lines, transparent elsewhere (white; tint it with the Image colour).</summary>
+    public static Sprite GripSprite()
+    {
+        if (gripSprite != null) return gripSprite;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Resize Grip", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        // lines x + (1 - y) = c, i.e. running from bottom-left up to the top-right of the lower-right triangle
+        float[] offsets = { 0.30f, 0.58f, 0.86f };
+        const float half = 0.045f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float cover = 0f;
+                for (int sy = 0; sy < 4; sy++)
+                    for (int sx = 0; sx < 4; sx++)
+                    {
+                        float u = (x + (sx + 0.5f) / 4f) / n, v = (y + (sy + 0.5f) / 4f) / n;
+                        // distance along the diagonal (u + (1 - v)) measured from the corner (1, 0)
+                        float d = ((1f - u) + v) * 0.7071f;
+                        foreach (float o in offsets) if (Mathf.Abs(d - o * 0.7071f) <= half && u + (1f - v) > 1f) { cover += 1f / 16f; break; }
+                    }
+                px[y * n + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(cover));
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        gripSprite = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        gripSprite.name = "Resize Grip";
+        return gripSprite;
+    }
+
     private static float SegDist(Vector2 p, Vector2 a, Vector2 b)
     {
         Vector2 ab = b - a;

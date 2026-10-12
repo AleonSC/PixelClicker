@@ -424,6 +424,11 @@ public class PixelDevShapes : MonoBehaviour
                 }
                 else if (FloorPoint(ray, out Vector3 point)) AddShape(point);
             }
+            if (RightPressed())
+            {
+                Shape doomed = PickShape();   // right-click removes the shape under the mouse
+                if (doomed != null) { Select(doomed); DeleteSelected(); dragging = false; }
+            }
             if (dragging && selected != null && LeftHeld())
             {
                 if (dragPlane.Raycast(ray, out float enter))

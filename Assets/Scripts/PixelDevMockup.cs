@@ -209,10 +209,11 @@ public class PixelDevMockup : MonoBehaviour
         GameObject h = new GameObject("Resize", typeof(RectTransform), typeof(Image));
         h.transform.SetParent(go.transform, false);
         Image hi = h.GetComponent<Image>();
+        hi.sprite = PixelUIKit.GripSprite();
         hi.color = new Color(1f, 0.85f, 0.2f, 0.95f);
         RectTransform hr = h.GetComponent<RectTransform>();
         hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 0f);
-        hr.sizeDelta = new Vector2(28f, 28f);
+        hr.sizeDelta = new Vector2(34f, 34f);
         hr.anchoredPosition = Vector2.zero;
         PixelMockupResizer resizer = h.AddComponent<PixelMockupResizer>();
         resizer.owner = this;
@@ -423,6 +424,15 @@ public class PixelDevMockup : MonoBehaviour
     // ------------------------------------------------------------------
 
     internal void PieceClicked(int id) { if (Active) Select(Find(id)); }
+
+    internal void PieceDeleted(int id)
+    {
+        if (!Active) return;
+        Piece p = Find(id);
+        if (p == null) return;
+        Select(p);
+        DeleteSelected();
+    }
 
     internal void PieceMoved(int id, Vector2 canvasDelta)
     {
@@ -724,7 +734,12 @@ public class PixelMockupPiece : MonoBehaviour, IPointerDownHandler, IDragHandler
     internal PixelDevMockup owner;
     internal int id;
 
-    public void OnPointerDown(PointerEventData eventData) { if (owner != null) owner.PieceClicked(id); }
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (owner == null) return;
+        if (eventData.button == PointerEventData.InputButton.Right) owner.PieceDeleted(id);   // right-click removes the piece
+        else owner.PieceClicked(id);
+    }
 
     public void OnDrag(PointerEventData eventData)
     {

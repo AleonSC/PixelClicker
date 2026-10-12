@@ -237,8 +237,69 @@ public partial class PixelSkybox
 
             case SkyPattern.EyeVoid:
                 return s.topColor;   // pitch black: the eye is a separate object (PixelSkyboxEye.cs)
+
+            case SkyPattern.TestGrid:
+                return TestGridColor(dir, sun, d);
         }
         return Gradient(s, dir.y, 0.5f);
+    }
+
+    /// <summary>
+    /// The test sky: a latitude / longitude grid (a line every 15 degrees, thick ones every 45 degrees of azimuth and 30 of elevation), the
+    /// eight 45-degree azimuths in different colours (azimuth 0 = +Z is green, 90 = +X is red), the horizon in white, the zenith / nadir marked,
+    /// a big orange disc at azimuth 0 / elevation 30 and a white disc at azimuth 90 / elevation 15, and everything BELOW the horizon tinted
+    /// differently. Nothing is mirrored, so a screenshot shows exactly where the camera looks and whether the sky is flipped.
+    /// </summary>
+    private static Color TestGridColor(Vector3 dir, Vector3 sun, float sunDot)
+    {
+        float el = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+        float az = Mathf.Repeat(Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg, 360f);
+        float ce = Mathf.Max(0.05f, Mathf.Cos(el * Mathf.Deg2Rad));
+        bool below = el < 0f;
+        Color c = below ? new Color(0.06f, 0.03f, 0.1f) : new Color(0.02f, 0.05f, 0.12f);
+        c += (below ? new Color(0.05f, 0f, 0.08f) : new Color(0f, 0.04f, 0.1f)) * (1f - Mathf.Abs(el) / 90f);
+
+        // parallels (elevation lines)
+        float nearestEl = Mathf.Round(el / 15f) * 15f;
+        float de = Mathf.Abs(el - nearestEl);
+        bool bigEl = Mathf.Abs(nearestEl) % 30f < 0.01f;
+        if (de < (bigEl ? 0.45f : 0.25f))
+            c = Color.Lerp(c, below ? new Color(0.8f, 0.35f, 0.9f) : new Color(0.3f, 0.8f, 1f), bigEl ? 0.95f : 0.55f);
+
+        // meridians (azimuth lines), measured on the ground so they stay the same width towards the poles
+        float nearestAz = Mathf.Round(az / 15f) * 15f;
+        float da = Mathf.Abs(az - nearestAz) * ce;
+        bool bigAz = Mathf.Abs(nearestAz % 45f) < 0.01f || Mathf.Abs(nearestAz % 45f - 45f) < 0.01f;
+        if (da < (bigAz ? 0.45f : 0.22f) && Mathf.Abs(el) < 89.5f)
+        {
+            Color lineColor = new Color(0.55f, 0.6f, 0.7f);
+            if (bigAz)
+            {
+                switch (Mathf.RoundToInt(Mathf.Repeat(nearestAz, 360f) / 45f) % 8)
+                {
+                    case 0: lineColor = new Color(0.2f, 1f, 0.3f); break;     // +Z
+                    case 1: lineColor = new Color(0.7f, 1f, 0.2f); break;
+                    case 2: lineColor = new Color(1f, 0.2f, 0.2f); break;     // +X
+                    case 3: lineColor = new Color(1f, 0.55f, 0.1f); break;
+                    case 4: lineColor = new Color(0.3f, 0.4f, 1f); break;     // -Z
+                    case 5: lineColor = new Color(0.7f, 0.3f, 1f); break;
+                    case 6: lineColor = new Color(1f, 1f, 0.2f); break;       // -X
+                    default: lineColor = new Color(0.2f, 1f, 0.9f); break;
+                }
+            }
+            c = Color.Lerp(c, lineColor, bigAz ? 0.95f : 0.5f);
+        }
+
+        // the horizon
+        if (Mathf.Abs(el) < 0.6f) c = Color.Lerp(c, Color.white, 0.95f);
+        // zenith (yellow ring) and nadir (magenta ring)
+        if (Mathf.Abs(Mathf.Abs(el) - 87f) < 0.5f) c = Color.Lerp(c, el > 0f ? new Color(1f, 1f, 0.3f) : new Color(1f, 0.3f, 0.8f), 0.95f);
+
+        // two big discs so the picture is clearly not symmetric
+        Vector3 orange = Direction(30f, 0f), moon = Direction(15f, 90f);
+        if (Vector3.Dot(dir, orange) > Mathf.Cos(7f * Mathf.Deg2Rad)) c = new Color(1f, 0.55f, 0.1f);
+        if (Vector3.Dot(dir, moon) > Mathf.Cos(5f * Mathf.Deg2Rad)) c = new Color(0.95f, 0.95f, 1f);
+        return c;
     }
 
     /// <summary>Square clouds drawn on cells of a flat layer overhead (cube-world style).</summary>
@@ -364,6 +425,14 @@ public partial class PixelSkybox
             name = "Watcher", pattern = SkyPattern.EyeVoid, seed = 173, width = 64,
             topColor = Color.black, horizonColor = Color.black, groundColor = Color.black,
             accentA = new Color(1f, 0.55f, 0.15f), accentB = new Color(0.6f, 0.1f, 0.1f), rotateSpeed = 0f
+        };
+
+        // ---- for diagnosing screenshots ----
+        yield return new SkyStyle
+        {
+            name = "Test Grid", pattern = SkyPattern.TestGrid, seed = 1, width = 2048,
+            topColor = Color.black, horizonColor = Color.black, groundColor = Color.black,
+            sunElevation = 30f, sunAzimuth = 0f, rotateSpeed = 0f
         };
     }
 }

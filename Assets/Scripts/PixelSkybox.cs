@@ -26,7 +26,8 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         Rain, Snow, Fog, Sandstorm, Rainbow,                 // weather (PixelSkyboxExtra.cs)
         RingedPlanet, SpiralGalaxy, BlackHole, TwinSuns,     // space
         CubeDay, CubeNight, CubeEmber, CubeVoid,             // cube world (blocky)
-        EyeVoid       // pitch black; an eye opens and watches the cursor (PixelSkyboxEye.cs)
+        EyeVoid,      // pitch black; an eye opens and watches the cursor (PixelSkyboxEye.cs)
+        TestGrid      // black sky with labelled latitude / longitude lines, NOT mirrored: for screenshots that diagnose orientation (PixelSkyboxExtra.cs)
     }
 
     [Serializable]
@@ -145,7 +146,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     public bool Usable => styles.Count > 0;
     public string StyleName(int i) => i >= 0 && i < styles.Count ? styles[i].name : "";
     // The part of the panorama straight ahead (u = 0.25 is +z), from just below the horizon upward.
-    public Rect PreviewRect => new Rect(0.125f, 0.42f, 0.25f, 0.5f);
+    public Rect PreviewRect => new Rect(0f, 0f, 1f, 1f);   // the previews are their own little square pictures now (DrawPreview), not a crop of the panorama
 
     private void Awake()
     {
@@ -317,7 +318,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         }
         if (!previews.TryGetValue(index, out Texture2D tex) || tex == null)
         {
-            tex = Draw(styles[index], Mathf.Clamp(previewWidth, 32, 1024));
+            tex = DrawPreview(styles[index], Mathf.Clamp(previewWidth / 2, 48, 256));
             previews[index] = tex;
         }
         return tex;
@@ -405,6 +406,46 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         return tex;
     }
 
+    /// <summary>
+    /// A small square picture of the sky for the menu icons: a wide-angle view looking towards the sun and tilted a little upwards (so the
+    /// sun / planet / moon, the horizon and the sky above it are all in it), instead of a crop of the panorama that missed most details.
+    /// </summary>
+    private static Texture2D DrawPreview(SkyStyle s, int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            name = "Sky Preview " + s.name,
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+        Vector3 sun = Direction(s.sunElevation, s.sunAzimuth);
+        float yaw = s.sunAzimuth * Mathf.Deg2Rad;
+        float pitch = Mathf.Clamp(s.sunElevation * 0.5f, 6f, 28f) * Mathf.Deg2Rad;
+        Vector3 forward = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), Mathf.Sin(pitch), Mathf.Cos(yaw) * Mathf.Cos(pitch));
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        Vector3 up = Vector3.Cross(forward, right);
+        float half = Mathf.Tan(55f * Mathf.Deg2Rad);   // 110 degrees across
+        const int virtualWidth = 1024;
+        Color[] px = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float fx = ((x + 0.5f) / size * 2f - 1f) * half, fy = ((y + 0.5f) / size * 2f - 1f) * half;
+                Vector3 dir = (forward + right * fx + up * fy).normalized;
+                float lat = Mathf.Acos(Mathf.Clamp(dir.y, -1f, 1f));
+                float lon = Mathf.Atan2(dir.z, dir.x);
+                float u = 0.5f - lon / (2f * Mathf.PI);
+                float v = 1f - lat / Mathf.PI;
+                Color c = Shade(s, dir, sun, Mathf.Sin(lat), Mathf.Clamp(Mathf.FloorToInt(Mathf.Repeat(u, 1f) * virtualWidth), 0, virtualWidth - 1),
+                                Mathf.Clamp(Mathf.FloorToInt(v * virtualWidth * 0.5f), 0, virtualWidth / 2 - 1), virtualWidth);
+                c.a = 1f;
+                px[y * size + x] = c;
+            }
+        tex.SetPixels(px);
+        tex.Apply(false);
+        return tex;
+    }
+
     private static Vector3 Direction(float elevationDeg, float azimuthDeg)
     {
         float el = elevationDeg * Mathf.Deg2Rad, az = azimuthDeg * Mathf.Deg2Rad;
@@ -415,7 +456,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     {
         // The sky fills the whole view (the main menu shows no floor): below the horizon it is the same sky mirrored,
         // never a flat ground colour.
-        if (dir.y < 0f) dir.y = -dir.y;
+        if (dir.y < 0f && s.pattern != SkyPattern.TestGrid) dir.y = -dir.y;
         float d = Vector3.Dot(dir, sun);
         float res = w / 1024f; // so stars look about the same at any size
 
