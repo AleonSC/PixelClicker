@@ -526,6 +526,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     [SerializeField] private float floorFadeSeconds = 0f;
 
     private bool HidesOnTitle => !keepFloorOnTitle;
+    private const float FadeOutFactor = 0.5f;   // leaving (quit to the main menu) is quicker than arriving
     private const float FadeInFactor = 2.5f;   // the floor texture fades IN this much slower than it fades out
     private float FadeTime => floorFadeSeconds > 0.05f ? floorFadeSeconds : 1f;
 
@@ -536,6 +537,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     /// <summary>0 = the floor is hidden, 1 = fully shown (the fog sheet follows it).</summary>
     public float FloorVisibility => visibility;
+
+    /// <summary>True while the floor or the old pixels / devices are still fading (either way).</summary>
+    public bool Settling => visibilityInit && (visibility < 0.999f || propsK < 0.999f) && HidesOnTitle;
 
     /// <summary>Fades the floor out, then calls 'onDone' (the main menu return waits for it before the camera swings back). Returns false (without calling it) if there is nothing to fade.</summary>
     public bool FadeOutThen(System.Action onDone)
@@ -553,11 +557,12 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
         // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
         float propsTarget = !HidesOnTitle ? 1f : (hide ? 0f : (visibility >= 0.999f ? 1f : 0f));
-        propsK = Mathf.MoveTowards(propsK, propsTarget, Time.unscaledDeltaTime / FadeTime);
+        float fadeDt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);   // (a long frame, e.g. while a report is built, must not make the fade jump)
+        propsK = Mathf.MoveTowards(propsK, propsTarget, fadeDt / (propsTarget < propsK ? FadeTime * FadeOutFactor : FadeTime));
         if (hide && exitHold && propsK > 0.001f) hide = false;   // (the floor stays until the props are gone)
         float target = hide ? 0f : 1f;
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
-        else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / (target > visibility ? FadeTime * FadeInFactor : FadeTime));
+        else visibility = Mathf.MoveTowards(visibility, target, fadeDt / (target > visibility ? FadeTime * FadeInFactor : FadeTime * FadeOutFactor));
         ApplyVisibility();
         if (exitDone != null && visibility <= 0.001f)
         {
