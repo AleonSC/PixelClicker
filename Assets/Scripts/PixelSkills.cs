@@ -63,6 +63,9 @@ public partial class PixelSkills : MonoBehaviour
         public float baseXp = 100f;
         [Tooltip("Each following level needs this many times more XP than the one before.")]
         public float xpGrowth = 1.6f;
+        [Min(0)]
+        [Tooltip("The level this skill counts as maxed at for Mastery. 0 = the default cap on the Pixel Skills component.")]
+        public int levelCap = 0;
         [Tooltip("The pixel types this pack puts in. The FIRST one must be unlocked (bought in the Shop) for the pack to be available. They only spawn while the pack is in play, unless turned on as guests.")]
         public PixelClicker.PixelType[] types = new PixelClicker.PixelType[0];
         public Perk[] perks = new Perk[0];

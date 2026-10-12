@@ -163,13 +163,15 @@ public partial class PixelSkills
         headerFill.offsetMax = new Vector2(-3f, -3f);
         headerFill.pivot = new Vector2(0f, 0.5f);
 
+        BuildMasteryBar();   // along the bottom: progress across all skills
+
         // Left: the pack cards.
         listScroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pack List", new Color(1f, 1f, 1f, 0.35f), 10f, 60f, out listContent, out listBar);
         RectTransform lr = listScroll.GetComponent<RectTransform>();
         lr.anchorMin = new Vector2(0f, 0f);
         lr.anchorMax = new Vector2(0f, 1f);
         lr.pivot = new Vector2(0f, 0.5f);
-        lr.offsetMin = new Vector2(26f, 24f);
+        lr.offsetMin = new Vector2(26f, 84f);
         lr.offsetMax = new Vector2(26f + 330f, -204f);
         for (int i = 0; i < packs.Count; i++) cards.Add(BuildCard(i));
 
@@ -182,7 +184,7 @@ public partial class PixelSkills
         RectTransform dr = detail.GetComponent<RectTransform>();
         dr.anchorMin = new Vector2(0f, 0f);
         dr.anchorMax = new Vector2(1f, 1f);
-        dr.offsetMin = new Vector2(380f, 24f);
+        dr.offsetMin = new Vector2(380f, 84f);
         dr.offsetMax = new Vector2(-26f, -204f);
 
         detailName = PixelUIKit.CreateText(Font, detail.transform, "Name", "", 44f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
@@ -777,6 +779,7 @@ public partial class PixelSkills
         string header = string.Format(trainingFormat, active.displayName, level);
         if (active.id == OfflineId) header += "   (pixels: " + Find(ActiveId).displayName + ")";
         PixelUIKit.SetText(headerLabel, header);
+        RefreshMastery();
         headerFill.anchorMax = new Vector2(active.id == StandardId ? 0f : Mathf.Clamp01((float)(into / need)), 1f);
         headerFill.offsetMax = new Vector2(-3f, -3f);
 
