@@ -622,3 +622,4 @@
 [2026-10-12 08:16 UTC] Added the woodchipper and log storage rack: they set up on the floor while you train Woodcutting, and dragging old wood blocks into them fills the bonus XP bank.
 [2026-10-12 08:17 UTC] Skill XP popups from the auto clicker now appear beside the cube instead of at the mouse.
 [2026-10-12 08:18 UTC] Added the Lumberjack, a cube vendor in a plaid shirt who buys wood goods for pure pixels and only visits while you train Woodcutting.
+[2026-10-12 08:22 UTC] Added the Foraging skill: a cheap Forager's Pack (150 White) with Berry, Mushroom, Herb, rare Truffle, Weeds filler and a poisonous Toadstool hazard, with looks, particle effects, sounds, guide texts and a tip.

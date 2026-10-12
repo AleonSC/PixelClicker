@@ -248,6 +248,7 @@ public class PixelAudio : MonoBehaviour
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("wood_chop", 0.04f, 0.9f, 1.15f),
+            Make("forage_pick", 0.04f, 0.9f, 1.15f),
             Make("chipper_feed", 0.08f, 0.95f, 1.05f),
             Make("rack_store", 0.05f, 0.9f, 1.1f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
@@ -321,6 +322,13 @@ public class PixelAudio : MonoBehaviour
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "chipper_feed": return new[] { PixelSynth.Chipper(1), PixelSynth.Chipper(2), PixelSynth.Chipper(3) };
             case "rack_store": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(4, 2) };
+            case "forage_pick": return new[] { PixelSynth.Forage(2, 1), PixelSynth.Forage(2, 2), PixelSynth.Forage(2, 3) };
+            case "pixel_berry": return new[] { PixelSynth.Forage(0, 1), PixelSynth.Forage(0, 2), PixelSynth.Forage(0, 3) };
+            case "pixel_mushroom": return new[] { PixelSynth.Forage(1, 1), PixelSynth.Forage(1, 2), PixelSynth.Forage(1, 3) };
+            case "pixel_herb": return new[] { PixelSynth.Forage(2, 1), PixelSynth.Forage(2, 2), PixelSynth.Forage(2, 3) };
+            case "pixel_truffle": return new[] { PixelSynth.Forage(3, 1), PixelSynth.Forage(3, 2) };
+            case "pixel_weeds": return new[] { PixelSynth.Forage(4, 1), PixelSynth.Forage(4, 2), PixelSynth.Forage(4, 3) };
+            case "pixel_toadstool": return new[] { PixelSynth.Forage(5, 1), PixelSynth.Forage(5, 2) };
             case "wood_chop": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
             case "pixel_wood": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
             case "pixel_bark": return new[] { PixelSynth.Wood(1, 1), PixelSynth.Wood(1, 2), PixelSynth.Wood(1, 3) };
@@ -1042,6 +1050,59 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
         AudioClip clip = AudioClip.Create("Chipper " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>Foraging sounds. kind: 0 berry squish, 1 mushroom pop, 2 herb rustle, 3 truffle dig + chime, 4 weed rip, 5 toadstool hiss.</summary>
+    public static AudioClip Forage(int kind, int seed)
+    {
+        const int rate = 22050;
+        float len = kind == 3 ? 0.45f : kind == 5 ? 0.5f : 0.2f;
+        int n = (int)(rate * len);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(2900 + kind * 71 + seed * 13);
+        float lp = 0f, lp2 = 0f, phase = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            float v = 0f;
+            switch (kind)
+            {
+                case 0: // a wet squish
+                    lp += (noise - lp) * 0.14f;
+                    v = lp * Mathf.Exp(-t * 16f) * 1.2f + Mathf.Sin(t * (200f - 80f * t * 6f + seed * 20f) * Mathf.PI * 2f) * Mathf.Exp(-t * 22f) * 0.7f;
+                    break;
+                case 1: // a soft pop with a puff of air
+                    lp += (noise - lp) * 0.35f;
+                    v = Mathf.Sin(t * (320f + seed * 30f) * Mathf.PI * 2f) * Mathf.Exp(-t * 45f) + lp * Mathf.Exp(-t * 14f) * 0.5f;
+                    break;
+                case 2: // a leafy rustle
+                    lp += (noise - lp) * 0.5f;
+                    v = (noise - lp) * Mathf.Sin(Mathf.Clamp01(t / 0.18f) * Mathf.PI) * 0.6f;
+                    break;
+                case 3: // digging up something precious: a scrape then a small bright chime
+                    lp += (noise - lp) * 0.12f;
+                    phase += (880f + seed * 110f) / rate;
+                    v = lp * Mathf.Exp(-t * 18f) * 1.2f + (t > 0.06f ? Mathf.Sin(phase * Mathf.PI * 2f) * Mathf.Exp(-(t - 0.06f) * 9f) * 0.45f : 0f);
+                    break;
+                case 4: // tearing out a weed: a short ripping crackle
+                    v = (rng.NextDouble() < 0.3 ? noise : 0f) * Mathf.Exp(-t * 20f) + (noise - lp) * 0.2f * Mathf.Exp(-t * 28f);
+                    lp += (noise - lp) * 0.4f;
+                    break;
+                default: // a poisonous hiss
+                    lp += (noise - lp) * 0.6f;
+                    lp2 += (lp - lp2) * 0.6f;
+                    v = (noise - lp2) * Mathf.Exp(-t * 6f) * 0.7f;
+                    break;
+            }
+            data[i] = v * Mathf.Clamp01(t / 0.003f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
+        AudioClip clip = AudioClip.Create("Forage " + kind + "_" + seed, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

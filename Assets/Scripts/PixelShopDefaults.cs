@@ -727,6 +727,37 @@ public partial class PixelShop
     }
 
     /// <summary>
+    /// Default Forager's Pack (Pixels tab): cheap, a base skill. Five foraged blocks for the Foraging skill: Berry, Mushroom, Herb, Truffle (rare) and the
+    /// filler Weeds, plus the Toadstool hazard. They only spawn while Foraging is the pack in play (Skills window).
+    /// </summary>
+    private static ShopPack CreateForagerPack()
+    {
+        PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
+        return new ShopPack
+        {
+            displayName = "Forager's Pack",
+            tab = ShopTab.Pixels,
+            description = "Adds the Foraging skill and five foraged blocks: Berry, Mushroom, Herb, Truffle (rare) and Weeds, plus a poisonous Toadstool to watch out for. They only spawn while Foraging is the pack in play (Skills window). Weeds are a useless filler that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more.",
+            requirements = Needs(-1),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
+            rewardTiers = new[]
+            {
+                Block(PixelClicker.PixelType.Berry, "Berry Pixels", new Color(0.75f, 0.15f, 0.35f, 1f), 1, 3, 1.0f),
+                Block(PixelClicker.PixelType.Mushroom, "Mushroom Pixels", new Color(0.82f, 0.4f, 0.3f, 1f), 2, 4, 0.6f),
+                Block(PixelClicker.PixelType.Herb, "Herb Pixels", new Color(0.3f, 0.7f, 0.35f, 1f), 1, 2, 0.9f),
+                Block(PixelClicker.PixelType.Truffle, "Truffle Pixels", new Color(0.34f, 0.23f, 0.17f, 1f), 3, 30, 0.1f),
+                Block(PixelClicker.PixelType.Weeds, "Weeds", new Color(0.55f, 0.62f, 0.35f, 1f), 1, 1, 1.0f),
+                // The Toadstool: a hazard (hit it too often and it bursts in poison spores that clear the old pixels around the cube; it pays nothing).
+                Block(PixelClicker.PixelType.Toadstool, "Toadstool", new Color(0.62f, 0.25f, 0.65f, 1f), 5, 0, 0.05f),
+            }
+        };
+    }
+
+    /// <summary>
     /// Default Farmer's Pack (Pixels tab): a TESTING price (10 White, no requirements). Eight farm blocks for the Farming skill: Dirt, Seed, Water,
     /// Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles / Skills window), unless a
     /// Farming skill tree node turned one on as a guest for other rotations.
@@ -1081,6 +1112,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateGlassPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Wood),
                           requires = null, create = i => CreateWoodPixelPack() },
+        new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Berry),
+                          requires = null, create = i => CreateForagerPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Dirt),
                           requires = null, create = i => CreateFarmerPack() },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Fire),

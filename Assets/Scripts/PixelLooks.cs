@@ -534,8 +534,7 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Sap, useColor = true, color = new Color(1f, 0.72f, 0.2f, 0.75f), forceTranslucent = true, metallic = 0f, smoothness = 0.95f, emission = 0.25f,
                             customPhysics = true, bounce = 0f, friction = 1.4f, gravityMultiplier = 1f, wobble = true, wobbleAmount = 0.08f, farmFx = PixelLook.FarmAmbient.Sap },
             new PixelLook { type = PixelClicker.PixelType.Leaf, useColor = true, color = new Color(0.35f, 0.78f, 0.3f, 1f), metallic = 0f, smoothness = 0.3f, basicSurface = PixelLook.BasicSurface.Mosaic,
-                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.35f, outlineStrength = 0.7f,
-                            customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.25f, wobble = true, wobbleAmount = 0.06f, farmFx = PixelLook.FarmAmbient.Leaves },
+                                                        customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.25f, wobble = true, wobbleAmount = 0.06f, farmFx = PixelLook.FarmAmbient.Leaves },
             new PixelLook { type = PixelClicker.PixelType.Heartwood, useColor = true, color = new Color(1f, 0.62f, 0.5f, 1f), metallic = 0.15f, smoothness = 0.55f, emission = 0.35f, shine = true,
                             blockSurface = PixelLook.BlockSurface.Wood, blob = true,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.4f, outlineStrength = 0.8f,
@@ -543,6 +542,21 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Twig, useColor = true, color = new Color(0.95f, 0.88f, 0.7f, 1f), metallic = 0f, smoothness = 0.05f, blockSurface = PixelLook.BlockSurface.Wood },
             new PixelLook { type = PixelClicker.PixelType.HornetNest, useColor = true, color = new Color(0.85f, 0.78f, 0.5f, 1f), metallic = 0f, smoothness = 0.3f, basicSurface = PixelLook.BasicSurface.Mosaic,
                             jagged = true, wobble = true, wobbleAmount = 0.06f, wobbleSpeed = 8f, farmFx = PixelLook.FarmAmbient.Hornets },
+
+            // The Foraging blocks: Berry (a juicy wobbling blob), Mushroom (a red-brown cap), Herb (leafy and light), Truffle (a rare dark lump with a shine),
+            // Weeds (the pale filler) and the Toadstool (a purple, spore-puffing hazard).
+            new PixelLook { type = PixelClicker.PixelType.Berry, useColor = true, color = new Color(0.75f, 0.15f, 0.35f, 1f), metallic = 0f, smoothness = 0.9f, emission = 0.15f,
+                            blob = true, wobble = true, wobbleAmount = 0.08f, farmFx = PixelLook.FarmAmbient.Dew },
+            new PixelLook { type = PixelClicker.PixelType.Mushroom, useColor = true, color = new Color(0.82f, 0.4f, 0.3f, 1f), metallic = 0f, smoothness = 0.4f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            blob = true, farmFx = PixelLook.FarmAmbient.Spores },
+            new PixelLook { type = PixelClicker.PixelType.Herb, useColor = true, color = new Color(0.3f, 0.7f, 0.35f, 1f), metallic = 0f, smoothness = 0.25f, basicSurface = PixelLook.BasicSurface.Grain,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.35f, outlineStrength = 0.7f,
+                            customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.5f, wobble = true, wobbleAmount = 0.05f, farmFx = PixelLook.FarmAmbient.Leaves },
+            new PixelLook { type = PixelClicker.PixelType.Truffle, useColor = true, color = new Color(0.34f, 0.23f, 0.17f, 1f), metallic = 0.1f, smoothness = 0.55f, emission = 0.1f, shine = true,
+                            jagged = true, farmFx = PixelLook.FarmAmbient.Sparkle },
+            new PixelLook { type = PixelClicker.PixelType.Weeds, useColor = true, color = new Color(0.55f, 0.62f, 0.35f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain },
+            new PixelLook { type = PixelClicker.PixelType.Toadstool, useColor = true, color = new Color(0.62f, 0.25f, 0.65f, 1f), metallic = 0f, smoothness = 0.35f, emission = 0.3f, basicSurface = PixelLook.BasicSurface.Mosaic,
+                            blob = true, wobble = true, wobbleAmount = 0.07f, wobbleSpeed = 7f, farmFx = PixelLook.FarmAmbient.Spores },
 
             // The farming blocks: each has a bevelled rim in a shade of its own colour and an ambient particle effect.
             new PixelLook { type = PixelClicker.PixelType.Dirt, useColor = true, color = Color.white, metallic = 0f, smoothness = 0.05f, blockSurface = PixelLook.BlockSurface.Dirt,

@@ -87,6 +87,18 @@ public static class PixelGuideTexts
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and a swarm of bugs pours out and eats the sprouts you have growing (the more bugs on a sprout, the faster it goes), and Farming XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it flies off by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your farming level rises.";
             case PixelClicker.PixelType.GasPocket:
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the gas explodes, blowing away the old pixels around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your mining level rises.";
+            case PixelClicker.PixelType.Berry:
+                return "Foraging block: a juicy berry. One pick, pays a little. It squelches.";
+            case PixelClicker.PixelType.Mushroom:
+                return "Foraging block: a mushroom. It takes " + t.clicksToCollect + " picks and releases a puff of spores.";
+            case PixelClicker.PixelType.Herb:
+                return "Foraging block that is light and leafy. One pick, pays little. An old Herb pixel drifts down slowly instead of dropping.";
+            case PixelClicker.PixelType.Truffle:
+                return "Foraging block, rare: a buried treasure. It takes " + t.clicksToCollect + " digs but pays a lot.";
+            case PixelClicker.PixelType.Weeds:
+                return "Foraging's filler block. One click, almost no pay. At low foraging level it is most of what appears; as you level up it gets rarer and the good finds show up more.";
+            case PixelClicker.PixelType.Toadstool:
+                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and it bursts in poison spores that wipe out the old pixels around the cube, and Foraging XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your foraging level rises.";
             case PixelClicker.PixelType.Wood:
                 return "Woodcutting block: a solid log. A couple of chops and it pays a fair amount.";
             case PixelClicker.PixelType.Bark:
