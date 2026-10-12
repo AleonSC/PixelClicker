@@ -372,14 +372,17 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private float changelogFontSize = 28f;
 
     [Header("How to Play and Controls")]
-    [Tooltip("Show the Game Guide tab of the How To Play screen.")]
+    [Tooltip("Show the How To Play tab of the Game Guide screen.")]
     [SerializeField] private bool showHowToPlay = true;
 
-    [Tooltip("Text of the Game Guide button and the title of its screen.")]
-    [SerializeField] private string gameGuideText = "Game Guide";
+    [Tooltip("Text of the How To Play tab (the written guide to the game).")]
+    [SerializeField] private string howToPlayTabText = "How To Play";
 
-    [Tooltip("Text of the pause menu's How To Play button and the title of its screen (it has two tabs: Controls and Game Guide).")]
-    [SerializeField] private string howToPlayMenuText = "How To Play";
+    [Tooltip("Text of the Database tab, which opens the searchable game database.")]
+    [SerializeField] private string databaseTabText = "Database";
+
+    [Tooltip("Text of the pause menu's Game Guide button and the title of its screen (it has three tabs: Controls, How To Play and Database).")]
+    [SerializeField] private string guideMenuText = "Game Guide";
 
     [Tooltip("Name of the text file in a Resources folder that holds the How to Play text (Assets/Resources/HowToPlay.txt). Edit that file to change what the screen says.")]
     [SerializeField] private string howToPlayResource = "HowToPlay";
@@ -694,7 +697,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         if (EscapePressed() && !PixelFeedback.Open && !PixelFeedback.ClosedThisFrame)
         {
-            if (IsPaused && PixelDevTools.ClosePanel())
+            if (IsPaused && (PixelDevTools.ClosePanel() || PixelDatabaseWindow.CloseIfOpen()))
             {
                 // The dev tools panel (opened from this menu) took the key press.
             }
@@ -1082,8 +1085,8 @@ public class PixelPauseMenu : MonoBehaviour
         BuildSettingsPanel();
         BuildQuitPanel();
         BuildRestartPanel();
-        if (showHowToPlay) howToPlayScreen = BuildGuideScreen("Game Guide Panel", howToPlayMenuText, howToPlayResource, emptyHowToPlayText, false);
-        if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", howToPlayMenuText, controlsResource, emptyControlsText, true);
+        if (showHowToPlay) howToPlayScreen = BuildGuideScreen("Game Guide Panel", guideMenuText, howToPlayResource, emptyHowToPlayText, false);
+        if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", guideMenuText, controlsResource, emptyControlsText, true);
 
         // Resume on top, alone
         entries.Add(new MenuEntry { label = resumeText, color = menuButtonColor, action = () => SetPaused(false), fullRow = true });
@@ -1093,7 +1096,7 @@ public class PixelPauseMenu : MonoBehaviour
         // Settings | Controls
         if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
         // How To Play (two tabs: Controls and Game Guide)
-        if (controlsScreen != null || howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayMenuText, color = menuButtonColor, action = () => ShowView((controlsScreen != null ? controlsScreen : howToPlayScreen).panel) });
+        if (controlsScreen != null || howToPlayScreen != null) entries.Add(new MenuEntry { label = guideMenuText, color = menuButtonColor, action = () => ShowView((controlsScreen != null ? controlsScreen : howToPlayScreen).panel) });
         // How to Play | Changelog
         // Give feedback: a long green button right above Quit
         entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, color = new Color(0.2f, 0.62f, 0.32f, 1f), action = () => PixelFeedback.OpenWindow(), fullRow = true });
@@ -1921,19 +1924,20 @@ public class PixelPauseMenu : MonoBehaviour
         s.panel = BuildSectionPanel(objectName, title, out float y);
         RectTransform pr = s.panel.GetComponent<RectTransform>();
 
-        // Two tabs under the title: Controls | Game Guide (each is its own panel; the tabs switch between them).
-        float tabWidth = (guideWidth - 80f - 10f) * 0.5f;
-        for (int tab = 0; tab < 2; tab++)
+        // Three tabs under the title: Controls | How To Play | Database (the first two are panels the tabs switch between; Database opens the game database window).
+        float tabWidth = (guideWidth - 80f - 20f) / 3f;
+        for (int tab = 0; tab < 3; tab++)
         {
-            bool controls = tab == 0;
-            bool active = controls == isControlsTab;
-            string label = controls ? controlsText : gameGuideText;
+            bool controls = tab == 0, database = tab == 2;
+            bool active = !database && controls == isControlsTab;
+            string label = controls ? controlsText : database ? databaseTabText : howToPlayTabText;
             Button tabButton = MakeButton(s.panel.transform, label + " Tab", label, new Vector2(tabWidth, rowHeight), active ? menuButtonColor : tickBoxColor, menuButtonFontSize * 0.8f);
             RectTransform tabRect = tabButton.GetComponent<RectTransform>();
             tabRect.anchorMin = tabRect.anchorMax = tabRect.pivot = new Vector2(0.5f, 1f);
-            tabRect.anchoredPosition = new Vector2((controls ? -1f : 1f) * (tabWidth + 10f) * 0.5f, -y);
+            tabRect.anchoredPosition = new Vector2((tab - 1) * (tabWidth + 10f), -y);
             tabButton.onClick.AddListener(() =>
             {
+                if (database) { PixelDatabaseWindow.Toggle(); return; }
                 GuideScreen target = controls ? controlsScreen : howToPlayScreen;
                 if (target != null) ShowView(target.panel);
             });

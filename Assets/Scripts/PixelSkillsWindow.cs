@@ -124,15 +124,6 @@ public partial class PixelSkills
         PixelMenuKeys.Register(PixelAction.Skills, tabButton);
         tabObject.SetActive(false);
 
-        // TEMPORARY: the Game Database (a search engine over everything in the game) has its own docked button right under Skills.
-        Button databaseButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Database Button", "Database", hud.ButtonSize, new Color(0.2f, 0.4f, 0.65f, 1f), textColor, 30f);
-        PixelDockedButton[] dbDock = new PixelDockedButton[1];
-        hud.DockInGroup(databaseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), () => PixelDatabaseWindow.IsOpen || (dbDock[0] != null && dbDock[0].PointerNear()),
-                        -(hud.ButtonSize.y + tabGap) * 2f, groupWidth, 0f, groupWidth);
-        dbDock[0] = databaseButton.GetComponent<PixelDockedButton>();
-        dbDock[0].blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
-        databaseButton.onClick.AddListener(PixelDatabaseWindow.Toggle);
-
         // ---- The window. ----
         windowObject = new GameObject("Skills Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
         windowObject.transform.SetParent(canvasRoot.transform, false);

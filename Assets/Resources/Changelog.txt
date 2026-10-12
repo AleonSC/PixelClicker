@@ -666,3 +666,4 @@
 [2026-10-12 12:32 UTC] Fixed a compile error in PixelSaveGame (a misplaced ContextMenu attribute).
 [2026-10-12 12:40 UTC] Simpler save flow on the main menu: the big button is Continue (loads the latest save) or New Game (no saves), Play once a save is loaded; an empty slot in the Load window starts a new game; nothing loads by itself at startup.
 [2026-10-12 12:43 UTC] Added modding support to the to-do list.
+[2026-10-12 12:47 UTC] Pause menu: How To Play is now Game Guide, its Game Guide tab is How To Play, and the Database opens from a new Database tab (its docked button is gone).

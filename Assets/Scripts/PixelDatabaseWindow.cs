@@ -51,6 +51,14 @@ public class PixelDatabaseWindow : MonoBehaviour
         instance.ToggleInternal();
     }
 
+    /// <summary>Closes the window if it is open (true when it was). The pause menu calls it first on Escape.</summary>
+    public static bool CloseIfOpen()
+    {
+        if (!IsOpen) return false;
+        PixelPop.Hide(instance.windowObject);
+        return true;
+    }
+
     public static bool IsOpen => instance != null && instance.windowObject != null && PixelPop.IsOpen(instance.windowObject);
 
     private void ToggleInternal()
@@ -89,7 +97,7 @@ public class PixelDatabaseWindow : MonoBehaviour
     {
         clicker = PixelFind.First<PixelClicker>();
         PixelUIKit.EnsureEventSystem();
-        canvasRoot = PixelUIKit.CreateCanvas("Game Database Canvas", 108, new Vector2(1920f, 1080f), true);
+        canvasRoot = PixelUIKit.CreateCanvas("Game Database Canvas", 520, new Vector2(1920f, 1080f), true);
         canvasRoot.transform.SetParent(transform, false);
 
         windowObject = new GameObject("Database Window", typeof(RectTransform), typeof(Image), typeof(PixelPop));
