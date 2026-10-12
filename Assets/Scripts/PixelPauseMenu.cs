@@ -2113,18 +2113,18 @@ public class PixelPauseMenu : MonoBehaviour
         Transform list = content;
         float y = 0f;
 
-        // Give feedback sits above Replay tutorial.
+        // Give feedback sits at the very top.
         AddWideButtonRow(list, string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, () => PixelFeedback.OpenWindow(), ref y);
 
-        // Replay tutorial sits at the very top.
+        // ---- Gameplay ----
+        AddSettingsSectionHeader(list, headerGameplay, ref y);
+        // Replay tutorial sits at the top of Gameplay.
         AddWideButtonRow(list, replayTutorialText, () =>
         {
             PixelHints.ReplayTutorial();
             SetPaused(false); // so the tips show over the game
         }, ref y);
 
-        // ---- Gameplay ----
-        AddSettingsSectionHeader(list, headerGameplay, ref y);
         rotationToggle = AddToggleRow(list, rotationLabel, clicker == null || clicker.AllowRotation,
                                       on => { if (clicker != null) clicker.AllowRotation = on; }, ref y);
         pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
@@ -2238,13 +2238,13 @@ public class PixelPauseMenu : MonoBehaviour
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(-60f, h);   // 10 wider than the rows, so the heading's text starts where the row names do
+        rt.sizeDelta = new Vector2(-96f, h);   // a little narrower than the buttons (-80)
         rt.anchoredPosition = new Vector2(0f, -y);
         TMP_Text t = b.GetComponentInChildren<TMP_Text>();
         t.color = statValueColor;
         t.fontStyle = FontStyles.Bold;
         t.alignment = TextAlignmentOptions.MidlineLeft;
-        t.rectTransform.offsetMin = new Vector2(10f, 0f);
+        t.rectTransform.offsetMin = new Vector2(18f, 0f);
         t.rectTransform.offsetMax = new Vector2(-10f, 0f);
         settingsHeaders[rt] = text;
         b.onClick.AddListener(() =>
