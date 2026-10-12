@@ -531,3 +531,4 @@
 [2026-10-12 01:33 UTC] Built games now keep the sky shader (a keep-alive material for Skybox/Panoramic), so sky styles show instead of a flat colour; run Pixel Clicker > Rebuild Shader Keep-Alive Materials once in the editor.
 [2026-10-12 01:37 UTC] Camera intro pull-back now measures distance from the cube's nearest extent (no little zoom-in as the box turns corner-on), and the sky-shader keep-alive material now carries the lat-long keyword so builds keep that shader variant.
 [2026-10-12 01:41 UTC] The floor / pixel fade is steadier (long frames no longer make it jump), the Welcome back report waits until the floor has fully faded in, and fading out on quit is twice as quick as fading in.
+[2026-10-12 01:46 UTC] Particles on old pixels and devices now stop and clear as they fade away on quit, and start again when they come back.

@@ -642,6 +642,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private float propsK = 1f;
     private readonly Dictionary<Transform, Vector3> propScales = new Dictionary<Transform, Vector3>();
     private readonly List<Transform> propList = new List<Transform>();
+    private readonly List<ParticleSystem> stoppedParticles = new List<ParticleSystem>();
+    private bool particlesStopped;
 
     /// <summary>Old pixels and devices start hidden and fade in (a game was just loaded).</summary>
     public void PropsFadeIn() { if (HidesOnTitle) propsK = 0f; }
@@ -658,6 +660,27 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         bool done = propsK >= 0.999f;
         float k = Mathf.Max(0.001f, propsK);
+
+        // Particles don't shrink with their parent (they live in world space): stop them emitting while the props are away, wipe what is left once
+        // the props are nearly gone, and start the same systems again when everything is back.
+        if (!done && !particlesStopped)
+        {
+            particlesStopped = true;
+            stoppedParticles.Clear();
+            foreach (Transform t in propList)
+            {
+                if (t == null) continue;
+                foreach (ParticleSystem ps in t.GetComponentsInChildren<ParticleSystem>(true))
+                    if (ps != null && ps.isPlaying) { stoppedParticles.Add(ps); ps.Stop(true, ParticleSystemStopBehavior.StopEmitting); }
+            }
+        }
+        if (!done && propsK < 0.15f) foreach (ParticleSystem ps in stoppedParticles) if (ps != null) ps.Clear(true);
+        if (done && particlesStopped)
+        {
+            particlesStopped = false;
+            foreach (ParticleSystem ps in stoppedParticles) if (ps != null) ps.Play(true);
+            stoppedParticles.Clear();
+        }
         foreach (Transform t in propList)
         {
             if (t == null) continue;
