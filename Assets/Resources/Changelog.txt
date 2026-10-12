@@ -590,3 +590,4 @@
 [2026-10-12 10:00 UTC] Settings: the Controls header is now 'How to play' with 'Controls' (the key bindings) and 'Game Guide' (the old pause-menu How to Play screen, which is removed from the main pause menu).
 [2026-10-12 10:20 UTC] The Changelog moved from the pause menu to the Dev Tools panel as a third tab; the To-Do and Changelog buttons now share the space the To-Do tab used to take.
 [2026-10-12 10:30 UTC] Fixed a compile error in the Dev Tools Changelog tab and removed an unused pause menu field.
+[2026-10-12 11:00 UTC] Pause menu: a new How To Play screen with two tabs (Controls and Game Guide) replaces the separate Controls button; Settings now ends with a Keybinds header with one button for changing key bindings.
