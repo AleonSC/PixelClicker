@@ -22,6 +22,7 @@ public class PixelTitleScreen : MonoBehaviour
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         Showing = false;
+        Reversing = false;
         PlayTime = 0f;
     }
 
@@ -202,6 +203,9 @@ public class PixelTitleScreen : MonoBehaviour
     /// <summary>True while the start screen is up (the game is frozen).</summary>
     public static bool Showing { get; private set; }
 
+    /// <summary>True while the camera swings back to the close-up on Quit > Main menu (the black margins slide away meanwhile).</summary>
+    public static bool Reversing { get; private set; }
+
     private GameObject canvasRoot, foreground;
     private Canvas canvas;
     private Image cover, bar, dim;
@@ -268,6 +272,7 @@ public class PixelTitleScreen : MonoBehaviour
     private void ReverseCamera()
     {
         PixelCameraIntro intro = PixelFind.First<PixelCameraIntro>();
+        Reversing = true;
         if (intro != null && intro.PlayReverse(FinishReturn)) return;
         FinishReturn();
     }
@@ -275,6 +280,7 @@ public class PixelTitleScreen : MonoBehaviour
     private void FinishReturn()
     {
         returning = false;
+        Reversing = false;
         Open(true);
     }
 

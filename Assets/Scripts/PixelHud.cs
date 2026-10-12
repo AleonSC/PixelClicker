@@ -198,8 +198,25 @@ public class PixelHud : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetGlowStatics() { barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; }
 
+    [Min(0f)]
+    [Tooltip("Seconds the black bars (and the docked buttons) take to slide in when the game starts and out when quitting to the main menu. 0 = 0.9.")]
+    [SerializeField] private float revealSeconds = 0f;
+
+    private float reveal = -1f;
+    private readonly RectTransform[] barRects = new RectTransform[2];
+
+    /// <summary>0 = the bars and docked buttons are slid off screen (main menu), 1 = in place. Eased.</summary>
+    public static float RevealEased => instance == null || instance.reveal < 0f ? 1f : Mathf.SmoothStep(0f, 1f, instance.reveal);
+
     private void Update()
     {
+        // The margins are away while the title screen shows and while the camera swings back to it; they slide in as the camera moves on Play.
+        bool away = PixelTitleScreen.Showing || PixelTitleScreen.Reversing;
+        if (reveal < 0f) reveal = away ? 0f : 1f;
+        reveal = Mathf.MoveTowards(reveal, away ? 0f : 1f, Time.unscaledDeltaTime / (revealSeconds > 0.05f ? revealSeconds : 0.9f));
+        float out01 = 1f - Mathf.SmoothStep(0f, 1f, reveal);
+        for (int i = 0; i < 2; i++)
+            if (barRects[i] != null) barRects[i].anchoredPosition = new Vector2(0f, (i == 0 ? 1f : -1f) * out01 * (barHeight + 16f));
         for (int i = 0; i < 2; i++)
         {
             UnityEngine.UI.Image[] g = glowParts[i];
@@ -229,6 +246,7 @@ public class PixelHud : MonoBehaviour
             r.pivot = new Vector2(0.5f, top ? 1f : 0f);
             r.sizeDelta = new Vector2(0f, barHeight);
             r.anchoredPosition = Vector2.zero;
+            barRects[i] = r;
 
             // The glow sits on the bar's inner edge (the one facing the play area): the top bar's bottom edge, the bottom bar's top edge.
             glowParts[i] = new[]
@@ -358,7 +376,8 @@ public class PixelDockedButton : MonoBehaviour
             // Docked to a side edge: slides sideways, centred vertically.
             float hiddenInset = groupWidth > 0f ? -(groupWidth - hud.Sliver) : hud.SideHiddenInset;
             float sideInset = Mathf.Lerp(hiddenInset, hud.SideShownInset, Mathf.SmoothStep(0f, 1f, slide));
-            rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -(sideInset + sideOffsetX) : sideInset + sideOffsetX, sideOffsetY);
+            float pushSide = (1f - PixelHud.RevealEased) * 420f;   // slid away with the black margins
+            rect.anchoredPosition = new Vector2(anchor.x > 0.5f ? -(sideInset + sideOffsetX) + pushSide : sideInset + sideOffsetX - pushSide, sideOffsetY);
             return;
         }
 
@@ -366,7 +385,8 @@ public class PixelDockedButton : MonoBehaviour
         float inset = Mathf.Lerp(hidden, shown, Mathf.SmoothStep(0f, 1f, slide));
         bool top = anchor.y > 0.5f;
         float x = Mathf.Approximately(anchor.x, 0.5f) ? 0f : anchor.x > 0.5f ? -hud.SideMargin : hud.SideMargin; // 0.5 = centred
-        rect.anchoredPosition = new Vector2(x, top ? -inset : inset);
+        float push = (1f - PixelHud.RevealEased) * (hud.BandHeight + hud.ButtonSize.y + 40f);
+        rect.anchoredPosition = new Vector2(x, top ? -inset + push : inset - push);
     }
 
     /// <summary>Is the mouse over (or close to) the spot the button slides out to?</summary>

@@ -523,3 +523,4 @@
 [2026-10-12 00:54 UTC] Old pixels and devices now fade (shrink) away before the floor and the camera when quitting to the main menu, and fade back in after the floor when a game starts or a save is loaded.
 [2026-10-12 00:58 UTC] The flat floor-coloured menu base is now much wider than the floor so it fills the whole ground area the camera sees.
 [2026-10-12 01:04 UTC] With live background the menu ground is now the sky's horizon colour (so the sky fills the view, whatever floor is picked) and the floor texture fades in more gradually.
+[2026-10-12 01:09 UTC] The black top / bottom margins and docked buttons now slide in as the camera swings on Play (before the floor fades in), and slide out as the camera swings back after the floor fades when quitting to the main menu.
