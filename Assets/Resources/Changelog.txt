@@ -575,3 +575,4 @@
 [2026-10-12 05:40 UTC] Skill tree window: a top-left button expands the tree over the Skills window (press again to go back), and the tree now scrolls sideways with soft faded left/right edges.
 [2026-10-12 06:10 UTC] Main menu: Egg and Bean now wander in too, and a new 'Pets & UFO' toggle (bottom left) shows the current save's pets hopping along the bottom of the screen and, if bought and switched on, the UFO Helper flying along the top. Also fixed the skill tree jumping for a frame when expanding or collapsing.
 [2026-10-12 06:20 UTC] Main menu: the UFO Helper now shows whenever it is bought and switched on in the save's own Toggles tab (no longer tied to the Pets toggle, which is now just 'Pets').
+[2026-10-12 06:30 UTC] Wood now looks like real tree bark: tall uneven ridges split by deep dark furrows, vertical fibres, flaking and patches of moss.

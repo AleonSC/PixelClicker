@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Crisp 64 px pixel-art surfaces for the base blocks of the skill packs: Wood (planks with grain, a knot and nails), Dirt (clumpy earth with
+/// Crisp 64 px pixel-art surfaces for the base blocks of the skill packs: Wood (tree bark: tall ridges split by dark furrows), Dirt (clumpy earth with
 /// pebbles) and Stone (a wall of chiselled blocks). Drawn once in code; they are white-balanced so the look's colour (white) shows them as drawn.
 /// </summary>
 public static class PixelBlockTextures
@@ -38,27 +38,42 @@ public static class PixelBlockTextures
 
     private static float H(int x, int y, int seed) => PixelNoise.Hash(x, y, seed);
 
-    // ---- Wood: rough bark with vertical ridges, deep splits, pale flecks and patches of moss ----
+    // ---- Wood: tree bark - tall, uneven ridges split by deep dark furrows, vertical fibres, flaking and a little moss ----
     private static Color WoodPixel(int x, int y)
     {
-        // Ridges wander sideways as they go down; each has its own tone.
-        float wob = Mathf.Sin(y * 0.09f + x * 0.03f) * 2.2f + (H(x / 12, y / 16, 71) - 0.5f) * 3f;
-        float fx = (x + wob) / 5.5f;
-        int ridge = Mathf.FloorToInt(fx);
-        float across = fx - ridge;                          // 0..1 across the ridge
-        float tone = 0.75f + H(ridge, 2, 73) * 0.4f;
-        Color bark = new Color(0.4f, 0.27f, 0.16f);
-        Color c = bark * tone;
-        // Relief: lit on the left of each ridge, dark in the groove between two.
-        c *= across < 0.2f ? 0.55f : across < 0.45f ? 1.18f : across > 0.85f ? 0.7f : 1f;
-        // Splits across the ridges and darker patches along them.
-        int seg = y / 11;
-        if (H(ridge, seg, 75) > 0.82f && y % 11 < 2) c *= 0.5f;
-        c *= 0.88f + H(x, y / 2, 77) * 0.2f;
-        // Pale flecks where the bark has flaked, and moss on the shadier side.
-        if (H(x, y, 79) > 0.972f) c = Color.Lerp(c, new Color(0.72f, 0.58f, 0.4f), 0.8f);
-        float moss = H(x / 6, y / 6, 81) * 0.55f + H(x / 3, y / 3, 83) * 0.45f;
-        if (moss > 0.66f && H(x, y, 85) > 0.35f) c = Color.Lerp(c, new Color(0.34f, 0.46f, 0.2f) * (0.8f + H(x, y, 87) * 0.4f), 0.75f);
+        // Ridge cells are long and thin (an anisotropic Voronoi) and the whole pattern sways sideways as it goes down, like real bark.
+        float sway = Mathf.Sin(y * 0.11f + H(x / 20, 0, 71) * 6.28f) * 1.9f + (H(x / 9, y / 22, 72) - 0.5f) * 2f;
+        float gx = (x + sway) / 10f, gy = y / 34f;
+        int cx = Mathf.FloorToInt(gx), cy = Mathf.FloorToInt(gy);
+        float d1 = 99f, d2 = 99f;
+        int id = 0;
+        for (int oy = -1; oy <= 1; oy++)
+            for (int ox = -1; ox <= 1; ox++)
+            {
+                int ix = cx + ox, iy = cy + oy;
+                float px = ix + 0.15f + H(ix, iy, 73) * 0.7f, py = iy + 0.1f + H(ix, iy, 74) * 0.8f;
+                float dx = (gx - px) * 10f, dy = (gy - py) * 34f * 0.28f;   // a step along the ridge counts for little: the ridges run up and down
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                if (d < d1) { d2 = d1; d1 = d; id = ix * 29 + iy * 13; }
+                else if (d < d2) d2 = d;
+            }
+        float edge = d2 - d1;                                   // ~0 in the furrow between two ridges, bigger on a ridge's top
+
+        // Each ridge has its own grey-brown tone.
+        float tone = H(id, 5, 75);
+        Color c = Color.Lerp(new Color(0.24f, 0.17f, 0.11f), new Color(0.46f, 0.37f, 0.28f), tone);
+        c = Color.Lerp(c, new Color(0.4f, 0.37f, 0.34f), 0.25f * H(id, 7, 76));   // a hint of grey, like old bark
+        // Relief: dark in the furrows, brightest along the ridge, shaded on the right side.
+        c *= Mathf.Lerp(0.5f, 1.18f, Mathf.Clamp01(edge / 5.5f));
+        if (edge < 1.1f) c = new Color(0.06f, 0.04f, 0.03f);   // the deep furrow itself
+        else if (edge < 2.2f) c *= 0.7f;
+        // Long vertical fibres and flaking (short pale / dark dashes along the ridges).
+        c *= 0.82f + H(x, y / 11, 77) * 0.3f;
+        if (H(x / 2, y / 5, 79) > 0.9f && edge > 2f) c *= 0.62f;                       // a small crack across a ridge
+        if (H(x, y / 3, 81) > 0.965f && edge > 2.5f) c = Color.Lerp(c, new Color(0.62f, 0.5f, 0.38f), 0.7f);   // a fleck of flaked, pale bark
+        // Moss in the furrows on the shadier patches.
+        float moss = H(x / 7, y / 9, 83) * 0.6f + H(x / 3, y / 4, 85) * 0.4f;
+        if (moss > 0.68f && edge < 3f && H(x, y, 87) > 0.3f) c = Color.Lerp(c, new Color(0.3f, 0.42f, 0.18f) * (0.8f + H(x, y, 89) * 0.4f), 0.7f);
         return c;
     }
 
