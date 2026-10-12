@@ -801,6 +801,13 @@ public partial class PixelSkills : MonoBehaviour
 
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
+        xpFromAuto = automatic;   // the XP popups of an auto click appear beside the cube, not at the mouse
+        try { OnCollectedInner(tierIndex, amount, automatic); }
+        finally { xpFromAuto = false; }
+    }
+
+    private void OnCollectedInner(int tierIndex, double amount, bool automatic)
+    {
         // Standard is a skill too: full XP while it is the one trained, a tiny share while another skill is.
         SkillPack standard = Find(StandardId);
         if (standard != null) AddXp(standard, (automatic ? autoXpFactor : 1d) * (TrainingId == StandardId ? 1d : StandardSideRate), TrainingId == StandardId && AnyTrainable);   // (no popups before the Skills tab exists)

@@ -5,7 +5,8 @@ using UnityEngine;
 /// <summary>
 /// Part of <see cref="PixelSkills"/>: a rising '+n Skill XP' popup in the skill's own colour whenever the skill in training gains XP. XP that comes
 /// in small pieces (auto clicks give a fraction) is gathered for a moment and shown as whole numbers, so there is one clean popup instead of a flood.
-/// It hangs just under the mouse cursor and follows it, and uses its own canvas so it never mixes with the other +n texts.
+/// XP from your own clicks hangs just under the mouse cursor and follows it; XP from the auto clicker appears beside the cube instead (so it isn't stuck to a
+/// mouse that is elsewhere). Uses its own canvas so it never mixes with the other +n texts.
 /// </summary>
 public partial class PixelSkills
 {
@@ -26,9 +27,22 @@ public partial class PixelSkills
     private SkillPack xpPendingPack;
     private float xpGatherTimer;
 
+    // XP that came from the auto clicker is gathered separately and shown beside the cube.
+    private bool xpFromAuto;
+    private double autoPending;
+    private SkillPack autoPendingPack;
+    private float autoGatherTimer;
+
     private void QueueXpPopup(SkillPack pack, double xp)
     {
         if (hideXpPopups || pack == null || xp <= 0d) return;
+        if (xpFromAuto)
+        {
+            if (autoPendingPack != null && autoPendingPack != pack) FlushAutoXpPopup(true);
+            autoPendingPack = pack;
+            autoPending += xp;
+            return;
+        }
         if (xpPendingPack != null && xpPendingPack != pack) FlushXpPopup(true);   // the skill changed: show what was gathered for the old one
         xpPendingPack = pack;
         xpPending += xp;
@@ -36,9 +50,17 @@ public partial class PixelSkills
 
     private void UpdateXpPopups()
     {
-        if (xpPendingPack == null) return;
-        xpGatherTimer += Time.unscaledDeltaTime;
-        if (xpGatherTimer >= (xpPopupGatherSeconds > 0.05f ? xpPopupGatherSeconds : 0.6f)) FlushXpPopup(false);
+        float gather = xpPopupGatherSeconds > 0.05f ? xpPopupGatherSeconds : 0.6f;
+        if (xpPendingPack != null)
+        {
+            xpGatherTimer += Time.unscaledDeltaTime;
+            if (xpGatherTimer >= gather) FlushXpPopup(false);
+        }
+        if (autoPendingPack != null)
+        {
+            autoGatherTimer += Time.unscaledDeltaTime;
+            if (autoGatherTimer >= gather) FlushAutoXpPopup(false);
+        }
     }
 
     private void FlushXpPopup(bool force)
@@ -53,10 +75,38 @@ public partial class PixelSkills
         xpPending -= whole;
         SkillPack pack = xpPendingPack;
         if (force) { xpPending = 0d; xpPendingPack = null; }
-        ShowXpPopup(pack, whole);
+        ShowXpPopup(pack, whole, false);
     }
 
-    private void ShowXpPopup(SkillPack pack, int amount)
+    private void FlushAutoXpPopup(bool force)
+    {
+        autoGatherTimer = 0f;
+        int whole = (int)System.Math.Floor(autoPending);
+        if (whole < 1 || autoPendingPack == null || PixelTitleScreen.Showing)
+        {
+            if (force) { autoPending = 0d; autoPendingPack = null; }
+            return;
+        }
+        autoPending -= whole;
+        SkillPack pack = autoPendingPack;
+        if (force) { autoPending = 0d; autoPendingPack = null; }
+        ShowXpPopup(pack, whole, true);
+    }
+
+    /// <summary>Where the cube is on the screen (screen pixels), or null if there is no camera / cube.</summary>
+    private Vector2? CubeScreenPoint()
+    {
+        Camera cam = Camera.main;
+        if (cam == null || clicker == null || clicker.PixelTransform == null) return null;
+        Vector3 sp = cam.WorldToScreenPoint(clicker.PixelTransform.position);
+        if (sp.z <= 0f) return null;
+        // Beside the cube: to the right of it, about as far as its apparent half-width plus a margin.
+        Vector3 edge = cam.WorldToScreenPoint(clicker.PixelTransform.position + cam.transform.right * clicker.PixelBaseSize * 0.5f);
+        float half = Mathf.Abs(edge.x - sp.x);
+        return new Vector2(sp.x + half + 70f, sp.y + 30f);
+    }
+
+    private void ShowXpPopup(SkillPack pack, int amount, bool nearCube)
     {
         if (xpCanvas == null)
         {
@@ -72,20 +122,32 @@ public partial class PixelSkills
         RectTransform r = t.rectTransform;
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
         r.sizeDelta = new Vector2(520f, size * 1.6f);
-        StartCoroutine(RiseXpPopup(t, r, canvasRect, xJitter, pack.accent));
+        StartCoroutine(RiseXpPopup(t, r, canvasRect, xJitter, pack.accent, nearCube));
     }
 
     /// <summary>The popup hangs just under the mouse cursor, follows it, drifts a little further down and fades.</summary>
-    private IEnumerator RiseXpPopup(TMP_Text t, RectTransform r, RectTransform canvasRect, float xJitter, Color color)
+    private IEnumerator RiseXpPopup(TMP_Text t, RectTransform r, RectTransform canvasRect, float xJitter, Color color, bool nearCube)
     {
         float time = 0f;
         const float life = 1.5f;
+        Vector2 lastCube = Vector2.zero;
         while (time < life && t != null)
         {
             time += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(time / life);
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
-            r.anchoredPosition = local + new Vector2(xJitter, -56f - 50f * k);
+            if (nearCube)
+            {
+                // Auto clicker XP rises beside the cube (and follows it if it moves).
+                Vector2? cube = CubeScreenPoint();
+                if (cube.HasValue) lastCube = cube.Value;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, lastCube, null, out Vector2 cubeLocal);
+                r.anchoredPosition = cubeLocal + new Vector2(xJitter * 0.5f, 90f * k);
+            }
+            else
+            {
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
+                r.anchoredPosition = local + new Vector2(xJitter, -56f - 50f * k);
+            }
             Color c = color;
             c.a = k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f;
             t.color = c;
