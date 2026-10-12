@@ -265,7 +265,7 @@ public class PixelGrab : MonoBehaviour
             foreach (Rigidbody other in clicker.OldPixels)
             {
                 if (other == null || other == pair.Key || other.isKinematic) continue;
-                if ((other.worldCenter - pair.Key.worldCenter).sqrMagnitude < reach * reach) limitedUntil[other] = now + 0.7f;
+                if ((other.position - pair.Key.position).sqrMagnitude < reach * reach) limitedUntil[other] = now + 0.7f;
             }
         }
         foreach (Rigidbody done in scratch)
