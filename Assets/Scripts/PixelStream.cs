@@ -36,6 +36,7 @@ public class OldPixelStream : MonoBehaviour
 
     private static void SetVelocityOf(Rigidbody rb, Vector3 v)
     {
+        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else
@@ -100,7 +101,7 @@ public class OldPixelStream : MonoBehaviour
 
         Vector3 v = VelocityOf(body);
         SetVelocityOf(body, new Vector3(v.x * 0.4f + away.x * 0.4f, 0f, v.z * 0.4f + away.z * 0.4f)); // a gentle slide, no bounce
-        body.angularVelocity *= 0.3f;
+        if (!body.isKinematic) body.angularVelocity *= 0.3f;
         if (box != null) box.isTrigger = false; // solid now
 
         // The landing counts as the impact that look behaviours wait for.

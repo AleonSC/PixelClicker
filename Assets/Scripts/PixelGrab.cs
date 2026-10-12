@@ -226,7 +226,7 @@ public class PixelGrab : MonoBehaviour
         Vector3 velocity = (target - held.position) * followSharpness / slow;
         if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
         SetVelocity(held, velocity);
-        held.angularVelocity *= 1f - spinDamping;
+        if (!held.isKinematic) held.angularVelocity *= 1f - spinDamping;
     }
 
     private void Release()
@@ -259,6 +259,7 @@ public class PixelGrab : MonoBehaviour
 
     private static void SetVelocity(Rigidbody rb, Vector3 v)
     {
+        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else

@@ -1616,6 +1616,7 @@ public class OldPixelGravityWell : MonoBehaviour
 
     private static void SetVelocityOf(Rigidbody rb, Vector3 v)
     {
+        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else
@@ -2021,7 +2022,7 @@ public class OldPixelShatter : MonoBehaviour
             // Set down gently: it settles (any surface, including other pixels) and lives longer.
             gentle = false;
             Rigidbody rb = GetComponent<Rigidbody>();
-            if (rb != null)
+            if (rb != null && !rb.isKinematic)
             {
 #if UNITY_6000_0_OR_NEWER
                 rb.linearVelocity *= 0.2f;

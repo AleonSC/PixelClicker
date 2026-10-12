@@ -778,7 +778,7 @@ public partial class PixelPets : MonoBehaviour
         Vector3 velocity = (target - rb.position) * followSharpness / slow;
         if (velocity.magnitude > maxFollowSpeed / slow) velocity = velocity.normalized * (maxFollowSpeed / slow);
         SetVelocity(rb, velocity);
-        rb.angularVelocity *= 0.9f;
+        SetAngular(rb, rb.angularVelocity * 0.9f);
     }
 
     private static Vector3 GetVelocity(Rigidbody rb)
@@ -790,8 +790,16 @@ public partial class PixelPets : MonoBehaviour
 #endif
     }
 
+    /// <summary>Sets the spin (not on a kinematic body, where Unity warns: a held, planted or otherwise frozen pet has no physics to steer).</summary>
+    private static void SetAngular(Rigidbody rb, Vector3 w)
+    {
+        if (rb == null || rb.isKinematic) return;
+        rb.angularVelocity = w;
+    }
+
     private static void SetVelocity(Rigidbody rb, Vector3 v)
     {
+        if (rb == null || rb.isKinematic) return;
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else
@@ -827,7 +835,7 @@ public partial class PixelPets : MonoBehaviour
         {
             float k = Mathf.Exp(-hoverStopDamping * Time.deltaTime);
             SetVelocity(rb, new Vector3(v.x * k, v.y, v.z * k));
-            rb.angularVelocity *= k;
+            SetAngular(rb, rb.angularVelocity * k);
             p.hopTimer = Mathf.Max(p.hopTimer, 0.4f);
             return;
         }
@@ -977,7 +985,7 @@ public partial class PixelPets : MonoBehaviour
     private void PlantPet(Pet p, Rigidbody rb, float size)
     {
         SetVelocity(rb, Vector3.zero);
-        rb.angularVelocity = Vector3.zero;
+        SetAngular(rb, Vector3.zero);
         rb.isKinematic = true;
         rb.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
         p.body.transform.rotation = rb.rotation;
@@ -1069,7 +1077,7 @@ public partial class PixelPets : MonoBehaviour
         {
             float k = Mathf.Exp(-hoverStopDamping * Time.deltaTime);
             SetVelocity(rb, v * k);
-            rb.angularVelocity *= k;
+            SetAngular(rb, rb.angularVelocity * k);
             return;
         }
 
@@ -1089,8 +1097,8 @@ public partial class PixelPets : MonoBehaviour
         Vector3 desired = to.normalized * Mathf.Min(ghostSpeed * Hyper, to.magnitude * 1.2f);
         desired.y += Mathf.Sin(Time.time * 2f + p.phase) * 0.25f; // bobbing
         SetVelocity(rb, Vector3.Lerp(v, desired, 1f - Mathf.Exp(-2f * Time.deltaTime))); // a throw fades into the drift
-        rb.angularVelocity = Vector3.Lerp(rb.angularVelocity, new Vector3(Mathf.Sin(Time.time + p.phase) * 0.3f, 0.4f, Mathf.Cos(Time.time * 0.7f + p.phase) * 0.3f),
-                                          1f - Mathf.Exp(-1.5f * Time.deltaTime));
+        SetAngular(rb, Vector3.Lerp(rb.angularVelocity, new Vector3(Mathf.Sin(Time.time + p.phase) * 0.3f, 0.4f, Mathf.Cos(Time.time * 0.7f + p.phase) * 0.3f),
+                                          1f - Mathf.Exp(-1.5f * Time.deltaTime)));
     }
 
     // ------------------------------------------------------------------

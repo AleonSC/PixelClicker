@@ -321,6 +321,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Cube Blink pack (Minigames tab): switches on the blink minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateBlinkPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Cube Blink",
+            tab = ShopTab.Minigames,
+            description = "Now and then the cube shrinks to nothing and teleports to a random spot, hides for a second or two, then pops back and stays a few seconds before teleporting again. The auto clicker switches off: click it whenever it shows. At the end you get a bonus of 10x the pixel's worth for every click you landed.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(60000),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "blink",
+        };
+    }
+
     /// <summary>Default Breakout pack (Minigames tab): switches on the breakout minigame. Needs the RGB pack first.</summary>
     private static ShopPack CreateBreakoutPack(int requiresRgbIndex)
     {
@@ -1100,6 +1115,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
         new DefaultPack { isThis = p => Unlocks(p, "dash"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateDashPack },
+        new DefaultPack { isThis = p => Unlocks(p, "blink"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBlinkPack },
         new DefaultPack { isThis = p => Unlocks(p, "breakout"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBreakoutPack },
         new DefaultPack { isThis = p => Unlocks(p, "sort"),

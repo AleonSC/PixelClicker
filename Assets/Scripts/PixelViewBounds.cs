@@ -206,6 +206,7 @@ public class PixelViewBounds : MonoBehaviour
 
     private static void SetVelocity(Rigidbody rb, Vector3 v)
     {
+        if (rb == null || rb.isKinematic) return;   // (a kinematic body cannot be steered: Unity warns)
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else

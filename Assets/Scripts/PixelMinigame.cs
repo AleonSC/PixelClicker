@@ -80,7 +80,8 @@ public abstract class PixelMinigame : MonoBehaviour
             case "pad": return 6f;
             case "stardust": return 8f;
             case "ghost": return 12f;
-            case "dash": return 15f;
+            case "dash":
+            case "blink": return 15f;
             case "bomb": return 20f;
             case "snake":
             case "sort":
