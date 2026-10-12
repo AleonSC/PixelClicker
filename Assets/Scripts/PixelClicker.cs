@@ -3537,6 +3537,7 @@ public class PixelClicker : MonoBehaviour
             if (info != null && IsValidTier(info.tierIndex))
             {
                 AddCurrency(info.tierIndex, info.amount);
+                PixelSkills.OldPixelConsumed(info.tierIndex);
                 perTier[info.tierIndex] += info.amount;
                 total += info.amount;
                 count++;
@@ -3680,6 +3681,7 @@ public class PixelClicker : MonoBehaviour
         if (info != null && IsValidTier(info.tierIndex))
         {
             AddCurrency(info.tierIndex, info.amount);
+            PixelSkills.OldPixelConsumed(info.tierIndex);
             double[] perTier = new double[tiers.Length];
             perTier[info.tierIndex] = info.amount;
             VacuumBreakdown?.Invoke(perTier);

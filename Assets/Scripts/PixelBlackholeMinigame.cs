@@ -490,6 +490,7 @@ public class PixelBlackholeMinigame : PixelMinigame
             if (clicker.ReleaseOldPixel(body, creditSwallowedPixels))
             {
                 PixelSwallowed?.Invoke(swallowedTier);
+                PixelSkills.OldPixelConsumed(swallowedTier);
                 GrantSkillXp();
                 UltraRoll(clicker, ultraChance, 0.01f, ultraMaxPerRound, 2, disableUltra, 1f, body.position);
                 StartCoroutine(SpiralIn(body, center, currentRadius, fullRadius));

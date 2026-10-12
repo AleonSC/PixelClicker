@@ -1221,7 +1221,9 @@ public partial class PixelPets : MonoBehaviour
             float sq = (b.position - pet.position).sqrMagnitude;
             if (sq < best) { best = sq; nearest = b; }
         }
+        OldPixelInfo eatenInfo = nearest != null ? nearest.GetComponent<OldPixelInfo>() : null;
         if (nearest == null || !clicker.ReleaseOldPixel(nearest, false)) return; // false: no payout
+        if (eatenInfo != null) PixelSkills.OldPixelConsumed(eatenInfo.tierIndex);
         PixelStats.Count("pet.vacuum");
         StartCoroutine(FlyIntoPet(nearest, pet.transform));
     }

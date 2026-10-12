@@ -767,6 +767,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         if (pack == null || xp <= 0d) return;
         xp *= PenaltyFactor;   // a hazard went off recently
+        xp += DrawBonus(pack, xp);   // bonus bank: doubles the gain, the extra comes out of the bank
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
         QueueXpPopup(pack, xp);
