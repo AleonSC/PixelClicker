@@ -83,6 +83,7 @@ public abstract class PixelMinigame : MonoBehaviour
             case "dash":
             case "blink":
             case "evade": return 15f;
+            case "traffic": return 20f;
             case "bomb": return 20f;
             case "snake":
             case "sort":

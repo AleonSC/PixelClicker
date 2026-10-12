@@ -329,7 +329,7 @@ public partial class PixelShop
     // Minigame models (simple shapes built from primitives)
     // ------------------------------------------------------------------
 
-    private static readonly string[] ModelledMinigames = { "ghost", "meteor", "blackhole", "bomb", "pad", "snake", "sort", "breakout", "dash", "blink", "evade" };
+    private static readonly string[] ModelledMinigames = { "ghost", "meteor", "blackhole", "bomb", "pad", "snake", "sort", "breakout", "dash", "blink", "evade", "traffic" };
 
     private static bool HasMinigameModel(string id)
     {
@@ -434,6 +434,15 @@ public partial class PixelShop
                         Prim(PrimitiveType.Cube, t, new Vector3(-0.63f + c * 0.42f, 0.5f - r * 0.2f, 0f), new Vector3(0.38f, 0.16f, 0.2f), rows[r]);
                 Prim(PrimitiveType.Sphere, t, new Vector3(0.1f, -0.25f, 0f), Vector3.one * 0.18f, Color.white);
                 Prim(PrimitiveType.Cube, t, new Vector3(0f, -0.62f, 0f), new Vector3(0.7f, 0.12f, 0.2f), new Color(0.6f, 0.8f, 1f, 1f));
+                break;
+            }
+            case "traffic":
+            {
+                // A traffic light: dark housing with red, yellow and green lamps (green lit).
+                Prim(PrimitiveType.Cube, t, new Vector3(0f, 0f, 0f), new Vector3(0.42f, 1.15f, 0.2f), new Color(0.1f, 0.1f, 0.12f, 1f));
+                Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0.36f, -0.12f), Vector3.one * 0.26f, new Color(0.45f, 0.1f, 0.1f, 1f));
+                Prim(PrimitiveType.Sphere, t, new Vector3(0f, 0f, -0.12f), Vector3.one * 0.26f, new Color(0.5f, 0.42f, 0.1f, 1f));
+                Prim(PrimitiveType.Sphere, t, new Vector3(0f, -0.36f, -0.12f), Vector3.one * 0.26f, new Color(0.3f, 1f, 0.45f, 1f));
                 break;
             }
             case "evade":

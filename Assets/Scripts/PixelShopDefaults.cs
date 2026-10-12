@@ -321,6 +321,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Red Light Green Light pack (Minigames tab): switches on the traffic minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateTrafficPack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Red Light Green Light",
+            tab = ShopTab.Minigames,
+            description = "A traffic light appears beside the cube. Click on green to score, never on red (it costs you), and on yellow click slowly, in time with the circle that closes around the cube. At the end you get a bonus of 10x the pixel's worth for every point.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(80000),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "traffic",
+        };
+    }
+
     /// <summary>Default Cube Evasion pack (Minigames tab): switches on the evade minigame. Needs the RGB pack first.</summary>
     private static ShopPack CreateEvadePack(int requiresRgbIndex)
     {
@@ -1130,6 +1145,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
         new DefaultPack { isThis = p => Unlocks(p, "dash"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateDashPack },
+        new DefaultPack { isThis = p => Unlocks(p, "traffic"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateTrafficPack },
         new DefaultPack { isThis = p => Unlocks(p, "evade"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateEvadePack },
         new DefaultPack { isThis = p => Unlocks(p, "blink"),

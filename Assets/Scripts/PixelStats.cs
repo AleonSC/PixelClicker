@@ -546,6 +546,11 @@ public class PixelStats : MonoBehaviour
             Cnt("Cube Dash clicks", "dash.clicks");
             Row("Best Cube Dash", PixelClicker.FormatNumber(Counter("dash.best")) + " clicks");
         }
+        if (Seen("traffic", "traffic.rounds", "traffic.best"))
+        {
+            Cnt("Red Light Green Light rounds", "traffic.rounds");
+            Row("Best Red Light Green Light", PixelClicker.FormatNumber(Counter("traffic.best")) + " points");
+        }
         if (Seen("evade", "evade.rounds", "evade.clicks"))
         {
             Cnt("Cube Evasion rounds", "evade.rounds");

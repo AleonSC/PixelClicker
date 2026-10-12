@@ -247,6 +247,15 @@ public class PixelAudio : MonoBehaviour
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
+            Make("traffic_start", 0.2f, 1f, 1f),
+            Make("traffic_green", 0.2f, 1f, 1f),
+            Make("traffic_yellow", 0.2f, 1f, 1f),
+            Make("traffic_red", 0.2f, 1f, 1f),
+            Make("traffic_tick", 0.08f, 0.97f, 1.03f),
+            Make("traffic_good", 0.04f, 0.97f, 1.05f),
+            Make("traffic_bad", 0.06f, 0.95f, 1.02f),
+            Make("traffic_win", 0.3f, 1f, 1f),
+            Make("traffic_lose", 0.3f, 1f, 1f),
         };
         foreach (PixelClicker.PixelType ore in Enum.GetValues(typeof(PixelClicker.PixelType)))
             if (PixelClicker.IsOre(ore)) list.Add(Make("pixel_bounce_" + ore.ToString().ToLowerInvariant(), 0.04f, 0.9f, 1.15f)); // ore clinks when an old ore lands
@@ -307,6 +316,15 @@ public class PixelAudio : MonoBehaviour
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "farm_hit": return new[] { PixelSynth.Farm(0, 1), PixelSynth.Farm(0, 2), PixelSynth.Farm(0, 3) };
             case "farm_gleam": return new[] { PixelSynth.Farm(9, 1) };
+            case "traffic_start": return new[] { PixelTrafficSynth.Start() };
+            case "traffic_green": return new[] { PixelTrafficSynth.Green() };
+            case "traffic_yellow": return new[] { PixelTrafficSynth.Yellow() };
+            case "traffic_red": return new[] { PixelTrafficSynth.Red() };
+            case "traffic_tick": return new[] { PixelTrafficSynth.Tick() };
+            case "traffic_good": return new[] { PixelTrafficSynth.Good(1), PixelTrafficSynth.Good(2) };
+            case "traffic_bad": return new[] { PixelTrafficSynth.Bad() };
+            case "traffic_win": return new[] { PixelTrafficSynth.Win() };
+            case "traffic_lose": return new[] { PixelTrafficSynth.Lose() };
             case "pixel_dirt": return new[] { PixelSynth.Farm(1, 1), PixelSynth.Farm(1, 2), PixelSynth.Farm(1, 3) };
             case "pixel_fertilizer": return new[] { PixelSynth.Farm(2, 1), PixelSynth.Farm(2, 2), PixelSynth.Farm(2, 3) };
             case "pixel_pollen": return new[] { PixelSynth.Farm(3, 1), PixelSynth.Farm(3, 2), PixelSynth.Farm(3, 3) };
