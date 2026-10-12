@@ -111,7 +111,7 @@ public partial class PixelFloor
         if (s.pattern == FloorPattern.Space) AddStars(px, n, s, rng);
         if (s.pattern == FloorPattern.PixelGrass) AddFlowers(px, n, s, rng);
         tex.SetPixels(px);
-        tex.Apply(false);
+        tex.Apply(tex.mipmapCount > 1);
         fillRoutine = null;
         if (overlay) BuildLayers(tex);
     }

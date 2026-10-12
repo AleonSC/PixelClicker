@@ -480,12 +480,15 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         if (style.pattern == FloorPattern.HauntedTiles && dt > 0f) UpdateHauntedFlicker();
 
-        if (style.animateFps > 0f && dt > 0f && activeTexture != null && fillRoutine == null)
+        // An animated floor nobody can see (faded out on the main menu, or switched off in Settings) is not redrawn at all.
+        bool unseen = visibilityInit && visibility <= 0.001f && !(PixelTitleScreen.Showing && !PixelTitleWanderers.LiveBackground);
+        if (style.animateFps > 0f && dt > 0f && activeTexture != null && fillRoutine == null && !unseen)
         {
             animClock += dt * style.animSpeed;
             animTimer += dt;
-            // While the camera swings the redraws slow down (a big texture re-filled every frame is what made the pan stutter).
+            // While the camera swings the redraws slow down (a big texture re-filled every frame is what made the pan stutter); no floor is redrawn faster than the cap.
             float fps = PixelCameraIntro.Progress > 0.001f && PixelCameraIntro.Progress < 0.999f ? Mathf.Min(style.animateFps, 8f) : style.animateFps;
+            fps = Mathf.Min(fps, animFpsCap > 0f ? animFpsCap : 10f);
             if (animTimer >= 1f / fps)
             {
                 animTimer = 0f;
@@ -532,6 +535,11 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // ------------------------------------------------------------------
     // Fading the floor in and out (the main menu has no floor, only the sky)
     // ------------------------------------------------------------------
+
+    [Header("Animation cost")]
+    [Min(0f)]
+    [Tooltip("No animated floor is redrawn more often than this many times a second (0 = 10). Lower = cheaper; the floors look fine at 8-10.")]
+    [SerializeField] private float animFpsCap = 0f;
 
     [Header("Fade")]
     [Tooltip("Tick to keep the floor always visible. (Normally, with 'Live background' on, the main menu and the camera swing show only the sky: the floor fades in once the camera has settled and fades out before it swings back.)")]
@@ -961,7 +969,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private static Texture2D BuildTexture(FloorStyle s, int step, bool deferFill = false)
     {
         int n = Mathf.Clamp(s.resolution, 8, 1024);
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false)
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, deferFill && !IsOverlayPattern(s.pattern) && !s.pixelated)   // (big still pictures get mipmaps so far-away ground doesn't shimmer)
         {
             name = "Floor " + s.name,
             wrapMode = s.stretchToFloor || s.fitToView ? TextureWrapMode.Clamp : TextureWrapMode.Repeat,   // a fitted picture is ONE copy: never repeated over the floor
