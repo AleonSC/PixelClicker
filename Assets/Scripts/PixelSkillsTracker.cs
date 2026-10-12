@@ -320,14 +320,14 @@ public partial class PixelSkills
         }
         trackerBarFill.offsetMax = new Vector2(-2f, -2f);
 
-        bool penalised = PenaltyPercent > 0;
+        bool penalised = PenaltyPercent(pack.id) > 0;   // only the skill it hit shows it
         if (trackerPenalty != null)
         {
             if (trackerPenalty.gameObject.activeSelf != penalised) trackerPenalty.gameObject.SetActive(penalised);
             if (penalised)
             {
-                int left = Mathf.CeilToInt(PenaltySecondsLeft);
-                PixelUIKit.SetText(trackerPenalty, "XP -" + PenaltyPercent + "%   " + (left / 60) + ":" + (left % 60).ToString("00"));
+                int left = Mathf.CeilToInt(PenaltySecondsLeft(pack.id));
+                PixelUIKit.SetText(trackerPenalty, "XP -" + PenaltyPercent(pack.id) + "%   " + (left / 60) + ":" + (left % 60).ToString("00"));
             }
         }
     }

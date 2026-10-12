@@ -129,7 +129,7 @@ public partial class PixelSkills : MonoBehaviour
     public event Action Changed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { penaltyLevel = 0; penaltyUntil = 0f; Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
+    private static void ResetStatics() { penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null; }
 
     private float bundleCheckTimer;
 
@@ -498,8 +498,9 @@ public partial class PixelSkills : MonoBehaviour
 
     // ---- The hazard XP penalty: -10% per hazard set off inside the last minute (cumulative, the minute restarts each time) ----
 
-    private static int penaltyLevel;
-    private static float penaltyUntil;
+    // One penalty per SKILL (the pack in play when the hazard went off): -10% each, restarting that skill's minute. Other skills are not affected.
+    private static readonly System.Collections.Generic.Dictionary<string, int> penaltyLevels = new System.Collections.Generic.Dictionary<string, int>();
+    private static readonly System.Collections.Generic.Dictionary<string, float> penaltyEnds = new System.Collections.Generic.Dictionary<string, float>();
 
     [Min(0f)]
     [Tooltip("How long the hazard XP penalty lasts, in seconds, restarting each time another hazard goes off. 0 = the coded default (60).")]
@@ -509,31 +510,36 @@ public partial class PixelSkills : MonoBehaviour
     [Tooltip("How much XP each hazard takes off (cumulative while the penalty is running). 0 = the coded default (0.1 = 10%).")]
     [SerializeField] private float penaltyStep = 0f;
 
-    /// <summary>The XP multiplier right now (1 = no penalty).</summary>
-    public static float PenaltyFactor
+    private static int PenaltyLevelOf(string id) =>
+        id != null && penaltyLevels.TryGetValue(id, out int level) && penaltyEnds.TryGetValue(id, out float end) && Time.time < end ? level : 0;
+
+    /// <summary>The XP multiplier of this skill right now (1 = no penalty).</summary>
+    public static float PenaltyFactor(string id)
     {
-        get
-        {
-            if (penaltyLevel <= 0 || Time.time >= penaltyUntil) return 1f;
-            float step = Instance != null && Instance.penaltyStep > 0f ? Instance.penaltyStep : 0.1f;
-            return Mathf.Max(0.1f, 1f - penaltyLevel * step);
-        }
+        int level = PenaltyLevelOf(id);
+        if (level <= 0) return 1f;
+        float step = Instance != null && Instance.penaltyStep > 0f ? Instance.penaltyStep : 0.1f;
+        return Mathf.Max(0.1f, 1f - level * step);
     }
 
-    /// <summary>The XP penalty running now, in percent (0 = none).</summary>
-    public static int PenaltyPercent => PenaltyFactor < 1f ? Mathf.RoundToInt((1f - PenaltyFactor) * 100f) : 0;
+    /// <summary>The XP penalty running on this skill, in percent (0 = none).</summary>
+    public static int PenaltyPercent(string id) { float f = PenaltyFactor(id); return f < 1f ? Mathf.RoundToInt((1f - f) * 100f) : 0; }
 
-    /// <summary>Seconds left on the XP penalty.</summary>
-    public static float PenaltySecondsLeft => Mathf.Max(0f, penaltyUntil - Time.time);
+    /// <summary>Seconds left on this skill's XP penalty.</summary>
+    public static float PenaltySecondsLeft(string id) => id != null && penaltyEnds.TryGetValue(id, out float end) ? Mathf.Max(0f, end - Time.time) : 0f;
 
-    /// <summary>A hazard went off: one more step of penalty (a new one when none is running) and the timer starts over. Returns text describing it.</summary>
+    /// <summary>A hazard went off: one more step of penalty on the skill in play (a new one when none is running) and its timer starts over. Returns text describing it.</summary>
     public static string ApplyHazardPenalty()
     {
+        string id = Instance != null ? Instance.ActiveId : StandardId;
         float seconds = Instance != null && Instance.penaltySeconds > 0f ? Instance.penaltySeconds : 60f;
         float step = Instance != null && Instance.penaltyStep > 0f ? Instance.penaltyStep : 0.1f;
-        penaltyLevel = Time.time < penaltyUntil ? Mathf.Min(penaltyLevel + 1, Mathf.RoundToInt(0.9f / step)) : 1;
-        penaltyUntil = Time.time + seconds;
-        return "Skill XP -" + Mathf.RoundToInt(penaltyLevel * step * 100f) + "% for " + Mathf.RoundToInt(seconds) + " seconds.";
+        int level = PenaltyLevelOf(id);
+        level = level > 0 ? Mathf.Min(level + 1, Mathf.RoundToInt(0.9f / step)) : 1;
+        penaltyLevels[id] = level;
+        penaltyEnds[id] = Time.time + seconds;
+        string name = Instance != null && Instance.Find(id) != null ? Instance.Find(id).displayName : "Skill";
+        return name + " XP -" + Mathf.RoundToInt(level * step * 100f) + "% for " + Mathf.RoundToInt(seconds) + " seconds.";
     }
 
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
@@ -784,7 +790,7 @@ public partial class PixelSkills : MonoBehaviour
     public void AddXp(SkillPack pack, double xp, bool popup = true)
     {
         if (pack == null || xp <= 0d) return;
-        xp *= PenaltyFactor;   // a hazard went off recently
+        xp *= PenaltyFactor(pack.id);   // a hazard went off recently in this skill
         xp += DrawBonus(pack, xp);   // bonus bank: doubles the gain, the extra comes out of the bank
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
