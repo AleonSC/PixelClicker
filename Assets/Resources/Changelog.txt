@@ -583,3 +583,4 @@
 [2026-10-12 08:10 UTC] Fixed the eyedropped bar glow colour (and the glow / UI hues and the chosen skill pack) not being kept: the per-save settings list stored them as whole numbers; the eyedropper icon is now a proper pipette with a glass tube, collar and bulb.
 [2026-10-12 08:10 UTC] Settings: every row under a section header (toggles, choices, sliders, buttons) is now exactly as wide as the Replay tutorial button, so they line up.
 [2026-10-12 08:30 UTC] Pause menu search box: added a magnifying glass icon and made the text smaller (one line, shrinks to fit) so the placeholder stays inside the box.
+[2026-10-12 08:50 UTC] Give feedback moved from Settings to a long green button on the pause menu, right above Quit.

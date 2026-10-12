@@ -1094,6 +1094,8 @@ public class PixelPauseMenu : MonoBehaviour
         // How to Play | Changelog
         if (howToPlayScreen != null) entries.Add(new MenuEntry { label = howToPlayText, color = menuButtonColor, action = () => ShowView(howToPlayScreen.panel) });
         if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
+        // Give feedback: a long green button right above Quit
+        entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, color = new Color(0.2f, 0.62f, 0.32f, 1f), action = () => PixelFeedback.OpenWindow(), fullRow = true });
         // Quit at the bottom, alone
         if (showQuit) entries.Add(new MenuEntry { label = quitText, color = quitButtonColor, action = () => ShowView(quitPanel), fullRow = true });
 
@@ -2171,9 +2173,6 @@ public class PixelPauseMenu : MonoBehaviour
 
         Transform list = content;
         float y = 0f;
-
-        // Give feedback sits at the very top.
-        AddWideButtonRow(list, string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, () => PixelFeedback.OpenWindow(), ref y);
 
         // ---- Gameplay ----
         AddSettingsSectionHeader(list, headerGameplay, ref y);
