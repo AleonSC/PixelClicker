@@ -1196,6 +1196,7 @@ public class PixelBank : MonoBehaviour
         float tabWidth = hud.ButtonSize.x * bankTabWidthFraction, hoseSize = hud.ButtonSize.y, groupWidth = tabWidth + hoseSize;
         hud.DockInGroup(bank.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, tabWidth, 0f, groupWidth);
         hud.DockInGroup(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, hoseSize, tabWidth, groupWidth);
+        hoseButton.GetComponent<PixelDockedButton>().useOwnColor = true;
         DrawHoseIcon(hoseButton.transform, hoseSize / 64f);
         BuildTip();
         AddHoseTip(hoseButton.gameObject);

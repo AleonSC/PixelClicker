@@ -423,7 +423,8 @@ public class PixelDevTools : MonoBehaviour
         Button button = PixelUIKit.CreateButton(font, dockRoot.transform, "Dev Tools Button", dockButtonText, new Vector2(230f, 64f),
                                                 dockButtonColor, dockTextColor, fontSize);
         RectTransform rt = button.GetComponent<RectTransform>();
-        PixelHud.Ensure(gameObject).Dock(rt, new Vector2(0.75f, 0f), () => IsOpen);
+        PixelHud.Ensure(gameObject).Dock(rt, new Vector2(0.5f, 0f), () => IsOpen);
+        rt.GetComponent<PixelDockedButton>().useOwnColor = true;
         button.onClick.AddListener(Open);
 
         PixelDevButtonFx fx = dockRoot.AddComponent<PixelDevButtonFx>();

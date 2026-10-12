@@ -287,6 +287,11 @@ public class PixelHud : MonoBehaviour
         return new Color(p.r, p.g, p.b, baseColor.a);
     }
 
+    [Tooltip("The one colour every docked menu button shares (the hose and Dev Tools buttons keep their own).")]
+    [SerializeField] private Color sharedButtonColor = new Color(0.2f, 0.3f, 0.45f, 1f);
+
+    internal Color SharedButtonColor => sharedButtonColor.a < 0.01f ? new Color(0.2f, 0.3f, 0.45f, 1f) : sharedButtonColor;
+
     public static void ReloadGlowFromPrefs() { buttonModeCache = -1; barGlowCache = -1; glowHueCache = -1f; glowCycleCache = -1; glowColorCache = null; barColorCache = null; BarColorVersion++; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -483,6 +488,20 @@ public class PixelDockedButton : MonoBehaviour
     }
 
     private Canvas sortCanvas;
+    private UnityEngine.UI.Image image;
+    private Color appliedColor = new Color(-1f, 0f, 0f, 0f);
+
+    /// <summary>The button keeps whatever colour its owner gives it (the Dev Tools button's gold).</summary>
+    public bool useOwnColor;
+
+    private void ApplyColor()
+    {
+        if (useOwnColor) return;
+        if (image == null) image = GetComponent<UnityEngine.UI.Image>();
+        if (image == null) return;
+        Color want = hud.SharedButtonColor;
+        if (want != appliedColor) { image.color = want; appliedColor = want; }
+    }
 
     /// <summary>With the buttons always showing, each one gets its own canvas below every window, so windows overlay the buttons instead of the other windows' buttons showing on top.</summary>
     private void UpdateSorting()
@@ -505,6 +524,7 @@ public class PixelDockedButton : MonoBehaviour
     {
         if (hud == null) return;
         UpdateSorting();
+        ApplyColor();
 
         if (ForceHidden) { slide = 0f; Apply(); return; }
         float target = !hud.SlideButtons || (keepOut != null && keepOut()) || PointerNear() ? 1f : 0f;

@@ -115,8 +115,10 @@ public partial class PixelSkills
         tabButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Skills Button", tabText, hud.ButtonSize, tabColor, textColor, 30f);
         tabObject = tabButton.gameObject;
         RectTransform tabRect = tabButton.GetComponent<RectTransform>();
-        hud.Dock(tabRect, new Vector2(1f, 0f), () => WindowOpen || (tabDock != null && tabDock.PointerNear()));
+        hud.DockInGroup(tabRect, new Vector2(0f, 0.5f), () => WindowOpen || (tabDock != null && tabDock.PointerNear()),
+                        -(hud.ButtonSize.y + tabGap), groupWidth, 0f, groupWidth);
         tabDock = tabButton.GetComponent<PixelDockedButton>();
+        tabDock.blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
         tabGroup = tabObject.AddComponent<CanvasGroup>();
         tabButton.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Skills, tabButton);
@@ -794,9 +796,13 @@ public partial class PixelSkills
 
         // The tab tucks away while the window is up and fades back in afterwards, like the Bank tabs.
         bool open = WindowOpen;
-        if (tabDock != null) tabDock.ForceHidden = false;   // the button lives in the bottom row now and stays put while the window is open
-        tabGroup.alpha = 1f;
-        tabGroup.blocksRaycasts = true;
+        if (tabDock != null) tabDock.ForceHidden = open || tabGroup.alpha < 0.05f;
+        if (open) { tabGroup.alpha = 0f; tabGroup.blocksRaycasts = false; }
+        else
+        {
+            tabGroup.blocksRaycasts = true;
+            tabGroup.alpha = Mathf.MoveTowards(tabGroup.alpha, 1f, Time.unscaledDeltaTime / 1.2f);
+        }
 
         // The first time a skill pack becomes available Cubie walks through the window (the screen dims and the game pauses meanwhile).
         UpdateTutorialStart(available, open);
