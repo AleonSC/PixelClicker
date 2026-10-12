@@ -406,12 +406,16 @@ public class PixelGuideVendor : MonoBehaviour
         PixelWindows.Register(this, 150, () => true, () => advance++); // Escape = next page
         panel.gameObject.SetActive(true);
 
+        giftLine = null;
         for (int i = 0; i < pages.Length; i++)
         {
+            wantBack = false;
+            if (backButton != null) backButton.gameObject.SetActive(i > 0);
             string text = pages[i];
             if (text.Contains("{gift}"))
             {
-                text = text.Replace("{gift}", replaying ? "(You already got yours, no seconds!)" : GiveGift());
+                if (giftLine == null) giftLine = replaying ? "(You already got yours, no seconds!)" : GiveGift();   // handed over once, even if the player goes back to this page
+                text = text.Replace("{gift}", giftLine);
                 if (giftBox != null) giftBox.gameObject.SetActive(true);
             }
             PixelUIKit.SetText(message, text);
@@ -425,6 +429,7 @@ public class PixelGuideVendor : MonoBehaviour
             message.maxVisibleCharacters = 0;
             while (true)
             {
+                if (wantBack) break;
                 if (advance != start)
                 {
                     if (shown < total) { shown = total; message.maxVisibleCharacters = total; start = advance; }
@@ -446,6 +451,7 @@ public class PixelGuideVendor : MonoBehaviour
             }
             message.maxVisibleCharacters = int.MaxValue;
             nextButton.transform.localScale = Vector3.one;
+            if (wantBack) { wantBack = false; i = Mathf.Max(-1, i - 2); }   // one page back (the loop adds 1)
         }
 
         PixelPop.Hide(panel.gameObject);
@@ -640,8 +646,31 @@ public class PixelGuideVendor : MonoBehaviour
         br.pivot = new Vector2(0.5f, 0f);
         br.anchoredPosition = new Vector2(0f, 30f);
         nextButton.onClick.AddListener(() => advance++);
+
+        // A small back arrow at the panel's bottom left: hold it to go back one page.
+        backButton = PixelUIKit.CreateButton(Font, panel, "Back", "<", new Vector2(64f, 56f), new Color(0.15f, 0.4f, 0.4f, 1f), Color.white, 32f);
+        PixelUIKit.UseArrowGlyph(backButton, true);
+        RectTransform bkr = backButton.GetComponent<RectTransform>();
+        bkr.anchorMin = bkr.anchorMax = new Vector2(0f, 0f);
+        bkr.pivot = new Vector2(0f, 0f);
+        bkr.anchoredPosition = new Vector2(30f, 42f);
+        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(backButton.transform, false);
+        fillGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.45f);
+        fillGo.GetComponent<Image>().raycastTarget = false;
+        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = new Vector2(0f, 1f);
+        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        fillRect.SetSiblingIndex(1);
+        PixelHoldButton hold = backButton.gameObject.AddComponent<PixelHoldButton>();
+        hold.Setup(fillRect, 0.6f, () => { hold.ResetProgress(); wantBack = true; advance++; });
         panel.gameObject.SetActive(false);
     }
+
+    private Button backButton;
+    private bool wantBack;
+    private string giftLine;
 
     private TMP_Text nameLabel;
 

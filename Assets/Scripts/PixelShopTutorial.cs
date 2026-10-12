@@ -143,6 +143,6 @@ public class PixelShopTutorial : MonoBehaviour
         if (index == 0) PixelGuideVendor.BeginNarration();   // Cubie narrates his shop from the bottom right
         Step step = steps[index];
         shop.TutorialOpen(step.tab, step.subTab);
-        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: UniformHeight());
+        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: UniformHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null);
     }
 }

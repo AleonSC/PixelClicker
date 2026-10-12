@@ -27,12 +27,13 @@ public static class PixelNotice
     /// <summary>'nearLog' = a small box at the bottom left, next to the event log.</summary>
     /// <summary>'aboveCombo' = a small box at the bottom of the screen, just above the combo meter.</summary>
     /// <summary>'nearScreen' = the box follows a point on screen (pixels; null = nowhere), sitting beside it, e.g. next to the ghost. 'freezeTime' = Time.timeScale is 0 until the box is closed.</summary>
+    /// <summary>'onBack' = a small back arrow appears at the box's top left; holding it closes this box (without running onClosed) and calls onBack (tutorial steps go to the previous step).</summary>
     /// <summary>'beside' = a window (Inventory, Log): the box sits right next to it, to its right, never overlapping it. 'besideBottom' aligns the bottoms (for a window at the bottom of the screen), else the tops.</summary>
     public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f)
+                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f, System.Action onBack = null)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime, minHeight); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime, minHeight, onBack); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -97,17 +98,66 @@ public class PixelNoticeBox : MonoBehaviour
         RectTransform okr = ok.GetComponent<RectTransform>();
         okr.anchorMin = okr.anchorMax = okr.pivot = new Vector2(0.5f, 0f);
         okr.anchoredPosition = new Vector2(0f, 18f);
-        ok.onClick.AddListener(Close);
+        ok.onClick.AddListener(OnOk);
         okRect = okr;
         okLabel = ok.GetComponentInChildren<TMP_Text>();
+
+        // A small back arrow at the top left: hold it to go back (only shown when the caller gave an onBack).
+        Button back = PixelUIKit.CreateButton(font, box.transform, "Back", "<", new Vector2(46f, 40f), new Color(0.2f, 0.35f, 0.5f, 1f), Color.white, 26f);
+        PixelUIKit.UseArrowGlyph(back, true);
+        backRect = back.GetComponent<RectTransform>();
+        backRect.anchorMin = backRect.anchorMax = backRect.pivot = new Vector2(0f, 1f);
+        backRect.anchoredPosition = new Vector2(10f, -10f);
+        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(back.transform, false);
+        Image fillImage = fillGo.GetComponent<Image>();
+        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
+        fillImage.raycastTarget = false;
+        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = new Vector2(0f, 1f);
+        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        fillRect.SetSiblingIndex(1);
+        PixelHoldButton hold = back.gameObject.AddComponent<PixelHoldButton>();
+        hold.Setup(fillRect, backHoldSeconds, () =>
+        {
+            hold.ResetProgress();
+            System.Action go = backCallback;
+            closedCallback = null;   // going back is not 'Got it'
+            Close();
+            go?.Invoke();
+        });
+    }
+
+    private RectTransform backRect;
+    private System.Action backCallback;
+    private const float backHoldSeconds = 0.6f;
+
+    // The text types itself out; the first Got it press shows the rest at once, the next one closes the box.
+    private bool typing;
+    private float typeShown;
+    private int typeTotal;
+    private const float TypeCharsPerSecond = 80f;
+
+    private void OnOk()
+    {
+        if (typing) { FinishTyping(); return; }
+        Close();
+    }
+
+    private void FinishTyping()
+    {
+        typing = false;
+        if (label != null) label.maxVisibleCharacters = int.MaxValue;
     }
 
     private const float BesideWidth = 640f;
 
     public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f)
+                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f, System.Action onBack = null)
     {
-        closedCallback = onClosed; // a tip replaced by a new one never runs the old callback
+        closedCallback = onClosed;
+        backCallback = onBack; // a tip replaced by a new one never runs the old callback
         besideTarget = null;
         Unfreeze();
         followPoint = nearScreen;
@@ -214,6 +264,16 @@ public class PixelNoticeBox : MonoBehaviour
         PixelPop.Show(boxRect.gameObject);   // a box that was still shrinking away grows back for the new tip
         timed = seconds > 0f;
         timer = seconds;
+        if (backRect != null) backRect.gameObject.SetActive(backCallback != null);
+        if (!timed)
+        {
+            label.ForceMeshUpdate();
+            typeTotal = label.textInfo.characterCount;
+            typeShown = 0f;
+            typing = typeTotal > 0;
+            label.maxVisibleCharacters = typing ? 0 : int.MaxValue;
+        }
+        else FinishTyping();
         if (followPoint != null) PlaceNearPoint();
         if (freezeTime && Time.timeScale > 0f)
         {
@@ -281,6 +341,8 @@ public class PixelNoticeBox : MonoBehaviour
         Unfreeze();
         System.Action callback = closedCallback;
         closedCallback = null;
+        backCallback = null;
+        FinishTyping();
         if (wasOpen) callback?.Invoke();
     }
 
@@ -304,6 +366,12 @@ public class PixelNoticeBox : MonoBehaviour
 
     private void Update()
     {
+        if (typing && label != null)
+        {
+            typeShown += Time.unscaledDeltaTime * TypeCharsPerSecond;
+            if (typeShown >= typeTotal) FinishTyping();
+            else label.maxVisibleCharacters = (int)typeShown;
+        }
         if (canvasRoot != null && canvasRoot.activeSelf) TrackBesideWindow();
         if (followPoint != null && canvasRoot != null && canvasRoot.activeSelf) PlaceNearPoint();
         if (!timed || canvasRoot == null || !canvasRoot.activeSelf) return;

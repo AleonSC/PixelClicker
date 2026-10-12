@@ -186,6 +186,38 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     private GameObject waresBar;
     private ScrollRect waresScroll;
     private readonly List<WareRow> rows = new List<WareRow>();
+    private TMP_Text greetMessage, asideMessage, typedLabel;
+    private bool asideBack;
+    private float typeShown;
+    private int typeTotal;
+    private const float TypeCharsPerSecond = 70f;
+
+    private bool Typing => typedLabel != null && typeShown < typeTotal;
+
+    private void StartType(TMP_Text label)
+    {
+        typedLabel = label;
+        if (label == null) return;
+        label.ForceMeshUpdate();
+        typeTotal = label.textInfo.characterCount;
+        typeShown = 0f;
+        label.maxVisibleCharacters = 0;
+    }
+
+    private void TickType()
+    {
+        if (!Typing) return;
+        typeShown += Time.unscaledDeltaTime * TypeCharsPerSecond;
+        if (typeShown >= typeTotal) FinishType();
+        else typedLabel.maxVisibleCharacters = (int)typeShown;
+    }
+
+    private void FinishType()
+    {
+        typeShown = typeTotal;
+        if (typedLabel != null) typedLabel.maxVisibleCharacters = int.MaxValue;
+    }
+
     private int decision; // 0 = waiting, 1 = accept, 2 = reject / leave
     private bool waresDone;
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
@@ -351,19 +383,30 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         visitorRect.anchoredPosition = new Vector2(restX, barH + 24f);
         SetDim(1f);
 
-        // They greet you.
-        greetingPanel.gameObject.SetActive(true);
-
-        while (decision == 0) { Bob(restX, barH); yield return null; }
-        PixelPop.Hide(greetingPanel.gameObject);
-
-        if (decision == 1 && asidePanel != null)
+        // They greet you (the text types itself; the first press of a button shows the rest, the next one answers / goes on).
+        bool again;
+        do
         {
-            asidePanel.gameObject.SetActive(true);
-            while (!asideDone && decision == 1) { Bob(restX, barH); yield return null; }
-            PixelPop.Hide(asidePanel.gameObject);
-            if (decision == 0) decision = 2;
-        }
+            again = false;
+            greetingPanel.gameObject.SetActive(true);
+            PixelPop.Show(greetingPanel.gameObject);
+            StartType(greetMessage);
+            while (decision == 0) { TickType(); Bob(restX, barH); yield return null; }
+            PixelPop.Hide(greetingPanel.gameObject);
+
+            if (decision == 1 && asidePanel != null)
+            {
+                asidePanel.gameObject.SetActive(true);
+                PixelPop.Show(asidePanel.gameObject);
+                asideDone = false;
+                asideBack = false;
+                StartType(asideMessage);
+                while (!asideDone && decision == 1 && !asideBack) { TickType(); Bob(restX, barH); yield return null; }
+                PixelPop.Hide(asidePanel.gameObject);
+                if (asideBack) { decision = 0; again = true; }   // back to the greeting
+                else if (decision == 0) decision = 2;
+            }
+        } while (again);
 
         if (decision == 1 && IsGift) OnGift();
         if (decision == 1 && !IsGift)
@@ -660,16 +703,17 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         message.enableAutoSizing = true;
         message.fontSizeMax = 34f;
         message.fontSizeMin = 18f;
+        greetMessage = message;
         Anchor(message.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
 
         Button accept = PixelUIKit.CreateButton(Font, greetingPanel, "Accept", AcceptLabel, new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
         PixelUIKit.Caps(accept);
         Corner(accept.GetComponent<RectTransform>(), new Vector2(0.25f, 0f), new Vector2(0f, 36f));
-        accept.onClick.AddListener(() => { if (decision == 0) decision = 1; });
+        accept.onClick.AddListener(() => { if (Typing) { FinishType(); return; } if (decision == 0) decision = 1; });
         Button reject = PixelUIKit.CreateButton(Font, greetingPanel, "Reject", RejectLabel, new Vector2(300f, 80f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 36f);
         PixelUIKit.Caps(reject);
         Corner(reject.GetComponent<RectTransform>(), new Vector2(0.75f, 0f), new Vector2(0f, 36f));
-        reject.onClick.AddListener(() => { if (decision == 0) decision = 2; });
+        reject.onClick.AddListener(() => { if (Typing) { FinishType(); return; } if (decision == 0) decision = 2; });
         greetingPanel.gameObject.SetActive(false);
 
         // --- Wares window.
@@ -779,11 +823,30 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             am.enableAutoSizing = true;
             am.fontSizeMax = 34f;
             am.fontSizeMin = 18f;
+            asideMessage = am;
             Anchor(am.rectTransform, 0f, 0f, 1f, 1f, new Vector2(36f, 130f), new Vector2(-36f, -92f));
             Button next = PixelUIKit.CreateButton(Font, asidePanel, "Next", "Next", new Vector2(300f, 80f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 36f);
             PixelUIKit.Caps(next);
             Corner(next.GetComponent<RectTransform>(), new Vector2(0.5f, 0f), new Vector2(0f, 36f));
-            next.onClick.AddListener(() => asideDone = true);
+            next.onClick.AddListener(() => { if (Typing) { FinishType(); return; } asideDone = true; });
+            // a small back arrow: hold it to return to the greeting
+            Button back = PixelUIKit.CreateButton(Font, asidePanel, "Back", "<", new Vector2(64f, 56f), new Color(0.3f, 0.3f, 0.4f, 1f), Color.white, 32f);
+            PixelUIKit.UseArrowGlyph(back, true);
+            RectTransform bkr = back.GetComponent<RectTransform>();
+            bkr.anchorMin = bkr.anchorMax = Vector2.zero;
+            bkr.pivot = Vector2.zero;
+            bkr.anchoredPosition = new Vector2(24f, 40f);
+            GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+            fillGo.transform.SetParent(back.transform, false);
+            fillGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.45f);
+            fillGo.GetComponent<Image>().raycastTarget = false;
+            RectTransform fillRect = fillGo.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = new Vector2(0f, 1f);
+            fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+            fillRect.SetSiblingIndex(1);
+            PixelHoldButton hold = back.gameObject.AddComponent<PixelHoldButton>();
+            hold.Setup(fillRect, 0.6f, () => { hold.ResetProgress(); asideBack = true; });
             asidePanel.gameObject.SetActive(false);
         }
     }

@@ -109,7 +109,7 @@ public partial class PixelSkills
             RefreshWindow();
         }
         PixelGuideVendor.PointOverride = () => TutorialTarget(step.focus);
-        PixelNotice.Show(step.text, 0f, small: true, beside: windowRect, onClosed: () => TutorialShowStep(index + 1), minHeight: TutorialBoxHeight());
+        PixelNotice.Show(step.text, 0f, small: true, beside: windowRect, onClosed: () => TutorialShowStep(index + 1), minHeight: TutorialBoxHeight(), onBack: index > 0 ? (System.Action)(() => TutorialShowStep(index - 1)) : null);
     }
 
     private float TutorialBoxHeight()
