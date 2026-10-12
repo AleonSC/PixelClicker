@@ -29,7 +29,8 @@ public partial class PixelSkybox
     private enum EyeState { Hidden, Opening, Watching, Closing }
 
     private GameObject eyeRoot;
-    private Transform eyeWhite, eyeIris, eyeOutline;
+    private Transform eyeWhite, eyeIris, eyeOutline, eyeHalo, eyePupil;
+    private float[] eyeAlphaScale;
     private Material[] eyeMats;
     private Texture2D[] eyeTextures;
     private EyeState eyeState = EyeState.Hidden;
@@ -44,6 +45,7 @@ public partial class PixelSkybox
     private void LateUpdate()
     {
         Camera cam = Cam;
+        UpdateRain(cam);
         bool want = !disableEye && cam != null && current >= 0 && current < styles.Count && styles[current].pattern == SkyPattern.EyeVoid;
         if (!want)
         {
@@ -112,16 +114,27 @@ public partial class PixelSkybox
         t.position = cam.ViewportToWorldPoint(new Vector3(eyeView.x, eyeView.y, dist));
         t.rotation = cam.transform.rotation;
 
+        float tNow = Time.unscaledTime;
         eyeWhite.localScale = new Vector3(w, Mathf.Max(0.001f, h * open), 1f);
-        eyeOutline.localScale = eyeWhite.localScale;
-        float ir = h * 0.72f;
+        eyeOutline.localScale = new Vector3(w * 1.12f, Mathf.Max(0.001f, h * 1.12f * open), 1f);   // (a little bigger: it carries the lashes)
+        float ir = h * 0.74f;
         eyeIris.localScale = new Vector3(ir, Mathf.Max(0.001f, ir * open), 1f);
-        eyeIris.localPosition = new Vector3(eyeLook.x * w * 0.14f, eyeLook.y * h * 0.04f * open, -0.02f * dist * 0.01f);
+        Vector3 irisPos = new Vector3(eyeLook.x * w * 0.14f, eyeLook.y * h * 0.04f * open, -0.02f * dist * 0.01f);
+        eyeIris.localPosition = irisPos;
+        // The slit pupil breathes slowly, and narrows when the eye stares right at the cursor.
+        float stare = 1f - Mathf.Clamp01(toward.magnitude * 2.5f);
+        float dilation = (0.75f + 0.35f * Mathf.Sin(tNow * 1.6f)) * Mathf.Lerp(1f, 0.6f, stare);
+        eyePupil.localScale = new Vector3(Mathf.Max(0.001f, ir * 0.26f * dilation), Mathf.Max(0.001f, ir * open * 0.98f), 1f);
+        eyePupil.localPosition = irisPos + new Vector3(eyeLook.x * w * 0.02f, 0f, -0.01f * dist * 0.01f);
         eyeWhite.localPosition = Vector3.zero;
         eyeOutline.localPosition = new Vector3(0f, 0f, -0.04f * dist * 0.01f);
+        // The glow behind the eye pulses like a heartbeat.
+        float beat = 1f + 0.07f * Mathf.Sin(tNow * 2.4f) + 0.04f * Mathf.Sin(tNow * 5.1f);
+        eyeHalo.localScale = new Vector3(w * 2.2f * beat, Mathf.Max(0.001f, h * 3.3f * beat * Mathf.Lerp(0.35f, 1f, open)), 1f);
+        eyeHalo.localPosition = new Vector3(0f, 0f, 0.05f * dist * 0.01f);
 
         float alpha = Mathf.Clamp01(open * 2.5f);
-        foreach (Material m in eyeMats) { Color c = m.color; c.a = alpha; m.color = c; }
+        for (int i = 0; i < eyeMats.Length; i++) { Color c = eyeMats[i].color; c.a = alpha * eyeAlphaScale[i]; eyeMats[i].color = c; }
     }
 
     private void OnDisable()
@@ -141,12 +154,14 @@ public partial class PixelSkybox
     {
         eyeRoot = new GameObject("Watcher Eye");
         eyeRoot.hideFlags = HideFlags.DontSave;
-        eyeTextures = new[] { WhiteTexture(), IrisTexture(s.accentA), OutlineTexture(s.accentB) };
-        eyeMats = new Material[3];
-        Transform[] parts = new Transform[3];
-        string[] names = { "White", "Iris", "Outline" };
+        // back to front: glow, sclera, iris, pupil, lid line + lashes
+        eyeTextures = new[] { HaloTexture(s.accentB, s.accentA), WhiteTexture(), IrisTexture(s.accentA, s.accentB), PupilTexture(s.accentB), OutlineTexture(s.accentB, s.accentA) };
+        eyeAlphaScale = new[] { 0.55f, 1f, 1f, 1f, 1f };
+        string[] names = { "Halo", "White", "Iris", "Pupil", "Outline" };
+        eyeMats = new Material[names.Length];
+        Transform[] parts = new Transform[names.Length];
         Mesh quad = EyeQuad();
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < names.Length; i++)
         {
             GameObject g = new GameObject(names[i], typeof(MeshFilter), typeof(MeshRenderer));
             g.transform.SetParent(eyeRoot.transform, false);
@@ -162,7 +177,7 @@ public partial class PixelSkybox
             eyeMats[i] = m;
             parts[i] = g.transform;
         }
-        eyeWhite = parts[0]; eyeIris = parts[1]; eyeOutline = parts[2];
+        eyeHalo = parts[0]; eyeWhite = parts[1]; eyeIris = parts[2]; eyePupil = parts[3]; eyeOutline = parts[4];
         eyeRoot.SetActive(false);
     }
 
@@ -188,9 +203,31 @@ public partial class PixelSkybox
         return new Texture2D(w, h, TextureFormat.RGBA32, false) { name = name, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
     }
 
+    /// <summary>A soft glow round the whole eye.</summary>
+    private static Texture2D HaloTexture(Color outer, Color inner)
+    {
+        const int n = 128;
+        Texture2D tex = NewEyeTexture(n, n, "Eye Halo");
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float nx = (x + 0.5f) / n * 2f - 1f, ny = (y + 0.5f) / n * 2f - 1f;
+                float r = Mathf.Sqrt(nx * nx + ny * ny);
+                float a = Mathf.Pow(Mathf.Clamp01(1f - r), 2.2f);
+                Color c = Color.Lerp(inner, outer, Mathf.Clamp01(r * 1.2f)) * 1.1f;
+                c.a = a * 0.8f;
+                px[y * n + x] = c;
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>The white of the eye: shaded darker and redder towards the lids, with bloodshot veins creeping in from the corners.</summary>
     private static Texture2D WhiteTexture()
     {
-        const int w = 192, h = 96;
+        const int w = 256, h = 128;
         Texture2D tex = NewEyeTexture(w, h, "Eye White");
         Color[] px = new Color[w * h];
         for (int y = 0; y < h; y++)
@@ -200,7 +237,21 @@ public partial class PixelSkybox
                 float eh = AlmondHeight(nx);
                 float a = Mathf.Clamp01((eh - Mathf.Abs(ny)) * 20f);
                 float k = eh > 0.001f ? Mathf.Pow(Mathf.Clamp01(Mathf.Abs(ny) / eh), 3f) : 1f;
-                Color c = Color.Lerp(new Color(0.93f, 0.9f, 0.8f), new Color(0.55f, 0.3f, 0.25f), k);
+                Color c = Color.Lerp(new Color(0.95f, 0.91f, 0.82f), new Color(0.6f, 0.3f, 0.26f), k);
+                // Veins: wavy lines running from the corners towards the middle, fading out before they reach it.
+                float veins = 0f;
+                for (int v = 0; v < 9; v++)
+                {
+                    float side = (v & 1) == 0 ? -1f : 1f;
+                    float start = side * 0.92f;
+                    float along = (nx - start) / (-side * 1.2f);                 // 0 at the corner, 1 a way in
+                    if (along < 0f || along > 1f) continue;
+                    float baseY = (v / 2 - 2) * 0.17f * (1f - along * 0.6f);
+                    float wave = Mathf.Sin(along * (7f + v) + v * 1.7f) * 0.05f * along;
+                    float dist = Mathf.Abs(ny - (baseY + wave));
+                    veins = Mathf.Max(veins, Mathf.Clamp01(1f - dist / 0.014f) * (1f - along) * 0.85f);
+                }
+                c = Color.Lerp(c, new Color(0.75f, 0.08f, 0.08f), veins);
                 c.a = a;
                 px[y * w + x] = c;
             }
@@ -209,9 +260,10 @@ public partial class PixelSkybox
         return tex;
     }
 
-    private static Texture2D IrisTexture(Color accent)
+    /// <summary>The iris: a dark limbal ring, glowing radial fibres, a bright ring round the pupil and soft glints. (The slit pupil is its own piece.)</summary>
+    private static Texture2D IrisTexture(Color accent, Color hot)
     {
-        const int n = 96;
+        const int n = 128;
         Texture2D tex = NewEyeTexture(n, n, "Eye Iris");
         Color[] px = new Color[n * n];
         for (int y = 0; y < n; y++)
@@ -219,13 +271,20 @@ public partial class PixelSkybox
             {
                 float nx = (x + 0.5f) / n * 2f - 1f, ny = (y + 0.5f) / n * 2f - 1f;
                 float r = Mathf.Sqrt(nx * nx + ny * ny);
-                float a = Mathf.Clamp01((1f - r) * 24f);
-                Color c = r > 0.86f ? accent * 0.3f : Color.Lerp(accent * 1.15f, accent * 0.55f, r);
-                float streak = Mathf.Sin(Mathf.Atan2(ny, nx) * 24f) * 0.5f + 0.5f;
-                c *= 0.85f + 0.3f * streak * (1f - r);
-                if (Mathf.Abs(nx) < 0.14f * (1f - ny * ny * 0.5f) && Mathf.Abs(ny) < 0.8f) c = Color.black;   // a slit pupil
-                float hx = nx + 0.3f, hy = ny - 0.35f;
-                if (hx * hx + hy * hy < 0.012f) c = Color.white;                                              // a glint
+                float a = Mathf.Clamp01((1f - r) * 30f);
+                float ang = Mathf.Atan2(ny, nx);
+                Color c = Color.Lerp(hot * 1.2f, accent * 0.9f, Mathf.Clamp01(r * 1.4f - 0.1f));          // hot near the middle, the iris colour outside
+                float fibre = 0.5f + 0.5f * Mathf.Sin(ang * 36f + Mathf.Sin(ang * 5f + r * 6f) * 1.4f);
+                float fibre2 = 0.5f + 0.5f * Mathf.Sin(ang * 71f - r * 9f);
+                c *= 0.55f + 0.55f * fibre * (1f - r * 0.4f) + 0.2f * fibre2;
+                float collarette = Mathf.Exp(-Mathf.Pow((r - 0.4f) / 0.07f, 2f));                         // a bright ring around the pupil
+                c = Color.Lerp(c, Color.Lerp(accent, Color.white, 0.5f), collarette * 0.55f);
+                float limbal = Mathf.Clamp01((r - 0.78f) / 0.2f);                                          // dark edge
+                c = Color.Lerp(c, accent * 0.12f, limbal * 0.9f);
+                float hx = nx + 0.32f, hy = ny - 0.36f;
+                float glint = Mathf.Exp(-(hx * hx + hy * hy) / 0.006f);
+                float glint2 = Mathf.Exp(-((nx - 0.28f) * (nx - 0.28f) + (ny + 0.3f) * (ny + 0.3f)) / 0.003f) * 0.6f;
+                c = Color.Lerp(c, Color.white, Mathf.Clamp01(glint + glint2));
                 c.a = a;
                 px[y * n + x] = c;
             }
@@ -234,24 +293,64 @@ public partial class PixelSkybox
         return tex;
     }
 
-    private static Texture2D OutlineTexture(Color accent)
+    /// <summary>A vertical slit pupil with pointed ends, black with a faint glowing rim.</summary>
+    private static Texture2D PupilTexture(Color rim)
     {
-        const int w = 192, h = 96;
-        Texture2D tex = NewEyeTexture(w, h, "Eye Outline");
+        const int w = 64, h = 128;
+        Texture2D tex = NewEyeTexture(w, h, "Eye Pupil");
         Color[] px = new Color[w * h];
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
             {
                 float nx = (x + 0.5f) / w * 2f - 1f, ny = (y + 0.5f) / h * 2f - 1f;
+                float half = Mathf.Pow(Mathf.Clamp01(1f - ny * ny), 0.8f);      // a lens: widest in the middle, pointed at the ends
+                float d = half - Mathf.Abs(nx);
+                float a = Mathf.Clamp01(d * 12f);
+                Color c = Color.Lerp(rim * 0.9f, Color.black, Mathf.Clamp01(d * 5f));
+                c.a = a;
+                px[y * w + x] = c;
+            }
+        tex.SetPixels(px);
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>The lid lines with a soft glow outside them and tapering lashes along both lids.</summary>
+    private static Texture2D OutlineTexture(Color accent, Color lash)
+    {
+        const int w = 256, h = 128;
+        Texture2D tex = NewEyeTexture(w, h, "Eye Outline");
+        Color[] px = new Color[w * h];
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                // (the picture is 1.12x the eye: map back to the eye's own coordinates)
+                float nx = ((x + 0.5f) / w * 2f - 1f) * 1.12f, ny = ((y + 0.5f) / h * 2f - 1f) * 1.12f;
                 float eh = AlmondHeight(nx);
                 float dist = eh - Mathf.Abs(ny);      // > 0 inside the lids
                 float a = 0f;
+                Color c = accent * 1.25f;
                 if (eh > 0f)
                 {
-                    a = Mathf.Clamp01(1f - Mathf.Abs(dist - 0.02f) / 0.05f);                 // the lid line
-                    if (dist < 0f) a = Mathf.Max(a, Mathf.Exp(dist * 14f) * 0.45f);          // a soft glow outside it
+                    a = Mathf.Clamp01(1f - Mathf.Abs(dist - 0.025f) / 0.06f);                 // the lid line, thicker than before
+                    if (dist < 0f) a = Mathf.Max(a, Mathf.Exp(dist * 12f) * 0.5f);            // a soft glow outside it
                 }
-                Color c = accent * 1.2f;
+                // Lashes: short tapering spikes fanning outwards from both lids.
+                if (dist < 0f && Mathf.Abs(nx) < 0.82f)
+                {
+                    float spacing = 0.13f;
+                    float cell = nx / spacing;
+                    float f = cell - Mathf.Floor(cell) - 0.5f;                                // -0.5..0.5 across one lash
+                    float len = 0.15f * (0.55f + 0.45f * Mathf.Abs(Mathf.Sin(Mathf.Floor(cell) * 2.4f))) * (1f - Mathf.Abs(nx) * 0.35f);
+                    float outside = -dist;
+                    float lean = nx * 0.12f;                                                  // lashes fan outwards
+                    float width = 0.07f * Mathf.Clamp01(1f - outside / len);
+                    if (outside < len && Mathf.Abs(f * spacing - lean * outside) < width)
+                    {
+                        a = Mathf.Max(a, 0.95f);
+                        c = lash * 1.2f;
+                    }
+                }
                 c.a = Mathf.Clamp01(a);
                 px[y * w + x] = c;
             }

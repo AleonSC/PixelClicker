@@ -643,3 +643,4 @@
 [2026-10-12 10:21 UTC] New orbital camera: the view key now cycles normal > first person > orbital; in orbital mode the camera swings round the cube (middle-mouse drag or arrow keys, Shift+wheel zoom) so it can be clicked from any side.
 [2026-10-12 10:26 UTC] Synthwave sky keeps its neon grid ground (it was mirrored away); sky pictures are drawn on all CPU cores so switching skies lags much less.
 [2026-10-12 10:27 UTC] Fixed the sky / whole view flipping 180 degrees at the end of the opening camera swing (it happened with a camera looking straight down).
+[2026-10-12 10:38 UTC] Skies: removed Synthwave, Alien World, Blocky Void, Black Hole, Spiral Galaxy and Ringed Planet; added 6 nebula colourings, 3 starfields, 3 auroras and an animated Underwater and Deep Ocean; falling rain in the rainy skies; a fancier Watcher eye.

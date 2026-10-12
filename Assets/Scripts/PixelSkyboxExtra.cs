@@ -240,6 +240,26 @@ public partial class PixelSkybox
 
             case SkyPattern.TestGrid:
                 return TestGridColor(dir, sun, d);
+
+            case SkyPattern.Starfield:
+            {
+                // Space with no objects: a dusty band, lots of stars and a few coloured ones.
+                Color c = Gradient(s, dir.y, 0.6f);
+                Vector3 n = new Vector3(0.3f, 0.8f, -0.5f).normalized;
+                float b = Vector3.Dot(dir, n);
+                float band = Mathf.Exp(-b * b * 14f) * Fbm3(dir * 3f, 4, s.seed);
+                float dust = Fbm3(dir * 8f, 3, s.seed + 4);
+                c += s.accentA * Mathf.Clamp01(band * 1.4f - 0.15f) * 0.45f;
+                c += s.accentB * Mathf.Clamp01(band * dust * 1.8f - 0.3f) * 0.35f;
+                c = Stars(c, s, x, y, sinLat, res, 1f + band * 4f);
+                float chance = s.starAmount * 0.0016f * sinLat / Mathf.Max(0.25f, res * res);
+                if (PixelNoise.Hash(x, y, s.seed + 5000) < chance)
+                    c = Color.Lerp(c, Color.HSVToRGB(PixelNoise.Hash(x, y, s.seed + 5001), 0.4f, 1f), 0.9f);
+                return c;
+            }
+
+            case SkyPattern.Underwater:
+                return UnderwaterColor(s, dir, sun, x, y);
         }
         return Gradient(s, dir.y, 0.5f);
     }
@@ -299,6 +319,60 @@ public partial class PixelSkybox
         Vector3 orange = Direction(30f, 0f), moon = Direction(15f, 90f);
         if (Vector3.Dot(dir, orange) > Mathf.Cos(7f * Mathf.Deg2Rad)) c = new Color(1f, 0.55f, 0.1f);
         if (Vector3.Dot(dir, moon) > Mathf.Cos(5f * Mathf.Deg2Rad)) c = new Color(0.95f, 0.95f, 1f);
+        return c;
+    }
+
+    /// <summary>Smooth 0..1 step between two edges (the shader-style smoothstep).</summary>
+    private static float Sstep(float e0, float e1, float x)
+    {
+        float t = Mathf.Clamp01((x - e0) / Mathf.Max(1e-6f, e1 - e0));
+        return t * t * (3f - 2f * t);
+    }
+
+    /// <summary>
+    /// The underwater sky (animated by <c>shadeTime</c>): light water overhead with a web of rippling caustics, soft shafts of light fanning out
+    /// from the sun above, drifting specks, and the water getting darker and bluer towards the depths.
+    /// </summary>
+    private static Color UnderwaterColor(SkyStyle s, Vector3 dir, Vector3 sun, int x, int y)
+    {
+        float t = shadeTime;
+        float up = dir.y;
+        Color c = up >= 0f ? Color.Lerp(s.horizonColor, s.topColor, Mathf.Pow(up, 0.7f)) : Color.Lerp(s.horizonColor, s.groundColor, Mathf.Clamp01(-up * 1.7f));
+
+        // Caustics: bright rippling lines where the surface focuses the light, seen on the 'ceiling' of water overhead.
+        if (up > 0.1f)
+        {
+            float k = 1f / up;
+            float px = dir.x * k * 1.3f, pz = dir.z * k * 1.3f;
+            float a = Mathf.Sin(px * 2.3f + t * 0.7f + 1.7f * Mathf.Sin(pz * 1.9f + t * 0.5f)) * Mathf.Sin(pz * 2.1f - t * 0.6f + 1.5f * Mathf.Sin(px * 1.7f - t * 0.4f));
+            float b = Mathf.Sin(px * 3.7f - t * 0.9f + 1.3f * Mathf.Sin(pz * 3.1f + t * 0.8f)) * Mathf.Sin(pz * 3.4f + t * 0.7f + 1.1f * Mathf.Sin(px * 2.9f - t * 0.6f));
+            float line = Mathf.Pow(1f - Mathf.Abs(a), 10f) * 0.8f + Mathf.Pow(1f - Mathf.Abs(b), 12f) * 0.5f;
+            c += s.accentA * line * Sstep(0.1f, 0.55f, up) * 0.55f;
+        }
+
+        // Shafts of light fanning out from the sun, swaying.
+        float dl = Vector3.Dot(dir, sun);
+        Vector3 rel = dir - sun * dl;
+        Vector3 e1 = Vector3.Cross(sun, Mathf.Abs(sun.y) > 0.95f ? Vector3.right : Vector3.up).normalized;
+        Vector3 e2 = Vector3.Cross(sun, e1);
+        float ang = Mathf.Atan2(Vector3.Dot(rel, e2), Vector3.Dot(rel, e1));
+        float r1 = 0.5f + 0.5f * Mathf.Sin(ang * 11f + t * 0.22f + 2.2f * Mathf.Sin(ang * 4f - t * 0.31f));
+        float r2 = 0.5f + 0.5f * Mathf.Sin(ang * 23f - t * 0.35f + 1.3f * Mathf.Sin(ang * 7f + t * 0.2f));
+        float rays = r1 * r1 * 0.7f + r2 * r2 * r2 * 0.3f;
+        float angDist = Mathf.Acos(Mathf.Clamp(dl, -1f, 1f)) * Mathf.Rad2Deg;
+        c += s.accentA * rays * Mathf.Exp(-angDist * 0.028f) * Sstep(-0.4f, 0.3f, up) * 0.5f;
+        c += s.accentA * Mathf.Exp(-angDist * 0.12f) * 0.25f;   // the bright patch of sky itself
+
+        // Drifting specks ('marine snow'): cells of a 3D grid that slide slowly upwards.
+        Vector3 p = dir * 46f + new Vector3(t * 0.15f, t * 0.55f, 0f);
+        int cx = Mathf.FloorToInt(p.x), cy = Mathf.FloorToInt(p.y), cz = Mathf.FloorToInt(p.z);
+        float h = PixelNoise.Hash(cx + cz * 977, cy, s.seed + 400);
+        if (h > 0.97f)
+        {
+            Vector3 centre = new Vector3(PixelNoise.Hash(cx, cy + cz, s.seed + 401), PixelNoise.Hash(cy, cz + cx, s.seed + 402), PixelNoise.Hash(cz, cx + cy, s.seed + 403));
+            float d = (new Vector3(p.x - cx, p.y - cy, p.z - cz) - centre).magnitude;
+            c += Color.white * Mathf.Clamp01(1f - d / 0.45f) * (0.25f + 0.5f * PixelNoise.Hash(cx, cy, s.seed + 404)) * Mathf.Clamp01(0.4f + up);
+        }
         return c;
     }
 
@@ -362,28 +436,6 @@ public partial class PixelSkybox
         // ---- space ----
         yield return new SkyStyle
         {
-            name = "Ringed Planet", pattern = SkyPattern.RingedPlanet, seed = 131,
-            topColor = new Color(0.005f, 0.005f, 0.02f), horizonColor = new Color(0.02f, 0.02f, 0.05f),
-            sunColor = new Color(0.85f, 0.7f, 0.5f), accentA = new Color(0.7f, 0.8f, 1f), accentB = new Color(0.55f, 0.4f, 0.3f),
-            cloudColor = new Color(0.9f, 0.85f, 0.7f), cloudShadowColor = new Color(0.45f, 0.38f, 0.3f),
-            sunElevation = 18f, sunAzimuth = 0f, sunSize = 34f, starAmount = 0.9f, rotateSpeed = 0f
-        };
-        yield return new SkyStyle
-        {
-            name = "Spiral Galaxy", pattern = SkyPattern.SpiralGalaxy, seed = 137,
-            topColor = new Color(0.003f, 0.004f, 0.015f), horizonColor = new Color(0.015f, 0.015f, 0.04f),
-            sunColor = new Color(1f, 0.9f, 0.7f), accentA = new Color(0.5f, 0.6f, 1f), accentB = new Color(1f, 0.5f, 0.7f),
-            sunElevation = 25f, sunAzimuth = 0f, sunSize = 60f, starAmount = 0.8f, rotateSpeed = 0f
-        };
-        yield return new SkyStyle
-        {
-            name = "Black Hole", pattern = SkyPattern.BlackHole, seed = 139,
-            topColor = new Color(0.002f, 0.002f, 0.01f), horizonColor = new Color(0.01f, 0.008f, 0.02f),
-            accentA = new Color(1f, 0.85f, 0.5f), accentB = new Color(0.9f, 0.35f, 0.1f),
-            sunElevation = 15f, sunAzimuth = 0f, sunSize = 22f, starAmount = 0.8f, rotateSpeed = 0f
-        };
-        yield return new SkyStyle
-        {
             name = "Binary Suns", pattern = SkyPattern.TwinSuns, seed = 149,
             topColor = new Color(0.18f, 0.12f, 0.35f), horizonColor = new Color(0.95f, 0.5f, 0.35f), groundColor = new Color(0.12f, 0.08f, 0.15f),
             sunColor = new Color(1f, 0.85f, 0.5f), accentA = new Color(0.6f, 0.8f, 1f), cloudColor = new Color(1f, 0.7f, 0.6f), cloudShadowColor = new Color(0.4f, 0.25f, 0.4f),
@@ -411,12 +463,118 @@ public partial class PixelSkybox
             topColor = new Color(0.18f, 0.02f, 0.02f), horizonColor = new Color(0.75f, 0.22f, 0.06f), groundColor = new Color(0.2f, 0.04f, 0.02f),
             accentA = new Color(1f, 0.55f, 0.1f), rotateSpeed = 0.3f
         };
+        
+
+        // ---- space variants (no objects: they survive the mirror) ----
         yield return new SkyStyle
         {
-            name = "Blocky Void", pattern = SkyPattern.CubeVoid, seed = 167, width = 256, pixelated = true,
-            topColor = new Color(0.03f, 0.01f, 0.05f), horizonColor = new Color(0.05f, 0.02f, 0.08f),
-            accentA = new Color(0.8f, 0.9f, 0.85f), accentB = new Color(0.35f, 0.15f, 0.5f),
-            sunElevation = 35f, sunAzimuth = 0f, sunSize = 12f, rotateSpeed = 0.2f
+            name = "Crimson Nebula", pattern = SkyPattern.Nebula, seed = 61,
+            topColor = new Color(0.02f, 0f, 0.01f), horizonColor = new Color(1f, 0.8f, 0.6f),
+            accentA = new Color(0.7f, 0.05f, 0.12f), accentB = new Color(0.9f, 0.35f, 0.05f),
+            starAmount = 1f, cloudAmount = 0f, rotateSpeed = 0.5f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Emerald Nebula", pattern = SkyPattern.Nebula, seed = 62,
+            topColor = new Color(0f, 0.015f, 0.01f), horizonColor = new Color(0.85f, 1f, 0.9f),
+            accentA = new Color(0.05f, 0.6f, 0.35f), accentB = new Color(0.05f, 0.3f, 0.6f),
+            starAmount = 1f, cloudAmount = 0f, rotateSpeed = 0.5f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Cobalt Nebula", pattern = SkyPattern.Nebula, seed = 63,
+            topColor = new Color(0f, 0.005f, 0.025f), horizonColor = new Color(0.8f, 0.9f, 1f),
+            accentA = new Color(0.1f, 0.2f, 0.85f), accentB = new Color(0.4f, 0.1f, 0.7f),
+            starAmount = 1f, cloudAmount = 0f, rotateSpeed = 0.5f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Violet Haze", pattern = SkyPattern.Nebula, seed = 64,
+            topColor = new Color(0.01f, 0f, 0.025f), horizonColor = new Color(1f, 0.85f, 1f),
+            accentA = new Color(0.45f, 0.15f, 0.75f), accentB = new Color(0.85f, 0.3f, 0.6f),
+            starAmount = 1f, cloudAmount = 0f, rotateSpeed = 0.5f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Golden Dust", pattern = SkyPattern.Nebula, seed = 65,
+            topColor = new Color(0.02f, 0.01f, 0f), horizonColor = new Color(1f, 0.95f, 0.7f),
+            accentA = new Color(0.75f, 0.45f, 0.1f), accentB = new Color(0.6f, 0.15f, 0.1f),
+            starAmount = 1f, cloudAmount = 0f, rotateSpeed = 0.5f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Teal Void", pattern = SkyPattern.Nebula, seed = 66,
+            topColor = new Color(0f, 0.012f, 0.015f), horizonColor = new Color(0.8f, 1f, 1f),
+            accentA = new Color(0.05f, 0.5f, 0.55f), accentB = new Color(0.05f, 0.15f, 0.35f),
+            starAmount = 1f, cloudAmount = 0f, rotateSpeed = 0.5f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Deep Space", pattern = SkyPattern.Starfield, seed = 71,
+            topColor = new Color(0f, 0f, 0.008f), horizonColor = new Color(0.01f, 0.01f, 0.03f), groundColor = new Color(0f, 0f, 0.008f),
+            accentA = new Color(0.35f, 0.4f, 0.8f), accentB = new Color(0.6f, 0.3f, 0.7f),
+            starAmount = 1.6f, cloudAmount = 0f, rotateSpeed = 0.4f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Star Dust", pattern = SkyPattern.Starfield, seed = 72,
+            topColor = new Color(0.01f, 0f, 0.02f), horizonColor = new Color(0.05f, 0.02f, 0.08f), groundColor = new Color(0.01f, 0f, 0.02f),
+            accentA = new Color(0.9f, 0.5f, 0.7f), accentB = new Color(0.4f, 0.6f, 1f),
+            starAmount = 1.2f, cloudAmount = 0f, rotateSpeed = 0.4f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Cold Stars", pattern = SkyPattern.Starfield, seed = 73,
+            topColor = new Color(0f, 0.01f, 0.025f), horizonColor = new Color(0.02f, 0.05f, 0.1f), groundColor = new Color(0f, 0.01f, 0.025f),
+            accentA = new Color(0.4f, 0.7f, 1f), accentB = new Color(0.6f, 0.9f, 1f),
+            starAmount = 1.4f, cloudAmount = 0f, rotateSpeed = 0.4f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Violet Aurora", pattern = SkyPattern.Aurora, seed = 81,
+            topColor = new Color(0.01f, 0.0f, 0.05f), horizonColor = new Color(0.07f, 0.03f, 0.14f), groundColor = new Color(0.01f, 0.0f, 0.05f),
+            accentA = new Color(0.65f, 0.25f, 1f), accentB = new Color(0.2f, 0.5f, 1f),
+            starAmount = 0.6f, cloudAmount = 0f, rotateSpeed = 0.3f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Ice Aurora", pattern = SkyPattern.Aurora, seed = 82,
+            topColor = new Color(0f, 0.02f, 0.06f), horizonColor = new Color(0.03f, 0.12f, 0.2f), groundColor = new Color(0f, 0.02f, 0.06f),
+            accentA = new Color(0.3f, 0.9f, 1f), accentB = new Color(0.4f, 0.5f, 1f),
+            starAmount = 0.6f, cloudAmount = 0f, rotateSpeed = 0.3f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Crimson Aurora", pattern = SkyPattern.Aurora, seed = 83,
+            topColor = new Color(0.03f, 0.0f, 0.03f), horizonColor = new Color(0.12f, 0.03f, 0.08f), groundColor = new Color(0.03f, 0.0f, 0.03f),
+            accentA = new Color(1f, 0.2f, 0.3f), accentB = new Color(0.9f, 0.5f, 0.2f),
+            starAmount = 0.6f, cloudAmount = 0f, rotateSpeed = 0.3f
+        };
+
+        // ---- under the sea (animated) ----
+        yield return new SkyStyle
+        {
+            name = "Underwater", pattern = SkyPattern.Underwater, seed = 91, width = 384,
+            topColor = new Color(0.3f, 0.82f, 0.88f), horizonColor = new Color(0.04f, 0.38f, 0.55f), groundColor = new Color(0.01f, 0.09f, 0.2f),
+            accentA = new Color(0.7f, 1f, 0.95f), sunElevation = 80f, sunAzimuth = 20f, rotateSpeed = 0f
+        };
+
+        yield return new SkyStyle
+        {
+            name = "Deep Ocean", pattern = SkyPattern.Underwater, seed = 92, width = 384,
+            topColor = new Color(0.04f, 0.28f, 0.42f), horizonColor = new Color(0.01f, 0.1f, 0.25f), groundColor = new Color(0f, 0.015f, 0.06f),
+            accentA = new Color(0.25f, 0.8f, 0.9f), sunElevation = 85f, sunAzimuth = -40f, rotateSpeed = 0f
         };
 
         // ---- the watcher ----

@@ -27,7 +27,9 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         RingedPlanet, SpiralGalaxy, BlackHole, TwinSuns,     // space
         CubeDay, CubeNight, CubeEmber, CubeVoid,             // cube world (blocky)
         EyeVoid,      // pitch black; an eye opens and watches the cursor (PixelSkyboxEye.cs)
-        TestGrid      // black sky with labelled latitude / longitude lines, NOT mirrored: for screenshots that diagnose orientation (PixelSkyboxExtra.cs)
+        TestGrid,     // black sky with labelled latitude / longitude lines, NOT mirrored: for screenshots that diagnose orientation (PixelSkyboxExtra.cs)
+        Starfield,    // dense coloured stars and a faint dusty band, no objects (space variants)
+        Underwater    // animated: rippling caustic light, sun shafts and drifting particles (the picture is redrawn about 12 times a second)
     }
 
     [Serializable]
@@ -151,6 +153,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     private void Awake()
     {
         Instance = this;
+        styles.RemoveAll(st => st != null && System.Array.IndexOf(RemovedStyleNames, st.name) >= 0);
         if (addDefaultStyles) EnsureDefaultStyles();
     }
 
@@ -159,6 +162,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         if (Instance == this) Instance = null;
         if (activeMaterial != null) Destroy(activeMaterial);
         DestroyEye();
+        DestroyRain();
         foreach (Texture2D t in panoramas.Values) if (t != null) Destroy(t);
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
         panoramas.Clear();
@@ -294,6 +298,18 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
             activeMaterial.SetFloat("_Rotation", rotation);
         }
 
+        if (IsAnimated(style) && panoramas.TryGetValue(current, out Texture2D animTex) && animTex != null)
+        {
+            skyClock += dt;
+            animTimer -= dt;
+            if (animTimer <= 0f)
+            {
+                animTimer = 1f / 12f;
+                shadeTime = skyClock;
+                Fill(animTex, style);
+            }
+        }
+
         if (style.flashesPerMinute > 0f && activeMaterial.HasProperty("_Exposure"))
         {
             if (dt > 0f && UnityEngine.Random.value < style.flashesPerMinute / 60f * dt) flash = UnityEngine.Random.Range(0.6f, 1f);
@@ -362,6 +378,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     {
         if (!panoramas.TryGetValue(index, out Texture2D tex) || tex == null)
         {
+            shadeTime = skyClock;
             tex = Draw(styles[index], Mathf.Clamp(styles[index].width, 64, 4096));
             panoramas[index] = tex;
         }
@@ -382,9 +399,24 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
             wrapModeU = TextureWrapMode.Repeat,
             wrapModeV = TextureWrapMode.Clamp
         };
+        Fill(tex, s);
+        return tex;
+    }
 
+    private static Color[] fillBuffer;
+
+    /// <summary>Paints the style into an existing panorama texture (also used to redraw an animated sky every few frames).</summary>
+    private static void Fill(Texture2D tex, SkyStyle s)
+    {
+        int w = tex.width, h = tex.height;
         Vector3 sun = Direction(s.sunElevation, s.sunAzimuth);
-        Color[] px = new Color[w * h];
+        Color[] px;
+        if (IsAnimated(s))
+        {
+            if (fillBuffer == null || fillBuffer.Length != w * h) fillBuffer = new Color[w * h];   // (redrawn many times a second: keep the array)
+            px = fillBuffer;
+        }
+        else px = new Color[w * h];
         // Rows are independent and Shade is pure (no Unity objects, no random state), so they are worked out on all CPU cores:
         // swapping skies in the editor / menu used to freeze for a moment while a big panorama was drawn on one core.
         System.Threading.Tasks.Parallel.For(0, h, y =>
@@ -405,8 +437,14 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         });
         tex.SetPixels(px);
         tex.Apply(false);
-        return tex;
     }
+
+    /// <summary>True for skies that are redrawn over time (Underwater).</summary>
+    private static bool IsAnimated(SkyStyle s) => s.pattern == SkyPattern.Underwater;
+
+    /// <summary>The clock the animated skies read while they are drawn (set just before a redraw, never during one).</summary>
+    private static float shadeTime;
+    private float skyClock, animTimer;
 
     /// <summary>
     /// A small square picture of the sky for the menu icons: a wide-angle view looking towards the sun and tilted a little upwards (so the
@@ -421,6 +459,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
             wrapMode = TextureWrapMode.Clamp
         };
         Vector3 sun = Direction(s.sunElevation, s.sunAzimuth);
+        shadeTime = 3f;   // (animated skies: the icon shows one frame of them)
         float yaw = s.sunAzimuth * Mathf.Deg2Rad;
         float pitch = Mathf.Clamp(s.sunElevation * 0.5f, 6f, 28f) * Mathf.Deg2Rad;
         Vector3 forward = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), Mathf.Sin(pitch), Mathf.Cos(yaw) * Mathf.Cos(pitch));
@@ -460,7 +499,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     {
         // The sky fills the whole view (the main menu shows no floor): below the horizon it is the same sky mirrored,
         // never a flat ground colour.
-        if (dir.y < 0f && s.pattern != SkyPattern.TestGrid && s.pattern != SkyPattern.Synthwave) dir.y = -dir.y;   // (the test grid and the synthwave neon ground live below the horizon)
+        if (dir.y < 0f && s.pattern != SkyPattern.TestGrid && s.pattern != SkyPattern.Underwater) dir.y = -dir.y;   // (the test grid and the underwater depths live below the horizon)
         float d = Vector3.Dot(dir, sun);
         float res = w / 1024f; // so stars look about the same at any size
 
@@ -754,6 +793,9 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
     // Built-in skies
     // ------------------------------------------------------------------
 
+    /// <summary>Skies that were taken out of the game; a scene that still has them saved loses them again at start.</summary>
+    private static readonly string[] RemovedStyleNames = { "Synthwave", "Blocky Void", "Black Hole", "Spiral Galaxy", "Ringed Planet", "Alien World" };
+
     private void EnsureDefaultStyles()
     {
         foreach (SkyStyle def in DefaultStyles())
@@ -811,15 +853,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
             starAmount = 0.6f, cloudAmount = 0f, rotateSpeed = 0.35f
         };
 
-        yield return new SkyStyle
-        {
-            name = "Synthwave", pattern = SkyPattern.Synthwave, seed = 67,
-            topColor = new Color(0.05f, 0.01f, 0.12f), horizonColor = new Color(0.55f, 0.1f, 0.45f),
-            groundColor = new Color(0.03f, 0.0f, 0.06f), sunColor = new Color(1f, 0.9f, 0.3f),
-            accentA = new Color(1f, 0.2f, 0.55f), accentB = new Color(0.1f, 0.9f, 1f),
-            sunElevation = 9f, sunAzimuth = 0f, sunSize = 26f, starAmount = 0.4f, cloudAmount = 0f, rotateSpeed = 0f
-        };
-
+        
         yield return new SkyStyle
         {
             name = "Pixel Clouds", pattern = SkyPattern.PixelClouds, seed = 71, width = 256, pixelated = true,
@@ -838,14 +872,5 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
             cloudAmount = 0.9f, rotateSpeed = 1.2f, flashesPerMinute = 6f, exposure = 0.9f
         };
 
-        yield return new SkyStyle
-        {
-            name = "Alien World", pattern = SkyPattern.AlienWorld, seed = 97,
-            topColor = new Color(0.05f, 0.22f, 0.25f), horizonColor = new Color(0.55f, 0.9f, 0.6f),
-            groundColor = new Color(0.1f, 0.15f, 0.1f), sunColor = new Color(0.95f, 0.65f, 0.4f),
-            cloudColor = new Color(0.85f, 0.6f, 0.9f), cloudShadowColor = new Color(0.35f, 0.25f, 0.45f),
-            accentA = new Color(0.9f, 0.9f, 1f), accentB = new Color(0.55f, 0.3f, 0.2f),
-            sunElevation = 28f, sunAzimuth = 15f, sunSize = 30f, starAmount = 0.3f, cloudAmount = 0.3f, rotateSpeed = 0.3f
-        };
-    }
+        }
 }
