@@ -722,6 +722,7 @@ public partial class PixelShop : MonoBehaviour
         EnsureMinigame<PixelBreakoutMinigame>();
         EnsureMinigame<PixelDashMinigame>();
         EnsureMinigame<PixelBlinkMinigame>();
+        EnsureMinigame<PixelEvadeMinigame>();
         EnsureMinigame<PixelTinkererMinigame>();
         EnsureMinigame<PixelWizardMinigame>();
         EnsureMinigame<PixelFarmerMinigame>();
@@ -1216,6 +1217,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelBreakoutMinigame>();
             EditorEnsureComponent<PixelDashMinigame>();
             EditorEnsureComponent<PixelBlinkMinigame>();
+            EditorEnsureComponent<PixelEvadeMinigame>();
             EditorEnsureComponent<PixelTinkererMinigame>();
             EditorEnsureComponent<PixelWizardMinigame>();
             EditorEnsureComponent<PixelFarmerMinigame>();

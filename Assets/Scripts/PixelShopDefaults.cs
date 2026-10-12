@@ -321,6 +321,21 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Cube Evasion pack (Minigames tab): switches on the evade minigame. Needs the RGB pack first.</summary>
+    private static ShopPack CreateEvadePack(int requiresRgbIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Cube Evasion",
+            tab = ShopTab.Minigames,
+            description = "Now and then the cube runs away from your mouse, sliding along the edges and slipping out of corners. The auto clicker switches off: corner it and click. At the end you get a bonus of 10x the pixel's worth for every click you landed.",
+            requirements = Needs(requiresRgbIndex),
+            costs = AllSix(70000),
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "evade",
+        };
+    }
+
     /// <summary>Default Cube Blink pack (Minigames tab): switches on the blink minigame. Needs the RGB pack first.</summary>
     private static ShopPack CreateBlinkPack(int requiresRgbIndex)
     {
@@ -1115,6 +1130,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
         new DefaultPack { isThis = p => Unlocks(p, "dash"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateDashPack },
+        new DefaultPack { isThis = p => Unlocks(p, "evade"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateEvadePack },
         new DefaultPack { isThis = p => Unlocks(p, "blink"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateBlinkPack },
         new DefaultPack { isThis = p => Unlocks(p, "breakout"),
