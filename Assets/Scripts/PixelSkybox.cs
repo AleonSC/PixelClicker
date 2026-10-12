@@ -408,6 +408,9 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
 
     private static Color Shade(SkyStyle s, Vector3 dir, Vector3 sun, float sinLat, int x, int y, int w)
     {
+        // The sky fills the whole view (the main menu shows no floor): below the horizon it is the same sky mirrored,
+        // never a flat ground colour.
+        if (dir.y < 0f) dir.y = -dir.y;
         float d = Vector3.Dot(dir, sun);
         float res = w / 1024f; // so stars look about the same at any size
 
