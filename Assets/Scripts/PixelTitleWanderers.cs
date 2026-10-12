@@ -62,6 +62,17 @@ public class PixelTitleWanderers : MonoBehaviour
     [Tooltip("How far below the top of the screen the UFO flies (min, max, canvas units).")]
     [SerializeField] private Vector2 ufoHeightRange = new Vector2(70f, 250f);
 
+    [Header("UFO abductions")]
+    [Tooltip("Turn off the UFO abducting walking vendors and pets on the main menu.")]
+    [SerializeField] private bool disableAbduction = false;
+
+    [Tooltip("Seconds between two abductions (min, max; 0 = 14 and 32).")]
+    [SerializeField] private Vector2 abductEvery = Vector2.zero;
+
+    [Min(0f)]
+    [Tooltip("Seconds the beam holds its victim while pulling it up (0 = 2.4).")]
+    [SerializeField] private float abductSeconds = 0f;
+
     [Tooltip("Text on the pets toggle (above the 'display floor' one).")]
     [SerializeField] private string petsText = "Pets";
 
@@ -154,7 +165,7 @@ public class PixelTitleWanderers : MonoBehaviour
         public RectTransform rect, art;
         public float x, targetX, speed, pause, bobPhase, facing = 1f;
         public int stopsLeft;
-        public bool leaving, staying;
+        public bool leaving, staying, abducted;
         public float exitX;
     }
 
@@ -344,6 +355,7 @@ public class PixelTitleWanderers : MonoBehaviour
     /// <summary>Moves one vendor; true when he has left the screen.</summary>
     private bool Step(Walker w, float dt, float half)
     {
+        if (w.abducted) return false;   // the UFO has him
         float dx = w.targetX - w.x;
         bool walking = false;
         if (w.pause > 0f)
@@ -393,11 +405,12 @@ public class PixelTitleWanderers : MonoBehaviour
         public Transform pivot;
         public GameObject studio;
         public float x, y, vy, vx, rest, facing = 1f, squash, hopT, hopLen, phase, appear;
-        public bool inAir;
+        public bool inAir, abducted;
     }
 
     private readonly List<Hopper> hoppers = new List<Hopper>();
     private string petSignature = "";
+    private float petRespawnAt;
     private float petCheckTimer;
     private const float StudioHeight = -5200f;
     private int studioCount;
@@ -422,7 +435,7 @@ public class PixelTitleWanderers : MonoBehaviour
             PixelPets pets = PixelPets.Instance;
             List<PixelPets.TitlePet> owned = pets != null ? pets.TitlePets() : new List<PixelPets.TitlePet>();
             string sig = SignatureOf(owned);
-            if (sig != petSignature || (owned.Count > 0 && hoppers.Count == 0))
+            if (sig != petSignature || (owned.Count > 0 && hoppers.Count == 0 && Time.unscaledTime >= petRespawnAt))
             {
                 petSignature = sig;
                 ClearPets();
@@ -431,7 +444,7 @@ public class PixelTitleWanderers : MonoBehaviour
         }
 
         float half = canvasRect != null ? canvasRect.rect.width * 0.5f : 960f;
-        foreach (Hopper h in hoppers) StepHopper(h, dt, half);
+        foreach (Hopper h in hoppers) if (!h.abducted) StepHopper(h, dt, half);
     }
 
     private void BuildPets(PixelPets pets, List<PixelPets.TitlePet> owned)
@@ -605,13 +618,15 @@ public class PixelTitleWanderers : MonoBehaviour
         ufoAppear = Mathf.MoveTowards(ufoAppear, 1f, dt / 0.6f);
         ufoPause -= dt;
         float dx = ufoTargetX - ufoX, dy = ufoTargetY - ufoY;
-        if (ufoPause <= 0f && dx * dx + dy * dy < 40f * 40f)
+        UpdateAbduction(dt, half);
+        dx = ufoTargetX - ufoX; dy = ufoTargetY - ufoY;
+        if (abState == Ab.Idle && ufoPause <= 0f && dx * dx + dy * dy < 40f * 40f)
         {
             ufoPause = Random.Range(0.8f, 2.8f);
             ufoTargetX = Random.Range(-half * 0.85f, half * 0.85f);
             ufoTargetY = -Random.Range(ufoHeightRange.x, Mathf.Max(ufoHeightRange.x, ufoHeightRange.y));
         }
-        Vector2 want2 = ufoPause > 0f ? Vector2.zero : new Vector2(dx, dy).normalized * ufoSpeed;
+        Vector2 want2 = ufoPause > 0f ? Vector2.zero : new Vector2(dx, dy).normalized * ufoSpeed * (abState == Ab.Fly ? 1.8f : 1f);
         ufoVx = Mathf.Lerp(ufoVx, want2.x, dt * 1.6f);
         ufoVy = Mathf.Lerp(ufoVy, want2.y, dt * 1.6f);
         ufoX += ufoVx * dt;
@@ -662,8 +677,172 @@ public class PixelTitleWanderers : MonoBehaviour
         ufoArt.anchoredPosition = new Vector2(ufoX, ufoY);
     }
 
+    // ---- The UFO abducts one of the walking vendors / hopping pets now and then ----
+
+    private enum Ab { Idle, Fly, Beam }
+    private Ab abState = Ab.Idle;
+    private float abNext = -1f, abTimer;
+    private Walker abWalker;
+    private Hopper abHopper;
+    private Vector3 abStart;
+    private RectTransform beamRect;
+
+    private RectTransform AbTargetRect => abWalker != null ? abWalker.rect : (abHopper != null ? abHopper.rect : null);
+
+    /// <summary>Called every frame by the UFO: waits, picks a victim, flies over, beams it up.</summary>
+    private void UpdateAbduction(float dt, float half)
+    {
+        if (disableAbduction || ufoArt == null || fadingOut) { if (abState != Ab.Idle) AbortAbduction(); return; }
+        if (abNext < 0f) abNext = Time.unscaledTime + RollAbductWait();
+
+        switch (abState)
+        {
+            case Ab.Idle:
+                if (Time.unscaledTime < abNext || ufoAppear < 1f) return;
+                if (!PickVictim(half)) { abNext = Time.unscaledTime + 4f; return; }
+                abState = Ab.Fly;
+                abTimer = 0f;
+                break;
+
+            case Ab.Fly:
+            {
+                RectTransform r = AbTargetRect;
+                if (r == null) { AbortAbduction(); return; }
+                abTimer += dt;
+                float tx = TargetCanvasX(r);
+                ufoTargetX = tx;
+                ufoTargetY = ufoY;
+                ufoPause = 0f;
+                if (Mathf.Abs(ufoX - tx) < 24f)
+                {
+                    // Above him: the beam comes on and he is held.
+                    if (abWalker != null) abWalker.abducted = true; else abHopper.abducted = true;
+                    abStart = r.position;
+                    abState = Ab.Beam;
+                    abTimer = 0f;
+                    BuildBeam();
+                }
+                else if (abTimer > 12f) AbortAbduction();   // he got away
+                break;
+            }
+
+            case Ab.Beam:
+            {
+                RectTransform r = AbTargetRect;
+                if (r == null) { AbortAbduction(); return; }
+                abTimer += dt;
+                float dur = abductSeconds > 0f ? abductSeconds : 2.4f;
+                float k = Mathf.Clamp01(abTimer / dur);
+                float e = k * k * (3f - 2f * k);
+                ufoTargetX = ufoX; ufoTargetY = ufoY; ufoPause = 999f;   // hover still while the beam works
+                Vector3 emitter = ufoArt.TransformPoint(new Vector3(0f, -56f, 0f));
+                Vector3 pos = Vector3.Lerp(abStart, emitter, e);
+                pos.x += Mathf.Sin(abTimer * 11f) * 6f * (1f - e);
+                r.position = pos;
+                float sc = Mathf.Lerp(1f, 0.12f, e);
+                float face = Mathf.Sign(r.localScale.x == 0f ? 1f : r.localScale.x);
+                r.localScale = new Vector3(face * sc, sc, 1f);
+                r.localRotation = Quaternion.Euler(0f, 0f, abTimer * 260f * e);
+                UpdateBeam(r);
+                if (k >= 1f) FinishAbduction();
+                break;
+            }
+        }
+    }
+
+    private float RollAbductWait()
+    {
+        float lo = abductEvery.x > 0f ? abductEvery.x : 14f, hi = abductEvery.y > 0f ? abductEvery.y : 32f;
+        return Random.Range(lo, Mathf.Max(lo, hi));
+    }
+
+    /// <summary>The canvas x (from the screen's middle) of a bottom-anchored title character.</summary>
+    private float TargetCanvasX(RectTransform r) => r.anchoredPosition.x;
+
+    private bool PickVictim(float half)
+    {
+        List<Walker> w = walkers.FindAll(x => x.rect != null && !x.abducted && Mathf.Abs(x.x) < half * 0.85f);
+        List<Hopper> h = hoppers.FindAll(x => x.rect != null && !x.abducted && x.appear >= 1f && !x.inAir && Mathf.Abs(x.x) < half * 0.85f);
+        int total = w.Count + h.Count;
+        if (total == 0) return false;
+        int pick = Random.Range(0, total);
+        abWalker = null; abHopper = null;
+        if (pick < w.Count) abWalker = w[pick]; else abHopper = h[pick - w.Count];
+        return true;
+    }
+
+    private void BuildBeam()
+    {
+        if (beamRect != null) return;
+        GameObject g = new GameObject("Abduction Beam", typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(ufoArt, false);
+        g.transform.SetAsFirstSibling();   // behind the saucer's parts
+        Image im = g.GetComponent<Image>();
+        im.color = new Color(0.6f, 1f, 0.55f, 0.32f);
+        im.raycastTarget = false;
+        beamRect = g.GetComponent<RectTransform>();
+        beamRect.anchorMin = beamRect.anchorMax = new Vector2(0.5f, 0.5f);
+        beamRect.pivot = new Vector2(0.5f, 1f);
+        beamRect.sizeDelta = new Vector2(110f, 10f);
+        GameObject core = new GameObject("Core", typeof(RectTransform), typeof(Image));
+        core.transform.SetParent(g.transform, false);
+        Image ci = core.GetComponent<Image>();
+        ci.color = new Color(0.9f, 1f, 0.8f, 0.4f);
+        ci.raycastTarget = false;
+        RectTransform cr = core.GetComponent<RectTransform>();
+        cr.anchorMin = new Vector2(0.5f, 0f); cr.anchorMax = new Vector2(0.5f, 1f);
+        cr.sizeDelta = new Vector2(46f, 0f);
+    }
+
+    private void UpdateBeam(RectTransform target)
+    {
+        if (beamRect == null) return;
+        Vector3 local = ufoArt.InverseTransformPoint(target.position);
+        float dy = -50f - local.y;
+        float len = Mathf.Max(8f, Mathf.Sqrt(local.x * local.x + dy * dy));
+        beamRect.anchoredPosition = new Vector2(0f, -50f);
+        beamRect.sizeDelta = new Vector2(110f * (0.85f + 0.15f * Mathf.Sin(Time.unscaledTime * 18f)), len);
+        beamRect.localRotation = Quaternion.Euler(0f, 0f, -Mathf.Atan2(local.x, Mathf.Max(1f, dy)) * Mathf.Rad2Deg);
+    }
+
+    private void FinishAbduction()
+    {
+        if (abWalker != null)
+        {
+            if (abWalker.rect != null) Destroy(abWalker.rect.gameObject);
+            walkers.Remove(abWalker);
+        }
+        if (abHopper != null)
+        {
+            if (abHopper.rect != null) Destroy(abHopper.rect.gameObject);
+            if (abHopper.studio != null) Destroy(abHopper.studio);
+            if (abHopper.texture != null) { abHopper.texture.Release(); Destroy(abHopper.texture); }
+            hoppers.Remove(abHopper);
+            petRespawnAt = Time.unscaledTime + 20f;   // the pets come back after a while
+        }
+        EndAbduction();
+    }
+
+    /// <summary>Cancels an abduction in progress (the victim walks / hops on again).</summary>
+    private void AbortAbduction()
+    {
+        if (abWalker != null) { abWalker.abducted = false; if (abWalker.rect != null) { abWalker.rect.localScale = new Vector3(abWalker.facing, 1f, 1f); abWalker.rect.localRotation = Quaternion.identity; } }
+        if (abHopper != null) { abHopper.abducted = false; if (abHopper.rect != null) abHopper.rect.localRotation = Quaternion.identity; }
+        EndAbduction();
+    }
+
+    private void EndAbduction()
+    {
+        abWalker = null; abHopper = null;
+        abState = Ab.Idle;
+        if (beamRect != null) { Destroy(beamRect.gameObject); beamRect = null; }
+        ufoPause = 0.6f;
+        abNext = Time.unscaledTime + RollAbductWait();
+    }
+
     private void ClearUfo()
     {
+        if (abState != Ab.Idle) AbortAbduction();
         if (ufoArt != null) Destroy(ufoArt.gameObject);
         ufoArt = null;
         ufoLights.Clear();
