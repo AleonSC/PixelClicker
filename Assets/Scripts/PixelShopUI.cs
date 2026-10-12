@@ -310,12 +310,7 @@ public partial class PixelShop
             StyleValueRow(row);
             row.buyButton.onClick.AddListener(() => { TryBuyValueUpgrade(captured, PixelInput.ShiftHeld()); RefreshRows(); });
             // Hovering the Upgrade button explains clicking and Shift-clicking (the orange '!' box explains what a level does).
-            System.Func<string> upgradeTip = () =>
-            {
-                if (captured >= clicker.Tiers.Length) return "";
-                int lvl = clicker.Tiers[captured].valueLevel;
-                return string.Format(valueUpgradeTipFormat, PixelClicker.FormatNumberShort(clicker.ValueMultiplierAt(lvl)), PixelClicker.FormatNumberShort(clicker.ValueMultiplierAt(lvl + 1)));
-            };
+            System.Func<string> upgradeTip = () => valueUpgradeTip;
             PixelHoverTip buyTip = row.buyButton.gameObject.AddComponent<PixelHoverTip>();
             buyTip.onEnter = () => hoverTip = upgradeTip;
             buyTip.onExit = () => { if (hoverTip == upgradeTip) hoverTip = null; };
