@@ -67,7 +67,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Mirror:
                 return "A chrome pixel. Clicking it pays its own value and then repeats the last payout of the previous different pixel you clicked.";
             case PixelClicker.PixelType.Seed:
-                return "A shell you dig open. Every hit throws dirt; the click that cracks it pays and plants three sprouts. Each sprout grows a random unlocked pixel over about 6 seconds (rarer types are likelier, with a 3% chance of a Singularity) and then pops off as an old pixel.";
+                return "A shell you dig open. Every hit throws dirt; the click that cracks it pays and plants three sprouts. Each sprout grows a random unlocked pixel over about 6 seconds (rarer types are likelier; never Vacuum or Singularity) and then pops off as an old pixel.";
             case PixelClicker.PixelType.Water:
                 return "A wobbly blue jelly. Its old pixel splashes the first time it lands, paying nothing, and instantly speeds up every growing sprout and planted Seed pet within about 5 pixel-widths (each only accepts water every 0.75 seconds).";
             case PixelClicker.PixelType.Fire:

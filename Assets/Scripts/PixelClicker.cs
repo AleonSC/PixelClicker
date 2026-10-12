@@ -821,10 +821,6 @@ public class PixelClicker : MonoBehaviour
     [Tooltip("How long (seconds) a sprout / Seed pet stays 'sun soaked' (Solar speed-up) after an old Solar pixel was last close to it.")]
     [SerializeField] private float seedSunSoakSeconds = 8f;
 
-    [Range(0f, 1f)]
-    [Tooltip("Chance that a sprout grows a Singularity pixel (when that type is unlocked) instead of a normal random type. Singularity is left out of the normal rarity roll.")]
-    [SerializeField] private float seedSingularityChance = 0.03f;
-
     [Header("Click Hint")]
     [Tooltip("Turn off the 'click me' pulse that the cube plays after the first guide text until the first pixel is collected.")]
     [SerializeField] private bool disableClickHint = false;
@@ -2503,13 +2499,9 @@ public class PixelClicker : MonoBehaviour
     /// <summary>The edge length of an old pixel in world units.</summary>
     public float OldPixelWorldSize => PixelBaseSize * oldPixelScale;
 
-    /// <summary>A random pixel type a Seed sprout can grow: unlocked, not a rare drop, not a fly-away type and not a Seed itself. -1 if none.</summary>
+    /// <summary>A random pixel type a Seed sprout can grow: unlocked, not a rare drop, not a fly-away type, not a Seed itself and never a Vacuum or Singularity pixel (those can still be planted from bought seeds). -1 if none.</summary>
     public int RandomSeedPixelTier()
     {
-        // A small fixed chance of a Singularity pixel (once that type is unlocked).
-        int singularity = IndexOf(PixelType.Singularity);
-        if (singularity >= 0 && tiers[singularity].unlocked && UnityEngine.Random.value < seedSingularityChance) return singularity;
-
         // Golden Fruit: a rare treat from a fully grown sprout (once that type is unlocked).
         int fruit = IndexOf(PixelType.GoldenFruit);
         if (fruit >= 0 && tiers[fruit].unlocked && UnityEngine.Random.value < (fruitSproutChance > 0f ? fruitSproutChance : 0.03f)) return fruit;
@@ -2521,7 +2513,7 @@ public class PixelClicker : MonoBehaviour
         for (int i = 0; i < tiers.Length; i++)
         {
             PixelTier t = tiers[i];
-            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed || t.type == PixelType.Singularity || IsStandalone(t.type)) continue;
+            if (!t.unlocked || t.rareDrop || t.flyAway || t.type == PixelType.Seed || t.type == PixelType.Singularity || t.type == PixelType.Vacuum || IsStandalone(t.type)) continue;
             float w = 1f / Mathf.Pow(Mathf.Max(0.02f, t.spawnWeight), seedRarityBias);
             candidates.Add(i);
             weights.Add(w);

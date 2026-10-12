@@ -896,6 +896,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     /// to repeat it across the screen (1 = the whole picture, for fitted / stretched styles that must not repeat) and a tint for a plain Classic floor.
     /// False when there is no floor to show.
     /// </summary>
+    /// <summary>The scroll position of a sliding style (Matrix Rain...), so a picture drawn from the texture alone keeps moving too.</summary>
+    public Vector2 ScrollOffset => offset;
+
     public bool TryGetTitlePicture(out Texture texture, out Vector2 tiles, out Color tint)
     {
         texture = null; tiles = Vector2.one; tint = Color.white;

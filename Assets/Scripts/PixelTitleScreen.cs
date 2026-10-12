@@ -859,7 +859,7 @@ public class PixelTitleScreen : MonoBehaviour
                 sharpTexture = NewTexture(Screen.width, Screen.height, 24, FilterMode.Bilinear);
             }
             if (PixelFloor.Instance.TryGetTitlePicture(out Texture floorPicture, out Vector2 tiles, out Color tint) && floorPicture != null)
-                Graphics.Blit(floorPicture, sharpTexture, tiles, Vector2.zero);
+                Graphics.Blit(floorPicture, sharpTexture, tiles, PixelFloor.Instance.ScrollOffset);
             else
             {
                 RenderTexture keep = RenderTexture.active;
@@ -899,7 +899,7 @@ public class PixelTitleScreen : MonoBehaviour
         {
             // No live scene: the floor style's picture fills the whole background (then it is blurred like the scene would be).
             if (PixelFloor.Instance.TryGetTitlePicture(out Texture floorPicture, out Vector2 tiles, out Color tint) && floorPicture != null)
-                Graphics.Blit(floorPicture, liveTexture, tiles, Vector2.zero);
+                Graphics.Blit(floorPicture, liveTexture, tiles, PixelFloor.Instance.ScrollOffset);
             else
             {
                 RenderTexture keep = RenderTexture.active;
