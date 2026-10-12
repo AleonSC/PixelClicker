@@ -1065,6 +1065,8 @@ public partial class PixelShop
     {
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Red),
                           requires = null, create = i => CreateRgbPack() },
+        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
+                          requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => p.unlocksAutoClicker,
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreateAutoClickerPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Glass),
@@ -1109,8 +1111,6 @@ public partial class PixelShop
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Solar),
                           requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
-        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.ComboMeter,
-                          requires = null, create = i => CreateComboPack() },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
                           requires = p => Rewards(p, PixelClicker.PixelType.Red), create = CreatePadPack },
         new DefaultPack { isThis = p => Unlocks(p, "dash"),

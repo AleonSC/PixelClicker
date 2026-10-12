@@ -976,6 +976,19 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 16)
+        {
+            // The Combo Meter is listed right above the Auto Clicker (the intro goals lead from one to the other).
+            if (packs != null)
+            {
+                int comboAt = Array.FindIndex(packs, p => p != null && p.upgradeEffect == UpgradeEffect.ComboMeter);
+                int autoAt = Array.FindIndex(packs, p => p != null && p.unlocksAutoClicker);
+                if (comboAt >= 0 && autoAt >= 0 && comboAt > autoAt) MovePack(comboAt, autoAt);
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 16);
+            changed = true;
+        }
+
         return changed;
     }
 
@@ -1573,6 +1586,25 @@ public partial class PixelShop : MonoBehaviour
     /// False if there is no such pack or it is already bought.
     /// </summary>
     public bool TryGetBuyGoal(PixelClicker.PixelType rewardType, out string packName, out string costText, out double have, out double need)
+        => TryGetPackGoal(p => p.rewardTiers != null && Array.Exists(p.rewardTiers, r => r.type == rewardType), false, out packName, out costText, out have, out need);
+
+    /// <summary>The Combo Meter goal (shown once the RGB Pack is bought): progress towards its first level.</summary>
+    public bool TryGetComboGoal(out string packName, out string costText, out double have, out double need)
+        => TryGetPackGoal(p => p.upgradeEffect == UpgradeEffect.ComboMeter, true, out packName, out costText, out have, out need);
+
+    /// <summary>The Auto Clicker goal (shown once the Combo Meter is bought).</summary>
+    public bool TryGetAutoClickerGoal(out string packName, out string costText, out double have, out double need)
+        => TryGetPackGoal(p => p.unlocksAutoClicker, false, out packName, out costText, out have, out need);
+
+    /// <summary>Is the first level of the Combo Meter bought?</summary>
+    public bool ComboMeterBought()
+    {
+        if (packs == null) return false;
+        foreach (ShopPack p in packs) if (p != null && p.upgradeEffect == UpgradeEffect.ComboMeter) return p.level >= 1;
+        return false;
+    }
+
+    private bool TryGetPackGoal(Predicate<ShopPack> match, bool firstLevelOnly, out string packName, out string costText, out double have, out double need)
     {
         packName = costText = "";
         have = need = 0d;
@@ -1580,8 +1612,8 @@ public partial class PixelShop : MonoBehaviour
         for (int i = 0; i < packs.Length; i++)
         {
             ShopPack pack = packs[i];
-            if (pack.rewardTiers == null || !Array.Exists(pack.rewardTiers, r => r.type == rewardType)) continue;
-            if (IsPurchased(i)) return false;
+            if (pack == null || !match(pack)) continue;
+            if (firstLevelOnly ? pack.level >= 1 : IsPurchased(i)) return false;
             packName = pack.displayName;
             PackCost[] costs = CurrentCosts(pack);
             System.Text.StringBuilder sb = new System.Text.StringBuilder();

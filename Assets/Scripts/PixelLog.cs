@@ -1420,6 +1420,36 @@ public class PixelLog : MonoBehaviour
             });
         }
 
+        // Next intro steps: the Combo Meter once the RGB Pack is bought, then the Auto Clicker once the Combo Meter is.
+        if (shop != null && shop.ShopAvailable && clicker.IsUnlocked(PixelClicker.PixelType.Red))
+        {
+            if (shop.TryGetComboGoal(out string comboName, out string comboCost, out double comboHave, out double comboNeed))
+            {
+                goals.Add(new Goal
+                {
+                    title = string.Format(buyRgbGoalFormat, comboName),
+                    description = string.Format(buyRgbGoalDescription, comboCost),
+                    count = comboHave,
+                    goal = comboNeed,
+                    skinTier = -1,
+                    iconColor = new Color(1f, 0.8f, 0.25f, 1f),
+                });
+            }
+            else if (shop.ComboMeterBought() &&
+                     shop.TryGetAutoClickerGoal(out string autoName, out string autoCost, out double autoHave, out double autoNeed))
+            {
+                goals.Add(new Goal
+                {
+                    title = string.Format(buyRgbGoalFormat, autoName),
+                    description = string.Format(buyRgbGoalDescription, autoCost),
+                    count = autoHave,
+                    goal = autoNeed,
+                    skinTier = -1,
+                    iconColor = new Color(0.4f, 0.8f, 1f, 1f),
+                });
+            }
+        }
+
         foreach (PixelMinigame m in PixelMinigame.All)
         {
             if (m == null || !m.HasTracker || !(m.Running || m.TrackerCount > 0d)) continue;
