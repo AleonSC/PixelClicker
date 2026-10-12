@@ -47,6 +47,9 @@ public class PixelTitleWanderers : MonoBehaviour
     [Tooltip("Text on the live background toggle (above the vendors one).")]
     [SerializeField] private string liveText = "Live background";
 
+    [Tooltip("Text on the blur toggle (above the live background one).")]
+    [SerializeField] private string blurText = "Blur background";
+
     private const string Pref = "PixelClicker.Setting.TitleWanderers";
     private const string LivePref = "PixelClicker.Setting.TitleLiveBackground";
 
@@ -67,8 +70,26 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private static int liveCache = -1;
 
+    private const string BlurPref = "PixelClicker.Setting.TitleBlurBackground";
+    private static int blurCache = -1;
+
+    /// <summary>True (the default) = the title background is blurred; false = it is shown sharp (the live scene itself, or the floor picture).</summary>
+    public static bool BlurBackground
+    {
+        get
+        {
+            if (blurCache < 0) blurCache = PlayerPrefs.GetInt(BlurPref, 1);
+            return blurCache == 1;
+        }
+        set
+        {
+            blurCache = value ? 1 : 0;
+            PlayerPrefs.SetInt(BlurPref, blurCache);
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { liveCache = -1; }
+    private static void ResetStatics() { liveCache = -1; blurCache = -1; }
 
     private class Walker
     {
@@ -86,6 +107,8 @@ public class PixelTitleWanderers : MonoBehaviour
     private bool on, built;
     private float nextArrival;
     private RectTransform canvasRect;
+    private CanvasGroup layerGroup;
+    private bool fadingOut;
 
     public static bool Enabled
     {
@@ -104,9 +127,12 @@ public class PixelTitleWanderers : MonoBehaviour
         RectTransform lr = l.GetComponent<RectTransform>();
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one; lr.offsetMin = lr.offsetMax = Vector2.zero;
         layer = l.transform;
+        layerGroup = l.AddComponent<CanvasGroup>();
+        layerGroup.blocksRaycasts = false;
 
         MakeToggle(font, "Wander Toggle", toggleText, 24f, () => on, v => { on = v; Enabled = v; });
         MakeToggle(font, "Live Background Toggle", liveText, 24f + toggleSize.y + 10f, () => LiveBackground, v => LiveBackground = v);
+        MakeToggle(font, "Blur Background Toggle", blurText, 24f + (toggleSize.y + 10f) * 2f, () => BlurBackground, v => BlurBackground = v);
         built = true;
         Refresh();
         nextArrival = Time.unscaledTime + 1.5f;
@@ -164,6 +190,15 @@ public class PixelTitleWanderers : MonoBehaviour
         if (!PixelTitleScreen.Showing)
         {
             if (walkers.Count > 0) ClearAll();
+            fadingOut = false;
+            if (layerGroup != null) layerGroup.alpha = 1f;
+            return;
+        }
+        if (fadingOut)
+        {
+            // Play was pressed: the vendors fade away at once (whatever the toggles say) and no new ones arrive.
+            layerGroup.alpha = Mathf.MoveTowards(layerGroup.alpha, 0f, Time.unscaledDeltaTime / 0.3f);
+            foreach (Toggle t in toggles) t.group.alpha = Mathf.MoveTowards(t.group.alpha, 0f, Time.unscaledDeltaTime / 0.2f);
             return;
         }
 
@@ -188,6 +223,9 @@ public class PixelTitleWanderers : MonoBehaviour
             nextArrival = Time.unscaledTime + Random.Range(arriveEvery.x, Mathf.Max(arriveEvery.x, arriveEvery.y));
         }
     }
+
+    /// <summary>Called when Play is pressed: the wandering vendors fade out immediately.</summary>
+    public void FadeOut() { fadingOut = true; }
 
     private void ClearAll()
     {

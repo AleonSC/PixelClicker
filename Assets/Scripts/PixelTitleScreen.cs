@@ -333,6 +333,7 @@ public class PixelTitleScreen : MonoBehaviour
         if (liveTexture != null) { liveTexture.Release(); Destroy(liveTexture); liveTexture = null; }
         foreach (RenderTexture rt in chain) if (rt != null) { rt.Release(); Destroy(rt); }
         chain.Clear();
+        if (sharpTexture != null) { sharpTexture.Release(); Destroy(sharpTexture); sharpTexture = null; }
         chainDivisors.Clear();
     }
 
@@ -822,9 +823,42 @@ public class PixelTitleScreen : MonoBehaviour
         return chain[chain.Count - 1];
     }
 
+    private RenderTexture sharpTexture;
+
+    /// <summary>Blur switched off: the live scene is simply left unblurred (the blur layers are hidden); without the live scene the floor picture is shown sharp.</summary>
+    private void UpdateSharp(bool live)
+    {
+        if (live || PixelFloor.Instance == null)
+        {
+            lightImage.enabled = strongImage.enabled = false;
+        }
+        else
+        {
+            if (sharpTexture == null || sharpTexture.width != Screen.width || sharpTexture.height != Screen.height)
+            {
+                if (sharpTexture != null) { sharpTexture.Release(); Destroy(sharpTexture); }
+                sharpTexture = NewTexture(Screen.width, Screen.height, 0, FilterMode.Bilinear);
+            }
+            if (PixelFloor.Instance.TryGetTitlePicture(out Texture floorPicture, out Vector2 tiles, out Color tint) && floorPicture != null)
+                Graphics.Blit(floorPicture, sharpTexture, tiles, Vector2.zero);
+            else
+            {
+                RenderTexture keep = RenderTexture.active;
+                RenderTexture.active = sharpTexture;
+                GL.Clear(true, true, tint);
+                RenderTexture.active = keep;
+            }
+            strongImage.texture = sharpTexture;
+            strongImage.enabled = true;
+            lightImage.enabled = false;
+        }
+        pictureReady = true;
+    }
+
     private void UpdateBlur()
     {
         bool live = PixelTitleWanderers.LiveBackground || PixelFloor.Instance == null;
+        if (!PixelTitleWanderers.BlurBackground) { UpdateSharp(live); return; }
         Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();
         if (live && cam == null) return;
         EnsureChain();
@@ -863,11 +897,11 @@ public class PixelTitleScreen : MonoBehaviour
             source = step;
         }
 
-        if (!pictureReady)
-        {
-            pictureReady = true;
-            lightImage.enabled = strongImage.enabled = true;
-        }
+        if (!pictureReady) pictureReady = true;
+        // (also switches the layers back on / to the blurred pictures after the blur was off)
+        lightImage.enabled = strongImage.enabled = true;
+        lightImage.texture = PickChain(lightBlurDivisor);
+        strongImage.texture = PickChain(strongBlurDivisor);
     }
 
     // ------------------------------------------------------------------
@@ -898,6 +932,8 @@ public class PixelTitleScreen : MonoBehaviour
     {
         if (playing) return;
         playing = true;
+        PixelTitleWanderers wander = GetComponent<PixelTitleWanderers>();
+        if (wander != null) wander.FadeOut();   // the wandering vendors vanish at once
         foreach (Button b in buttons) b.interactable = false;
         StartCoroutine(PlayRoutine());
     }

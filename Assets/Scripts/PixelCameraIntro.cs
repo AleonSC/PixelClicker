@@ -160,9 +160,9 @@ public class PixelCameraIntro : MonoBehaviour
         Moving = reversing || !done;
         if (reversing)
         {
-            reverseTime += Time.unscaledDeltaTime;
+            reverseTime += Mathf.Min(Time.unscaledDeltaTime, 0.05f);   // a long frame can't make the camera jump
             float rk = Mathf.Clamp01(reverseTime / reverseSeconds);
-            Apply(1f - Mathf.SmoothStep(0f, 1f, rk));
+            Apply(1f - Smoother(rk));
             if (rk >= 1f)
             {
                 reversing = false;
@@ -193,24 +193,37 @@ public class PixelCameraIntro : MonoBehaviour
 
         if (skipOnClick && (PixelInput.LeftPressed() || PixelInput.RightPressed())) { Finish(); return; }
 
-        moved += Time.unscaledDeltaTime;
+        moved += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
         float k = Mathf.Clamp01(moved / introSeconds);
-        Apply(Mathf.SmoothStep(0f, 1f, k));
+        Apply(Smoother(k));
         if (k >= 1f) Finish();
+    }
+
+    /// <summary>A gentler ease than SmoothStep: zero speed AND zero acceleration at both ends (quintic).</summary>
+    private static float Smoother(float t)
+    {
+        t = Mathf.Clamp01(t);
+        return t * t * t * (t * (t * 6f - 15f) + 10f);
     }
 
     /// <summary>Puts the camera at 'k' of the way from the close-up (0) to the normal view (1).</summary>
     private void Apply(float k)
     {
         Progress = k;
-        // Swing round the cube on an arc: the offset turns and its length changes smoothly.
-        Vector3 offset = Vector3.Slerp(startOffset, finalOffset, k);
-        offset = offset.normalized * Mathf.Lerp(startOffset.magnitude, finalOffset.magnitude, k);
+        // Swing round the cube on an arc, worked out from yaw / pitch / distance (steady even when the start and end views are nearly opposite,
+        // where a straight rotation between the two offsets can flip): the heading turns by the shorter way, the height and distance blend.
+        float startLen = Mathf.Max(0.001f, startOffset.magnitude), endLen = Mathf.Max(0.001f, finalOffset.magnitude);
+        float yaw0 = Mathf.Atan2(startOffset.x, startOffset.z) * Mathf.Rad2Deg, yaw1 = Mathf.Atan2(finalOffset.x, finalOffset.z) * Mathf.Rad2Deg;
+        float pitch0 = Mathf.Asin(Mathf.Clamp(startOffset.y / startLen, -1f, 1f)) * Mathf.Rad2Deg, pitch1 = Mathf.Asin(Mathf.Clamp(finalOffset.y / endLen, -1f, 1f)) * Mathf.Rad2Deg;
+        float yaw = (yaw0 + Mathf.DeltaAngle(yaw0, yaw1) * k) * Mathf.Deg2Rad;
+        float pitch = Mathf.Lerp(pitch0, pitch1, k) * Mathf.Deg2Rad;
+        float len = Mathf.Lerp(startLen, endLen, k);
+        Vector3 offset = new Vector3(Mathf.Sin(yaw) * Mathf.Cos(pitch), Mathf.Sin(pitch), Mathf.Cos(yaw) * Mathf.Cos(pitch)) * len;
         cam.transform.position = pivot + offset;
 
-        // Look at the cube at first, then settle into the scene's own view direction.
+        // Look at the cube at first, then ease into the scene's own view direction (one continuous blend, no late kink).
         Quaternion lookAtCube = Quaternion.LookRotation(pivot - cam.transform.position, Vector3.up);
-        cam.transform.rotation = Quaternion.Slerp(lookAtCube, finalRotation, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.35f, 1f, k)));
+        cam.transform.rotation = Quaternion.Slerp(lookAtCube, finalRotation, Smoother(k));
 
         cam.fieldOfView = Mathf.Lerp(startFov, finalFov, k);
         if (cam.orthographic) cam.orthographicSize = Mathf.Lerp(startOrtho, finalOrtho, k);

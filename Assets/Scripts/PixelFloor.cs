@@ -516,12 +516,15 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // ------------------------------------------------------------------
 
     [Header("Fade")]
-    [Tooltip("With 'Live background' on, the main menu and the camera swing show only the sky: the floor fades in once the camera has settled and fades out before it swings back. Untick to keep the floor always visible.")]
-    [SerializeField] private bool hideFloorOnTitle = true;
+    [Tooltip("Tick to keep the floor always visible. (Normally, with 'Live background' on, the main menu and the camera swing show only the sky: the floor fades in once the camera has settled and fades out before it swings back.)")]
+    [SerializeField] private bool keepFloorOnTitle = false;
 
-    [Min(0.05f)]
-    [Tooltip("Seconds the floor takes to fade in or out.")]
-    [SerializeField] private float fadeSeconds = 1f;
+    [Min(0f)]
+    [Tooltip("Seconds the floor takes to fade in or out. 0 = 1.")]
+    [SerializeField] private float floorFadeSeconds = 0f;
+
+    private bool HidesOnTitle => !keepFloorOnTitle;
+    private float FadeTime => floorFadeSeconds > 0.05f ? floorFadeSeconds : 1f;
 
     private float visibility = 1f;
     private bool visibilityInit, exitHold, oldPixelsHidden;
@@ -534,7 +537,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     /// <summary>Fades the floor out, then calls 'onDone' (the main menu return waits for it before the camera swings back). Returns false (without calling it) if there is nothing to fade.</summary>
     public bool FadeOutThen(System.Action onDone)
     {
-        if (floorRenderer == null || !hideFloorOnTitle || visibility <= 0.001f) return false;
+        if (floorRenderer == null || !HidesOnTitle || visibility <= 0.001f) return false;
         exitHold = true;
         exitDone = onDone;
         return true;
@@ -544,10 +547,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         if (floorRenderer == null) return;
         if (exitHold && PixelTitleScreen.Showing) exitHold = false;
-        bool hide = hideFloorOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
+        bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
         float target = hide ? 0f : 1f;
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
-        else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / Mathf.Max(0.05f, fadeSeconds));
+        else visibility = Mathf.MoveTowards(visibility, target, Time.unscaledDeltaTime / FadeTime);
         ApplyVisibility();
         if (exitDone != null && visibility <= 0.001f)
         {
@@ -560,6 +563,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void ApplyVisibility()
     {
         floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
+        // Any other renderers on the floor object (a second mesh, trim) go with it.
+        foreach (Renderer extra in floorRenderer.GetComponentsInChildren<Renderer>(true)) if (extra != floorRenderer) extra.forceRenderingOff = visibility < 0.999f;
         if (visibility >= 0.999f) DropProxies(true);
         else if (visibility > 0.001f)
         {

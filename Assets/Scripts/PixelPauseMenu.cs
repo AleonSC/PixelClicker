@@ -1536,7 +1536,7 @@ public class PixelPauseMenu : MonoBehaviour
         xr.anchoredPosition = new Vector2((half.x + gap) * 0.5f, 24f);
         // Overwriting needs a short HOLD on the red button (a fill grows across it), so it can't happen by an accidental click.
         TMP_Text confirmLabel = confirm.GetComponentInChildren<TMP_Text>();
-        if (!string.IsNullOrEmpty(overwriteHoldText)) confirmLabel.text = overwriteHoldText;
+        confirmLabel.text = !string.IsNullOrEmpty(overwriteHoldText) ? overwriteHoldText : "Hold to overwrite";
         confirmLabel.transform.SetAsLastSibling();
         GameObject holdFill = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         holdFill.transform.SetParent(confirm.transform, false);
@@ -1547,7 +1547,7 @@ public class PixelPauseMenu : MonoBehaviour
         RectTransform holdRect = holdFill.GetComponent<RectTransform>();
         holdRect.anchorMin = Vector2.zero; holdRect.anchorMax = new Vector2(0f, 1f); holdRect.offsetMin = holdRect.offsetMax = Vector2.zero;
         overwriteHold = confirm.gameObject.AddComponent<PixelHoldButton>();
-        overwriteHold.Setup(holdRect, overwriteHoldSeconds, () =>
+        overwriteHold.Setup(holdRect, overwriteHoldSeconds > 0.01f ? overwriteHoldSeconds : 0.6f, () =>
         {
             overwriteHold.ResetProgress();
             overwriteOverlay.SetActive(false);
@@ -2112,7 +2112,7 @@ public class PixelPauseMenu : MonoBehaviour
         float y = 0f;
 
         // Give feedback sits above Replay tutorial.
-        AddWideButtonRow(list, feedbackText, () => PixelFeedback.OpenWindow(), ref y);
+        AddWideButtonRow(list, string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, () => PixelFeedback.OpenWindow(), ref y);
 
         // Replay tutorial sits at the very top.
         AddWideButtonRow(list, replayTutorialText, () =>
