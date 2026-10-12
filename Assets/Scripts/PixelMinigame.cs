@@ -56,7 +56,49 @@ public abstract class PixelMinigame : MonoBehaviour
     public static event System.Action<PixelMinigame, MinigameEvent> Happened;
 
     /// <summary>Subclasses call this when something happens (for the stats).</summary>
-    protected void Report(MinigameEvent what) => Happened?.Invoke(this, what);
+    protected void Report(MinigameEvent what)
+    {
+        Happened?.Invoke(this, what);
+        if (what == MinigameEvent.Clicked) GrantSkillXp();   // every 'Clicked' report is a success (caught, defused, won...)
+    }
+
+    [Header("Skill XP Bonus")]
+    [Tooltip("Turn off the bonus skill XP this minigame gives to the skill in training.")]
+    [SerializeField] private bool disableSkillXp = false;
+
+    [Min(0f)]
+    [Tooltip("Bonus XP for the skill in training each time you succeed at this minigame (catch, defuse, win...). 0 = this minigame's own default.")]
+    [SerializeField] private float skillXpReward = 0f;
+
+    /// <summary>The coded default bonus XP per success, by minigame (frequent small events give little, big rounds give more).</summary>
+    private float DefaultSkillXp()
+    {
+        switch (Id)
+        {
+            case "meteor": return 1f;
+            case "blackhole": return 1f;
+            case "pad": return 6f;
+            case "stardust": return 8f;
+            case "ghost": return 12f;
+            case "dash": return 15f;
+            case "bomb": return 20f;
+            case "snake":
+            case "sort":
+            case "breakout": return 25f;
+            default: return 5f;
+        }
+    }
+
+    /// <summary>Gives bonus XP to the skill in training (nothing while no skill is in training). Turning minigames on is part of the reward.</summary>
+    protected void GrantSkillXp(float amount = 0f)
+    {
+        if (disableSkillXp || PixelSkills.Instance == null) return;
+        PixelSkills skills = PixelSkills.Instance;
+        PixelSkills.SkillPack pack = skills.Find(skills.TrainingId);
+        if (pack == null || pack.id == PixelSkills.StandardId) return;
+        float xp = amount > 0f ? amount : (skillXpReward > 0f ? skillXpReward : DefaultSkillXp());
+        skills.AddXp(pack, xp);
+    }
 
     /// <summary>Name shown in menus (e.g. the dev tools). Defaults to the id.</summary>
     public virtual string DisplayName => Id;
