@@ -14,8 +14,6 @@ public partial class PixelFloor
         switch (s.pattern)
         {
             case FloorPattern.BattleCrater: return ShadeCraterField(s, u, v, x, y, n);
-            case FloorPattern.Galaxy: return ShadeGalaxyHQ(s, u, v, x, y, n);
-            case FloorPattern.BlackHole: return ShadeBlackHoleHQ(s, u, v, x, y, n);
             case FloorPattern.Hyperspace: return ShadeHyperspace(s, u, v, cells);
             case FloorPattern.DataStream: return ShadeDataStream(s, u, v, cells);
             case FloorPattern.CircuitFlow: return ShadeCircuitFlow(s, u, v, n, cells);
@@ -159,7 +157,7 @@ public partial class PixelFloor
 
         Color c = s.colorA * (0.9f + 0.15f * CircuitGround(u, v, n, s.seed));
         float trace = 0f, pulse = 0f;
-        float wTrace = 1.3f * texel;
+        float wTrace = 1.3f * texel * Mathf.Max(1f, 24f / cells);   // (thicker traces when the board is zoomed in)
 
         // Right edge of this node and the left half of it (the edge from the left neighbour).
         bool right = Hash(wi, wj, s.seed) > 0.42f, left = Hash(wl, wj, s.seed) > 0.42f;

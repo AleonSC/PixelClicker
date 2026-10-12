@@ -2094,6 +2094,19 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 9;
         }
 
+        // Spiral Galaxy and Black Hole are gone; Radar lost its circles; Liquid Flow, Circuit Flow, Cyber Hex and Watching Eyes are bigger.
+        if (defaultsVersion < 10)
+        {
+            styles.RemoveAll(x => x != null && (x.name == "Spiral Galaxy" || x.name == "Black Hole" || x.pattern == FloorPattern.Galaxy || x.pattern == FloorPattern.BlackHole));
+            foreach (FloorStyle def in DefaultStyles())
+            {
+                if (def.name != "Radar" && def.name != "Liquid Flow" && def.name != "Circuit Flow" && def.name != "Cyber Hex" && def.name != "Watching Eyes") continue;
+                int at = styles.FindIndex(x => x != null && x.name == def.name);
+                if (at >= 0) styles[at] = def;
+            }
+            defaultsVersion = 10;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2273,8 +2286,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return lasers;
 
         FloorStyle liquid = S("Liquid Flow", FloorPattern.Liquid, new Color(0.02f, 0.15f, 0.35f), new Color(0.1f, 0.55f, 0.75f),
-                              new Color(0.85f, 1f, 1f), 768, false, 40f, 30, 0.95f, 0.25f);
-        liquid.detail = 7; liquid.scrollSpeed = new Vector2(0.004f, 0.006f); liquid.pulseSpeed = 0.3f; liquid.pulseAmount = 0.15f;   // (one big picture that drifts)
+                              new Color(0.85f, 1f, 1f), 768, false, 40f, 12, 0.95f, 0.25f);
+        liquid.detail = 3; liquid.scrollSpeed = new Vector2(0.004f, 0.006f); liquid.pulseSpeed = 0.3f; liquid.pulseAmount = 0.15f;   // (one big picture that drifts)
         yield return liquid;
 
         FloorStyle clouds = S("Moving Clouds", FloorPattern.CloudSea, new Color(0.35f, 0.6f, 0.9f), new Color(0.72f, 0.78f, 0.88f),
@@ -2307,13 +2320,6 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             return f;
         }
         // ---- Space ----
-        // (Galaxy and Black Hole are drawn once at 1024 px - much sharper than the old 192 / 256 px animated pictures - and only glow.)
-        FloorStyle galaxy = St("Spiral Galaxy", FloorPattern.Galaxy, new Color(0.01f, 0.01f, 0.04f), new Color(0.35f, 0.5f, 1f), new Color(1f, 0.8f, 0.55f), 1024, 8f, 1, 0f, true, 0.8f);
-        galaxy.pulseSpeed = 0.15f; galaxy.pulseAmount = 0.15f;
-        yield return galaxy;
-        FloorStyle hole = St("Black Hole", FloorPattern.BlackHole, new Color(0.005f, 0.005f, 0.02f), new Color(1f, 0.45f, 0.1f), new Color(1f, 0.9f, 0.7f), 1024, 8f, 1, 0f, true, 1f);
-        hole.pulseSpeed = 0.2f; hole.pulseAmount = 0.2f;
-        yield return hole;
         yield return St("Hyperspace", FloorPattern.Hyperspace, new Color(0f, 0f, 0.03f), new Color(0.5f, 0.7f, 1f), new Color(0.9f, 0.5f, 1f), 192, 8f, 6, 24f, true, 1f);
         // (Moon Surface and Red Planet: one big picture with a big crater, smaller ones and pits, like Battle Crater; cells = how many smaller craters.)
         FloorStyle moon = St("Moon Surface", FloorPattern.Craters, new Color(0.55f, 0.55f, 0.57f), new Color(0.4f, 0.4f, 0.43f), new Color(0.15f, 0.15f, 0.17f), 1024, 40f, 10, 0f, false, 0f, 0.1f);
@@ -2324,8 +2330,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         yield return red;
         // ---- Digital / tech ----
         yield return St("Data Streams", FloorPattern.DataStream, new Color(0.01f, 0.02f, 0.05f), new Color(0.1f, 0.8f, 1f), new Color(1f, 0.3f, 0.7f), 192, 8f, 16, 20f, true, 1f);
-        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 768, 36f, 24, 8f, false, 0.8f);   // (the circuit board is drawn once; only the sparks move)
-        FloorStyle hex = St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 1024, 36f, 26, 0f, false, 0.9f);
+        yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 768, 36f, 12, 8f, false, 0.8f);   // (the circuit board is drawn once; only the sparks move)
+        FloorStyle hex = St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 1024, 36f, 13, 0f, false, 0.9f);
         hex.pulseSpeed = 0.5f; hex.pulseAmount = 0.3f;
         yield return hex;
         yield return St("Glitch", FloorPattern.Glitch, new Color(0.03f, 0.03f, 0.05f), new Color(0.9f, 0.2f, 0.6f), new Color(0.2f, 1f, 0.9f), 192, 8f, 1, 14f, true, 0.4f);
@@ -2341,7 +2347,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         FloorStyle yard = St("Graveyard", FloorPattern.Graveyard, new Color(0.1f, 0.08f, 0.06f), new Color(0.2f, 0.17f, 0.12f), new Color(0.55f, 0.65f, 0.7f), 1024, 40f, 1, 0f, false, 0f, 0.1f);
         yard.detail = 6;
         yield return yard;
-        yield return St("Watching Eyes", FloorPattern.WatchingEyes, new Color(0.02f, 0.02f, 0.03f), Color.black, new Color(1f, 0.1f, 0.05f), 1024, 36f, 22, 10f, false, 1.2f);   // (the ground is drawn once; only the eyes that blink are repainted)
+        yield return St("Watching Eyes", FloorPattern.WatchingEyes, new Color(0.02f, 0.02f, 0.03f), Color.black, new Color(1f, 0.1f, 0.05f), 1024, 36f, 11, 10f, false, 1.2f);   // (the ground is drawn once; only the eyes that blink are repainted)
         // ---- Scenes ----
         yield return St("City Skyline", FloorPattern.Skyline, new Color(0.02f, 0.03f, 0.12f), new Color(0.55f, 0.25f, 0.45f), new Color(0.06f, 0.05f, 0.12f), 256, 8f, 1, 8f, true, 0.3f);
         yield return St("Meadow Horizon", FloorPattern.GroundSky, new Color(0.25f, 0.5f, 0.9f), new Color(0.75f, 0.88f, 0.98f), new Color(0.3f, 0.62f, 0.2f), 256, 8f, 1, 0f, true, 0f, 0.15f);

@@ -688,3 +688,4 @@
 [2026-10-12 20:15 UTC] Removed three unused fields (console warnings).
 [2026-10-12 20:18 UTC] Added Unity Profiler markers (Pixel.FloorRedraw, ElectricLinks.Scan, SolarClusters, QuantumScan) so slow spots can be measured.
 [2026-10-12 20:20 UTC] Big floors now show a soft blurred version of their picture while the sharp one is drawn, instead of a flat colour.
+[2026-10-12 20:26 UTC] Floors: Radar has no circles, Liquid Flow is bigger, Spiral Galaxy and Black Hole removed, Circuit Flow / Cyber Hex / Watching Eyes zoomed in.

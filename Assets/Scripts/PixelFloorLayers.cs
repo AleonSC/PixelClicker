@@ -10,7 +10,6 @@ using static PixelNoise;
 /// <item>Animated floors that used to redraw the whole texture many times a second (Radar, Circuit Flow, Watching Eyes) now draw their still picture once and only repaint the
 ///   small parts that move (<see cref="OverlayFrame"/>: radar blips, circuit sparks, blinking eyes).</item>
 /// <item>The crater floors (Battle Crater, Moon Surface, Red Planet): a few big craters plus small ones and pits, lit from the upper left.</item>
-/// <item>High quality Spiral Galaxy and Black Hole (drawn once, 1024 px, only the glow pulses).</item>
 /// </list>
 /// </summary>
 public partial class PixelFloor
@@ -395,11 +394,9 @@ public partial class PixelFloor
         radarDots = new RadarDot[30];
         for (int i = 0; i < radarDots.Length; i++)
         {
-            float ang = Hash(i, 1, s.seed) * Mathf.PI * 2f;
-            float rad = 0.05f + 0.41f * Mathf.Sqrt(Hash(i, 2, s.seed));
             radarDots[i] = new RadarDot
             {
-                x = 0.5f + Mathf.Cos(ang) * rad, y = 0.5f + Mathf.Sin(ang) * rad,
+                x = 0.05f + 0.9f * Hash(i, 1, s.seed), y = 0.05f + 0.9f * Hash(i, 2, s.seed),
                 phase = Hash(i, 3, s.seed) * Mathf.PI * 2f, rate = 0.6f + Hash(i, 4, s.seed) * 1.3f,
             };
         }
@@ -411,17 +408,8 @@ public partial class PixelFloor
         float cu = Frac(u * cells), cv = Frac(v * cells);
         float line = Mathf.Min(Mathf.Min(cu, 1f - cu), Mathf.Min(cv, 1f - cv)) * n / cells;
         c = Color.Lerp(c, s.colorB * 0.7f, Mathf.Clamp01(1.2f - line) * 0.45f);
-        float dx = u - 0.5f, dy = v - 0.5f;
-        float rr = Mathf.Sqrt(dx * dx + dy * dy);
-        if (rr < 0.5f)
-        {
-            float ringPos = rr * 10f;
-            float rd = Mathf.Abs(ringPos - Mathf.Round(ringPos)) * (n / 10f);       // texels from the nearest range ring
-            c = Color.Lerp(c, s.colorB, Mathf.Clamp01(1.5f - rd) * 0.85f);
-            float ax = Mathf.Min(Mathf.Abs(dx), Mathf.Abs(dy)) * n;                // the cross-hair
-            c = Color.Lerp(c, s.colorB, Mathf.Clamp01(1.5f - ax) * 0.85f);
-        }
-        c *= 1f - Sstep(0.46f, 0.53f, rr) * 0.65f;                                  // dim beyond the radar's range
+        float ax = Mathf.Min(Mathf.Abs(u - 0.5f), Mathf.Abs(v - 0.5f)) * n;                // the cross-hair through the middle
+        c = Color.Lerp(c, s.colorB, Mathf.Clamp01(1.5f - ax) * 0.85f);
         if ((y % 3) == 0) c *= 0.88f;                                               // screen lines
         c.a = 1f;
         if (!shadeBase && radarDots != null)
@@ -450,8 +438,6 @@ public partial class PixelFloor
             layerDirty.Add(rect);
             float pulse = 0.5f + 0.5f * Mathf.Sin(t * d.rate + d.phase);
             pulse *= pulse;
-            float pingR = Frac(t * 0.3f * d.rate + d.phase) * 22f;                   // a ring that spreads out from the blip
-            float pingA = 1f - pingR / 22f;
             float sigma = 5f + 5f * pulse;
             for (int y = rect.y; y < rect.y + rect.height; y++)
             {
@@ -461,9 +447,8 @@ public partial class PixelFloor
                     float dist2 = dx * dx + dy * dy;
                     float dist = Mathf.Sqrt(dist2);
                     float glow = Mathf.Exp(-dist2 / (2f * sigma * sigma)) * (0.3f + 0.7f * pulse);
-                    float ring = Mathf.Exp(-(dist - pingR) * (dist - pingR) / 2.5f) * pingA * 0.45f;
-                    float core = dist < 3f ? 1f : (dist < 4.5f ? 1f - (dist - 3f) / 1.5f : 0f);
-                    float k = glow + ring;
+                            float core = dist < 3f ? 1f : (dist < 4.5f ? 1f - (dist - 3f) / 1.5f : 0f);
+                    float k = glow;
                     int idx = y * n + x;
                     AddLight(idx, s.colorC.r * k, s.colorC.g * k, s.colorC.b * k);
                     if (core > 0f)
@@ -595,97 +580,7 @@ public partial class PixelFloor
     }
 
     // ------------------------------------------------------------------
-    // Space: stars, spiral galaxy, black hole
     // ------------------------------------------------------------------
-
-    /// <summary>Soft round stars on a jittered grid (one star at most per 'cell' x 'cell' block); 'chance' = how many blocks have one, 'xScale' squeezes the shape for a stretched picture.</summary>
-    private static Color StarLayer(float px, float py, float cell, int seed, float chance, float sigma, float xScale)
-    {
-        int cx = Mathf.FloorToInt(px / cell), cy = Mathf.FloorToInt(py / cell);
-        float h = Hash(cx, cy, seed);
-        if (h > chance) return Color.black;
-        float sx = (cx + 0.3f + 0.4f * Hash(cx, cy, seed + 1)) * cell, sy = (cy + 0.3f + 0.4f * Hash(cx, cy, seed + 2)) * cell;
-        float dx = (px - sx) * xScale, dy = py - sy;
-        float b = Mathf.Exp(-(dx * dx + dy * dy) / (2f * sigma * sigma));
-        float mag = 0.25f + 0.75f * Mathf.Pow(Hash(cx, cy, seed + 3), 2.5f);
-        float tint = Hash(cx, cy, seed + 4);
-        Color col = tint < 0.25f ? new Color(0.7f, 0.82f, 1f) : (tint > 0.8f ? new Color(1f, 0.82f, 0.62f) : Color.white);
-        return col * (b * mag);
-    }
-
-    private static Color ShadeGalaxyHQ(FloorStyle s, float u, float v, int x, int y, int n)
-    {
-        float A = ViewAspect();
-        float px = (u - 0.5f) * A, py = v - 0.5f;
-        // The disc is tilted: turned a little and squashed.
-        float rx = px * 0.94f + py * 0.342f, ry = (-px * 0.342f + py * 0.94f) / 0.62f;
-        float r = Mathf.Sqrt(rx * rx + ry * ry);
-        float ang = Mathf.Atan2(ry, rx);
-
-        float warp = (Fbm(u, v, 6, 4, s.seed + 1) - 0.5f) * 1.3f;
-        float phase = ang * 2f - Mathf.Log(r + 0.03f) * 4.4f + warp;
-        float arm = Mathf.Pow(0.5f + 0.5f * Mathf.Cos(phase), 1.7f);
-        float falloff = Mathf.Exp(-r * 2.5f);
-        float clump = Fbm(u, v, 14, 5, s.seed + 2);
-        float body = arm * falloff * (0.3f + 1.2f * clump);
-        float halo = Mathf.Exp(-r * 4f) * 0.3f;
-        float bulge = Mathf.Exp(-r * 12f);
-
-        Color armTint = Color.Lerp(s.colorB, new Color(0.8f, 0.86f, 1f), 0.45f * clump);
-        Color c = s.colorA * (0.8f + 0.4f * Fbm(u, v, 3, 3, s.seed + 4));
-        c += armTint * (body * 1.5f) + s.colorB * halo + s.colorC * (bulge * 1.5f);
-
-        // Dust lanes just inside the arms and pink star-forming knots along them.
-        float lane = Mathf.Pow(0.5f + 0.5f * Mathf.Cos(phase - 0.9f), 6f) * Sstep(0.04f, 0.2f, r) * falloff;
-        float dust = lane * Sstep(0.35f, 0.75f, Fbm(u, v, 22, 4, s.seed + 3));
-        c *= 1f - dust * 0.65f;
-        float knot = Sstep(0.8f, 0.95f, Fbm(u, v, 40, 3, s.seed + 5)) * arm * falloff;
-        c += new Color(1f, 0.45f, 0.65f) * (knot * 1.2f);
-
-        // Stars: lots of faint ones, fewer bright ones, thicker along the arms.
-        c += StarLayer(x, y, 5f, s.seed + 20, 0.35f + 0.4f * Mathf.Clamp01(body * 3f), 1.1f, A) * 0.8f;
-        c += StarLayer(x, y, 17f, s.seed + 40, 0.5f, 1.9f, A) * 1.4f;
-        c.a = 1f;
-        return c;
-    }
-
-    private static Color ShadeBlackHoleHQ(FloorStyle s, float u, float v, int x, int y, int n)
-    {
-        float A = ViewAspect();
-        float px = (u - 0.5f) * A, py = v - 0.5f;
-        float r = Mathf.Sqrt(px * px + py * py);
-
-        // The background stars are bent outwards round the hole: look the stars up at a pushed-out radius.
-        float lensR = r + 0.0125f / Mathf.Max(r, 0.02f);
-        float k = lensR / Mathf.Max(r, 1e-4f);
-        float lx = px * k, ly = py * k;
-        float gx = (lx / A + 0.5f) * n, gy = (ly + 0.5f) * n;
-        Color c = s.colorA * (0.8f + 0.5f * Fbm(u, v, 3, 3, s.seed + 7));
-        c += StarLayer(gx, gy, 5f, s.seed + 20, 0.38f, 1.1f, A) * 0.9f;
-        c += StarLayer(gx, gy, 17f, s.seed + 40, 0.5f, 1.9f, A) * 1.4f;
-
-        // The tilted accretion disk, hot and fast near the hole, brighter on the side turning towards us.
-        float ey = py * 3.2f;
-        float er = Mathf.Sqrt(px * px + ey * ey);
-        float eang = Mathf.Atan2(ey, px);
-        float streaks = Fbm(Frac((eang + er * 5f) / (Mathf.PI * 2f)), er * 3f, 8, 4, s.seed + 2);
-        float heat = Mathf.Clamp01(0.14f / Mathf.Max(er, 0.14f));
-        Color diskColor = Color.Lerp(s.colorB, s.colorC, Mathf.Pow(heat, 1.4f)) * (0.45f + 1.1f * streaks) * (0.5f + 1.3f * heat);
-        diskColor *= 1f + 0.55f * Mathf.Clamp(-px / 0.4f, -1f, 1f);
-        float diskMask = Sstep(0.14f, 0.2f, er) * (1f - Sstep(0.42f, 0.55f, er));
-
-        // The far side of the disk, lensed into an arch over the top of the hole.
-        float arch = Mathf.Exp(-Mathf.Pow((r - 0.145f) / 0.04f, 2f)) * (py > 0f ? 1f : 0f) * (0.55f + 0.7f * streaks);
-        c += diskColor * (arch * 1.5f);
-        if (py < 0f || r > 0.115f) c = Color.Lerp(c, diskColor, diskMask);
-
-        // Photon ring, a faint bloom, and the shadow itself.
-        c += Color.Lerp(s.colorC, Color.white, 0.4f) * (Mathf.Exp(-Mathf.Pow((r - 0.099f) / 0.008f, 2f)) * 1.3f);
-        c += s.colorB * (Mathf.Exp(-r * 7f) * 0.1f);
-        c = Color.Lerp(c, Color.black, 1f - Sstep(0.085f, 0.095f, r));
-        c.a = 1f;
-        return c;
-    }
 }
 
 public partial class PixelFloor
