@@ -554,3 +554,4 @@
 [2026-10-12 03:17 UTC] Settings: the Replay tutorial button is now narrower than the Gameplay header.
 [2026-10-12 03:20 UTC] Settings: rows are now the same width as the section headers.
 [2026-10-12 03:23 UTC] Main menu: new 'Display floor' toggle (bottom left, with the other menu toggles); unticked, the game shows only the sky and an invisible floor lets pixels land.
+[2026-10-12 03:30 UTC] 15 new skies: Rainy Day, Thunderstorm, Snowfall, Foggy Morning, Sandstorm, Rainbow Sky, Ringed Planet, Spiral Galaxy, Black Hole, Binary Suns, Blocky Day / Night / Ember / Void, and the Watcher (pitch black, an eye opens, follows the cursor, then vanishes for a while).

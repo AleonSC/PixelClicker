@@ -9,7 +9,7 @@ using UnityEngine;
 /// Skybox/Panoramic shader (built-in and URP); the shader slot is filled in automatically in the editor so builds keep it.
 /// Some skies move: slow rotation, lightning flashes. Added by PixelClicker.Awake if missing.
 /// </summary>
-public class PixelSkybox : MonoBehaviour, IPixelLookSource
+public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
 {
     public enum SkyPattern
     {
@@ -22,7 +22,11 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
         Synthwave,    // retro striped sun over a neon grid
         PixelClouds,  // pixel-art sky with blocky clouds
         Storm,        // dark heavy clouds with lightning flashes
-        AlienWorld    // strange-coloured sky with a big banded planet and a moon
+        AlienWorld,   // strange-coloured sky with a big banded planet and a moon
+        Rain, Snow, Fog, Sandstorm, Rainbow,                 // weather (PixelSkyboxExtra.cs)
+        RingedPlanet, SpiralGalaxy, BlackHole, TwinSuns,     // space
+        CubeDay, CubeNight, CubeEmber, CubeVoid,             // cube world (blocky)
+        EyeVoid       // pitch black; an eye opens and watches the cursor (PixelSkyboxEye.cs)
     }
 
     [Serializable]
@@ -153,6 +157,7 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
     {
         if (Instance == this) Instance = null;
         if (activeMaterial != null) Destroy(activeMaterial);
+        DestroyEye();
         foreach (Texture2D t in panoramas.Values) if (t != null) Destroy(t);
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
         panoramas.Clear();
@@ -574,7 +579,7 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
                 return Clouds(c, s, dir, sun, new Vector2(0.5f, 1.5f), 0.3f);
             }
         }
-        return Gradient(s, dir.y, 0.5f);
+        return ShadeExtra(s, dir, sun, d, x, y, sinLat, res);
     }
 
     // ---- building blocks ----
@@ -707,6 +712,8 @@ public class PixelSkybox : MonoBehaviour, IPixelLookSource
     private void EnsureDefaultStyles()
     {
         foreach (SkyStyle def in DefaultStyles())
+            if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
+        foreach (SkyStyle def in ExtraStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
 
