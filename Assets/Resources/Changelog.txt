@@ -548,3 +548,4 @@
 [2026-10-12 02:55 UTC] Settings > Display has a 'Pick glow colour from screen' eyedropper: click any colour on the game or main menu to make the neon margin glow that exact static colour (the cycle toggle still makes it drift between colours).
 [2026-10-12 02:58 UTC] Tick boxes now show a clean, smooth check mark instead of a plain filled square.
 [2026-10-12 02:58 UTC] Settings: collapsible headers are slightly narrower than the buttons, and Replay tutorial moved to the top of Gameplay.
+[2026-10-12 03:11 UTC] Settings: removed the 'Bar glow colour' slider and the wide eyedropper button; a small eyedropper button now sits next to the 'Neon bar glow' tick box.

@@ -296,12 +296,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings tick box for the rounded, glowing window frames (takes effect for windows built after the next start).")]
     [SerializeField] private string fancyWindowsLabel = "Fancy windows (next start)";
 
-    [Tooltip("Label of the Settings slider that picks the colour (hue) of the neon bar glow.")]
-    [SerializeField] private string glowHueLabel = "Bar glow colour";
-
-    [Tooltip("Label of the Settings button that picks the neon bar glow's colour from the screen with an eyedropper. Empty = the default text.")]
-    [SerializeField] private string glowPickLabel = "";
-
     [Tooltip("Label of the Settings tick box that lets the neon bar glow slowly change colour by itself.")]
     [SerializeField] private string glowCycleLabel = "Cycle glow colour";
 
@@ -1326,6 +1320,31 @@ public class PixelPauseMenu : MonoBehaviour
         return toggle;
     }
 
+    /// <summary>A small eyedropper button just left of a tick box (picks a colour from the screen).</summary>
+    private void AddEyedropperButton(Toggle toggle, UnityEngine.Events.UnityAction onClick)
+    {
+        RectTransform row = toggle.transform.parent as RectTransform;
+        Button b = MakeButton(row, "Eyedropper Button", "", new Vector2(tickBoxSize, tickBoxSize), tickBoxColor, rowFontSize * 0.7f);
+        RectTransform br = b.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
+        br.anchoredPosition = new Vector2(-(tickBoxSize + 10f), 0f);
+        GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        icon.transform.SetParent(b.transform, false);
+        Image im = icon.GetComponent<Image>();
+        im.sprite = PixelUIKit.EyedropperSprite();
+        im.color = Color.white;
+        im.raycastTarget = false;
+        im.preserveAspect = true;
+        RectTransform ir = icon.GetComponent<RectTransform>();
+        ir.anchorMin = Vector2.zero; ir.anchorMax = Vector2.one;
+        ir.offsetMin = new Vector2(tickBoxSize * 0.15f, tickBoxSize * 0.15f);
+        ir.offsetMax = new Vector2(-tickBoxSize * 0.15f, -tickBoxSize * 0.15f);
+        b.onClick.AddListener(onClick);
+        TMP_Text label = row.GetComponentInChildren<TMP_Text>();
+        if (label != null) label.rectTransform.offsetMax = new Vector2(-(tickBoxSize * 2f + 24f), 0f);
+    }
+
     /// <summary>A label with a 0..1 slider on its right.</summary>
     private Slider AddSliderRow(Transform parent, string label, float value, UnityEngine.Events.UnityAction<float> onChanged, ref float y)
     {
@@ -2172,11 +2191,10 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, horizonFogLabel, () => PixelHorizonFog.Enabled, on => PixelHorizonFog.Enabled = on, ref y);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
         AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
-        AddSettingToggle(list, barGlowLabel, () => PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
-        AddSliderRow(list, glowHueLabel, PixelHud.GlowHue, v => PixelHud.GlowHue = v, ref y);
+        Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
+        settingsRefreshers.Add(() => glowToggle.SetIsOnWithoutNotify(PixelHud.BarGlow));
+        AddEyedropperButton(glowToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }));
         AddSettingToggle(list, glowCycleLabel, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on, ref y);
-        AddWideButtonRow(list, string.IsNullOrEmpty(glowPickLabel) ? "Pick glow colour from screen" : glowPickLabel,
-                         () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }), ref y);
         AddSettingToggle(list, uiColorLabel, () => PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
         AddSliderRow(list, uiHueLabel, PixelUIKit.UiHue, v => PixelUIKit.UiHue = v, ref y);
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);

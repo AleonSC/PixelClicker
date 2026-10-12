@@ -408,6 +408,40 @@ public static class PixelUIKit
         return closeCross;
     }
 
+    private static Sprite eyedropper;
+
+    /// <summary>A small white pixel-art eyedropper (pipette), drawn once in code.</summary>
+    public static Sprite EyedropperSprite()
+    {
+        if (eyedropper != null) return eyedropper;
+        string[] rows =
+        {
+            ".......###..",
+            "......#####.",
+            "......#####.",
+            ".....#####..",
+            "....####....",
+            "...####.....",
+            "..####......",
+            ".####.......",
+            ".###........",
+            "##..........",
+            "#...........",
+            "............",
+        };
+        int n = rows.Length;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Eyedropper", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        Color[] px = new Color[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+                px[(n - 1 - y) * n + x] = rows[y][x] == '#' ? Color.white : new Color(1f, 1f, 1f, 0f);
+        tex.SetPixels(px);
+        tex.Apply();
+        eyedropper = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f), 100f);
+        eyedropper.name = "Eyedropper";
+        return eyedropper;
+    }
+
     private static Sprite tickMark;
 
     /// <summary>A white, smooth-edged check mark with rounded ends (drawn once in code) for the fill of tick boxes.</summary>
