@@ -1072,7 +1072,6 @@ public class PixelPauseMenu : MonoBehaviour
         BuildStatsPanel();
         BuildSettingsPanel();
         BuildQuitPanel();
-        BuildChangelogPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("How To Play Panel", gameGuideText, howToPlayResource, emptyHowToPlayText);
         if (showControls) controlsScreen = BuildGuideScreen("Controls Panel", controlsText, controlsResource, emptyControlsText);
@@ -1086,7 +1085,6 @@ public class PixelPauseMenu : MonoBehaviour
         if (showSettings) entries.Add(new MenuEntry { label = settingsText, color = menuButtonColor, action = () => ShowView(settingsPanel) });
         if (controlsScreen != null) entries.Add(new MenuEntry { label = controlsText, color = menuButtonColor, action = () => ShowView(controlsScreen.panel) });
         // How to Play | Changelog
-        if (showChangelog) entries.Add(new MenuEntry { label = changelogText, color = menuButtonColor, action = () => ShowView(changelogPanel) });
         // Give feedback: a long green button right above Quit
         entries.Add(new MenuEntry { label = string.IsNullOrEmpty(feedbackText) ? "Give feedback" : feedbackText, color = new Color(0.2f, 0.62f, 0.32f, 1f), action = () => PixelFeedback.OpenWindow(), fullRow = true });
         // Quit at the bottom, alone

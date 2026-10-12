@@ -91,6 +91,12 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the To-Do tab.")]
     [SerializeField] private string todoTabText = "To-Do";
 
+    [Tooltip("Label of the Changelog tab (it moved here from the pause menu).")]
+    [SerializeField] private string changelogTabText = "Changelog";
+
+    [Tooltip("Name of the text file in Assets/Resources (without .txt) shown in the Changelog tab, one change per line, newest first.")]
+    [SerializeField] private string changelogResource = "Changelog";
+
     [Tooltip("Colour of finished to-do items.")]
     [SerializeField] private Color todoDoneColor = new Color(0.45f, 0.8f, 0.5f, 1f);
 
@@ -533,8 +539,12 @@ public class PixelDevTools : MonoBehaviour
         panel.SetActive(true);
     }
 
-    private GameObject toolsView, todoView;
-    private Image toolsTabImage, todoTabImage;
+    private GameObject toolsView, todoView, changelogView;
+    private Image toolsTabImage, todoTabImage, changelogTabImage;
+    private TMP_Text changelogLabel;
+    private ScrollRect changelogScroll;
+    private GameObject changelogBar;
+    private RectTransform changelogViewRect;
     private RectTransform todoContent;
     private ScrollRect todoScroll;
     private GameObject todoBar;
@@ -544,9 +554,58 @@ public class PixelDevTools : MonoBehaviour
     {
         if (toolsView != null) toolsView.SetActive(tab == 0);
         if (todoView != null) todoView.SetActive(tab == 1);
+        if (changelogView != null) changelogView.SetActive(tab == 2);
         if (toolsTabImage != null) toolsTabImage.color = tab == 0 ? buttonColor : boxColor;
         if (todoTabImage != null) todoTabImage.color = tab == 1 ? buttonColor : boxColor;
+        if (changelogTabImage != null) changelogTabImage.color = tab == 2 ? buttonColor : boxColor;
         if (tab == 1) RebuildTodo();
+        if (tab == 2) RebuildChangelog();
+    }
+
+    /// <summary>The Changelog tab: the lines of Resources/Changelog.txt, newest first, in one scrolling text.</summary>
+    private void BuildChangelogView(Transform box, float top)
+    {
+        changelogView = new GameObject("Changelog View", typeof(RectTransform));
+        changelogView.transform.SetParent(box, false);
+        PixelUIKit.Stretch(changelogView.GetComponent<RectTransform>());
+
+        changelogScroll = PixelUIKit.CreateScrollView(changelogView.transform, "Changelog Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 16f, 60f,
+                                                      out RectTransform content, out changelogBar);
+        changelogViewRect = changelogScroll.GetComponent<RectTransform>();
+        changelogViewRect.anchorMin = Vector2.zero;
+        changelogViewRect.anchorMax = Vector2.one;
+        changelogViewRect.offsetMin = new Vector2(40f, 30f);
+        changelogViewRect.offsetMax = new Vector2(-40f, -top);
+
+        changelogLabel = PixelUIKit.CreateText(font, content, "Changelog Text", "", fontSize * 0.8f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
+        changelogLabel.raycastTarget = false;
+        RectTransform lr = changelogLabel.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = new Vector2(1f, 1f);
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.offsetMin = new Vector2(0f, 0f);
+        lr.offsetMax = new Vector2(-30f, 0f);
+        changelogView.SetActive(false);
+    }
+
+    private void RebuildChangelog()
+    {
+        if (changelogLabel == null) return;
+        TextAsset asset = Resources.Load<TextAsset>(changelogResource);
+        List<string> entries = new List<string>();
+        if (asset != null)
+            foreach (string raw in asset.text.Split('\n'))
+            {
+                string line = raw.Trim();
+                if (line.Length > 0) entries.Add(line);
+            }
+        entries.Reverse();   // newest first
+        string text = entries.Count > 0 ? string.Join("\n\n", entries) : "Nothing in the changelog yet.";
+        changelogLabel.text = text;
+        float width = Mathf.Max(100f, changelogViewRect.rect.width - 30f);
+        float height = Mathf.Ceil(changelogLabel.GetPreferredValues(text, width, 0f).y) + 10f;
+        changelogLabel.rectTransform.sizeDelta = new Vector2(-30f, height);
+        PixelUIKit.UpdateScrollView(changelogScroll, changelogBar, height, changelogViewRect.rect.height);
     }
 
     /// <summary>The To-Do tab: a scrolling list of the lines in Resources/Todo.txt, plus a Close button.</summary>
@@ -726,12 +785,24 @@ public class PixelDevTools : MonoBehaviour
                                                   boxColor, textColor, fontSize);
         PixelUIKit.Caps(toolsTab);
         Place(toolsTab.GetComponent<RectTransform>(), 40f, y, tabW);
-        Button todoTab = PixelUIKit.CreateButton(font, box.transform, "Todo Tab", todoTabText, new Vector2(tabW, rowHeight),
+        // The right half is shared by To-Do and Changelog (together exactly the space the To-Do tab used to take).
+        float halfW = (tabW - 10f) * 0.5f;
+        Button todoTab = PixelUIKit.CreateButton(font, box.transform, "Todo Tab", todoTabText, new Vector2(halfW, rowHeight),
                                                  boxColor, textColor, fontSize);
         PixelUIKit.Caps(todoTab);
-        Place(todoTab.GetComponent<RectTransform>(), 40f + tabW + 10f, y, tabW);
+        Place(todoTab.GetComponent<RectTransform>(), 40f + tabW + 10f, y, halfW);
+        Button changelogTab = PixelUIKit.CreateButton(font, box.transform, "Changelog Tab", changelogTabText, new Vector2(halfW, rowHeight),
+                                                      boxColor, textColor, fontSize);
+        PixelUIKit.Caps(changelogTab);
+        Place(changelogTab.GetComponent<RectTransform>(), 40f + tabW + 10f + halfW + 10f, y, halfW);
+        foreach (Button b in new[] { todoTab, changelogTab })
+        {
+            TMP_Text t = b.GetComponentInChildren<TMP_Text>();
+            if (t != null) { t.enableAutoSizing = true; t.fontSizeMax = fontSize; t.fontSizeMin = 10f; }   // the shorter buttons shrink their text to fit
+        }
         toolsTabImage = toolsTab.GetComponent<Image>();
         todoTabImage = todoTab.GetComponent<Image>();
+        changelogTabImage = changelogTab.GetComponent<Image>();
         float tabsBottom = y + rowHeight + 16f;
         y = tabsBottom;
 
@@ -870,8 +941,10 @@ public class PixelDevTools : MonoBehaviour
         PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, y, boxHeight - scrollTop - 30f);
 
         BuildTodoView(box.transform, tabsBottom, inner);
+        BuildChangelogView(box.transform, tabsBottom);
         toolsTab.onClick.AddListener(() => SetTab(0));
         todoTab.onClick.AddListener(() => SetTab(1));
+        changelogTab.onClick.AddListener(() => SetTab(2));
         SetTab(0);
 
         FillDropdowns();

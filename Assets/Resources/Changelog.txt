@@ -588,3 +588,4 @@
 [2026-10-12 09:20 UTC] Removed the outdated Horizon fog feature and its Settings tick box.
 [2026-10-12 09:40 UTC] Removed the UI colour slider; the Custom UI colour tick box now has an eyedropper button that picks the window colour from anywhere on screen.
 [2026-10-12 10:00 UTC] Settings: the Controls header is now 'How to play' with 'Controls' (the key bindings) and 'Game Guide' (the old pause-menu How to Play screen, which is removed from the main pause menu).
+[2026-10-12 10:20 UTC] The Changelog moved from the pause menu to the Dev Tools panel as a third tab; the To-Do and Changelog buttons now share the space the To-Do tab used to take.
