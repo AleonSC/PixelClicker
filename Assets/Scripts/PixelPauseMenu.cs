@@ -312,6 +312,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the sky picker (arrows step through the skies of the Pixel Skybox component).")]
     [SerializeField] private string skyStyleLabel = "Sky";
 
+    [Tooltip("Settings > Display tick box that switches the camera to the flat (orthographic) view.")]
+    [SerializeField] private string flatViewLabel = "Flat view";
+
     [Tooltip("Label of the Settings tick box for the bevelled button look (takes effect for windows built after the next start).")]
     [SerializeField] private string fancyButtonsLabel = "Fancy buttons (next start)";
 
@@ -2284,6 +2287,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true);
         AddSettingToggle(list, displayFloorLabel, () => PixelTitleWanderers.DisplayFloor, on => PixelTitleWanderers.DisplayFloor = on, ref y);
         AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y, popout: true);
+        AddSettingToggle(list, flatViewLabel, () => PixelOrthoView.Enabled, on => PixelOrthoView.Enabled = on, ref y);
         AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
         AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
         Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);

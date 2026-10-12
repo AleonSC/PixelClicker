@@ -84,6 +84,7 @@
 | `PixelFloorFade.cs` | Floor edge fade (partial class PixelFloor, UpdateEdgeFade from LateUpdate; | in the header comment of `PixelFloorFade.cs` |
 | `PixelFloor.cs` | Floor styles (added by PixelClicker.Awake): | `docs/systems/PixelFloor.md` |
 | `PixelDayNight.cs` | Day / night cycle (added by PixelClicker.Awake; | in the header comment of `PixelDayNight.cs` |
+| `PixelOrthoView.cs` | Flat view (added by PixelClicker.Awake; Settings > Display > 'Flat view' = PixelOrthoView.Enabled, off by default, synced per save): | `docs/systems/PixelOrthoView.md` |
 | `PixelSkybox.cs` | Sky styles (added by PixelClicker.Awake, implements IPixelLookSource): | `docs/systems/PixelSkybox.md` |
 | `PixelLookSource.cs` / `PixelNoise.cs` | IPixelLookSource = anything with looks to step through (Usable, Current, StyleName, PreviewTexture/Color/Rect, Step); | in the header comment of `PixelLookSource.cs` |
 | `PixelOrbitCamera.cs` | Orbital camera (added by PixelClicker.Awake; | in the header comment of `PixelOrbitCamera.cs` |

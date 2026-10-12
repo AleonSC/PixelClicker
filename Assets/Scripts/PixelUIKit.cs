@@ -39,6 +39,12 @@ public static class PixelUIKit
         return root;
     }
 
+    /// <summary>The height of the camera's view (world units) at 'depth' in front of it - works for the normal and the flat (orthographic) view.</summary>
+    public static float ViewHeightAt(Camera cam, float depth)
+    {
+        return cam.orthographic ? 2f * cam.orthographicSize : 2f * depth * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+    }
+
     /// <summary>
     /// Moves a 3D text so all of it stays inside the camera's view (its whole width and height, with a margin as a fraction of
     /// the screen), clear of the black bars. Returns the adjusted world position.
@@ -49,7 +55,7 @@ public static class PixelUIKit
         Vector3 v = cam.WorldToViewportPoint(position);
         if (v.z <= 0.01f) return position;
 
-        float viewHeight = 2f * v.z * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float viewHeight = ViewHeightAt(cam, v.z);
         float viewWidth = viewHeight * cam.aspect;
         text.ForceMeshUpdate();
         float halfW = Mathf.Min(0.45f, text.preferredWidth * 0.5f * text.transform.lossyScale.x / Mathf.Max(0.01f, viewWidth));

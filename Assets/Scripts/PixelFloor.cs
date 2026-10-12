@@ -229,7 +229,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private Vector2 uvT0, uvD1, uvD2;
     private Vector3 lastFitCamPos;
     private Quaternion lastFitCamRot;
-    private float lastFitAspect;
+    private float lastFitAspect, lastFitOrtho;
 
     public int StyleCount => styles.Count;
     public int Current => current;
@@ -863,7 +863,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             cam = fitCam;
         }
         Transform ct = cam.transform;
-        if (!force && ct.position == lastFitCamPos && ct.rotation == lastFitCamRot && Mathf.Approximately(cam.aspect, lastFitAspect)) return false;
+        if (!force && ct.position == lastFitCamPos && ct.rotation == lastFitCamRot && Mathf.Approximately(cam.aspect, lastFitAspect) && (!cam.orthographic || Mathf.Approximately(cam.orthographicSize, lastFitOrtho))) return false;
 
         float bar = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight / 1080f : 0f;
         Plane floor = new Plane(floorRenderer.transform.up.sqrMagnitude > 0f ? floorRenderer.transform.up : Vector3.up,
@@ -876,6 +876,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         lastFitCamPos = ct.position;
         lastFitCamRot = ct.rotation;
         lastFitAspect = cam.aspect;
+        lastFitOrtho = cam.orthographicSize;
 
         Vector2 uvBL = WorldToFloorUv(bl), uvBR = WorldToFloorUv(br), uvTL = WorldToFloorUv(tl);
         // Texture coordinate = uv * tiling + offset: 0 at the bottom-left corner of the view, 1 at the right / top edge.

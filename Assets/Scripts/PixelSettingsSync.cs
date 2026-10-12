@@ -36,7 +36,7 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "FlatView", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
         foreach (string k in new[] { "GlowHue", "UiHue", "UiSat" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
@@ -110,6 +110,7 @@ public static class PixelSettingsSync
         if (menu != null) menu.ReloadSettingsFromPrefs();
         PixelHints.RefreshLog();
         PixelDevTools.ReloadFromPrefs();
+        PixelOrthoView.ReloadFromPrefs();
         PixelHud.ReloadGlowFromPrefs();
         PixelUIKit.ReloadColorFromPrefs();
         PixelProspector.ReloadSettingsFromPrefs();
