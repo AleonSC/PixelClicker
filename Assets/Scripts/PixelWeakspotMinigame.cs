@@ -241,7 +241,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
         // Anything that takes over the clock or the screen ends the round at once.
         if (PixelTimeStop.IsStopped || PixelTimeStop.IsSlowed || PixelTitleScreen.Showing) { Finish(); return; }
-        if (PixelPauseMenu.IsPaused) return;   // the pause menu owns timeScale; our clocks wait
+        if (PixelPauseMenu.IsPaused || PixelTutorialDim.Active) return;   // the pause menu / a frozen tip box owns timeScale; our clocks wait
         if (phase != Phase.ZoomOut && slowed && !Mathf.Approximately(Time.timeScale, slowScale)) ApplySlow(true);
 
         float dt = Time.unscaledDeltaTime;

@@ -926,9 +926,12 @@ public class PixelHints : MonoBehaviour
         // The tips for something that just happened in a minigame are small; the rest are shop-sized.
         // The first ghost tip appears beside the ghost and stops time until it is closed.
         PixelGhostMinigame ghostGame = next.id == "minigame_ghost" ? PixelMinigame.Find("ghost") as PixelGhostMinigame : null;
-        if (ghostGame != null && ghostGame.GhostScreenPosition().HasValue)
+        if (next.id != null && next.id.StartsWith("minigame_"))
         {
-            PixelNotice.Show(next.text, 0f, small: true, nearScreen: ghostGame.GhostScreenPosition, freezeTime: true);
+            // Every first-time minigame tip stops time and darkens the screen until 'Got it' (the first ghost tip sits beside the ghost).
+            PixelTutorialDim.Begin(null);
+            System.Func<Vector2?> near = ghostGame != null && ghostGame.GhostScreenPosition().HasValue ? ghostGame.GhostScreenPosition : null;
+            PixelNotice.Show(next.text, 0f, small: true, nearScreen: near, freezeTime: true, onClosed: PixelTutorialDim.End);
             wasShowing = true;
             return;
         }
