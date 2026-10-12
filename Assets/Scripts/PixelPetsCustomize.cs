@@ -472,6 +472,12 @@ public partial class PixelPets
     /// <summary>Builds outfit number 'index' (0 = none) as a child "Outfit" of 'parent'; 'size' = the pet's edge length.</summary>
     private void BuildOutfit(Transform parent, int index, float size)
     {
+        if (index >= CustomBase)
+        {
+            int c = index - CustomBase;
+            if (c >= 0 && c < Customs().Count) BuildCustomOutfit(parent, Customs()[c], size);
+            return;
+        }
         List<Outfit> list = OutfitList();
         if (index <= 0 || index >= list.Count) return;
         GameObject root = new GameObject("Outfit");
@@ -758,10 +764,16 @@ public partial class PixelPets
         TopRow(outfitLabel.rectTransform, -690f, 60f, 40f);
         UpdateOutfitLabel();
 
+        Button design = PixelUIKit.CreateButton(font, box.transform, "Design", "Design outfits", new Vector2(320f, 80f), new Color(0.3f, 0.4f, 0.75f, 1f), Color.white, 32f);
+        RectTransform gr = design.GetComponent<RectTransform>();
+        gr.anchorMin = gr.anchorMax = gr.pivot = new Vector2(0.5f, 0f);
+        gr.anchoredPosition = new Vector2(-180f, 36f);
+        design.onClick.AddListener(() => OpenStudio(editPet));
+
         Button done = PixelUIKit.CreateButton(font, box.transform, "Done", doneText, new Vector2(320f, 80f), buttonColor, Color.white, 38f);
         RectTransform dr = done.GetComponent<RectTransform>();
         dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 0f);
-        dr.anchoredPosition = new Vector2(0f, 36f);
+        dr.anchoredPosition = new Vector2(180f, 36f);
         done.onClick.AddListener(CloseCustomize);
     }
 
@@ -783,8 +795,11 @@ public partial class PixelPets
     private void ChangeOutfit(int direction)
     {
         if (editPet == null) return;
-        int count = OutfitList().Count;
-        editPet.outfit = ((editPet.outfit + direction) % count + count) % count;
+        List<int> choices = OutfitChoices(editPet.type);
+        int at = choices.IndexOf(editPet.outfit);
+        if (at < 0) at = 0;
+        at = ((at + direction) % choices.Count + choices.Count) % choices.Count;
+        editPet.outfit = choices[at];
         ApplyOutfit(editPet);          // the pet on the floor wears it right away
         RebuildPreviewModel(editPet);
         UpdateOutfitLabel();
@@ -794,9 +809,9 @@ public partial class PixelPets
     private void UpdateOutfitLabel()
     {
         if (outfitLabel == null || editPet == null) return;
-        List<Outfit> list = OutfitList();
-        int i = Mathf.Clamp(editPet.outfit, 0, list.Count - 1);
-        outfitLabel.text = string.Format(outfitFormat, i + 1, list.Count, list[i].name);
+        List<int> choices = OutfitChoices(editPet.type);
+        int at = Mathf.Max(0, choices.IndexOf(editPet.outfit));
+        outfitLabel.text = string.Format(outfitFormat, at + 1, choices.Count, OutfitNameOf(choices[at]));
     }
 
     private void ApplyName()
@@ -809,6 +824,7 @@ public partial class PixelPets
 
     private void UpdateCustomize()
     {
+        UpdateStudio();
         if (previewModel == null) return;
         if (!previewDragging) previewYaw += previewSpinSpeed * Time.unscaledDeltaTime;
         previewModel.localRotation = Quaternion.Euler(previewPitch, previewYaw, 0f);
@@ -828,6 +844,7 @@ public partial class PixelPets
 
     private void CleanupCustomize()
     {
+        if (studioOpen) { PixelWindows.Unregister(studioKey); CleanupStudio(); }
         if (customRoot != null) Destroy(customRoot);
         customRoot = null;
         if (previewStudio != null) Destroy(previewStudio);

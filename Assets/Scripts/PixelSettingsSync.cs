@@ -40,7 +40,7 @@ public static class PixelSettingsSync
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
         foreach (string k in new[] { "GlowHue", "UiHue", "UiSat" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
-        foreach (string k in new[] { "GlowColor", "SkillPack", "SkillGuests", "OptInOff", "MyWindow" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
+        foreach (string k in new[] { "GlowColor", "SkillPack", "SkillGuests", "OptInOff", "MyWindow", "PetOutfits" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
         known.Add(new Known("PixelAudio.Effects", 1));
@@ -116,5 +116,6 @@ public static class PixelSettingsSync
         PixelSkills.ReloadSettingsFromPrefs();
         PixelBasicFx.ReloadFromPrefs();
         PixelMyWindow.ReloadFromPrefs();
+        PixelPets.ReloadOutfitsFromPrefs();
     }
 }
