@@ -775,12 +775,12 @@ public partial class PixelSkills
         SkillPack active = Find(TrainingId);
         double into, need;
         int level = LevelOf(active, out into, out need);
-        string trainingFormat = active.id == StandardId ? "Playing: {0}" : "Training: {0}   Lv {1}";
+        string trainingFormat = "Training: {0}   Lv {1}";
         string header = string.Format(trainingFormat, active.displayName, level);
         if (active.id == OfflineId) header += "   (pixels: " + Find(ActiveId).displayName + ")";
         PixelUIKit.SetText(headerLabel, header);
         RefreshMastery();
-        headerFill.anchorMax = new Vector2(active.id == StandardId ? 0f : Mathf.Clamp01((float)(into / need)), 1f);
+        headerFill.anchorMax = new Vector2(Mathf.Clamp01((float)(into / need)), 1f);
         headerFill.offsetMax = new Vector2(-3f, -3f);
 
         for (int i = 0; i < cards.Count; i++)
@@ -794,12 +794,12 @@ public partial class PixelSkills
             int cl = LevelOf(c.pack, out ci, out cn);
             c.background.color = i == selected ? cardSelectedColor : cardColor;
             PixelUIKit.SetText(c.nameLabel, open ? c.pack.displayName : lockedName);
-            PixelUIKit.SetText(c.levelLabel, open && c.pack.id != StandardId ? "Lv " + cl : "");
+            PixelUIKit.SetText(c.levelLabel, open ? "Lv " + cl : "");
             c.badge.gameObject.SetActive(isActive || pixelsOnly);
             c.treeButton.gameObject.SetActive(open && c.pack.nodes != null && c.pack.nodes.Length > 0);
             c.barFill.color = open ? c.pack.accent : new Color(0.3f, 0.3f, 0.35f, 1f);
             RectTransform fr = c.barFill.rectTransform;
-            fr.anchorMax = new Vector2(open && c.pack.id != StandardId ? Mathf.Clamp01((float)(ci / cn)) : 0f, 1f);
+            fr.anchorMax = new Vector2(open ? Mathf.Clamp01((float)(ci / cn)) : 0f, 1f);
             fr.offsetMax = Vector2.zero;
         }
         PixelUIKit.UpdateScrollView(listScroll, listBar, cards.Count * 108f, listScroll.GetComponent<RectTransform>().rect.height);

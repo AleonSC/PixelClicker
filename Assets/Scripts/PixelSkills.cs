@@ -96,6 +96,7 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     public const string StandardId = "standard";
+    private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. While you train another skill it still gains a tiny 5% of the XP.";
     public const string MiningId = "mining";
     public const string OfflineId = "offline";
     public const string FarmingId = "farming";
@@ -183,8 +184,9 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(0, new SkillPack
             {
                 id = StandardId, displayName = "Standard", accent = new Color(0.5f, 0.55f, 0.65f),
-                description = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). No skill is trained.",
-                replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "Nothing",
+                baseXp = 80f, xpGrowth = 1.5f, perks = StandardPerks(),
+                description = StandardDescription,
+                replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "Every pixel you collect (5% while another skill is trained)",
             });
         if (!packs.Exists(p => p.id == MiningId))
             packs.Add(new SkillPack
@@ -318,6 +320,9 @@ public partial class PixelSkills : MonoBehaviour
             }
             if (pack.id == StandardId)
             {
+                if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
+                if (pack.description != null && pack.description.Contains("No skill is trained")) pack.description = StandardDescription;
+                if (pack.xpFrom == "Nothing") pack.xpFrom = "Every pixel you collect (5% while another skill is trained)";
                 if (pack.description != null && pack.description.StartsWith("The usual rotation: monochrome, RGB, Glass and Luminescent"))
                     pack.description = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). No skill is trained.";
                 if (pack.spawns == "White, Gray, Black, Red, Green, Blue, Glass, Luminescent")
@@ -756,6 +761,10 @@ public partial class PixelSkills : MonoBehaviour
 
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
+        // Standard is a skill too: full XP while it is the one trained, a tiny share while another skill is.
+        SkillPack standard = Find(StandardId);
+        if (standard != null) AddXp(standard, (automatic ? autoXpFactor : 1d) * (TrainingId == StandardId ? 1d : StandardSideRate), TrainingId == StandardId && AnyTrainable);   // (no popups before the Skills tab exists)
+
         // Offline Progression: every click trains it; the pack assigned to it (the pixels in play) still earns half of its normal XP,
         // and with no skill pack in play Offline Progression itself earns 50% more.
         SkillPack offline = Find(OfflineId);
@@ -772,16 +781,16 @@ public partial class PixelSkills : MonoBehaviour
         AddXp(pack, automatic ? autoXpFactor : 1d);
     }
 
-    public void AddXp(SkillPack pack, double xp)
+    public void AddXp(SkillPack pack, double xp, bool popup = true)
     {
         if (pack == null || xp <= 0d) return;
         xp *= PenaltyFactor;   // a hazard went off recently
         xp += DrawBonus(pack, xp);   // bonus bank: doubles the gain, the extra comes out of the bank
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
-        QueueXpPopup(pack, xp);
+        if (popup) QueueXpPopup(pack, xp);
         int after = LevelOf(pack);
-        if (after > before)
+        if (after > before && (pack.id != StandardId || AnyTrainable))
             PixelHints.Announce(pack.displayName + " level " + after, "Your " + pack.displayName + " skill reached level " + after + " (+" + (after - before) + " skill point" + (after - before == 1 ? "" : "s") + ").");
         Changed?.Invoke();
     }

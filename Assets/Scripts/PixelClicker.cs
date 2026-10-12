@@ -593,7 +593,7 @@ public class PixelClicker : MonoBehaviour
     public int PotionVacuumEvery => Mathf.Max(1, potionVacuumEvery);
 
     /// <summary>Seconds an old pixel lies around before it despawns.</summary>
-    public float FallingCopyLifetime => fallingCopyLifetime;
+    public float FallingCopyLifetime => fallingCopyLifetime > 0f ? fallingCopyLifetime + PixelSkills.StandardLifetimeBonus : 0f;   // + the Standard skill's 'Lingering pixels' perk
 
     [Header("Value Upgrades")]
     [Min(0f)]
@@ -677,7 +677,7 @@ public class PixelClicker : MonoBehaviour
     /// <summary>Linear drag of old pixels (see <see cref="OldPixelGravityScale"/>).</summary>
     public float OldPixelDrag => fallingCopyDrag;
 
-    public int OldPixelCap => oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap;
+    public int OldPixelCap => (oldPixelCapOverride > 0 ? Mathf.Max(oldPixelCapOverride, baseOldPixelCap) : baseOldPixelCap) + PixelSkills.StandardCapacityBonus;   // + the Standard skill's 'Roomy floor' perk
 
     /// <summary>Called by the shop's Old Pixel Capacity upgrade (0 = back to the Inspector value).</summary>
     public void SetOldPixelCap(int value) => oldPixelCapOverride = Mathf.Max(0, value);
@@ -4288,7 +4288,7 @@ public class PixelClicker : MonoBehaviour
             rb.AddForce(routedVelocity, ForceMode.VelocityChange);
             rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
                          ForceMode.VelocityChange);
-            AddDespawn(copy, fallingCopyLifetime * LifetimeFactor(tierIndex));
+            AddDespawn(copy, FallingCopyLifetime * LifetimeFactor(tierIndex));
             OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
@@ -4327,7 +4327,7 @@ public class PixelClicker : MonoBehaviour
             pop.Setup(box, copy.transform.localScale, popStartScale, popGrowSeconds, popNoCollisionSeconds);
         }
 
-        AddDespawn(copy, fallingCopyLifetime * LifetimeFactor(tierIndex));
+        AddDespawn(copy, FallingCopyLifetime * LifetimeFactor(tierIndex));
 
         OldPixelInfo info = copy.AddComponent<OldPixelInfo>();
         info.tierIndex = tierIndex;
@@ -4431,7 +4431,7 @@ public class PixelClicker : MonoBehaviour
                 BounceSoundId(body.GetComponent<OldPixelInfo>() != null ? body.GetComponent<OldPixelInfo>().tierIndex : -1));
 
         OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-        if (despawn != null) despawn.AddLifetime(fallingCopyLifetime);
+        if (despawn != null) despawn.AddLifetime(FallingCopyLifetime);
     }
 
     private void PlayClickEffects(PixelTier tier)
