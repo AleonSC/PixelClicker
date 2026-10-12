@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// Part of <see cref="PixelSkills"/>: a rising '+n Skill XP' popup in the skill's own colour whenever the skill in training gains XP. XP that comes
 /// in small pieces (auto clicks give a fraction) is gathered for a moment and shown as whole numbers, so there is one clean popup instead of a flood.
-/// It rises from the pinned tracker when that is showing, else from beside the cube, and uses its own canvas so it never mixes with the other +n texts.
+/// It hangs just under the mouse cursor and follows it, and uses its own canvas so it never mixes with the other +n texts.
 /// </summary>
 public partial class PixelSkills
 {
@@ -64,19 +64,7 @@ public partial class PixelSkills
             xpCanvas.transform.SetParent(transform, false);
         }
         RectTransform canvasRect = xpCanvas.GetComponent<RectTransform>();
-
-        Vector2 at;
-        if (trackerBuilt && trackerCanvas != null && trackerCanvas.activeSelf && trackerOn)
-            at = trackerRect.anchoredPosition + new Vector2(0f, trackerRect.sizeDelta.y * 0.5f + 8f);   // rises from the pinned tracker
-        else
-        {
-            Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-            Vector2 screen = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
-            if (cam != null && clicker != null && clicker.PixelTransform != null) screen = cam.WorldToScreenPoint(clicker.PixelTransform.position);
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out at);
-            at += new Vector2(160f, 110f);   // beside the cube
-        }
-        at += new Vector2(Random.Range(-30f, 30f), 0f);
+        float xJitter = Random.Range(-24f, 24f);
 
         float size = xpPopupSize > 1f ? xpPopupSize : 34f;
         TMP_Text t = PixelUIKit.CreateText(Font, xpCanvas.transform, "Skill XP", "+" + amount + " " + pack.displayName + " XP", size, TextAlignmentOptions.Center, FontStyles.Bold, pack.accent);
@@ -84,20 +72,20 @@ public partial class PixelSkills
         RectTransform r = t.rectTransform;
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
         r.sizeDelta = new Vector2(520f, size * 1.6f);
-        r.anchoredPosition = at;
-        StartCoroutine(RiseXpPopup(t, r, pack.accent));
+        StartCoroutine(RiseXpPopup(t, r, canvasRect, xJitter, pack.accent));
     }
 
-    private IEnumerator RiseXpPopup(TMP_Text t, RectTransform r, Color color)
+    /// <summary>The popup hangs just under the mouse cursor, follows it, drifts a little further down and fades.</summary>
+    private IEnumerator RiseXpPopup(TMP_Text t, RectTransform r, RectTransform canvasRect, float xJitter, Color color)
     {
-        Vector2 start = r.anchoredPosition;
         float time = 0f;
         const float life = 1.5f;
         while (time < life && t != null)
         {
             time += Time.unscaledDeltaTime;
             float k = Mathf.Clamp01(time / life);
-            r.anchoredPosition = start + new Vector2(0f, 110f * (1f - (1f - k) * (1f - k)));
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
+            r.anchoredPosition = local + new Vector2(xJitter, -56f - 50f * k);
             Color c = color;
             c.a = k < 0.5f ? 1f : 1f - (k - 0.5f) / 0.5f;
             t.color = c;

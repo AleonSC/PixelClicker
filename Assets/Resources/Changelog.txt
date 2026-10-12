@@ -539,3 +539,4 @@
 [2026-10-12 02:15 UTC] Crafting now gives XP: a crafting level bar sits at the bottom of the crafting window and each craft shows its own '+n XP' popup (the level is a placeholder for now).
 [2026-10-12 02:19 UTC] Double-clicking a skill card in the Skills window now chooses that skill (like the Train button).
 [2026-10-12 02:20 UTC] Skills now show a rising '+n <skill> XP' popup in the skill's colour whenever the skill in training gains XP.
+[2026-10-12 02:23 UTC] Skill XP popups now hang under the mouse cursor and follow it.
