@@ -1203,10 +1203,10 @@ public class PixelPauseMenu : MonoBehaviour
         row.sizeDelta = new Vector2(-96f, rowHeight);
         row.anchoredPosition = new Vector2(0f, -y);
 
-        TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize * 0.65f, FontStyles.Normal);   // one size for every row so they line up
+        TMP_Text label = MakeText(go.transform, "Label", text, rowFontSize * 0.55f, FontStyles.Normal);   // one size for every row so they line up
         label.alignment = TextAlignmentOptions.MidlineLeft;
         label.enableAutoSizing = false;
-        label.fontSize = rowFontSize * 0.65f;
+        label.fontSize = rowFontSize * 0.55f;
         label.overflowMode = TextOverflowModes.Overflow;
 #if UNITY_2023_1_OR_NEWER
         label.textWrappingMode = TextWrappingModes.NoWrap;   // ONE line: a long name shrinks to fit instead of wrapping
@@ -2255,7 +2255,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         y += 8f;
         float h = rowHeight * 0.8f;
-        Button b = MakeButton(parent, text + " Header", "", new Vector2(10f, h), tickBoxColor, rowFontSize * 0.7f);
+        Button b = MakeButton(parent, text + " Header", "", new Vector2(10f, h), tickBoxColor, rowFontSize * 0.9f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
@@ -2408,7 +2408,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>A full-width button row (an action rather than a setting).</summary>
     private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = 80f)
     {
-        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.9f);
+        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.7f);
         RectTransform rt = b.GetComponent<RectTransform>();
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);

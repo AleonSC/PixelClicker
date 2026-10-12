@@ -568,3 +568,4 @@
 [2026-10-12 04:50 UTC] Dirt now takes 3 digs: digging noises and falling dirt on every hit, and the block shrinks a little with each dig until it is old-pixel size.
 [2026-10-12 04:50 UTC] Reworked the Pest: a black spiky carapace with hazard stripes and red eyes that multiply as you hit it, bugs spill out on every hit, and when it goes off a swarm of bugs runs to your planted sprouts, climbs them and eats them.
 [2026-10-12 04:50 UTC] Seedlings from a cracked Seed shell now take 40 seconds to grow (was 6).
+[2026-10-12 04:46 UTC] Settings: section headers are now larger and the rows under them smaller.
