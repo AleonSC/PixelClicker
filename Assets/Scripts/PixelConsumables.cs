@@ -107,6 +107,8 @@ public class PixelConsumables : MonoBehaviour
         MagnetSorter = 11,
         /// <summary>Placed: a walled pad. Pixels dropped on it bind their type; loose old pixels of a bound type are dematerialized (glitch) and rematerialize in the box as storage.</summary>
         QuantumOrganizer = 12,
+        /// <summary>Placed, permanent, needs no switching on: a crate with two rows of five compartments. Click it to store the loose pixels lying on it; click a stored pixel to pick it up.</summary>
+        StorageCrate = 13,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -560,6 +562,29 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultStorageCrate()
+    {
+        return new Device
+        {
+            kind = DeviceKind.StorageCrate,
+            displayName = "Storage Crate",
+            description = "A sectioned crate with room for 10 pixels (2 rows of 5). It needs no switching on and stays until you remove it. Drag pixels onto it (Pixel Grabbing) and click the crate to store them in the next free sections; click a stored pixel to pick it up again.",
+            requiredType = PixelClicker.PixelType.Gray,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 300 },
+            },
+            maxHeld = 3,
+            durationSeconds = 1e9f,
+            radius = 1f,
+            boxCapacity = 10,
+            color = new Color(0.62f, 0.45f, 0.28f, 1f),
+            bodyDiameter = 2.5f,   // the crate's width (five compartments)
+            bodyHeight = 0.3f,     // wall height
+            placingMessage = "Click the floor to place the {0}  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultQuantumOrganizer()
     {
         return new Device
@@ -868,6 +893,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Magnet, CreateDefaultMagnet),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.MagnetSorter, CreateDefaultMagnetSorter),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.QuantumOrganizer, CreateDefaultQuantumOrganizer),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1610,6 +1636,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.Magnet:
                 case DeviceKind.MagnetSorter:
                 case DeviceKind.QuantumOrganizer:
+                case DeviceKind.StorageCrate:
                     root = BuildDeviceObject(d, false, out _, out _);
                     break;
                 case DeviceKind.ChargeBooster:
@@ -2114,7 +2141,7 @@ public class PixelConsumables : MonoBehaviour
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null) placed.Disarm();   // starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -2185,6 +2212,15 @@ public class PixelConsumables : MonoBehaviour
             PixelMagnetSorterDevice sorter = root.AddComponent<PixelMagnetSorterDevice>();
             sorter.Init(clicker, cam, d, timer, timerFormat, duration, shrinkSeconds, root.transform.Find("Mouth"), d.bodyDiameter, d.bodyHeight);
             result = sorter;
+        }
+        else if (d.kind == DeviceKind.StorageCrate)
+        {
+            GameObject root = BuildDeviceObject(d, false, out _, out TextMeshPro crateTimer);
+            if (crateTimer != null) crateTimer.gameObject.SetActive(false);
+            root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+            PixelStorageCrate crate = root.AddComponent<PixelStorageCrate>();
+            crate.Init(clicker, cam, d, shrinkSeconds);
+            result = crate;
         }
         else if (d.kind == DeviceKind.QuantumOrganizer)
         {
@@ -2267,6 +2303,7 @@ public class PixelConsumables : MonoBehaviour
             if (placed is PixelChargeBooster booster) state.aim = booster.Charge;
             if (placed is PixelMagnetSorterDevice magSorter) state.extra = magSorter.ExportState();
             if (placed is PixelQuantumDevice organizer) state.extra = organizer.ExportState();
+            if (placed is PixelStorageCrate storageCrate) state.extra = storageCrate.ExportState();
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
@@ -2293,10 +2330,11 @@ public class PixelConsumables : MonoBehaviour
         int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
         if (index < 0) return;
         PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
-        if (restored != null && state.disarmed) restored.Disarm();
+        if (restored != null && state.disarmed && !(restored is PixelStorageCrate)) restored.Disarm();
         if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
         if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);
+        if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
     }
 
     /// <summary>Starts a potion again with the time it had left (no sound, nothing used up). Used when loading a save.</summary>
@@ -2365,6 +2403,10 @@ public class PixelConsumables : MonoBehaviour
         {
             BuildQuantumBody(root, d, isPreview);
         }
+        else if (d.kind == DeviceKind.StorageCrate)
+        {
+            BuildCrateBody(root, d, isPreview);
+        }
         else if (d.kind == DeviceKind.MagnetSorter)
         {
             BuildMagnetSorterBody(root, d, isPreview);
@@ -2387,7 +2429,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         // Flat disc showing the reach.
-        if (showRange && !displayOnly && d.kind != DeviceKind.MagnetSorter && d.kind != DeviceKind.QuantumOrganizer)
+        if (showRange && !displayOnly && d.kind != DeviceKind.MagnetSorter && d.kind != DeviceKind.QuantumOrganizer && d.kind != DeviceKind.StorageCrate)
         {
             GameObject disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             disc.name = "Range";
@@ -2545,6 +2587,42 @@ public class PixelConsumables : MonoBehaviour
         for (int sx = -1; sx <= 1; sx += 2)
             for (int sz = -1; sz <= 1; sz += 2)
                 Part("Post", new Vector3(sx * o, H * 0.65f, sz * o), new Vector3(wall * 1.7f, H * 1.3f, wall * 1.7f), rimColor);
+    }
+
+    private void BuildCrateBody(GameObject root, Device d, bool isPreview)
+    {
+        float opacity = isPreview ? previewOpacity : 1f;
+        float W = d.bodyDiameter, cell = W / 5f, Dp = cell * 2f, H = d.bodyHeight, t = 0.06f;
+        Color wood = new Color(d.color.r, d.color.g, d.color.b, opacity);
+        Color dark = new Color(d.color.r * 0.55f, d.color.g * 0.55f, d.color.b * 0.55f, opacity);
+        Color trim = new Color(0.85f, 0.75f, 0.45f, opacity);
+
+        void Part(string name, Vector3 pos, Vector3 scale, Color color)
+        {
+            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            g.name = name;
+            Destroy(g.GetComponent<Collider>());
+            g.transform.SetParent(root.transform, false);
+            g.transform.localPosition = pos;
+            g.transform.localScale = scale;
+            Material m = clicker.CreateVisualMaterial(color, isPreview);
+            if (m != null) g.GetComponent<Renderer>().sharedMaterial = m;
+            g.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
+        Part("Floor", new Vector3(0f, 0.03f, 0f), new Vector3(W + t * 2f, 0.06f, Dp + t * 2f), dark);
+        float ox = W * 0.5f + t * 0.5f, oz = Dp * 0.5f + t * 0.5f;
+        Part("Wall N", new Vector3(0f, H * 0.5f, oz), new Vector3(W + t * 2f, H, t), wood);
+        Part("Wall S", new Vector3(0f, H * 0.5f, -oz), new Vector3(W + t * 2f, H, t), wood);
+        Part("Wall E", new Vector3(ox, H * 0.5f, 0f), new Vector3(t, H, Dp), wood);
+        Part("Wall W", new Vector3(-ox, H * 0.5f, 0f), new Vector3(t, H, Dp), wood);
+        Part("Divider", new Vector3(0f, H * 0.45f, 0f), new Vector3(W, H * 0.9f, t * 0.7f), trim);
+        for (int i = 1; i < 5; i++)
+            Part("Divider", new Vector3(-W * 0.5f + i * cell, H * 0.45f, 0f), new Vector3(t * 0.7f, H * 0.9f, Dp), trim);
+        Part("Rim N", new Vector3(0f, H + 0.012f, oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
+        Part("Rim S", new Vector3(0f, H + 0.012f, -oz), new Vector3(W + t * 2f, 0.025f, t * 1.4f), trim);
+        Part("Rim E", new Vector3(ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
+        Part("Rim W", new Vector3(-ox, H + 0.012f, 0f), new Vector3(t * 1.4f, 0.025f, Dp), trim);
     }
 
     private void BuildMagnetSorterBody(GameObject root, Device d, bool isPreview)

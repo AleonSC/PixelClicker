@@ -162,8 +162,17 @@ public class PixelGrab : MonoBehaviour
             return;
         }
 
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelRobotWorker.Piloting || PixelMinigame.TakeoverActive || PixelClicker.GodMode || PixelPets.HoveringPet || !LeftPressed() || PointerOverUI()) return;
+        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelRobotWorker.Piloting || PixelMinigame.TakeoverActive || PixelClicker.GodMode || PixelPets.HoveringPet || !LeftPressed() || PointerOverUI() || PixelStorageCrate.ClaimsPointer()) return;
         TryGrab();
+    }
+
+    /// <summary>Puts an old pixel straight into the mouse's hand (the left button must be held), as if it had just been grabbed. Used by the Storage Crate.</summary>
+    public void BeginHold(Rigidbody body)
+    {
+        if (!Working || clicker == null || held != null || body == null) return;
+        cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return;
+        Grab(body, body.GetComponent<OldPixelDespawn>(), cam.ScreenPointToRay(PointerPosition()));
     }
 
     private void TryGrab()
