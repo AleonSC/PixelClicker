@@ -576,3 +576,4 @@
 [2026-10-12 06:10 UTC] Main menu: Egg and Bean now wander in too, and a new 'Pets & UFO' toggle (bottom left) shows the current save's pets hopping along the bottom of the screen and, if bought and switched on, the UFO Helper flying along the top. Also fixed the skill tree jumping for a frame when expanding or collapsing.
 [2026-10-12 06:20 UTC] Main menu: the UFO Helper now shows whenever it is bought and switched on in the save's own Toggles tab (no longer tied to the Pets toggle, which is now just 'Pets').
 [2026-10-12 06:30 UTC] Wood now looks like real tree bark: tall uneven ridges split by deep dark furrows, vertical fibres, flaking and patches of moss.
+[2026-10-12 06:45 UTC] Right-clicking a hazard block (Pest, Gas Pocket) now works it away safely: it takes as many right clicks as the block needs to break plus the hits you already made (5 to break and 2 hits in = 7), with a rising count like 3/7; no explosion, swarm or XP penalty.

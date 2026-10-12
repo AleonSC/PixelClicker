@@ -1695,7 +1695,10 @@ public class PixelClicker : MonoBehaviour
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
-        if (!WasClickedThisFrame() || targetCamera == null) return;
+        bool leftClick = WasClickedThisFrame();
+        // A RIGHT click on a hazard block (Pest, Gas Pocket) works it away safely (see DefuseHazard).
+        bool rightClick = !leftClick && pixelTransform != null && !isSpawning && PixelInput.RightPressed() && IsHazard(GetClickTier().type);
+        if ((!leftClick && !rightClick) || targetCamera == null) return;
         if (ignoreClicksOverUI && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         Ray ray = targetCamera.ScreenPointToRay(PointerPosition());
@@ -1714,7 +1717,8 @@ public class PixelClicker : MonoBehaviour
                 if (Time.unscaledTime - lastManualClickTime >= minClickInterval)
                 {
                     lastManualClickTime = Time.unscaledTime;
-                    Collect();
+                    if (rightClick) DefuseHazard();
+                    else Collect();
                 }
             }
             return; // first non-ignored hit decides
@@ -3490,6 +3494,60 @@ public class PixelClicker : MonoBehaviour
         Materialize(GetClickTier());
     }
 
+    private int defuseClicks;
+
+    /// <summary>
+    /// A right click on a hazard block: it takes as many right clicks as the block takes to break PLUS the hits you had already put into it (5 to break
+    /// and 2 hits in = 7 right clicks). Reaching that clears the block safely - no explosion / swarm, no XP penalty, no payout.
+    /// </summary>
+    private void DefuseHazard()
+    {
+        PixelTier tier = GetClickTier();
+        if (!IsHazard(tier.type) || pixelTransform == null) return;
+        int required = NeededClicks(tier) + hitsOnCurrentPixel;
+        defuseClicks++;
+        hitPunchTimer = hitPunchDuration;
+        PixelAudio.Play("click");
+        StartCoroutine(DefusePopup(Mathf.Min(defuseClicks, required) + "/" + required, pixelTransform.position + Vector3.up * PixelBaseSize * 0.7f));
+        if (defuseClicks < required) return;
+
+        defuseClicks = 0;
+        hitsOnCurrentPixel = 0;
+        PixelStats.Count("hazards.defused", 1);
+        PixelHints.Announce("You cleared the " + tier.displayName.ToLowerInvariant() + " safely.");
+        if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, false, 1f, clickPopStrength);
+        if (randomizeSpawnTier) currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+    }
+
+    /// <summary>A small number that rises off the cube and fades ('3/7').</summary>
+    private IEnumerator DefusePopup(string text, Vector3 start)
+    {
+        GameObject go = new GameObject("Defuse Text");
+        go.transform.position = start;
+        TextMeshPro tm = go.AddComponent<TextMeshPro>();
+        if (uiFont != null) tm.font = uiFont;
+        tm.text = text;
+        tm.fontSize = 5f * Mathf.Max(0.2f, PixelBaseSize);
+        tm.fontStyle = FontStyles.Bold;
+        tm.alignment = TextAlignmentOptions.Center;
+        tm.color = new Color(1f, 0.75f, 0.3f, 1f);
+#if UNITY_2023_1_OR_NEWER
+        tm.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        tm.enableWordWrapping = false;
+#endif
+        for (float t = 0f; t < 0.7f; t += Time.unscaledDeltaTime)
+        {
+            if (go == null) yield break;
+            if (targetCamera != null) go.transform.rotation = targetCamera.transform.rotation;
+            go.transform.position = start + Vector3.up * (PixelBaseSize * 0.8f * (t / 0.7f));
+            Color c = tm.color; c.a = 1f - t / 0.7f; tm.color = c;
+            yield return null;
+        }
+        if (go != null) Destroy(go);
+    }
+
     /// <summary>The hazard block was hit too many times: the Pest kills every sprout, the Gas Pocket explodes. Either way the skill earns less XP for a while.</summary>
     private void TriggerHazard(int tierIndex, PixelTier tier)
     {
@@ -3527,6 +3585,7 @@ public class PixelClicker : MonoBehaviour
         if (IsHazard(tier.type)) PixelHints.Trigger("hazard");
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
         digShrinkTarget = digShrinkCurrent = 1f;
+        defuseClicks = 0;
         liveSince = Time.time;
         liveNeed = tier.randomClicks ? RollNeededClicks(tier) : 0;   // a treasure chest needs a random number of clicks
 
