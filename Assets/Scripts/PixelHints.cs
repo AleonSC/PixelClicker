@@ -31,6 +31,9 @@ public class PixelHints : MonoBehaviour
         public string shortText = "";
     }
 
+    /// <summary>Every tip, read-only (the game database reads it).</summary>
+    public IReadOnlyList<Hint> AllHints => hints;
+
     [Header("Settings")]
     [Tooltip("Master switch for all first-time tips.")]
     [SerializeField] private bool hintsEnabled = true;

@@ -1613,6 +1613,9 @@ public partial class PixelShop : MonoBehaviour
 
     public int PackCount => packs.Length;
 
+    /// <summary>Every pack, read-only (the game database reads it).</summary>
+    public System.Collections.Generic.IReadOnlyList<ShopPack> AllPacks => packs;
+
     public string GetPackName(int index) => packs[index].displayName;
 
     public bool GetPackPurchased(int index) => packs[index].purchased;

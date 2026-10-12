@@ -915,6 +915,9 @@ public class PixelCrafting : MonoBehaviour
     /// Every recipe the book lists: the Recipes list, one for every 2-type combo potion, and the 3-type combo potions you have made
     /// (there are far too many of those to list as ???).
     /// </summary>
+    /// <summary>The recipes defined in the list (not the automatic combos), read-only (the game database reads it).</summary>
+    public IReadOnlyList<Recipe> DefinedRecipes => recipes;
+
     private List<Recipe> AllRecipes()
     {
         List<Recipe> list = new List<Recipe>();

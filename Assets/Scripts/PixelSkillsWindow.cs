@@ -143,6 +143,12 @@ public partial class PixelSkills
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(() => PixelPop.Hide(windowObject));
         BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
+        // TEMPORARY: the Game Database (a search engine over everything in the game) opens from here.
+        Button database = PixelUIKit.CreateButton(Font, windowObject.transform, "Database Button", "Database", new Vector2(190f, 70f), new Color(0.2f, 0.4f, 0.65f, 1f), textColor, 28f);
+        RectTransform dbr = database.GetComponent<RectTransform>();
+        dbr.anchorMin = dbr.anchorMax = dbr.pivot = new Vector2(0f, 1f);
+        dbr.anchoredPosition = new Vector2(94f, -12f);
+        database.onClick.AddListener(PixelDatabaseWindow.Toggle);
 
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
