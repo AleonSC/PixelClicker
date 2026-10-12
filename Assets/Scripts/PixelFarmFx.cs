@@ -121,9 +121,26 @@ public static class PixelFarmFx
                 Burst("Dust", new Vector2(0.9f, 1.5f), new Vector2(0.2f, 1f), new Vector2(0.25f, 0.5f), -0.04f, new Color(0.62f, 0.5f, 0.38f, 0.5f), new Color(0.5f, 0.4f, 0.3f, 0.4f), 8, 0.5f, true, new Vector2(0.6f, 1.6f)).Play();
                 break;
             case PixelClicker.PixelType.Water:
-                Burst("Drops", new Vector2(0.6f, 1.1f), new Vector2(1.4f, 3.6f), new Vector2(0.06f, 0.13f), 2.4f, new Color(0.7f, 0.9f, 1f), new Color(0.3f, 0.65f, 1f), 26, 0.45f, false, new Vector2(1f, 0.5f)).Play();
-                PixelFxRing.Spawn(centre, new Color(0.5f, 0.8f, 1f, 0.7f), size * 0.4f, size * 1.8f, 0.45f, 0f);
+            {
+                // A splash instead of a ring: a crown of drops flung up and out, a thin jet of bigger drops, a few bubbles and a little mist.
+                Color deep = new Color(0.25f, 0.55f, 0.95f), lightWater = new Color(0.75f, 0.92f, 1f);
+                ParticleSystem Splash(string name, Vector2 life, Vector2 speed, Vector2 psize, float gravity, Color ca, Color cb, int count, float radius, float angle, bool fade, Vector2 sizeLife = default)
+                {
+                    PixelFx.Spec sp = new PixelFx.Spec
+                    {
+                        lifetime = life, speed = speed * size, size = psize * size, gravity = gravity, colorA = ca, colorB = cb, burst = count,
+                        shape = ParticleSystemShapeType.Cone, shapeRadius = size * radius, shapeAngle = angle, shapeRotation = new Vector3(-90f, 0f, 0f),
+                        randomDirection = 0.05f, maxParticles = count + 6, sizeOverLife = sizeLife,
+                    };
+                    if (fade) sp.overLife = PixelFx.FadeGradient(Color.white, Color.white, Color.white, 0.8f);
+                    return PixelFx.Make(t, name, sp);
+                }
+                Splash("Crown", new Vector2(0.55f, 0.95f), new Vector2(1.6f, 3.2f), new Vector2(0.06f, 0.13f), 3.2f, lightWater, deep, 22, 0.4f, 58f, false).Play();
+                Splash("Jet", new Vector2(0.7f, 1.1f), new Vector2(3.2f, 4.6f), new Vector2(0.08f, 0.15f), 3.6f, lightWater, deep, 5, 0.1f, 6f, false).Play();
+                Splash("Bubbles", new Vector2(0.6f, 1.1f), new Vector2(0.25f, 0.7f), new Vector2(0.05f, 0.1f), -0.35f, new Color(0.85f, 0.95f, 1f, 0.8f), new Color(0.6f, 0.85f, 1f, 0.6f), 7, 0.45f, 40f, true, new Vector2(1f, 0.3f)).Play();
+                Splash("Mist", new Vector2(0.7f, 1.1f), new Vector2(0.4f, 1.1f), new Vector2(0.22f, 0.4f), -0.02f, new Color(0.75f, 0.9f, 1f, 0.35f), new Color(0.6f, 0.82f, 1f, 0.25f), 6, 0.45f, 70f, true, new Vector2(0.7f, 1.5f)).Play();
                 break;
+            }
             case PixelClicker.PixelType.Fertilizer:
                 Burst("Spores", new Vector2(1f, 1.8f), new Vector2(0.6f, 2.2f), new Vector2(0.06f, 0.14f), -0.15f, new Color(0.7f, 1f, 0.4f), new Color(0.35f, 0.8f, 0.2f), 30, 0.55f, true, new Vector2(1f, 0.2f)).Play();
                 Burst("Clumps", new Vector2(0.6f, 1f), new Vector2(1f, 3f), new Vector2(0.06f, 0.12f), 2.5f, new Color(0.45f, 0.35f, 0.15f), new Color(0.3f, 0.5f, 0.15f), 12, 0.5f, false).Play();

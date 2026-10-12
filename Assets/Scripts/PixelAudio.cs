@@ -297,7 +297,7 @@ public class PixelAudio : MonoBehaviour
             case "dragon_summon": return new[] { PixelSynth.Summon() };
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
             case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
-            case "pixel_water": return new[] { PixelSynth.WaterClick(1), PixelSynth.WaterClick(2), PixelSynth.WaterClick(3), PixelSynth.WaterClick(4) };
+            case "pixel_water": return new[] { PixelSynth.WaterClick(1), PixelSynth.WaterClick(2), PixelSynth.WaterClick(3), PixelSynth.WaterClick(4), PixelSynth.WaterClick(5), PixelSynth.WaterClick(6), PixelSynth.WaterClick(7), PixelSynth.WaterClick(8), PixelSynth.WaterClick(9), PixelSynth.WaterClick(10), PixelSynth.WaterClick(11), PixelSynth.WaterClick(12) };   // a pool: every click sounds different
             case "water_splash": return new[] { PixelSynth.Splash(1), PixelSynth.Splash(2), PixelSynth.Splash(3) };
             case "chest_hit": return new[] { PixelSynth.ChestHit(1), PixelSynth.ChestHit(2), PixelSynth.ChestHit(3) };
             case "chest_open": return new[] { PixelSynth.ChestOpen() };
@@ -827,13 +827,13 @@ public static class PixelSynth
         System.Random rng = new System.Random(500 + seed * 31);
         float lp = 0f;
         float[] bloopAt = { 0.015f, 0.06f + seed * 0.01f, 0.115f };
-        float[] bloopHz = { 520f + seed * 60f, 700f + seed * 50f, 900f };
+        float[] bloopHz = { 230f + seed * 30f, 310f + seed * 25f, 400f };
         for (int i = 0; i < n; i++)
         {
             float sec = i / (float)rate;
             float noise = (float)rng.NextDouble() * 2f - 1f;
-            lp += (noise - lp) * 0.18f;
-            float hiss = (noise - lp) * Mathf.Exp(-sec * 14f);        // bright splash hiss
+            lp += (noise - lp) * 0.07f;
+            float hiss = lp * 4f * Mathf.Exp(-sec * 11f);              // a soft, low wash instead of a bright hiss
             float bloops = 0f;
             for (int k = 0; k < bloopAt.Length; k++)
             {
@@ -1026,25 +1026,53 @@ public static class PixelSynth
         return clip;
     }
 
+    /// <summary>
+    /// A deep, smooth water sound for a Water pixel: one to three low bubbles that climb a little in pitch, over a soft, heavily filtered wash.
+    /// Every 'seed' rolls its own pitch, bubble count, timing and length, so a pool of them never sounds the same twice.
+    /// </summary>
     public static AudioClip WaterClick(int seed)
     {
         const int rate = 22050;
-        int n = (int)(rate * 0.2f);
+        System.Random rng = new System.Random(900 + seed * 37);
+        float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+        float length = R(0.28f, 0.42f);
+        int n = (int)(rate * length);
         float[] data = new float[n];
-        System.Random rng = new System.Random(900 + seed * 17);
-        float lp = 0f;
-        float plipHz = 620f + seed * 90f;
-        float secondAt = 0.045f + seed * 0.006f, secondHz = 980f + seed * 70f;
+
+        int bubbles = 1 + rng.Next(0, 3);
+        float[] at = new float[bubbles], hz = new float[bubbles], amp = new float[bubbles], rise = new float[bubbles], decay = new float[bubbles];
+        float t0 = 0f;
+        for (int k = 0; k < bubbles; k++)
+        {
+            at[k] = t0;
+            hz[k] = R(130f, 330f) * (k == 0 ? 1f : R(0.9f, 1.5f));
+            amp[k] = k == 0 ? 1f : R(0.35f, 0.7f);
+            rise[k] = R(2f, 6f);
+            decay[k] = R(8f, 15f);
+            t0 += R(0.05f, 0.11f);
+        }
+        float washDecay = R(6f, 11f), washAmount = R(0.2f, 0.45f);
+        float lp1 = 0f, lp2 = 0f, lp3 = 0f, smooth = 0f;
         for (int i = 0; i < n; i++)
         {
             float sec = i / (float)rate;
             float noise = (float)rng.NextDouble() * 2f - 1f;
-            lp += (noise - lp) * 0.22f;
-            float splash = (noise - lp) * Mathf.Exp(-sec * 24f) * 0.55f;                         // the wet hiss
-            float plip = Mathf.Sin(sec * plipHz * (1f + sec * 9f) * Mathf.PI * 2f) * Mathf.Exp(-sec * 32f);   // a droplet rising in pitch
-            float t2 = sec - secondAt;
-            float plip2 = t2 > 0f ? Mathf.Sin(t2 * secondHz * (1f + t2 * 7f) * Mathf.PI * 2f) * Mathf.Exp(-t2 * 40f) * 0.5f : 0f;
-            data[i] = (splash + plip * 0.8f + plip2) * Mathf.Clamp01(sec / 0.002f);
+            lp1 += (noise - lp1) * 0.05f;
+            lp2 += (lp1 - lp2) * 0.1f;
+            lp3 += (lp2 - lp3) * 0.2f;
+            float wash = lp3 * 7f * Mathf.Exp(-sec * washDecay) * Mathf.Clamp01(sec / 0.02f) * washAmount;   // a soft, low rumble of moving water
+            float body = 0f;
+            for (int k = 0; k < bubbles; k++)
+            {
+                float t = sec - at[k];
+                if (t < 0f) continue;
+                float phase = hz[k] * (t + rise[k] * t * t * 0.5f) * Mathf.PI * 2f;                 // pitch climbs as the bubble rises
+                float env = Mathf.Exp(-t * decay[k]) * Mathf.Clamp01(t / 0.008f);
+                body += (Mathf.Sin(phase) + 0.18f * Mathf.Sin(phase * 2f)) * env * amp[k];
+            }
+            float raw = wash + body * 0.7f;
+            smooth += (raw - smooth) * 0.55f;   // one more gentle low-pass: no sharp edges
+            data[i] = smooth;
         }
         float peak = 0.0001f;
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
