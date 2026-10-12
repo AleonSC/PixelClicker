@@ -525,3 +525,4 @@
 [2026-10-12 01:04 UTC] With live background the menu ground is now the sky's horizon colour (so the sky fills the view, whatever floor is picked) and the floor texture fades in more gradually.
 [2026-10-12 01:09 UTC] The black top / bottom margins and docked buttons now slide in as the camera swings on Play (before the floor fades in), and slide out as the camera swings back after the floor fades when quitting to the main menu.
 [2026-10-12 01:12 UTC] Wandering vendors vanish when the toggle is switched off, and no longer flash in the middle of the screen just before they walk in.
+[2026-10-12 01:13 UTC] The camera intro / outro now keeps the cube centred for almost the whole swing, only easing into the scene's own view at the very end.
