@@ -717,6 +717,7 @@ public class PixelTitleScreen : MonoBehaviour
             for (int i = 0; i < count; i++) options.Add(new TMP_Dropdown.OptionData(look.StyleName(i)));
             p.dropdown.ClearOptions();
             p.dropdown.AddOptions(options);
+            PixelDebug.Info("PixelTitleScreen: a look picker now lists " + count + " looks" + (usable ? "" : " (its source is not usable yet: " + (look == null ? "no component" : "no floor / no styles") + ")") + ".", p.dropdown);
         }
         if (usable) p.dropdown.SetValueWithoutNotify(index);
         p.dropdown.RefreshShownValue();
