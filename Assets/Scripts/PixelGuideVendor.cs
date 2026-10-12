@@ -97,7 +97,7 @@ public class PixelGuideVendor : MonoBehaviour
     private static PixelGuideVendor instance;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; PointOverride = null; }
+    private static void ResetStatics() { instance = null; PointOverride = null; ShopHold = false; }
 
     private const string Stage1Key = "guide.stage1";
     private const string Stage2Key = "guide.stage2";
@@ -217,6 +217,31 @@ public class PixelGuideVendor : MonoBehaviour
     /// <summary>True while he is on screen.</summary>
     public static bool Visiting => instance != null && instance.visiting;
 
+    /// <summary>
+    /// After his second visit time stays frozen until the player opens the shop (the 'Buy the RGB Pack' line pulses and arrows point at the Shop button,
+    /// see PixelShopNudge); opening it starts the shop tutorial. Stops a player who fiddles too fast from skipping the tutorial.
+    /// </summary>
+    public static bool ShopHold { get; private set; }
+
+    private float holdScale = 1f;
+
+    private void UpdateHold()
+    {
+        bool leave = PixelTitleScreen.Showing || !PixelHints.TipsEnabled || shop == null || !shop.ShopAvailable || PixelStats.Total(PixelShopTutorial.DoneKey) >= 1d;
+        if (leave || shop.WindowOpen)
+        {
+            ShopHold = false;
+            if (Time.timeScale <= 0f && !PixelPauseMenu.IsPaused && !PixelTitleScreen.Showing) Time.timeScale = holdScale;
+            if (!leave) PixelShopTutorial.RequestStart();
+            return;
+        }
+        if (!PixelPauseMenu.IsPaused && Time.timeScale > 0f)
+        {
+            holdScale = Time.timeScale;
+            Time.timeScale = 0f;
+        }
+    }
+
 
     private PixelStats stats;
     private bool replaying; // Settings > Replay tutorial: both visits again, no second gift
@@ -243,6 +268,7 @@ public class PixelGuideVendor : MonoBehaviour
     private void OnDestroy()
     {
         Unfreeze();
+        if (ShopHold) { ShopHold = false; if (Time.timeScale <= 0f) Time.timeScale = holdScale; }
         PixelWindows.Unregister(this);
         if (instance == this) instance = null;
         if (canvasRoot != null) Destroy(canvasRoot);
@@ -261,6 +287,7 @@ public class PixelGuideVendor : MonoBehaviour
 
     private void Update()
     {
+        if (ShopHold) UpdateHold();
         if (disableGuide || clicker == null || visiting) return;
         if (shop == null) shop = PixelFind.First<PixelShop>();
         if (stats == null) stats = PixelFind.First<PixelStats>();
@@ -428,6 +455,12 @@ public class PixelGuideVendor : MonoBehaviour
         if (second)
         {
             PixelStats.Best(Stage2Key, 1d);
+            if (shop != null && shop.ShopAvailable && PixelHints.TipsEnabled && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d)
+            {
+                ShopHold = true;   // time stays frozen until the player opens the shop
+                holdScale = savedTimeScale > 0f ? savedTimeScale : 1f;
+                if (Time.timeScale > 0f) Time.timeScale = 0f;
+            }
             replaying = false;
             StartVendors(false);
         }

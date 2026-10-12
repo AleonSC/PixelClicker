@@ -514,6 +514,9 @@ public class PixelUI : MonoBehaviour
     private TMP_Text hudLabel;
     private TMP_Text guideLabel;
     private GameObject guideRoot;
+
+    /// <summary>The tier guide box (the Shop nudge draws its arrows from here); null before it is built.</summary>
+    public RectTransform GuideRect => guideRoot != null && guideRoot.activeInHierarchy ? guideRoot.GetComponent<RectTransform>() : null;
     private Image guideBackground;
     private GameObject guideCanvasRoot;
     private float unlockTimer;
@@ -2338,6 +2341,7 @@ public class PixelUI : MonoBehaviour
         {
             text = BuildGuideText();
         }
+        if (PixelGuideVendor.ShopHold) { text = shopGuideText; unlockTimer = 0f; }   // Cubie's hold: the 'buy the RGB Pack' line stays and animates
         PixelClicker.ClickHint = unlockTimer <= 0f && !string.IsNullOrEmpty(text) && showTierGuide; // the cube pulses while this text shows and nothing was collected yet
 
         bool visible = !string.IsNullOrEmpty(text);
@@ -2345,10 +2349,17 @@ public class PixelUI : MonoBehaviour
         if (!visible) return;
 
         // Fades away while a window is open and comes straight back when it closes.
-        bool windowOpen = PixelWindows.AnyOpenExcept(null);
+        bool windowOpen = PixelWindows.AnyOpenExcept(null) && !PixelGuideVendor.ShopHold;
         windowFade = Mathf.MoveTowards(windowFade, windowOpen ? 0f : 1f, Time.unscaledDeltaTime / (windowOpen ? 0.25f : 0.06f));
         fade *= windowFade;
 
+        if (PixelGuideVendor.ShopHold)
+        {
+            // The line pulses and shimmers gold so it can't be missed.
+            float beat = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
+            color = Color.Lerp(Color.white, new Color(1f, 0.82f, 0.25f, 1f), beat);
+            size *= 1f + 0.12f * beat;
+        }
         guideLabel.text = text;
         guideLabel.fontSize = size;
         color.a *= fade;

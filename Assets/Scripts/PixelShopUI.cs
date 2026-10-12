@@ -90,7 +90,7 @@ public partial class PixelShop
         rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
         rt.anchoredPosition = new Vector2(anchor.x > 0.5f ? -buttonMargin.x : buttonMargin.x,
                                           anchor.y > 0.5f ? -buttonMargin.y : buttonMargin.y);
-        PixelHud.Ensure(gameObject).Dock(rt, anchor, () => panelObject != null && panelObject.activeSelf);
+        PixelHud.Ensure(gameObject).Dock(rt, anchor, () => (panelObject != null && panelObject.activeSelf) || PixelGuideVendor.ShopHold);   // (stays slid out while Cubie's hold waits for the first click)
 
         button.onClick.AddListener(() =>
         {
@@ -631,6 +631,12 @@ public partial class PixelShop
     /// <summary>Switches to a tab and scrolls back to the top.</summary>
     /// <summary>The shop window's rectangle (used to place tutorial boxes next to it).</summary>
     public RectTransform PanelRect => panelRect;
+
+    /// <summary>The Shop button (for the nudge that points the player at it).</summary>
+    public RectTransform ShopButtonRect => shopButtonObject != null ? shopButtonObject.GetComponent<RectTransform>() : null;
+
+    /// <summary>The shop window is open (and not closing).</summary>
+    public bool WindowOpen => panelObject != null && PixelPop.IsOpen(panelObject);
 
     /// <summary>The shop window's size (width, height) from its settings, available before the window is built (the Crafting window copies it).</summary>
     public Vector2 PanelSize => new Vector2(panelWidth, panelHeight);

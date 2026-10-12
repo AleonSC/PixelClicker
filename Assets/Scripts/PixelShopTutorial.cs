@@ -44,9 +44,18 @@ public class PixelShopTutorial : MonoBehaviour
     private PixelShop shop;
     private bool running;
     private float readyTimer;
+    private bool requested;
+    private static PixelShopTutorial instance;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { instance = null; }
+
+    /// <summary>Starts the tutorial at the next calm moment without the usual start delay (Cubie's hold ends when the player opens the shop).</summary>
+    public static void RequestStart() { if (instance != null) instance.requested = true; }
 
     private void Awake()
     {
+        instance = this;
         shop = GetComponent<PixelShop>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
     }
@@ -72,6 +81,7 @@ public class PixelShopTutorial : MonoBehaviour
     private void BeginRun()
     {
         running = true;
+        requested = false;
         PixelTutorialDim.Begin(() => ShowStep(0), dimAmount, dimSeconds);
     }
 
@@ -94,7 +104,7 @@ public class PixelShopTutorial : MonoBehaviour
             return;
         }
         readyTimer += Time.unscaledDeltaTime;
-        if (readyTimer < startDelay) return;
+        if (readyTimer < startDelay && !requested) return;
 
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
         BeginRun();

@@ -1113,6 +1113,7 @@ public class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelPets>() == null) gameObject.AddComponent<PixelPets>(); // rare pet versions of the pixels you click
         if (PixelFind.First<PixelSkills>() == null) gameObject.AddComponent<PixelSkills>();   // skill packs: Standard / Mining, the Skills window
         if (PixelFind.First<PixelBlockTooltip>() == null) gameObject.AddComponent<PixelBlockTooltip>();   // hover tooltip for blocks
+        if (PixelFind.First<PixelShopNudge>() == null) gameObject.AddComponent<PixelShopNudge>();   // points the player at the Shop button after Cubie's second visit
         if (PixelFind.First<PixelTreasureMap>() == null) gameObject.AddComponent<PixelTreasureMap>();   // Fishing: the treasure map from a message in a bottle
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
