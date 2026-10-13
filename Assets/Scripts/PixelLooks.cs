@@ -1374,9 +1374,6 @@ public static class PixelLooks
     // Neon edge mesh: 12 thin boxes for a bright core plus 12 wider, fainter ones for the halo
     // ------------------------------------------------------------------
 
-    /// <summary>A thin bevelled rim along every edge of a unit cube (white, for the Auto-contrast outline: tinted by its material).</summary>
-    public static Mesh ContrastRimMesh() => EdgeMesh(Vector3.one, 0.085f, Color.white, 1f, true);
-
     private static Mesh EdgeMesh(Vector3 size, float thicknessFraction, Color colour, float strength, bool bevel = false)
     {
         int key = unchecked(size.GetHashCode() * 31 + thicknessFraction.GetHashCode() * 17 + colour.GetHashCode() * 13 + strength.GetHashCode() + (bevel ? 977 : 0));

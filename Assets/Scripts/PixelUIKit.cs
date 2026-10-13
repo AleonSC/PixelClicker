@@ -113,54 +113,21 @@ public static class PixelUIKit
         return go.GetComponent<Button>();
     }
 
-    private const string PrefFancyButtons = "PixelClicker.Setting.FancyButtons";
-    private static int fancyCache = -1;
     private static Sprite buttonSprite;
 
-    /// <summary>Buttons get a bevelled, rounded, gradient look instead of a flat colour (Settings > Display, applies to windows built after the next start). On by default.</summary>
-    public static bool FancyButtons
-    {
-        get
-        {
-            if (fancyCache < 0) fancyCache = PlayerPrefs.GetInt(PrefFancyButtons, 1);
-            return fancyCache != 0;
-        }
-        set
-        {
-            fancyCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefFancyButtons, fancyCache);
-        }
-    }
-
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetButtonStatics() { fancyCache = -1; buttonSprite = null; boxSprite = null; insetSprite = null; }
+    private static void ResetButtonStatics() { buttonSprite = null; boxSprite = null; insetSprite = null; }
 
     /// <summary>
     /// A grey-scale 9-sliced button sprite (drawn once in code; it takes the button's colour as a tint): rounded corners, a dark outline,
     /// a vertical light-to-dark gradient and a bright strip just inside the top edge, so a button reads as a raised key.
     /// </summary>
-    private const string PrefFancyWindows = "PixelClicker.Setting.FancyWindows";
     private const string PrefUiColor = "PixelClicker.Setting.UiColor", PrefUiHue = "PixelClicker.Setting.UiHue", PrefUiSat = "PixelClicker.Setting.UiSat";
-    private static int fancyWindowCache = -1, uiColorCache = -1;
+    private static int uiColorCache = -1;
     private static float uiHueCache = -1f, uiSatCache = -1f;
     private static readonly System.Collections.Generic.Dictionary<Color32, Sprite> windowSprites = new System.Collections.Generic.Dictionary<Color32, Sprite>();
     private struct WindowEntry { public Image image; public Color color; }
     private static readonly System.Collections.Generic.List<WindowEntry> windowImages = new System.Collections.Generic.List<WindowEntry>();
-
-    /// <summary>Windows get a rounded, bevelled frame with a glowing rim instead of a flat rectangle (Settings > Display, windows built after the next start). On by default.</summary>
-    public static bool FancyWindows
-    {
-        get
-        {
-            if (fancyWindowCache < 0) fancyWindowCache = PlayerPrefs.GetInt(PrefFancyWindows, 1);
-            return fancyWindowCache != 0;
-        }
-        set
-        {
-            fancyWindowCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefFancyWindows, fancyWindowCache);
-        }
-    }
 
     /// <summary>Use the player's own colour for the windows (and their glowing rim) instead of the neutral dark grey. Off by default. Applies to open windows at once.</summary>
     public static bool UiColorOn
@@ -220,12 +187,12 @@ public static class PixelUIKit
 
     public static void ReloadColorFromPrefs()
     {
-        uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; fancyWindowCache = -1;
+        uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f;
         RefreshWindows();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetWindowStatics() { fancyWindowCache = -1; uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
+    private static void ResetWindowStatics() { uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
 
     /// <summary>A window colour with the player's UI hue applied (dark colours stay dark but pick up a clear tint).</summary>
     public static Color Tinted(Color c)
@@ -238,7 +205,7 @@ public static class PixelUIKit
     }
 
     /// <summary>
-    /// Gives a window's background image its colour: with Fancy windows on, a rounded 9-slice frame (soft vertical gradient, a bright
+    /// Gives a window's background image its colour: a rounded 9-slice frame (soft vertical gradient, a bright
     /// rim and a little glow bleeding inward, the colour baked into the sprite) - otherwise a flat colour as before. Remembered, so changing
     /// the UI colour in Settings recolours every open window at once.
     /// </summary>
@@ -265,7 +232,6 @@ public static class PixelUIKit
     private static void ApplyWindow(Image image, Color color)
     {
         Color body = Tinted(color);
-        if (!FancyWindows) { image.color = body; return; }
         Color32 key = body;
         if (!windowSprites.TryGetValue(key, out Sprite sprite) || sprite == null)
         {
@@ -322,11 +288,11 @@ public static class PixelUIKit
 
     /// <summary>
     /// Gives a list row / card background a softly rounded, gently shaded look with a thin lighter rim (a raised box). With 'inset' the
-    /// shading is reversed (darker at the top, lighter rim at the bottom): a sunken frame, used round the 3D pictures. Follows the Fancy windows setting.
+    /// shading is reversed (darker at the top, lighter rim at the bottom): a sunken frame, used round the 3D pictures. 
     /// </summary>
     public static void StyleBox(Image image, bool inset = false)
     {
-        if (image == null || !FancyWindows) return;
+        if (image == null) return;
         image.sprite = inset ? InsetSprite() : BoxSprite();
         image.type = Image.Type.Sliced;
     }
@@ -359,10 +325,10 @@ public static class PixelUIKit
         return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(12, 12, 12, 12));
     }
 
-    /// <summary>Gives a button's background image the bevelled look when Fancy buttons is on (also used by the shop's own button builder).</summary>
+    /// <summary>Gives a button's background image the bevelled look (also used by the shop's own button builder).</summary>
     public static void StyleButton(Image image)
     {
-        if (image == null || !FancyButtons) return;
+        if (image == null) return;
         image.sprite = ButtonSprite();
         image.type = Image.Type.Sliced;
     }
@@ -935,7 +901,7 @@ public static class PixelUIKit
         return scroll;
     }
 
-    /// <summary>The one look for every scroll bar: a slim rounded dark track with a lighter rounded handle (flat when Fancy buttons is off).</summary>
+    /// <summary>The one look for every scroll bar: a slim rounded dark track with a lighter rounded handle.</summary>
     public static void StyleScrollBar(Image track, Image handle)
     {
         if (track != null) { track.color = new Color(0.16f, 0.16f, 0.2f, 1f); StyleButton(track); }

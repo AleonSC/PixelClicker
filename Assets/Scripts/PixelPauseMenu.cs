@@ -248,7 +248,6 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Heading of the accessibility section in Settings.")]
     [SerializeField] private string headerAccessibility = "Accessibility";
-    [SerializeField] private string headerSaving = "Saving";
     [SerializeField] private string headerDisplay = "Display";
     [SerializeField] private string headerAudio = "Audio";
     [SerializeField] private string headerKeybinds = "Keybinds";
@@ -265,9 +264,6 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings choice for how the docked menu buttons behave.")]
     [SerializeField] private string buttonModeLabel = "Menu buttons";
 
-    [Tooltip("Label of the Settings choice for the small click particle effects (Off / Light / Normal).")]
-    [SerializeField] private string clickFxLabel = "Click effects";
-
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
     [Tooltip("Label of the small button in the Save / Load window that opens the list of autosaves.")]
@@ -278,16 +274,12 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
     [Tooltip("Label of the pixel-assemble menu buttons tick box in Settings.")]
     [SerializeField] private string fancyHudLabel = "Pixel-assemble menu buttons";
+    [Tooltip("Label of the UI click sounds tick box (Settings > Audio).")]
+    [SerializeField] private string uiClicksLabel = "UI click sounds";
     [Tooltip("Label of the fancy pause menu tick box in Settings (off = the classic menu).")]
     [SerializeField] private string fancyMenuLabel = "Fancy pause menu (animated)";
     [Tooltip("Label of the next-up window tick box in Settings.")]
     [SerializeField] private string nextUpLabel = "Next-up window (Block Hold)";
-    [Tooltip("Label of the auto-contrast outline tick box in Settings.")]
-    [SerializeField] private string contrastRimLabel = "Auto-contrast pixel outline";
-    [Tooltip("Label of the cube spotlight tick box in Settings.")]
-    [SerializeField] private string spotlightLabel = "Cube spotlight (fade the ground behind it)";
-    [Tooltip("Label of the spotlight strength slider in Settings.")]
-    [SerializeField] private string spotlightStrengthLabel = "Spotlight strength";
     [Tooltip("Label of the screen filter drop-down in Settings.")]
     [SerializeField] private string filterLabel = "Screen filter";
     [Tooltip("Label of the screen filter strength slider in Settings.")]
@@ -328,26 +320,11 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Label of the floor style picker (arrows step through the styles of the Pixel Floor component).")]
     [SerializeField] private string floorStyleLabel = "Floor style";
-    [Tooltip("Label of the Display floor tick box under the floor style row.")]
-    [SerializeField] private string displayFloorLabel = "Display floor";
-
     [Tooltip("Label of the Settings choice that decides what the floor shows while 'Display floor' is off (invisible, a flat plane, or a pulse where pixels land).")]
     [SerializeField] private string floorOffModeLabel = "When floor is off";
 
     [Tooltip("Label of the sky picker (arrows step through the skies of the Pixel Skybox component).")]
     [SerializeField] private string skyStyleLabel = "Sky";
-
-    [Tooltip("Settings > Display tick box that switches the camera to the flat (orthographic) view.")]
-    [SerializeField] private string flatViewLabel = "Flat view";
-
-    [Tooltip("Label of the Settings tick box for the bevelled button look (takes effect for windows built after the next start).")]
-    [SerializeField] private string fancyButtonsLabel = "Fancy buttons (next start)";
-
-    [Tooltip("Label of the Settings tick box for the rounded, glowing window frames (takes effect for windows built after the next start).")]
-    [SerializeField] private string fancyWindowsLabel = "Fancy windows (next start)";
-
-    [Tooltip("Label of the Settings tick box that lets the neon bar glow slowly change colour by itself.")]
-    [SerializeField] private string glowCycleLabel = "Cycle glow colour";
 
     [Tooltip("Label of the Settings tick box that switches on your own colour for the black bars (game and main menu).")]
     [SerializeField] private string barColorLabel = "Custom bar colour";
@@ -1429,6 +1406,52 @@ public class PixelPauseMenu : MonoBehaviour
         if (label != null) label.rectTransform.offsetMax = new Vector2(-(tickBoxSize * 2f + 24f), 0f);
     }
 
+    private static Sprite cycleSprite;
+
+    /// <summary>A small rainbow button just left of the eyedropper: shows (and switches) that the colour cycles by itself. Bright = cycling, dim = off.</summary>
+    private void AddCycleButton(Toggle toggle, System.Func<bool> get, System.Action<bool> set)
+    {
+        RectTransform row = toggle.transform.parent as RectTransform;
+        Button b = MakeButton(row, "Cycle Button", "", new Vector2(tickBoxSize, tickBoxSize), tickBoxColor, rowFontSize * 0.7f);
+        RectTransform br = b.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
+        br.anchoredPosition = new Vector2(-(tickBoxSize * 2f + 20f), 0f);
+        if (cycleSprite == null)
+        {
+            const int n = 24;
+            Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            for (int y2 = 0; y2 < n; y2++)
+                for (int x2 = 0; x2 < n; x2++)
+                {
+                    float dx = x2 - (n - 1) * 0.5f, dy = y2 - (n - 1) * 0.5f;
+                    float r = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a2 = Mathf.Clamp01((n * 0.5f - 1f - r) + 0.5f) * Mathf.Clamp01((r - n * 0.2f) + 0.5f);   // a ring
+                    Color c = Color.HSVToRGB(Mathf.Repeat(Mathf.Atan2(dy, dx) / (2f * Mathf.PI), 1f), 0.8f, 1f);
+                    c.a = a2;
+                    tex.SetPixel(x2, y2, c);
+                }
+            tex.Apply();
+            cycleSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        }
+        GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        icon.transform.SetParent(b.transform, false);
+        Image im = icon.GetComponent<Image>();
+        im.sprite = cycleSprite;
+        im.raycastTarget = false;
+        im.preserveAspect = true;
+        RectTransform ir = icon.GetComponent<RectTransform>();
+        ir.anchorMin = Vector2.zero; ir.anchorMax = Vector2.one;
+        ir.offsetMin = new Vector2(tickBoxSize * 0.12f, tickBoxSize * 0.12f);
+        ir.offsetMax = new Vector2(-tickBoxSize * 0.12f, -tickBoxSize * 0.12f);
+        System.Action refresh = () => { im.color = get() ? Color.white : new Color(1f, 1f, 1f, 0.3f); };
+        b.onClick.AddListener(() => { set(!get()); refresh(); });
+        refresh();
+        settingsRefreshers.Add(refresh);
+        TMP_Text label = row.GetComponentInChildren<TMP_Text>();
+        if (label != null) label.rectTransform.offsetMax = new Vector2(-(tickBoxSize * 3f + 38f), 0f);
+    }
+
     /// <summary>A label with a 0..1 slider on its right.</summary>
     private Slider AddSliderRow(Transform parent, string label, float value, UnityEngine.Events.UnityAction<float> onChanged, ref float y)
     {
@@ -2308,6 +2331,19 @@ public class PixelPauseMenu : MonoBehaviour
             PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
             ApplyFreeze(); // takes effect right away, even though the menu is open
         }, ref y);
+        AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
+        AddDropdownRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
+        if (saveGame != null)
+        {
+            AddSettingToggle(list, autoSaveMessageLabel, () => saveGame.AutoSaveMessageNow,
+                             on => PixelSaveGame.AutoSaveMessageChoice = on ? 1 : 0, ref y);
+            AddDropdownRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
+        }
+        // The floor: its style + the tick box that switches it on / off in one entry, then what shows when it is off; then the sky.
+        AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true,
+                   getToggle: () => PixelTitleWanderers.DisplayFloor, setToggle: on => PixelTitleWanderers.DisplayFloor = on);
+        AddDropdownRow(list, floorOffModeLabel, PixelFloor.OffModeNames, () => PixelFloor.OffMode, v => PixelFloor.OffMode = v, ref y);
+        AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y, popout: true);
 
         // ---- Interface ----
         AddSettingsSectionHeader(list, headerInterface, ref y);
@@ -2316,12 +2352,21 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
         AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
         AddSettingToggle(list, nextUpLabel, () => PixelNextUp.Enabled, on => PixelNextUp.Enabled = on, ref y);
+        AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
         AddSettingToggle(list, fancyMenuLabel, () => PixelMenuFx.Enabled, on => PixelMenuFx.Enabled = on, ref y);
         AddSettingToggle(list, fancyHudLabel, () => PixelMenuFx.HudEnabled, on => PixelMenuFx.HudEnabled = on, ref y);
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
-        AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
-        AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
-        AddChoiceRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
+        AddDropdownRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
+        Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
+        settingsRefreshers.Add(() => glowToggle.SetIsOnWithoutNotify(PixelHud.BarGlow));
+        AddEyedropperButton(glowToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }));
+        AddCycleButton(glowToggle, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on);   // a small rainbow button beside the eyedropper: the glow colour cycles
+        Toggle uiColorToggle = AddToggleRow(list, uiColorLabel, PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
+        settingsRefreshers.Add(() => uiColorToggle.SetIsOnWithoutNotify(PixelUIKit.UiColorOn));
+        AddEyedropperButton(uiColorToggle, () => PixelEyedropper.Begin(c => { PixelUIKit.SetUiColorFromColor(c); settingsRefreshersRun(); }));   // pick the windows' colour from anywhere on screen
+        Toggle barColorToggle = AddToggleRow(list, barColorLabel, PixelHud.BarColorOn, on => PixelHud.BarColorOn = on, ref y);
+        settingsRefreshers.Add(() => barColorToggle.SetIsOnWithoutNotify(PixelHud.BarColorOn));
+        AddEyedropperButton(barColorToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetBarColorFromColor(c); settingsRefreshersRun(); }));   // pick the black bars' colour from anywhere on screen
 
         // ---- Accessibility ----
         AddSettingsSectionHeader(list, headerAccessibility, ref y);
@@ -2330,57 +2375,25 @@ public class PixelPauseMenu : MonoBehaviour
         pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
-        AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
-        AddSettingToggle(list, contrastRimLabel, () => PixelContrast.RimEnabled, on => PixelContrast.RimEnabled = on, ref y);
-        AddSettingToggle(list, spotlightLabel, () => PixelContrast.SpotlightEnabled, on => PixelContrast.SpotlightEnabled = on, ref y);
-        Slider spotSlider = AddSliderRow(list, spotlightStrengthLabel, PixelContrast.SpotlightStrength, v => PixelContrast.SpotlightStrength = v, ref y);
-        settingsRefreshers.Add(() => spotSlider.SetValueWithoutNotify(PixelContrast.SpotlightStrength));
-        AddChoiceRow(list, clickFxLabel, PixelBasicFx.LevelNames, () => PixelBasicFx.Level, v => PixelBasicFx.Level = v, ref y);
-        AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
-        AddWideButtonRow(list, resetPopupPinText, () => { PixelAchievements ach = PixelFind.First<PixelAchievements>(); if (ach != null) ach.ResetPopupPin(); }, ref y);
-        AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
+        AddDropdownRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
+        AddDropdownRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
-        AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
-
-        // ---- Saving ----
-        if (saveGame != null)
-        {
-            AddSettingsSectionHeader(list, headerSaving, ref y);
-            AddSettingToggle(list, autoSaveMessageLabel, () => saveGame.AutoSaveMessageNow,
-                             on => PixelSaveGame.AutoSaveMessageChoice = on ? 1 : 0, ref y);
-            AddDropdownRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
-        }
+        AddDropdownRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
+        AddWideButtonRow(list, resetPopupPinText, () => { PixelAchievements ach = PixelFind.First<PixelAchievements>(); if (ach != null) ach.ResetPopupPin(); }, ref y);   // (last in this section)
 
         // ---- Display ----
         AddSettingsSectionHeader(list, headerDisplay, ref y);
-        AddLookRow(list, floorStyleLabel, () => PixelFloor.Instance, ref y, popout: true);
-        AddSettingToggle(list, displayFloorLabel, () => PixelTitleWanderers.DisplayFloor, on => PixelTitleWanderers.DisplayFloor = on, ref y);
-        AddChoiceRow(list, floorOffModeLabel, PixelFloor.OffModeNames, () => PixelFloor.OffMode, v => PixelFloor.OffMode = v, ref y);
-        AddLookRow(list, skyStyleLabel, () => PixelSkybox.Instance, ref y, popout: true);
-        AddSettingToggle(list, flatViewLabel, () => PixelOrthoView.Enabled, on => PixelOrthoView.Enabled = on, ref y);
-        AddSettingToggle(list, fancyButtonsLabel, () => PixelUIKit.FancyButtons, on => PixelUIKit.FancyButtons = on, ref y);
-        AddSettingToggle(list, fancyWindowsLabel, () => PixelUIKit.FancyWindows, on => PixelUIKit.FancyWindows = on, ref y);
         AddDropdownRow(list, filterLabel, PixelFilters.Names, () => PixelFilters.Choice, v => PixelFilters.Choice = v, ref y);
         Slider filterSlider = AddSliderRow(list, filterStrengthLabel, PixelFilters.Strength, v => PixelFilters.Strength = v, ref y);
         settingsRefreshers.Add(() => filterSlider.SetValueWithoutNotify(PixelFilters.Strength));
-        Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
-        settingsRefreshers.Add(() => glowToggle.SetIsOnWithoutNotify(PixelHud.BarGlow));
-        AddEyedropperButton(glowToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }));
-        AddSettingToggle(list, glowCycleLabel, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on, ref y);
-        Toggle uiColorToggle = AddToggleRow(list, uiColorLabel, PixelUIKit.UiColorOn, on => PixelUIKit.UiColorOn = on, ref y);
-        settingsRefreshers.Add(() => uiColorToggle.SetIsOnWithoutNotify(PixelUIKit.UiColorOn));
-        AddEyedropperButton(uiColorToggle, () => PixelEyedropper.Begin(c => { PixelUIKit.SetUiColorFromColor(c); settingsRefreshersRun(); }));   // pick the windows' colour from anywhere on screen
-        Toggle barColorToggle = AddToggleRow(list, barColorLabel, PixelHud.BarColorOn, on => PixelHud.BarColorOn = on, ref y);
-        settingsRefreshers.Add(() => barColorToggle.SetIsOnWithoutNotify(PixelHud.BarColorOn));
-        AddEyedropperButton(barColorToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetBarColorFromColor(c); settingsRefreshersRun(); }));   // pick the black bars' colour from anywhere on screen
         AddSettingToggle(list, vsyncLabel, () => PixelDisplaySettings.VSync, on => PixelDisplaySettings.VSync = on, ref y);
         AddSettingToggle(list, fullscreenLabel, () => PixelDisplaySettings.Fullscreen, on => PixelDisplaySettings.Fullscreen = on, ref y);
         List<Vector2Int> resolutions = PixelDisplaySettings.Resolutions;
         string[] resolutionNames = new string[resolutions.Count];
         for (int i = 0; i < resolutionNames.Length; i++) resolutionNames[i] = resolutions[i].x + " x " + resolutions[i].y;
-        AddChoiceRow(list, resolutionLabel, resolutionNames, () => Mathf.Max(0, resolutions.IndexOf(PixelDisplaySettings.Resolution)),
-                     v => PixelDisplaySettings.Resolution = resolutions[v], ref y);
+        AddDropdownRow(list, resolutionLabel, resolutionNames, () => Mathf.Max(0, resolutions.IndexOf(PixelDisplaySettings.Resolution)),
+                       v => PixelDisplaySettings.Resolution = resolutions[v], ref y);
 
         // ---- Audio: the mute box, then three volume sliders (the sound system is added by Start, which runs first) ----
         PixelAudio audio = PixelFind.First<PixelAudio>();
@@ -2388,6 +2401,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             AddSettingsSectionHeader(list, headerAudio, ref y);
             muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
+            AddSettingToggle(list, uiClicksLabel, () => PixelAudio.UiClicks, on => PixelAudio.UiClicks = on, ref y);
             masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
             effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
             musicSlider = AddSliderRow(list, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
@@ -2565,39 +2579,6 @@ public class PixelPauseMenu : MonoBehaviour
         y += rowHeight + 6f;
     }
 
-    /// <summary>A label with a button on the right that steps through the options each click (wraps around).</summary>
-    private void AddChoiceRow(Transform parent, string label, string[] options, System.Func<int> get, System.Action<int> set, ref float y)
-    {
-        TMP_Text choiceLabel = AddRowLabel(parent, label, y, out RectTransform row);
-        choiceLabel.rectTransform.anchorMax = new Vector2(0.6f, 1f);
-        choiceLabel.rectTransform.offsetMax = new Vector2(-14f, 0f);   // a gap before the button
-        Button b = MakeButton(row, "Choice", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.8f);
-        RectTransform br = b.GetComponent<RectTransform>();
-        br.anchorMin = new Vector2(0.62f, 0.06f);
-        br.anchorMax = new Vector2(1f, 0.94f);
-        br.offsetMin = br.offsetMax = Vector2.zero;
-        TMP_Text text = b.GetComponentInChildren<TMP_Text>();
-        text.enableAutoSizing = true;
-        text.fontSizeMax = rowFontSize * 0.8f;
-        text.fontSizeMin = 12f;
-        text.overflowMode = TextOverflowModes.Truncate;
-
-        System.Action refresh = () =>
-        {
-            int index = options.Length == 0 ? 0 : Mathf.Clamp(get(), 0, options.Length - 1);
-            text.text = options.Length == 0 ? "-" : options[index];
-        };
-        b.onClick.AddListener(() =>
-        {
-            if (options.Length == 0) return;
-            set((Mathf.Clamp(get(), 0, options.Length - 1) + 1) % options.Length);
-            refresh();
-        });
-        refresh();
-        settingsRefreshers.Add(refresh);
-        y += rowHeight + 6f;
-    }
-
     /// <summary>A full-width button row (an action rather than a setting).</summary>
     private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y, float inset = SettingsRowInset)
     {
@@ -2725,10 +2706,41 @@ public class PixelPauseMenu : MonoBehaviour
     /// A "pick a look" row (floor style, sky): a picture of the current look, its name, and arrows to step through
     /// the looks. 'source' is asked again each time, so it works even if the look component wakes up later.
     /// </summary>
-    private void AddLookRow(Transform parent, string labelText, System.Func<IPixelLookSource> source, ref float y, bool popout = false)
+    private void AddLookRow(Transform parent, string labelText, System.Func<IPixelLookSource> source, ref float y, bool popout = false,
+                            System.Func<bool> getToggle = null, System.Action<bool> setToggle = null)
     {
         TMP_Text label = AddRowLabel(parent, labelText, y, out RectTransform row);
-        label.rectTransform.anchorMax = new Vector2(0.4f, 1f);
+        label.rectTransform.anchorMax = new Vector2(getToggle != null ? 0.3f : 0.4f, 1f);
+
+        if (getToggle != null)
+        {
+            // A tick box in the same entry, between the name and the picker (the floor: shown / hidden).
+            GameObject box = new GameObject("Tick Box", typeof(RectTransform), typeof(Image), typeof(Toggle));
+            box.transform.SetParent(row, false);
+            Image bg = box.GetComponent<Image>();
+            bg.color = tickBoxColor;
+            RectTransform br = box.GetComponent<RectTransform>();
+            br.anchorMin = br.anchorMax = new Vector2(0.355f, 0.5f);
+            br.pivot = new Vector2(0.5f, 0.5f);
+            br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
+            br.anchoredPosition = Vector2.zero;
+            GameObject tick = new GameObject("Tick", typeof(RectTransform), typeof(Image));
+            tick.transform.SetParent(box.transform, false);
+            tick.GetComponent<Image>().sprite = PixelUIKit.TickSprite();
+            tick.GetComponent<Image>().color = tickColor;
+            tick.GetComponent<Image>().raycastTarget = false;
+            RectTransform tkr = tick.GetComponent<RectTransform>();
+            tkr.anchorMin = Vector2.zero; tkr.anchorMax = Vector2.one;
+            tkr.offsetMin = new Vector2(tickBoxSize * 0.1f, tickBoxSize * 0.1f);
+            tkr.offsetMax = new Vector2(-tickBoxSize * 0.1f, -tickBoxSize * 0.1f);
+            Toggle toggle = box.GetComponent<Toggle>();
+            toggle.targetGraphic = bg;
+            toggle.graphic = tick.GetComponent<Image>();
+            toggle.SetIsOnWithoutNotify(getToggle());
+            toggle.onValueChanged.AddListener(on => setToggle?.Invoke(on));
+            toggle.onValueChanged.AddListener(_ => PixelAudio.Play("ui_click"));
+            settingsRefreshers.Add(() => toggle.SetIsOnWithoutNotify(getToggle()));
+        }
 
         // One drop-down button: picture + name + a down arrow. The list opens over everything (see OpenLookList).
         Button pick = MakeButton(row, labelText + " Picker", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.8f);

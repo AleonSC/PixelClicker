@@ -1166,7 +1166,6 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
         if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
-        if (PixelFind.First<PixelContrast>() == null) gameObject.AddComponent<PixelContrast>();   // auto-contrast outline + cube spotlight
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
         if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
@@ -4972,7 +4971,6 @@ public partial class PixelClicker : MonoBehaviour
         info.bornTime = Time.unscaledTime;
         info.tierIndex = tierIndex;
         info.amount = amount;
-        PixelContrast.TryAttachRim(copy.transform);   // the auto-contrast outline, when it is switched on
         PixelMold.TryAttachGlow(copy, tiers[tierIndex].type);   // a Berry / Mushroom / Herb / Truffle is sometimes a glowing variant
 
         oldPixels.Add(rb);

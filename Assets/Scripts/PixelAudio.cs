@@ -126,8 +126,19 @@ public class PixelAudio : MonoBehaviour
     private bool defaultMuted;
 
     /// <summary>A save file with its own settings was loaded: read the volumes again (missing ones go back to the Inspector values).</summary>
+    private const string PrefUiClicks = "PixelAudio.UiClicks";
+    private static int uiClicksCache = -1;
+
+    /// <summary>Settings > Audio > 'UI click sounds': the click sound of every UI button / tick box (sound id ui_click). On by default.</summary>
+    public static bool UiClicks
+    {
+        get { if (uiClicksCache < 0) uiClicksCache = PlayerPrefs.GetInt(PrefUiClicks, 1); return uiClicksCache != 0; }
+        set { uiClicksCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefUiClicks, uiClicksCache); PlayerPrefs.Save(); }
+    }
+
     public static void ReloadFromPrefs()
     {
+        uiClicksCache = -1;
         if (instance == null) return;
         instance.masterVolume = PlayerPrefs.HasKey(PrefMaster) ? PlayerPrefs.GetFloat(PrefMaster) : instance.defaultMaster;
         instance.effectsVolume = PlayerPrefs.HasKey(PrefEffects) ? PlayerPrefs.GetFloat(PrefEffects) : instance.defaultEffects;
@@ -623,6 +634,7 @@ public class PixelAudio : MonoBehaviour
     private void PlaySound(string id, float pitchMultiplier, float volumeMultiplier = 1f)
     {
         if (muted || voices == null || !byId.TryGetValue(id, out Sound s)) return;
+        if (!UiClicks && id == "ui_click") return;   // the UI click sounds can be switched off in Settings > Audio
         if (s.clips == null || s.clips.Length == 0) return;
 
         float now = Time.unscaledTime;

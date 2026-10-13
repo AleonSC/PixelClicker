@@ -36,16 +36,17 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewKind", "ViewAutoOrbit", "ViewScrollInvert", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "Filter", "ContrastRim", "Spotlight", "NextUp", "FancyMenu", "FancyHud",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewKind", "ViewAutoOrbit", "ViewScrollInvert", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "Filter", "NextUp", "FancyMenu", "FancyHud",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
-        foreach (string k in new[] { "GlowHue", "UiHue", "UiSat", "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength", "SpotlightStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
+        foreach (string k in new[] { "GlowHue", "UiHue", "UiSat", "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
         foreach (string k in new[] { "GlowColor", "BarColor", "SkillPack", "SkillGuests", "OptInOff", "MyWindow", "PetOutfits" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
         known.Add(new Known("PixelAudio.Effects", 1));
         known.Add(new Known("PixelAudio.Music", 1));
         known.Add(new Known("PixelAudio.Muted", 0));
+        known.Add(new Known("PixelAudio.UiClicks", 0));
         // Key bindings.
         foreach (string name in Enum.GetNames(typeof(PixelAction))) known.Add(new Known("PixelClicker.Key." + name, 0));
         // Dev tools.
@@ -133,7 +134,6 @@ public static class PixelSettingsSync
         PixelPets.ReloadOutfitsFromPrefs();
         PixelDayNight.ReloadFromPrefs();
         PixelFilters.ReloadFromPrefs();
-        PixelContrast.ReloadFromPrefs();
         PixelNextUp.ReloadFromPrefs();
         PixelMenuFx.ReloadFromPrefs();
     }
