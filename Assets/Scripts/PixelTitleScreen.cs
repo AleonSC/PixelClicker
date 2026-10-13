@@ -213,7 +213,8 @@ public class PixelTitleScreen : MonoBehaviour
     private GameObject canvasRoot, foreground;
     private Canvas canvas;
     private Image cover, bar, dim;
-    private RawImage lightImage, strongImage, logoImage, fadeImage;
+    private RawImage lightImage, midImage, strongImage, logoImage, fadeImage;
+    private float strongPlayFactor = 1f, strongBlend = 1f;   // the Play transition's fade of the strong layers x how far the blur slider sits between two blur levels
     private RenderTexture fadeTexture;
     private bool lastLive, lastBlur, haveLastToggles;
     private float fadeAmount;
@@ -306,7 +307,8 @@ public class PixelTitleScreen : MonoBehaviour
         pictureReady = false;
         framesShown = animated ? 2 : 0;
         cover.color = animated ? Color.clear : Color.black;
-        lightImage.enabled = strongImage.enabled = false;
+        lightImage.enabled = midImage.enabled = strongImage.enabled = false;
+        strongPlayFactor = 1f;
         fadeAmount = 0f;
         if (fadeImage != null) fadeImage.enabled = false;
         haveLastToggles = false;
@@ -506,6 +508,7 @@ public class PixelTitleScreen : MonoBehaviour
         Stretched(coverGo);
 
         lightImage = MakeRaw("Light Blur");
+        midImage = MakeRaw("Mid Blur");   // the blur level just below the slider (the strong layer fades in over it: a smooth blur slider)
         strongImage = MakeRaw("Strong Blur");
         fadeImage = MakeRaw("Background Fade");   // the previous picture, fading away when Live / Blur background is switched
 
@@ -907,7 +910,9 @@ public class PixelTitleScreen : MonoBehaviour
             finally { cam.targetTexture = previous; }
             strongImage.texture = sharpTexture;
             strongImage.enabled = true;
-            lightImage.enabled = false;
+            lightImage.enabled = midImage.enabled = false;
+            strongBlend = 1f;
+            ApplyStrongAlpha();
         }
         else
         {
@@ -927,7 +932,9 @@ public class PixelTitleScreen : MonoBehaviour
             }
             strongImage.texture = sharpTexture;
             strongImage.enabled = true;
-            lightImage.enabled = false;
+            lightImage.enabled = midImage.enabled = false;
+            strongBlend = 1f;
+            ApplyStrongAlpha();
         }
         pictureReady = true;
     }
@@ -1013,17 +1020,37 @@ public class PixelTitleScreen : MonoBehaviour
 
         if (!pictureReady) pictureReady = true;
         // (also switches the layers back on / to the blurred pictures after the blur was off)
-        lightImage.enabled = strongImage.enabled = true;
+        lightImage.enabled = midImage.enabled = strongImage.enabled = true;
         lightImage.texture = PickChain(lightBlurDivisor);
-        strongImage.texture = PickChain(StrongDivisorForAmount());
+        BlurLevelsForAmount(out int lo, out int hi, out float blend);
+        midImage.texture = chain[lo];
+        strongImage.texture = chain[hi];
+        strongBlend = blend;
+        ApplyStrongAlpha();
     }
 
-    /// <summary>The strong layer's divisor scaled by the menu's blur slider (1 = the full strong blur, 0 = the weakest copy in the chain).</summary>
-    private int StrongDivisorForAmount()
+    /// <summary>
+    /// The blur slider is continuous: it sits between two of the shrunk copies (each is half the size of the one before), so the lower one is drawn fully and the higher one
+    /// fades in over it. The position is measured in log space (each copy is twice as blurry as the last) so the slider feels even.
+    /// </summary>
+    private void BlurLevelsForAmount(out int lo, out int hi, out float blend)
     {
-        float a = PixelTitleWanderers.BlurAmount;
-        if (a >= 0.999f || chainDivisors.Count == 0) return strongBlurDivisor;
-        return Mathf.Max(1, Mathf.RoundToInt(Mathf.Lerp(chainDivisors[0], strongBlurDivisor, a)));
+        lo = hi = Mathf.Max(0, chain.Count - 1);
+        blend = 1f;
+        if (chainDivisors.Count == 0) return;
+        float a = Mathf.Clamp01(PixelTitleWanderers.BlurAmount);
+        float logD = Mathf.Lerp(Mathf.Log(chainDivisors[0]), Mathf.Log(Mathf.Max(chainDivisors[0], strongBlurDivisor)), a);
+        lo = 0;
+        for (int i = 0; i < chainDivisors.Count; i++) if (Mathf.Log(chainDivisors[i]) <= logD + 0.0001f) lo = i;
+        hi = Mathf.Min(lo + 1, chainDivisors.Count - 1);
+        if (hi == lo) { blend = 0f; return; }
+        blend = Mathf.Clamp01((logD - Mathf.Log(chainDivisors[lo])) / (Mathf.Log(chainDivisors[hi]) - Mathf.Log(chainDivisors[lo])));
+    }
+
+    private void ApplyStrongAlpha()
+    {
+        if (strongImage != null) SetAlpha(strongImage, strongPlayFactor * strongBlend);
+        if (midImage != null) SetAlpha(midImage, strongPlayFactor);
     }
 
     // ------------------------------------------------------------------
@@ -1086,7 +1113,8 @@ public class PixelTitleScreen : MonoBehaviour
         glowFade = 1f - thin;
 
         float focus = Mathf.Clamp01(t / focusSeconds);
-        SetAlpha(strongImage, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(focus / 0.7f)));
+        strongPlayFactor = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(focus / 0.7f));
+        ApplyStrongAlpha();
         SetAlpha(lightImage, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((focus - 0.3f) / 0.7f)));
         Color d = dimColor;
         d.a *= 1f - focus;
