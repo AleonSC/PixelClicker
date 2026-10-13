@@ -23,7 +23,7 @@ public static class PixelMenuFx
     private static int cache = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { cache = -1; hudCache = -1; vignette = null; }
+    private static void ResetStatics() { cache = -1; vignette = null; }
 
     /// <summary>Settings > Interface > Fancy pause menu (off = the classic menu).</summary>
     public static bool Enabled
