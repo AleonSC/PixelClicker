@@ -162,6 +162,17 @@ public class PixelFirstPerson : MonoBehaviour
         return true;
     }
 
+    private Vector3 externalVelocity;
+    private float externalUntil;
+
+    /// <summary>Something moves the player (a conveyor belt): this world velocity is added to the player's own movement for the next fraction of a second (call it every frame).</summary>
+    public static void PushPlayer(Vector3 velocity)
+    {
+        if (!Active || instance == null) return;
+        instance.externalVelocity = velocity;
+        instance.externalUntil = Time.unscaledTime + 0.1f;
+    }
+
     private PixelClicker clicker;
     private Camera mainCamera, fpCamera;
     private int savedMask;
@@ -394,7 +405,8 @@ public class PixelFirstPerson : MonoBehaviour
         float dt = Time.unscaledDeltaTime; // so you can still run about while time is stopped
         verticalSpeed += Physics.gravity.y * V(gravityFactor, 2f) * dt;
 
-        controller.Move((dir * speed + Vector3.up * verticalSpeed) * dt);
+        Vector3 push = Time.unscaledTime < externalUntil ? externalVelocity : Vector3.zero;   // a conveyor belt carrying the player
+        controller.Move((dir * speed + Vector3.up * verticalSpeed + push) * dt);
 
         // Head bob: a phase that advances with the walking speed, faded in only while walking on the ground.
         float walking = grounded && dir.sqrMagnitude > 0.01f ? 1f : 0f;

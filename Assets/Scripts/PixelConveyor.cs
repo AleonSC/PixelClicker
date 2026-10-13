@@ -171,8 +171,8 @@ public class PixelConveyor : MonoBehaviour
         // The belt slab (its top is the surface things stand on) and the side rails.
         k.Box("Belt", transform, new Vector3(0f, height * 0.5f, 0f), new Vector3(width, height, length), rubber, default, true, 0.1f, 0.3f);
         float rail = 0.13f * unit, railH = 0.34f * unit;
-        k.Box("Rail L", transform, new Vector3(-(width * 0.5f + rail * 0.5f), railH * 0.5f, 0f), new Vector3(rail, railH, length + rail * 2f), steel, default, true, 0.7f, 0.5f);
-        k.Box("Rail R", transform, new Vector3(width * 0.5f + rail * 0.5f, railH * 0.5f, 0f), new Vector3(rail, railH, length + rail * 2f), steel, default, true, 0.7f, 0.5f);
+        k.Box("Rail L", transform, new Vector3(-(width * 0.5f + rail * 0.5f), railH * 0.5f, 0f), new Vector3(rail, railH, length + rail * 2f), steel, default, false, 0.7f, 0.5f);   // (no collider: the player can walk on and off)
+        k.Box("Rail R", transform, new Vector3(width * 0.5f + rail * 0.5f, railH * 0.5f, 0f), new Vector3(rail, railH, length + rail * 2f), steel, default, false, 0.7f, 0.5f);
         // Rollers at both ends.
         k.Cyl("Roller A", transform, new Vector3(0f, height * 0.5f, -length * 0.5f), height * 0.6f, width * 1.02f, steel, new Vector3(0f, 0f, 90f), 0.8f, 0.5f);
         k.Cyl("Roller B", transform, new Vector3(0f, height * 0.5f, length * 0.5f), height * 0.6f, width * 1.02f, steel, new Vector3(0f, 0f, 90f), 0.8f, 0.5f);
@@ -239,6 +239,14 @@ public class PixelConveyor : MonoBehaviour
         return Mathf.Abs(l.x) < width * 0.5f && Mathf.Abs(l.z) < length * 0.5f + 0.1f * unit && l.y > height - 0.1f * unit && l.y < height + 1.1f * unit;
     }
 
+    /// <summary>Is this world point (the player's feet) on the belt, with a little give at the sides (the rails)? 'lateral' = how far off the centre line it is (+ = to the right of the travel direction).</summary>
+    public bool CarriesPlayer(Vector3 feet, out float lateral)
+    {
+        Vector3 l = transform.InverseTransformPoint(feet);
+        lateral = Vector3.Dot(feet - transform.position, Vector3.Cross(Vector3.up, Direction));
+        return Mathf.Abs(l.x) < width * 0.5f + 0.2f * unit && Mathf.Abs(l.z) < length * 0.5f && l.y > -0.05f * unit && l.y < height + 0.35f * unit;
+    }
+
     public static IReadOnlyList<PixelConveyor> All => all;
 }
 
@@ -252,6 +260,15 @@ public class PixelConveyorSystem : MonoBehaviour
         public float s;
         public float half;     // half the pixel's height (it rides with its bottom on the belt)
     }
+
+    [Header("Player on a belt (first person)")]
+    [Min(0f)]
+    [Tooltip("How strongly a belt carries the player, as a fraction of the belt's speed (1 = the belt's own speed). 0 = the coded default (1).")]
+    [SerializeField] private float playerPull = 0f;
+
+    [Min(0f)]
+    [Tooltip("The soft magnet that draws the player to the belt's middle line, in cube widths per second at most. Walking out is always stronger. 0 = the coded default (0.9).")]
+    [SerializeField] private float playerMagnet = 0f;
 
     private PixelClicker clicker;
     private static PixelConveyorSystem system;
@@ -386,8 +403,29 @@ public class PixelConveyorSystem : MonoBehaviour
         }
     }
 
+    /// <summary>First person: a player standing on a belt is carried along it and softly drawn to its middle line (never locked - walking out is stronger).</summary>
+    private void CarryPlayer()
+    {
+        if (!PixelFirstPerson.TryGetPlayerPosition(out Vector3 feet)) return;
+        PixelConveyor best = null;
+        float bestLateral = 0f;
+        foreach (PixelConveyor belt in PixelConveyor.All)
+        {
+            if (belt == null || belt.IsGhost || !belt.CarriesPlayer(feet, out float lat)) continue;
+            if (best == null || Mathf.Abs(lat) < Mathf.Abs(bestLateral)) { best = belt; bestLateral = lat; }
+        }
+        if (best == null) return;
+        float u = best.Unit;
+        Vector3 dir = best.Direction;
+        Vector3 side = Vector3.Cross(Vector3.up, dir);
+        float magnetMax = u * (playerMagnet > 0f ? playerMagnet : 0.9f);
+        float pull = Mathf.Clamp(-bestLateral * 3f * u, -magnetMax, magnetMax);   // towards the middle, stronger the further off
+        PixelFirstPerson.PushPlayer(dir * best.Speed * (playerPull > 0f ? playerPull : 1f) + side * pull);
+    }
+
     private void Update()
     {
+        if (clicker != null && PixelConveyor.All.Count > 0) CarryPlayer();
         if (clicker == null || !PixelInput.RightPressed() || PixelClicker.ExternalClickBlock || PixelPauseMenu.IsPaused || PixelInput.PointerOverUI() || PixelFirstPerson.Active) return;
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return;

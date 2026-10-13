@@ -843,3 +843,4 @@
 [2026-10-13 17:58] Added a Conveyor Belt (click two points to build, chain pieces for curves, right click to reverse, carries old pixels) and a Kiln (anything going into its mouth burns into Charcoal old pixels from the back chute, new Charcoal block) to the Dev Hub Feature Tester.
 [2026-10-13 18:00] Fixed two compile errors in the conveyor belt (a static reset in the wrong class and a wrong argument in a chevron box).
 [2026-10-13 18:06] Conveyor belts now lock pixels onto the belt and carry them along by position (no physics, like the storage crate); pixels are handed on to the next belt of a chain and only ejected when a belt end has no belt after it.
+[2026-10-13 18:08] The first person player standing on a conveyor belt is now carried along it and softly magnetized to its middle line (walking out is always stronger); belt rails no longer block walking on or off.
