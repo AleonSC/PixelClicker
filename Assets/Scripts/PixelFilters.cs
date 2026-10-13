@@ -229,7 +229,7 @@ public class PixelFilters : MonoBehaviour
     {
         urpReady = false;
         if (p == null) { if (volume != null) volume.enabled = false; return; }
-        if (!EnsureVolume()) return;
+        if (!EnsureVolume()) { Debug.LogWarning("PixelFilters: the render pipeline asset in Project Settings > Graphics is not a Universal RP asset, so the bulge / grain / colour effects are skipped (only the overlay shows).", this); return; }
         volume.enabled = true;
         urpReady = true;
         colorAdj.saturation.value = p.saturation * k;
@@ -243,9 +243,10 @@ public class PixelFilters : MonoBehaviour
         lensFx.intensity.value = p.lens * k;
         bloomFx.intensity.value = p.bloom * k;
         EnableCameras();
+        Debug.Log("PixelFilters: URP post-processing volume active for '" + p.name + "' (strength " + k.ToString("0.00") + "). If the picture shows no bulge / grain, check the Universal Renderer asset has Post-processing enabled and the camera's Post Processing box is ticked.", this);
     }
 #else
-    private void ApplyVolume(Preset p, float k) { }
+    private void ApplyVolume(Preset p, float k) { if (p != null) Debug.LogWarning("PixelFilters: UNITY_PIPELINE_URP is not defined, so only the overlay part of the filter works (no bulge, grain, colour grading).", this); }
 #endif
 
     // ------------------------------------------------------------------

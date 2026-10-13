@@ -752,3 +752,4 @@
 [2026-10-13 09:09 UTC] The main menu background blur slider is now smooth: it crossfades between two blur levels (measured evenly) instead of jumping from one shrunk picture to the next.
 [2026-10-13 09:10 UTC] On the main menu the black bar and its glow lights now stay visible behind the Settings / Load windows instead of disappearing.
 [2026-10-13 09:11 UTC] CRT TV filter: bigger rounded tube-shaped corners with a soft dark rim, and a stronger screen bulge.
+[2026-10-13 09:13 UTC] Screen filters now log to the Console whether the URP post-processing part is running, to make a missing bulge easier to track down.
