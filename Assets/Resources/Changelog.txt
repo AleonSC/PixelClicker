@@ -832,3 +832,4 @@
 [2026-10-13 17:01] Block Hold ignores right presses that are part of a right-click spam (e.g. clearing a hazard), so the press that lands on the next block no longer grabs it and costs the meter.
 [2026-10-13 17:05] Block Hold lasts 3.5 seconds now; new Pesticide hold block in the Woodcutter's Pack (while held, a left click clears a Hornet Nest at once); the Toadstool is out of every rotation (the block stays in the game).
 [2026-10-13 17:09] Block Hold lasts 5 seconds by default and 10 seconds when the held block is a hold block (Whetstone, Pesticide...).
+[2026-10-13 17:12] Great Oak nests now fly a short scripted arc out of the cube's side, make one small hop and land close to it (no physics or colliders, so they can no longer bounce far away).
