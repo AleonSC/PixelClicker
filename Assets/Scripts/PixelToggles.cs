@@ -569,7 +569,7 @@ public class PixelToggles : MonoBehaviour
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(Close);
-        PixelMenuFx.AddWindowLine(windowObject.transform, headerH + 4f);
+        PixelMenuFx.AddWindowLine(windowObject.transform, Mathf.Min(headerH - 8f, 16f + titleFontSize * 1.4f + 4f));   // between the title and the icon row (the row starts at the shop's tab row)
 
         y = headerH;   // same y as the shop's tab row
 

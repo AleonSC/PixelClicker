@@ -788,3 +788,4 @@
 [2026-10-13 13:22 UTC] Shop: the tab buttons and list moved down a little and the line under the title now has a bright neon light spot sweeping along it.
 [2026-10-13 13:29 UTC] Dev Hub tabs are now small icon tabs (the active one shows its name); To-Do and Changelog moved into a new Docs tab with a third permanent Notes sub-tab where you can type and keep your own notes.
 [2026-10-13 13:34 UTC] The shop's title line is the plain white sliding segment again, and the Toggles, Log, Inventory, Bank, Skills, Crafting and Pixel Guide windows got the same line under their headers.
+[2026-10-13 13:39 UTC] Moved the Toggles window's title line up between the title and the icon row so it is visible.
