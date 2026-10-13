@@ -4207,6 +4207,7 @@ public partial class PixelClicker : MonoBehaviour
     private void TriggerHazard(int tierIndex, PixelTier tier)
     {
         hitsOnCurrentPixel = 0;
+        PixelBlockRules.OnHazardWentOff(tier.type);   // some hazards (the Hornet Nest) cost the Block Hold meter part of its charge
         Vector3 pos = pixelTransform.position;
         string what;
         if (tier.type == PixelType.Pest)

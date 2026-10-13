@@ -27,3 +27,6 @@ Special and hold blocks appear on the guide by themselves: PixelBlockRules.Ensur
 
 ## Stall (a trait on any block)
 `PixelTier.stallsHold` (+ `stallSeconds`, 0 = 1.5): every click on such a block freezes the Block Hold meter's drain for that long and adds `stallRefill` (0 = 4%) of the meter (each click restarts it; PixelClicker.CollectInternal -> PixelBlockHold.Stall). The meter turns icy white-blue while frozen. Independent of hit count and of the special / hold roles. Tagged "STALL" on the Pixel Guide with its own sentence. Default: the Great Oak (so a held Whetstone / Pesticide keeps its bonus while you work through an oak).
+
+## Hazards that drain the hold meter
+`HazardHoldPenalty` list: when a hazard GOES OFF (destroyed by clicking it, PixelClicker.TriggerHazard -> PixelBlockRules.OnHazardWentOff) the Block Hold meter loses `loseFraction` of its CURRENT charge (PixelBlockHold.LoseFraction; the meter flashes red briefly). Clearing the hazard safely (right clicks, a held Pesticide) does not count. Default: Hornet Nest, 50%.

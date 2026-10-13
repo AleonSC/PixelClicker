@@ -115,6 +115,15 @@ public class PixelBlockHold : MonoBehaviour
         }
     }
 
+    /// <summary>Takes this fraction of the meter's CURRENT charge away (a hazard went off). The drawn meter glides down to it.</summary>
+    public void LoseFraction(float fraction)
+    {
+        if (!Active) return;
+        meter *= 1f - Mathf.Clamp01(fraction);
+        flash = Mathf.Max(flash, 0.6f);   // a short red flash on the meter
+        if (holding && meter < MinStart * 0.2f) { /* the normal drain will end the hold when it reaches empty */ }
+    }
+
     private bool Stalled => Time.unscaledTime < stallUntil;
 
     /// <summary>The tier index of the block in hand (-1 when nothing is held).</summary>

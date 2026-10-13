@@ -9,6 +9,7 @@
 //   * HOLD BLOCK = a base block of a skill that gives a bonus while it is held (Block Hold, the right button: PixelBlockHold). HoldRule: the block type, the skill, and what the bonus does:
 //     extraClicks (RAPID CLICKS like Overcharge: each manual click is followed by n extra full clicks, burstGapSeconds apart, via AutoCollect; PixelClicker.CollectInternal -> PixelBlockRules.OnManualClick), payoutMultiplier (every
 //     payout, CollectInternal) and xpMultiplier (skill XP of that skill, PixelSkills.AddXp) plus a label shown beside the hold meter. Defaults: Whetstone (Woodcutting, 2 extra rapid clicks = x3), Pesticide (Woodcutting, clearsHazard: a left click clears a Hornet Nest at once, PixelClicker.CollectInternal -> ClearHazardNow).
+//   HAZARD PENALTY (HazardHoldPenalty list): a hazard that GOES OFF (destroyed by clicks, PixelClicker.TriggerHazard) takes a fraction of the hold meter's current charge; default Hornet Nest 50%.
 //   Add a new special / hold block: give it a PixelType (append), a look and spawn data like any block (hold blocks are normal base blocks of their pack: shop pack reward tier + the skill's
 //   types list), then add ONE rule here. Behaviour beyond the numbers (the Great Oak's nests) still lives in its own script and listens to PixelClicker.PixelHit.
 // ---------------------------------------------------
@@ -79,6 +80,19 @@ public class PixelBlockRules : MonoBehaviour
     [Header("Hold blocks (bonus while held)")]
     [SerializeField] private List<HoldRule> holdRules = new List<HoldRule>();
 
+    [Serializable]
+    public class HazardHoldPenalty
+    {
+        [Tooltip("The hazard block that hurts the Block Hold meter when it goes off (is destroyed by clicking it; clearing it safely with right clicks or a Pesticide does not count).")]
+        public PixelClicker.PixelType hazard = PixelClicker.PixelType.HornetNest;
+        [Range(0f, 1f)]
+        [Tooltip("The fraction of the meter's CURRENT charge that is lost (0.5 = half of what is left).")]
+        public float loseFraction = 0.5f;
+    }
+
+    [Header("Hazards that drain the hold meter")]
+    [SerializeField] private List<HazardHoldPenalty> hazardPenalties = new List<HazardHoldPenalty>();
+
     [Tooltip("Add the built-in rules that are missing from the lists above (at start).")]
     [SerializeField] private bool addDefaultRules = true;
 
@@ -115,6 +129,9 @@ public class PixelBlockRules : MonoBehaviour
             });
         if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Whetstone))
             holdRules.Add(new HoldRule { name = "Whetstone", type = PixelClicker.PixelType.Whetstone, skillId = PixelSkills.WoodcuttingId, extraClicks = 2, label = "Rapid clicks x3" });
+        if (hazardPenalties == null) hazardPenalties = new List<HazardHoldPenalty>();
+        if (!hazardPenalties.Exists(h => h != null && h.hazard == PixelClicker.PixelType.HornetNest))
+            hazardPenalties.Add(new HazardHoldPenalty { hazard = PixelClicker.PixelType.HornetNest, loseFraction = 0.5f });
         if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Pesticide))
             holdRules.Add(new HoldRule { name = "Pesticide", type = PixelClicker.PixelType.Pesticide, skillId = PixelSkills.WoodcuttingId, clearsHazard = true, hazardType = PixelClicker.PixelType.HornetNest, label = "Hornet nests: instant clear" });
     }
@@ -218,6 +235,15 @@ public class PixelBlockRules : MonoBehaviour
         HoldRule r = ActiveHold;
         if (r == null || r.xpMultiplier <= 0f) return 1d;
         return string.IsNullOrEmpty(r.skillId) || r.skillId == skillId ? r.xpMultiplier : 1d;
+    }
+
+    /// <summary>A hazard went off (it was destroyed by clicking): the Block Hold meter may lose part of its charge (HazardHoldPenalty).</summary>
+    public static void OnHazardWentOff(PixelClicker.PixelType hazard)
+    {
+        PixelBlockRules rules = Instance;
+        if (rules == null || PixelBlockHold.Instance == null) return;
+        foreach (HazardHoldPenalty h in rules.hazardPenalties)
+            if (h != null && h.hazard == hazard && h.loseFraction > 0f) PixelBlockHold.Instance.LoseFraction(h.loseFraction);
     }
 
     // ---------------- the Pixel Guide (and anything else that lists blocks) ----------------
