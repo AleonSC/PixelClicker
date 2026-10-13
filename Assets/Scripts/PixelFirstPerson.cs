@@ -519,7 +519,7 @@ public class PixelFirstPerson : MonoBehaviour
         }
 
         // The white ghost where it would stick.
-        bool snapped = FindCarriedSnap(unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target);
+        bool snapped = FindCarriedSnap(unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target, out bool onBelt);
         UpdateAttachGhosts(snapped, hPos, hRot);
 
         // Left button: a quick tap sticks it (white ghost) or sets it down; HOLD it to charge a throw (the ghost line shows the flight) and let go to throw.
@@ -541,7 +541,7 @@ public class PixelFirstPerson : MonoBehaviour
                 bool threw = chargeTime > TapSeconds;
                 HideThrowLine();
                 if (threw) DropCarried(ThrowVelocity());
-                else if (snapped) AttachCarried(hPos, hRot, member, target);
+                else if (snapped) AttachCarried(hPos, hRot, member, target, onBelt);
                 else DropCarried();
             }
         }
@@ -614,9 +614,9 @@ public class PixelFirstPerson : MonoBehaviour
     private void HideThrowLine() { if (throwLine != null && throwLine.gameObject.activeSelf) throwLine.gameObject.SetActive(false); }
 
     /// <summary>Best spot for the carried cube / build: on another cube's face, or flat on the ground. Returns the handle's pose, which carried cube makes the contact and what it sticks to (null = ground).</summary>
-    private bool FindCarriedSnap(float unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target)
+    private bool FindCarriedSnap(float unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target, out bool onBelt)
     {
-        hPos = Vector3.zero; hRot = Quaternion.identity; member = 0; target = null;
+        hPos = Vector3.zero; hRot = Quaternion.identity; member = 0; target = null; onBelt = false;
         float maxDist = unit * V(attachDistance, 0.9f);
         float angle = attachAngle > 0.5f ? attachAngle : 28f;
         PixelAttachment.Snap best = default;
@@ -643,6 +643,21 @@ public class PixelFirstPerson : MonoBehaviour
         }
         bool useGround = groundMember >= 0 && (bestMember < 0 || ground.distance < bestDist);
         if (useGround) { best = ground; bestMember = groundMember; }
+
+        // A single carried cube can be put straight ONTO a conveyor belt (it sits on the belt line and the belt takes it from there).
+        if (carried.Count == 1 && carried[0] != null)
+        {
+            float bestGap = (bestMember >= 0 ? (useGround ? ground.distance : bestDist) : float.MaxValue);
+            foreach (PixelConveyor belt in PixelConveyor.All)
+            {
+                if (belt == null || !belt.TrySnapPlace(carried[0].transform.position, heldHalves[0].y, out Vector3 bp, out float gap)) continue;
+                if (gap > maxDist * 1.6f || gap >= bestGap) continue;
+                bestGap = gap;
+                Quaternion q = PixelAttachment.NearestAligned(belt.transform.rotation, carried[0].transform.rotation);
+                best = new PixelAttachment.Snap { position = bp, rotation = q, target = null, distance = gap };
+                bestMember = 0; onBelt = true;
+            }
+        }
         if (bestMember < 0) return false;
         member = bestMember;
         target = best.target;
@@ -651,7 +666,7 @@ public class PixelFirstPerson : MonoBehaviour
         return true;
     }
 
-    private void AttachCarried(Vector3 hPos, Quaternion hRot, int member, Rigidbody target)
+    private void AttachCarried(Vector3 hPos, Quaternion hRot, int member, Rigidbody target, bool onBelt = false)
     {
         Rigidbody contact = carried[member];
         for (int i = 0; i < carried.Count; i++)
@@ -670,7 +685,8 @@ public class PixelFirstPerson : MonoBehaviour
             if (shatter != null) shatter.Released(true, 3f);   // (a glass cube is set down gently)
         }
         foreach (PixelAttachment.Edge e in carriedEdges) PixelAttachment.Attach(e.a, e.b);
-        if (target != null) PixelAttachment.Attach(contact, target);
+        if (onBelt) { /* put on a conveyor belt: no glue, the belt system takes the cube from here */ PixelAudio.Play("drop"); }
+        else if (target != null) PixelAttachment.Attach(contact, target);
         else PixelAttachment.AttachToWorld(contact);          // a foundation: pinned where it rests on the ground
         ClearCarried();
         HideAttachGhost();

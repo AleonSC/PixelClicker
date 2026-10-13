@@ -273,6 +273,7 @@ public class PixelAttachment : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
+            if (hit.collider.GetComponentInParent<PixelConveyor>() != null) continue;   // a belt is not ground (cubes are put ON belts, not pinned to them)
             if (ignoreRoot != null && hit.transform.IsChildOf(ignoreRoot)) continue;
             if (hit.normal.y < 0.7f) continue;
             groundY = hit.point.y;

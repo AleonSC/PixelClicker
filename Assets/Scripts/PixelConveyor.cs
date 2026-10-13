@@ -256,6 +256,19 @@ public class PixelConveyor : MonoBehaviour
         return Mathf.Abs(l.x) < width * 0.5f + 0.2f * unit && Mathf.Abs(l.z) < length * 0.5f && l.y > -0.05f * unit && l.y < height + 0.35f * unit;
     }
 
+    /// <summary>First person: where a carried cube would sit if put down on this belt (centred on the line, bottom on the belt). False if it is not over the belt.</summary>
+    public bool TrySnapPlace(Vector3 held, float halfHeight, out Vector3 position, out float gap)
+    {
+        position = held; gap = float.MaxValue;
+        if (ghostMode) return false;
+        Vector3 l = transform.InverseTransformPoint(held);
+        if (Mathf.Abs(l.x) > width * 0.5f + 0.2f * unit || Mathf.Abs(l.z) > length * 0.5f || l.y < height - 0.3f * unit || l.y > height + 3.2f * unit) return false;
+        float targetY = height + halfHeight;
+        position = transform.TransformPoint(new Vector3(0f, targetY, l.z));
+        gap = Mathf.Abs(l.y - targetY);
+        return true;
+    }
+
     public static IReadOnlyList<PixelConveyor> All => all;
 }
 
@@ -434,6 +447,7 @@ public class PixelConveyorSystem : MonoBehaviour
 
     private void Update()
     {
+        if (editorOpen && PixelKeys.KeyPressed(KeyCode.Escape)) { CloseEditor(); return; }   // Esc backs out (the number box swallows the key for itself, so it is checked here too)
         if (clicker != null && PixelConveyor.All.Count > 0) CarryPlayer();
         if (clicker == null || !PixelInput.RightPressed() || PixelClicker.ExternalClickBlock && !PixelFirstPerson.Active || PixelPauseMenu.IsPaused || editorOpen) return;
         bool fp = PixelFirstPerson.Active;
@@ -513,7 +527,7 @@ public class PixelConveyorSystem : MonoBehaviour
         TMP_FontAsset font = clicker.UIFont;
         if (font == null) return;
         PixelUIKit.EnsureEventSystem();
-        editorRoot = PixelUIKit.CreateCanvas("Belt Speed", 330, new Vector2(1920f, 1080f), false);
+        editorRoot = PixelUIKit.CreateCanvas("Belt Speed", 330, new Vector2(1920f, 1080f), true);   // (clickable: the buttons need a GraphicRaycaster)
         GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(editorRoot.transform, false);
         RectTransform pr = panel.GetComponent<RectTransform>();
@@ -538,6 +552,11 @@ public class PixelConveyorSystem : MonoBehaviour
         ir.anchoredPosition = new Vector2(0f, -120f);
         speedInput.contentType = TMP_InputField.ContentType.DecimalNumber;
         speedInput.onSubmit.AddListener(_ => ApplySpeed());
+        // The speed changes AS YOU TYPE (a valid number applies at once): no Enter needed.
+        speedInput.onValueChanged.AddListener(text =>
+        {
+            if (editing != null && float.TryParse(text.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v)) editing.SetSpeedCubes(v);
+        });
 
         Button Make(string name, string label, Vector2 pos, Color color, UnityEngine.Events.UnityAction act)
         {
