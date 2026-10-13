@@ -6,7 +6,8 @@
 //   the pixel's reach towards it (box support function: the sum of |normal . axis| x half size along the pixel's own axes, from its
 //   BoxCollider and lossyScale), plus extraEdgeMargin (default 0), so a pixel's outer surface - not its centre - meets the screen edge
 //   (the old fixed 0.15 margin let big pixels poke off screen and kept small ones too far in). Skips kinematic pixels and fly-away
-//   tiers (Meteor). Added by PixelClicker.Awake if missing. (An earlier version with big invisible wall slabs was reverted: the slabs
+//   tiers (Meteor). CIRCLE MODE (circleAroundFloor, default on): instead of the four screen-edge planes pixels are kept inside a vertical cylinder round the floor's middle whose radius is where
+//   the floor fades out (PixelFloor.TryGetEdgeCircle), by the pixel's own reach; the near-camera limit stays. Added by PixelClicker.Awake if missing. (An earlier version with big invisible wall slabs was reverted: the slabs
 //   tinted the screen and acted as a false floor.)
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -31,6 +32,9 @@ public class PixelViewBounds : MonoBehaviour
     [Header("Bounds")]
     [Tooltip("Turn the screen-edge limit on or off.")]
     [SerializeField] private bool boundsActive = true;
+
+    [Tooltip("Keep old pixels inside a CIRCLE round the edge of the floor (where the floor fades out) instead of the four screen edges. Falls back to the screen edges while there is no floor.")]
+    [SerializeField] private bool circleAroundFloor = true;
 
     [Tooltip("Keep the left and right edges.")]
     [SerializeField] private bool sideEdges = true;
@@ -113,6 +117,11 @@ public class PixelViewBounds : MonoBehaviour
             planesBars = barNow;
         }
 
+        bool useCircle = false;
+        Vector3 circleCenter = Vector3.zero;
+        float circleRadius = 0f;
+        if (circleAroundFloor && PixelFloor.Instance != null) useCircle = PixelFloor.Instance.TryGetEdgeCircle(out circleCenter, out circleRadius);
+
         var pixels = clicker.OldPixels;
         if (infoCache.Count > pixels.Count + 64) infoCache.Clear(); // drop entries of destroyed pixels
         for (int i = 0; i < pixels.Count; i++)
@@ -140,9 +149,31 @@ public class PixelViewBounds : MonoBehaviour
                 ? Vector3.Scale(entry.box.size, new Vector3(Mathf.Abs(lossy.x), Mathf.Abs(lossy.y), Mathf.Abs(lossy.z))) * 0.5f
                 : Vector3.one * (Mathf.Max(Mathf.Abs(lossy.x), Mathf.Max(Mathf.Abs(lossy.y), Mathf.Abs(lossy.z))) * 0.5f);
 
+            if (useCircle)
+            {
+                // The circle: a vertical cylinder round the floor's middle. The pixel's own horizontal reach keeps its outer surface (not its centre) inside it.
+                float dx = position.x - circleCenter.x, dz = position.z - circleCenter.z;
+                float dist = Mathf.Sqrt(dx * dx + dz * dz);
+                float reachC = Mathf.Max(half.x, Mathf.Max(half.y, half.z)) + extraEdgeMargin;
+                float maxDist = Mathf.Max(0.1f, circleRadius - reachC);
+                if (dist > maxDist && dist > 0.0001f)
+                {
+                    Vector3 outward = new Vector3(dx / dist, 0f, dz / dist);   // points out of the circle
+                    position.x = circleCenter.x + outward.x * maxDist;
+                    position.z = circleCenter.z + outward.z * maxDist;
+                    float outSpeed = Vector3.Dot(velocity, outward);
+                    if (outSpeed > 0f)
+                    {
+                        Vector3 tangent = velocity - outward * outSpeed;
+                        velocity = tangent * (1f - friction) - outward * outSpeed * bounciness;
+                    }
+                    changed = true;
+                }
+            }
+
             for (int p = 0; p < planes.Length; p++)
             {
-                if (!used[p]) continue;
+                if (!used[p] || (useCircle && p < 4)) continue;   // (the circle replaces the four screen edges; the near limit stays)
                 float distance = planes[p].GetDistanceToPoint(position);
                 Vector3 normal = planes[p].normal; // points into the view
                 // How far a box of this size and rotation reaches towards the edge from its centre (exact for a box), so the pixel's

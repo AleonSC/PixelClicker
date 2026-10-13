@@ -136,6 +136,20 @@ public partial class PixelFloor
         return Mathf.Max(tile, 2f * r1 / 0.94f / Mathf.Min(1f, aspect));
     }
 
+    /// <summary>The circle the floor fades out at (centre = the floor's middle, radius = where the fade ends): old pixels are kept inside it (PixelViewBounds). False when there is no floor yet.</summary>
+    public bool TryGetEdgeCircle(out Vector3 center, out float radius)
+    {
+        center = Vector3.zero;
+        radius = 0f;
+        if (floorRenderer == null) return false;
+        PixelClicker c = edgeClicker != null ? edgeClicker : PixelFind.First<PixelClicker>();
+        if (c == null) return false;
+        FadeRadii(c, out _, out float r1);
+        center = floorRenderer.bounds.center;
+        radius = r1;
+        return radius > 0.1f;
+    }
+
     private void FadeRadii(PixelClicker clicker, out float r0, out float r1)
     {
         float unit = Mathf.Max(0.05f, clicker.PixelBaseSize);
