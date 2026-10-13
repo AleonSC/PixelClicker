@@ -5,7 +5,7 @@
 //   (bigger) and the block BEFORE it at the bottom (dim). When the block changes the cubes slide down one slot (the new next slides in from above, the old 'before' slides out below);
 //   any other change (a Block Hold swap) pops the changed cubes in and out. Data: PixelClicker.PeekNextTier() (a block put back by Block Hold that waits in line, else the pre-rolled
 //   'upcoming' tier: PixelClicker.RollTier hands out that same tier, so the preview is true; it is re-rolled if a potion / skill / switch makes it invalid; nothing is pre-rolled while
-//   this window is hidden, so normal play rolls exactly as before), CurrentClickTierIndex and PreviousTierIndex. The cubes are PixelCubeIcon (UI) in the tier colours.
+//   this window is hidden, so normal play rolls exactly as before), CurrentClickTierIndex and PreviousTierIndex. The cubes are the blocks' REAL models (PixelTierPicture: a hidden studio camera per block rendering into a RenderTexture, shown by a RawImage), not flat coloured cubes.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -52,7 +52,7 @@ public class PixelNextUp : MonoBehaviour
     private class Chip
     {
         public RectTransform rect;
-        public PixelCubeIcon icon;
+        public RawImage pic;   // the block's real model (PixelTierPicture)
         public int tier;
         public Color baseColor;
         public float y, alpha, scale;
@@ -149,17 +149,15 @@ public class PixelNextUp : MonoBehaviour
 
     private Chip NewChip(int tier, int i, bool fromAbove, bool grow = false)
     {
-        Color col = clicker.Tiers[tier].color;   // (glass-like types stay a little see-through)
-        col.a = Mathf.Max(0.55f, col.a);
         GameObject g = new GameObject("Cube " + tier, typeof(RectTransform));
         g.transform.SetParent(chipHost, false);
         RectTransform r = g.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
         r.sizeDelta = new Vector2(IconSize, IconSize);
-        PixelCubeIcon icon = g.AddComponent<PixelCubeIcon>();
-        icon.spinDegreesPerSecond = 45f;
-        icon.fill = 0.74f;
-        Chip c = new Chip { rect = r, icon = icon, tier = tier, baseColor = col };
+        RawImage pic = g.AddComponent<RawImage>();
+        pic.raycastTarget = false;
+        pic.texture = PixelTierPicture.Get(clicker, tier);
+        Chip c = new Chip { rect = r, pic = pic, tier = tier, baseColor = Color.white };
         SetTargets(c, i);
         c.y = fromAbove ? Spacing * 1.9f : c.targetY;
         c.alpha = fromAbove || grow ? 0f : c.targetAlpha;
@@ -174,7 +172,14 @@ public class PixelNextUp : MonoBehaviour
         c.rect.anchoredPosition = new Vector2(-28f, c.y);
         c.rect.localScale = Vector3.one * Mathf.Max(0.001f, c.scale);
         Color col = c.baseColor; col.a = Mathf.Clamp01(c.baseColor.a * c.alpha);
-        c.icon.color = col;
+        c.pic.color = col;
+    }
+
+    private void LateUpdate()
+    {
+        if (!built || canvasRoot == null || !canvasRoot.activeInHierarchy) return;
+        float yaw = Time.unscaledTime * 45f;
+        for (int i = 0; i < chips.Count; i++) if (chips[i] != null && chips[i].pic != null && chips[i].pic.texture != null) PixelTierPicture.Render(chips[i].tier, yaw);
     }
 
     private void Animate(float dt)

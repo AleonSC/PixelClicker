@@ -128,6 +128,7 @@
 | Foraging pixels / Forager's Pack | Foraging (PixelSkills.ForagingId, second base gathering skill after Woodcutting; | `docs/systems/SkillBlocks.md` |
 | Fishing / ore rework | Fishing (PixelSkills.FishingId, third base gathering skill; | `docs/systems/SkillBlocks.md` |
 | `PixelFilters.cs` | Screen filters (Settings > Display: CRT TV, VHS, Wild West, Noir, Night Vision, Neon Dream; URP post-processing volume + a code-drawn overlay, strength slider). | in the header comment of `PixelFilters.cs` |
+| `PixelTierPicture.cs` | Shared real-model pictures of pixel types (hidden studio + camera -> RenderTexture): PixelTierPicture.Get / Render. Used by the Next-up window; the guide / shop / log / operation studios still have their own copies. | in the header comment of `PixelTierPicture.cs` |
 | `PixelNextUp.cs` | The 'Next up' window (shown with Block Hold): a vertical window with three spinning cubes - the next block on top, the current one in the middle, the previous one at the bottom - that slide down when the block changes. | in the header comment of `PixelNextUp.cs` |
 | `PixelBlockRules.cs` | Shared foundation for SPECIAL blocks (rare replacements of rolled blocks, e.g. Great Oak) and HOLD blocks (bonus while held with Block Hold, e.g. Whetstone): two data lists of rules. | `docs/systems/PixelBlockRules.md` |
 | `PixelBlockHold.cs` | Block Hold (shop pack unlocksBlockHold): hold the right mouse button on the cube's block to pull it out of the rotation while a meter drains; letting go puts it back. | in the header comment of `PixelBlockHold.cs` |

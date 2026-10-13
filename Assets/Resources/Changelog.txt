@@ -837,3 +837,4 @@
 [2026-10-13 17:22] Added a 'stall' flag for blocks (every click on one freezes the Block Hold meter for a moment, meter turns icy); the Great Oak has it; shown as STALL on the Pixel Guide.
 [2026-10-13 17:23] Clicks on stalling blocks (Great Oak) also refill the Block Hold meter a little (4% of the meter per click).
 [2026-10-13 17:27] A released held block now comes back AFTER the block on the cube (first in line, hits kept) instead of replacing it, so a hazard that came up while holding can be cleared first and hold / release can't be used to reroll the cube.
+[2026-10-13 17:29] The Next-up window (block predictor) now shows each block's real 3D model with its true look instead of a plain coloured cube; new shared PixelTierPicture helper.
