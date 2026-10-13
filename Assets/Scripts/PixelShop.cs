@@ -1930,6 +1930,18 @@ public partial class PixelShop : MonoBehaviour
     public bool TryGetAutoClickerGoal(out string packName, out string costText, out double have, out double need)
         => TryGetPackGoal(p => p.unlocksAutoClicker, false, out packName, out costText, out have, out need);
 
+    /// <summary>The Woodcutter's Pack goal (shown after the Toggles tutorial's skills hint): false once it is bought.</summary>
+    public bool TryGetWoodcutterGoal(out string packName, out string costText, out double have, out double need)
+        => TryGetPackGoal(p => Rewards(p, PixelClicker.PixelType.Wood), false, out packName, out costText, out have, out need);
+
+    /// <summary>Is the Auto Clicker pack bought?</summary>
+    public bool AutoClickerBought()
+    {
+        if (packs == null) return false;
+        for (int i = 0; i < packs.Length; i++) if (packs[i] != null && packs[i].unlocksAutoClicker) return IsPurchased(i);
+        return false;
+    }
+
     /// <summary>Is the first level of the Combo Meter bought?</summary>
     public bool ComboMeterBought()
     {

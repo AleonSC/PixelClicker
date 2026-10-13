@@ -1119,7 +1119,13 @@ public partial class PixelShop
         int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
         for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
         bool grouped = !searching && currentTab == ShopTab.Pixels;
-        if (grouped) System.Array.Sort(packOrder, (a, b) => { int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b])); return d != 0 ? d : a.CompareTo(b); });
+        if (grouped) System.Array.Sort(packOrder, (a, b) =>
+        {
+            int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b]));
+            if (d != 0) return d;
+            if (IsWoodcutterPack(packs[a]) != IsWoodcutterPack(packs[b])) return IsWoodcutterPack(packs[a]) ? -1 : 1;   // the Woodcutter's Pack stands first in the Pixels tab
+            return a.CompareTo(b);
+        });
         int lastSection = -1;
 
         for (int oi = 0; oi < packOrder.Length; oi++)
@@ -1137,7 +1143,7 @@ public partial class PixelShop
                 ? openParent >= 0 && pack.ParentIndex == openParent && listed && !HiddenAsPurchased(i)
                 : (searching ? MatchesSearch(pack) : TabOf(pack) == currentTab && showGeneral) && listed && !HiddenAsPurchased(i);
 
-            if (visible && grouped && !child && SectionOf(pack) == 0 && owned) visible = false;   // the RGB pack disappears once bought, whatever the 'hide purchased' setting says
+            if (visible && grouped && !child && SectionOf(pack) == 0 && owned && !IsWoodcutterPack(pack)) visible = false;   // the RGB pack disappears once bought, whatever the 'hide purchased' setting says
             if (visible && grouped && sectionHeaders != null && !child && SectionOf(pack) != 0)
             {
                 int sec = SectionOf(pack);
@@ -1252,8 +1258,12 @@ public partial class PixelShop
     private readonly bool[] sectionCollapsed = { false, true, true };   // the two sections start collapsed
 
     /// <summary>Which Pixels-tab section a pack belongs to: 0 = the RGB pack (listed above the sections, hidden once bought), 1 = single toggleable pixels (Glass, Luminescent, Obsidian...), 2 = skill packs (many pixels at once).</summary>
+    /// <summary>The Woodcutter's Pack (the first skill pack): it is listed FIRST in the Pixels tab, above the RGB pack and the sections, and stays listed once bought.</summary>
+    private static bool IsWoodcutterPack(ShopPack pack) => pack != null && Rewards(pack, PixelClicker.PixelType.Wood);
+
     private static int SectionOf(ShopPack pack)
     {
+        if (IsWoodcutterPack(pack)) return 0;   // (with the RGB pack, but sorted before it)
         if (!string.IsNullOrEmpty(pack.skillId)) return 2;   // a skill pack, even without reward pixels of its own
         if (pack.rewardTiers == null || pack.rewardTiers.Length == 0) return 1;
         if (pack.rewardTiers.Length >= 4) return 2;

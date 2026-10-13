@@ -1458,6 +1458,21 @@ public class PixelLog : MonoBehaviour
             }
         }
 
+        // After the Auto Clicker (and Cubie's Toggles tutorial that hints at skills; with tips off straight away): buy the Woodcutter's Pack, the first skill.
+        if (shop != null && shop.ShopAvailable && shop.AutoClickerBought() && (PixelStats.Total(PixelTogglesTutorial.DoneKey) >= 1d || !PixelHints.TipsEnabled) &&
+            shop.TryGetWoodcutterGoal(out string woodName, out string woodCost, out double woodHave, out double woodNeed))
+        {
+            goals.Add(new Goal
+            {
+                title = string.Format(buyRgbGoalFormat, woodName),
+                description = string.Format(buyRgbGoalDescription, woodCost),
+                count = woodHave,
+                goal = woodNeed,
+                skinTier = clicker.IndexOf(PixelClicker.PixelType.Wood),
+                iconColor = new Color(0.6f, 0.4f, 0.22f, 1f),
+            });
+        }
+
         foreach (PixelMinigame m in PixelMinigame.All)
         {
             if (m == null || !m.HasTracker || !(m.Running || m.TrackerCount > 0d)) continue;
