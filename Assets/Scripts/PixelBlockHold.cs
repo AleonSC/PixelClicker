@@ -9,6 +9,7 @@
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
+//   STALL: PixelTier.stallsHold / stallSeconds (Great Oak): every click on such a block freezes the drain for stallSeconds (PixelBlockHold.Stall), the meter turns icy while frozen.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
 using TMPro;
@@ -75,6 +76,7 @@ public class PixelBlockHold : MonoBehaviour
     private bool unlocked, holding;
     private int heldTier = -1, heldHits;
     private float meter = 1f, cooldown, flash;
+    private float stallUntil;   // while a click on a stalling block is fresh the hold meter does not drain
     private float shown = 1f, readyPop;   // the meter as drawn (it glides to the real value) / the "recharged!" pop timer
 
     // ---- state of the held block's picture ----
@@ -99,6 +101,14 @@ public class PixelBlockHold : MonoBehaviour
 
     public bool Active => unlocked && !disableBlockHold;
     public bool Holding => holding;
+
+    /// <summary>A click landed on a stalling block (PixelTier.stallsHold): the hold meter stops draining for this many seconds.</summary>
+    public static void Stall(float seconds)
+    {
+        if (Instance != null) Instance.stallUntil = Mathf.Max(Instance.stallUntil, Time.unscaledTime + Mathf.Max(0.05f, seconds));
+    }
+
+    private bool Stalled => Time.unscaledTime < stallUntil;
 
     /// <summary>The tier index of the block in hand (-1 when nothing is held).</summary>
     /// <summary>Is the block in hand a hold block (one with a bonus rule)? It can be held twice as long.</summary>
@@ -152,7 +162,7 @@ public class PixelBlockHold : MonoBehaviour
             if (!PixelInput.RightHeld()) Release(false);
             else
             {
-                meter -= dt / (HeldIsHoldBlock() ? HoldBlockSeconds : HoldSeconds);
+                if (!Stalled) meter -= dt / (HeldIsHoldBlock() ? HoldBlockSeconds : HoldSeconds);   // (a stalling block, e.g. the Great Oak, freezes it)
                 if (meter <= 0f) { meter = 0f; Release(true); }
             }
         }
@@ -401,6 +411,7 @@ public class PixelBlockHold : MonoBehaviour
         float warn = holding && k < 0.3f ? 0.5f + 0.5f * Mathf.Sin(time * (14f + (0.3f - k) * 40f)) : 0f;   // faster flicker the lower it gets
         c = Color.Lerp(c, Color.white, warn * 0.35f);
         c = Color.Lerp(c, exhaustColor, flashing ? 0.4f + 0.6f * pulse : 0f);
+        if (holding && Stalled) c = Color.Lerp(c, new Color(0.75f, 0.95f, 1f, 1f), 0.65f);   // frozen: an icy white-blue
         if (!holding && !flashing) c = Color.Lerp(c, new Color(0.35f, 0.5f, 0.75f, 1f), 0.45f);   // recharging: subdued
         if (!holding && cooldown > 0f && !flashing) c.a = 0.6f;   // waiting for the recharge to begin
         fill.color = c;

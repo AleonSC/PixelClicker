@@ -109,7 +109,7 @@ public class PixelBlockRules : MonoBehaviour
                 tier = new PixelClicker.PixelTier
                 {
                     type = PixelClicker.PixelType.GreatOak, displayName = "Great Oak", color = new Color(0.36f, 0.26f, 0.15f, 1f),
-                    amountPerClick = 150, clicksToCollect = 100, randomClicks = true, randomClicksMin = 50, randomClicksMax = 100,
+                    amountPerClick = 150, clicksToCollect = 100, randomClicks = true, randomClicksMin = 50, randomClicksMax = 100, stallsHold = true, stallSeconds = 1.5f,
                     spawnWeight = 0f, spawnSwitch = PixelClicker.SpawnSwitch.AlwaysOn, unlockMode = PixelClicker.TierUnlockMode.ShopOnly,
                 },
             });
