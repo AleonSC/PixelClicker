@@ -335,6 +335,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the Settings tick box for the neon glow along the black bars.")]
     [SerializeField] private string barGlowLabel = "Neon bar glow";
 
+    [Tooltip("Label of the tick box for the soft glow behind the clicker cube.")]
+    [SerializeField] private string clickerAuraLabel = "Clicker glow aura";
+
     [Tooltip("Shown in the floor style picker when the scene has no floor to restyle.")]
     [SerializeField] private string noFloorText = "No floor found";
 
@@ -2353,6 +2356,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
         AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
+        AddSettingToggle(list, clickerAuraLabel, () => PixelClickerAura.Enabled, on => PixelClickerAura.Enabled = on, ref y);
         AddSettingToggle(list, nextUpLabel, () => PixelNextUp.Enabled, on => PixelNextUp.Enabled = on, ref y);
         AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
         AddSettingToggle(list, fancyMenuLabel, () => PixelMenuFx.Enabled, on => PixelMenuFx.Enabled = on, ref y);

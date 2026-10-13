@@ -1162,6 +1162,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelViewWindow>() == null) gameObject.AddComponent<PixelViewWindow>();   // the View window (key V): views, flat view, zoom, orbit controls
         if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
         if (PixelFind.First<PixelOrbitCamera>() == null) gameObject.AddComponent<PixelOrbitCamera>();   // orbital camera (third step of the view key)
+        if (PixelFind.First<PixelClickerAura>() == null) gameObject.AddComponent<PixelClickerAura>();   // the soft glow behind the clicker cube (Settings)
         if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar

@@ -793,3 +793,4 @@
 [2026-10-13 13:51 UTC] Dev Tools: the on-screen spawn selector is now two widgets in the Main tab - Spawned pixel and Minigames, each with its own Spawn and Despawn buttons - plus a Middle click widget; the dropdown widgets sit on a pinned board at the top.
 [2026-10-13 13:57 UTC] New Dev Hub 'Tester' tab (spawn and try features that are not in the game yet, with a placement ghost on the mouse) and its first feature: a detailed Wood Chipper that shreds old pixels.
 [2026-10-13 13:58 UTC] Drop-down lists (the title screen's floor / sky pickers, Settings look lists and every other code-built drop-down) now open scrolled to the entry you chose instead of the top.
+[2026-10-13 14:03 UTC] Fixed the Wood Chipper glowing like the cube (its materials inherited the cube's emission), and added a 'Clicker glow aura' (Settings > Interface, on by default): a soft halo in the pixel's colour behind the clicker cube so it is easier to find without changing the pixels.

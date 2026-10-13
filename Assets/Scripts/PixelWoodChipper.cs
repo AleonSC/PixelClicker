@@ -373,6 +373,9 @@ public class PixelWoodChipper : MonoBehaviour
             if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", metal);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smooth);
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smooth);
+            // The cube's material (which the copy comes from) can glow: switch every trace of emission off, or the whole machine shines like the cube.
+            if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", Color.black);
+            m.DisableKeyword("_EMISSION");
             if (!unique) mats[key] = m;
             return m;
         }
@@ -690,6 +693,7 @@ public class PixelWoodChipper : MonoBehaviour
         lamp = lampGo.transform;
         Material own = k.Mat(new Color(1f, 0.7f, 0.1f), 0f, 0.85f, true);   // its own material so blinking doesn't recolour anything else
         lampGo.GetComponent<Renderer>().sharedMaterial = own;
+        if (!k.ghost) own.EnableKeyword("_EMISSION");   // the beacon is the one thing that glows
         return k.ghost ? null : own;
     }
 }
