@@ -3205,11 +3205,14 @@ public class PixelHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHan
 }
 
 /// <summary>Drags a UI box by this handle (the pause menu's floor-style pop-out).</summary>
-public class PixelPopoutDrag : MonoBehaviour, UnityEngine.EventSystems.IDragHandler
+public class PixelPopoutDrag : MonoBehaviour, UnityEngine.EventSystems.IDragHandler, UnityEngine.EventSystems.IEndDragHandler
 {
     public RectTransform target;
     public Canvas canvas;
     public System.Action onMoved;
+    public System.Action onEnd;   // the drag was let go (My Window docks to an edge here)
+
+    public void OnEndDrag(UnityEngine.EventSystems.PointerEventData e) { onEnd?.Invoke(); }
     public bool locked;   // 'stuck' boxes can't be dragged
 
     public void OnDrag(UnityEngine.EventSystems.PointerEventData e)

@@ -12,6 +12,12 @@
 //   The rows are saved per save file (JSON in PlayerPrefs PixelClicker.Setting.MyWindow, listed in PixelSettingsSync.Known_, reloaded
 //   by PixelMyWindow.ReloadFromPrefs). Values refresh every refreshSeconds (0 = 0.4); rows are rebuilt when what an 'all' row expands
 //   to changes.
+//   Layout (current): opens as a tall window (defaultSize 0 = 450 x 660) at the right side just above the bottom black bar (layout version 2 ignores older saved
+//   geometry). It can only be dragged INSIDE the playfield between the black bars and the screen sides (ClampToScreen). MINIMIZE button in the header: only the
+//   header remains (still draggable); the full height is remembered. DOCKING: let go of a drag with the window against the left or right screen edge (edgeSnap px) and it docks
+//   there at that height (dockSide -1 / +1, dockY): only a sliver (dockSliver) stays on screen and it slides out while the mouse is near / over it or while editing
+//   (UpdateDock); an UNDOCK arrow button appears in the header while docked (it pulls the window back into the screen); a pale strip at the edge shows while a drag is close
+//   enough to dock. Saved globally: PixelClicker.MyWindow.Min / Dock / DockY next to X / Y / W / H.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -39,7 +45,7 @@ public class PixelMyWindow : MonoBehaviour
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "My Window";
 
-    [Tooltip("Starting size of the window (canvas units). 0 = the coded default (470 x 640).")]
+    [Tooltip("Starting size of the window (canvas units). 0 = the coded default (450 x 660, tall).")]
     [SerializeField] private Vector2 defaultSize = Vector2.zero;
 
     [Tooltip("Canvas sorting order (below the Shop / Skills windows, above the game). 0 = the coded default (107).")]
@@ -126,6 +132,15 @@ public class PixelMyWindow : MonoBehaviour
     private TMP_Dropdown typeDropdown, targetDropdown;
     private readonly List<string> targetKeys = new List<string>();
     private bool open, editing;
+    private bool minimized;
+    private float restoreHeight = 660f;
+    private int dockSide;          // 0 = free, -1 = docked on the left edge, 1 = docked on the right edge
+    private float dockY, dockSlide;
+    private Button minimizeButton, undockButton;
+    private GameObject editButtonObject, resizeHandleObject;
+    private PixelPopoutDrag headerDrag;
+    private RectTransform dockHint;
+    private const float HeaderHeight = 60f, EdgeSnap = 70f, DockSliver = 36f, EdgeMargin = 14f;
     private float refreshTimer, saveTimer, hudTimer;
     private bool geometryDirty;
     private bool buttonAvailable;
@@ -161,6 +176,9 @@ public class PixelMyWindow : MonoBehaviour
         BuildUI();
         LoadEntries();
         open = PlayerPrefs.GetInt(PrefPrefix + "Open", 0) != 0;
+        if (minimized) windowRect.sizeDelta = new Vector2(windowRect.sizeDelta.x, HeaderHeight);
+        ApplyDockState();
+        Layout();
         ApplyOpen();
         if (!open) windowObject.SetActive(false);
     }
@@ -195,8 +213,12 @@ public class PixelMyWindow : MonoBehaviour
         PlayerPrefs.SetFloat(PrefPrefix + "X", windowRect.anchoredPosition.x);
         PlayerPrefs.SetFloat(PrefPrefix + "Y", windowRect.anchoredPosition.y);
         PlayerPrefs.SetFloat(PrefPrefix + "W", windowRect.sizeDelta.x);
-        PlayerPrefs.SetFloat(PrefPrefix + "H", windowRect.sizeDelta.y);
+        PlayerPrefs.SetFloat(PrefPrefix + "H", minimized ? restoreHeight : windowRect.sizeDelta.y);
         PlayerPrefs.SetInt(PrefPrefix + "Open", open ? 1 : 0);
+        PlayerPrefs.SetInt(PrefPrefix + "Layout", 2);
+        PlayerPrefs.SetInt(PrefPrefix + "Min", minimized ? 1 : 0);
+        PlayerPrefs.SetInt(PrefPrefix + "Dock", dockSide);
+        PlayerPrefs.SetFloat(PrefPrefix + "DockY", dockY);
     }
 
     // ------------------------------------------------------------------
@@ -225,9 +247,22 @@ public class PixelMyWindow : MonoBehaviour
         PixelUIKit.StyleWindow(windowObject.GetComponent<Image>(), panelColor);
         windowRect = windowObject.GetComponent<RectTransform>();
         windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(0f, 1f);
-        Vector2 size = defaultSize.x > 100f && defaultSize.y > 100f ? defaultSize : new Vector2(470f, 640f);
-        windowRect.sizeDelta = new Vector2(Mathf.Max(MinSize.x, PlayerPrefs.GetFloat(PrefPrefix + "W", size.x)), Mathf.Max(MinSize.y, PlayerPrefs.GetFloat(PrefPrefix + "H", size.y)));
-        windowRect.anchoredPosition = new Vector2(PlayerPrefs.GetFloat(PrefPrefix + "X", 60f), PlayerPrefs.GetFloat(PrefPrefix + "Y", -170f));
+        Vector2 size = defaultSize.x > 100f && defaultSize.y > 100f ? defaultSize : new Vector2(450f, 660f);
+        bool saved = PlayerPrefs.GetInt(PrefPrefix + "Layout", 0) == 2;   // (older saved places / sizes are ignored once: the window now opens tall at the right)
+        windowRect.sizeDelta = saved ? new Vector2(Mathf.Max(MinSize.x, PlayerPrefs.GetFloat(PrefPrefix + "W", size.x)), Mathf.Max(MinSize.y, PlayerPrefs.GetFloat(PrefPrefix + "H", size.y))) : size;
+        restoreHeight = windowRect.sizeDelta.y;
+        Vector2 cs = canvasRect.rect.size;
+        if (cs.x < 100f || cs.y < 100f) cs = new Vector2(1920f, 1080f);
+        float inset = BarInset();
+        windowRect.anchoredPosition = saved
+            ? new Vector2(PlayerPrefs.GetFloat(PrefPrefix + "X", 60f), PlayerPrefs.GetFloat(PrefPrefix + "Y", -170f))
+            : new Vector2(cs.x - windowRect.sizeDelta.x - 22f, -(cs.y - inset - windowRect.sizeDelta.y));   // right side, just above the bottom bar
+        if (saved)
+        {
+            minimized = PlayerPrefs.GetInt(PrefPrefix + "Min", 0) != 0;
+            dockSide = PlayerPrefs.GetInt(PrefPrefix + "Dock", 0);
+            dockY = PlayerPrefs.GetFloat(PrefPrefix + "DockY", windowRect.anchoredPosition.y);
+        }
 
         // Header: title (drag handle), Edit, close.
         GameObject header = new GameObject("Header", typeof(RectTransform), typeof(Image));
@@ -239,7 +274,9 @@ public class PixelMyWindow : MonoBehaviour
         PixelPopoutDrag drag = header.AddComponent<PixelPopoutDrag>();
         drag.target = windowRect;
         drag.canvas = canvas;
-        drag.onMoved = () => { ClampToScreen(); geometryDirty = true; };
+        headerDrag = drag;
+        drag.onMoved = () => { ClampToScreen(); UpdateDockHint(); geometryDirty = true; };
+        drag.onEnd = () => { TryDock(); UpdateDockHint(); geometryDirty = true; };
 
         TMP_Text title = PixelUIKit.CreateText(Font, header.transform, "Title", windowTitle, 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         PixelUIKit.Caps(title);
@@ -248,7 +285,7 @@ public class PixelMyWindow : MonoBehaviour
         title.fontSizeMax = 30f;
         title.fontSizeMin = 14f;
         title.rectTransform.anchorMin = Vector2.zero; title.rectTransform.anchorMax = Vector2.one;
-        title.rectTransform.offsetMin = new Vector2(18f, 0f); title.rectTransform.offsetMax = new Vector2(-170f, 0f);
+        title.rectTransform.offsetMin = new Vector2(18f, 0f); title.rectTransform.offsetMax = new Vector2(-270f, 0f);
 
         Button close = PixelUIKit.CreateButton(Font, header.transform, "Close", "X", new Vector2(44f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 26f);
         RectTransform cr = close.GetComponent<RectTransform>();
@@ -262,6 +299,30 @@ public class PixelMyWindow : MonoBehaviour
         er.anchoredPosition = new Vector2(-62f, 0f);
         editLabel = edit.GetComponentInChildren<TMP_Text>();
         edit.onClick.AddListener(() => { editing = !editing; RebuildRows(); });
+        editButtonObject = edit.gameObject;
+
+        // Minimize: a small bar icon. Undock: an arrow (shown only while docked) that pulls the window back into the screen.
+        minimizeButton = PixelUIKit.CreateButton(Font, header.transform, "Minimize", "", new Vector2(44f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 22f);
+        RectTransform mr = minimizeButton.GetComponent<RectTransform>();
+        mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(1f, 0.5f);
+        mr.anchoredPosition = new Vector2(-166f, 0f);
+        GameObject bar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
+        bar.transform.SetParent(minimizeButton.transform, false);
+        bar.GetComponent<Image>().color = Color.white;
+        bar.GetComponent<Image>().raycastTarget = false;
+        RectTransform br2 = bar.GetComponent<RectTransform>();
+        br2.anchorMin = br2.anchorMax = br2.pivot = new Vector2(0.5f, 0.5f);
+        br2.sizeDelta = new Vector2(20f, 4f);
+        br2.anchoredPosition = new Vector2(0f, -6f);
+        minimizeButton.onClick.AddListener(() => SetMinimized(!minimized));
+
+        undockButton = PixelUIKit.CreateButton(Font, header.transform, "Undock", ">", new Vector2(44f, 44f), buttonColor, Color.white, 22f);
+        RectTransform ur = undockButton.GetComponent<RectTransform>();
+        ur.anchorMin = ur.anchorMax = ur.pivot = new Vector2(1f, 0.5f);
+        ur.anchoredPosition = new Vector2(-218f, 0f);
+        PixelUIKit.UseArrowGlyph(undockButton, false);
+        undockButton.onClick.AddListener(Undock);
+        undockButton.gameObject.SetActive(false);
 
         // Add bar (edit mode): what to add, which one, the Add button.
         GameObject bar = new GameObject("Add Bar", typeof(RectTransform), typeof(Image));
@@ -308,6 +369,15 @@ public class PixelMyWindow : MonoBehaviour
         rr.anchoredPosition = new Vector2(-6f, 6f);
         PixelMyWindowResizer resizer = handle.GetComponent<PixelMyWindowResizer>();
         resizer.owner = this;
+        resizeHandleObject = handle;
+
+        // A pale strip at a screen edge while a drag is close enough to dock there.
+        GameObject hint = new GameObject("Dock Hint", typeof(RectTransform), typeof(Image));
+        hint.transform.SetParent(canvasRoot.transform, false);
+        hint.GetComponent<Image>().color = new Color(0.45f, 0.85f, 1f, 0.35f);
+        hint.GetComponent<Image>().raycastTarget = false;
+        dockHint = hint.GetComponent<RectTransform>();
+        hint.SetActive(false);
 
         FillTargets();
         ClampToScreen();
@@ -327,8 +397,10 @@ public class PixelMyWindow : MonoBehaviour
     {
         Vector2 size = windowRect.sizeDelta + new Vector2(delta.x, -delta.y);
         size.x = Mathf.Clamp(size.x, MinSize.x, 1200f);
-        size.y = Mathf.Clamp(size.y, MinSize.y, 1000f);
+        float availableHeight = Mathf.Max(MinSize.y, canvasRect.rect.height - 2f * BarInset());
+        size.y = Mathf.Clamp(size.y, MinSize.y, Mathf.Min(1000f, availableHeight));
         windowRect.sizeDelta = size;
+        restoreHeight = size.y;
         ClampToScreen();
         Layout();
         geometryDirty = true;
@@ -336,18 +408,120 @@ public class PixelMyWindow : MonoBehaviour
 
     internal float CanvasScale => canvas != null && canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
 
+    /// <summary>How far the black bars (plus a little air) reach into the screen from the top / bottom.</summary>
+    private float BarInset() => (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 84f) + EdgeMargin;
+
+    /// <summary>Keeps the window INSIDE the playfield: between the black bars and the screen sides (a docked window only slides sideways, so only its height is kept in).</summary>
     private void ClampToScreen()
     {
-        Vector2 canvasSize = canvasRect.rect.size;
-        Vector2 p = windowRect.anchoredPosition;
-        p.x = Mathf.Clamp(p.x, 0f, Mathf.Max(0f, canvasSize.x - 120f));
-        p.y = Mathf.Clamp(p.y, -Mathf.Max(0f, canvasSize.y - 80f), 0f);
+        Vector2 cs = canvasRect.rect.size;
+        if (cs.x < 100f || cs.y < 100f) return;   // (the canvas has no size yet)
+        Vector2 p = windowRect.anchoredPosition, sz = windowRect.sizeDelta;
+        float inset = BarInset();
+        if (dockSide == 0) p.x = Mathf.Clamp(p.x, EdgeMargin, Mathf.Max(EdgeMargin, cs.x - sz.x - EdgeMargin));
+        float maxY = -inset, minY = -(cs.y - inset - sz.y);
+        p.y = Mathf.Clamp(p.y, Mathf.Min(minY, maxY), maxY);
         windowRect.anchoredPosition = p;
+        if (dockSide != 0) dockY = p.y;
+    }
+
+    // ---- Minimize ----
+
+    private void SetMinimized(bool on)
+    {
+        if (on == minimized) return;
+        if (on) restoreHeight = windowRect.sizeDelta.y;
+        minimized = on;
+        windowRect.sizeDelta = new Vector2(windowRect.sizeDelta.x, minimized ? HeaderHeight : restoreHeight);
+        ClampToScreen();
+        Layout();
+        geometryDirty = true;
+    }
+
+    // ---- Docking to a screen edge ----
+
+    /// <summary>After a drag: against the left or right screen edge = dock there at this height.</summary>
+    private void TryDock()
+    {
+        if (dockSide != 0 || canvasRect == null) return;
+        Vector2 cs = canvasRect.rect.size;
+        float left = windowRect.anchoredPosition.x, right = left + windowRect.sizeDelta.x;
+        int side = left < EdgeSnap ? -1 : cs.x - right < EdgeSnap ? 1 : 0;
+        if (side == 0) return;
+        dockSide = side;
+        dockY = windowRect.anchoredPosition.y;
+        dockSlide = 1f;   // (it is out right now; it tucks away when the mouse leaves)
+        ApplyDockState();
+        PixelAudio.Play("ui_click");
+    }
+
+    private void Undock()
+    {
+        if (dockSide == 0) return;
+        Vector2 cs = canvasRect.rect.size;
+        int side = dockSide;
+        dockSide = 0;
+        windowRect.anchoredPosition = new Vector2(side < 0 ? EdgeMargin : cs.x - windowRect.sizeDelta.x - EdgeMargin, dockY);
+        ClampToScreen();
+        ApplyDockState();
+        geometryDirty = true;
+        PixelAudio.Play("ui_click");
+    }
+
+    /// <summary>Shows the undock button and locks / unlocks dragging.</summary>
+    private void ApplyDockState()
+    {
+        if (undockButton != null)
+        {
+            undockButton.gameObject.SetActive(dockSide != 0);
+            undockButton.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 180f : 0f);   // points into the screen
+        }
+        if (headerDrag != null) headerDrag.locked = dockSide != 0;   // a docked window is moved by undocking it first
+        geometryDirty = true;
+    }
+
+    /// <summary>The pale strip at the edge a drag is about to dock to.</summary>
+    private void UpdateDockHint()
+    {
+        if (dockHint == null || canvasRect == null) return;
+        bool dragging = PixelInput.LeftHeld() && dockSide == 0;
+        Vector2 cs = canvasRect.rect.size;
+        float left = windowRect.anchoredPosition.x, right = left + windowRect.sizeDelta.x;
+        int side = !dragging ? 0 : left < EdgeSnap ? -1 : cs.x - right < EdgeSnap ? 1 : 0;
+        dockHint.gameObject.SetActive(side != 0);
+        if (side == 0) return;
+        float inset = BarInset() - EdgeMargin;
+        dockHint.anchorMin = new Vector2(side < 0 ? 0f : 1f, 0f);
+        dockHint.anchorMax = new Vector2(side < 0 ? 0f : 1f, 1f);
+        dockHint.pivot = new Vector2(side < 0 ? 0f : 1f, 0.5f);
+        dockHint.sizeDelta = new Vector2(16f, -2f * inset);
+        dockHint.anchoredPosition = Vector2.zero;
+    }
+
+    /// <summary>A docked window sits at its edge with only a sliver showing and slides out while the mouse is near it (or while it is being edited).</summary>
+    private void UpdateDock()
+    {
+        Vector2 cs = canvasRect.rect.size;
+        float w = windowRect.sizeDelta.x, h = windowRect.sizeDelta.y;
+        bool near = editing;
+        if (!near && RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
+        {
+            float px = local.x + cs.x * 0.5f, py = cs.y * 0.5f - local.y;   // from the top left, y down
+            float edge = dockSide < 0 ? px : cs.x - px;
+            float top = -dockY;
+            near = edge <= DockSliver + dockSlide * w && py >= top - 20f && py <= top + h + 20f;
+        }
+        dockSlide = Mathf.MoveTowards(dockSlide, near ? 1f : 0f, Time.unscaledDeltaTime / 0.22f);
+        float e = Mathf.SmoothStep(0f, 1f, dockSlide);
+        float shownX = dockSide < 0 ? EdgeMargin * 0.5f : cs.x - w - EdgeMargin * 0.5f;
+        float hiddenX = dockSide < 0 ? -(w - DockSliver) : cs.x - DockSliver;
+        windowRect.anchoredPosition = new Vector2(Mathf.Lerp(hiddenX, shownX, e), dockY);
     }
 
     private void ApplyOpen()
     {
         if (windowObject == null) return;
+        if (open && dockSide != 0) dockSlide = 1f;
         if (open) PixelPop.Show(windowObject); else PixelPop.Hide(windowObject);
         if (open) RebuildRows();
         geometryDirty = true;
@@ -358,12 +532,15 @@ public class PixelMyWindow : MonoBehaviour
     {
         if (scroll == null) return;
         float top = 64f + (editing ? 170f : 0f);
+        scroll.gameObject.SetActive(!minimized);
+        if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
+        if (editButtonObject != null) editButtonObject.SetActive(!minimized);
         RectTransform vr = scroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(12f, 34f);
         vr.offsetMax = new Vector2(-12f, -top);
-        addBar.gameObject.SetActive(editing);
+        addBar.gameObject.SetActive(editing && !minimized);
         if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
         UpdateContentHeight();
     }
@@ -869,6 +1046,8 @@ public class PixelMyWindow : MonoBehaviour
         saveTimer -= Time.unscaledDeltaTime;
         if (geometryDirty && saveTimer <= 0f && !PixelInput.LeftHeld()) { SaveGeometry(); saveTimer = 0.5f; }
 
+        if (open && dockSide != 0) UpdateDock();
+        if (open) UpdateDockHint();
         if (!open) return;
         sampleTimer -= Time.unscaledDeltaTime;
         if (sampleTimer <= 0f) { sampleTimer = 1f; SampleRates(); }
