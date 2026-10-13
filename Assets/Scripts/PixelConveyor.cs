@@ -278,6 +278,7 @@ public class PixelConveyor : MonoBehaviour
             ribs.Add(chev.transform);
         }
         BuildSupports(k, steel);
+        ApplySelection();
         PlaceRibs();
     }
 
@@ -400,6 +401,31 @@ public class PixelConveyor : MonoBehaviour
     }
 
     public static IReadOnlyList<PixelConveyor> All => all;
+
+    // ---------------- selection (Dev Hub tester: several belts edited together) ----------------
+
+    private bool selected;
+    public bool Selected => selected;
+
+    /// <summary>Shows or hides the teal selection glow round the belt.</summary>
+    public void SetSelected(bool on)
+    {
+        selected = on;
+        ApplySelection();
+    }
+
+    private void ApplySelection()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = transform.GetChild(i);
+            if (child.name == "Selection") { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+        }
+        if (!selected || ghostMode) return;
+        PixelFactoryKit k = new PixelFactoryKit(clicker, true);
+        k.alpha = 0.4f;
+        k.Box("Selection", transform, new Vector3(0f, height * 0.5f + 0.1f * unit, 0f), new Vector3(width + 0.5f * unit, height + 0.45f * unit, length + 0.3f * unit), new Color(0.2f, 0.9f, 1f, 1f));
+    }
 }
 
 /// <summary>One place that captures, carries, hands on and ejects the pixels riding every belt (physics step), and turns a belt round when it is right-clicked.</summary>
@@ -646,34 +672,51 @@ public class PixelConveyorSystem : MonoBehaviour
     {
         if (editorOpen && PixelKeys.KeyPressed(KeyCode.Escape)) { CloseEditor(); return; }   // Esc backs out (the number box swallows the key for itself, so it is checked here too)
         if (clicker != null && PixelConveyor.All.Count > 0) CarryPlayer();
-        if (clicker == null || !PixelInput.RightPressed() || PixelClicker.ExternalClickBlock && !PixelFirstPerson.Active || PixelPauseMenu.IsPaused || editorOpen) return;
+        if (clicker == null || PixelPauseMenu.IsPaused || editorOpen) return;
         bool fp = PixelFirstPerson.Active;
-        Ray ray;
-        float reach = 1000f;
+        if (PixelClicker.ExternalClickBlock && !fp) { flipTap.Update(null); return; }
         if (fp)
         {
-            if (!PixelFirstPerson.TryGetViewRay(out ray)) return;
-            reach = clicker.OldPixelWorldSize * 16f;
+            if (!PixelInput.RightPressed()) return;
+            if (!PixelFirstPerson.TryGetViewRay(out Ray fpRay)) return;
+            PixelConveyor fpBelt = BeltUnder(fpRay, clicker.OldPixelWorldSize * 16f);
+            if (fpBelt != null) OpenEditor(fpBelt);    // first person: type a custom speed
+            return;
         }
-        else
-        {
-            if (PixelInput.PointerOverUI()) return;
-            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-            if (cam == null) return;
-            ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
-        }
+        // Normal view: a quick right CLICK turns the belt round (holding the button deletes a tester object instead, see PixelFeatureTester).
+        if (!(PixelInput.RightPressed() || PixelInput.RightHeld() || flipTap.Pending)) return;
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        PixelConveyor belt = cam != null && !PixelInput.PointerOverUI() ? BeltUnder(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f) : null;
+        if (flipTap.Update(belt) && belt != null) belt.Flip();
+    }
+
+    private readonly PixelRightTap flipTap = new PixelRightTap();
+
+    /// <summary>The belt under a ray (the cube or an old pixel in front of it wins: then null).</summary>
+    private PixelConveyor BeltUnder(Ray ray, float reach)
+    {
         RaycastHit[] hits = Physics.RaycastAll(ray, reach, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
         foreach (RaycastHit h in hits)
         {
-            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return;   // the cube's own right click comes first
-            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return;
+            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return null;   // the cube's own right click comes first
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return null;
             PixelConveyor belt = h.collider.GetComponentInParent<PixelConveyor>();
-            if (belt == null) continue;
-            if (fp) OpenEditor(belt);    // first person: type a custom speed
-            else belt.Flip();            // normal view: turn it round
-            return;
+            if (belt != null) return belt;
         }
+        return null;
+    }
+
+    /// <summary>A pixel being grabbed by the player leaves its belt (or other lock) and gets its physics back.</summary>
+    public static void FreeRider(Rigidbody rb)
+    {
+        if (rb == null || !rb.isKinematic) return;
+        if (system != null)
+        {
+            system.riding.Remove(rb);
+            system.riders.RemoveAll(r => r.rb == rb);
+        }
+        rb.isKinematic = false;
     }
 
     // ---- the speed editor (first person right click on a belt) ----

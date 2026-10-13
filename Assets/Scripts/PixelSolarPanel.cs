@@ -261,19 +261,29 @@ public class PixelSolarPanel : MonoBehaviour
 
     // ---------------- right click on a placed panel: link again ----------------
 
+    private readonly PixelRightTap relinkTap = new PixelRightTap();   // (a right HOLD on a tester object deletes it, so only a quick click re-links)
+
     private void LateUpdate()
     {
-        if (clicker == null || !PixelInput.RightPressed() || PixelClicker.ExternalClickBlock || PixelPauseMenu.IsPaused || PixelInput.PointerOverUI() || PixelFirstPerson.Active) return;
+        if (clicker == null || !(PixelInput.RightPressed() || PixelInput.RightHeld() || relinkTap.Pending)) return;
+        bool usable = !PixelClicker.ExternalClickBlock && !PixelPauseMenu.IsPaused && !PixelInput.PointerOverUI() && !PixelFirstPerson.Active;
+        if (relinkTap.Update(usable && PointerOnThis() ? (object)this : null)) PixelFeatureTester.BeginLink(gameObject);
+    }
+
+    /// <summary>Is the pointer on this panel (nothing nearer in the way: the cube, an old pixel)?</summary>
+    private bool PointerOnThis()
+    {
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        if (cam == null) return;
+        if (cam == null) return false;
         RaycastHit[] hits = Physics.RaycastAll(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
         foreach (RaycastHit h in hits)
         {
-            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return;
-            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return;
-            if (h.collider.GetComponentInParent<PixelSolarPanel>() == this) { PixelFeatureTester.BeginLink(gameObject); return; }
+            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return false;
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return false;
+            if (h.collider.GetComponentInParent<PixelSolarPanel>() == this) return true;
         }
+        return false;
     }
 
     // ---------------- saving (PixelFeatureTester) ----------------

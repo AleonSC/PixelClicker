@@ -12,6 +12,14 @@ public sealed class PixelPathCarrier
 {
     private sealed class Item { public Rigidbody rb; public Vector3 from; public float approach, d; }
 
+    private static readonly HashSet<Rigidbody> carriedAll = new HashSet<Rigidbody>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { carriedAll.Clear(); }
+
+    /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Splitter)? Such pixels cannot be grabbed with the mouse.</summary>
+    public static bool IsCarried(Rigidbody rb) => rb != null && carriedAll.Contains(rb);
+
     private readonly List<Item> items = new List<Item>();
     private readonly HashSet<Rigidbody> set = new HashSet<Rigidbody>();
 
@@ -47,6 +55,7 @@ public sealed class PixelPathCarrier
     public void Add(Rigidbody rb)
     {
         if (rb == null || !set.Add(rb)) return;
+        carriedAll.Add(rb);
         SetVelocity(rb, Vector3.zero);
         rb.isKinematic = true;
         items.Add(new Item { rb = rb, from = rb.position });
@@ -61,7 +70,7 @@ public sealed class PixelPathCarrier
             OldPixelInfo info = c.rb != null ? c.rb.GetComponent<OldPixelInfo>() : null;
             if (c.rb == null || (info != null && info.heldByPlayer))   // gone, or grabbed (the grab's business now)
             {
-                if (c.rb != null) set.Remove(c.rb);
+                if (c.rb != null) { set.Remove(c.rb); carriedAll.Remove(c.rb); }
                 items.RemoveAt(i);
                 continue;
             }
@@ -82,6 +91,7 @@ public sealed class PixelPathCarrier
             {
                 Rigidbody rb = c.rb;
                 set.Remove(rb);
+                carriedAll.Remove(rb);
                 items.RemoveAt(i);
                 rb.isKinematic = false;
                 onEnd?.Invoke(rb);
@@ -93,7 +103,7 @@ public sealed class PixelPathCarrier
 
     public void ReleaseAll()
     {
-        foreach (Item c in items) if (c.rb != null) c.rb.isKinematic = false;
+        foreach (Item c in items) if (c.rb != null) { c.rb.isKinematic = false; carriedAll.Remove(c.rb); }
         items.Clear();
         set.Clear();
     }

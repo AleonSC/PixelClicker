@@ -411,6 +411,15 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("Fan: degrees per second turned while holding Q or E.")]
     [SerializeField] private float rotateSpeedDegrees = 120f;
 
+    [Header("Shift snapping")]
+    [Min(0f)]
+    [Tooltip("Holding Shift while placing snaps the spot to a grid of this many old-pixel widths (also used by the Dev Hub tester). 0 = the coded default (1).")]
+    [SerializeField] private float shiftSnapGridCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("Holding Shift while placing or turning snaps the turn to steps of this many degrees. 0 = the coded default (15).")]
+    [SerializeField] private float shiftSnapAngleDegrees = 0f;
+
     [Header("Removing")]
     [Min(0.1f)]
     [Tooltip("How long (seconds) you hold the right mouse button on a placed device to remove it. The same hold cancels the running potion.")]
@@ -1991,7 +2000,7 @@ public class PixelConsumables : MonoBehaviour
         : PixelKeys.Replace(devices[placingIndex].kind == DeviceKind.Sorter && sorterPhase == 1 ? devices[placingIndex].sorterBendMessage
         : devices[placingIndex].placingMessage);
 
-    private float placingYaw;
+    private float placingYaw, rawYaw;   // rawYaw = the turn before Shift snapping
     private bool chipperLatched;
     private Vector3 chipperLatchPoint;
     private float chipperLatchYaw;
@@ -2063,6 +2072,7 @@ public class PixelConsumables : MonoBehaviour
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         placingYaw = cam != null ? cam.transform.eulerAngles.y : 0f; // a fan starts out blowing away from the camera
         if (devices[deviceIndex].kind == DeviceKind.Funnel) placingYaw = 0f;   // (the funnel's turn is only a nudge on top of "away from the cube")
+        rawYaw = placingYaw;
         previewSorter = null;
         if (devices[deviceIndex].kind == DeviceKind.Sorter)
         {
@@ -2123,14 +2133,17 @@ public class PixelConsumables : MonoBehaviour
             return;
         }
 
+        PixelSnap.Configure(shiftSnapGridCubes, shiftSnapAngleDegrees);
         bool hasPoint = TryGetPlacePoint(out Vector3 point);
+        if (hasPoint && PixelSnap.Active) point = PixelSnap.Point(point, clicker.OldPixelWorldSize);   // Shift: snap to the grid
         preview.SetActive(hasPoint);
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
         if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel)
         {
-            placingYaw += TurnInput();
+            rawYaw += TurnInput();
+            placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // Shift: snap the turn to angle steps (the raw turn keeps counting so Q / E stay smooth)
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
         }
         chipperLatched = false;

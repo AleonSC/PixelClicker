@@ -6,6 +6,8 @@
 //   While placing, clicks on the cube are blocked (PixelClicker.ExternalClickBlock). Placed test objects ARE saved (see SAVING below). To add something to test: write a builder (see PixelWoodChipper:
 //   CreateGhost / Place) and add one Register line here.
 //   Two-point features (RegisterLine, a conveyor belt) use a marker ghost, then a preview piece between the first point and the mouse; every click builds a piece and the end starts the next.
+//   DELETE: hold the right button on any placed tester object (not while placing) to remove it (PixelHold ring; a quick right click still flips a belt / re-links a panel: PixelRightTap). BELT SELECTION card:
+//   'Select belts' mode toggles belts by click or box-drag (teal glow, PixelConveyor.SetSelected) and sets speed / reverses them together. SHIFT while placing snaps to a grid and angle steps (PixelSnap).
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
 //   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
@@ -146,13 +148,14 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].linkAfterPlace = true;
 
         Build(PixelDevHub.TabRoot("tester"));
-        PixelWindows.Register(this, 210, () => placing != null, StopPlacing);   // Escape stops placing first
+        PixelWindows.Register(this, 210, () => placing != null || selecting, StopPlacing);   // Escape stops placing first
     }
 
     private void OnDestroy()
     {
         PixelWindows.Unregister(this);
         StopPlacing();
+        if (overlayRoot != null) Destroy(overlayRoot);
         if (instance == this) instance = null;
     }
 
@@ -196,6 +199,7 @@ public class PixelFeatureTester : MonoBehaviour
             clear.onClick.AddListener(() => Clear(feature));
             y += CardH + 10f;
         }
+        y = BuildSelectionCard(content, y);
         PixelUIKit.UpdateScrollView(scroll, bar, y, H - top - bottom);
 
         statusLabel = PixelUIKit.CreateText(font, root, "Status", "", 20f, TextAlignmentOptions.MidlineLeft, FontStyles.Italic, new Color(0.75f, 0.85f, 1f, 1f));
@@ -243,6 +247,7 @@ public class PixelFeatureTester : MonoBehaviour
         stageActive = false;
         lineElev = 0f;
         placing = null;
+        EndSelecting();
         if (blocking) { PixelClicker.ExternalClickBlock = false; blocking = false; }
         Refresh();
     }
@@ -279,6 +284,229 @@ public class PixelFeatureTester : MonoBehaviour
         if (!floor.Raycast(ray, out float enter)) return false;
         point = ray.GetPoint(enter);
         return true;
+    }
+
+    // ---------------- deleting: hold the right button on a placed tester object ----------------
+
+    private const float DeleteHoldSeconds = 0.8f;
+
+    private void UpdateDelete()
+    {
+        GameObject target = null;
+        if (clicker != null && !PixelFirstPerson.Active && !PixelPauseMenu.IsPaused && (PixelInput.RightPressed() || PixelInput.RightHeld()) && !PixelInput.PointerOverUI())
+            target = ObjectUnderPointer();
+        if (!PixelHold.Update(this, target, DeleteHoldSeconds, "", new Color(0.9f, 0.3f, 0.3f, 1f), true, "remove_buildup") || target == null) return;
+        foreach (Feature f in features) f.placed.Remove(target);
+        Destroy(target);   // (a belt's riders are let go by the belt system; a chipper just vanishes)
+        PixelAudio.Play("device_remove");
+        Refresh();
+    }
+
+    /// <summary>The nearest placed tester object under the mouse (by its visible parts); null if the cube or an old pixel is in front of it.</summary>
+    private GameObject ObjectUnderPointer()
+    {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return null;
+        Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
+        GameObject best = null;
+        float bestDist = float.MaxValue;
+        foreach (Feature f in features)
+            foreach (GameObject go in f.placed)
+            {
+                if (go == null) continue;
+                foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+                    if (r.enabled && r.bounds.IntersectRay(ray, out float d) && d < bestDist) { bestDist = d; best = go; }
+            }
+        if (best == null) return null;
+        foreach (RaycastHit h in Physics.RaycastAll(ray, bestDist, ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return null;
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return null;
+        }
+        return best;
+    }
+
+    // ---------------- selecting belts: edit their speed together ----------------
+
+    private bool selecting;
+    private bool pressing, rectShown;
+    private Vector2 dragStart;
+    private readonly HashSet<PixelConveyor> selection = new HashSet<PixelConveyor>();
+    private TMP_Text selectLabel, countLabel;
+    private TMP_InputField speedField;
+    private GameObject overlayRoot;
+    private RectTransform rectView;
+
+    private float BuildSelectionCard(RectTransform content, float y)
+    {
+        const float CardH2 = 214f;
+        GameObject card = new GameObject("Card Belt Selection", typeof(RectTransform), typeof(Image));
+        card.transform.SetParent(content, false);
+        PlaceTL(card.GetComponent<RectTransform>(), 0f, y, W - 40f, CardH2);
+        card.GetComponent<Image>().color = BoxColor;
+        card.GetComponent<Image>().raycastTarget = false;
+        PixelUIKit.StyleBox(card.GetComponent<Image>());
+
+        TMP_Text name = PixelUIKit.CreateText(font, card.transform, "Name", "BELT SELECTION", 28f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, TextColor);
+        PlaceTL(name.rectTransform, 16f, 8f, W - 72f, 36f);
+        name.raycastTarget = false;
+        TMP_Text desc = PixelUIKit.CreateText(font, card.transform, "Description", "Change several belts at once. Press Select belts, then click belts to toggle them or drag a box round a group (they glow teal). Type a speed (cube widths per second) and press Set speed; Reverse turns them all round. Hold the right button on any placed tester object to delete it.", 19f, TextAlignmentOptions.TopLeft, FontStyles.Normal, new Color(0.8f, 0.85f, 0.95f, 1f));
+        PlaceTL(desc.rectTransform, 16f, 46f, W - 72f, 80f);
+        desc.raycastTarget = false;
+
+        Button sel = PixelUIKit.CreateButton(font, card.transform, "Select", "Select belts", new Vector2(200f, 36f), new Color(0.2f, 0.45f, 0.65f, 1f), TextColor, 22f);
+        PlaceTL(sel.GetComponent<RectTransform>(), 16f, 128f, 200f, 36f);
+        selectLabel = sel.GetComponentInChildren<TMP_Text>();
+        sel.onClick.AddListener(() => { if (selecting) StopPlacing(); else StartSelecting(); });
+        Button all = PixelUIKit.CreateButton(font, card.transform, "All", "Select all", new Vector2(200f, 36f), new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 22f);
+        PlaceTL(all.GetComponent<RectTransform>(), 226f, 128f, 200f, 36f);
+        all.onClick.AddListener(() => { foreach (PixelConveyor b in PixelConveyor.All) if (b != null && !b.IsGhost) AddToSelection(b); RefreshSelection(); });
+        Button none = PixelUIKit.CreateButton(font, card.transform, "None", "Deselect", new Vector2(200f, 36f), new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 22f);
+        PlaceTL(none.GetComponent<RectTransform>(), 436f, 128f, 200f, 36f);
+        none.onClick.AddListener(ClearSelection);
+
+        speedField = PixelUIKit.CreateInputField(font, card.transform, "Speed", new Vector2(120f, 36f), new Color(0.05f, 0.06f, 0.09f, 1f), Color.white, 22f, "1.6");
+        PlaceTL(speedField.GetComponent<RectTransform>(), 16f, 172f, 120f, 36f);
+        speedField.contentType = TMP_InputField.ContentType.DecimalNumber;
+        Button set = PixelUIKit.CreateButton(font, card.transform, "Set", "Set speed", new Vector2(150f, 36f), new Color(0.2f, 0.6f, 0.3f, 1f), TextColor, 22f);
+        PlaceTL(set.GetComponent<RectTransform>(), 146f, 172f, 150f, 36f);
+        set.onClick.AddListener(ApplySpeedToSelection);
+        Button rev = PixelUIKit.CreateButton(font, card.transform, "Reverse", "Reverse", new Vector2(130f, 36f), new Color(0.55f, 0.4f, 0.15f, 1f), TextColor, 22f);
+        PlaceTL(rev.GetComponent<RectTransform>(), 306f, 172f, 130f, 36f);
+        rev.onClick.AddListener(() => { foreach (PixelConveyor b in selection) if (b != null) b.Flip(); });
+        countLabel = PixelUIKit.CreateText(font, card.transform, "Count", "0 selected", 20f, TextAlignmentOptions.MidlineLeft, FontStyles.Italic, new Color(0.75f, 0.85f, 1f, 1f));
+        PlaceTL(countLabel.rectTransform, 446f, 172f, W - 500f, 36f);
+        countLabel.raycastTarget = false;
+        return y + CardH2 + 10f;
+    }
+
+    private void StartSelecting()
+    {
+        StopPlacing();
+        selecting = true;
+        pressing = false; rectShown = false;
+        placeStartFrame = Time.frameCount;
+        if (selectLabel != null) selectLabel.text = "Stop selecting";
+        if (statusLabel != null) statusLabel.text = "Click belts to toggle them, or drag a box round several. Right click or Esc stops.";
+    }
+
+    private void EndSelecting()
+    {
+        if (!selecting) return;
+        selecting = false; pressing = false;
+        HideRect();
+        if (selectLabel != null) selectLabel.text = "Select belts";
+    }
+
+    private void AddToSelection(PixelConveyor belt) { if (selection.Add(belt)) belt.SetSelected(true); }
+
+    private void ClearSelection()
+    {
+        foreach (PixelConveyor b in selection) if (b != null) b.SetSelected(false);
+        selection.Clear();
+        RefreshSelection();
+    }
+
+    private void RefreshSelection()
+    {
+        selection.RemoveWhere(b => b == null);
+        if (countLabel != null) countLabel.text = selection.Count + " selected";
+        if (speedField != null && selection.Count > 0 && !speedField.isFocused)
+        {
+            foreach (PixelConveyor b in selection) { speedField.text = b.SpeedCubes.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture); break; }
+        }
+    }
+
+    private void ApplySpeedToSelection()
+    {
+        if (speedField == null || !float.TryParse(speedField.text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v)) return;
+        foreach (PixelConveyor b in selection) if (b != null) b.SetSpeedCubes(v);
+        PixelAudio.Play("ui_click");
+    }
+
+    private void UpdateSelect()
+    {
+        PixelClicker.ExternalClickBlock = true;
+        blocking = true;
+        if (!PixelDevHub.IsOpen) { StopPlacing(); return; }
+        Vector2 m = PixelInput.PointerPosition();
+        if (Time.frameCount != placeStartFrame)
+        {
+            if (!pressing && PixelInput.LeftPressed() && !PixelInput.PointerOverUI()) { pressing = true; dragStart = m; }
+            if (pressing)
+            {
+                if (PixelInput.LeftHeld())
+                {
+                    if ((m - dragStart).sqrMagnitude > 64f) ShowRect(dragStart, m);
+                }
+                else
+                {
+                    pressing = false;
+                    if (rectShown) { SelectInRect(dragStart, m); HideRect(); }
+                    else ToggleUnderPointer();
+                    RefreshSelection();
+                }
+            }
+            else if (PixelInput.RightPressed()) { StopPlacing(); return; }
+        }
+    }
+
+    private void ToggleUnderPointer()
+    {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return;
+        RaycastHit[] hits = Physics.RaycastAll(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f, ~0, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (RaycastHit h in hits)
+        {
+            if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return;
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return;
+            PixelConveyor belt = h.collider.GetComponentInParent<PixelConveyor>();
+            if (belt == null) continue;
+            if (selection.Contains(belt)) { selection.Remove(belt); belt.SetSelected(false); }
+            else AddToSelection(belt);
+            return;
+        }
+    }
+
+    private void SelectInRect(Vector2 a, Vector2 b)
+    {
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return;
+        Rect r = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        foreach (PixelConveyor belt in PixelConveyor.All)
+        {
+            if (belt == null || belt.IsGhost) continue;
+            foreach (Vector3 w in new[] { belt.transform.position, belt.EndA, belt.EndB })
+            {
+                Vector3 sp = cam.WorldToScreenPoint(w);
+                if (sp.z > 0f && r.Contains(new Vector2(sp.x, sp.y))) { AddToSelection(belt); break; }
+            }
+        }
+    }
+
+    private void ShowRect(Vector2 a, Vector2 b)
+    {
+        if (overlayRoot == null)
+        {
+            overlayRoot = PixelUIKit.CreateCanvas("Tester Selection Overlay", 400, new Vector2(1920f, 1080f), false, false);   // (pixel units: no scaling)
+            GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
+            box.transform.SetParent(overlayRoot.transform, false);
+            box.GetComponent<Image>().color = new Color(0.25f, 0.9f, 1f, 0.22f);
+            box.GetComponent<Image>().raycastTarget = false;
+            rectView = box.GetComponent<RectTransform>();
+            rectView.anchorMin = rectView.anchorMax = rectView.pivot = Vector2.zero;
+        }
+        overlayRoot.SetActive(true);
+        rectShown = true;
+        rectView.anchoredPosition = new Vector2(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y));
+        rectView.sizeDelta = new Vector2(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
+    }
+
+    private void HideRect()
+    {
+        rectShown = false;
+        if (overlayRoot != null) overlayRoot.SetActive(false);
     }
 
     // ---------------- saving with the save file ----------------
@@ -486,7 +714,8 @@ public class PixelFeatureTester : MonoBehaviour
     private void Update()
     {
         if (linkPanel != null) { UpdateLink(); return; }
-        if (placing == null) return;
+        if (selecting) { UpdateSelect(); return; }
+        if (placing == null) { UpdateDelete(); return; }
         if (!PixelDevHub.IsOpen) { StopPlacing(); return; }
         PixelClicker.ExternalClickBlock = true;
         blocking = true;
@@ -494,8 +723,9 @@ public class PixelFeatureTester : MonoBehaviour
         bool overUi = PixelInput.PointerOverUI();
         Vector3 point = Vector3.zero;
         bool hasPoint = !overUi && ((placing.line || placing.heightStage || placing.groundPlane) ? TryGroundPoint(out point) : TryFloorPoint(out point));
-        float useYaw = yaw;
-        if (hasPoint && placing.placeSnap != null && placing.placeSnap(clicker, point, yaw, ghost, out Vector3 snapP, out float snapYaw)) { point = snapP; useYaw = snapYaw; }
+        if (hasPoint && PixelSnap.Active) point = PixelSnap.Point(point, clicker.OldPixelWorldSize);   // Shift: snap to the grid (a latch onto a belt end still wins)
+        float useYaw = PixelSnap.Active ? PixelSnap.Yaw(yaw) : yaw;   // Shift: snap the turn to angle steps
+        if (hasPoint && placing.placeSnap != null && placing.placeSnap(clicker, point, useYaw, ghost, out Vector3 snapP, out float snapYaw)) { point = snapP; useYaw = snapYaw; }
         if (ghost != null && !(placing.line && hasStart) && !(placing.heightStage && stageActive))
         {
             ghost.SetActive(hasPoint);

@@ -233,6 +233,7 @@ public class PixelGrab : MonoBehaviour
         {
             Rigidbody body = hit.rigidbody;
             if (body == null || !IsOldPixel(body)) continue;
+            if (PixelPathCarrier.IsCarried(body)) continue;   // inside a Funnel tube / Elevator / Splitter: not to be dragged out
             if (clicker.IsFlyingPixel(body) && !PixelTimeStop.IsSlowed) continue; // a flying meteor can only be caught while time is slowed
 
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
@@ -272,6 +273,7 @@ public class PixelGrab : MonoBehaviour
     private void Grab(Rigidbody body, OldPixelDespawn despawn, Ray ray)
     {
         PixelStats.Count("old.grabbed");
+        PixelConveyorSystem.FreeRider(body);   // a pixel riding a belt is locked (kinematic): free it, or it would stay stuck where it is let go
         clicker.LandFlyingPixel(body); // a caught meteor becomes an ordinary old pixel (solid, falls when let go)
         held = body;
         OldPixelInfo heldInfo = body.GetComponent<OldPixelInfo>();

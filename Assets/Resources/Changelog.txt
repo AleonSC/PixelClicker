@@ -853,3 +853,7 @@
 [2026-10-13 19:04 UTC] First person now has out-of-bounds protection: the player is kept inside the play circle (and put back at the start spot if they fall out of the world), and a pink wireframe wall fades in when they get near the edge.
 [2026-10-13 19:12 UTC] Added the Conveyor Elevator tester part (magnetizes to a belt end, mouse sets the height, a new belt can snap to its top) and conveyor belts can now be raised and sloped with the scroll wheel while placing, with supports under them.
 [2026-10-13 19:16 UTC] Moved the Funnel onto the shared PixelPathCarrier and added a Splitter tester block that snaps to a belt end and shares the pixels evenly between its three other sides (belts snap to its outputs).
+[2026-10-13 19:22 UTC] Hold the right button on any Dev Hub tester object (including the Wood Chipper) to delete it; a quick right click still reverses a belt or re-links a solar panel.
+[2026-10-13 19:22 UTC] Pixels inside Funnel tubes (and Elevator / Splitter) can no longer be dragged, and pixels grabbed off a conveyor belt no longer get stuck (they are freed from the belt when grabbed).
+[2026-10-13 19:22 UTC] Dev Hub Tester: Belt Selection card to select several belts (click or drag a box) and set their speed or reverse them together.
+[2026-10-13 19:22 UTC] Holding Shift while placing or turning a consumable or tester machine snaps it to a grid and to angle steps (Settings on PixelConsumables: Shift snapping).
