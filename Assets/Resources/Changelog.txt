@@ -866,3 +866,4 @@
 [2026-10-13 19:58 UTC] To-do: shared tutorial runner for the shop, skills and Toggles tutorials.
 [2026-10-13 20:00 UTC] Cubie now logs (Editor / dev builds) why he is not visiting yet, to trace a missing first appearance.
 [2026-10-13 20:03 UTC] Fixed Continue overwriting settings the player changed on the main menu (for example Show first-time tips after a New Game): Continue now keeps changed settings.
+[2026-10-13 20:08 UTC] Small tip boxes that follow a point (the Toggles tutorial) now honour the tutorial's uniform height and have a little more room, so long steps are no longer cut off.

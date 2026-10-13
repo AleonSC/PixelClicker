@@ -238,7 +238,7 @@ public class PixelNoticeBox : MonoBehaviour
         {
             float textHeight = Mathf.Ceil(label.GetPreferredValues(message, width - (small ? 36f : 60f), 0f).y);
             float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-            boxRect.sizeDelta = new Vector2(width, textHeight + (small ? 84f : 130f));
+            boxRect.sizeDelta = new Vector2(width, Mathf.Max(minHeight, textHeight + (small ? 100f : 130f)));   // (minHeight keeps a series of tips - the tutorials - the same size, so Got it never moves)
             if (nearLog)
             {
                 // Bottom left, right next to the event log.
