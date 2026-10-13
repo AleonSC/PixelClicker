@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "LMXymrSSuggFvXDqF8TsG658fkuCGBTw9gY6qL4F2VaDj7DNLVu1c3aIIujJWvDuuSIQx5Q9S90lmktMn9soHw==",
+  "success": true,
+  "projectFilePath": "/home/user/PixelClicker/tools/compile-check/CompileCheck.csproj",
+  "expectedPackageFiles": [
+    "/root/.nuget/packages/microsoft.netframework.referenceassemblies/1.0.3/microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",
+    "/root/.nuget/packages/microsoft.netframework.referenceassemblies.net48/1.0.3/microsoft.netframework.referenceassemblies.net48.1.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

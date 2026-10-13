@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles Assets/Scripts with a normal C# compiler: real Unity module assemblies (NuGet UnityEngine.Modules 2021.3.33, downloaded by check.sh) + Stubs.cs for UI / TextMeshPro.
+       Unity-6-only code paths are guarded by #if UNITY_6000_0_OR_NEWER, so the 2021.3 API is enough; the Input System path is off (legacy input). Not part of the game. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <OutputType>Library</OutputType>
+    <OutputPath>.cache/out/</OutputPath>
+    <BaseIntermediateOutputPath>.cache/obj/</BaseIntermediateOutputPath>
+    <NoWarn>CS0414;CS0649;CS0169;CS0219;CS0618;CS0108;CS0114;CS8632;CS0067;CS0105;CS1701;CS1702</NoWarn>
+    <DefineConstants>UNITY_2021_3;UNITY_2021_3_OR_NEWER;ENABLE_LEGACY_INPUT_MANAGER;DEVELOPMENT_BUILD</DefineConstants>
+    <UnityRefs Condition="'$(UnityRefs)'==''">$(MSBuildThisFileDirectory).cache/unity/lib/net45/</UnityRefs>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="$(UnityRefs)*.dll" />
+    <Compile Include="Stubs.cs" />
+    <Compile Include="../../Assets/Scripts/**/*.cs" Exclude="../../Assets/Scripts/Editor/**" />
+  </ItemGroup>
+</Project>

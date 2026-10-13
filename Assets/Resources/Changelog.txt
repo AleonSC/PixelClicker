@@ -872,3 +872,4 @@
 [2026-10-13 20:17 UTC] The Toggles tutorial's first box no longer sits under Cubie (it follows the middle of the right side of the screen while the Toggles window is closed).
 [2026-10-13 20:19 UTC] The Woodcutter's Pack is now listed first in the shop's Pixels tab (and stays listed once bought), and the Log's Goals tab gets a 'Purchase the Woodcutter's Pack' goal after the Auto Clicker and Cubie's Toggles tutorial (straight after the Auto Clicker with tips off).
 [2026-10-13 20:22 UTC] Fixed Continue loading the most recent save over a new game that had just been started from the Save / Load window: a started new game now counts as the game in progress.
+[2026-10-13 21:40 UTC] Added a compile check (tools/compile-check/check.sh) that compiles Assets/Scripts without Unity and reports errors such as wrong argument types or missing members, so they are caught before you open Unity.

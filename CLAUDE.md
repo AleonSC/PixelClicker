@@ -192,6 +192,7 @@
 - UI layout: line pitch ≥ 1.3× font size, header height computed from font; the Inventory and Log boxes have a centred title and a close "X" in a header above the tabs (clicking their button also toggles); titles capitalised ("Currency", "Log", "Shop").
 - Clicks on UI must not hit the pixel (`EventSystem.IsPointerOverGameObject`); pixel hitbox is a full-size trigger so rapid clicks during materialize aren't lost; use `Physics.RaycastAll` with `QueryTriggerInteraction.Collide`.
 - Scripts depend on each other (`FormatNumber`, `VacuumBreakdown`, `UIFont`, …). **Always copy the whole `Assets/Scripts` folder together** – most past compile errors (CS0122, CS1061, CS0246, CS0111) were stale/mismatched copies in the Unity project.
+- **Compile check before committing:** run `tools/compile-check/check.sh` (compiles `Assets/Scripts` without Unity; details in `tools/compile-check/README.md`) and fix every error it reports. It does not replace testing in Unity (editor-only / Unity-6-only / UI-TMP-stub gaps, run-time bugs).
 - Git: develop on the branch the session names (recently `claude/intelligent-cori-y2qt3d`); commit + push when work is done; no PRs unless asked.
 
 - **Skill packs (Mining, Farming, Electrician, future ones) are chosen in the Skills window only - never add a switch for one to the Toggles window.**
