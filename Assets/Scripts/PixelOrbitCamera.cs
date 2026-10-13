@@ -7,7 +7,7 @@
 //   'Top down' = Enter(topDown: true): the same camera with the pitch locked at 89 degrees; disableOrbit): the REAL camera swings round the cube (Enter captures
 //   the home pose; yaw / pitch / distance round CubeBasePosition, rotation = look-at-cube x aimOffset so the cube keeps its on-screen
 //   spot): middle-mouse drag (PixelInput.MiddleHeld, dragDegreesPerPixel 0 = 0.25) or arrow keys (keyDegreesPerSecond 0 = 90) turn /
-//   tilt (pitch min minPitch 0 = 6 so it never looks from under the floor), the wheel (or Shift + wheel) and the View window's zoom slider (DistanceFraction, MinFraction 0.35 .. MaxFraction 2) zoom, the
+//   tilt (pitch min minPitch 0 = 6 so it never looks from under the floor), Ctrl + wheel and the View window's zoom slider (DistanceFraction, MinFraction 0.35 .. MaxFraction 2) zoom, the
 //   window's Auto orbit tick box (AutoOrbit, AutoSpeed = autoOrbitDegreesPerSecond 0 = 10) turns the camera slowly round the cube by itself,
 //   and its hold buttons (HoldTurn / HoldTilt) add to the arrow keys; dragging / arrow keys still work, followSharpness smoothing. Its controls are shown as a hover tooltip in the View window (no hint line on screen). Clicks need no change (raycasts go through
 //   TargetCamera). While PixelOrbitCamera.Active, PixelOrbitCamera.HomeCamera (a hidden disabled copy at the home pose) is what
@@ -22,7 +22,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Orbital camera (one of the views of the View window, <c>PixelViewWindow</c>: Default / First person / Orbital / Top down; top down is this camera with the tilt locked straight down).
 /// The real camera swings round the clicker cube, so you can click it from any direction (clicks are ordinary raycasts through the camera).
-/// Drag with the MIDDLE mouse button, or use the arrow keys, to turn round it and tilt; Shift + mouse wheel zooms. Leaving glides back to the
+/// Drag with the MIDDLE mouse button, or use the arrow keys, to turn round it and tilt; Ctrl + mouse wheel zooms. Leaving glides back to the
 /// view the camera had. While it is on, old pixels stay inside the NORMAL view (<see cref="HomeCamera"/>, a hidden copy of the camera at its
 /// home pose, is what the view bounds and the fitted floors use), and takeover minigames / the title screen end it.
 /// </summary>
@@ -252,7 +252,7 @@ public class PixelOrbitCamera : MonoBehaviour
             float ks = V(keyDegreesPerSecond, 90f) * dt;
             targetYaw -= turn * ks;
             targetPitch += tilt * ks;
-            if (!PixelInput.PointerOverUI())   // (the plain wheel zooms now; Shift + wheel still does too)
+            if (PixelInput.ControlHeld() && !PixelDevShapes.Active && !PixelInput.PointerOverUI())   // Ctrl + wheel zooms; the plain wheel belongs to whatever is being held / turned (lifting a grabbed pixel, turning a device...)
             {
                 float scroll = PixelInput.ScrollY();
                 if (PixelViewWindow.InvertScroll) scroll = -scroll;   // (View window tick box: some mice / systems report the wheel the other way round)

@@ -442,8 +442,8 @@ public class PixelViewWindow : MonoBehaviour
         string[] tips =
         {
             "<b>First person controls</b>\nWASD  -  move\nShift  -  run\nSpace  -  jump\nClick the cube  -  click it\nRight-click a cube  -  carry it\n(again = drop, left-click = throw)\nEsc  -  leave\n{key:ViewWindow}  -  this window",
-            "<b>Orbital controls</b>\nMiddle mouse drag  -  turn and tilt\nArrow keys  -  turn and tilt\nMouse wheel  -  zoom\nTurn / tilt buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
-            "<b>Top down controls</b>\nMiddle mouse drag  -  turn\nLeft / right arrow keys  -  turn\nMouse wheel  -  zoom\nTurn buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
+            "<b>Orbital controls</b>\nMiddle mouse drag  -  turn and tilt\nArrow keys  -  turn and tilt\nCtrl + mouse wheel  -  zoom\nTurn / tilt buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
+            "<b>Top down controls</b>\nMiddle mouse drag  -  turn\nLeft / right arrow keys  -  turn\nCtrl + mouse wheel  -  zoom\nTurn buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
         };
 
         // --- Views: ticking one unticks the others.
@@ -489,7 +489,7 @@ public class PixelViewWindow : MonoBehaviour
         oy += 36f;
         autoTick = TickRow(orbitSection.transform, oy, "Auto orbit", on => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoOrbit = on; PlayerPrefs.SetInt(PrefAuto, on ? 1 : 0); }, out _);
         oy += RowH + 6f;
-        invertTick = TickRow(orbitSection.transform, oy, "Invert zoom scroll (scroll up = zoom in)", on => { InvertScroll = on; PlayerPrefs.SetInt(PrefInvert, on ? 1 : 0); }, out _);
+        invertTick = TickRow(orbitSection.transform, oy, "Invert Ctrl + scroll zoom", on => { InvertScroll = on; PlayerPrefs.SetInt(PrefInvert, on ? 1 : 0); }, out _);
         oy += RowH + 6f;
         speedSlider = SliderRow(orbitSection.transform, oy, "Auto speed", 2f, 60f, v => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoSpeed = v; PlayerPrefs.SetFloat(PrefSpeed, v); }, out _, out speedValue);
         oy += RowH + 14f;

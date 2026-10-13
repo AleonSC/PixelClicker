@@ -174,7 +174,7 @@ public class PixelGrab : MonoBehaviour
         if (held != null)
         {
             if (!LeftHeld() || Time.timeScale <= 0f) { Release(); return; }
-            float wheel = PixelInput.ScrollY();
+            float wheel = PixelInput.ControlHeld() ? 0f : PixelInput.ScrollY();   // (Ctrl + wheel zooms the camera instead)
             if (wheel != 0f)
             {
                 float cap = maxWheelLift > 0f ? maxWheelLift : 6f;

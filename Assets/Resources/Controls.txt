@@ -16,7 +16,7 @@ Hold right-click ("Active:" line) | Cancel the potion
 Esc | Pause menu / close the top window
 {key:TimeStop} | Stop and resume time (Time Stop; uses an energy meter, you can still click the cube)
 Arrow keys | Steer the snake during a Snake round (or use the on-screen arrows)
-{key:ViewWindow} | Open / close the View window: pick Default, First person (WASD, mouse, Space, Shift; click the cube to click it; right-click a cube to carry it, right-click again drops it, left-click throws it; Esc leaves), Orbital (middle mouse drag or arrow keys turn round the cube, wheel zooms) or Top down; tick Orthographic (flat) view (not in first person); zoom slider; Auto orbit and turn / tilt buttons
+{key:ViewWindow} | Open / close the View window: pick First person (WASD, mouse, Space, Shift; click the cube to click it; right-click a cube to carry it, right-click again drops it, left-click throws it; Esc leaves), Orbital (middle mouse drag or arrow keys turn round the cube) or Top down (the normal view); Ctrl + mouse wheel zooms the camera; tick Orthographic (flat) view (not in first person); zoom slider; Auto orbit and turn / tilt buttons
 {key:Feedback} | Give feedback (opens a window with a text box and screenshots you can draw on; saved to the Feedback folder). Also in Settings.
 {key:TimeSlow} | Slow time and back to normal (Time Slow upgrade; shares the Time Stop meter; slowed meteor pixels can be grabbed)
 {key:Hose} | Equip / put away the hose (Pixel Bank)
@@ -24,6 +24,7 @@ Arrow keys | Steer the snake during a Snake round (or use the on-screen arrows)
 {key:RotateLeft} or {key:RotateRight} | Turn a fan or sorter while placing it
 Mouse wheel | Turn a fan or sorter while placing it
 Mouse wheel while holding a pixel | Raise or lower it
+Ctrl + mouse wheel | Zoom the camera (the plain wheel never moves the camera)
 
 # Placing a Device
 Left-click the floor | Place a Vacuum Device or Fan
