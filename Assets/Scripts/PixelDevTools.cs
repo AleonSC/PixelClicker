@@ -342,7 +342,7 @@ public class PixelDevTools : MonoBehaviour
 
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle dockToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle dockToggle, clearToggle, infiniteToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -360,7 +360,6 @@ public class PixelDevTools : MonoBehaviour
         if (clickCountField != null) clickCountField.SetTextWithoutNotify(clickCount.ToString());
         if (clearToggle != null) clearToggle.SetIsOnWithoutNotify(clearKeyEnabled);
         if (infiniteToggle != null) infiniteToggle.SetIsOnWithoutNotify(infiniteResources);
-        if (selectorToggle != null) selectorToggle.SetIsOnWithoutNotify(spawnSelectorEnabled);
         if (noDespawnToggle != null) noDespawnToggle.SetIsOnWithoutNotify(disableDespawn);
         if (noLimitToggle != null) noLimitToggle.SetIsOnWithoutNotify(disableOldPixelLimit);
         if (farmerSeedsToggle != null) farmerSeedsToggle.SetIsOnWithoutNotify(farmerAlwaysSeeds);
@@ -376,7 +375,7 @@ public class PixelDevTools : MonoBehaviour
         if (clicker == null) return; // the panel isn't built yet: Start applies everything
         if (selectorDropdown != null) selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelPixel", 0), 0, Mathf.Max(0, selectorDropdown.options.Count - 1)));
         if (selectorMinigameDropdown != null) selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelMinigame", 0), 0, Mathf.Max(0, selectorMinigameDropdown.options.Count - 1)));
-        SetSelector(spawnSelectorEnabled);
+        if (selectorDropdown != null) { if (spawnSelectorEnabled) ApplySelector(selectorDropdown.value); else clicker.SetDevSpawnTiers(null); RefreshSpawnedPixelButton(); }
         SetGodMode(godMode);
     }
 
@@ -452,7 +451,6 @@ public class PixelDevTools : MonoBehaviour
             PixelClicker.DevClickCount = 1;
             PixelFarmerMinigame.DevAlwaysDragonSeeds = false;
         }
-        if (selectorRoot != null) Destroy(selectorRoot);
         if (godRoot != null) Destroy(godRoot);
         PixelClicker.GodMode = false;
         OldPixelDespawn.DevNoDespawn = false;
@@ -466,9 +464,9 @@ public class PixelDevTools : MonoBehaviour
     /// <summary>Middle click (with the on-screen selector on) swaps the pixel on the cube for the one chosen in the swap drop-down.</summary>
     private void UpdateMiddleSwap()
     {
-        if (!spawnSelectorEnabled || clicker == null || swapDropdown == null || PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        if (clicker == null || swapDropdown == null || swapDropdown.value <= 0 || PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
         if (!PixelInput.MiddlePressed() || PixelInput.PointerOverUI() || IsTyping()) return;
-        int v = swapDropdown.value;
+        int v = swapDropdown.value - 1;   // (entry 0 = 'off')
         if (v < 0 || v >= swapChoices.Count) return;
         clicker.DevSwapCurrentPixel(swapChoices[v]);
     }
@@ -766,26 +764,42 @@ public class PixelDevTools : MonoBehaviour
         PixelUIKit.Stretch(tools.GetComponent<RectTransform>());
         toolsView = tools;
 
-        // Row: pixel dropdown | amount field | Add
+        // The PINNED widgets at the top (they hold drop-downs, whose lists would be clipped inside the scrolling board): add pixels, spawned pixel, minigames, middle click.
+        GameObject pinnedGo = new GameObject("Pinned Widgets", typeof(RectTransform));
+        pinnedGo.transform.SetParent(tools.transform, false);
+        RectTransform pinnedRoot = pinnedGo.GetComponent<RectTransform>();
+        pinnedRoot.anchorMin = pinnedRoot.anchorMax = pinnedRoot.pivot = new Vector2(0f, 1f);
+        pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, 400f);
+        pinnedRoot.anchoredPosition = new Vector2(0f, -8f);
+        float pinnedHeight = 0f;
+        PixelWidgetBoard pinned = new PixelWidgetBoard(pinnedRoot, PrefPrefix + "PinnedOrder", 8f, height => pinnedHeight = height);
+
+        // Widget: pixel dropdown | amount field | Add | Give pet
+        int pinStart = pinnedRoot.childCount;
         float fieldW = inner * 0.30f, dropW = inner - fieldW - rowHeight * 2f - 30f;
-        pixelDropdown = PixelUIKit.CreateDropdown(font, tools.transform, "Pixel Dropdown", new Vector2(dropW, rowHeight),
+        pixelDropdown = PixelUIKit.CreateDropdown(font, pinnedRoot, "Pixel Dropdown", new Vector2(dropW, rowHeight),
                                                   boxColor, listColor, textColor, fontSize);
         Place(pixelDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
-        amountField = PixelUIKit.CreateInputField(font, tools.transform, "Amount Field", new Vector2(fieldW, rowHeight),
+        amountField = PixelUIKit.CreateInputField(font, pinnedRoot, "Amount Field", new Vector2(fieldW, rowHeight),
                                                   boxColor, textColor, fontSize, "amount");
         amountField.text = defaultAmount;
         amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
         Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
-        Button add = IconButton(tools.transform, "Add Button", DevIcons.PlusSprite(), new Color(0.3f, 0.78f, 0.38f, 1f), rowHeight);
+        Button add = IconButton(pinnedRoot, "Add Button", DevIcons.PlusSprite(), new Color(0.3f, 0.78f, 0.38f, 1f), rowHeight);
         Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, rowHeight);
         add.onClick.AddListener(AddSelected);
         AddTip(add.gameObject, addTipText);
-        Button pet = IconButton(tools.transform, "Give Pet Button", DevIcons.PawSprite(), new Color(0.97f, 0.82f, 0.22f, 1f), rowHeight);
+        Button pet = IconButton(pinnedRoot, "Give Pet Button", DevIcons.PawSprite(), new Color(0.97f, 0.82f, 0.22f, 1f), rowHeight);
         Place(pet.GetComponent<RectTransform>(), 40f + dropW + fieldW + 30f + rowHeight, y, rowHeight);
         pet.onClick.AddListener(GivePet);
         AddTip(pet.gameObject, petTipText);
-        y += rowHeight + 16f;
-        float scrollTop = y; // the pixel row above stays fixed (a drop-down can't live inside a scroll list); the rest scrolls
+        Widget(pinnedRoot, pinned, "addpixel", pinStart, y);
+
+        BuildSpawnWidgets(pinnedRoot, pinned, inner, y);
+        pinned.Finish();
+        pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, pinnedHeight);
+        y += pinnedHeight + 8f;
+        float scrollTop = y; // the pinned widgets above stay fixed; the rest scrolls
 
         ScrollRect toolsScroll = PixelUIKit.CreateScrollView(tools.transform, "Tools Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 16f, 60f,
                                                              out RectTransform content, out GameObject toolsBar);
@@ -889,11 +903,6 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
         ws = content.childCount;
 
-        // Row: tick box for the on-screen spawn selector
-        selectorToggle = BuildToggleRow(content, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
-        Widget(content, board, "selector", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
 
         // Row: tick box to stop old pixels despawning
         noDespawnToggle = BuildToggleRow(content, noDespawnToggleText, y, inner, disableDespawn, on =>
@@ -966,7 +975,9 @@ public class PixelDevTools : MonoBehaviour
         pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("PixelIndex", 0), 0, pixelDropdown.options.Count - 1));
         pixelDropdown.RefreshShownValue();
         pixelDropdown.onValueChanged.AddListener(v => SetInt("PixelIndex", v));
-        if (spawnSelectorEnabled) SetSelector(true);
+        FillSelector();
+        if (spawnSelectorEnabled) ApplySelector(selectorDropdown.value);
+        RefreshSpawnedPixelButton();
         if (godMode) SetGodMode(true);
         // Saved shapes / mockup pieces come back even while the hub is closed.
         PixelDevShapes.Boot();
@@ -983,7 +994,7 @@ public class PixelDevTools : MonoBehaviour
 
     private void OnHubOpenChanged(bool open)
     {
-        if (open && pixelDropdown != null) FillDropdowns();
+        if (open && pixelDropdown != null) { FillDropdowns(); FillSelector(); }
     }
 
     /// <summary>Turns the controls built since child number 'start' of 'content' (one row) into a draggable widget card at row position y.</summary>
@@ -1036,135 +1047,89 @@ public class PixelDevTools : MonoBehaviour
         if (resetLabel != null) resetLabel.text = resetCountsText;
     }
 
-    private GameObject selectorRoot;
-    private RectTransform selectorHover;
-    private TMP_Dropdown selectorDropdown;
+    // ------------------------------------------------------------------
+    // Spawn widgets (they replaced the on-screen row at the top of the screen): 'Spawned pixel', 'Minigames' and 'Middle click'.
+    // They sit on the pinned widget board at the top of the Main tab (a drop-down's list would be clipped inside the scrolling board).
+    // ------------------------------------------------------------------
+
+    private TMP_Dropdown selectorDropdown, selectorMinigameDropdown;
     private readonly List<PixelClicker.PixelType[]> selectorChoices = new List<PixelClicker.PixelType[]>();
+    private Image spawnPixelButtonImage;
+    private TMP_Text spawnPixelButtonLabel;
 
-    private TMP_Dropdown selectorMinigameDropdown;
-
-    private void SetSelector(bool on)
+    /// <summary>Builds the three spawn widgets into the pinned board (each is one row of controls on a card; 'y' is the row position the controls are placed at).</summary>
+    private void BuildSpawnWidgets(RectTransform root, PixelWidgetBoard board, float inner, float y)
     {
-        spawnSelectorEnabled = on;
-        SetBool("Selector", on);
-        if (clicker == null) return;
-        if (!on)
-        {
-            if (selectorRoot != null) selectorRoot.SetActive(false);
-            clicker.SetDevSpawnTiers(null);
-            return;
-        }
+        float bw = 140f, gap = 10f, dropW = inner - bw * 2f - gap * 2f;
 
-        if (selectorRoot == null) BuildSelector();
-        FillSelector();
-        selectorRoot.SetActive(true);
-        ApplySelector(selectorDropdown.value);
-    }
+        // ---- Spawned pixel: which pixel the cube spawns. Spawn = make only this one spawn (and swap the current block now), Despawn = back to normal. ----
+        int start = root.childCount;
+        selectorDropdown = PixelUIKit.CreateDropdown(font, root, "Spawned Pixel Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(selectorDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        selectorDropdown.onValueChanged.AddListener(v => SetInt("SelPixel", v));
+        Button spawn = PixelUIKit.CreateButton(font, root, "Spawn Pixel Button", spawnText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(spawn.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        spawn.onClick.AddListener(SpawnPixelClicked);
+        spawnPixelButtonImage = spawn.GetComponent<Image>();
+        spawnPixelButtonLabel = spawn.GetComponentInChildren<TMP_Text>();
+        Button despawn = PixelUIKit.CreateButton(font, root, "Despawn Pixel Button", despawnText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(despawn.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
+        despawn.onClick.AddListener(DespawnPixelClicked);
+        AddTip(spawn.gameObject, "Make only the chosen pixel (or the Monochrome / RGB pack) spawn on the cube, and swap the pixel on the cube to it now.");
+        AddTip(despawn.gameObject, "Go back to normal spawning.");
+        Widget(root, board, "spawnpixel", start, y);
 
-    /// <summary>The on-screen row at the top: pixel drop-down, then minigame drop-down + Spawn button.</summary>
-    private void BuildSelector()
-    {
-        selectorRoot = PixelUIKit.CreateCanvas("PixelDevTools Spawn Selector", 145, referenceResolution, true);
-        selectorRoot.transform.SetParent(transform, false);
-        selectorRoot.AddComponent<CanvasGroup>();
-
-        const float gap = 10f;
-        float total = selectorSize.x + gap + minigameSelectorWidth + gap + spawnButtonWidth + gap + despawnButtonWidth + gap + swapSelectorWidth;
-        float x = -total * 0.5f;
-        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        float top = -(bar + 12f);
-
-        selectorDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Spawn Dropdown", selectorSize,
-                                                     boxColor, listColor, textColor, fontSize);
-        PlaceTop(selectorDropdown.GetComponent<RectTransform>(), x, top, selectorSize);
-        selectorDropdown.onValueChanged.AddListener(v => { SetInt("SelPixel", v); ApplySelector(v); });
-        x += selectorSize.x + gap;
-
-        Vector2 mgSize = new Vector2(minigameSelectorWidth, selectorSize.y);
-        selectorMinigameDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Minigame Dropdown", mgSize,
-                                                             boxColor, listColor, textColor, fontSize);
-        PlaceTop(selectorMinigameDropdown.GetComponent<RectTransform>(), x, top, mgSize);
+        // ---- Minigames: pick one, Spawn it or Despawn it (Despawn clears whatever minigame is on screen when the chosen one isn't). ----
+        start = root.childCount;
+        selectorMinigameDropdown = PixelUIKit.CreateDropdown(font, root, "Minigame Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(selectorMinigameDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
         selectorMinigameDropdown.onValueChanged.AddListener(v => SetInt("SelMinigame", v));
-        x += minigameSelectorWidth + gap;
+        Button mgSpawn = PixelUIKit.CreateButton(font, root, "Spawn Minigame Button", spawnText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(mgSpawn.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        mgSpawn.onClick.AddListener(SpawnSelected);
+        Button mgDespawn = PixelUIKit.CreateButton(font, root, "Despawn Minigame Button", despawnText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(mgDespawn.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
+        mgDespawn.onClick.AddListener(DespawnSelected);
+        Widget(root, board, "spawnminigame", start, y);
 
-        Vector2 btnSize = new Vector2(spawnButtonWidth, selectorSize.y);
-        Button spawn = PixelUIKit.CreateButton(font, selectorRoot.transform, "Spawn Button", spawnText, btnSize,
-                                               buttonColor, textColor, fontSize);
-        PlaceTop(spawn.GetComponent<RectTransform>(), x, top, btnSize);
-        spawn.onClick.AddListener(SpawnSelected);
-        x += spawnButtonWidth + gap;
-        float rowRight = x + despawnButtonWidth + gap + swapSelectorWidth;
-
-        Vector2 despawnSize = new Vector2(despawnButtonWidth, selectorSize.y);
-        Button despawn = PixelUIKit.CreateButton(font, selectorRoot.transform, "Despawn Button", despawnText, despawnSize,
-                                                 buttonColor, textColor, fontSize);
-        PlaceTop(despawn.GetComponent<RectTransform>(), x, top, despawnSize);
-        despawn.onClick.AddListener(DespawnSelected);
-        x += despawnButtonWidth + gap;
-
-        Vector2 swapSize = new Vector2(swapSelectorWidth, selectorSize.y);
-        swapDropdown = PixelUIKit.CreateDropdown(font, selectorRoot.transform, "Swap Dropdown", swapSize, boxColor, listColor, textColor, fontSize);
-        PlaceTop(swapDropdown.GetComponent<RectTransform>(), x, top, swapSize);
+        // ---- Middle click: swap the pixel on the cube for the chosen one (first entry = off). ----
+        start = root.childCount;
+        swapDropdown = PixelUIKit.CreateDropdown(font, root, "Swap Dropdown", new Vector2(inner, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(swapDropdown.GetComponent<RectTransform>(), 40f, y, inner);
         swapDropdown.onValueChanged.AddListener(v => SetInt("SelSwap", v));
-        TMP_Text despawnLabel = despawn.GetComponentInChildren<TMP_Text>(true);
-        if (despawnLabel != null)
-        {
-            despawnLabel.enableAutoSizing = true;   // the text shrinks to fit the button instead of spilling out of it
-            despawnLabel.fontSizeMax = fontSize;
-            despawnLabel.fontSizeMin = 10f;
-            despawnLabel.rectTransform.offsetMin = new Vector2(4f, 0f);
-            despawnLabel.rectTransform.offsetMax = new Vector2(-4f, 0f);
-        }
-
-        // An invisible area around the whole row: the mouse over it keeps the row (or brings it back) visible.
-        GameObject hoverGo = new GameObject("Hover Area", typeof(RectTransform));
-        hoverGo.transform.SetParent(selectorRoot.transform, false);
-        selectorHover = hoverGo.GetComponent<RectTransform>();
-        float left = -total * 0.5f - 30f, width = rowRight + total * 0.5f + 60f;
-        selectorHover.anchorMin = selectorHover.anchorMax = new Vector2(0.5f, 1f);
-        selectorHover.pivot = new Vector2(0f, 1f);
-        selectorHover.sizeDelta = new Vector2(width, selectorSize.y + 50f);
-        selectorHover.anchoredPosition = new Vector2(left, top + 20f);
-
-        PixelFadeOnIdle fade = selectorRoot.AddComponent<PixelFadeOnIdle>();
-        fade.Setup(selectorRoot.GetComponent<CanvasGroup>(), selectorHideSeconds > 0f ? selectorHideSeconds : 2.5f,
-                   selectorFadeSeconds > 0f ? selectorFadeSeconds : 0.35f, SelectorActive);
-        fade.hideWhen = SelectorHidden;
+        Widget(root, board, "middleclick", start, y);
     }
 
-    /// <summary>True while an interface is open (the spawner hides); any open drop-down list is closed too, since its list lives on its own canvas and would stay behind.</summary>
-    private bool SelectorHidden()
+    private void SpawnPixelClicked()
     {
-        bool hide = PixelWindows.AnyOpen() || PixelPauseMenu.IsPaused || (PixelUI.Compact && PixelUI.InventoryOpen);   // the pinned Inventory is not a registered window, so it is checked by hand
-        if (hide)
-        {
-            if (selectorDropdown != null && selectorDropdown.IsExpanded) selectorDropdown.Hide();
-            if (selectorMinigameDropdown != null && selectorMinigameDropdown.IsExpanded) selectorMinigameDropdown.Hide();
-            if (swapDropdown != null && swapDropdown.IsExpanded) swapDropdown.Hide();
-        }
-        return hide;
+        if (clicker == null || selectorDropdown == null) return;
+        spawnSelectorEnabled = true;
+        SetBool("Selector", true);
+        int v = selectorDropdown.value;
+        ApplySelector(v);
+        if (v >= 0 && v < selectorChoices.Count && selectorChoices[v] != null && selectorChoices[v].Length == 1) clicker.DevSwapCurrentPixel(selectorChoices[v][0]);   // one exact pixel: the cube shows it right away
+        RefreshSpawnedPixelButton();
     }
 
-    /// <summary>The selector counts as 'in use' while the mouse is over it, a drop-down is open or a button is held.</summary>
-    private bool SelectorActive()
+    private void DespawnPixelClicked()
     {
-        if (selectorDropdown != null && selectorDropdown.IsExpanded) return true;
-        if (selectorMinigameDropdown != null && selectorMinigameDropdown.IsExpanded) return true;
-        if (swapDropdown != null && swapDropdown.IsExpanded) return true;
-        return selectorHover != null && RectTransformUtility.RectangleContainsScreenPoint(selectorHover, PixelInput.PointerPosition(), null);
+        if (clicker == null) return;
+        spawnSelectorEnabled = false;
+        SetBool("Selector", false);
+        clicker.SetDevSpawnTiers(null);
+        RefreshSpawnedPixelButton();
     }
 
-    private static void PlaceTop(RectTransform rt, float x, float y, Vector2 size)
+    /// <summary>The Spawn button of the pixel widget is green while a spawn override is active.</summary>
+    private void RefreshSpawnedPixelButton()
     {
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot = new Vector2(0f, 1f);
-        rt.sizeDelta = size;
-        rt.anchoredPosition = new Vector2(x, y);
+        if (spawnPixelButtonImage != null) spawnPixelButtonImage.color = spawnSelectorEnabled ? new Color(0.25f, 0.6f, 0.3f, 1f) : buttonColor;
     }
 
-    /// <summary>Pixel options: normal, Monochrome pack, RGB pack, then every pixel type (locked ones marked). Plus the minigame list.</summary>
+    /// <summary>Pixel options: normal, Monochrome pack, RGB pack, then every pixel type (locked ones marked). Plus the minigame list and the middle-click list.</summary>
     private void FillSelector()
     {
+        if (selectorDropdown == null || selectorMinigameDropdown == null || clicker == null) return;
         bool first = selectorChoices.Count == 0;
         int keep = first ? GetInt("SelPixel", 0) : selectorDropdown.value;
         selectorChoices.Clear();
@@ -1187,12 +1152,12 @@ public class PixelDevTools : MonoBehaviour
         selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, names.Count - 1));
         selectorDropdown.RefreshShownValue();
 
-        // Middle-click swap: every pixel type.
+        // Middle-click swap: off, then every pixel type.
         if (swapDropdown != null)
         {
             int keepSwap = first ? GetInt("SelSwap", 0) : swapDropdown.value;
             swapChoices.Clear();
-            List<string> swapNames = new List<string>();
+            List<string> swapNames = new List<string> { swapPrefix + "off" };
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
             {
                 swapNames.Add(swapPrefix + tier.displayName + (tier.unlocked ? "" : " (locked)"));

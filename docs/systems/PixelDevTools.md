@@ -30,3 +30,8 @@ One window for every dev tool: drag, minimize, pin, dock to a screen side (`Pixe
 ## Hub tabs: icons, Docs, Notes
 
 Hub tabs are small: each shows only a pixel-art icon, the active tab also shows its name (`PixelDevHub.LayoutTabs`, icons drawn from text in `TabIcon`). Tabs now: Main, Docs, Inspector, Shapes, UI Mock. **Docs** (`PixelDevDocs.cs`) has three permanent sub-tabs: To-Do, Changelog and **Notes** (your own notes typed in-game: list on the left, title + multi-line text on the right, auto-saved to `<persistentDataPath>/DevNotes.json`, Delete confirms with a second click). `PixelInputCaret` draws the text cursor in the Inspector / Notes fields.
+
+
+## Spawn widgets (replaced the on-screen spawn selector)
+
+The 'On-screen spawn selector' tick box and the row at the top of the screen are gone. The Main tab now has a PINNED widget board above the scrolling one (its own saved order, `PixelClicker.Dev.PinnedOrder`; pinned because a drop-down's list would be clipped inside a scroll view): **Add pixels** (the old pixel drop-down | amount | Add | Give pet row), **Spawned pixel** (drop-down: normal / Monochrome / RGB / every pixel; **Spawn** = only that pixel spawns (`SetDevSpawnTiers`) and a single exact pixel replaces the one on the cube now, the button is green while active; **Despawn** = back to normal), **Minigames** (drop-down, **Spawn** = `SpawnNow`, **Despawn** = `DespawnNow` of the chosen one or every busy one) and **Middle click** (drop-down, first entry 'off': a middle click swaps the pixel on the cube, `DevSwapCurrentPixel`). Built by `PixelDevTools.BuildSpawnWidgets`; saved: `Selector` (override active), `SelPixel`, `SelMinigame`, `SelSwap`.

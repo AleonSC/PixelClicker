@@ -790,3 +790,4 @@
 [2026-10-13 13:34 UTC] The shop's title line is the plain white sliding segment again, and the Toggles, Log, Inventory, Bank, Skills, Crafting and Pixel Guide windows got the same line under their headers.
 [2026-10-13 13:39 UTC] Moved the Toggles window's title line up between the title and the icon row so it is visible.
 [2026-10-13 13:48 UTC] Added 10 new big floors: Lush Grass, Nebula Field, Still Pond, Graffiti Wall, Leaf Litter, Zen Garden, Persian Rug, Coral Reef, Casino Felt and Stained Glass.
+[2026-10-13 13:51 UTC] Dev Tools: the on-screen spawn selector is now two widgets in the Main tab - Spawned pixel and Minigames, each with its own Spawn and Despawn buttons - plus a Middle click widget; the dropdown widgets sit on a pinned board at the top.
