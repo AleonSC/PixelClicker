@@ -148,12 +148,12 @@ public class PixelTitleWanderers : MonoBehaviour
     private const string FloorPref = "PixelClicker.Setting.DisplayFloor";
     private static int floorCache = -1;
 
-    /// <summary>True (the default) = the floor is drawn in the game; false = only the sky shows and an invisible floor (its collider) lets pixels land.</summary>
+    /// <summary>True = the floor is drawn in the game; false (the default) = only the sky shows and an invisible floor (its collider) lets pixels land.</summary>
     public static bool DisplayFloor
     {
         get
         {
-            if (floorCache < 0) floorCache = PlayerPrefs.GetInt(FloorPref, 1);
+            if (floorCache < 0) floorCache = PlayerPrefs.GetInt(FloorPref, 0);
             return floorCache == 1;
         }
         set

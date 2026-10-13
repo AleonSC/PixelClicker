@@ -189,6 +189,18 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     [Tooltip("Object names tried when no floor renderer is set and nothing is found below the cube.")]
     [SerializeField] private string[] floorNames = { "Floor", "Ground", "Plane" };
 
+    [Header("Game-made floor")]
+    [Tooltip("Ignore the floor object in the scene: hide it and switch its collider off, and use the floor this component builds itself (an invisible-by-default flat sheet with a collider). The game also builds its own when the scene has no floor at all.")]
+    [SerializeField] private bool ignoreSceneFloor = false;
+
+    [Min(0f)]
+    [Tooltip("Side length (world units) of the floor the game builds itself. 0 = the default (80).")]
+    [SerializeField] private float ownFloorSize = 0f;
+
+    [Min(0f)]
+    [Tooltip("When there is no scene floor to measure, the game-made floor lies this many main-pixel widths below the cube's resting spot. 0 = the default (1).")]
+    [SerializeField] private float ownFloorDrop = 0f;
+
     [Header("Styles")]
     [Tooltip("Add the built-in styles that are missing from the list (by name).")]
     [SerializeField] private bool addDefaultStyles = true;
@@ -271,6 +283,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void OnDestroy()
     {
         if (fitCam != null) Destroy(fitCam.gameObject);
+        if (ownFloor != null) Destroy(ownFloor);
         if (Instance == this) Instance = null;
         DropProxies(true);
         if (flatBase != null) Destroy(flatBase);
@@ -298,6 +311,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     private bool floorReady;
     private float floorRetry;
+    private int floorTries;
+    private GameObject ownFloor;
 
     private void Start() { InitFloor(); }
 
@@ -306,11 +321,16 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         if (floorReady) return;
         if (floorRenderer == null) floorRenderer = FindFloor();
+        if (floorRenderer != null && ignoreSceneFloor && !IsOwnFloor(floorRenderer)) floorRenderer = BuildOwnFloor(floorRenderer);
         if (floorRenderer == null)
         {
-            if (!floorWarned) Debug.LogWarning("PixelFloor: no floor found (looking again every second). Assign the floor renderer on the Pixel Floor component to use floor styles.");
-            floorWarned = true;
-            return;
+            floorTries++;
+            if (floorTries >= 3)
+            {
+                floorRenderer = BuildOwnFloor(null);   // no floor in the scene: make one (it is invisible unless 'Display floor' is on)
+                if (floorRenderer != null) PixelDebug.Info("PixelFloor: no scene floor found, built one.", this);
+            }
+            if (floorRenderer == null) return;
         }
         floorReady = true;
         originalMaterials = floorRenderer.sharedMaterials;
@@ -337,6 +357,61 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     // Finding the floor
     // ------------------------------------------------------------------
 
+    private bool IsOwnFloor(Renderer r) => ownFloor != null && r != null && r.gameObject == ownFloor;
+
+    /// <summary>
+    /// Builds the game's own floor: a flat sheet (a code-made quad, UVs 0..1 like a Unity plane) with a thin box collider, so the game never depends on a floor
+    /// object in the scene. With a scene floor ('scene') it takes that floor's height and collider material and switches the scene floor off.
+    /// </summary>
+    private Renderer BuildOwnFloor(Renderer scene)
+    {
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) return null;
+        float size = ownFloorSize > 1f ? ownFloorSize : 80f;
+        float y = scene != null ? scene.bounds.max.y : clicker.CubeBasePosition.y - clicker.PixelBaseSize * (ownFloorDrop > 0f ? ownFloorDrop : 1f);
+        Vector3 centre = scene != null ? scene.bounds.center : clicker.CubeBasePosition;
+
+        ownFloor = new GameObject("Pixel Ground");
+        ownFloor.transform.position = new Vector3(centre.x, y, centre.z);
+        float h = size * 0.5f;
+        Mesh mesh = new Mesh { name = "Pixel Ground" };
+        mesh.vertices = new[] { new Vector3(-h, 0f, -h), new Vector3(-h, 0f, h), new Vector3(h, 0f, h), new Vector3(h, 0f, -h) };
+        mesh.uv = new[] { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+        mesh.normals = new[] { Vector3.up, Vector3.up, Vector3.up, Vector3.up };
+        mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        mesh.RecalculateBounds();
+        ownFloor.AddComponent<MeshFilter>().sharedMesh = mesh;
+        MeshRenderer mr = ownFloor.AddComponent<MeshRenderer>();
+        Material mat = clicker.CreateVisualMaterial(new Color(0.55f, 0.55f, 0.58f), false);
+        if (mat != null) mr.sharedMaterial = mat;
+
+        BoxCollider box = ownFloor.AddComponent<BoxCollider>();
+        box.center = new Vector3(0f, -0.5f, 0f);
+        box.size = new Vector3(size, 1f, size);
+#if UNITY_6000_0_OR_NEWER
+        PhysicsMaterial surface = null;
+#else
+        PhysicMaterial surface = null;
+#endif
+        if (scene != null)
+        {
+            Collider sc = scene.GetComponent<Collider>();
+            if (sc != null) surface = sc.sharedMaterial;
+            if (sc != null) sc.enabled = false;
+            scene.enabled = false;
+        }
+        if (surface == null)
+        {
+#if UNITY_6000_0_OR_NEWER
+            surface = new PhysicsMaterial("Pixel Ground") { dynamicFriction = 0.6f, staticFriction = 0.6f, bounciness = 0.1f };
+#else
+            surface = new PhysicMaterial("Pixel Ground") { dynamicFriction = 0.6f, staticFriction = 0.6f, bounciness = 0.1f };
+#endif
+        }
+        box.sharedMaterial = surface;
+        return mr;
+    }
+
     /// <summary>The dev shape placer's shapes are never the floor.</summary>
     private static bool IsDevShape(Transform t)
     {
@@ -355,7 +430,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             foreach (RaycastHit hit in hits)
             {
-                if (hit.collider.transform.IsChildOf(clicker.transform) || IsDevShape(hit.collider.transform)) continue;
+                if (hit.collider.transform.IsChildOf(clicker.transform) || IsDevShape(hit.collider.transform) || hit.collider.gameObject == ownFloor) continue;
                 if (hit.rigidbody != null && !hit.rigidbody.isKinematic) continue;
                 Renderer r = hit.collider.GetComponent<Renderer>();
                 if (r != null) return r;
