@@ -758,3 +758,4 @@
 [2026-10-13 09:25 UTC] Fixed the CRT warp shader (a reserved word and a texture sample inside a branch made it fail to compile and show a purple screen).
 [2026-10-13 09:28 UTC] CRT warp: the picture is no longer upside down (flip follows the graphics API), it zooms in slightly so the corners are not cut so hard, and the glass edges are anti-aliased.
 [2026-10-13 09:32 UTC] CRT TV filter now sits in a modelled TV bezel (plastic frame with a lit inner lip and a soft shadow on the glass instead of a hard cut to black), and Night Vision became tech goggles (two round lenses with metal rims, tick-mark rings, crosshairs and a small HUD).
+[2026-10-13 09:35 UTC] Added a to-do item to revisit the screen filter TV bezel and tech goggles frames.
