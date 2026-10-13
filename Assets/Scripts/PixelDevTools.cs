@@ -346,7 +346,7 @@ public class PixelDevTools : MonoBehaviour
 
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle mockToggle, dockToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle inspectorToggle, mockToggle, dockToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -449,6 +449,7 @@ public class PixelDevTools : MonoBehaviour
     {
         PixelWindows.Unregister(this);
         PixelDevMockWindow.OpenChanged -= OnMockOpenChanged;
+        PixelDevInspector.OpenChanged -= OnInspectorOpenChanged;
         if (dockRoot != null) Destroy(dockRoot);
         if (instance == this)
         {
@@ -989,6 +990,11 @@ public class PixelDevTools : MonoBehaviour
                                     "One draggable window with two tabs: the Shape placer (click the floor to drop cubes, spheres, ramps; drag, rotate, scale) and the UI mockup builder (windows, boxes, buttons, text, images). Copy the layout to describe exact placements. The '-' button shrinks it to a thin header. Saved. Each tab has a RESET ALL button.");
         y += rowHeight + 24f;
 
+        // Row: the Inspector window (gravity, physics, time, and every value of whatever you click)
+        inspectorToggle = BuildToggleRow(content, "Inspector", y, inner, PixelDevInspector.SavedOpen, PixelDevInspector.SetOpen,
+                                         "A window to change values while playing. World tab: time scale, gravity, physics settings, live counts and every game system. Selected tab: turn Pick on, click any object and edit its fields (game scripts, Rigidbody, Collider, Light...). 'Copy edits' puts your changes on the clipboard.");
+        y += rowHeight + 24f;
+
         // Row: how many clicks one click counts as (payouts, tough-pixel hits and the combo all scale with it)
         TMP_Text clickLabel = PixelUIKit.CreateText(font, content, "Click Count Label", clickCountText, fontSize,
                                                     TextAlignmentOptions.MidlineLeft, FontStyles.Normal, textColor);
@@ -1032,7 +1038,14 @@ public class PixelDevTools : MonoBehaviour
         PixelDevShapes.Boot();
         PixelDevMockup.Boot();
         PixelDevMockWindow.OpenChanged += OnMockOpenChanged;
+        PixelDevInspector.OpenChanged += OnInspectorOpenChanged;
+        if (PixelDevInspector.SavedOpen) PixelDevInspector.SetOpen(true);
         if (PixelDevMockWindow.SavedOpen) PixelDevMockWindow.SetOpen(true);
+    }
+
+    private void OnInspectorOpenChanged(bool open)
+    {
+        if (inspectorToggle != null) inspectorToggle.SetIsOnWithoutNotify(open);
     }
 
     private void OnMockOpenChanged(bool open)

@@ -144,6 +144,19 @@ public class PixelTitleScreen : MonoBehaviour
     [SerializeField] private Color quitColor = new Color(0.45f, 0.18f, 0.18f, 0.9f);
 
     [Header("Floor and Sky Pickers")]
+    [Tooltip("Put the pickers in the bottom right corner of the screen (the sky above the floor). Off = either side of the Play button.")]
+    [SerializeField] private bool pickersBottomRight = true;
+
+    [Tooltip("Gap between the bottom right pickers and the screen's right / bottom edge.")]
+    [SerializeField] private Vector2 pickerCornerMargin = new Vector2(48f, 40f);
+
+    [Tooltip("Extra vertical space between the two bottom right pickers (the captions sit in it).")]
+    [SerializeField] private float pickerStackGap = 52f;
+
+    [Range(0f, 1f)]
+    [Tooltip("How visible a picker is while the mouse is away (it fades up to full when the mouse comes near).")]
+    [SerializeField] private float pickerRestAlpha = 0.6f;
+
     [Tooltip("Show the floor picker (right of Play) and sky picker (left of Play): a drop-down listing every look. A quick version of the Settings rows.")]
     [SerializeField] private bool showLookPickers = true;
 
@@ -488,6 +501,7 @@ public class PixelTitleScreen : MonoBehaviour
         b.onClick.AddListener(onClick);
         shrinkRects.Add(r);
         buttons.Add(b);
+        PixelMenuFx.DecorateTitle(b);   // the fancy menu's hover glow and the shine that sweeps over it now and then
         return b;
     }
 
@@ -570,8 +584,17 @@ public class PixelTitleScreen : MonoBehaviour
         {
             float pickerWidth = LookDropdownWidth;
             float pickerX = buttonSize.x * 0.5f + lookGap + pickerWidth * 0.5f;
-            BuildLookPicker(font, "Sky Picker", skyPickerCaption, () => PixelSkybox.Instance, new Vector2(-pickerX, 0f));
-            BuildLookPicker(font, "Floor Picker", floorPickerCaption, () => PixelFloor.Instance, new Vector2(pickerX, 0f));
+            if (pickersBottomRight)
+            {
+                float x = -(pickerCornerMargin.x + pickerWidth * 0.5f), y0 = pickerCornerMargin.y + lookBoxHeight * 0.5f;
+                BuildLookPicker(font, "Floor Picker", floorPickerCaption, () => PixelFloor.Instance, new Vector2(x, y0), new Vector2(1f, 0f));
+                BuildLookPicker(font, "Sky Picker", skyPickerCaption, () => PixelSkybox.Instance, new Vector2(x, y0 + lookBoxHeight + pickerStackGap), new Vector2(1f, 0f));
+            }
+            else
+            {
+                BuildLookPicker(font, "Sky Picker", skyPickerCaption, () => PixelSkybox.Instance, new Vector2(-pickerX, 0f), new Vector2(0.5f, 0.5f));
+                BuildLookPicker(font, "Floor Picker", floorPickerCaption, () => PixelFloor.Instance, new Vector2(pickerX, 0f), new Vector2(0.5f, 0.5f));
+            }
         }
 
     }
@@ -602,14 +625,15 @@ public class PixelTitleScreen : MonoBehaviour
     private float LookDropdownWidth => lookDropdownWidth > 1f ? lookDropdownWidth : 300f;
 
     /// <summary>A drop-down listing every look of the floor / sky (with a small caption above it).</summary>
-    private void BuildLookPicker(TMP_FontAsset font, string objectName, string caption, System.Func<IPixelLookSource> source, Vector2 position)
+    private void BuildLookPicker(TMP_FontAsset font, string objectName, string caption, System.Func<IPixelLookSource> source, Vector2 position, Vector2 anchor)
     {
         lookFont = font;
         float width = LookDropdownWidth;
         GameObject root = new GameObject(objectName, typeof(RectTransform));
         root.transform.SetParent(foreground.transform, false);
         RectTransform rr = root.GetComponent<RectTransform>();
-        rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0.5f, 0.5f);
+        rr.anchorMin = rr.anchorMax = anchor;
+        rr.pivot = new Vector2(0.5f, 0.5f);
         rr.sizeDelta = new Vector2(width, lookBoxHeight);
         rr.anchoredPosition = position;
         shrinkRects.Add(rr);
@@ -622,7 +646,7 @@ public class PixelTitleScreen : MonoBehaviour
 
         float fontSize = Mathf.Max(16f, lookNameFontSize);
         TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, root.transform, "Dropdown", new Vector2(width, lookBoxHeight), lookArrowColor,
-                                                    new Color(0.1f, 0.12f, 0.18f, 1f), buttonTextColor, fontSize);
+                                                    new Color(0.1f, 0.12f, 0.18f, 1f), buttonTextColor, fontSize, true);   // (true = a little preview picture beside each name)
         RectTransform dr = dd.GetComponent<RectTransform>();
         dr.anchorMin = dr.anchorMax = dr.pivot = new Vector2(0.5f, 0.5f);
         dr.anchoredPosition = Vector2.zero;
@@ -671,7 +695,7 @@ public class PixelTitleScreen : MonoBehaviour
             bool over = !playing && (open || pointer.x >= corners[0].x - pickerHoverMargin && pointer.x <= corners[2].x + pickerHoverMargin
                         && pointer.y >= corners[0].y - pickerHoverMargin && pointer.y <= corners[2].y + pickerHoverMargin);
             p.alpha = Mathf.MoveTowards(p.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.35f));
-            p.group.alpha = p.alpha;
+            p.group.alpha = Mathf.Lerp(pickerRestAlpha, 1f, p.alpha);
             p.group.blocksRaycasts = p.alpha > 0.05f;
         }
     }
@@ -728,7 +752,7 @@ public class PixelTitleScreen : MonoBehaviour
         {
             p.optionCount = count;
             List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>(count);
-            for (int i = 0; i < count; i++) options.Add(new TMP_Dropdown.OptionData(look.StyleName(i)));
+            for (int i = 0; i < count; i++) options.Add(new TMP_Dropdown.OptionData(look.StyleName(i), PixelUIKit.PreviewSprite(look.PreviewTexture(i), look.PreviewRect, look.PreviewColor(i))));
             p.dropdown.ClearOptions();
             p.dropdown.AddOptions(options);
             PixelDebug.Info("PixelTitleScreen: a look picker now lists " + count + " looks" + (usable ? "" : " (its source is not usable yet: " + (look == null ? "no component" : "no floor / no styles") + ")") + ".", p.dropdown);

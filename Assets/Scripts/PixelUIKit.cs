@@ -645,8 +645,10 @@ public static class PixelUIKit
 
     /// <summary>A TMP dropdown built in code (closed box + scrolling list). Fill it with <c>options</c>.</summary>
     public static TMP_Dropdown CreateDropdown(TMP_FontAsset font, Transform parent, string objectName, Vector2 size,
-                                              Color boxColor, Color listColor, Color textColor, float fontSize)
+                                              Color boxColor, Color listColor, Color textColor, float fontSize, bool icons = false)
     {
+        // icons = a small picture left of each entry and of the shown name (fill it with TMP_Dropdown.OptionData(text, sprite)).
+        float iconPad = icons ? size.y - 4f : 0f;
         GameObject root = new GameObject(objectName, typeof(RectTransform), typeof(Image), typeof(TMP_Dropdown));
         root.transform.SetParent(parent, false);
         root.GetComponent<RectTransform>().sizeDelta = size;
@@ -662,7 +664,12 @@ public static class PixelUIKit
         label.overflowMode = TextOverflowModes.Truncate;
         RectTransform lr = label.rectTransform;
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
-        lr.offsetMin = new Vector2(14f, 2f); lr.offsetMax = new Vector2(-size.y, -2f);
+        lr.offsetMin = new Vector2(14f + iconPad, 2f); lr.offsetMax = new Vector2(-size.y, -2f);
+        Image captionIcon = null;
+        if (icons)
+        {
+            captionIcon = MakeDropdownIcon(root.transform, "Caption Icon", size.y - 12f, 8f);
+        }
 
         // Down arrow: a drawn triangle (not a letter), tinted with the text colour.
         GameObject arrowGo = new GameObject("Arrow", typeof(RectTransform), typeof(Image));
@@ -734,7 +741,8 @@ public static class PixelUIKit
         itemLabel.overflowMode = TextOverflowModes.Truncate;
         RectTransform ilr = itemLabel.rectTransform;
         ilr.anchorMin = Vector2.zero; ilr.anchorMax = Vector2.one;
-        ilr.offsetMin = new Vector2(14f, 2f); ilr.offsetMax = new Vector2(-8f, -2f);
+        ilr.offsetMin = new Vector2(14f + iconPad, 2f); ilr.offsetMax = new Vector2(-8f, -2f);
+        Image itemIcon = icons ? MakeDropdownIcon(item.transform, "Item Icon", size.y - 12f, 10f) : null;
 
         Toggle toggle = item.GetComponent<Toggle>();
         toggle.targetGraphic = itemBgImage;
@@ -774,8 +782,38 @@ public static class PixelUIKit
         dropdown.template = tr;
         dropdown.captionText = label;
         dropdown.itemText = itemLabel;
+        if (icons) { dropdown.captionImage = captionIcon; dropdown.itemImage = itemIcon; }
         template.SetActive(false);
         return dropdown;
+    }
+
+    private static Image MakeDropdownIcon(Transform parent, string objectName, float side, float x)
+    {
+        GameObject g = new GameObject(objectName, typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(parent, false);
+        Image im = g.GetComponent<Image>();
+        im.raycastTarget = false;
+        im.preserveAspect = false;
+        RectTransform r = im.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 0.5f);
+        r.sizeDelta = new Vector2(side, side);
+        r.anchoredPosition = new Vector2(x, 0f);
+        return im;
+    }
+
+    /// <summary>A tiny picture for a dropdown entry: the part 'uv' of 'tex' (or a flat 'tint' square when tex is null).</summary>
+    public static Sprite PreviewSprite(Texture tex, Rect uv, Color tint)
+    {
+        Texture2D t2 = tex as Texture2D;
+        if (t2 == null)
+        {
+            Texture2D flat = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            flat.SetPixels(new[] { tint, tint, tint, tint });
+            flat.Apply();
+            return Sprite.Create(flat, new Rect(0f, 0f, 2f, 2f), new Vector2(0.5f, 0.5f), 100f);
+        }
+        Rect px = new Rect(uv.x * t2.width, uv.y * t2.height, Mathf.Max(1f, uv.width * t2.width), Mathf.Max(1f, uv.height * t2.height));
+        return Sprite.Create(t2, px, new Vector2(0.5f, 0.5f), 100f);
     }
 
     /// <summary>A TMP input field built in code. Content type is free text; set it afterwards if needed.</summary>

@@ -774,3 +774,6 @@
 [2026-10-13 10:57 UTC] My Window: opens tall (450 x 660) at the right just above the bottom bar, can only be dragged inside the playfield between the black bars, has a minimize button (header only), and can be dragged against the left or right screen edge to dock there at any height as a slide-out window with an undock arrow button in its header.
 [2026-10-13 11:03 UTC] Fixed a compile error in My Window (a duplicate variable name in the minimize button code).
 [2026-10-13 12:22 UTC] The docked UI buttons now also shine every few seconds like the menu buttons, and the shop got the fancy menu look (button shine, glowing panel, sliding title line).
+[2026-10-13 12:32 UTC] The main menu buttons (Play, Load, Settings, Quit) now brighten on hover and shine like the pause menu buttons.
+[2026-10-13 12:32 UTC] The main menu's sky and floor pickers moved to the bottom right of the screen (sky above floor, a bit faded until the mouse comes near) and every entry in their lists now has a tiny preview picture.
+[2026-10-13 12:32 UTC] New Dev Tools 'Inspector' window: change time, gravity and physics settings, see live counts, and click any object to edit its fields (game scripts, Rigidbody, Collider, Light...), with a Copy edits button.

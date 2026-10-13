@@ -51,6 +51,13 @@ public static class PixelMenuFx
         button.gameObject.AddComponent<PixelFancyButton>().Setup(Color.white, null, 0, true, true, true);   // (+ the shine every few seconds, like the main menu's buttons)
     }
 
+    /// <summary>The main menu's Play / Load / Settings / Quit buttons: brighten, press and the shine (also every few seconds). Follows 'Fancy pause menu'.</summary>
+    public static void DecorateTitle(Button button)
+    {
+        if (button == null || button.GetComponent<PixelFancyButton>() != null || button.GetComponent<Image>() == null) return;
+        button.gameObject.AddComponent<PixelFancyButton>().Setup(Color.white, null, 0, true, false, true);
+    }
+
     /// <summary>The light animation (brighten, shine, press) for every button under a screen (Settings, Stats, Save / Load).</summary>
     public static void DecorateAll(Transform root)
     {
@@ -241,7 +248,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         hoverT = Mathf.MoveTowards(hoverT, hover ? 1f : 0f, dt * 7f);
         float h = hoverT * hoverT * (3f - 2f * hoverT);
         float scale = (lightMode ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
-        rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));
+        if (button == null || button.interactable) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));   // (a button something else is animating - the title's shrink - is left alone)
 
         if (lightMode && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
         else image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
