@@ -2874,7 +2874,25 @@ public partial class PixelClicker : MonoBehaviour
         if (h >= 0) { hazardIndex = h; hazardWeight = basis * hShare / (1f - hShare); }
     }
 
-    private int PickSpawnTier() => MaybeGreatOak(PickSpawnTierBase());
+    private int PickSpawnTier()
+    {
+        int pick = PickSpawnTierBase();
+        // Safety net: a block that is locked or belongs to a skill that is not in play must never come up on its own (dev spawning and forced blocks are exempt).
+        if (devSpawnTiers == null && IsValidTier(pick) && !(IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
+            && (!tiers[pick].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[pick].type)) && !IsDragonCube(tiers[pick].type))
+        {
+            PixelSkills sk = PixelSkills.Instance;
+            Debug.LogWarning("PixelClicker: the spawn roll picked '" + tiers[pick].displayName + "' (" + tiers[pick].type + ") but it may not spawn now (unlocked " + tiers[pick].unlocked
+                             + ", spawnDisabled " + tiers[pick].spawnDisabled + ", skill in play " + (sk != null ? sk.ActiveId : "none") + ") - rolled again.", this);
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                int again = PickSpawnTierBase();
+                if (IsValidTier(again) && tiers[again].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[again].type)) { pick = again; break; }
+            }
+            if (!tiers[pick].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[pick].type)) pick = GetHighestUnlockedIndex();
+        }
+        return MaybeGreatOak(pick);
+    }
 
     private int PickSpawnTierBase()
     {
