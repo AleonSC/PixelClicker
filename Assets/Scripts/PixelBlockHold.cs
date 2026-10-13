@@ -8,6 +8,7 @@
 //   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. The hold lasts 2 seconds by default.
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
+//   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
 using TMPro;
@@ -47,6 +48,9 @@ public class PixelBlockHold : MonoBehaviour
     [SerializeField] private float sideDistance = 0f;
     [Tooltip("Colour the meter flashes when it ran dry.")]
     [SerializeField] private Color exhaustColor = new Color(1f, 0.2f, 0.15f, 1f);
+    [Min(0f)]
+    [Tooltip("A right press that comes this soon after another right press (or a right click on a hazard) is part of a spam, not a hold: it does not grab the block. 0 = the default (0.45).")]
+    [SerializeField] private float rightSpamGapSeconds = 0f;
     [Tooltip("Switch the whole feature off (even when the upgrade is bought).")]
     [SerializeField] private bool disableBlockHold = false;
 
@@ -59,6 +63,8 @@ public class PixelBlockHold : MonoBehaviour
     private float ReleaseCooldown => releaseCooldownSeconds > 0f ? releaseCooldownSeconds : 1f;
     private float ExhaustCooldown => exhaustCooldownSeconds > 0f ? exhaustCooldownSeconds : 3f;
     private float FlashSeconds => flashSeconds > 0f ? flashSeconds : 1.5f;
+    private float SpamGap => rightSpamGapSeconds > 0f ? rightSpamGapSeconds : 0.45f;
+    private float lastRightPress = -99f;
     private float MinStart => minStartFraction > 0f ? minStartFraction : 0.1f;
 
     private PixelClicker clicker;
@@ -144,7 +150,13 @@ public class PixelBlockHold : MonoBehaviour
         {
             if (cooldown > 0f) cooldown -= dt;
             else meter = Mathf.Min(1f, meter + dt / RechargeSeconds);
-            if (PixelInput.RightPressed() && CanStart()) Begin();
+            if (PixelInput.RightPressed())
+            {
+                // Right-clicking a hazard away means spamming the button; the press that lands on the NEXT block must not grab it (that costs the meter and breaks the flow).
+                bool spam = Time.unscaledTime - lastRightPress < SpamGap || Time.unscaledTime - clicker.LastDefuseTime < SpamGap;
+                lastRightPress = Time.unscaledTime;
+                if (!spam && CanStart()) Begin();
+            }
         }
         if (flash > 0f) flash -= dt;
     }

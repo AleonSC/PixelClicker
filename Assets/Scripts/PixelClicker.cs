@@ -4114,6 +4114,9 @@ public partial class PixelClicker : MonoBehaviour
 
     private int defuseClicks;
 
+    /// <summary>When the last right click on a hazard / bottle happened (Block Hold ignores a right press that follows it closely: it is part of the same spam).</summary>
+    public float LastDefuseTime { get; private set; } = -99f;
+
     /// <summary>
     /// A right click on a hazard block: it takes as many right clicks as the block takes to break PLUS the hits you had already put into it (5 to break
     /// and 2 hits in = 7 right clicks). Reaching that clears the block safely - no explosion / swarm, no XP penalty, no payout.
@@ -4123,6 +4126,7 @@ public partial class PixelClicker : MonoBehaviour
         PixelTier tier = GetClickTier();
         if (!IsHazard(tier.type) || pixelTransform == null) return;
         int required = NeededClicks(tier) + hitsOnCurrentPixel;
+        LastDefuseTime = Time.unscaledTime;
         defuseClicks++;
         hitPunchTimer = hitPunchDuration;
         PixelAudio.Play("click");
