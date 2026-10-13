@@ -1,6 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelHold.cs
-//   PixelHold.Update(caller, target, seconds, label, colour, circle, buildSound): hold-the-right-mouse-button helper with a filling bar next to the
+//   PixelHold.Update(caller, target, seconds, label, colour, circle, buildSound, useLeft): hold-the-right (or, useLeft, the LEFT) mouse-button helper with a filling bar next to the
 //   pointer (PixelHoldMeter, built lazily) or, with circle = true, ONLY a ring that fills round the cursor (no text) and a rising 'buildup' sound that stops when the hold ends
 //   (PixelHold.ProgressOf(target) lets the owner react, e.g. the removed device glows red); true when the hold completes. Used by PixelConsumables.UpdateRemoval (hold on a placed
 //   device -> PixelPlacedDevice.RemoveNow(), no refund; hit-test = renderer bounds, ignoring the range disc / blow area) and
@@ -41,7 +41,7 @@ public static class PixelHold
     public static float ProgressOf(object target) => target != null && ownerTarget == target ? lastProgress : 0f;
 
     /// <summary>Call every frame. 'target' = what the pointer is over right now (null = nothing). True when the hold completes.</summary>
-    public static bool Update(object caller, object target, float seconds, string label, Color color, bool circle = false, string buildSound = null)
+    public static bool Update(object caller, object target, float seconds, string label, Color color, bool circle = false, string buildSound = null, bool useLeft = false)
     {
         if (target == null || PixelPauseMenu.IsPaused)
         {
@@ -52,7 +52,7 @@ public static class PixelHold
         if (ownerCaller != caller || ownerTarget != target)
         {
             // A hold only starts with a fresh right-press on the target.
-            if (!PixelInput.RightPressed())
+            if (!(useLeft ? PixelInput.LeftPressed() : PixelInput.RightPressed()))
             {
                 if (ownerCaller == caller) Reset();
                 return false;
@@ -67,7 +67,7 @@ public static class PixelHold
             }
         }
 
-        if (!PixelInput.RightHeld())
+        if (!(useLeft ? PixelInput.LeftHeld() : PixelInput.RightHeld()))
         {
             Reset();
             return false;

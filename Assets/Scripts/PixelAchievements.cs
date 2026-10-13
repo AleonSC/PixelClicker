@@ -8,7 +8,8 @@
 //   drunk once, "Gadgeteer" = every device kind placed once; progress from PixelStats PotionsUsed / FansUsed / VacuumDevicesUsed /
 //   SortersUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
 //   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
-//   Kind.ClickPixelType). Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
+//   Kind.ClickPixelType). The unlock POPUP sits centred above the combo meter by default (DefaultPopupPosition); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
+//   PixelHold with useLeft) to pick it up, click to PIN it anywhere (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y, inside the black margins), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -143,11 +144,15 @@ public class PixelAchievements : MonoBehaviour
     [Tooltip("Popup size (canvas units).")]
     [SerializeField] private Vector2 popupSize = new Vector2(640f, 120f);
 
-    [Tooltip("Distance of the achievement popup from the right edge of the screen. It sits at the right, vertically centred.")]
-    [SerializeField] private float popupRightMargin = 60f;
+    [Min(0f)]
+    [Tooltip("How long (seconds) the left mouse button must be held on the popup, filling a small ring, before it can be moved and pinned. 0 = 0.5.")]
+    [SerializeField] private float popupHoldSeconds = 0f;
 
-    [Tooltip("Move the popup up (positive) or down (negative) from the vertical centre of the screen.")]
-    [SerializeField] private float popupVerticalOffset = 0f;
+    [Tooltip("Colour of the ring that fills while the popup is held.")]
+    [SerializeField] private Color popupRingColor = new Color(1f, 0.85f, 0.3f, 1f);
+
+    [Tooltip("Shown instead of the heading while the popup is being placed.")]
+    [SerializeField] private string popupPlaceText = "Click to place it   (right-click: back to the middle)";
 
     [Tooltip("Popup background colour.")]
     [SerializeField] private Color popupColor = new Color(0.07f, 0.07f, 0.09f, 0.95f);
@@ -289,6 +294,12 @@ public class PixelAchievements : MonoBehaviour
     private TMP_Text popupHeadingLabel, popupTitleLabel;
     private PixelCubeIcon popupIcon;
     private float popupTimer;
+    private Image popupImage;
+    private RectTransform popupCanvasRect;
+    private bool popupPinned, popupPlacing;
+    private Vector2 popupPinnedPos;
+    private int popupPlaceFrame;
+    private const string PrefPopupX = "PixelClicker.Setting.AchievementPopupX", PrefPopupY = "PixelClicker.Setting.AchievementPopupY";
 
     /// <summary>Number of achievements.</summary>
     public int Count => achievements.Count;
@@ -682,19 +693,23 @@ public class PixelAchievements : MonoBehaviour
 
     private void BuildPopup()
     {
-        popupCanvas = PixelUIKit.CreateCanvas("PixelAchievements Popup", popupSortingOrder, referenceResolution, false);
+        popupCanvas = PixelUIKit.CreateCanvas("PixelAchievements Popup", popupSortingOrder, referenceResolution, true);
+        popupCanvasRect = popupCanvas.GetComponent<RectTransform>();
 
         GameObject panel = new GameObject("Popup", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
         panel.transform.SetParent(popupCanvas.transform, false);
-        panel.GetComponent<Image>().color = popupColor;
-        panel.GetComponent<Image>().raycastTarget = false;
+        popupImage = panel.GetComponent<Image>();
+        popupImage.color = popupColor;
+        popupImage.raycastTarget = true;   // the popup can be held and moved (and the click does not reach the cube behind it)
         popupGroup = panel.GetComponent<CanvasGroup>();
-        popupGroup.blocksRaycasts = false;
+        popupGroup.blocksRaycasts = true;
 
         popupRect = panel.GetComponent<RectTransform>();
-        popupRect.anchorMin = popupRect.anchorMax = popupRect.pivot = new Vector2(1f, 0.5f); // right edge, vertically centred
+        popupRect.anchorMin = popupRect.anchorMax = popupRect.pivot = new Vector2(0.5f, 0.5f);   // positions are measured from the middle of the screen
         popupRect.sizeDelta = popupSize;
-        popupRect.anchoredPosition = new Vector2(-popupRightMargin, popupVerticalOffset);
+        popupPinned = PlayerPrefs.HasKey(PrefPopupX) && PlayerPrefs.HasKey(PrefPopupY);
+        popupPinnedPos = new Vector2(PlayerPrefs.GetFloat(PrefPopupX, 0f), PlayerPrefs.GetFloat(PrefPopupY, 0f));
+        PositionPopup();
 
         float iconSize = popupSize.y * 0.75f;
         GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
@@ -733,16 +748,88 @@ public class PixelAchievements : MonoBehaviour
         if (popupRect == null) return;
         popupTitleLabel.text = FormatForTier(index, achievements[index].title, tier);
         popupIcon.color = GetIconColor(index);
-        popupTimer = popupSeconds;
+        if (!popupPlacing) popupTimer = popupSeconds;
         popupRect.gameObject.SetActive(true);
+    }
+
+    /// <summary>The standard spot: centred on the screen, just above the combo meter. Positions are canvas units from the middle of the screen.</summary>
+    private Vector2 DefaultPopupPosition()
+    {
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        PixelCombo combo = PixelFind.First<PixelCombo>();
+        float above = combo != null ? combo.MeterTopOffset : bar + 140f;   // from the bottom of the screen to the bottom of the popup
+        float height = popupCanvasRect != null && popupCanvasRect.rect.height > 10f ? popupCanvasRect.rect.height : 1080f;
+        return new Vector2(0f, -height * 0.5f + above + popupSize.y * 0.5f);
+    }
+
+    private Vector2 ClampToCanvas(Vector2 p)
+    {
+        if (popupCanvasRect == null) return p;
+        Rect r = popupCanvasRect.rect;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        float hx = Mathf.Max(0f, r.width * 0.5f - popupSize.x * 0.5f), hy = Mathf.Max(0f, r.height * 0.5f - bar - popupSize.y * 0.5f);   // (inside the black margins)
+        return new Vector2(Mathf.Clamp(p.x, -hx, hx), Mathf.Clamp(p.y, -hy, hy));
+    }
+
+    private void PositionPopup()
+    {
+        if (popupRect != null) popupRect.anchoredPosition = popupPinned ? ClampToCanvas(popupPinnedPos) : DefaultPopupPosition();
     }
 
     private void TickPopup()
     {
-        if (popupRect == null || popupTimer <= 0f) return;
+        if (popupRect == null || !popupRect.gameObject.activeSelf) return;
+        if (PixelPauseMenu.IsPaused) return;
+
+        if (popupPlacing) { TickPlacing(); return; }
+
+        // Hold the left mouse button on the popup for a moment (a small ring fills round the cursor) and it can be moved and pinned anywhere.
+        Vector2 pointer = PixelInput.PointerPosition();
+        bool over = popupGroup.alpha > 0.2f && RectTransformUtility.RectangleContainsScreenPoint(popupRect, pointer, null);
+        if (PixelHold.Update(this, over ? popupRect : null, popupHoldSeconds > 0f ? popupHoldSeconds : 0.5f, "", popupRingColor, true, null, true))
+        {
+            popupPlacing = true;
+            popupPlaceFrame = Time.frameCount;
+            popupGroup.alpha = 1f;
+            popupHeadingLabel.text = popupPlaceText;
+            return;
+        }
+        if (over || PixelHold.ProgressOf(popupRect) > 0f) popupTimer = Mathf.Max(popupTimer, Mathf.Min(1f, popupSeconds));   // it stays while the mouse is on it
 
         popupTimer -= Time.unscaledDeltaTime;
         popupGroup.alpha = Mathf.Clamp01(popupTimer / Mathf.Min(1f, popupSeconds));
         if (popupTimer <= 0f) popupRect.gameObject.SetActive(false);
+    }
+
+    /// <summary>The popup follows the mouse; a left click pins it there, a right click puts it back to the middle.</summary>
+    private void TickPlacing()
+    {
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(popupCanvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
+            popupRect.anchoredPosition = ClampToCanvas(local);
+        popupImage.color = Color.Lerp(popupColor, new Color(0.35f, 0.3f, 0.1f, 0.98f), 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f));
+
+        bool place = PixelInput.LeftPressed() && Time.frameCount > popupPlaceFrame + 1;
+        bool reset = PixelInput.RightPressed();
+        if (!place && !reset) return;
+
+        if (place)
+        {
+            popupPinned = true;
+            popupPinnedPos = popupRect.anchoredPosition;
+            PlayerPrefs.SetFloat(PrefPopupX, popupPinnedPos.x);
+            PlayerPrefs.SetFloat(PrefPopupY, popupPinnedPos.y);
+            PixelAudio.Play("ui_click");
+        }
+        else
+        {
+            popupPinned = false;
+            PlayerPrefs.DeleteKey(PrefPopupX);
+            PlayerPrefs.DeleteKey(PrefPopupY);
+        }
+        popupPlacing = false;
+        popupImage.color = popupColor;
+        popupHeadingLabel.text = popupHeading;
+        PositionPopup();
+        popupTimer = 2.5f;   // it stays a moment where it was put
     }
 }
