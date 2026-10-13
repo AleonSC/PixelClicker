@@ -2923,6 +2923,8 @@ public class PixelPauseMenu : MonoBehaviour
             });
         }
         PixelUIKit.UpdateScrollView(scroll, bar, count * itemH, height - 12f);
+        PixelScrollKeep keepAt = scroll.gameObject.AddComponent<PixelScrollKeep>();   // (set again for a few frames: the list's layout is still settling)
+        keepAt.content = content; keepAt.viewport = vr; keepAt.index = look.Current; keepAt.count = count; keepAt.itemHeight = itemH;
         // Bring the current look into view.
         float visible = height - 12f;
         float want = Mathf.Max(0f, look.Current * itemH - visible * 0.5f + itemH * 0.5f);

@@ -782,6 +782,7 @@ public static class PixelUIKit
         dropdown.template = tr;
         dropdown.captionText = label;
         dropdown.itemText = itemLabel;
+        root.AddComponent<PixelDropdownScroll>();   // an opened list starts at the chosen entry instead of the top
         if (icons) { dropdown.captionImage = captionIcon; dropdown.itemImage = itemIcon; }
         template.SetActive(false);
         return dropdown;
@@ -1033,5 +1034,53 @@ public class PixelScrollBarAutoHide : MonoBehaviour
         bool needed = scroll.content.rect.height > view.rect.height + 0.5f;
         if (bar.activeSelf != needed) bar.SetActive(needed);
         if (!needed && scroll.content.anchoredPosition.y != 0f) scroll.content.anchoredPosition = Vector2.zero;
+    }
+}
+
+/// <summary>
+/// Keeps a scroll list centred on one entry for its first few frames (the Settings look list, and every drop-down made by PixelUIKit.CreateDropdown via PixelDropdownScroll):
+/// the list is built with its layout still settling, so the position is set again for three frames instead of once.
+/// </summary>
+public class PixelScrollKeep : MonoBehaviour
+{
+    public RectTransform content, viewport;
+    public int index, count;
+    public float itemHeight;   // 0 = content height / count
+    private int frames = 3;
+
+    private void LateUpdate()
+    {
+        if (frames-- <= 0 || content == null || viewport == null) { Destroy(this); return; }
+        float contentH = content.rect.height, viewH = viewport.rect.height;
+        float item = itemHeight > 0f ? itemHeight : (count > 0 ? contentH / count : 0f);
+        if (item <= 0f || contentH <= viewH) return;
+        float target = Mathf.Clamp((index + 0.5f) * item - viewH * 0.5f, 0f, contentH - viewH);
+        content.anchoredPosition = new Vector2(content.anchoredPosition.x, target);
+    }
+}
+
+/// <summary>On every code-built drop-down: when its list opens, scroll it to the currently chosen entry.</summary>
+public class PixelDropdownScroll : MonoBehaviour
+{
+    private TMP_Dropdown dropdown;
+    private bool wasOpen;
+
+    private void Update()
+    {
+        if (dropdown == null) dropdown = GetComponent<TMP_Dropdown>();
+        if (dropdown == null) return;
+        bool open = dropdown.IsExpanded;
+        if (open && !wasOpen)
+        {
+            Transform list = transform.Find("Dropdown List");
+            ScrollRect sr = list != null ? list.GetComponent<ScrollRect>() : null;
+            if (sr != null && sr.content != null && sr.viewport != null)
+            {
+                PixelScrollKeep keep = sr.gameObject.AddComponent<PixelScrollKeep>();
+                keep.content = sr.content; keep.viewport = sr.viewport;
+                keep.index = dropdown.value; keep.count = dropdown.options.Count;
+            }
+        }
+        wasOpen = open;
     }
 }
