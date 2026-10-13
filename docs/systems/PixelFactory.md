@@ -10,3 +10,9 @@ Both are Dev Hub > Tester features (PixelFeatureTester), built from primitives i
 ## Kiln (PixelKiln.cs)
 - Anything inside the mouth zone (in front of the +X door) burns: `ClaimOldPixel`, drawn in while it shrinks, then `charcoalPerPixel` Charcoal old pixels (`PixelType.Charcoal 81`, `EnsureCharcoalTier`, standalone, look migration looksVersion 58) leave the back chute after `charcoalDelaySeconds`, one per `charcoalGapSeconds`. Fire light, embers, smoke (thicker while it burns).
 - A belt can lead into the mouth; another can carry the charcoal away.
+
+## Wood Chipper discharge arrow and belt latch
+While placing, the ghost chipper shows a flat arrow from its chute outwards (PixelWoodChipper.BuildArrow; the chips shoot out along it). If the opening (start) of a belt lies in the arrow's area, `PixelWoodChipper.TrySnapToBelt` (the tester's `placeSnap` hook) turns the chipper so the arrow runs the way the belt runs and puts the chute over the belt's opening; the arrow turns green. A placed chipper drops its Wood Chips blocks straight onto a belt opening in that area (`BeltAtOutlet`).
+
+## Belt speed (first person)
+Right click a belt in first person: a small window (PixelConveyorSystem speed editor) with a number box (cube widths per second, 0 stops it), Set, Reverse and Close; Esc closes it; the mouse is freed while it is open (PixelFirstPerson `playable`). In the normal view a right click still reverses the belt.

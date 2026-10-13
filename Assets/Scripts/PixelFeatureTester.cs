@@ -18,8 +18,12 @@ public class PixelFeatureTester : MonoBehaviour
 {
     private const float W = PixelDevHub.ContentW, H = PixelDevHub.ContentH, CardH = 150f;
 
+    /// <summary>A feature may snap its placement (the Wood Chipper latches onto a belt opening): returns true when it did, with the snapped pose.</summary>
+    private delegate bool PlaceSnap(PixelClicker c, Vector3 point, float yaw, GameObject ghost, out Vector3 snappedPoint, out float snappedYaw);
+
     private sealed class Feature
     {
+        public PlaceSnap placeSnap;
         public string name, description;
         public Func<PixelClicker, GameObject> ghost;
         public Func<PixelClicker, Vector3, float, GameObject> place;
@@ -88,8 +92,9 @@ public class PixelFeatureTester : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
 
         Register("Wood Chipper",
-                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing.",
+                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out; if a conveyor belt's opening is in the arrow's area the chipper latches onto it and its Wood Chips drop straight onto the belt.",
                  c => PixelWoodChipper.CreateGhost(c), (c, p, yw) => PixelWoodChipper.Place(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelWoodChipper.TrySnapToBelt;
 
         RegisterLine("Conveyor Belt",
                      "Click a point, then another: a belt is built between them (the second point starts the next piece, so short pieces make a curve; right click ends the chain, right click again stops). Clicks near a belt's end snap to it. Right click a placed belt to reverse it. Anything standing on a belt is carried along - drop things on it with Pixel Grabbing, or put it under a machine's outlet.",
@@ -274,10 +279,12 @@ public class PixelFeatureTester : MonoBehaviour
         bool hasPoint = !overUi && TryFloorPoint(out Vector3 point0);
         Vector3 point = Vector3.zero;
         if (hasPoint) TryFloorPoint(out point);
+        float useYaw = yaw;
+        if (hasPoint && placing.placeSnap != null && placing.placeSnap(clicker, point, yaw, ghost, out Vector3 snapP, out float snapYaw)) { point = snapP; useYaw = snapYaw; }
         if (ghost != null && !(placing.line && hasStart))
         {
             ghost.SetActive(hasPoint);
-            if (hasPoint) ghost.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+            if (hasPoint) ghost.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, useYaw, 0f));
         }
         if (placing.line) { UpdateLine(hasPoint, point); return; }
         if (PixelKeys.Held(PixelAction.RotateLeft)) yaw -= 120f * Time.unscaledDeltaTime;
@@ -286,7 +293,7 @@ public class PixelFeatureTester : MonoBehaviour
         if (Time.frameCount == placeStartFrame) return;
         if (hasPoint && PixelInput.LeftPressed())
         {
-            GameObject go = placing.place(clicker, point, yaw);
+            GameObject go = placing.place(clicker, point, useYaw);
             if (go != null) placing.placed.Add(go);
             Refresh();
         }

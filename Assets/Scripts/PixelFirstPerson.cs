@@ -242,7 +242,7 @@ public class PixelFirstPerson : MonoBehaviour
         if (player == null || fpCamera == null) { Exit(); return; }
         if (PixelMinigame.TakeoverActive || PixelTitleScreen.Showing) { Exit(); return; }
         // Paused, a popup, a visitor... : give the mouse back until play resumes.
-        bool playable = !PixelPauseMenu.IsPaused && (Time.timeScale > 0f || PixelTimeStop.IsStopped) && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting && !PixelViewWindow.IsOpen && !PixelDevTools.IsOpen;   // (the View window and the Dev Hub need the mouse)
+        bool playable = !PixelPauseMenu.IsPaused && (Time.timeScale > 0f || PixelTimeStop.IsStopped) && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting && !PixelViewWindow.IsOpen && !PixelDevTools.IsOpen && !PixelConveyorSystem.EditorOpen;   // (the View window and the Dev Hub need the mouse)
         SetCursor(playable);
         if (!playable) return;
 

@@ -8,10 +8,14 @@
 //   locks pixels in. At the end of a belt it is handed on to a belt that STARTS there (a chained piece, ends within 0.45 cube widths and not head-on); when there is no belt to hand it
 //   to, the end is detected and the pixel is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
 //   when the one ahead is stopped. Flipping a belt flips its riders; grabbing a rider with Pixel Grabbing frees it. Things spat out of a machine or dropped by the player simply land on a
-//   belt and get captured. Belts are NOT saved. Built with PixelFactoryKit.
+//   belt and get captured. Belts are NOT saved. Built with PixelFactoryKit. SPEED: each belt can have its own speed - in FIRST PERSON a right click on a belt opens a small window (PixelConveyorSystem
+//   speed editor: a number box in cube widths per second, Set / Reverse / Close; the mouse is freed while it is open); in the normal view a right click still reverses the belt.
 // ---------------------------------------------------
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class PixelConveyor : MonoBehaviour
 {
@@ -63,7 +67,12 @@ public class PixelConveyor : MonoBehaviour
 
     public Vector3 EndA => a;
     public Vector3 EndB => b;
-    public float Speed => unit * (beltSpeedCubes > 0f ? beltSpeedCubes : 1.6f);
+    private float customSpeedCubes = -1f;   // set by the player (first person right click); negative = the default
+    /// <summary>The belt's speed in cube widths per second.</summary>
+    public float SpeedCubes => customSpeedCubes >= 0f ? customSpeedCubes : (beltSpeedCubes > 0f ? beltSpeedCubes : 1.6f);
+    public float Speed => unit * SpeedCubes;
+    public void SetSpeedCubes(float cubesPerSecond) { customSpeedCubes = Mathf.Clamp(cubesPerSecond, 0f, 30f); }
+    public void FlipPublic() { Flip(); }
 
     /// <summary>The way things move along the belt (flat, world space).</summary>
     public Vector3 Direction
@@ -426,18 +435,123 @@ public class PixelConveyorSystem : MonoBehaviour
     private void Update()
     {
         if (clicker != null && PixelConveyor.All.Count > 0) CarryPlayer();
-        if (clicker == null || !PixelInput.RightPressed() || PixelClicker.ExternalClickBlock || PixelPauseMenu.IsPaused || PixelInput.PointerOverUI() || PixelFirstPerson.Active) return;
-        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        if (cam == null) return;
-        RaycastHit[] hits = Physics.RaycastAll(cam.ScreenPointToRay(PixelInput.PointerPosition()), 1000f, ~0, QueryTriggerInteraction.Ignore);
+        if (clicker == null || !PixelInput.RightPressed() || PixelClicker.ExternalClickBlock && !PixelFirstPerson.Active || PixelPauseMenu.IsPaused || editorOpen) return;
+        bool fp = PixelFirstPerson.Active;
+        Ray ray;
+        float reach = 1000f;
+        if (fp)
+        {
+            if (!PixelFirstPerson.TryGetViewRay(out ray)) return;
+            reach = clicker.OldPixelWorldSize * 16f;
+        }
+        else
+        {
+            if (PixelInput.PointerOverUI()) return;
+            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            if (cam == null) return;
+            ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
+        }
+        RaycastHit[] hits = Physics.RaycastAll(ray, reach, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
         foreach (RaycastHit h in hits)
         {
             if (clicker.PixelTransform != null && h.transform.IsChildOf(clicker.PixelTransform)) return;   // the cube's own right click comes first
             if (h.collider.GetComponentInParent<OldPixelInfo>() != null) return;
             PixelConveyor belt = h.collider.GetComponentInParent<PixelConveyor>();
-            if (belt != null) { belt.Flip(); return; }
+            if (belt == null) continue;
+            if (fp) OpenEditor(belt);    // first person: type a custom speed
+            else belt.Flip();            // normal view: turn it round
+            return;
         }
+    }
+
+    // ---- the speed editor (first person right click on a belt) ----
+
+    private static bool editorOpen;
+    /// <summary>True while the belt speed window is open (first person gives the mouse back).</summary>
+    public static bool EditorOpen => editorOpen;
+
+    private GameObject editorRoot;
+    private TMP_InputField speedInput;
+    private TMP_Text speedTitle;
+    private PixelConveyor editing;
+    private bool windowRegistered;
+
+    private void OpenEditor(PixelConveyor belt)
+    {
+        if (editorRoot == null) BuildEditor();
+        if (editorRoot == null) return;
+        editing = belt;
+        speedInput.text = belt.SpeedCubes.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        editorRoot.SetActive(true);
+        editorOpen = true;
+        if (!windowRegistered) { PixelWindows.Register(this, 215, () => editorOpen, CloseEditor); windowRegistered = true; }
+        speedInput.Select();
+        speedInput.ActivateInputField();
+    }
+
+    private void CloseEditor()
+    {
+        editorOpen = false;
+        editing = null;
+        if (editorRoot != null) editorRoot.SetActive(false);
+        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+    }
+
+    private void ApplySpeed()
+    {
+        if (editing != null && float.TryParse(speedInput.text.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v))
+        {
+            editing.SetSpeedCubes(v);
+            PixelAudio.Play("device_place");
+            CloseEditor();
+        }
+    }
+
+    private void BuildEditor()
+    {
+        TMP_FontAsset font = clicker.UIFont;
+        if (font == null) return;
+        PixelUIKit.EnsureEventSystem();
+        editorRoot = PixelUIKit.CreateCanvas("Belt Speed", 330, new Vector2(1920f, 1080f), false);
+        GameObject panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(editorRoot.transform, false);
+        RectTransform pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(520f, 300f);
+        Image bg = panel.GetComponent<Image>();
+        PixelUIKit.StyleWindow(bg, new Color(0.1f, 0.12f, 0.18f, 0.96f));
+
+        speedTitle = PixelUIKit.CreateText(font, panel.transform, "Title", "BELT SPEED", 32f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        RectTransform tr = speedTitle.rectTransform;
+        tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(480f, 50f); tr.anchoredPosition = new Vector2(0f, -16f);
+
+        TMP_Text hint = PixelUIKit.CreateText(font, panel.transform, "Hint", "cube widths per second (0 stops the belt)", 20f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.75f, 0.82f, 0.95f, 1f));
+        RectTransform hr = hint.rectTransform;
+        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(480f, 30f); hr.anchoredPosition = new Vector2(0f, -70f);
+
+        speedInput = PixelUIKit.CreateInputField(font, panel.transform, "Speed Input", new Vector2(300f, 56f), new Color(0.05f, 0.06f, 0.09f, 1f), Color.white, 30f, "1.6");
+        RectTransform ir = speedInput.GetComponent<RectTransform>();
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 1f);
+        ir.anchoredPosition = new Vector2(0f, -120f);
+        speedInput.contentType = TMP_InputField.ContentType.DecimalNumber;
+        speedInput.onSubmit.AddListener(_ => ApplySpeed());
+
+        Button Make(string name, string label, Vector2 pos, Color color, UnityEngine.Events.UnityAction act)
+        {
+            Button b = PixelUIKit.CreateButton(font, panel.transform, name, label, new Vector2(150f, 52f), color, Color.white, 24f);
+            RectTransform r = b.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0f);
+            r.anchoredPosition = pos;
+            b.onClick.AddListener(act);
+            return b;
+        }
+        Make("Set", "Set", new Vector2(-170f, 24f), new Color(0.2f, 0.6f, 0.3f, 1f), ApplySpeed);
+        Make("Reverse", "Reverse", new Vector2(0f, 24f), new Color(0.25f, 0.45f, 0.7f, 1f), () => { if (editing != null) editing.FlipPublic(); });
+        Make("Close", "Close", new Vector2(170f, 24f), new Color(0.55f, 0.22f, 0.2f, 1f), CloseEditor);
+        editorRoot.SetActive(false);
     }
 
     private void OnDestroy()
@@ -446,5 +560,8 @@ public class PixelConveyorSystem : MonoBehaviour
         riders.Clear();
         riding.Clear();
         if (system == this) system = null;
+        editorOpen = false;
+        if (windowRegistered) PixelWindows.Unregister(this);
+        if (editorRoot != null) Destroy(editorRoot);
     }
 }
