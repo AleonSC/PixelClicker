@@ -978,6 +978,20 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Block Hold upgrade (Upgrades tab): hold the right mouse button on the cube's block to pull it out of the rotation. Cheap while testing.</summary>
+    private static ShopPack CreateBlockHoldPack()
+    {
+        return new ShopPack
+        {
+            displayName = "Block Hold",
+            tab = ShopTab.Upgrades,
+            description = "Hold the right mouse button on the cube's block to pull it out of the rotation: the cube gives you a new one while it stays held. Let go and it goes back. Holding drains a meter; if it runs dry the block is put back and the meter takes longer to recharge.",
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 5 } },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksBlockHold = true,
+        };
+    }
+
     /// <summary>Default Robot Worker upgrade (Upgrades tab): a robot that keeps a chosen consumable running.</summary>
     private static ShopPack CreateRobotPack()
     {
@@ -1231,6 +1245,8 @@ public partial class PixelShop
                           requires = p => p.unlocksTimeStop, create = CreateTimeSlowPack },
         new DefaultPack { isThis = p => p.unlocksBank,
                           requires = null, create = i => CreateBankPack() },
+        new DefaultPack { isThis = p => p.unlocksBlockHold,
+                          requires = null, create = i => CreateBlockHoldPack() },
         new DefaultPack { isThis = p => p.unlocksRobot,
                           requires = null, create = i => CreateRobotPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.OldPixelCap,

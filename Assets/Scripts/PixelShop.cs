@@ -169,6 +169,9 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Buying this pack unlocks the Pixel Bank (the Bank tab, the hose and the B key).")]
         public bool unlocksBank = false;
 
+        [Tooltip("Buying this pack unlocks Block Hold (hold the right mouse button on the cube's block to pull it out of the rotation for a moment).")]
+        public bool unlocksBlockHold = false;
+
         [Tooltip("Buying this pack gives you the Robot Worker (he keeps a chosen consumable running).")]
         public bool unlocksRobot = false;
 
@@ -1715,6 +1718,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksTimeSlow && timeStop != null && !purchased) timeStop.DeactivateSlow();
         if (pack.unlocksBank && bank != null && !purchased) bank.Deactivate();
         if (pack.unlocksRobot && robot != null && !purchased) robot.Deactivate();
+        if (pack.unlocksBlockHold && !purchased) PixelFind.First<PixelBlockHold>()?.Deactivate();
         if (!purchased && !string.IsNullOrEmpty(pack.unlocksMinigame)) PixelMinigame.Find(pack.unlocksMinigame)?.Deactivate();
     }
 
@@ -1987,6 +1991,7 @@ public partial class PixelShop : MonoBehaviour
         if (pack.unlocksTimeSlow && timeStop != null) timeStop.ActivateSlow();
         if (pack.unlocksBank && bank != null) bank.Activate();
         if (pack.unlocksRobot && robot != null) robot.Activate();
+        if (pack.unlocksBlockHold) PixelFind.First<PixelBlockHold>()?.Activate();
         if (!string.IsNullOrEmpty(pack.unlocksMinigame)) ActivateMinigame(pack.unlocksMinigame); // no-op if already running
     }
 
@@ -2100,6 +2105,7 @@ public partial class PixelShop : MonoBehaviour
                 if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.UserDisabled = true;
                 if (pack.unlocksGrabbing && grab != null) grab.UserDisabled = true;
                 if (pack.unlocksTimeStop && timeStop != null) timeStop.UserDisabled = true;
+                if (pack.unlocksRobot && robot != null) robot.UserDisabled = true;
                 if (!string.IsNullOrEmpty(pack.unlocksMinigame))
                 {
                     PixelMinigame game = PixelMinigame.Find(pack.unlocksMinigame);
@@ -2155,6 +2161,7 @@ public partial class PixelShop : MonoBehaviour
             pack.purchased = true;
             AnnouncePurchase(pack, "You bought " + pack.displayName + "!");
             ApplyPackEffects(pack);
+            if (pack.unlocksRobot && robot != null) robot.UserDisabled = true;   // the UFO starts switched OFF (Toggles window)
 
             if (pack.unlocksCrafting) PixelHints.Trigger("crafting");
             if (pack.unlocksGrabbing) PixelHints.Trigger("grab");
@@ -2162,6 +2169,7 @@ public partial class PixelShop : MonoBehaviour
             if (pack.unlocksTimeSlow) PixelHints.Trigger("timeslow");
             if (pack.unlocksBank) PixelHints.Trigger("bank");
             if (pack.unlocksRobot) PixelHints.Trigger("robot");
+            if (pack.unlocksBlockHold) PixelHints.Trigger("blockhold");
             if (pack.rewardTiers != null)
                 foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
                 {

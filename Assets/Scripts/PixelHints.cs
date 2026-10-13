@@ -289,6 +289,7 @@ public class PixelHints : MonoBehaviour
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
+        H("blockhold", "Block Hold unlocked! HOLD the right mouse button on the block on the cube to pull it out of the rotation: you get a new block while it stays held. Let go and it goes back. Holding drains the meter under the cube; if it runs dry the block is put back and the meter recharges more slowly."),
         H("robot", "UFO Helper hired! It hovers off to the side of the screen. Click him, pick a consumable and place its ghost where you want it: whenever that device runs out, he puts a new one there as long as you have one to spare."),
         H("timeslow", "Time Slow unlocked! Press {key:TimeSlow} to slow time and again to return to normal. It uses the same energy meter as Time Stop, but drains it more slowly. Meteor pixels crawl while time is slow - grab one with Pixel Grabbing and put it where you like."),
         H("timestop_slow", "Time is slowed! Everything crawls - even meteor pixels, which you can now grab. The Time Stop meter drains slowly while it lasts; press {key:TimeSlow} to go back to normal speed."),

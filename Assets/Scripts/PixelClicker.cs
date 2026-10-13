@@ -1165,6 +1165,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
+        if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
         if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
         if (PixelFind.First<PixelWoodworking>() == null) gameObject.AddComponent<PixelWoodworking>();   // Woodcutting's woodchipper and log rack
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
@@ -2569,7 +2570,51 @@ public partial class PixelClicker : MonoBehaviour
 
     private bool devSwapped; // dev tools: the pixel on the cube was swapped by hand and stays until it is clicked (even a locked type)
 
-    private int RollTier() { devSwapped = false; return PickSpawnTier(); }
+    private int RollTier()
+    {
+        devSwapped = false;
+        if (queuedReturnTier >= 0)
+        {
+            int queued = queuedReturnTier;
+            queuedReturnTier = -1;
+            if (IsValidTier(queued)) return queued;   // a block put back from the hold (PixelBlockHold)
+        }
+        return PickSpawnTier();
+    }
+
+    // ---- Block Hold (PixelBlockHold.cs) ----
+
+    private int queuedReturnTier = -1;
+
+    /// <summary>Where the block on the cube is.</summary>
+    public Vector3 LiveWorldPosition => pixelTransform != null ? pixelTransform.position : transform.position;
+
+    /// <summary>Block Hold: pulls the block on the cube out of the rotation (the cube rolls a new one at once). False if this block can't be held right now.</summary>
+    public bool TryPullLive(out int heldTier)
+    {
+        heldTier = -1;
+        if (!randomizeSpawnTier || pixelTransform == null || tiers == null || tiers.Length == 0 || isSpawning || CubeHidden || fishingBusy || hitsOnCurrentPixel != 0) return false;
+        int index = GetClickTierIndex();
+        PixelType type = tiers[index].type;
+        if (IsHazard(type) || type == PixelType.Bottle || type == PixelType.Whale || type == PixelType.Fish || type == PixelType.Treasure) return false;
+        if (PixelSkills.TryGetFiller(out PixelType filler, out float share) && share > 0f && filler == type) return false;   // filler can't be dodged
+        heldTier = index;
+        currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+        return true;
+    }
+
+    /// <summary>Block Hold: puts a held block back. It replaces the block on the cube if that one has no hits yet, otherwise it comes after that block breaks.</summary>
+    public void ReturnHeldTier(int tierIndex)
+    {
+        if (!IsValidTier(tierIndex)) return;
+        queuedReturnTier = tierIndex;
+        if (randomizeSpawnTier && pixelTransform != null && hitsOnCurrentPixel == 0 && !fishingBusy)
+        {
+            currentTierIndex = RollTier();
+            Materialize(GetClickTier());
+        }
+    }
 
     /// <summary>Dev tools: replaces the pixel on the cube with this type at once (even a locked one) so its behaviour can be tested.</summary>
     public void DevSwapCurrentPixel(PixelType type)

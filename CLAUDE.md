@@ -127,6 +127,7 @@
 | `PixelPestSwarm.cs` (Pest rework) | The Pest block (PixelLook.blockSurface Pest, PixelBlockTextures.PestHide(level,max): | in the header comment of `PixelPestSwarm.cs` |
 | Foraging pixels / Forager's Pack | Foraging (PixelSkills.ForagingId, second base gathering skill after Woodcutting; | `docs/systems/SkillBlocks.md` |
 | Fishing / ore rework | Fishing (PixelSkills.FishingId, third base gathering skill; | `docs/systems/SkillBlocks.md` |
+| `PixelBlockHold.cs` | Block Hold (shop pack unlocksBlockHold): hold the right mouse button on the cube's block to pull it out of the rotation while a meter drains; letting go puts it back. | in the header comment of `PixelBlockHold.cs` |
 | `PixelMold.cs` | Foraging's Mold hazard (zone that spreads over fallen pixels per click, shake to clean) + glowing Berry / Mushroom / Herb / Truffle old pixels. | in the header comment of `PixelMold.cs` |
 | `PixelFishingSpawns.cs` | Fishing's fixed spawn table (partial class PixelClicker): Water 80.5%, Driftwood 5%, Seaweed 7.5%, Jellyfish 3%, Shell 3%, Fish 1%, plus replacement rolls (Fish -> Whale 5%, Seaweed / Shell -> Bottle 2%, Shell -> Pearl) and Bait after a Water pixel. | in the header comment of `PixelFishingSpawns.cs` |
 | `PixelBurstPop.cs` | Aims a clicked pixel's old copy at a random point on a ring round the cube when the ground is a long fall away (partial class PixelClicker: TryBurstVelocity), so pixels spread over the floor instead of dropping in one stack. | in the header comment of `PixelBurstPop.cs` |
