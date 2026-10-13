@@ -842,6 +842,7 @@ public class PixelHints : MonoBehaviour
         return false;
     }
     private float introWait;
+    private bool freshJudged;   // freshAtStart has been worked out (on the title screen, or at the first update after it)
 
     private void TryStartIntro()
     {
@@ -849,16 +850,28 @@ public class PixelHints : MonoBehaviour
         if (PixelTitleScreen.Showing)
         {
             freshAtStart = !AnyCollected(); // judged on the title screen, before the player can click anything
+            freshJudged = true;
             return;
+        }
+        if (!freshJudged)
+        {
+            // The title screen never showed while this ran (a New Game / Restart presses Play at once, and which script updates first is not fixed): judge now, the player cannot have clicked yet.
+            freshAtStart = !AnyCollected();
+            freshJudged = true;
         }
         introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play)
         if (introWait < introDelay) return;
         introChecked = true;
-        if (!showIntro || !hintsEnabled || !TipsEnabled || Seen("intro_log")) return;
+        if (!showIntro || !hintsEnabled || !TipsEnabled || Seen("intro_log"))
+        {
+            PixelDebug.Info("Intro tips not started: showIntro " + showIntro + ", hintsEnabled " + hintsEnabled + ", TipsEnabled " + TipsEnabled + ", intro_log already seen " + Seen("intro_log"), this);
+            return;
+        }
 
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
-        if (!forceIntro && !freshAtStart) return; // not a new game
+        if (!forceIntro && !freshAtStart) { PixelDebug.Info("Intro tips not started: not a new game (something was already collected when the title screen was left) and no replay was asked for", this); return; } // not a new game
+        PixelDebug.Info("Intro tips start (replay " + forceIntro + ")", this);
         bool replay = forceIntro;
         forceIntro = false;
 
