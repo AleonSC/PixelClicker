@@ -552,6 +552,7 @@ public class PixelFirstPerson : MonoBehaviour
 
         // The white ghost where it would stick.
         bool snapped = FindCarriedSnap(unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target, out bool onBelt);
+        if (snapped && PixelSnap.Active && target == null && !onBelt) SnapPoseToGrid(unit, member, ref hPos, ref hRot);   // Shift: ground placements snap to the grid and to angle steps
         UpdateAttachGhosts(snapped, hPos, hRot);
 
         // Left button: a quick tap sticks it (white ghost) or sets it down; HOLD it to charge a throw (the ghost line shows the flight) and let go to throw.
@@ -577,6 +578,19 @@ public class PixelFirstPerson : MonoBehaviour
                 else DropCarried();
             }
         }
+    }
+
+    /// <summary>Shift while placing: the block that touches the ground is turned to the nearest angle step (round the contact cube) and moved so it fills a cell of the grid.</summary>
+    private void SnapPoseToGrid(float unit, int member, ref Vector3 hPos, ref Quaternion hRot)
+    {
+        Vector3 contact = hPos + hRot * relPos[member];
+        float yaw = (hRot * relRot[member]).eulerAngles.y;
+        hRot = Quaternion.AngleAxis(PixelSnap.Yaw(yaw) - yaw, Vector3.up) * hRot;
+        hPos = contact - hRot * relPos[member];   // (the contact cube stays where it was while the build turns round it)
+        Vector3 half = heldHalves[member];
+        float h = Mathf.Max(half.x, half.z), g = Mathf.Max(0.001f, unit * PixelSnap.GridCubes);
+        float sx = Mathf.Round((contact.x - h) / g) * g + h, sz = Mathf.Round((contact.z - h) / g) * g + h;
+        hPos += new Vector3(sx - contact.x, 0f, sz - contact.z);
     }
 
     private const float TapSeconds = 0.25f;
