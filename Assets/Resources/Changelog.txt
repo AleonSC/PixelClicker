@@ -798,3 +798,4 @@
 [2026-10-13 14:13 UTC] The clicker aura colour is adjustable: an eyedropper next to the toggle picks any colour, and an 'Aura color' drop-down chooses Match pixel, Custom or Rainbow.
 [2026-10-13 14:19 UTC] Old pixels are now kept inside a circle round the edge of the floor (where it fades out) instead of the four screen edges.
 [2026-10-13 14:22 UTC] Wood Chipper: made all its surfaces matt (no metal, little gloss, no specular or reflections) so its big flat tops no longer blow out to bright white.
+[2026-10-13 14:25 UTC] Wood Chipper: the whole paint palette is darker (55%) so the sun and bloom no longer blow its sun-facing tops out to white.

@@ -350,6 +350,9 @@ public class PixelWoodChipper : MonoBehaviour
 
     // ---- the kit: makes primitives with a cached material per colour ----
 
+    /// <summary>How much of its colour the machine's paint keeps (1 = the full palette).</summary>
+    private const float PaintBrightness = 0.55f;
+
     private sealed class Kit
     {
         public PixelClicker clicker;
@@ -360,6 +363,9 @@ public class PixelWoodChipper : MonoBehaviour
         public Material Mat(Color c, float metal = 0.25f, float smooth = 0.45f, bool unique = false)
         {
             Color col = c;
+            // Tame the paint: in sunlight (and with the day / night sun at full) bright colours go above 1 and bloom into white blobs on the tops that face the sun,
+            // which is why the machine seemed to glow from some camera angles only. The whole palette is scaled down.
+            col.r *= PaintBrightness; col.g *= PaintBrightness; col.b *= PaintBrightness;
             if (ghost) col.a = alpha;
             string key = col.ToString() + metal + smooth;
             if (!unique && mats.TryGetValue(key, out Material cached) && cached != null) return cached;
