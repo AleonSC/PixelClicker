@@ -471,9 +471,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Show the Quit button (stops Play mode in the Editor, closes the game in a build).")]
     [SerializeField] private bool showQuit = true;
 
-    [Min(300f)]
-    [Tooltip("Width of the Key Bindings screen (canvas units). Wider than the menu panel so long action names and key names fit.")]
-    [SerializeField] private float keyBindingsWidth = 900f;
+    [Min(0f)]
+    [Tooltip("Width of the Key Bindings screen (canvas units). 0 = the default (1150).")]
+    [SerializeField] private float keyBindingsPanelWidth = 0f;
 
     [Tooltip("Menu panel size. The main menu uses its own width (Main Panel Width) and fits its height to its buttons.")]
     [SerializeField] private Vector2 panelSize = new Vector2(560f, 560f);
@@ -2601,7 +2601,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         keysPanel = BuildSectionPanel("Key Bindings Panel", keyBindingsPanelTitle, out float y);
         RectTransform keysRect = keysPanel.GetComponent<RectTransform>();
-        keysRect.sizeDelta = new Vector2(Mathf.Max(keysRect.sizeDelta.x, keyBindingsWidth), keysRect.sizeDelta.y);
+        keysRect.sizeDelta = new Vector2(Mathf.Max(keysRect.sizeDelta.x, keyBindingsPanelWidth > 0f ? keyBindingsPanelWidth : 1150f), keysRect.sizeDelta.y);
         int count = PixelKeys.Count;
         keyButtonLabels = new TMP_Text[count];
 
@@ -2613,18 +2613,18 @@ public class PixelPauseMenu : MonoBehaviour
             string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "Switch view (first person / orbit)" : MenuKeyLabel((PixelAction)i);
             TMP_Text keyLabel = AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
             keyLabel.enableAutoSizing = true;           // long names ("Turn left (fan / sorter)") shrink to fit, they are not cut off
-            keyLabel.fontSizeMax = rowFontSize * 0.65f;
+            keyLabel.fontSizeMax = rowFontSize * 0.85f;
             keyLabel.fontSizeMin = 9f;
-            keyLabel.rectTransform.anchorMax = new Vector2(0.66f, 1f);
+            keyLabel.rectTransform.anchorMax = new Vector2(0.62f, 1f);
             keyLabel.rectTransform.offsetMax = new Vector2(-12f, 0f);
             Button b = MakeButton(row, "Key", "", new Vector2(10f, 10f), tickBoxColor, rowFontSize * 0.85f);
             RectTransform br = b.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(0.68f, 0.06f);
+            br.anchorMin = new Vector2(0.64f, 0.06f);
             br.anchorMax = new Vector2(1f, 0.94f);
             br.offsetMin = br.offsetMax = Vector2.zero;
             TMP_Text text = b.GetComponentInChildren<TMP_Text>();
             text.enableAutoSizing = true;
-            text.fontSizeMax = rowFontSize * 0.85f;
+            text.fontSizeMax = rowFontSize * 0.95f;
             text.fontSizeMin = 12f;
             keyButtonLabels[i] = text;
             b.onClick.AddListener(() => { capturingAction = index; RefreshKeyLabels(); });
