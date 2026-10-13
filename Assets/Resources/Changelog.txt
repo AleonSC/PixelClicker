@@ -753,3 +753,4 @@
 [2026-10-13 09:10 UTC] On the main menu the black bar and its glow lights now stay visible behind the Settings / Load windows instead of disappearing.
 [2026-10-13 09:11 UTC] CRT TV filter: bigger rounded tube-shaped corners with a soft dark rim, and a stronger screen bulge.
 [2026-10-13 09:13 UTC] Screen filters now log to the Console whether the URP post-processing part is running, to make a missing bulge easier to track down.
+[2026-10-13 09:15 UTC] Screen filters: an editor script now adds a PIXEL_URP define when the URP package is installed (UNITY_PIPELINE_URP was not defined in the game scripts), so the CRT bulge / grain / colour grading can turn on.

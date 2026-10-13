@@ -3,7 +3,7 @@
 //   Screen filters (Settings > Display > 'Screen filter' drop-down + 'Filter strength' slider; saved per profile through PixelSettingsSync: PlayerPrefs
 //   PixelClicker.Setting.Filter / FilterStrength; component added by PixelClicker.Awake, PixelFilters.Instance). A filter is a Preset (Inspector list `presets`, index 0 = Off;
 //   defaults CreateDefaults: CRT TV, VHS, Wild West, Noir, Night Vision, Neon Dream) with TWO parts, both scaled by the strength slider:
-//   1) URP post-processing (only with the Universal RP package, #if UNITY_PIPELINE_URP and a URP pipeline asset): a runtime global Volume with ColorAdjustments, WhiteBalance, Vignette,
+//   1) URP post-processing (only with the Universal RP package, #if PIXEL_URP and a URP pipeline asset): a runtime global Volume with ColorAdjustments, WhiteBalance, Vignette,
 //      FilmGrain, ChromaticAberration, LensDistortion and Bloom, blended from neutral to the preset by the strength; the cameras get renderPostProcessing switched on (re-checked every
 //      cameraCheckSeconds). Without URP this part is skipped and only the overlay works.
 //   2) A screen-space overlay canvas (sortingOrder overlaySortingOrder, above the UI so it also covers windows like a real screen): colour tint, vignette, CRT rounded corners
@@ -14,7 +14,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-#if UNITY_PIPELINE_URP
+#if PIXEL_URP
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 #endif
@@ -102,7 +102,7 @@ public class PixelFilters : MonoBehaviour
     private float nextNoise, nextDust, nextCameraCheck;
     private Preset active;
 
-#if UNITY_PIPELINE_URP
+#if PIXEL_URP
     private Volume volume;
     private VolumeProfile profile;
     private ColorAdjustments colorAdj;
@@ -175,7 +175,7 @@ public class PixelFilters : MonoBehaviour
             }
         }
 
-#if UNITY_PIPELINE_URP
+#if PIXEL_URP
         if (urpReady && time >= nextCameraCheck)
         {
             nextCameraCheck = time + cameraCheckSeconds;
@@ -188,7 +188,7 @@ public class PixelFilters : MonoBehaviour
     // URP post-processing
     // ------------------------------------------------------------------
 
-#if UNITY_PIPELINE_URP
+#if PIXEL_URP
     private void EnableCameras()
     {
         foreach (Camera cam in Camera.allCameras)
@@ -246,7 +246,7 @@ public class PixelFilters : MonoBehaviour
         Debug.Log("PixelFilters: URP post-processing volume active for '" + p.name + "' (strength " + k.ToString("0.00") + "). If the picture shows no bulge / grain, check the Universal Renderer asset has Post-processing enabled and the camera's Post Processing box is ticked.", this);
     }
 #else
-    private void ApplyVolume(Preset p, float k) { if (p != null) Debug.LogWarning("PixelFilters: UNITY_PIPELINE_URP is not defined, so only the overlay part of the filter works (no bulge, grain, colour grading).", this); }
+    private void ApplyVolume(Preset p, float k) { if (p != null) Debug.LogWarning("PixelFilters: PIXEL_URP is not defined, so only the overlay part of the filter works (no bulge, grain, colour grading).", this); }
 #endif
 
     // ------------------------------------------------------------------
