@@ -793,10 +793,19 @@ public class PixelDevTools : MonoBehaviour
         scrollRect.anchorMax = Vector2.one;
         scrollRect.offsetMin = new Vector2(0f, 8f);
         scrollRect.offsetMax = new Vector2(0f, -scrollTop);
-        y = 0f; // rows below are placed from the top of the scrolling content
-
-
+        y = 0f; // rows below are placed from the top of the scrolling content (each one becomes a draggable widget card)
+        PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - scrollTop - 8f));
         int ws = content.childCount;
+        if (PixelCrashLog.Available)
+        {
+            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", "Open crash report folder", new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+            Place(report.GetComponent<RectTransform>(), 40f, y, inner);
+            report.onClick.AddListener(PixelCrashLog.OpenFolder);
+            AddTip(report.gameObject, reportTipText);
+            Widget(content, board, "report", ws, y);
+            y += rowHeight + 24f;
+            ws = content.childCount;
+        }
         // Row: tick box for the docked Dev Tools button (the key always opens the window)
         dockToggle = BuildToggleRow(content, "Show Dev Tools button", y, inner, showDockButton, SetDockVisible,
                                     "The glowing Dev Tools button at the bottom of the screen. The window always opens with its key (Settings > Key bindings, default F9).");
