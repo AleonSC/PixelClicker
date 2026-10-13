@@ -7,6 +7,8 @@
 //   BEHAVIOUR (the placed machine): any old pixel inside the hopper (or just above its mouth, suction) is pulled to the rollers and SHREDDED: PixelClicker.ClaimOldPixel takes it out of the list
 //   (no payout), it is drawn through the rollers while it squashes, and a burst of pixel-coloured chips plus wood chips comes out of the chute. While it works the machine shakes, the rollers and
 //   flywheel speed up, the beacon blinks and the exhaust puffs more. Pixels you are holding are left alone.
+//   WOOD CHIPS: every woodPerChips (5) wood pixels consumed (woodConsumed / chipProgress) the chute spits out one 'Wood Chips' old pixel (PixelType.WoodChips, PixelClicker.EnsureWoodChipsTier,
+//   never spawns on the cube; it despawns like any old pixel until later tools turn it into currency). A BLUE bar under the health bar shows the progress to the next block.
 //   GAME RULES: a WOOD pixel (PixelClicker.IsWoodBlock) gives Woodcutting XP (woodXp, PixelSkills.AddXp on the Woodcutting pack, with the usual popup). Any other pixel DAMAGES it
 //   (damagePerOtherPixel off 'maxHealth'): the paint darkens, sparks fly, the exhaust turns black and thick; a health bar floats over it. At 0 it is BROKEN for good (stops, no beacon, smoke,
 //   'BROKEN' label): clear it in the Tester tab and place a new one. Tunables are [SerializeField] fields (editable live with the Dev Hub's Inspector).
@@ -68,6 +70,10 @@ public class PixelWoodChipper : MonoBehaviour
     [Tooltip("How much damage every non-wood pixel does to the machine.")]
     [SerializeField] private float damagePerOtherPixel = 14f;
 
+    [Min(1)]
+    [Tooltip("Every this many wood pixels shredded, the machine spits out one Wood Chips block (an old pixel that despawns like any other).")]
+    [SerializeField] private int woodPerChips = 5;
+
     [Tooltip("The machine's health; at 0 it breaks for good.")]
     [SerializeField] private float maxHealth = 100f;
 
@@ -110,6 +116,8 @@ public class PixelWoodChipper : MonoBehaviour
     private float scaleFactor = 1f;
     private float health;
     private bool broken;
+    private int woodConsumed, chipProgress;   // wood pixels shredded in total / since the last Wood Chips block
+    private Transform chipBarFill;
     private readonly List<Renderer> paintRenderers = new List<Renderer>();
     private readonly List<Color> paintColors = new List<Color>();
     private Transform barRoot, barFill;
@@ -263,6 +271,31 @@ public class PixelWoodChipper : MonoBehaviour
 
         if (go != null) Destroy(go);
         EmitChips(tint);
+        if (isWood) CountWood();
+    }
+
+    /// <summary>A wood pixel was consumed: every 'woodPerChips' of them the machine spits out a Wood Chips block.</summary>
+    private void CountWood()
+    {
+        woodConsumed++;
+        chipProgress++;
+        if (chipProgress >= Mathf.Max(1, woodPerChips))
+        {
+            chipProgress = 0;
+            SpitChipsBlock();
+        }
+        RefreshCondition();
+    }
+
+    private void SpitChipsBlock()
+    {
+        if (clicker == null) return;
+        int tier = clicker.EnsureWoodChipsTier();
+        float s = transform.lossyScale.x;
+        Vector3 pos = transform.TransformPoint(OutletLocal);
+        Vector3 dir = (transform.TransformDirection(OutletDirLocal).normalized + Vector3.up * 0.25f + Random.insideUnitSphere * 0.15f).normalized;
+        clicker.SpawnStoredPixel(tier, 1, pos, dir * Random.Range(2.5f, 4f) * s);
+        PixelAudio.Play("drop", 0.5f, 1.2f);
     }
 
     /// <summary>A wood pixel went through: Woodcutting XP.</summary>
@@ -305,6 +338,12 @@ public class PixelWoodChipper : MonoBehaviour
         {
             barFill.localScale = new Vector3(1.5f * Mathf.Max(0.001f, k), 1f, 1f);
             barFill.localPosition = new Vector3(-0.75f * (1f - k), 0f, -0.012f);
+        }
+        if (chipBarFill != null)
+        {
+            float c = Mathf.Clamp01(chipProgress / (float)Mathf.Max(1, woodPerChips));
+            chipBarFill.localScale = new Vector3(1.5f * Mathf.Max(0.001f, c), 1f, 1f);
+            chipBarFill.localPosition = new Vector3(-0.75f * (1f - c), -0.17f, -0.012f);
         }
         if (barFillMat != null) SetColor(barFillMat, Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.3f, 0.8f, 0.25f), k));
         float paint = broken ? 0.3f : Mathf.Lerp(0.5f, 1f, k);
@@ -435,6 +474,18 @@ public class PixelWoodChipper : MonoBehaviour
         barFill = fillPivot.transform;   // scaled along X, anchored at the left
         barFillMat = k.Mat(new Color(0.3f, 0.8f, 0.25f), 0f, 0.1f, true);
         fill.GetComponent<Renderer>().sharedMaterial = barFillMat;
+        // A blue bar under the health bar: it fills with every wood pixel and empties when a Wood Chips block comes out.
+        k.Box("Chip Back", barRoot, new Vector3(0f, -0.17f, 0f), new Vector3(1.64f, 0.14f, 0.02f), new Color(0.05f, 0.05f, 0.06f), default, false, 0f, 0.1f);
+        GameObject chipFill = k.Box("Chip Fill", barRoot, Vector3.zero, new Vector3(1f, 0.07f, 0.02f), new Color(0.2f, 0.55f, 1f), default, false, 0f, 0.1f);
+        GameObject chipPivot = new GameObject("Chip Fill Pivot");
+        chipPivot.transform.SetParent(barRoot, false);
+        chipPivot.transform.localPosition = new Vector3(0f, -0.17f, -0.012f);
+        chipPivot.transform.localScale = new Vector3(0.001f, 1f, 1f);
+        chipFill.transform.SetParent(chipPivot.transform, false);
+        chipFill.transform.localPosition = Vector3.zero;
+        chipFill.transform.localScale = new Vector3(1f, 0.07f, 0.02f);
+        chipBarFill = chipPivot.transform;
+        chipFill.GetComponent<Renderer>().sharedMaterial = k.Mat(new Color(0.2f, 0.55f, 1f), 0f, 0.1f, true);
         // The label (a TextMesh needs no font setup) shows only when it is broken.
         GameObject lg = new GameObject("Broken Label", typeof(TextMesh));
         lg.transform.SetParent(transform, false);

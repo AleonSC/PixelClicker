@@ -143,6 +143,7 @@ public partial class PixelClicker : MonoBehaviour
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
+        WoodChips = 76,   // spat out by the Wood Chipper (every 5 wood pixels shredded): never spawns on the cube, only exists as an old pixel (PixelWoodChipper)
     }
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
@@ -167,7 +168,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold;
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips;
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1814,6 +1815,16 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 51;
         }
 
+        if (looksVersion < 52)
+        {
+            // The Wood Chips block got a look.
+            System.Collections.Generic.List<PixelLook> list52 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook def52 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.WoodChips);
+            if (def52 != null && PixelLooks.Find(list52.ToArray(), PixelType.WoodChips) == null) list52.Add(def52);
+            looks = list52.ToArray();
+            looksVersion = 52;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2548,6 +2559,21 @@ public partial class PixelClicker : MonoBehaviour
         list.Insert(insertAt, copy);
         tiers = list.ToArray();
         return insertAt;
+    }
+
+    /// <summary>The Wood Chips tier (made on first use; never spawns on the cube, the Wood Chipper spits them out as old pixels). Returns its index.</summary>
+    public int EnsureWoodChipsTier()
+    {
+        return EnsureTier(new PixelTier
+        {
+            type = PixelType.WoodChips,
+            displayName = "Wood Chips",
+            color = new Color(0.82f, 0.62f, 0.36f, 1f),
+            amountPerClick = 1,
+            spawnWeight = 0f,
+            spawnSwitch = SpawnSwitch.AlwaysOn,
+            unlockMode = TierUnlockMode.ShopOnly,
+        });
     }
 
     private int[] devSpawnTiers; // dev tools: only these tiers spawn (locked ones too); null = normal spawning
