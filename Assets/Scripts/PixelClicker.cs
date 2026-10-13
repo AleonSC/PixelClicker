@@ -4331,6 +4331,14 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>The old pixels currently lying around (read-only). Used by the vacuum device.</summary>
     public System.Collections.Generic.IReadOnlyList<Rigidbody> OldPixels => oldPixels;
 
+    /// <summary>Takes an old pixel out of the old-pixel list WITHOUT paying anything: the caller (the Wood Chipper) now owns the object and must destroy it.</summary>
+    public bool ClaimOldPixel(Rigidbody body)
+    {
+        if (body == null || !oldPixels.Remove(body)) return false;
+        PixelStats.Count("old.shredded");
+        return true;
+    }
+
     /// <summary>
     /// Collects one old pixel again (its reward is re-added) and pulls it into 'target' while it shrinks.
     /// Returns false if it isn't an old pixel any more.

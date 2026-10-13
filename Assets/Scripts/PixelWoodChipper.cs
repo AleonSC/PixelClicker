@@ -1,0 +1,695 @@
+// ---- System notes ----
+// PixelWoodChipper.cs
+//   The WOOD CHIPPER: the first thing built for the Dev Hub's Tester tab (PixelFeatureTester). A detailed machine built from primitives in code (PixelWoodChipper.Build(ghost)): a trailer chassis
+//   with two tyres, hubs, fenders, a hitch with a jack stand and coupler; an orange cutter housing with a hatch, bolts, a flywheel guard with a spinning pulley, warning stripes and a danger plate;
+//   a big tapered FEED HOPPER (double-sided walls, dark liner, yellow / black hazard rim) over two ribbed feed rollers; a discharge chute with a swivel hood; an engine with fins, valve cover, air
+//   filter, fuel tank, muffler and exhaust stack; a control panel with levers, a gauge and an e-stop; an amber beacon; reflectors. Build(true) makes the see-through placement ghost (no colliders).
+//   BEHAVIOUR (the placed machine): any old pixel inside the hopper (or just above its mouth, suction) is pulled to the rollers and SHREDDED: PixelClicker.ClaimOldPixel takes it out of the list
+//   (no payout), it is drawn through the rollers while it squashes, and a burst of pixel-coloured chips plus wood chips comes out of the chute. While it works the machine shakes, the rollers and
+//   flywheel speed up, the beacon blinks and the exhaust puffs more. Pixels you are holding are left alone. Tunables are [SerializeField] fields (editable live with the Dev Hub's Inspector).
+// ---------------------------------------------------
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PixelWoodChipper : MonoBehaviour
+{
+    // ------------------------------------------------------------------
+    // Where things are, in the machine's own units (before the scale)
+    // ------------------------------------------------------------------
+
+    private static readonly Vector3 ThroatLocal = new Vector3(-1.2f, 1.8f, 0f);
+    private static readonly Vector3 OutletLocal = new Vector3(0.25f, 3.05f, 0.55f);
+    private static readonly Vector3 OutletDirLocal = new Vector3(0f, 0.45f, 1f);
+    private const float FunnelBaseY = 1.7f, FunnelMouthY = 2.75f;
+
+    private static readonly Color Orange = new Color(0.95f, 0.48f, 0.08f), DarkOrange = new Color(0.72f, 0.33f, 0.05f), Steel = new Color(0.66f, 0.68f, 0.72f),
+                                  Dark = new Color(0.17f, 0.18f, 0.2f), Rubber = new Color(0.07f, 0.07f, 0.08f), Yellow = new Color(1f, 0.84f, 0.08f),
+                                  Red = new Color(0.8f, 0.08f, 0.07f), Wood = new Color(0.78f, 0.58f, 0.32f);
+
+    // ------------------------------------------------------------------
+    // Tunables
+    // ------------------------------------------------------------------
+
+    [Header("Size")]
+    [Tooltip("World size of the machine as a multiple of the cube's size.")]
+    [SerializeField] private float sizeInCubes = 0.9f;
+
+    [Header("Feeding")]
+    [Tooltip("How hard a pixel inside the hopper is pulled towards the rollers (world units per second squared).")]
+    [SerializeField] private float pullAcceleration = 55f;
+
+    [Tooltip("How far above the hopper's mouth pixels are sucked in (machine units, before the scale).")]
+    [SerializeField] private float suctionHeight = 1.4f;
+
+    [Tooltip("Pixels closer than this to the rollers (machine units) are shredded.")]
+    [SerializeField] private float shredDistance = 0.4f;
+
+    [Header("Shredding")]
+    [Tooltip("Seconds a pixel takes to be drawn into the rollers.")]
+    [SerializeField] private float drawSeconds = 0.28f;
+
+    [Tooltip("Seconds the pixel is chewed (squashed) in the rollers before the chips come out.")]
+    [SerializeField] private float chewSeconds = 0.3f;
+
+    [Tooltip("How many chips fly out of the chute per shredded pixel.")]
+    [SerializeField] private int chipsPerPixel = 16;
+
+    [Tooltip("Seconds the machine stays 'busy' (shaking, beacon, fast rollers) after the last pixel.")]
+    [SerializeField] private float busySeconds = 1.2f;
+
+    [Header("Look")]
+    [Tooltip("How strongly the machine shakes while busy (machine units).")]
+    [SerializeField] private float shakeAmount = 0.025f;
+
+    // ------------------------------------------------------------------
+    // Placement helpers (used by PixelFeatureTester)
+    // ------------------------------------------------------------------
+
+    /// <summary>The see-through ghost that follows the mouse while placing.</summary>
+    public static GameObject CreateGhost(PixelClicker clicker)
+    {
+        GameObject root = Build(clicker, true);
+        root.name = "Wood Chipper (Ghost)";
+        return root;
+    }
+
+    /// <summary>A working Wood Chipper standing at 'point' turned by 'yaw' degrees.</summary>
+    public static GameObject Place(PixelClicker clicker, Vector3 point, float yaw)
+    {
+        GameObject root = Build(clicker, false);
+        root.name = "Wood Chipper";
+        root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
+        return root;
+    }
+
+    // ------------------------------------------------------------------
+    // The behaviour
+    // ------------------------------------------------------------------
+
+    private PixelClicker clicker;
+    private Transform shake, flywheel, rollerA, rollerB, beaconLamp;
+    private Material beaconMat;
+    private ParticleSystem chips, smoke;
+    private Transform chipFloor;
+    private Vector3 shakeHome;
+    private float busyUntil, rollerAngle, flyAngle;
+    private float scaleFactor = 1f;
+
+    private bool Busy => Time.time < busyUntil;
+
+    private void Update()
+    {
+        bool busy = Busy;
+        float dt = Time.deltaTime;
+        float rollerSpeed = busy ? 520f : 40f, flySpeed = busy ? 900f : 160f;
+        rollerAngle += rollerSpeed * dt;
+        flyAngle += flySpeed * dt;
+        if (rollerA != null) rollerA.localRotation = Quaternion.Euler(0f, 0f, rollerAngle);
+        if (rollerB != null) rollerB.localRotation = Quaternion.Euler(0f, 0f, -rollerAngle);
+        if (flywheel != null) flywheel.localRotation = Quaternion.Euler(0f, 0f, flyAngle);
+
+        if (shake != null)
+        {
+            Vector3 jitter = busy ? new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * shakeAmount : Vector3.zero;
+            jitter += new Vector3(0f, Mathf.Sin(Time.time * 38f) * 0.004f, 0f);   // the idling engine
+            shake.localPosition = shakeHome + jitter;
+        }
+        if (beaconMat != null)
+        {
+            bool on = busy ? Mathf.Repeat(Time.time * 4f, 1f) < 0.5f : Mathf.Repeat(Time.time * 0.8f, 1f) < 0.15f;
+            Color c = on ? new Color(1f, 0.7f, 0.1f) : new Color(0.45f, 0.25f, 0.03f);
+            SetColor(beaconMat, c);
+        }
+        if (smoke != null)
+        {
+            ParticleSystem.EmissionModule em = smoke.emission;
+            em.rateOverTime = busy ? 28f : 7f;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (clicker == null) return;
+        IReadOnlyList<Rigidbody> list = clicker.OldPixels;
+        if (list == null || list.Count == 0) return;
+        Vector3 throat = transform.TransformPoint(ThroatLocal);
+        float scale = transform.lossyScale.x;
+        for (int i = list.Count - 1; i >= 0; i--)
+        {
+            if (i >= list.Count) continue;
+            Rigidbody rb = list[i];
+            if (rb == null) continue;
+            OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+            if (info == null || info.heldByPlayer) continue;   // what you are holding is yours
+
+            Vector3 p = transform.InverseTransformPoint(rb.position);
+            if (!InsideFeed(p)) continue;
+
+            // Pull it down the hopper and a little to the rollers.
+            Vector3 toThroat = throat - rb.position;
+            float dist = toThroat.magnitude;
+            if (dist < shredDistance * scale || (p.y < FunnelBaseY + 0.25f && Mathf.Abs(p.x - ThroatLocal.x) < 0.5f))
+            {
+                if (clicker.ClaimOldPixel(rb)) StartCoroutine(Shred(rb, info));
+                continue;
+            }
+            rb.AddForce(toThroat / Mathf.Max(0.0001f, dist) * pullAcceleration, ForceMode.Acceleration);
+            Damp(rb, 2.5f * Time.fixedDeltaTime);
+        }
+    }
+
+    /// <summary>Is this machine-space point inside the hopper (or in the suction zone just above its mouth)?</summary>
+    private bool InsideFeed(Vector3 p)
+    {
+        float top = FunnelMouthY + suctionHeight;
+        if (p.y < FunnelBaseY - 0.05f || p.y > top) return false;
+        float t = Mathf.Clamp01((p.y - FunnelBaseY) / (FunnelMouthY - FunnelBaseY));
+        float cx = Mathf.Lerp(-1.2f, -1.5f, t), hx = Mathf.Lerp(0.42f, 1f, t), hz = Mathf.Lerp(0.55f, 1f, t);
+        if (p.y > FunnelMouthY) { float k = (p.y - FunnelMouthY) / suctionHeight; hx += 0.5f * k; hz += 0.5f * k; }   // the suction cone widens a little
+        return Mathf.Abs(p.x - cx) < hx && Mathf.Abs(p.z) < hz;
+    }
+
+    private static void Damp(Rigidbody rb, float amount)
+    {
+#if UNITY_6000_0_OR_NEWER
+        rb.linearVelocity *= Mathf.Clamp01(1f - amount);
+#else
+        rb.velocity *= Mathf.Clamp01(1f - amount);
+#endif
+    }
+
+    /// <summary>One pixel goes through the machine: drawn to the rollers, chewed, and its chips come out of the chute.</summary>
+    private IEnumerator Shred(Rigidbody rb, OldPixelInfo info)
+    {
+        GameObject go = rb.gameObject;
+        Transform t = go.transform;
+        Color tint = Color.white;
+        if (clicker != null && clicker.IsValidTierIndex(info.tierIndex)) tint = clicker.Tiers[info.tierIndex].color;
+        foreach (Collider c in go.GetComponentsInChildren<Collider>()) c.enabled = false;
+        rb.isKinematic = true;
+        OldPixelDespawn despawn = go.GetComponent<OldPixelDespawn>();
+        if (despawn != null) despawn.enabled = false;
+        busyUntil = Time.time + drawSeconds + chewSeconds + busySeconds;
+
+        Vector3 startPos = t.position, startScale = t.localScale;
+        float time = 0f;
+        while (time < drawSeconds)
+        {
+            if (t == null) yield break;
+            time += Time.deltaTime;
+            float k = Mathf.Clamp01(time / Mathf.Max(0.01f, drawSeconds));
+            float e = k * k * (3f - 2f * k);
+            Vector3 throat = transform.TransformPoint(ThroatLocal);
+            t.position = Vector3.Lerp(startPos, throat, e);
+            t.Rotate(0f, 360f * Time.deltaTime, 200f * Time.deltaTime, Space.World);
+            yield return null;
+        }
+
+        PixelAudio.Play("hit", 0.55f, 0.6f);
+        time = 0f;
+        while (time < chewSeconds)
+        {
+            if (t == null) yield break;
+            time += Time.deltaTime;
+            float k = Mathf.Clamp01(time / Mathf.Max(0.01f, chewSeconds));
+            t.localScale = new Vector3(startScale.x * (1f + 0.5f * k), startScale.y * Mathf.Lerp(1f, 0.08f, k), startScale.z * (1f + 0.5f * k));
+            t.position = transform.TransformPoint(ThroatLocal) + Random.insideUnitSphere * 0.02f * transform.lossyScale.x;
+            yield return null;
+        }
+
+        if (go != null) Destroy(go);
+        EmitChips(tint);
+    }
+
+    /// <summary>A burst out of the chute: pixel-coloured squares and wood chips.</summary>
+    private void EmitChips(Color pixelColor)
+    {
+        if (chips == null) return;
+        float s = transform.lossyScale.x;
+        Vector3 pos = transform.TransformPoint(OutletLocal);
+        Vector3 dir = transform.TransformDirection(OutletDirLocal).normalized;
+        for (int i = 0; i < chipsPerPixel; i++)
+        {
+            ParticleSystem.EmitParams ep = new ParticleSystem.EmitParams();
+            ep.position = pos + Random.insideUnitSphere * 0.05f * s;
+            Vector3 spread = Random.insideUnitSphere * 0.45f;
+            ep.velocity = (dir + spread).normalized * Random.Range(2.5f, 5.5f) * s;
+            bool fromPixel = i % 3 == 0;
+            Color c = fromPixel ? pixelColor * Random.Range(0.8f, 1.15f) : Wood * Random.Range(0.75f, 1.15f);
+            c.a = 1f;
+            ep.startColor = c;
+            ep.startSize = Random.Range(0.05f, 0.11f) * s;
+            ep.startLifetime = Random.Range(0.9f, 1.5f);
+            ep.rotation = Random.Range(0f, 360f);
+            ep.angularVelocity = Random.Range(-360f, 360f);
+            chips.Emit(ep, 1);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Building the machine
+    // ------------------------------------------------------------------
+
+    /// <summary>Builds the whole machine (origin on the ground under its middle) and, for a real one, adds this behaviour.</summary>
+    private static GameObject Build(PixelClicker clicker, bool ghost)
+    {
+        Kit k = new Kit { clicker = clicker, ghost = ghost, alpha = 0.45f };
+        GameObject root = new GameObject("Wood Chipper");
+        float scale = clicker != null ? Mathf.Max(0.05f, clicker.PixelBaseSize) * 0.9f : 1f;
+
+        // Everything except the wheels sits on a 'Shake' pivot (the idling engine / working machine shakes).
+        GameObject shake = new GameObject("Shake");
+        shake.transform.SetParent(root.transform, false);
+        Transform sh = shake.transform;
+
+        BuildChassis(k, root.transform, sh);
+        BuildHousing(k, sh);
+        Transform rA, rB;
+        BuildHopper(k, sh, out rA, out rB);
+        BuildChute(k, sh);
+        Transform fly;
+        BuildFlywheel(k, sh, out fly);
+        BuildEngine(k, sh, out Transform exhaustTop);
+        Material beacon = BuildControls(k, sh, out Transform lamp);
+
+        root.transform.localScale = Vector3.one * scale;
+        if (ghost) return root;
+
+        PixelWoodChipper chipper = root.AddComponent<PixelWoodChipper>();
+        chipper.clicker = clicker;
+        chipper.shake = sh; chipper.shakeHome = sh.localPosition;
+        chipper.rollerA = rA; chipper.rollerB = rB; chipper.flywheel = fly; chipper.beaconLamp = lamp; chipper.beaconMat = beacon;
+        chipper.scaleFactor = scale;
+        chipper.MakeParticles(exhaustTop);
+        return root;
+    }
+
+    private void MakeParticles(Transform exhaustTop)
+    {
+        float s = scaleFactor;
+        // The chips: little squares that fall and bounce on the ground.
+        GameObject cg = new GameObject("Chips", typeof(ParticleSystem));
+        cg.transform.SetParent(transform, false);
+        chips = cg.GetComponent<ParticleSystem>();
+        chips.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ParticleSystem.MainModule cm = chips.main;
+        cm.playOnAwake = false; cm.loop = false;
+        cm.simulationSpace = ParticleSystemSimulationSpace.World;
+        cm.gravityModifier = 1.3f; cm.maxParticles = 600;
+        cm.startSpeed = 0f;
+        ParticleSystem.EmissionModule ce = chips.emission; ce.enabled = false;
+        ParticleSystem.ShapeModule cs = chips.shape; cs.enabled = false;
+        ParticleSystemRenderer cr = cg.GetComponent<ParticleSystemRenderer>();
+        Shader sprite = PixelShaders.SpriteDefault();
+        if (sprite != null) cr.sharedMaterial = new Material(sprite);
+        GameObject floorGo = new GameObject("Chip Floor");
+        floorGo.transform.SetParent(transform, false);
+        floorGo.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+        chipFloor = floorGo.transform;
+        ParticleSystem.CollisionModule col = chips.collision;
+        col.enabled = true;
+        col.type = ParticleSystemCollisionType.Planes;
+        col.mode = ParticleSystemCollisionMode.Collision3D;
+        col.SetPlane(0, chipFloor);
+        col.bounce = 0.35f; col.dampen = 0.4f; col.lifetimeLoss = 0.15f;
+        chips.Play();
+
+        // Exhaust smoke: a thin grey stream rising from the stack.
+        GameObject sg = new GameObject("Smoke", typeof(ParticleSystem));
+        sg.transform.SetParent(exhaustTop, false);
+        sg.transform.localPosition = Vector3.zero;
+        sg.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+        smoke = sg.GetComponent<ParticleSystem>();
+        smoke.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ParticleSystem.MainModule sm = smoke.main;
+        sm.loop = true; sm.startLifetime = 1.4f; sm.startSpeed = 0.7f * s; sm.startSize = 0.1f * s;
+        sm.simulationSpace = ParticleSystemSimulationSpace.World;
+        sm.gravityModifier = -0.05f; sm.maxParticles = 120;
+        sm.startColor = new Color(0.45f, 0.45f, 0.48f, 0.6f);
+        ParticleSystem.EmissionModule se = smoke.emission; se.rateOverTime = 7f;
+        ParticleSystem.ShapeModule ss = smoke.shape; ss.shapeType = ParticleSystemShapeType.Cone; ss.angle = 8f; ss.radius = 0.02f * s;
+        ParticleSystem.SizeOverLifetimeModule so = smoke.sizeOverLifetime; so.enabled = true;
+        so.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.6f), new Keyframe(1f, 2.6f)));
+        ParticleSystem.ColorOverLifetimeModule co = smoke.colorOverLifetime; co.enabled = true;
+        Gradient g = new Gradient();
+        g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                  new[] { new GradientAlphaKey(0.7f, 0f), new GradientAlphaKey(0f, 1f) });
+        co.color = g;
+        ParticleSystemRenderer sr = sg.GetComponent<ParticleSystemRenderer>();
+        if (sprite != null) sr.sharedMaterial = new Material(sprite);
+        smoke.Play();
+    }
+
+    private static void SetColor(Material m, Color c)
+    {
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+        if (m.HasProperty("_Color")) m.SetColor("_Color", c);
+        if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", c * 1.5f);
+    }
+
+    // ---- the kit: makes primitives with a cached material per colour ----
+
+    private sealed class Kit
+    {
+        public PixelClicker clicker;
+        public bool ghost;
+        public float alpha;
+        private readonly Dictionary<string, Material> mats = new Dictionary<string, Material>();
+
+        public Material Mat(Color c, float metal = 0.25f, float smooth = 0.45f, bool unique = false)
+        {
+            Color col = c;
+            if (ghost) col.a = alpha;
+            string key = col.ToString() + metal + smooth;
+            if (!unique && mats.TryGetValue(key, out Material cached) && cached != null) return cached;
+            Material m = clicker != null ? clicker.CreateVisualMaterial(col, ghost) : null;
+            if (m == null)
+            {
+                Shader sh = Shader.Find("Standard");
+                m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
+                m.color = col;
+            }
+            if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", metal);
+            if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smooth);
+            if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smooth);
+            if (!unique) mats[key] = m;
+            return m;
+        }
+
+        public GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 pos, Vector3 scale, Color c, Vector3 euler = default, float metal = 0.25f, float smooth = 0.45f, bool collider = false)
+        {
+            GameObject go = GameObject.CreatePrimitive(type);
+            go.name = name;
+            Collider col = go.GetComponent<Collider>();
+            if (col != null && (ghost || !collider)) Object.DestroyImmediate(col);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = pos;
+            go.transform.localRotation = Quaternion.Euler(euler);
+            go.transform.localScale = scale;
+            Renderer r = go.GetComponent<Renderer>();
+            r.sharedMaterial = Mat(c, metal, smooth);
+            if (ghost) { r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false; }
+            return go;
+        }
+
+        public GameObject Box(string name, Transform parent, Vector3 pos, Vector3 size, Color c, Vector3 euler = default, bool collider = false, float metal = 0.25f, float smooth = 0.45f)
+            => Prim(PrimitiveType.Cube, name, parent, pos, size, c, euler, metal, smooth, collider);
+
+        /// <summary>A cylinder of 'radius' and 'length' along the axis given by 'euler' (0 = along Y).</summary>
+        public GameObject Cyl(string name, Transform parent, Vector3 pos, float radius, float length, Color c, Vector3 euler = default, float metal = 0.25f, float smooth = 0.45f)
+            => Prim(PrimitiveType.Cylinder, name, parent, pos, new Vector3(radius * 2f, length * 0.5f, radius * 2f), c, euler, metal, smooth, false);
+
+        public GameObject Ball(string name, Transform parent, Vector3 pos, float radius, Color c, float metal = 0.25f, float smooth = 0.6f)
+            => Prim(PrimitiveType.Sphere, name, parent, pos, Vector3.one * radius * 2f, c, default, metal, smooth, false);
+    }
+
+    private static GameObject Empty(string name, Transform parent, Vector3 pos)
+    {
+        GameObject g = new GameObject(name);
+        g.transform.SetParent(parent, false);
+        g.transform.localPosition = pos;
+        return g;
+    }
+
+    // ---- chassis: frame, wheels, fenders, hitch ----
+
+    private static void BuildChassis(Kit k, Transform root, Transform sh)
+    {
+        k.Box("Frame", sh, new Vector3(0.45f, 0.7f, 0f), new Vector3(4.5f, 0.16f, 1.2f), Dark, default, true, 0.5f, 0.35f);
+        k.Box("Frame Rail L", sh, new Vector3(0.45f, 0.62f, 0.5f), new Vector3(4.5f, 0.1f, 0.1f), Steel, default, false, 0.7f, 0.5f);
+        k.Box("Frame Rail R", sh, new Vector3(0.45f, 0.62f, -0.5f), new Vector3(4.5f, 0.1f, 0.1f), Steel, default, false, 0.7f, 0.5f);
+        k.Box("Axle", root, new Vector3(0.6f, 0.52f, 0f), new Vector3(0.1f, 0.1f, 1.7f), Steel, default, false, 0.8f, 0.5f);
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Transform wheel = Empty("Wheel", root, new Vector3(0.6f, 0.52f, 0.8f * side)).transform;
+            k.Cyl("Tyre", wheel, Vector3.zero, 0.52f, 0.3f, Rubber, new Vector3(90f, 0f, 0f), 0f, 0.15f);
+            k.Cyl("Rim", wheel, new Vector3(0f, 0f, 0.03f * side), 0.33f, 0.32f, Steel, new Vector3(90f, 0f, 0f), 0.85f, 0.6f);
+            k.Cyl("Hub", wheel, new Vector3(0f, 0f, 0.17f * side), 0.1f, 0.06f, Dark, new Vector3(90f, 0f, 0f), 0.6f, 0.4f);
+            for (int n = 0; n < 6; n++)
+            {
+                float a = n * 60f * Mathf.Deg2Rad;
+                k.Cyl("Lug", wheel, new Vector3(Mathf.Cos(a) * 0.19f, Mathf.Sin(a) * 0.19f, 0.17f * side), 0.022f, 0.05f, Steel, new Vector3(90f, 0f, 0f), 0.9f, 0.6f);
+            }
+            for (int n = 0; n < 24; n++)   // tread blocks round the tyre
+            {
+                float a = n * 15f * Mathf.Deg2Rad;
+                k.Box("Tread", wheel, new Vector3(Mathf.Cos(a) * 0.52f, Mathf.Sin(a) * 0.52f, 0f), new Vector3(0.1f, 0.06f, 0.31f), new Color(0.04f, 0.04f, 0.05f), new Vector3(0f, 0f, n * 15f), false, 0f, 0.1f);
+            }
+            // fender
+            k.Box("Fender", sh, new Vector3(0.6f, 1.12f, 0.8f * side), new Vector3(1.15f, 0.05f, 0.4f), Dark, default, false, 0.4f, 0.4f);
+            k.Box("Fender Front", sh, new Vector3(0.07f, 1.0f, 0.8f * side), new Vector3(0.3f, 0.05f, 0.4f), Dark, new Vector3(0f, 0f, 38f), false, 0.4f, 0.4f);
+            k.Box("Fender Back", sh, new Vector3(1.13f, 1.0f, 0.8f * side), new Vector3(0.3f, 0.05f, 0.4f), Dark, new Vector3(0f, 0f, -38f), false, 0.4f, 0.4f);
+            k.Box("Fender Stripe", sh, new Vector3(0.6f, 1.15f, 0.8f * side), new Vector3(1.15f, 0.015f, 0.4f), Yellow, default, false, 0.1f, 0.4f);
+        }
+
+        // Hitch: an A-frame, a coupler ball, a jack stand with a foot.
+        for (int side = -1; side <= 1; side += 2)
+            k.Box("Hitch Arm", sh, new Vector3(3.2f, 0.7f, 0.3f * side), new Vector3(1.35f, 0.1f, 0.1f), Dark, new Vector3(0f, -side * 22f, 0f), false, 0.5f, 0.35f);
+        k.Cyl("Coupler Neck", sh, new Vector3(3.78f, 0.76f, 0f), 0.09f, 0.14f, Steel, default, 0.8f, 0.5f);
+        k.Ball("Coupler", sh, new Vector3(3.78f, 0.88f, 0f), 0.13f, Steel, 0.8f, 0.6f);
+        k.Cyl("Jack Post", sh, new Vector3(3.2f, 0.45f, 0f), 0.05f, 0.55f, Steel, default, 0.8f, 0.5f);
+        k.Box("Jack Foot", sh, new Vector3(3.2f, 0.17f, 0f), new Vector3(0.3f, 0.04f, 0.3f), Dark, default, false, 0.5f, 0.3f);
+        k.Cyl("Jack Crank", sh, new Vector3(3.2f, 0.62f, 0.1f), 0.015f, 0.25f, Red, new Vector3(90f, 0f, 0f));
+
+        // Reflectors and tail light.
+        k.Box("Reflector R1", sh, new Vector3(2.68f, 0.78f, 0.55f), new Vector3(0.03f, 0.08f, 0.14f), new Color(1f, 0.45f, 0.05f));
+        k.Box("Reflector R2", sh, new Vector3(2.68f, 0.78f, -0.55f), new Vector3(0.03f, 0.08f, 0.14f), new Color(1f, 0.45f, 0.05f));
+        k.Box("Reflector F1", sh, new Vector3(-1.78f, 0.78f, 0.55f), new Vector3(0.03f, 0.08f, 0.14f), Red);
+        k.Box("Reflector F2", sh, new Vector3(-1.78f, 0.78f, -0.55f), new Vector3(0.03f, 0.08f, 0.14f), Red);
+        // Infeed table the pixels land on below the hopper.
+        k.Box("Infeed Table", sh, new Vector3(-1.2f, 1.2f, 0f), new Vector3(0.84f, 0.8f, 1.1f), Dark, default, true, 0.5f, 0.3f);
+    }
+
+    // ---- cutter housing: body, hatch, bolts, danger plate, stripes ----
+
+    private static void BuildHousing(Kit k, Transform sh)
+    {
+        k.Box("Housing", sh, new Vector3(0.1f, 1.45f, 0f), new Vector3(1.7f, 1.35f, 1.25f), Orange, default, true, 0.3f, 0.5f);
+        k.Box("Housing Top Plate", sh, new Vector3(0.1f, 2.15f, 0f), new Vector3(1.78f, 0.06f, 1.33f), DarkOrange, default, false, 0.4f, 0.5f);
+        k.Box("Housing Base Plate", sh, new Vector3(0.1f, 0.8f, 0f), new Vector3(1.78f, 0.06f, 1.33f), DarkOrange, default, false, 0.4f, 0.5f);
+        for (int side = -1; side <= 1; side += 2)
+        {
+            float z = 0.64f * side;
+            // inspection hatch with bolts and a handle
+            k.Box("Hatch", sh, new Vector3(-0.15f, 1.5f, z), new Vector3(0.75f, 0.75f, 0.035f), DarkOrange, default, false, 0.4f, 0.5f);
+            k.Box("Hatch Frame", sh, new Vector3(-0.15f, 1.5f, z * 0.995f), new Vector3(0.82f, 0.82f, 0.03f), Dark, default, false, 0.5f, 0.4f);
+            for (int bx = -1; bx <= 1; bx += 2)
+                for (int by = -1; by <= 1; by += 2)
+                    k.Ball("Bolt", sh, new Vector3(-0.15f + bx * 0.33f, 1.5f + by * 0.33f, z + 0.02f * side), 0.035f, Steel, 0.9f, 0.7f);
+            k.Cyl("Handle Post A", sh, new Vector3(0.1f, 1.65f, z + 0.04f * side), 0.015f, 0.08f, Steel, new Vector3(90f, 0f, 0f), 0.9f, 0.7f);
+            k.Cyl("Handle Post B", sh, new Vector3(0.1f, 1.35f, z + 0.04f * side), 0.015f, 0.08f, Steel, new Vector3(90f, 0f, 0f), 0.9f, 0.7f);
+            k.Cyl("Handle", sh, new Vector3(0.1f, 1.5f, z + 0.08f * side), 0.018f, 0.34f, Steel, default, 0.9f, 0.7f);
+            // rivets along the top edge
+            for (int n = 0; n < 9; n++) k.Ball("Rivet", sh, new Vector3(-0.68f + n * 0.17f, 2.08f, z + 0.015f * side), 0.022f, Steel, 0.9f, 0.7f);
+            // hazard stripe along the bottom
+            for (int n = 0; n < 8; n++)
+                k.Box("Stripe", sh, new Vector3(-0.62f + n * 0.2f, 0.9f, z + 0.005f * side), new Vector3(0.1f, 0.12f, 0.012f), n % 2 == 0 ? Yellow : Rubber, new Vector3(0f, 0f, 30f));
+        }
+        // Danger plate on the +Z side above the hatch: a yellow triangle-ish plate with a bar and a dot.
+        k.Box("Danger Plate", sh, new Vector3(0.62f, 1.8f, 0.665f), new Vector3(0.34f, 0.3f, 0.015f), Yellow, default, false, 0f, 0.3f);
+        k.Box("Danger Bar", sh, new Vector3(0.62f, 1.84f, 0.675f), new Vector3(0.05f, 0.14f, 0.012f), Rubber);
+        k.Ball("Danger Dot", sh, new Vector3(0.62f, 1.7f, 0.675f), 0.03f, Rubber, 0f, 0.3f);
+        k.Box("Brand Band", sh, new Vector3(0.62f, 1.28f, 0.665f), new Vector3(0.42f, 0.1f, 0.012f), Rubber);
+        for (int n = 0; n < 5; n++) k.Box("Brand Block", sh, new Vector3(0.48f + n * 0.07f, 1.28f, 0.672f), new Vector3(0.05f, 0.06f, 0.01f), n % 2 == 0 ? Orange : Yellow);
+    }
+
+    // ---- the feed hopper: double-sided funnel, liner, hazard rim, rollers ----
+
+    private static Mesh FunnelMesh(Vector3[] b, Vector3[] m)
+    {
+        // Eight corners, four walls; each wall gets both windings so it shows from either side.
+        List<Vector3> v = new List<Vector3>();
+        List<int> tri = new List<int>();
+        for (int i = 0; i < 4; i++)
+        {
+            int j = (i + 1) % 4;
+            int s = v.Count;
+            v.Add(b[i]); v.Add(b[j]); v.Add(m[j]); v.Add(m[i]);
+            tri.AddRange(new[] { s, s + 1, s + 2, s, s + 2, s + 3, s, s + 2, s + 1, s, s + 3, s + 2 });
+        }
+        Mesh mesh = new Mesh { name = "Funnel" };
+        mesh.SetVertices(v);
+        mesh.SetTriangles(tri, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    private static Vector3[] Corners(float cx, float y, float hx, float hz)
+    {
+        return new[] { new Vector3(cx - hx, y, -hz), new Vector3(cx + hx, y, -hz), new Vector3(cx + hx, y, hz), new Vector3(cx - hx, y, hz) };
+    }
+
+    private static void AddMeshObject(Kit k, Transform parent, string name, Mesh mesh, Color c, float metal, float smooth)
+    {
+        GameObject g = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+        g.transform.SetParent(parent, false);
+        g.GetComponent<MeshFilter>().sharedMesh = mesh;
+        g.GetComponent<MeshRenderer>().sharedMaterial = k.Mat(c, metal, smooth);
+        if (k.ghost) { g.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; }
+    }
+
+    private static void BuildHopper(Kit k, Transform sh, out Transform rollerA, out Transform rollerB)
+    {
+        Vector3[] b = Corners(-1.2f, FunnelBaseY, 0.42f, 0.55f), m = Corners(-1.5f, FunnelMouthY, 1f, 1f);
+        AddMeshObject(k, sh, "Hopper Outer", FunnelMesh(b, m), Orange, 0.3f, 0.5f);
+        Vector3[] bi = Corners(-1.2f, FunnelBaseY + 0.03f, 0.39f, 0.52f), mi = Corners(-1.5f, FunnelMouthY - 0.03f, 0.96f, 0.96f);
+        AddMeshObject(k, sh, "Hopper Liner", FunnelMesh(bi, mi), new Color(0.12f, 0.12f, 0.14f), 0.5f, 0.35f);
+
+        // Thin collider walls so pixels slide down inside it (real machine only).
+        if (!k.ghost)
+            for (int i = 0; i < 4; i++)
+            {
+                int j = (i + 1) % 4;
+                Vector3 mid = (b[i] + b[j] + m[i] + m[j]) * 0.25f;
+                Vector3 across = ((b[j] - b[i]) + (m[j] - m[i])) * 0.5f;
+                Vector3 up = ((m[i] + m[j]) - (b[i] + b[j])) * 0.5f;
+                Vector3 normal = Vector3.Cross(across, up).normalized;
+                GameObject wall = new GameObject("Hopper Wall " + i, typeof(BoxCollider));
+                wall.transform.SetParent(sh, false);
+                wall.transform.localPosition = mid;
+                wall.transform.localRotation = Quaternion.LookRotation(normal, up.normalized);
+                wall.GetComponent<BoxCollider>().size = new Vector3(across.magnitude, up.magnitude, 0.06f);
+            }
+
+        // Rim: four yellow bars with black hazard blocks.
+        float hx = 1f, hz = 1f, cx = -1.5f, y = FunnelMouthY;
+        k.Box("Rim -Z", sh, new Vector3(cx, y, -hz), new Vector3(hx * 2f + 0.1f, 0.09f, 0.1f), Yellow, default, false, 0.2f, 0.4f);
+        k.Box("Rim +Z", sh, new Vector3(cx, y, hz), new Vector3(hx * 2f + 0.1f, 0.09f, 0.1f), Yellow, default, false, 0.2f, 0.4f);
+        k.Box("Rim -X", sh, new Vector3(cx - hx, y, 0f), new Vector3(0.1f, 0.09f, hz * 2f), Yellow, default, false, 0.2f, 0.4f);
+        k.Box("Rim +X", sh, new Vector3(cx + hx, y, 0f), new Vector3(0.1f, 0.09f, hz * 2f), Yellow, default, false, 0.2f, 0.4f);
+        for (int n = 0; n < 8; n++)
+        {
+            float x = cx - hx + 0.15f + n * 0.24f;
+            if (n % 2 == 0) { k.Box("Hazard", sh, new Vector3(x, y + 0.001f, -hz), new Vector3(0.12f, 0.095f, 0.102f), Rubber); k.Box("Hazard", sh, new Vector3(x, y + 0.001f, hz), new Vector3(0.12f, 0.095f, 0.102f), Rubber); }
+            float zz = -hz + 0.15f + n * 0.24f;
+            if (n % 2 == 1) { k.Box("Hazard", sh, new Vector3(cx - hx, y + 0.001f, zz), new Vector3(0.102f, 0.095f, 0.12f), Rubber); k.Box("Hazard", sh, new Vector3(cx + hx, y + 0.001f, zz), new Vector3(0.102f, 0.095f, 0.12f), Rubber); }
+        }
+        // Hopper braces and a splash flap.
+        for (int side = -1; side <= 1; side += 2)
+        {
+            k.Box("Brace", sh, new Vector3(-1.35f, 2.2f, 0.78f * side), new Vector3(0.05f, 0.95f, 0.05f), Steel, new Vector3(side * 18f, 0f, 0f), false, 0.8f, 0.5f);
+            k.Ball("Brace Bolt", sh, new Vector3(-1.45f, 2.64f, 0.95f * side), 0.04f, Steel, 0.9f, 0.7f);
+        }
+        k.Box("Safety Bar", sh, new Vector3(-2.52f, 2.6f, 0f), new Vector3(0.05f, 0.05f, 1.9f), Red, default, false, 0.2f, 0.5f);
+
+        // Two ribbed feed rollers at the bottom of the throat (they turn).
+        rollerA = BuildRoller(k, sh, new Vector3(-1.34f, 1.82f, 0f));
+        rollerB = BuildRoller(k, sh, new Vector3(-1.06f, 1.82f, 0f));
+        k.Box("Roller Bearing L", sh, new Vector3(-1.2f, 1.82f, 0.5f), new Vector3(0.7f, 0.2f, 0.06f), Dark, default, false, 0.7f, 0.4f);
+        k.Box("Roller Bearing R", sh, new Vector3(-1.2f, 1.82f, -0.5f), new Vector3(0.7f, 0.2f, 0.06f), Dark, default, false, 0.7f, 0.4f);
+        // Hydraulic lines from the rollers to the engine side.
+        k.Cyl("Hose A", sh, new Vector3(-0.78f, 1.82f, 0.55f), 0.025f, 0.35f, Rubber, new Vector3(0f, 0f, 90f), 0f, 0.2f);
+        k.Cyl("Hose B", sh, new Vector3(-0.78f, 1.7f, -0.55f), 0.025f, 0.35f, Rubber, new Vector3(0f, 0f, 90f), 0f, 0.2f);
+    }
+
+    private static Transform BuildRoller(Kit k, Transform parent, Vector3 pos)
+    {
+        Transform r = Empty("Roller", parent, pos).transform;
+        k.Cyl("Drum", r, Vector3.zero, 0.12f, 0.95f, Steel, new Vector3(90f, 0f, 0f), 0.85f, 0.5f);
+        for (int n = 0; n < 8; n++)
+        {
+            float a = n * 45f * Mathf.Deg2Rad;
+            k.Box("Rib", r, new Vector3(Mathf.Cos(a) * 0.125f, Mathf.Sin(a) * 0.125f, 0f), new Vector3(0.05f, 0.03f, 0.95f), Dark, new Vector3(0f, 0f, n * 45f), false, 0.8f, 0.4f);
+        }
+        return r;
+    }
+
+    // ---- discharge chute with a hood ----
+
+    private static void BuildChute(Kit k, Transform sh)
+    {
+        k.Cyl("Chute Base", sh, new Vector3(0.25f, 2.3f, 0f), 0.34f, 0.3f, DarkOrange, default, 0.4f, 0.5f);
+        k.Cyl("Chute Tube", sh, new Vector3(0.25f, 2.7f, 0f), 0.28f, 0.8f, Steel, default, 0.8f, 0.55f);
+        k.Cyl("Chute Collar", sh, new Vector3(0.25f, 3.0f, 0f), 0.31f, 0.08f, Yellow, default, 0.3f, 0.4f);
+        // Swivel hood: a horizontal tube pointing out to +Z, tilted up, with a flared mouth.
+        k.Cyl("Hood", sh, new Vector3(0.25f, 3.08f, 0.3f), 0.26f, 0.7f, Steel, new Vector3(90f - 24f, 0f, 0f), 0.8f, 0.55f);
+        k.Cyl("Hood Mouth", sh, new Vector3(0.25f, 3.22f, 0.62f), 0.31f, 0.1f, Yellow, new Vector3(90f - 24f, 0f, 0f), 0.3f, 0.4f);
+        k.Ball("Hood Cap", sh, new Vector3(0.25f, 3.0f, 0f), 0.3f, Steel, 0.8f, 0.55f);
+        k.Box("Hood Handle", sh, new Vector3(0.25f, 3.3f, 0.12f), new Vector3(0.06f, 0.06f, 0.4f), Red, default, false, 0.2f, 0.5f);
+        for (int n = 0; n < 6; n++)
+        {
+            float a = n * 60f * Mathf.Deg2Rad;
+            k.Ball("Collar Bolt", sh, new Vector3(0.25f + Mathf.Cos(a) * 0.31f, 3.0f, Mathf.Sin(a) * 0.31f), 0.025f, Steel, 0.9f, 0.7f);
+        }
+    }
+
+    // ---- flywheel with its guard (a spinning pulley behind a grille) ----
+
+    private static void BuildFlywheel(Kit k, Transform sh, out Transform spinner)
+    {
+        Vector3 c = new Vector3(0.1f, 1.45f, 0.78f);
+        spinner = Empty("Flywheel", sh, c).transform;
+        k.Cyl("Pulley", spinner, Vector3.zero, 0.36f, 0.1f, Steel, new Vector3(90f, 0f, 0f), 0.85f, 0.5f);
+        for (int n = 0; n < 3; n++) k.Box("Spoke", spinner, Vector3.zero, new Vector3(0.7f, 0.07f, 0.05f), Dark, new Vector3(0f, 0f, n * 60f), false, 0.7f, 0.4f);
+        k.Cyl("Pulley Hub", spinner, new Vector3(0f, 0f, 0.05f), 0.08f, 0.06f, Red, new Vector3(90f, 0f, 0f), 0.4f, 0.5f);
+        // The guard: an outer ring of little blocks and radial bars in front of it.
+        for (int n = 0; n < 20; n++)
+        {
+            float a = n * 18f * Mathf.Deg2Rad;
+            k.Box("Guard Ring", sh, c + new Vector3(Mathf.Cos(a) * 0.5f, Mathf.Sin(a) * 0.5f, 0.1f), new Vector3(0.17f, 0.05f, 0.05f), Dark, new Vector3(0f, 0f, n * 18f + 90f), false, 0.6f, 0.4f);
+        }
+        for (int n = 0; n < 8; n++) k.Box("Guard Bar", sh, c + new Vector3(0f, 0f, 0.1f), new Vector3(1f, 0.025f, 0.025f), Dark, new Vector3(0f, 0f, n * 22.5f), false, 0.6f, 0.4f);
+        k.Cyl("Guard Boss", sh, c + new Vector3(0f, 0f, 0.1f), 0.06f, 0.05f, Yellow, new Vector3(90f, 0f, 0f), 0.4f, 0.4f);
+    }
+
+    // ---- engine ----
+
+    private static void BuildEngine(Kit k, Transform sh, out Transform exhaustTop)
+    {
+        k.Cyl("Coupling", sh, new Vector3(1.1f, 1.45f, 0f), 0.13f, 0.4f, Steel, new Vector3(0f, 0f, 90f), 0.85f, 0.5f);
+        k.Box("Engine Block", sh, new Vector3(1.85f, 1.2f, 0f), new Vector3(1.0f, 0.7f, 0.9f), Dark, default, true, 0.55f, 0.35f);
+        k.Box("Engine Base", sh, new Vector3(1.85f, 0.88f, 0f), new Vector3(1.1f, 0.08f, 1.0f), Steel, default, false, 0.7f, 0.4f);
+        k.Box("Valve Cover", sh, new Vector3(1.85f, 1.62f, 0f), new Vector3(0.82f, 0.18f, 0.7f), Orange, default, false, 0.3f, 0.55f);
+        for (int n = 0; n < 7; n++)
+        {
+            k.Box("Fin", sh, new Vector3(1.5f + n * 0.12f, 1.2f, 0.47f), new Vector3(0.05f, 0.62f, 0.05f), Steel, default, false, 0.8f, 0.5f);
+            k.Box("Fin", sh, new Vector3(1.5f + n * 0.12f, 1.2f, -0.47f), new Vector3(0.05f, 0.62f, 0.05f), Steel, default, false, 0.8f, 0.5f);
+        }
+        for (int n = 0; n < 4; n++) k.Ball("Valve Bolt", sh, new Vector3(1.55f + (n % 2) * 0.6f, 1.72f, -0.3f + (n / 2) * 0.6f), 0.028f, Steel, 0.9f, 0.7f);
+        // air filter, fuel tank, filler cap
+        k.Cyl("Air Filter", sh, new Vector3(1.5f, 1.88f, 0.22f), 0.17f, 0.3f, Yellow, default, 0.3f, 0.45f);
+        k.Cyl("Air Filter Cap", sh, new Vector3(1.5f, 2.05f, 0.22f), 0.19f, 0.05f, Dark, default, 0.6f, 0.4f);
+        k.Cyl("Fuel Tank", sh, new Vector3(1.9f, 1.95f, -0.12f), 0.21f, 0.62f, Red, new Vector3(0f, 0f, 90f), 0.35f, 0.65f);
+        k.Cyl("Fuel Cap", sh, new Vector3(1.9f, 2.17f, -0.12f), 0.06f, 0.06f, Dark, default, 0.6f, 0.4f);
+        // muffler + exhaust stack with a rain cap
+        k.Cyl("Muffler", sh, new Vector3(2.05f, 1.72f, -0.62f), 0.14f, 0.55f, Steel, new Vector3(0f, 0f, 90f), 0.85f, 0.55f);
+        k.Cyl("Stack", sh, new Vector3(2.25f, 2.2f, -0.62f), 0.055f, 1.0f, Steel, default, 0.85f, 0.55f);
+        k.Cyl("Stack Cap", sh, new Vector3(2.25f, 2.73f, -0.62f), 0.1f, 0.03f, Dark, default, 0.6f, 0.4f);
+        exhaustTop = Empty("Exhaust Top", sh, new Vector3(2.25f, 2.7f, -0.62f)).transform;
+        // heat shield grille
+        for (int n = 0; n < 5; n++) k.Box("Heat Shield", sh, new Vector3(1.55f + n * 0.14f, 1.45f, -0.57f), new Vector3(0.04f, 0.5f, 0.02f), Dark, default, false, 0.5f, 0.3f);
+        k.Box("Heat Shield Frame", sh, new Vector3(1.83f, 1.45f, -0.585f), new Vector3(0.72f, 0.04f, 0.02f), Dark);
+    }
+
+    // ---- control panel + beacon ----
+
+    private static Material BuildControls(Kit k, Transform sh, out Transform lamp)
+    {
+        Vector3 c = new Vector3(-0.5f, 1.42f, 0.7f);
+        k.Box("Panel", sh, c, new Vector3(0.38f, 0.5f, 0.08f), Dark, new Vector3(-12f, 0f, 0f), false, 0.5f, 0.3f);
+        Color[] knob = { Red, new Color(0.15f, 0.7f, 0.25f), Yellow };
+        for (int n = 0; n < 3; n++)
+        {
+            float x = c.x - 0.12f + n * 0.12f;
+            k.Cyl("Lever", sh, new Vector3(x, c.y - 0.02f, c.z + 0.12f), 0.014f, 0.22f, Steel, new Vector3(-30f, 0f, 0f), 0.9f, 0.6f);
+            k.Ball("Lever Knob", sh, new Vector3(x, c.y + 0.07f, c.z + 0.2f), 0.04f, knob[n], 0.2f, 0.6f);
+        }
+        // gauge
+        k.Cyl("Gauge", sh, new Vector3(c.x - 0.1f, c.y + 0.17f, c.z + 0.05f), 0.07f, 0.03f, Color.white, new Vector3(78f, 0f, 0f), 0f, 0.7f);
+        k.Box("Gauge Needle", sh, new Vector3(c.x - 0.1f, c.y + 0.18f, c.z + 0.075f), new Vector3(0.012f, 0.06f, 0.006f), Red, new Vector3(-12f, 0f, 25f));
+        // e-stop: yellow base, red mushroom
+        k.Cyl("E-Stop Base", sh, new Vector3(c.x + 0.1f, c.y + 0.17f, c.z + 0.05f), 0.065f, 0.03f, Yellow, new Vector3(78f, 0f, 0f), 0.2f, 0.5f);
+        k.Cyl("E-Stop", sh, new Vector3(c.x + 0.1f, c.y + 0.18f, c.z + 0.08f), 0.045f, 0.045f, Red, new Vector3(78f, 0f, 0f), 0.2f, 0.7f);
+
+        // Amber beacon on the roof (the lamp's material is returned so the machine can blink it).
+        k.Cyl("Beacon Base", sh, new Vector3(-0.55f, 2.22f, -0.45f), 0.1f, 0.06f, Dark, default, 0.5f, 0.4f);
+        GameObject lampGo = k.Ball("Beacon", sh, new Vector3(-0.55f, 2.3f, -0.45f), 0.09f, new Color(1f, 0.7f, 0.1f), 0f, 0.85f);
+        lamp = lampGo.transform;
+        Material own = k.Mat(new Color(1f, 0.7f, 0.1f), 0f, 0.85f, true);   // its own material so blinking doesn't recolour anything else
+        lampGo.GetComponent<Renderer>().sharedMaterial = own;
+        return k.ghost ? null : own;
+    }
+}

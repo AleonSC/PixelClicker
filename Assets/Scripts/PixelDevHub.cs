@@ -138,7 +138,7 @@ public class PixelDevHub : MonoBehaviour
         // ---- the tabs ----
         string[,] defs =
         {
-            { "main", "Main", "700" }, { "docs", "Docs", "700" },
+            { "main", "Main", "700" }, { "docs", "Docs", "700" }, { "tester", "Tester", "700" },
             { "inspector", "Inspector", "700" }, { "shapes", "Shapes", "500" }, { "uimock", "UI Mock", "500" },
         };
         string saved = PlayerPrefs.GetString(P + "Order", "");
@@ -175,6 +175,7 @@ public class PixelDevHub : MonoBehaviour
         Find("uimock").onVisible = PixelDevMockup.SetActive;
         PixelDevInspector.Boot();
         PixelDevDocs.Boot();
+        PixelFeatureTester.Boot();
         windowRect.gameObject.SetActive(true);
         canvasRoot.SetActive(false);
     }
@@ -191,6 +192,8 @@ public class PixelDevHub : MonoBehaviour
         {
             case "main":       // sliders
                 rows = new[] { "............", ".##########.", "....##......", "............", ".##########.", "........##..", "............", ".##########.", "..##........", "............" }; break;
+            case "tester":     // a flask
+                rows = new[] { "...######...", "...#....#...", "...#....#...", "...#....#...", "..#......#..", ".#...##...#.", ".#..####..#.", ".#........#.", "..########..", "............" }; break;
             case "docs":       // a book
                 rows = new[] { "............", ".#########..", ".#.......##.", ".#.#####.#..", ".#.......#..", ".#.#####.#..", ".#.......#..", ".#.#####.#..", ".#########..", "............" }; break;
             case "inspector":  // a magnifying glass
