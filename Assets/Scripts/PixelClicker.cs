@@ -5070,18 +5070,26 @@ public class OldPixelImpact : MonoBehaviour
         cooldown = gap;
     }
 
+    private float lastPulseTime = -99f;
+
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
-        if (Time.time - lastTime < cooldown) return;
 
         float speed = collision.relativeVelocity.magnitude;
+        if (speed >= 0.6f && Time.time - lastPulseTime > 0.08f)
+        {
+            // The landing ripple (floor invisible + 'Landing pulse'): softer landings count too, it has its own short gap.
+            lastPulseTime = Time.time;
+            OldPixelInfo landedInfo = GetComponent<OldPixelInfo>();
+            PixelFloorPulse.Landed(collision, transform, landedInfo != null ? landedInfo.tierIndex : -1, Mathf.Clamp01(speed / fullSpeed));
+        }
+
+        if (Time.time - lastTime < cooldown) return;
         if (speed < minSpeed) return;
 
         lastTime = Time.time;
         float intensity = Mathf.Clamp01(speed / fullSpeed);
-        OldPixelInfo landedInfo = GetComponent<OldPixelInfo>();
-        PixelFloorPulse.Landed(collision, transform, landedInfo != null ? landedInfo.tierIndex : -1, intensity);   // (a ripple on the surface, when the floor is invisible and 'Landing pulse' is on)
         if (!string.IsNullOrEmpty(soundId) && PixelAudio.Has(soundId)) PixelAudio.PlayScaled(soundId, Mathf.Lerp(0.3f, 1f, intensity));
         else PixelClicker.RaiseOldPixelLanded(intensity);
     }

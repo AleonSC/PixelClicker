@@ -179,6 +179,12 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         [Tooltip("Pattern variation (crater floors: 0 = battle, 1 = moon, 2 = red planet).")]
         public int variant = 0;
 
+        [Tooltip("Draw the ground with the world-space ground shader instead of a painted texture (0 = painted texture, 1 lava, 2 marble, 3 ice, 4 deep space). The picture then never repeats or stretches and stays sharp at any zoom. The menus' preview pictures stay painted.")]
+        public int shaderGround = 0;
+
+        [Tooltip("World units one 'cell' of the shader pattern spans (0 = the default 6).")]
+        public float shaderScale = 0f;
+
         public FloorStyle Clone() => (FloorStyle)MemberwiseClone();
     }
 
@@ -508,6 +514,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             return;
         }
 
+        if (style.shaderGround > 0 && ApplyShaderGround(style)) return;
+
         Material source = originalMaterials != null && originalMaterials.Length > 0 ? originalMaterials[0] : null;
         if (source == null)
         {
@@ -573,6 +581,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (activeTexture != null) Destroy(activeTexture);
         activeMaterial = null;
         activeTexture = null;
+        groundShaderOn = false;
     }
 
     private bool floorWarned;
@@ -585,6 +594,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             if (floorRetry <= 0f) { floorRetry = 1f; InitFloor(); }
             return;
         }
+        UpdateGroundHeight();
         if (activeMaterial == null || current < 0 || current >= styles.Count) return;
         FloorStyle style = styles[current];
         float dt = PixelTimeStop.IsStopped ? 0f : Time.unscaledDeltaTime; // keeps moving on the title screen, freezes in Time Stop
@@ -724,6 +734,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         else visibility = Mathf.MoveTowards(visibility, target, fadeDt / (target > visibility ? FadeTime * FadeInFactor : FadeTime * FadeOutFactor));
         ApplyVisibility();
         UpdatePlane();
+        UpdateGroundShader();
         UpdateEdgeFade();
         if (exitDone != null && visibility <= 0.001f)
         {
@@ -864,6 +875,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
         // Any other renderers on the floor object (a second mesh, trim) go with it.
         foreach (Renderer extra in floorRenderer.GetComponentsInChildren<Renderer>(true)) if (extra != floorRenderer) extra.forceRenderingOff = visibility < 0.999f;
+        if (groundShaderOn)
+        {
+            // The ground shader fades itself: no see-through copies of the material are needed.
+            DropProxies(true);
+            SetFloat(activeMaterial, "_Fade", visibility);
+            return;
+        }
         if (visibility >= 0.999f) DropProxies(true);
         else if (visibility > 0.001f)
         {
@@ -2239,6 +2257,18 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 10;
         }
 
+        // Lava, Marble, Ice and Deep Space are drawn by the world-space ground shader in the game (their menu pictures stay painted).
+        if (defaultsVersion < 11)
+        {
+            foreach (FloorStyle def in DefaultStyles())
+            {
+                if (def.shaderGround <= 0) continue;
+                FloorStyle old = styles.Find(x => x != null && x.name == def.name);
+                if (old != null) { old.shaderGround = def.shaderGround; old.shaderScale = def.shaderScale; }
+            }
+            defaultsVersion = 11;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2285,22 +2315,22 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         // The big floors below are ONE huge picture (about 40 world units wide, drawn a few milliseconds per frame) instead of a small tile repeated many times.
         FloorStyle marble = S("Marble", FloorPattern.Marble, new Color(0.95f, 0.94f, 0.92f), new Color(0.55f, 0.55f, 0.6f),
                               new Color(0.78f, 0.66f, 0.42f), 1024, false, 40f, 14, 0.9f);
-        marble.stretchToFloor = true; marble.detail = 5;
+        marble.stretchToFloor = true; marble.detail = 5; marble.shaderGround = 2; marble.shaderScale = 7f;
         yield return marble;
 
         FloorStyle lava = S("Lava", FloorPattern.Lava, new Color(0.12f, 0.05f, 0.04f), new Color(1f, 0.25f, 0.02f),
                             new Color(1f, 0.85f, 0.3f), 768, true, 40f, 36, 0.35f, 1.4f);
-        lava.pulseSpeed = 0.5f; lava.pulseAmount = 0.4f; lava.scrollSpeed = new Vector2(0.0015f, 0.0009f); lava.detail = 8;
+        lava.pulseSpeed = 0.5f; lava.pulseAmount = 0.4f; lava.scrollSpeed = new Vector2(0.0015f, 0.0009f); lava.detail = 8; lava.shaderGround = 1; lava.shaderScale = 6f;
         yield return lava;
 
         FloorStyle space = S("Deep Space", FloorPattern.Space, new Color(0.01f, 0.01f, 0.04f), new Color(0.35f, 0.1f, 0.55f),
                              new Color(0.1f, 0.45f, 0.8f), 1024, false, 40f, 1, 0.6f, 1.1f);
-        space.scrollSpeed = new Vector2(0.001f, 0.003f); space.detail = 2;
+        space.scrollSpeed = new Vector2(0.001f, 0.003f); space.detail = 2; space.shaderGround = 4; space.shaderScale = 9f;
         yield return space;
 
         FloorStyle ice = S("Ice", FloorPattern.Ice, new Color(0.7f, 0.85f, 0.95f), new Color(0.5f, 0.7f, 0.9f),
                            new Color(0.97f, 0.99f, 1f), 1024, false, 40f, 28, 0.95f);
-        ice.stretchToFloor = true; ice.detail = 6;
+        ice.stretchToFloor = true; ice.detail = 6; ice.shaderGround = 3; ice.shaderScale = 8f;
         yield return ice;
 
         FloorStyle disco = S("Disco", FloorPattern.Disco, new Color(0.05f, 0.05f, 0.07f), Color.white, Color.white,

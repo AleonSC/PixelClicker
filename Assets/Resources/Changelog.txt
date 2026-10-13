@@ -705,3 +705,4 @@
 [2026-10-12 21:32 UTC] The floor finder no longer picks the shape placer's shapes, falls back to the biggest flat mesh below the cube, and keeps looking every second if the floor was not found at start
 [2026-10-13 02:39 UTC] The floor is now invisible by default ('Display floor' defaults to off) and the game builds its own floor (flat sheet + collider) when the scene has none; new 'Ignore scene floor' option on the Pixel Floor component
 [2026-10-13 02:51 UTC] Game-made floor now lies 10 units under the cube; the cube swells very slightly when clicked; 'When floor is off' setting adds a flat opaque plane or a ripple where pixels land
+[2026-10-13 03:01 UTC] Added the world-space ground shader (Lava, Marble, Ice and Deep Space now draw sharp and never repeat); the game-made ground is lifted onto the screen so pixels really land on it; landing pulses also fire for soft landings

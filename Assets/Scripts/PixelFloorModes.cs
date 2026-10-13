@@ -39,6 +39,112 @@ public partial class PixelFloor
 
     private bool PlaneMode => !PixelTitleWanderers.DisplayFloor && OffMode == 1;
 
+    // ------------------------------------------------------------------
+    // The world-space ground shader (styles with shaderGround > 0)
+    // ------------------------------------------------------------------
+
+    private static Shader groundShaderCache;
+    private static bool groundShaderMissing;
+    private bool groundShaderOn;
+
+    private static Shader GroundShader()
+    {
+        if (groundShaderCache == null && !groundShaderMissing)
+        {
+            groundShaderCache = Resources.Load<Shader>("PixelWorldGround");
+            if (groundShaderCache == null)
+            {
+                groundShaderMissing = true;
+                Debug.LogWarning("PixelFloor: Resources/PixelWorldGround.shader was not found; ground-shader styles use their painted texture instead.");
+            }
+        }
+        return groundShaderCache;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetGroundShader() { groundShaderCache = null; groundShaderMissing = false; }
+
+    /// <summary>Shows a style with the world-space ground shader. False (nothing changed) when the shader is missing or unsupported: the painted texture is used.</summary>
+    private bool ApplyShaderGround(FloorStyle style)
+    {
+        Shader shader = GroundShader();
+        if (shader == null || !shader.isSupported) return false;
+        activeMaterial = new Material(shader) { name = "Floor (ground shader " + style.name + ")" };
+        Material m = activeMaterial;
+        m.SetColor("_ColorA", style.colorA);
+        m.SetColor("_ColorB", style.colorB);
+        m.SetColor("_ColorC", style.colorC);
+        m.SetFloat("_Pattern", style.shaderGround);
+        m.SetFloat("_Scale", style.shaderScale > 0f ? style.shaderScale : 6f);
+        m.SetFloat("_Speed", 0.15f);
+        m.SetFloat("_Glow", style.glow > 0f ? Mathf.Clamp(style.glow, 0.5f, 2f) : 1f);
+        m.SetFloat("_Seed", style.seed % 97);
+        m.SetFloat("_Fade", visibility);
+        Material[] mats = new Material[Mathf.Max(1, originalMaterials != null ? originalMaterials.Length : 1)];
+        for (int i = 0; i < mats.Length; i++) mats[i] = m;
+        floorRenderer.sharedMaterials = mats;
+        animTimer = animClock = 0f;
+        groundShaderOn = true;
+        return true;
+    }
+
+    /// <summary>The shader fades the ground out in a circle round the cube (or the first person player), like the edge fade does for painted floors.</summary>
+    private void UpdateGroundShader()
+    {
+        if (!groundShaderOn || activeMaterial == null || floorRenderer == null) return;
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) return;
+        float unit = Mathf.Max(0.05f, clicker.PixelBaseSize);
+        Bounds fb = floorRenderer.bounds;
+        float half = Mathf.Max(unit, Mathf.Min(fb.extents.x, fb.extents.z));
+        float r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
+        float r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.4f));
+        Vector3 centre = clicker.CubeBasePosition;
+        if (PixelFirstPerson.TryGetPlayerPosition(out Vector3 playerPos)) centre = playerPos;
+        activeMaterial.SetVector("_Center", new Vector4(centre.x, centre.z, 0f, 0f));
+        activeMaterial.SetFloat("_FadeStart", r0);
+        activeMaterial.SetFloat("_FadeEnd", r1);
+    }
+
+    // ------------------------------------------------------------------
+    // The game-made ground never lies below the bottom edge of the view
+    // ------------------------------------------------------------------
+
+    [Tooltip("Let the game-made ground lie below the bottom edge of the view even when that is further than the fall distance allows. Normally it is lifted until it is on screen: below the edge, falling pixels would stop on the invisible screen-edge limit instead of landing, so nothing would ever touch the ground.")]
+    [SerializeField] private bool allowGroundOffScreen = false;
+
+    private float groundTimer;
+
+    private void UpdateGroundHeight()
+    {
+        if (ownFloor == null || allowGroundOffScreen) return;
+        groundTimer -= Time.unscaledDeltaTime;
+        if (groundTimer > 0f) return;
+        groundTimer = 0.5f;
+        if (PixelCameraIntro.Moving || PixelTitleScreen.Showing || PixelTitleScreen.Reversing) return;
+        PixelClicker clicker = PixelFind.First<PixelClicker>();
+        if (clicker == null) return;
+        Camera cam = PixelOrbitCamera.HomeCamera != null ? PixelOrbitCamera.HomeCamera : (clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main);   // the NORMAL view, like the view bounds
+        if (cam == null) return;
+
+        Vector3 b = clicker.CubeBasePosition;
+        float fall = groundFallDistance > 0f ? groundFallDistance : 10f;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.RawBarHeight / 1080f : 0f;
+        float limit = bar + 0.035f;   // the lowest screen height a pixel may reach
+        bool Visible(float drop)
+        {
+            Vector3 vp = cam.WorldToViewportPoint(new Vector3(b.x, b.y - drop, b.z));
+            return vp.z > 0f && vp.y >= limit;
+        }
+        float lo = 0f, hi = fall;
+        if (Visible(hi)) lo = hi;
+        else for (int i = 0; i < 14; i++) { float mid = (lo + hi) * 0.5f; if (Visible(mid)) lo = mid; else hi = mid; }
+
+        Vector3 pos = ownFloor.transform.position;
+        float y = b.y - lo;
+        if (Mathf.Abs(pos.y - y) > 0.05f) ownFloor.transform.position = new Vector3(pos.x, y, pos.z);
+    }
+
     private GameObject plane;
     private Material planeMat;
     private int planeStyle = -2;
