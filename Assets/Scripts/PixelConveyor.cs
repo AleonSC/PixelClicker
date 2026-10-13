@@ -1,5 +1,9 @@
 // ---- System notes ----
 // PixelConveyor.cs
+//   HEIGHT / RAMPS: belt ends (a, b) are full 3D points - the y is the belt's underside. While placing, the scroll wheel raises / lowers the point being placed (PixelFeatureTester.UpdateLine, steps of half a cube,
+//   ClampEnd keeps the slope under about 37 degrees); posts (BuildSupports) stand on the floor (FloorY) under a raised belt. Riders measure their place along the GROUND (Length = horizontal length), PointAt gives the
+//   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
+//   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
 //   starts the next belt, so a series of short straight pieces makes a curve; right click ends the chain, a second right click stops placing). Clicks near the end of an existing belt
 //   snap to it. RIGHT CLICK a placed belt (not while placing) to reverse its direction (PixelConveyorSystem). A belt is a low solid slab with side rails and moving chevrons that show
@@ -8,7 +12,7 @@
 //   locks pixels in. At the end of a belt it is handed on to a belt that STARTS there (a chained piece, ends within 0.45 cube widths and not head-on); when there is no belt to hand it
 //   to, the end is detected: a machine whose opening is there (IPixelBeltAcceptor: the Kiln mouth, the Storage Crate) takes the pixel straight in, otherwise it is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
 //   when the one ahead is stopped. Flipping a belt flips its riders; grabbing a rider with Pixel Grabbing frees it. Things spat out of a machine or dropped by the player simply land on a
-//   belt and get captured. Belts are NOT saved. Built with PixelFactoryKit. SPEED: each belt can have its own speed - in FIRST PERSON a right click on a belt opens a small window (PixelConveyorSystem
+//   belt and get captured. Belts are saved with the tester save (shape incl. heights, riders). Built with PixelFactoryKit. SPEED: each belt can have its own speed - in FIRST PERSON a right click on a belt opens a small window (PixelConveyorSystem
 //   speed editor: a number box in cube widths per second, Set / Reverse / Close; the mouse is freed while it is open); in the normal view a right click still reverses the belt.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -40,12 +44,29 @@ public class PixelConveyor : MonoBehaviour
     private PixelClicker clicker;
     private Vector3 a, b;
     private bool reversed;
-    private float length, width, height, unit;
+    private float length, hLength, width, height, unit;   // length = the belt's true length (slope included), hLength = its length along the ground (what riders measure)
     private Transform ribsRoot;
     private readonly List<Transform> ribs = new List<Transform>();
     private float ribOffset, ribSpacing;
 
-    public float Length => length;
+    /// <summary>The belt's length along the ground (riders measure their place along it from 0 to this).</summary>
+    public float Length => hLength;
+    /// <summary>Rise per metre travelled along the ground in the direction of travel (positive = the belt climbs).</summary>
+    public float SlopeUp => hLength > 0.0001f ? (ExitPoint.y - StartPoint.y) / hLength : 0f;
+    /// <summary>Ground speed of things riding the belt (the belt's own speed shortened by the slope, so they move at the belt's real speed).</summary>
+    public float RunSpeed => Speed / Mathf.Sqrt(1f + SlopeUp * SlopeUp);
+    /// <summary>1 / cos of the slope: a pixel resting on the belt sits this much higher than the slab (straight up) to keep its distance from the surface.</summary>
+    public float LiftFactor => Mathf.Sqrt(1f + SlopeUp * SlopeUp);
+    /// <summary>The highest point of the floor under the belt ends (the supports stand on it).</summary>
+    public static float FloorY(PixelClicker c) { PixelFloor f = PixelFloor.Instance; return f != null && f.FloorRenderer != null ? f.FloorRenderer.bounds.max.y : 0f; }
+    /// <summary>Keeps a belt from being steeper than about 37 degrees: returns 'to' with its height pulled in if needed.</summary>
+    public static Vector3 ClampEnd(Vector3 from, Vector3 to)
+    {
+        Vector3 d = to - from; d.y = 0f;
+        float limit = d.magnitude * 0.75f;
+        to.y = from.y + Mathf.Clamp(to.y - from.y, -limit, limit);
+        return to;
+    }
     public float Unit => unit;
     public float SurfaceHeight => height;
     /// <summary>The end things enter at / leave from (in the direction of travel).</summary>
@@ -54,7 +75,7 @@ public class PixelConveyor : MonoBehaviour
     /// <summary>How far along the belt (from its start, in the direction of travel) this world point is.</summary>
     public float Along(Vector3 world) { Vector3 d = Direction; Vector3 v = world - StartPoint; return v.x * d.x + v.z * d.z; }
     /// <summary>The point on the belt line (at the belt's ground height) at distance s from its start.</summary>
-    public Vector3 PointAt(float s) => StartPoint + Direction * s;
+    public Vector3 PointAt(float s) { Vector3 p = StartPoint + Direction * s; p.y = StartPoint.y + SlopeUp * s; return p; }
 
     /// <summary>The belt that carries on from the end of this one: its start is at this end and it does not run back towards it. Null = this is an end.</summary>
     public PixelConveyor FindNext()
@@ -67,7 +88,7 @@ public class PixelConveyor : MonoBehaviour
             if (c == null || c == this || c.ghostMode) continue;
             Vector3 sp = c.StartPoint;
             float d = (new Vector3(sp.x, exit.y, sp.z) - exit).sqrMagnitude;
-            if (d >= bestD) continue;
+            if (d >= bestD || Mathf.Abs(sp.y - exit.y) > unit * 0.45f) continue;   // (a belt at another height is not a continuation)
             if (Vector3.Dot(c.Direction, Direction) < -0.5f) continue;   // head-on: that is an end, not a continuation
             bestD = d; best = c;
         }
@@ -153,21 +174,37 @@ public class PixelConveyor : MonoBehaviour
         return root;
     }
 
-    /// <summary>If the point is close to the end of a placed belt, returns that end (so belts chain neatly).</summary>
-    public static Vector3 Snap(PixelClicker c, Vector3 p)
+    /// <summary>
+    /// If the mouse is close (on screen) to the end of a placed belt or to an elevator's top output, returns that end - at ITS height - so belts chain neatly (also at different heights).
+    /// 'p' = the mouse's point on the ground (plus the player's chosen height); 'snapped' says whether it latched.
+    /// </summary>
+    public static Vector3 Snap(PixelClicker c, Vector3 p, out bool snapped)
     {
-        float reach = c.OldPixelWorldSize * 0.9f;
-        float best = reach * reach;
+        bool found = false;
+        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Vector2 mouse = PixelInput.PointerPosition();
+        float best = 70f * 70f;                       // screen pixels
+        float groundReach = c.OldPixelWorldSize * 0.9f;
         Vector3 result = p;
+        void Try(Vector3 end)
+        {
+            float score = float.MaxValue;
+            if (cam != null)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(end);
+                if (sp.z > 0f) score = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
+            }
+            float flat = (new Vector3(end.x, p.y, end.z) - p).sqrMagnitude;
+            if (flat < groundReach * groundReach) score = Mathf.Min(score, 0f + flat);   // (an end right under the pointer on the ground)
+            if (score < best) { best = score; result = end; found = true; }
+        }
         foreach (PixelConveyor belt in all)
         {
             if (belt == null || belt.ghostMode) continue;
-            foreach (Vector3 end in new[] { belt.a, belt.b })
-            {
-                float d = (new Vector3(end.x, p.y, end.z) - p).sqrMagnitude;
-                if (d < best) { best = d; result = new Vector3(end.x, p.y, end.z); }
-            }
+            Try(belt.a); Try(belt.b);
         }
+        foreach (PixelElevator lift in PixelElevator.All) if (lift != null && !lift.IsGhost) Try(lift.OutputPoint);
+        snapped = found;
         return result;
     }
 
@@ -179,10 +216,11 @@ public class PixelConveyor : MonoBehaviour
         ribs.Clear();
         a = from; b = to;
         Vector3 d = b - a; d.y = 0f;
-        length = d.magnitude;
+        hLength = d.magnitude;
+        length = (b - a).magnitude;
         width = 1.35f * unit;
         height = 0.16f * unit;
-        transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation(d.normalized, Vector3.up));
+        transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation((b - a).normalized, Vector3.up));
 
         PixelFactoryKit k = new PixelFactoryKit(clicker, ghostMode);
         Color rubber = new Color(0.16f, 0.17f, 0.2f, 1f), steel = new Color(0.55f, 0.58f, 0.64f, 1f), accent = new Color(1f, 0.78f, 0.15f, 1f);
@@ -214,7 +252,31 @@ public class PixelConveyor : MonoBehaviour
             }
             ribs.Add(chev.transform);
         }
+        BuildSupports(k, steel);
         PlaceRibs();
+    }
+
+    /// <summary>Posts under a raised belt, from the floor up to the belt's underside: at both ends and every few cube widths between (they stay upright however the belt slopes).</summary>
+    private void BuildSupports(PixelFactoryKit k, Color steel)
+    {
+        float floorY = FloorY(clicker);
+        Vector3 flat = b - a; flat.y = 0f;
+        if (hLength < 0.01f) return;
+        flat /= hLength;
+        int posts = Mathf.Max(2, Mathf.CeilToInt(hLength / (5f * unit)) + 1);
+        GameObject holder = new GameObject("Supports");
+        holder.transform.SetParent(transform, false);
+        holder.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);   // (so the posts below are placed in world coordinates)
+        for (int i = 0; i < posts; i++)
+        {
+            float t = hLength * i / (posts - 1);
+            Vector3 p = a + flat * t;
+            float under = a.y + (b.y - a.y) * (t / hLength) - 0.02f * unit;   // the belt's underside
+            float h = under - floorY;
+            if (h < 0.3f * unit) continue;
+            k.Box("Post", holder.transform, new Vector3(p.x, floorY + h * 0.5f, p.z), new Vector3(0.14f * unit, h, 0.14f * unit), steel, default, false, 0.7f, 0.5f);
+            k.Box("Foot", holder.transform, new Vector3(p.x, floorY + 0.02f * unit, p.z), new Vector3(0.45f * unit, 0.04f * unit, 0.45f * unit), steel, default, false, 0.7f, 0.5f);
+        }
     }
 
     private void PlaceRibs()
@@ -452,7 +514,7 @@ public class PixelConveyorSystem : MonoBehaviour
         riding.Remove(r.rb);
         if (r.rb == null) return;
         r.rb.isKinematic = false;
-        if (eject && r.belt != null) SetVelocity(r.rb, r.belt.Direction * r.belt.Speed * 1.15f + Vector3.up * r.belt.Unit * 0.5f);
+        if (eject && r.belt != null) SetVelocity(r.rb, r.belt.Direction * r.belt.Speed * 1.15f + Vector3.up * (r.belt.Unit * 0.5f + r.belt.SlopeUp * r.belt.Speed));
         else SetVelocity(r.rb, Vector3.zero);
     }
 
@@ -504,7 +566,7 @@ public class PixelConveyorSystem : MonoBehaviour
             float gap = belt.Unit * 1.1f;
             float limit = belt.Length;
             foreach (Rider o in riders) if (o != r && o.belt == belt && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);
-            float want = r.s + belt.Speed * dt;
+            float want = r.s + belt.RunSpeed * dt;
             bool atEnd = want >= belt.Length - 0.001f && limit >= belt.Length - 0.001f;
             r.s = Mathf.Clamp(Mathf.Min(want, limit), 0f, belt.Length);
             if (atEnd)
@@ -529,7 +591,7 @@ public class PixelConveyorSystem : MonoBehaviour
             }
             // Position: on the line, bottom on the belt surface; glides to it (a pixel that landed from above settles onto the belt).
             Vector3 p = belt.PointAt(r.s);
-            p.y += belt.SurfaceHeight + r.half;
+            p.y += (belt.SurfaceHeight + r.half) * belt.LiftFactor;
             Vector3 current = r.rb.position;
             r.rb.MovePosition(Vector3.Lerp(current, p, 0.55f));
         }
@@ -552,7 +614,7 @@ public class PixelConveyorSystem : MonoBehaviour
         Vector3 side = Vector3.Cross(Vector3.up, dir);
         float magnetMax = u * (playerMagnet > 0f ? playerMagnet : 0.9f);
         float pull = Mathf.Clamp(-bestLateral * 3f * u, -magnetMax, magnetMax);   // towards the middle, stronger the further off
-        PixelFirstPerson.PushPlayer(dir * best.Speed * (playerPull > 0f ? playerPull : 1f) + side * pull);
+        PixelFirstPerson.PushPlayer(dir * best.RunSpeed * (playerPull > 0f ? playerPull : 1f) + side * pull);
     }
 
     private void Update()

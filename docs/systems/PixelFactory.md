@@ -26,3 +26,7 @@ PixelVisitorMinigame got `BuySellTabs` (a vendor that sells wares AND buys pixel
 ## Solar Panel + saving the tester machines
 - `PixelSolarPanel.cs` (Dev Hub tester feature): a flat panel powered while Solar pixels lie on it; it calls `HoldPower()` on its ONE linked device (blue line). Solar pixels on it are slowly used up unless they form a complete group of 5 (the existing Solar cluster keep-alive). After placing, click a device inside the blue ring to link; right click a placed panel to re-link (`PixelFeatureTester.BeginLink`).
 - All tester machines save with the save file: `SaveData.testerObjects` = `PixelFeatureTester.TesterSave[]` (feature name + JSON from each feature's `ExportState/ImportState`). Imported after the placed devices (panels re-link to the nearest restored device by position). Belt riders are saved with their belt (`PixelConveyorSystem.ExportRiders/ImportRider`) and skipped by the normal loose old-pixel save.
+
+## Heights, ramps and the Conveyor Elevator
+- Belt ends are 3D points (y = underside). Scroll while placing a belt raises / lowers the point (posts appear), so belts can slope; `Snap` finds belt ends / elevator tops by screen distance. Riders move by ground distance (`Length`), with `PointAt` / `RunSpeed` / `LiftFactor` handling the slope.
+- `PixelElevator` (tester feature): magnetizes to a belt end, click for the base, mouse height, click to confirm. Entry on its -Z face (an `IPixelBeltAcceptor`), exit on the +Z face at `OutputPoint`, where a new belt can start. Uses `PixelPathCarrier`.
