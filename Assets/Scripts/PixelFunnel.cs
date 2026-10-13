@@ -2,7 +2,7 @@
 // PixelFunnel.cs
 //   The FUNNEL (consumable device, PixelConsumables DeviceKind.Funnel 16, one at a time; the placed device is the thin PixelChipperDevice stub on the same object). A wide glass cone hangs just UNDER
 //   the clicker cube (mouth radius mouthRadius cube widths, its mouth mouthDrop below the cube's underside) and catches every loose old pixel that falls into it: the pixel is locked (kinematic,
-//   moved by position like a belt rider), drawn to the throat and carried down a see-through TUBE (PixelTube, a smooth curve from the throat to the output) at tubeSpeed cube widths per second,
+//   moved by position by the shared PixelPathCarrier), drawn to the throat and carried down a see-through TUBE (PixelTube, a smooth curve from the throat to the output) at tubeSpeed cube widths per second,
 //   one gap apart. The output sits on the floor where the player clicked (the object's own position; the spout points away from the cube, Scroll / Q / E turns it a bit, a conveyor belt
 //   opening in front of the spout makes it latch on like the Wood Chipper); at the end the pixel is put back as an ordinary old pixel (physics again) with a small push, or dropped onto the
 //   belt. While placing, the output can only be put within maxReach cube widths of the cube. Placing a second funnel MOVES the first (no extra one is used up).
@@ -64,14 +64,6 @@ public class PixelFunnel : MonoBehaviour
     /// <summary>Is a working funnel standing in the world (placing another one then moves it)?</summary>
     public static bool Exists { get { real.RemoveAll(f => f == null); return real.Count > 0; } }
 
-    private sealed class Carried
-    {
-        public Rigidbody rb;
-        public Vector3 from;
-        public float approach;   // 0..1 while being drawn to the throat
-        public float d;          // distance along the tube
-    }
-
     private Mode mode;
     private PixelClicker clicker;
     private PixelPlacedDevice device;
@@ -88,8 +80,7 @@ public class PixelFunnel : MonoBehaviour
     private Vector3 lastPos = new Vector3(1e9f, 0f, 0f);
     private float lastYaw = 1e9f;
     private bool displayDone;
-    private readonly List<Carried> carried = new List<Carried>();
-    private readonly HashSet<Rigidbody> carriedSet = new HashSet<Rigidbody>();
+    private readonly PixelPathCarrier carrier = new PixelPathCarrier();   // locks the caught pixels and moves them down the tube
 
     // ---------------- building ----------------
 
@@ -305,9 +296,7 @@ public class PixelFunnel : MonoBehaviour
     private void OnDestroy()
     {
         real.Remove(this);
-        foreach (Carried c in carried) if (c.rb != null) c.rb.isKinematic = false;
-        carried.Clear();
-        carriedSet.Clear();
+        carrier.ReleaseAll();
     }
 
     private bool InMouth(Vector3 c)
@@ -322,7 +311,7 @@ public class PixelFunnel : MonoBehaviour
 
     private bool CanCatch(Rigidbody rb)
     {
-        if (rb == null || rb.isKinematic || carriedSet.Contains(rb) || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) return false;
+        if (rb == null || rb.isKinematic || carrier.Contains(rb) || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) return false;
         OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
         if (info != null && info.heldByPlayer) return false;
         OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
@@ -330,34 +319,11 @@ public class PixelFunnel : MonoBehaviour
         return true;
     }
 
-    private static void SetVelocity(Rigidbody rb, Vector3 v)
-    {
-#if UNITY_6000_0_OR_NEWER
-        rb.linearVelocity = v;
-#else
-        rb.velocity = v;
-#endif
-        rb.angularVelocity = Vector3.zero;
-    }
-
-    private Vector3 PointAtDist(float d)
-    {
-        d = Mathf.Clamp(d, 0f, pathLen);
-        for (int i = 1; i < path.Length; i++)
-            if (pathDist[i] >= d)
-            {
-                float span = Mathf.Max(0.0001f, pathDist[i] - pathDist[i - 1]);
-                return Vector3.Lerp(path[i - 1], path[i], (d - pathDist[i - 1]) / span);
-            }
-        return path[path.Length - 1];
-    }
-
     private void FixedUpdate()
     {
         if (mode != Mode.Real || clicker == null || pathLen <= 0f) return;
         if (device == null) device = GetComponent<PixelPlacedDevice>();
         bool removing = device != null && device.IsRemoving;
-        float u = unit, dt = Time.fixedDeltaTime;
 
         // 1. Catch: every loose old pixel inside the cone is locked and drawn to the throat.
         if (!removing)
@@ -366,46 +332,16 @@ public class PixelFunnel : MonoBehaviour
             for (int i = 0; i < list.Count; i++)
             {
                 Rigidbody rb = list[i];
-                if (!CanCatch(rb) || !InMouth(rb.worldCenterOfMass)) continue;
-                SetVelocity(rb, Vector3.zero);
-                rb.isKinematic = true;
-                carried.Add(new Carried { rb = rb, from = rb.position });
-                carriedSet.Add(rb);
+                if (CanCatch(rb) && InMouth(rb.worldCenterOfMass)) carrier.Add(rb);
             }
         }
 
-        // 2. Carry: the one furthest down goes first, each keeps a gap behind the one ahead; at the end the pixel is put back into the world.
-        float speed = Speed * u, gap = Gap * u;
-        for (int i = carried.Count - 1; i >= 0; i--)
-        {
-            Carried c = carried[i];
-            OldPixelInfo info = c.rb != null ? c.rb.GetComponent<OldPixelInfo>() : null;
-            if (c.rb == null || (info != null && info.heldByPlayer))   // gone, or grabbed (the grab's business now)
-            {
-                if (c.rb != null) carriedSet.Remove(c.rb);
-                carried.RemoveAt(i);
-                continue;
-            }
-            OldPixelDespawn despawn = c.rb.GetComponent<OldPixelDespawn>();
-            if (despawn != null) despawn.KeepAlive();
-
-            if (c.approach < 1f)
-            {
-                c.approach = Mathf.Min(1f, c.approach + dt / ApproachSeconds);
-                float e = c.approach * c.approach * (3f - 2f * c.approach);
-                c.rb.MovePosition(Vector3.Lerp(c.from, path[0], e));
-                continue;
-            }
-            float limit = pathLen;
-            foreach (Carried o in carried) if (o != c && o.approach >= 1f && o.d > c.d) limit = Mathf.Min(limit, o.d - gap);
-            c.d = Mathf.Max(c.d, Mathf.Min(c.d + speed * dt, limit));
-            if (c.d >= pathLen - 0.001f) { Release(c); carriedSet.Remove(c.rb); carried.RemoveAt(i); continue; }
-            c.rb.MovePosition(Vector3.Lerp(c.rb.position, PointAtDist(c.d), 0.6f));
-        }
+        // 2. Carry them down the tube (a gap apart); at the end each one is put back into the world.
+        carrier.Step(path, pathDist, Speed * unit, Gap * unit, Time.fixedDeltaTime, Release, ApproachSeconds);
     }
 
     /// <summary>The pixel leaves the spout: ordinary physics again, or dropped onto a belt opening in front of it.</summary>
-    private void Release(Carried c)
+    private void Release(Rigidbody rb)
     {
         float u = unit;
         Vector3 end = path[path.Length - 1], dir = (path[path.Length - 1] - path[path.Length - 2]).normalized;
@@ -421,8 +357,7 @@ public class PixelFunnel : MonoBehaviour
             velocity = belt.Direction * belt.Speed * 0.5f;
             break;
         }
-        c.rb.isKinematic = false;
-        c.rb.position = end;
-        SetVelocity(c.rb, velocity);
+        rb.position = end;
+        PixelPathCarrier.SetVelocity(rb, velocity);
     }
 }

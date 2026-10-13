@@ -59,6 +59,30 @@ public class PixelConveyor : MonoBehaviour
     public float LiftFactor => Mathf.Sqrt(1f + SlopeUp * SlopeUp);
     /// <summary>The highest point of the floor under the belt ends (the supports stand on it).</summary>
     public static float FloorY(PixelClicker c) { PixelFloor f = PixelFloor.Instance; return f != null && f.FloorRenderer != null ? f.FloorRenderer.bounds.max.y : 0f; }
+    /// <summary>The belt whose exit is nearest the mouse: within groundReach of the ground point, or within about 80 screen pixels of the mouse (so raised ends can be picked). Null if none.</summary>
+    public static PixelConveyor NearestExit(PixelClicker c, Vector3 groundPoint, float groundReach)
+    {
+        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Vector2 mouse = PixelInput.PointerPosition();
+        PixelConveyor best = null;
+        float bestScore = float.MaxValue;
+        foreach (PixelConveyor belt in all)
+        {
+            if (belt == null || belt.ghostMode) continue;
+            Vector3 e = belt.ExitPoint;
+            float score = float.MaxValue;
+            float flat = (new Vector3(e.x, groundPoint.y, e.z) - groundPoint).magnitude;
+            if (flat < groundReach) score = flat / groundReach;
+            if (cam != null)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(e);
+                if (sp.z > 0f) { float px = (new Vector2(sp.x, sp.y) - mouse).magnitude; if (px < 80f) score = Mathf.Min(score, px / 80f); }
+            }
+            if (score < bestScore) { bestScore = score; best = belt; }
+        }
+        return best;
+    }
+
     /// <summary>Keeps a belt from being steeper than about 37 degrees: returns 'to' with its height pulled in if needed.</summary>
     public static Vector3 ClampEnd(Vector3 from, Vector3 to)
     {
@@ -204,6 +228,7 @@ public class PixelConveyor : MonoBehaviour
             Try(belt.a); Try(belt.b);
         }
         foreach (PixelElevator lift in PixelElevator.All) if (lift != null && !lift.IsGhost) Try(lift.OutputPoint);
+        foreach (PixelSplitter split in PixelSplitter.All) if (split != null && !split.IsGhost) for (int i = 0; i < 3; i++) Try(split.OutputPoint(i));
         snapped = found;
         return result;
     }

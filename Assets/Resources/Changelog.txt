@@ -852,3 +852,4 @@
 [2026-10-13 19:02 UTC] The Next up window now has a header and can be dragged, minimized with '-' and docked against the left or right screen side (PixelWindowChrome).
 [2026-10-13 19:04 UTC] First person now has out-of-bounds protection: the player is kept inside the play circle (and put back at the start spot if they fall out of the world), and a pink wireframe wall fades in when they get near the edge.
 [2026-10-13 19:12 UTC] Added the Conveyor Elevator tester part (magnetizes to a belt end, mouse sets the height, a new belt can snap to its top) and conveyor belts can now be raised and sloped with the scroll wheel while placing, with supports under them.
+[2026-10-13 19:16 UTC] Moved the Funnel onto the shared PixelPathCarrier and added a Splitter tester block that snaps to a belt end and shares the pixels evenly between its three other sides (belts snap to its outputs).

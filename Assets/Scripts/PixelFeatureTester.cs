@@ -44,6 +44,7 @@ public class PixelFeatureTester : MonoBehaviour
         public SnapFunc snap;
         // Tall features (the Conveyor Elevator): after the base is clicked the mouse sets the HEIGHT, a second click confirms.
         public bool heightStage;
+        public bool groundPlane;      // placed on the flat ground level, not on whatever the mouse ray hits (belts, towers, the Splitter)
         public Func<PixelClicker, Vector3, float, float, GameObject> placeTall;
         public readonly List<GameObject> placed = new List<GameObject>();
         public TMP_Text placeLabel, clearLabel;
@@ -121,9 +122,17 @@ public class PixelFeatureTester : MonoBehaviour
                  c => PixelElevator.CreateGhost(c), (c, p, yw) => PixelElevator.Place(c, p, yw));
         features[features.Count - 1].placeSnap = PixelElevator.TrySnap;
         features[features.Count - 1].heightStage = true;
+        features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].placeTall = PixelElevator.PlaceTall;
         features[features.Count - 1].export = PixelElevator.ExportState;
         features[features.Count - 1].import = PixelElevator.ImportState;
+        Register("Splitter",
+                 "A block that snaps to the end of a conveyor belt (bring the ghost near the end) and shares what the belt brings out of its other three sides, one pixel at a time in turn. Start new belts from the three outputs (their first point snaps there); a side without a belt is skipped, and with no belts at all the pixels are flung out of all three sides.",
+                 c => PixelSplitter.CreateGhost(c), (c, p, yw) => PixelSplitter.Place(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelSplitter.TrySnap;
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelSplitter.ExportState;
+        features[features.Count - 1].import = PixelSplitter.ImportState;
         Register("Kiln",
                  "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
@@ -484,7 +493,7 @@ public class PixelFeatureTester : MonoBehaviour
 
         bool overUi = PixelInput.PointerOverUI();
         Vector3 point = Vector3.zero;
-        bool hasPoint = !overUi && ((placing.line || placing.heightStage) ? TryGroundPoint(out point) : TryFloorPoint(out point));
+        bool hasPoint = !overUi && ((placing.line || placing.heightStage || placing.groundPlane) ? TryGroundPoint(out point) : TryFloorPoint(out point));
         float useYaw = yaw;
         if (hasPoint && placing.placeSnap != null && placing.placeSnap(clicker, point, yaw, ghost, out Vector3 snapP, out float snapYaw)) { point = snapP; useYaw = snapYaw; }
         if (ghost != null && !(placing.line && hasStart) && !(placing.heightStage && stageActive))

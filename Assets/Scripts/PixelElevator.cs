@@ -143,15 +143,7 @@ public class PixelElevator : MonoBehaviour, IPixelBeltAcceptor
     {
         snappedPoint = point; snappedYaw = yaw;
         float u = Mathf.Max(0.05f, c.OldPixelWorldSize);
-        PixelConveyor best = null;
-        float bestD = (3.5f * u) * (3.5f * u);
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            Vector3 e = belt.ExitPoint;
-            float d = (new Vector3(e.x, point.y, e.z) - point).sqrMagnitude;
-            if (d < bestD) { bestD = d; best = belt; }
-        }
+        PixelConveyor best = PixelConveyor.NearestExit(c, point, 3.5f * u);
         if (best == null) return false;
         Vector3 dir = best.Direction;
         snappedYaw = Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg;

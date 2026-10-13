@@ -1,7 +1,6 @@
 // ---- System notes ----
 // PixelPathCarrier.cs
-//   Shared helper for machines that CARRY old pixels along a path (first user: the Conveyor Elevator; the Funnel still has its own copy of this logic - move it over when it is next touched,
-//   and the belts could follow). Add(rb) locks a loose old pixel (kinematic, no velocity); Step(...) each FixedUpdate draws new ones to the path's start (approachSeconds), then moves every
+//   Shared helper for machines that CARRY old pixels along a path (users: the Funnel and the Conveyor Elevator; the belts have their own rider system). Add(rb) locks a loose old pixel (kinematic, no velocity); Step(...) each FixedUpdate draws new ones to the path's start (approachSeconds), then moves every
 //   pixel along the polyline at 'speed' keeping 'gap' behind the one ahead, keeps them from despawning, lets go of ones that were grabbed or destroyed, and calls onEnd(rb) when one reaches
 //   the end (the caller then puts it back into the world with ReleaseAt). ReleaseAll() lets everything go (the machine was removed).
 // ---------------------------------------------------
