@@ -4,7 +4,7 @@
 //   wood block (Wood, Bark, Sap, Leaf, Heartwood, Twig) has a 5% chance of becoming one (edit it in PixelBlockRules; no spawn weight of its own).
 //   While you hit it, BIRD NESTS fall out of the tree (this component, added by PixelClicker.Awake, listens to PixelClicker.PixelHit): each hit has a nestChance (0 = 40%) to drop one,
 //   a nest (a woven ring with eggs) lands on the ground near the cube and stays for nestSeconds (0 = 9, it blinks away in the last 2 s). Click it (the pointer, or the crosshair in
-//   first person - with any item selected) before it vanishes for nestXp (0 = 30) Woodcutting XP, a chirp and a puff of feathers. At most maxNests (0 = 10) lie about at once; they are thrown out to a random spot up to scatterCubes (0 = 5) cube widths from the cube.
+//   first person - with any item selected) before it vanishes for nestXp (0 = 30) Woodcutting XP, a chirp and a puff of feathers. At most maxNests (0 = 10) lie about at once; they are shot out of a random SIDE of the cube (no collider for the first half second, so nothing stops them) to a random spot up to scatterCubes (0 = 9) cube widths away.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,7 +25,7 @@ public class PixelGreatOak : MonoBehaviour
     [SerializeField] private float nestXp = 0f;
 
     [Min(0f)]
-    [Tooltip("How far (in cube widths) a nest can land from the cube. 0 = the coded default (5).")]
+    [Tooltip("How far (in cube widths) a nest can land from the cube. 0 = the coded default (9).")]
     [SerializeField] private float scatterCubes = 0f;
 
     [Min(0)]
@@ -42,6 +42,8 @@ public class PixelGreatOak : MonoBehaviour
         public GameObject go;
         public Rigidbody body;
         public float born;
+        public float colliderAt;      // the time its collider switches on (it flies out without one first)
+        public SphereCollider col;
         public Renderer[] renderers;
     }
 
@@ -79,7 +81,7 @@ public class PixelGreatOak : MonoBehaviour
     private void SpawnNest()
     {
         float size = clicker.PixelBaseSize;
-        Vector3 origin = clicker.LiveWorldPosition + Vector3.up * size * 0.6f;
+        Vector3 origin = clicker.LiveWorldPosition + Vector3.up * size * 0.3f;
         if (nestMat == null)
         {
             nestMat = Mat(new Color(0.42f, 0.29f, 0.16f));
@@ -87,7 +89,7 @@ public class PixelGreatOak : MonoBehaviour
         }
         GameObject go = new GameObject("Bird Nest");
         float s = size * 0.55f;
-        go.transform.position = origin + Random.insideUnitSphere * size * 0.15f;
+        go.transform.position = origin;
         Piece(go.transform, PrimitiveType.Cylinder, new Vector3(0f, 0f, 0f), new Vector3(s, s * 0.12f, s), nestMat);          // the woven base
         Piece(go.transform, PrimitiveType.Cylinder, new Vector3(0f, s * 0.12f, 0f), new Vector3(s * 0.92f, s * 0.06f, s * 0.92f), nestMat);
         for (int i = 0; i < 6; i++)                                                                                              // twigs sticking out of the rim
@@ -104,14 +106,16 @@ public class PixelGreatOak : MonoBehaviour
         }
         SphereCollider col = go.AddComponent<SphereCollider>();
         col.radius = 0.5f * s; col.center = new Vector3(0f, s * 0.15f, 0f);
+        col.enabled = false;   // no collider while it flies clear of the cube and the old pixels round it (switched on shortly after)
         Rigidbody rb = go.AddComponent<Rigidbody>();
         rb.mass = 0.2f;
         // Thrown out to a random spot on the ground round the cube: a flight of about 0.8 s at this launch angle covers the chosen distance.
-        float far = size * (scatterCubes > 0f ? scatterCubes : 5f);
+        float far = size * (scatterCubes > 0f ? scatterCubes : 9f);
         float dist = Random.Range(0.25f, 1f) * far;
         float angle = Random.Range(0f, Mathf.PI * 2f);
         Vector3 flat = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
         float flight = 0.8f;
+        go.transform.position = origin + flat * size * 0.6f;   // shot out of the SIDE of the cube, in the direction it flies
         Vector3 toss = flat * (dist / flight) + Vector3.up * (0.5f * -Physics.gravity.y * flight);
 #if UNITY_6000_0_OR_NEWER
         rb.linearDamping = 0f;
@@ -123,7 +127,7 @@ public class PixelGreatOak : MonoBehaviour
         rb.velocity = toss;
 #endif
         go.transform.rotation = Quaternion.Euler(Random.Range(-20f, 20f), Random.Range(0f, 360f), Random.Range(-20f, 20f));
-        nests.Add(new Nest { go = go, body = rb, born = Time.time, renderers = go.GetComponentsInChildren<Renderer>() });
+        nests.Add(new Nest { go = go, body = rb, born = Time.time, colliderAt = Time.time + 0.55f, col = col, renderers = go.GetComponentsInChildren<Renderer>() });
         PixelAudio.Play("nest_fall");
     }
 
@@ -159,6 +163,7 @@ public class PixelGreatOak : MonoBehaviour
         {
             Nest n = nests[i];
             if (n.go == null) { nests.RemoveAt(i); continue; }
+            if (n.col != null && !n.col.enabled && Time.time >= n.colliderAt) n.col.enabled = true;
             float age = Time.time - n.born;
             if (age >= Seconds) { Vanish(n); nests.RemoveAt(i); continue; }
             bool blink = age > Seconds - 2f && Mathf.Sin(Time.time * 18f) < 0f;   // hurry: it flickers in the last 2 seconds

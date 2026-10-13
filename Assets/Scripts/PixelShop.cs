@@ -1275,6 +1275,21 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 29)
+        {
+            // The auto clicker's Multi-Click tops out at 3x for now: cut the levels above it (a saved level is clamped when the save loads).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.upgradeEffect != UpgradeEffect.AutoClickerClicks || p.levels == null) continue;
+                    System.Collections.Generic.List<PackLevel> keep = new System.Collections.Generic.List<PackLevel>();
+                    foreach (PackLevel l in p.levels) if (l != null && l.value <= 3.001f) keep.Add(l);
+                    if (keep.Count > 0 && keep.Count < p.levels.Length) { p.levels = keep.ToArray(); p.level = Mathf.Clamp(p.level, 0, p.levels.Length); }
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 29);
+            changed = true;
+        }
+
         return changed;
     }
 

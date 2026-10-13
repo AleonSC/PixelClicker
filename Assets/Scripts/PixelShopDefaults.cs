@@ -1110,7 +1110,7 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default "extra clicks" upgrade: 4 levels, +1 click per tick each.</summary>
+    /// <summary>Default "extra clicks" upgrade: 2 levels (2x, 3x clicks per auto click; 3x is the top for now).</summary>
     private static ShopPack CreateClicksUpgradePack(int requiresAutoClickerIndex)
     {
         return new ShopPack
@@ -1123,9 +1123,7 @@ public partial class PixelShop
             levels = new[]
             {
                 new PackLevel { value = 2f, costs = AllSix(2500) },
-                new PackLevel { value = 3f, costs = AllSix(25000) },
-                new PackLevel { value = 4f, costs = AllSix(250000) },
-                new PackLevel { value = 5f, costs = AllSix(2500000) },
+                new PackLevel { value = 3f, costs = AllSix(25000) },   // (3x is the top for now)
             }
         };
     }
