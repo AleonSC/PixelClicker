@@ -1860,6 +1860,20 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 55;
         }
 
+        if (looksVersion < 56)
+        {
+            // Wood-family old pixels (and the Whetstone) hardly bounce: low bounce, grippy, normal gravity.
+            if (looks != null)
+                foreach (PixelLook l in looks)
+                {
+                    if (l == null) continue;
+                    if (l.type == PixelType.Wood || l.type == PixelType.Bark || l.type == PixelType.Heartwood || l.type == PixelType.Twig || l.type == PixelType.Acorn
+                        || l.type == PixelType.Whetstone || l.type == PixelType.GreatOak || l.type == PixelType.WoodChips)
+                    { l.customPhysics = true; l.bounce = 0.05f; l.friction = 0.9f; l.gravityMultiplier = 1f; }
+                }
+            looksVersion = 56;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.

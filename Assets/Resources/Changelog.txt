@@ -825,3 +825,4 @@
 [2026-10-13 16:37] Special and hold blocks now show on the Pixel Guide (tagged SPECIAL / HOLD, with their chance or bonus in the '!' tip, spawn shares include the replacements); added Whetstone and Great Oak guide texts.
 [2026-10-13 16:44] To-do: added the cross-skill links idea (Farming saplings from Woodcutting that grow into better trees).
 [2026-10-13 16:47] Great Oak now replaces a wood block 1% of the time; new Acorn block (Woodcutter's Pack): acorn old pixels just lying on the field raise that chance up to 25% (12 acorns out).
+[2026-10-13 16:48] Wood old pixels (wood, bark, heartwood, twig, acorn, great oak, wood chips and the whetstone) now barely bounce: low bounce, grippy, normal gravity.
