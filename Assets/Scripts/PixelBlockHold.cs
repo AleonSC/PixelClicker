@@ -71,7 +71,6 @@ public class PixelBlockHold : MonoBehaviour
     private Material beamMaterial;
     private float slide;            // 0 = at the cube, 1 = hovering at the side
     private bool returning;         // sliding back in after the button was let go
-    private int returnTier = -1, returnHits;
 
     // ---- the meter next to the cursor ----
     private GameObject canvasRoot;
@@ -124,7 +123,7 @@ public class PixelBlockHold : MonoBehaviour
         {
             if (cooldown > 0f) cooldown -= dt;
             else meter = Mathf.Min(1f, meter + dt / RechargeSeconds);
-            if (!returning && PixelInput.RightPressed() && CanStart()) Begin();
+            if (PixelInput.RightPressed() && CanStart()) Begin();
         }
         if (flash > 0f) flash -= dt;
     }
@@ -139,6 +138,7 @@ public class PixelBlockHold : MonoBehaviour
     {
         if (!clicker.TryPullLive(out heldTier, out heldHits)) return;
         holding = true;
+        returning = false;
         slide = 0f;
         BuildVisual();
         PixelAudio.Play("ui_click");
@@ -147,21 +147,19 @@ public class PixelBlockHold : MonoBehaviour
     private void Release(bool exhausted)
     {
         holding = false;
-        returning = holder != null;   // the block slides back in, then is put back
-        returnTier = heldTier;
-        returnHits = heldHits;
+        // The block takes the cube AT ONCE (the one that was there moves to next in line); the picture of it only slides back for show.
+        if (heldTier >= 0 && clicker != null) clicker.ReturnHeldTier(heldTier, heldHits);
         heldTier = -1;
+        returning = holder != null;
         cooldown = exhausted ? ExhaustCooldown : ReleaseCooldown;
         if (exhausted) flash = FlashSeconds;
-        if (!returning) FinishReturn();
+        if (!returning) DestroyVisual();
         PixelAudio.Play("click");
     }
 
-    /// <summary>The slide back is over (or skipped): the block goes back into the rotation and its picture goes away.</summary>
+    /// <summary>The slide back is over (or skipped): the picture of the held block goes away.</summary>
     private void FinishReturn()
     {
-        if (returnTier >= 0 && clicker != null) clicker.ReturnHeldTier(returnTier, returnHits);
-        returnTier = -1;
         returning = false;
         DestroyVisual();
     }

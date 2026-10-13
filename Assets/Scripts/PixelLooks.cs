@@ -258,6 +258,8 @@ public class PixelLook
 
     [Tooltip("Ghost: a darker nucleus drifts inside the pixel and tiny bubbles rise through it.")]
     public bool gelFx = false;
+    /// <summary>The Message in a Bottle: a small 3D treasure map floats inside the (clear glass) cube - see PixelBottleMap.cs.</summary>
+    public bool bottleMap = false;
 
     [Tooltip("Vacuum: draw a clear glass container (hollow, thin walls) with ONE round opening in its front face instead of a solid cube. Draws a different mesh; the hit box stays a cube.")]
     public bool vacuumContainer = false;
@@ -299,7 +301,7 @@ public class PixelLook
     public bool shatter = false;
 
     /// <summary>Does this look add objects to the cube (outline / core)?</summary>
-    public bool HasExtras => gelFx || windFx || flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
+    public bool HasExtras => bottleMap || gelFx || windFx || flames || radiation || cometTail || sunFx || farmFx != FarmAmbient.None || electricFx != ElectricAmbient.None || obsidianFx || outline || darkMatter || lightning || sprout || shine || starCubes > 0 || faceCircles || (colorBlindSides >= 3 && PixelDisplaySettings.ColorBlind);
 
     /// <summary>Does this look put its own texture on the pixel (streaks and/or damage)?</summary>
     public bool HasSurfaceTexture => meteorTexture || sunTexture || streakTexture || damageCracks || chromeTexture || oreTexture || chestTexture || blockSurface != BlockSurface.None || basicSurface != BasicSurface.None;
@@ -530,8 +532,10 @@ public static class PixelLooks
                             blob = true, wobble = true, wobbleAmount = 0.14f, wobbleSpeed = 6f, farmFx = PixelLook.FarmAmbient.Spores,
                             lightning = true, lightningCoreColor = new Color(1f, 0.92f, 1f, 1f), lightningGlowColor = new Color(0.95f, 0.4f, 1f, 1f), lightningJitter = 0.1f },
             // Fishing's special blocks: a message in a bottle (cracks as you hit it) and a whale (a cube with a whale drawn on every face).
-            new PixelLook { type = PixelClicker.PixelType.Bottle, useColor = true, color = Color.white, metallic = 0.1f, smoothness = 0.95f, damageCracks = true,
-                            blockSurface = PixelLook.BlockSurface.Bottle, blob = true, wobble = true, wobbleAmount = 0.05f, wobbleSpeed = 2.2f, farmFx = PixelLook.FarmAmbient.Sparkle },
+            // (the Bottle is a clear glass cube with a little 3D treasure map floating inside, PixelBottleMap.cs)
+            new PixelLook { type = PixelClicker.PixelType.Bottle, useColor = true, color = new Color(0.55f, 0.9f, 0.8f, 0.3f), forceTranslucent = true, metallic = 0f, smoothness = 0.97f, emission = 0.04f,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.8f, 1f, 0.95f, 1f), outlineBevel = true, outlineThickness = 0.035f, outlineStrength = 0.85f,
+                            bottleMap = true, wobble = true, wobbleAmount = 0.03f, wobbleSpeed = 2.2f, farmFx = PixelLook.FarmAmbient.Sparkle },
             new PixelLook { type = PixelClicker.PixelType.Whale, useColor = true, color = Color.white, metallic = 0.05f, smoothness = 0.6f,
                             blockSurface = PixelLook.BlockSurface.Whale, blob = true, wobble = true, wobbleAmount = 0.07f, wobbleSpeed = 3.2f, farmFx = PixelLook.FarmAmbient.Dew },
             // Bait: small brown-orange pellets pressed into a lump.
@@ -869,6 +873,7 @@ public static class PixelLooks
         if (look.radiation) PixelRadiationFx.Attach(root.transform, centre, size);
         if (look.cometTail) PixelCometFx.Attach(root.transform, centre, size);
         if (look.windFx) PixelVacuumFx.Attach(root.transform, centre, size);
+        if (look.bottleMap) PixelBottleMap.Attach(root.transform, centre, size, baseMaterial);
         if (look.gelFx) PixelGelFx.Attach(root.transform, centre, size);
         if (look.sunFx) PixelSunFx.Attach(root.transform, centre, size);
         if (look.farmFx != PixelLook.FarmAmbient.None) PixelFarmFx.Attach(root.transform, centre, size, look.farmFx);

@@ -1801,6 +1801,17 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 50;
         }
 
+        if (looksVersion < 51)
+        {
+            // The Message in a Bottle became a clear glass cube with a map inside: replace the saved look.
+            System.Collections.Generic.List<PixelLook> list51 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            list51.RemoveAll(l => l != null && l.type == PixelType.Bottle);
+            PixelLook def51 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Bottle);
+            if (def51 != null) list51.Add(def51);
+            looks = list51.ToArray();
+            looksVersion = 51;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
