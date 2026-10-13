@@ -57,7 +57,24 @@ public static class PixelSettingsSync
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { known = null; }
+    private static void ResetStatics() { known = null; baseline = null; }
+
+    private static string baseline;
+
+    /// <summary>The current settings as one string (to tell whether the player changed any since a profile's settings were put in place).</summary>
+    private static string Snapshot()
+    {
+        List<string> parts = new List<string>();
+        foreach (Entry e in Collect()) parts.Add(e.key + "=" + e.value);
+        parts.Sort(StringComparer.Ordinal);
+        return string.Join("|", parts);
+    }
+
+    /// <summary>Remembers the settings as they are now (just applied from a save, or reset for a new game).</summary>
+    private static void MarkBaseline() { baseline = Snapshot(); }
+
+    /// <summary>Has the player changed a setting (on the main menu, say) since the last Apply / ResetToDefaults? Then Continue keeps their choice instead of overwriting it with the save's.</summary>
+    public static bool ChangedSinceBaseline() => baseline != null && Snapshot() != baseline;
 
     /// <summary>The current settings, ready to be stored in a save file.</summary>
     public static Entry[] Collect()
@@ -96,6 +113,7 @@ public static class PixelSettingsSync
         PlayerPrefs.Save();
 
         Reload();
+        MarkBaseline();
     }
 
     /// <summary>A brand-new game: every per-save setting goes back to its default (key bindings and volumes are the player's own and stay).</summary>
@@ -108,6 +126,7 @@ public static class PixelSettingsSync
         }
         PlayerPrefs.Save();
         Reload();
+        MarkBaseline();
     }
 
     /// <summary>Tells everything that keeps a setting in memory to read it from PlayerPrefs again.</summary>

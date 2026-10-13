@@ -330,7 +330,7 @@ public class PixelSaveGame : MonoBehaviour
     {
         if (!TryGetLatest(out int slot, out string path)) return false;
         if (slot > 0) CurrentSlot = slot;
-        skipSettingsOnce = appliedProfilePath == path;   // the main menu already shows this profile's settings (and the player may have changed them there): keep them
+        skipSettingsOnce = appliedProfilePath == path || PixelSettingsSync.ChangedSinceBaseline();   // the main menu already shows this profile's settings, or the player changed them there (after a New Game, say): keep them
         bool ok = Load(false, true, path);
         skipSettingsOnce = false;
         return ok;
