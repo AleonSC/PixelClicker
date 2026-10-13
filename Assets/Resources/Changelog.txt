@@ -717,3 +717,4 @@
 [2026-10-13 04:44 UTC] Notes updated: the changelog is no longer cleared and is the searchable history of past changes.
 [2026-10-13 04:46 UTC] Notes updated: every new feature now gets a big-picture check (reuse, duplication, performance, saves) with a short 'fits the game / could be better' note.
 [2026-10-13 04:58 UTC] Notes: clarified that the Game Guide's Controls and How To Play panels are the current setup, not an old note.
+[2026-10-13 04:59 UTC] Notes: Game Guide notes now say it has three tabs (Controls, How To Play, Database).

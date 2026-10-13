@@ -10,6 +10,6 @@ The Settings screen is a scrolling list with section headers (Gameplay, Interfac
 
 The pause menu has one **Game Guide** button (between Settings and Give feedback; it was called How To Play) that opens a screen with three TABS: **Controls**, **How To Play** (the written guide) and **Database** (opens the game database window) - the tabs: **Controls** (`Controls.txt`, formerly the pause menu's Controls button) and **Game Guide** (`HowToPlay.txt`); each tab is its own `GuideScreen` panel and the tab buttons switch between the panels (`BuildGuideScreen(..., isControlsTab)`). **Settings ends with a 'Keybinds' header** with one 'Change keybinds' button that opens the key-binding screen (titled 'Keybinds').
 
-## PixelPauseMenu Game Guide panels (current: the tabs above switch between these two panels)
+## PixelPauseMenu Game Guide text tabs (Controls and How To Play are two panels; the third tab, Database, opens the database window)
 
 Two more screens that show **`Assets/Resources/HowToPlay.txt`** and **`Assets/Resources/Controls.txt`** (the user edits these files; `GuideScreen`, `BuildGuideScreen`, `RefreshGuideScreen`, `FormatGuideText`). File format: lines starting `//` are hidden notes, `# Heading` = coloured heading, `Key | Action` = two columns, anything else is shown as written (TMP rich text allowed). **When a keybind or control changes, update `Controls.txt`; when a major system is added, update `HowToPlay.txt`.**
