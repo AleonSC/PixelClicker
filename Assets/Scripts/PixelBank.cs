@@ -1221,7 +1221,7 @@ public class PixelBank : MonoBehaviour
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0f, 0.5f);
         wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(gapToButton + hud.SideMargin * 0.35f, 0f);   // the window takes the place of the tab and hose buttons while it is open
+        wr.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);   // the window takes the place of the tab and hose buttons while it is open
 
         BuildWindowHoseButton();
         RefreshHoseButton();

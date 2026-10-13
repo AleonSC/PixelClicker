@@ -541,7 +541,7 @@ public class PixelToggles : MonoBehaviour
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 0.5f);
         wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(-(hud.SideMargin * 0.35f), 0f); // takes the spot the button slides out to
+        wr.anchoredPosition = new Vector2(-(hud.SideShownInset), 0f); // takes the spot the button slides out to
 
         // The contents line up with the Shop's: the first element under the header starts at the shop's tab row, is as tall, and the list starts where the shop's list does.
         PixelShop layoutShop = PixelFind.First<PixelShop>();
@@ -664,7 +664,7 @@ public class PixelToggles : MonoBehaviour
         RectTransform hr = hintObject.GetComponent<RectTransform>();
         hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 0.5f);
         hr.sizeDelta = hintSize;
-        hr.anchoredPosition = new Vector2(-(hud.ButtonSize.x + gapToButton + hud.SideMargin * 0.35f), 0f);
+        hr.anchoredPosition = new Vector2(-(hud.ButtonSize.x + gapToButton + hud.SideShownInset), 0f);
 
         TMP_Text hintLabel = PixelUIKit.CreateText(font, hintObject.transform, "Hint Text", hintText, fontSize * 0.95f,
                                                    TextAlignmentOptions.Center, FontStyles.Normal, textColor);
@@ -734,7 +734,7 @@ public class PixelToggles : MonoBehaviour
         Canvas canvas = windowObject.GetComponentInParent<Canvas>();
         float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
         PixelHud hud = PixelHud.Instance;
-        float inset = hud != null ? hud.SideMargin * 0.35f : 0f;
+        float inset = hud != null ? hud.SideShownInset : 0f;
 
         if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
         {

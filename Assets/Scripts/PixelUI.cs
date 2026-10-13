@@ -130,9 +130,6 @@ public class PixelUI : MonoBehaviour
     /// <summary>Vertical distance between lines. Never smaller than the text, so lines can't overlap.</summary>
     private float LinePitch => Mathf.Max(lineHeight, fontSize * 1.3f);
 
-    [Tooltip("Gap between the button and the box.")]
-    [SerializeField] private float gapBelowButton = 12f;
-
     [Tooltip("Start with the box open.")]
     [SerializeField] private bool startOpen = false;
 
@@ -1050,7 +1047,7 @@ public class PixelUI : MonoBehaviour
         boxRect = boxObject.GetComponent<RectTransform>();
         boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = anchor;
         boxRect.sizeDelta = new Vector2(panelWidth, headerHeight + panelPadding * 2f + LinePitch * count);
-        boxRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * (hud.BandThickness + gapBelowButton)); // the inventory's own gap below the bar
+        boxRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * hud.WindowOffset); // the same gap from the black margin as the docked button keeps
 
         // Header: title and close button (same look as the Pixel Log)
         if (showHeader)

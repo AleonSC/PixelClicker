@@ -178,7 +178,7 @@ public class PixelPixelGuide : MonoBehaviour
         RectTransform wr = windowObject.GetComponent<RectTransform>();
         wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 0.5f);
         wr.sizeDelta = windowSize;
-        wr.anchoredPosition = new Vector2(-(hud.SideMargin * 0.35f), 0f);
+        wr.anchoredPosition = new Vector2(-(hud.SideShownInset), 0f);
 
         PixelShop layoutShop = PixelFind.First<PixelShop>();
         float headerH = layoutShop != null ? layoutShop.HeaderHeightValue : 100f;
@@ -537,7 +537,7 @@ public class PixelPixelGuide : MonoBehaviour
         Canvas canvas = windowObject.GetComponentInParent<Canvas>();
         float scale = canvas != null ? Mathf.Max(0.01f, canvas.rootCanvas.scaleFactor) : 1f;
         PixelHud hud = PixelHud.Instance;
-        float inset = hud != null ? hud.SideMargin * 0.35f : 0f;
+        float inset = hud != null ? hud.SideShownInset : 0f;
 
         if (shopRect == null || !shopRect.gameObject.activeInHierarchy)
         {

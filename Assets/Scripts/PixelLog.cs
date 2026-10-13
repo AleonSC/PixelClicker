@@ -187,8 +187,6 @@ public class PixelLog : MonoBehaviour
     [Tooltip("Inner padding of the panel.")]
     [SerializeField] private float panelPadding = 20f;
 
-    [Tooltip("Gap between the Log button and the panel.")]
-    [SerializeField] private float gapAboveButton = 12f;
 
     [Tooltip("Panel background colour.")]
     [SerializeField] private Color panelColor = new Color(0.07f, 0.07f, 0.09f, 0.95f);
@@ -714,7 +712,7 @@ public class PixelLog : MonoBehaviour
         PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
         panelRect = panelObject.GetComponent<RectTransform>();
         panelRect.anchorMin = panelRect.anchorMax = panelRect.pivot = anchor;
-        panelRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * (hud.BandThickness + gapAboveButton)); // the log's own gap beyond the bar
+        panelRect.anchoredPosition = new Vector2(sx * hud.SideShownInset, sy * hud.WindowOffset); // the same gap from the black margin as the docked button keeps
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,

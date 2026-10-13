@@ -139,7 +139,7 @@ public partial class PixelSkills
         windowRect = windowObject.GetComponent<RectTransform>();
         windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(0f, 0.5f);
         windowRect.sizeDelta = windowSize;
-        windowRect.anchoredPosition = new Vector2(gapToButton + hud.SideMargin * 0.35f, 0f);   // takes the place of the tabs while it is open
+        windowRect.anchoredPosition = new Vector2(gapToButton + hud.SideShownInset, 0f);   // takes the place of the tabs while it is open
 
         TMP_Text title = PixelUIKit.CreateText(Font, windowObject.transform, "Title", windowTitle, 56f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
         PixelUIKit.Caps(title);
@@ -326,7 +326,7 @@ public partial class PixelSkills
         PixelUIKit.StyleWindow(treeWindow.GetComponent<Image>(), panelColor);
         treeRect = treeWindow.GetComponent<RectTransform>();
         float left = windowRect.anchoredPosition.x + windowSize.x + 14f;
-        float right = gapToButton + hud.SideMargin * 0.35f;
+        float right = gapToButton + hud.SideShownInset;
         treeRect.anchorMin = new Vector2(0f, 0.5f);
         treeRect.anchorMax = new Vector2(1f, 0.5f);
         treeRect.pivot = new Vector2(0f, 0.5f);
@@ -776,7 +776,7 @@ public partial class PixelSkills
         PixelHud hud = PixelHud.Ensure(gameObject);
         float parentW = parent.rect.width;
         float leftVisual = treeExpanded ? windowRect.anchoredPosition.x : windowRect.anchoredPosition.x + windowSize.x * s + 14f;   // expanded: it covers the Skills window
-        float rightVisual = gapToButton + hud.SideMargin * 0.35f;
+        float rightVisual = gapToButton + hud.SideShownInset;
         float designW = Mathf.Max(300f, (parentW - leftVisual - rightVisual) / s);
         treeRect.offsetMin = new Vector2(leftVisual, -windowSize.y * 0.5f);
         treeRect.offsetMax = new Vector2(leftVisual + designW - parentW, windowSize.y * 0.5f);

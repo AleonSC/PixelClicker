@@ -3,7 +3,7 @@
 //   Screen frame: black bar along the top and bottom (barHeight) and the docked buttons. PixelHud.Ensure(gameObject) then
 //   hud.Dock(buttonRect, anchor(0|1,0|1), keepOutWhile) gives a button the standard ButtonSize and makes it slide off screen (only a
 //   sliver shows) until the mouse is near (PixelDockedButton); it stays out while its window is open. Windows that open from a docked
-//   button use hud.SideMargin / hud.WindowOffset for position; top/bottom-anchored overlays add PixelHud.Instance.BarHeight. Used by
+//   button use hud.SideShownInset / hud.WindowOffset for position (both equal the gap the docked buttons keep from the black margin, ShownInset, so windows and buttons line up with the same gap on every side); top/bottom-anchored overlays add PixelHud.Instance.BarHeight. Used by
 //   Inventory, Shop, Log and Crafting buttons. Menu buttons setting (PixelHud.ButtonMode, PlayerPrefs PixelClicker.Setting.ButtonMode,
 //   per save, Settings > Interface 'Menu buttons'): 0 peeking (sliver shows, default), 1 always showing (SlideButtons false), 2 hidden
 //   (Sliver 0 until the mouse is near). While 'always showing' (mode 1) each docked button gets its own nested canvas with
@@ -84,9 +84,6 @@ public class PixelHud : MonoBehaviour
     [Tooltip("Distance of a button from the left or right edge of the screen.")]
     [SerializeField] private float sideMargin = 24f;
 
-    [Tooltip("Gap between a button and the window that opens from it.")]
-    [SerializeField] private float windowGap = 12f;
-
     [Header("Sliding")]
     [Tooltip("Slide the buttons off screen until the mouse comes near. Off = buttons always stay out.")]
     [SerializeField] private bool slideButtons = true;
@@ -138,7 +135,7 @@ public class PixelHud : MonoBehaviour
     /// How far from the screen edge a window opening from a docked button should start: below the button's band,
     /// plus the gap.
     /// </summary>
-    public float WindowOffset => BandThickness + windowGap;
+    public float WindowOffset => BandThickness + ShownInset;   // a window sits as far from the black margin as the docked button does (the same gap on both sides of the button)
 
     /// <summary>Thickness of the band along the screen edge that the docked buttons occupy (the bar, or the button plus margin).</summary>
     public float BandThickness => barsEnabled ? barHeight / PixelDisplaySettings.UIScale : ButtonSize.y + sideMargin;
@@ -453,11 +450,11 @@ public class PixelHud : MonoBehaviour
     }
 
     // Where the button sits when shown / hidden (its edge nearest the screen edge, measured inward from that edge).
-    internal float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - ButtonSize.y) * 0.5f) : sideMargin * 0.5f;   // exactly centred in the black margin
+    public float ShownInset => barsEnabled ? Mathf.Max(2f, (BarHeight - ButtonSize.y) * 0.5f) : sideMargin * 0.5f;   // exactly centred in the black margin
     internal float HiddenInset => -(ButtonSize.y - Sliver);
 
     // Same for a button docked to the middle of the left / right screen edge (it slides sideways).
-    public float SideShownInset => sideMargin * 0.35f;
+    public float SideShownInset => barsEnabled ? ShownInset : sideMargin * 0.35f;   // the same gap as the buttons keep from the top / bottom margins, so windows and buttons line up with equal gaps all round
     internal float SideHiddenInset => -(ButtonSize.x - Sliver);
     internal bool SlideButtons => slideButtons && ButtonMode != 1;
     internal float SlideSeconds => slideSeconds;
