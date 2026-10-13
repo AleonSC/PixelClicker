@@ -6,6 +6,8 @@
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
 //   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes.
+//   WHETSTONE (PixelType.Whetstone, Woodcutting base block, 3 hits): while it is held, every manual click counts as whetstoneClicks (3) clicks (PixelBlockHold.ClickFactor, used by PixelClicker.CollectInternal).
+//   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
 using TMPro;
@@ -45,6 +47,9 @@ public class PixelBlockHold : MonoBehaviour
     [SerializeField] private float sideDistance = 0f;
     [Tooltip("Colour the meter flashes when it ran dry.")]
     [SerializeField] private Color exhaustColor = new Color(1f, 0.2f, 0.15f, 1f);
+    [Min(1)]
+    [Tooltip("While a Whetstone is held, every manual click counts as this many clicks (damage on tough blocks and payout). 0 or 1 = the coded default (3).")]
+    [SerializeField] private int whetstoneClicks = 0;
     [Tooltip("Switch the whole feature off (even when the upgrade is bought).")]
     [SerializeField] private bool disableBlockHold = false;
 
@@ -81,6 +86,21 @@ public class PixelBlockHold : MonoBehaviour
 
     public bool Active => unlocked && !disableBlockHold;
     public bool Holding => holding;
+
+    /// <summary>The tier index of the block in hand (-1 when nothing is held).</summary>
+    public int HeldTierIndex => holding ? heldTier : -1;
+
+    /// <summary>How many clicks one manual click counts as: more than 1 for as long as a Whetstone is held (right button), else 1.</summary>
+    public static int ClickFactor
+    {
+        get
+        {
+            PixelBlockHold h = Instance;
+            if (h == null || !h.holding || h.clicker == null || !h.clicker.IsValidTierIndex(h.heldTier)) return 1;
+            if (h.clicker.Tiers[h.heldTier].type != PixelClicker.PixelType.Whetstone) return 1;
+            return h.whetstoneClicks > 1 ? h.whetstoneClicks : 3;
+        }
+    }
     private float SlideSeconds => slideSeconds > 0f ? slideSeconds : 0.25f;
     private float SideDistance => sideDistance > 0f ? sideDistance : 2.3f;
 

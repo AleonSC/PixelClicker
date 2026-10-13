@@ -1243,6 +1243,22 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 27)
+        {
+            // Woodcutting: the Whetstone joins the Woodcutter's Pack as a base block.
+            PixelClicker.PixelTier stoneDef = null;
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Whetstone) stoneDef = t;
+            if (packs != null && stoneDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood) || Rewards(p, PixelClicker.PixelType.Whetstone)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { stoneDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 27);
+            changed = true;
+        }
+
         return changed;
     }
 

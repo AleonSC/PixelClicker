@@ -718,7 +718,7 @@ public partial class PixelShop
         {
             displayName = "Woodcutter's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Woodcutting skill and six wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and Twig, plus a Hornet Nest to watch out for. They only spawn while Woodcutting is the pack in play (Skills window). Twig is a useless filler that is most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
+            description = "Adds the Woodcutting skill and six wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and Twig, plus a Hornet Nest to watch out for and a Whetstone (hold it with Block Hold and your clicks count for more). They only spawn while Woodcutting is the pack in play (Skills window). Twig is a useless filler that is most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
@@ -729,6 +729,8 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Leaf, "Leaf Pixels", new Color(0.35f, 0.78f, 0.3f, 1f), 1, 1, 0.9f),
                 Block(PixelClicker.PixelType.Heartwood, "Heartwood Pixels", new Color(0.78f, 0.35f, 0.28f, 1f), 4, 25, 0.1f),
                 Block(PixelClicker.PixelType.Twig, "Twig Pixels", new Color(0.82f, 0.72f, 0.52f, 1f), 1, 1, 1.0f),
+                // The Whetstone: a base block that takes 3 clicks. Hold it with Block Hold (right button) and every click counts for more while you hold it.
+                Block(PixelClicker.PixelType.Whetstone, "Whetstone", new Color(0.62f, 0.68f, 0.76f, 1f), 3, 2, 0.35f),
                 // The Hornet Nest: a hazard (hit it too often and the hornets chase off the old pixels around the cube; it pays nothing).
                 Block(PixelClicker.PixelType.HornetNest, "Hornet Nest", new Color(0.85f, 0.78f, 0.5f, 1f), 5, 0, 0.05f),
             }

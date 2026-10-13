@@ -28,3 +28,6 @@ While holding a cube or build: a quick left tap (under 0.25 s) sticks it / sets 
 ### Hotbar, axe and the Great Oak
 - PixelFirstPersonHotbar (added by Enter): 5 slots, wheel (when not carrying) or keys 1-5. Slot 1 = the AXE, drawn in hand (primitives on the camera) with a wind-up / strike / recover swing; the other slots are empty hands. With the axe, left click on a wood old pixel chops it (XP + 150% pay) and on the cube swings and clicks it (bonus XP, +50% pay when a wood block breaks); non-wood things are still picked up. Settings under "Axe" on PixelFirstPerson. Sounds: PixelAxeSynth (axe_swing, axe_chop, nest_fall, nest_catch).
 - GREAT OAK: PixelType.GreatOak 77 (see PixelGreatOak.cs header): 5% replacement of a rolled wood block while Woodcutting is in play, 50-100 clicks, shakes bird nests loose that you click for XP before they vanish.
+
+### Whetstone
+Woodcutter's Pack base block (PixelType.Whetstone 78, 3 clicks, weight 0.35, pack migration packDataVersion 27). Hold it with Block Hold (right button on the cube): while it is held every manual click counts as `whetstoneClicks` (3) clicks (PixelBlockHold.ClickFactor, applied in PixelClicker.CollectInternal). A partly broken block keeps its hits through the hold, so one you only noticed after a click can still be grabbed.
