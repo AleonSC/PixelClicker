@@ -473,6 +473,20 @@ public partial class PixelClicker : MonoBehaviour
     private bool glowHalo => !hideGlowHalo;
     private float glowShellAlpha => 0.5f + glowShellExtra;
 
+    [Header("Click Pulse")]
+    [Tooltip("Turn off the very slight swell of the cube every time it is clicked.")]
+    [SerializeField] private bool disableClickPulse = false;
+
+    [Min(0f)]
+    [Tooltip("How much the cube swells when clicked (0.03 = 3% bigger at the peak). 0 = the default (0.03).")]
+    [SerializeField] private float clickPulseAmount = 0f;
+
+    [Min(0f)]
+    [Tooltip("How long the swell lasts (seconds). 0 = the default (0.12).")]
+    [SerializeField] private float clickPulseSeconds = 0f;
+
+    private float clickPulseTimer;
+
     [Header("Tough Pixels (Clicks To Collect > 1)")]
     [Range(0f, 0.6f)]
     [Tooltip("How much the pixel squashes when it is hit but not yet collected. 0 = no reaction.")]
@@ -2008,6 +2022,7 @@ public partial class PixelClicker : MonoBehaviour
 
     private void CollectInternal(bool automatic)
     {
+        if (!disableClickPulse) clickPulseTimer = clickPulseSeconds > 0f ? clickPulseSeconds : 0.12f;
         if (blockClicksWhileSpawning && isSpawning) return;
         int clickCount = Mathf.Max(1, DevClickCount);
 
@@ -3127,13 +3142,21 @@ public partial class PixelClicker : MonoBehaviour
             punch = 1f - hitPunchAmount * Mathf.Clamp01(hitPunchTimer / Mathf.Max(0.01f, hitPunchDuration));
         }
 
+        float clickSwell = 1f;
+        if (clickPulseTimer > 0f)
+        {
+            float length = clickPulseSeconds > 0f ? clickPulseSeconds : 0.12f;
+            clickPulseTimer -= AnimDelta;
+            clickSwell = 1f + (clickPulseAmount > 0f ? clickPulseAmount : 0.03f) * Mathf.Sin(Mathf.Clamp01(1f - clickPulseTimer / length) * Mathf.PI);
+        }
+
         Vector3 liveBase = baseScale;
         if (activeLook != null && activeLook.wobble && allowPulsing)
             liveBase = Vector3.Scale(baseScale, PixelWobble.Scale(time, activeLook.wobbleAmount, activeLook.wobbleSpeed, 0f));
         cubeShrinkCurrent = Mathf.MoveTowards(cubeShrinkCurrent, cubeShrinkTarget, Time.unscaledDeltaTime / Mathf.Max(0.05f, cubeShrinkSeconds));
         float hintPulse = ClickHintPulse(time);
         digShrinkCurrent = Mathf.MoveTowards(digShrinkCurrent, digShrinkTarget, Time.unscaledDeltaTime * 3f);
-        pixelTransform.localScale = liveBase * (materializeFactor * punch * (1f + pulse * pulseAmount) * (1f + hintPulse * clickHintAmount) * cubeShrinkCurrent * digShrinkCurrent);
+        pixelTransform.localScale = liveBase * (materializeFactor * punch * clickSwell * (1f + pulse * pulseAmount) * (1f + hintPulse * clickHintAmount) * cubeShrinkCurrent * digShrinkCurrent);
 
         if (pulseEnabled && allowPulsing && pulseBrightness)
         {
@@ -5057,6 +5080,8 @@ public class OldPixelImpact : MonoBehaviour
 
         lastTime = Time.time;
         float intensity = Mathf.Clamp01(speed / fullSpeed);
+        OldPixelInfo landedInfo = GetComponent<OldPixelInfo>();
+        PixelFloorPulse.Landed(collision, transform, landedInfo != null ? landedInfo.tierIndex : -1, intensity);   // (a ripple on the surface, when the floor is invisible and 'Landing pulse' is on)
         if (!string.IsNullOrEmpty(soundId) && PixelAudio.Has(soundId)) PixelAudio.PlayScaled(soundId, Mathf.Lerp(0.3f, 1f, intensity));
         else PixelClicker.RaiseOldPixelLanded(intensity);
     }

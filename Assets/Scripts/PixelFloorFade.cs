@@ -57,7 +57,7 @@ public partial class PixelFloor
 
     private void UpdateEdgeFade()
     {
-        bool want = !disableEdgeFade && floorRenderer != null && visibility > 0.001f && !FloorOff;
+        bool want = !disableEdgeFade && floorRenderer != null && ((visibility > 0.001f && !FloorOff) || PlaneVisible);
         if (!want)
         {
             if (edgeRoot != null && edgeRoot.activeSelf) edgeRoot.SetActive(false);
@@ -91,9 +91,10 @@ public partial class PixelFloor
             Color flat = EdgeFadeColor();
             ringBase = flat;
         }
-        ringMat.color = new Color(ringBase.r, ringBase.g, ringBase.b, visibility);
+        float fadeAlpha = FloorOff ? 1f : visibility;   // (the flat plane's rim is solid)
+        ringMat.color = new Color(ringBase.r, ringBase.g, ringBase.b, fadeAlpha);
         Color wc = wireColor.a > 0f ? wireColor : new Color(0.25f, 1f, 0.9f, 1f);
-        wireMat.color = new Color(wc.r, wc.g, wc.b, visibility * (wireStrength > 0f ? wireStrength : 0.9f));
+        wireMat.color = new Color(wc.r, wc.g, wc.b, FloorOff ? 0f : visibility * (wireStrength > 0f ? wireStrength : 0.9f));
     }
 
     private Color ringBase = new Color(0.5f, 0.55f, 0.6f);

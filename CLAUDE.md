@@ -81,6 +81,7 @@
 | `PixelDebug.cs` | PixelDebug.Info(msg, ctx): diagnostic logging that is compiled out of release builds (Editor/dev builds only). | in the header comment of `PixelDebug.cs` |
 | `PixelInput.cs` | Static input helpers for both input systems (PointerPosition, LeftPressed, RightPressed, PointerOverUI); | in the header comment of `PixelInput.cs` |
 | `PixelViewBounds.cs` | Keeps old pixels inside the camera's view with no scene objects: | in the header comment of `PixelViewBounds.cs` |
+| `PixelFloorModes.cs` | What the floor shows while 'Display floor' is off (PixelFloor.OffMode: Invisible / Flat plane / Landing pulse) and the PixelFloorPulse ripples where old pixels land. | in the header comment of `PixelFloorModes.cs` |
 | `PixelFloorFade.cs` | Floor edge fade (partial class PixelFloor, UpdateEdgeFade from LateUpdate; | in the header comment of `PixelFloorFade.cs` |
 | `PixelFloor.cs` | Floor styles (added by PixelClicker.Awake): | `docs/systems/PixelFloor.md` |
 | `PixelDayNight.cs` | Day / night cycle (added by PixelClicker.Awake; | in the header comment of `PixelDayNight.cs` |

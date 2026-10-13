@@ -190,16 +190,16 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     [SerializeField] private string[] floorNames = { "Floor", "Ground", "Plane" };
 
     [Header("Game-made floor")]
-    [Tooltip("Ignore the floor object in the scene: hide it and switch its collider off, and use the floor this component builds itself (an invisible-by-default flat sheet with a collider). The game also builds its own when the scene has no floor at all.")]
-    [SerializeField] private bool ignoreSceneFloor = false;
+    [Tooltip("Use the floor object that is in the scene instead of the floor this component builds itself (a flat sheet with a collider, ten units under the cube by default). Off = the scene floor is hidden and its collider switched off.")]
+    [SerializeField] private bool useSceneFloor = false;
 
     [Min(0f)]
     [Tooltip("Side length (world units) of the floor the game builds itself. 0 = the default (80).")]
     [SerializeField] private float ownFloorSize = 0f;
 
     [Min(0f)]
-    [Tooltip("When there is no scene floor to measure, the game-made floor lies this many main-pixel widths below the cube's resting spot. 0 = the default (1).")]
-    [SerializeField] private float ownFloorDrop = 0f;
+    [Tooltip("How far (world units) the game-made floor lies under the cube's resting spot - the falling distance of the old pixels. 0 = the default (10).")]
+    [SerializeField] private float groundFallDistance = 0f;
 
     [Header("Styles")]
     [Tooltip("Add the built-in styles that are missing from the list (by name).")]
@@ -289,6 +289,8 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (flatBase != null) Destroy(flatBase);
         if (flatMat != null) Destroy(flatMat);
         DestroyEdgeFade();
+        if (plane != null) Destroy(plane);
+        if (planeMat != null) Destroy(planeMat);
         ReleaseActive();
         foreach (Texture2D t in previews.Values) if (t != null) Destroy(t);
         previews.Clear();
@@ -320,17 +322,22 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private void InitFloor()
     {
         if (floorReady) return;
-        if (floorRenderer == null) floorRenderer = FindFloor();
-        if (floorRenderer != null && ignoreSceneFloor && !IsOwnFloor(floorRenderer)) floorRenderer = BuildOwnFloor(floorRenderer);
-        if (floorRenderer == null)
+        if (!useSceneFloor)
         {
-            floorTries++;
-            if (floorTries >= 3)
+            // The game's own floor: ten units under the cube. A scene floor, if there is one, is switched off.
+            Renderer scene = floorRenderer != null && !IsOwnFloor(floorRenderer) ? floorRenderer : FindFloor();
+            floorRenderer = BuildOwnFloor(scene);
+            if (floorRenderer == null) return;   // (no PixelClicker yet: try again)
+        }
+        else
+        {
+            if (floorRenderer == null) floorRenderer = FindFloor();
+            if (floorRenderer == null)
             {
-                floorRenderer = BuildOwnFloor(null);   // no floor in the scene: make one (it is invisible unless 'Display floor' is on)
-                if (floorRenderer != null) PixelDebug.Info("PixelFloor: no scene floor found, built one.", this);
+                floorTries++;
+                if (floorTries >= 3) floorRenderer = BuildOwnFloor(null);   // no floor in the scene: make one
+                if (floorRenderer == null) return;
             }
-            if (floorRenderer == null) return;
         }
         floorReady = true;
         originalMaterials = floorRenderer.sharedMaterials;
@@ -361,15 +368,15 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
     /// <summary>
     /// Builds the game's own floor: a flat sheet (a code-made quad, UVs 0..1 like a Unity plane) with a thin box collider, so the game never depends on a floor
-    /// object in the scene. With a scene floor ('scene') it takes that floor's height and collider material and switches the scene floor off.
+    /// object in the scene. It lies 'groundFallDistance' under the cube; with a scene floor ('scene') it takes that floor's collider material and switches the scene floor off.
     /// </summary>
     private Renderer BuildOwnFloor(Renderer scene)
     {
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return null;
         float size = ownFloorSize > 1f ? ownFloorSize : 80f;
-        float y = scene != null ? scene.bounds.max.y : clicker.CubeBasePosition.y - clicker.PixelBaseSize * (ownFloorDrop > 0f ? ownFloorDrop : 1f);
-        Vector3 centre = scene != null ? scene.bounds.center : clicker.CubeBasePosition;
+        float y = clicker.CubeBasePosition.y - (groundFallDistance > 0f ? groundFallDistance : 10f);
+        Vector3 centre = clicker.CubeBasePosition;
 
         ownFloor = new GameObject("Pixel Ground");
         ownFloor.transform.position = new Vector3(centre.x, y, centre.z);
@@ -716,6 +723,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
         else visibility = Mathf.MoveTowards(visibility, target, fadeDt / (target > visibility ? FadeTime * FadeInFactor : FadeTime * FadeOutFactor));
         ApplyVisibility();
+        UpdatePlane();
         UpdateEdgeFade();
         if (exitDone != null && visibility <= 0.001f)
         {
