@@ -7,7 +7,7 @@
 //   (FindLoose, nearest first) are stored in the next free section (row 1 left to right, then row 2; ReleaseOldPixel + FlyIn, their
 //   payout is kept, a spinning CreateDisplayPixel model sits in the compartment). Left-click a stored pixel (PickSection, screen
 //   distance) to take it out: SpawnStoredPixel at the compartment and PixelGrab.BeginHold puts it in the mouse's hand. A pixel you
-//   hold and let go of above the crate is stored at once (TryStoreReleased: PixelGrab.HeldBody was a pixel last frame and is not now,
+//   hold and let go of above the crate is stored at once (any pixel tagged 'recently held by the player' - OldPixelInfo.RecentlyHeld, PixelGrab.recentlyHeldSeconds - that ends up in the footprint is stored too, from ANY height: CaptureRecentlyHeld) (TryStoreReleased: PixelGrab.HeldBody was a pixel last frame and is not now,
 //   and it is inside the footprint and below ~3 units above it). Two grip handles on the short (+/-X) ends (Handle parts built by
 //   BuildCrateBody): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
@@ -170,6 +170,7 @@ public class PixelStorageCrate : PixelPlacedDevice
         Rigidbody heldNow = grab != null ? grab.HeldBody : null;
         if (lastHeld != null && heldNow != lastHeld) TryStoreReleased(lastHeld);
         lastHeld = heldNow;
+        CaptureRecentlyHeld();
 
         if (dragging)
         {
@@ -250,10 +251,38 @@ public class PixelStorageCrate : PixelPlacedDevice
         for (int i = 0; i < pixels.Count && !listed; i++) listed = pixels[i] == body;
         if (!listed) return;
         Vector3 local = transform.InverseTransformPoint(body.position);
-        if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f || local.y > 3.2f) return;
+        OldPixelInfo tagged = body.GetComponent<OldPixelInfo>();
+        bool fromAnyHeight = tagged != null && tagged.RecentlyHeld(PixelGrab.RecentlyHeldSeconds);   // let go by the player a moment ago: dropped from the very top still counts
+        if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f || (!fromAnyHeight && local.y > 3.2f)) return;
         OldPixelInfo info = body.GetComponent<OldPixelInfo>();
         if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) return;
         StoreBody(body, info);
+    }
+
+    private float nextCapture;
+
+    /// <summary>Old pixels tagged 'recently held by the player' that end up inside the crate's footprint (above it or on it, from any height) are stored, like a pixel let go right above it.</summary>
+    private void CaptureRecentlyHeld()
+    {
+        if (Time.time < nextCapture || NextFree() < 0) return;
+        nextCapture = Time.time + 0.1f;
+        float window = PixelGrab.RecentlyHeldSeconds;
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        for (int i = 0; i < pixels.Count; i++)
+        {
+            Rigidbody body = pixels[i];
+            if (body == null || body.isKinematic || (grab != null && body == grab.HeldBody)) continue;
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info == null || info.heldByPlayer || !info.RecentlyHeld(window)) continue;
+            if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
+            if (!clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway || clicker.IsFlyingPixel(body)) continue;
+            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;
+            Vector3 local = transform.InverseTransformPoint(body.position);
+            if (Mathf.Abs(local.x) > width * 0.5f + cell * 0.4f || Mathf.Abs(local.z) > depth * 0.5f + cell * 0.4f || local.y < -0.3f) continue;
+            StoreBody(body, info);
+            if (NextFree() < 0) return;
+        }
     }
 
     private void StoreBody(Rigidbody body, OldPixelInfo info)

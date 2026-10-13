@@ -5361,4 +5361,13 @@ public class OldPixelInfo : MonoBehaviour
     [HideInInspector] public double amount;
     /// <summary>Unscaled time the old pixel appeared (Pixel Grabbing ignores it for a split second so it can't be grabbed through the cube).</summary>
     [HideInInspector] public float bornTime = -99f;
+
+    /// <summary>The player is holding this pixel right now (Pixel Grabbing).</summary>
+    [HideInInspector] public bool heldByPlayer;
+
+    /// <summary>Unscaled time the player last let go of this pixel (-99 = never held).</summary>
+    [HideInInspector] public float lastHeldTime = -99f;
+
+    /// <summary>Is this pixel tagged 'recently held by the player': held right now, or let go within 'seconds' (PixelGrab.RecentlyHeldSeconds, editable in the Inspector)? Storage Crates capture tagged pixels that land on them.</summary>
+    public bool RecentlyHeld(float seconds) => heldByPlayer || Time.unscaledTime - lastHeldTime <= seconds;
 }

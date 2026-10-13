@@ -12,6 +12,8 @@
 //   throw) and every old pixel within ~1.7 widths of a light one has its speed capped to hitReactionSpeedLimit (0 = 5) for 0.7 s
 //   (LimitReactions, MakeLight), so piles react less and nothing flies far; physics still applies (disableGentleHits). Sets
 //   PixelClicker.GrabEnabled so clicks on old pixels no longer pass through to the cube. Sounds grab/drop. PixelShop finds/adds it.
+//   Tags: OldPixelInfo.heldByPlayer / lastHeldTime / RecentlyHeld(seconds) = 'recently held by the player' (held now, or let go within recentlyHeldSeconds 0 = 6, Inspector); the Storage Crate
+//   stores a tagged pixel that lands in its footprint from any height.
 //   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, off by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
 //   from it to the first surface a sphere of its size would land on (ignores itself, triggers and the live cube) and a ring on that surface = where it drops if let go standing still.
 // ---------------------------------------------------
@@ -43,6 +45,15 @@ public class PixelGrab : MonoBehaviour
     [Min(0f)]
     [Tooltip("An old pixel can't be grabbed for this many seconds after it appears (it is still inside the cube's click area, so it would be grabbed straight through the cube). 0 = the default (0.35).")]
     [SerializeField] private float grabDelaySeconds = 0f;
+
+    [Min(0f)]
+    [Tooltip("How long (seconds) after the player lets go of an old pixel it still counts as 'recently held by the player' (OldPixelInfo.RecentlyHeld). A Storage Crate stores such a pixel when it lands on it, even if it was dropped from the very top. 0 = the default (6).")]
+    [SerializeField] private float recentlyHeldSeconds = 0f;
+
+    /// <summary>How long a let-go pixel stays tagged 'recently held by the player'.</summary>
+    public static float RecentlyHeldSeconds => instance != null && instance.recentlyHeldSeconds > 0f ? instance.recentlyHeldSeconds : 6f;
+
+    private static PixelGrab instance;
 
     [Min(1f)]
     [Tooltip("How tightly a held pixel follows the mouse (higher = snappier, lower = floaty).")]
@@ -144,6 +155,7 @@ public class PixelGrab : MonoBehaviour
 
     private void Awake()
     {
+        instance = this;
         grabbingActive = true;   // Pixel Grabbing is unlocked from the start now (it still has its switch in the Toggles window)
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null)
@@ -157,6 +169,7 @@ public class PixelGrab : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (instance == this) instance = null;
         Release();
         if (clicker != null) clicker.GrabEnabled = false;
     }
@@ -261,6 +274,8 @@ public class PixelGrab : MonoBehaviour
         PixelStats.Count("old.grabbed");
         clicker.LandFlyingPixel(body); // a caught meteor becomes an ordinary old pixel (solid, falls when let go)
         held = body;
+        OldPixelInfo heldInfo = body.GetComponent<OldPixelInfo>();
+        if (heldInfo != null) heldInfo.heldByPlayer = true;   // tagged 'recently held by the player' from now on (until recentlyHeldSeconds after it is let go)
         liftOffset = 0f;
         heldDespawn = despawn;
         if (heldDespawn != null) heldDespawn.Held = true; // frozen lifetime while held
@@ -448,6 +463,8 @@ public class PixelGrab : MonoBehaviour
         if (v.magnitude > maxThrowSpeed) v = v.normalized * maxThrowSpeed;
         SetVelocity(held, v);
 
+        OldPixelInfo letGoInfo = held.GetComponent<OldPixelInfo>();
+        if (letGoInfo != null) { letGoInfo.heldByPlayer = false; letGoInfo.lastHeldTime = Time.unscaledTime; }
         if (lightUntil.ContainsKey(held)) lightUntil[held] = Time.time + (lightSecondsAfterThrow > 0f ? lightSecondsAfterThrow : 1.5f);   // stays light for a moment after the throw
         if (heldShatter != null) heldShatter.Released(v.magnitude <= gentleReleaseSpeed, gentleLifetimeBonus);
         heldShatter = null;
