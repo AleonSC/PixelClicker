@@ -80,6 +80,7 @@ public class PixelSaveGame : MonoBehaviour
     {
         public int version = 1;
         public string savedAt;
+        public string slotName = "";   // the save's own name (Save / Load window > Rename): lives in the file, so it travels with it
         public long savedAtTicks;   // UTC, used for offline progress
         public TierSave[] tiers;
         public long ultraPixels = -1;   // Ultra pixels held (-1 = an older save: the per-pixel counts in the tiers are added up)
@@ -296,26 +297,106 @@ public class PixelSaveGame : MonoBehaviour
         }
     }
 
-    /// <summary>The slot whose save file was written last (false when there are no saves at all).</summary>
-    public bool TryGetMostRecentSlot(out int slot)
+    /// <summary>
+    /// The newest save of all: a manual slot (1..SlotCount) or the newest autosave (slot 0, 'path' = its file in the autosave list). Manual saves only ever
+    /// go to the numbered slots and autosaves only to the autosave list; 'Continue' picks whichever is newest. False when there are no saves at all.
+    /// </summary>
+    public bool TryGetLatest(out int slot, out string path)
     {
         slot = 0;
+        path = null;
         DateTime best = DateTime.MinValue;
         for (int i = 1; i <= SlotCount; i++)
         {
             if (!SlotHasSave(i)) continue;
             DateTime t = File.GetLastWriteTimeUtc(PathFor(i));
-            if (slot == 0 || t > best) { best = t; slot = i; }
+            if (path == null || t > best) { best = t; slot = i; path = PathFor(i); }
         }
-        return slot > 0;
+        string newestAuto = PixelAutosaves.NewestPath();
+        if (newestAuto != null)
+        {
+            DateTime t = File.GetLastWriteTimeUtc(newestAuto);
+            if (path == null || t > best) { slot = 0; path = newestAuto; }
+        }
+        return path != null;
     }
 
-    /// <summary>Main menu 'Continue': loads the most recent save (and pays the time away). False if there is none or it can't be read.</summary>
+    /// <summary>Same, without the file: true when there is any save; 'slot' is 0 when the newest one is an autosave.</summary>
+    public bool TryGetMostRecentSlot(out int slot) => TryGetLatest(out slot, out _);
+
+    /// <summary>Main menu 'Continue': loads the newest save, manual or autosave (and pays the time away). False if there is none or it can't be read.</summary>
     public bool ContinueMostRecent()
     {
-        if (!TryGetMostRecentSlot(out int slot)) return false;
-        CurrentSlot = slot;
-        return Load(false, true);
+        if (!TryGetLatest(out int slot, out string path)) return false;
+        if (slot > 0) CurrentSlot = slot;
+        skipSettingsOnce = appliedProfilePath == path;   // the main menu already shows this profile's settings (and the player may have changed them there): keep them
+        bool ok = Load(false, true, path);
+        skipSettingsOnce = false;
+        return ok;
+    }
+
+    private string appliedProfilePath;
+    private bool skipSettingsOnce;
+
+    /// <summary>The main menu shows the settings of the profile that Continue would load (the newest save): put them in place.</summary>
+    private void ApplyProfileSettings(string path)
+    {
+        try
+        {
+            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+            if (data == null) return;
+            appliedProfilePath = path;
+            PixelSettingsSync.Apply(data.settings);   // (an older save without settings changes nothing)
+        }
+        catch (Exception) { }
+    }
+
+    // ---- The save's own name (stored in the file) ----
+
+    private const string PendingNamePref = "PixelClicker.SlotName.";   // a name given to a slot that has no save yet (and the old, pre-file names): written into the file by the next save
+
+    /// <summary>The name of a slot's save ('' = none): from the file, else a name waiting for the first save.</summary>
+    public string GetSlotName(int slot)
+    {
+        try
+        {
+            string path = PathFor(slot);
+            if (File.Exists(path))
+            {
+                SaveData d = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+                if (d != null && !string.IsNullOrWhiteSpace(d.slotName)) return d.slotName;
+            }
+        }
+        catch (Exception) { }
+        return PlayerPrefs.GetString(PendingNamePref + slot, "");
+    }
+
+    /// <summary>Renames a slot: a save's name is written into its file at once; a slot with no save keeps the name until it is saved.</summary>
+    public void SetSlotName(int slot, string name)
+    {
+        name = (name ?? "").Trim();
+        string path = PathFor(slot);
+        if (File.Exists(path))
+        {
+            try
+            {
+                SaveData d = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+                if (d != null)
+                {
+                    d.slotName = name;
+                    string temp = path + ".tmp";
+                    File.WriteAllText(temp, JsonUtility.ToJson(d, true));
+                    File.Delete(path);
+                    File.Move(temp, path);
+                    PlayerPrefs.DeleteKey(PendingNamePref + slot);
+                    return;
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("PixelSaveGame: could not rename the save - " + e.Message, this); }
+        }
+        if (name.Length == 0) PlayerPrefs.DeleteKey(PendingNamePref + slot);
+        else PlayerPrefs.SetString(PendingNamePref + slot, name);
+        PlayerPrefs.Save();
     }
 
     /// <summary>Main menu 'New Game': from now on autosave and quit-save write into this slot.</summary>
@@ -335,7 +416,7 @@ public class PixelSaveGame : MonoBehaviour
     public bool SaveToSlot(int slot, bool message = true)
     {
         CurrentSlot = slot;
-        return Save(message);
+        return WriteSave(slot, message);
     }
 
     /// <summary>Loads this slot (it becomes the current slot).</summary>
@@ -370,7 +451,18 @@ public class PixelSaveGame : MonoBehaviour
         // One frame later, so every other script has finished its own startup first.
         yield return null;
         // With the main menu showing, nothing loads by itself: its Continue button (or the Load window) does.
-        if (loadOnStart && HasSave && !PixelTitleScreen.Showing) Load(false, true);
+        if (PixelTitleScreen.Showing)
+        {
+            if (AutoStartNewGame) { }   // a fresh start (Restart / New Game): the defaults stay
+            else
+            // The main menu shows the settings of the profile Continue would load (a brand-new game, with no save, keeps the defaults).
+            if (TryGetLatest(out int _, out string latestPath)) ApplyProfileSettings(latestPath);
+        }
+        else if (loadOnStart && TryGetLatest(out int latestSlot, out string startPath))
+        {
+            if (latestSlot > 0) CurrentSlot = latestSlot;
+            Load(false, true, startPath);
+        }
     }
 
     private const string PrefAutoSave = "PixelClicker.Setting.AutoSave";
@@ -407,6 +499,8 @@ public class PixelSaveGame : MonoBehaviour
     {
         float interval = AutoSaveInterval;
         if (interval <= 0f) return;
+        // The timer only runs while the game is being played: not on the main menu, not while the pause menu (or the Save / Load window) is open.
+        if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelPauseMenu.IsPaused) return;
 
         autoSaveTimer += Time.unscaledDeltaTime;
         if (autoSaveTimer >= interval)
@@ -470,11 +564,22 @@ public class PixelSaveGame : MonoBehaviour
     // Save
     // ------------------------------------------------------------------
 
-    /// <summary>Writes the save file. Returns true on success.</summary>
+    /// <summary>Writes the current slot's save (a manual save).</summary>
     [ContextMenu("Save Now")]
-    public bool Save() => Save(true);
+    public bool Save() => SaveToSlot(CurrentSlot, true);
 
+    private float lastAutosaveTime = -999f;
+
+    /// <summary>An AUTOSAVE (the timer, the save on quit / losing focus / Quit > Main menu): goes into the autosave list only - the numbered slots are only ever written by a manual save.</summary>
     public bool Save(bool showMessage)
+    {
+        if (PixelTitleScreen.Showing) return false;   // no autosaving from the main menu
+        if (!autoSaveCall && Time.realtimeSinceStartup - lastAutosaveTime < 5f) return true;   // (quit + focus loss + main menu in quick succession: one is enough)
+        return WriteSave(0, showMessage);
+    }
+
+    /// <summary>The slot's save: slot 0 = the autosave list, 1.. = a numbered slot (manual saves).</summary>
+    private bool WriteSave(int slot, bool showMessage)
     {
         if (suppressSaving || clicker == null) return false;
         // On the main menu before anything was loaded or started, the game in memory is a blank one: an autosave / quit save / focus-loss save would write it over the real save in the current slot
@@ -484,6 +589,7 @@ public class PixelSaveGame : MonoBehaviour
         try
         {
             SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks };
+            if (slot > 0) data.slotName = GetSlotName(slot);   // the save keeps its own name (a name waiting from a rename of an empty slot, or the one already in the file)
 
             PixelClicker.PixelTier[] tiers = clicker.Tiers;
             data.tiers = new TierSave[tiers.Length];
@@ -593,28 +699,33 @@ public class PixelSaveGame : MonoBehaviour
             if (!PixelMinigame.TakeoverActive) data.oldPixels = clicker.GetOldPixelStates().ToArray();
             data.settings = PixelSettingsSync.Collect();
 
-            // Write to a temp file first so a crash mid-write can't destroy the old save.
-            string path = FilePath;
-            string temp = path + ".tmp";
             string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(temp, json);
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(temp, path);
-            HasLoadedSave = true;
-
-            // A screenshot of the game goes next to every save (and next to the autosave-list copy), shown in the hover tooltips.
-            var shots = new System.Collections.Generic.List<string> { PixelSaveShots.ThumbPath(path) };
-            if (autoSaveCall && keepAutosaveHistory)
+            var shots = new System.Collections.Generic.List<string>();
+            if (slot > 0)
+            {
+                // Write to a temp file first so a crash mid-write can't destroy the old save.
+                string path = PathFor(slot);
+                string temp = path + ".tmp";
+                File.WriteAllText(temp, json);
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(temp, path);
+                PlayerPrefs.DeleteKey(PendingNamePref + slot);   // (the name is in the file now)
+                shots.Add(PixelSaveShots.ThumbPath(path));   // a screenshot of the game goes next to every save, shown in the hover tooltips
+            }
+            else
             {
                 double totalPixels = 0d;
                 if (data.tiers != null) foreach (TierSave ts in data.tiers) totalPixels += ts.total;
-                string historyShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.statPlaySeconds }, autosaveHistorySize);
-                if (historyShot != null) shots.Add(historyShot);
+                string autoShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.statPlaySeconds },
+                                                     keepAutosaveHistory ? autosaveHistorySize : 1);
+                if (autoShot != null) shots.Add(autoShot);
+                lastAutosaveTime = Time.realtimeSinceStartup;
             }
+            HasLoadedSave = true;
             PixelSaveShots.Request(shots);
 
-            if (logToConsole) Debug.Log("PixelSaveGame: saved (slot " + CurrentSlot + ").", this);
-            if (showMessage) { if (autoSaveCall) ShowAutoNote(); else ShowMessage("Saved to slot " + CurrentSlot); }
+            if (logToConsole) Debug.Log("PixelSaveGame: saved (" + (slot > 0 ? "slot " + slot : "autosave") + ").", this);
+            if (showMessage) { if (slot == 0) ShowAutoNote(); else ShowMessage("Saved to slot " + slot); }
             return true;
         }
         catch (Exception e)
@@ -706,7 +817,7 @@ public class PixelSaveGame : MonoBehaviour
             PixelRobotWorker robotLoad = PixelFind.First<PixelRobotWorker>();
             if (robotLoad != null) { robotLoad.Import(data.robot); robotLoad.UserDisabled = data.robotDisabled; } // older saves have no robot job
             PixelHints.ImportHistory(data.eventTexts, data.eventFulls);
-            PixelSettingsSync.Apply(data.settings);
+            if (!skipSettingsOnce) PixelSettingsSync.Apply(data.settings);   // (the profile's settings; Continue from the main menu keeps the ones it already showed)
 
             // Potions.
             if (consumables != null)
@@ -806,16 +917,13 @@ public class PixelSaveGame : MonoBehaviour
         }
     }
 
-    /// <summary>Deletes the save file.</summary>
+    /// <summary>Deletes the autosaves (the manual slots are not touched).</summary>
     [ContextMenu("Delete Save")]
     public void DeleteSave()
     {
         try
         {
-            if (File.Exists(FilePath)) File.Delete(FilePath);
-            string shot = PixelSaveShots.ThumbPath(FilePath);
-            if (File.Exists(shot)) File.Delete(shot);
-            PixelSaveShots.Forget(shot);
+            PixelAutosaves.DeleteAll();   // (Restart: the autosaves of the old game go; manual saves in the slots stay)
             HasLoadedSave = false;
             if (logToConsole) Debug.Log("PixelSaveGame: save deleted.", this);
         }

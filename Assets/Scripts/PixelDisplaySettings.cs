@@ -176,12 +176,12 @@ public static class PixelDisplaySettings
         if ((ColorBlind ? 1 : 0) != before) ColorBlindChanged?.Invoke();
     }
 
-    /// <summary>Accessibility: while an old pixel is held (Pixel Grabbing), a faint line and ring show where it would land if it were let go from a standing position (straight down). Off by default.</summary>
+    /// <summary>Accessibility: while an old pixel is held (Pixel Grabbing), a faint line and ring show where it would land if it were let go from a standing position (straight down). On by default.</summary>
     public static bool DropGuide
     {
         get
         {
-            if (dropGuide < 0) dropGuide = PlayerPrefs.GetInt(PrefDropGuide, 0);
+            if (dropGuide < 0) dropGuide = PlayerPrefs.GetInt(PrefDropGuide, 1);
             return dropGuide != 0;
         }
         set

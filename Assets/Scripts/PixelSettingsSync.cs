@@ -97,6 +97,18 @@ public static class PixelSettingsSync
         Reload();
     }
 
+    /// <summary>A brand-new game: every per-save setting goes back to its default (key bindings and volumes are the player's own and stay).</summary>
+    public static void ResetToDefaults()
+    {
+        foreach (Known k in Known_())
+        {
+            if (k.key.StartsWith("PixelClicker.Key.") || k.key.StartsWith("PixelAudio.")) continue;
+            PlayerPrefs.DeleteKey(k.key);
+        }
+        PlayerPrefs.Save();
+        Reload();
+    }
+
     /// <summary>Tells everything that keeps a setting in memory to read it from PlayerPrefs again.</summary>
     public static void Reload()
     {

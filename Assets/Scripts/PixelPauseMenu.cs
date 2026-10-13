@@ -617,19 +617,17 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Longest name a save slot can have.")]
     [SerializeField] private int slotNameMaxLength = 24;
 
-    private const string SlotNamePref = "PixelClicker.SlotName.";
-
     /// <summary>How messages refer to a slot: its number, or its custom name in quotes ("slot {0}" reads 'slot 2' or 'slot "My run"').</summary>
     private string SlotRef(int slot)
     {
-        string custom = PlayerPrefs.GetString(SlotNamePref + slot, "");
+        string custom = saveGame != null ? saveGame.GetSlotName(slot) : "";
         return string.IsNullOrWhiteSpace(custom) ? slot.ToString() : "\"" + custom + "\"";
     }
 
     /// <summary>The player's name for a save slot, or the default 'Slot N'.</summary>
     private string SlotNameOf(int slot)
     {
-        string custom = PlayerPrefs.GetString(SlotNamePref + slot, "");
+        string custom = saveGame != null ? saveGame.GetSlotName(slot) : "";
         return string.IsNullOrWhiteSpace(custom) ? string.Format(slotNameFormat, slot) : custom;
     }
     private Button slotSaveButton, slotLoadButton;
@@ -1018,6 +1016,8 @@ public class PixelPauseMenu : MonoBehaviour
             saveGame.SuppressSaving(); // so autosave / quit can't write the old game back
             saveGame.DeleteSave();
             PixelHints.ResetSeen(); // a new game shows the first-time tips (and the intro) again
+            PixelSettingsSync.ResetToDefaults();   // ...and starts with the default settings
+            PixelSaveGame.AutoStartNewGame = true;   // the main menu starts it by itself (no Continue detour)
         }
         PixelCrashLog.EndSessionCleanly(); // a deliberate restart is not a crash
         PixelAchievements.ResetOnNextStart = true; // achievements start from nothing in the new game too
@@ -1741,7 +1741,7 @@ public class PixelPauseMenu : MonoBehaviour
         if (renameOverlay == null) return;
         renameSlot = slot;
         renameTitleLabel.text = string.Format(renameTitle, slot);
-        renameInput.text = PlayerPrefs.GetString(SlotNamePref + slot, "");
+        renameInput.text = saveGame != null ? saveGame.GetSlotName(slot) : "";
         renameOverlay.SetActive(true);
         renameOverlay.transform.SetAsLastSibling();
         renameInput.Select();
@@ -1751,9 +1751,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void ConfirmRename()
     {
         string name = (renameInput.text ?? "").Trim();
-        if (name.Length == 0) PlayerPrefs.DeleteKey(SlotNamePref + renameSlot);   // empty = back to 'Slot N'
-        else PlayerPrefs.SetString(SlotNamePref + renameSlot, name);
-        PlayerPrefs.Save();
+        if (saveGame != null) saveGame.SetSlotName(renameSlot, name);   // empty = back to 'Slot N'; the name is stored in the save file
         renameOverlay.SetActive(false);
         RefreshSlots();
     }
@@ -2323,7 +2321,7 @@ public class PixelPauseMenu : MonoBehaviour
             AddSettingsSectionHeader(list, headerSaving, ref y);
             AddSettingToggle(list, autoSaveMessageLabel, () => saveGame.AutoSaveMessageNow,
                              on => PixelSaveGame.AutoSaveMessageChoice = on ? 1 : 0, ref y);
-            AddChoiceRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
+            AddDropdownRow(list, autoSaveLabel, PixelSaveGame.AutoSaveNames, CurrentAutoSaveIndex, v => PixelSaveGame.AutoSaveChoice = v, ref y);
         }
 
         // ---- Display ----
@@ -2514,6 +2512,26 @@ public class PixelPauseMenu : MonoBehaviour
     {
         Toggle toggle = AddToggleRow(parent, label, get(), on => set(on), ref y);
         settingsRefreshers.Add(() => toggle.SetIsOnWithoutNotify(get()));
+    }
+
+    /// <summary>A label with a drop-down list on the right (for settings with many options).</summary>
+    private void AddDropdownRow(Transform parent, string label, string[] options, System.Func<int> get, System.Action<int> set, ref float y)
+    {
+        TMP_Text rowLabel = AddRowLabel(parent, label, y, out RectTransform row);
+        rowLabel.rectTransform.anchorMax = new Vector2(0.6f, 1f);
+        rowLabel.rectTransform.offsetMax = new Vector2(-14f, 0f);
+        TMP_Dropdown dd = PixelUIKit.CreateDropdown(font, row, label + " Dropdown", new Vector2(10f, rowHeight * 0.88f), tickBoxColor, tickBoxColor, Color.white, rowFontSize * 0.8f);
+        RectTransform dr = dd.GetComponent<RectTransform>();
+        dr.anchorMin = new Vector2(0.62f, 0.06f);
+        dr.anchorMax = new Vector2(1f, 0.94f);
+        dr.offsetMin = dr.offsetMax = Vector2.zero;
+        dd.ClearOptions();
+        dd.AddOptions(new System.Collections.Generic.List<string>(options));
+        System.Action refresh = () => dd.SetValueWithoutNotify(options.Length == 0 ? 0 : Mathf.Clamp(get(), 0, options.Length - 1));
+        dd.onValueChanged.AddListener(v => set(v));
+        refresh();
+        settingsRefreshers.Add(refresh);
+        y += rowHeight + 6f;
     }
 
     /// <summary>A label with a button on the right that steps through the options each click (wraps around).</summary>

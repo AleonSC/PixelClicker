@@ -57,6 +57,31 @@ public static class PixelAutosaves
         }
     }
 
+    /// <summary>The newest autosave's file, or null (cheap: just the file names).</summary>
+    public static string NewestPath()
+    {
+        try
+        {
+            if (!Directory.Exists(Folder)) return null;
+            string best = null;
+            foreach (string f in Directory.GetFiles(Folder, "autosave_*.json"))
+                if (best == null || string.CompareOrdinal(f, best) > 0) best = f;
+            return best;
+        }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>Deletes every autosave (Restart).</summary>
+    public static void DeleteAll()
+    {
+        try
+        {
+            if (!Directory.Exists(Folder)) return;
+            foreach (string f in Directory.GetFiles(Folder, "autosave_*")) { File.Delete(f); if (f.EndsWith(".jpg")) PixelSaveShots.Forget(f); }
+        }
+        catch (Exception) { }
+    }
+
     /// <summary>The kept autosaves, newest first.</summary>
     public static List<Entry> List()
     {
