@@ -336,10 +336,11 @@ public class PixelFilters : MonoBehaviour
         public static Texture2D Corners() => corners != null ? corners : corners = Tex(256, 256, false, FilterMode.Bilinear, (x, y) =>
         {
             float dx = Mathf.Abs(x / 255f - 0.5f) * 2f, dy = Mathf.Abs(y / 255f - 0.5f) * 2f;
-            const float half = 0.93f, r = 0.2f;
+            const float half = 0.9f, r = 0.3f;   // a TV-tube shaped window: big round corners
             float qx = Mathf.Max(0f, dx - (half - r)), qy = Mathf.Max(0f, dy - (half - r));
             float dist = Mathf.Sqrt(qx * qx + qy * qy) - r;   // <0 inside the rounded rect
-            float a = Mathf.Clamp01(dist / 0.06f + 0.5f);
+            float a = Mathf.Clamp01(dist / 0.08f + 0.5f);
+            a = Mathf.Max(a, Mathf.Clamp01((dist + 0.1f) / 0.1f) * 0.35f);   // a soft dark rim inside the edge, like the glass curving away
             return new Color32(0, 0, 0, (byte)Mathf.RoundToInt(255f * a));
         });
 
@@ -395,7 +396,7 @@ public class PixelFilters : MonoBehaviour
     public static List<Preset> CreateDefaults() => new List<Preset>
     {
         new Preset { name = "Off" },
-        new Preset { name = "CRT TV", saturation = 12f, contrast = 14f, vignette = 0.3f, grain = 0.12f, chromatic = 0.3f, lens = -0.18f, bloom = 0.6f,
+        new Preset { name = "CRT TV", saturation = 12f, contrast = 14f, vignette = 0.3f, grain = 0.12f, chromatic = 0.3f, lens = -0.3f, bloom = 0.6f,
                      scanlines = 0.28f, crtCorners = 0.95f, noise = 0.05f, overlayVignette = 0.25f },
         new Preset { name = "VHS", saturation = -22f, contrast = -6f, temperature = 8f, vignette = 0.3f, grain = 0.5f, chromatic = 0.7f, bloom = 0.3f,
                      scanlines = 0.1f, noise = 0.12f, band = 0.22f, overlayVignette = 0.15f },
