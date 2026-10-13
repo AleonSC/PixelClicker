@@ -1,4 +1,4 @@
-// The first person neon floor (PixelFirstPersonGrid): a world-space grid of glowing lines drawn on a flat quad just above the ground, visible only within a radius of up to 32 lit points
+// The first person neon floor (PixelFirstPersonGrid): a world-space grid of glowing lines drawn on a flat quad just above the ground, visible only within a radius of up to 64 lit points
 // (the player, the clicker cube and old pixels resting on the ground). _Points[i] = (x, z, radius, 0). Additive, no depth write. Lives in Resources so builds include it.
 Shader "Pixel Clicker/Neon Grid"
 {
@@ -15,7 +15,7 @@ Shader "Pixel Clicker/Neon Grid"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
-            float4 _Points[32];
+            float4 _Points[64];
             float _Count;
             float4 _Color;
             float _Spacing;
@@ -32,7 +32,7 @@ Shader "Pixel Clicker/Neon Grid"
             fixed4 frag(v2f i) : SV_Target
             {
                 float k = 0;
-                for (int n = 0; n < 32; n++)
+                for (int n = 0; n < 64; n++)
                 {
                     if (n >= (int)_Count) break;
                     float d = distance(i.world.xz, _Points[n].xy);

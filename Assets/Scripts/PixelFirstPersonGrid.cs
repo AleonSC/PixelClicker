@@ -2,14 +2,14 @@
 // PixelFirstPersonGrid.cs
 //   The first person floor: while PixelFirstPerson is active the normal floor is hidden (PixelFloor.FloorOff includes PixelFirstPerson.Active, the ground collider stays) and this draws a bright neon
 //   grid (Resources/PixelNeonGrid.shader, world-space lines) on a quad just above the ground, only within a radius of lit points: the player, the clicker cube and old pixels resting on the ground
-//   (up to 32, nearest to the player first; collected every 0.1 s). Settings live on PixelFirstPerson (header "Neon floor"). Added/removed by PixelFirstPerson.Enter / Exit.
+//   (up to 64, nearest to the player first; collected every 0.1 s). Settings live on PixelFirstPerson (header "Neon floor"). Added/removed by PixelFirstPerson.Enter / Exit.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PixelFirstPersonGrid : MonoBehaviour
 {
-    private const int MaxPoints = 32;
+    private const int MaxPoints = 64;
 
     private PixelClicker clicker;
     private Material mat;
@@ -19,6 +19,7 @@ public class PixelFirstPersonGrid : MonoBehaviour
     private float timer;
     private int count;
     private float groundY;
+    private readonly HashSet<long> cells = new HashSet<long>();
     private readonly List<KeyValuePair<float, Vector4>> candidates = new List<KeyValuePair<float, Vector4>>();
 
     public void Setup(PixelClicker owner, Color gridColor, float spacingWorld, float playerRadiusWorld, float pixelRadiusWorld, float brightnessValue)
@@ -67,6 +68,8 @@ public class PixelFirstPersonGrid : MonoBehaviour
         if (mat == null || clicker == null) return;
         PixelFirstPerson.TryGetPlayerPosition(out Vector3 player);
         candidates.Clear();
+        cells.Clear();
+        float cell = Mathf.Max(0.05f, pixelRadius * 0.6f);
         float unit = clicker.OldPixelWorldSize;
         float touch = groundY + unit * 0.75f;
         var list = clicker.OldPixels;
@@ -76,6 +79,9 @@ public class PixelFirstPersonGrid : MonoBehaviour
             if (b == null || b.isKinematic) continue;
             Vector3 pos = b.worldCenterOfMass;
             if (pos.y > touch) continue;
+            // Pixels in one heap share a light (one per cell), so a crowd doesn't use up the lights and hide the far ones.
+            long key = ((long)Mathf.FloorToInt(pos.x / cell) << 32) ^ (uint)Mathf.FloorToInt(pos.z / cell);
+            if (!cells.Add(key)) continue;
             float d = (new Vector2(pos.x, pos.z) - new Vector2(player.x, player.z)).sqrMagnitude;
             candidates.Add(new KeyValuePair<float, Vector4>(d, new Vector4(pos.x, pos.z, pixelRadius, 0f)));
         }
