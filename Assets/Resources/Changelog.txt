@@ -795,3 +795,4 @@
 [2026-10-13 13:58 UTC] Drop-down lists (the title screen's floor / sky pickers, Settings look lists and every other code-built drop-down) now open scrolled to the entry you chose instead of the top.
 [2026-10-13 14:03 UTC] Fixed the Wood Chipper glowing like the cube (its materials inherited the cube's emission), and added a 'Clicker glow aura' (Settings > Interface, on by default): a soft halo in the pixel's colour behind the clicker cube so it is easier to find without changing the pixels.
 [2026-10-13 14:10 UTC] The clicker aura is now cut out wherever the cube is (a depth-only copy of the cube's mesh), so transparent cubes no longer show the glow through them.
+[2026-10-13 14:13 UTC] The clicker aura colour is adjustable: an eyedropper next to the toggle picks any colour, and an 'Aura color' drop-down chooses Match pixel, Custom or Rainbow.

@@ -22,7 +22,39 @@ public class PixelClickerAura : MonoBehaviour
         set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
     }
 
-    public static void ReloadFromPrefs() { cache = -1; }
+    private const string PrefMode = "PixelClicker.Setting.AuraMode", PrefColor = "PixelClicker.Setting.AuraColor";
+    private static int modeCache = -1;
+    private static string colorCache;
+    private static Color? colorParsed;
+
+    /// <summary>Where the colour comes from: 0 = the pixel being clicked, 1 = the custom colour (eyedropper in Settings), 2 = a slow rainbow.</summary>
+    public static int Mode
+    {
+        get { if (modeCache < 0) modeCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefMode, 0), 0, 2); return modeCache; }
+        set { modeCache = Mathf.Clamp(value, 0, 2); PlayerPrefs.SetInt(PrefMode, modeCache); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>The custom colour (default a soft sky blue).</summary>
+    public static Color CustomColor
+    {
+        get
+        {
+            if (colorCache == null) { colorCache = PlayerPrefs.GetString(PrefColor, ""); colorParsed = ColorUtility.TryParseHtmlString("#" + colorCache, out Color c) ? c : (Color?)null; }
+            return colorParsed ?? new Color(0.45f, 0.8f, 1f);
+        }
+    }
+
+    /// <summary>Sets the custom colour (the eyedropper in Settings).</summary>
+    public static void SetCustomColor(Color c)
+    {
+        c.a = 1f;
+        colorCache = ColorUtility.ToHtmlStringRGB(c);
+        colorParsed = c;
+        PlayerPrefs.SetString(PrefColor, colorCache);
+        PlayerPrefs.Save();
+    }
+
+    public static void ReloadFromPrefs() { cache = -1; modeCache = -1; colorCache = null; colorParsed = null; }
 
     [Header("Look")]
     [Tooltip("Width of the halo as a multiple of the cube's size.")]
@@ -166,9 +198,15 @@ public class PixelClickerAura : MonoBehaviour
         quad.gameObject.layer = clicker.PixelTransform.gameObject.layer;
 
         Color target = Color.white;
-        int tier = clicker.CurrentClickTierIndex;
-        if (clicker.IsValidTierIndex(tier)) target = clicker.Tiers[tier].color;
-        target = Color.Lerp(target, Color.white, whiten);
+        int mode = Mode;
+        if (mode == 1) target = CustomColor;
+        else if (mode == 2) target = Color.Lerp(Color.HSVToRGB(Mathf.Repeat(Time.unscaledTime * 0.08f, 1f), 0.7f, 1f), Color.white, 0.15f);
+        else
+        {
+            int tier = clicker.CurrentClickTierIndex;
+            if (clicker.IsValidTierIndex(tier)) target = clicker.Tiers[tier].color;
+            target = Color.Lerp(target, Color.white, whiten);
+        }
         color = Color.Lerp(color, target, 1f - Mathf.Exp(-colorFollow * Time.unscaledDeltaTime));
         color.a = strength * (1f + breathe * breatheAmount);
         material.color = color;
