@@ -119,6 +119,8 @@ public static class PixelGuideTexts
                 return "Foraging block, rare: a buried treasure. It takes " + t.clicksToCollect + " digs but pays a lot.";
             case PixelClicker.PixelType.Weeds:
                 return "Foraging's filler block. One click, almost no pay. At low foraging level it is most of what appears; as you level up it gets rarer and the good finds show up more.";
+            case PixelClicker.PixelType.Mold:
+                return "A HAZARD. Every click on it spreads mold further over the old pixels lying around the cube, and moldy pixels die after a while. Right-click it to stop it spreading (that does NOT undo the mold already spread). To save a moldy pixel, grab it and shake it hard until the mold falls off. It leaves by itself after a few seconds. The auto clicker never touches it.";
             case PixelClicker.PixelType.Toadstool:
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and it bursts in poison spores that wipe out the old pixels around the cube, and Foraging XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your foraging level rises.";
             case PixelClicker.PixelType.Wood:

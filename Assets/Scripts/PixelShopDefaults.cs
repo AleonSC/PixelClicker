@@ -737,7 +737,7 @@ public partial class PixelShop
 
     /// <summary>
     /// Default Forager's Pack (Pixels tab): cheap, a base skill. Five foraged blocks for the Foraging skill: Berry, Mushroom, Herb, Truffle (rare) and the
-    /// filler Weeds, plus the Toadstool hazard. They only spawn while Foraging is the pack in play (Skills window).
+    /// filler Weeds, plus the Mold hazard (the Toadstool is switched off for now). They only spawn while Foraging is the pack in play (Skills window).
     /// </summary>
     private static ShopPack CreateForagerPack()
     {
@@ -750,7 +750,7 @@ public partial class PixelShop
         {
             displayName = "Forager's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Foraging skill and five foraged blocks: Berry, Mushroom, Herb, Truffle (rare) and Weeds, plus a poisonous Toadstool to watch out for. They only spawn while Foraging is the pack in play (Skills window). Weeds are a useless filler that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more.",
+            description = "Adds the Foraging skill and five foraged blocks: Berry, Mushroom, Herb, Truffle (rare) and Weeds, plus a spreading Mold to watch out for. They only spawn while Foraging is the pack in play (Skills window). Weeds are a useless filler that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
@@ -760,8 +760,8 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Herb, "Herb Pixels", new Color(0.3f, 0.7f, 0.35f, 1f), 1, 2, 0.9f),
                 Block(PixelClicker.PixelType.Truffle, "Truffle Pixels", new Color(0.34f, 0.23f, 0.17f, 1f), 3, 30, 0.1f),
                 Block(PixelClicker.PixelType.Weeds, "Weeds", new Color(0.55f, 0.62f, 0.35f, 1f), 1, 1, 1.0f),
-                // The Toadstool: a hazard (hit it too often and it bursts in poison spores that clear the old pixels around the cube; it pays nothing).
-                Block(PixelClicker.PixelType.Toadstool, "Toadstool", new Color(0.62f, 0.25f, 0.65f, 1f), 5, 0, 0.05f),
+                // The Mold: a hazard (every click spreads mold over the fallen pixels, see PixelMold.cs; it pays nothing). The Toadstool (type kept) is switched off for now.
+                Block(PixelClicker.PixelType.Mold, "Mold", new Color(0.4f, 0.55f, 0.25f, 1f), 8, 0, 0.05f),
             }
         };
     }

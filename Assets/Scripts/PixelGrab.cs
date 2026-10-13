@@ -14,7 +14,7 @@
 //   PixelClicker.GrabEnabled so clicks on old pixels no longer pass through to the cube. Sounds grab/drop. PixelShop finds/adds it.
 //   Tags: OldPixelInfo.heldByPlayer / lastHeldTime / RecentlyHeld(seconds) = 'recently held by the player' (held now, or let go within recentlyHeldSeconds 0 = 6, Inspector); the Storage Crate
 //   stores a tagged pixel that lands in its footprint from any height.
-//   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, off by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
+//   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, on by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
 //   from it to the first surface a sphere of its size would land on (ignores itself, triggers and the live cube) and a ring on that surface = where it drops if let go standing still.
 // ---------------------------------------------------
 using UnityEngine;

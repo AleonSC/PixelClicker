@@ -142,6 +142,7 @@ public partial class PixelClicker : MonoBehaviour
         Bait = 72,        // Fishing: drops bait pellets that make fish appear more often
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
+        Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
     }
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
@@ -160,13 +161,13 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
 
     /// <summary>A HAZARD block (the Pest in Farming, the Gas Pocket in Mining): hit it too many times and it goes off.</summary>
-    public static bool IsHazard(PixelType type) => type == PixelType.Pest || type == PixelType.GasPocket || type == PixelType.HornetNest || type == PixelType.Toadstool || type == PixelType.Jellyfish;
+    public static bool IsHazard(PixelType type) => type == PixelType.Pest || type == PixelType.GasPocket || type == PixelType.HornetNest || type == PixelType.Toadstool || type == PixelType.Jellyfish || type == PixelType.Mold;
 
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale);
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold;
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1164,6 +1165,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
+        if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
         if (PixelFind.First<PixelWoodworking>() == null) gameObject.AddComponent<PixelWoodworking>();   // Woodcutting's woodchipper and log rack
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
@@ -1788,6 +1790,16 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 49;
         }
 
+        if (looksVersion < 50)
+        {
+            // The Mold block got a look.
+            System.Collections.Generic.List<PixelLook> list50 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook def50 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Mold);
+            if (def50 != null && PixelLooks.Find(list50.ToArray(), PixelType.Mold) == null) list50.Add(def50);
+            looks = list50.ToArray();
+            looksVersion = 50;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2086,7 +2098,7 @@ public partial class PixelClicker : MonoBehaviour
                 PlayClickEffects(tier);
                 if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, automatic, 0.35f, clickPopStrength);   // a small chip of a tough pixel
                 if (tier.type == PixelType.Seed || tier.type == PixelType.Dirt) SeedDigEffect(Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // digging noises + falling dirt
-                if (tier.type != PixelType.Seed && (IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type) || tier.type == PixelType.HornetNest || tier.type == PixelType.Toadstool || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
+                if (tier.type != PixelType.Seed && (IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type) || tier.type == PixelType.HornetNest || tier.type == PixelType.Toadstool || tier.type == PixelType.Mold || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Dirt) digShrinkTarget = Mathf.Lerp(1f, oldPixelScale, Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // each dig shrinks it towards old-pixel size
                 if ((tier.type == PixelType.Pest || tier.type == PixelType.HornetNest) && !disablePestSwarm) PixelPestSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // bugs spill out of it
                 if ((IsElectricalBlock(tier.type) || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
@@ -2094,6 +2106,7 @@ public partial class PixelClicker : MonoBehaviour
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Meteor && !disableMeteorFx) PixelCometFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Treasure && !disableTreasureFx) TreasureFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
+                if (tier.type == PixelType.Mold) PixelMold.Spread(pixelTransform.position);   // every click spreads the mold further over the fallen pixels
                 if (tier.type == PixelType.Whale) PixelWhaleFight.OnHit(this, automatic, hitsOnCurrentPixel, need);   // the first manual hit hooks it: it starts to fight the line
                 PixelHit?.Invoke(tierIndex, hitsOnCurrentPixel, shownNeed, automatic);
                 onPixelClicked?.Invoke();
@@ -3917,7 +3930,7 @@ public partial class PixelClicker : MonoBehaviour
         defuseClicks = 0;
         hitsOnCurrentPixel = 0;
         PixelStats.Count("hazards.defused", 1);
-        PixelHints.Announce("You cleared the " + tier.displayName.ToLowerInvariant() + " safely.");
+        PixelHints.Announce(tier.type == PixelType.Mold ? "You scraped the mold off the cube. What it already spread stays - shake infected pixels clean." : "You cleared the " + tier.displayName.ToLowerInvariant() + " safely.");
         if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, false, 1f, clickPopStrength);
         if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());
@@ -3982,6 +3995,12 @@ public partial class PixelClicker : MonoBehaviour
                 Rigidbody b = oldPixels[i];
                 if (b != null && (b.position - pos).sqrMagnitude <= sporeReach * sporeReach) ReleaseOldPixel(b, false);
             }
+        }
+        else if (tier.type == PixelType.Mold)
+        {
+            what = "The mold burst and spread far over the fallen pixels - shake them clean!";
+            PixelMold.Spread(pos, 2f);
+            if (!disableFarmFx) PixelFarmFx.Break(PixelType.Mold, pos, PixelBaseSize, tier.color);
         }
         else if (tier.type == PixelType.HornetNest)
         {
@@ -4854,6 +4873,7 @@ public partial class PixelClicker : MonoBehaviour
         info.bornTime = Time.unscaledTime;
         info.tierIndex = tierIndex;
         info.amount = amount;
+        PixelMold.TryAttachGlow(copy, tiers[tierIndex].type);   // a Berry / Mushroom / Herb / Truffle is sometimes a glowing variant
 
         oldPixels.Add(rb);
         while (CopyCap > 0 && oldPixels.Count > CopyCap)
@@ -5278,6 +5298,9 @@ public class OldPixelDespawn : MonoBehaviour
 
     private bool restoredRemaining;
 
+    /// <summary>How far through its lifespan it is (0..1; 0 when it never expires).</summary>
+    public float AgeFraction => lifetime > 0f ? Mathf.Clamp01(age / lifetime) : 0f;
+
     /// <summary>Seconds left before it starts to vanish (-1 = it never expires).</summary>
     public float Remaining => lifetime > 0f ? Mathf.Max(0f, lifetime - age) : -1f;
 
@@ -5367,6 +5390,9 @@ public class OldPixelInfo : MonoBehaviour
 
     /// <summary>Unscaled time the player last let go of this pixel (-99 = never held).</summary>
     [HideInInspector] public float lastHeldTime = -99f;
+
+    /// <summary>Game time until which mold can't infect this pixel (it was just shaken clean).</summary>
+    [HideInInspector] public float moldImmuneUntil;
 
     /// <summary>Is this pixel tagged 'recently held by the player': held right now, or let go within 'seconds' (PixelGrab.RecentlyHeldSeconds, editable in the Inspector)? Storage Crates capture tagged pixels that land on them.</summary>
     public bool RecentlyHeld(float seconds) => heldByPlayer || Time.unscaledTime - lastHeldTime <= seconds;

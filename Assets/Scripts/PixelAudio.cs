@@ -349,6 +349,7 @@ public class PixelAudio : MonoBehaviour
             case "pixel_herb": return new[] { PixelSynth.Forage(2, 1), PixelSynth.Forage(2, 2), PixelSynth.Forage(2, 3) };
             case "pixel_truffle": return new[] { PixelSynth.Forage(3, 1), PixelSynth.Forage(3, 2) };
             case "pixel_weeds": return new[] { PixelSynth.Forage(4, 1), PixelSynth.Forage(4, 2), PixelSynth.Forage(4, 3) };
+            case "pixel_mold":
             case "pixel_toadstool": return new[] { PixelSynth.Forage(5, 1), PixelSynth.Forage(5, 2) };
             case "wood_chop": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };
             case "pixel_wood": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(0, 2), PixelSynth.Wood(0, 3) };

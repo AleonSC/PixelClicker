@@ -214,14 +214,14 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(Mathf.Min(packs.Count, 2), new SkillPack
             {
                 id = ForagingId, displayName = "Foraging", accent = new Color(0.78f, 0.28f, 0.4f),
-                description = "Swap the basic cubes for foraged goods: berries, mushrooms, herbs and rare truffles. Weeds are a useless filler block that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more. Watch out for the poisonous toadstool. Pick blocks for foraging XP: a cheap early skill that leads on towards farming.",
+                description = "Swap the basic cubes for foraged goods: berries, mushrooms, herbs and rare truffles. Weeds are a useless filler block that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more. Watch out for the mold, which spreads over the pixels you drop: shake them clean. Pick blocks for foraging XP: a cheap early skill that leads on towards farming.",
                 replaces = "Monochrome, RGB", spawns = "Weeds, Berry, Mushroom, Herb, Truffle",
                 xpFrom = "Collecting foraged blocks",
                 unlockHint = "Buy the Forager's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb, PixelClicker.PixelType.Truffle,
-                                PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Toadstool },
-                fillerType = "Weeds", hazardType = "Toadstool",
+                                PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold },
+                fillerType = "Weeds", hazardType = "Mold",
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Keen eyes: berries show up more often" },
@@ -396,11 +396,12 @@ public partial class PixelSkills : MonoBehaviour
             {
                 System.Collections.Generic.List<PixelClicker.PixelType> forage = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb,
-                                                             PixelClicker.PixelType.Truffle, PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Toadstool })
+                                                             PixelClicker.PixelType.Truffle, PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold })
                     if (!forage.Contains(t)) forage.Add(t);
+                forage.Remove(PixelClicker.PixelType.Toadstool);   // the Toadstool is switched off for now (the Mold took its place)
                 pack.types = forage.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Weeds.ToString();
-                if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.Toadstool.ToString();
+                if (string.IsNullOrEmpty(pack.hazardType) || pack.hazardType == "Toadstool") pack.hazardType = PixelClicker.PixelType.Mold.ToString();
             }
             if (pack.id == MiningId || pack.id == FarmingId)
             {
@@ -663,7 +664,7 @@ public partial class PixelSkills : MonoBehaviour
         PixelSkills s = Instance;
         if (PixelClicker.IsRetiredOre(type)) return true;   // the dropped Lead / Zinc / Nickel never spawn
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
-        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool;
+        if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool || type == PixelClicker.PixelType.Mold;
         SkillPack owner = s.PackOfType(type);
         string active = s.ActiveId;
         if (owner != null)

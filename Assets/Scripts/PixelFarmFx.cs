@@ -103,7 +103,7 @@ public static class PixelFarmFx
             shape = ParticleSystemShapeType.Sphere, shapeRadius = size * 0.5f, randomDirection = 0.1f, maxParticles = 20,
         }).Play();
         if (type == PixelClicker.PixelType.Bottle || type == PixelClicker.PixelType.Whale) return;   // their own click sounds are enough
-        PixelAudio.Play(PixelClicker.IsWoodBlock(type) ? "wood_chop" : PixelClicker.IsForageBlock(type) || type == PixelClicker.PixelType.Toadstool ? "forage_pick" : PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Jellyfish ? "fish_splash" : "farm_hit");
+        PixelAudio.Play(PixelClicker.IsWoodBlock(type) ? "wood_chop" : PixelClicker.IsForageBlock(type) || type == PixelClicker.PixelType.Toadstool || type == PixelClicker.PixelType.Mold ? "forage_pick" : PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Jellyfish ? "fish_splash" : "farm_hit");
     }
 
     /// <summary>The burst when a farm block breaks: a mix of bits, puffs and glints that suits the block.</summary>
@@ -206,6 +206,10 @@ public static class PixelFarmFx
                 break;
             case PixelClicker.PixelType.Weeds:
                 Burst("Bits", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.05f, 0.11f), 2.2f, new Color(0.6f, 0.7f, 0.35f), new Color(0.4f, 0.5f, 0.25f), 16, 0.5f, false).Play();
+                break;
+            case PixelClicker.PixelType.Mold:
+                Burst("Spores", new Vector2(1.2f, 2.2f), new Vector2(1f, 3.2f), new Vector2(0.1f, 0.22f), -0.05f, new Color(0.55f, 0.85f, 0.35f, 0.8f), new Color(0.3f, 0.5f, 0.2f, 0.7f), 45, 0.55f, true, new Vector2(1f, 0.3f)).Play();
+                PixelFxRing.Spawn(centre, new Color(0.5f, 0.8f, 0.3f, 0.8f), size * 0.5f, size * 4f, 0.7f, 0f);
                 break;
             case PixelClicker.PixelType.Toadstool:
                 Burst("Spores", new Vector2(1.2f, 2.2f), new Vector2(1f, 3.2f), new Vector2(0.1f, 0.22f), -0.05f, new Color(0.75f, 0.4f, 0.85f, 0.8f), new Color(0.45f, 0.9f, 0.4f, 0.7f), 50, 0.55f, true, new Vector2(1f, 0.3f)).Play();

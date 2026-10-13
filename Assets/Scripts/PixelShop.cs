@@ -1221,6 +1221,22 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 26)
+        {
+            // Foraging: the Mold block joins the Forager's Pack (the Toadstool is switched off in the Skills pack, its tier stays).
+            PixelClicker.PixelTier moldDef = null;
+            foreach (PixelClicker.PixelTier t in CreateForagerPack().rewardTiers) if (t.type == PixelClicker.PixelType.Mold) moldDef = t;
+            if (packs != null && moldDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Berry) || Rewards(p, PixelClicker.PixelType.Mold)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { moldDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 26);
+            changed = true;
+        }
+
         return changed;
     }
 
