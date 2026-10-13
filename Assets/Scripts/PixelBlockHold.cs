@@ -36,8 +36,14 @@ public class PixelBlockHold : MonoBehaviour
     [SerializeField] private float minStartFraction = 0f;
 
     [Header("Look")]
-    [Tooltip("Colour of the meter while holding / recharging.")]
+    [Tooltip("Colour of the meter, the beam and the aura around the held block.")]
     [SerializeField] private Color meterColor = new Color(0.45f, 0.85f, 1f, 1f);
+    [Min(0f)]
+    [Tooltip("Seconds the held block takes to slide out to the side / back in. 0 = the default (0.25).")]
+    [SerializeField] private float slideSeconds = 0f;
+    [Min(0f)]
+    [Tooltip("How far to the side of the cube the held block hovers, in cube widths. 0 = the default (2.3).")]
+    [SerializeField] private float sideDistance = 0f;
     [Tooltip("Colour the meter flashes when it ran dry.")]
     [SerializeField] private Color exhaustColor = new Color(1f, 0.2f, 0.15f, 1f);
     [Tooltip("Switch the whole feature off (even when the upgrade is bought).")]
@@ -59,14 +65,26 @@ public class PixelBlockHold : MonoBehaviour
     private int heldTier = -1;
     private float meter = 1f, cooldown, flash;
 
-    // UI
+    // ---- state of the held block's picture ----
+    private GameObject holder, aura;
+    private Material auraMaterial;
+    private LineRenderer[] beams;
+    private Material beamMaterial;
+    private float slide;            // 0 = at the cube, 1 = hovering at the side
+    private bool returning;         // sliding back in after the button was let go
+    private int returnTier = -1;
+
+    // ---- the meter next to the cursor ----
     private GameObject canvasRoot;
     private RectTransform panel, canvasRect;
     private Image fill, back;
-    private TMP_Text label;
+    private static Sprite arcSprite;
+    private const float ArcHalfDegrees = 55f;
 
     public bool Active => unlocked && !disableBlockHold;
     public bool Holding => holding;
+    private float SlideSeconds => slideSeconds > 0f ? slideSeconds : 0.25f;
+    private float SideDistance => sideDistance > 0f ? sideDistance : 2.3f;
 
     private void Awake() { Instance = this; clicker = GetComponent<PixelClicker>(); }
 
@@ -77,6 +95,7 @@ public class PixelBlockHold : MonoBehaviour
     public void Deactivate()
     {
         if (holding) Release(false);
+        FinishReturn();
         unlocked = false;
         if (canvasRoot != null) canvasRoot.SetActive(false);
     }
@@ -88,6 +107,7 @@ public class PixelBlockHold : MonoBehaviour
         if (PixelTitleScreen.Showing || PixelPauseMenu.IsPaused)
         {
             if (holding) Release(false);
+            FinishReturn();   // (no slide while paused: the block goes straight back)
             return;
         }
 
@@ -105,7 +125,7 @@ public class PixelBlockHold : MonoBehaviour
         {
             if (cooldown > 0f) cooldown -= dt;
             else meter = Mathf.Min(1f, meter + dt / RechargeSeconds);
-            if (PixelInput.RightPressed() && CanStart()) Begin();
+            if (!returning && PixelInput.RightPressed() && CanStart()) Begin();
         }
         if (flash > 0f) flash -= dt;
     }
@@ -120,85 +140,210 @@ public class PixelBlockHold : MonoBehaviour
     {
         if (!clicker.TryPullLive(out heldTier)) return;
         holding = true;
+        slide = 0f;
+        BuildVisual();
         PixelAudio.Play("ui_click");
     }
 
     private void Release(bool exhausted)
     {
         holding = false;
-        clicker.ReturnHeldTier(heldTier);
+        returning = holder != null;   // the block slides back in, then is put back
+        returnTier = heldTier;
         heldTier = -1;
         cooldown = exhausted ? ExhaustCooldown : ReleaseCooldown;
         if (exhausted) flash = FlashSeconds;
+        if (!returning) FinishReturn();
         PixelAudio.Play("click");
+    }
+
+    /// <summary>The slide back is over (or skipped): the block goes back into the rotation and its picture goes away.</summary>
+    private void FinishReturn()
+    {
+        if (returnTier >= 0 && clicker != null) clicker.ReturnHeldTier(returnTier);
+        returnTier = -1;
+        returning = false;
+        DestroyVisual();
     }
 
     private void LateUpdate()
     {
-        if (!Active || clicker == null || PixelTitleScreen.Showing) return;
-        bool show = holding || flash > 0f || cooldown > 0f || meter < 0.999f;
+        if (clicker == null) return;
+        UpdateVisual();
+        UpdateMeter();
+    }
+
+    // ------------------------------------------------------------------
+    // The telekinetic beam
+    // ------------------------------------------------------------------
+
+    private void BuildVisual()
+    {
+        DestroyVisual();
+        float size = clicker.PixelBaseSize;
+        holder = new GameObject("Held Block");
+        holder.transform.position = clicker.LiveWorldPosition;
+        GameObject model = clicker.CreateDisplayPixel(heldTier, holder.transform, size);
+        if (model != null) model.transform.localPosition = Vector3.zero;
+
+        // The aura: a pulsing translucent shell round the block.
+        PixelMold.MakeShell(holder.transform, size * 1.35f, out auraMaterial);
+        aura = holder.transform.GetChild(holder.transform.childCount - 1).gameObject;
+
+        // The beam: three wobbling lines from the cube to the block.
+        beamMaterial = new Material(PixelShaders.SpriteDefault());
+        beams = new LineRenderer[3];
+        for (int i = 0; i < beams.Length; i++)
+        {
+            GameObject g = new GameObject("Beam " + i);
+            g.transform.SetParent(holder.transform, false);
+            LineRenderer lr = g.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.positionCount = 12;
+            lr.sharedMaterial = beamMaterial;
+            lr.startWidth = lr.endWidth = size * (i == 0 ? 0.09f : 0.04f);
+            lr.numCapVertices = 3;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            beams[i] = lr;
+        }
+    }
+
+    private void DestroyVisual()
+    {
+        if (holder != null) Destroy(holder);
+        if (auraMaterial != null) Destroy(auraMaterial);
+        if (beamMaterial != null) Destroy(beamMaterial);
+        holder = null; aura = null; auraMaterial = null; beamMaterial = null; beams = null;
+    }
+
+    private void UpdateVisual()
+    {
+        if (holder == null) return;
+        float dt = Time.unscaledDeltaTime;
+        slide = Mathf.Clamp01(slide + (returning ? -dt : dt) / SlideSeconds);
+        if (returning && slide <= 0f) { FinishReturn(); return; }
+
+        float size = clicker.PixelBaseSize;
+        Camera cam = clicker.TargetCamera;
+        Vector3 right = cam != null ? cam.transform.right : Vector3.right;
+        Vector3 up = cam != null ? cam.transform.up : Vector3.up;
+        Vector3 cubePos = clicker.LiveWorldPosition;
+        float eased = slide * slide * (3f - 2f * slide);
+        float time = Time.unscaledTime;
+        Vector3 hover = cubePos + right * size * SideDistance + up * size * 0.35f;
+        Vector3 pos = Vector3.Lerp(cubePos, hover, eased) + up * (Mathf.Sin(time * 2.2f) * 0.07f * size * eased);
+        holder.transform.position = pos;
+        holder.transform.Rotate(up, 35f * dt, Space.World);
+
+        bool flashing = flash > 0f;
+        Color c = Color.Lerp(meterColor, exhaustColor, flashing ? 0.5f + 0.5f * Mathf.Sin(time * 22f) : 0f);
+        float pulse = 0.75f + 0.25f * Mathf.Sin(time * 5f);
+        if (aura != null)
+        {
+            aura.transform.localScale = Vector3.one * size * 1.35f * (1f + 0.05f * Mathf.Sin(time * 6f));
+            Color ac = c; ac.a = 0.34f * pulse * Mathf.Clamp01(eased * 1.6f + 0.25f);
+            auraMaterial.color = ac;
+        }
+        if (beams != null)
+        {
+            Vector3 dir = pos - cubePos;
+            Vector3 perp = cam != null ? Vector3.Cross(dir, cam.transform.forward).normalized : Vector3.up;
+            float amp = 0.12f * size;
+            for (int b = 0; b < beams.Length; b++)
+            {
+                LineRenderer lr = beams[b];
+                lr.enabled = eased > 0.03f;
+                Color bc = c; bc.a = (b == 0 ? 0.85f : 0.55f) * pulse;
+                lr.startColor = bc; bc.a *= 0.4f; lr.endColor = bc;
+                for (int i = 0; i < lr.positionCount; i++)
+                {
+                    float t = i / (float)(lr.positionCount - 1);
+                    float wob = b == 0 ? 0.25f : 1f;
+                    float off = Mathf.Sin(t * Mathf.PI) * amp * wob * Mathf.Sin(time * (8f + b * 3f) + t * (7f + b * 4f) + b * 2.1f);
+                    lr.SetPosition(i, Vector3.Lerp(cubePos, pos, t) + perp * off);
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // The meter: a curved vertical arc to the right of the mouse cursor
+    // ------------------------------------------------------------------
+
+    private static Sprite BuildArcSprite()
+    {
+        const int n = 192;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[n * n];
+        float c = (n - 1) * 0.5f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x - c) / c, dy = (y - c) / c;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float ang = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;   // 0 = east
+                float radial = Mathf.Clamp01(Mathf.Min((r - 0.78f) / 0.03f, (0.98f - r) / 0.03f));
+                float angular = Mathf.Clamp01((ArcHalfDegrees - Mathf.Abs(ang)) / 2.5f);
+                px[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * radial * angular));
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    private void UpdateMeter()
+    {
+        bool show = Active && !PixelTitleScreen.Showing && (holding || returning || flash > 0f || cooldown > 0f || meter < 0.999f);
         if (!show) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); return; }
-        if (canvasRoot == null) BuildUi();
+        if (canvasRoot == null) BuildMeter();
         if (canvasRoot == null) return;
         canvasRoot.SetActive(true);
 
-        // Under the cube.
-        Camera cam = clicker.TargetCamera;
-        Vector3 world = clicker.LiveWorldPosition;
-        if (cam != null)
-        {
-            Vector3 sp = cam.WorldToScreenPoint(world);
-            Vector3 top = cam.WorldToScreenPoint(world + cam.transform.up * clicker.PixelBaseSize * 0.5f);
-            float radius = Mathf.Abs(top.y - sp.y);
-            if (sp.z > 0f && RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, new Vector2(sp.x, sp.y - radius - 30f), null, out Vector2 local))
-                panel.anchoredPosition = local;
-        }
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
+            panel.anchoredPosition = local + new Vector2(6f, 0f);
+
         float k = Mathf.Clamp01(meter);
-        fill.fillAmount = k;
+        // (the arc sprite shows 35..145 degrees of the circle, measured from the bottom, going round the right side)
+        fill.fillAmount = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k) / 360f;
         bool flashing = flash > 0f;
         float pulse = flashing ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 22f) : 0f;
         Color c = Color.Lerp(meterColor, exhaustColor, flashing ? 0.4f + 0.6f * pulse : 0f);
-        if (!holding && cooldown > 0f && !flashing) c.a = 0.55f;   // waiting for the recharge to begin
+        if (!holding && cooldown > 0f && !flashing) c.a = 0.6f;   // waiting for the recharge to begin
         fill.color = c;
-        back.color = flashing ? Color.Lerp(new Color(0f, 0f, 0f, 0.55f), new Color(0.5f, 0f, 0f, 0.8f), pulse) : new Color(0f, 0f, 0f, 0.55f);
-        label.text = holding && clicker.IsValidTierIndex(heldTier) ? "HOLDING " + clicker.Tiers[heldTier].displayName.ToUpperInvariant() : flashing ? "OUT OF ENERGY" : "";
+        back.color = flashing ? Color.Lerp(new Color(0f, 0f, 0f, 0.6f), new Color(0.55f, 0f, 0f, 0.85f), pulse) : new Color(0f, 0f, 0f, 0.6f);
     }
 
-    private void BuildUi()
+    private void BuildMeter()
     {
-        if (clicker.UIFont == null) return;
         canvasRoot = PixelUIKit.CreateCanvas("Block Hold", 55, new Vector2(1920f, 1080f), false);
         canvasRect = canvasRoot.GetComponent<RectTransform>();
+        if (arcSprite == null) arcSprite = BuildArcSprite();
+
         GameObject p = new GameObject("Meter", typeof(RectTransform));
         p.transform.SetParent(canvasRoot.transform, false);
         panel = p.GetComponent<RectTransform>();
-        panel.sizeDelta = new Vector2(200f, 16f);
+        panel.sizeDelta = new Vector2(190f, 190f);
         panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
 
-        GameObject b = new GameObject("Back", typeof(RectTransform), typeof(Image));
-        b.transform.SetParent(panel, false);
-        back = b.GetComponent<Image>();
-        back.raycastTarget = false;
-        PixelUIKit.Stretch(b.GetComponent<RectTransform>());
-
-        GameObject f = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        f.transform.SetParent(panel, false);
-        fill = f.GetComponent<Image>();
-        fill.raycastTarget = false;
+        Image Arc(string name, float scale)
+        {
+            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(panel, false);
+            Image im = g.GetComponent<Image>();
+            im.sprite = arcSprite;
+            im.raycastTarget = false;
+            RectTransform r = g.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+            r.sizeDelta = panel.sizeDelta * scale;
+            r.anchoredPosition = Vector2.zero;
+            return im;
+        }
+        back = Arc("Back", 1.06f);
+        fill = Arc("Fill", 1f);
         fill.type = Image.Type.Filled;
-        fill.fillMethod = Image.FillMethod.Horizontal;
-        RectTransform fr = f.GetComponent<RectTransform>();
-        PixelUIKit.Stretch(fr);
-        fr.offsetMin = new Vector2(2f, 2f);
-        fr.offsetMax = new Vector2(-2f, -2f);
-
-        label = PixelUIKit.CreateText(clicker.UIFont, panel, "Label", "", 20f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        label.raycastTarget = false;
-        RectTransform lr = label.rectTransform;
-        lr.anchorMin = new Vector2(0f, 1f);
-        lr.anchorMax = new Vector2(1f, 1f);
-        lr.pivot = new Vector2(0.5f, 0f);
-        lr.sizeDelta = new Vector2(240f, 28f);
-        lr.anchoredPosition = new Vector2(0f, 2f);
+        fill.fillMethod = Image.FillMethod.Radial360;
+        fill.fillOrigin = (int)Image.Origin360.Bottom;
+        fill.fillClockwise = false;   // bottom -> right -> top
     }
 }

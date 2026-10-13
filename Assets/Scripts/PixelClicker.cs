@@ -2597,7 +2597,6 @@ public partial class PixelClicker : MonoBehaviour
         int index = GetClickTierIndex();
         PixelType type = tiers[index].type;
         if (IsHazard(type) || type == PixelType.Bottle || type == PixelType.Whale || type == PixelType.Fish || type == PixelType.Treasure) return false;
-        if (PixelSkills.TryGetFiller(out PixelType filler, out float share) && share > 0f && filler == type) return false;   // filler can't be dodged
         heldTier = index;
         currentTierIndex = RollTier();
         Materialize(GetClickTier());
