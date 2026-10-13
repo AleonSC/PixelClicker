@@ -33,7 +33,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float runFactor = 0f;
 
     [Min(0f)]
-    [Tooltip("How high a jump goes, in old-pixel widths. 0 = the coded default (0.7).")]
+    [Tooltip("How high a jump goes, in old-pixel widths. 0 = the coded default (0.45).")]
     [SerializeField] private float jumpHeight = 0f;
 
     [Min(0f)]
@@ -89,6 +89,19 @@ public class PixelFirstPerson : MonoBehaviour
     [Min(0f)]
     [Tooltip("Seconds the right button is held on a stuck cube to pry it loose. 0 = the coded default (0.7).")]
     [SerializeField] private float pryHoldSeconds = 0f;
+
+    [Header("Weight and head bob")]
+    [Min(0f)]
+    [Tooltip("How heavy the player feels: gravity is multiplied by this (2 = double the mass, a snappier fall and a shorter jump air time). 0 = the coded default (2).")]
+    [SerializeField] private float gravityFactor = 0f;
+
+    [Min(0f)]
+    [Tooltip("How far the view bobs up and down while walking, as a fraction of eye height. 0 = the coded default (0.022); use a tiny number like 0.0001 to turn it almost off.")]
+    [SerializeField] private float headBobAmount = 0f;
+
+    [Min(0f)]
+    [Tooltip("Head bob steps per walking-speed unit: bigger = quicker bobbing. 0 = the coded default (0.8).")]
+    [SerializeField] private float headBobRate = 0f;
 
     [Header("Neon floor (first person)")]
     [Tooltip("Colour of the neon grid that replaces the floor in first person.")]
@@ -203,10 +216,15 @@ public class PixelFirstPerson : MonoBehaviour
         UpdateClick();
     }
 
+    private float bobPhase, bobStrength;
+
     private void LateUpdate()
     {
         if (!Active || player == null || fpCamera == null) return;
-        fpCamera.transform.SetPositionAndRotation(player.transform.position + Vector3.up * eyeHeight, Quaternion.Euler(pitch, yaw, 0f));
+        float bob = Mathf.Sin(bobPhase * Mathf.PI) * bobStrength * eyeHeight * V(headBobAmount, 0.022f);
+        float sway = Mathf.Cos(bobPhase * Mathf.PI * 0.5f) * bobStrength * eyeHeight * V(headBobAmount, 0.022f) * 0.5f;
+        Quaternion look = Quaternion.Euler(pitch, yaw, 0f);
+        fpCamera.transform.SetPositionAndRotation(player.transform.position + Vector3.up * (eyeHeight + bob) + look * Vector3.right * sway, look);
         PlaceCarried();
     }
 
@@ -341,11 +359,16 @@ public class PixelFirstPerson : MonoBehaviour
 
         bool grounded = controller.isGrounded;
         if (grounded && verticalSpeed < 0f) verticalSpeed = -1f;
-        if (grounded && PixelKeys.KeyPressed(KeyCode.Space)) verticalSpeed = Mathf.Sqrt(2f * -Physics.gravity.y * unit * SizeScale * V(jumpHeight, 0.7f));
+        if (grounded && PixelKeys.KeyPressed(KeyCode.Space)) verticalSpeed = Mathf.Sqrt(2f * -Physics.gravity.y * V(gravityFactor, 2f) * unit * SizeScale * V(jumpHeight, 0.45f));
         float dt = Time.unscaledDeltaTime; // so you can still run about while time is stopped
-        verticalSpeed += Physics.gravity.y * dt;
+        verticalSpeed += Physics.gravity.y * V(gravityFactor, 2f) * dt;
 
         controller.Move((dir * speed + Vector3.up * verticalSpeed) * dt);
+
+        // Head bob: a phase that advances with the walking speed, faded in only while walking on the ground.
+        float walking = grounded && dir.sqrMagnitude > 0.01f ? 1f : 0f;
+        bobStrength = Mathf.MoveTowards(bobStrength, walking, dt * 6f);
+        bobPhase += (dir.magnitude * speed / Mathf.Max(0.0001f, unit * SizeScale)) * V(headBobRate, 0.8f) * dt;
     }
 
     private void UpdateClick()

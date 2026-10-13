@@ -811,3 +811,4 @@
 [2026-10-13 15:02] First person neon grid: far-away pixels now light the grid too (heaps share a light, up to 64 lights instead of 32 nearest).
 [2026-10-13 15:33] First person: hold left click while holding a cube to charge a throw with a ghost arc line that lengthens as you aim, release to throw; a quick tap still sticks or sets it down.
 [2026-10-13 15:34] Wood Chipper counts the wood pixels it eats and spits out a Wood Chips block (new standalone type, despawns like an old pixel) every 5, with a blue progress bar under its health bar.
+[2026-10-13 15:37] First person feels heavier (gravity doubled, lower default jump height) and the view now bobs while walking.
