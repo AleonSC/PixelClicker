@@ -833,3 +833,4 @@
 [2026-10-13 17:05] Block Hold lasts 3.5 seconds now; new Pesticide hold block in the Woodcutter's Pack (while held, a left click clears a Hornet Nest at once); the Toadstool is out of every rotation (the block stays in the game).
 [2026-10-13 17:09] Block Hold lasts 5 seconds by default and 10 seconds when the held block is a hold block (Whetstone, Pesticide...).
 [2026-10-13 17:12] Great Oak nests now fly a short scripted arc out of the cube's side, make one small hop and land close to it (no physics or colliders, so they can no longer bounce far away).
+[2026-10-13 17:16] Block tooltips: they stay open while you grab a block, hold Alt hides them (new Settings tick box, on by default), and the card no longer jumps around with every mouse move (it keeps its spot and glides when the pointer moves well away).

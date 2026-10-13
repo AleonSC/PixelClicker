@@ -5,8 +5,7 @@
 //   PixelClicker.TryGetBlockAt(screen, ...) finds the nearest of the clickable cube / an old pixel under the pointer; after the hover
 //   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, spinning PixelCubeIcon, name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
-//   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose, god mode or while a pixel is
-//   held.
+//   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose, god mode or while Alt is held (Settings > Interface, PixelBlockTooltip.HideWithAlt, default on). Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -21,6 +20,17 @@ using static PixelInput;
 public class PixelBlockTooltip : MonoBehaviour
 {
     private const string PrefEnabled = "PixelClicker.Setting.BlockTips";
+
+    private const string PrefAlt = "PixelClicker.Setting.BlockTipsAlt";
+
+    /// <summary>Hold Alt to hide the tooltip (it comes back when Alt is let go)? Default on.</summary>
+    public static bool HideWithAlt
+    {
+        get => PlayerPrefs.GetInt(PrefAlt, 1) != 0;
+        set { PlayerPrefs.SetInt(PrefAlt, value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
+    private static bool AltHeld() => PixelKeys.KeyHeld(KeyCode.LeftAlt) || PixelKeys.KeyHeld(KeyCode.RightAlt);
 
     /// <summary>Show the tooltip when hovering a block? Default on.</summary>
     public static bool Enabled
@@ -184,11 +194,12 @@ public class PixelBlockTooltip : MonoBehaviour
         r.sizeDelta = new Vector2(width, height);
     }
 
-    private bool Suppressed()
+    private bool Suppressed(bool whileHeld = false)
     {
         return disableTooltip || !Enabled || clicker == null || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused ||
                PixelFirstPerson.Active || PixelRobotWorker.Piloting || PixelClicker.GodMode || PixelCameraIntro.Moving ||
-               PointerOverUI() || (grab != null && grab.HeldBody != null) || PixelBank.HoseOn;
+               (HideWithAlt && AltHeld()) ||
+               (!whileHeld && (PointerOverUI() || (grab != null && grab.HeldBody != null))) || PixelBank.HoseOn;
     }
 
     private void Update()
@@ -197,7 +208,15 @@ public class PixelBlockTooltip : MonoBehaviour
         if (grab == null) grab = PixelFind.First<PixelGrab>();
 
         int tier = -1; bool live = false; Rigidbody body = null;
-        bool hovering = !Suppressed() && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
+        bool hovering;
+        Rigidbody heldBody = grab != null ? grab.HeldBody : null;
+        OldPixelInfo heldInfo = heldBody != null ? heldBody.GetComponent<OldPixelInfo>() : null;
+        if (heldInfo != null && clicker.IsValidTierIndex(heldInfo.tierIndex) && !Suppressed(true))
+        {
+            // Grabbing a block keeps its tooltip open (it follows the block you carry).
+            tier = heldInfo.tierIndex; live = false; body = heldBody; hovering = true;
+        }
+        else hovering = !Suppressed() && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
 
         bool same = hovering && tier == shownTier && live == shownLive && body == shownBody;
         if (hovering && !same)
@@ -216,6 +235,7 @@ public class PixelBlockTooltip : MonoBehaviour
         {
             if (canvasObject != null && canvasObject.activeSelf) canvasObject.SetActive(false);
             if (!hovering) { shownTier = -1; shownBody = null; }
+            anchored = false;
             return;
         }
         if (canvasObject == null) Build();
@@ -347,20 +367,31 @@ public class PixelBlockTooltip : MonoBehaviour
         shine.enabled = phase < 1f;
     }
 
+    private Vector2 anchorPoint;          // where the pointer was when the card last picked a spot (the card only re-places itself when the pointer moves well away from it)
+    private bool anchored;
+    private Vector2 smoothPos;
+    private const float DeadZone = 70f;   // canvas units the pointer may wander before the card moves
+
     private void Follow()
     {
         float scaleFactor = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
-        Vector2 p = PointerPosition() / scaleFactor;
+        Vector2 pointer = PointerPosition() / scaleFactor;
+        if (!anchored || (pointer - anchorPoint).sqrMagnitude > DeadZone * DeadZone) { anchorPoint = pointer; if (!anchored) { anchored = true; smoothPos = Vector2.zero; } }
+        Vector2 p = anchorPoint;
         Vector2 size = card.sizeDelta;
         Vector2 canvasSize = new Vector2(Screen.width, Screen.height) / scaleFactor;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        // To the lower right of the pointer; flipped to the other side when it would leave the screen.
-        float x = p.x + 28f;
-        if (x + size.x > canvasSize.x - 8f) x = p.x - 28f - size.x;
-        float y = p.y - 18f;
-        if (y - size.y < bar + 8f) y = p.y + 24f + size.y;
+        // To the lower right of the anchor; flipped to the other side when it would leave the screen.
+        float x = p.x + 40f;
+        if (x + size.x > canvasSize.x - 8f) x = p.x - 40f - size.x;
+        float y = p.y - 24f;
+        if (y - size.y < bar + 8f) y = p.y + 30f + size.y;
         x = Mathf.Clamp(x, 8f, Mathf.Max(8f, canvasSize.x - size.x - 8f));
         y = Mathf.Clamp(y, bar + size.y + 8f, Mathf.Max(bar + size.y + 8f, canvasSize.y - bar - 8f));
-        card.anchoredPosition = new Vector2(x, y);
+        Vector2 target = new Vector2(x, y);
+        // Glide to the spot (so the little re-placements are not jumps).
+        if (smoothPos == Vector2.zero || (smoothPos - target).sqrMagnitude > 600f * 600f) smoothPos = target;
+        smoothPos = Vector2.Lerp(smoothPos, target, 1f - Mathf.Exp(-9f * Time.unscaledDeltaTime));
+        card.anchoredPosition = smoothPos;
     }
 }
