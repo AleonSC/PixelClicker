@@ -9,7 +9,8 @@
 //   SortersUsed). Achievements have tiers (tiers[], earnedTiers); defaults per pixel type: tiered "Collect" (lifetime value,
 //   totalCollected: 10, 100, 1K, 10K, 100K, 1M) and tiered "Click" (PixelTier.timesCollected, saved: 10, 50, 250, 1K, 5K, 25K;
 //   Kind.ClickPixelType). The unlock POPUP sits centred above the combo meter by default (DefaultPopupPosition); hold the left mouse button on it (popupHoldSeconds 0.5, a ring fills round the cursor,
-//   PixelHold with useLeft) to pick it up, click to PIN it anywhere (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y, inside the black margins), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
+//   PixelHold with useLeft) to pick it up, click to PIN it anywhere; the thin button on its far right collapses it to the icon box and expands it again with a shorter hold (popupCollapseHoldSeconds 0.3, saved);
+//   Settings > 'Reset achievement popup position' (ResetPopupPin) forgets the pin. The pinned position is the popup's LEFT edge; the pin is saved in (PlayerPrefs PixelClicker.Setting.AchievementPopupX/Y, inside the black margins), right-click to put it back. Saved as "id:tiers". Unlocks quietly/with popup, ids saved by PixelSaveGame. Auto-added by PixelLog.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -141,8 +142,23 @@ public class PixelAchievements : MonoBehaviour
     [Tooltip("How long the popup stays (seconds). It fades out at the end.")]
     [SerializeField] private float popupSeconds = 4f;
 
-    [Tooltip("Popup size (canvas units).")]
-    [SerializeField] private Vector2 popupSize = new Vector2(640f, 120f);
+    [Tooltip("Popup size when open (canvas units): an icon box on the left, the heading and the name, and a thin collapse button on the far right.")]
+    [SerializeField] private Vector2 popupExpandedSize = new Vector2(790f, 155f);
+
+    [Min(120f)]
+    [Tooltip("Popup width when collapsed (canvas units): just the icon box and the button.")]
+    [SerializeField] private float popupCollapsedWidth = 195f;
+
+    [Min(10f)]
+    [Tooltip("Width of the thin collapse / expand button on the popup's right edge.")]
+    [SerializeField] private float popupButtonWidth = 40f;
+
+    [Min(0.05f)]
+    [Tooltip("Seconds the left mouse button is held on that button, filling the ring, to collapse or expand the popup.")]
+    [SerializeField] private float popupCollapseHoldSeconds = 0.3f;
+
+    [Tooltip("Colour of the icon box (the square the cube icon sits in) and of the collapse button.")]
+    [SerializeField] private Color popupBoxColor = new Color(0.14f, 0.17f, 0.26f, 1f);
 
     [Min(0f)]
     [Tooltip("How long (seconds) the left mouse button must be held on the popup, filling a small ring, before it can be moved and pinned. 0 = 0.5.")]
@@ -296,7 +312,11 @@ public class PixelAchievements : MonoBehaviour
     private float popupTimer;
     private Image popupImage;
     private RectTransform popupCanvasRect;
-    private bool popupPinned, popupPlacing;
+    private bool popupPinned, popupPlacing, popupCollapsed;
+    private float popupWidth;
+    private RectTransform popupButtonRect, popupTextRoot;
+    private TMP_Text popupArrow;
+    private const string PrefPopupCollapsed = "PixelClicker.Setting.AchievementPopupCollapsed";
     private Vector2 popupPinnedPos;
     private int popupPlaceFrame;
     private const string PrefPopupX = "PixelClicker.Setting.AchievementPopupX", PrefPopupY = "PixelClicker.Setting.AchievementPopupY";
@@ -701,42 +721,89 @@ public class PixelAchievements : MonoBehaviour
         popupImage = panel.GetComponent<Image>();
         popupImage.color = popupColor;
         popupImage.raycastTarget = true;   // the popup can be held and moved (and the click does not reach the cube behind it)
+        PixelUIKit.StyleBox(popupImage);
         popupGroup = panel.GetComponent<CanvasGroup>();
         popupGroup.blocksRaycasts = true;
 
         popupRect = panel.GetComponent<RectTransform>();
-        popupRect.anchorMin = popupRect.anchorMax = popupRect.pivot = new Vector2(0.5f, 0.5f);   // positions are measured from the middle of the screen
-        popupRect.sizeDelta = popupSize;
+        popupRect.anchorMin = popupRect.anchorMax = new Vector2(0.5f, 0.5f);
+        popupRect.pivot = new Vector2(0f, 0.5f);   // positions are the popup's LEFT edge, measured from the middle of the screen (so collapsing it does not move the icon)
+        popupCollapsed = PlayerPrefs.GetInt(PrefPopupCollapsed, 0) != 0;
+        popupWidth = popupCollapsed ? popupCollapsedWidth : popupExpandedSize.x;
+        popupRect.sizeDelta = new Vector2(popupWidth, popupExpandedSize.y);
         popupPinned = PlayerPrefs.HasKey(PrefPopupX) && PlayerPrefs.HasKey(PrefPopupY);
         popupPinnedPos = new Vector2(PlayerPrefs.GetFloat(PrefPopupX, 0f), PlayerPrefs.GetFloat(PrefPopupY, 0f));
         PositionPopup();
 
-        float iconSize = popupSize.y * 0.75f;
+        // The icon box: a dark rounded square on the left with the spinning cube in it.
+        float h = popupExpandedSize.y, boxSize = h - 30f;
+        GameObject iconBox = new GameObject("Icon Box", typeof(RectTransform), typeof(Image));
+        iconBox.transform.SetParent(panel.transform, false);
+        Image boxImage = iconBox.GetComponent<Image>();
+        boxImage.color = popupBoxColor;
+        boxImage.raycastTarget = false;
+        PixelUIKit.StyleBox(boxImage, true);
+        RectTransform br = iconBox.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0f, 0.5f);
+        br.sizeDelta = new Vector2(boxSize, boxSize);
+        br.anchoredPosition = new Vector2(15f, 0f);
+
         GameObject iconGo = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
-        iconGo.transform.SetParent(panel.transform, false);
+        iconGo.transform.SetParent(iconBox.transform, false);
         popupIcon = iconGo.AddComponent<PixelCubeIcon>();
         RectTransform ir = popupIcon.rectTransform;
-        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
-        ir.sizeDelta = new Vector2(iconSize, iconSize);
-        ir.anchoredPosition = new Vector2(popupSize.y * 0.15f, 0f);
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
+        ir.sizeDelta = new Vector2(boxSize * 0.78f, boxSize * 0.78f);
+        ir.anchoredPosition = Vector2.zero;
 
-        popupHeadingLabel = MakeText(panel.transform, "Heading", popupHeading, popupHeadingFontSize, FontStyles.Bold, popupHeadingColor);
+        // The collapse / expand button: thin, on the far right, full height (hold it for a moment).
+        GameObject button = new GameObject("Collapse Button", typeof(RectTransform), typeof(Image));
+        button.transform.SetParent(panel.transform, false);
+        Image buttonImage = button.GetComponent<Image>();
+        buttonImage.color = popupBoxColor;
+        buttonImage.raycastTarget = true;
+        PixelUIKit.StyleBox(buttonImage);
+        popupButtonRect = button.GetComponent<RectTransform>();
+        popupButtonRect.anchorMin = new Vector2(1f, 0f);
+        popupButtonRect.anchorMax = new Vector2(1f, 1f);
+        popupButtonRect.pivot = new Vector2(1f, 0.5f);
+        popupButtonRect.sizeDelta = new Vector2(popupButtonWidth, -30f);
+        popupButtonRect.anchoredPosition = new Vector2(-15f, 0f);
+        popupArrow = MakeText(button.transform, "Arrow", popupCollapsed ? ">" : "<", 40f, FontStyles.Bold, popupHeadingColor);
+        popupArrow.richText = false;   // (a lone < or > must not be read as a tag)
+        popupArrow.alignment = TextAlignmentOptions.Center;
+        popupArrow.raycastTarget = false;
+        PixelUIKit.Stretch(popupArrow.rectTransform);
+
+        // The heading and the name sit between the icon box and the button.
+        GameObject texts = new GameObject("Texts", typeof(RectTransform));
+        texts.transform.SetParent(panel.transform, false);
+        popupTextRoot = texts.GetComponent<RectTransform>();
+        popupTextRoot.anchorMin = Vector2.zero;
+        popupTextRoot.anchorMax = Vector2.one;
+        popupTextRoot.offsetMin = new Vector2(15f + boxSize + 18f, 0f);
+        popupTextRoot.offsetMax = new Vector2(-(15f + popupButtonWidth + 14f), 0f);
+
+        popupHeadingLabel = MakeText(texts.transform, "Heading", popupHeading, popupHeadingFontSize, FontStyles.Bold, popupHeadingColor);
+        popupHeadingLabel.raycastTarget = false;
         RectTransform hr = popupHeadingLabel.rectTransform;
         hr.anchorMin = new Vector2(0f, 0.55f);
         hr.anchorMax = new Vector2(1f, 1f);
-        hr.offsetMin = new Vector2(popupSize.y + 10f, 0f);
-        hr.offsetMax = new Vector2(-16f, -6f);
+        hr.offsetMin = Vector2.zero;
+        hr.offsetMax = new Vector2(0f, -10f);
 
-        popupTitleLabel = MakeText(panel.transform, "Title", "", popupTitleFontSize, FontStyles.Bold, Color.white);
+        popupTitleLabel = MakeText(texts.transform, "Title", "", popupTitleFontSize, FontStyles.Bold, Color.white);
+        popupTitleLabel.raycastTarget = false;
         RectTransform tr = popupTitleLabel.rectTransform;
         tr.anchorMin = new Vector2(0f, 0f);
         tr.anchorMax = new Vector2(1f, 0.58f);
-        tr.offsetMin = new Vector2(popupSize.y + 10f, 6f);
-        tr.offsetMax = new Vector2(-16f, 0f);
+        tr.offsetMin = new Vector2(0f, 10f);
+        tr.offsetMax = Vector2.zero;
         popupTitleLabel.enableAutoSizing = true;
         popupTitleLabel.fontSizeMax = popupTitleFontSize;
         popupTitleLabel.fontSizeMin = 14f;
 
+        popupTextRoot.gameObject.SetActive(!popupCollapsed);
         panel.SetActive(false);
     }
 
@@ -750,16 +817,17 @@ public class PixelAchievements : MonoBehaviour
         popupIcon.color = GetIconColor(index);
         if (!popupPlacing) popupTimer = popupSeconds;
         popupRect.gameObject.SetActive(true);
+        popupTextRoot.gameObject.SetActive(!popupCollapsed);
     }
 
-    /// <summary>The standard spot: centred on the screen, just above the combo meter. Positions are canvas units from the middle of the screen.</summary>
+    /// <summary>The standard spot: centred on the screen, just above the combo meter. Positions are the popup's left edge / middle height, in canvas units from the middle of the screen.</summary>
     private Vector2 DefaultPopupPosition()
     {
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         PixelCombo combo = PixelFind.First<PixelCombo>();
         float above = combo != null ? combo.MeterTopOffset : bar + 140f;   // from the bottom of the screen to the bottom of the popup
         float height = popupCanvasRect != null && popupCanvasRect.rect.height > 10f ? popupCanvasRect.rect.height : 1080f;
-        return new Vector2(0f, -height * 0.5f + above + popupSize.y * 0.5f);
+        return new Vector2(-popupWidth * 0.5f, -height * 0.5f + above + popupExpandedSize.y * 0.5f);
     }
 
     private Vector2 ClampToCanvas(Vector2 p)
@@ -767,8 +835,9 @@ public class PixelAchievements : MonoBehaviour
         if (popupCanvasRect == null) return p;
         Rect r = popupCanvasRect.rect;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        float hx = Mathf.Max(0f, r.width * 0.5f - popupSize.x * 0.5f), hy = Mathf.Max(0f, r.height * 0.5f - bar - popupSize.y * 0.5f);   // (inside the black margins)
-        return new Vector2(Mathf.Clamp(p.x, -hx, hx), Mathf.Clamp(p.y, -hy, hy));
+        float minX = -r.width * 0.5f, maxX = Mathf.Max(minX, r.width * 0.5f - popupWidth);
+        float hy = Mathf.Max(0f, r.height * 0.5f - bar - popupExpandedSize.y * 0.5f);   // (inside the black margins)
+        return new Vector2(Mathf.Clamp(p.x, minX, maxX), Mathf.Clamp(p.y, -hy, hy));
     }
 
     private void PositionPopup()
@@ -776,25 +845,62 @@ public class PixelAchievements : MonoBehaviour
         if (popupRect != null) popupRect.anchoredPosition = popupPinned ? ClampToCanvas(popupPinnedPos) : DefaultPopupPosition();
     }
 
+    /// <summary>Settings > 'Reset achievement popup position': forgets the pin, the popup goes back to the middle above the combo meter.</summary>
+    public void ResetPopupPin()
+    {
+        popupPinned = false;
+        PlayerPrefs.DeleteKey(PrefPopupX);
+        PlayerPrefs.DeleteKey(PrefPopupY);
+        PositionPopup();
+    }
+
+    private void SetCollapsed(bool collapsed)
+    {
+        popupCollapsed = collapsed;
+        PlayerPrefs.SetInt(PrefPopupCollapsed, collapsed ? 1 : 0);
+        if (popupArrow != null) popupArrow.text = collapsed ? ">" : "<";
+        PixelAudio.Play("ui_click");
+    }
+
     private void TickPopup()
     {
         if (popupRect == null || !popupRect.gameObject.activeSelf) return;
         if (PixelPauseMenu.IsPaused) return;
 
+        // The width eases between the open and the collapsed size; the texts show only while it is open enough for them.
+        float targetWidth = popupCollapsed ? popupCollapsedWidth : popupExpandedSize.x;
+        popupWidth = Mathf.Lerp(popupWidth, targetWidth, 1f - Mathf.Exp(-18f * Time.unscaledDeltaTime));
+        if (Mathf.Abs(popupWidth - targetWidth) < 0.5f) popupWidth = targetWidth;
+        popupRect.sizeDelta = new Vector2(popupWidth, popupExpandedSize.y);
+        bool textsOn = !popupCollapsed && popupWidth > popupCollapsedWidth + 220f;
+        if (popupTextRoot.gameObject.activeSelf != textsOn) popupTextRoot.gameObject.SetActive(textsOn);
+        if (!popupPinned && !popupPlacing) PositionPopup();   // (the default spot is centred: it follows the width)
+        else if (!popupPlacing) popupRect.anchoredPosition = ClampToCanvas(popupPinnedPos);
+
         if (popupPlacing) { TickPlacing(); return; }
 
-        // Hold the left mouse button on the popup for a moment (a small ring fills round the cursor) and it can be moved and pinned anywhere.
+        // Hold the left mouse button for a moment (a small ring fills round the cursor): on the thin button at the right it collapses / expands the popup,
+        // anywhere else on the popup it can be moved and pinned.
         Vector2 pointer = PixelInput.PointerPosition();
         bool over = popupGroup.alpha > 0.2f && RectTransformUtility.RectangleContainsScreenPoint(popupRect, pointer, null);
-        if (PixelHold.Update(this, over ? popupRect : null, popupHoldSeconds > 0f ? popupHoldSeconds : 0.5f, "", popupRingColor, true, null, true))
+        bool overButton = over && RectTransformUtility.RectangleContainsScreenPoint(popupButtonRect, pointer, null);
+        RectTransform target = overButton ? popupButtonRect : over ? popupRect : null;
+        float seconds = overButton ? popupCollapseHoldSeconds : (popupHoldSeconds > 0f ? popupHoldSeconds : 0.5f);
+        if (PixelHold.Update(this, target, seconds, "", popupRingColor, true, null, true))
         {
-            popupPlacing = true;
-            popupPlaceFrame = Time.frameCount;
-            popupGroup.alpha = 1f;
-            popupHeadingLabel.text = popupPlaceText;
+            if (target == popupButtonRect) SetCollapsed(!popupCollapsed);
+            else
+            {
+                popupPlacing = true;
+                popupPlaceFrame = Time.frameCount;
+                popupGroup.alpha = 1f;
+                popupHeadingLabel.text = popupPlaceText;
+                popupTextRoot.gameObject.SetActive(true);
+            }
+            popupTimer = Mathf.Max(popupTimer, 1.5f);
             return;
         }
-        if (over || PixelHold.ProgressOf(popupRect) > 0f) popupTimer = Mathf.Max(popupTimer, Mathf.Min(1f, popupSeconds));   // it stays while the mouse is on it
+        if (over || PixelHold.ProgressOf(popupRect) > 0f || PixelHold.ProgressOf(popupButtonRect) > 0f) popupTimer = Mathf.Max(popupTimer, Mathf.Min(1f, popupSeconds));   // it stays while the mouse is on it
 
         popupTimer -= Time.unscaledDeltaTime;
         popupGroup.alpha = Mathf.Clamp01(popupTimer / Mathf.Min(1f, popupSeconds));
@@ -805,7 +911,7 @@ public class PixelAchievements : MonoBehaviour
     private void TickPlacing()
     {
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(popupCanvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
-            popupRect.anchoredPosition = ClampToCanvas(local);
+            popupRect.anchoredPosition = ClampToCanvas(local - new Vector2(popupWidth * 0.5f, 0f));   // (centred on the mouse)
         popupImage.color = Color.Lerp(popupColor, new Color(0.35f, 0.3f, 0.1f, 0.98f), 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f));
 
         bool place = PixelInput.LeftPressed() && Time.frameCount > popupPlaceFrame + 1;
@@ -820,12 +926,7 @@ public class PixelAchievements : MonoBehaviour
             PlayerPrefs.SetFloat(PrefPopupY, popupPinnedPos.y);
             PixelAudio.Play("ui_click");
         }
-        else
-        {
-            popupPinned = false;
-            PlayerPrefs.DeleteKey(PrefPopupX);
-            PlayerPrefs.DeleteKey(PrefPopupY);
-        }
+        else ResetPopupPin();
         popupPlacing = false;
         popupImage.color = popupColor;
         popupHeadingLabel.text = popupHeading;

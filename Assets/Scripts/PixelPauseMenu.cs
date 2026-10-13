@@ -272,6 +272,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
     [Tooltip("Label of the small button in the Save / Load window that opens the list of autosaves.")]
     [SerializeField] private string autosavesText = "Autosaves";
+    [Tooltip("Label of the Settings button that puts the achievement popup back to its default spot (the middle, above the combo meter).")]
+    [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
@@ -2309,6 +2311,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
         AddChoiceRow(list, clickFxLabel, PixelBasicFx.LevelNames, () => PixelBasicFx.Level, v => PixelBasicFx.Level = v, ref y);
         AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
+        AddWideButtonRow(list, resetPopupPinText, () => { PixelAchievements ach = PixelFind.First<PixelAchievements>(); if (ach != null) ach.ResetPopupPin(); }, ref y);
         AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
