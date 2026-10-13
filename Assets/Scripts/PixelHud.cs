@@ -420,8 +420,7 @@ public class PixelHud : MonoBehaviour
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
         dock.Setup(this, button, anchor, keepOut, sideOffsetY, (ButtonSize.x - button.sizeDelta.x) * 0.5f, 0f, cornerOffset);
-        if (button.GetComponent<PixelDockFx>() == null) button.gameObject.AddComponent<PixelDockFx>();
-        PixelMenuFx.DecorateHud(button.GetComponent<Button>());   // the shine on hover   // the button materializes out of pixels when it slides out (a toggle in Settings)
+        PixelMenuFx.DecorateHud(button.GetComponent<Button>());   // the shine on hover
     }
 
     /// <summary>

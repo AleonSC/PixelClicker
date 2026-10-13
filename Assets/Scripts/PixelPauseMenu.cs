@@ -272,8 +272,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
-    [Tooltip("Label of the pixel-assemble menu buttons tick box in Settings.")]
-    [SerializeField] private string fancyHudLabel = "Pixel-assemble menu buttons";
+    [Tooltip("Label of the custom UI button colour tick box in Settings (the eyedropper beside it picks the colour).")]
+    [SerializeField] private string buttonColorLabel = "Custom UI button colour";
     [Tooltip("Label of the UI click sounds tick box (Settings > Audio).")]
     [SerializeField] private string uiClicksLabel = "UI click sounds";
     [Tooltip("Label of the fancy pause menu tick box in Settings (off = the classic menu).")]
@@ -2408,7 +2408,9 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, nextUpLabel, () => PixelNextUp.Enabled, on => PixelNextUp.Enabled = on, ref y);
         AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
         AddSettingToggle(list, fancyMenuLabel, () => PixelMenuFx.Enabled, on => PixelMenuFx.Enabled = on, ref y);
-        AddSettingToggle(list, fancyHudLabel, () => PixelMenuFx.HudEnabled, on => PixelMenuFx.HudEnabled = on, ref y);
+        Toggle buttonColorToggle = AddToggleRow(list, buttonColorLabel, PixelUIKit.ButtonColorOn, on => PixelUIKit.ButtonColorOn = on, ref y);
+        settingsRefreshers.Add(() => buttonColorToggle.SetIsOnWithoutNotify(PixelUIKit.ButtonColorOn));
+        AddEyedropperButton(buttonColorToggle, () => PixelEyedropper.Begin(c => { PixelUIKit.SetButtonColorFromColor(c); settingsRefreshersRun(); }));   // pick the buttons' colour from anywhere on screen
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddDropdownRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
         Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);

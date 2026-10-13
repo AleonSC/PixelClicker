@@ -11,7 +11,6 @@
 //   * The SETTINGS and STATS screens get the lighter button animation (PixelMenuFx.DecorateAll: brighten, shine, press; no scaling inside scroll lists).
 //   * The docked HUD buttons also get the light animation WITH the idle shine (DecorateHud), and the SHOP gets the same treatment (its buttons, a glow behind the panel and the sliding title line; PixelShop.BuildPanel / CreateButton).
 //   * PixelQuitFx: the Quit to... box darkens the screen and pours flickering red neon light round the window (PixelPauseMenu.BuildQuitPanel).
-//   * PixelDockFx on every docked HUD button (PixelHud.Dock / DockInGroup): the button MATERIALIZES out of pixels each time it slides out (own toggle: 'Pixel-assemble menu buttons', PixelMenuFx.HudEnabled, PlayerPrefs PixelClicker.Setting.FancyHud).
 //   Everything runs on unscaled time (the game is paused while the menu shows).
 // ---------------------------------------------------
 using UnityEngine;
@@ -33,19 +32,9 @@ public static class PixelMenuFx
         set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
     }
 
-    private const string HudPref = "PixelClicker.Setting.FancyHud";
-    private static int hudCache = -1;
+    public static void ReloadFromPrefs() { cache = -1; }
 
-    /// <summary>Settings > Interface > 'Pixel-assemble menu buttons': the docked HUD buttons materialize out of pixels (PixelDockFx). On by default.</summary>
-    public static bool HudEnabled
-    {
-        get { if (hudCache < 0) hudCache = PlayerPrefs.GetInt(HudPref, 1); return hudCache != 0; }
-        set { hudCache = value ? 1 : 0; PlayerPrefs.SetInt(HudPref, hudCache); PlayerPrefs.Save(); }
-    }
-
-    public static void ReloadFromPrefs() { cache = -1; hudCache = -1; }
-
-    /// <summary>The light animation for one docked HUD button (brighten, shine on hover, press); it follows the 'Pixel-assemble menu buttons' setting.</summary>
+    /// <summary>The light animation for one docked HUD button (brighten, shine on hover, press); (the shine, hover and press).</summary>
     public static void DecorateHud(Button button)
     {
         if (button == null || button.GetComponent<PixelFancyButton>() != null || button.GetComponent<Image>() == null) return;
@@ -313,128 +302,6 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     public void OnPointerExit(PointerEventData d) { hover = false; press = false; }
     public void OnPointerDown(PointerEventData d) { press = true; }
     public void OnPointerUp(PointerEventData d) { press = false; pressUntil = Time.unscaledTime + 0.18f; }
-}
-
-/// <summary>
-/// The docked HUD buttons (Inventory, Shop, Log, Crafting...) MATERIALIZE out of pixels when they slide out: a grid of little squares flies in from the screen edge, settles into the
-/// button's shape and fades while the button itself fades in. Triggered when the button slides out (SlideAmount passes 0.18) and when it first shows. Toggle: PixelMenuFx.HudEnabled.
-/// </summary>
-public class PixelDockFx : MonoBehaviour
-{
-    private const int Cols = 12, Rows = 3;
-    private const float Total = 0.62f;
-
-    private PixelDockedButton dock;
-    private RectTransform rect, container;
-    private CanvasGroup group;
-    private Image buttonImage;
-    private RectTransform[] cells;
-    private Image[] cellImages;
-    private float[] delay, jitterX, jitterY;
-    private float t = 99f, lastStart = -9f;
-    private bool wasVisible, alphaTouched;
-    private Vector2 fromDir = new Vector2(-1f, 0f);
-
-    private void Awake()
-    {
-        dock = GetComponent<PixelDockedButton>();
-        rect = GetComponent<RectTransform>();
-        buttonImage = GetComponent<Image>();
-    }
-
-    private void OnEnable() { wasVisible = false; }
-
-    private void OnDisable() { if (container != null) container.gameObject.SetActive(false); ResetAlpha(); }
-
-    private void ResetAlpha() { if (alphaTouched && group != null) { group.alpha = 1f; alphaTouched = false; } }
-
-    private void Build()
-    {
-        if (container != null || rect == null || rect.parent == null) return;
-        GameObject c = new GameObject("Pixel FX", typeof(RectTransform));
-        c.transform.SetParent(rect.parent, false);
-        container = c.GetComponent<RectTransform>();
-        container.anchorMin = rect.anchorMin; container.anchorMax = rect.anchorMax; container.pivot = rect.pivot;
-        cells = new RectTransform[Cols * Rows];
-        cellImages = new Image[Cols * Rows];
-        delay = new float[Cols * Rows]; jitterX = new float[Cols * Rows]; jitterY = new float[Cols * Rows];
-        for (int i = 0; i < cells.Length; i++)
-        {
-            GameObject g = new GameObject("Pixel", typeof(RectTransform), typeof(Image));
-            g.transform.SetParent(container, false);
-            cellImages[i] = g.GetComponent<Image>();
-            cellImages[i].raycastTarget = false;
-            cells[i] = g.GetComponent<RectTransform>();
-            cells[i].anchorMin = cells[i].anchorMax = rect.pivot;   // measured from the container's PIVOT (the docked button's corner / edge point), not its centre
-            cells[i].pivot = new Vector2(0.5f, 0.5f);
-        }
-        group = gameObject.GetComponent<CanvasGroup>();
-        if (group == null) group = gameObject.AddComponent<CanvasGroup>();
-    }
-
-    private void StartAssemble()
-    {
-        Build();
-        if (container == null) return;
-        t = 0f;
-        lastStart = Time.unscaledTime;
-        container.SetAsLastSibling();
-        container.gameObject.SetActive(true);
-        Vector2 anchor = rect.anchorMin;
-        fromDir = new Vector2(anchor.x < 0.25f ? -1f : anchor.x > 0.75f ? 1f : 0f, anchor.y > 0.75f ? 1f : anchor.y < 0.25f ? -1f : 0f);
-        if (fromDir == Vector2.zero) fromDir = Vector2.left;
-        Color baseCol = buttonImage != null ? buttonImage.color : Color.white;
-        for (int i = 0; i < cells.Length; i++)
-        {
-            int col = i % Cols;
-            delay[i] = Random.value * 0.3f + (fromDir.x != 0f ? (fromDir.x < 0f ? col : Cols - 1 - col) / (float)Cols * 0.1f : 0f);
-            jitterX[i] = Random.Range(-60f, 60f); jitterY[i] = Random.Range(-50f, 50f);
-            Color c = Random.value < 0.18f ? Color.Lerp(baseCol, Color.white, 0.45f) : baseCol * Random.Range(0.78f, 1.12f);   // mostly the button's own colour, a few light ones
-            c.a = 1f;
-            cellImages[i].color = c;
-        }
-    }
-
-    private void LateUpdate()
-    {
-        if (dock == null) return;
-        if (!PixelMenuFx.HudEnabled)
-        {
-            if (container != null && container.gameObject.activeSelf) container.gameObject.SetActive(false);
-            ResetAlpha();
-            return;
-        }
-        bool visible = dock.SlideAmount >= 0.18f;
-        if (visible && !wasVisible && Time.unscaledTime - lastStart > 0.8f) StartAssemble();
-        wasVisible = visible;
-        if (container == null || t > Total) { if (t > Total) { ResetAlpha(); if (container != null && container.gameObject.activeSelf) container.gameObject.SetActive(false); } return; }
-
-        t += Time.unscaledDeltaTime;
-        float u = Mathf.Clamp01(t / Total);
-        // The container follows the button (which slides about).
-        container.anchoredPosition = rect.anchoredPosition;
-        container.sizeDelta = rect.sizeDelta;
-        container.localScale = rect.localScale;
-        float w = rect.rect.width, h = rect.rect.height;
-        float cw = w / Cols, ch = h / Rows;
-        for (int i = 0; i < cells.Length; i++)
-        {
-            int col = i % Cols, row = i / Cols;
-            float local = Mathf.Clamp01((u - delay[i]) / 0.55f);
-            float ease = 1f - (1f - local) * (1f - local) * (1f - local);
-            Vector2 target = new Vector2((col + 0.5f) * cw - rect.pivot.x * w, (row + 0.5f) * ch - rect.pivot.y * h);
-            Vector2 start = target + fromDir * (90f + Mathf.Abs(jitterX[i])) + new Vector2(jitterX[i] * 0.4f, jitterY[i]);
-            cells[i].anchoredPosition = Vector2.Lerp(start, target, ease);
-            float size = Mathf.Lerp(0.3f, 1f, ease);
-            cells[i].sizeDelta = new Vector2(cw + 1f, ch + 1f) * size;
-            Color c = cellImages[i].color;
-            c.a = (local <= 0f ? 0f : Mathf.Clamp01(local * 3f)) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((u - 0.62f) / 0.38f)));
-            cellImages[i].color = c;
-        }
-        group.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((u - 0.3f) / 0.5f));
-        alphaTouched = true;
-        if (u >= 1f) { group.alpha = 1f; alphaTouched = false; container.gameObject.SetActive(false); }
-    }
 }
 
 /// <summary>Soft pixel motes drifting up behind the pause menu + a vignette.</summary>

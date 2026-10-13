@@ -192,7 +192,7 @@ public static class PixelUIKit
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetWindowStatics() { uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
+    private static void ResetWindowStatics() { buttonImages.Clear(); buttonColorCache = -1; buttonHueCache = -1f; buttonSatCache = -1f; uiColorCache = -1; uiHueCache = -1f; uiSatCache = -1f; windowSprites.Clear(); windowImages.Clear(); }
 
     /// <summary>A window colour with the player's UI hue applied (dark colours stay dark but pick up a clear tint).</summary>
     public static Color Tinted(Color c)
@@ -331,6 +331,72 @@ public static class PixelUIKit
         if (image == null) return;
         image.sprite = ButtonSprite();
         image.type = Image.Type.Sliced;
+        Color baseColor = image.color;
+        Color applied = ButtonTinted(baseColor);
+        if (ButtonColorOn) image.color = applied;
+        buttonImages.Add(new ButtonEntry { image = image, baseColor = baseColor, applied = applied });
+        if (buttonImages.Count > 600) buttonImages.RemoveAll(e => e.image == null);
+    }
+
+    // ---- the player's own button colour (Settings > 'Custom UI button colour') ----
+
+    private const string PrefButtonColor = "PixelClicker.Setting.UiButtonColor", PrefButtonHue = "PixelClicker.Setting.UiButtonHue", PrefButtonSat = "PixelClicker.Setting.UiButtonSat";
+    private static int buttonColorCache = -1;
+    private static float buttonHueCache = -1f, buttonSatCache = -1f;
+    private struct ButtonEntry { public Image image; public Color baseColor, applied; }
+    private static readonly System.Collections.Generic.List<ButtonEntry> buttonImages = new System.Collections.Generic.List<ButtonEntry>();
+
+    /// <summary>Use the player's own colour for the (neutral) buttons. Off by default. Coloured buttons (red Quit, green confirm...) keep their meaning colour. Applies to every button at once.</summary>
+    public static bool ButtonColorOn
+    {
+        get { if (buttonColorCache < 0) buttonColorCache = PlayerPrefs.GetInt(PrefButtonColor, 0); return buttonColorCache != 0; }
+        set { buttonColorCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefButtonColor, buttonColorCache); RefreshButtons(); }
+    }
+
+    private static float ButtonHue { get { if (buttonHueCache < 0f) buttonHueCache = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefButtonHue, 0.6f)); return buttonHueCache; } }
+    private static float ButtonSat { get { if (buttonSatCache < 0f) buttonSatCache = Mathf.Clamp(PlayerPrefs.GetFloat(PrefButtonSat, 0.55f), 0.2f, 1f); return buttonSatCache; } }
+
+    /// <summary>Makes the buttons take on the colour of 'c' (hue and how colourful it is) and switches the custom button colour on. Used by the eyedropper in Settings.</summary>
+    public static void SetButtonColorFromColor(Color c)
+    {
+        Color.RGBToHSV(c, out float h, out float s, out _);
+        buttonHueCache = Mathf.Clamp01(h);
+        buttonSatCache = Mathf.Clamp(s, 0.2f, 1f);
+        buttonColorCache = 1;
+        PlayerPrefs.SetFloat(PrefButtonHue, buttonHueCache);
+        PlayerPrefs.SetFloat(PrefButtonSat, buttonSatCache);
+        PlayerPrefs.SetInt(PrefButtonColor, 1);
+        PlayerPrefs.Save();
+        RefreshButtons();
+    }
+
+    public static void ReloadButtonColorFromPrefs() { buttonColorCache = -1; buttonHueCache = -1f; buttonSatCache = -1f; RefreshButtons(); }
+
+    /// <summary>A button colour with the player's hue applied; strongly coloured buttons are left alone.</summary>
+    private static Color ButtonTinted(Color c)
+    {
+        if (!ButtonColorOn) return c;
+        Color.RGBToHSV(c, out _, out float s, out float v);
+        if (s > 0.45f) return c;
+        Color o = Color.HSVToRGB(ButtonHue, Mathf.Max(s, ButtonSat), Mathf.Min(1f, v * 1.5f + 0.05f));
+        o.a = c.a;
+        return o;
+    }
+
+    private static bool Near(Color a, Color b) => Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) < 0.02f;
+
+    /// <summary>Recolours every button that has been built (after the setting changed). A button whose colour something else changed meanwhile (a selected row) is left alone.</summary>
+    public static void RefreshButtons()
+    {
+        for (int i = buttonImages.Count - 1; i >= 0; i--)
+        {
+            ButtonEntry e = buttonImages[i];
+            if (e.image == null) { buttonImages.RemoveAt(i); continue; }
+            Color target = ButtonTinted(e.baseColor);
+            if (Near(e.image.color, e.applied)) { Color c = target; c.a = e.image.color.a; e.image.color = c; }
+            e.applied = target;
+            buttonImages[i] = e;
+        }
     }
 
     private static Sprite ButtonSprite()

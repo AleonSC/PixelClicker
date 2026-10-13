@@ -819,3 +819,4 @@
 [2026-10-13 16:16] Save slots: hold the right mouse button on a slot that has a save (ring fills, about 1.4 s) to delete that save; the hover box says so.
 [2026-10-13 16:18] Spawn safety net: a block that is locked or belongs to a skill that is not in play is re-rolled (with a console warning naming it), after a Bait block showed up in the monochrome stage.
 [2026-10-13 16:28] To-do: added the machine jams / Cubie sends you to first person idea.
+[2026-10-13 16:31] Removed the pixel-assemble menu button effect and its Settings tick box; added a 'Custom UI button colour' tick box with an eyedropper that recolours the neutral buttons.
