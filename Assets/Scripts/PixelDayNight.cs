@@ -3,7 +3,7 @@
 //   Day / night cycle (added by PixelClicker.Awake; disableDayNight): TimeOfDay 0..1 (0 midnight, 0.5 noon; a new game starts at 0.38)
 //   advances with SCALED time (stops while paused / Time Stop) over LengthMinutes (Settings > Interface 'Length of a day': 4 / 8 / 15
 //   / 30, default 8; switch 'Day / night cycle', default on; PlayerPrefs PixelClicker.Setting.DayNight / DayNightLength, per save) and
-//   drives the scene's sun (RenderSettings.sun or the first directional light: pitch / yaw swing sunSweepDegrees 140, warm near the
+//   drives the scene's sun (RenderSettings.sun or the first directional light: it rises on one side of the scene, passes OVERHEAD at noon and sets on the other (an arc in the vertical plane turned by the scene sun's own yaw, sunLean 0 = 0.18 tilts it a little); the moon takes the same arc back, a bit lower; warm near the
 //   horizon, moonColor at night, intensity down to minSunIntensity 0.3), the ambient light (minAmbient 0.55) and the sky material's
 //   _Tint / _SkyTint (nightSkyColor, duskSkyColor); everything is restored when switched off. Night never goes fully dark.
 //   PixelDayNight.Level (0 night .. 1 day) is there for other systems (not used yet). The time of day is the saved stat counter
@@ -37,8 +37,8 @@ public class PixelDayNight : MonoBehaviour
     [SerializeField] private float minAmbient = 0f;
 
     [Min(0f)]
-    [Tooltip("How far (degrees) the sun swings round the scene from sunrise to sunset. 0 = the coded default (140).")]
-    [SerializeField] private float sunSweepDegrees = 0f;
+    [Tooltip("How far the sun's path leans to one side, so noon shadows are not dead straight (0 = straight overhead, 1 = leaning as far as it is high). 0 = the coded default (0.18).")]
+    [SerializeField] private float sunLean = 0f;
 
     [Tooltip("Colour multiplier of the sky at night (0.5 grey sky tint x this).")]
     [SerializeField] private Color nightSkyColor = new Color(0.4f, 0.45f, 0.85f, 1f);
@@ -158,10 +158,12 @@ public class PixelDayNight : MonoBehaviour
         float dusk = Mathf.Clamp01(1f - Mathf.Abs(s) / 0.35f);
         Level = day;
 
-        // Sun: swings across the scene, warm near the horizon, moonlight at night.
-        float sweep = sunSweepDegrees > 0f ? sunSweepDegrees : 140f;
-        float pitch = s >= 0f ? Mathf.Lerp(8f, 68f, s) : 38f;
-        sun.transform.rotation = Quaternion.Euler(pitch, baseYaw + (TimeOfDay - 0.5f) * sweep, 0f);
+        // Sun: climbs from one horizon, passes OVERHEAD at noon and sets on the other side; the moon takes the same arc back (a little lower). Warm near the horizon, moonlight at night.
+        float phase = Mathf.Repeat(TimeOfDay - 0.25f, 1f);            // 0 sunrise .. 0.5 sunset .. 1 next sunrise
+        bool daytime = phase < 0.5f;
+        float arc = (daytime ? phase : phase - 0.5f) * Mathf.PI * 2f;   // 0..pi along the arc
+        Vector3 toSun = new Vector3((daytime ? -1f : 1f) * Mathf.Cos(arc), 0.14f + (daytime ? 1.03f : 0.8f) * Mathf.Sin(arc), sunLean > 0f ? sunLean : 0.18f).normalized;   // (never below the horizon: no light from underneath)
+        sun.transform.rotation = Quaternion.Euler(0f, baseYaw, 0f) * Quaternion.LookRotation(-toSun, Vector3.up);
         Color sunColor = Color.Lerp(moonColor, baseSunColor, day);
         sunColor = Color.Lerp(sunColor, duskSunColor, dusk * 0.7f);
         sun.color = sunColor;

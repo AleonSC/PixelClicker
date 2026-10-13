@@ -453,9 +453,9 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Black, metallic = 0.15f, smoothness = 0.85f, useColor = true, color = new Color(0.1f, 0.1f, 0.12f, 1f), basicSurface = PixelLook.BasicSurface.Sheen, },
 
             // Red, green and blue: a faint pixel-art mosaic and a lighter rim in their own colour; with the colour-blind setting on they also get a shape on every face.
-            new PixelLook { type = PixelClicker.PixelType.Red, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic, },
-            new PixelLook { type = PixelClicker.PixelType.Green, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic, },
-            new PixelLook { type = PixelClicker.PixelType.Blue, metallic = 0.1f, smoothness = 0.6f, emission = 0.12f, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic, },
+            new PixelLook { type = PixelClicker.PixelType.Red, metallic = 0.1f, smoothness = 0.6f, emission = 0f, colorBlindSides = 3, colorBlindRotation = 90f, basicSurface = PixelLook.BasicSurface.Mosaic, },
+            new PixelLook { type = PixelClicker.PixelType.Green, metallic = 0.1f, smoothness = 0.6f, emission = 0f, colorBlindSides = 4, colorBlindRotation = 45f, basicSurface = PixelLook.BasicSurface.Mosaic, },
+            new PixelLook { type = PixelClicker.PixelType.Blue, metallic = 0.1f, smoothness = 0.6f, emission = 0f, colorBlindSides = 32, basicSurface = PixelLook.BasicSurface.Mosaic, },
 
             // Vacuum: a clear lavender glass container with one round opening and a suction wind curling into it.
             new PixelLook { type = PixelClicker.PixelType.Vacuum, useColor = true, color = new Color(0.62f, 0.5f, 0.95f, 0.2f),
@@ -626,9 +626,11 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Water, useColor = true, color = new Color(0.25f, 0.6f, 1f, 0.5f),
                             forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.25f, wobble = true, splash = true, farmFx = PixelLook.FarmAmbient.Dew },
 
-            // Mirror: polished chrome that reflects the sky.
+            // Mirror: polished chrome. The reflection is PAINTED into the texture (chromeTexture) and the glint is the Shine overlay, so it does not lean on the scene's
+            // reflection probe (a build has no auto-updated one: a high metallic value turned the cube dark there) or on emission (stripped from builds, and it only
+            // made the build-proof glow shell wash over the chrome).
             new PixelLook { type = PixelClicker.PixelType.Mirror, useColor = true, color = Color.white,
-                            metallic = 0.7f, smoothness = 0.95f, emission = 0.3f, chromeTexture = true, shine = true },
+                            metallic = 0.15f, smoothness = 0.8f, emission = 0f, chromeTexture = true, shine = true },
 
             // Dragon Cubes 1-7: glassy orange cubes with 1-7 dark orange small cubes inside, like dragon balls.
             DragonCubeLook(PixelClicker.PixelType.DragonCube1, 1),

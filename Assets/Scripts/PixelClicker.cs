@@ -404,7 +404,7 @@ public partial class PixelClicker : MonoBehaviour
     [SerializeField] private PixelLook[] looks = PixelLooks.CreateDefaults();
 
     [Min(0f)]
-    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container; 39 = Ghost gel blob
+    [SerializeField, HideInInspector] private int looksVersion; // 1 = White/Gray/Black got a custom look; 2 = removed again; 3 = RGB outlines removed too; 4 = Vacuum look added; 5 = Obsidian look added; 6 = Ghost look added; 7 = RGB colour-blind marks; 8 = Singularity gravity well; 9 = Electric look added; 10 = Dragon Cube looks added; 17 = basic pixels got a subtle surface + rim; 18 = their rims became shades of their own colour; 19 = flat solid bevel instead of neon; 20 = Obsidian / Seed got the bevel too; 21 = basic pixels got metallic / smoothness / emission; 22 = Vacuum vortex marks + violet rim; 23 = RGB lost their rim, Gray rim darker; 24 = Black / Gray lost their rim, Obsidian rim darker; 25 = Fire + ore looks added; 26 = Treasure chest look added; 27 = Nuclear look added; 35 = Meteor / Solar looks; 36 = rocky pixels jagged, no outlines; 38 = Vacuum glass container; 39 = Ghost gel blob; 49 = RGB lost their faint emission, Mirror no longer leans on reflections / emission
 
     [Tooltip("Shattering pixels (see Looks): how hard they must hit the ground to break.")]
     [SerializeField] private float shatterMinSpeed = 2f;
@@ -1770,6 +1770,22 @@ public partial class PixelClicker : MonoBehaviour
             }
             looks = list48.ToArray();
             looksVersion = 48;
+        }
+
+        if (looksVersion < 49)
+        {
+            // Red / Green / Blue lost their faint emission (it made them glow: a build-proof glow shell and halo are drawn for anything emissive) and the Mirror stopped leaning on
+            // reflections and emission (it came out dark / washed in a build).
+            PixelLook[] defaults49 = PixelLooks.CreateDefaults();
+            if (looks != null)
+                foreach (PixelType t in new[] { PixelType.Red, PixelType.Green, PixelType.Blue, PixelType.Mirror })
+                {
+                    PixelLook saved = PixelLooks.Find(looks, t), def = PixelLooks.Find(defaults49, t);
+                    if (saved == null || def == null) continue;
+                    saved.emission = def.emission;
+                    if (t == PixelType.Mirror) { saved.metallic = def.metallic; saved.smoothness = def.smoothness; }
+                }
+            looksVersion = 49;
         }
 
         if (pixelRenderer != null)
