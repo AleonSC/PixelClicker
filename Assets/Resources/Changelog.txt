@@ -756,3 +756,4 @@
 [2026-10-13 09:15 UTC] Screen filters: an editor script now adds a PIXEL_URP define when the URP package is installed (UNITY_PIPELINE_URP was not defined in the game scripts), so the CRT bulge / grain / colour grading can turn on.
 [2026-10-13 09:23 UTC] Screen filters: added a real CRT screen warp (a shader copies the finished frame, UI included, and draws it back with a barrel warp, rounded glass corners, scanlines and colour fringing, plus a software mouse cursor that sits on the warped picture) for CRT TV, VHS and Night Vision.
 [2026-10-13 09:25 UTC] Fixed the CRT warp shader (a reserved word and a texture sample inside a branch made it fail to compile and show a purple screen).
+[2026-10-13 09:28 UTC] CRT warp: the picture is no longer upside down (flip follows the graphics API), it zooms in slightly so the corners are not cut so hard, and the glass edges are anti-aliased.

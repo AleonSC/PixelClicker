@@ -71,7 +71,7 @@ public class PixelFilters : MonoBehaviour
     [Min(0.1f)]
     [Tooltip("Seconds between checks that every camera has post-processing switched on.")]
     [SerializeField] private float cameraCheckSeconds = 1.5f;
-    [Tooltip("Tick this if the warped picture comes out upside down (it depends on the graphics API).")]
+    [Tooltip("The captured picture is flipped on most graphics APIs (Direct3D, Metal, Vulkan) and the warp corrects that by itself. Tick this to flip it the other way if it still comes out upside down.")]
     [SerializeField] private bool flipVertical = false;
     [Tooltip("Size of the software mouse cursor drawn while a warping filter is on (pixels).")]
     [SerializeField] private float cursorSize = 28f;
@@ -335,12 +335,14 @@ public class PixelFilters : MonoBehaviour
             warpMaterial.SetFloat("_Bright", Mathf.Lerp(1f, p.shaderBright, k));
             warpMaterial.SetFloat("_Flicker", p.shaderFlicker * k);
             warpMaterial.SetFloat("_TimeV", Time.unscaledTime);
-            warpMaterial.SetFloat("_Flip", flipVertical ? 1f : 0f);
+            bool flip = SystemInfo.graphicsUVStartsAtTop != flipVertical;
+            warpMaterial.SetFloat("_Flip", flip ? 1f : 0f);
+            warpMaterial.SetFloat("_Zoom", ZoomFor(p.warp * k));
             warpMaterial.SetVector("_Res", new Vector4(w, h, 0f, 0f));
 
             // The real pointer is a point of the UNWARPED picture; the warped picture shows that point at InverseWarp(point), so the cursor is drawn there.
             Vector2 pointer = PixelInput.PointerPosition();
-            Vector2 shown = InverseWarp(new Vector2(pointer.x / w, pointer.y / h), p.warp * k);
+            Vector2 shown = InverseWarp(new Vector2(pointer.x / w, pointer.y / h), p.warp * k);   // (the zoom is part of the warp)
             bool inWindow = pointer.x >= 0f && pointer.y >= 0f && pointer.x <= w && pointer.y <= h;
             warpMaterial.SetVector("_Cursor", new Vector4(shown.x * w, shown.y * h, cursorSize, inWindow ? 1f : 0f));
             if (!cursorHidden) { cursorWasVisible = Cursor.visible; cursorHidden = true; }
@@ -350,10 +352,13 @@ public class PixelFilters : MonoBehaviour
         }
     }
 
+    /// <summary>The picture is zoomed in a little so the curved edges crop the content instead of leaving big black corners (a CRT's overscan).</summary>
+    private static float ZoomFor(float k) => 1f / (1f + k * 0.65f);
+
     /// <summary>Where the warped picture shows the point 's' (0..1 of the unwarped picture): solves s = c * (1 + k * c.yx^2) for the screen point c.</summary>
     public static Vector2 InverseWarp(Vector2 s01, float k)
     {
-        Vector2 s = s01 * 2f - Vector2.one;
+        Vector2 s = (s01 * 2f - Vector2.one) / ZoomFor(k);
         Vector2 c = s;
         for (int i = 0; i < 10; i++)
         {

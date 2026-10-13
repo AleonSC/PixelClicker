@@ -15,7 +15,7 @@ Shader "Pixel Clicker/CRT Warp"
 
             sampler2D _MainTex;
             sampler2D _CursorTex;
-            float _Warp, _Scan, _Chroma, _Vignette, _Round, _Flip, _Bright, _Flicker, _TimeV;
+            float _Zoom, _Warp, _Scan, _Chroma, _Vignette, _Round, _Flip, _Bright, _Flicker, _TimeV;
             float4 _Res;      // x = width, y = height (pixels)
             float4 _Cursor;   // xy = where the cursor tip is drawn (pixels, from the bottom left), z = size in pixels, w = 1 when the cursor is drawn
 
@@ -24,14 +24,15 @@ Shader "Pixel Clicker/CRT Warp"
                 float2 uv = i.uv;
                 float2 c = uv * 2.0 - 1.0;
                 // The picture's point shown at this spot: pushed outwards towards the corners, so the edges curve like a tube.
-                float2 s = c * (1.0 + _Warp * float2(c.y * c.y, c.x * c.x));
+                float2 s = c * _Zoom * (1.0 + _Warp * float2(c.y * c.y, c.x * c.x));
                 float2 suv = s * 0.5 + 0.5;
-                float inside = step(0.0, suv.x) * step(suv.x, 1.0) * step(0.0, suv.y) * step(suv.y, 1.0);
+                float2 edgeD = min(suv, 1.0 - suv);
+                float inside = smoothstep(0.0, 0.004, min(edgeD.x, edgeD.y));   // (soft edge, no jagged cut)
 
                 // Rounded corners of the glass.
                 float2 q = abs(c) - (1.0 - _Round);
                 float rd = length(max(q, 0.0)) - _Round;
-                float mask = inside * (1.0 - smoothstep(0.0, 0.012, rd));
+                float mask = inside * (1.0 - smoothstep(-0.004, 0.012, rd));
 
                 float2 sampleUV = float2(suv.x, lerp(suv.y, 1.0 - suv.y, _Flip));
                 float2 off = (suv - 0.5) * _Chroma;
