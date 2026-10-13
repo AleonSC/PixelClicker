@@ -16,3 +16,7 @@ Dev tools (Editor/dev builds only unless **`allowInFullBuild`** is ticked on the
 ## PixelDevInspector.cs
 
 Tools tab tick box 'Inspector' opens a draggable, minimizable window (header notes in `PixelDevInspector.cs`): World tab (time scale, fixed step, gravity / Gravity Y, solver iterations, thresholds, live counts, a drop-down of every game system) and Selected tab (Pick mode = click any collider, Parent / Active / Destroy, filter, foldable components; game scripts list every supported field by reflection, Unity components a fixed list; old pixels also show their PixelTier). 'Copy edits' copies every change as `Owner.field = value` lines.
+
+## Dev Tools window (PixelWindowChrome)
+
+The Dev Tools panel is no longer a modal dialog: no dimmer, so the game stays clickable. `PixelWindowChrome` (header notes in the script) gives it drag by the title (kept between the black bars), Minimize ('-'), Pin ('P': a pinned panel ignores Escape and doesn't count as an open window) and docking to the left / right edge (drag against a side; slides out on hover or while typing; undock arrow). Prefs `PixelClicker.Dev.Window.*`. My Window, the Mock up window and the Inspector still have their own copies of this logic.

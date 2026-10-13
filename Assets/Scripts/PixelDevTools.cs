@@ -247,9 +247,6 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Title text size.")]
     [SerializeField] private float titleFontSize = 48f;
 
-    [Tooltip("Dark background behind the panel.")]
-    [SerializeField] private Color dimColor = new Color(0f, 0f, 0f, 0.6f);
-
     [Tooltip("Panel background colour.")]
     [SerializeField] private Color panelColor = new Color(0.12f, 0.12f, 0.16f, 0.98f);
 
@@ -278,6 +275,8 @@ public class PixelDevTools : MonoBehaviour
 
     private static PixelDevTools instance;
     private GameObject canvasRoot;
+    private PixelWindowChrome chrome;
+    private GameObject reportButtonObject;
     private GameObject panel;
     private TMP_Dropdown pixelDropdown;
     private TMP_InputField amountField;
@@ -416,7 +415,7 @@ public class PixelDevTools : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         BuildPanel();
         BuildDockButton();
-        PixelWindows.Register(this, 200, () => IsOpen, Close); // Escape closes the panel first
+        PixelWindows.Register(this, 200, () => IsOpen && (chrome == null || !chrome.Pinned), Close); // Escape closes the panel first (a pinned panel ignores it and doesn't count as an open window)
     }
 
     private GameObject dockRoot;
@@ -780,7 +779,8 @@ public class PixelDevTools : MonoBehaviour
         // Full-screen dimmer that also blocks clicks behind the panel.
         GameObject dim = new GameObject("Dev Tools", typeof(RectTransform), typeof(Image));
         dim.transform.SetParent(canvasRoot.transform, false);
-        dim.GetComponent<Image>().color = dimColor;
+        dim.GetComponent<Image>().color = Color.clear;   // (no longer a modal dimmer: the panel is a draggable window you can leave open while playing)
+        dim.GetComponent<Image>().raycastTarget = false;
         PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
         panel = dim;
 
@@ -788,7 +788,7 @@ public class PixelDevTools : MonoBehaviour
         box.transform.SetParent(dim.transform, false);
         PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
         RectTransform boxRect = box.GetComponent<RectTransform>();
-        boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0.5f, 0.5f);
+        boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0f, 1f);   // top left, so PixelWindowChrome can drag / dock it
         boxRect.anchoredPosition = Vector2.zero;
 
         TMP_Text t = PixelUIKit.CreateText(font, box.transform, "Title", title, titleFontSize,
@@ -819,6 +819,7 @@ public class PixelDevTools : MonoBehaviour
             rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 1f);
             rr.anchoredPosition = new Vector2(20f, -20f);
             report.onClick.AddListener(PixelCrashLog.OpenFolder);
+            reportButtonObject = report.gameObject;
             AddTip(report.gameObject, reportTipText);
         }
 
@@ -1019,6 +1020,11 @@ public class PixelDevTools : MonoBehaviour
         float boxHeight = Mathf.Min(wanted, limit);
         boxRect.sizeDelta = new Vector2(panelSize.x, boxHeight);
         PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, y, boxHeight - scrollTop - 30f);
+        chrome = PixelWindowChrome.Attach(boxRect, font, "PixelClicker.Dev.Window", 24f + titleFontSize * 1.6f + 8f, 20f + xSize + 8f, 20f, xSize,
+                                          new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);   // drag by the title, minimize, pin, dock to a side
+        chrome.Keep(closeX.gameObject);
+        chrome.Keep(t.gameObject);
+        chrome.Keep(reportButtonObject);
 
         BuildTodoView(box.transform, tabsBottom, inner);
         BuildChangelogView(box.transform, tabsBottom);
