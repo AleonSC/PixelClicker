@@ -823,3 +823,4 @@
 [2026-10-13 16:34] Added PixelBlockRules: one data-driven place for special blocks (rare replacements, Great Oak moved into it) and hold blocks (bonus while held: click / payout / XP multipliers and a label next to the hold meter, Whetstone moved into it).
 [2026-10-13 16:35] Fixed a compile error left over from removing the pixel-assemble buttons (a leftover reference in PixelMenuFx).
 [2026-10-13 16:37] Special and hold blocks now show on the Pixel Guide (tagged SPECIAL / HOLD, with their chance or bonus in the '!' tip, spawn shares include the replacements); added Whetstone and Great Oak guide texts.
+[2026-10-13 16:44] To-do: added the cross-skill links idea (Farming saplings from Woodcutting that grow into better trees).
