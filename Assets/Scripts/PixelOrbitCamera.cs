@@ -1,6 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOrbitCamera.cs
-//   BASE VIEW: at start (Start -> ApplyBaseView, useBaseView) the scene camera is moved to baseDistance 0 = 6 units from the cube at baseTilt 0 = 89 degrees, baseYaw 0: that
+//   BASE VIEW: at start (Start -> ApplyBaseView, useBaseView) the scene camera is moved to baseDistance 0 = 6 units from the cube at baseTilt 0 = 89 degrees, baseTurn 180 (the game's original orientation, +Z at the top of the screen): that
 //   pose is the game's normal view and the 1.0 of the zoom slider (Enter takes it as the home pose, so the camera intro settles into it, PixelViewBounds reads it through
 //   HomeCamera and takeover minigames glide back to it). The View window keeps the camera in Top down (this camera, pitch locked) whenever nothing else uses it.
 //   Orbital camera (added by PixelClicker.Awake; chosen in the View window (PixelViewWindow, key PixelAction.ViewWindow) as 'Orbital', or
@@ -76,8 +76,8 @@ public class PixelOrbitCamera : MonoBehaviour
     [Tooltip("Base view: degrees above the floor the camera looks down from (90 = straight down). 0 = the default (89, the top down view).")]
     [SerializeField] private float baseTilt = 0f;
 
-    [Tooltip("Base view: which side of the cube the camera sits on, in degrees round it (0 = the +Z side, which puts the floor's -Z side at the top of the screen).")]
-    [SerializeField] private float baseYaw = 0f;
+    [Tooltip("Base view: which side of the cube the camera sits on, in degrees round it. 180 = the -Z side, so the floor's +Z side is at the top of the screen (the original orientation of the game); 0 = the +Z side, which flips the picture.")]
+    [SerializeField] private float baseTurn = 180f;
 
     [Tooltip("Hint shown at the bottom of the screen while orbiting. {0} = the view key.")]
     [SerializeField] private string hintTextV2 = "Orbit: middle mouse drag or arrow keys  -  mouse wheel zooms  -  {0} opens the View window (zoom slider, auto orbit, other views)";
@@ -161,7 +161,7 @@ public class PixelOrbitCamera : MonoBehaviour
         if (!useBaseView || Active || clicker == null || clicker.PixelTransform == null) return;
         Camera c = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (c == null) return;
-        float y = baseYaw * Mathf.Deg2Rad, p = V(baseTilt, 89f) * Mathf.Deg2Rad;
+        float y = baseTurn * Mathf.Deg2Rad, p = V(baseTilt, 89f) * Mathf.Deg2Rad;
         Vector3 dir = new Vector3(Mathf.Sin(y) * Mathf.Cos(p), Mathf.Sin(p), Mathf.Cos(y) * Mathf.Cos(p));
         c.transform.SetPositionAndRotation(clicker.PixelTransform.position + dir * V(baseDistance, 6f), Quaternion.LookRotation(-dir, Vector3.up));
     }
