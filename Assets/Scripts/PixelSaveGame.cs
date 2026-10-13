@@ -477,6 +477,9 @@ public class PixelSaveGame : MonoBehaviour
     public bool Save(bool showMessage)
     {
         if (suppressSaving || clicker == null) return false;
+        // On the main menu before anything was loaded or started, the game in memory is a blank one: an autosave / quit save / focus-loss save would write it over the real save in the current slot
+        // (and fill the autosave list with blank games). Once a save is loaded or a new game started, or after Quit > Main menu (HasLoadedSave stays true), saving is fine.
+        if (PixelTitleScreen.Showing && !HasLoadedSave) return false;
 
         try
         {
