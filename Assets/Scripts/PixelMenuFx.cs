@@ -117,12 +117,14 @@ public static class PixelMenuFx
     }
 
     /// <summary>A sliding light segment under the title.</summary>
-    public static void BuildTitleLine(RectTransform panel, float x, float y, float width)
+    public static void BuildTitleLine(RectTransform panel, float x, float y, float width, bool neon = false)
     {
-        GameObject line = new GameObject("Fancy Title Line", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(PixelMenuTitleLine));
+        GameObject line = new GameObject("Fancy Title Line", typeof(RectTransform), typeof(Image), typeof(PixelMenuTitleLine));
+        if (!neon) line.AddComponent<RectMask2D>();   // (a neon line lets its glow reach past the thin line)
+        line.GetComponent<PixelMenuTitleLine>().neon = neon;
         line.transform.SetParent(panel, false);
         Image im = line.GetComponent<Image>();
-        im.color = new Color(1f, 1f, 1f, 0.12f);
+        im.color = neon ? new Color(0.3f, 0.8f, 1f, 0.4f) : new Color(1f, 1f, 1f, 0.12f);
         im.raycastTarget = false;
         RectTransform r = line.GetComponent<RectTransform>();
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
@@ -513,28 +515,69 @@ public class PixelMenuPanelGlow : MonoBehaviour
 /// <summary>A light segment sliding along a thin line (under the pause menu's title).</summary>
 public class PixelMenuTitleLine : MonoBehaviour
 {
+    /// <summary>A bright neon light spot (a soft halo round a hot core) instead of the plain sliding segment.</summary>
+    public bool neon;
     private RectTransform seg;
     private Image line;
+    private static Sprite haloSprite;
+
+    private static Sprite HaloSprite()
+    {
+        if (haloSprite != null) return haloSprite;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float dx = (x + 0.5f) / n * 2f - 1f, dy = (y + 0.5f) / n * 2f - 1f;
+                float a = Mathf.Pow(Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy)), 1.8f);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        tex.Apply(false, true);
+        haloSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        return haloSprite;
+    }
 
     private void Update()
     {
         if (seg == null)
         {
             line = GetComponent<Image>();
-            GameObject s = new GameObject("Segment", typeof(RectTransform), typeof(Image));
-            s.transform.SetParent(transform, false);
-            s.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.85f);
-            s.GetComponent<Image>().raycastTarget = false;
-            seg = s.GetComponent<RectTransform>();
-            seg.anchorMin = new Vector2(0f, 0f); seg.anchorMax = new Vector2(0f, 1f); seg.pivot = new Vector2(0.5f, 0.5f);
-            seg.sizeDelta = new Vector2(90f, 0f);
+            if (neon)
+            {
+                GameObject root = new GameObject("Neon Spot", typeof(RectTransform));
+                root.transform.SetParent(transform, false);
+                seg = root.GetComponent<RectTransform>();
+                seg.anchorMin = seg.anchorMax = new Vector2(0f, 0.5f); seg.pivot = new Vector2(0.5f, 0.5f);
+                seg.sizeDelta = Vector2.zero;
+                GameObject halo = new GameObject("Halo", typeof(RectTransform), typeof(Image));
+                halo.transform.SetParent(root.transform, false);
+                Image hi = halo.GetComponent<Image>();
+                hi.sprite = HaloSprite(); hi.color = new Color(0.2f, 0.85f, 1f, 0.95f); hi.raycastTarget = false;
+                halo.GetComponent<RectTransform>().sizeDelta = new Vector2(260f, 34f);
+                GameObject core = new GameObject("Core", typeof(RectTransform), typeof(Image));
+                core.transform.SetParent(root.transform, false);
+                Image ci = core.GetComponent<Image>();
+                ci.sprite = HaloSprite(); ci.color = new Color(0.9f, 1f, 1f, 1f); ci.raycastTarget = false;
+                core.GetComponent<RectTransform>().sizeDelta = new Vector2(110f, 9f);
+            }
+            else
+            {
+                GameObject s = new GameObject("Segment", typeof(RectTransform), typeof(Image));
+                s.transform.SetParent(transform, false);
+                s.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.85f);
+                s.GetComponent<Image>().raycastTarget = false;
+                seg = s.GetComponent<RectTransform>();
+                seg.anchorMin = new Vector2(0f, 0f); seg.anchorMax = new Vector2(0f, 1f); seg.pivot = new Vector2(0.5f, 0.5f);
+                seg.sizeDelta = new Vector2(90f, 0f);
+            }
         }
         bool on = PixelMenuFx.Enabled;
         if (line.enabled != on) { line.enabled = on; seg.gameObject.SetActive(on); }
         if (!on) return;
         float w = ((RectTransform)transform).rect.width;
-        float t = Mathf.Repeat(Time.unscaledTime / 2.4f, 1f);
-        seg.anchoredPosition = new Vector2(Mathf.Lerp(-60f, w + 60f, t * t * (3f - 2f * t)), 0f);
+        float t = Mathf.Repeat(Time.unscaledTime / (neon ? 1.8f : 2.4f), 1f);
+        seg.anchoredPosition = new Vector2(Mathf.Lerp(-120f, w + 120f, neon ? t : t * t * (3f - 2f * t)), 0f);
     }
 }
 

@@ -347,6 +347,9 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Height of the title bar.")]
     [SerializeField] private float headerHeight = 100f;
 
+    [Tooltip("How far the tab row and everything under it sits below the neon line under the shop title (canvas units).")]
+    [SerializeField] private float tabsDrop = 12f;
+
     [Tooltip("Inner padding of the panel.")]
     [SerializeField] private float panelPadding = 20f;
 
@@ -652,7 +655,7 @@ public partial class PixelShop : MonoBehaviour
     public float HeaderHeightValue => headerHeight;
     public float TabHeightValue => tabHeight;
     public float PanelPaddingValue => panelPadding;
-    public float ListTopValue => headerHeight + tabHeight + panelPadding * 0.5f;
+    public float ListTopValue => headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f;
 
     public float CurrencyPanelWidth => currencyPanelWidth > 40f ? currencyPanelWidth : 380f;
 

@@ -125,7 +125,7 @@ public partial class PixelShop
         glow.GetComponent<Image>().raycastTarget = false;
         glow.GetComponent<PixelMenuPanelGlow>().target = panelRect;
         PixelUIKit.StyleBox(glow.GetComponent<Image>());
-        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight - 4f), panelWidth - panelPadding * 2f);
+        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f, true);   // a neon light spot sweeps along it
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
@@ -189,7 +189,7 @@ public partial class PixelShop
         });
 
         BuildTabs(panelObject.transform);
-        BuildScrollArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f,
+        BuildScrollArea(panelObject.transform, headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f,
                         out contentRect, out scrollRect, out emptyLabel);
         BuildUpgradesWindow(parent);
         BuildCurrencyPanel(panelObject.transform);
@@ -209,7 +209,7 @@ public partial class PixelShop
         BuildSubTabs(contentRect);
 
         // The Consumables tab is two purchase cards (potions / utilities), not part of the scrolling list.
-        BuildConsumablesArea(panelObject.transform, headerHeight + tabHeight + panelPadding * 0.5f);
+        BuildConsumablesArea(panelObject.transform, headerHeight + tabsDrop + tabHeight + panelPadding * 0.5f);
 
         panelObject.SetActive(false);
         subPanelObject.SetActive(false);
@@ -437,7 +437,7 @@ public partial class PixelShop
         barRect.anchorMax = new Vector2(1f, 1f);
         barRect.pivot = new Vector2(0.5f, 1f);
         barRect.sizeDelta = new Vector2(-panelPadding * 2f, tabHeight);
-        barRect.anchoredPosition = new Vector2(0f, -headerHeight);
+        barRect.anchoredPosition = new Vector2(0f, -(headerHeight + tabsDrop));
 
         float slice = 1f / tabs.Length;
         for (int i = 0; i < tabs.Length; i++)
