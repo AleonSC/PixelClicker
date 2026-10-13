@@ -42,23 +42,18 @@ Shader "Pixel Clicker/CRT Warp"
                 col.b = tex2D(_MainTex, sampleUV - off).b;
 
                 // Scanlines (a 3 pixel period on the screen's own pixels), vignette, brightness, a faint flicker.
-                float line = 0.5 + 0.5 * sin(uv.y * _Res.y * 2.0943951);
-                col *= 1.0 - _Scan * (1.0 - line);
+                float scanWave = 0.5 + 0.5 * sin(uv.y * _Res.y * 2.0943951);
+                col *= 1.0 - _Scan * (1.0 - scanWave);
                 col *= saturate(1.0 - _Vignette * dot(c, c) * 0.5);
                 col *= _Bright * (1.0 + _Flicker * sin(_TimeV * 55.0));
                 col *= mask;
 
                 // The mouse cursor (an arrow texture, tip at the top left).
-                if (_Cursor.w > 0.5)
-                {
-                    float2 p = uv * _Res.xy - _Cursor.xy;
-                    float2 t = float2(p.x, -p.y) / _Cursor.z;
-                    if (t.x >= 0.0 && t.x <= 1.0 && t.y >= 0.0 && t.y <= 1.0)
-                    {
-                        fixed4 cur = tex2D(_CursorTex, float2(t.x, 1.0 - t.y));
-                        col = lerp(col, cur.rgb, cur.a);
-                    }
-                }
+                float2 pc = uv * _Res.xy - _Cursor.xy;
+                float2 tc = float2(pc.x, -pc.y) / max(_Cursor.z, 1.0);
+                float curIn = step(0.0, tc.x) * step(tc.x, 1.0) * step(0.0, tc.y) * step(tc.y, 1.0) * step(0.5, _Cursor.w);
+                fixed4 cur = tex2D(_CursorTex, float2(saturate(tc.x), 1.0 - saturate(tc.y)));   // (sampled outside any branch)
+                col = lerp(col, cur.rgb, cur.a * curIn);
                 return fixed4(col, 1.0);
             }
             ENDCG
