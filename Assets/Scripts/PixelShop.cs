@@ -1207,7 +1207,30 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 25)
+        {
+            // The Whale takes a random 15-50 clicks (was 15-100).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null) continue;
+                    foreach (PixelClicker.PixelTier t in p.rewardTiers) ApplyWhaleClicks(t);
+                }
+            if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) ApplyWhaleClicks(t);
+            packDataVersion = Mathf.Max(packDataVersion, 25);
+            changed = true;
+        }
+
         return changed;
+    }
+
+    private static void ApplyWhaleClicks(PixelClicker.PixelTier t)
+    {
+        if (t == null || t.type != PixelClicker.PixelType.Whale) return;
+        t.randomClicks = true;
+        t.randomClicksMin = Mathf.Min(t.randomClicksMin, 50);
+        t.randomClicksMax = 50;
+        t.clicksToCollect = 33;   // (the average of 15-50, used for estimates)
     }
 
     [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)

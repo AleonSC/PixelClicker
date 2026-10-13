@@ -2,8 +2,8 @@ using UnityEngine;
 using static PixelInput;
 
 /// <summary>
-/// The Whale (Fishing's rarest special block). Its first manual click hooks it: it yanks the line and runs from the mouse, dashing about the screen while
-/// you click it down - it needs a random 15-100 clicks and pays more the longer the fight. A thin fishing line is drawn from the cursor to the whale; it is
+/// The Whale (Fishing's rarest special block). Its first manual click hooks it: it then stays almost still (drifting slowly) for 2-3 clicks, then dashes to a
+/// new spot on the screen, rests again, and so on while you click it down - it needs a random 15-50 clicks and pays more the longer the fight. A thin fishing line is drawn from the cursor to the whale; it is
 /// invisible within about a pixel of the cursor and fades in beyond that (the way the bank hose fades out near the camera). If you can't land it in time it
 /// breaks the line and swims off. The auto clicker waits while a fight is on.
 /// </summary>
@@ -12,16 +12,18 @@ public class PixelWhaleFight : MonoBehaviour
     [Header("Whale fight")]
     [SerializeField, Tooltip("Turns the whale's running and the fishing line off: a whale is then just a block that takes many clicks.")]
     private bool disableFight;
-    [SerializeField, Tooltip("How close the mouse can come before the whale runs, in screen heights. 0 = 0.2.")]
-    private float fleeRadius;
-    [SerializeField, Tooltip("How fast the whale swims away from the mouse, in screen heights per second. 0 = 0.55.")]
-    private float fleeSpeed;
-    [SerializeField, Tooltip("How much faster the whale dashes when it yanks the line (times the flee speed). 0 = 2.4.")]
-    private float yankSpeedFactor;
-    [SerializeField, Tooltip("Seconds between the whale's own yanks (random between half and one and a half times this). 0 = 2.6.")]
-    private float yankEvery;
-    [SerializeField, Tooltip("How long one yank lasts, in seconds. 0 = 0.35.")]
-    private float yankSeconds;
+    [SerializeField, Tooltip("How many clicks the whale stays almost still before it runs to a new spot: a random number between this and 'Rest Clicks Max' (the hooking click counts as the first). 0 = 2.")]
+    private int restClicksMin;
+    [SerializeField, Tooltip("See 'Rest Clicks Min'. 0 = 3.")]
+    private int restClicksMax;
+    [SerializeField, Tooltip("How slowly the whale drifts while it rests, in screen heights per second. 0 = 0.03.")]
+    private float driftSpeed;
+    [SerializeField, Tooltip("How fast the whale dashes to its new spot, in screen heights per second. 0 = 1.3.")]
+    private float runSpeed;
+    [SerializeField, Tooltip("The longest a dash lasts, in seconds (it ends sooner when the whale arrives). 0 = 0.9.")]
+    private float runSeconds;
+    [SerializeField, Tooltip("The new spot is at least this far from the old one, in screen heights. 0 = 0.3.")]
+    private float minRunDistance;
     [SerializeField, Tooltip("Seconds you have to land the whale before it breaks the line. 0 = 80.")]
     private float fightSeconds;
     [SerializeField, Tooltip("The reward grows with the clicks: pay x clicks x (1 + clicks x this). 0 = 0.05.")]
@@ -55,8 +57,12 @@ public class PixelWhaleFight : MonoBehaviour
     private bool fighting;
     private float fightLeft;
     private Vector2 pos, vel;              // viewport position and velocity (screen heights per second)
-    private float yankLeft, nextYank;
-    private Vector2 yankDir;
+    private int restLeft;                  // clicks until the next run
+    private bool running;
+    private float runLeft;
+    private Vector2 runTarget;             // viewport spot the whale dashes to
+    private Vector2 driftDir;
+    private float driftChange;
     private GameObject lineObject;
     private MeshFilter lineFilter;
     private Mesh lineMesh;
@@ -65,8 +71,12 @@ public class PixelWhaleFight : MonoBehaviour
     private float tension;                 // 1 = the whale just yanked (the line is pulled straight)
     private float areaLeft = 0.1f, areaRight = 0.9f, areaBottom = 0.2f, areaTop = 0.78f;
 
-    private float FleeRadius => fleeRadius > 0f ? fleeRadius : 0.2f;
-    private float FleeSpeed => fleeSpeed > 0f ? fleeSpeed : 0.55f;
+    private int RollRest()
+    {
+        int lo = Mathf.Max(1, restClicksMin > 0 ? restClicksMin : 2);
+        int hi = Mathf.Max(lo, restClicksMax > 0 ? restClicksMax : 3);
+        return Random.Range(lo, hi + 1);
+    }
 
     private void Awake() { instance = this; }
 
@@ -94,7 +104,15 @@ public class PixelWhaleFight : MonoBehaviour
             if (automatic || !CanFight()) return;
             BeginFight();
         }
-        Yank(true);
+        ClickedWhale();
+    }
+
+    /// <summary>Each click while hooked: the whale stays almost still for a few clicks, then dashes to a new spot.</summary>
+    private void ClickedWhale()
+    {
+        restLeft--;
+        if (restLeft <= 0) { StartRun(); restLeft = RollRest(); }
+        else tension = Mathf.Max(tension, 0.35f);   // a small tug on the line, no movement
     }
 
     private bool CanFight()
@@ -115,32 +133,34 @@ public class PixelWhaleFight : MonoBehaviour
         Vector3 vp = cam.WorldToViewportPoint(clicker.PixelTransform.position);
         pos = new Vector2(Mathf.Clamp(vp.x, areaLeft, areaRight), Mathf.Clamp(vp.y, areaBottom, areaTop));
         vel = Vector2.zero;
-        yankLeft = 0f;
-        ScheduleYank();
+        running = false;
+        restLeft = RollRest();
+        driftChange = 0f;
         PixelAudio.Play("whale_hook");
         PixelHints.Announce("A whale is on the line!");
         PixelStats.Count("whales.hooked");
     }
 
-    private void ScheduleYank()
-    {
-        float every = yankEvery > 0f ? yankEvery : 2.6f;
-        nextYank = Time.unscaledTime + every * Random.Range(0.5f, 1.5f);
-    }
-
-    /// <summary>The whale pulls: a burst of speed away from the mouse (or a random way).</summary>
-    private void Yank(bool fromClick)
+    /// <summary>The whale bolts to a new spot at least minRunDistance away.</summary>
+    private void StartRun()
     {
         if (!fighting || cam == null) return;
-        Vector2 mouse = cam.ScreenToViewportPoint(PointerPosition());
         float aspect = Mathf.Max(0.5f, cam.aspect);
-        Vector2 away = new Vector2((pos.x - mouse.x) * aspect, pos.y - mouse.y);
-        yankDir = away.sqrMagnitude > 1e-5f ? away.normalized : Random.insideUnitCircle.normalized;
-        if (!fromClick) yankDir = (yankDir + Random.insideUnitCircle * 0.6f).normalized;
-        yankLeft = (yankSeconds > 0f ? yankSeconds : 0.35f) * (fromClick ? 0.7f : 1f);
+        float need = minRunDistance > 0f ? minRunDistance : 0.3f;
+        Vector2 best = pos;
+        float bestDist = -1f;
+        for (int i = 0; i < 10; i++)
+        {
+            Vector2 c = new Vector2(Random.Range(areaLeft, areaRight), Random.Range(areaBottom, areaTop));
+            float d = new Vector2((c.x - pos.x) * aspect, c.y - pos.y).magnitude;
+            if (d > bestDist) { best = c; bestDist = d; }
+            if (d >= need) { best = c; bestDist = d; break; }
+        }
+        runTarget = best;
+        running = true;
+        runLeft = runSeconds > 0f ? runSeconds : 0.9f;
         tension = 1f;
         PixelAudio.Play("whale_yank");
-        ScheduleYank();
     }
 
     private void EndFight(bool resetCube)
@@ -185,59 +205,37 @@ public class PixelWhaleFight : MonoBehaviour
             clicker.WhaleGotAway();
             return;
         }
-        if (Time.unscaledTime >= nextYank) Yank(false);
         tension = Mathf.MoveTowards(tension, 0f, dt * 2.5f);
         Steer(dt);
         Place();
     }
 
-    /// <summary>Swims away from the mouse (the same rules as Cube Evasion), with a burst of speed on every yank.</summary>
+    /// <summary>Drifts slowly while it rests; dashes to its new spot when a run starts.</summary>
     private void Steer(float dt)
     {
         float aspect = Mathf.Max(0.5f, cam.aspect);
-        Vector2 mouse = cam.ScreenToViewportPoint(PointerPosition());
-        Vector2 away = new Vector2((pos.x - mouse.x) * aspect, pos.y - mouse.y);
-        float dist = away.magnitude;
         Vector2 desired = Vector2.zero;
-        float agility = 7f;
-        float marginX = 0.04f / aspect, marginY = 0.04f;
+        float agility = 2f;
 
-        if (yankLeft > 0f)
+        if (running)
         {
-            yankLeft -= dt;
-            Vector2 dir = yankDir;
-            // A dash that meets a wall turns along it.
-            if ((pos.x < areaLeft + marginX && dir.x < 0f) || (pos.x > areaRight - marginX && dir.x > 0f)) dir.x = -dir.x * 0.6f;
-            if ((pos.y < areaBottom + marginY && dir.y < 0f) || (pos.y > areaTop - marginY && dir.y > 0f)) dir.y = -dir.y * 0.6f;
-            yankDir = dir.normalized;
-            desired = yankDir * FleeSpeed * (yankSpeedFactor > 0f ? yankSpeedFactor : 2.4f);
+            runLeft -= dt;
+            Vector2 toTarget = new Vector2((runTarget.x - pos.x) * aspect, runTarget.y - pos.y);
+            if (toTarget.magnitude < 0.03f || runLeft <= 0f) running = false;
+            else desired = toTarget.normalized * (runSpeed > 0f ? runSpeed : 1.3f);
             agility = 14f;
         }
-        else if (dist < FleeRadius)
+        else
         {
-            Vector2 dir = dist > 0.0005f ? away / dist : Random.insideUnitCircle.normalized;
-            float urgency = 1f - Mathf.Clamp01(dist / FleeRadius);
-            float speed = FleeSpeed * Mathf.Lerp(0.35f, 1f, urgency);
-            bool blockL = pos.x < areaLeft + marginX && dir.x < 0f, blockR = pos.x > areaRight - marginX && dir.x > 0f;
-            bool blockB = pos.y < areaBottom + marginY && dir.y < 0f, blockT = pos.y > areaTop - marginY && dir.y > 0f;
-            bool blockX = blockL || blockR, blockY = blockB || blockT;
-            if (blockX && blockY)
+            driftChange -= dt;
+            if (driftChange <= 0f)
             {
+                driftChange = Random.Range(1.2f, 2.6f);
                 Vector2 centre = new Vector2((areaLeft + areaRight) * 0.5f, (areaBottom + areaTop) * 0.5f);
                 Vector2 toCentre = new Vector2((centre.x - pos.x) * aspect, centre.y - pos.y);
-                dir = toCentre.sqrMagnitude > 1e-6f ? toCentre.normalized : Vector2.up;
+                driftDir = (Random.insideUnitCircle * 0.8f + toCentre * 0.8f).normalized;   // a lazy wander that leans back towards the middle
             }
-            else if (blockX)
-            {
-                float sign = Mathf.Abs(away.y) > 0.01f ? Mathf.Sign(away.y) : (pos.y < (areaBottom + areaTop) * 0.5f ? 1f : -1f);
-                dir = new Vector2(0f, sign);
-            }
-            else if (blockY)
-            {
-                float sign = Mathf.Abs(away.x) > 0.01f ? Mathf.Sign(away.x) : (pos.x < (areaLeft + areaRight) * 0.5f ? 1f : -1f);
-                dir = new Vector2(sign, 0f);
-            }
-            desired = dir * speed;
+            desired = driftDir * (driftSpeed > 0f ? driftSpeed : 0.03f);
         }
 
         vel = Vector2.Lerp(vel, desired, 1f - Mathf.Exp(-agility * dt));

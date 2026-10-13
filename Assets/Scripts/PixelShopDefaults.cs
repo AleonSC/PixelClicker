@@ -770,11 +770,11 @@ public partial class PixelShop
     /// Default Angler's Pack (Pixels tab): cheap, a base skill. Five fished blocks for the Fishing skill: Fish, Seaweed, Shell, Pearl (rare) and the
     /// filler Driftwood, plus the Jellyfish hazard. They only spawn while Fishing is the pack in play (Skills window).
     /// </summary>
-    /// <summary>The Whale: a rare block that takes a random 15-100 clicks (it fights the line) and pays more the longer the fight.</summary>
+    /// <summary>The Whale: a rare block that takes a random 15-50 clicks (it fights the line) and pays more the longer the fight.</summary>
     private static PixelClicker.PixelTier AnglerWhale() => new PixelClicker.PixelTier
     {
-        type = PixelClicker.PixelType.Whale, displayName = "Whale", color = new Color(0.3f, 0.5f, 0.75f, 1f), clicksToCollect = 58, amountPerClick = 20, spawnWeight = 0.015f,
-        randomClicks = true, randomClicksMin = 15, randomClicksMax = 100,
+        type = PixelClicker.PixelType.Whale, displayName = "Whale", color = new Color(0.3f, 0.5f, 0.75f, 1f), clicksToCollect = 33, amountPerClick = 20, spawnWeight = 0.015f,
+        randomClicks = true, randomClicksMin = 15, randomClicksMax = 50,
         unlockMode = PixelClicker.TierUnlockMode.ShopOnly
     };
 
