@@ -340,9 +340,13 @@ public class PixelDevTools : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    [Header("Dev Tools button")]
+    [Tooltip("Show the glowing Dev Tools button at the bottom of the screen. Off by default: the Dev Tools window opens with its key (Settings > Key bindings, default F9) and this tick box turns the button back on.")]
+    [SerializeField] private bool showDockButton = false;
+
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle shapesToggle, mockupToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle mockToggle, dockToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -365,6 +369,8 @@ public class PixelDevTools : MonoBehaviour
         if (noLimitToggle != null) noLimitToggle.SetIsOnWithoutNotify(disableOldPixelLimit);
         if (farmerSeedsToggle != null) farmerSeedsToggle.SetIsOnWithoutNotify(farmerAlwaysSeeds);
         if (godToggle != null) godToggle.SetIsOnWithoutNotify(godMode);
+        if (dockToggle != null) dockToggle.SetIsOnWithoutNotify(showDockButton);
+        if (dockRoot != null) dockRoot.SetActive(showDockButton);
         if (amountField != null) amountField.SetTextWithoutNotify(defaultAmount);
         if (pixelDropdown != null && pixelDropdown.options.Count > 0)
         {
@@ -388,6 +394,7 @@ public class PixelDevTools : MonoBehaviour
         farmerAlwaysSeeds = GetBool("FarmerSeeds", farmerAlwaysSeeds);
         PixelFarmerMinigame.DevAlwaysDragonSeeds = farmerAlwaysSeeds;
         godMode = GetBool("God", godMode);
+        showDockButton = GetBool("ShowButton", showDockButton);
         clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
         if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
     }
@@ -435,11 +442,13 @@ public class PixelDevTools : MonoBehaviour
         PixelFadeOnIdle fade = dockRoot.AddComponent<PixelFadeOnIdle>();
         fade.Setup(dockRoot.AddComponent<CanvasGroup>(), dockHideSeconds > 0f ? dockHideSeconds : 6f,
                    dockFadeSeconds > 0f ? dockFadeSeconds : 0.7f, () => IsOpen || (docked != null && docked.PointerNear()));
+        dockRoot.SetActive(showDockButton);   // hidden unless the Dev Tools tick box says so (the key always opens the window)
     }
 
     private void OnDestroy()
     {
         PixelWindows.Unregister(this);
+        PixelDevMockWindow.OpenChanged -= OnMockOpenChanged;
         if (dockRoot != null) Destroy(dockRoot);
         if (instance == this)
         {
@@ -472,6 +481,12 @@ public class PixelDevTools : MonoBehaviour
 
     private void Update()
     {
+        if (!PixelTitleScreen.Showing)
+        {
+            if (PixelKeys.Pressed(PixelAction.DevTools)) { if (IsOpen) Close(); else Open(); }
+            if (PixelKeys.Pressed(PixelAction.MarkMoment)) PixelDevProbe.MarkMoment();
+            if (PixelKeys.Pressed(PixelAction.InspectHover)) PixelDevProbe.Inspect();
+        }
         UpdateGod();
         UpdateMiddleSwap();
         if (!clearKeyEnabled || clicker == null || PixelPauseMenu.IsPaused) return;
@@ -527,12 +542,25 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Seconds between pressing the snapshot button and the snapshot, so the panel can be closed and the view set up.")]
     [SerializeField] private float boundsSnapshotDelay = 3f;
 
-    private System.Collections.IEnumerator BoundsSnapshotRoutine()
+    [Tooltip("Label of the Tools tab button that saves a screenshot + state report (PixelDevProbe.MarkMoment) after the snapshot delay. The key (default F10) does it at once.")]
+    [SerializeField] private string markMomentText = "Mark this moment (waits 3 s)";
+
+    [Tooltip("Label of the Tools tab button that saves the UI layout as text (PixelDevProbe.UiLayoutDump) after the snapshot delay.")]
+    [SerializeField] private string uiDumpText = "UI layout dump (waits 3 s)";
+
+    private System.Collections.IEnumerator ProbeRoutine(System.Action run, string what)
     {
-        Debug.Log("Bounds snapshot in " + boundsSnapshotDelay + " s - close this panel and set up the view.");
+        Debug.Log(what + " in " + boundsSnapshotDelay + " s - close this panel and set up what you want to show.");
         yield return new WaitForSecondsRealtime(boundsSnapshotDelay);
         yield return new WaitForEndOfFrame();
-        PixelBoundsSnapshot.Capture();
+        run();
+    }
+
+    private void SetDockVisible(bool on)
+    {
+        showDockButton = on;
+        SetBool("ShowButton", on);
+        if (dockRoot != null) dockRoot.SetActive(on);
     }
 
     private void SkipIntro()
@@ -859,6 +887,11 @@ public class PixelDevTools : MonoBehaviour
         y = 0f; // rows below are placed from the top of the scrolling content
 
 
+        // Row: tick box for the docked Dev Tools button (the key always opens the window)
+        dockToggle = BuildToggleRow(content, "Show Dev Tools button", y, inner, showDockButton, SetDockVisible,
+                                    "The glowing Dev Tools button at the bottom of the screen. The window always opens with its key (Settings > Key bindings, default F9).");
+        y += rowHeight + 24f;
+
         // Row: skip intro
         Button skip = PixelUIKit.CreateButton(font, content, "Skip Intro Button", skipIntroLabel,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
@@ -870,7 +903,19 @@ public class PixelDevTools : MonoBehaviour
         Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(snap.GetComponent<RectTransform>(), 40f, y, inner);
-        snap.onClick.AddListener(() => StartCoroutine(BoundsSnapshotRoutine()));
+        snap.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelBoundsSnapshot.Capture(), "Bounds snapshot")));
+        y += rowHeight + 24f;
+
+        // Rows: mark this moment / UI layout dump (same wait; the keys F10 / F11 need no wait: mark this moment, inspect under the mouse)
+        Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText,
+                                                new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(moment.GetComponent<RectTransform>(), 40f, y, inner);
+        moment.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.MarkMoment(), "Marked moment")));
+        y += rowHeight + 24f;
+        Button uiDump = PixelUIKit.CreateButton(font, content, "UI Layout Button", uiDumpText,
+                                                new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(uiDump.GetComponent<RectTransform>(), 40f, y, inner);
+        uiDump.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.UiLayoutDump(), "UI layout dump")));
         y += rowHeight + 24f;
 
         // Row: give the next Dragon Cube still needed
@@ -940,11 +985,8 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         // Rows: the shape placer and the UI mockup builder (layout helpers for describing exact placements in screenshots)
-        shapesToggle = BuildToggleRow(content, "Shape placer", y, inner, PixelDevShapes.SavedActive, PixelDevShapes.SetActive,
-                                      "Click the floor to drop cubes, spheres, ramps and more; drag them, rotate, scale, copy the layout. Saved. Has a RESET ALL button.");
-        y += rowHeight + 24f;
-        mockupToggle = BuildToggleRow(content, "UI mockup builder", y, inner, PixelDevMockup.SavedActive, PixelDevMockup.SetActive,
-                                      "Drag out windows, boxes, buttons, text and temporary images; layer them, change opacity and colour, copy the exact layout. Saved. Has a RESET ALL button.");
+        mockToggle = BuildToggleRow(content, "Mock up mode", y, inner, PixelDevMockWindow.SavedOpen, PixelDevMockWindow.SetOpen,
+                                    "One draggable window with two tabs: the Shape placer (click the floor to drop cubes, spheres, ramps; drag, rotate, scale) and the UI mockup builder (windows, boxes, buttons, text, images). Copy the layout to describe exact placements. The '-' button shrinks it to a thin header. Saved. Each tab has a RESET ALL button.");
         y += rowHeight + 24f;
 
         // Row: how many clicks one click counts as (payouts, tough-pixel hits and the combo all scale with it)
@@ -989,8 +1031,13 @@ public class PixelDevTools : MonoBehaviour
         // Saved shapes / mockup pieces come back even while their panels are closed.
         PixelDevShapes.Boot();
         PixelDevMockup.Boot();
-        if (PixelDevShapes.SavedActive) PixelDevShapes.SetActive(true);
-        if (PixelDevMockup.SavedActive) PixelDevMockup.SetActive(true);
+        PixelDevMockWindow.OpenChanged += OnMockOpenChanged;
+        if (PixelDevMockWindow.SavedOpen) PixelDevMockWindow.SetOpen(true);
+    }
+
+    private void OnMockOpenChanged(bool open)
+    {
+        if (mockToggle != null) mockToggle.SetIsOnWithoutNotify(open);
     }
 
     // ------------------------------------------------------------------

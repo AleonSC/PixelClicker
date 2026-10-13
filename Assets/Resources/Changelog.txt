@@ -718,3 +718,4 @@
 [2026-10-13 04:46 UTC] Notes updated: every new feature now gets a big-picture check (reuse, duplication, performance, saves) with a short 'fits the game / could be better' note.
 [2026-10-13 04:58 UTC] Notes: clarified that the Game Guide's Controls and How To Play panels are the current setup, not an old note.
 [2026-10-13 04:59 UTC] Notes: Game Guide notes now say it has three tabs (Controls, How To Play, Database).
+[2026-10-13 05:15 UTC] Dev tools: new F9 key opens/closes Dev Tools (the dock button is hidden unless ticked), the Shape placer and UI mockup builder are now one draggable Mock up mode window with tabs and a minimize button, and new snapshot tools: F10 mark this moment, F11 inspect under the mouse, and a UI layout dump.

@@ -1,6 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelFind.cs
-//   PixelFind.First<T>() / Count<T>(): the only place with the FindFirstObjectByType / FindObjectOfType version check. Use it instead
+//   PixelFind.First<T>() / All<T>() / Count<T>(): the only place with the FindFirstObjectByType / FindObjectOfType version check. Use it instead
 //   of calling Unity's Find methods directly.
 // ---------------------------------------------------
 using UnityEngine;
@@ -18,6 +18,16 @@ public static class PixelFind
         return Object.FindFirstObjectByType<T>();
 #else
         return Object.FindObjectOfType<T>();
+#endif
+    }
+
+    /// <summary>Every object of type T in the scene (a new array each call: for dev tools / one-off dumps, not for Update).</summary>
+    public static T[] All<T>() where T : Object
+    {
+#if UNITY_2023_1_OR_NEWER
+        return Object.FindObjectsByType<T>(FindObjectsSortMode.None);
+#else
+        return Object.FindObjectsOfType<T>();
 #endif
     }
 

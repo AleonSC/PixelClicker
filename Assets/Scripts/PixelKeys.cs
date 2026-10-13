@@ -35,6 +35,9 @@ public enum PixelAction
     Feedback = 14,
     Zoom = 15,
     ViewWindow = 16,
+    DevTools = 17,
+    MarkMoment = 18,
+    InspectHover = 19,
 }
 
 /// <summary>
@@ -63,6 +66,9 @@ public static class PixelKeys
         KeyCode.F8,       // Feedback (the Give feedback window)
         KeyCode.None,     // Zoom (retired: the View window has a zoom slider)
         KeyCode.V,        // ViewWindow (opens the View window: view, flat view, zoom and orbit controls)
+        KeyCode.F9,       // DevTools (opens / closes the Dev Tools window; dev builds only)
+        KeyCode.F10,      // MarkMoment (dev: saves a screenshot + state report of this instant)
+        KeyCode.F11,      // InspectHover (dev: copies what is under the mouse)
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";

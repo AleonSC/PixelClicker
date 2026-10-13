@@ -18,14 +18,12 @@ public class PixelDevMockup : MonoBehaviour
 {
     public enum PieceKind { Window, Box, Button, Text, Image }
 
-    private const string PrefActive = "PixelClicker.Dev.MockupOn", PrefData = "PixelClicker.Dev.MockupData", PrefKeep = "PixelClicker.Dev.MockupKeep";
+    private const string PrefData = "PixelClicker.Dev.MockupData", PrefKeep = "PixelClicker.Dev.MockupKeep";
 
     private static PixelDevMockup instance;
 
     /// <summary>The builder panel is open (pieces can be edited).</summary>
     public static bool Active { get; private set; }
-
-    public static bool SavedActive => PlayerPrefs.GetInt(PrefActive, 0) != 0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { instance = null; Active = false; }
@@ -34,7 +32,14 @@ public class PixelDevMockup : MonoBehaviour
     {
         Boot();
         instance.Apply(on);
-        PlayerPrefs.SetInt(PrefActive, on ? 1 : 0);
+    }
+
+    /// <summary>Mock up mode's window is open: the pieces stay visible even while the other tab is showing.</summary>
+    public static void SetWindowOpen(bool open)
+    {
+        Boot();
+        instance.windowOpen = open;
+        instance.ApplyVisibility();
     }
 
     public static void Boot()
@@ -86,6 +91,7 @@ public class PixelDevMockup : MonoBehaviour
 
     private TMP_FontAsset font;
     private GameObject piecesCanvas, panelCanvas;
+    private bool windowOpen;
     private RectTransform piecesRoot;
     private Canvas piecesCanvasComponent;
     private TMP_InputField textField, xField, yField, wField, hField, colourField;
@@ -107,6 +113,7 @@ public class PixelDevMockup : MonoBehaviour
         font = clicker != null ? clicker.UIFont : null;
         keepWhenClosed = PlayerPrefs.GetInt(PrefKeep, 0) != 0;
         PixelUIKit.EnsureEventSystem();
+        PixelDevMockWindow.Boot();
 
         piecesCanvas = PixelUIKit.CreateCanvas("Dev Mockup Pieces", 540, new Vector2(1920f, 1080f), true, false);
         piecesCanvas.transform.SetParent(transform, false);
@@ -118,7 +125,6 @@ public class PixelDevMockup : MonoBehaviour
 
         BuildPanel();
         Load();
-        panelCanvas.SetActive(false);
         ApplyVisibility();
         RefreshImageList();
     }
@@ -131,7 +137,6 @@ public class PixelDevMockup : MonoBehaviour
     private void Apply(bool on)
     {
         Active = on;
-        panelCanvas.SetActive(on);
         if (!on) Select(null);
         ApplyVisibility();
         RefreshImageList();
@@ -140,7 +145,7 @@ public class PixelDevMockup : MonoBehaviour
 
     private void ApplyVisibility()
     {
-        piecesCanvas.SetActive(!hideAll && (Active || keepWhenClosed));
+        piecesCanvas.SetActive(!hideAll && (Active || windowOpen || keepWhenClosed));
         foreach (Piece p in pieces)
         {
             p.group.blocksRaycasts = Active;
@@ -516,23 +521,13 @@ public class PixelDevMockup : MonoBehaviour
 
     private void BuildPanel()
     {
-        panelCanvas = PixelUIKit.CreateCanvas("Dev Mockup UI", 545, new Vector2(1920f, 1080f), true);
-        panelCanvas.transform.SetParent(transform, false);
-        GameObject windowGo = new GameObject("Window", typeof(RectTransform), typeof(Image));
-        windowGo.transform.SetParent(panelCanvas.transform, false);
-        RectTransform wr = windowGo.GetComponent<RectTransform>();
-        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(1f, 1f);
-        wr.anchoredPosition = new Vector2(-20f, -120f);
-        wr.sizeDelta = new Vector2(500f, 880f);
-        PixelUIKit.StyleWindow(windowGo.GetComponent<Image>(), new Color(0.08f, 0.1f, 0.16f, 0.97f));
-        Transform t = windowGo.transform;
+        // The controls live in the Mock up mode window's second tab (PixelDevMockWindow), 500 wide like the old panel.
+        RectTransform tabRoot = PixelDevMockWindow.TabRoot(1);
+        panelCanvas = tabRoot.gameObject;
+        Transform t = tabRoot;
 
         Color text = new Color(0.92f, 0.94f, 1f, 1f), grey = new Color(0.35f, 0.4f, 0.5f, 1f), blue = new Color(0.25f, 0.45f, 0.8f, 1f);
-        float y = 14f;
-        TMP_Text title = PixelUIKit.CreateText(font, t, "Title", "UI MOCKUP BUILDER", 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, text);
-        PlaceTL(title.rectTransform, 20f, y, 380f, 44f);
-        MakeButton(t, "X", 440f, y, 44f, new Color(0.6f, 0.2f, 0.2f, 1f), () => SetActive(false), 26f);
-        y += 52f;
+        float y = 8f;
 
         // Add pieces
         MakeButton(t, "Window", 16f, y, 92f, blue, () => AddPiece(PieceKind.Window), 18f);
@@ -615,7 +610,7 @@ public class PixelDevMockup : MonoBehaviour
         y += 52f;
 
         readout = PixelUIKit.CreateText(font, t, "Readout", "", 17f, TextAlignmentOptions.TopLeft, FontStyles.Normal, text);
-        PlaceTL(readout.rectTransform, 20f, y, 462f, 880f - y - 10f);
+        PlaceTL(readout.rectTransform, 20f, y, 462f, PixelDevMockWindow.ContentHeight - y - 10f);
         readout.overflowMode = TextOverflowModes.Truncate;
 
         RefreshAll();

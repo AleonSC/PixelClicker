@@ -7,7 +7,6 @@
 //   (y, mesh bounds, own ground settings), PixelViewBounds' settings and its five planes, physics numbers, where the viewport edges (corners and
 //   edge middles, also inside the bars) land on the floor plane and on the cube's height, and every old pixel's position.
 // ---------------------------------------------------
-using System.IO;
 using System.Text;
 using UnityEngine;
 
@@ -85,19 +84,7 @@ public static class PixelBoundsSnapshot
         }
         sb.AppendLine("extent of all old pixels: min=" + all.min.ToString("F2") + " max=" + all.max.ToString("F2"));
 
-        try
-        {
-            string dir = Path.Combine(Application.persistentDataPath, "Snapshots");
-            Directory.CreateDirectory(dir);
-            string stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string path = Path.Combine(dir, "bounds_" + stamp + ".txt");
-            File.WriteAllText(path, sb.ToString());
-            ScreenCapture.CaptureScreenshot(Path.Combine(dir, "bounds_" + stamp + ".png"));
-            GUIUtility.systemCopyBuffer = sb.ToString();
-            Debug.Log("Bounds snapshot saved (and copied to the clipboard): " + path);
-            return path;
-        }
-        catch (System.Exception e) { Debug.LogWarning("Bounds snapshot failed: " + e.Message); return null; }
+        return PixelDevProbe.Save("bounds", sb.ToString(), true);
     }
 
     private static void Describe(StringBuilder sb, string label, Camera c)

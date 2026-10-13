@@ -97,6 +97,16 @@ public class PixelCrashLog : MonoBehaviour
     private GameObject noticeRoot;
     private float noticeTimer;
 
+    /// <summary>The game-state summary the crash reports carry (refreshed every few seconds), for the dev snapshot tools.</summary>
+    public static string GameStateText() => instance != null ? instance.cachedSnapshot : "";
+
+    /// <summary>The last few log lines (the same ones written under an error), for the dev snapshot tools.</summary>
+    public static string RecentLogText()
+    {
+        if (instance == null) return "";
+        lock (instance.gate) return string.Join("\n", instance.recent.ToArray());
+    }
+
     /// <summary>True when the report system is running.</summary>
     public static bool Available => instance != null && instance.enableReports;
 

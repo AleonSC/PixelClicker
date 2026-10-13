@@ -2535,6 +2535,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             if ((PixelAction)i == PixelAction.FirstPerson || (PixelAction)i == PixelAction.Zoom) continue;   // retired keys: the View window does their job
+            if (i >= (int)PixelAction.DevTools && !Application.isEditor && !Debug.isDebugBuild) continue;   // dev keys only exist in the Editor / development builds
             int index = i;
             string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "Switch view (first person / orbit)" : MenuKeyLabel((PixelAction)i);
             TMP_Text keyLabel = AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
@@ -2594,6 +2595,9 @@ public class PixelPauseMenu : MonoBehaviour
             case PixelAction.Skills: return "Open Skills";
             case PixelAction.Feedback: return "Give feedback";
             case PixelAction.ViewWindow: return "Open View window";
+            case PixelAction.DevTools: return "Open Dev Tools";
+            case PixelAction.MarkMoment: return "Dev: mark this moment";
+            case PixelAction.InspectHover: return "Dev: inspect under mouse";
         }
         return action.ToString();
     }

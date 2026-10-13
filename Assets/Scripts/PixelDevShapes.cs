@@ -1,14 +1,15 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelDevShapes.cs / PixelDevMockup.cs
-//   Layout dev tools (tick boxes 'Shape placer' / 'UI mockup builder' at the bottom of the Dev Tools Tools tab; both components are
-//   created by PixelDevTools at start (Boot) so saved layouts reappear, the panels open with SetActive; state in PlayerPrefs
-//   PixelClicker.Dev.*, not in the game save). Shape placer: left panel; click the floor to drop the brush shape (ShapeKind Cube /
+//   Layout dev tools ('Mock up mode' tick box in the Dev Tools Tools tab = PixelDevMockWindow, ONE draggable window with a Shapes tab and a UI pieces tab
+//   and a minimize button; both components are created by PixelDevTools at start (Boot) so saved layouts reappear, the host window turns the tabs on with
+//   SetActive; their controls are built into PixelDevMockWindow.TabRoot; state in PlayerPrefs
+//   PixelClicker.Dev.*, not in the game save). Shape placer (tab 0); click the floor to drop the brush shape (ShapeKind Cube /
 //   Sphere / Cylinder / Capsule / Ramp (runtime wedge mesh) / Wall / Disc, sizes in main-pixel widths), click a shape to select + drag
 //   it on the floor plane, Q / E (PixelAction.RotateLeft/Right) turn, the wheel turns smoothly and Ctrl + wheel resizes (the hovered / dragged shape, else the brush), a see-through GHOST of the brush follows the mouse over the floor (UpdateGhost) and the shape is dropped with the brush's size / turn, Delete removes; ShapeMode Solid (static collider)
 //   / Dynamic (rigidbody) / Ghost (no collider); colour cycle button; every shape has a billboard number label, the panel lists id /
 //   kind / mode / x z y / rotation / size and 'Copy layout' puts the text on the clipboard; 'RESET ALL SHAPES' deletes everything (one
 //   click). While open PixelClicker.DevClickBlock (part of ExternalClickBlock) keeps the cube from taking the clicks. UI mockup
-//   builder: right panel; right-click on a piece deletes it; resize grips are a drawn corner grip (PixelUIKit.GripSprite, also on My
+//   builder (tab 1); right-click on a piece deletes it; resize grips are a drawn corner grip (PixelUIKit.GripSprite, also on My
 //   Window); add Window / Box / Button / Text / Image pieces (own canvas 540, 1920 x 1080 units, origin top-left, no UI-scale
 //   division) - drag to move, yellow corner handle to resize, number badge, exact X / Y / W / H fields, text box, font size, opacity
 //   slider, hex colour, layer Front / Up / Down / Back, duplicate, delete; Image pieces show PNG / JPG files from
@@ -36,15 +37,12 @@ public class PixelDevShapes : MonoBehaviour
     public enum ShapeKind { Cube, Sphere, Cylinder, Capsule, Ramp, Wall, Disc }
     public enum ShapeMode { Solid, Dynamic, Ghost }
 
-    private const string PrefActive = "PixelClicker.Dev.ShapesOn", PrefData = "PixelClicker.Dev.ShapesData";
+    private const string PrefData = "PixelClicker.Dev.ShapesData";
 
     private static PixelDevShapes instance;
 
     /// <summary>The shape placer panel is open.</summary>
     public static bool Active { get; private set; }
-
-    /// <summary>The tick box was on last time.</summary>
-    public static bool SavedActive => PlayerPrefs.GetInt(PrefActive, 0) != 0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { instance = null; Active = false; }
@@ -54,7 +52,6 @@ public class PixelDevShapes : MonoBehaviour
     {
         Boot();
         instance.Apply(on);
-        PlayerPrefs.SetInt(PrefActive, on ? 1 : 0);
     }
 
     /// <summary>Creates the placer (loading the saved shapes) if there is something saved.</summary>
@@ -126,9 +123,10 @@ public class PixelDevShapes : MonoBehaviour
         instance = this;
         clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
+        PixelDevMockWindow.Boot();
         Load();
         BuildPanel();
-        canvasRoot.SetActive(false);
+        Apply(false);
     }
 
     private void OnDestroy()
@@ -142,7 +140,6 @@ public class PixelDevShapes : MonoBehaviour
     private void Apply(bool on)
     {
         Active = on;
-        canvasRoot.SetActive(on);
         foreach (Shape s in shapes) if (s.label != null) s.label.gameObject.SetActive(on);
         if (!on) { dragging = false; PixelClicker.DevClickBlock = false; if (ghost != null) ghost.SetActive(false); }
         Refresh();
@@ -535,26 +532,19 @@ public class PixelDevShapes : MonoBehaviour
     private void BuildPanel()
     {
         PixelUIKit.EnsureEventSystem();
-        canvasRoot = PixelUIKit.CreateCanvas("Dev Shapes UI", 560, new Vector2(1920f, 1080f), true);
-        canvasRoot.transform.SetParent(transform, false);
-
-        const float width = 470f;
-        GameObject windowGo = new GameObject("Window", typeof(RectTransform), typeof(Image));
-        windowGo.transform.SetParent(canvasRoot.transform, false);
+        // The controls live in the Mock up mode window's first tab (PixelDevMockWindow): a 470-wide column centred in it.
+        RectTransform tabRoot = PixelDevMockWindow.TabRoot(0);
+        canvasRoot = tabRoot.gameObject;
+        GameObject windowGo = new GameObject("Shapes Content", typeof(RectTransform));
+        windowGo.transform.SetParent(tabRoot, false);
         window = windowGo;
         RectTransform wr = windowGo.GetComponent<RectTransform>();
-        float top = 120f;
-        PlaceTL(wr, 20f, top, width, 760f);
-        PixelUIKit.StyleWindow(windowGo.GetComponent<Image>(), new Color(0.08f, 0.1f, 0.16f, 0.96f));
+        wr.anchorMin = wr.anchorMax = wr.pivot = new Vector2(0.5f, 1f);
+        wr.anchoredPosition = Vector2.zero;
+        wr.sizeDelta = new Vector2(470f, PixelDevMockWindow.ContentHeight);
 
         Color text = new Color(0.92f, 0.94f, 1f, 1f), box = new Color(0.16f, 0.2f, 0.3f, 1f), btn = new Color(0.25f, 0.45f, 0.8f, 1f);
-        float y = 16f;
-        TMP_Text title = PixelUIKit.CreateText(font, windowGo.transform, "Title", "SHAPE PLACER", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, text);
-        PlaceTL(title.rectTransform, 20f, y, width - 100f, 44f);
-        Button close = PixelUIKit.CreateButton(font, windowGo.transform, "Close", "X", new Vector2(44f, 44f), new Color(0.6f, 0.2f, 0.2f, 1f), text, 28f);
-        PlaceTL(close.GetComponent<RectTransform>(), width - 60f, y, 44f, 44f);
-        close.onClick.AddListener(() => SetActive(false));
-        y += 56f;
+        float y = 8f;
 
         // Shape + mode
         kindDropdown = PixelUIKit.CreateDropdown(font, windowGo.transform, "Kind", new Vector2(200f, 46f), box, box, text, 26f);
@@ -599,7 +589,7 @@ public class PixelDevShapes : MonoBehaviour
         y += 92f;
 
         readout = PixelUIKit.CreateText(font, windowGo.transform, "Readout", "", 19f, TextAlignmentOptions.TopLeft, FontStyles.Normal, text);
-        PlaceTL(readout.rectTransform, 20f, y, 430f, 760f - y - 12f);
+        PlaceTL(readout.rectTransform, 20f, y, 430f, PixelDevMockWindow.ContentHeight - y - 12f);
         readout.overflowMode = TextOverflowModes.Truncate;
         Refresh();
     }
