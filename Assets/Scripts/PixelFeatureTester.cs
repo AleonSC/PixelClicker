@@ -3,10 +3,12 @@
 //   The 'Tester' tab of the Dev Hub: a place to spawn and try things that are not part of the game yet (a consumable, a device, a machine...). Each testable thing is a Feature registered in
 //   Awake (Register(name, description, ghostBuilder, placeBuilder)): the tab lists them as cards with a 'Place' button. Place = a see-through GHOST follows the mouse over the floor
 //   (PixelConsumables.TryGetFloorPoint); left click puts a real one down (and keeps placing), Q / E turn it, right click or Escape stops (PixelWindows entry); 'Clear' removes the ones placed.
-//   While placing, clicks on the cube are blocked (PixelClicker.ExternalClickBlock). Placed test objects are NOT saved. To add something to test: write a builder (see PixelWoodChipper:
+//   While placing, clicks on the cube are blocked (PixelClicker.ExternalClickBlock). Placed test objects ARE saved (see SAVING below). To add something to test: write a builder (see PixelWoodChipper:
 //   CreateGhost / Place) and add one Register line here.
 //   Two-point features (RegisterLine, a conveyor belt) use a marker ghost, then a preview piece between the first point and the mouse; every click builds a piece and the end starts the next.
-//   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels).
+//   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
+//   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
+//   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -24,6 +26,10 @@ public class PixelFeatureTester : MonoBehaviour
     private sealed class Feature
     {
         public PlaceSnap placeSnap;
+        // Saving with the save file: export a placed object to JSON, import it back (null = this feature is not saved).
+        public Func<GameObject, string> export;
+        public Func<PixelClicker, string, GameObject> import;
+        public bool linkAfterPlace;   // after placing, click a device to link it (the Solar Panel)
         public string name, description;
         public Func<PixelClicker, GameObject> ghost;
         public Func<PixelClicker, Vector3, float, GameObject> place;
@@ -95,14 +101,26 @@ public class PixelFeatureTester : MonoBehaviour
                  "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing. While placing, an arrow shows where its chips shoot out; if a conveyor belt's opening is in the arrow's area the chipper latches onto it and its Wood Chips drop straight onto the belt.",
                  c => PixelWoodChipper.CreateGhost(c), (c, p, yw) => PixelWoodChipper.Place(c, p, yw));
         features[features.Count - 1].placeSnap = PixelWoodChipper.TrySnapToBelt;
+        features[features.Count - 1].export = PixelWoodChipper.ExportState;
+        features[features.Count - 1].import = PixelWoodChipper.ImportState;
 
         RegisterLine("Conveyor Belt",
                      "Click a point, then another: a belt is built between them (the second point starts the next piece, so short pieces make a curve; right click ends the chain, right click again stops). Clicks near a belt's end snap to it. Right click a placed belt to reverse it. Anything standing on a belt is carried along - drop things on it with Pixel Grabbing, or put it under a machine's outlet.",
                      c => PixelConveyor.CreateMarker(c), c => PixelConveyor.CreatePreview(c), (g, a, b) => PixelConveyor.UpdatePreview(g, a, b),
                      (c, a, b) => PixelConveyor.Place(c, a, b), (c, p) => PixelConveyor.Snap(c, p));
+        features[features.Count - 1].export = PixelConveyor.ExportState;
+        features[features.Count - 1].import = PixelConveyor.ImportState;
         Register("Kiln",
                  "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
                  c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
+        features[features.Count - 1].export = PixelKiln.ExportState;
+        features[features.Count - 1].import = PixelKiln.ImportState;
+        Register("Solar Panel",
+                 "A flat solar panel. It is powered while Solar pixels lie on it, and then it stops the countdown of the ONE device it is linked to (a blue line joins them). Solar pixels on it are slowly used up, unless they sit in a complete group of 5 - those last and power it for good. After placing it, click a device inside the blue ring to link it; right click a placed panel to link it again.",
+                 c => PixelSolarPanel.CreateGhost(c), (c, p, yw) => PixelSolarPanel.Place(c, p, yw));
+        features[features.Count - 1].export = PixelSolarPanel.ExportState;
+        features[features.Count - 1].import = PixelSolarPanel.ImportState;
+        features[features.Count - 1].linkAfterPlace = true;
 
         Build(PixelDevHub.TabRoot("tester"));
         PixelWindows.Register(this, 210, () => placing != null, StopPlacing);   // Escape stops placing first
@@ -173,7 +191,8 @@ public class PixelFeatureTester : MonoBehaviour
             if (f.clearLabel != null) f.clearLabel.text = "Clear (" + f.placed.Count + ")";
         }
         if (statusLabel != null)
-            statusLabel.text = placing == null ? "Pick 'Place' on a card to try it."
+            statusLabel.text = linkPanel != null ? "Click a device inside the blue ring to link the solar panel to it (right click skips)."
+                : placing == null ? "Pick 'Place' on a card to try it."
                 : placing.line ? "Placing " + placing.name + (hasStart ? ": left click the end point (it starts the next piece), right click ends the chain." : ": left click the first point.") + " Right click stops / Esc stops."
                 : "Placing " + placing.name + ": left click puts one down, Q / E turn it, right click or Esc stops.";
     }
@@ -224,6 +243,100 @@ public class PixelFeatureTester : MonoBehaviour
         return true;
     }
 
+    // ---------------- saving with the save file ----------------
+
+    [Serializable]
+    public class TesterSave { public string feature; public string json; }
+
+    private static TesterSave[] kept;   // what was loaded while the tester was not running (kept as it was, so a save made then does not lose it)
+
+    /// <summary>Every placed test object (chipper, belts and their riders, kiln, solar panels) as JSON for the save file.</summary>
+    public static TesterSave[] ExportAll()
+    {
+        if (instance == null) return kept;
+        List<TesterSave> list = new List<TesterSave>();
+        foreach (Feature f in instance.features)
+        {
+            if (f.export == null) continue;
+            foreach (GameObject go in f.placed)
+            {
+                if (go == null) continue;
+                string json = f.export(go);
+                if (!string.IsNullOrEmpty(json)) list.Add(new TesterSave { feature = f.name, json = json });
+            }
+        }
+        return list.ToArray();
+    }
+
+    /// <summary>Loading a save: the placed test objects are replaced by the saved ones.</summary>
+    public static void ImportAll(TesterSave[] saved)
+    {
+        kept = saved;
+        if (instance == null && saved != null && saved.Length > 0) Boot();
+        if (instance == null) return;
+        instance.StopPlacing();
+        foreach (Feature f in instance.features) { foreach (GameObject g in f.placed) if (g != null) Destroy(g); f.placed.Clear(); }
+        if (saved != null && instance.clicker != null)
+            foreach (TesterSave t in saved)
+            {
+                if (t == null || string.IsNullOrEmpty(t.json)) continue;
+                Feature f = instance.features.Find(x => x.name == t.feature);
+                if (f == null || f.import == null) continue;
+                GameObject go = null;
+                try { go = f.import(instance.clicker, t.json); } catch (Exception e) { Debug.LogWarning("PixelFeatureTester: could not restore a " + t.feature + " - " + e.Message); }
+                if (go != null) f.placed.Add(go);
+            }
+        instance.Refresh();
+    }
+
+    // ---------------- linking (the Solar Panel) ----------------
+
+    private GameObject linkPanel;
+
+    /// <summary>Starts linking a placed panel to a device: click a device inside the ring (called by the panel on a right click).</summary>
+    public static void BeginLink(GameObject panel)
+    {
+        if (instance == null) return;
+        instance.StopPlacing();
+        instance.linkPanel = panel;
+        instance.placeStartFrame = Time.frameCount;
+        panel.GetComponent<PixelSolarPanel>()?.ShowRange(true);
+        instance.linkOnly = true;
+        PixelClicker.ExternalClickBlock = true; instance.blocking = true;
+        instance.Refresh();
+    }
+
+    private bool linkOnly;   // linking a placed panel without placing anything
+
+    private void EndLink(bool keepPlacing)
+    {
+        if (linkPanel != null) linkPanel.GetComponent<PixelSolarPanel>()?.ShowRange(false);
+        linkPanel = null;
+        if (linkOnly) { linkOnly = false; if (blocking) { PixelClicker.ExternalClickBlock = false; blocking = false; } }
+        Refresh();
+    }
+
+    private void UpdateLink()
+    {
+        PixelClicker.ExternalClickBlock = true;
+        blocking = true;
+        if (linkPanel == null) { EndLink(true); return; }
+        if (ghost != null) ghost.SetActive(false);
+        if (Time.frameCount == placeStartFrame) return;
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) return;
+        if (PixelInput.LeftPressed() && !PixelInput.PointerOverUI())
+        {
+            PixelPlacedDevice device = PixelSolarPanel.DeviceUnderRay(linkPanel, cam.ScreenPointToRay(PixelInput.PointerPosition()));
+            if (device != null)
+            {
+                linkPanel.GetComponent<PixelSolarPanel>().LinkTo(device);
+                EndLink(true);
+            }
+        }
+        else if (PixelInput.RightPressed()) EndLink(true);
+    }
+
     /// <summary>Two-point placing: marker at the mouse until the first click, then the belt stretches to the mouse; every further click builds that piece and starts the next one.</summary>
     private void UpdateLine(bool hasPoint, Vector3 raw)
     {
@@ -270,6 +383,7 @@ public class PixelFeatureTester : MonoBehaviour
 
     private void Update()
     {
+        if (linkPanel != null) { UpdateLink(); return; }
         if (placing == null) return;
         if (!PixelDevHub.IsOpen) { StopPlacing(); return; }
         PixelClicker.ExternalClickBlock = true;
@@ -295,6 +409,7 @@ public class PixelFeatureTester : MonoBehaviour
         {
             GameObject go = placing.place(clicker, point, useYaw);
             if (go != null) placing.placed.Add(go);
+            if (go != null && placing.linkAfterPlace) { linkPanel = go; linkOnly = false; placeStartFrame = Time.frameCount; go.GetComponent<PixelSolarPanel>()?.ShowRange(true); }
             Refresh();
         }
         else if (PixelInput.RightPressed()) StopPlacing();

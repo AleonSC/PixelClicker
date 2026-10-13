@@ -174,6 +174,28 @@ public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor
         return ps;
     }
 
+    // ---------------- saving (PixelFeatureTester) ----------------
+
+    [System.Serializable]
+    private class Save { public Vector3 position; public float yaw; public int pending; }
+
+    public static string ExportState(GameObject root)
+    {
+        PixelKiln k = root != null ? root.GetComponent<PixelKiln>() : null;
+        if (k == null) return null;
+        return JsonUtility.ToJson(new Save { position = root.transform.position, yaw = root.transform.eulerAngles.y, pending = k.pendingCharcoal });
+    }
+
+    public static GameObject ImportState(PixelClicker c, string json)
+    {
+        Save s = JsonUtility.FromJson<Save>(json);
+        if (s == null) return null;
+        GameObject root = Place(c, s.position, s.yaw);
+        PixelKiln k = root.GetComponent<PixelKiln>();
+        if (k != null) for (int i = 0; i < s.pending; i++) { k.pendingCharcoal++; k.readyTimes.Add(Time.time + 1f + i * 0.2f); }
+        return root;
+    }
+
     // ---------------- behaviour ----------------
 
     private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); }

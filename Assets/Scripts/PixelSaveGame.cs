@@ -104,6 +104,7 @@ public class PixelSaveGame : MonoBehaviour
         public int activePotionThird;    // 0 = none; otherwise (third pixel type + 1) of a 3-type combo potion
         public float activePotionRemaining;
         public PixelConsumables.PlacedState[] placedDevices;
+        public PixelFeatureTester.TesterSave[] testerObjects;   // the Dev Hub tester machines (Wood Chipper, belts + their riders, Kiln, Solar Panels)
         public PixelBank.Entry[] bank;
         public bool autoClickerRunning;
         public bool autoClickerDisabled; // switched off by the player (Toggles window)
@@ -684,6 +685,7 @@ public class PixelSaveGame : MonoBehaviour
                 data.activePotionRemaining = consumables.Remaining;
             }
             if (consumables != null) data.placedDevices = consumables.GetPlacedDevices().ToArray();
+            data.testerObjects = PixelFeatureTester.ExportAll();
             if (bank != null) data.bank = bank.GetState().ToArray();
 
             // Every minigame with a goal counter saves its count under its id.
@@ -913,6 +915,7 @@ public class PixelSaveGame : MonoBehaviour
                 consumables.ClearPlacedDevices();
                 if (data.placedDevices != null)
                     foreach (PixelConsumables.PlacedState placed in data.placedDevices) consumables.RestorePlacedDevice(placed);
+                PixelFeatureTester.ImportAll(data.testerObjects);   // after the devices (a solar panel links to one) and the old pixels (belt riders are made again)
 
                 if (data.hasActivePotion)
                 {

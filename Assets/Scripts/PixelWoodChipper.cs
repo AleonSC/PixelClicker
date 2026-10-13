@@ -165,6 +165,33 @@ public class PixelWoodChipper : MonoBehaviour
         return best;
     }
 
+    // ---- saving (PixelFeatureTester) ----
+
+    [System.Serializable]
+    private class Save { public Vector3 position; public float yaw; public float health; public int chipProgress, woodConsumed; public bool broken; }
+
+    public static string ExportState(GameObject root)
+    {
+        PixelWoodChipper c = root != null ? root.GetComponent<PixelWoodChipper>() : null;
+        if (c == null) return null;
+        return JsonUtility.ToJson(new Save { position = root.transform.position, yaw = root.transform.eulerAngles.y, health = c.health, chipProgress = c.chipProgress, woodConsumed = c.woodConsumed, broken = c.broken });
+    }
+
+    public static GameObject ImportState(PixelClicker clicker, string json)
+    {
+        Save s = JsonUtility.FromJson<Save>(json);
+        if (s == null) return null;
+        GameObject root = Place(clicker, s.position, s.yaw);
+        PixelWoodChipper c = root.GetComponent<PixelWoodChipper>();
+        if (c != null)
+        {
+            c.health = s.health; c.chipProgress = s.chipProgress; c.woodConsumed = s.woodConsumed;
+            if (s.broken) { c.broken = true; if (c.brokenLabel != null) c.brokenLabel.gameObject.SetActive(true); }
+            c.RefreshCondition();
+        }
+        return root;
+    }
+
     /// <summary>The see-through ghost that follows the mouse while placing.</summary>
     public static GameObject CreateGhost(PixelClicker clicker)
     {

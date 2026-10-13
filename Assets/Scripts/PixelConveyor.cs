@@ -265,6 +265,40 @@ public class PixelConveyor : MonoBehaviour
         return Mathf.Abs(l.x) < width * 0.5f + 0.2f * unit && Mathf.Abs(l.z) < length * 0.5f && l.y > -0.05f * unit && l.y < height + 0.35f * unit;
     }
 
+    // ---------------- saving (PixelFeatureTester) ----------------
+
+    [System.Serializable]
+    private class Save
+    {
+        public Vector3 a, b;
+        public bool reversed;
+        public float customSpeed = -1f;
+        public List<PixelConveyorSystem.RiderSave> riders = new List<PixelConveyorSystem.RiderSave>();
+    }
+
+    /// <summary>The belt's shape, direction, custom speed and the pixels riding it (where along the belt each is).</summary>
+    public static string ExportState(GameObject root)
+    {
+        PixelConveyor belt = root != null ? root.GetComponent<PixelConveyor>() : null;
+        if (belt == null) return null;
+        Save s = new Save { a = belt.a, b = belt.b, reversed = belt.reversed, customSpeed = belt.customSpeedCubes };
+        s.riders = PixelConveyorSystem.ExportRiders(belt);
+        return JsonUtility.ToJson(s);
+    }
+
+    public static GameObject ImportState(PixelClicker c, string json)
+    {
+        Save s = JsonUtility.FromJson<Save>(json);
+        if (s == null) return null;
+        GameObject root = Place(c, s.a, s.b);
+        if (root == null) return null;
+        PixelConveyor belt = root.GetComponent<PixelConveyor>();
+        if (s.reversed) { belt.reversed = true; belt.PlaceRibs(); }
+        belt.customSpeedCubes = s.customSpeed;
+        if (s.riders != null) foreach (PixelConveyorSystem.RiderSave r in s.riders) PixelConveyorSystem.ImportRider(belt, r);
+        return root;
+    }
+
     /// <summary>First person: where a carried cube would sit if put down on this belt (centred on the line, bottom on the belt). False if it is not over the belt.</summary>
     public bool TrySnapPlace(Vector3 held, float halfHeight, out Vector3 position, out float gap)
     {
@@ -329,6 +363,45 @@ public class PixelConveyorSystem : MonoBehaviour
     private static void ResetSystem() { system = null; }
 
     public static void Ensure(PixelClicker c) { if (system == null) { GameObject go = new GameObject("Conveyor System"); system = go.AddComponent<PixelConveyorSystem>(); system.clicker = c; } }
+
+    [System.Serializable]
+    public class RiderSave { public string type; public double amount; public float s; }
+
+    /// <summary>Is this old pixel locked onto a belt right now (it is saved with the belt, not with the loose old pixels)?</summary>
+    public static bool IsRiding(Rigidbody rb) => system != null && rb != null && system.riding.Contains(rb);
+
+    public static List<RiderSave> ExportRiders(PixelConveyor belt)
+    {
+        List<RiderSave> list = new List<RiderSave>();
+        if (system == null || system.clicker == null) return list;
+        foreach (Rider r in system.riders)
+        {
+            if (r.belt != belt || r.rb == null) continue;
+            OldPixelInfo info = r.rb.GetComponent<OldPixelInfo>();
+            if (info == null || !system.clicker.IsValidTierIndex(info.tierIndex)) continue;
+            list.Add(new RiderSave { type = system.clicker.Tiers[info.tierIndex].type.ToString(), amount = info.amount, s = r.s });
+        }
+        return list;
+    }
+
+    /// <summary>A saved rider goes back on the belt at its place (the pixel is made again and locked on).</summary>
+    public static void ImportRider(PixelConveyor belt, RiderSave save)
+    {
+        if (system == null || system.clicker == null || save == null || belt == null) return;
+        PixelClicker c = system.clicker;
+        if (!System.Enum.TryParse(save.type, out PixelClicker.PixelType type)) return;
+        int tier = c.IndexOf(type);
+        if (tier < 0) return;
+        float s = Mathf.Clamp(save.s, 0f, belt.Length);
+        Vector3 p = belt.PointAt(s) + Vector3.up * (belt.SurfaceHeight + belt.Unit * 0.5f);
+        int before = c.OldPixels.Count;
+        if (!c.SpawnStoredPixel(tier, save.amount, p, Vector3.zero) || c.OldPixels.Count <= before) return;
+        Rigidbody rb = c.OldPixels[c.OldPixels.Count - 1];
+        if (rb == null) return;
+        OldPixelPopIn pop = rb.GetComponent<OldPixelPopIn>();
+        if (pop != null) pop.Finish();
+        system.Capture(rb, belt, s);
+    }
 
     /// <summary>A belt was reversed: its riders now travel the other way (their distance along it is mirrored).</summary>
     public static void OnFlipped(PixelConveyor belt)

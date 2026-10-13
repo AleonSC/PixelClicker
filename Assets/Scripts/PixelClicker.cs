@@ -4460,7 +4460,7 @@ public partial class PixelClicker : MonoBehaviour
         for (int i = 0; i < oldPixels.Count; i++)
         {
             Rigidbody rb = oldPixels[i];
-            if (rb == null || IsFlyingPixel(rb)) continue;
+            if (rb == null || IsFlyingPixel(rb) || PixelConveyorSystem.IsRiding(rb)) continue;   // (pixels riding a belt are saved with the belt)
             OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
             if (info == null) continue;
             OldPixelDespawn d = rb.GetComponent<OldPixelDespawn>();
@@ -5614,6 +5614,9 @@ public class OldPixelDespawn : MonoBehaviour
     }
 
     private float keepUntil;
+
+    /// <summary>Is it being kept alive right now (a complete Solar group, a gravity well...)? The solar panel uses it to tell a complete group from stray Solar pixels.</summary>
+    public bool IsKept => Time.time < keepUntil;
 
     /// <summary>True once it has started swelling and shrinking away.</summary>
     public bool IsDespawning => despawning;
