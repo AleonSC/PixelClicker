@@ -295,13 +295,32 @@ public class PixelGuideVendor : MonoBehaviour
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
-    private bool Calm()
+    private bool Calm() => CalmBlocker() == null;
+
+    private string lastBlocker;
+
+    /// <summary>What keeps Cubie from turning up right now (null = nothing: it is calm). The reason is logged once whenever it changes (Editor / dev builds, PixelDebug) so a missing visit can be traced.</summary>
+    private string CalmBlocker()
     {
-        if (PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelNotice.IsShowing || PixelPauseMenu.IsPaused ||
-            PixelMinigame.TakeoverActive || PixelPets.PopupOpen || PixelCameraIntro.ClicksLocked || PixelCameraIntro.Moving ||
-            Time.timeScale <= 0f || PixelWindows.AnyOpen()) return false;   // (Cubie only turns up when no other window is open)
-        foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy) return false;
-        return true;
+        string why = null;
+        if (PixelTitleScreen.Showing) why = "the title screen is showing";
+        else if (PixelHints.IntroHoldsGuide) why = "the intro tips are still running";
+        else if (PixelNotice.IsShowing) why = "a tip box is showing";
+        else if (PixelPauseMenu.IsPaused) why = "the game is paused";
+        else if (PixelMinigame.TakeoverActive) why = "a takeover minigame is running";
+        else if (PixelPets.PopupOpen) why = "a pet popup is open";
+        else if (PixelCameraIntro.ClicksLocked) why = "the camera intro has clicks locked";
+        else if (PixelCameraIntro.Moving) why = "the camera intro is moving";
+        else if (Time.timeScale <= 0f) why = "Time.timeScale is 0";
+        else if (PixelWindows.AnyOpen()) why = "a registered window is open";   // (Cubie only turns up when no other window is open)
+        else
+            foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy) { why = "the minigame " + m.Id + " is busy"; break; }
+        if (why != lastBlocker)
+        {
+            lastBlocker = why;
+            PixelDebug.Info("Cubie waits: " + (why ?? "calm now"), this);
+        }
+        return why;
     }
 
     private bool ShopThere => shop != null && shop.ShopAvailable;
@@ -309,7 +328,7 @@ public class PixelGuideVendor : MonoBehaviour
     private void Update()
     {
         if (ShopHold) UpdateHold();
-        if (disableGuide || clicker == null || visiting) return;
+        if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
         if (shop == null) shop = PixelFind.First<PixelShop>();
         if (stats == null) stats = PixelFind.First<PixelStats>();
         if (stats == null) return; // progress is kept in the stat counters, so nothing happens without them
@@ -324,6 +343,7 @@ public class PixelGuideVendor : MonoBehaviour
             if (ShopThere && !s1 && !replaying)
             {
                 // A save that already reached the shop: no visits, no gift - just the vendors from now on.
+                PixelDebug.Info("Cubie skips both visits: the Shop button is already available (required pixel unlocked)", this);
                 PixelStats.Best(Stage1Key, 1d);
                 PixelStats.Best(Stage2Key, 1d);
                 PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
@@ -331,6 +351,7 @@ public class PixelGuideVendor : MonoBehaviour
             }
             else if (!PixelHints.TipsEnabled && !replaying)
             {
+                PixelDebug.Info("Cubie skips his visits: Show first-time tips is off", this);
                 // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
                 if (!s1) PixelStats.Best(Stage1Key, 1d);
                 if (ShopThere)
@@ -341,7 +362,8 @@ public class PixelGuideVendor : MonoBehaviour
                 }
             }
             else if (ShopThere) StartCoroutine(Visit(true));
-            else if (!s1) StartCoroutine(Visit(false));
+            else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(false)); }
+            else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
             return;
         }
 

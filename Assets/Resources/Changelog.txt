@@ -864,3 +864,4 @@
 [2026-10-13 19:41 UTC] To-do: rebalance Old Pixel Capacity into a Standard skill reward.
 [2026-10-13 19:49 UTC] After buying the Auto Clicker (with first-time tips on) Cubie now explains the Toggles window, then hints at Skills and buying the Woodcutter's Pack; it replays with Replay tutorial and the skills tutorial waits for it.
 [2026-10-13 19:58 UTC] To-do: shared tutorial runner for the shop, skills and Toggles tutorials.
+[2026-10-13 20:00 UTC] Cubie now logs (Editor / dev builds) why he is not visiting yet, to trace a missing first appearance.
