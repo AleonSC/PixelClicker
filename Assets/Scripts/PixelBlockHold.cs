@@ -2,7 +2,7 @@
 // PixelBlockHold.cs
 //   Block Hold (shop pack with unlocksBlockHold, Upgrades tab, cheap while testing; component added by PixelShop / PixelClicker.Awake, Activate / Deactivate like the Bank):
 //   HOLD the RIGHT mouse button on the block on the cube to pull it out of the rotation (PixelClicker.TryPullLive: the cube rolls a new block at once, so you can keep clicking
-//   while it stays held). Letting go puts it back (PixelClicker.ReturnHeldTier: it takes the cube at once, with the hits it had; the block that was on the cube moves to next in line, hits kept - RollTier hands it out). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
+//   while it stays held). Letting go puts it back IN LINE (PixelClicker.ReturnHeldTier: it comes AFTER the block that is on the cube now, with the hits it had - RollTier hands it out - so a hazard that came up while you held is dealt with first and holding / releasing can never reroll the cube). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
 //   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
@@ -207,7 +207,7 @@ public class PixelBlockHold : MonoBehaviour
     private void Release(bool exhausted)
     {
         holding = false;
-        // The block takes the cube AT ONCE (the one that was there moves to next in line); the picture of it only slides back for show.
+        // The block goes first in line (it comes after the block on the cube now); the picture of it only slides back for show.
         if (heldTier >= 0 && clicker != null) clicker.ReturnHeldTier(heldTier, heldHits);
         heldTier = -1;
         returning = holder != null;

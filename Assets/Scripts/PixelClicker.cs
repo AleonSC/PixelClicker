@@ -2758,16 +2758,11 @@ public partial class PixelClicker : MonoBehaviour
     public void ReturnHeldTier(int tierIndex, int hits)
     {
         if (!IsValidTier(tierIndex)) return;
-        if (randomizeSpawnTier && pixelTransform != null && tiers.Length > 0 && !fishingBusy)
-        {
-            previousTier = GetClickTierIndex();
-            nextInLine.Insert(0, new Vector2Int(GetClickTierIndex(), hitsOnCurrentPixel));
-            while (nextInLine.Count > 3) nextInLine.RemoveAt(nextInLine.Count - 1);
-            currentTierIndex = tierIndex;
-            pendingHits = hits;
-            Materialize(GetClickTier());
-        }
-        else nextInLine.Insert(0, new Vector2Int(tierIndex, hits));
+        // The held block comes back AFTER the block that is on the cube now (it goes first in line, hits kept). That way a hazard that came up while you held can be dealt with first,
+        // and picking a block up and putting it down can never reroll the cube: the two blocks just keep taking turns.
+        nextInLine.Insert(0, new Vector2Int(tierIndex, hits));
+        while (nextInLine.Count > 3) nextInLine.RemoveAt(nextInLine.Count - 1);
+        upcomingTier = -1;
     }
 
     /// <summary>Dev tools: replaces the pixel on the cube with this type at once (even a locked one) so its behaviour can be tested.</summary>
