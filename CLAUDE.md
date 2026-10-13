@@ -113,6 +113,7 @@
 | Inventory currency groups (`PixelUI.Refresh`, `CurrencyGroup`) | The Currency tab lists the pixel rows in GROUPS under foldable headers (click a header, '- PURE' / '+ PURE'; | `docs/systems/PixelUI.md` |
 | `PixelShop.cs` / `PixelShopUI.cs` / `PixelShopDefaults.cs` | One partial class PixelShop in three files: | `docs/systems/PixelShop.md` |
 | `PixelOperation.cs` / `PixelShopOperation.cs` | Upgrades > Operation (the third sub-tab of the shop's Upgrades tab, operationSubTabText; | in the header comment of `PixelOperation.cs` |
+| `PixelConveyor.cs` / `PixelKiln.cs` / `PixelFactoryKit.cs` | Tester machines: conveyor belt (two-click placing, carries old pixels, right click reverses) and kiln (burns what enters its mouth into Charcoal old pixels); PixelFactoryKit = shared primitive builder. | `docs/systems/PixelFactory.md` |
 | `PixelFirePixel.cs` / `PixelProspector.cs` | Fire pixel + Prospector's Pack (PixelType.Fire 25, ores Copper..Nickel 26-31; | `docs/systems/PixelFirePixel.md` |
 | `PixelNuclearPixel.cs` | Nuclear pixel (PixelType.Nuclear 33, IsStandalone (no potions / seeds / crafting / pets / achievements / Value upgrades), spawn switch in Toggles; | in the header comment of `PixelNuclearPixel.cs` |
 | `PixelTreasure.cs` | Treasure pixel (PixelType.Treasure 32, IsStandalone, spawn switch in Toggles; | in the header comment of `PixelTreasure.cs` |

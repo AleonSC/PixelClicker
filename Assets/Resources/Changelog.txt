@@ -840,3 +840,4 @@
 [2026-10-13 17:29] The Next-up window (block predictor) now shows each block's real 3D model with its true look instead of a plain coloured cube; new shared PixelTierPicture helper.
 [2026-10-13 17:33] Destroying a Hornet Nest (letting it go off) now costs the Block Hold meter half of its current charge; clearing it safely does not (data: PixelBlockRules hazard penalties).
 [2026-10-13 17:45] Hazard blocks (Hornet Nest, Pest, Gas Pocket, Jellyfish, Mold) now have tells: a pulsing warning glow round the cube, a bobbing red warning triangle above it, a warning sound when one appears (plus an angry buzz for the Hornet Nest), all pulsing faster as it is about to leave.
+[2026-10-13 17:58] Added a Conveyor Belt (click two points to build, chain pieces for curves, right click to reverse, carries old pixels) and a Kiln (anything going into its mouth burns into Charcoal old pixels from the back chute, new Charcoal block) to the Dev Hub Feature Tester.

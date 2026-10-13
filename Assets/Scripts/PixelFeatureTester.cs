@@ -5,7 +5,8 @@
 //   (PixelConsumables.TryGetFloorPoint); left click puts a real one down (and keeps placing), Q / E turn it, right click or Escape stops (PixelWindows entry); 'Clear' removes the ones placed.
 //   While placing, clicks on the cube are blocked (PixelClicker.ExternalClickBlock). Placed test objects are NOT saved. To add something to test: write a builder (see PixelWoodChipper:
 //   CreateGhost / Place) and add one Register line here.
-//   Features now: Wood Chipper (PixelWoodChipper.cs).
+//   Two-point features (RegisterLine, a conveyor belt) use a marker ghost, then a preview piece between the first point and the mouse; every click builds a piece and the end starts the next.
+//   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,12 @@ public class PixelFeatureTester : MonoBehaviour
         public string name, description;
         public Func<PixelClicker, GameObject> ghost;
         public Func<PixelClicker, Vector3, float, GameObject> place;
+        // Two-point features (a conveyor belt): click a start, click an end, repeat (the end starts the next piece).
+        public bool line;
+        public Func<PixelClicker, GameObject> preview;
+        public Func<PixelClicker, Vector3, Vector3, GameObject> placeLine;
+        public Action<GameObject, Vector3, Vector3> updatePreview;
+        public Func<PixelClicker, Vector3, Vector3> snap;
         public readonly List<GameObject> placed = new List<GameObject>();
         public TMP_Text placeLabel, clearLabel;
     }
@@ -49,6 +56,9 @@ public class PixelFeatureTester : MonoBehaviour
     private float yaw;
     private int placeStartFrame;
     private bool blocking;
+    private bool hasStart;            // a line feature: the first point is chosen
+    private Vector3 lineStart;
+    private GameObject previewGhost;  // a line feature: the belt that stretches from the first point to the mouse
 
     private static void PlaceTL(RectTransform rt, float x, float y, float w, float h)
     {
@@ -63,6 +73,13 @@ public class PixelFeatureTester : MonoBehaviour
         features.Add(new Feature { name = name, description = description, ghost = ghostBuilder, place = placeBuilder });
     }
 
+    /// <summary>Adds a two-point thing to test (a belt between two clicked points). 'markerBuilder' = the ghost at the mouse while choosing the first point.</summary>
+    private void RegisterLine(string name, string description, Func<PixelClicker, GameObject> markerBuilder, Func<PixelClicker, GameObject> previewBuilder,
+                              Action<GameObject, Vector3, Vector3> previewUpdate, Func<PixelClicker, Vector3, Vector3, GameObject> placeBuilder, Func<PixelClicker, Vector3, Vector3> snapPoint)
+    {
+        features.Add(new Feature { name = name, description = description, ghost = markerBuilder, line = true, preview = previewBuilder, updatePreview = previewUpdate, placeLine = placeBuilder, snap = snapPoint });
+    }
+
     private void Awake()
     {
         instance = this;
@@ -73,6 +90,14 @@ public class PixelFeatureTester : MonoBehaviour
         Register("Wood Chipper",
                  "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing.",
                  c => PixelWoodChipper.CreateGhost(c), (c, p, yw) => PixelWoodChipper.Place(c, p, yw));
+
+        RegisterLine("Conveyor Belt",
+                     "Click a point, then another: a belt is built between them (the second point starts the next piece, so short pieces make a curve; right click ends the chain, right click again stops). Clicks near a belt's end snap to it. Right click a placed belt to reverse it. Anything standing on a belt is carried along - drop things on it with Pixel Grabbing, or put it under a machine's outlet.",
+                     c => PixelConveyor.CreateMarker(c), c => PixelConveyor.CreatePreview(c), (g, a, b) => PixelConveyor.UpdatePreview(g, a, b),
+                     (c, a, b) => PixelConveyor.Place(c, a, b), (c, p) => PixelConveyor.Snap(c, p));
+        Register("Kiln",
+                 "A brick kiln with a glowing mouth on its front. Anything that goes into the mouth from the side burns (lead a conveyor belt into it, or throw things in): each burnt pixel makes a Charcoal old pixel that comes out of the chute at the back. Charcoal despawns like any old pixel, for now.",
+                 c => PixelKiln.CreateGhost(c), (c, p, yw) => PixelKiln.Place(c, p, yw));
 
         Build(PixelDevHub.TabRoot("tester"));
         PixelWindows.Register(this, 210, () => placing != null, StopPlacing);   // Escape stops placing first
@@ -143,7 +168,9 @@ public class PixelFeatureTester : MonoBehaviour
             if (f.clearLabel != null) f.clearLabel.text = "Clear (" + f.placed.Count + ")";
         }
         if (statusLabel != null)
-            statusLabel.text = placing != null ? "Placing " + placing.name + ": left click puts one down, Q / E turn it, right click or Esc stops." : "Pick 'Place' on a card to try it.";
+            statusLabel.text = placing == null ? "Pick 'Place' on a card to try it."
+                : placing.line ? "Placing " + placing.name + (hasStart ? ": left click the end point (it starts the next piece), right click ends the chain." : ": left click the first point.") + " Right click stops / Esc stops."
+                : "Placing " + placing.name + ": left click puts one down, Q / E turn it, right click or Esc stops.";
     }
 
     private void StartPlacing(Feature f)
@@ -163,6 +190,9 @@ public class PixelFeatureTester : MonoBehaviour
     {
         if (ghost != null) Destroy(ghost);
         ghost = null;
+        if (previewGhost != null) Destroy(previewGhost);
+        previewGhost = null;
+        hasStart = false;
         placing = null;
         if (blocking) { PixelClicker.ExternalClickBlock = false; blocking = false; }
         Refresh();
@@ -189,6 +219,50 @@ public class PixelFeatureTester : MonoBehaviour
         return true;
     }
 
+    /// <summary>Two-point placing: marker at the mouse until the first click, then the belt stretches to the mouse; every further click builds that piece and starts the next one.</summary>
+    private void UpdateLine(bool hasPoint, Vector3 raw)
+    {
+        Vector3 p = hasPoint ? placing.snap(clicker, raw) : raw;
+        if (!hasStart)
+        {
+            if (ghost != null) { ghost.SetActive(hasPoint); if (hasPoint) ghost.transform.position = p; }
+        }
+        else
+        {
+            if (previewGhost != null && hasPoint) placing.updatePreview(previewGhost, lineStart, p);
+            else if (previewGhost != null) previewGhost.SetActive(false);
+        }
+        if (Time.frameCount == placeStartFrame) return;
+        if (hasPoint && PixelInput.LeftPressed())
+        {
+            if (!hasStart)
+            {
+                hasStart = true;
+                lineStart = p;
+                if (ghost != null) ghost.SetActive(false);
+                if (previewGhost == null) previewGhost = placing.preview(clicker);
+                Refresh();
+            }
+            else
+            {
+                GameObject go = placing.placeLine(clicker, lineStart, p);
+                if (go != null) { placing.placed.Add(go); lineStart = p; }
+                Refresh();
+            }
+        }
+        else if (PixelInput.RightPressed())
+        {
+            if (hasStart)
+            {
+                hasStart = false;                                   // ends the chain, the first point can be chosen again
+                if (previewGhost != null) Destroy(previewGhost);
+                previewGhost = null;
+                Refresh();
+            }
+            else StopPlacing();
+        }
+    }
+
     private void Update()
     {
         if (placing == null) return;
@@ -200,11 +274,12 @@ public class PixelFeatureTester : MonoBehaviour
         bool hasPoint = !overUi && TryFloorPoint(out Vector3 point0);
         Vector3 point = Vector3.zero;
         if (hasPoint) TryFloorPoint(out point);
-        if (ghost != null)
+        if (ghost != null && !(placing.line && hasStart))
         {
             ghost.SetActive(hasPoint);
             if (hasPoint) ghost.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
         }
+        if (placing.line) { UpdateLine(hasPoint, point); return; }
         if (PixelKeys.Held(PixelAction.RotateLeft)) yaw -= 120f * Time.unscaledDeltaTime;
         if (PixelKeys.Held(PixelAction.RotateRight)) yaw += 120f * Time.unscaledDeltaTime;
 
