@@ -310,7 +310,8 @@ public class PixelDockFx : MonoBehaviour
             cellImages[i] = g.GetComponent<Image>();
             cellImages[i].raycastTarget = false;
             cells[i] = g.GetComponent<RectTransform>();
-            cells[i].anchorMin = cells[i].anchorMax = cells[i].pivot = new Vector2(0.5f, 0.5f);
+            cells[i].anchorMin = cells[i].anchorMax = rect.pivot;   // measured from the container's PIVOT (the docked button's corner / edge point), not its centre
+            cells[i].pivot = new Vector2(0.5f, 0.5f);
         }
         group = gameObject.GetComponent<CanvasGroup>();
         if (group == null) group = gameObject.AddComponent<CanvasGroup>();
@@ -333,7 +334,7 @@ public class PixelDockFx : MonoBehaviour
             int col = i % Cols;
             delay[i] = Random.value * 0.3f + (fromDir.x != 0f ? (fromDir.x < 0f ? col : Cols - 1 - col) / (float)Cols * 0.1f : 0f);
             jitterX[i] = Random.Range(-60f, 60f); jitterY[i] = Random.Range(-50f, 50f);
-            Color c = Color.Lerp(baseCol, Color.white, Random.Range(0.1f, 0.65f));
+            Color c = Random.value < 0.18f ? Color.Lerp(baseCol, Color.white, 0.45f) : baseCol * Random.Range(0.78f, 1.12f);   // mostly the button's own colour, a few light ones
             c.a = 1f;
             cellImages[i].color = c;
         }
