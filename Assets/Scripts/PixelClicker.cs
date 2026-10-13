@@ -4790,7 +4790,9 @@ public partial class PixelClicker : MonoBehaviour
         Vector3 direction = new Vector3(flat.x, vertical, flat.y).normalized;
         float speed = UnityEngine.Random.Range(popSpeedRange.x, popSpeedRange.y);
 
-        rb.AddForce(direction * speed, ForceMode.VelocityChange);
+        Vector3 launch = direction * speed;
+        if (TryBurstVelocity(copy.transform.position, flat, out Vector3 burstVelocity)) launch = burstVelocity;   // a long fall: thrown out in a random direction so it lands round the cube
+        rb.AddForce(launch, ForceMode.VelocityChange);
         rb.AddTorque(UnityEngine.Random.onUnitSphere * UnityEngine.Random.Range(popSpinRange.x, popSpinRange.y),
                      ForceMode.VelocityChange);
 
