@@ -171,6 +171,13 @@ public class PixelSaveGame : MonoBehaviour
     [Min(0f)]
     [SerializeField] private float autoSaveSeconds = 30f;
 
+    [Tooltip("Keep a list of the autosaves (the pause menu's Save / Load window has an 'Autosaves' button that opens it, for testing). Every timer autosave is also copied into the Autosaves folder next to the save files.")]
+    [SerializeField] private bool keepAutosaveHistory = true;
+
+    [Min(1)]
+    [Tooltip("How many autosaves the list keeps. When it is full, the OLDEST are deleted to make room for newer ones.")]
+    [SerializeField] private int autosaveHistorySize = 100;
+
     [Tooltip("Save when the game closes (and when you stop Play mode in the Editor).")]
     [SerializeField] private bool saveOnQuit = true;
 
@@ -586,10 +593,22 @@ public class PixelSaveGame : MonoBehaviour
             // Write to a temp file first so a crash mid-write can't destroy the old save.
             string path = FilePath;
             string temp = path + ".tmp";
-            File.WriteAllText(temp, JsonUtility.ToJson(data, true));
+            string json = JsonUtility.ToJson(data, true);
+            File.WriteAllText(temp, json);
             if (File.Exists(path)) File.Delete(path);
             File.Move(temp, path);
             HasLoadedSave = true;
+
+            // A screenshot of the game goes next to every save (and next to the autosave-list copy), shown in the hover tooltips.
+            var shots = new System.Collections.Generic.List<string> { PixelSaveShots.ThumbPath(path) };
+            if (autoSaveCall && keepAutosaveHistory)
+            {
+                double totalPixels = 0d;
+                if (data.tiers != null) foreach (TierSave ts in data.tiers) totalPixels += ts.total;
+                string historyShot = PixelAutosaves.Add(json, new PixelAutosaves.Meta { savedAt = data.savedAt, totalPixels = totalPixels, playSeconds = data.statPlaySeconds }, autosaveHistorySize);
+                if (historyShot != null) shots.Add(historyShot);
+            }
+            PixelSaveShots.Request(shots);
 
             if (logToConsole) Debug.Log("PixelSaveGame: saved (slot " + CurrentSlot + ").", this);
             if (showMessage) { if (autoSaveCall) ShowAutoNote(); else ShowMessage("Saved to slot " + CurrentSlot); }
@@ -617,8 +636,14 @@ public class PixelSaveGame : MonoBehaviour
     [ContextMenu("Load Now")]
     public bool Load() => Load(true);
 
-    /// <summary>Loads the save. 'grantOffline' also pays out what the auto clicker earned while the game was closed (startup only).</summary>
-    public bool Load(bool showMessage, bool grantOffline = false)
+    /// <summary>Loads one save file (an entry of the autosave list). The current slot does not change.</summary>
+    public bool LoadFile(string path) => Load(false, false, path);
+
+    /// <summary>The screenshot file of a slot's save.</summary>
+    public string SlotThumbPath(int slot) => PixelSaveShots.ThumbPath(PathFor(slot));
+
+    /// <summary>Loads the save. 'grantOffline' also pays out what the auto clicker earned while the game was closed (startup only). 'pathOverride' = load this file instead of the current slot's.</summary>
+    public bool Load(bool showMessage, bool grantOffline = false, string pathOverride = null)
     {
         if (clicker == null) return false;
         if (!grantOffline)
@@ -628,7 +653,7 @@ public class PixelSaveGame : MonoBehaviour
             if (old != null) old.Dismiss();
         }
 
-        if (!HasSave)
+        if (pathOverride != null ? !File.Exists(pathOverride) : !HasSave)
         {
             if (showMessage) ShowMessage("No save found");
             return false;
@@ -638,7 +663,7 @@ public class PixelSaveGame : MonoBehaviour
 
         try
         {
-            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(FilePath));
+            SaveData data = JsonUtility.FromJson<SaveData>(File.ReadAllText(pathOverride ?? FilePath));
             if (data == null || data.tiers == null) throw new Exception("the file is empty or damaged");
 
             // Pixels. Anything the save doesn't mention goes back to nothing / locked.
@@ -785,6 +810,9 @@ public class PixelSaveGame : MonoBehaviour
         try
         {
             if (File.Exists(FilePath)) File.Delete(FilePath);
+            string shot = PixelSaveShots.ThumbPath(FilePath);
+            if (File.Exists(shot)) File.Delete(shot);
+            PixelSaveShots.Forget(shot);
             HasLoadedSave = false;
             if (logToConsole) Debug.Log("PixelSaveGame: save deleted.", this);
         }

@@ -270,6 +270,8 @@ public class PixelPauseMenu : MonoBehaviour
 
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
+    [Tooltip("Label of the small button in the Save / Load window that opens the list of autosaves.")]
+    [SerializeField] private string autosavesText = "Autosaves";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
@@ -599,6 +601,8 @@ public class PixelPauseMenu : MonoBehaviour
     private GameObject renameOverlay, slotTip;
     private TMP_InputField renameInput;
     private TMP_Text renameTitleLabel, slotTipLabel;
+    private RawImage slotTipImage;
+    private RectTransform slotTipImageRect;
     private int renameSlot = 1, hoverSlot = -1;
 
     [Tooltip("Rename button on each save slot.")]
@@ -726,7 +730,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         if (EscapePressed() && !PixelFeedback.Open && !PixelFeedback.ClosedThisFrame)
         {
-            if (IsPaused && (PixelDevTools.ClosePanel() || PixelDatabaseWindow.CloseIfOpen()))
+            if (IsPaused && (PixelAutosaveWindow.CloseIfOpen() || PixelDevTools.ClosePanel() || PixelDatabaseWindow.CloseIfOpen()))
             {
                 // The dev tools panel (opened from this menu) took the key press.
             }
@@ -1541,6 +1545,14 @@ public class PixelPauseMenu : MonoBehaviour
         slotLoadButton.onClick.AddListener(OnSlotLoad);
         y += menuButtonSize.y + 14f;
 
+        // A small button under Save | Load that opens the list of autosaves (a separate window).
+        Button autosavesButton = MakeButton(saveLoadPanel.transform, "Autosaves Button", autosavesText, new Vector2(Mathf.Min(260f, panelSize.x - 80f), menuButtonSize.y * 0.62f), tickBoxColor, menuButtonFontSize * 0.6f);
+        RectTransform ar = autosavesButton.GetComponent<RectTransform>();
+        ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 1f);
+        ar.anchoredPosition = new Vector2(0f, -y);
+        autosavesButton.onClick.AddListener(() => { if (saveGame != null) PixelAutosaveWindow.Open(saveGame, () => SetPaused(false)); });
+        y += menuButtonSize.y * 0.62f + 14f;
+
         BuildOverwriteOverlay(saveLoadPanel.transform);
         BuildResultOverlay(saveLoadPanel.transform);
         BuildRenameOverlay(saveLoadPanel.transform);
@@ -1759,6 +1771,12 @@ public class PixelPauseMenu : MonoBehaviour
             bg.color = new Color(0.07f, 0.09f, 0.13f, 0.97f);
             bg.raycastTarget = false;
             PixelUIKit.StyleBox(bg);
+            GameObject shotGo = new GameObject("Screenshot", typeof(RectTransform), typeof(RawImage));
+            shotGo.transform.SetParent(slotTip.transform, false);
+            slotTipImage = shotGo.GetComponent<RawImage>();
+            slotTipImage.raycastTarget = false;
+            slotTipImageRect = shotGo.GetComponent<RectTransform>();
+            slotTipImageRect.anchorMin = slotTipImageRect.anchorMax = slotTipImageRect.pivot = new Vector2(0.5f, 1f);
             slotTipLabel = MakeText(slotTip.transform, "Text", "", rowFontSize * 0.8f, FontStyles.Normal);
             slotTipLabel.raycastTarget = false;
             slotTipLabel.alignment = TextAlignmentOptions.Left;
@@ -1771,7 +1789,20 @@ public class PixelPauseMenu : MonoBehaviour
         string text = slotDetails[hoverSlot - 1];
         if (slotTipLabel.text != text) slotTipLabel.text = text;
         RectTransform rt = slotTip.GetComponent<RectTransform>();
-        Vector2 size = new Vector2(520f, Mathf.Ceil(slotTipLabel.GetPreferredValues(text, 488f, 0f).y) + 20f);
+        // The screenshot taken when that slot was saved sits above the details.
+        Texture2D shot = saveGame != null ? PixelSaveShots.Load(saveGame.SlotThumbPath(hoverSlot)) : null;
+        float imgH = 0f;
+        slotTipImage.gameObject.SetActive(shot != null);
+        if (shot != null)
+        {
+            slotTipImage.texture = shot;
+            imgH = 488f * shot.height / Mathf.Max(1, shot.width);
+            slotTipImageRect.sizeDelta = new Vector2(488f, imgH);
+            slotTipImageRect.anchoredPosition = new Vector2(0f, -10f);
+            slotTipLabel.rectTransform.offsetMax = new Vector2(-16f, -(imgH + 18f));
+        }
+        else slotTipLabel.rectTransform.offsetMax = new Vector2(-16f, -8f);
+        Vector2 size = new Vector2(520f, Mathf.Ceil(slotTipLabel.GetPreferredValues(text, 488f, 0f).y) + 20f + (shot != null ? imgH + 10f : 0f));
         rt.sizeDelta = size;
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);

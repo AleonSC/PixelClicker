@@ -141,6 +141,7 @@
 | `PixelCubeIcon.cs` | UI MaskableGraphic drawing a tiny spinning shaded 3D cube (no camera/render texture) - achievement icons. | in the header comment of `PixelCubeIcon.cs` |
 | `PixelLog.cs` | Bottom-left "Log" toggle with two tabs (the old Pixels / Clicks tab was removed; | `docs/systems/PixelLog.md` |
 | `PixelSaveGame.cs` | Save/load to JSON in Application.persistentDataPath (tiers, shop packs by name, auto clicker, potions owned). | `docs/systems/PixelSaveGame.md` |
+| `PixelAutosaves.cs` | Autosave history (the last 100 timer autosaves kept in <persistentDataPath>/Autosaves, oldest replaced first; opened from the small 'Autosaves' button in the Save / Load window) + a screenshot saved next to EVERY save and shown in the hover tooltips (PixelSaveShots). | in the header comment of `PixelAutosaves.cs` |
 | `PixelOfflineProgress.cs` | Offline progress: PixelSaveGame stores savedAtTicks (UTC) on every save and, on the startup load only, calls Grant(lastSaved). | in the header comment of `PixelOfflineProgress.cs` |
 | `PixelStats.cs` | Play stats. Typed fields (manual/auto clicks, play time, pixels spent, ghosts/meteors clicked, meteors/black holes spawned, fans/vacuum devices/sorters placed, singularities fed, potions used per name | in the header comment of `PixelStats.cs` |
 | `PixelWindows.cs` | CloseAllExcept(owner) closes every open window with priority < 100 (Crafting calls it when it opens, and closes itself when AnyOpenExcept(this) turns true; | in the header comment of `PixelWindows.cs` |
