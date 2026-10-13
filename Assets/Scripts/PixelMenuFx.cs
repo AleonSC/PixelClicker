@@ -121,7 +121,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private Color accent;
     private Texture2D icon;
     private int index;
-    private bool light;
+    private bool lightMode;
     private Button button;
     private Image image;
     private RectTransform rect, labelRect;
@@ -135,7 +135,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private RectTransform shine;
     private float shineRange;
 
-    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false) { accent = accentColor; icon = iconTexture; index = i; light = lighter; }
+    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false) { accent = accentColor; icon = iconTexture; index = i; lightMode = lighter; }
 
     private void Build()
     {
@@ -143,7 +143,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         button = GetComponent<Button>();
         image = GetComponent<Image>();
         rect = GetComponent<RectTransform>();
-        if (!light)
+        if (!lightMode)
         {
             group = gameObject.GetComponent<CanvasGroup>();
             if (group == null) group = gameObject.AddComponent<CanvasGroup>();
@@ -171,7 +171,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         shine.localRotation = Quaternion.Euler(0f, 0f, 18f);
         shineRange = rect.rect.width;
 
-        if (!light)
+        if (!lightMode)
         {
             // The accent stripe on the left.
             GameObject st = new GameObject("Accent", typeof(RectTransform), typeof(Image));
@@ -214,12 +214,12 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         float dt = Time.unscaledDeltaTime;
         if (!on)
         {
-            if (!light) { rect.localScale = Vector3.one; rect.anchoredPosition = basePos; group.alpha = 1f; image.color = baseColor; if (labelRect != null) labelRect.anchoredPosition = baseLabelPos; }
+            if (!lightMode) { rect.localScale = Vector3.one; rect.anchoredPosition = basePos; group.alpha = 1f; image.color = baseColor; if (labelRect != null) labelRect.anchoredPosition = baseLabelPos; }
             else if (rect.localScale != Vector3.one) rect.localScale = Vector3.one;
             return;
         }
 
-        if (!light)
+        if (!lightMode)
         {
             // Entrance: slide in from the left one after the other.
             enterT += dt;
@@ -231,13 +231,13 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         hoverT = Mathf.MoveTowards(hoverT, hover ? 1f : 0f, dt * 7f);
         float h = hoverT * hoverT * (3f - 2f * hoverT);
-        float scale = (light ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
+        float scale = (lightMode ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
         rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));
 
-        if (light && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
+        if (lightMode && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
         else image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
 
-        if (!light)
+        if (!lightMode)
         {
             if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(10f * h, 0f);
             stripe.rectTransform.sizeDelta = new Vector2(6f + 10f * h, 0f);

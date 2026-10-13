@@ -409,9 +409,6 @@ public class PixelConsumables : MonoBehaviour
     [Tooltip("How long (seconds) you hold the right mouse button on a placed device to remove it. The same hold cancels the running potion.")]
     [SerializeField] private float removeHoldSeconds = 0.8f;
 
-    [Tooltip("Text above the meter while removing a placed device. {0} = device name.")]
-    [SerializeField] private string removeText = "Removing {0}...";
-
     [Tooltip("Text above the meter while cancelling the running potion. {0} = potion name.")]
     [SerializeField] private string cancelPotionText = "Cancelling {0}...";
 
