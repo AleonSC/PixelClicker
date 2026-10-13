@@ -77,7 +77,7 @@ public partial class PixelClicker
     private void QueueBaitAfter(PixelType collected)
     {
         if (collected != PixelType.Water || !FishingTableOn() || !FishAvailable(IndexOf(PixelType.Bait))) return;
-        if (UnityEngine.Random.value < BaitP) baitNext = true;
+        if (UnityEngine.Random.value < BaitP) { baitNext = true; upcomingTier = -1; }   // (the next roll must see the bait: drop a pre-rolled block)
     }
 
     /// <summary>Picks the next pixel with the fixed Fishing table. False (nothing picked) when Fishing's table is not in use.</summary>

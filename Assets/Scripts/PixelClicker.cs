@@ -1165,6 +1165,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelDayNight>() == null) gameObject.AddComponent<PixelDayNight>();   // day / night cycle (sun, ambient, sky tint)
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
+        if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
         if (PixelFind.First<PixelContrast>() == null) gameObject.AddComponent<PixelContrast>();   // auto-contrast outline + cube spotlight
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
@@ -2586,6 +2587,7 @@ public partial class PixelClicker : MonoBehaviour
     private int RollTier()
     {
         devSwapped = false;
+        if (IsValidTier(currentTierIndex)) previousTier = currentTierIndex;   // (what the 'Next up' window shows as 'before')
         while (nextInLine.Count > 0)
         {
             Vector2Int queued = nextInLine[0];   // a block bumped by the hold (PixelBlockHold) is next in line, with the hits it had taken
@@ -2594,13 +2596,37 @@ public partial class PixelClicker : MonoBehaviour
             pendingHits = queued.y;
             return queued.x;
         }
-        return PickSpawnTier();
+        int pick = UpcomingValid() ? upcomingTier : PickSpawnTier();   // the block the 'Next up' window showed (if it was still valid)
+        upcomingTier = -1;
+        return pick;
     }
 
     // ---- Block Hold (PixelBlockHold.cs) ----
 
     private readonly System.Collections.Generic.List<Vector2Int> nextInLine = new System.Collections.Generic.List<Vector2Int>();   // (tier, hits) of blocks waiting to come back
     private int pendingHits;   // hits the next materialized block starts with (a held block keeps its damage)
+    private int upcomingTier = -1, previousTier = -1;   // the pre-rolled next block (only while the 'Next up' window asks for it) and the block that was on the cube before this one
+
+    /// <summary>Is the pre-rolled next block still a legal spawn (a potion, skill or switch may have changed the rules since)?</summary>
+    private bool UpcomingValid()
+    {
+        if (!IsValidTier(upcomingTier) || devSpawnTiers != null) return false;
+        if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
+            return upcomingTier == forcedTierIndex || upcomingTier == forcedTierIndex2 || upcomingTier == forcedTierIndex3;
+        return tiers[upcomingTier].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[upcomingTier].type);
+    }
+
+    /// <summary>The block that comes after this one: a block waiting in line from Block Hold, else the pre-rolled one (rolled now if needed; -1 when the cube does not roll random blocks).</summary>
+    public int PeekNextTier()
+    {
+        if (!randomizeSpawnTier || tiers == null || tiers.Length == 0) return -1;
+        if (nextInLine.Count > 0 && IsValidTier(nextInLine[0].x)) return nextInLine[0].x;
+        if (!UpcomingValid()) upcomingTier = PickSpawnTier();
+        return upcomingTier;
+    }
+
+    /// <summary>The block that was on the cube before the current one (-1 = none yet).</summary>
+    public int PreviousTierIndex => IsValidTier(previousTier) ? previousTier : -1;
 
     /// <summary>Where the block on the cube is.</summary>
     public Vector3 LiveWorldPosition => pixelTransform != null ? pixelTransform.position : transform.position;
@@ -2627,6 +2653,7 @@ public partial class PixelClicker : MonoBehaviour
         if (!IsValidTier(tierIndex)) return;
         if (randomizeSpawnTier && pixelTransform != null && tiers.Length > 0 && !fishingBusy)
         {
+            previousTier = GetClickTierIndex();
             nextInLine.Insert(0, new Vector2Int(GetClickTierIndex(), hitsOnCurrentPixel));
             while (nextInLine.Count > 3) nextInLine.RemoveAt(nextInLine.Count - 1);
             currentTierIndex = tierIndex;

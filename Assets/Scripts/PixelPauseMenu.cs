@@ -276,6 +276,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
+    [Tooltip("Label of the next-up window tick box in Settings.")]
+    [SerializeField] private string nextUpLabel = "Next-up window (Block Hold)";
     [Tooltip("Label of the auto-contrast outline tick box in Settings.")]
     [SerializeField] private string contrastRimLabel = "Auto-contrast pixel outline";
     [Tooltip("Label of the cube spotlight tick box in Settings.")]
@@ -2304,6 +2306,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
         AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
+        AddSettingToggle(list, nextUpLabel, () => PixelNextUp.Enabled, on => PixelNextUp.Enabled = on, ref y);
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
         AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
