@@ -10,6 +10,7 @@
 //   * PixelMenuPanelGlow: a rounded glow behind the main panel that slowly cycles colour and breathes; PixelMenuTitleLine: a light segment sliding along a line under the title.
 //   * The SETTINGS and STATS screens get the lighter button animation (PixelMenuFx.DecorateAll: brighten, shine, press; no scaling inside scroll lists).
 //   * The docked HUD buttons also get the light animation WITH the idle shine (DecorateHud), and the SHOP gets the same treatment (its buttons, a glow behind the panel and the sliding title line; PixelShop.BuildPanel / CreateButton).
+//   * PixelQuitFx: the Quit to... box darkens the screen and pours flickering red neon light round the window (PixelPauseMenu.BuildQuitPanel).
 //   * PixelDockFx on every docked HUD button (PixelHud.Dock / DockInGroup): the button MATERIALIZES out of pixels each time it slides out (own toggle: 'Pixel-assemble menu buttons', PixelMenuFx.HudEnabled, PlayerPrefs PixelClicker.Setting.FancyHud).
 //   Everything runs on unscaled time (the game is paused while the menu shows).
 // ---------------------------------------------------
@@ -517,5 +518,152 @@ public class PixelMenuTitleLine : MonoBehaviour
         float w = ((RectTransform)transform).rect.width;
         float t = Mathf.Repeat(Time.unscaledTime / 2.4f, 1f);
         seg.anchoredPosition = new Vector2(Mathf.Lerp(-60f, w + 60f, t * t * (3f - 2f * t)), 0f);
+    }
+}
+
+/// <summary>
+/// The 'Quit to...' box: while it shows, the screen goes almost black (with a faint red vignette) and red neon light pours out from around the window - two soft glow layers that
+/// breathe, a thin neon tube round the edge, and a flicker as it switches on and now and then afterwards. Created by PixelPauseMenu.BuildQuitPanel (PixelQuitFx.Build), follows the
+/// panel's rect and pop animation, runs on unscaled time and is off when 'Fancy pause menu' is off.
+/// </summary>
+public class PixelQuitFx : MonoBehaviour
+{
+    private RectTransform target, glowOuter, glowInner, tube;
+    private Image darkImage, vignetteImage, outerImage, innerImage, tubeImage;
+    private float t, flickerUntil, flickerLevel = 1f, nextFlicker = 3f, onTime;
+    private bool wasOn;
+
+    private static Sprite glowSprite, tubeSprite;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { glowSprite = null; tubeSprite = null; }
+
+    /// <summary>Distance from point (x, y) to a rounded rectangle [lo, hi] x [lo, hi] with corner radius r (negative inside).</summary>
+    private static float RoundedDistance(float x, float y, float lo, float hi, float r)
+    {
+        float cx = (lo + hi) * 0.5f, half = (hi - lo) * 0.5f - r;
+        float dx = Mathf.Abs(x - cx) - half, dy = Mathf.Abs(y - cx) - half;
+        float outside = Mathf.Sqrt(Mathf.Max(dx, 0f) * Mathf.Max(dx, 0f) + Mathf.Max(dy, 0f) * Mathf.Max(dy, 0f));
+        return outside + Mathf.Min(Mathf.Max(dx, dy), 0f) - r;
+    }
+
+    /// <summary>A soft glow: solid inside a rounded rectangle, fading out over the rest of the texture (9-sliced).</summary>
+    private static Sprite GlowSprite()
+    {
+        if (glowSprite != null) return glowSprite;
+        const int n = 96;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = RoundedDistance(x + 0.5f, y + 0.5f, 40f, n - 40f, 14f);
+                float a = d <= 0f ? 1f : Mathf.Pow(Mathf.Clamp01(1f - d / 40f), 2.2f);
+                px[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * a));
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        glowSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(46f, 46f, 46f, 46f));
+        return glowSprite;
+    }
+
+    /// <summary>A thin bright ring (the neon tube), 9-sliced.</summary>
+    private static Sprite TubeSprite()
+    {
+        if (tubeSprite != null) return tubeSprite;
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[n * n];
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = Mathf.Abs(RoundedDistance(x + 0.5f, y + 0.5f, 6f, n - 6f, 20f));
+                float a = Mathf.Clamp01(1.6f - d * 0.8f);   // ~2 px of tube with soft sides
+                px[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * a));
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        tubeSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(26f, 26f, 26f, 26f));
+        return tubeSprite;
+    }
+
+    private static Image MakeImage(Transform parent, string name, Sprite sprite, Image.Type type)
+    {
+        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(parent, false);
+        Image im = g.GetComponent<Image>();
+        im.sprite = sprite;
+        im.type = type;
+        im.raycastTarget = false;
+        im.color = new Color(1f, 1f, 1f, 0f);
+        return im;
+    }
+
+    /// <summary>Puts the effect behind 'panel' (inside the panel's parent, just under it).</summary>
+    public static void Build(GameObject panel)
+    {
+        if (panel == null || panel.transform.parent == null) return;
+        Transform parent = panel.transform.parent;
+        GameObject root = new GameObject("Quit Fx", typeof(RectTransform), typeof(PixelQuitFx));
+        root.transform.SetParent(parent, false);
+        PixelQuitFx fx = root.GetComponent<PixelQuitFx>();
+        fx.target = panel.GetComponent<RectTransform>();
+        RectTransform rr = root.GetComponent<RectTransform>();
+        rr.anchorMin = Vector2.zero; rr.anchorMax = Vector2.one; rr.offsetMin = rr.offsetMax = Vector2.zero;
+        fx.darkImage = MakeImage(root.transform, "Dark", null, Image.Type.Simple);
+        PixelUIKit.Stretch(fx.darkImage.rectTransform);
+        fx.vignetteImage = MakeImage(root.transform, "Red Vignette", null, Image.Type.Simple);
+        PixelUIKit.Stretch(fx.vignetteImage.rectTransform);
+        fx.outerImage = MakeImage(root.transform, "Glow Outer", GlowSprite(), Image.Type.Sliced);
+        fx.innerImage = MakeImage(root.transform, "Glow Inner", GlowSprite(), Image.Type.Sliced);
+        fx.tubeImage = MakeImage(root.transform, "Neon Tube", TubeSprite(), Image.Type.Sliced);
+        fx.glowOuter = fx.outerImage.rectTransform; fx.glowInner = fx.innerImage.rectTransform; fx.tube = fx.tubeImage.rectTransform;
+        // Everything sits just behind the panel.
+        root.transform.SetSiblingIndex(panel.transform.GetSiblingIndex());
+        fx.Hide();
+    }
+
+    private void Hide() { darkImage.enabled = vignetteImage.enabled = outerImage.enabled = innerImage.enabled = tubeImage.enabled = false; }
+
+    private void Update()
+    {
+        bool on = PixelMenuFx.Enabled && target != null && target.gameObject.activeInHierarchy;
+        float dt = Time.unscaledDeltaTime;
+        if (on && !wasOn) { onTime = 0f; t = 0f; nextFlicker = Random.Range(2.5f, 5f); }
+        wasOn = on;
+        t = Mathf.MoveTowards(t, on ? 1f : 0f, dt / (on ? 0.4f : 0.18f));
+        if (t <= 0.001f) { if (darkImage.enabled) Hide(); return; }
+        if (!darkImage.enabled) darkImage.enabled = vignetteImage.enabled = outerImage.enabled = innerImage.enabled = tubeImage.enabled = true;
+        if (vignetteImage.sprite == null) { Texture2D v = PixelMenuFx.Vignette(); vignetteImage.sprite = Sprite.Create(v, new Rect(0, 0, v.width, v.height), new Vector2(0.5f, 0.5f)); }
+        onTime += dt;
+
+        // Neon flicker: erratic as it switches on, then an occasional quick stutter.
+        float flicker = 1f;
+        if (onTime < 0.9f) flicker = Mathf.Sin(onTime * 90f) * Mathf.Sin(onTime * 37f) > -0.1f ? Mathf.Clamp01(onTime / 0.9f + 0.25f) : 0.12f;
+        else if (Time.unscaledTime > nextFlicker) { flickerUntil = Time.unscaledTime + 0.22f; nextFlicker = Time.unscaledTime + Random.Range(3f, 7f); }
+        if (Time.unscaledTime < flickerUntil) flickerLevel = Mathf.Sin(Time.unscaledTime * 80f) > 0f ? 1f : 0.3f; else flickerLevel = 1f;
+        flicker = onTime < 0.9f ? flicker : flickerLevel;
+
+        float ease = t * t * (3f - 2f * t);
+        float breathe = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 2.2f);
+        darkImage.color = new Color(0f, 0f, 0f, 0.9f * ease);
+        vignetteImage.color = new Color(0.8f, 0.02f, 0.02f, 0.35f * ease * flicker);
+
+        FollowPanel(glowOuter, 30f + 22f * breathe + 16f * ease);
+        outerImage.color = new Color(1f, 0.05f, 0.05f, (0.45f + 0.2f * breathe) * ease * flicker);
+        FollowPanel(glowInner, 6f + 8f * breathe);
+        innerImage.color = new Color(1f, 0.18f, 0.12f, (0.7f + 0.15f * breathe) * ease * flicker);
+        FollowPanel(tube, 5f);
+        tubeImage.color = new Color(1f, 0.55f, 0.5f, ease * flicker);
+    }
+
+    /// <summary>Makes 'r' as big as the panel plus 'grow' on every side, at the panel's place and scale (the panel pops open).</summary>
+    private void FollowPanel(RectTransform r, float grow)
+    {
+        r.anchorMin = target.anchorMin; r.anchorMax = target.anchorMax; r.pivot = target.pivot;
+        r.anchoredPosition = target.anchoredPosition;
+        r.localScale = target.localScale;
+        r.sizeDelta = target.sizeDelta + new Vector2(grow * 2f, grow * 2f);
+        if (target.anchorMin != target.anchorMax) { r.offsetMin = target.offsetMin - new Vector2(grow, grow); r.offsetMax = target.offsetMax + new Vector2(grow, grow); }
     }
 }

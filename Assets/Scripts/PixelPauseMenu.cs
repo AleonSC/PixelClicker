@@ -1936,6 +1936,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddMenuButton(quitPanel.transform, quitDesktopText, quitButtonColor, ref y, Quit);
         AddMenuButton(quitPanel.transform, quitMainMenuText, menuButtonColor, ref y, ToMainMenu);
         FinishSectionPanel(quitPanel, y);
+        PixelQuitFx.Build(quitPanel);   // the screen goes dark and red neon light pours out round the box
     }
 
     /// <summary>Quit > Main menu: saves, then the camera zooms back into the cube and the title screen returns.</summary>
