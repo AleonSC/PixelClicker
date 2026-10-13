@@ -1,5 +1,8 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOrbitCamera.cs
+//   BASE VIEW: at start (Start -> ApplyBaseView, useBaseView) the scene camera is moved to baseDistance 0 = 6 units from the cube at baseTilt 0 = 89 degrees, baseYaw 0: that
+//   pose is the game's normal view and the 1.0 of the zoom slider (Enter takes it as the home pose, so the camera intro settles into it, PixelViewBounds reads it through
+//   HomeCamera and takeover minigames glide back to it). The View window keeps the camera in Top down (this camera, pitch locked) whenever nothing else uses it.
 //   Orbital camera (added by PixelClicker.Awake; chosen in the View window (PixelViewWindow, key PixelAction.ViewWindow) as 'Orbital', or
 //   'Top down' = Enter(topDown: true): the same camera with the pitch locked at 89 degrees; disableOrbit): the REAL camera swings round the cube (Enter captures
 //   the home pose; yaw / pitch / distance round CubeBasePosition, rotation = look-at-cube x aimOffset so the cube keeps its on-screen
@@ -60,6 +63,21 @@ public class PixelOrbitCamera : MonoBehaviour
     [Min(0f)]
     [Tooltip("Degrees per second the camera turns round the cube while the Auto button is on. 0 = the default (10).")]
     [SerializeField] private float autoOrbitDegreesPerSecond = 0f;
+
+    [Header("Base view (the normal camera of the game)")]
+    [Tooltip("At the start of the game put the scene camera at the base view below: looking down at the cube from 'Base Distance', tilted 'Base Tilt' degrees. This IS the normal view (zoom 1.0 of the View window's slider; the intro settles into it, the view bounds read it, takeover minigames glide back to it). Off = keep the camera exactly as the scene has it.")]
+    [SerializeField] private bool useBaseView = true;
+
+    [Min(0f)]
+    [Tooltip("Base view: distance from the cube in world units (the View window's zoom 1.0). 0 = the default (6).")]
+    [SerializeField] private float baseDistance = 0f;
+
+    [Min(0f)]
+    [Tooltip("Base view: degrees above the floor the camera looks down from (90 = straight down). 0 = the default (89, the top down view).")]
+    [SerializeField] private float baseTilt = 0f;
+
+    [Tooltip("Base view: which side of the cube the camera sits on, in degrees round it (0 = the +Z side, which puts the floor's -Z side at the top of the screen).")]
+    [SerializeField] private float baseYaw = 0f;
 
     [Tooltip("Hint shown at the bottom of the screen while orbiting. {0} = the view key.")]
     [SerializeField] private string hintTextV2 = "Orbit: middle mouse drag or arrow keys  -  mouse wheel zooms  -  {0} opens the View window (zoom slider, auto orbit, other views)";
@@ -133,6 +151,19 @@ public class PixelOrbitCamera : MonoBehaviour
     {
         Instance = this;
         clicker = PixelFind.First<PixelClicker>();
+    }
+
+    private void Start() { ApplyBaseView(); }
+
+    /// <summary>Puts the scene camera at the base view (before the camera intro records its end pose in its first LateUpdate).</summary>
+    private void ApplyBaseView()
+    {
+        if (!useBaseView || Active || clicker == null || clicker.PixelTransform == null) return;
+        Camera c = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (c == null) return;
+        float y = baseYaw * Mathf.Deg2Rad, p = V(baseTilt, 89f) * Mathf.Deg2Rad;
+        Vector3 dir = new Vector3(Mathf.Sin(y) * Mathf.Cos(p), Mathf.Sin(p), Mathf.Cos(y) * Mathf.Cos(p));
+        c.transform.SetPositionAndRotation(clicker.PixelTransform.position + dir * V(baseDistance, 6f), Quaternion.LookRotation(-dir, Vector3.up));
     }
 
     private void OnDestroy()
