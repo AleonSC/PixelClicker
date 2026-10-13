@@ -111,7 +111,7 @@ public class PixelTogglesTutorial : MonoBehaviour
         return (c[0] + c[2]) * 0.5f;
     }
 
-    /// <summary>Where the Got it box follows: the middle of the Toggles window's left edge when it is open, else the Toggles tab.</summary>
+    /// <summary>Where the Got it box follows: the middle of the Toggles window's left edge when it is open, else the middle of the right side of the screen (clear of Cubie).</summary>
     private static Vector2? BoxAnchor()
     {
         RectTransform w = PixelToggles.WindowRect;
@@ -121,8 +121,8 @@ public class PixelTogglesTutorial : MonoBehaviour
             w.GetWorldCorners(c);
             return (Vector2)((c[0] + c[1]) * 0.5f);
         }
-        Vector3? t = Centre(PixelToggles.TabRect);
-        return t.HasValue ? (Vector2?)(Vector2)t.Value : null;
+        // The window is closed (the tab is in the bottom right corner, where Cubie stands and would cover the box): the box sits to the left of a spot at the middle of the right side instead.
+        return new Vector2(Screen.width * 0.97f, Screen.height * 0.5f);
     }
 
     private void ShowStep(int index)
