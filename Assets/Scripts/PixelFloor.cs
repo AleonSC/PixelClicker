@@ -98,7 +98,17 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         SnakeGrid,       // 8-bit green LCD snake (animated)
         BlockStack,      // 8-bit falling blocks in a well (animated)
         Dungeon,         // 8-bit top-down dungeon: tiles, carpet, braziers, a hero and a slime (animated)
-        Crossing         // 8-bit crossing: traffic, a river and a hopping frog (animated)
+        Crossing,        // 8-bit crossing: traffic, a river and a hopping frog (animated)
+        LushGrass,       // big meadow: blades, flower patches and a dirt trail (still, one big picture)
+        NebulaField,     // warped gas clouds, dust lanes, stars with spikes, a gas giant and a moon
+        StillPond,       // pond water with caustics, ripples, lily pads, lotus flowers and koi
+        GraffitiWall,    // a brick wall laid flat with a big bubble-letter tag, drips and paint-over patches
+        LeafLitter,      // soil under two layers of autumn leaves and twigs
+        ZenGarden,       // raked sand that rings round mossy rocks
+        PersianRug,      // a woven rug with a medallion and borders on a wooden floor
+        CoralReef,       // seabed with brain / polyp / fan corals, seagrass, starfish and caustics
+        CasinoFelt,      // green baize with gold rings, chips, dice and cards
+        StainedGlass     // jewel panes in lead with a rose window under the cube
     }
 
     [Serializable]
@@ -2470,6 +2480,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         foreach (FloorStyle extra in ExtraStyles()) yield return extra;
         foreach (FloorStyle retro in RetroStyles()) yield return retro;
+        foreach (FloorStyle world in WorldStyles()) yield return world;
     }
 
     /// <summary>The second batch: space, tech, trippy, horror, a noir smoker, a skyline and ground-and-sky scenes (patterns in PixelFloorScenes.cs).</summary>

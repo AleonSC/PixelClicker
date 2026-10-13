@@ -22,7 +22,7 @@ public partial class PixelFloor
             case FloorPattern.LightCycles: return ShadeLightCycles(s, u, v, n, cells);
             case FloorPattern.ArcadeCarpet: return ShadeArcadeCarpet(s, u, v, cells);
         }
-        return s.colorA;
+        return ShadeWorlds(s, u, v, x, y, n, cells);   // the fourth batch (PixelFloorWorlds.cs)
     }
 
     // ---- helpers ----
