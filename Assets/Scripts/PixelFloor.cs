@@ -189,7 +189,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         [Tooltip("Pattern variation (crater floors: 0 = battle, 1 = moon, 2 = red planet).")]
         public int variant = 0;
 
-        [Tooltip("Draw the ground with the world-space ground shader instead of a painted texture (0 = painted texture, 1 lava, 2 marble, 3 ice, 4 deep space). The picture then never repeats or stretches and stays sharp at any zoom. The menus' preview pictures stay painted.")]
+        [Tooltip("Draw the ground with the world-space ground shader instead of a painted texture (0 = painted texture, 1 lava, 2 marble, 3 ice, 4 deep space, 5 data streams). The picture then never repeats or stretches and stays sharp at any zoom. The menus' preview pictures stay painted.")]
         public int shaderGround = 0;
 
         [Tooltip("World units one 'cell' of the shader pattern spans (0 = the default 6).")]
@@ -2279,6 +2279,14 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 11;
         }
 
+        // Data Streams: drawn by the ground shader now (pattern 5), so it fills the whole floor circle.
+        if (defaultsVersion < 12)
+        {
+            FloorStyle streams = styles.Find(x => x != null && x.name == "Data Streams");
+            if (streams != null) { streams.shaderGround = 5; streams.shaderScale = 1.1f; }
+            defaultsVersion = 12;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2502,7 +2510,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         red.stretchToFloor = true; red.detail = 6; red.variant = 2;
         yield return red;
         // ---- Digital / tech ----
-        yield return St("Data Streams", FloorPattern.DataStream, new Color(0.01f, 0.02f, 0.05f), new Color(0.1f, 0.8f, 1f), new Color(1f, 0.3f, 0.7f), 192, 8f, 16, 20f, true, 1f);
+        // (Data Streams is drawn by the world-space ground shader in the game, pattern 5: lanes of packets over the whole floor circle, never stretched; the painted version is the menu picture / fallback.)
+        FloorStyle streams = St("Data Streams", FloorPattern.DataStream, new Color(0.01f, 0.02f, 0.05f), new Color(0.1f, 0.8f, 1f), new Color(1f, 0.3f, 0.7f), 192, 8f, 16, 20f, true, 1f);
+        streams.shaderGround = 5; streams.shaderScale = 1.1f;
+        yield return streams;
         yield return St("Circuit Flow", FloorPattern.CircuitFlow, new Color(0.02f, 0.07f, 0.08f), new Color(0.1f, 0.7f, 0.8f), new Color(0.7f, 1f, 1f), 768, 36f, 12, 8f, false, 0.8f);   // (the circuit board is drawn once; only the sparks move)
         FloorStyle hex = St("Cyber Hex", FloorPattern.CyberHex, new Color(0.02f, 0.03f, 0.07f), new Color(0.2f, 0.55f, 1f), new Color(0.6f, 0.3f, 1f), 1024, 36f, 13, 0f, false, 0.9f);
         hex.pulseSpeed = 0.5f; hex.pulseAmount = 0.3f;
