@@ -276,6 +276,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
+    [Tooltip("Label of the pixel-assemble menu buttons tick box in Settings.")]
+    [SerializeField] private string fancyHudLabel = "Pixel-assemble menu buttons";
     [Tooltip("Label of the fancy pause menu tick box in Settings (off = the classic menu).")]
     [SerializeField] private string fancyMenuLabel = "Fancy pause menu (animated)";
     [Tooltip("Label of the next-up window tick box in Settings.")]
@@ -1137,6 +1139,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (showSaveLoad && saveGame != null) BuildSaveLoadPanel();
         BuildStatsPanel();
         BuildSettingsPanel();
+        PixelMenuFx.DecorateAll(statsPanel != null ? statsPanel.transform : null);      // the fancy menu's light button animation on these two screens
+        PixelMenuFx.DecorateAll(settingsPanel != null ? settingsPanel.transform : null);
         BuildQuitPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("Game Guide Panel", guideMenuText, howToPlayResource, emptyHowToPlayText, false);
@@ -2313,6 +2317,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
         AddSettingToggle(list, nextUpLabel, () => PixelNextUp.Enabled, on => PixelNextUp.Enabled = on, ref y);
         AddSettingToggle(list, fancyMenuLabel, () => PixelMenuFx.Enabled, on => PixelMenuFx.Enabled = on, ref y);
+        AddSettingToggle(list, fancyHudLabel, () => PixelMenuFx.HudEnabled, on => PixelMenuFx.HudEnabled = on, ref y);
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
         AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);

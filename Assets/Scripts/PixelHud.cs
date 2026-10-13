@@ -413,6 +413,7 @@ public class PixelHud : MonoBehaviour
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
         dock.Setup(this, button, anchor, keepOut, sideOffsetY, (ButtonSize.x - button.sizeDelta.x) * 0.5f);
+        if (button.GetComponent<PixelDockFx>() == null) button.gameObject.AddComponent<PixelDockFx>();   // the button materializes out of pixels when it slides out (a toggle in Settings)
     }
 
     /// <summary>

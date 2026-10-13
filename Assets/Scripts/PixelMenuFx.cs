@@ -8,6 +8,8 @@
 //     left, and every time the menu opens the buttons slide in one after the other (entranceStagger).
 //   * PixelMenuBackdrop (PixelPauseMenu.BuildUI -> BuildBackdrop): soft pixel motes drifting up behind the panel + a darkening vignette over the dimmer.
 //   * PixelMenuPanelGlow: a rounded glow behind the main panel that slowly cycles colour and breathes; PixelMenuTitleLine: a light segment sliding along a line under the title.
+//   * The SETTINGS and STATS screens get the lighter button animation (PixelMenuFx.DecorateAll: brighten, shine, press; no scaling inside scroll lists).
+//   * PixelDockFx on every docked HUD button (PixelHud.Dock / DockInGroup): the button MATERIALIZES out of pixels each time it slides out (own toggle: 'Pixel-assemble menu buttons', PixelMenuFx.HudEnabled, PlayerPrefs PixelClicker.Setting.FancyHud).
 //   Everything runs on unscaled time (the game is paused while the menu shows).
 // ---------------------------------------------------
 using UnityEngine;
@@ -20,7 +22,7 @@ public static class PixelMenuFx
     private static int cache = -1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { cache = -1; vignette = null; }
+    private static void ResetStatics() { cache = -1; hudCache = -1; vignette = null; }
 
     /// <summary>Settings > Interface > Fancy pause menu (off = the classic menu).</summary>
     public static bool Enabled
@@ -29,7 +31,28 @@ public static class PixelMenuFx
         set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
     }
 
-    public static void ReloadFromPrefs() { cache = -1; }
+    private const string HudPref = "PixelClicker.Setting.FancyHud";
+    private static int hudCache = -1;
+
+    /// <summary>Settings > Interface > 'Pixel-assemble menu buttons': the docked HUD buttons materialize out of pixels (PixelDockFx). On by default.</summary>
+    public static bool HudEnabled
+    {
+        get { if (hudCache < 0) hudCache = PlayerPrefs.GetInt(HudPref, 1); return hudCache != 0; }
+        set { hudCache = value ? 1 : 0; PlayerPrefs.SetInt(HudPref, hudCache); PlayerPrefs.Save(); }
+    }
+
+    public static void ReloadFromPrefs() { cache = -1; hudCache = -1; }
+
+    /// <summary>The light animation (brighten, shine, press) for every button under a screen (Settings, Stats).</summary>
+    public static void DecorateAll(Transform root)
+    {
+        if (root == null) return;
+        foreach (Button b in root.GetComponentsInChildren<Button>(true))
+        {
+            if (b.GetComponent<PixelFancyButton>() != null || b.GetComponent<Image>() == null) continue;
+            b.gameObject.AddComponent<PixelFancyButton>().Setup(Color.white, null, 0, true);
+        }
+    }
 
     /// <summary>Makes a main-menu button animated.</summary>
     public static void Decorate(Button button, Color accent, Texture2D icon, int index)
@@ -92,12 +115,13 @@ public static class PixelMenuFx
     }
 }
 
-/// <summary>An animated main-menu button (see the notes at the top of PixelMenuFx.cs).</summary>
+/// <summary>An animated menu button (see the notes at the top of PixelMenuFx.cs). 'light' = a lighter version for the Settings / Stats screens: brighten + shine + press only.</summary>
 public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
     private Color accent;
     private Texture2D icon;
     private int index;
+    private bool light;
     private Button button;
     private Image image;
     private RectTransform rect, labelRect;
@@ -111,7 +135,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private RectTransform shine;
     private float shineRange;
 
-    public void Setup(Color accentColor, Texture2D iconTexture, int i) { accent = accentColor; icon = iconTexture; index = i; }
+    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false) { accent = accentColor; icon = iconTexture; index = i; light = lighter; }
 
     private void Build()
     {
@@ -119,8 +143,11 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         button = GetComponent<Button>();
         image = GetComponent<Image>();
         rect = GetComponent<RectTransform>();
-        group = gameObject.GetComponent<CanvasGroup>();
-        if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+        if (!light)
+        {
+            group = gameObject.GetComponent<CanvasGroup>();
+            if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+        }
         baseColor = image.color;
         basePos = rect.anchoredPosition;
         Transform label = transform.Find("Label");
@@ -140,36 +167,40 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         shine = s.GetComponent<RectTransform>();
         shine.anchorMin = shine.anchorMax = new Vector2(0f, 0.5f);
         shine.pivot = new Vector2(0.5f, 0.5f);
-        shine.sizeDelta = new Vector2(46f, rect.rect.height * 2.4f);
+        shine.sizeDelta = new Vector2(Mathf.Clamp(rect.rect.width * 0.18f, 14f, 46f), rect.rect.height * 2.4f);
         shine.localRotation = Quaternion.Euler(0f, 0f, 18f);
         shineRange = rect.rect.width;
 
-        // The accent stripe on the left.
-        GameObject st = new GameObject("Accent", typeof(RectTransform), typeof(Image));
-        st.transform.SetParent(fxRoot.transform, false);
-        stripe = st.GetComponent<Image>();
-        stripe.color = accent;
-        stripe.raycastTarget = false;
-        RectTransform sr = stripe.rectTransform;
-        sr.anchorMin = new Vector2(0f, 0.12f); sr.anchorMax = new Vector2(0f, 0.88f); sr.pivot = new Vector2(0f, 0.5f);
-        sr.anchoredPosition = new Vector2(6f, 0f);
-        sr.sizeDelta = new Vector2(6f, 0f);
-
-        if (icon != null)
+        if (!light)
         {
-            GameObject ig = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
-            ig.transform.SetParent(fxRoot.transform, false);
-            RawImage ri = ig.GetComponent<RawImage>();
-            ri.texture = icon;
-            ri.raycastTarget = false;
-            RectTransform irect = ri.rectTransform;
-            float side = Mathf.Min(rect.rect.height * 0.55f, 44f);
-            irect.anchorMin = irect.anchorMax = new Vector2(0f, 0.5f);
-            irect.pivot = new Vector2(0f, 0.5f);
-            irect.sizeDelta = new Vector2(side, side);
-            irect.anchoredPosition = new Vector2(26f, 0f);
+            // The accent stripe on the left.
+            GameObject st = new GameObject("Accent", typeof(RectTransform), typeof(Image));
+            st.transform.SetParent(fxRoot.transform, false);
+            stripe = st.GetComponent<Image>();
+            stripe.color = accent;
+            stripe.raycastTarget = false;
+            RectTransform sr = stripe.rectTransform;
+            sr.anchorMin = new Vector2(0f, 0.12f); sr.anchorMax = new Vector2(0f, 0.88f); sr.pivot = new Vector2(0f, 0.5f);
+            sr.anchoredPosition = new Vector2(6f, 0f);
+            sr.sizeDelta = new Vector2(6f, 0f);
+
+            if (icon != null)
+            {
+                GameObject ig = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
+                ig.transform.SetParent(fxRoot.transform, false);
+                RawImage ri = ig.GetComponent<RawImage>();
+                ri.texture = icon;
+                ri.raycastTarget = false;
+                RectTransform irect = ri.rectTransform;
+                float side = Mathf.Min(rect.rect.height * 0.55f, 44f);
+                irect.anchorMin = irect.anchorMax = new Vector2(0f, 0.5f);
+                irect.pivot = new Vector2(0f, 0.5f);
+                irect.sizeDelta = new Vector2(side, side);
+                irect.anchoredPosition = new Vector2(26f, 0f);
+            }
+            idleShine = Random.Range(2f, 7f) + index * 0.9f;
         }
-        idleShine = Random.Range(2f, 7f) + index * 0.9f;
+        else idleShine = 1e9f;
     }
 
     private void OnEnable() { if (built) enterT = 0f; else enterT = -1f; hoverT = 0f; press = hover = false; }
@@ -183,36 +214,43 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         float dt = Time.unscaledDeltaTime;
         if (!on)
         {
-            rect.localScale = Vector3.one; rect.anchoredPosition = basePos; group.alpha = 1f; image.color = baseColor;
-            if (labelRect != null) labelRect.anchoredPosition = baseLabelPos;
+            if (!light) { rect.localScale = Vector3.one; rect.anchoredPosition = basePos; group.alpha = 1f; image.color = baseColor; if (labelRect != null) labelRect.anchoredPosition = baseLabelPos; }
+            else if (rect.localScale != Vector3.one) rect.localScale = Vector3.one;
             return;
         }
 
-        // Entrance: slide in from the left one after the other.
-        enterT += dt;
-        float e = Mathf.Clamp01((enterT - index * 0.055f) / 0.32f);
-        float ease = 1f - (1f - e) * (1f - e) * (1f - e);
-        group.alpha = ease;
-        rect.anchoredPosition = basePos + new Vector2(-70f * (1f - ease), 0f);
+        if (!light)
+        {
+            // Entrance: slide in from the left one after the other.
+            enterT += dt;
+            float e = Mathf.Clamp01((enterT - index * 0.055f) / 0.32f);
+            float ease = 1f - (1f - e) * (1f - e) * (1f - e);
+            group.alpha = ease;
+            rect.anchoredPosition = basePos + new Vector2(-70f * (1f - ease), 0f);
+        }
 
         hoverT = Mathf.MoveTowards(hoverT, hover ? 1f : 0f, dt * 7f);
         float h = hoverT * hoverT * (3f - 2f * hoverT);
-        float scale = Mathf.Lerp(1f, 1.04f, h) * (press ? 0.965f : 1f);
+        float scale = (light ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
         rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));
-        image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
-        if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(10f * h, 0f);
-        stripe.rectTransform.sizeDelta = new Vector2(6f + 10f * h, 0f);
 
-        // The shine sweep: on hover, and now and then by itself.
-        idleShine -= dt;
-        if (idleShine <= 0f) { idleShine = Random.Range(6f, 9f); shineT = 0f; }
+        if (light && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
+        else image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
+
+        if (!light)
+        {
+            if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(10f * h, 0f);
+            stripe.rectTransform.sizeDelta = new Vector2(6f + 10f * h, 0f);
+            idleShine -= dt;
+            if (idleShine <= 0f) { idleShine = Random.Range(6f, 9f); shineT = 0f; }
+        }
         if (shineT <= 1.2f)
         {
             shineT += dt * 1.9f;
-            float t = Mathf.Clamp01(shineT);
-            shine.anchoredPosition = new Vector2(Mathf.Lerp(-60f, shineRange + 60f, t), 0f);
+            float tt = Mathf.Clamp01(shineT);
+            shine.anchoredPosition = new Vector2(Mathf.Lerp(-60f, shineRange + 60f, tt), 0f);
             Image si = shine.GetComponent<Image>();
-            Color c = si.color; c.a = 0.24f * Mathf.Sin(t * Mathf.PI); si.color = c;
+            Color c = si.color; c.a = 0.24f * Mathf.Sin(tt * Mathf.PI); si.color = c;
         }
     }
 
@@ -220,6 +258,127 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     public void OnPointerExit(PointerEventData d) { hover = false; press = false; }
     public void OnPointerDown(PointerEventData d) { press = true; }
     public void OnPointerUp(PointerEventData d) { press = false; }
+}
+
+/// <summary>
+/// The docked HUD buttons (Inventory, Shop, Log, Crafting...) MATERIALIZE out of pixels when they slide out: a grid of little squares flies in from the screen edge, settles into the
+/// button's shape and fades while the button itself fades in. Triggered when the button slides out (SlideAmount passes 0.18) and when it first shows. Toggle: PixelMenuFx.HudEnabled.
+/// </summary>
+public class PixelDockFx : MonoBehaviour
+{
+    private const int Cols = 12, Rows = 3;
+    private const float Total = 0.62f;
+
+    private PixelDockedButton dock;
+    private RectTransform rect, container;
+    private CanvasGroup group;
+    private Image buttonImage;
+    private RectTransform[] cells;
+    private Image[] cellImages;
+    private float[] delay, jitterX, jitterY;
+    private float t = 99f, lastStart = -9f;
+    private bool wasVisible, alphaTouched;
+    private Vector2 fromDir = new Vector2(-1f, 0f);
+
+    private void Awake()
+    {
+        dock = GetComponent<PixelDockedButton>();
+        rect = GetComponent<RectTransform>();
+        buttonImage = GetComponent<Image>();
+    }
+
+    private void OnEnable() { wasVisible = false; }
+
+    private void OnDisable() { if (container != null) container.gameObject.SetActive(false); ResetAlpha(); }
+
+    private void ResetAlpha() { if (alphaTouched && group != null) { group.alpha = 1f; alphaTouched = false; } }
+
+    private void Build()
+    {
+        if (container != null || rect == null || rect.parent == null) return;
+        GameObject c = new GameObject("Pixel FX", typeof(RectTransform));
+        c.transform.SetParent(rect.parent, false);
+        container = c.GetComponent<RectTransform>();
+        container.anchorMin = rect.anchorMin; container.anchorMax = rect.anchorMax; container.pivot = rect.pivot;
+        cells = new RectTransform[Cols * Rows];
+        cellImages = new Image[Cols * Rows];
+        delay = new float[Cols * Rows]; jitterX = new float[Cols * Rows]; jitterY = new float[Cols * Rows];
+        for (int i = 0; i < cells.Length; i++)
+        {
+            GameObject g = new GameObject("Pixel", typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(container, false);
+            cellImages[i] = g.GetComponent<Image>();
+            cellImages[i].raycastTarget = false;
+            cells[i] = g.GetComponent<RectTransform>();
+            cells[i].anchorMin = cells[i].anchorMax = cells[i].pivot = new Vector2(0.5f, 0.5f);
+        }
+        group = gameObject.GetComponent<CanvasGroup>();
+        if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+    }
+
+    private void StartAssemble()
+    {
+        Build();
+        if (container == null) return;
+        t = 0f;
+        lastStart = Time.unscaledTime;
+        container.SetAsLastSibling();
+        container.gameObject.SetActive(true);
+        Vector2 anchor = rect.anchorMin;
+        fromDir = new Vector2(anchor.x < 0.25f ? -1f : anchor.x > 0.75f ? 1f : 0f, anchor.y > 0.75f ? 1f : anchor.y < 0.25f ? -1f : 0f);
+        if (fromDir == Vector2.zero) fromDir = Vector2.left;
+        Color baseCol = buttonImage != null ? buttonImage.color : Color.white;
+        for (int i = 0; i < cells.Length; i++)
+        {
+            int col = i % Cols;
+            delay[i] = Random.value * 0.3f + (fromDir.x != 0f ? (fromDir.x < 0f ? col : Cols - 1 - col) / (float)Cols * 0.1f : 0f);
+            jitterX[i] = Random.Range(-60f, 60f); jitterY[i] = Random.Range(-50f, 50f);
+            Color c = Color.Lerp(baseCol, Color.white, Random.Range(0.1f, 0.65f));
+            c.a = 1f;
+            cellImages[i].color = c;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (dock == null) return;
+        if (!PixelMenuFx.HudEnabled)
+        {
+            if (container != null && container.gameObject.activeSelf) container.gameObject.SetActive(false);
+            ResetAlpha();
+            return;
+        }
+        bool visible = dock.SlideAmount >= 0.18f;
+        if (visible && !wasVisible && Time.unscaledTime - lastStart > 0.8f) StartAssemble();
+        wasVisible = visible;
+        if (container == null || t > Total) { if (t > Total) { ResetAlpha(); if (container != null && container.gameObject.activeSelf) container.gameObject.SetActive(false); } return; }
+
+        t += Time.unscaledDeltaTime;
+        float u = Mathf.Clamp01(t / Total);
+        // The container follows the button (which slides about).
+        container.anchoredPosition = rect.anchoredPosition;
+        container.sizeDelta = rect.sizeDelta;
+        container.localScale = rect.localScale;
+        float w = rect.rect.width, h = rect.rect.height;
+        float cw = w / Cols, ch = h / Rows;
+        for (int i = 0; i < cells.Length; i++)
+        {
+            int col = i % Cols, row = i / Cols;
+            float local = Mathf.Clamp01((u - delay[i]) / 0.55f);
+            float ease = 1f - (1f - local) * (1f - local) * (1f - local);
+            Vector2 target = new Vector2((col + 0.5f) * cw - rect.pivot.x * w, (row + 0.5f) * ch - rect.pivot.y * h);
+            Vector2 start = target + fromDir * (90f + Mathf.Abs(jitterX[i])) + new Vector2(jitterX[i] * 0.4f, jitterY[i]);
+            cells[i].anchoredPosition = Vector2.Lerp(start, target, ease);
+            float size = Mathf.Lerp(0.3f, 1f, ease);
+            cells[i].sizeDelta = new Vector2(cw + 1f, ch + 1f) * size;
+            Color c = cellImages[i].color;
+            c.a = (local <= 0f ? 0f : Mathf.Clamp01(local * 3f)) * (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((u - 0.62f) / 0.38f)));
+            cellImages[i].color = c;
+        }
+        group.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((u - 0.3f) / 0.5f));
+        alphaTouched = true;
+        if (u >= 1f) { group.alpha = 1f; alphaTouched = false; container.gameObject.SetActive(false); }
+    }
 }
 
 /// <summary>Soft pixel motes drifting up behind the pause menu + a vignette.</summary>
