@@ -747,3 +747,4 @@
 [2026-10-13 08:06 UTC] Block Hold meter now sits on the left side of the mouse cursor so it does not cover the block tooltips.
 [2026-10-13 08:09 UTC] Block Hold: a held block returns to the cube instantly (the block that was there moves to next in line), and blocks that already have hits can be held and keep their damage.
 [2026-10-13 08:32 UTC] Block Hold now puts the block back truly instantly (the beam picture just slides back for show, and the bumped block always goes to next in line with its hits), and the Message in a Bottle is a clear glass cube with a little 3D treasure map floating inside.
+[2026-10-13 09:02 UTC] Added screen filters (Settings > Display > Screen filter and Filter strength): CRT TV, VHS, Wild West, Noir, Night Vision and Neon Dream, built from a URP post-processing volume plus a code-drawn overlay (scanlines, static, tracking band, dust, vignette, tint).

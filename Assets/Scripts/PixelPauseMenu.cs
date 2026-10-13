@@ -276,6 +276,10 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
+    [Tooltip("Label of the screen filter drop-down in Settings.")]
+    [SerializeField] private string filterLabel = "Screen filter";
+    [Tooltip("Label of the screen filter strength slider in Settings.")]
+    [SerializeField] private string filterStrengthLabel = "Filter strength";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [SerializeField] private string dayNightLabel = "Day / night cycle";
     [SerializeField] private string dayNightLengthLabel = "Length of a day";
@@ -2314,6 +2318,9 @@ public class PixelPauseMenu : MonoBehaviour
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddChoiceRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
+        AddDropdownRow(list, filterLabel, PixelFilters.Names, () => PixelFilters.Choice, v => PixelFilters.Choice = v, ref y);
+        Slider filterSlider = AddSliderRow(list, filterStrengthLabel, PixelFilters.Strength, v => PixelFilters.Strength = v, ref y);
+        settingsRefreshers.Add(() => filterSlider.SetValueWithoutNotify(PixelFilters.Strength));
 
         // ---- Saving ----
         if (saveGame != null)
