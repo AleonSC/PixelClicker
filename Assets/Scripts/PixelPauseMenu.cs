@@ -276,6 +276,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
+    [Tooltip("Label of the fancy pause menu tick box in Settings (off = the classic menu).")]
+    [SerializeField] private string fancyMenuLabel = "Fancy pause menu (animated)";
     [Tooltip("Label of the next-up window tick box in Settings.")]
     [SerializeField] private string nextUpLabel = "Next-up window (Block Hold)";
     [Tooltip("Label of the auto-contrast outline tick box in Settings.")]
@@ -1160,6 +1162,9 @@ public class PixelPauseMenu : MonoBehaviour
         mainButtons.Clear();
         for (int c = buttonsBefore; c < panel.transform.childCount; c++) mainButtons.Add(panel.transform.GetChild(c).gameObject);
         mainEntries = entries;
+
+        PixelMenuFx.BuildBackdrop(menuRoot.transform, panelRect);   // the fancy menu's motes, vignette and panel glow (hidden when the setting is off)
+        PixelMenuFx.BuildTitleLine(panelRect, 40f, -(30f + titleFontSize * 1.6f + 6f), mainPanelWidth - 80f);
 
         menuRoot.SetActive(false);
     }
@@ -2307,6 +2312,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
         AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
         AddSettingToggle(list, nextUpLabel, () => PixelNextUp.Enabled, on => PixelNextUp.Enabled = on, ref y);
+        AddSettingToggle(list, fancyMenuLabel, () => PixelMenuFx.Enabled, on => PixelMenuFx.Enabled = on, ref y);
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
         AddChoiceRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
@@ -3052,6 +3058,10 @@ public class PixelPauseMenu : MonoBehaviour
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = new Vector2(x, -(top + rowOf[i] * (buttonHeight + menuButtonSpacing)));
             button.onClick.AddListener(entries[i].action);
+
+            // The fancy pause menu (PixelMenuFx): an animated button with an accent stripe, a shine, an icon for a few entries, and a staggered entrance. It hides itself when the setting is off.
+            Texture2D fancyIcon = entries[i].label == saveLoadMenuText ? PixelMenuIcons.Floppy : entries[i].label == settingsText ? PixelMenuIcons.Cog : entries[i].label == quitText ? PixelMenuIcons.Door : null;
+            PixelMenuFx.Decorate(button, Color.Lerp(entries[i].color, Color.white, 0.55f), fancyIcon, i);
         }
 
         float needed = top + rows * (buttonHeight + menuButtonSpacing) + 10f;
