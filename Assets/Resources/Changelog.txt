@@ -708,3 +708,4 @@
 [2026-10-13 03:01 UTC] Added the world-space ground shader (Lava, Marble, Ice and Deep Space now draw sharp and never repeat); the game-made ground is lifted onto the screen so pixels really land on it; landing pulses also fire for soft landings
 [2026-10-13 03:06 UTC] New View window (key V): pick Default / First person / Orbital / Top down with tick boxes, flat view tick box (not in first person), zoom slider and orbit controls; the F (view) and X (zoom) keys are gone; added a Top down view
 [2026-10-13 03:41 UTC] Smoother floor fade: painted pictures now fade out before their own edge (no stretched edge pixels), shader grounds get the digital wireframe rim, and the fade curve is gentler
+[2026-10-13 03:44 UTC] Less lag when clicking quickly (click particle bursts are pooled and the spawn path allocates less, with Profiler markers); old pixels can't be grabbed for 0.35 s after they appear

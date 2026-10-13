@@ -16,3 +16,5 @@ Moved from CLAUDE.md.
 
 ## Profiling (added with optimization step 2)
 Profiler markers (Window > Analysis > Profiler, CPU > Timeline / Hierarchy, search "Pixel."): `Pixel.FloorRedraw` (animated floor texture), `Pixel.ElectricLinks.Scan`, `Pixel.SolarClusters`, `Pixel.QuantumScan`. Reading the code, the old-pixel scans are timer-limited (0.1-0.15 s) and O(n) with early exits, and `GetComponent<OldPixelInfo>` only appears in timer-driven scans (`PixelViewBounds` already caches it), so a shared pixel registry / pooling is NOT worth doing until a profile with ~150 old pixels shows these markers (or the per-object Update / FixedUpdate of `OldPixelDespawn` / `ScaledGravity`) taking real time.
+
+- **Click lag (Editor):** per-click click-effect bursts are pooled (`PixelBasicFx` Burst pool + `PixelFx.Configure`), the spawn path reuses one MaterialPropertyBlock and caches the live cube's colliders, and Profiler markers `Pixel.SpawnFallingCopy`, `Pixel.Materialize`, `Pixel.ClickFx` show what is left. Still unpooled: the old pixel GameObjects themselves (about a dozen components each), `PixelFarmFx` / `PixelElectricFx` bursts, +N popups. Profile before pooling more.

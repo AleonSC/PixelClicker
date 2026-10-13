@@ -3976,6 +3976,11 @@ public partial class PixelClicker : MonoBehaviour
 
     private void Materialize(PixelTier tier)
     {
+        using (materializeMarker.Auto()) MaterializeInner(tier);
+    }
+
+    private void MaterializeInner(PixelTier tier)
+    {
         if (IsHazard(tier.type)) PixelHints.Trigger("hazard");
         hitsOnCurrentPixel = 0; // a fresh pixel has taken no hits yet
         fishNeed = fishReel = 0;
@@ -4522,8 +4527,18 @@ public partial class PixelClicker : MonoBehaviour
         return oldPixels.Count > 0 ? oldPixels[oldPixels.Count - 1] : null;
     }
 
+    private static readonly ProfilerMarker spawnCopyMarker = new ProfilerMarker("Pixel.SpawnFallingCopy");
+    private static readonly ProfilerMarker materializeMarker = new ProfilerMarker("Pixel.Materialize");
+    private static MaterialPropertyBlock spawnBlock;
+    private Collider[] liveColliders;
+
     private void SpawnFallingCopy(int tierIndex, double amount, bool stored = false, Vector3 storedPosition = default,
                                   Vector3 storedVelocity = default, bool streamed = false)
+    {
+        using (spawnCopyMarker.Auto()) SpawnFallingCopyInner(tierIndex, amount, stored, storedPosition, storedVelocity, streamed);
+    }
+
+    private void SpawnFallingCopyInner(int tierIndex, double amount, bool stored, Vector3 storedPosition, Vector3 storedVelocity, bool streamed)
     {
         // Skip if the pixel is mid-materialize and basically invisible.
         if (!stored && pixelTransform.localScale.sqrMagnitude < 0.0001f) return;
@@ -4560,7 +4575,9 @@ public partial class PixelClicker : MonoBehaviour
         {
             copy.AddComponent<MeshFilter>().sharedMesh = copyMesh;
             MeshRenderer mr = copy.AddComponent<MeshRenderer>();
-            MaterialPropertyBlock block = new MaterialPropertyBlock();
+            if (spawnBlock == null) spawnBlock = new MaterialPropertyBlock();
+            MaterialPropertyBlock block = spawnBlock;   // (SetPropertyBlock copies it, so one block is reused instead of allocating one per click)
+            block.Clear();
             if (stored && IsValidTier(tierIndex))
             {
                 // A stored pixel looks like its own type, not like whatever the cube currently shows.
@@ -4603,8 +4620,9 @@ public partial class PixelClicker : MonoBehaviour
         // Keep the old pixel from colliding with / bumping the live one if requested.
         if (!collideWithLivePixel)
         {
-            foreach (Collider live in pixelTransform.GetComponentsInChildren<Collider>())
-                Physics.IgnoreCollision(box, live);
+            if (liveColliders == null) liveColliders = pixelTransform.GetComponentsInChildren<Collider>();
+            foreach (Collider live in liveColliders)
+                if (live != null) Physics.IgnoreCollision(box, live);
         }
 
         Rigidbody rb = copy.AddComponent<Rigidbody>();
@@ -4731,6 +4749,7 @@ public partial class PixelClicker : MonoBehaviour
         {
             AddDespawn(copy, flyLifetime);
             OldPixelInfo flyInfo = copy.AddComponent<OldPixelInfo>();
+        flyInfo.bornTime = Time.unscaledTime;
             flyInfo.tierIndex = tierIndex;
             flyInfo.amount = amount;
             oldPixels.Add(rb);
@@ -4744,6 +4763,7 @@ public partial class PixelClicker : MonoBehaviour
                          ForceMode.VelocityChange);
             AddDespawn(copy, FallingCopyLifetime * LifetimeFactor(tierIndex));
             OldPixelInfo routedInfo = copy.AddComponent<OldPixelInfo>();
+        routedInfo.bornTime = Time.unscaledTime;
             routedInfo.tierIndex = tierIndex;
             routedInfo.amount = amount;
             if (!stored || streamed)
@@ -4784,6 +4804,7 @@ public partial class PixelClicker : MonoBehaviour
         AddDespawn(copy, FallingCopyLifetime * LifetimeFactor(tierIndex));
 
         OldPixelInfo info = copy.AddComponent<OldPixelInfo>();
+        info.bornTime = Time.unscaledTime;
         info.tierIndex = tierIndex;
         info.amount = amount;
 
@@ -5290,4 +5311,6 @@ public class OldPixelInfo : MonoBehaviour
 {
     [HideInInspector] public int tierIndex;
     [HideInInspector] public double amount;
+    /// <summary>Unscaled time the old pixel appeared (Pixel Grabbing ignores it for a split second so it can't be grabbed through the cube).</summary>
+    [HideInInspector] public float bornTime = -99f;
 }

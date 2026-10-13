@@ -58,6 +58,17 @@ public static class PixelFx
         GameObject go = new GameObject(name, typeof(ParticleSystem));
         go.transform.SetParent(parent, false);
         ParticleSystem ps = go.GetComponent<ParticleSystem>();
+        Configure(ps, s);
+        ParticleSystemRenderer r = go.GetComponent<ParticleSystemRenderer>();
+        r.sharedMaterial = Material;
+        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        r.receiveShadows = false;
+        return ps;
+    }
+
+    /// <summary>Sets a (new or reused) particle system up from a spec. Reusing one instead of building a new system is much cheaper in the Editor (click bursts do that).</summary>
+    public static void Configure(ParticleSystem ps, Spec s)
+    {
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         ParticleSystem.MainModule main = ps.main;
@@ -74,6 +85,7 @@ public static class PixelFx
         ParticleSystem.EmissionModule emission = ps.emission;
         emission.rateOverTime = s.rate;
         if (s.burst > 0) emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)s.burst) });
+        else emission.burstCount = 0;
 
         ParticleSystem.ShapeModule shape = ps.shape;
         shape.shapeType = s.shape;
@@ -84,24 +96,13 @@ public static class PixelFx
         shape.position = s.shapePosition;
         shape.randomDirectionAmount = s.randomDirection;
 
-        if (s.overLife != null)
-        {
-            ParticleSystem.ColorOverLifetimeModule col = ps.colorOverLifetime;
-            col.enabled = true;
-            col.color = s.overLife;
-        }
+        ParticleSystem.ColorOverLifetimeModule col = ps.colorOverLifetime;
+        col.enabled = s.overLife != null;
+        if (s.overLife != null) col.color = s.overLife;
+        ParticleSystem.SizeOverLifetimeModule sol = ps.sizeOverLifetime;
+        sol.enabled = s.sizeOverLife != Vector2.zero;
         if (s.sizeOverLife != Vector2.zero)
-        {
-            ParticleSystem.SizeOverLifetimeModule sol = ps.sizeOverLifetime;
-            sol.enabled = true;
             sol.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, s.sizeOverLife.x), new Keyframe(1f, s.sizeOverLife.y)));
-        }
-
-        ParticleSystemRenderer r = go.GetComponent<ParticleSystemRenderer>();
-        r.sharedMaterial = Material;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        r.receiveShadows = false;
-        return ps;
     }
 }
 
