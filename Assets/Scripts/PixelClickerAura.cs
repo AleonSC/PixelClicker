@@ -3,7 +3,7 @@
 //   A soft glow BEHIND the clicker cube to make it easier to find without touching the pixels themselves (Settings > Interface > 'Clicker glow aura', PixelClickerAura.Enabled,
 //   PlayerPrefs PixelClicker.Setting.ClickerAura, default ON, saved per profile). A camera-facing quad with a radial fade (Sprites/Default, alpha blended) sits just behind the cube as seen
 //   from the camera, so the cube hides the middle and a halo shows round it from any view. Its colour is the colour of the pixel being clicked (washed towards white), fades smoothly when the
-//   tier changes and breathes slowly. Added by PixelClicker.Awake. Tunables are [SerializeField] fields.
+//   tier changes and breathes slowly. The cube is CUT OUT of it: PixelDepthMask.shader (Resources) draws a copy of the cube's main mesh that writes only depth, in queue 3001 between the cube and the aura (3002), so a transparent cube doesn't show the glow through itself. Added by PixelClicker.Awake. Tunables are [SerializeField] fields.
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -56,6 +56,13 @@ public class PixelClickerAura : MonoBehaviour
     private Material material;
     private Texture2D texture;
     private Color color = Color.white;
+    private Shader maskShader;
+    private Material maskMaterial;
+    private MeshFilter maskSource;
+    private Transform mask;
+    private MeshFilter maskFilter;
+    private MeshRenderer maskRenderer;
+    private float maskSearchAt;
 
     private void Awake() { clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
 
@@ -75,6 +82,8 @@ public class PixelClickerAura : MonoBehaviour
             }
         texture.Apply(false, true);
         material = new Material(shader) { mainTexture = texture };
+        material.renderQueue = 3002;   // after the cube (even a transparent one) and after the depth mask (3001) that cuts the cube's shape out of it
+        maskShader = Resources.Load<Shader>("PixelDepthMask");
 
         GameObject g = GameObject.CreatePrimitive(PrimitiveType.Quad);
         g.name = "Clicker Aura";
@@ -87,8 +96,49 @@ public class PixelClickerAura : MonoBehaviour
         quadRenderer.receiveShadows = false;
     }
 
+    /// <summary>The cube's silhouette: a copy of its main mesh that writes only depth, so the aura (drawn behind it) is hidden wherever the cube is.</summary>
+    private void UpdateMask(bool on)
+    {
+        if (maskShader == null) return;
+        if (on && (maskSource == null || !maskSource.gameObject.activeInHierarchy) && Time.unscaledTime >= maskSearchAt)
+        {
+            maskSearchAt = Time.unscaledTime + 0.25f;
+            maskSource = null;
+            float best = 0f;
+            foreach (MeshFilter mf in clicker.PixelTransform.GetComponentsInChildren<MeshFilter>(false))
+            {
+                if (mf == maskFilter || mf.sharedMesh == null) continue;
+                MeshRenderer mr = mf.GetComponent<MeshRenderer>();
+                if (mr == null || !mr.enabled) continue;
+                float size = mf.sharedMesh.bounds.size.sqrMagnitude * mf.transform.lossyScale.sqrMagnitude;
+                if (size > best) { best = size; maskSource = mf; }
+            }
+        }
+        bool show = on && maskSource != null && maskSource.gameObject.activeInHierarchy;
+        if (!show) { if (mask != null && mask.gameObject.activeSelf) mask.gameObject.SetActive(false); return; }
+        if (mask == null)
+        {
+            GameObject g = new GameObject("Clicker Aura Mask", typeof(MeshFilter), typeof(MeshRenderer));
+            mask = g.transform;
+            maskFilter = g.GetComponent<MeshFilter>();
+            maskRenderer = g.GetComponent<MeshRenderer>();
+            maskMaterial = new Material(maskShader);
+            maskMaterial.renderQueue = 3001;
+            maskRenderer.sharedMaterial = maskMaterial;
+            maskRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            maskRenderer.receiveShadows = false;
+        }
+        if (!mask.gameObject.activeSelf) mask.gameObject.SetActive(true);
+        if (maskFilter.sharedMesh != maskSource.sharedMesh) maskFilter.sharedMesh = maskSource.sharedMesh;
+        mask.SetPositionAndRotation(maskSource.transform.position, maskSource.transform.rotation);
+        mask.localScale = maskSource.transform.lossyScale;
+        mask.gameObject.layer = maskSource.gameObject.layer;
+    }
+
     private void OnDestroy()
     {
+        if (mask != null) Destroy(mask.gameObject);
+        if (maskMaterial != null) Destroy(maskMaterial);
         if (quad != null) Destroy(quad.gameObject);
         if (material != null) Destroy(material);
         if (texture != null) Destroy(texture);
@@ -100,6 +150,7 @@ public class PixelClickerAura : MonoBehaviour
         bool on = Enabled && clicker.PixelTransform.gameObject.activeInHierarchy;
         if (quad == null) { if (!on) return; Build(); if (quad == null) return; }
         if (quadRenderer.enabled != on) quadRenderer.enabled = on;
+        UpdateMask(on);
         if (!on) return;
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
