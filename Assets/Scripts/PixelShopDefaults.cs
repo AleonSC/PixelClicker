@@ -1033,7 +1033,7 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Old Pixel Capacity upgrade (Upgrades tab, 5 levels): raises how many old pixels may lie around at once (base 50).</summary>
+    /// <summary>The old Old Pixel Capacity upgrade (5 levels, base 50): NO LONGER sold (not in the default table, MigrateOldPackData removes saved copies); kept as the reference for rebalancing it into a Standard skill reward.</summary>
     private static ShopPack CreateOldPixelCapPack()
     {
         return new ShopPack
@@ -1253,8 +1253,6 @@ public partial class PixelShop
                           requires = null, create = i => CreateBlockHoldPack() },
         new DefaultPack { isThis = p => p.unlocksRobot,
                           requires = null, create = i => CreateRobotPack() },
-        new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.OldPixelCap,
-                          requires = null, create = i => CreateOldPixelCapPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.BankCapacity,
                           requires = p => p.unlocksBank, create = CreateBankStoragePack },
     };

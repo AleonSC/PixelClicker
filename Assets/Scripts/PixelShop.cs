@@ -1373,6 +1373,8 @@ public partial class PixelShop : MonoBehaviour
                                                  && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
                                              // Pixel Grabbing is unlocked from the start now (it keeps its switch in the Toggles window).
                                              || pack.unlocksGrabbing
+                                             // Old Pixel Capacity is no longer sold: it will come back as a Standard skill reward (see the to-do list).
+                                             || pack.upgradeEffect == UpgradeEffect.OldPixelCap
                                              // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
                                              || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
                                              // Stone (the old Rock block) is Mining's filler now: it comes with the Prospector's Pack, no longer sold on its own.
