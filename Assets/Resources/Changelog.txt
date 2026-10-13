@@ -806,3 +806,4 @@
 [2026-10-13 14:41 UTC] Data Streams floor now fills the whole floor circle: it is drawn by the world-space ground shader (new pattern 5) so the lanes keep their size and never stretch.
 [2026-10-13 14:51] First person building: fixed prying (attached cubes were being skipped), left click now drags whole attached builds as one piece, and a held cube or build can snap flat onto the ground in any orientation as a pinned foundation.
 [2026-10-13 14:53] First person now hides the normal floor and its wireframe circle and shows a neon grid only within a radius of the player, the clicker cube and old pixels lying on the ground.
+[2026-10-13 14:58] Opening the Dev Hub in first person now gives the mouse back (and pauses walking / looking) until it is closed.
