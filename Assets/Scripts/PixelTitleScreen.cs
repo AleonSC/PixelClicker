@@ -226,7 +226,8 @@ public class PixelTitleScreen : MonoBehaviour
     private GameObject canvasRoot, foreground;
     private Canvas canvas;
     private Image cover, bar, dim;
-    private RawImage lightImage, midImage, strongImage, logoImage, fadeImage;
+    private RawImage lightImage, midImage, strongImage, fadeImage;
+    private PixelLogoView logoView;
     private float strongPlayFactor = 1f, strongBlend = 1f;   // the Play transition's fade of the strong layers x how far the blur slider sits between two blur levels
     private RenderTexture fadeTexture;
     private bool lastLive, lastBlur, haveLastToggles;
@@ -256,8 +257,7 @@ public class PixelTitleScreen : MonoBehaviour
     private RenderTexture liveTexture;
     private readonly List<RenderTexture> chain = new List<RenderTexture>();
     private readonly List<int> chainDivisors = new List<int>();
-    private Texture2D logoTexture;
-    private float logoAspect = 0.41f;
+    private const float logoAspect = 144f / 352f;   // (the logo's cell grid: 44 x 18 cells)
     private float timeScaleBefore = 1f;
     private bool playing, pictureReady;
     private int framesShown;
@@ -356,7 +356,6 @@ public class PixelTitleScreen : MonoBehaviour
         if (Showing && playing == false && Time.timeScale == 0f) Time.timeScale = timeScaleBefore;
         Showing = false;
         ReleaseTextures();
-        if (logoTexture != null) Destroy(logoTexture);
         if (canvasRoot != null) Destroy(canvasRoot);
     }
 
@@ -459,7 +458,7 @@ public class PixelTitleScreen : MonoBehaviour
                 float room = canvasH * 0.5f - barHeight * 0.5f - 16f;   // from the screen's top edge down to just above the bar
                 top = Mathf.Min(logoTopMargin, room * 0.15f);
                 float shrink = Mathf.Clamp(Mathf.Min(1f, (room - top - logoBobAmount) / natural), 0.3f, 1f);
-                logoRect.sizeDelta = new Vector2(logoWidth * shrink, natural * shrink);
+                logoRect.localScale = new Vector3(shrink, shrink, 1f);   // (the cells of the logo scale with their container)
             }
             logoRect.anchoredPosition = new Vector2(0f, -top + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
         }
@@ -560,7 +559,7 @@ public class PixelTitleScreen : MonoBehaviour
         if (wanderers == null) wanderers = gameObject.AddComponent<PixelTitleWanderers>();
         wanderers.Setup(foreground.transform, font, canvasRoot.GetComponent<RectTransform>());
 
-        if (showLogo) BuildLogo();
+        if (showLogo) BuildLogo(font);
 
         // Play on top, Load + Settings side by side under it (together exactly as wide as Play).
         Vector2 centre = new Vector2(0.5f, 0.5f);
@@ -775,104 +774,19 @@ public class PixelTitleScreen : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // The logo: a 5x7 pixel font drawn into one texture (bevelled cells with a drop shadow)
+    // The logo: PixelLogoView builds it from little animated cells (20 styles, arrows at its sides switch them)
     // ------------------------------------------------------------------
 
-    private static readonly Dictionary<char, string[]> Glyphs = new Dictionary<char, string[]>
+    private void BuildLogo(TMP_FontAsset font)
     {
-        { 'P', new[] { "####.", "#...#", "#...#", "####.", "#....", "#....", "#...." } },
-        { 'I', new[] { "#####", "..#..", "..#..", "..#..", "..#..", "..#..", "#####" } },
-        { 'X', new[] { "#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#" } },
-        { 'E', new[] { "#####", "#....", "#....", "####.", "#....", "#....", "#####" } },
-        { 'L', new[] { "#....", "#....", "#....", "#....", "#....", "#....", "#####" } },
-        { 'C', new[] { ".####", "#....", "#....", "#....", "#....", "#....", ".####" } },
-        { 'K', new[] { "#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#" } },
-        { 'R', new[] { "####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#" } },
-    };
-
-    private void BuildLogo()
-    {
-        const string top = "PIXEL", bottom = "CLICKER";
-        const int cell = 8, margin = 12, letterCols = 5, gapCols = 1, rows = 7;
-        int cols = bottom.Length * letterCols + (bottom.Length - 1) * gapCols;
-        int width = cols * cell + margin * 2;
-        int height = (rows * 2 + 1) * cell + margin * 2;
-
-        Color32[] pixels = new Color32[width * height];
-        for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color32(0, 0, 0, 0);
-
-        int colorIndex = 0;
-        DrawWord(pixels, width, height, top, cols, 0, ref colorIndex, cell, margin, letterCols, gapCols, rows);
-        DrawWord(pixels, width, height, bottom, cols, rows + 1, ref colorIndex, cell, margin, letterCols, gapCols, rows);
-
-        logoTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
-        {
-            filterMode = FilterMode.Point,
-            wrapMode = TextureWrapMode.Clamp,
-            name = "Pixel Clicker Logo",
-        };
-        logoTexture.SetPixels32(pixels);
-        logoTexture.Apply(false, true);
-
-        GameObject go = new GameObject("Logo", typeof(RectTransform), typeof(RawImage));
+        GameObject go = new GameObject("Logo", typeof(RectTransform), typeof(CanvasGroup), typeof(PixelLogoView));
         go.transform.SetParent(foreground.transform, false);
-        logoImage = go.GetComponent<RawImage>();
-        logoImage.texture = logoTexture;
-        logoImage.raycastTarget = false;
         logoRect = go.GetComponent<RectTransform>();
         logoRect.anchorMin = logoRect.anchorMax = logoRect.pivot = new Vector2(0.5f, 1f);
-        logoAspect = (float)height / width;
         logoRect.sizeDelta = new Vector2(logoWidth, logoWidth * logoAspect);
         logoRect.anchoredPosition = new Vector2(0f, -logoTopMargin);
-    }
-
-    private void DrawWord(Color32[] pixels, int width, int height, string word, int totalCols, int rowOffset, ref int colorIndex,
-                          int cell, int margin, int letterCols, int gapCols, int rows)
-    {
-        int wordCols = word.Length * letterCols + (word.Length - 1) * gapCols;
-        int startCol = (totalCols - wordCols) / 2;
-        Color[] palette = logoColors != null && logoColors.Length > 0 ? logoColors : new[] { Color.white };
-
-        for (int li = 0; li < word.Length; li++)
-        {
-            string[] glyph;
-            if (!Glyphs.TryGetValue(word[li], out glyph)) continue;
-            Color baseColor = palette[colorIndex % palette.Length];
-            colorIndex++;
-            int letterCol = startCol + li * (letterCols + gapCols);
-            for (int r = 0; r < rows; r++)
-            for (int c = 0; c < letterCols; c++)
-            {
-                if (glyph[r][c] != '#') continue;
-                int px = margin + (letterCol + c) * cell;
-                int py = height - margin - (rowOffset + r + 1) * cell; // row 0 is the top
-                // Lighter toward the top of each letter.
-                Color tint = Color.Lerp(baseColor, Color.white, 0.25f * (1f - r / (float)(rows - 1)));
-                FillCell(pixels, width, height, px + 3, py - 3, cell, new Color(0f, 0f, 0f, 0.55f), null); // drop shadow
-                FillCell(pixels, width, height, px, py, cell, tint, tint);
-            }
-        }
-    }
-
-    /// <summary>Draws one square cell; with a base colour it gets a light top-left and dark bottom-right bevel.</summary>
-    private static void FillCell(Color32[] pixels, int width, int height, int x0, int y0, int size, Color fill, Color? bevelBase)
-    {
-        for (int y = 0; y < size; y++)
-        for (int x = 0; x < size; x++)
-        {
-            int px = x0 + x, py = y0 + y;
-            if (px < 0 || py < 0 || px >= width || py >= height) continue;
-            Color c = fill;
-            if (bevelBase.HasValue)
-            {
-                bool dark = y < 2 || x >= size - 2;
-                bool light = y >= size - 2 || x < 2;
-                if (dark) c = Color.Lerp(fill, Color.black, 0.45f);
-                else if (light) c = Color.Lerp(fill, Color.white, 0.55f);
-            }
-            else if (pixels[py * width + px].a > 0) continue; // shadows never cover letters
-            pixels[py * width + px] = c;
-        }
+        logoView = go.GetComponent<PixelLogoView>();
+        logoView.Init(logoWidth, logoColors, font);
     }
 
     // ------------------------------------------------------------------
@@ -1132,7 +1046,7 @@ public class PixelTitleScreen : MonoBehaviour
         float button = Mathf.Clamp01(t / buttonShrinkSeconds);
         float s = 1f - button * button; // shrinks faster and faster
         foreach (RectTransform r in shrinkRects) if (r != null) r.localScale = Vector3.one * Mathf.Max(0f, s);
-        if (logoImage != null) logoImage.color = new Color(1f, 1f, 1f, 1f - button);
+        if (logoView != null) logoView.SetAlpha(1f - button);
 
         float thin = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / barThinSeconds));
         barRect.sizeDelta = new Vector2(0f, barHeight * (1f - thin));
