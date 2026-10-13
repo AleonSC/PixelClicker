@@ -56,6 +56,15 @@ public class PixelOrthoView : MonoBehaviour
     /// <summary>Called after a save file changed the settings.</summary>
     public static void ReloadFromPrefs() { enabledCache = -1; }
 
+    /// <summary>Back to the perspective view at once (first person copies the camera, so it must not be flat when it starts).</summary>
+    public static void ForcePerspectiveNow()
+    {
+        if (instance == null) return;
+        Blend = 0f;
+        instance.lastBlend = 0f;
+        if (instance.cam != null) instance.Restore();
+    }
+
     /// <summary>How flat the view is right now: 0 = perspective, 1 = orthographic.</summary>
     public static float Blend { get; private set; }
 
@@ -85,7 +94,7 @@ public class PixelOrthoView : MonoBehaviour
 
         // The intro and the title screen's close-up work on the field of view, so they get the normal perspective camera.
         bool busy = PixelCameraIntro.Moving || PixelTitleScreen.Showing;
-        float target = Enabled && !disableFlatView && !busy && !PixelTitleScreen.Reversing ? 1f : 0f;
+        float target = Enabled && !disableFlatView && !busy && !PixelTitleScreen.Reversing && !PixelFirstPerson.Active ? 1f : 0f;   // (first person is always the 3D view)
         if (busy) Blend = 0f;
         else
         {

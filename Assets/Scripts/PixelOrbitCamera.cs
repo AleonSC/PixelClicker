@@ -1,12 +1,12 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelOrbitCamera.cs
-//   Orbital camera (added by PixelClicker.Awake; the THIRD step of the perspective key PixelAction.FirstPerson: normal -> first person
-//   -> orbital -> normal, driven from PixelFirstPerson.Update; disableOrbit): the REAL camera swings round the cube (Enter captures
+//   Orbital camera (added by PixelClicker.Awake; chosen in the View window (PixelViewWindow, key PixelAction.ViewWindow) as 'Orbital', or
+//   'Top down' = Enter(topDown: true): the same camera with the pitch locked at 89 degrees; disableOrbit): the REAL camera swings round the cube (Enter captures
 //   the home pose; yaw / pitch / distance round CubeBasePosition, rotation = look-at-cube x aimOffset so the cube keeps its on-screen
 //   spot): middle-mouse drag (PixelInput.MiddleHeld, dragDegreesPerPixel 0 = 0.25) or arrow keys (keyDegreesPerSecond 0 = 90) turn /
-//   tilt (pitch min minPitch 0 = 6 so it never looks from under the floor), the wheel (or Shift + wheel) and the on-screen + / - buttons zoom (minDistanceFraction 0 = 0.35,
-//   maxDistanceFraction 0 = 2), an AUTO button (bottom centre, green while on) turns the camera slowly round the cube by itself
-//   (autoOrbitDegreesPerSecond 0 = 10; dragging / arrow keys still add to it), followSharpness smoothing, a hint line for hintSeconds. Clicks need no change (raycasts go through
+//   tilt (pitch min minPitch 0 = 6 so it never looks from under the floor), the wheel (or Shift + wheel) and the View window's zoom slider (DistanceFraction, MinFraction 0.35 .. MaxFraction 2) zoom, the
+//   window's Auto orbit tick box (AutoOrbit, AutoSpeed = autoOrbitDegreesPerSecond 0 = 10) turns the camera slowly round the cube by itself,
+//   and its hold buttons (HoldTurn / HoldTilt) add to the arrow keys; dragging / arrow keys still work, followSharpness smoothing, a hint line for hintSeconds. Clicks need no change (raycasts go through
 //   TargetCamera). While PixelOrbitCamera.Active, PixelOrbitCamera.HomeCamera (a hidden disabled copy at the home pose) is what
 //   PixelViewBounds and PixelFloor.FitToView read, so old pixels stay inside the NORMAL view and fitted floors don't re-fit. Leaving
 //   glides back over returnSeconds (0 = 0.7); the title screen, the camera intro and takeover / zooming minigames (any Busy + Takeover
@@ -17,7 +17,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Orbital camera (the third view in the perspective switch cycle: normal -> first person -> orbital -> normal; same key, <c>PixelAction.FirstPerson</c>).
+/// Orbital camera (one of the views of the View window, <c>PixelViewWindow</c>: Default / First person / Orbital / Top down; top down is this camera with the tilt locked straight down).
 /// The real camera swings round the clicker cube, so you can click it from any direction (clicks are ordinary raycasts through the camera).
 /// Drag with the MIDDLE mouse button, or use the arrow keys, to turn round it and tilt; Shift + mouse wheel zooms. Leaving glides back to the
 /// view the camera had. While it is on, old pixels stay inside the NORMAL view (<see cref="HomeCamera"/>, a hidden copy of the camera at its
@@ -62,7 +62,7 @@ public class PixelOrbitCamera : MonoBehaviour
     [SerializeField] private float autoOrbitDegreesPerSecond = 0f;
 
     [Tooltip("Hint shown at the bottom of the screen while orbiting. {0} = the view key.")]
-    [SerializeField] private string hintText = "Orbit: middle mouse drag or arrow keys  -  mouse wheel or the + / - buttons zoom  -  Auto turns by itself  -  {0} to switch view";
+    [SerializeField] private string hintTextV2 = "Orbit: middle mouse drag or arrow keys  -  mouse wheel zooms  -  {0} opens the View window (zoom slider, auto orbit, other views)";
 
     [Min(0f)]
     [Tooltip("How long the hint stays on screen (seconds). 0 = the default (6).")]
@@ -90,9 +90,41 @@ public class PixelOrbitCamera : MonoBehaviour
     private float returnT;
     private float returnFromYaw, returnFromPitch, returnFromDistance;
     private Vector2 lastPointer;
-    private GameObject hintRoot, controlsRoot;
+    private GameObject hintRoot;
     private bool autoOrbit;
-    private Image autoButtonImage;
+
+    /// <summary>True while the camera looks straight down at the cube (the 'top down' view; same component, pitch locked).</summary>
+    public static bool TopDown { get; private set; }
+
+    /// <summary>Camera distance as a fraction of the normal one (1 = normal); setting it moves the camera closer or further.</summary>
+    public float DistanceFraction
+    {
+        get => homeDistance > 0.01f ? targetDistance / homeDistance : 1f;
+        set { if (Active && homeDistance > 0.01f) targetDistance = homeDistance * Mathf.Clamp(value, MinFraction, MaxFraction); }
+    }
+
+    public float MinFraction => V(minDistanceFraction, 0.35f);
+    public float MaxFraction => V(maxDistanceFraction, 2f);
+
+    /// <summary>The camera turns slowly round the cube by itself.</summary>
+    public bool AutoOrbit { get => autoOrbit; set => autoOrbit = value; }
+
+    /// <summary>Degrees per second of the automatic turn.</summary>
+    public float AutoSpeed { get => V(autoOrbitDegreesPerSecond, 10f); set => autoOrbitDegreesPerSecond = Mathf.Max(0.5f, value); }
+
+    /// <summary>Held by the View window's buttons: -1..1 turn / tilt, added to the keys.</summary>
+    public float HoldTurn, HoldTilt;
+
+    /// <summary>Switches between the orbital and the top down view while orbiting (the camera glides to the new angle).</summary>
+    public void SetTopDown(bool on)
+    {
+        if (!Active) return;
+        TopDown = on;
+        targetPitch = on ? 89f : Mathf.Clamp(homePitch, V(minPitch, 6f), 88f);
+    }
+
+    /// <summary>Ends orbiting at once (back to the normal view without the glide); used when another view takes over.</summary>
+    public void Cancel() { if (Active) Finish(true); }
     private float hintTimer;
 
     private static float V(float value, float fallback) => value > 0f ? value : fallback;
@@ -110,7 +142,7 @@ public class PixelOrbitCamera : MonoBehaviour
     }
 
     /// <summary>The view key was pressed while first person mode ended or no mode was on: start orbiting. Returns false if it can't.</summary>
-    public bool Enter()
+    public bool Enter(bool topDown = false)
     {
         if (disableOrbit || Active || clicker == null || clicker.PixelTransform == null) return false;
         PixelZoom.ResetNow();   // (the orbit starts from the normal view, not a zoomed one)
@@ -135,6 +167,8 @@ public class PixelOrbitCamera : MonoBehaviour
         yaw = targetYaw = homeYaw;
         pitch = targetPitch = homePitch;
         distance = targetDistance = homeDistance;
+        TopDown = topDown;
+        if (topDown) targetPitch = 89f;   // looks straight down (the camera glides there)
 
         GameObject go = new GameObject("Orbit Home Camera");
         go.hideFlags = HideFlags.HideAndDontSave;
@@ -146,9 +180,9 @@ public class PixelOrbitCamera : MonoBehaviour
         returning = false;
         Active = true;
         autoOrbit = false;
+        HoldTurn = HoldTilt = 0f;
         lastPointer = PixelInput.PointerPosition();
         BuildHint();
-        BuildControls();
         return true;
     }
 
@@ -160,7 +194,6 @@ public class PixelOrbitCamera : MonoBehaviour
         returnT = 0f;
         returnFromYaw = yaw; returnFromPitch = pitch; returnFromDistance = distance;
         HideHint();
-        HideControls();
     }
 
     private void Finish(bool snap)
@@ -170,8 +203,8 @@ public class PixelOrbitCamera : MonoBehaviour
         orbitHome = null;
         Active = false;
         returning = false;
+        TopDown = false;
         HideHint();
-        HideControls();
     }
 
     private void Update()
@@ -198,10 +231,10 @@ public class PixelOrbitCamera : MonoBehaviour
                 Vector2 d = pointer - lastPointer;
                 float k = V(dragDegreesPerPixel, 0.25f);
                 targetYaw -= d.x * k;
-                targetPitch += d.y * k;
+                if (!TopDown) targetPitch += d.y * k;
             }
-            float turn = (PixelKeys.KeyHeld(KeyCode.RightArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.LeftArrow) ? 1f : 0f);
-            float tilt = (PixelKeys.KeyHeld(KeyCode.UpArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.DownArrow) ? 1f : 0f);
+            float turn = (PixelKeys.KeyHeld(KeyCode.RightArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.LeftArrow) ? 1f : 0f) + HoldTurn;
+            float tilt = TopDown ? 0f : (PixelKeys.KeyHeld(KeyCode.UpArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.DownArrow) ? 1f : 0f) + HoldTilt;
             float ks = V(keyDegreesPerSecond, 90f) * dt;
             targetYaw -= turn * ks;
             targetPitch += tilt * ks;
@@ -211,7 +244,7 @@ public class PixelOrbitCamera : MonoBehaviour
                 if (Mathf.Abs(scroll) > 0.01f) targetDistance *= scroll > 0f ? 0.9f : 1.1f;
             }
             if (autoOrbit) targetYaw -= V(autoOrbitDegreesPerSecond, 10f) * dt;
-            targetPitch = Mathf.Clamp(targetPitch, V(minPitch, 6f), 88f);
+            targetPitch = TopDown ? 89f : Mathf.Clamp(targetPitch, V(minPitch, 6f), 88f);
             targetDistance = Mathf.Clamp(targetDistance, homeDistance * V(minDistanceFraction, 0.35f), homeDistance * V(maxDistanceFraction, 2f));
         }
         lastPointer = pointer;
@@ -256,7 +289,7 @@ public class PixelOrbitCamera : MonoBehaviour
         HideHint();
         hintRoot = PixelUIKit.CreateCanvas("Orbit Hint", 300, new Vector2(1920f, 1080f), false);
         hintRoot.transform.SetParent(transform, false);
-        TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, hintRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintText, PixelKeys.Name(PixelAction.FirstPerson))),
+        TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, hintRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintTextV2, PixelKeys.Name(PixelAction.ViewWindow))),
                                               26f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
         hint.raycastTarget = false;
         hint.outlineWidth = 0.3f;
@@ -268,43 +301,6 @@ public class PixelOrbitCamera : MonoBehaviour
         hr.sizeDelta = new Vector2(0f, 44f);
         hr.anchoredPosition = new Vector2(0f, (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f) + 14f);
         hintTimer = V(hintSeconds, 6f);
-    }
-
-    private void BuildControls()
-    {
-        HideControls();
-        controlsRoot = PixelUIKit.CreateCanvas("Orbit Controls", 301, new Vector2(1920f, 1080f), true);
-        controlsRoot.transform.SetParent(transform, false);
-        Color box = new Color(0.22f, 0.28f, 0.4f, 0.95f), text = Color.white;
-        float bottom = (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f) + 70f;
-
-        Button Make(string name, string label, float x, float width, System.Action click)
-        {
-            Button b = PixelUIKit.CreateButton(clicker.UIFont, controlsRoot.transform, name, label, new Vector2(width, 56f), box, text, 30f);
-            RectTransform r = b.GetComponent<RectTransform>();
-            r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
-            r.pivot = new Vector2(0.5f, 0f);
-            r.anchoredPosition = new Vector2(x, bottom);
-            b.onClick.AddListener(() => click());
-            return b;
-        }
-        Make("Zoom Out", "-", -110f, 70f, () => targetDistance *= 1.25f);
-        Make("Zoom In", "+", -30f, 70f, () => targetDistance *= 0.8f);
-        Button auto = Make("Auto Orbit", "AUTO", 80f, 130f, () => { autoOrbit = !autoOrbit; RefreshAutoButton(); });
-        autoButtonImage = auto.GetComponent<Image>();
-        RefreshAutoButton();
-    }
-
-    private void RefreshAutoButton()
-    {
-        if (autoButtonImage != null) autoButtonImage.color = autoOrbit ? new Color(0.2f, 0.62f, 0.3f, 1f) : new Color(0.22f, 0.28f, 0.4f, 0.95f);
-    }
-
-    private void HideControls()
-    {
-        if (controlsRoot != null) Destroy(controlsRoot);
-        controlsRoot = null;
-        autoButtonImage = null;
     }
 
     private void HideHint()

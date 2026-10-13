@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelZoom.cs
-//   Zoom key (added by PixelClicker.Awake; rebindable key PixelAction.Zoom, default X; disableZoom): PRESS it to step through the zoom
+//   Zoom of the normal view (added by PixelClicker.Awake; set from the View window's zoom slider with PixelZoom.SetTarget - the old X key is gone; disableZoom). Old note: PRESS it to step through the zoom
 //   levels (zoomLevels, empty = 1 / 0.6 / 0.35 = fractions of the normal camera distance; the step happens when the key is let go, and
 //   only if the wheel was not used meanwhile), HOLD it and use the mouse wheel to zoom smoothly anywhere between the closest and the
 //   furthest level. The real camera slides along the line from the cube to its normal position (the cube keeps its spot on screen;
@@ -20,20 +20,16 @@ public class PixelZoom : MonoBehaviour
     [Tooltip("Turn the zoom key off.")]
     [SerializeField] private bool disableZoom = false;
 
-    [Tooltip("The zoom levels as fractions of the normal camera distance (1 = normal, smaller = closer). Press the key to step through them in this order; holding the key + the wheel moves between the smallest and the biggest. Empty = 1, 0.6, 0.35.")]
+    [Tooltip("Only the smallest and the biggest of these matter now: they are the closest zoom of the View window's slider (as a fraction of the normal camera distance; 1 = normal, smaller = closer) and the minimum of the furthest. Empty = 1, 0.6, 0.35.")]
     [SerializeField] private float[] zoomLevels = { };
 
     [Min(0f)]
-    [Tooltip("How far OUT the hold-the-key + wheel zoom may go, as a fraction of the normal camera distance (2 = twice as far). The press-to-step levels above are not affected. 0 = the default (2.2).")]
+    [Tooltip("How far OUT the View window's zoom slider may go in the normal view, as a fraction of the normal camera distance (2 = twice as far). 0 = the default (2.2).")]
     [SerializeField] private float maxZoomOut = 0f;
 
     [Min(0f)]
     [Tooltip("How quickly the camera follows the zoom (bigger = snappier). 0 = the default (10).")]
     [SerializeField] private float followSharpness = 0f;
-
-    [Min(0f)]
-    [Tooltip("How much one notch of the wheel changes the zoom while the key is held (0.1 = 10%). 0 = the default (0.1).")]
-    [SerializeField] private float wheelStep = 0f;
 
     /// <summary>True while the camera is zoomed away from its normal view.</summary>
     public static bool Zoomed { get; private set; }
@@ -52,7 +48,6 @@ public class PixelZoom : MonoBehaviour
     private Quaternion homeRot;
     private float homeOrtho;
     private float factor = 1f, target = 1f;
-    private bool wasHeld, scrolled;
 
     private static float V(float value, float fallback) => value > 0f ? value : fallback;
 
@@ -65,6 +60,20 @@ public class PixelZoom : MonoBehaviour
     private void OnDestroy()
     {
         if (instance == this) { RestoreCamera(); instance = null; }
+    }
+
+    /// <summary>The zoom the camera is heading for, as a fraction of the normal distance (1 = normal).</summary>
+    public static float Target => instance != null ? instance.target : 1f;
+
+    public static float ClosestFraction => instance != null ? instance.Closest : 0.35f;
+
+    public static float FurthestFraction => instance != null ? instance.Furthest : 2.2f;
+
+    /// <summary>Zooms the normal view (the View window's slider). Ignored while first person, the orbit camera or a takeover minigame owns the camera.</summary>
+    public static void SetTarget(float fraction)
+    {
+        if (instance == null || instance.disableZoom || instance.NeedsNormalView()) return;
+        instance.target = Mathf.Clamp(fraction, instance.Closest, instance.Furthest);
     }
 
     /// <summary>Puts the camera back to its normal view at once (the orbit camera, first person and the title screen start from the normal view).</summary>
@@ -92,34 +101,9 @@ public class PixelZoom : MonoBehaviour
         if (NeedsNormalView())
         {
             if (Zoomed || Mathf.Abs(target - 1f) > 0.0001f) Snap();
-            wasHeld = false;
             return;
         }
 
-        bool playable = !PixelPauseMenu.IsPaused && !PixelKeys.Typing && (Time.timeScale > 0f || PixelTimeStop.IsStopped)
-                        && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting && !PixelTutorialDim.Active;
-        bool held = playable && PixelKeys.Held(PixelAction.Zoom);
-        if (held)
-        {
-            if (!wasHeld) scrolled = false;
-            float scroll = PixelInput.ScrollY();
-            if (Mathf.Abs(scroll) > 0.01f)
-            {
-                scrolled = true;
-                float step = V(wheelStep, 0.1f);
-                target *= scroll > 0f ? 1f - step : 1f + step;
-                target = Mathf.Clamp(target, Closest, Furthest);
-            }
-        }
-        else if (wasHeld && playable && !scrolled)
-        {
-            // A plain press (the key came up without any wheel use): the next level.
-            float[] levels = Levels();
-            int nearest = 0;
-            for (int i = 1; i < levels.Length; i++) if (Mathf.Abs(levels[i] - target) < Mathf.Abs(levels[nearest] - target)) nearest = i;
-            target = levels[(nearest + 1) % levels.Length];
-        }
-        wasHeld = held;
     }
 
     private void LateUpdate()

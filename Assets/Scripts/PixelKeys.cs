@@ -34,6 +34,7 @@ public enum PixelAction
     Skills = 13,
     Feedback = 14,
     Zoom = 15,
+    ViewWindow = 16,
 }
 
 /// <summary>
@@ -51,7 +52,7 @@ public static class PixelKeys
         KeyCode.E,        // RotateRight
         KeyCode.Return,   // EventLog
         KeyCode.S,        // TimeSlow
-        KeyCode.F,        // FirstPerson
+        KeyCode.None,     // FirstPerson (retired: the View window changes views)
         KeyCode.None,     // Inventory (blank until the player picks a key)
         KeyCode.None,     // Shop
         KeyCode.None,     // Log window
@@ -60,7 +61,8 @@ public static class PixelKeys
         KeyCode.None,     // Bank
         KeyCode.None,     // Skills
         KeyCode.F8,       // Feedback (the Give feedback window)
-        KeyCode.X,        // Zoom (press: next of the zoom levels; hold + mouse wheel: any zoom)
+        KeyCode.None,     // Zoom (retired: the View window has a zoom slider)
+        KeyCode.V,        // ViewWindow (opens the View window: view, flat view, zoom and orbit controls)
     };
 
     private const string PrefPrefix = "PixelClicker.Key.";

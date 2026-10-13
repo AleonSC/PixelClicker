@@ -53,7 +53,7 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float pushSpeed = 0f;
 
     [Tooltip("Text shown at the bottom of the screen while in first person mode. {0} = the First Person key.")]
-    [SerializeField] private string hintLine = "WASD move  -  Shift run  -  Space jump  -  click the cube to click it  -  right-click a cube to carry it (again = drop, left-click = throw)  -  {0} or Esc to leave";
+    [SerializeField] private string hintLineV2 = "WASD move  -  Shift run  -  Space jump  -  click the cube to click it  -  right-click a cube to carry it (again = drop, left-click = throw)  -  Esc to leave, {0} opens the View window";
 
     /// <summary>True while first person mode is on (other scripts step aside: cube clicks, grabbing, the hose, Time Slow's S key).</summary>
     [Min(0)]
@@ -113,6 +113,20 @@ public class PixelFirstPerson : MonoBehaviour
         if (Active) Exit();
     }
 
+    /// <summary>The View window switches first person mode on. False when it can't start now.</summary>
+    public static bool TryEnter()
+    {
+        if (instance == null || Active || !instance.CanEnter()) return Active;
+        instance.Enter();
+        return Active;
+    }
+
+    /// <summary>The View window switches first person mode off.</summary>
+    public static void Leave()
+    {
+        if (instance != null && Active) instance.Exit();
+    }
+
     private bool CanEnter()
     {
         if (disableFirstPerson || clicker == null || clicker.PixelTransform == null) return false;
@@ -131,28 +145,12 @@ public class PixelFirstPerson : MonoBehaviour
 
     private void Update()
     {
-        if (!Active)
-        {
-            if (!Typing() && PixelKeys.Pressed(PixelAction.FirstPerson))
-            {
-                // The view key cycles: normal -> first person -> orbital -> normal.
-                if (PixelOrbitCamera.Active) PixelOrbitCamera.Instance?.Exit();
-                else if (CanEnter()) Enter();
-            }
-            return;
-        }
+        if (!Active) return;   // (the View window switches first person on and off: TryEnter / Leave)
 
         if (player == null || fpCamera == null) { Exit(); return; }
         if (PixelMinigame.TakeoverActive || PixelTitleScreen.Showing) { Exit(); return; }
-        if (!Typing() && PixelKeys.Pressed(PixelAction.FirstPerson))
-        {
-            Exit();
-            if (PixelOrbitCamera.Instance == null || !PixelOrbitCamera.Instance.Enter()) { }   // (no orbital camera: back to the normal view)
-            return;
-        }
-
         // Paused, a popup, a visitor... : give the mouse back until play resumes.
-        bool playable = !PixelPauseMenu.IsPaused && (Time.timeScale > 0f || PixelTimeStop.IsStopped) && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting;
+        bool playable = !PixelPauseMenu.IsPaused && (Time.timeScale > 0f || PixelTimeStop.IsStopped) && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting && !PixelViewWindow.IsOpen;   // (the View window needs the mouse)
         SetCursor(playable);
         if (!playable) return;
 
@@ -175,6 +173,7 @@ public class PixelFirstPerson : MonoBehaviour
     private void Enter()
     {
         PixelZoom.ResetNow();
+        PixelOrthoView.ForcePerspectiveNow();   // (first person is always the normal 3D view)
         mainCamera = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (mainCamera == null) return;
         PixelWindows.CloseAllExcept(this);
@@ -445,7 +444,7 @@ public class PixelFirstPerson : MonoBehaviour
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(10f, 10f);
 
-        TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintLine, PixelKeys.Name(PixelAction.FirstPerson))),
+        TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintLineV2, PixelKeys.Name(PixelAction.ViewWindow))),
                                               26f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 1f, 1f, 0.75f));
         hint.raycastTarget = false;
         hint.color = Color.white;

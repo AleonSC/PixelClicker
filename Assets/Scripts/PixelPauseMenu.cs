@@ -2534,6 +2534,7 @@ public class PixelPauseMenu : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
+            if ((PixelAction)i == PixelAction.FirstPerson || (PixelAction)i == PixelAction.Zoom) continue;   // retired keys: the View window does their job
             int index = i;
             string label = keyActionLabels != null && i < keyActionLabels.Length ? keyActionLabels[i] : (PixelAction)i == PixelAction.TimeSlow ? "Time slow" : (PixelAction)i == PixelAction.FirstPerson ? "Switch view (first person / orbit)" : MenuKeyLabel((PixelAction)i);
             TMP_Text keyLabel = AddRowLabel(keysPanel.transform, label, y, out RectTransform row);
@@ -2592,7 +2593,7 @@ public class PixelPauseMenu : MonoBehaviour
             case PixelAction.Bank: return "Open Pixel Bank";
             case PixelAction.Skills: return "Open Skills";
             case PixelAction.Feedback: return "Give feedback";
-            case PixelAction.Zoom: return "Zoom (hold + wheel for any level)";
+            case PixelAction.ViewWindow: return "Open View window";
         }
         return action.ToString();
     }
@@ -2601,7 +2602,7 @@ public class PixelPauseMenu : MonoBehaviour
     {
         if (keyButtonLabels == null) return;
         for (int i = 0; i < keyButtonLabels.Length; i++)
-            keyButtonLabels[i].text = capturingAction == i ? pressAKeyText : PixelKeys.Name((PixelAction)i);
+            if (keyButtonLabels[i] != null) keyButtonLabels[i].text = capturingAction == i ? pressAKeyText : PixelKeys.Name((PixelAction)i);
     }
 
     /// <summary>While a key button waits for a key: the next key press becomes the binding (Escape cancels).</summary>
