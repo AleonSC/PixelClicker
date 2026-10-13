@@ -87,7 +87,7 @@ public class PixelSplitter : MonoBehaviour, IPixelBeltAcceptor
             k.Box("Out Strip", transform, d * (half - 0.2f * u) + Vector3.up * (plate + 0.01f * u), i == 0 ? new Vector3(0.9f * u, 0.02f * u, 0.25f * u) : new Vector3(0.25f * u, 0.02f * u, 0.9f * u), teal);
         }
         // The diverter in the middle (a diamond that shows the block shares its load) and low corner posts.
-        k.Box("Diverter", transform, new Vector3(0f, plate + 0.05f * u, 0f), new Vector3(0.5f * u, 0.1f * u, 0.5f * u), accent, new Vector3(0f, 45f, 0f), 0.4f, 0.5f);
+        k.Box("Diverter", transform, new Vector3(0f, plate + 0.05f * u, 0f), new Vector3(0.5f * u, 0.1f * u, 0.5f * u), accent, new Vector3(0f, 45f, 0f), false, 0.4f, 0.5f);
         float o = half - 0.07f * u;
         for (int sx = -1; sx <= 1; sx += 2)
             for (int sz = -1; sz <= 1; sz += 2)

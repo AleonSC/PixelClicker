@@ -857,3 +857,4 @@
 [2026-10-13 19:22 UTC] Pixels inside Funnel tubes (and Elevator / Splitter) can no longer be dragged, and pixels grabbed off a conveyor belt no longer get stuck (they are freed from the belt when grabbed).
 [2026-10-13 19:22 UTC] Dev Hub Tester: Belt Selection card to select several belts (click or drag a box) and set their speed or reverse them together.
 [2026-10-13 19:22 UTC] Holding Shift while placing or turning a consumable or tester machine snaps it to a grid and to angle steps (Settings on PixelConsumables: Shift snapping).
+[2026-10-13 19:23 UTC] Fixed the Splitter compile error (CS1503) and removed 16 unused Dev Tools fields that caused the yellow CS0414 warnings.

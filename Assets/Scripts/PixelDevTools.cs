@@ -85,14 +85,8 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Name of the text file in Assets/Resources (without .txt) shown in the To-Do tab. One item per line: '[ ] text' = open, '[x] text' = done, '# Heading', '//' = hidden note.")]
     [SerializeField] private string todoResource = "Todo";
 
-    [Tooltip("Label of the Tools tab.")]
-    [SerializeField] private string toolsTabText = "Tools";
 
-    [Tooltip("Label of the To-Do tab.")]
-    [SerializeField] private string todoTabText = "To-Do";
 
-    [Tooltip("Label of the Changelog tab (it moved here from the pause menu).")]
-    [SerializeField] private string changelogTabText = "Changelog";
 
     [Tooltip("Name of the text file in Assets/Resources (without .txt) shown in the Changelog tab, one change per line, newest first.")]
     [SerializeField] private string changelogResource = "Changelog";
@@ -146,13 +140,7 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string resetConfirmText = "Click again to erase all counts";
 
     [Header("Auto-hide (fades when not used, comes back on hover)")]
-    [Min(0.2f)]
-    [Tooltip("Seconds the on-screen spawn selector stays visible without being touched before it fades away.")]
-    [SerializeField] private float selectorHideSeconds = 2.5f;
 
-    [Min(0.05f)]
-    [Tooltip("Seconds the spawn selector takes to fade out / in.")]
-    [SerializeField] private float selectorFadeSeconds = 0.35f;
 
     [Min(0.2f)]
     [Tooltip("Seconds the Dev Tools button stays visible without being touched before it fades away (a bit longer than the selector).")]
@@ -168,8 +156,6 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the infinite-resources tick box.")]
     [SerializeField] private string infiniteToggleText = "Infinite resources";
 
-    [Tooltip("Label of the spawn-selector tick box.")]
-    [SerializeField] private string spawnSelectorToggleText = "On-screen spawn selector";
 
     [Tooltip("First entry of the on-screen selector (normal random spawning).")]
     [SerializeField] private string spawnNormalText = "Spawn: normal (random)";
@@ -180,20 +166,10 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Entry that spawns only Red, Green and Blue.")]
     [SerializeField] private string spawnRgbText = "Spawn: RGB pack";
 
-    [Tooltip("Size of the on-screen pixel selector (canvas units).")]
-    [SerializeField] private Vector2 selectorSize = new Vector2(440f, 56f);
 
-    [Tooltip("Width of the on-screen minigame drop-down next to it (canvas units).")]
-    [SerializeField] private float minigameSelectorWidth = 340f;
 
-    [Tooltip("Width of the on-screen minigame Spawn button (canvas units).")]
-    [SerializeField] private float spawnButtonWidth = 130f;
 
-    [Tooltip("Width of the on-screen minigame Despawn button next to it (canvas units).")]
-    [SerializeField] private float despawnButtonWidth = 150f;
 
-    [Tooltip("Width of the on-screen 'middle-click swap' drop-down at the end of the row (canvas units).")]
-    [SerializeField] private float swapSelectorWidth = 300f;
 
     [Tooltip("Prefix of the middle-click swap drop-down entries.")]
     [SerializeField] private string swapPrefix = "Middle click: ";
@@ -232,11 +208,7 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string clickCountText = "Clicks per click";
 
     [Header("Look")]
-    [Tooltip("Panel size (canvas units). It grows if the rows need more room.")]
-    [SerializeField] private Vector2 panelSize = new Vector2(900f, 700f);
 
-    [Tooltip("The panel is never taller than this (canvas units); the rows scroll when they don't fit (mouse wheel). 0 = 760.")]
-    [SerializeField] private float panelHeightLimit = 760f;
 
     [Tooltip("Height of each row.")]
     [SerializeField] private float rowHeight = 64f;
@@ -244,11 +216,7 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text size of rows and buttons.")]
     [SerializeField] private float fontSize = 30f;
 
-    [Tooltip("Title text size.")]
-    [SerializeField] private float titleFontSize = 48f;
 
-    [Tooltip("Panel background colour.")]
-    [SerializeField] private Color panelColor = new Color(0.12f, 0.12f, 0.16f, 0.98f);
 
     [Tooltip("Button colour.")]
     [SerializeField] private Color buttonColor = new Color(0.8f, 0.25f, 0.25f, 1f);
@@ -267,8 +235,6 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private Color tickColor = new Color(0.4f, 0.9f, 0.5f, 1f);
 
     [Header("Canvas")]
-    [Tooltip("Sorting order of the canvas. Must be above the pause menu (500) so the panel is not hidden by it.")]
-    [SerializeField] private int panelSortingOrder = 700;
 
     [Tooltip("Reference resolution for the canvas scaler.")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
