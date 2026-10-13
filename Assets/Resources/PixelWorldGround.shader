@@ -1,6 +1,6 @@
 // World-space ground: the pattern is worked out per pixel from the WORLD position, so it never repeats, never stretches and stays sharp at
 // any zoom or camera angle. Unlit and alpha-faded round a centre (so the ground melts into the sky). Used by PixelFloor for styles with a
-// 'shaderGround' number (1 Lava, 2 Marble, 3 Ice, 4 Deep Space). Lives in Resources so builds include it (loaded with Resources.Load).
+// 'shaderGround' number (1 Lava, 2 Marble, 3 Ice, 4 Deep Space, 5 Data Streams). Lives in Resources so builds include it (loaded with Resources.Load).
 Shader "Pixel Clicker/World Ground"
 {
     Properties
@@ -130,7 +130,7 @@ Shader "Pixel Clicker/World Ground"
                     col = lerp(col, _ColorC.rgb, edge * 0.85);
                     col += _ColorC.rgb * 0.12 * fbm(p * 5.0);
                 }
-                else                           // deep space: nebula clouds and stars
+                else if (_Pattern < 4.5)       // deep space: nebula clouds and stars
                 {
                     float n1 = fbm(p * 0.25 + t * 0.02);
                     float n2 = fbm(p * 0.5 + 11.3 - t * 0.03);
@@ -141,6 +141,29 @@ Shader "Pixel Clicker/World Ground"
                     float2 f = frac(sp) - 0.5;
                     float star = step(0.93, h) * smoothstep(0.3, 0.0, length(f - (hash22(g) - 0.5) * 0.6));
                     col += star * (0.6 + 0.4 * sin(_Time.y * 2.0 + h * 40.0)) * _Glow;
+                }
+
+                else                           // data streams: lanes of glowing packets racing along them (a lane is _Scale world units wide)
+                {
+                    float lane = floor(p.x);
+                    float lf = frac(p.x);
+                    float dirSign = hash21(float2(lane, 2.0) + _Seed) > 0.5 ? 1.0 : -1.0;
+                    float speed = (0.15 + 0.5 * hash21(float2(lane, 1.0) + _Seed)) * dirSign;
+                    float yc = p.y * 0.9 + _Time.y * speed * 1.6;
+                    float ci = floor(yc);
+                    float cf = frac(yc);
+                    col = _ColorA.rgb * (0.85 + 0.2 * hash21(float2(lane, 8.0) + _Seed));
+                    if (lf < 0.05 || lf > 0.95) col = lerp(col, _ColorB.rgb, 0.12);          // lane rails
+                    float on = hash21(float2(ci, lane + 50.0) + _Seed);
+                    if (on > 0.5 && lf > 0.2 && lf < 0.8 && cf > 0.08 && cf < 0.92)
+                    {
+                        float pick = hash21(float2(ci, lane + 9.0) + _Seed);
+                        float3 packet = pick < 0.6 ? _ColorB.rgb : (pick < 0.88 ? _ColorC.rgb : float3(1, 1, 1));
+                        float shine = 0.55 + 0.45 * hash21(float2(ci, lane + 33.0) + _Seed);
+                        float lead = dirSign > 0.0 ? cf : 1.0 - cf;                            // the leading edge is brighter
+                        col = packet * (shine * (0.6 + 0.6 * lead)) * (0.85 + 0.3 * _Glow);
+                    }
+                    else if (on > 0.5 && lf > 0.35 && lf < 0.65) col = lerp(col, _ColorB.rgb, 0.25);   // glow smear between packets
                 }
 
                 float dist = distance(i.world.xz, _Center.xy);
