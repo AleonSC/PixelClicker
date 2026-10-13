@@ -177,7 +177,7 @@ public class PixelFilters : MonoBehaviour
         if (active == null) return;
         float dt = Time.unscaledDeltaTime, time = Time.unscaledTime;
         float k = Strength;
-        if (recLabel != null && gogglesHud != null && gogglesHud.activeSelf) recLabel.text = (time % 1.2f) < 0.7f ? "REC \u25CF" : "REC";
+        if (recLabel != null && gogglesHud != null && gogglesHud.activeSelf) recLabel.enabled = (time % 1.2f) < 0.7f;   // blinks
 
         if (canvasRoot != null)
         {
