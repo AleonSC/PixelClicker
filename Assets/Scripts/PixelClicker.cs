@@ -143,6 +143,7 @@ public partial class PixelClicker : MonoBehaviour
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
+        GreatOak = 77,    // Woodcutting's rare giant block (50-100 clicks, shakes bird nests loose): see PixelGreatOak.cs
         WoodChips = 76,   // spat out by the Wood Chipper (every 5 wood pixels shredded): never spawns on the cube, only exists as an old pixel (PixelWoodChipper)
     }
 
@@ -156,7 +157,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsForageBlock(PixelType type) => type >= PixelType.Berry && type <= PixelType.Weeds;
 
     /// <summary>The Woodcutting skill pack's blocks: Wood, Bark, Sap, Leaf, Heartwood and the filler Twig (the Hornet Nest is its hazard).</summary>
-    public static bool IsWoodBlock(PixelType type) => type == PixelType.Wood || (type >= PixelType.Bark && type <= PixelType.Twig);
+    public static bool IsWoodBlock(PixelType type) => type == PixelType.Wood || (type >= PixelType.Bark && type <= PixelType.Twig) || type == PixelType.GreatOak;
 
     /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
     public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
@@ -168,7 +169,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips;
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips || type == PixelType.GreatOak;
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1170,6 +1171,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
+        if (PixelFind.First<PixelGreatOak>() == null) gameObject.AddComponent<PixelGreatOak>();   // Woodcutting's Great Oak bird nests
         if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
@@ -1823,6 +1825,16 @@ public partial class PixelClicker : MonoBehaviour
             if (def52 != null && PixelLooks.Find(list52.ToArray(), PixelType.WoodChips) == null) list52.Add(def52);
             looks = list52.ToArray();
             looksVersion = 52;
+        }
+
+        if (looksVersion < 53)
+        {
+            // The Great Oak got a look.
+            System.Collections.Generic.List<PixelLook> list53 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook def53 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.GreatOak);
+            if (def53 != null && PixelLooks.Find(list53.ToArray(), PixelType.GreatOak) == null) list53.Add(def53);
+            looks = list53.ToArray();
+            looksVersion = 53;
         }
 
         if (pixelRenderer != null)
@@ -2576,6 +2588,40 @@ public partial class PixelClicker : MonoBehaviour
         });
     }
 
+    /// <summary>The Great Oak tier (made on first use; no spawn weight, PickSpawnTier turns rolled wood blocks into it). Returns its index.</summary>
+    public int EnsureGreatOakTier()
+    {
+        int index = EnsureTier(new PixelTier
+        {
+            type = PixelType.GreatOak,
+            displayName = "Great Oak",
+            color = new Color(0.36f, 0.26f, 0.15f, 1f),
+            amountPerClick = 150,
+            clicksToCollect = 100,
+            randomClicks = true,
+            randomClicksMin = 50,
+            randomClicksMax = 100,
+            spawnWeight = 0f,
+            spawnSwitch = SpawnSwitch.AlwaysOn,
+            unlockMode = TierUnlockMode.ShopOnly,
+        });
+        if (IsValidTier(index)) tiers[index].unlocked = true;   // (the cube only shows unlocked blocks)
+        return index;
+    }
+
+    /// <summary>While Woodcutting is in play a rolled wood block is a Great Oak instead now and then (PixelGreatOak.OakChance).</summary>
+    private int MaybeGreatOak(int pick)
+    {
+        if (devSpawnTiers != null || !IsValidTier(pick)) return pick;
+        PixelType type = tiers[pick].type;
+        if (!IsWoodBlock(type) || type == PixelType.GreatOak) return pick;
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills == null || skills.ActiveId != PixelSkills.WoodcuttingId) return pick;
+        if (UnityEngine.Random.value >= PixelGreatOak.OakChance) return pick;
+        int oak = EnsureGreatOakTier();
+        return IsValidTier(oak) ? oak : pick;
+    }
+
     private int[] devSpawnTiers; // dev tools: only these tiers spawn (locked ones too); null = normal spawning
 
     /// <summary>True while the dev tools restrict spawning to chosen pixel types.</summary>
@@ -2816,7 +2862,9 @@ public partial class PixelClicker : MonoBehaviour
         if (h >= 0) { hazardIndex = h; hazardWeight = basis * hShare / (1f - hShare); }
     }
 
-    private int PickSpawnTier()
+    private int PickSpawnTier() => MaybeGreatOak(PickSpawnTierBase());
+
+    private int PickSpawnTierBase()
     {
         if (devSpawnTiers != null) return devSpawnTiers[UnityEngine.Random.Range(0, devSpawnTiers.Length)];
 

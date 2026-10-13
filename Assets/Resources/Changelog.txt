@@ -813,3 +813,4 @@
 [2026-10-13 15:34] Wood Chipper counts the wood pixels it eats and spits out a Wood Chips block (new standalone type, despawns like an old pixel) every 5, with a blue progress bar under its health bar.
 [2026-10-13 15:37] First person feels heavier (gravity doubled, lower default jump height) and the view now bobs while walking.
 [2026-10-13 15:46] First person logs the gravity, jump height, walk speed and head bob values it is using when you enter it (to check saved Inspector values).
+[2026-10-13 15:59] First person hotbar (wheel / keys 1-5) with an axe in slot 1: animated swing and sounds, chops wood blocks for Woodcutting XP and extra pay; new Great Oak block (5% replaces a wood block, 50-100 clicks) that shakes bird nests loose which you click for XP before they vanish.

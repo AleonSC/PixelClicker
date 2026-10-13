@@ -201,7 +201,7 @@ public partial class PixelSkills : MonoBehaviour
                 unlockHint = "Buy the Woodcutter's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest },
+                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak },
                 fillerType = "Twig", hazardType = "HornetNest",
                 perks = new[]
                 {
@@ -355,7 +355,7 @@ public partial class PixelSkills : MonoBehaviour
                 // A saved Woodcutting pack could lack a block: make sure every one is in the rotation.
                 System.Collections.Generic.List<PixelClicker.PixelType> wood = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest })
+                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak })
                     if (!wood.Contains(t)) wood.Add(t);
                 pack.types = wood.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();

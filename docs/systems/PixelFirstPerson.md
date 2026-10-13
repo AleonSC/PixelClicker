@@ -24,3 +24,7 @@ In first person the normal floor (and its wireframe circle) is hidden (PixelFloo
 
 ### Throwing
 While holding a cube or build: a quick left tap (under 0.25 s) sticks it / sets it down as before; HOLD left to charge a throw - a ghost line (LineRenderer, Sprites/Default) draws the arc to where it lands, longer and orange as power builds (throwSpeed full power, throwChargeSeconds to charge) - and let go to throw along the view.
+
+### Hotbar, axe and the Great Oak
+- PixelFirstPersonHotbar (added by Enter): 5 slots, wheel (when not carrying) or keys 1-5. Slot 1 = the AXE, drawn in hand (primitives on the camera) with a wind-up / strike / recover swing; the other slots are empty hands. With the axe, left click on a wood old pixel chops it (XP + 150% pay) and on the cube swings and clicks it (bonus XP, +50% pay when a wood block breaks); non-wood things are still picked up. Settings under "Axe" on PixelFirstPerson. Sounds: PixelAxeSynth (axe_swing, axe_chop, nest_fall, nest_catch).
+- GREAT OAK: PixelType.GreatOak 77 (see PixelGreatOak.cs header): 5% replacement of a rolled wood block while Woodcutting is in play, 50-100 clicks, shakes bird nests loose that you click for XP before they vanish.

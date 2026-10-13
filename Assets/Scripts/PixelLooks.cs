@@ -586,6 +586,8 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Truffle, useColor = true, color = new Color(0.34f, 0.23f, 0.17f, 1f), metallic = 0.1f, smoothness = 0.55f, emission = 0.1f, shine = true,
                             jagged = true, farmFx = PixelLook.FarmAmbient.Sparkle },
             new PixelLook { type = PixelClicker.PixelType.Weeds, useColor = true, color = new Color(0.55f, 0.62f, 0.35f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain },
+            new PixelLook { type = PixelClicker.PixelType.GreatOak, useColor = true, color = new Color(0.42f, 0.3f, 0.18f, 1f), metallic = 0f, smoothness = 0.08f, blockSurface = PixelLook.BlockSurface.Wood,
+                            jagged = true, farmFx = PixelLook.FarmAmbient.Leaves },
             new PixelLook { type = PixelClicker.PixelType.WoodChips, useColor = true, color = new Color(0.82f, 0.62f, 0.36f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain, jagged = true },
             new PixelLook { type = PixelClicker.PixelType.Mold, useColor = true, color = new Color(0.4f, 0.55f, 0.25f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Grain,
                             blob = true, wobble = true, wobbleAmount = 0.05f, wobbleSpeed = 3f, farmFx = PixelLook.FarmAmbient.Spores },

@@ -103,6 +103,19 @@ public class PixelFirstPerson : MonoBehaviour
     [Tooltip("Head bob steps per walking-speed unit: bigger = quicker bobbing. 0 = the coded default (0.8).")]
     [SerializeField] private float headBobRate = 0f;
 
+    [Header("Axe (hotbar slot 1)")]
+    [Min(0f)]
+    [Tooltip("Seconds one axe swing takes. 0 = the coded default (0.42).")]
+    [SerializeField] private float axeSwingSeconds = 0f;
+
+    [Min(0f)]
+    [Tooltip("Extra Woodcutting XP for every axe hit on a wood block (on top of the normal XP). 0 = the coded default (4).")]
+    [SerializeField] private float axeBonusXp = 0f;
+
+    [Min(0f)]
+    [Tooltip("Extra currency for breaking a wood block with the axe, as a fraction of what it paid (0.5 = 50% more). 0 = the coded default (0.5).")]
+    [SerializeField] private float axeBonusPay = 0f;
+
     [Header("Neon floor (first person)")]
     [Tooltip("Colour of the neon grid that replaces the floor in first person.")]
     [SerializeField] private Color gridColor = new Color(0.2f, 1f, 0.9f, 1f);
@@ -124,6 +137,8 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float gridBrightness = 0f;
 
     private PixelFirstPersonGrid grid;
+    private PixelFirstPersonHotbar hotbar;
+    private bool axeSwingActive;   // true while an axe hit is making its click (so PixelCollected adds the bonus)
 
     public static bool Active { get; private set; }
 
@@ -135,6 +150,15 @@ public class PixelFirstPerson : MonoBehaviour
         position = Vector3.zero;
         if (!Active || instance == null || instance.player == null) return false;
         position = instance.player.transform.position;
+        return true;
+    }
+
+    /// <summary>The view ray of the first person camera (false when not in first person): used to click things in the world with the crosshair.</summary>
+    public static bool TryGetViewRay(out Ray ray)
+    {
+        ray = default;
+        if (!Active || instance == null || instance.fpCamera == null) return false;
+        ray = new Ray(instance.fpCamera.transform.position, instance.fpCamera.transform.forward);
         return true;
     }
 
@@ -290,6 +314,9 @@ public class PixelFirstPerson : MonoBehaviour
         BuildHud();
         Active = true;
         Debug.Log("PixelFirstPerson: entered - gravity x" + V(gravityFactor, 2f) + ", jump height " + V(jumpHeight, 0.45f) + ", walk speed " + V(walkSpeed, 5f) + ", head bob " + V(headBobAmount, 0.022f) + " (Inspector values: gravityFactor " + gravityFactor + ", jumpHeight " + jumpHeight + ", headBobAmount " + headBobAmount + ")");
+        hotbar = new GameObject("First Person Hotbar").AddComponent<PixelFirstPersonHotbar>();
+        hotbar.Setup(clicker, fpCamera, canvasRoot.transform, eyeHeight, V(axeSwingSeconds, 0.42f));
+        clicker.PixelCollected += OnCollectedForAxe;
         float gridUnit = clicker.OldPixelWorldSize;
         grid = new GameObject("First Person Neon Grid").AddComponent<PixelFirstPersonGrid>();
         grid.Setup(clicker, gridColor, gridUnit * V(gridSpacingCubes, 1f), gridUnit * V(gridPlayerRadiusCubes, 7f), gridUnit * V(gridPixelRadiusCubes, 2.5f), V(gridBrightness, 1.2f));
@@ -305,6 +332,9 @@ public class PixelFirstPerson : MonoBehaviour
         if (fpCamera != null) Destroy(fpCamera.gameObject);
         if (player != null) Destroy(player);
         if (canvasRoot != null) Destroy(canvasRoot);
+        if (clicker != null) clicker.PixelCollected -= OnCollectedForAxe;
+        if (hotbar != null) Destroy(hotbar.gameObject);
+        hotbar = null;
         if (throwLine != null) Destroy(throwLine.gameObject);
         throwLine = null; charging = false;
         if (grid != null) Destroy(grid.gameObject);
@@ -379,13 +409,22 @@ public class PixelFirstPerson : MonoBehaviour
         Rigidbody target = !holding ? FindPickup() : null;
         bool stuck = target != null && PixelAttachment.IsAttached(target);   // part of a build: left drags the whole build, a right hold pries this one cube off
 
+        if (hotbar != null) hotbar.Busy = holding;
+        bool axe = hotbar != null && hotbar.AxeSelected && !holding;
+        Rigidbody chopTarget = axe && target != null && !stuck && IsWoodPixel(target) ? target : null;   // with the axe in hand a wood block is chopped instead of picked up
+
         if (holding) UpdateHolding();
         else
         {
             HideAttachGhost();
             if (PixelInput.LeftPressed())
             {
-                if (target != null) PickUp(target);       // left click grabs a cube (or a whole build)...
+                if (axe && (chopTarget != null || (aiming && target == null)))
+                {
+                    Rigidbody chop = chopTarget;
+                    hotbar.StartSwing(() => AxeHit(chop));          // the swing: the hit lands when the blade connects
+                }
+                else if (target != null) PickUp(target);       // left click grabs a cube (or a whole build)...
                 else if (aiming) clicker.ManualClickFromAfar();   // ...or clicks the clicker
             }
             // Hold the right button on a stuck cube to pry it loose (the ring sits on the crosshair; the cursor is locked).
@@ -401,6 +440,58 @@ public class PixelFirstPerson : MonoBehaviour
             crosshair.color = holding ? new Color(1f, 1f, 1f, 0.5f) : aiming && target == null ? new Color(0.4f, 1f, 0.5f, 0.95f)
                             : stuck ? new Color(0.4f, 0.85f, 1f, 0.95f) : target != null ? new Color(1f, 0.85f, 0.25f, 0.95f) : new Color(1f, 1f, 1f, 0.7f);
         UpdateHint(holding, target != null && !stuck, stuck, aiming);
+    }
+
+    // ---- the axe ----
+
+    private bool IsWoodPixel(Rigidbody body)
+    {
+        OldPixelInfo info = body != null ? body.GetComponent<OldPixelInfo>() : null;
+        return info != null && clicker.IsValidTierIndex(info.tierIndex) && PixelClicker.IsWoodBlock(clicker.Tiers[info.tierIndex].type);
+    }
+
+    /// <summary>The blade connects: chops the wood pixel it was aimed at, or clicks the cube (a wood block on it pays the axe bonus).</summary>
+    private void AxeHit(Rigidbody chop)
+    {
+        if (!Active) return;
+        if (chop != null && chop.gameObject != null && IsWoodPixel(chop) && !PixelAttachment.IsAttached(chop))
+        {
+            OldPixelInfo info = chop.GetComponent<OldPixelInfo>();
+            PixelClicker.PixelTier tier = clicker.Tiers[info.tierIndex];
+            Vector3 pos = chop.worldCenterOfMass;
+            if (clicker.ClaimOldPixel(chop))
+            {
+                PixelFarmFx.Break(tier.type, pos, clicker.OldPixelWorldSize, tier.color);
+                Destroy(chop.gameObject);
+                double pay = System.Math.Max(1d, tier.amountPerClick) * (1d + V(axeBonusPay, 0.5f));
+                clicker.AddCurrency(info.tierIndex, pay);
+                AddWoodXp(V(axeBonusXp, 4f) * 2f);
+                PixelAudio.Play("axe_chop");
+            }
+            return;
+        }
+        if (!AimingAtCube()) return;
+        axeSwingActive = true;
+        bool clicked = clicker.ManualClickFromAfar();
+        axeSwingActive = false;
+        if (!clicked) return;
+        PixelAudio.Play("axe_chop");
+        int idx = clicker.CurrentClickTierIndex;
+        if (clicker.IsValidTierIndex(idx) && PixelClicker.IsWoodBlock(clicker.Tiers[idx].type)) AddWoodXp(V(axeBonusXp, 4f));
+    }
+
+    /// <summary>A wood block broke while the axe was swung: extra currency on top.</summary>
+    private void OnCollectedForAxe(int tierIndex, double amount, bool automatic)
+    {
+        if (!axeSwingActive || automatic || !clicker.IsValidTierIndex(tierIndex) || !PixelClicker.IsWoodBlock(clicker.Tiers[tierIndex].type)) return;
+        clicker.AddCurrency(tierIndex, System.Math.Max(0d, amount * V(axeBonusPay, 0.5f)));
+    }
+
+    private void AddWoodXp(float xp)
+    {
+        PixelSkills skills = PixelSkills.Instance;
+        PixelSkills.SkillPack pack = skills != null ? skills.Find(PixelSkills.WoodcuttingId) : null;
+        if (pack != null && xp > 0f) skills.AddXp(pack, xp);
     }
 
     /// <summary>While a cube or build is in hand: the wheel moves it, the right button turns it (see Look), and left click attaches it (cube faces or the ground, where the white ghost shows) or sets it down.</summary>
