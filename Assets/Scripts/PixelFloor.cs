@@ -557,7 +557,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         // Tile by world size so the pattern has the same scale on any floor.
         Vector3 size = floorRenderer.bounds.size;
-        float tile = Mathf.Max(0.1f, style.tileWorldSize);
+        float tile = EffectiveTileSize(style);   // (a stretched picture is at least as big as the standard floor area)
         // Tile by world size so every pattern has the same scale on any floor, centred on the floor's middle.
         float aspect = style.tileAspect > 0.01f ? style.tileAspect : 1f;
         baseTiling = new Vector2(Mathf.Max(0.02f, size.x / (tile * aspect)), Mathf.Max(0.02f, size.z / tile));

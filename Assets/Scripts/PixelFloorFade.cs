@@ -7,7 +7,9 @@
 //   Sprites/Default, a hair above the floor top) plus a digital wireframe in the rim (RebuildWire: a world-aligned grid every
 //   wireSpacingCubes (0 = 1.25 pixel widths) and three rings, clipped to the rim, brightness bell-shaped across it, wireColor (alpha 0
 //   = cyan), wireStrength 0 = 0.9; rebuilt when the centre moves). fadeStartCubes / fadeWidthCubes 0 = automatic from the floor's size
-//   (start about half the way to the nearest edge). Scaled by the floor's own fade-in visibility; hidden with the floor / FloorOff.
+//   (start about half the way to the nearest edge) - BUT with a base view (PixelOrbitCamera) every floor uses the STANDARD area instead (StandardRadii: fade starts at standardFadeStart 0.9 of
+//   the screen's half width on the floor at 16:9, solid at standardFadeEnd 1.3, so the floor fills the screen and only the sides / corners show the wireframe; stretched one-copy pictures are
+//   enlarged to cover it, EffectiveTileSize). Scaled by the floor's own fade-in visibility; hidden with the floor / FloorOff.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -31,6 +33,14 @@ public partial class PixelFloor
     [Min(0f)]
     [Tooltip("How wide the fading rim is, in main-pixel widths. 0 = automatic (a bit less than half of the start distance).")]
     [SerializeField] private float fadeWidthCubes = 0f;
+
+    [Range(0.3f, 1.5f)]
+    [Tooltip("Standard floor area: where the fade into the wireframe starts, as a fraction of the screen's half width on the floor at the base view (0.9 = the last tenth of the sides and the corners). Used when 'Fade Start Cubes' is 0.")]
+    [SerializeField] private float standardFadeStart = 0.9f;
+
+    [Range(0.4f, 2f)]
+    [Tooltip("Standard floor area: where the floor is fully faded, as a fraction of the screen's half width (1.3 = a bit beyond the corners).")]
+    [SerializeField] private float standardFadeEnd = 1.3f;
 
     [Min(0f)]
     [Tooltip("Distance between the grid lines of the wireframe rim, in main-pixel widths. 0 = the default (1.25).")]
@@ -101,11 +111,42 @@ public partial class PixelFloor
     /// Where the floor's fade starts (r0) and ends (r1), in world units from the player. Normally from the floor's size; a painted picture that is
     /// ONE clamped copy (stretchToFloor) must be gone before its own edge, or its edge pixels would show smeared outwards.
     /// </summary>
+    /// <summary>
+    /// The STANDARD area every floor covers: sized from the base view (PixelOrbitCamera), so the floor fills the screen and only its very edge - the left and right sides
+    /// and the corners - fades into the wireframe. The fade starts at 90% of the screen's half width (measured on the floor, at 16:9) and is solid at 130%.
+    /// False when there is no base view (the old size-based fade is used then).
+    /// </summary>
+    private bool StandardRadii(Bounds fb, out float r0, out float r1)
+    {
+        r0 = r1 = 0f;
+        if (!PixelOrbitCamera.TryGetBaseView(out Vector3 camPos, out float fov)) return false;
+        float height = Mathf.Max(0.5f, camPos.y - fb.max.y);
+        float halfWidth = height * Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * (16f / 9f);
+        r0 = halfWidth * Mathf.Max(0.1f, standardFadeStart);
+        r1 = halfWidth * Mathf.Max(standardFadeStart + 0.05f, standardFadeEnd);
+        return true;
+    }
+
+    /// <summary>Size of the ONE copy of a stretched picture, in world units: at least the standard area (so the picture covers it instead of fading out early), else the style's own size.</summary>
+    private float EffectiveTileSize(FloorStyle style)
+    {
+        float tile = Mathf.Max(0.1f, style.tileWorldSize);
+        if (!style.stretchToFloor || floorRenderer == null || !StandardRadii(floorRenderer.bounds, out _, out float r1)) return tile;
+        float aspect = style.tileAspect > 0.01f ? style.tileAspect : 1f;
+        return Mathf.Max(tile, 2f * r1 / 0.94f / Mathf.Min(1f, aspect));
+    }
+
     private void FadeRadii(PixelClicker clicker, out float r0, out float r1)
     {
         float unit = Mathf.Max(0.05f, clicker.PixelBaseSize);
         Bounds fb = floorRenderer.bounds;
         float half = Mathf.Max(unit, Mathf.Min(fb.extents.x, fb.extents.z));
+        if (fadeStartCubes <= 0f && StandardRadii(fb, out r0, out r1))
+        {
+            float cap = half * 0.97f;   // (never past the floor's own edge)
+            if (r1 > cap) { float k = cap / r1; r0 *= k; r1 = cap; }
+            return;
+        }
         r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
         r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.45f));
         if (groundShaderOn || current < 0 || current >= styles.Count || !styles[current].stretchToFloor) return;

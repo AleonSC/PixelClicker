@@ -89,7 +89,7 @@ public class PixelOrbitCamera : MonoBehaviour
     private static Camera orbitHome;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Active = false; Instance = null; orbitHome = null; }
+    private static void ResetStatics() { Active = false; Instance = null; orbitHome = null; baseViewKnown = false; }
 
     private PixelClicker clicker;
     private Camera cam;
@@ -144,6 +144,18 @@ public class PixelOrbitCamera : MonoBehaviour
         clicker = PixelFind.First<PixelClicker>();
     }
 
+    private static Vector3 baseViewPosition;
+    private static float baseViewFov;
+    private static bool baseViewKnown;
+
+    /// <summary>The base view's camera (where ApplyBaseView put the scene camera, field of view): the floors size their covered area from it. False when the base view is off.</summary>
+    public static bool TryGetBaseView(out Vector3 position, out float fieldOfView)
+    {
+        position = baseViewPosition;
+        fieldOfView = baseViewFov;
+        return baseViewKnown;
+    }
+
     private void Start() { ApplyBaseView(); }
 
     /// <summary>Puts the scene camera at the base view (before the camera intro records its end pose in its first LateUpdate).</summary>
@@ -155,6 +167,9 @@ public class PixelOrbitCamera : MonoBehaviour
         float y = baseTurn * Mathf.Deg2Rad, p = V(baseTilt, 89f) * Mathf.Deg2Rad;
         Vector3 dir = new Vector3(Mathf.Sin(y) * Mathf.Cos(p), Mathf.Sin(p), Mathf.Cos(y) * Mathf.Cos(p));
         c.transform.SetPositionAndRotation(clicker.PixelTransform.position + dir * V(baseDistance, 6f), Quaternion.LookRotation(-dir, Vector3.up));
+        baseViewPosition = c.transform.position;
+        baseViewFov = c.fieldOfView;
+        baseViewKnown = true;
     }
 
     private void OnDestroy()

@@ -616,7 +616,7 @@ public partial class PixelFloor
         Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.64f, 0f));
         if (!plane.Raycast(ray, out float dist)) return;
         Vector3 hit = ray.GetPoint(dist);
-        float tile = Mathf.Max(0.1f, style.tileWorldSize);
+        float tile = EffectiveTileSize(style);
         float u = 0.5f + (hit.x - b.center.x) / tile, v = 0.5f + (hit.z - b.center.z) / tile;
         craterFocus = new Vector2(Mathf.Clamp(u, 0.3f, 0.7f), Mathf.Clamp(v, 0.3f, 0.7f));
     }
