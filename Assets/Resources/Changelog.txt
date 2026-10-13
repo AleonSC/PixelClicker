@@ -827,3 +827,4 @@
 [2026-10-13 16:47] Great Oak now replaces a wood block 1% of the time; new Acorn block (Woodcutter's Pack): acorn old pixels just lying on the field raise that chance up to 25% (12 acorns out).
 [2026-10-13 16:48] Wood old pixels (wood, bark, heartwood, twig, acorn, great oak, wood chips and the whetstone) now barely bounce: low bounce, grippy, normal gravity.
 [2026-10-13 16:49] Whetstone changed: while held, every click is followed by 2 extra rapid clicks (three at once, like the Electric overcharge) instead of one click counting for more.
+[2026-10-13 16:53] Block Hold: the right-click hold now lasts 2 seconds, and the meter looks better (smooth gliding fill, blue to amber to red as it runs low, soft glow, bright tip, quarter marks and a ready pop when recharged).

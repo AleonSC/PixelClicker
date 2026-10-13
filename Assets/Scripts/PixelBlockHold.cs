@@ -5,7 +5,7 @@
 //   while it stays held). Letting go puts it back (PixelClicker.ReturnHeldTier: it takes the cube at once, with the hits it had; the block that was on the cube moves to next in line, hits kept - RollTier hands it out). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
-//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes.
+//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. The hold lasts 2 seconds by default.
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
@@ -18,7 +18,7 @@ public class PixelBlockHold : MonoBehaviour
 {
     [Header("Meter")]
     [Min(0f)]
-    [Tooltip("Seconds the right button can hold a block with a full meter. 0 = the default (5).")]
+    [Tooltip("Seconds the right button can hold a block with a full meter. 0 = the default (2).")]
     [SerializeField] private float holdSeconds = 0f;
     [Min(0f)]
     [Tooltip("Seconds the meter takes to recharge from empty to full. 0 = the default (8).")]
@@ -52,9 +52,9 @@ public class PixelBlockHold : MonoBehaviour
 
     public static PixelBlockHold Instance { get; private set; }
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; }
+    private static void ResetStatics() { Instance = null; dotSprite = null; arcSprite = null; }
 
-    private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 5f;
+    private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 2f;
     private float RechargeSeconds => rechargeSeconds > 0f ? rechargeSeconds : 8f;
     private float ReleaseCooldown => releaseCooldownSeconds > 0f ? releaseCooldownSeconds : 1f;
     private float ExhaustCooldown => exhaustCooldownSeconds > 0f ? exhaustCooldownSeconds : 3f;
@@ -65,6 +65,7 @@ public class PixelBlockHold : MonoBehaviour
     private bool unlocked, holding;
     private int heldTier = -1, heldHits;
     private float meter = 1f, cooldown, flash;
+    private float shown = 1f, readyPop;   // the meter as drawn (it glides to the real value) / the "recharged!" pop timer
 
     // ---- state of the held block's picture ----
     private GameObject holder, aura;
@@ -79,6 +80,10 @@ public class PixelBlockHold : MonoBehaviour
     private RectTransform panel, canvasRect;
     private Image fill, back;
     private TMPro.TMP_Text bonusLabel;
+    private Image glow, ready, tip;
+    private readonly Image[] ticks = new Image[3];
+    private bool wasFull = true;
+    private static Sprite dotSprite;
     private static Sprite arcSprite;
     private const float ArcHalfDegrees = 55f;
 
@@ -306,13 +311,41 @@ public class PixelBlockHold : MonoBehaviour
         return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
     }
 
+    /// <summary>A soft white dot (bright centre, fading edge): the glowing tip and the quarter marks.</summary>
+    private static Sprite BuildDotSprite()
+    {
+        const int n = 64;
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        Color32[] px = new Color32[n * n];
+        float c = (n - 1) * 0.5f;
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;
+                float a = Mathf.Clamp01(1f - d);
+                a = a * a * (3f - 2f * a);
+                px[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * a));
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+    }
+
     private void UpdateMeter()
     {
-        bool show = Active && !PixelTitleScreen.Showing && (holding || returning || flash > 0f || cooldown > 0f || meter < 0.999f);
-        if (!show) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); return; }
+        bool full = meter >= 0.999f;
+        bool show = Active && !PixelTitleScreen.Showing && (holding || returning || flash > 0f || cooldown > 0f || !full || readyPop > 0f);
+        if (!show) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); wasFull = true; return; }
         if (canvasRoot == null) BuildMeter();
         if (canvasRoot == null) return;
         canvasRoot.SetActive(true);
+        float dt = Time.unscaledDeltaTime;
+        float time = Time.unscaledTime;
+
+        // The "ready again" pop: the moment a recharge finishes.
+        if (full && !wasFull && !holding) readyPop = 0.45f;
+        wasFull = full;
+        if (readyPop > 0f) readyPop -= dt;
 
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
             panel.anchoredPosition = local + new Vector2(-6f, 0f);
@@ -330,15 +363,59 @@ public class PixelBlockHold : MonoBehaviour
             }
         }
 
-        float k = Mathf.Clamp01(meter);
-        // (the arc sprite shows 35..145 degrees of the circle, measured from the bottom, going round the right side)
-        fill.fillAmount = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k) / 360f;
+        // The drawn fill glides to the real value (smooth drain and recharge).
+        shown = Mathf.MoveTowards(shown, Mathf.Clamp01(meter), dt * 3.5f + Mathf.Abs(shown - meter) * 8f * dt);
+        float k = Mathf.Clamp01(shown);
+        float sweep = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k);   // degrees from the bottom (the arc sprite shows 35..145 degrees)
+        fill.fillAmount = sweep / 360f;
+        if (glow != null) glow.fillAmount = fill.fillAmount;
+
         bool flashing = flash > 0f;
-        float pulse = flashing ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 22f) : 0f;
-        Color c = Color.Lerp(meterColor, exhaustColor, flashing ? 0.4f + 0.6f * pulse : 0f);
+        float pulse = flashing ? 0.5f + 0.5f * Mathf.Sin(time * 22f) : 0f;
+        // Colour: cool blue when plenty is left, amber then red as it runs out (while holding), a calm dim blue while recharging.
+        Color c = meterColor;
+        if (holding) c = k > 0.5f ? meterColor : Color.Lerp(new Color(1f, 0.55f, 0.15f, 1f), meterColor, (k - 0.25f) / 0.25f);
+        if (holding && k <= 0.25f) c = Color.Lerp(exhaustColor, new Color(1f, 0.55f, 0.15f, 1f), k / 0.25f);
+        float warn = holding && k < 0.3f ? 0.5f + 0.5f * Mathf.Sin(time * (14f + (0.3f - k) * 40f)) : 0f;   // faster flicker the lower it gets
+        c = Color.Lerp(c, Color.white, warn * 0.35f);
+        c = Color.Lerp(c, exhaustColor, flashing ? 0.4f + 0.6f * pulse : 0f);
+        if (!holding && !flashing) c = Color.Lerp(c, new Color(0.35f, 0.5f, 0.75f, 1f), 0.45f);   // recharging: subdued
         if (!holding && cooldown > 0f && !flashing) c.a = 0.6f;   // waiting for the recharge to begin
         fill.color = c;
         back.color = flashing ? Color.Lerp(new Color(0f, 0f, 0f, 0.6f), new Color(0.55f, 0f, 0f, 0.85f), pulse) : new Color(0f, 0f, 0f, 0.6f);
+
+        // The soft glow behind the fill, pulsing while held.
+        if (glow != null)
+        {
+            Color gc = c; gc.a = holding ? 0.28f + 0.14f * Mathf.Sin(time * 6f) : 0.12f;
+            glow.color = gc;
+        }
+
+        // The bright tip at the end of the fill: it rides the arc as the meter moves.
+        if (tip != null)
+        {
+            float angle = (-90f + sweep) * Mathf.Deg2Rad;
+            float radius = panel.sizeDelta.x * 0.5f * 0.88f;
+            tip.rectTransform.anchoredPosition = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            float tipScale = (holding ? 1f + 0.18f * Mathf.Sin(time * 9f) : 0.8f) * (1f + (readyPop > 0f ? readyPop * 0.8f : 0f));
+            tip.rectTransform.localScale = Vector3.one * tipScale;
+            Color tc = Color.Lerp(c, Color.white, 0.6f); tc.a = k < 0.01f ? 0f : 0.95f;
+            tip.color = tc;
+        }
+
+        // Quarter marks along the track, lit up to the current level.
+        for (int i = 0; i < ticks.Length; i++)
+            if (ticks[i] != null) { Color tcol = k >= (i + 1) * 0.25f - 0.01f ? new Color(1f, 1f, 1f, 0.55f) : new Color(1f, 1f, 1f, 0.18f); ticks[i].color = tcol; }
+
+        // "Ready!" pop when it is full again: a bright arc that swells and fades.
+        if (ready != null)
+        {
+            float rp = Mathf.Clamp01(readyPop / 0.45f);
+            Color rc = Color.white; rc.a = rp * 0.8f;
+            ready.color = rc;
+            ready.rectTransform.sizeDelta = panel.sizeDelta * (1.06f + (1f - rp) * 0.18f);
+            ready.fillAmount = 1f;
+        }
     }
 
     private void BuildMeter()
@@ -367,12 +444,42 @@ public class PixelBlockHold : MonoBehaviour
             r.anchoredPosition = Vector2.zero;
             return im;
         }
+        Image Dot(string name, Vector2 pos, float size)
+        {
+            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(panel, false);
+            Image im = g.GetComponent<Image>();
+            im.sprite = dotSprite;
+            im.raycastTarget = false;
+            RectTransform r = g.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+            r.sizeDelta = new Vector2(size, size);
+            r.anchoredPosition = pos;
+            return im;
+        }
         back = Arc("Back", 1.06f);
+        glow = Arc("Glow", 1.12f);
         fill = Arc("Fill", 1f);
-        fill.type = Image.Type.Filled;
-        fill.fillMethod = Image.FillMethod.Radial360;
-        fill.fillOrigin = (int)Image.Origin360.Bottom;
-        fill.fillClockwise = false;   // bottom -> right -> top
+        ready = Arc("Ready", 1.06f);
+        foreach (Image f in new[] { glow, fill })
+        {
+            f.type = Image.Type.Filled;
+            f.fillMethod = Image.FillMethod.Radial360;
+            f.fillOrigin = (int)Image.Origin360.Bottom;
+            f.fillClockwise = false;   // bottom -> right -> top
+        }
+        ready.color = new Color(1f, 1f, 1f, 0f);
+        ready.type = Image.Type.Filled; ready.fillMethod = Image.FillMethod.Radial360; ready.fillOrigin = (int)Image.Origin360.Bottom; ready.fillClockwise = false;
+        ready.fillAmount = 1f;
+        // Quarter marks: small dots on the track at 25 / 50 / 75 %.
+        if (dotSprite == null) dotSprite = BuildDotSprite();
+        float trackR = panel.sizeDelta.x * 0.5f * 0.88f;
+        for (int i = 0; i < ticks.Length; i++)
+        {
+            float a = (-90f + Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, (i + 1) * 0.25f)) * Mathf.Deg2Rad;
+            ticks[i] = Dot("Tick " + (i + 1), new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * trackR, 9f);
+        }
+        tip = Dot("Tip", Vector2.zero, 34f);
 
         // The bonus text of a held bonus block (PixelBlockRules.HoldRule.label), under the arc.
         bonusLabel = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Bonus Label", "", 30f, TMPro.TextAlignmentOptions.Center, TMPro.FontStyles.Bold, new Color(1f, 0.9f, 0.4f, 1f));
