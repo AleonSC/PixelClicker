@@ -306,11 +306,11 @@ public class PixelMyWindow : MonoBehaviour
         RectTransform mr = minimizeButton.GetComponent<RectTransform>();
         mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(1f, 0.5f);
         mr.anchoredPosition = new Vector2(-166f, 0f);
-        GameObject bar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
-        bar.transform.SetParent(minimizeButton.transform, false);
-        bar.GetComponent<Image>().color = Color.white;
-        bar.GetComponent<Image>().raycastTarget = false;
-        RectTransform br2 = bar.GetComponent<RectTransform>();
+        GameObject minBar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
+        minBar.transform.SetParent(minimizeButton.transform, false);
+        minBar.GetComponent<Image>().color = Color.white;
+        minBar.GetComponent<Image>().raycastTarget = false;
+        RectTransform br2 = minBar.GetComponent<RectTransform>();
         br2.anchorMin = br2.anchorMax = br2.pivot = new Vector2(0.5f, 0.5f);
         br2.sizeDelta = new Vector2(20f, 4f);
         br2.anchoredPosition = new Vector2(0f, -6f);
