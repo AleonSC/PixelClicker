@@ -1026,6 +1026,7 @@ public class PixelTitleScreen : MonoBehaviour
         {
             if (saveGame == null) saveGame = PixelFind.First<PixelSaveGame>();
             if (saveGame != null && saveGame.TryGetMostRecentSlot(out int _) && !PixelSaveGame.AutoStartNewGame) saveGame.ContinueMostRecent();
+            else PixelSaveGame.HasLoadedSave = true;   // a NEW game has started (New Game, or no save at all): from now on Play / Continue resumes it, it must not load the newest old save over it
         }
         PixelSaveGame.AutoStartNewGame = false;
         PlayedOnce = true;

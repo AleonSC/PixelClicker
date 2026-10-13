@@ -871,3 +871,4 @@
 [2026-10-13 20:14 UTC] Fixed Restart / New Game bringing an old save's settings (for example first-time tips off) into the new game: the save system's startup check now knows a new game was just started even after the title's Play cleared its flag.
 [2026-10-13 20:17 UTC] The Toggles tutorial's first box no longer sits under Cubie (it follows the middle of the right side of the screen while the Toggles window is closed).
 [2026-10-13 20:19 UTC] The Woodcutter's Pack is now listed first in the shop's Pixels tab (and stays listed once bought), and the Log's Goals tab gets a 'Purchase the Woodcutter's Pack' goal after the Auto Clicker and Cubie's Toggles tutorial (straight after the Auto Clicker with tips off).
+[2026-10-13 20:22 UTC] Fixed Continue loading the most recent save over a new game that had just been started from the Save / Load window: a started new game now counts as the game in progress.
