@@ -472,6 +472,10 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Show the Quit button (stops Play mode in the Editor, closes the game in a build).")]
     [SerializeField] private bool showQuit = true;
 
+    [Min(300f)]
+    [Tooltip("Width of the Key Bindings screen (canvas units). Wider than the menu panel so long action names and key names fit.")]
+    [SerializeField] private float keyBindingsWidth = 900f;
+
     [Tooltip("Menu panel size. The main menu uses its own width (Main Panel Width) and fits its height to its buttons.")]
     [SerializeField] private Vector2 panelSize = new Vector2(560f, 560f);
 
@@ -2529,6 +2533,8 @@ public class PixelPauseMenu : MonoBehaviour
     private void BuildKeysPanel()
     {
         keysPanel = BuildSectionPanel("Key Bindings Panel", keyBindingsPanelTitle, out float y);
+        RectTransform keysRect = keysPanel.GetComponent<RectTransform>();
+        keysRect.sizeDelta = new Vector2(Mathf.Max(keysRect.sizeDelta.x, keyBindingsWidth), keysRect.sizeDelta.y);
         int count = PixelKeys.Count;
         keyButtonLabels = new TMP_Text[count];
 
