@@ -151,6 +151,7 @@
 | `PixelPauseMenu` How to Play / Controls (older note) | Two more screens that show Assets/Resources/HowToPlay.txt and Assets/Resources/Controls.txt (the user edits these files; | `docs/systems/PixelPauseMenu.md` |
 | `PixelCrashLog.cs` | Local crash / error reports (added by PixelClicker.Awake). | in the header comment of `PixelCrashLog.cs` |
 | `PixelDevShapes.cs` / `PixelDevMockup.cs` | Layout dev tools (tick boxes 'Shape placer' / 'UI mockup builder' at the bottom of the Dev Tools Tools tab; | in the header comment of `PixelDevShapes.cs` |
+| `PixelBoundsSnapshot.cs` | Dev tool (Dev Tools > Tools > 'Snapshot bounds') that writes the camera / view / cube / floor / PixelViewBounds numbers and where the viewport edges land on the floor to <persistentDataPath>/Snapshots + clipboard + screenshot, for tuning the pixel bounds. | in the header comment of `PixelBoundsSnapshot.cs` |
 | `PixelDevTools.cs` | Dev tools (Editor/dev builds only unless allowInFullBuild is ticked on the component; | `docs/systems/PixelDevTools.md` |
 
 ### Data model

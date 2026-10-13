@@ -519,6 +519,22 @@ public class PixelDevTools : MonoBehaviour
     }
 
 
+    [Header("Bounds snapshot")]
+    [Tooltip("Label of the Tools tab button that writes the view bounds snapshot (PixelBoundsSnapshot).")]
+    [SerializeField] private string boundsSnapshotText = "Snapshot bounds (waits 3 s)";
+
+    [Min(0f)]
+    [Tooltip("Seconds between pressing the snapshot button and the snapshot, so the panel can be closed and the view set up.")]
+    [SerializeField] private float boundsSnapshotDelay = 3f;
+
+    private System.Collections.IEnumerator BoundsSnapshotRoutine()
+    {
+        Debug.Log("Bounds snapshot in " + boundsSnapshotDelay + " s - close this panel and set up the view.");
+        yield return new WaitForSecondsRealtime(boundsSnapshotDelay);
+        yield return new WaitForEndOfFrame();
+        PixelBoundsSnapshot.Capture();
+    }
+
     private void SkipIntro()
     {
         if (shop != null) shop.DevSkipIntro();
@@ -848,6 +864,13 @@ public class PixelDevTools : MonoBehaviour
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
         skip.onClick.AddListener(SkipIntro);
+        y += rowHeight + 24f;
+
+        // Row: snapshot of the view bounds / floor numbers (waits so the panel can be closed first)
+        Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText,
+                                              new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(snap.GetComponent<RectTransform>(), 40f, y, inner);
+        snap.onClick.AddListener(() => StartCoroutine(BoundsSnapshotRoutine()));
         y += rowHeight + 24f;
 
         // Row: give the next Dragon Cube still needed

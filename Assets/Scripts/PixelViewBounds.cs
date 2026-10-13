@@ -170,6 +170,17 @@ public class PixelViewBounds : MonoBehaviour
         }
     }
 
+    /// <summary>Writes this component's settings and its current five planes (point on plane = normal * -distance) for the bounds snapshot tool.</summary>
+    public void Describe(System.Text.StringBuilder sb)
+    {
+        sb.AppendLine("boundsActive=" + boundsActive + " sideEdges=" + sideEdges + " topEdge=" + topEdge + " bottomEdge=" + bottomEdge + " insideBlackBars=" + insideBlackBars);
+        sb.AppendLine("inset=" + inset + " extraEdgeMargin=" + extraEdgeMargin + " nearLimit=" + nearLimit + " bounciness=" + bounciness + " friction=" + friction);
+        sb.AppendLine("barFractionUsed=" + (insideBlackBars && PixelHud.Instance != null && PixelHud.Instance.BarHeight > 0f ? BarFraction() : 0f));
+        string[] names = { "left", "right", "top", "bottom", "near" };
+        for (int i = 0; i < planes.Length && i < names.Length; i++)
+            sb.AppendLine("plane " + names[i] + " used=" + used[i] + " normal=" + planes[i].normal.ToString("F4") + " distance=" + planes[i].distance.ToString("F4"));
+    }
+
     /// <summary>Builds the planes of the view's edges (all normals point into the view).</summary>
     private void BuildPlanes(Camera cam)
     {

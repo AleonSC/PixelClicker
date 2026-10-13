@@ -712,3 +712,4 @@
 [2026-10-13 03:47 UTC] Main menu: switching Live background or Blur background now crossfades gradually; letting go of the blur slider no longer unticks the Blur toggle
 [2026-10-13 03:54 UTC] Clicked pixels now burst out of the cube in random directions and land in a ring round it when the ground is far below, instead of dropping in one stack
 [2026-10-13 04:15 UTC] The View window's choices (view, zoom, orbit zoom, auto orbit and its speed) are now saved with the save file's settings and restored after the title screen.
+[2026-10-13 04:16 UTC] Added a Dev Tools 'Snapshot bounds' button that saves the camera, view, cube, floor and view-bounds numbers (plus a screenshot) to a text file and the clipboard.
