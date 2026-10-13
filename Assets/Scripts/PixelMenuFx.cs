@@ -162,9 +162,10 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         GameObject s = new GameObject("Shine", typeof(RectTransform), typeof(Image));
         s.transform.SetParent(fxRoot.transform, false);
         Image si = s.GetComponent<Image>();
-        si.color = new Color(1f, 1f, 1f, 0.22f);
+        si.color = new Color(1f, 1f, 1f, 0f);   // invisible until a sweep starts (it used to sit at the left edge as a pale slanted bar)
         si.raycastTarget = false;
         shine = s.GetComponent<RectTransform>();
+        shine.anchoredPosition = new Vector2(-200f, 0f);
         shine.anchorMin = shine.anchorMax = new Vector2(0f, 0.5f);
         shine.pivot = new Vector2(0.5f, 0.5f);
         shine.sizeDelta = new Vector2(Mathf.Clamp(rect.rect.width * 0.18f, 14f, 46f), rect.rect.height * 2.4f);
@@ -252,6 +253,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             Image si = shine.GetComponent<Image>();
             Color c = si.color; c.a = 0.24f * Mathf.Sin(tt * Mathf.PI); si.color = c;
         }
+        else if (shine.anchoredPosition.x > -150f) { shine.anchoredPosition = new Vector2(-200f, 0f); Image si2 = shine.GetComponent<Image>(); Color c2 = si2.color; c2.a = 0f; si2.color = c2; }   // (parked, invisible)
     }
 
     public void OnPointerEnter(PointerEventData d) { hover = true; shineT = 0f; }
