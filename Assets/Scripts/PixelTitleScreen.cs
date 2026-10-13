@@ -155,7 +155,7 @@ public class PixelTitleScreen : MonoBehaviour
 
     [Range(0f, 1f)]
     [Tooltip("How visible a picker is while the mouse is away (it fades up to full when the mouse comes near).")]
-    [SerializeField] private float pickerRestAlpha = 0.6f;
+    [SerializeField] private float pickerIdleAlpha = 0f;
 
     [Tooltip("Show the floor picker (right of Play) and sky picker (left of Play): a drop-down listing every look. A quick version of the Settings rows.")]
     [SerializeField] private bool showLookPickers = true;
@@ -695,7 +695,7 @@ public class PixelTitleScreen : MonoBehaviour
             bool over = !playing && (open || pointer.x >= corners[0].x - pickerHoverMargin && pointer.x <= corners[2].x + pickerHoverMargin
                         && pointer.y >= corners[0].y - pickerHoverMargin && pointer.y <= corners[2].y + pickerHoverMargin);
             p.alpha = Mathf.MoveTowards(p.alpha, over ? 1f : 0f, Time.unscaledDeltaTime / (over ? 0.12f : 0.35f));
-            p.group.alpha = Mathf.Lerp(pickerRestAlpha, 1f, p.alpha);
+            p.group.alpha = Mathf.Lerp(pickerIdleAlpha, 1f, p.alpha);
             p.group.blocksRaycasts = p.alpha > 0.05f;
         }
     }

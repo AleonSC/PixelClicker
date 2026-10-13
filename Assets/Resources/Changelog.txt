@@ -781,3 +781,4 @@
 [2026-10-13 12:43 UTC] The Inspector's input fields now draw their own blinking text cursor.
 [2026-10-13 12:49 UTC] Dev Tools is now a draggable window (no dimmer) with minimize, pin and docking to the screen sides (new shared PixelWindowChrome).
 [2026-10-13 12:57 UTC] The Quit to... window now blacks out the screen and glows with flickering red neon light around its edges.
+[2026-10-13 13:01 UTC] The main menu's floor and sky dropdowns are invisible again until the mouse is over them.
