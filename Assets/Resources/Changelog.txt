@@ -744,3 +744,4 @@
 [2026-10-13 07:55 UTC] Added the Block Hold shop upgrade (hold right click on the cube's block to pull it out of the rotation while a meter drains, release to put it back, a red flash and longer wait if the meter runs dry) and the UFO Helper now starts switched off when bought.
 [2026-10-13 08:04 UTC] Block Hold: filler blocks can be held too, the held block is now wrapped in a telekinetic beam and aura and slides out to the side (and back in when released), and the meter is a curved vertical arc next to the mouse cursor.
 [2026-10-13 08:05 UTC] Block Hold meter now sits on the left side of the mouse cursor so it does not cover the block tooltips.
+[2026-10-13 08:06 UTC] Block Hold meter now sits on the left side of the mouse cursor so it does not cover the block tooltips.

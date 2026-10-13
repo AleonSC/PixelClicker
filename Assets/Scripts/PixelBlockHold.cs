@@ -268,7 +268,7 @@ public class PixelBlockHold : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // The meter: a curved vertical arc to the right of the mouse cursor
+    // The meter: a curved vertical arc to the LEFT of the mouse cursor (tooltips pop up on the right)
     // ------------------------------------------------------------------
 
     private static Sprite BuildArcSprite()
@@ -301,7 +301,7 @@ public class PixelBlockHold : MonoBehaviour
         canvasRoot.SetActive(true);
 
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
-            panel.anchoredPosition = local + new Vector2(6f, 0f);
+            panel.anchoredPosition = local + new Vector2(-6f, 0f);
 
         float k = Mathf.Clamp01(meter);
         // (the arc sprite shows 35..145 degrees of the circle, measured from the bottom, going round the right side)
@@ -325,6 +325,7 @@ public class PixelBlockHold : MonoBehaviour
         panel = p.GetComponent<RectTransform>();
         panel.sizeDelta = new Vector2(190f, 190f);
         panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
+        panel.localScale = new Vector3(-1f, 1f, 1f);   // the arc sprite is on the right: mirrored it sits on the LEFT of the cursor (the block tooltips pop up on the right)
 
         Image Arc(string name, float scale)
         {
