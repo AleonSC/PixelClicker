@@ -213,7 +213,10 @@ public class PixelTitleScreen : MonoBehaviour
     private GameObject canvasRoot, foreground;
     private Canvas canvas;
     private Image cover, bar, dim;
-    private RawImage lightImage, strongImage, logoImage;
+    private RawImage lightImage, strongImage, logoImage, fadeImage;
+    private RenderTexture fadeTexture;
+    private bool lastLive, lastBlur, haveLastToggles;
+    private float fadeAmount;
     private RectTransform barRect, logoRect;
     private readonly List<Image> glowImages = new List<Image>();   // [0,1] top outer/inner, [2,3] bottom outer/inner, [4] top line, [5] bottom line
     private float glowFade = 1f;
@@ -304,6 +307,9 @@ public class PixelTitleScreen : MonoBehaviour
         framesShown = animated ? 2 : 0;
         cover.color = animated ? Color.clear : Color.black;
         lightImage.enabled = strongImage.enabled = false;
+        fadeAmount = 0f;
+        if (fadeImage != null) fadeImage.enabled = false;
+        haveLastToggles = false;
         foreach (Button b in buttons) b.interactable = !animated;
         if (animated)
         {
@@ -345,6 +351,7 @@ public class PixelTitleScreen : MonoBehaviour
         foreach (RenderTexture rt in chain) if (rt != null) { rt.Release(); Destroy(rt); }
         chain.Clear();
         if (sharpTexture != null) { sharpTexture.Release(); Destroy(sharpTexture); sharpTexture = null; }
+        if (fadeTexture != null) { fadeTexture.Release(); Destroy(fadeTexture); fadeTexture = null; }
         chainDivisors.Clear();
     }
 
@@ -499,6 +506,7 @@ public class PixelTitleScreen : MonoBehaviour
 
         lightImage = MakeRaw("Light Blur");
         strongImage = MakeRaw("Strong Blur");
+        fadeImage = MakeRaw("Background Fade");   // the previous picture, fading away when Live / Blur background is switched
 
         GameObject dimGo = new GameObject("Dim", typeof(RectTransform), typeof(Image));
         dimGo.transform.SetParent(canvasRoot.transform, false);
@@ -923,8 +931,45 @@ public class PixelTitleScreen : MonoBehaviour
         pictureReady = true;
     }
 
+    /// <summary>
+    /// Switching 'Live background' or 'Blur background' changes the whole picture at once; instead the picture that was showing is kept as a snapshot
+    /// on top and fades away over about a second, so the floor (or the sky) comes in gradually.
+    /// </summary>
+    private void UpdateBackgroundFade()
+    {
+        bool liveNow = PixelTitleWanderers.LiveBackground, blurNow = PixelTitleWanderers.BlurBackground;
+        if (!haveLastToggles) { lastLive = liveNow; lastBlur = blurNow; haveLastToggles = true; }
+        else if (liveNow != lastLive || blurNow != lastBlur)
+        {
+            lastLive = liveNow;
+            lastBlur = blurNow;
+            Texture shown = strongImage != null && strongImage.enabled ? strongImage.texture : null;
+            if (shown != null && pictureReady && !playing)
+            {
+                if (fadeTexture == null || fadeTexture.width != shown.width || fadeTexture.height != shown.height)
+                {
+                    if (fadeTexture != null) { fadeTexture.Release(); Destroy(fadeTexture); }
+                    fadeTexture = NewTexture(shown.width, shown.height, 0, FilterMode.Bilinear);
+                }
+                Graphics.Blit(shown, fadeTexture);
+                fadeImage.texture = fadeTexture;
+                fadeAmount = 1f;
+                fadeImage.color = Color.white;
+                fadeImage.enabled = true;
+            }
+        }
+        if (fadeAmount > 0f)
+        {
+            fadeAmount = playing ? 0f : Mathf.MoveTowards(fadeAmount, 0f, Time.unscaledDeltaTime / 1.1f);
+            float k = fadeAmount * fadeAmount * (3f - 2f * fadeAmount);
+            fadeImage.color = new Color(1f, 1f, 1f, k);
+            if (fadeAmount <= 0f) fadeImage.enabled = false;
+        }
+    }
+
     private void UpdateBlur()
     {
+        UpdateBackgroundFade();
         bool live = PixelTitleWanderers.LiveBackground || PixelFloor.Instance == null;
         if (!PixelTitleWanderers.BlurBackground) { UpdateSharp(live); return; }
         Camera cam = Camera.main != null ? Camera.main : PixelFind.First<Camera>();

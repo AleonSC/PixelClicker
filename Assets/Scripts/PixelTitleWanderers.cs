@@ -178,7 +178,7 @@ public class PixelTitleWanderers : MonoBehaviour
 
     private readonly List<Walker> walkers = new List<Walker>();
     private Transform layer;
-    private class Toggle { public RectTransform rect; public CanvasGroup group; public Image tick; public System.Func<bool> get; public System.Action<bool> set; public TMP_Text label; public Slider slider; }
+    private class Toggle { public RectTransform rect; public CanvasGroup group; public Image tick; public System.Func<bool> get; public System.Action<bool> set; public TMP_Text label; public Slider slider; public float sliderUsed = -99f; }
     private readonly List<Toggle> toggles = new List<Toggle>();
     private bool on, built;
     private float nextArrival;
@@ -243,7 +243,14 @@ public class PixelTitleWanderers : MonoBehaviour
         CanvasGroup group = t.GetComponent<CanvasGroup>();
         group.alpha = 0f;
         Toggle toggle = new Toggle { rect = rect, group = group, get = get, set = set };
-        t.GetComponent<Button>().onClick.AddListener(() => { toggle.set(!toggle.get()); Refresh(); });
+        t.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            // Letting go of the blur slider must not count as a click on the toggle behind it.
+            if (toggle.slider != null && toggle.slider.gameObject.activeInHierarchy &&
+                (Time.unscaledTime - toggle.sliderUsed < 0.3f || RectTransformUtility.RectangleContainsScreenPoint((RectTransform)toggle.slider.transform, PixelInput.PointerPosition(), null))) return;
+            toggle.set(!toggle.get());
+            Refresh();
+        });
 
         // A tick box and the text.
         GameObject box = new GameObject("Box", typeof(RectTransform), typeof(Image));
@@ -278,7 +285,7 @@ public class PixelTitleWanderers : MonoBehaviour
             sr.offsetMin = new Vector2(58f, 6f); sr.offsetMax = new Vector2(-10f, -6f);
             sl.minValue = 0f; sl.maxValue = 1f;
             sl.SetValueWithoutNotify(BlurAmount);
-            sl.onValueChanged.AddListener(v => BlurAmount = v);
+            sl.onValueChanged.AddListener(v => { BlurAmount = v; toggle.sliderUsed = Time.unscaledTime; });
             toggle.slider = sl;
         }
         toggles.Add(toggle);
