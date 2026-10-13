@@ -25,6 +25,8 @@ using UnityEngine.Rendering.Universal;
 
 public class PixelFilters : MonoBehaviour
 {
+    public enum FrameKind { None = 0, TvBezel = 1, Goggles = 2 }
+
     [Serializable]
     public class Preset
     {
@@ -57,6 +59,9 @@ public class PixelFilters : MonoBehaviour
         [Range(0f, 0.4f)] public float shaderRound;        // rounded glass corners
         public float shaderBright = 1f;
         [Range(0f, 0.1f)] public float shaderFlicker;
+        public FrameKind frame = FrameKind.None;       // None / a TV bezel round the glass / tech goggles (two round lenses)
+        [Range(0f, 0.2f)] public float bezel = 0.06f;   // TV bezel thickness (fraction of the half screen)
+        public Color shaderTint = new Color(0f, 0f, 0f, 0f);   // the picture is turned into this colour (alpha = how much)
     }
 
     public static PixelFilters Instance { get; private set; }
@@ -162,7 +167,8 @@ public class PixelFilters : MonoBehaviour
         bool on = active != null && k > 0.001f;
         ApplyOverlay(on ? active : null, k);
         ApplyVolume(on ? active : null, k);
-        SetWarp(on && active.warp > 0.0001f);
+        SetWarp(on && (active.warp > 0.0001f || active.frame != FrameKind.None));
+        ApplyGoggleHud(on && active.frame == FrameKind.Goggles);
         enabled = on;
     }
 
@@ -171,6 +177,7 @@ public class PixelFilters : MonoBehaviour
         if (active == null) return;
         float dt = Time.unscaledDeltaTime, time = Time.unscaledTime;
         float k = Strength;
+        if (recLabel != null && gogglesHud != null && gogglesHud.activeSelf) recLabel.text = (time % 1.2f) < 0.7f ? "REC \u25CF" : "REC";
 
         if (canvasRoot != null)
         {
@@ -338,11 +345,15 @@ public class PixelFilters : MonoBehaviour
             bool flip = SystemInfo.graphicsUVStartsAtTop != flipVertical;
             warpMaterial.SetFloat("_Flip", flip ? 1f : 0f);
             warpMaterial.SetFloat("_Zoom", ZoomFor(p.warp * k));
+            float bezelNow = p.frame == FrameKind.TvBezel ? p.bezel * Mathf.Clamp01(k * 1.5f) : 0f;
+            warpMaterial.SetFloat("_Frame", (float)p.frame);
+            warpMaterial.SetFloat("_Bezel", bezelNow);
+            warpMaterial.SetColor("_Tint", new Color(p.shaderTint.r, p.shaderTint.g, p.shaderTint.b, p.shaderTint.a * k));
             warpMaterial.SetVector("_Res", new Vector4(w, h, 0f, 0f));
 
             // The real pointer is a point of the UNWARPED picture; the warped picture shows that point at InverseWarp(point), so the cursor is drawn there.
             Vector2 pointer = PixelInput.PointerPosition();
-            Vector2 shown = InverseWarp(new Vector2(pointer.x / w, pointer.y / h), p.warp * k);   // (the zoom is part of the warp)
+            Vector2 shown = InverseWarp(new Vector2(pointer.x / w, pointer.y / h), p.warp * k, bezelNow);   // (the zoom and the bezel are part of the warp)
             bool inWindow = pointer.x >= 0f && pointer.y >= 0f && pointer.x <= w && pointer.y <= h;
             warpMaterial.SetVector("_Cursor", new Vector4(shown.x * w, shown.y * h, cursorSize, inWindow ? 1f : 0f));
             if (!cursorHidden) { cursorWasVisible = Cursor.visible; cursorHidden = true; }
@@ -356,16 +367,17 @@ public class PixelFilters : MonoBehaviour
     private static float ZoomFor(float k) => 1f / (1f + k * 0.65f);
 
     /// <summary>Where the warped picture shows the point 's' (0..1 of the unwarped picture): solves s = c * (1 + k * c.yx^2) for the screen point c.</summary>
-    public static Vector2 InverseWarp(Vector2 s01, float k)
+    public static Vector2 InverseWarp(Vector2 s01, float k, float bezel = 0f)
     {
         Vector2 s = (s01 * 2f - Vector2.one) / ZoomFor(k);
-        Vector2 c = s;
+        Vector2 cg = s;   // 'cg' = the glass' own coordinates (the screen's, scaled by the bezel)
         for (int i = 0; i < 10; i++)
         {
-            float cx = s.x / (1f + k * c.y * c.y);
-            float cy = s.y / (1f + k * c.x * c.x);
-            c = new Vector2(cx, cy);
+            float cx = s.x / (1f + k * cg.y * cg.y);
+            float cy = s.y / (1f + k * cg.x * cg.x);
+            cg = new Vector2(cx, cy);
         }
+        Vector2 c = cg * (1f - bezel);
         return c * 0.5f + new Vector2(0.5f, 0.5f);
     }
 
@@ -398,6 +410,39 @@ public class PixelFilters : MonoBehaviour
         tex.SetPixels32(px);
         tex.Apply();
         return tex;
+    }
+
+    // ---- The goggles' HUD text (drawn on the overlay canvas inside each lens; the screen capture then carries it into the shader) ----
+    private GameObject gogglesHud;
+    private TMPro.TMP_Text recLabel;
+
+    private void ApplyGoggleHud(bool on)
+    {
+        if (!on) { if (gogglesHud != null) gogglesHud.SetActive(false); return; }
+        if (canvasRoot == null) BuildOverlay();
+        if (gogglesHud == null)
+        {
+            PixelClicker clicker = PixelFind.First<PixelClicker>();
+            if (clicker == null || clicker.UIFont == null) return;
+            gogglesHud = new GameObject("Goggles HUD", typeof(RectTransform));
+            gogglesHud.transform.SetParent(canvasRoot.transform, false);
+            PixelUIKit.Stretch(gogglesHud.GetComponent<RectTransform>());
+            Color green = new Color(0.4f, 1f, 0.55f, 0.9f);
+            void Label(string name, string text, Vector2 pos, out TMPro.TMP_Text made)
+            {
+                made = PixelUIKit.CreateText(clicker.UIFont, gogglesHud.transform, name, text, 26f, TMPro.TextAlignmentOptions.Center, TMPro.FontStyles.Bold, green);
+                made.raycastTarget = false;
+                RectTransform r = made.rectTransform;
+                r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+                r.sizeDelta = new Vector2(360f, 40f);
+                r.anchoredPosition = pos;
+            }
+            Label("Rec", "REC", new Vector2(-480f, 345f), out recLabel);
+            Label("Bat", "BAT 87%", new Vector2(-480f, -345f), out _);
+            Label("Ir", "IR 940NM", new Vector2(480f, 345f), out _);
+            Label("Lux", "LUX 0.04", new Vector2(480f, -345f), out _);
+        }
+        gogglesHud.SetActive(true);
     }
 
     // ------------------------------------------------------------------
@@ -549,16 +594,17 @@ public class PixelFilters : MonoBehaviour
     {
         new Preset { name = "Off" },
         new Preset { name = "CRT TV", saturation = 12f, contrast = 12f, vignette = 0.2f, grain = 0.12f, bloom = 0.6f, noise = 0.05f,
-                     warp = 0.13f, shaderScan = 0.38f, shaderChroma = 0.0045f, shaderVignette = 0.4f, shaderRound = 0.1f, shaderBright = 1.15f, shaderFlicker = 0.012f },
+                     warp = 0.11f, shaderScan = 0.36f, shaderChroma = 0.004f, shaderVignette = 0.4f, shaderRound = 0.11f, shaderBright = 1.15f, shaderFlicker = 0.012f,
+                     frame = FrameKind.TvBezel, bezel = 0.065f },
         new Preset { name = "VHS", saturation = -22f, contrast = -6f, temperature = 8f, vignette = 0.3f, grain = 0.5f, chromatic = 0.7f, bloom = 0.3f,
                      scanlines = 0.1f, noise = 0.12f, band = 0.22f, overlayVignette = 0.15f,
                      warp = 0.03f, shaderChroma = 0.003f, shaderRound = 0.03f, shaderFlicker = 0.01f },
         new Preset { name = "Wild West", saturation = -58f, contrast = 12f, colorFilter = new Color(1f, 0.86f, 0.62f), temperature = 30f, vignette = 0.55f, grain = 0.35f,
                      dust = 0.5f, overlayVignette = 0.35f, tint = new Color(0.45f, 0.28f, 0.1f, 0.14f) },
         new Preset { name = "Noir", saturation = -100f, contrast = 32f, vignette = 0.5f, grain = 0.4f, dust = 0.18f, overlayVignette = 0.3f },
-        new Preset { name = "Night Vision", saturation = -50f, exposure = 0.6f, colorFilter = new Color(0.45f, 1f, 0.5f), vignette = 0.6f, grain = 0.6f, bloom = 0.9f,
-                     noise = 0.08f, overlayVignette = 0.4f, tint = new Color(0.1f, 0.6f, 0.15f, 0.1f),
-                     warp = 0.07f, shaderScan = 0.2f, shaderChroma = 0.002f, shaderRound = 0.06f, shaderBright = 1.1f },
+        new Preset { name = "Night Vision", saturation = -50f, exposure = 0.6f, colorFilter = new Color(0.45f, 1f, 0.5f), grain = 0.6f, bloom = 0.9f, noise = 0.08f,
+                     warp = 0f, shaderScan = 0.2f, shaderChroma = 0.002f, shaderVignette = 0.5f, shaderBright = 1.25f, shaderFlicker = 0.02f,
+                     frame = FrameKind.Goggles, shaderTint = new Color(0.25f, 1f, 0.4f, 0.75f) },
         new Preset { name = "Neon Dream", saturation = 55f, contrast = 12f, vignette = 0.2f, chromatic = 0.18f, bloom = 1.3f, overlayVignette = 0.15f },
     };
 }
