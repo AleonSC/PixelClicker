@@ -125,7 +125,7 @@ public partial class PixelShop
         glow.GetComponent<Image>().raycastTarget = false;
         glow.GetComponent<PixelMenuPanelGlow>().target = panelRect;
         PixelUIKit.StyleBox(glow.GetComponent<Image>());
-        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f, true);   // a neon light spot sweeps along it
+        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight + tabsDrop * 0.3f), panelWidth - panelPadding * 2f);   // the same sliding white segment as the pause menu
 
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,

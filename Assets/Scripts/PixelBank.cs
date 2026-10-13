@@ -1246,6 +1246,7 @@ public class PixelBank : MonoBehaviour
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(CloseWindow);
         y += titleFontSize * 1.4f + 10f;
+        PixelMenuFx.AddWindowLine(windowObject.transform, y - 6f);
 
         capacityLabel = PixelUIKit.CreateText(font, windowObject.transform, "Capacity", "", fontSize, TextAlignmentOptions.Center,
                                               FontStyles.Normal, new Color(textColor.r, textColor.g, textColor.b, 0.8f));

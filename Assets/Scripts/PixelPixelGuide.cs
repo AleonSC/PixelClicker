@@ -194,6 +194,7 @@ public class PixelPixelGuide : MonoBehaviour
         tr.anchorMax = new Vector2(1f, 1f);
         tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(-170f, 44f * 1.4f);
+        PixelMenuFx.AddWindowLine(windowObject.transform, headerH - 2f);
         tr.anchoredPosition = new Vector2(0f, -16f);
 
         Button close = PixelUIKit.CreateButton(Font, windowObject.transform, "Close", "X", new Vector2(64f, 64f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 34f);

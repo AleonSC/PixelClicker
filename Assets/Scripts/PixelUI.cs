@@ -1067,6 +1067,7 @@ public class PixelUI : MonoBehaviour
             tr.pivot = new Vector2(0.5f, 1f);
             tr.sizeDelta = new Vector2(-(panelPadding * 2f + closeSpace * 2f), headerHeight); // centred, with room for the X
             tr.anchoredPosition = Vector2.zero;
+            PixelMenuFx.AddWindowLine(boxObject.transform, headerHeight - 4f, panelPadding);
 
             if (closeButtonSize > 0f)
             {

@@ -146,6 +146,7 @@ public partial class PixelSkills
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(() => PixelPop.Hide(windowObject));
+        PixelMenuFx.AddWindowLine(windowObject.transform, 90f);
         BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);

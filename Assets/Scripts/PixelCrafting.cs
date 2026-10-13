@@ -661,6 +661,7 @@ public class PixelCrafting : MonoBehaviour
         tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(-200f, titleH);
         tr.anchoredPosition = new Vector2(0f, -y);
+        PixelMenuFx.AddWindowLine(windowObject.transform, y + titleH + 4f);
 
         Button close = PixelUIKit.CreateButton(font, windowObject.transform, "Close", "X", new Vector2(70f, 70f),
                                                new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);

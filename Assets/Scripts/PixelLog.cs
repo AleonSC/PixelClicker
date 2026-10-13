@@ -724,6 +724,7 @@ public class PixelLog : MonoBehaviour
         tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(-(panelPadding * 2f + 160f), headerHeight);
         tr.anchoredPosition = Vector2.zero;
+        PixelMenuFx.AddWindowLine(panelObject.transform, headerHeight - 6f, panelPadding);
 
         // Close button
         Button close = CreateButton(panelObject.transform, "Close", "X", new Vector2(70f, 70f),

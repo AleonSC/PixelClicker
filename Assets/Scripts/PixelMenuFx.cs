@@ -116,6 +116,21 @@ public static class PixelMenuFx
         }
     }
 
+    /// <summary>The same sliding light line under a window's title, stretched across the window ('y' = distance from the window's top edge, 'margin' = space at both ends).</summary>
+    public static void AddWindowLine(Transform window, float y, float margin = 24f)
+    {
+        if (window == null) return;
+        GameObject line = new GameObject("Fancy Title Line", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(PixelMenuTitleLine));
+        line.transform.SetParent(window, false);
+        Image im = line.GetComponent<Image>();
+        im.color = new Color(1f, 1f, 1f, 0.12f);
+        im.raycastTarget = false;
+        RectTransform r = line.GetComponent<RectTransform>();
+        r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
+        r.sizeDelta = new Vector2(-2f * margin, 4f);
+        r.anchoredPosition = new Vector2(0f, -y);
+    }
+
     /// <summary>A sliding light segment under the title.</summary>
     public static void BuildTitleLine(RectTransform panel, float x, float y, float width, bool neon = false)
     {
