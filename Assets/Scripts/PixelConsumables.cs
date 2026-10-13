@@ -111,6 +111,8 @@ public class PixelConsumables : MonoBehaviour
         StorageCrate = 13,
         /// <summary>Not placed by hand: right-click in the inventory (Fishing only) and a bucket stands on the floor until you stop Fishing. Drop Fish / Water pixels in; stored fish make more fish spawn.</summary>
         BaitBucket = 14,
+        /// <summary>Placed, permanent, sold by the Lumberjack: a trailer-mounted wood chipper (PixelWoodChipper). Turn it before placing; its chute arrow shows where the chips go and a conveyor belt opening in that area latches on.</summary>
+        WoodChipper = 15,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -243,6 +245,9 @@ public class PixelConsumables : MonoBehaviour
         [Header("Magnetized Sorter only")]
         [Tooltip("Craft-only: never sold in the shop or by visitors (you make it in the Crafting window).")]
         public bool craftOnly = false;
+
+        [Tooltip("Not sold in the shop: only a visiting vendor (the Lumberjack) sells it.")]
+        public bool vendorOnly = false;
 
         [Range(20f, 170f)]
         [Tooltip("Magnetized Sorter: opening angle (degrees) of the arc in front of the magnet that pulls pixels in. Its length is 'Radius'.")]
@@ -584,6 +589,30 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultWoodChipper()
+    {
+        return new Device
+        {
+            kind = DeviceKind.WoodChipper,
+            vendorOnly = true,
+            displayName = "Wood Chipper",
+            description = "A trailer-mounted wood chipper, bought from the Lumberjack. Wood pixels dropped into its hopper are shredded for Woodcutting XP and every few of them make a Wood Chips block that shoots out of its chute (a conveyor belt opening in front of the chute latches on). Anything that is not wood damages it, and enough of that breaks it for good.",
+            requiredType = PixelClicker.PixelType.Wood,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Wood, amount = 400 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Bark, amount = 150 },
+            },
+            maxHeld = 2,
+            durationSeconds = 1e9f,
+            radius = 1f,
+            color = new Color(0.9f, 0.45f, 0.1f, 1f),
+            bodyDiameter = 3f,
+            bodyHeight = 3f,
+            placingMessage = "Scroll or Q / E to turn the {0}. The arrow shows where its chips go (a conveyor belt opening latches on). Click the floor to place it  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultQuantumOrganizer()
     {
         return new Device
@@ -912,6 +941,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.QuantumOrganizer, CreateDefaultQuantumOrganizer),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.WoodChipper, CreateDefaultWoodChipper),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1136,6 +1166,9 @@ public class PixelConsumables : MonoBehaviour
     }
 
     public bool ItemNotSold(int item) => IsDevice(item) && devices[item - potions.Length].craftOnly;
+
+    /// <summary>A device only a visiting vendor sells (not listed in the shop).</summary>
+    public bool ItemVendorOnly(int item) => IsDevice(item) && devices[item - potions.Length].vendorOnly;
 
     /// <summary>The second pixel type of a combo potion.</summary>
     public PixelClicker.PixelType ItemSecondType(int item) => potions[item].secondType;
@@ -1675,6 +1708,9 @@ public class PixelConsumables : MonoBehaviour
                     root = BuildDeviceObject(d, false, out _, out _);
                     DecorateRodModel(root, d);
                     break;
+                case DeviceKind.WoodChipper:
+                    root = PixelWoodChipper.CreateDisplay(clicker);
+                    break;
                 case DeviceKind.ComboFuel:
                 case DeviceKind.GhostBait:
                 case DeviceKind.PetTreat:
@@ -1928,6 +1964,9 @@ public class PixelConsumables : MonoBehaviour
         : devices[placingIndex].placingMessage);
 
     private float placingYaw;
+    private bool chipperLatched;
+    private Vector3 chipperLatchPoint;
+    private float chipperLatchYaw;
     private PixelSorterDevice.Parts previewSorter;
     private int sorterPhase;      // 0 = turning the pipe, 1 = bending it
     private float sorterBend;
@@ -2060,10 +2099,18 @@ public class PixelConsumables : MonoBehaviour
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper)
         {
             placingYaw += TurnInput();
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
+        }
+        chipperLatched = false;
+        if (hasPoint && devices[placingIndex].kind == DeviceKind.WoodChipper
+            && PixelWoodChipper.TrySnapToBelt(clicker, point, placingYaw, preview, out Vector3 latchPoint, out float latchYaw))
+        {
+            // The chipper's chute arrow found a conveyor belt opening: it latches on (turns and moves so the chute sits over the belt).
+            chipperLatched = true; chipperLatchPoint = latchPoint; chipperLatchYaw = latchYaw;
+            preview.transform.SetPositionAndRotation(latchPoint, Quaternion.Euler(0f, latchYaw, 0f));
         }
 
         if (devices[placingIndex].kind == DeviceKind.Seed)
@@ -2181,6 +2228,7 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
+        if (chipperLatched && d.kind == DeviceKind.WoodChipper) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
         if (robotPicked != null)
         {
             Action<int, Vector3, float, float> picked = robotPicked;
@@ -2193,7 +2241,7 @@ public class PixelConsumables : MonoBehaviour
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -2264,6 +2312,13 @@ public class PixelConsumables : MonoBehaviour
             PixelMagnetSorterDevice sorter = root.AddComponent<PixelMagnetSorterDevice>();
             sorter.Init(clicker, cam, d, timer, timerFormat, duration, shrinkSeconds, root.transform.Find("Mouth"), d.bodyDiameter, d.bodyHeight);
             result = sorter;
+        }
+        else if (d.kind == DeviceKind.WoodChipper)
+        {
+            GameObject root = PixelWoodChipper.Place(clicker, point, yaw);
+            PixelChipperDevice chipperDevice = root.AddComponent<PixelChipperDevice>();
+            chipperDevice.Init(clicker, cam, shrinkSeconds);
+            result = chipperDevice;
         }
         else if (d.kind == DeviceKind.StorageCrate)
         {
@@ -2382,7 +2437,7 @@ public class PixelConsumables : MonoBehaviour
         int index = Array.FindIndex(devices, x => x != null && x.displayName == state.device);
         if (index < 0) return;
         PixelPlacedDevice restored = SpawnDevice(index, state.position, state.yaw, state.remaining, state.aim, state.bend, state.force);
-        if (restored != null && state.disarmed && !(restored is PixelStorageCrate)) restored.Disarm();
+        if (restored != null && state.disarmed && !(restored is PixelStorageCrate) && !(restored is PixelChipperDevice)) restored.Disarm();
         if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
         if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);
@@ -2437,6 +2492,12 @@ public class PixelConsumables : MonoBehaviour
     /// </summary>
     private GameObject BuildDeviceObject(Device d, bool isPreview, out Transform suckPoint, out TextMeshPro timer)
     {
+        if (d.kind == DeviceKind.WoodChipper)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelWoodChipper.CreateGhost(clicker) : displayOnly ? PixelWoodChipper.CreateDisplay(clicker) : PixelWoodChipper.Place(clicker, Vector3.zero, 0f);
+        }
+
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
 
         if (d.kind == DeviceKind.Vacuum)

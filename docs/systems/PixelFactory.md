@@ -16,3 +16,9 @@ While placing, the ghost chipper shows a flat arrow from its chute outwards (Pix
 
 ## Belt speed (first person)
 Right click a belt in first person: a small window (PixelConveyorSystem speed editor) with a number box (cube widths per second, 0 stops it), Set, Reverse and Close; Esc closes it; the mouse is freed while it is open (PixelFirstPerson `playable`). In the normal view a right click still reverses the belt.
+
+## Belt ends feed machines (IPixelBeltAcceptor)
+At a belt end with no belt after it, `PixelConveyorSystem` asks the registered acceptors (`IPixelBeltAcceptor`: `AcceptsAt(world)` / `AcceptFromBelt(rb)`; machines call `PixelConveyorSystem.Register`) whether one has its opening there. The Kiln (its mouth zone, roomier) burns the pixel; the Storage Crate (over its footprint, a free section needed) stores it. Otherwise the pixel is ejected as before.
+
+## Lumberjack: Buy / Sell tabs, Wood Chipper device, potions
+PixelVisitorMinigame got `BuySellTabs` (a vendor that sells wares AND buys pixels: Buy tab = wares, Sell tab = trades). The Lumberjack sells the Wood Chipper (`DeviceKind.WoodChipper` 15, `Device.vendorOnly` = not listed in the shop or sold by the Tinkerer; costs wood + bark; placed like the Fan with the turn input, its chute arrow latches onto a belt opening; thin `PixelChipperDevice : PixelPlacedDevice` on the machine `PixelWoodChipper.Place` builds, so it is saved / restored / removed like any device) and plain potions of the Lumberjack pack's pixels; and buys those pixels (Wood, Bark, Sap, Leaf, Heartwood, Twig, Acorn, Whetstone, Pesticide - not the Great Oak) for pure currency.

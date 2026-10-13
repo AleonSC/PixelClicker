@@ -173,6 +173,14 @@ public class PixelWoodChipper : MonoBehaviour
         return root;
     }
 
+    /// <summary>A solid, inert model for pictures (inventory / vendor items): no behaviour, no colliders, no arrow.</summary>
+    public static GameObject CreateDisplay(PixelClicker clicker)
+    {
+        GameObject root = Build(clicker, true, 1f, false);
+        root.name = "Wood Chipper (Display)";
+        return root;
+    }
+
     /// <summary>A working Wood Chipper standing at 'point' turned by 'yaw' degrees.</summary>
     public static GameObject Place(PixelClicker clicker, Vector3 point, float yaw)
     {
@@ -512,9 +520,9 @@ public class PixelWoodChipper : MonoBehaviour
     }
 
     /// <summary>Builds the whole machine (origin on the ground under its middle) and, for a real one, adds this behaviour.</summary>
-    private static GameObject Build(PixelClicker clicker, bool ghost)
+    private static GameObject Build(PixelClicker clicker, bool ghost, float ghostAlpha = 0.45f, bool withArrow = true)
     {
-        Kit k = new Kit { clicker = clicker, ghost = ghost, alpha = 0.45f };
+        Kit k = new Kit { clicker = clicker, ghost = ghost, alpha = ghostAlpha };
         GameObject root = new GameObject("Wood Chipper");
         float scale = clicker != null ? Mathf.Max(0.05f, clicker.PixelBaseSize) * 0.9f : 1f;
 
@@ -533,7 +541,7 @@ public class PixelWoodChipper : MonoBehaviour
         BuildEngine(k, sh, out Transform exhaustTop);
         Material beacon = BuildControls(k, sh, out Transform lamp);
 
-        if (ghost) BuildArrow(root.transform, clicker);
+        if (ghost && withArrow) BuildArrow(root.transform, clicker);
         root.transform.localScale = Vector3.one * scale;
         if (ghost) return root;
 

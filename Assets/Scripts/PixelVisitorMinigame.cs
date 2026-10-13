@@ -233,6 +233,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     /// <summary>Visitors that trade pixels return their offers here when they arrive (null = a normal wares visitor).</summary>
     protected virtual List<Trade> RollTrades() => null;
 
+    /// <summary>True for a vendor that both SELLS wares and BUYS pixels: the window gets a Buy tab (the wares) and a Sell tab (the trades from <see cref="RollTrades"/>).</summary>
+    protected virtual bool BuySellTabs => false;
+
     /// <summary>Label of a trade's button.</summary>
     protected virtual string TradeText => "Trade";
 
@@ -263,6 +266,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
 
     private class WareRow
     {
+        public int tab;   // 0 = Buy tab (a ware), 1 = Sell tab (a trade); only used with BuySellTabs
         public Trade trade;
         public int item;
         public RectTransform rect;
@@ -719,7 +723,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         // --- Wares window.
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         trades = RollTrades();
-        bool tradeMode = trades != null;
+        tabsMode = BuySellTabs;
+        bool tradeMode = trades != null && !tabsMode;
         List<int> wares = tradeMode ? new List<int>() : Wares();
         stock.Clear();
         if (!tradeMode && OfferedWares > 0)
@@ -727,9 +732,20 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (!tradeMode) ModifyWares(wares);
         if (!tradeMode && StockMax > 0)
             foreach (int w in wares) stock[w] = StockFor(w);
-        int rowCount = tradeMode ? trades.Count : wares.Count;
+
+        // The rows: (item, trade). A buy / sell vendor lists the wares first, then the trades; the tabs show one group at a time.
+        List<KeyValuePair<int, Trade>> entries = new List<KeyValuePair<int, Trade>>();
+        if (tradeMode) foreach (Trade t in trades) entries.Add(new KeyValuePair<int, Trade>(-1, t));
+        else
+        {
+            foreach (int w in wares) entries.Add(new KeyValuePair<int, Trade>(w, null));
+            if (tabsMode && trades != null) foreach (Trade t in trades) entries.Add(new KeyValuePair<int, Trade>(-1, t));
+        }
+        int rowCount = entries.Count;
+        int tallest = tabsMode ? Mathf.Max(wares.Count, trades != null ? trades.Count : 0) : rowCount;
         float rowH = 104f;
-        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + rowCount * (rowH + 8f) + 110f);
+        float tabsH = tabsMode ? 64f : 0f;
+        float height = Mathf.Min(1080f - 2f * barH - 30f, 190f + tabsH + tallest * (rowH + 8f) + 110f);
         waresPanel = Panel("Wares", new Vector2(900f, Mathf.Max(420f, height)), visitorRect.sizeDelta.x + 90f);
         TMP_Text wt = PixelUIKit.CreateText(Font, waresPanel, "Title", Pick(waresTitle, DefaultWaresTitle), 50f, TextAlignmentOptions.Center, FontStyles.Bold, TitleColor);
         PixelUIKit.Caps(wt);
@@ -739,20 +755,40 @@ public abstract class PixelVisitorMinigame : PixelMinigame
                                               TextAlignmentOptions.Center, FontStyles.Italic, new Color(0.7f, 1f, 0.75f));
         Anchor(sale.rectTransform, 0f, 1f, 1f, 1f, new Vector2(20f, -122f), new Vector2(-20f, -84f));
 
+        // Buy / Sell tabs (only for a vendor that does both).
+        tabButtons = null;
+        if (tabsMode)
+        {
+            tabButtons = new Button[2];
+            string[] names = { "Buy", "Sell" };
+            for (int i = 0; i < 2; i++)
+            {
+                int captured = i;
+                Button tb = PixelUIKit.CreateButton(Font, waresPanel, "Tab " + names[i], names[i], new Vector2(220f, 52f), new Color(0.22f, 0.24f, 0.32f, 1f), Color.white, 30f);
+                PixelUIKit.Caps(tb);
+                RectTransform tr = tb.GetComponent<RectTransform>();
+                tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
+                tr.anchoredPosition = new Vector2(i == 0 ? -118f : 118f, -126f);
+                tb.onClick.AddListener(() => SetShopTab(captured));
+                tabButtons[i] = tb;
+            }
+        }
+
         waresScroll = PixelUIKit.CreateScrollView(waresPanel, "Wares List", new Color(1f, 1f, 1f, 0.35f), 12f, rowH * 0.6f, out waresContent, out waresBar);
         RectTransform vr = waresScroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(24f, 110f);
-        vr.offsetMax = new Vector2(-24f, -132f);
+        vr.offsetMax = new Vector2(-24f, -132f - tabsH);
 
         rows.Clear();
         float y = 0f;
         for (int n = 0; n < rowCount; n++)
         {
-            int item = tradeMode ? -1 : wares[n];
-            Trade trade = tradeMode ? trades[n] : null;
-            WareRow row = new WareRow { item = item, trade = trade };
+            int item = entries[n].Key;
+            Trade trade = entries[n].Value;
+            bool isTrade = trade != null;
+            WareRow row = new WareRow { item = item, trade = trade, tab = isTrade ? 1 : 0 };
             GameObject go = new GameObject("Ware", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(waresContent, false);
             go.GetComponent<Image>().color = new Color(0.16f, 0.16f, 0.2f, 1f);
@@ -766,14 +802,14 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             row.rect.anchoredPosition = new Vector2(0f, -y);
             Image rowBack = go.GetComponent<Image>();
             Outline rowGlow = null;
-            if (!tradeMode && Highlighted(item))
+            if (!isTrade && Highlighted(item))
             {
                 rowGlow = go.AddComponent<Outline>();
                 rowGlow.effectDistance = new Vector2(4f, -4f);
                 rowGlow.useGraphicAlpha = false;
             }
 
-            row.name = PixelUIKit.CreateText(Font, go.transform, "Name", tradeMode ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
+            row.name = PixelUIKit.CreateText(Font, go.transform, "Name", isTrade ? TradeGetText(trade) : consumables.ItemName(item), 32f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, Color.white);
             row.name.enableAutoSizing = true; row.name.fontSizeMax = 32f; row.name.fontSizeMin = 14f;
             Anchor(row.name.rectTransform, 0f, 0.55f, 0.62f, 1f, new Vector2(16f, 0f), new Vector2(0f, -6f));
 
@@ -790,7 +826,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             row.stockLabel.enableAutoSizing = true; row.stockLabel.fontSizeMax = 24f; row.stockLabel.fontSizeMin = 11f;
             Anchor(row.stockLabel.rectTransform, 0.62f, 0.55f, 1f, 1f, new Vector2(0f, 0f), new Vector2(-190f, -6f));
 
-            row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", buyText, new Vector2(150f, 70f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 32f);
+            row.buy = PixelUIKit.CreateButton(Font, go.transform, "Buy", isTrade ? TradeText : buyText, new Vector2(150f, 70f), new Color(0.2f, 0.55f, 0.3f, 1f), Color.white, 32f);
             row.buyImage = row.buy.GetComponent<Image>();
             row.buyLabel = row.buy.GetComponentInChildren<TMP_Text>();
             RectTransform br = row.buy.GetComponent<RectTransform>();
@@ -803,7 +839,9 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             rows.Add(row);
             y += rowH + 8f;
         }
-        PixelUIKit.UpdateScrollView(waresScroll, waresBar, Mathf.Max(0f, y - 8f), vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - 242f));
+        waresViewHeight = vr.rect.height > 1f ? vr.rect.height : (waresPanel.sizeDelta.y - 242f - tabsH);
+        shopTab = 0;
+        LayoutRows(rowH);
 
         Button done = PixelUIKit.CreateButton(Font, waresPanel, "Done", doneText, new Vector2(320f, 80f), new Color(0.3f, 0.3f, 0.38f, 1f), Color.white, 36f);
         PixelUIKit.Caps(done);
@@ -849,6 +887,40 @@ public abstract class PixelVisitorMinigame : PixelMinigame
             hold.Setup(fillRect, 0.6f, () => { hold.ResetProgress(); asideBack = true; });
             asidePanel.gameObject.SetActive(false);
         }
+    }
+
+    private bool tabsMode;
+    private int shopTab;
+    private Button[] tabButtons;
+    private float waresViewHeight;
+    private float rowHeight = 104f;
+
+    /// <summary>Lays the rows out in the scroll list: all of them (one group), or only the shown tab's rows (Buy / Sell).</summary>
+    private void LayoutRows(float rowH)
+    {
+        rowHeight = rowH;
+        float y = 0f;
+        foreach (WareRow row in rows)
+        {
+            bool show = !tabsMode || row.tab == shopTab;
+            row.rect.gameObject.SetActive(show);
+            if (!show) continue;
+            row.rect.anchoredPosition = new Vector2(0f, -y);
+            y += rowH + 8f;
+        }
+        PixelUIKit.UpdateScrollView(waresScroll, waresBar, Mathf.Max(0f, y - 8f), waresViewHeight);
+        if (tabButtons != null)
+            for (int i = 0; i < tabButtons.Length; i++)
+                tabButtons[i].GetComponent<Image>().color = i == shopTab ? new Color(0.25f, 0.5f, 0.75f, 1f) : new Color(0.22f, 0.24f, 0.32f, 1f);
+        RefreshWares();
+    }
+
+    private void SetShopTab(int tab)
+    {
+        if (shopTab == tab) return;
+        shopTab = tab;
+        PixelAudio.Play("ui_click");
+        LayoutRows(rowHeight);
     }
 
     private string TradeGetText(Trade t) =>

@@ -193,7 +193,7 @@ public partial class PixelShop
         List<int> list = new List<int>();
         for (int i = 0; i < consumables.ItemCount; i++)
         {
-            if (consumables.ItemCraftOnly(i) || consumables.ItemNotSold(i)) continue;             // combo potions and craft-only devices can only be crafted
+            if (consumables.ItemCraftOnly(i) || consumables.ItemNotSold(i) || consumables.ItemVendorOnly(i)) continue;             // combo potions and craft-only devices can only be crafted
             bool seedItem = consumables.IsSeedItem(i);
             if (card.supplies) { if (consumables.IsSupplyItem(i)) list.Add(i); }                     // the Supplies card: instant-use items only
             else if (consumables.IsSupplyItem(i)) continue;                                           // supplies are not on the Utilities card any more

@@ -846,3 +846,4 @@
 [2026-10-13 18:08] The first person player standing on a conveyor belt is now carried along it and softly magnetized to its middle line (walking out is always stronger); belt rails no longer block walking on or off.
 [2026-10-13 18:26] Wood chipper shows a discharge arrow while placing and latches onto a conveyor belt opening in the arrow's area (its Wood Chips drop onto the belt); right clicking a belt in first person opens a window to type a custom belt speed.
 [2026-10-13 18:40] Belt speed window fixed (clickable buttons, Esc backs out, the speed applies as you type), and a block carried in first person can now be put straight onto a conveyor belt.
+[2026-10-13 18:49] Conveyor belt ends now feed the Kiln mouth and the Storage Crate directly; the Lumberjack has Buy and Sell tabs - he sells the new Wood Chipper device (placed like other devices, saved, belt latch) and potions for the Lumberjack pack's pixels, and buys the pack's pixels for pure currency.

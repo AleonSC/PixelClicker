@@ -4,13 +4,13 @@
 //   into the mouth from the side burns: an old pixel (not held, not glued into a build) inside the mouth zone (a box just in front of the door, mouthCenter / mouthHalf in kiln units)
 //   is taken out of the game (PixelClicker.ClaimOldPixel, no payout), drawn in while it shrinks and flares, and a CHARCOAL old pixel (PixelType.Charcoal 81, PixelClicker.EnsureCharcoalTier,
 //   standalone, despawns like any old pixel) is queued: charcoalPerPixel of them come out of the back chute charcoalDelaySeconds after the burn, one every charcoalGapSeconds. A conveyor
-//   belt (PixelConveyor) can lead into the mouth, and another can carry the charcoal away. The kiln roars while it burns (light, ember sparks, thicker smoke). Not saved.
+//   belt (PixelConveyor) can lead into the mouth: a belt END at the mouth hands its pixels straight in (IPixelBeltAcceptor), and another can carry the charcoal away. The kiln roars while it burns (light, ember sparks, thicker smoke). Not saved.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelKiln : MonoBehaviour
+public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor
 {
     [Header("Burning")]
     [Min(0f)]
@@ -176,7 +176,23 @@ public class PixelKiln : MonoBehaviour
 
     // ---------------- behaviour ----------------
 
-    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
+    private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); }
+    private void OnDisable() { PixelConveyorSystem.Unregister(this); }
+
+    /// <summary>A belt's end: the pixel is at the mouth when it is in the mouth zone (a bit roomier than the zone things fall into).</summary>
+    public bool AcceptsAt(Vector3 world)
+    {
+        Vector3 d = transform.InverseTransformPoint(world) / Mathf.Max(0.0001f, unit) - MouthCenter;
+        return Mathf.Abs(d.x) < MouthHalf.x + 0.9f && Mathf.Abs(d.y) < MouthHalf.y + 0.6f && Mathf.Abs(d.z) < MouthHalf.z + 0.3f;
+    }
+
+    /// <summary>A belt hands a pixel to the kiln: it burns just like one that went into the mouth.</summary>
+    public bool AcceptFromBelt(Rigidbody pixel)
+    {
+        if (pixel == null || clicker == null || !clicker.ClaimOldPixel(pixel)) return false;
+        StartCoroutine(BurnPixel(pixel));
+        return true;
+    }
 
     private bool InMouth(Vector3 world)
     {

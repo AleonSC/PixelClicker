@@ -1,10 +1,10 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelLumberjackVendor.cs
 //   The Lumberjack (id lumberjack, 'Big Tim the Lumberjack'; a cube like Cubie in a red plaid shirt with a big beard, a green beanie
-//   and an axe): the Prospector's twin for Woodcutting - he BUYS wood goods (Wood, Bark, Sap, Leaf, Heartwood; not Twig) for pure
-//   currency with the same offer rules (RollTrades, sellRate 0 = 0.8, luck, 'Sell' buttons) and only visits while Woodcutting is the
-//   skill in training (CanVisit); started by PixelGuideVendor.StartVendors as soon as Woodcutting is available; counter
-//   lumberjack.bought.
+//   and an axe): BUY / SELL TABS (PixelVisitorMinigame.BuySellTabs). BUY tab = his wares: the WOOD CHIPPER (a placed device, PixelConsumables DeviceKind.WoodChipper, costs wood
+//   and bark) and plain POTIONS of the Lumberjack pack's pixels (Wood, Bark, Sap, Leaf, Heartwood, Twig, Acorn, Whetstone, Pesticide). SELL tab = he BUYS those pack pixels for pure currency
+//   (RollTrades: offerCount offers, sellRate 0 = 0.8, luck, 'Sell' buttons; the Great Oak is not bought). Only visits while Woodcutting is the skill in training (CanVisit); started by
+//   PixelGuideVendor.StartVendors as soon as Woodcutting is available; counter lumberjack.bought.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,7 +21,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [Header("Offers")]
     [Min(1)]
     [Tooltip("How many offers he brings (a different wood block in each).")]
-    [SerializeField] private int offerCount = 3;
+    [SerializeField] private int offerCount = 5;
 
     [Range(0.01f, 1f)]
     [Tooltip("Fewest fraction of the wood block you hold of one type that an offer asks for.")]
@@ -47,13 +47,47 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [Tooltip("You must hold at least this many of a wood block for him to ask for it.")]
     [SerializeField] private double minHeld = 5;
 
+    [Min(1)]
+    [Tooltip("Fewest bottles of each potion he has.")]
+    [SerializeField] private int potionStockMin = 2;
+
+    [Min(1)]
+    [Tooltip("Most bottles of each potion he has.")]
+    [SerializeField] private int potionStockMax = 5;
+
+    [Min(1)]
+    [Tooltip("Most Wood Chippers he has this visit.")]
+    [SerializeField] private int chipperStockMax = 2;
+
     public override string Id => "lumberjack";
     public override string DisplayName => "Lumberjack";
 
-    protected override bool IsWare(int item) => false;
+    protected override bool BuySellTabs => true;
+    protected override int StockMin => potionStockMin;
+    protected override int StockMax => Mathf.Max(potionStockMax, chipperStockMax);
+
+    /// <summary>The Lumberjack pack's pixels (the ones he deals in).</summary>
+    private static bool IsPackPixel(PixelClicker.PixelType t) =>
+        (PixelClicker.IsWoodBlock(t) && t != PixelClicker.PixelType.GreatOak) || t == PixelClicker.PixelType.Acorn || t == PixelClicker.PixelType.Whetstone || t == PixelClicker.PixelType.Pesticide;
+
+    /// <summary>He sells the Wood Chipper and plain potions of his pack's pixels (once you have unlocked that pixel).</summary>
+    protected override bool IsWare(int item)
+    {
+        if (consumables == null || clicker == null) return false;
+        if (consumables.IsDevice(item)) return consumables.DeviceKindOf(item) == PixelConsumables.DeviceKind.WoodChipper;
+        if (consumables.ItemCraftOnly(item)) return false;
+        PixelClicker.PixelType t = consumables.ItemRequiredType(item);
+        return IsPackPixel(t) && (consumables.ItemOwned(item) > 0 || clicker.IsUnlocked(t));
+    }
+
+    protected override int StockFor(int item)
+    {
+        if (consumables != null && consumables.IsDevice(item)) return Random.Range(1, Mathf.Max(1, chipperStockMax) + 1);
+        return Random.Range(Mathf.Max(1, potionStockMin), Mathf.Max(potionStockMin, potionStockMax) + 1);
+    }
     protected override string DefaultName => "Big Tim the Lumberjack";
-    protected override string DefaultGreeting => "Timber! A fellow chopper, I see. I buy logs, bark, sap, leaves, and I pay in good, honest pixels. My prices are fair-ish. Got any wood to sell?";
-    protected override string DefaultWaresTitle => "Today's Offers";
+    protected override string DefaultGreeting => "Timber! A fellow chopper, I see. I sell wood chippers and potions for all things woodcutting, and I buy logs, bark, sap, acorns and more for good, honest pixels. My prices are fair-ish. Take a look!";
+    protected override string DefaultWaresTitle => "Big Tim's Yard";
     protected override string SaleFormat => "Fair-ish prices!";
     protected override string DefaultArrivedLog => "The Lumberjack is here!";
     protected override float StartDelayOffset => 30f;
@@ -90,7 +124,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         List<int> pure = new List<int>();       // pure pixel types he pays in
         for (int i = 0; i < tiers.Length; i++)
         {
-            if (PixelClicker.IsWoodBlock(tiers[i].type) && tiers[i].type != PixelClicker.PixelType.Twig && tiers[i].count >= minHeld) sellable.Add(i);
+            if (IsPackPixel(tiers[i].type) && tiers[i].count >= minHeld) sellable.Add(i);
             if (IsPure(tiers[i].type) && tiers[i].unlocked) pure.Add(i);
         }
         if (sellable.Count == 0 || pure.Count == 0) return result;

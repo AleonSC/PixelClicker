@@ -27,7 +27,7 @@ using UnityEngine;
 /// value is kept). Left-click a stored pixel to take it out again - it is handed to the mouse like a grabbed pixel. Removing the crate lets everything out.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelStorageCrate : PixelPlacedDevice
+public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor
 {
     private const int Columns = 5, Rows = 2, Sections = Columns * Rows;
 
@@ -65,7 +65,29 @@ public class PixelStorageCrate : PixelPlacedDevice
         wallHeight = settings.bodyHeight;
         for (int i = 0; i < Sections; i++) sections[i] = new Section();
         foreach (Renderer r in GetComponentsInChildren<Renderer>()) if (r.name == "Handle") handles.Add(r);
-        Ended += _ => ReleaseAll();
+        Ended += _ => { ReleaseAll(); PixelConveyorSystem.Unregister(this); };
+        PixelConveyorSystem.Register(this);   // a conveyor belt that ends at the crate feeds it directly
+    }
+
+    private void OnDestroy() { PixelConveyorSystem.Unregister(this); }
+
+    /// <summary>A belt's end: is this point over the crate (with some give round its edge) and is there a free section?</summary>
+    public bool AcceptsAt(Vector3 world)
+    {
+        if (IsDying || NextFree() < 0) return false;
+        Vector3 l = transform.InverseTransformPoint(world);
+        return Mathf.Abs(l.x) < width * 0.5f + cell * 1.2f && Mathf.Abs(l.z) < depth * 0.5f + cell * 1.2f && l.y > -0.6f && l.y < 3.2f;
+    }
+
+    /// <summary>A belt hands over a pixel: it flies into the next free section. False when the crate is full (the belt then ejects it).</summary>
+    public bool AcceptFromBelt(Rigidbody body)
+    {
+        if (body == null || IsDying || NextFree() < 0) return false;
+        OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+        if (info == null || !clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway) return false;
+        int before = FreeCount();
+        StoreBody(body, info);
+        return FreeCount() < before;
     }
 
     private Vector3 SectionPosition(int i)
