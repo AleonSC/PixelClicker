@@ -179,6 +179,15 @@
 
 - **Skill packs (Mining, Farming, Electrician, future ones) are chosen in the Skills window only - never add a switch for one to the Toggles window.**
 
+## Big-picture check on every new feature (standing instruction from the user)
+- Features like new pixel packs, skills, minigames or devices tend to be added one at a time with no shared system behind them, and the code turns into a mess nobody asked to clean up. **Before building a new feature, and again when reporting it, look at how it fits the game as a whole:**
+  - Is there already a system for this kind of thing (a table, base class, helper, data-driven list)? Use it. If the new feature is the 3rd or later of its kind and each one is hand-wired, say so and propose the shared system instead of copying the pattern again.
+  - Does it duplicate logic that lives elsewhere, add another scattered check (`Showing`, `IsPaused`, `TakeoverActive`...), or touch many files for one addition? Name it.
+  - Is there an obvious performance cost (per-frame work, allocations, `Find` calls, unpooled spawns)? Avoid it or flag it.
+  - Does it interact with saves, the Toggles / Skills windows, the shop, achievements or the database in a way that needs a migration or index update?
+- In the reply, add a short **'Fits the game / could be better'** note: what the feature reuses, what it hand-wires, and the one or two cleanups worth doing. Keep it to a few lines.
+- Small tweaks and bug fixes need no note. For a bigger refactor than the request, don't do it unasked: ask whether to build it now or add it to the to-do (see below).
+
 ## To-Do list (standing instruction from the user)
 - `Assets/Resources/Todo.txt` is the project's idea / to-do list, shown in the Dev Tools panel's To-Do tab. **When the user says to add something to the to-do, add a line to that file** (`[ ] short description`) and commit it. **When an idea or feature comes up that is bigger than the current request or not asked for yet, ask whether to add it to the to-do instead of building it in the moment.** Mark items done by changing `[ ]` to `[x]` when they ship. Also add a changelog line for each to-do edit.
 
