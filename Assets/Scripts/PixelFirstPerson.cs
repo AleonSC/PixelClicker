@@ -289,6 +289,7 @@ public class PixelFirstPerson : MonoBehaviour
 
         BuildHud();
         Active = true;
+        Debug.Log("PixelFirstPerson: entered - gravity x" + V(gravityFactor, 2f) + ", jump height " + V(jumpHeight, 0.45f) + ", walk speed " + V(walkSpeed, 5f) + ", head bob " + V(headBobAmount, 0.022f) + " (Inspector values: gravityFactor " + gravityFactor + ", jumpHeight " + jumpHeight + ", headBobAmount " + headBobAmount + ")");
         float gridUnit = clicker.OldPixelWorldSize;
         grid = new GameObject("First Person Neon Grid").AddComponent<PixelFirstPersonGrid>();
         grid.Setup(clicker, gridColor, gridUnit * V(gridSpacingCubes, 1f), gridUnit * V(gridPlayerRadiusCubes, 7f), gridUnit * V(gridPixelRadiusCubes, 2.5f), V(gridBrightness, 1.2f));
