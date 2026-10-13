@@ -713,3 +713,4 @@
 [2026-10-13 03:54 UTC] Clicked pixels now burst out of the cube in random directions and land in a ring round it when the ground is far below, instead of dropping in one stack
 [2026-10-13 04:15 UTC] The View window's choices (view, zoom, orbit zoom, auto orbit and its speed) are now saved with the save file's settings and restored after the title screen.
 [2026-10-13 04:16 UTC] Added a Dev Tools 'Snapshot bounds' button that saves the camera, view, cube, floor and view-bounds numbers (plus a screenshot) to a text file and the clipboard.
+[2026-10-13 04:30 UTC] Added the central game state idea (Title / Intro / Playing / Paused) to the to-do list.
