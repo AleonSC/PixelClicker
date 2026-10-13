@@ -113,6 +113,8 @@ public class PixelConsumables : MonoBehaviour
         BaitBucket = 14,
         /// <summary>Placed, permanent, sold by the Lumberjack: a trailer-mounted wood chipper (PixelWoodChipper). Turn it before placing; its chute arrow shows where the chips go and a conveyor belt opening in that area latches on.</summary>
         WoodChipper = 15,
+        /// <summary>Placed, permanent, one at a time: a wide glass funnel under the clicker cube that catches falling old pixels and carries them down a tube to an output on the floor you click (PixelFunnel). A conveyor belt opening in front of the output latches on.</summary>
+        Funnel = 16,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -589,6 +591,28 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultFunnel()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Funnel,
+            displayName = "Funnel",
+            description = "A wide glass funnel that hangs under the clicker cube and catches the pixels that fall off it. They are carried down a see-through tube and come out at an output on the floor - click where you want it. Point the output at a conveyor belt to feed it. Only one stands at a time: placing it again moves it.",
+            requiredType = PixelClicker.PixelType.Gray,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Gray, amount = 600 },
+            },
+            maxHeld = 1,
+            durationSeconds = 1e9f,
+            radius = 1f,
+            color = new Color(0.55f, 0.8f, 1f, 1f),
+            bodyDiameter = 3f,
+            bodyHeight = 3f,
+            placingMessage = "Click the floor where the {0}'s output should be. Scroll or Q / E turns the spout a little; a conveyor belt opening in front of it latches on  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultWoodChipper()
     {
         return new Device
@@ -942,6 +966,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.StorageCrate, CreateDefaultStorageCrate),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.WoodChipper, CreateDefaultWoodChipper),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Funnel, CreateDefaultFunnel),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1711,6 +1736,9 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.WoodChipper:
                     root = PixelWoodChipper.CreateDisplay(clicker);
                     break;
+                case DeviceKind.Funnel:
+                    root = PixelFunnel.CreateDisplay(clicker);
+                    break;
                 case DeviceKind.ComboFuel:
                 case DeviceKind.GhostBait:
                 case DeviceKind.PetTreat:
@@ -2034,6 +2062,7 @@ public class PixelConsumables : MonoBehaviour
         placeStartFrame = Time.frameCount;
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         placingYaw = cam != null ? cam.transform.eulerAngles.y : 0f; // a fan starts out blowing away from the camera
+        if (devices[deviceIndex].kind == DeviceKind.Funnel) placingYaw = 0f;   // (the funnel's turn is only a nudge on top of "away from the cube")
         previewSorter = null;
         if (devices[deviceIndex].kind == DeviceKind.Sorter)
         {
@@ -2099,7 +2128,7 @@ public class PixelConsumables : MonoBehaviour
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel)
         {
             placingYaw += TurnInput();
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
@@ -2111,6 +2140,18 @@ public class PixelConsumables : MonoBehaviour
             // The chipper's chute arrow found a conveyor belt opening: it latches on (turns and moves so the chute sits over the belt).
             chipperLatched = true; chipperLatchPoint = latchPoint; chipperLatchYaw = latchYaw;
             preview.transform.SetPositionAndRotation(latchPoint, Quaternion.Euler(0f, latchYaw, 0f));
+        }
+
+        if (hasPoint && devices[placingIndex].kind == DeviceKind.Funnel)
+        {
+            // The funnel's output goes where you point (kept within reach, the spout turned away from the cube plus your turn); a belt opening in front of it latches on.
+            PixelFunnel funnel = preview.GetComponent<PixelFunnel>();
+            if (funnel != null)
+            {
+                funnel.Adjust(point, placingYaw, out Vector3 funnelPoint, out float funnelYaw);
+                chipperLatched = true; chipperLatchPoint = funnelPoint; chipperLatchYaw = funnelYaw;
+                preview.transform.SetPositionAndRotation(funnelPoint, Quaternion.Euler(0f, funnelYaw, 0f));
+            }
         }
 
         if (devices[placingIndex].kind == DeviceKind.Seed)
@@ -2228,7 +2269,7 @@ public class PixelConsumables : MonoBehaviour
     {
         int index = placingIndex;
         Device d = devices[index];
-        if (chipperLatched && d.kind == DeviceKind.WoodChipper) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
+        if (chipperLatched && (d.kind == DeviceKind.WoodChipper || d.kind == DeviceKind.Funnel)) { point = chipperLatchPoint; placingYaw = chipperLatchYaw; }
         if (robotPicked != null)
         {
             Action<int, Vector3, float, float> picked = robotPicked;
@@ -2237,11 +2278,12 @@ public class PixelConsumables : MonoBehaviour
             picked(index, point, yaw, 0f);
             return;
         }
-        if (!Inf) d.owned = Mathf.Max(0, d.owned - 1);
+        bool movingFunnel = d.kind == DeviceKind.Funnel && PixelFunnel.Exists;   // placing the funnel again just moves it
+        if (!Inf && !movingFunnel) d.owned = Mathf.Max(0, d.owned - 1);
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -2319,6 +2361,13 @@ public class PixelConsumables : MonoBehaviour
             PixelChipperDevice chipperDevice = root.AddComponent<PixelChipperDevice>();
             chipperDevice.Init(clicker, cam, shrinkSeconds);
             result = chipperDevice;
+        }
+        else if (d.kind == DeviceKind.Funnel)
+        {
+            GameObject root = PixelFunnel.Place(clicker, point, yaw);
+            PixelFunnelDevice funnelDevice = root.AddComponent<PixelFunnelDevice>();   // (the thin permanent-device stub; all the behaviour is in PixelFunnel)
+            funnelDevice.Init(clicker, cam, shrinkSeconds);
+            result = funnelDevice;
         }
         else if (d.kind == DeviceKind.StorageCrate)
         {
@@ -2492,6 +2541,11 @@ public class PixelConsumables : MonoBehaviour
     /// </summary>
     private GameObject BuildDeviceObject(Device d, bool isPreview, out Transform suckPoint, out TextMeshPro timer)
     {
+        if (d.kind == DeviceKind.Funnel)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelFunnel.CreateGhost(clicker) : displayOnly ? PixelFunnel.CreateDisplay(clicker) : PixelFunnel.Place(clicker, Vector3.zero, 0f);
+        }
         if (d.kind == DeviceKind.WoodChipper)
         {
             suckPoint = null; timer = null;
