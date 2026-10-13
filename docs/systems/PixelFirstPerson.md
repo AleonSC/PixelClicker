@@ -30,4 +30,4 @@ While holding a cube or build: a quick left tap (under 0.25 s) sticks it / sets 
 - GREAT OAK: PixelType.GreatOak 77 (see PixelGreatOak.cs header): 5% replacement of a rolled wood block while Woodcutting is in play, 50-100 clicks, shakes bird nests loose that you click for XP before they vanish.
 
 ### Whetstone
-Woodcutter's Pack base block (PixelType.Whetstone 78, 3 clicks, weight 0.35, pack migration packDataVersion 27). Hold it with Block Hold (right button on the cube): while it is held every manual click counts as 3 clicks (a HoldRule in PixelBlockRules, see docs/systems/PixelBlockRules.md). A partly broken block keeps its hits through the hold, so one you only noticed after a click can still be grabbed.
+Woodcutter's Pack base block (PixelType.Whetstone 78, 3 clicks, weight 0.35, pack migration packDataVersion 27). Hold it with Block Hold (right button on the cube): while it is held every manual click is followed by 2 extra rapid clicks, like an Overcharge burst (a HoldRule in PixelBlockRules, see docs/systems/PixelBlockRules.md). A partly broken block keeps its hits through the hold, so one you only noticed after a click can still be grabbed.

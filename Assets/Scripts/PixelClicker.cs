@@ -144,7 +144,7 @@ public partial class PixelClicker : MonoBehaviour
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
         Acorn = 79,       // Woodcutting's base block: acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules SpecialRule boost)
-        Whetstone = 78,   // Woodcutting's base block that can be held (Block Hold): while it is held every manual click counts for more (PixelBlockHold.ClickFactor)
+        Whetstone = 78,   // Woodcutting's base block that can be held (Block Hold): while it is held every manual click is followed by a rapid burst of extra clicks (PixelBlockRules HoldRule.extraClicks)
         GreatOak = 77,    // Woodcutting's rare giant block (50-100 clicks, shakes bird nests loose): see PixelGreatOak.cs
         WoodChips = 76,   // spat out by the Wood Chipper (every 5 wood pixels shredded): never spawns on the cube, only exists as an old pixel (PixelWoodChipper)
     }
@@ -2128,7 +2128,7 @@ public partial class PixelClicker : MonoBehaviour
         if (!disableClickPulse) clickPulseTimer = clickPulseSeconds > 0f ? clickPulseSeconds : 0.12f;
         if (blockClicksWhileSpawning && isSpawning) return;
         int clickCount = Mathf.Max(1, DevClickCount);
-        if (!automatic) clickCount *= PixelBlockHold.ClickFactor;   // a held Whetstone makes every click count for more
+        if (!automatic) PixelBlockRules.OnManualClick(this);   // a held Whetstone follows every click with a rapid burst of extra clicks
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];

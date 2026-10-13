@@ -141,7 +141,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Acorn:
                 return "Woodcutting block: an acorn. One click, pays a little. The trick is its OLD pixel: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other old pixels, so keep them coming.";
             case PixelClicker.PixelType.Whetstone:
-                return "Woodcutting block: a hard grey stone for sharpening. It takes " + t.clicksToCollect + " clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too).";
+                return "Woodcutting block: a hard grey stone for sharpening. It takes " + t.clicksToCollect + " clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too). While you hold it every click fires off a rapid burst of extra clicks.";
             case PixelClicker.PixelType.GreatOak:
                 return "Woodcutting block, very rare: a mighty oak. It takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks, but pays a huge amount. Every hit has a chance to shake a bird nest out of the tree onto the ground round the cube: click the nest before it disappears (about 9 seconds) for bonus Woodcutting XP.";
             case PixelClicker.PixelType.Rock:

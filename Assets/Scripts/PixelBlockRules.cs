@@ -7,8 +7,8 @@
 //     use (PixelClicker.EnsureSpecialTier, no spawn weight of its own). Defaults: Great Oak (Woodcutting, replaces any wood block, 1% rising to 25% with 12 Acorn old pixels lying on the field - SpecialRule.hasBoost). Fishing's Whale / Bottle / Pearl still use their own
 //     rolls (PixelFishingSpawns) - move them into this table when they are next touched (their chances feed the Pixel Guide's SpawnShare).
 //   * HOLD BLOCK = a base block of a skill that gives a bonus while it is held (Block Hold, the right button: PixelBlockHold). HoldRule: the block type, the skill, and what the bonus does:
-//     clickMultiplier (every manual click counts as n clicks: damage on tough blocks and payout; PixelBlockHold.ClickFactor -> PixelClicker.CollectInternal), payoutMultiplier (every
-//     payout, CollectInternal) and xpMultiplier (skill XP of that skill, PixelSkills.AddXp) plus a label shown beside the hold meter. Defaults: Whetstone (Woodcutting, clicks x3).
+//     extraClicks (RAPID CLICKS like Overcharge: each manual click is followed by n extra full clicks, burstGapSeconds apart, via AutoCollect; PixelClicker.CollectInternal -> PixelBlockRules.OnManualClick), payoutMultiplier (every
+//     payout, CollectInternal) and xpMultiplier (skill XP of that skill, PixelSkills.AddXp) plus a label shown beside the hold meter. Defaults: Whetstone (Woodcutting, 2 extra rapid clicks = x3).
 //   Add a new special / hold block: give it a PixelType (append), a look and spawn data like any block (hold blocks are normal base blocks of their pack: shop pack reward tier + the skill's
 //   types list), then add ONE rule here. Behaviour beyond the numbers (the Great Oak's nests) still lives in its own script and listens to PixelClicker.PixelHit.
 // ---------------------------------------------------
@@ -53,9 +53,12 @@ public class PixelBlockRules : MonoBehaviour
         public PixelClicker.PixelType type = PixelClicker.PixelType.White;
         [Tooltip("The skill the bonus belongs to (a skill id; empty = any). The XP multiplier only affects this skill's XP.")]
         public string skillId = "";
-        [Min(1)]
-        [Tooltip("Every manual click counts as this many clicks while held (1 = no change).")]
-        public int clickMultiplier = 1;
+        [Min(0)]
+        [Tooltip("RAPID CLICKS (like Overcharge): while held, every manual click is followed straight away by this many extra clicks (2 = three clicks in all), each one a full click with its own payout and effects.")]
+        public int extraClicks = 0;
+        [Min(0.01f)]
+        [Tooltip("Seconds between the clicks of the rapid burst.")]
+        public float burstGapSeconds = 0.06f;
         [Min(0f)]
         [Tooltip("Every payout is multiplied by this while held (1 = no change).")]
         public float payoutMultiplier = 1f;
@@ -107,7 +110,7 @@ public class PixelBlockRules : MonoBehaviour
                 },
             });
         if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Whetstone))
-            holdRules.Add(new HoldRule { name = "Whetstone", type = PixelClicker.PixelType.Whetstone, skillId = PixelSkills.WoodcuttingId, clickMultiplier = 3, label = "Clicks x3" });
+            holdRules.Add(new HoldRule { name = "Whetstone", type = PixelClicker.PixelType.Whetstone, skillId = PixelSkills.WoodcuttingId, extraClicks = 2, label = "Rapid clicks x3" });
     }
 
     // ---------------- special blocks ----------------
@@ -168,8 +171,30 @@ public class PixelBlockRules : MonoBehaviour
         }
     }
 
-    /// <summary>How many clicks one manual click counts as (1 normally).</summary>
-    public static int HeldClickFactor { get { HoldRule r = ActiveHold; return r != null ? Mathf.Max(1, r.clickMultiplier) : 1; } }
+    private int pendingExtra;
+
+    /// <summary>Called by PixelClicker for every manual click: while a hold block with rapid clicks is held, the click is followed by a quick burst of extra clicks (the burst's own clicks are automatic and never start another).</summary>
+    public static void OnManualClick(PixelClicker clicker)
+    {
+        PixelBlockRules rules = Instance;
+        if (rules == null || clicker == null) return;
+        HoldRule r = ActiveHold;
+        if (r == null || r.extraClicks <= 0 || rules.pendingExtra > 24) return;   // (a cap, so mashing the button cannot pile up a huge queue)
+        rules.StartCoroutine(rules.RapidBurst(clicker, r.extraClicks, Mathf.Max(0.01f, r.burstGapSeconds)));
+    }
+
+    private System.Collections.IEnumerator RapidBurst(PixelClicker clicker, int count, float gap)
+    {
+        pendingExtra += count;
+        for (int i = 0; i < count; i++)
+        {
+            yield return new WaitForSeconds(gap);
+            pendingExtra--;
+            if (clicker == null) continue;
+            if (clicker.CubeHidden || PixelMinigame.TakeoverActive) continue;
+            clicker.AutoCollect();
+        }
+    }
 
     /// <summary>Multiplier on every payout while a hold block is held.</summary>
     public static double HeldPayoutFactor { get { HoldRule r = ActiveHold; return r != null && r.payoutMultiplier > 0f ? r.payoutMultiplier : 1d; } }
@@ -258,7 +283,7 @@ public class PixelBlockRules : MonoBehaviour
         {
             sb.Append("\n\n<b>Hold block:</b> hold it with Block Hold (the right button on the cube) to pull it out of the rotation. While you hold it: ");
             var parts = new System.Collections.Generic.List<string>();
-            if (h.clickMultiplier > 1) parts.Add("every click counts as " + h.clickMultiplier + " clicks");
+            if (h.extraClicks > 0) parts.Add("every click is followed by " + h.extraClicks + " extra rapid click" + (h.extraClicks > 1 ? "s" : "") + " (" + (h.extraClicks + 1) + " clicks at once, like an overcharge)");
             if (h.payoutMultiplier > 0f && !Mathf.Approximately(h.payoutMultiplier, 1f)) parts.Add("every payout is x" + h.payoutMultiplier.ToString("0.##"));
             if (h.xpMultiplier > 0f && !Mathf.Approximately(h.xpMultiplier, 1f)) parts.Add((string.IsNullOrEmpty(h.skillId) ? "skill" : h.skillId) + " XP is x" + h.xpMultiplier.ToString("0.##"));
             sb.Append(parts.Count > 0 ? string.Join(", ", parts) : "it gives a bonus").Append(". The bonus lasts exactly as long as you hold it.");

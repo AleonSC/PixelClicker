@@ -6,7 +6,7 @@
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
 //   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes.
-//   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = clicks x3.
+//   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
@@ -97,8 +97,6 @@ public class PixelBlockHold : MonoBehaviour
         return true;
     }
 
-    /// <summary>How many clicks one manual click counts as (1 unless a hold block with a click bonus is held; see PixelBlockRules).</summary>
-    public static int ClickFactor => PixelBlockRules.HeldClickFactor;
     private float SlideSeconds => slideSeconds > 0f ? slideSeconds : 0.25f;
     private float SideDistance => sideDistance > 0f ? sideDistance : 2.3f;
 
