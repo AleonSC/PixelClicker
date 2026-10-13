@@ -258,6 +258,10 @@ public partial class PixelClicker : MonoBehaviour
         [Tooltip("How long one click on a stalling block freezes the Block Hold meter (each click restarts it). 0 = the coded default (1.5).")]
         public float stallSeconds = 0f;
 
+        [Range(0f, 1f)]
+        [Tooltip("STALL blocks also REFILL the Block Hold meter: every click on this block adds this fraction of the whole meter (0.05 = 5%). 0 = the coded default (0.04).")]
+        public float stallRefill = 0f;
+
         [Tooltip("Clicking this tier sucks up every old pixel currently in the scene and collects them again (a '+X' popup shows the total).")]
         public bool vacuum = false;
 
@@ -2150,7 +2154,7 @@ public partial class PixelClicker : MonoBehaviour
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
-        if (tier.stallsHold) PixelBlockHold.Stall(tier.stallSeconds > 0f ? tier.stallSeconds : 1.5f);   // every click on a stalling block freezes the hold meter
+        if (tier.stallsHold) PixelBlockHold.Stall(tier.stallSeconds > 0f ? tier.stallSeconds : 1.5f, tier.stallRefill > 0f ? tier.stallRefill : 0.04f);   // every click on a stalling block freezes the hold meter and refills it a little
         if (!automatic && IsHazard(tier.type) && PixelBlockRules.HeldClearsHazard(tier.type)) { ClearHazardNow(tier); return; }   // a held Pesticide: one left click clears it
         if (automatic && IsHazard(tier.type) && !HazardAutoClear) return;   // the auto clicker never touches a hazard: it waits until you deal with it (or it goes away)
 

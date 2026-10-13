@@ -9,7 +9,7 @@
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
-//   STALL: PixelTier.stallsHold / stallSeconds (Great Oak): every click on such a block freezes the drain for stallSeconds (PixelBlockHold.Stall), the meter turns icy while frozen.
+//   STALL: PixelTier.stallsHold / stallSeconds (Great Oak): every click on such a block freezes the drain for stallSeconds and adds stallRefill (0.04) of the meter (PixelBlockHold.Stall), the meter turns icy while frozen.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
 using TMPro;
@@ -103,9 +103,16 @@ public class PixelBlockHold : MonoBehaviour
     public bool Holding => holding;
 
     /// <summary>A click landed on a stalling block (PixelTier.stallsHold): the hold meter stops draining for this many seconds.</summary>
-    public static void Stall(float seconds)
+    public static void Stall(float seconds, float refill = 0f)
     {
-        if (Instance != null) Instance.stallUntil = Mathf.Max(Instance.stallUntil, Time.unscaledTime + Mathf.Max(0.05f, seconds));
+        PixelBlockHold h = Instance;
+        if (h == null) return;
+        h.stallUntil = Mathf.Max(h.stallUntil, Time.unscaledTime + Mathf.Max(0.05f, seconds));
+        if (refill > 0f && h.Active)
+        {
+            h.meter = Mathf.Min(1f, h.meter + refill);   // the click also tops the meter up (while holding or recharging)
+            if (!h.holding) h.cooldown = 0f;              // ...and a waiting recharge starts at once
+        }
     }
 
     private bool Stalled => Time.unscaledTime < stallUntil;

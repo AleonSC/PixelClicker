@@ -14,7 +14,7 @@ public static class PixelGuideTexts
         // What every pixel shares, in short.
         if (t.clicksToCollect > 1 && !t.randomClicks && !PixelClicker.IsHazard(type))
             sb.Append("\n\n<b>Tough:</b> it takes ").Append(t.clicksToCollect).Append(" clicks; only the last click pays.");
-        if (t.stallsHold) sb.Append("\n\n<b>Stall:</b> every click on it freezes your Block Hold meter for about ").Append((t.stallSeconds > 0f ? t.stallSeconds : 1.5f).ToString("0.#")).Append(" seconds, so a held block keeps its bonus for as long as you keep working on this one.");
+        if (t.stallsHold) sb.Append("\n\n<b>Stall:</b> every click on it freezes your Block Hold meter for about ").Append((t.stallSeconds > 0f ? t.stallSeconds : 1.5f).ToString("0.#")).Append(" seconds and tops the meter up a little, so a held block keeps its bonus for as long as you keep working on this one.");
         sb.Append(PixelBlockRules.GuideNotes(type));   // special / hold role, from the rules
         sb.Append("\n\n<b>Old pixel:</b> ").Append(OldPixel(type));
         return sb.ToString();

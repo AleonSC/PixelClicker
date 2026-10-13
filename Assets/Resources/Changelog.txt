@@ -835,3 +835,4 @@
 [2026-10-13 17:12] Great Oak nests now fly a short scripted arc out of the cube's side, make one small hop and land close to it (no physics or colliders, so they can no longer bounce far away).
 [2026-10-13 17:16] Block tooltips: they stay open while you grab a block, hold Alt hides them (new Settings tick box, on by default), and the card no longer jumps around with every mouse move (it keeps its spot and glides when the pointer moves well away).
 [2026-10-13 17:22] Added a 'stall' flag for blocks (every click on one freezes the Block Hold meter for a moment, meter turns icy); the Great Oak has it; shown as STALL on the Pixel Guide.
+[2026-10-13 17:23] Clicks on stalling blocks (Great Oak) also refill the Block Hold meter a little (4% of the meter per click).
