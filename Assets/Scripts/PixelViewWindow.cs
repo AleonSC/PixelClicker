@@ -10,7 +10,7 @@
 //   box + speed slider, and hold buttons for turning (and, in Orbital only, tilting). While the window is open first person gives the
 //   mouse back (PixelFirstPerson checks PixelViewWindow.IsOpen). The choices are saved with the save file's settings (PlayerPrefs
 //   PixelClicker.Setting.ViewKind / ViewZoom / ViewOrbitZoom / ViewAutoOrbit / ViewAutoSpeed, listed in PixelSettingsSync): ApplySaved puts the
-//   view back once the title screen and camera intro are over (first person is never restored by itself; orthographic is the existing FlatView setting).
+//   view back once the title screen and camera intro are over. With nothing saved the DEFAULT view is Top down at defaultOrbitZoom 2 (camera 2x the normal distance from the cube, looking straight down, perspective); the zoom TRAVELS between views (SetView carries DistanceFraction <-> PixelZoom target, so Default 3D at zoom 2 sits where the top down camera is and the proportions stay alike). 'Invert zoom scroll' tick (orbit section, PlayerPrefs ViewScrollInvert, default ON) flips the wheel direction in PixelOrbitCamera (scroll up = zoom in) (first person is never restored by itself; orthographic is the existing FlatView setting).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -50,15 +50,36 @@ public class PixelViewWindow : MonoBehaviour
     [Tooltip("Colour of the hold buttons.")]
     [SerializeField] private Color buttonColor = new Color(0.25f, 0.4f, 0.7f, 1f);
 
+    [Header("Default view (used until the player picks one: no saved view setting)")]
+    [Tooltip("The view a fresh save starts in. Top down = the orbit camera looking straight down at the cube (the view marked as the preferred default).")]
+    [SerializeField] private PixelViewKind defaultView = PixelViewKind.TopDown;
+
+    [Min(0.1f)]
+    [Tooltip("Orbital / top down zoom of that default view, as a fraction of the normal camera distance (2 = twice as far = the furthest the slider goes).")]
+    [SerializeField] private float defaultOrbitZoom = 2f;
+
+    [Min(0.1f)]
+    [Tooltip("Zoom of the Default (3D) view when it has no saved zoom, as a fraction of the normal distance. 2 puts the camera where the top down view's camera is, so switching between them keeps the proportions.")]
+    [SerializeField] private float defaultNormalZoom = 2f;
+
     // Saved with the save file's settings (PixelSettingsSync lists these keys): the view, the zoom of the normal view, the orbit / top down zoom and auto orbit.
     private const string PrefKind = "PixelClicker.Setting.ViewKind", PrefZoom = "PixelClicker.Setting.ViewZoom", PrefOrbitZoom = "PixelClicker.Setting.ViewOrbitZoom",
-                         PrefAuto = "PixelClicker.Setting.ViewAutoOrbit", PrefSpeed = "PixelClicker.Setting.ViewAutoSpeed";
+                         PrefAuto = "PixelClicker.Setting.ViewAutoOrbit", PrefSpeed = "PixelClicker.Setting.ViewAutoSpeed",
+                         PrefInvert = "PixelClicker.Setting.ViewScrollInvert";
+
+    /// <summary>The mouse wheel's zoom direction in the orbital / top down views is flipped (scroll up = zoom in). On by default; a tick box in the View window turns it off.</summary>
+    public static bool InvertScroll { get; private set; } = true;
 
     private static PixelViewWindow instance;
     private bool pendingApply;
+    private int applyTries;
 
     /// <summary>A save file with its own settings was loaded (or the game just started): the saved view is applied again as soon as it can be.</summary>
-    public static void ReloadFromPrefs() { if (instance != null) instance.pendingApply = true; }
+    public static void ReloadFromPrefs()
+    {
+        InvertScroll = PlayerPrefs.GetInt(PrefInvert, 1) != 0;
+        if (instance != null) instance.pendingApply = true;
+    }
 
     private static void SaveKind(PixelViewKind kind) { PlayerPrefs.SetInt(PrefKind, kind == PixelViewKind.FirstPerson ? 0 : (int)kind); }   // (first person is never restored by itself)
     private static Vector2 savedPosition = new Vector2(-40f, 0f);
@@ -67,7 +88,7 @@ public class PixelViewWindow : MonoBehaviour
     public static bool IsOpen => instance != null && PixelPop.IsOpen(instance.window);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; savedPosition = new Vector2(-40f, 0f); }
+    private static void ResetStatics() { instance = null; savedPosition = new Vector2(-40f, 0f); InvertScroll = true; }
 
     /// <summary>The view in use right now.</summary>
     public static PixelViewKind CurrentView =>
@@ -75,11 +96,13 @@ public class PixelViewWindow : MonoBehaviour
         PixelOrbitCamera.Active ? (PixelOrbitCamera.TopDown ? PixelViewKind.TopDown : PixelViewKind.Orbital) : PixelViewKind.Default;
 
     /// <summary>Switches to a view: leaves the current one and enters the new one. Returns false if the new view can't start now (the game is back to the Default view then).</summary>
-    public static bool SetView(PixelViewKind kind)
+    public static bool SetView(PixelViewKind kind, bool announceFailure = true)
     {
         PixelViewKind cur = CurrentView;
         if (cur == kind) return true;
         PixelOrbitCamera orbit = PixelOrbitCamera.Instance;
+        bool fromOrbit = (cur == PixelViewKind.Orbital || cur == PixelViewKind.TopDown) && orbit != null;
+        float carry = fromOrbit ? orbit.DistanceFraction : PixelZoom.Target;   // the zoom travels with you between the normal view and the orbit views
         if ((cur == PixelViewKind.Orbital || cur == PixelViewKind.TopDown) && (kind == PixelViewKind.Orbital || kind == PixelViewKind.TopDown) && orbit != null)
         {
             orbit.SetTopDown(kind == PixelViewKind.TopDown);   // the same camera, re-aimed
@@ -95,8 +118,13 @@ public class PixelViewWindow : MonoBehaviour
             case PixelViewKind.Orbital: ok = orbit != null && orbit.Enter(false); break;
             case PixelViewKind.TopDown: ok = orbit != null && orbit.Enter(true); break;
         }
-        if (!ok) PixelHints.Announce("That view can't start right now");
-        return ok;
+        if (!ok) { if (announceFailure) PixelHints.Announce("That view can't start right now"); return false; }
+        if (cur != PixelViewKind.FirstPerson && kind != PixelViewKind.FirstPerson)
+        {
+            if (kind == PixelViewKind.Default) PixelZoom.SetTarget(carry);
+            else if (cur == PixelViewKind.Default && orbit != null) orbit.DistanceFraction = carry;
+        }
+        return true;
     }
 
     private PixelClicker clicker;
@@ -104,7 +132,7 @@ public class PixelViewWindow : MonoBehaviour
     private RectTransform windowRect;
     private TMP_FontAsset font;
     private readonly Toggle[] viewTicks = new Toggle[4];
-    private Toggle orthoTick, autoTick;
+    private Toggle orthoTick, autoTick, invertTick;
     private TMP_Text orthoNote, zoomValue, speedValue;
     private Slider zoomSlider, speedSlider;
     private GameObject zoomRow, orbitSection, tiltRow;
@@ -119,7 +147,8 @@ public class PixelViewWindow : MonoBehaviour
         clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
         PixelWindows.Register(this, 130, () => IsOpen, Close);
-        pendingApply = PlayerPrefs.HasKey(PrefKind) || PlayerPrefs.HasKey(PrefZoom);
+        InvertScroll = PlayerPrefs.GetInt(PrefInvert, 1) != 0;
+        pendingApply = true;   // the saved view, or the default view when nothing is saved
     }
 
     private void OnDestroy()
@@ -148,20 +177,25 @@ public class PixelViewWindow : MonoBehaviour
     private void ApplySaved()
     {
         pendingApply = false;
-        PixelViewKind kind = (PixelViewKind)Mathf.Clamp(PlayerPrefs.GetInt(PrefKind, 0), 0, 3);
+        PixelViewKind kind = (PixelViewKind)Mathf.Clamp(PlayerPrefs.GetInt(PrefKind, (int)defaultView), 0, 3);
         if (kind == PixelViewKind.FirstPerson) kind = PixelViewKind.Default;
-        if (CurrentView != kind) SetView(kind);
+        if (CurrentView != kind && !SetView(kind, false))
+        {
+            if (++applyTries < 300) pendingApply = true;   // (the camera could not start it just now: try again in a moment)
+            return;
+        }
         if (CurrentView == PixelViewKind.Orbital || CurrentView == PixelViewKind.TopDown)
         {
             PixelOrbitCamera orbit = PixelOrbitCamera.Instance;
             if (orbit != null)
             {
-                if (PlayerPrefs.HasKey(PrefOrbitZoom)) orbit.DistanceFraction = PlayerPrefs.GetFloat(PrefOrbitZoom, 1f);
+                orbit.DistanceFraction = PlayerPrefs.GetFloat(PrefOrbitZoom, defaultOrbitZoom);
                 if (PlayerPrefs.HasKey(PrefSpeed)) orbit.AutoSpeed = PlayerPrefs.GetFloat(PrefSpeed, 10f);
                 orbit.AutoOrbit = PlayerPrefs.GetInt(PrefAuto, 0) == 1;
             }
         }
-        else if (CurrentView == PixelViewKind.Default && PlayerPrefs.HasKey(PrefZoom)) PixelZoom.SetTarget(PlayerPrefs.GetFloat(PrefZoom, 1f));
+        else if (CurrentView == PixelViewKind.Default) PixelZoom.SetTarget(PlayerPrefs.GetFloat(PrefZoom, defaultNormalZoom));
+        applyTries = 0;
     }
 
     private void Open()
@@ -223,6 +257,7 @@ public class PixelViewWindow : MonoBehaviour
             if (orbit != null)
             {
                 autoTick.SetIsOnWithoutNotify(orbit.AutoOrbit);
+                invertTick.SetIsOnWithoutNotify(InvertScroll);
                 if (!Dragging(speedSlider)) speedSlider.SetValueWithoutNotify(Mathf.Clamp(orbit.AutoSpeed, speedSlider.minValue, speedSlider.maxValue));
                 PixelUIKit.SetText(speedValue, Mathf.RoundToInt(speedSlider.value) + " deg/s");
                 orbit.HoldTurn = (rightBtn.Held ? 1f : 0f) - (leftBtn.Held ? 1f : 0f);
@@ -403,6 +438,8 @@ public class PixelViewWindow : MonoBehaviour
         Place(head.rectTransform, Pad + 6f, oy, Width - Pad * 2f, 30f);
         oy += 36f;
         autoTick = TickRow(orbitSection.transform, oy, "Auto orbit", on => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoOrbit = on; PlayerPrefs.SetInt(PrefAuto, on ? 1 : 0); }, out _);
+        oy += RowH + 6f;
+        invertTick = TickRow(orbitSection.transform, oy, "Invert zoom scroll (scroll up = zoom in)", on => { InvertScroll = on; PlayerPrefs.SetInt(PrefInvert, on ? 1 : 0); }, out _);
         oy += RowH + 6f;
         speedSlider = SliderRow(orbitSection.transform, oy, "Auto speed", 2f, 60f, v => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoSpeed = v; PlayerPrefs.SetFloat(PrefSpeed, v); }, out _, out speedValue);
         oy += RowH + 14f;

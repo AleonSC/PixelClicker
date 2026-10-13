@@ -241,6 +241,7 @@ public class PixelOrbitCamera : MonoBehaviour
             if (!PixelInput.PointerOverUI())   // (the plain wheel zooms now; Shift + wheel still does too)
             {
                 float scroll = PixelInput.ScrollY();
+                if (PixelViewWindow.InvertScroll) scroll = -scroll;   // (View window tick box: some mice / systems report the wheel the other way round)
                 if (Mathf.Abs(scroll) > 0.01f) targetDistance *= scroll > 0f ? 0.9f : 1.1f;
             }
             if (autoOrbit) targetYaw -= V(autoOrbitDegreesPerSecond, 10f) * dt;

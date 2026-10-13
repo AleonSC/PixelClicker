@@ -720,3 +720,4 @@
 [2026-10-13 04:59 UTC] Notes: Game Guide notes now say it has three tabs (Controls, How To Play, Database).
 [2026-10-13 05:15 UTC] Dev tools: new F9 key opens/closes Dev Tools (the dock button is hidden unless ticked), the Shape placer and UI mockup builder are now one draggable Mock up mode window with tabs and a minimize button, and new snapshot tools: F10 mark this moment, F11 inspect under the mouse, and a UI layout dump.
 [2026-10-13 05:21 UTC] The Key Bindings screen is wider (900) so long action and key names fit.
+[2026-10-13 05:29 UTC] New default view: Top down, zoomed to the furthest (2x), and switching between the 3D view and the orbit views keeps the same zoom so proportions stay similar; the orbit wheel zoom direction is flipped (scroll up = zoom in) with an 'Invert zoom scroll' tick in the View window.
