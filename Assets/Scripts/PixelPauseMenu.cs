@@ -426,8 +426,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string emptyControlsText = "Nothing to show yet. Add text to Assets/Resources/Controls.txt.";
 
     [Min(300f)]
-    [Tooltip("Width of the How to Play / Controls screens (canvas units).")]
-    [SerializeField] private float guideWidth = 1100f;
+    [Tooltip("Width of the Game Guide screens: Controls and How To Play (canvas units, 1920 wide canvas).")]
+    [SerializeField] private float guideScreenWidth = 1400f;
 
     [Min(100f)]
     [Tooltip("Height of the scrolling text on those screens (canvas units).")]
@@ -1953,7 +1953,7 @@ public class PixelPauseMenu : MonoBehaviour
         RectTransform pr = s.panel.GetComponent<RectTransform>();
 
         // Three tabs under the title: Controls | How To Play | Database (the first two are panels the tabs switch between; Database opens the game database window).
-        float tabWidth = (guideWidth - 80f - 20f) / 3f;
+        float tabWidth = (guideScreenWidth - 80f - 20f) / 3f;
         for (int tab = 0; tab < 3; tab++)
         {
             bool controls = tab == 0, database = tab == 2;
@@ -1973,7 +1973,7 @@ public class PixelPauseMenu : MonoBehaviour
         y += rowHeight + 14f;
 
         s.viewHeight = FitViewHeight(guideViewHeight, y);
-        pr.sizeDelta = new Vector2(guideWidth, pr.sizeDelta.y);
+        pr.sizeDelta = new Vector2(guideScreenWidth, pr.sizeDelta.y);
 
         s.scroll = PixelUIKit.CreateScrollView(s.panel.transform, title + " List", scrollbarColor, 12f, guideFontSize * 1.5f,
                                                out RectTransform content, out s.bar);
@@ -2000,7 +2000,7 @@ public class PixelPauseMenu : MonoBehaviour
         for (int i = content.childCount - 1; i >= 0; i--) Destroy(content.GetChild(i).gameObject);
 
         float viewWidth = s.scroll.GetComponent<RectTransform>().rect.width;
-        if (viewWidth < 100f) viewWidth = guideWidth - 60f;
+        if (viewWidth < 100f) viewWidth = guideScreenWidth - 60f;
         float width = viewWidth - 36f;
         float keyWidth = width * Mathf.Clamp(guideColumnPercent, 15f, 60f) / 100f;
         float gap = 14f;
