@@ -15,7 +15,7 @@ public class PixelConveyor : MonoBehaviour
     private static readonly List<PixelConveyor> all = new List<PixelConveyor>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { all.Clear(); system = null; }
+    private static void ResetStatics() { all.Clear(); }
 
     [Min(0f)]
     [Tooltip("How fast the belt carries things, in cube widths per second. 0 = the coded default (1.6).")]
@@ -160,7 +160,7 @@ public class PixelConveyor : MonoBehaviour
             {
                 // A V that points the way the belt runs (+Z): two bars swept back from the middle.
                 float bx = s * half * 0.5f;
-                k.Box("Bar", chev.transform, new Vector3(bx, height + 0.004f * unit, -Mathf.Abs(bx) * Mathf.Tan(35f * Mathf.Deg2Rad)), new Vector3(half * 1.05f, 0.012f * unit, 0.07f * unit), accent, new Vector3(0f, s * 35f, 0f), 0.1f, 0.3f);
+                k.Box("Bar", chev.transform, new Vector3(bx, height + 0.004f * unit, -Mathf.Abs(bx) * Mathf.Tan(35f * Mathf.Deg2Rad)), new Vector3(half * 1.05f, 0.012f * unit, 0.07f * unit), accent, new Vector3(0f, s * 35f, 0f), false, 0.1f, 0.3f);
             }
             ribs.Add(chev.transform);
         }
@@ -217,6 +217,9 @@ public class PixelConveyorSystem : MonoBehaviour
     public static void Ensure(PixelClicker c) { if (system == null) { GameObject go = new GameObject("Conveyor System"); system = go.AddComponent<PixelConveyorSystem>(); system.clicker = c; } }
 
     private static PixelConveyorSystem system;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetSystem() { system = null; }
 
     private static void SetFlat(Rigidbody rb, Vector3 flatTarget, float k)
     {
