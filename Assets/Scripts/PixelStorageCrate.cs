@@ -11,7 +11,7 @@
 //   and it is inside the footprint and below ~3 units above it). Two grip handles on the short (+/-X) ends (Handle parts built by
 //   BuildCrateBody): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
-//   (DragTo, kept on screen) with the fist cursor. PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
+//   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; HandleHot blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
 //   ('S,slot,tier,amount;'). Tip device_StorageCrate.
 // ---------------------------------------------------
@@ -53,6 +53,7 @@ public class PixelStorageCrate : PixelPlacedDevice
     private PixelGrab grab;
     private Rigidbody lastHeld;
     private bool dragging;
+    private PixelConsumables consumables;
     private Vector3 dragOffset;
 
     public void Init(PixelClicker owner, Camera camera, PixelConsumables.Device settings, float shrinkTime)
@@ -177,6 +178,14 @@ public class PixelStorageCrate : PixelPlacedDevice
             {
                 hotFrame = Time.frameCount;
                 PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
+                // Scroll or Q / E turns the crate while it is being moved (the same turning as when placing it).
+                if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
+                float turn = consumables != null ? consumables.TurnInput() : 0f;
+                if (!Mathf.Approximately(turn, 0f))
+                {
+                    transform.Rotate(0f, turn, 0f, Space.World);
+                    dragOffset = Quaternion.Euler(0f, turn, 0f) * dragOffset;   // the grabbed point swings round the centre with it
+                }
                 DragTo(cam.ScreenPointToRay(PixelInput.PointerPosition()));
                 return;
             }

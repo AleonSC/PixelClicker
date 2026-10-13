@@ -583,7 +583,7 @@ public class PixelConsumables : MonoBehaviour
             color = new Color(0.62f, 0.45f, 0.28f, 1f),
             bodyDiameter = 2.5f,   // the crate's width (five compartments)
             bodyHeight = 0.3f,     // wall height
-            placingMessage = "Click the floor to place the {0}  (right-click to cancel)",
+            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
         };
     }
 
@@ -1174,13 +1174,22 @@ public class PixelConsumables : MonoBehaviour
         if (!IsPlacing && !PixelBank.HoseOn && !PixelClicker.GodMode && Time.frameCount != placeEndFrame && (RightPressed() || RightHeld()) && !PointerOverUI())
             target = DeviceUnderPointer();
 
-        string text = target != null ? string.Format(removeText, target.name) : "";
-        if (PixelHold.Update(this, target, removeHoldSeconds, text, removeMeterColor))
+        // Only a ring fills round the cursor (no text), a buildup sound rises, and the device glows red as it fills.
+        bool done = PixelHold.Update(this, target, removeHoldSeconds, "", removeMeterColor, true, "remove_buildup");
+        if (glowDevice != null && glowDevice != target) glowDevice.SetRemoveGlow(0f);
+        if (done)
         {
+            target.SetRemoveGlow(1f);   // (it shrinks away glowing)
             target.RemoveNow();
             PixelAudio.Play("device_remove");
+            glowDevice = null;
+            return;
         }
+        if (target != null) target.SetRemoveGlow(PixelHold.ProgressOf(target));
+        glowDevice = target;
     }
+
+    private PixelPlacedDevice glowDevice;
 
     /// <summary>The placed device under the mouse (nearest first). Looks at the device's visible parts, not its range markings. 'onlyDisarmed' = only devices still waiting for their first click.</summary>
     private PixelPlacedDevice DeviceUnderPointer(bool onlyDisarmed = false)
@@ -1916,6 +1925,7 @@ public class PixelConsumables : MonoBehaviour
 
     /// <summary>The device's own placing message (empty = use the default one).</summary>
     public string PlacingMessage => !IsPlacing ? ""
+        : devices[placingIndex].kind == DeviceKind.StorageCrate ? PixelKeys.Replace("Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)")
         : PixelKeys.Replace(devices[placingIndex].kind == DeviceKind.Sorter && sorterPhase == 1 ? devices[placingIndex].sorterBendMessage
         : devices[placingIndex].placingMessage);
 
@@ -2052,7 +2062,7 @@ public class PixelConsumables : MonoBehaviour
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate)
         {
             placingYaw += TurnInput();
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
@@ -2980,14 +2990,14 @@ public class PixelConsumables : MonoBehaviour
     }
 
     /// <summary>Degrees to turn this frame from the mouse wheel and the Q / E keys.</summary>
-    private float TurnInput()
+    public float TurnInput()
     {
         float degrees = 0f;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
-        if (Mouse.current != null) degrees += Mathf.Sign(Mouse.current.scroll.ReadValue().y) * (Mathf.Abs(Mouse.current.scroll.ReadValue().y) > 0.01f ? 1f : 0f) * rotateStepDegrees;
+        if (Mouse.current != null && !PixelInput.ControlHeld()) degrees += Mathf.Sign(Mouse.current.scroll.ReadValue().y) * (Mathf.Abs(Mouse.current.scroll.ReadValue().y) > 0.01f ? 1f : 0f) * rotateStepDegrees;
 #else
         float wheel = Input.mouseScrollDelta.y;
-        if (Mathf.Abs(wheel) > 0.01f) degrees += Mathf.Sign(wheel) * rotateStepDegrees;
+        if (Mathf.Abs(wheel) > 0.01f && !PixelInput.ControlHeld()) degrees += Mathf.Sign(wheel) * rotateStepDegrees;   // (Ctrl + wheel zooms the camera)
 #endif
         if (PixelKeys.Held(PixelAction.RotateRight)) degrees += rotateSpeedDegrees * Time.deltaTime; // rebindable (default E)
         if (PixelKeys.Held(PixelAction.RotateLeft)) degrees -= rotateSpeedDegrees * Time.deltaTime;  // (default Q)

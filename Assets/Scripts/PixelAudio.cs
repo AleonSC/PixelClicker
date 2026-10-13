@@ -221,6 +221,7 @@ public class PixelAudio : MonoBehaviour
             Make("ultra_gain", 0.2f, 1f, 1f),
             Make("time_stop", 0.3f, 1f, 1f),
             Make("device_remove", 0.2f, 1f, 1f),
+            Make("remove_buildup", 0.05f, 1f, 1f),   // the rising whine while the right mouse button is held on a placed device (PixelHold)
             Make("sorter_button", 0.2f, 1f, 1f),
             Make("hose_toggle", 0.2f, 1f, 1f),
             Make("bank_suck", 0.1f, 1f, 1f),
@@ -303,6 +304,7 @@ public class PixelAudio : MonoBehaviour
         {
             case "pixel_bounce_electric": return new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
             case "overcharge": return new[] { PixelSynth.Charge() };
+            case "remove_buildup": return new[] { PixelSynth.Buildup() };
             case "dragon_summon": return new[] { PixelSynth.Summon() };
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
             case "seed_plant": return new[] { PixelSynth.Crunch(1), PixelSynth.Crunch(2), PixelSynth.Crunch(3) };
@@ -1334,6 +1336,36 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.8f;
         AudioClip clip = AudioClip.Create("Dig " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>The removal buildup: a smooth tone that climbs from low to high with a growing shimmer, 0.8 s long (PixelHold plays it with its pitch scaled so it lasts as long as the hold).</summary>
+    public const float BuildupSeconds = 0.8f;
+
+    public static AudioClip Buildup()
+    {
+        const int rate = 44100;
+        int n = (int)(rate * BuildupSeconds);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(77);
+        float phase = 0f, phase2 = 0f, noise = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)n;
+            float sec = i / (float)rate;
+            float hz = Mathf.Lerp(150f, 1250f, t * t);
+            phase += hz / rate;
+            phase2 += hz * 1.5f / rate;
+            float tone = Mathf.Sin(phase * Mathf.PI * 2f) * 0.6f + Mathf.Sin(phase2 * Mathf.PI * 2f) * 0.22f * t;
+            float tremolo = 1f - 0.25f * Mathf.Sin(sec * Mathf.Lerp(10f, 34f, t) * Mathf.PI * 2f) * t;
+            noise = Mathf.Lerp(noise, (float)rng.NextDouble() * 2f - 1f, 0.35f);
+            data[i] = (tone * tremolo + noise * 0.12f * t) * Mathf.Lerp(0.2f, 1f, t) * Mathf.Clamp01(sec / 0.03f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
+        AudioClip clip = AudioClip.Create("RemoveBuildup", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

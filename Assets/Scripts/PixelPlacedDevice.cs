@@ -1,5 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelPlacedDevice.cs
+//   SetRemoveGlow(0..1): while the right mouse button is held on the device (PixelConsumables.UpdateRemoval + PixelHold ring) it tints red, glows and lights up red as the ring fills.
 //   Abstract base of placed devices: countdown, timer text facing the camera, shrink-away (InitCommon, OnTick, IsDying). Armed /
 //   disarmed: every device you place starts DISARMED (Disarm() right after SpawnDevice; grey via per-renderer property blocks -
 //   ApplyTint / ClearTint, a desaturated dull version of each material's colour, emission off; the countdown does not run, OnTick is
@@ -80,6 +81,36 @@ public abstract class PixelPlacedDevice : MonoBehaviour
     }
     private List<TintEntry> tintEntries;
     private MaterialPropertyBlock tintBlock;
+    // --- Being removed (hold the right mouse button on it): the device slowly glows a luminescent red as the hold fills (PixelConsumables.UpdateRemoval).
+    private float removeGlow;
+    private Light removeLight;
+    private static readonly Color RemoveRed = new Color(1f, 0.1f, 0.06f, 1f);
+
+    /// <summary>0..1: how far the removal hold has got. Tints the whole device red, adds a red glow and a red light; 0 puts it back.</summary>
+    public void SetRemoveGlow(float k)
+    {
+        k = Mathf.Clamp01(k);
+        if (Mathf.Approximately(k, removeGlow)) return;
+        removeGlow = k;
+        if (removeGlow > 0f) ApplyTint(); else if (tint >= 1f) ClearTint(); else ApplyTint();
+        if (removeGlow > 0f)
+        {
+            if (removeLight == null)
+            {
+                GameObject lightGo = new GameObject("Remove Glow");
+                lightGo.transform.SetParent(transform, false);
+                lightGo.transform.localPosition = Vector3.up * 0.6f;
+                removeLight = lightGo.AddComponent<Light>();
+                removeLight.type = LightType.Point;
+                removeLight.color = RemoveRed;
+                removeLight.range = 4f;
+                removeLight.shadows = LightShadows.None;
+            }
+            removeLight.intensity = removeGlow * removeGlow * 4f;
+        }
+        else if (removeLight != null) { Destroy(removeLight.gameObject); removeLight = null; }
+    }
+
     private static readonly int ColorId = Shader.PropertyToID("_Color"), BaseColorId = Shader.PropertyToID("_BaseColor"), EmissionId = Shader.PropertyToID("_EmissionColor");
 
     /// <summary>Puts the device to sleep: grey and idle until <see cref="Arm"/>. Called once, right after a device is placed.</summary>
@@ -140,10 +171,11 @@ public abstract class PixelPlacedDevice : MonoBehaviour
                 float grey = e.baseColor.r * 0.3f + e.baseColor.g * 0.59f + e.baseColor.b * 0.11f;
                 Color dull = new Color(grey * 0.8f + 0.1f, grey * 0.8f + 0.1f, grey * 0.8f + 0.1f, e.baseColor.a);
                 Color c = Color.Lerp(dull, e.baseColor, tint);
+                if (removeGlow > 0f) c = Color.Lerp(c, new Color(RemoveRed.r, RemoveRed.g * 0.5f, RemoveRed.b * 0.5f, c.a), removeGlow * 0.85f);
                 tintBlock.SetColor(e.hasBaseColorProp ? BaseColorId : ColorId, c);
                 if (e.hasBaseColorProp) tintBlock.SetColor(ColorId, c);
             }
-            if (e.hasEmission) tintBlock.SetColor(EmissionId, e.baseEmission * tint);
+            if (e.hasEmission) tintBlock.SetColor(EmissionId, e.baseEmission * tint + RemoveRed * (removeGlow * removeGlow * 2.5f));
             e.renderer.SetPropertyBlock(tintBlock);
         }
     }
@@ -273,7 +305,7 @@ public abstract class PixelPlacedDevice : MonoBehaviour
         if (Armed && tint < 1f)
         {
             tint = Mathf.MoveTowards(tint, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, ArmFadeSeconds));
-            if (tint >= 1f) ClearTint(); else ApplyTint();
+            if (tint >= 1f && removeGlow <= 0f) ClearTint(); else ApplyTint();
         }
 
         // The timer always faces the camera.
