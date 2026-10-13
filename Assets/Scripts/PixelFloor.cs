@@ -704,7 +704,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     private bool HidesOnTitle => !keepFloorOnTitle;
 
     /// <summary>The 'Display floor' switch is off: the floor is never drawn (its collider stays so pixels still land).</summary>
-    private static bool FloorOff => !PixelTitleWanderers.DisplayFloor;
+    private static bool FloorOff => !PixelTitleWanderers.DisplayFloor || PixelFirstPerson.Active;   // (first person has its own neon grid, PixelFirstPersonGrid)
     private const float FadeOutFactor = 0.5f;   // leaving (quit to the main menu) is quicker than arriving
     private const float FadeInFactor = 2.5f;   // the floor texture fades IN this much slower than it fades out
     private float FadeTime => floorFadeSeconds > 0.05f ? floorFadeSeconds : 1f;

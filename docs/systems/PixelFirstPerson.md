@@ -18,3 +18,6 @@ Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point her
 - Left click on a cube that is part of a build picks up the WHOLE build (PixelAttachment.Group; joints removed with TakeApart while carried, glued back on release). The wheel / right-hold turn work on the whole build; every carried cube has its own white ghost.
 - A held cube or build can also snap flat onto the ground (PixelAttachment.TryGroundSnap, any of the 24 grid orientations relative to the world; the carried cube that must lift the most makes the contact). Clicking pins it with a world joint (AttachToWorld) so it stays as a foundation to build on.
 - Prying (hold right on a cube of a build, ring on the crosshair via PixelHold's `at` argument) works again: FindPickup used to skip cubes whose lifetime is frozen, which every attached cube is.
+
+### Neon floor
+In first person the normal floor (and its wireframe circle) is hidden (PixelFloor.FloorOff includes PixelFirstPerson.Active; the ground collider stays) and PixelFirstPersonGrid draws a neon grid (Resources/PixelNeonGrid.shader) that only shows within a radius of the player, the clicker cube and old pixels lying on the ground. Colour, spacing, radii and brightness are on PixelFirstPerson ("Neon floor").

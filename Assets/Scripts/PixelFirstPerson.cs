@@ -86,6 +86,28 @@ public class PixelFirstPerson : MonoBehaviour
     [Tooltip("Seconds the right button is held on a stuck cube to pry it loose. 0 = the coded default (0.7).")]
     [SerializeField] private float pryHoldSeconds = 0f;
 
+    [Header("Neon floor (first person)")]
+    [Tooltip("Colour of the neon grid that replaces the floor in first person.")]
+    [SerializeField] private Color gridColor = new Color(0.2f, 1f, 0.9f, 1f);
+
+    [Min(0f)]
+    [Tooltip("Distance between the grid lines, in cube widths. 0 = the coded default (1).")]
+    [SerializeField] private float gridSpacingCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("How far the grid shows round the player and the clicker cube, in cube widths. 0 = the coded default (7).")]
+    [SerializeField] private float gridPlayerRadiusCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("How far the grid shows round each old pixel lying on the ground, in cube widths. 0 = the coded default (2.5).")]
+    [SerializeField] private float gridPixelRadiusCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("Brightness of the grid. 0 = the coded default (1.2).")]
+    [SerializeField] private float gridBrightness = 0f;
+
+    private PixelFirstPersonGrid grid;
+
     public static bool Active { get; private set; }
 
     private static PixelFirstPerson instance;
@@ -245,6 +267,9 @@ public class PixelFirstPerson : MonoBehaviour
 
         BuildHud();
         Active = true;
+        float cube = clicker.OldPixelWorldSize;
+        grid = new GameObject("First Person Neon Grid").AddComponent<PixelFirstPersonGrid>();
+        grid.Setup(clicker, gridColor, cube * V(gridSpacingCubes, 1f), cube * V(gridPlayerRadiusCubes, 7f), cube * V(gridPixelRadiusCubes, 2.5f), V(gridBrightness, 1.2f));
         SetCursor(true);
     }
 
@@ -257,6 +282,8 @@ public class PixelFirstPerson : MonoBehaviour
         if (fpCamera != null) Destroy(fpCamera.gameObject);
         if (player != null) Destroy(player);
         if (canvasRoot != null) Destroy(canvasRoot);
+        if (grid != null) Destroy(grid.gameObject);
+        grid = null;
         foreach (GameObject g in attachGhosts) if (g != null) Destroy(g);
         attachGhosts.Clear(); hintLabel = null;
         fpCamera = null; player = null; controller = null; canvasRoot = null;
