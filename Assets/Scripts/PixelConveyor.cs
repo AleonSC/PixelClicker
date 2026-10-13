@@ -3,9 +3,12 @@
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
 //   starts the next belt, so a series of short straight pieces makes a curve; right click ends the chain, a second right click stops placing). Clicks near the end of an existing belt
 //   snap to it. RIGHT CLICK a placed belt (not while placing) to reverse its direction (PixelConveyorSystem). A belt is a low solid slab with side rails and moving chevrons that show
-//   the way; every old pixel standing on it (not held, not kinematic, not glued into a build) is carried along at beltSpeedCubes (0 = 1.6 cube widths per second) by
-//   PixelConveyorSystem.FixedUpdate (one place for all belts): its sideways speed is damped so it stays on the line. Things spat out of a machine (Wood Chipper chips blocks,
-//   Kiln charcoal) or dropped by the player simply land on it. Belts are NOT saved. Built with PixelFactoryKit.
+//   the way. LOCKED RIDING (no physics): an old pixel that lands on a belt (not held, not glued into a build, not flying, and there is room: riders keep a gap of 1.1 cube widths)
+//   is CAPTURED by PixelConveyorSystem - made kinematic, centred on the line and carried along it at beltSpeedCubes (0 = 1.6 cube widths per second) by position, like the Storage Crate
+//   locks pixels in. At the end of a belt it is handed on to a belt that STARTS there (a chained piece, ends within 0.45 cube widths and not head-on); when there is no belt to hand it
+//   to, the end is detected and the pixel is EJECTED: physics back on, thrown on a little along the belt's direction (so it can fly into a Kiln mouth or onto the floor). Riders queue
+//   when the one ahead is stopped. Flipping a belt flips its riders; grabbing a rider with Pixel Grabbing frees it. Things spat out of a machine or dropped by the player simply land on a
+//   belt and get captured. Belts are NOT saved. Built with PixelFactoryKit.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -28,6 +31,35 @@ public class PixelConveyor : MonoBehaviour
     private Transform ribsRoot;
     private readonly List<Transform> ribs = new List<Transform>();
     private float ribOffset, ribSpacing;
+
+    public float Length => length;
+    public float Unit => unit;
+    public float SurfaceHeight => height;
+    /// <summary>The end things enter at / leave from (in the direction of travel).</summary>
+    public Vector3 StartPoint => reversed ? b : a;
+    public Vector3 ExitPoint => reversed ? a : b;
+    /// <summary>How far along the belt (from its start, in the direction of travel) this world point is.</summary>
+    public float Along(Vector3 world) { Vector3 d = Direction; Vector3 v = world - StartPoint; return v.x * d.x + v.z * d.z; }
+    /// <summary>The point on the belt line (at the belt's ground height) at distance s from its start.</summary>
+    public Vector3 PointAt(float s) => StartPoint + Direction * s;
+
+    /// <summary>The belt that carries on from the end of this one: its start is at this end and it does not run back towards it. Null = this is an end.</summary>
+    public PixelConveyor FindNext()
+    {
+        PixelConveyor best = null;
+        float bestD = (unit * 0.45f) * (unit * 0.45f);
+        Vector3 exit = ExitPoint;
+        foreach (PixelConveyor c in all)
+        {
+            if (c == null || c == this || c.ghostMode) continue;
+            Vector3 sp = c.StartPoint;
+            float d = (new Vector3(sp.x, exit.y, sp.z) - exit).sqrMagnitude;
+            if (d >= bestD) continue;
+            if (Vector3.Dot(c.Direction, Direction) < -0.5f) continue;   // head-on: that is an end, not a continuation
+            bestD = d; best = c;
+        }
+        return best;
+    }
 
     public Vector3 EndA => a;
     public Vector3 EndB => b;
@@ -193,6 +225,7 @@ public class PixelConveyor : MonoBehaviour
     public void Flip()
     {
         reversed = !reversed;
+        PixelConveyorSystem.OnFlipped(this);   // riders turn round with it
         PlaceRibs();
         PixelAudio.Play("device_place", 1.3f);
     }
@@ -209,65 +242,147 @@ public class PixelConveyor : MonoBehaviour
     public static IReadOnlyList<PixelConveyor> All => all;
 }
 
-/// <summary>One place that moves things on every belt (physics step), and turns a belt round when it is right-clicked.</summary>
+/// <summary>One place that captures, carries, hands on and ejects the pixels riding every belt (physics step), and turns a belt round when it is right-clicked.</summary>
 public class PixelConveyorSystem : MonoBehaviour
 {
+    private sealed class Rider
+    {
+        public Rigidbody rb;
+        public PixelConveyor belt;
+        public float s;
+        public float half;     // half the pixel's height (it rides with its bottom on the belt)
+    }
+
     private PixelClicker clicker;
-
-    public static void Ensure(PixelClicker c) { if (system == null) { GameObject go = new GameObject("Conveyor System"); system = go.AddComponent<PixelConveyorSystem>(); system.clicker = c; } }
-
     private static PixelConveyorSystem system;
+    private readonly List<Rider> riders = new List<Rider>();
+    private readonly HashSet<Rigidbody> riding = new HashSet<Rigidbody>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetSystem() { system = null; }
 
-    private static void SetFlat(Rigidbody rb, Vector3 flatTarget, float k)
+    public static void Ensure(PixelClicker c) { if (system == null) { GameObject go = new GameObject("Conveyor System"); system = go.AddComponent<PixelConveyorSystem>(); system.clicker = c; } }
+
+    /// <summary>A belt was reversed: its riders now travel the other way (their distance along it is mirrored).</summary>
+    public static void OnFlipped(PixelConveyor belt)
     {
-#if UNITY_6000_0_OR_NEWER
-        Vector3 v = rb.linearVelocity;
-#else
-        Vector3 v = rb.velocity;
-#endif
-        v.x += (flatTarget.x - v.x) * k;
-        v.z += (flatTarget.z - v.z) * k;
+        if (system == null) return;
+        foreach (Rider r in system.riders) if (r.belt == belt) r.s = Mathf.Clamp(belt.Length - r.s, 0f, belt.Length);
+    }
+
+    private static void SetVelocity(Rigidbody rb, Vector3 v)
+    {
 #if UNITY_6000_0_OR_NEWER
         rb.linearVelocity = v;
 #else
         rb.velocity = v;
 #endif
+        rb.angularVelocity = Vector3.zero;
+    }
+
+    private bool Eligible(Rigidbody rb)
+    {
+        if (rb == null || rb.isKinematic || riding.Contains(rb) || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) return false;
+        OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
+        if (info != null && info.heldByPlayer) return false;
+        OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+        if (despawn != null && (despawn.IsDespawning || despawn.Held)) return false;
+        return true;
+    }
+
+    /// <summary>Is there room for another pixel at distance s on this belt (no rider closer than a gap)?</summary>
+    private bool RoomAt(PixelConveyor belt, float s, Rider ignore = null)
+    {
+        float gap = belt.Unit * 1.1f;
+        foreach (Rider r in riders) if (r != ignore && r.belt == belt && Mathf.Abs(r.s - s) < gap) return false;
+        return true;
+    }
+
+    private void Capture(Rigidbody rb, PixelConveyor belt, float s)
+    {
+        SetVelocity(rb, Vector3.zero);
+        rb.isKinematic = true;
+        float half = PixelAttachment.HalfExtents(rb, belt.Unit).y;
+        riders.Add(new Rider { rb = rb, belt = belt, s = Mathf.Clamp(s, 0f, belt.Length), half = half });
+        riding.Add(rb);
+    }
+
+    private void Release(Rider r, bool eject)
+    {
+        riding.Remove(r.rb);
+        if (r.rb == null) return;
+        r.rb.isKinematic = false;
+        if (eject && r.belt != null) SetVelocity(r.rb, r.belt.Direction * r.belt.Speed * 1.15f + Vector3.up * r.belt.Unit * 0.5f);
+        else SetVelocity(r.rb, Vector3.zero);
     }
 
     private void FixedUpdate()
     {
         if (clicker == null) return;
-        var list = clicker.OldPixels;
         IReadOnlyList<PixelConveyor> belts = PixelConveyor.All;
-        if (belts.Count == 0) return;
-        for (int i = 0; i < list.Count; i++)
+
+        // 1. Capture: a pixel that has landed on a belt (with room at its place) is locked onto it.
+        if (belts.Count > 0)
         {
-            Rigidbody rb = list[i];
-            if (rb == null || rb.isKinematic || PixelAttachment.IsAttached(rb) || clicker.IsFlyingPixel(rb)) continue;
-            for (int j = 0; j < belts.Count; j++)
+            var list = clicker.OldPixels;
+            for (int i = 0; i < list.Count; i++)
             {
-                PixelConveyor belt = belts[j];
-                if (belt == null || belt.IsGhost || !belt.Carries(rb.worldCenterOfMass)) continue;
-                Vector3 dir = belt.Direction;
-                SetFlat(rb, dir * belt.Speed, 0.3f);
-                // Keep it on the line: damp what points sideways.
-                Vector3 side = Vector3.Cross(Vector3.up, dir);
-#if UNITY_6000_0_OR_NEWER
-                Vector3 v = rb.linearVelocity;
-#else
-                Vector3 v = rb.velocity;
-#endif
-                float s = Vector3.Dot(v, side);
-#if UNITY_6000_0_OR_NEWER
-                rb.linearVelocity = v - side * s * 0.4f;
-#else
-                rb.velocity = v - side * s * 0.4f;
-#endif
-                break;   // one belt at a time
+                Rigidbody rb = list[i];
+                if (!Eligible(rb)) continue;
+                Vector3 c = rb.worldCenterOfMass;
+                for (int j = 0; j < belts.Count; j++)
+                {
+                    PixelConveyor belt = belts[j];
+                    if (belt == null || belt.IsGhost || !belt.Carries(c)) continue;
+                    float s = belt.Along(c);
+                    if (RoomAt(belt, s)) Capture(rb, belt, s);
+                    break;
+                }
             }
+        }
+
+        // 2. Drop riders that went away (despawned, grabbed by the player, belt removed).
+        for (int i = riders.Count - 1; i >= 0; i--)
+        {
+            Rider r = riders[i];
+            bool gone = r.rb == null;
+            OldPixelInfo info = gone ? null : r.rb.GetComponent<OldPixelInfo>();
+            if (gone || (info != null && info.heldByPlayer) || r.belt == null)
+            {
+                if (!gone && (info == null || !info.heldByPlayer)) Release(r, false);   // (a grabbed pixel is the grab's business now)
+                riding.Remove(r.rb);
+                riders.RemoveAt(i);
+            }
+        }
+
+        // 3. Carry them: front rider first, each one keeps a gap behind the one ahead; at the end hand on or eject.
+        float dt = Time.fixedDeltaTime;
+        for (int i = riders.Count - 1; i >= 0; i--)
+        {
+            Rider r = riders[i];
+            PixelConveyor belt = r.belt;
+            float gap = belt.Unit * 1.1f;
+            float limit = belt.Length;
+            foreach (Rider o in riders) if (o != r && o.belt == belt && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);
+            float want = r.s + belt.Speed * dt;
+            bool atEnd = want >= belt.Length - 0.001f && limit >= belt.Length - 0.001f;
+            r.s = Mathf.Clamp(Mathf.Min(want, limit), 0f, belt.Length);
+            if (atEnd)
+            {
+                PixelConveyor next = belt.FindNext();
+                if (next == null)
+                {
+                    riders.RemoveAt(i);
+                    Release(r, true);      // an end: the pixel leaves the belt
+                    continue;
+                }
+                if (RoomAt(next, 0f, r)) { r.belt = next; r.s = 0f; belt = next; }
+            }
+            // Position: on the line, bottom on the belt surface; glides to it (a pixel that landed from above settles onto the belt).
+            Vector3 p = belt.PointAt(r.s);
+            p.y += belt.SurfaceHeight + r.half;
+            Vector3 current = r.rb.position;
+            r.rb.MovePosition(Vector3.Lerp(current, p, 0.55f));
         }
     }
 
@@ -285,5 +400,13 @@ public class PixelConveyorSystem : MonoBehaviour
             PixelConveyor belt = h.collider.GetComponentInParent<PixelConveyor>();
             if (belt != null) { belt.Flip(); return; }
         }
+    }
+
+    private void OnDestroy()
+    {
+        foreach (Rider r in riders) if (r.rb != null) { r.rb.isKinematic = false; }
+        riders.Clear();
+        riding.Clear();
+        if (system == this) system = null;
     }
 }

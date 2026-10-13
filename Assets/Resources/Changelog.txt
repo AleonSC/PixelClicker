@@ -842,3 +842,4 @@
 [2026-10-13 17:45] Hazard blocks (Hornet Nest, Pest, Gas Pocket, Jellyfish, Mold) now have tells: a pulsing warning glow round the cube, a bobbing red warning triangle above it, a warning sound when one appears (plus an angry buzz for the Hornet Nest), all pulsing faster as it is about to leave.
 [2026-10-13 17:58] Added a Conveyor Belt (click two points to build, chain pieces for curves, right click to reverse, carries old pixels) and a Kiln (anything going into its mouth burns into Charcoal old pixels from the back chute, new Charcoal block) to the Dev Hub Feature Tester.
 [2026-10-13 18:00] Fixed two compile errors in the conveyor belt (a static reset in the wrong class and a wrong argument in a chevron box).
+[2026-10-13 18:06] Conveyor belts now lock pixels onto the belt and carry them along by position (no physics, like the storage crate); pixels are handed on to the next belt of a chain and only ejected when a belt end has no belt after it.
