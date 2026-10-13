@@ -127,6 +127,7 @@
 | `PixelPestSwarm.cs` (Pest rework) | The Pest block (PixelLook.blockSurface Pest, PixelBlockTextures.PestHide(level,max): | in the header comment of `PixelPestSwarm.cs` |
 | Foraging pixels / Forager's Pack | Foraging (PixelSkills.ForagingId, second base gathering skill after Woodcutting; | `docs/systems/SkillBlocks.md` |
 | Fishing / ore rework | Fishing (PixelSkills.FishingId, third base gathering skill; | `docs/systems/SkillBlocks.md` |
+| `PixelContrast.cs` | Accessibility aids (Settings > Accessibility): an auto-contrast pixel outline that turns light or dark with the background behind the cube, and a cube spotlight that fades the ground in a circle round it. | in the header comment of `PixelContrast.cs` |
 | `PixelFilters.cs` | Screen filters (Settings > Display: CRT TV, VHS, Wild West, Noir, Night Vision, Neon Dream; URP post-processing volume + a code-drawn overlay, strength slider). | in the header comment of `PixelFilters.cs` |
 | `PixelBlockHold.cs` | Block Hold (shop pack unlocksBlockHold): hold the right mouse button on the cube's block to pull it out of the rotation while a meter drains; letting go puts it back. | in the header comment of `PixelBlockHold.cs` |
 | `PixelMold.cs` | Foraging's Mold hazard (zone that spreads over fallen pixels per click, shake to clean) + glowing Berry / Mushroom / Herb / Truffle old pixels. | in the header comment of `PixelMold.cs` |

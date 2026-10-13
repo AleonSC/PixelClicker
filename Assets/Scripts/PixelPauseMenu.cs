@@ -276,6 +276,12 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
+    [Tooltip("Label of the auto-contrast outline tick box in Settings.")]
+    [SerializeField] private string contrastRimLabel = "Auto-contrast pixel outline";
+    [Tooltip("Label of the cube spotlight tick box in Settings.")]
+    [SerializeField] private string spotlightLabel = "Cube spotlight (fade the ground behind it)";
+    [Tooltip("Label of the spotlight strength slider in Settings.")]
+    [SerializeField] private string spotlightStrengthLabel = "Spotlight strength";
     [Tooltip("Label of the screen filter drop-down in Settings.")]
     [SerializeField] private string filterLabel = "Screen filter";
     [Tooltip("Label of the screen filter strength slider in Settings.")]
@@ -2311,6 +2317,10 @@ public class PixelPauseMenu : MonoBehaviour
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
         AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
+        AddSettingToggle(list, contrastRimLabel, () => PixelContrast.RimEnabled, on => PixelContrast.RimEnabled = on, ref y);
+        AddSettingToggle(list, spotlightLabel, () => PixelContrast.SpotlightEnabled, on => PixelContrast.SpotlightEnabled = on, ref y);
+        Slider spotSlider = AddSliderRow(list, spotlightStrengthLabel, PixelContrast.SpotlightStrength, v => PixelContrast.SpotlightStrength = v, ref y);
+        settingsRefreshers.Add(() => spotSlider.SetValueWithoutNotify(PixelContrast.SpotlightStrength));
         AddChoiceRow(list, clickFxLabel, PixelBasicFx.LevelNames, () => PixelBasicFx.Level, v => PixelBasicFx.Level = v, ref y);
         AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
         AddWideButtonRow(list, resetPopupPinText, () => { PixelAchievements ach = PixelFind.First<PixelAchievements>(); if (ach != null) ach.ResetPopupPin(); }, ref y);
