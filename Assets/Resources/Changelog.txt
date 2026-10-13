@@ -804,3 +804,4 @@
 [2026-10-13 14:39 UTC] First person: left click now grabs a cube (or clicks the clicker); while holding, the wheel moves it closer / farther, holding right click turns it, a white ghost shows when a face is near another cube's face and left click sticks it there; stuck cubes are pried off by holding right click.
 [2026-10-13 14:41 UTC] Data Streams floor now fills the whole floor circle: it is drawn by the world-space ground shader (new pattern 5) so the lanes keep their size and never stretch.
 [2026-10-13 14:41 UTC] Data Streams floor now fills the whole floor circle: it is drawn by the world-space ground shader (new pattern 5) so the lanes keep their size and never stretch.
+[2026-10-13 14:51] First person building: fixed prying (attached cubes were being skipped), left click now drags whole attached builds as one piece, and a held cube or build can snap flat onto the ground in any orientation as a pinned foundation.

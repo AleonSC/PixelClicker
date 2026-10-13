@@ -257,8 +257,8 @@ public class PixelFirstPerson : MonoBehaviour
         if (fpCamera != null) Destroy(fpCamera.gameObject);
         if (player != null) Destroy(player);
         if (canvasRoot != null) Destroy(canvasRoot);
-        if (attachGhost != null) Destroy(attachGhost);
-        attachGhost = null; hintLabel = null;
+        foreach (GameObject g in attachGhosts) if (g != null) Destroy(g);
+        attachGhosts.Clear(); hintLabel = null;
         fpCamera = null; player = null; controller = null; canvasRoot = null;
         if (was) SetCursor(false);
     }
@@ -319,8 +319,8 @@ public class PixelFirstPerson : MonoBehaviour
     {
         bool aiming = AimingAtCube();
         bool holding = carried.Count > 0;
-        Rigidbody target = !holding ? FindPickup(false) : null;
-        Rigidbody stuck = !holding && target == null ? FindPickup(true) : null;   // a cube that is glued to others (pry it off with the right button)
+        Rigidbody target = !holding ? FindPickup() : null;
+        bool stuck = target != null && PixelAttachment.IsAttached(target);   // part of a build: left drags the whole build, a right hold pries this one cube off
 
         if (holding) UpdateHolding();
         else
@@ -328,28 +328,28 @@ public class PixelFirstPerson : MonoBehaviour
             HideAttachGhost();
             if (PixelInput.LeftPressed())
             {
-                if (target != null) PickUp(target);       // left click grabs a cube...
+                if (target != null) PickUp(target);       // left click grabs a cube (or a whole build)...
                 else if (aiming) clicker.ManualClickFromAfar();   // ...or clicks the clicker
             }
-            // Hold the right button on a stuck cube to pry it loose.
-            if (PixelHold.Update(this, stuck, V(pryHoldSeconds, 0.7f), "", new Color(1f, 0.85f, 0.3f), true) && stuck != null)
+            // Hold the right button on a stuck cube to pry it loose (the ring sits on the crosshair; the cursor is locked).
+            Vector2 centre = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+            if (PixelHold.Update(this, stuck ? target : null, V(pryHoldSeconds, 0.7f), "", new Color(1f, 0.85f, 0.3f), true, null, false, centre) && stuck && target != null)
             {
-                PixelAttachment.Detach(stuck);
+                PixelAttachment.Detach(target);
                 PixelAudio.Play("device_remove");
             }
         }
 
         if (crosshair != null)
             crosshair.color = holding ? new Color(1f, 1f, 1f, 0.5f) : aiming && target == null ? new Color(0.4f, 1f, 0.5f, 0.95f)
-                            : target != null ? new Color(1f, 0.85f, 0.25f, 0.95f) : stuck != null ? new Color(0.4f, 0.85f, 1f, 0.95f) : new Color(1f, 1f, 1f, 0.7f);
-        UpdateHint(holding, target != null, stuck != null, aiming);
+                            : stuck ? new Color(0.4f, 0.85f, 1f, 0.95f) : target != null ? new Color(1f, 0.85f, 0.25f, 0.95f) : new Color(1f, 1f, 1f, 0.7f);
+        UpdateHint(holding, target != null && !stuck, stuck, aiming);
     }
 
-    /// <summary>While a cube is in hand: the wheel moves it, the right button turns it (see Look), and left click attaches it (when its white ghost shows) or sets it down.</summary>
+    /// <summary>While a cube or build is in hand: the wheel moves it, the right button turns it (see Look), and left click attaches it (cube faces or the ground, where the white ghost shows) or sets it down.</summary>
     private void UpdateHolding()
     {
-        Rigidbody body = carried[0];
-        if (body == null) { carried.Clear(); return; }
+        if (carried.Count == 0 || carried[0] == null) { carried.Clear(); return; }
         float unit = clicker.OldPixelWorldSize;
         float scroll = PixelInput.ScrollY();
         if (Mathf.Abs(scroll) > 0.001f)
@@ -359,63 +359,124 @@ public class PixelFirstPerson : MonoBehaviour
         }
 
         // The white ghost where it would stick.
-        bool snapped = PixelAttachment.TrySnap(body, heldHalf, clicker.OldPixels, unit, attachAngle, unit * V(attachDistance, 0.9f), out PixelAttachment.Snap snap);
-        UpdateAttachGhost(snapped, snap);
+        bool snapped = FindCarriedSnap(unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target);
+        UpdateAttachGhosts(snapped, hPos, hRot);
 
         if (PixelInput.LeftPressed())
         {
-            if (snapped) AttachHeld(body, snap);
-            else Release(body, false);
+            if (snapped) AttachCarried(hPos, hRot, member, target);
+            else DropCarried();
         }
     }
 
-    private void AttachHeld(Rigidbody body, PixelAttachment.Snap snap)
+    /// <summary>Best spot for the carried cube / build: on another cube's face, or flat on the ground. Returns the handle's pose, which carried cube makes the contact and what it sticks to (null = ground).</summary>
+    private bool FindCarriedSnap(float unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target)
     {
-        carried.Remove(body);
-        foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = true;
-        body.transform.SetPositionAndRotation(snap.position, snap.rotation);
-        body.isKinematic = false;
-        SetBodyVelocity(body, Vector3.zero);
-        ScaledGravity gravity = body.GetComponent<ScaledGravity>();
-        if (gravity != null) gravity.enabled = true;
-        OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
-        if (shatter != null) shatter.Released(true, 3f);   // (a glass cube is set down gently)
-        PixelAttachment.Attach(body, snap.target);
+        hPos = Vector3.zero; hRot = Quaternion.identity; member = 0; target = null;
+        float maxDist = unit * V(attachDistance, 0.9f);
+        float angle = attachAngle > 0.5f ? attachAngle : 28f;
+        PixelAttachment.Snap best = default;
+        int bestMember = -1;
+        float bestDist = float.MaxValue;
+        for (int i = 0; i < carried.Count; i++)
+        {
+            if (carried[i] == null) continue;
+            if (PixelAttachment.TrySnap(carried[i], heldHalves[i], clicker.OldPixels, unit, angle, maxDist, out PixelAttachment.Snap s) && s.distance < bestDist)
+            { best = s; bestMember = i; bestDist = s.distance; }
+        }
+        // The ground: of the carried cubes that can rest on it, the one that has to lift the most (the lowest) makes the contact.
+        PixelAttachment.Snap ground = default;
+        int groundMember = -1;
+        float groundLift = float.MinValue;
+        for (int i = 0; i < carried.Count; i++)
+        {
+            if (carried[i] == null) continue;
+            if (PixelAttachment.TryGroundSnap(carried[i], heldHalves[i], unit, angle, maxDist, clicker.PixelTransform, out PixelAttachment.Snap g))
+            {
+                float lift = g.position.y - carried[i].transform.position.y;
+                if (lift > groundLift) { groundLift = lift; ground = g; groundMember = i; }
+            }
+        }
+        bool useGround = groundMember >= 0 && (bestMember < 0 || ground.distance < bestDist);
+        if (useGround) { best = ground; bestMember = groundMember; }
+        if (bestMember < 0) return false;
+        member = bestMember;
+        target = best.target;
+        hRot = best.rotation * Quaternion.Inverse(relRot[bestMember]);
+        hPos = best.position - hRot * relPos[bestMember];
+        return true;
+    }
+
+    private void AttachCarried(Vector3 hPos, Quaternion hRot, int member, Rigidbody target)
+    {
+        Rigidbody contact = carried[member];
+        for (int i = 0; i < carried.Count; i++)
+        {
+            Rigidbody body = carried[i];
+            if (body == null) continue;
+            foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = true;
+            body.transform.SetPositionAndRotation(hPos + hRot * relPos[i], hRot * relRot[i]);
+            body.isKinematic = false;
+            SetBodyVelocity(body, Vector3.zero);
+            ScaledGravity gravity = body.GetComponent<ScaledGravity>();
+            if (gravity != null) gravity.enabled = true;
+            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.Held = false;
+            OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
+            if (shatter != null) shatter.Released(true, 3f);   // (a glass cube is set down gently)
+        }
+        foreach (PixelAttachment.Edge e in carriedEdges) PixelAttachment.Attach(e.a, e.b);
+        if (target != null) PixelAttachment.Attach(contact, target);
+        else PixelAttachment.AttachToWorld(contact);          // a foundation: pinned where it rests on the ground
+        ClearCarried();
         HideAttachGhost();
         PixelAudio.Play("device_place");
     }
 
-    // ---- the white attach ghost ----
+    // ---- the white attach ghost (one per carried cube) ----
 
-    private GameObject attachGhost;
+    private readonly System.Collections.Generic.List<GameObject> attachGhosts = new System.Collections.Generic.List<GameObject>();
     private Material attachGhostMat;
     private Vector3 heldHalf = Vector3.one * 0.5f;
     private Quaternion heldRotation = Quaternion.identity;
     private float holdDistance;
+    private readonly System.Collections.Generic.List<Vector3> relPos = new System.Collections.Generic.List<Vector3>();
+    private readonly System.Collections.Generic.List<Quaternion> relRot = new System.Collections.Generic.List<Quaternion>();
+    private readonly System.Collections.Generic.List<Vector3> heldHalves = new System.Collections.Generic.List<Vector3>();
+    private System.Collections.Generic.List<PixelAttachment.Edge> carriedEdges = new System.Collections.Generic.List<PixelAttachment.Edge>();
 
-    private void UpdateAttachGhost(bool show, PixelAttachment.Snap snap)
+    private void UpdateAttachGhosts(bool show, Vector3 hPos, Quaternion hRot)
     {
         if (!show) { HideAttachGhost(); return; }
-        if (attachGhost == null)
+        if (attachGhostMat == null)
         {
-            attachGhost = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            attachGhost.name = "Attach Ghost";
-            Collider c = attachGhost.GetComponent<Collider>();
-            if (c != null) Destroy(c);
             Shader sh = PixelShaders.SpriteDefault();
             attachGhostMat = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
-            Renderer r = attachGhost.GetComponent<Renderer>();
+        }
+        attachGhostMat.color = new Color(1f, 1f, 1f, 0.3f + 0.12f * Mathf.Sin(Time.unscaledTime * 6f));
+        while (attachGhosts.Count < carried.Count)
+        {
+            GameObject g = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            g.name = "Attach Ghost";
+            Collider c = g.GetComponent<Collider>();
+            if (c != null) Destroy(c);
+            Renderer r = g.GetComponent<Renderer>();
             r.sharedMaterial = attachGhostMat;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             r.receiveShadows = false;
+            attachGhosts.Add(g);
         }
-        attachGhost.SetActive(true);
-        attachGhost.transform.SetPositionAndRotation(snap.position, snap.rotation);
-        attachGhost.transform.localScale = heldHalf * 2f * 1.02f;
-        attachGhostMat.color = new Color(1f, 1f, 1f, 0.3f + 0.12f * Mathf.Sin(Time.unscaledTime * 6f));
+        for (int i = 0; i < attachGhosts.Count; i++)
+        {
+            bool on = i < carried.Count;
+            attachGhosts[i].SetActive(on);
+            if (!on) continue;
+            attachGhosts[i].transform.SetPositionAndRotation(hPos + hRot * relPos[i], hRot * relRot[i]);
+            attachGhosts[i].transform.localScale = heldHalves[i] * 2f * 1.02f;
+        }
     }
 
-    private void HideAttachGhost() { if (attachGhost != null && attachGhost.activeSelf) attachGhost.SetActive(false); }
+    private void HideAttachGhost() { foreach (GameObject g in attachGhosts) if (g != null && g.activeSelf) g.SetActive(false); }
 
     // ---- a short hint line ----
 
@@ -424,9 +485,9 @@ public class PixelFirstPerson : MonoBehaviour
     private void UpdateHint(bool holding, bool canGrab, bool canPry, bool aimingCube)
     {
         if (hintLabel == null) return;
-        string text = holding ? "Wheel: closer / farther     Hold right + mouse: turn     Left: stick it where the white ghost shows, or put it down"
+        string text = holding ? "Wheel: closer / farther     Hold right + mouse: turn     Left: stick it where the white ghost shows (on a cube or the ground), or put it down"
                     : canGrab ? "Left click: pick up this cube"
-                    : canPry ? "Hold right click: pry this cube loose"
+                    : canPry ? "Left click: move the whole build     Hold right click: pry this cube loose"
                     : aimingCube ? "Left click: click the cube" : "";
         if (hintLabel.text != text) hintLabel.text = text;
     }
@@ -462,8 +523,8 @@ public class PixelFirstPerson : MonoBehaviour
         rb.angularVelocity = Vector3.zero;
     }
 
-    /// <summary>The old pixel the crosshair is nearest to (within reach and a small angle), or null.</summary>
-    private Rigidbody FindPickup(bool attachedOnly)
+    /// <summary>The old pixel the crosshair is nearest to (within reach and a small angle), or null. Cubes glued into a build count too.</summary>
+    private Rigidbody FindPickup()
     {
         if (fpCamera == null) return null;
         float reach = height * V(carryReach, 3.5f);
@@ -475,9 +536,9 @@ public class PixelFirstPerson : MonoBehaviour
         {
             Rigidbody body = list[i];
             if (body == null || body.isKinematic || carried.Contains(body) || clicker.IsFlyingPixel(body)) continue;
-            if (PixelAttachment.IsAttached(body) != attachedOnly) continue;   // free cubes are picked up, stuck ones are pried off
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-            if (despawn != null && (despawn.IsDespawning || despawn.Held)) continue;
+            // (a cube in a build always has its lifetime frozen - that must not hide it)
+            if (despawn != null && (despawn.IsDespawning || (despawn.Held && !PixelAttachment.IsAttached(body)))) continue;
             Vector3 to = body.worldCenterOfMass - origin;
             float distance = to.magnitude;
             if (distance > reach || distance < 0.0001f) continue;
@@ -491,66 +552,85 @@ public class PixelFirstPerson : MonoBehaviour
         return best;
     }
 
-    private void PickUp(Rigidbody body)
+    /// <summary>Picks up 'handle' - and, if it is part of a build, every cube glued to it (they keep their places relative to the handle).</summary>
+    private void PickUp(Rigidbody handle)
     {
-        PixelStats.Count("old.grabbed");
-        clicker.LandFlyingPixel(body);
-        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-        if (despawn != null) despawn.Held = true;
-        ScaledGravity gravity = body.GetComponent<ScaledGravity>();
-        if (gravity != null) gravity.enabled = false;
-        OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
-        if (shatter != null) shatter.Grabbed();
-        foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = false;   // a carried cube pushes nothing and nothing pushes it
-        SetBodyVelocity(body, Vector3.zero);
-        body.isKinematic = true;
-        carried.Add(body);
-        heldRotation = body.transform.rotation;
-        heldHalf = PixelAttachment.HalfExtents(body, clicker.OldPixelWorldSize);
-        holdDistance = Mathf.Clamp(Vector3.Distance(fpCamera.transform.position, body.transform.position), clicker.OldPixelWorldSize * 1.1f, height * V(carryReach, 3.5f));
+        clicker.LandFlyingPixel(handle);
+        System.Collections.Generic.List<Rigidbody> members = PixelAttachment.Group(handle);
+        members.Remove(handle);
+        members.Insert(0, handle);
+        carriedEdges = PixelAttachment.TakeApart(members);
+        Quaternion inv = Quaternion.Inverse(handle.transform.rotation);
+        foreach (Rigidbody body in members)
+        {
+            PixelStats.Count("old.grabbed");
+            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.Held = true;
+            ScaledGravity gravity = body.GetComponent<ScaledGravity>();
+            if (gravity != null) gravity.enabled = false;
+            OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
+            if (shatter != null) shatter.Grabbed();
+            foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = false;   // a carried cube pushes nothing and nothing pushes it
+            SetBodyVelocity(body, Vector3.zero);
+            body.isKinematic = true;
+            carried.Add(body);
+            relPos.Add(inv * (body.transform.position - handle.transform.position));
+            relRot.Add(inv * body.transform.rotation);
+            heldHalves.Add(PixelAttachment.HalfExtents(body, clicker.OldPixelWorldSize));
+        }
+        heldRotation = handle.transform.rotation;
+        heldHalf = heldHalves[0];
+        holdDistance = Mathf.Clamp(Vector3.Distance(fpCamera.transform.position, handle.transform.position), clicker.OldPixelWorldSize * 1.1f, height * V(carryReach, 3.5f));
         PixelAudio.Play("grab");
     }
 
-    /// <summary>Lets go of the cube on top of the stack; 'throwIt' sends it ahead, else it is set down in front of you.</summary>
-    private void Release(Rigidbody body, bool throwIt)
+    private void ClearCarried()
     {
-        if (body == null) return;
-        carried.Remove(body);
-        foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = true;
-        body.isKinematic = false;
-        ScaledGravity gravity = body.GetComponent<ScaledGravity>();
-        if (gravity != null) gravity.enabled = true;
-        OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
-        if (despawn != null) despawn.Held = false;
+        carried.Clear(); relPos.Clear(); relRot.Clear(); heldHalves.Clear(); carriedEdges.Clear();
+    }
+
+    /// <summary>Sets what is in hand down in front of you (a build keeps its glue).</summary>
+    private void DropCarried()
+    {
+        if (carried.Count == 0) return;
         Vector3 forward = fpCamera != null ? fpCamera.transform.forward : Vector3.forward;
         float unit = clicker.OldPixelWorldSize;
-        Vector3 velocity = throwIt ? (forward + Vector3.up * 0.25f).normalized * unit * V(throwSpeed, 7f) : forward * unit * 0.6f;
-        SetBodyVelocity(body, velocity);
-        OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
-        if (shatter != null) shatter.Released(!throwIt, 3f);
+        foreach (Rigidbody body in carried)
+        {
+            if (body == null) continue;
+            foreach (Collider c in body.GetComponentsInChildren<Collider>()) c.enabled = true;
+            body.isKinematic = false;
+            ScaledGravity gravity = body.GetComponent<ScaledGravity>();
+            if (gravity != null) gravity.enabled = true;
+            OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.Held = false;
+            SetBodyVelocity(body, forward * unit * 0.6f);
+            OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
+            if (shatter != null) shatter.Released(true, 3f);
+        }
+        foreach (PixelAttachment.Edge e in carriedEdges) PixelAttachment.Attach(e.a, e.b);   // (also freezes their lifetime again)
+        ClearCarried();
+        HideAttachGhost();
         PixelAudio.Play("drop");
     }
 
-    private void DropTop(bool throwIt) { if (carried.Count > 0) Release(carried[carried.Count - 1], throwIt); }
-    private void ThrowTop() => DropTop(true);
+    private void DropAll() { DropCarried(); }
 
-    private void DropAll()
-    {
-        for (int i = carried.Count - 1; i >= 0; i--) Release(carried[i], false);
-        carried.Clear();
-    }
-
-    /// <summary>Holds the cube straight ahead along the view at the held distance, turned the way the player turned it.</summary>
+    /// <summary>Holds the cube (or build) straight ahead along the view at the held distance, turned the way the player turned it.</summary>
     private void PlaceCarried()
     {
         if (fpCamera == null || carried.Count == 0) return;
-        Rigidbody body = carried[0];
-        if (body == null) { carried.Clear(); return; }
+        Rigidbody handle = carried[0];
+        if (handle == null) { ClearCarried(); return; }
         Transform ct = fpCamera.transform;
         Vector3 target = ct.position + ct.forward * holdDistance;
         float follow = 1f - Mathf.Exp(-22f * Time.unscaledDeltaTime);
-        body.transform.position = Vector3.Lerp(body.transform.position, target, follow);
-        body.transform.rotation = heldRotation;
+        Vector3 pos = Vector3.Lerp(handle.transform.position, target, follow);
+        for (int i = 0; i < carried.Count; i++)
+        {
+            if (carried[i] == null) continue;
+            carried[i].transform.SetPositionAndRotation(pos + heldRotation * relPos[i], heldRotation * relRot[i]);
+        }
     }
 
     // ------------------------------------------------------------------

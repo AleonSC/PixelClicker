@@ -8,6 +8,8 @@
 //   * PixelAttachment.Attach(a, b): a FixedJoint from a to b (unbreakable, colliders ignore each other) and a PixelAttachment component on both. Attached pixels keep their lifetime frozen
 //     (OldPixelDespawn.Held is re-asserted every frame) so a build does not decay; they can't be picked up, only pried off: PixelAttachment.Detach(x) removes every joint to and from x
 //     (the first person player holds the RIGHT mouse button on it). Joints are not saved: loading a save leaves the cubes loose.
+//   * A whole build moves as one: Group(x) = every cube glued to x; the player carries it (PixelFirstPerson) after TakeApart removes the joints, and the links are glued back on release.
+//   * Foundations: TryGroundSnap lets a cube rest flat on the ground in any of the 24 orientations; AttachToWorld pins it with a joint that has no other body (pry it off like any cube).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -61,6 +63,70 @@ public class PixelAttachment : MonoBehaviour
         PixelStats.Count("old.attached");
     }
 
+    /// <summary>Pins 'a' to the world where it stands (a foundation on the ground): a joint with no other body.</summary>
+    public static void AttachToWorld(Rigidbody a)
+    {
+        if (a == null) return;
+        PixelAttachment pa = Ensure(a);
+        FixedJoint joint = a.gameObject.AddComponent<FixedJoint>();
+        joint.connectedBody = null;
+        joint.enableCollision = false;
+        joint.breakForce = Mathf.Infinity;
+        joint.breakTorque = Mathf.Infinity;
+        pa.joints.Add(joint);
+        PixelStats.Count("old.attached");
+    }
+
+    public struct Edge { public Rigidbody a, b; }
+
+    /// <summary>Every cube glued (directly or through others) to 'start', including 'start'.</summary>
+    public static List<Rigidbody> Group(Rigidbody start)
+    {
+        List<Rigidbody> set = new List<Rigidbody>();
+        if (start == null) return set;
+        set.Add(start);
+        bool grew = true;
+        while (grew)
+        {
+            grew = false;
+            for (int i = 0; i < all.Count; i++)
+            {
+                PixelAttachment pa = all[i];
+                if (pa == null || pa.body == null) continue;
+                foreach (FixedJoint j in pa.joints)
+                {
+                    if (j == null || j.connectedBody == null) continue;
+                    bool hasA = set.Contains(pa.body), hasB = set.Contains(j.connectedBody);
+                    if (hasA && !hasB) { set.Add(j.connectedBody); grew = true; }
+                    else if (hasB && !hasA) { set.Add(pa.body); grew = true; }
+                }
+            }
+        }
+        return set;
+    }
+
+    /// <summary>Removes every joint of the cubes in 'members' (the build is being carried) and returns the cube-to-cube links so they can be glued back with <see cref="Attach"/>.</summary>
+    public static List<Edge> TakeApart(List<Rigidbody> members)
+    {
+        List<Edge> edges = new List<Edge>();
+        foreach (Rigidbody m in members)
+        {
+            PixelAttachment pa = m != null ? m.GetComponent<PixelAttachment>() : null;
+            if (pa == null) continue;
+            for (int j = pa.joints.Count - 1; j >= 0; j--)
+            {
+                FixedJoint joint = pa.joints[j];
+                if (joint != null)
+                {
+                    if (joint.connectedBody != null && members.Contains(joint.connectedBody)) edges.Add(new Edge { a = m, b = joint.connectedBody });
+                    Destroy(joint);
+                }
+                pa.joints.RemoveAt(j);
+            }
+        }
+        return edges;
+    }
+
     /// <summary>Pries 'x' loose: every joint it has, and every joint of another cube that holds on to it. Cubes left with no joints become ordinary again.</summary>
     public static void Detach(Rigidbody x)
     {
@@ -100,7 +166,8 @@ public class PixelAttachment : MonoBehaviour
     {
         public Vector3 position;
         public Quaternion rotation;
-        public Rigidbody target;
+        public Rigidbody target;      // the cube it sticks to (null = the ground)
+        public float distance;        // how far the held pose is from this spot
     }
 
     private static readonly Vector3[] Axes = { Vector3.right, Vector3.left, Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
@@ -180,10 +247,44 @@ public class PixelAttachment : MonoBehaviour
                 if (dist < snapDistance && dist < best)
                 {
                     best = dist;
-                    result = new Snap { position = p, rotation = q, target = b };
+                    result = new Snap { position = p, rotation = q, target = b, distance = dist };
                 }
             }
         }
         return best < float.MaxValue;
+    }
+
+    /// <summary>
+    /// Would 'held' rest flat on the ground just below it? Any of the 24 grid orientations counts (relative to the world), within maxAngle of how it is held; it keeps its place sideways
+    /// and sits exactly on the surface. 'ignoreRoot' = the clicker cube (not ground). Snap.target is null for the ground.
+    /// </summary>
+    public static bool TryGroundSnap(Rigidbody held, Vector3 heldHalf, float size, float maxAngle, float snapDistance, Transform ignoreRoot, out Snap result)
+    {
+        result = default;
+        if (held == null) return false;
+        Quaternion heldRot = held.transform.rotation;
+        Quaternion q = NearestAligned(Quaternion.identity, heldRot);
+        if (Quaternion.Angle(q, heldRot) > maxAngle) return false;
+        Vector3 pos = held.transform.position;
+        RaycastHit[] hits = Physics.RaycastAll(pos + Vector3.up * size, Vector3.down, size * 8f, ~0, QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (x, y) => x.distance.CompareTo(y.distance));
+        float groundY = 0f;
+        bool found = false;
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.GetComponentInParent<OldPixelInfo>() != null) continue;
+            if (ignoreRoot != null && hit.transform.IsChildOf(ignoreRoot)) continue;
+            if (hit.normal.y < 0.7f) continue;
+            groundY = hit.point.y;
+            found = true;
+            break;
+        }
+        if (!found) return false;
+        float hA = Mathf.Abs((q * Vector3.right).y) * heldHalf.x + Mathf.Abs((q * Vector3.up).y) * heldHalf.y + Mathf.Abs((q * Vector3.forward).y) * heldHalf.z;
+        float y = groundY + hA;
+        float dist = Mathf.Abs(pos.y - y);
+        if (dist > snapDistance) return false;
+        result = new Snap { position = new Vector3(pos.x, y, pos.z), rotation = q, target = null, distance = dist };
+        return true;
     }
 }

@@ -41,7 +41,7 @@ public static class PixelHold
     public static float ProgressOf(object target) => target != null && ownerTarget == target ? lastProgress : 0f;
 
     /// <summary>Call every frame. 'target' = what the pointer is over right now (null = nothing). True when the hold completes.</summary>
-    public static bool Update(object caller, object target, float seconds, string label, Color color, bool circle = false, string buildSound = null, bool useLeft = false)
+    public static bool Update(object caller, object target, float seconds, string label, Color color, bool circle = false, string buildSound = null, bool useLeft = false, Vector2? at = null)
     {
         if (target == null || PixelPauseMenu.IsPaused)
         {
@@ -83,7 +83,7 @@ public static class PixelHold
         }
 
         if (meter == null) meter = new GameObject("Hold Meter").AddComponent<PixelHoldMeter>();
-        meter.Show(PixelInput.PointerPosition(), progress, label, color, circle);
+        meter.Show(at ?? PixelInput.PointerPosition(), progress, label, color, circle);
         return false;
     }
 
