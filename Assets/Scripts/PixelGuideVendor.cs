@@ -1,5 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelGuideVendor.cs
+//   Cubie's intro visits only start when nothing else is open (Calm: no window in PixelWindows, no tip box, no minigame...) and only while 'Show first-time tips' (PixelHints.TipsEnabled) is on: with tips
+//   off the visits are skipped, their progress is recorded and the starter gift is handed over quietly once the shop exists (Update); Replay tutorial still plays them.
 //   Cubie, the suspicious cube guide / shopkeeper (added by PixelClicker.Awake; code-drawn teal cube with darting sideways eyes, hat,
 //   smirk; slides in like the visitors, time stops, a paged speech box, Next button or Escape = next page). Visit 1 (new game, after
 //   the intro tips, calmSeconds (1.5) of calm): a shady dealer's pitch - pixels are money 'because that's what we're all told' (a
@@ -296,7 +298,7 @@ public class PixelGuideVendor : MonoBehaviour
     {
         if (PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelNotice.IsShowing || PixelPauseMenu.IsPaused ||
             PixelMinigame.TakeoverActive || PixelPets.PopupOpen || PixelCameraIntro.ClicksLocked || PixelCameraIntro.Moving ||
-            Time.timeScale <= 0f) return false;
+            Time.timeScale <= 0f || PixelWindows.AnyOpen()) return false;   // (Cubie only turns up when no other window is open)
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy) return false;
         return true;
     }
@@ -325,6 +327,17 @@ public class PixelGuideVendor : MonoBehaviour
                 PixelStats.Best(Stage2Key, 1d);
                 PixelStats.Best(PixelShopTutorial.DoneKey, 1d);   // an older save: no tutorial
                 StartVendors(true);
+            }
+            else if (!PixelHints.TipsEnabled && !replaying)
+            {
+                // 'Show first-time tips' is off: Cubie does not turn up with his intros. The game carries on as if they had happened, and the starter gift still arrives once the shop is there.
+                if (!s1) PixelStats.Best(Stage1Key, 1d);
+                if (ShopThere)
+                {
+                    PixelStats.Best(Stage2Key, 1d);
+                    GiveGift();
+                    StartVendors(false);
+                }
             }
             else if (ShopThere) StartCoroutine(Visit(true));
             else if (!s1) StartCoroutine(Visit(false));
