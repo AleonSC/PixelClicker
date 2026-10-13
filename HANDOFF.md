@@ -17,7 +17,7 @@ These are repeated in CLAUDE.md; the important ones:
 - Branch: `claude/pixelclicker-initial-script-un1ao1`. Commit and push when work is done (`git push -u origin <branch>`). **No PRs unless asked.** Never force-push.
 - Commit messages end with:
   `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>` and `Claude-Session: https://claude.ai/code/session_01MLDA8YRETKw2wrxsN92QzB` (use the current session's lines if they differ).
-- **After every game change append one line** to `Assets/Resources/Changelog.txt`: `[YYYY-MM-DD HH:MM UTC] plain-language sentence` (`date -u +"%Y-%m-%d %H:%M"`). "Clear the changelog" = empty the file (keep it) and commit. The user's pause menu shows this file to players.
+- **After every game change append one line** to `Assets/Resources/Changelog.txt`: `[YYYY-MM-DD HH:MM UTC] plain-language sentence` (`date -u +"%Y-%m-%d %H:%M"`). Never clear it (the user backs it up themselves); search it and `git log --grep` for what was done before. The user's pause menu shows this file to players.
 - Update `Controls.txt` when a key/control changes, `HowToPlay.txt` when a major system is added, `CLAUDE.md` when a system changes.
 - **Every variable must be editable in Unity**: `[SerializeField] private` + `[Tooltip]` (+ `[Header]`). Field initializers do not update already-serialized components, so to push a new default onto the user's scene **rename the field** (this has been done several times, e.g. `logWidth`, `guideTextSize`).
 - Always tell the user to **copy the whole `Assets/Scripts` and `Assets/Resources` folders** (most past compile errors were stale partial copies). Say when a script was deleted so they delete it in Unity too.
@@ -25,7 +25,7 @@ These are repeated in CLAUDE.md; the important ones:
 - Tone: the user likes short, direct answers, and a final summary of what changed + which folders to copy. They test fast and report screenshots.
 
 ### Pending reminders for the user (do these first)
-1. **Clear the changelog**: they built a game for a friend; they asked to be reminded. Entries from "Added a start screen..." onward are post-build. Only clear when they say so.
+1. (none about the changelog: it is no longer cleared.)
 2. The agreed plan was: optimization review -> this handoff. Both are now written; the next step is the user choosing which optimizations to do (section 4).
 
 ## 3. State of the project

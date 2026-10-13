@@ -165,7 +165,7 @@
 ## Changelog workflow (standing instruction from the user)
 - The Dev Tools panel's **Changelog** tab shows `Assets/Resources/Changelog.txt` (one change per line, newest shown first).
 - **After every change you make, append one line** to that file: `[YYYY-MM-DD HH:MM UTC] what was added/changed/fixed` (get the time with `date -u +"%Y-%m-%d %H:%M"`). Keep it one plain-language sentence; commit it with the change.
-- When the user says to **clear the changelog** (they're making a build), empty the file (keep the file, zero lines) and commit.
+- The changelog is **never cleared** (the user backs it up themselves when they want). It is also the history of what was done before: before assuming something was never built or tried, search it (`grep -i <word> Assets/Resources/Changelog.txt`) and `git log --grep=<word>`.
 
 ## Active conventions
 - **Every variable must be editable in Unity**: `[SerializeField] private` + `[Tooltip]` (+ `[Header]` grouping). Nested config classes are `[Serializable]`.
