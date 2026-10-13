@@ -2,9 +2,9 @@
 // PixelGreatOak.cs
 //   The GREAT OAK (PixelType.GreatOak 77, PixelClicker.EnsureGreatOakTier): a huge Woodcutting block that takes a random 50-100 clicks. While Woodcutting is the skill in play every rolled
 //   wood block (Wood, Bark, Sap, Leaf, Heartwood, Twig) has a greatOakChance (0 = 5%) of becoming one (PixelClicker.PickSpawnTier wrapper; no spawn weight of its own).
-//   While you hit it, BIRD NESTS fall out of the tree (this component, added by PixelClicker.Awake, listens to PixelClicker.PixelHit): each hit has a nestChance (0 = 14%) to drop one,
+//   While you hit it, BIRD NESTS fall out of the tree (this component, added by PixelClicker.Awake, listens to PixelClicker.PixelHit): each hit has a nestChance (0 = 40%) to drop one,
 //   a nest (a woven ring with eggs) lands on the ground near the cube and stays for nestSeconds (0 = 9, it blinks away in the last 2 s). Click it (the pointer, or the crosshair in
-//   first person - with any item selected) before it vanishes for nestXp (0 = 30) Woodcutting XP, a chirp and a puff of feathers. At most maxNests lie about at once.
+//   first person - with any item selected) before it vanishes for nestXp (0 = 30) Woodcutting XP, a chirp and a puff of feathers. At most maxNests (0 = 10) lie about at once; they are thrown out to a random spot up to scatterCubes (0 = 5) cube widths from the cube.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,7 +17,7 @@ public class PixelGreatOak : MonoBehaviour
     [SerializeField] private float greatOakChance = 0f;
 
     [Range(0f, 1f)]
-    [Tooltip("Chance that a hit on the Great Oak shakes a bird nest loose. 0 = the coded default (0.14).")]
+    [Tooltip("Chance that a hit on the Great Oak shakes a bird nest loose. 0 = the coded default (0.4).")]
     [SerializeField] private float nestChance = 0f;
 
     [Min(0f)]
@@ -28,8 +28,12 @@ public class PixelGreatOak : MonoBehaviour
     [Tooltip("Woodcutting XP for catching a nest in time. 0 = the coded default (30).")]
     [SerializeField] private float nestXp = 0f;
 
+    [Min(0f)]
+    [Tooltip("How far (in cube widths) a nest can land from the cube. 0 = the coded default (5).")]
+    [SerializeField] private float scatterCubes = 0f;
+
     [Min(0)]
-    [Tooltip("Most nests lying about at once. 0 = the coded default (5).")]
+    [Tooltip("Most nests lying about at once. 0 = the coded default (10).")]
     [SerializeField] private int maxNests = 0;
 
     public static PixelGreatOak Instance { get; private set; }
@@ -53,8 +57,8 @@ public class PixelGreatOak : MonoBehaviour
     private Material nestMat, eggMat;
 
     private float Seconds => nestSeconds > 0f ? nestSeconds : 9f;
-    private float Chance => nestChance > 0f ? nestChance : 0.14f;
-    private int Max => maxNests > 0 ? maxNests : 5;
+    private float Chance => nestChance > 0f ? nestChance : 0.4f;
+    private int Max => maxNests > 0 ? maxNests : 10;
 
     private void Awake() { Instance = this; }
 
@@ -109,13 +113,19 @@ public class PixelGreatOak : MonoBehaviour
         col.radius = 0.5f * s; col.center = new Vector3(0f, s * 0.15f, 0f);
         Rigidbody rb = go.AddComponent<Rigidbody>();
         rb.mass = 0.2f;
-        Vector3 toss = (Random.onUnitSphere * 0.6f + Vector3.up * 0.4f) * size * 1.4f;
+        // Thrown out to a random spot on the ground round the cube: a flight of about 0.8 s at this launch angle covers the chosen distance.
+        float far = size * (scatterCubes > 0f ? scatterCubes : 5f);
+        float dist = Random.Range(0.25f, 1f) * far;
+        float angle = Random.Range(0f, Mathf.PI * 2f);
+        Vector3 flat = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+        float flight = 0.8f;
+        Vector3 toss = flat * (dist / flight) + Vector3.up * (0.5f * -Physics.gravity.y * flight);
 #if UNITY_6000_0_OR_NEWER
-        rb.linearDamping = 0.2f;
+        rb.linearDamping = 0f;
         rb.angularDamping = 1f;
         rb.linearVelocity = toss;
 #else
-        rb.drag = 0.2f;
+        rb.drag = 0f;
         rb.angularDrag = 1f;
         rb.velocity = toss;
 #endif
