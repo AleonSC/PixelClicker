@@ -635,9 +635,10 @@ public class PixelCrafting : MonoBehaviour
                                               buttonColor, textColor, buttonFontSize);
         buttonObject = open.gameObject;
         RectTransform br = buttonObject.GetComponent<RectTransform>();
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0f);
-        br.anchoredPosition = new Vector2(-buttonMargin.x, buttonMargin.y);
-        PixelHud.Ensure(gameObject).Dock(br, new Vector2(1f, 0f), () => windowObject != null && windowObject.activeSelf);
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 1f);
+        br.anchoredPosition = new Vector2(-buttonMargin.x, -buttonMargin.y);
+        PixelHud craftHud = PixelHud.Ensure(gameObject);
+        craftHud.Dock(br, new Vector2(1f, 1f), () => windowObject != null && windowObject.activeSelf, 0f, 1f, craftHud.ButtonSize.x + craftHud.CornerGap);   // top-right corner: Shop (corner), then Crafting
         open.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Crafting, open);
 

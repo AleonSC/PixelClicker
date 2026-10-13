@@ -1193,9 +1193,11 @@ public class PixelBank : MonoBehaviour
                                              buttonTextColor, 30f);
         hoseButtonImage = hoseButton.GetComponent<Image>();
 
-        float tabWidth = hud.ButtonSize.x * bankTabWidthFraction, hoseSize = hud.ButtonSize.y, groupWidth = tabWidth + hoseSize;
-        hud.DockInGroup(bank.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, tabWidth, 0f, groupWidth);
-        hud.DockInGroup(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 0.5f), KeepButtonsOut, 0f, hoseSize, tabWidth, groupWidth);
+        float tabWidth = hud.ButtonSize.x * bankTabWidthFraction, hoseSize = hud.ButtonSize.y;
+        // Top-left corner of the bars: Inventory (corner), then the Bank tab, then the square hose button.
+        float bankOffset = hud.ButtonSize.x + hud.CornerGap;
+        hud.Dock(bank.GetComponent<RectTransform>(), new Vector2(0f, 1f), KeepButtonsOut, 0f, bankTabWidthFraction, bankOffset);
+        hud.Dock(hoseButton.GetComponent<RectTransform>(), new Vector2(0f, 1f), KeepButtonsOut, 0f, hoseSize / hud.ButtonSize.x, bankOffset + tabWidth + hud.CornerGap * 0.5f);
         hoseButton.GetComponent<PixelDockedButton>().useOwnColor = true;
         DrawHoseIcon(hoseButton.transform, hoseSize / 64f);
         BuildTip();

@@ -32,6 +32,13 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelHud : MonoBehaviour
 {
+    [Min(0f)]
+    [Tooltip("Gap between two docked buttons that share a corner of the bars (canvas units). 0 = the default (10).")]
+    [SerializeField] private float cornerGap = 0f;
+
+    /// <summary>Gap between two docked buttons side by side in a corner.</summary>
+    public float CornerGap => cornerGap > 0f ? cornerGap : 10f;
+
     [Header("Black Bars")]
     [Tooltip("Show a black bar along the top and bottom of the screen.")]
     [SerializeField] private bool barsEnabled = true;
@@ -389,7 +396,7 @@ public class PixelHud : MonoBehaviour
     /// button's window is open, so it doesn't slide away then. 'sideOffsetY' moves a side-docked button up (positive) or
     /// down (negative) from the vertical middle, so two buttons can be docked one under the other.
     /// </summary>
-    public void Dock(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY = 0f, float widthScale = 1f)
+    public void Dock(RectTransform button, Vector2 anchor, Func<bool> keepOut, float sideOffsetY = 0f, float widthScale = 1f, float cornerOffset = 0f)
     {
         button.anchorMin = button.anchorMax = button.pivot = anchor;
         button.sizeDelta = new Vector2(ButtonSize.x * widthScale, ButtonSize.y);
@@ -412,7 +419,7 @@ public class PixelHud : MonoBehaviour
         // A button anchored at the vertical middle (anchor.y = 0.5) docks to the left / right edge instead of the top / bottom.
         PixelDockedButton dock = button.gameObject.GetComponent<PixelDockedButton>();
         if (dock == null) dock = button.gameObject.AddComponent<PixelDockedButton>();
-        dock.Setup(this, button, anchor, keepOut, sideOffsetY, (ButtonSize.x - button.sizeDelta.x) * 0.5f);
+        dock.Setup(this, button, anchor, keepOut, sideOffsetY, (ButtonSize.x - button.sizeDelta.x) * 0.5f, 0f, cornerOffset);
         if (button.GetComponent<PixelDockFx>() == null) button.gameObject.AddComponent<PixelDockFx>();
         PixelMenuFx.DecorateHud(button.GetComponent<Button>());   // the shine on hover   // the button materializes out of pixels when it slides out (a toggle in Settings)
     }
@@ -487,10 +494,12 @@ public class PixelDockedButton : MonoBehaviour
     /// <summary>How far out the button is (0 = hidden, 1 = fully shown).</summary>
     public float SlideAmount => slide;
 
+    private float cornerOffset; // a corner button sits this far along its bar from the corner, towards the middle (two buttons per corner: the second one is offset by the first one's width + the gap)
     private float groupWidth; // > 0: this button is one of a side-by-side group that slides as a whole (see PixelHud.DockInGroup)
 
-    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f, float offsetX = 0f, float groupTotalWidth = 0f)
+    public void Setup(PixelHud owner, RectTransform button, Vector2 corner, Func<bool> keepOutWhile, float offsetY = 0f, float offsetX = 0f, float groupTotalWidth = 0f, float cornerAlong = 0f)
     {
+        cornerOffset = cornerAlong;
         sideOffsetY = offsetY;
         sideOffsetX = offsetX;
         groupWidth = groupTotalWidth;
@@ -566,6 +575,7 @@ public class PixelDockedButton : MonoBehaviour
         float f = Mathf.Clamp01(anchor.x);
         float x = Mathf.Lerp(hud.SideShownInset, -hud.SideShownInset, f);
         if (groupWidth > 0f) x += -f * groupWidth + sideOffsetX;   // one of a group: the whole group is spread like one button, this member sits at its offset
+        else x += f > 0.5f ? -cornerOffset : cornerOffset;
         float push = (1f - PixelHud.RevealEased) * (hud.BandHeight + hud.ButtonSize.y + 40f);
         rect.anchoredPosition = new Vector2(x, top ? -inset + push : inset - push);
     }
@@ -592,7 +602,7 @@ public class PixelDockedButton : MonoBehaviour
 
         float w = rect.sizeDelta.x;
         float f = Mathf.Clamp01(anchor.x), screenW = Screen.width / scale;
-        float x0 = (groupWidth > 0f ? f * (screenW - groupWidth) + sideOffsetX : f * (screenW - w)) + Mathf.Lerp(hud.SideShownInset, -hud.SideShownInset, f);
+        float x0 = (groupWidth > 0f ? f * (screenW - groupWidth) + sideOffsetX : f * (screenW - w) + (f > 0.5f ? -cornerOffset : cornerOffset)) + Mathf.Lerp(hud.SideShownInset, -hud.SideShownInset, f);
         float x1 = x0 + w;
         float px = p.x / scale, py = p.y / scale;
         float fromEdge = anchor.y > 0.5f ? Screen.height / scale - py : py; // distance of the mouse from the button's screen edge

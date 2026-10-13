@@ -517,13 +517,14 @@ public class PixelToggles : MonoBehaviour
                                               buttonColor, buttonTextColor, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
         // The tab is narrower, with a square My Window button on its inner side (the Bank tab and its hose button work the same way on the left edge).
-        float squareSize = hud.ButtonSize.y, tabWidth = hud.ButtonSize.x - squareSize, groupWidth = hud.ButtonSize.x;
+        float squareSize = hud.ButtonSize.y, tabWidth = hud.ButtonSize.x - squareSize;
         myWindowButton = PixelUIKit.CreateButton(font, canvasRoot.transform, "My Window Button", "", new Vector2(squareSize, squareSize),
                                                  buttonColor, buttonTextColor, 20f);
         System.Func<bool> keepOut = () => (windowObject != null && windowObject.activeSelf) || (hintObject != null && hintObject.activeSelf)   // stays out while its hint is showing
                                           || (dock != null && dock.PointerNear()) || (myDock != null && myDock.PointerNear());
-        hud.DockInGroup(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), keepOut, 0f, tabWidth, 0f, groupWidth);
-        hud.DockInGroup(myWindowButton.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), keepOut, 0f, squareSize, tabWidth, groupWidth);
+        // Bottom-right corner of the bars: the Toggles tab in the corner, the square My Window button beside it (and the Pixel Guide button next to those).
+        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0f), keepOut, 0f, tabWidth / hud.ButtonSize.x, 0f);
+        hud.Dock(myWindowButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), keepOut, 0f, squareSize / hud.ButtonSize.x, tabWidth + hud.CornerGap * 0.5f);
         myDock = myWindowButton.GetComponent<PixelDockedButton>();
         myGroup = myWindowButton.gameObject.AddComponent<CanvasGroup>();
         BuildMyWindowIcon(myWindowButton, squareSize);

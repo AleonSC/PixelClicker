@@ -165,7 +165,9 @@ public class PixelPixelGuide : MonoBehaviour
         // The button, docked on the middle of the right edge directly under the Toggles button.
         Button open = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Pixel Guide Button", buttonText, new Vector2(230f, 64f), buttonColor, Color.white, 30f);
         PixelHud hud = PixelHud.Ensure(gameObject);
-        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0.5f), () => windowObject != null && windowObject.activeSelf, -(hud.ButtonSize.y + 14f));
+        // Bottom-right corner, beside the Toggles tab and its My Window button: [Pixel Guide][My Window][Toggles].
+        float guideOffset = hud.ButtonSize.x + hud.CornerGap;
+        hud.Dock(open.GetComponent<RectTransform>(), new Vector2(1f, 0f), () => windowObject != null && windowObject.activeSelf, 0f, 1f, guideOffset);
         open.onClick.AddListener(Toggle);
         openObject = open.gameObject;
         dock = openObject.GetComponent<PixelDockedButton>();

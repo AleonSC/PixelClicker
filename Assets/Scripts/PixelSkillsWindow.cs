@@ -26,9 +26,6 @@ public partial class PixelSkills
     [Tooltip("Gap between the screen edge's docked tab and the window.")]
     [SerializeField] private float gapToButton = 14f;
 
-    [Tooltip("Gap between the Bank / Hose buttons and the Skills tab under them.")]
-    [SerializeField] private float tabGap = 10f;
-
     [SerializeField] private string windowTitle = "Skills";
     [SerializeField] private string tabText = "Skills";
     [SerializeField] private string trainText = "Train";
@@ -119,12 +116,11 @@ public partial class PixelSkills
         canvasRoot = PixelUIKit.CreateCanvas("PixelSkills Canvas", sortingOrder, new Vector2(1920f, 1080f), true);
 
         // ---- The tab: left edge, directly under the Bank + Hose buttons (same width as the pair). ----
-        float groupWidth = PixelBank.DockGroupWidth(hud);
         tabButton = PixelUIKit.CreateButton(Font, canvasRoot.transform, "Skills Button", tabText, hud.ButtonSize, tabColor, textColor, 30f);
         tabObject = tabButton.gameObject;
         RectTransform tabRect = tabButton.GetComponent<RectTransform>();
-        hud.DockInGroup(tabRect, new Vector2(0f, 0.5f), () => WindowOpen || (tabDock != null && tabDock.PointerNear()),
-                        -(hud.ButtonSize.y + tabGap), groupWidth, 0f, groupWidth);
+        // Bottom-left corner of the bars: Log (corner), then the Skills tab.
+        hud.Dock(tabRect, new Vector2(0f, 0f), () => WindowOpen || (tabDock != null && tabDock.PointerNear()), 0f, 1f, hud.ButtonSize.x + hud.CornerGap);
         tabDock = tabButton.GetComponent<PixelDockedButton>();
         tabDock.blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
         tabGroup = tabObject.AddComponent<CanvasGroup>();

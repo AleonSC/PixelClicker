@@ -769,3 +769,4 @@
 [2026-10-13 10:26 UTC] Widened the Key Bindings screen (1150 wide, new width setting) and made its labels and key buttons bigger.
 [2026-10-13 10:28 UTC] Fixed the pale slanted bar that showed on the left of Settings section headers and other animated menu buttons (the shine effect started visible).
 [2026-10-13 10:31 UTC] Added the hover shine to the Save / Load screen's buttons and to the docked HUD buttons (the HUD ones follow the 'Pixel-assemble menu buttons' toggle).
+[2026-10-13 10:43 UTC] Docked HUD buttons now sit two (or three) per corner of the black bars: top-left Inventory + Bank + Hose, top-right Shop + Crafting, bottom-left Log + Skills, bottom-right Toggles + My Window + Pixel Guide. Their windows (including the Toggles / Pixel Guide windows that dock beside the shop) are unchanged.
