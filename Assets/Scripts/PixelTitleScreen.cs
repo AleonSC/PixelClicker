@@ -525,7 +525,9 @@ public class PixelTitleScreen : MonoBehaviour
         Stretched(foreground);
 
         GameObject barGo = new GameObject("Bar", typeof(RectTransform), typeof(Image));
-        barGo.transform.SetParent(foreground.transform, false);
+        // The bar (and its glow) is NOT under 'foreground': it stays visible, behind the pause menu's windows, while Settings / Load are open on the title.
+        barGo.transform.SetParent(canvasRoot.transform, false);
+        barGo.transform.SetSiblingIndex(foreground.transform.GetSiblingIndex());   // (just under the foreground, same drawing order as before)
         bar = barGo.GetComponent<Image>();
         bar.color = PixelHud.BarTint(barColor);
         titleBarVersion = PixelHud.BarColorVersion;
