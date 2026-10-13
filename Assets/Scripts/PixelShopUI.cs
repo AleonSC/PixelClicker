@@ -118,6 +118,15 @@ public partial class PixelShop
         PixelNotice.SideGap = currencyPanelGap;
         PixelUIKit.StyleWindow(panelObject.GetComponent<Image>(), panelColor);
 
+        // The fancy menu look (Settings > Interface > Fancy pause menu): a colour-cycling glow behind the panel and a light segment sliding under the title.
+        GameObject glow = new GameObject("Fancy Panel Glow", typeof(RectTransform), typeof(Image), typeof(PixelMenuPanelGlow));
+        glow.transform.SetParent(parent, false);
+        glow.transform.SetSiblingIndex(panelObject.transform.GetSiblingIndex());   // just behind the panel
+        glow.GetComponent<Image>().raycastTarget = false;
+        glow.GetComponent<PixelMenuPanelGlow>().target = panelRect;
+        PixelUIKit.StyleBox(glow.GetComponent<Image>());
+        PixelMenuFx.BuildTitleLine(panelRect, panelPadding, -(headerHeight - 4f), panelWidth - panelPadding * 2f);
+
         // Title
         TMP_Text title = CreateText(panelObject.transform, "Title", panelTitle, titleFontSize,
                                     TextAlignmentOptions.Center, FontStyles.Bold);
@@ -1042,6 +1051,7 @@ public partial class PixelShop
         button.targetGraphic = image;
         button.onClick.AddListener(() => PixelAudio.Play("ui_click")); // the shop builds its own buttons, so it adds the sound itself
         go.AddComponent<PixelButtonPulse>();   // a neon rim in the button's colour comes out from under it on every press
+        PixelMenuFx.DecorateAll(go.transform);   // the fancy menu's brighten / shine / press (this button only)
 
         labelText = CreateText(go.transform, "Label", label, labelSize, TextAlignmentOptions.Center, FontStyles.Bold);
         labelText.color = labelColor;

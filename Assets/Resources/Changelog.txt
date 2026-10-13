@@ -773,3 +773,4 @@
 [2026-10-13 10:55 UTC] Removed the woodchipper and log rack (PixelWoodworking deleted), and the Pixel Guide, Toggles, Skills and Bank / Hose buttons now stay visible when their window is open so they can be clicked again to close it.
 [2026-10-13 10:57 UTC] My Window: opens tall (450 x 660) at the right just above the bottom bar, can only be dragged inside the playfield between the black bars, has a minimize button (header only), and can be dragged against the left or right screen edge to dock there at any height as a slide-out window with an undock arrow button in its header.
 [2026-10-13 11:03 UTC] Fixed a compile error in My Window (a duplicate variable name in the minimize button code).
+[2026-10-13 12:22 UTC] The docked UI buttons now also shine every few seconds like the menu buttons, and the shop got the fancy menu look (button shine, glowing panel, sliding title line).

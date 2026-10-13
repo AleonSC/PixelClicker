@@ -9,6 +9,7 @@
 //   * PixelMenuBackdrop (PixelPauseMenu.BuildUI -> BuildBackdrop): soft pixel motes drifting up behind the panel + a darkening vignette over the dimmer.
 //   * PixelMenuPanelGlow: a rounded glow behind the main panel that slowly cycles colour and breathes; PixelMenuTitleLine: a light segment sliding along a line under the title.
 //   * The SETTINGS and STATS screens get the lighter button animation (PixelMenuFx.DecorateAll: brighten, shine, press; no scaling inside scroll lists).
+//   * The docked HUD buttons also get the light animation WITH the idle shine (DecorateHud), and the SHOP gets the same treatment (its buttons, a glow behind the panel and the sliding title line; PixelShop.BuildPanel / CreateButton).
 //   * PixelDockFx on every docked HUD button (PixelHud.Dock / DockInGroup): the button MATERIALIZES out of pixels each time it slides out (own toggle: 'Pixel-assemble menu buttons', PixelMenuFx.HudEnabled, PlayerPrefs PixelClicker.Setting.FancyHud).
 //   Everything runs on unscaled time (the game is paused while the menu shows).
 // ---------------------------------------------------
@@ -47,7 +48,7 @@ public static class PixelMenuFx
     public static void DecorateHud(Button button)
     {
         if (button == null || button.GetComponent<PixelFancyButton>() != null || button.GetComponent<Image>() == null) return;
-        button.gameObject.AddComponent<PixelFancyButton>().Setup(Color.white, null, 0, true, true);
+        button.gameObject.AddComponent<PixelFancyButton>().Setup(Color.white, null, 0, true, true, true);   // (+ the shine every few seconds, like the main menu's buttons)
     }
 
     /// <summary>The light animation (brighten, shine, press) for every button under a screen (Settings, Stats, Save / Load).</summary>
@@ -128,7 +129,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private Color accent;
     private Texture2D icon;
     private int index;
-    private bool lightMode, hudSetting;
+    private bool lightMode, hudSetting, idleSheen;
     private Button button;
     private Image image;
     private RectTransform rect, labelRect;
@@ -142,7 +143,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private RectTransform shine;
     private float shineRange;
 
-    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false, bool followHudSetting = false) { accent = accentColor; icon = iconTexture; index = i; lightMode = lighter; hudSetting = followHudSetting; }
+    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false, bool followHudSetting = false, bool sheenOften = false) { accent = accentColor; icon = iconTexture; index = i; lightMode = lighter; hudSetting = followHudSetting; idleSheen = sheenOften; }
 
     private void Build()
     {
@@ -208,7 +209,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             }
             idleShine = Random.Range(2f, 7f) + index * 0.9f;
         }
-        else idleShine = 1e9f;
+        else idleShine = idleSheen ? Random.Range(2f, 8f) : 1e9f;
     }
 
     private void OnEnable() { if (built) enterT = 0f; else enterT = -1f; hoverT = 0f; press = hover = false; }
@@ -249,6 +250,9 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         {
             if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(10f * h, 0f);
             stripe.rectTransform.sizeDelta = new Vector2(6f + 10f * h, 0f);
+        }
+        if (!lightMode || idleSheen)
+        {
             idleShine -= dt;
             if (idleShine <= 0f) { idleShine = Random.Range(6f, 9f); shineT = 0f; }
         }
@@ -474,6 +478,7 @@ public class PixelMenuPanelGlow : MonoBehaviour
         float grow = 26f + 8f * Mathf.Sin(t * 1.7f);
         rect.sizeDelta = target.rect.size + new Vector2(grow, grow);
         rect.anchoredPosition = target.anchoredPosition;
+        rect.localScale = target.localScale;   // (follows a window's pop-open animation)
         Color c = Color.HSVToRGB(Mathf.Repeat(t * 0.04f, 1f), 0.55f, 1f);
         c.a = 0.32f + 0.1f * Mathf.Sin(t * 1.7f);
         image.color = c;
