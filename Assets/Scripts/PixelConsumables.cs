@@ -861,7 +861,7 @@ public class PixelConsumables : MonoBehaviour
     {
         System.Collections.Generic.List<Potion> list = new System.Collections.Generic.List<Potion>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
-            if (!PixelClicker.IsDragonCube(type) && !PixelClicker.IsStandalone(type)) list.Add(CreateDefaultPotion(type)); // no potions for the Dragon Cubes, Fire or the ores
+            if (!PixelClicker.IsDragonCube(type)) list.Add(CreateDefaultPotion(type)); // a potion for every pixel (only the Dragon Cubes have none)
         return list.ToArray();
     }
 
@@ -958,7 +958,7 @@ public class PixelConsumables : MonoBehaviour
 
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
+            if (PixelClicker.IsDragonCube(type)) continue;
             if (Array.Exists(potions, p => p != null && p.type == type)) continue;
             Array.Resize(ref potions, potions.Length + 1);
             potions[potions.Length - 1] = CreateDefaultPotion(type);
@@ -1015,7 +1015,8 @@ public class PixelConsumables : MonoBehaviour
     private void AppendComboPotions()
     {
         System.Collections.Generic.List<Potion> bases = new System.Collections.Generic.List<Potion>();
-        foreach (Potion p in potions) if (p != null && !p.craftOnly && p.type != PixelClicker.PixelType.Vacuum) bases.Add(p);
+        // (The standalone types - ores, skill blocks, Fire... - have single potions only: combining all of them would make tens of thousands of combos, and their enum values are past the 64 bits of the lookup mask.)
+        foreach (Potion p in potions) if (p != null && !p.craftOnly && p.type != PixelClicker.PixelType.Vacuum && !PixelClicker.IsStandalone(p.type)) bases.Add(p);
         bases.Sort((x, y) => ((int)x.type).CompareTo((int)y.type));
 
         System.Collections.Generic.List<Potion> all = new System.Collections.Generic.List<Potion>(potions);

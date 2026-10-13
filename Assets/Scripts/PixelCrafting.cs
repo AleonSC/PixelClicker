@@ -426,7 +426,7 @@ public class PixelCrafting : MonoBehaviour
         List<Recipe> list = new List<Recipe>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
+            if (PixelClicker.IsDragonCube(type)) continue;
             list.Add(new Recipe
             {
                 label = type + " Potion",
@@ -446,7 +446,7 @@ public class PixelCrafting : MonoBehaviour
         bool changed = false;
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
+            if (PixelClicker.IsDragonCube(type)) continue;
             if (recipes.Exists(r => r != null && r.resultKind == ResultKind.Potion && r.resultPotion == type)) continue;
             recipes.Add(new Recipe
             {
@@ -828,12 +828,28 @@ public class PixelCrafting : MonoBehaviour
         tr.sizeDelta = new Vector2(-40f, titleH);
         tr.anchoredPosition = new Vector2(0f, -20f);
 
+        // Search box under the title: filters the list by name.
+        float searchH = 56f;
+        materialSearchField = PixelUIKit.CreateInputField(font, panel.transform, "Search", new Vector2(0f, searchH), slotColor, textColor, fontSize * 0.8f, "Search materials...");
+        PixelUIKit.AddSearchIcon(materialSearchField);
+        RectTransform sr = materialSearchField.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0f, 1f);
+        sr.anchorMax = new Vector2(1f, 1f);
+        sr.pivot = new Vector2(0.5f, 1f);
+        sr.sizeDelta = new Vector2(-40f, searchH);
+        sr.anchoredPosition = new Vector2(0f, -(20f + titleH + 6f));
+        materialSearchField.onValueChanged.AddListener(text =>
+        {
+            materialSearch = (text ?? "").Trim().ToLowerInvariant();
+            RefreshList();
+        });
+
         listScroll = PixelUIKit.CreateScrollView(panel.transform, "Item List", scrollbarColor, 12f, RowHeight * 0.6f, out listContent, out listBar);
         RectTransform vr = listScroll.GetComponent<RectTransform>();
         vr.anchorMin = Vector2.zero;
         vr.anchorMax = Vector2.one;
         vr.offsetMin = new Vector2(20f, 20f);
-        vr.offsetMax = new Vector2(-20f, -(20f + titleH));
+        vr.offsetMax = new Vector2(-20f, -(20f + titleH + 6f + searchH + 10f));
 
         emptyLabel = MakeLabel(listContent, "Empty", emptyItemsText, fontSize * 0.8f, TextAlignmentOptions.Center, FontStyles.Italic);
         emptyLabel.color = new Color(textColor.r, textColor.g, textColor.b, 0.6f);
@@ -907,8 +923,7 @@ public class PixelCrafting : MonoBehaviour
     private bool RecipeKnown(Recipe r)
     {
         if (PixelStats.Total(RecipeKey(r)) > 0d || PixelStats.Total(LegacyRecipeKey(r)) > 0d) return true;
-        int result = ResultIndex(r);
-        return result >= 0 && consumables != null && consumables.ItemOwned(result) > 0; // older saves: owning the result counts
+        return false;   // the book starts empty: a recipe is only written down once it was crafted
     }
 
     /// <summary>
@@ -921,7 +936,7 @@ public class PixelCrafting : MonoBehaviour
     private List<Recipe> AllRecipes()
     {
         List<Recipe> list = new List<Recipe>();
-        foreach (Recipe r in recipes) if (r != null) list.Add(r);
+        foreach (Recipe r in recipes) if (r != null && RecipeKnown(r)) list.Add(r);
         if (comboCraftingEnabled && consumables != null)
             for (int i = 0; i < consumables.ItemCount && !consumables.IsDevice(i); i++)
             {
@@ -929,7 +944,7 @@ public class PixelCrafting : MonoBehaviour
                 Item potion = new Item(ItemKind.Potion, consumables.ItemRequiredType(i), true, consumables.ItemSecondType(i), consumables.ItemHasThird(i), consumables.ItemThirdType(i));
                 List<Recipe> ways = Decompositions(potion);
                 if (ways.Count == 0) continue;
-                if (potion.hasThird && !RecipeKnown(ways[0])) continue;   // 3-type potions are listed once made
+                if (!RecipeKnown(ways[0])) continue;   // listed once made
                 list.Add(ways[0]);
             }
         return list;
@@ -1122,7 +1137,7 @@ public class PixelCrafting : MonoBehaviour
             y += BookRowHeight;
         }
         // A line of help at the end of the list (or when nothing matches the search).
-        string note = bookRows.Count == 0 ? "No recipes found." : bookSearch.Length == 0 ? "Click a recipe to fill the boxes. 3-type potions are listed once you have crafted them." : "";
+        string note = bookRows.Count == 0 ? (bookSearch.Length == 0 ? "Nothing crafted yet. Every recipe you craft is written down here." : "No recipes found.") : bookSearch.Length == 0 ? "Click a recipe to fill the boxes." : "";
         if (note.Length > 0)
         {
             GameObject noteRow = new GameObject("Note", typeof(RectTransform));
@@ -1449,7 +1464,7 @@ public class PixelCrafting : MonoBehaviour
         FitWindow();
         List<Item> items = new List<Item>();
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (Math.Floor(t.count) >= 1d && !t.rareDrop && !PixelClicker.IsStandalone(t.type)) items.Add(new Item(ItemKind.Pixel, t.type)); // Dragon Cubes are for the wish, not crafting
+            if (Math.Floor(t.count) >= 1d && !t.rareDrop) items.Add(new Item(ItemKind.Pixel, t.type)); // Dragon Cubes are for the wish, not crafting
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount && !consumables.IsDevice(i); i++)
                 if (consumables.ItemCraftOnly(i) ? consumables.Get(i).owned > 0 : consumables.ItemOwned(i) > 0) // combo potions only when really held (Infinite resources would list all of them)
@@ -1464,7 +1479,32 @@ public class PixelCrafting : MonoBehaviour
                 if (dv >= 0 && consumables.ItemOwned(dv) > 0) items.Add(new Item(ItemKind.Device, PixelClicker.PixelType.White) { device = kind });
             }
 
-        while (cells.Count < items.Count) cells.Add(BuildCell());
+        // Search, then lay the rest out under foldable category headers (Pixels / Potions / Devices).
+        bool searching = materialSearch.Length > 0;
+        if (searching) items.RemoveAll(it => !ItemName(it).ToLowerInvariant().Contains(materialSearch));
+        int[] totals = new int[3];
+        foreach (Item it in items) totals[(int)it.kind]++;
+        List<Item> shown = new List<Item>();
+        List<float> shownY = new List<float>();
+        float y = 0f;
+        int headerCount = 0;
+        for (int c = 0; c < 3; c++)
+        {
+            if (totals[c] == 0) continue;
+            MaterialHeader h = GetHeader(headerCount++);
+            h.category = c;
+            h.rect.gameObject.SetActive(true);
+            h.rect.anchoredPosition = new Vector2(0f, -y);
+            bool open = searching || !materialsCollapsed[c];
+            h.label.text = (open ? "- " : "+ ") + CategoryNames[c] + " (" + totals[c] + ")";
+            y += HeaderHeight;
+            if (!open) continue;
+            foreach (Item it in items)
+                if ((int)it.kind == c) { shown.Add(it); shownY.Add(y); y += RowHeight; }
+        }
+        for (int i = headerCount; i < headers.Count; i++) headers[i].rect.gameObject.SetActive(false);
+
+        while (cells.Count < shown.Count) cells.Add(BuildCell());
 
         bool oneFilled = slots[0].has != slots[1].has;
         Item filledItem = slots[0].has ? slots[0].item : slots[1].item;
@@ -1472,11 +1512,11 @@ public class PixelCrafting : MonoBehaviour
         for (int i = 0; i < cells.Count; i++)
         {
             Cell cell = cells[i];
-            bool used = i < items.Count;
+            bool used = i < shown.Count;
             if (cell.rect.gameObject.activeSelf != used) cell.rect.gameObject.SetActive(used);
             if (!used) continue;
 
-            Item item = items[i];
+            Item item = shown[i];
             if (!cell.built || !SameItem(cell.item, item))
             {
                 if (cell.icon != null) Destroy(cell.icon);
@@ -1492,12 +1532,65 @@ public class PixelCrafting : MonoBehaviour
             cell.disabled = !compatible;
             if (cell.group != null) cell.group.alpha = compatible ? 1f : 0.3f;
 
-            cell.rect.anchoredPosition = new Vector2(0f, -i * RowHeight);
+            cell.rect.anchoredPosition = new Vector2(0f, -shownY[i]);
         }
 
-        float contentHeight = items.Count > 0 ? items.Count * RowHeight : fontSize * 2.6f;
+        float contentHeight = items.Count > 0 ? y : fontSize * 2.6f;
+        emptyLabel.text = searching ? "Nothing matches your search." : emptyItemsText;
         emptyLabel.gameObject.SetActive(items.Count == 0);
         PixelUIKit.UpdateScrollView(listScroll, listBar, contentHeight, listScroll.GetComponent<RectTransform>().rect.height);
+    }
+
+    // ---- Materials list: category headers + search ----
+
+    private static readonly string[] CategoryNames = { "PIXELS", "POTIONS", "DEVICES" };
+    private readonly bool[] materialsCollapsed = new bool[3];
+    private string materialSearch = "";
+    private TMP_InputField materialSearchField;
+    private readonly List<MaterialHeader> headers = new List<MaterialHeader>();
+    private float HeaderHeight => RowHeight * 0.55f;
+
+    private class MaterialHeader
+    {
+        public RectTransform rect;
+        public TMP_Text label;
+        public int category;
+    }
+
+    private MaterialHeader GetHeader(int index)
+    {
+        while (headers.Count <= index)
+        {
+            MaterialHeader h = new MaterialHeader();
+            GameObject go = new GameObject("Category", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(listContent, false);
+            Image im = go.GetComponent<Image>();
+            im.color = new Color(cellColor.r, cellColor.g, cellColor.b, 0.55f);
+            PixelUIKit.StyleBox(im);
+            h.rect = go.GetComponent<RectTransform>();
+            h.rect.anchorMin = new Vector2(0f, 1f);
+            h.rect.anchorMax = new Vector2(1f, 1f);
+            h.rect.pivot = new Vector2(0.5f, 1f);
+            h.rect.sizeDelta = new Vector2(0f, HeaderHeight - 6f);
+            h.label = MakeLabel(go.transform, "Text", "", fontSize * 0.6f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold);
+            h.label.raycastTarget = false;
+            RectTransform lr = h.label.rectTransform;
+            lr.anchorMin = Vector2.zero;
+            lr.anchorMax = Vector2.one;
+            lr.offsetMin = new Vector2(14f, 0f);
+            lr.offsetMax = new Vector2(-8f, 0f);
+            Button b = go.GetComponent<Button>();
+            b.targetGraphic = im;
+            b.transition = Selectable.Transition.None;   // (a Button, not a drag handler, so the list still scrolls when dragged)
+            b.onClick.AddListener(() =>
+            {
+                materialsCollapsed[h.category] = !materialsCollapsed[h.category];
+                PixelAudio.Play("ui_click");
+                RefreshList();
+            });
+            headers.Add(h);
+        }
+        return headers[index];
     }
 
     private Cell BuildCell()
@@ -1656,6 +1749,7 @@ public class PixelCrafting : MonoBehaviour
         else return null;
 
         if (potion.hasThird) return null;
+        if (PixelClicker.IsStandalone(potion.type)) return null;   // standalone pixels only have single potions
         if (potion.type == pixel.type || (potion.combo && potion.second == pixel.type)) return null;
         if (PixelClicker.IsDragonCube(pixel.type) || PixelClicker.IsStandalone(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
         if (clicker.IndexOf(pixel.type) < 0) return null;
