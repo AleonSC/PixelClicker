@@ -6,7 +6,10 @@
 //   filter, fuel tank, muffler and exhaust stack; a control panel with levers, a gauge and an e-stop; an amber beacon; reflectors. Build(true) makes the see-through placement ghost (no colliders).
 //   BEHAVIOUR (the placed machine): any old pixel inside the hopper (or just above its mouth, suction) is pulled to the rollers and SHREDDED: PixelClicker.ClaimOldPixel takes it out of the list
 //   (no payout), it is drawn through the rollers while it squashes, and a burst of pixel-coloured chips plus wood chips comes out of the chute. While it works the machine shakes, the rollers and
-//   flywheel speed up, the beacon blinks and the exhaust puffs more. Pixels you are holding are left alone. Tunables are [SerializeField] fields (editable live with the Dev Hub's Inspector).
+//   flywheel speed up, the beacon blinks and the exhaust puffs more. Pixels you are holding are left alone.
+//   GAME RULES: a WOOD pixel (PixelClicker.IsWoodBlock) gives Woodcutting XP (woodXp, PixelSkills.AddXp on the Woodcutting pack, with the usual popup). Any other pixel DAMAGES it
+//   (damagePerOtherPixel off 'maxHealth'): the paint darkens, sparks fly, the exhaust turns black and thick; a health bar floats over it. At 0 it is BROKEN for good (stops, no beacon, smoke,
+//   'BROKEN' label): clear it in the Tester tab and place a new one. Tunables are [SerializeField] fields (editable live with the Dev Hub's Inspector).
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -58,6 +61,16 @@ public class PixelWoodChipper : MonoBehaviour
     [Tooltip("Seconds the machine stays 'busy' (shaking, beacon, fast rollers) after the last pixel.")]
     [SerializeField] private float busySeconds = 1.2f;
 
+    [Header("Game rules")]
+    [Tooltip("Woodcutting XP for every wood pixel shredded.")]
+    [SerializeField] private float woodXp = 3f;
+
+    [Tooltip("How much damage every non-wood pixel does to the machine.")]
+    [SerializeField] private float damagePerOtherPixel = 14f;
+
+    [Tooltip("The machine's health; at 0 it breaks for good.")]
+    [SerializeField] private float maxHealth = 100f;
+
     [Header("Look")]
     [Tooltip("How strongly the machine shakes while busy (machine units).")]
     [SerializeField] private float shakeAmount = 0.025f;
@@ -95,42 +108,66 @@ public class PixelWoodChipper : MonoBehaviour
     private Vector3 shakeHome;
     private float busyUntil, rollerAngle, flyAngle;
     private float scaleFactor = 1f;
+    private float health;
+    private bool broken;
+    private readonly List<Renderer> paintRenderers = new List<Renderer>();
+    private readonly List<Color> paintColors = new List<Color>();
+    private Transform barRoot, barFill;
+    private Material barFillMat;
+    private TextMesh brokenLabel;
+    private ParticleSystem sparks;
 
     private bool Busy => Time.time < busyUntil;
 
     private void Update()
     {
-        bool busy = Busy;
+        bool busy = Busy && !broken;
         float dt = Time.deltaTime;
         float rollerSpeed = busy ? 520f : 40f, flySpeed = busy ? 900f : 160f;
         rollerAngle += rollerSpeed * dt;
         flyAngle += flySpeed * dt;
+        if (broken) { rollerSpeed = 0f; flySpeed = 0f; }
         if (rollerA != null) rollerA.localRotation = Quaternion.Euler(0f, 0f, rollerAngle);
         if (rollerB != null) rollerB.localRotation = Quaternion.Euler(0f, 0f, -rollerAngle);
         if (flywheel != null) flywheel.localRotation = Quaternion.Euler(0f, 0f, flyAngle);
 
         if (shake != null)
         {
-            Vector3 jitter = busy ? new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * shakeAmount : Vector3.zero;
+            Vector3 jitter = busy && !broken ? new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)) * shakeAmount : Vector3.zero;
             jitter += new Vector3(0f, Mathf.Sin(Time.time * 38f) * 0.004f, 0f);   // the idling engine
             shake.localPosition = shakeHome + jitter;
         }
         if (beaconMat != null)
         {
-            bool on = busy ? Mathf.Repeat(Time.time * 4f, 1f) < 0.5f : Mathf.Repeat(Time.time * 0.8f, 1f) < 0.15f;
+            bool on = broken ? false : busy ? Mathf.Repeat(Time.time * 4f, 1f) < 0.5f : Mathf.Repeat(Time.time * 0.8f, 1f) < 0.15f;
             Color c = on ? new Color(1f, 0.7f, 0.1f) : new Color(0.45f, 0.25f, 0.03f);
             SetColor(beaconMat, c);
         }
         if (smoke != null)
         {
+            float hurt = 1f - Mathf.Clamp01(health / Mathf.Max(1f, maxHealth));   // 0 = fine, 1 = wrecked
             ParticleSystem.EmissionModule em = smoke.emission;
-            em.rateOverTime = busy ? 28f : 7f;
+            em.rateOverTime = (busy ? 28f : 7f) + hurt * 26f;
+            ParticleSystem.MainModule sm = smoke.main;
+            Color grey = Color.Lerp(new Color(0.45f, 0.45f, 0.48f, 0.6f), new Color(0.05f, 0.05f, 0.06f, 0.85f), hurt);   // thicker and blacker the worse it is
+            sm.startColor = grey;
+        }
+        if (broken && sparks != null && Random.value < dt * 2.5f) EmitSparks(2 + Random.Range(0, 3));
+        if (barRoot != null)
+        {
+            Camera cam = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            if (cam != null) barRoot.rotation = cam.transform.rotation;
+        }
+        if (brokenLabel != null)
+        {
+            Camera cam2 = clicker != null && clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+            if (cam2 != null) brokenLabel.transform.rotation = cam2.transform.rotation;
         }
     }
 
     private void FixedUpdate()
     {
-        if (clicker == null) return;
+        if (clicker == null || broken) return;
         IReadOnlyList<Rigidbody> list = clicker.OldPixels;
         if (list == null || list.Count == 0) return;
         Vector3 throat = transform.TransformPoint(ThroatLocal);
@@ -185,7 +222,12 @@ public class PixelWoodChipper : MonoBehaviour
         GameObject go = rb.gameObject;
         Transform t = go.transform;
         Color tint = Color.white;
-        if (clicker != null && clicker.IsValidTierIndex(info.tierIndex)) tint = clicker.Tiers[info.tierIndex].color;
+        bool isWood = false;
+        if (clicker != null && clicker.IsValidTierIndex(info.tierIndex))
+        {
+            tint = clicker.Tiers[info.tierIndex].color;
+            isWood = PixelClicker.IsWoodBlock(clicker.Tiers[info.tierIndex].type);
+        }
         foreach (Collider c in go.GetComponentsInChildren<Collider>()) c.enabled = false;
         rb.isKinematic = true;
         OldPixelDespawn despawn = go.GetComponent<OldPixelDespawn>();
@@ -207,6 +249,7 @@ public class PixelWoodChipper : MonoBehaviour
         }
 
         PixelAudio.Play("hit", 0.55f, 0.6f);
+        if (isWood) GiveWoodXp(); else TakeDamage();
         time = 0f;
         while (time < chewSeconds)
         {
@@ -220,6 +263,81 @@ public class PixelWoodChipper : MonoBehaviour
 
         if (go != null) Destroy(go);
         EmitChips(tint);
+    }
+
+    /// <summary>A wood pixel went through: Woodcutting XP.</summary>
+    private void GiveWoodXp()
+    {
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills == null || woodXp <= 0f) return;
+        PixelSkills.SkillPack pack = skills.Find(PixelSkills.WoodcuttingId);
+        if (pack != null) skills.AddXp(pack, woodXp);
+    }
+
+    /// <summary>Something that is not wood went through: the machine takes damage, and breaks for good at 0.</summary>
+    private void TakeDamage()
+    {
+        if (broken) return;
+        health = Mathf.Max(0f, health - damagePerOtherPixel);
+        EmitSparks(10);
+        busyUntil = Time.time + 2f;
+        PixelAudio.Play("glass_shatter", 0.6f, 0.5f);
+        RefreshCondition();
+        if (health <= 0f) Break();
+    }
+
+    private void Break()
+    {
+        broken = true;
+        busyUntil = 0f;
+        EmitSparks(30);
+        PixelAudio.Play("device_arm", 0.5f, 0.8f);
+        if (brokenLabel != null) brokenLabel.gameObject.SetActive(true);
+        RefreshCondition();
+        PixelHints.Announce("The Wood Chipper broke - only wood goes in it. Clear it in the Tester tab and place a new one.");
+    }
+
+    /// <summary>Health bar + paint darkness follow the health.</summary>
+    private void RefreshCondition()
+    {
+        float k = Mathf.Clamp01(health / Mathf.Max(1f, maxHealth));
+        if (barFill != null)
+        {
+            barFill.localScale = new Vector3(1.5f * Mathf.Max(0.001f, k), 1f, 1f);
+            barFill.localPosition = new Vector3(-0.75f * (1f - k), 0f, -0.012f);
+        }
+        if (barFillMat != null) SetColor(barFillMat, Color.Lerp(new Color(0.85f, 0.15f, 0.1f), new Color(0.3f, 0.8f, 0.25f), k));
+        float paint = broken ? 0.3f : Mathf.Lerp(0.5f, 1f, k);
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        for (int i = 0; i < paintRenderers.Count; i++)
+        {
+            Renderer r = paintRenderers[i];
+            if (r == null) continue;
+            Color c = paintColors[i] * paint;
+            c.a = paintColors[i].a;
+            r.GetPropertyBlock(block);
+            block.SetColor("_BaseColor", c);
+            block.SetColor("_Color", c);
+            r.SetPropertyBlock(block);
+        }
+    }
+
+    /// <summary>A shower of sparks from the engine side.</summary>
+    private void EmitSparks(int count)
+    {
+        if (sparks == null) return;
+        float s = transform.lossyScale.x;
+        Vector3 pos = transform.TransformPoint(new Vector3(0.9f, 1.6f, 0f));
+        for (int i = 0; i < count; i++)
+        {
+            ParticleSystem.EmitParams ep = new ParticleSystem.EmitParams();
+            ep.position = pos + Random.insideUnitSphere * 0.2f * s;
+            ep.velocity = (Random.insideUnitSphere + Vector3.up * 0.8f).normalized * Random.Range(1.5f, 4f) * s;
+            ep.startColor = Color.Lerp(new Color(1f, 0.55f, 0.1f), new Color(1f, 0.95f, 0.5f), Random.value);
+            ep.startSize = Random.Range(0.03f, 0.07f) * s;
+            ep.startLifetime = Random.Range(0.3f, 0.7f);
+            sparks.Emit(ep, 1);
+        }
     }
 
     /// <summary>A burst out of the chute: pixel-coloured squares and wood chips.</summary>
@@ -282,7 +400,54 @@ public class PixelWoodChipper : MonoBehaviour
         chipper.rollerA = rA; chipper.rollerB = rB; chipper.flywheel = fly; chipper.beaconLamp = lamp; chipper.beaconMat = beacon;
         chipper.scaleFactor = scale;
         chipper.MakeParticles(exhaustTop);
+        chipper.health = chipper.maxHealth;
+        chipper.BuildCondition(k);
         return root;
+    }
+
+    /// <summary>Remembers every part's colour (so damage can darken them), and builds the floating health bar and the BROKEN label.</summary>
+    private void BuildCondition(Kit k)
+    {
+        foreach (MeshRenderer r in GetComponentsInChildren<MeshRenderer>())
+        {
+            if (r.sharedMaterial == beaconMat) continue;
+            Material m = r.sharedMaterial;
+            if (m == null) continue;
+            Color c = m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
+            paintRenderers.Add(r);
+            paintColors.Add(c);
+        }
+        // Health bar: a dark back plate and a fill that shrinks, facing the camera, above the chute.
+        GameObject bar = new GameObject("Condition Bar");
+        bar.transform.SetParent(transform, false);
+        bar.transform.localPosition = new Vector3(0f, 4.1f, 0f);
+        barRoot = bar.transform;
+        GameObject back = k.Box("Back", barRoot, Vector3.zero, new Vector3(1.64f, 0.2f, 0.02f), new Color(0.05f, 0.05f, 0.06f), default, false, 0f, 0.1f);
+        GameObject fill = k.Box("Fill", barRoot, Vector3.zero, new Vector3(1.5f, 0.1f, 0.02f), new Color(0.3f, 0.8f, 0.25f), default, false, 0f, 0.1f);
+        // A parent for the fill so scaling it happens along its own width, anchored at the left.
+        GameObject fillPivot = new GameObject("Fill Pivot");
+        fillPivot.transform.SetParent(barRoot, false);
+        fillPivot.transform.localPosition = new Vector3(0f, 0f, -0.012f);
+        fillPivot.transform.localScale = new Vector3(1.5f, 1f, 1f);
+        fill.transform.SetParent(fillPivot.transform, false);
+        fill.transform.localPosition = Vector3.zero;
+        fill.transform.localScale = new Vector3(1f, 0.1f, 0.02f);
+        barFill = fillPivot.transform;   // scaled along X, anchored at the left
+        barFillMat = k.Mat(new Color(0.3f, 0.8f, 0.25f), 0f, 0.1f, true);
+        fill.GetComponent<Renderer>().sharedMaterial = barFillMat;
+        // The label (a TextMesh needs no font setup) shows only when it is broken.
+        GameObject lg = new GameObject("Broken Label", typeof(TextMesh));
+        lg.transform.SetParent(transform, false);
+        lg.transform.localPosition = new Vector3(0f, 4.55f, 0f);
+        brokenLabel = lg.GetComponent<TextMesh>();
+        brokenLabel.text = "BROKEN";
+        brokenLabel.anchor = TextAnchor.MiddleCenter;
+        brokenLabel.alignment = TextAlignment.Center;
+        brokenLabel.characterSize = 0.18f;
+        brokenLabel.fontSize = 48;
+        brokenLabel.color = new Color(1f, 0.25f, 0.2f);
+        lg.SetActive(false);
+        RefreshCondition();
     }
 
     private void MakeParticles(Transform exhaustTop)
@@ -314,6 +479,20 @@ public class PixelWoodChipper : MonoBehaviour
         col.SetPlane(0, chipFloor);
         col.bounce = 0.35f; col.dampen = 0.4f; col.lifetimeLoss = 0.15f;
         chips.Play();
+
+        // Sparks: tiny bright squares, shot out when the machine is hurt.
+        GameObject spg = new GameObject("Sparks", typeof(ParticleSystem));
+        spg.transform.SetParent(transform, false);
+        sparks = spg.GetComponent<ParticleSystem>();
+        sparks.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        ParticleSystem.MainModule spm = sparks.main;
+        spm.playOnAwake = false; spm.loop = false; spm.simulationSpace = ParticleSystemSimulationSpace.World;
+        spm.gravityModifier = 1.5f; spm.maxParticles = 200; spm.startSpeed = 0f;
+        ParticleSystem.EmissionModule spe = sparks.emission; spe.enabled = false;
+        ParticleSystem.ShapeModule sps = sparks.shape; sps.enabled = false;
+        ParticleSystemRenderer spr = spg.GetComponent<ParticleSystemRenderer>();
+        if (sprite != null) spr.sharedMaterial = new Material(sprite);
+        sparks.Play();
 
         // Exhaust smoke: a thin grey stream rising from the stack.
         GameObject sg = new GameObject("Smoke", typeof(ParticleSystem));
@@ -351,7 +530,7 @@ public class PixelWoodChipper : MonoBehaviour
     // ---- the kit: makes primitives with a cached material per colour ----
 
     /// <summary>How much of its colour the machine's paint keeps (1 = the full palette).</summary>
-    private const float PaintBrightness = 0.55f;
+    private const float PaintBrightness = 1f;
 
     private sealed class Kit
     {
@@ -363,8 +542,6 @@ public class PixelWoodChipper : MonoBehaviour
         public Material Mat(Color c, float metal = 0.25f, float smooth = 0.45f, bool unique = false)
         {
             Color col = c;
-            // Tame the paint: in sunlight (and with the day / night sun at full) bright colours go above 1 and bloom into white blobs on the tops that face the sun,
-            // which is why the machine seemed to glow from some camera angles only. The whole palette is scaled down.
             col.r *= PaintBrightness; col.g *= PaintBrightness; col.b *= PaintBrightness;
             if (ghost) col.a = alpha;
             string key = col.ToString() + metal + smooth;
@@ -376,16 +553,9 @@ public class PixelWoodChipper : MonoBehaviour
                 m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
                 m.color = col;
             }
-            // Dull, matt surfaces: the big flat tops of a shiny machine reflect the sun and sky as blown-out white blobs (and bloom), so metal / gloss are scaled right down and highlights switched off.
-            metal *= 0.15f; smooth *= 0.4f;
             if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", metal);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smooth);
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smooth);
-            if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
-            if (m.HasProperty("_EnvironmentReflections")) m.SetFloat("_EnvironmentReflections", 0f);
-            if (m.HasProperty("_GlossyReflections")) m.SetFloat("_GlossyReflections", 0f);
-            m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-            m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             // The cube's material (which the copy comes from) can glow: switch every trace of emission off, or the whole machine shines like the cube.
             if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", Color.black);
             m.DisableKeyword("_EMISSION");

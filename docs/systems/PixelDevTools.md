@@ -40,3 +40,6 @@ The 'On-screen spawn selector' tick box and the row at the top of the screen are
 ## Feature Tester tab + Wood Chipper
 
 The hub's **Tester** tab (`PixelFeatureTester.cs`) lists things that are not in the game yet as cards with Place / Clear. Place = a see-through ghost follows the mouse over the floor, left click puts a real one down (keeps placing), Q / E turn it, right click / Esc stops; placed test objects are not saved. Add a feature = one `Register(...)` line in `PixelFeatureTester.Awake`. First feature: **Wood Chipper** (`PixelWoodChipper.cs`): a detailed machine built from primitives (trailer, tyres, hopper, rollers, chute, engine, controls, beacon...) that pulls old pixels in and shreds them (`PixelClicker.ClaimOldPixel`, no payout) with chips, shaking, blinking beacon and exhaust smoke.
+
+
+**Wood Chipper rules:** a wood pixel (`PixelClicker.IsWoodBlock`) gives Woodcutting XP (`woodXp`, 3, via `PixelSkills.AddXp` with the usual popup); any other pixel does `damagePerOtherPixel` (14) of `maxHealth` (100): the paint darkens, sparks fly, the exhaust gets thicker and blacker, a health bar floats over it; at 0 it is broken for good (stops, no beacon, 'BROKEN' label) and has to be cleared and replaced.

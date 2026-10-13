@@ -800,3 +800,4 @@
 [2026-10-13 14:22 UTC] Wood Chipper: made all its surfaces matt (no metal, little gloss, no specular or reflections) so its big flat tops no longer blow out to bright white.
 [2026-10-13 14:25 UTC] Wood Chipper: the whole paint palette is darker (55%) so the sun and bloom no longer blow its sun-facing tops out to white.
 [2026-10-13 14:28 UTC] Wood Chipper: fixed the hopper's mesh normals (its front and back faces shared vertices, which gave zero normals and a NaN-white blob under bloom).
+[2026-10-13 14:33 UTC] Wood Chipper: wood pixels give Woodcutting XP, any other pixel damages it (darker paint, sparks, black smoke, a health bar) and enough damage breaks it for good; its full colours and gloss are back.

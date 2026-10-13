@@ -71,7 +71,7 @@ public class PixelFeatureTester : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
 
         Register("Wood Chipper",
-                 "A detailed trailer-mounted wood chipper. Pixels dropped into its hopper (or lying close above it) are pulled in and shredded into chips - no payout. Drag pixels in with Pixel Grabbing, or drop them from the cube.",
+                 "A detailed trailer-mounted wood chipper. Wood pixels dropped into its hopper (or lying close above it) are shredded for Woodcutting XP. Anything else damages it, and enough of that breaks it for good - Clear it and place a new one. Drag pixels in with Pixel Grabbing.",
                  c => PixelWoodChipper.CreateGhost(c), (c, p, yw) => PixelWoodChipper.Place(c, p, yw));
 
         Build(PixelDevHub.TabRoot("tester"));
