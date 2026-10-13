@@ -270,6 +270,8 @@ public class PixelPauseMenu : MonoBehaviour
 
     [SerializeField] private string uiScaleLabel = "UI scale (after restart)";
     [SerializeField] private string colorBlindLabel = "Colour-blind marks";
+    [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
+    [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [SerializeField] private string dayNightLabel = "Day / night cycle";
     [SerializeField] private string dayNightLengthLabel = "Length of a day";
@@ -2273,6 +2275,7 @@ public class PixelPauseMenu : MonoBehaviour
         pulsingToggle = AddToggleRow(list, pulsingLabel, clicker == null || clicker.AllowPulsing,
                                      on => { if (clicker != null) clicker.AllowPulsing = on; }, ref y);
         AddSettingToggle(list, colorBlindLabel, () => PixelDisplaySettings.ColorBlind, on => PixelDisplaySettings.ColorBlind = on, ref y);
+        AddSettingToggle(list, dropGuideLabel, () => PixelDisplaySettings.DropGuide, on => PixelDisplaySettings.DropGuide = on, ref y);
         AddChoiceRow(list, clickFxLabel, PixelBasicFx.LevelNames, () => PixelBasicFx.Level, v => PixelBasicFx.Level = v, ref y);
         AddChoiceRow(list, popupSizeLabel, PixelUI.PopupSizeNames, () => PixelUI.PopupSizeChoice, v => PixelUI.PopupSizeChoice = v, ref y);
         AddChoiceRow(list, eventLogSizeLabel, PixelHints.LogSizeNames, () => PixelHints.LogSizeChoice, v => PixelHints.LogSizeChoice = v, ref y);

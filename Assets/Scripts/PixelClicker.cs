@@ -4811,7 +4811,11 @@ public partial class PixelClicker : MonoBehaviour
         Vector2 flat = UnityEngine.Random.insideUnitCircle;
         if (flat.sqrMagnitude < 0.0001f) flat = Vector2.right;
         flat.Normalize();
-        float vertical = UnityEngine.Random.Range(popVerticalRange.x, popVerticalRange.y);
+        float vertical = Mathf.Min(0f, UnityEngine.Random.Range(popVerticalRange.x, popVerticalRange.y));   // never upward: the copy leaves through a side of the cube, not over its top
+        // It appears at the side face it is thrown from (not at the centre, where it could show over the top face).
+        Vector3 sidePosition = copy.transform.position + new Vector3(flat.x, 0f, flat.y) * ((popSideOffset > 0f ? popSideOffset : 0.45f) * PixelBaseSize);
+        copy.transform.position = sidePosition;
+        rb.position = sidePosition;
         Vector3 direction = new Vector3(flat.x, vertical, flat.y).normalized;
         float speed = UnityEngine.Random.Range(popSpeedRange.x, popSpeedRange.y);
 

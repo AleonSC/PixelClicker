@@ -24,6 +24,8 @@ public static class PixelDisplaySettings
     private const string PrefResH = PrefPrefix + "ResH";
     private const string PrefUiScale = PrefPrefix + "UIScale";
     private const string PrefColorBlind = PrefPrefix + "ColorBlind";
+    private const string PrefDropGuide = PrefPrefix + "DropGuide";
+    private static int dropGuide = -1;
 
     /// <summary>The UI scales the player can pick (shown as percentages).</summary>
     public static readonly float[] UIScaleChoices = { 0.8f, 0.9f, 1f, 1.1f, 1.2f, 1.3f };
@@ -37,6 +39,7 @@ public static class PixelDisplaySettings
         appliedUiScale = -1f;
         colorBlind = -1;
         ColorBlindChanged = null;
+        dropGuide = -1;
     }
 
     // ------------------------------------------------------------------
@@ -167,9 +170,26 @@ public static class PixelDisplaySettings
     /// <summary>A save file with its own settings was loaded: read the colour-blind setting again.</summary>
     public static void ReloadFromPrefs()
     {
+        dropGuide = -1;
         int before = colorBlind;
         colorBlind = -1;
         if ((ColorBlind ? 1 : 0) != before) ColorBlindChanged?.Invoke();
+    }
+
+    /// <summary>Accessibility: while an old pixel is held (Pixel Grabbing), a faint line and ring show where it would land if it were let go from a standing position (straight down). Off by default.</summary>
+    public static bool DropGuide
+    {
+        get
+        {
+            if (dropGuide < 0) dropGuide = PlayerPrefs.GetInt(PrefDropGuide, 0);
+            return dropGuide != 0;
+        }
+        set
+        {
+            dropGuide = value ? 1 : 0;
+            PlayerPrefs.SetInt(PrefDropGuide, dropGuide);
+            PlayerPrefs.Save();
+        }
     }
 
     /// <summary>Raised when the colour-blind setting changes.</summary>

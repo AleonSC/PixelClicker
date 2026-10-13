@@ -12,6 +12,8 @@
 //   throw) and every old pixel within ~1.7 widths of a light one has its speed capped to hitReactionSpeedLimit (0 = 5) for 0.7 s
 //   (LimitReactions, MakeLight), so piles react less and nothing flies far; physics still applies (disableGentleHits). Sets
 //   PixelClicker.GrabEnabled so clicks on old pixels no longer pass through to the cube. Sounds grab/drop. PixelShop finds/adds it.
+//   Accessibility 'Drop guide for held pixels' (Settings, PixelDisplaySettings.DropGuide, off by default): while holding a pixel LateUpdate / UpdateDropGuide draws a faint line straight down
+//   from it to the first surface a sphere of its size would land on (ignores itself, triggers and the live cube) and a ring on that surface = where it drops if let go standing still.
 // ---------------------------------------------------
 using UnityEngine;
 using static PixelInput;
@@ -334,6 +336,90 @@ public class PixelGrab : MonoBehaviour
             if (other.angularVelocity.magnitude > limit * 2f) other.angularVelocity = other.angularVelocity.normalized * limit * 2f;
         }
         foreach (Rigidbody done in scratch) limitedUntil.Remove(done);
+    }
+
+    // ---- Accessibility drop guide: where would the held pixel land if it were let go from a standing position? ----
+    private LineRenderer guideLine, guideRing;
+    private Material guideMaterial;
+    private const int GuideRingPoints = 24;
+
+    private void LateUpdate()
+    {
+        bool show = held != null && PixelDisplaySettings.DropGuide;
+        if (show) show = UpdateDropGuide();
+        if (!show && guideLine != null && guideLine.gameObject.activeSelf) { guideLine.gameObject.SetActive(false); guideRing.gameObject.SetActive(false); }
+    }
+
+    private LineRenderer MakeGuideRenderer(string objectName, bool loop)
+    {
+        GameObject go = new GameObject(objectName, typeof(LineRenderer));
+        go.transform.SetParent(transform, false);
+        LineRenderer lr = go.GetComponent<LineRenderer>();
+        lr.sharedMaterial = guideMaterial;
+        lr.useWorldSpace = true;
+        lr.loop = loop;
+        lr.alignment = LineAlignment.View;
+        lr.numCapVertices = 4;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+        return lr;
+    }
+
+    /// <summary>Draws a faint line straight down from the held pixel to what it would land on, and a ring there. False when nothing is below it.</summary>
+    private bool UpdateDropGuide()
+    {
+        float half = Mathf.Max(0.02f, held.transform.lossyScale.x * 0.5f);
+        RaycastHit[] hits = Physics.SphereCastAll(held.position, half, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.PositiveInfinity;
+        RaycastHit pick = default;
+        foreach (RaycastHit h in hits)
+        {
+            if (h.collider == null || h.rigidbody == held || h.distance <= 0f) continue;   // (h.distance 0 = already overlapping: no useful surface)
+            if (clicker.PixelTransform != null && h.collider.transform.IsChildOf(clicker.PixelTransform)) continue;
+            if (h.distance < best) { best = h.distance; pick = h; }
+        }
+        if (float.IsPositiveInfinity(best)) return false;
+
+        if (guideMaterial == null)
+        {
+            Shader shader = PixelShaders.SpriteDefault();
+            if (shader == null) return false;
+            guideMaterial = new Material(shader) { name = "DropGuide" };
+        }
+        if (guideLine == null)
+        {
+            guideLine = MakeGuideRenderer("Drop Guide Line", false);
+            guideRing = MakeGuideRenderer("Drop Guide Ring", true);
+            guideRing.positionCount = GuideRingPoints;
+        }
+        if (!guideLine.gameObject.activeSelf) { guideLine.gameObject.SetActive(true); guideRing.gameObject.SetActive(true); }
+
+        Vector3 from = held.position + Vector3.down * half;
+        Vector3 landing = new Vector3(held.position.x, held.position.y - best, held.position.z);   // the pixel's centre when it touches down
+        Vector3 ground = new Vector3(landing.x, pick.point.y, landing.z);
+        float width = Mathf.Max(0.02f, half * 0.18f);
+        guideLine.startWidth = guideLine.endWidth = width;
+        guideLine.startColor = new Color(1f, 1f, 1f, 0.6f);
+        guideLine.endColor = new Color(1f, 1f, 1f, 0.25f);
+        guideLine.positionCount = 2;
+        guideLine.SetPosition(0, from);
+        guideLine.SetPosition(1, ground);
+
+        guideRing.startWidth = guideRing.endWidth = width;
+        guideRing.startColor = guideRing.endColor = new Color(1f, 1f, 1f, 0.75f);
+        Vector3 normal = pick.normal.sqrMagnitude > 0.01f ? pick.normal.normalized : Vector3.up;
+        Vector3 tangent = Vector3.Cross(normal, Vector3.right);
+        if (tangent.sqrMagnitude < 0.01f) tangent = Vector3.Cross(normal, Vector3.forward);
+        tangent.Normalize();
+        Vector3 bitangent = Vector3.Cross(normal, tangent);
+        float radius = half * 1.25f;
+        Vector3 centre = ground + normal * (width * 0.6f);
+        for (int i = 0; i < GuideRingPoints; i++)
+        {
+            float a = i / (float)GuideRingPoints * Mathf.PI * 2f;
+            guideRing.SetPosition(i, centre + (tangent * Mathf.Cos(a) + bitangent * Mathf.Sin(a)) * radius);
+        }
+        return true;
     }
 
     private void FixedUpdate()
