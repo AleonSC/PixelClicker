@@ -621,6 +621,12 @@ public class PixelAudio : MonoBehaviour
         if (instance != null) instance.PlaySound(id, pitchMultiplier);
     }
 
+    /// <summary>Plays a sound by id with its pitch and volume multiplied (a very quiet tick = Play("ui_click", 1.7f, 0.25f)).</summary>
+    public static void Play(string id, float pitchMultiplier, float volumeMultiplier)
+    {
+        if (instance != null) instance.PlaySound(id, pitchMultiplier, volumeMultiplier);
+    }
+
     /// <summary>Cuts off every voice that is currently playing this sound (e.g. the Time Stop sound when time resumes).</summary>
     public static void Stop(string id)
     {

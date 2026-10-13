@@ -6,7 +6,7 @@
 //     is shown (Drop, Fly, Zoom, Wipe, Spiral, Stack, Flip): Classic, Rainbow Wave, Neon, Shatter, Matrix, Inferno, Frost, Glitch, Jelly, Flip, Blocks, Plasma, Synthwave, Gold, Ghost,
 //     Storm, Shockwave, Disco, Ocean, Hologram. To add one: write a function, add a line to Styles. A style may also scale a whole LETTER (S.lsx / lsy, about its base / centre).
 //   * ARROWS: two invisible buttons at the far left / right of the logo fade in while the mouse is near them and step to the previous / next style (wraps); the style's name shows
-//     under the logo for a moment. The choice is saved (PlayerPrefs PixelClicker.Setting.LogoStyle).
+//     under the logo for a moment. A random style is picked at every launch (never the same as last time; PlayerPrefs PixelClicker.Setting.LogoStyle remembers the last one only for that).
 //   * PixelTitleScreen only positions / bobs / fades (SetAlpha) the container. Runs on unscaled time (the game is frozen while the title shows).
 //   Cost: ~200 cells x 3 images, updated each frame only while the title screen is up.
 // ---------------------------------------------------
@@ -168,7 +168,10 @@ public class PixelLogoView : MonoBehaviour
         if (group == null) group = gameObject.AddComponent<CanvasGroup>();
         if (palette == null || palette.Length == 0) palette = new[] { Color.white };
         unit = width / (TotalCols + 3);
-        style = Mathf.Clamp(PlayerPrefs.GetInt(Pref, 0), 0, Styles.Length - 1);
+        // A different style every time the game starts (never the one used last time).
+        int last = PlayerPrefs.GetInt(Pref, -1);
+        do style = Random.Range(0, Styles.Length); while (style == last && Styles.Length > 1);
+        PlayerPrefs.SetInt(Pref, style);
 
         RectTransform glowLayer = MakeLayer("Glows"), shadowLayer = MakeLayer("Shadows"), bodyLayer = MakeLayer("Bodies");
         string[] words = { "PIXEL", "CLICKER" };

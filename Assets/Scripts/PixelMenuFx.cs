@@ -145,7 +145,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private Color baseColor;
     private Vector2 basePos, baseLabelPos;
     private bool built, hover, press;
-    private float hoverT, enterT = 1f, shineT = 2f, idleShine;
+    private float hoverT, enterT = 1f, shineT = 2f, idleShine, pressVis, pressUntil;
     private GameObject fxRoot;
     private Image stripe;
     private RectTransform shine;
@@ -184,7 +184,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         shine.anchoredPosition = new Vector2(-200f, 0f);
         shine.anchorMin = shine.anchorMax = new Vector2(0f, 0.5f);
         shine.pivot = new Vector2(0.5f, 0.5f);
-        shine.sizeDelta = new Vector2(Mathf.Clamp(rect.rect.width * 0.18f, 14f, 46f), rect.rect.height * 2.4f);
+        shine.sizeDelta = new Vector2(Mathf.Clamp(rect.rect.width * 0.18f, 14f, hudSetting ? 70f : 46f), rect.rect.height * 2.4f);
         shine.localRotation = Quaternion.Euler(0f, 0f, 18f);
         shineRange = rect.rect.width;
 
@@ -226,7 +226,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     {
         if (!built) Build();
         if (enterT < 0f) enterT = 0f;
-        bool on = hudSetting ? PixelMenuFx.HudEnabled : PixelMenuFx.Enabled;   // (the docked HUD buttons follow 'Pixel-assemble menu buttons')
+        bool on = hudSetting || PixelMenuFx.Enabled;   // (the docked HUD buttons always get their hover sheen and sink)
         if (fxRoot.activeSelf != on) fxRoot.SetActive(on);
         float dt = Time.unscaledDeltaTime;
         if (!on)
@@ -249,9 +249,22 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         hoverT = Mathf.MoveTowards(hoverT, hover ? 1f : 0f, dt * 7f);
         float h = hoverT * hoverT * (3f - 2f * hoverT);
         float scale = (lightMode ? 1f : Mathf.Lerp(1f, 1.04f, h)) * (press ? 0.965f : 1f);
-        if (button == null || button.interactable) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));   // (a button something else is animating - the title's shrink - is left alone)
+        if (!hudSetting && (button == null || button.interactable)) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * scale, 1f - Mathf.Exp(-dt * 20f));   // (a button something else is animating - the title's shrink - is left alone)
 
-        if (lightMode && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
+        if (hudSetting)
+        {
+            // The docked HUD buttons SINK: a little when the mouse is over them, all the way while pressed (and for a moment after, so a quick click still shows it).
+            pressVis = Mathf.MoveTowards(pressVis, press || Time.unscaledTime < pressUntil ? 1f : 0f, dt * 14f);
+            float hoverDepth = h * 0.35f;
+            float depth = Mathf.Max(hoverDepth, pressVis);
+            float dark = Mathf.Lerp(1f, 0.7f, depth);
+            if (hoverT <= 0.001f && pressVis <= 0.001f) baseColor = image.color;
+            else image.color = new Color(baseColor.r * dark, baseColor.g * dark, baseColor.b * dark, baseColor.a);
+            if (labelRect != null) labelRect.anchoredPosition = baseLabelPos + new Vector2(0f, -(1.5f * h + 3.5f * pressVis));
+            float s2 = Mathf.Lerp(1f, 0.978f, h) * Mathf.Lerp(1f, 0.96f, pressVis);
+            if (button == null || button.interactable) rect.localScale = Vector3.Lerp(rect.localScale, Vector3.one * s2, 1f - Mathf.Exp(-dt * 20f));
+        }
+        else if (lightMode && hoverT <= 0.001f) baseColor = image.color;   // (follow outside colour changes while nothing is happening)
         else image.color = Color.Lerp(baseColor, new Color(Mathf.Min(1f, baseColor.r * 1.28f + 0.05f), Mathf.Min(1f, baseColor.g * 1.28f + 0.05f), Mathf.Min(1f, baseColor.b * 1.28f + 0.05f), baseColor.a), h);
 
         if (!lightMode)
@@ -270,15 +283,19 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
             float tt = Mathf.Clamp01(shineT);
             shine.anchoredPosition = new Vector2(Mathf.Lerp(-60f, shineRange + 60f, tt), 0f);
             Image si = shine.GetComponent<Image>();
-            Color c = si.color; c.a = 0.24f * Mathf.Sin(tt * Mathf.PI); si.color = c;
+            Color c = si.color; c.a = (hudSetting ? 0.5f : 0.24f) * Mathf.Sin(tt * Mathf.PI); si.color = c;
         }
         else if (shine.anchoredPosition.x > -150f) { shine.anchoredPosition = new Vector2(-200f, 0f); Image si2 = shine.GetComponent<Image>(); Color c2 = si2.color; c2.a = 0f; si2.color = c2; }   // (parked, invisible)
     }
 
-    public void OnPointerEnter(PointerEventData d) { hover = true; shineT = 0f; }
+    public void OnPointerEnter(PointerEventData d)
+    {
+        hover = true; shineT = 0f;
+        if (hudSetting) PixelAudio.Play("ui_click", 1.7f, 0.22f);   // a very quiet tick as the button sinks
+    }
     public void OnPointerExit(PointerEventData d) { hover = false; press = false; }
     public void OnPointerDown(PointerEventData d) { press = true; }
-    public void OnPointerUp(PointerEventData d) { press = false; }
+    public void OnPointerUp(PointerEventData d) { press = false; pressUntil = Time.unscaledTime + 0.18f; }
 }
 
 /// <summary>
