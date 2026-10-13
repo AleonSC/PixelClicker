@@ -754,3 +754,4 @@
 [2026-10-13 09:11 UTC] CRT TV filter: bigger rounded tube-shaped corners with a soft dark rim, and a stronger screen bulge.
 [2026-10-13 09:13 UTC] Screen filters now log to the Console whether the URP post-processing part is running, to make a missing bulge easier to track down.
 [2026-10-13 09:15 UTC] Screen filters: an editor script now adds a PIXEL_URP define when the URP package is installed (UNITY_PIPELINE_URP was not defined in the game scripts), so the CRT bulge / grain / colour grading can turn on.
+[2026-10-13 09:23 UTC] Screen filters: added a real CRT screen warp (a shader copies the finished frame, UI included, and draws it back with a barrel warp, rounded glass corners, scanlines and colour fringing, plus a software mouse cursor that sits on the warped picture) for CRT TV, VHS and Night Vision.

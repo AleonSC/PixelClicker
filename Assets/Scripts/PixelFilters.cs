@@ -8,7 +8,11 @@
 //      cameraCheckSeconds). Without URP this part is skipped and only the overlay works.
 //   2) A screen-space overlay canvas (sortingOrder overlaySortingOrder, above the UI so it also covers windows like a real screen): colour tint, vignette, CRT rounded corners
 //      (mask), scanlines (tiled 4 px texture, rolling), animated static noise, a VHS tracking band, film dust / scratches. All textures are generated in code once.
-//   Off = the volume is disabled and the overlay canvas hidden, so it costs nothing.
+//   3) THE SCREEN WARP (presets with warp > 0, shader Assets/Resources/PixelCrtWarp.shader 'Pixel Clicker/CRT Warp'): at the end of every frame the finished picture (world AND all UI) is
+//      copied (ScreenCapture.CaptureScreenshotIntoRenderTexture) and drawn back through the shader: barrel warp, rounded black glass corners, scanlines, colour fringing, vignette. The
+//      game's real input is untouched (everything still reads the real pointer = a point of the unwarped picture), so the OS cursor is hidden and a software cursor is drawn by the
+//      shader at the warped position of that point (InverseWarp) - the cursor always sits on what you click. If the picture comes out upside down, tick `flipVertical`.
+//   Off = the volume is disabled, the overlay canvas hidden and the warp loop stopped, so it costs nothing.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -45,6 +49,14 @@ public class PixelFilters : MonoBehaviour
         [Range(0f, 1f)] public float dust;
         [Range(0f, 1f)] public float overlayVignette;
         public Color tint = new Color(0f, 0f, 0f, 0f);   // alpha = strength of the colour wash
+        [Header("Screen warp (shader)")]
+        [Range(0f, 0.4f)] public float warp;              // 0 = no warp pass at all
+        [Range(0f, 1f)] public float shaderScan;
+        [Range(0f, 0.02f)] public float shaderChroma;
+        [Range(0f, 1f)] public float shaderVignette;
+        [Range(0f, 0.4f)] public float shaderRound;        // rounded glass corners
+        public float shaderBright = 1f;
+        [Range(0f, 0.1f)] public float shaderFlicker;
     }
 
     public static PixelFilters Instance { get; private set; }
@@ -59,6 +71,10 @@ public class PixelFilters : MonoBehaviour
     [Min(0.1f)]
     [Tooltip("Seconds between checks that every camera has post-processing switched on.")]
     [SerializeField] private float cameraCheckSeconds = 1.5f;
+    [Tooltip("Tick this if the warped picture comes out upside down (it depends on the graphics API).")]
+    [SerializeField] private bool flipVertical = false;
+    [Tooltip("Size of the software mouse cursor drawn while a warping filter is on (pixels).")]
+    [SerializeField] private float cursorSize = 28f;
     [Tooltip("Switch the whole filter system off.")]
     [SerializeField] private bool disableFilters = false;
 
@@ -123,7 +139,13 @@ public class PixelFilters : MonoBehaviour
 
     private void Start() { Refresh(); }
 
-    private void OnDestroy() { if (Instance == this) Instance = null; }
+    private void OnDestroy()
+    {
+        SetWarp(false);
+        if (Instance == this) Instance = null;
+    }
+
+    private void OnDisable() { RestoreCursor(); }
 
     private Preset Chosen()
     {
@@ -140,6 +162,7 @@ public class PixelFilters : MonoBehaviour
         bool on = active != null && k > 0.001f;
         ApplyOverlay(on ? active : null, k);
         ApplyVolume(on ? active : null, k);
+        SetWarp(on && active.warp > 0.0001f);
         enabled = on;
     }
 
@@ -248,6 +271,129 @@ public class PixelFilters : MonoBehaviour
 #else
     private void ApplyVolume(Preset p, float k) { if (p != null) Debug.LogWarning("PixelFilters: PIXEL_URP is not defined, so only the overlay part of the filter works (no bulge, grain, colour grading).", this); }
 #endif
+
+    // ------------------------------------------------------------------
+    // Screen warp
+    // ------------------------------------------------------------------
+
+    private Material warpMaterial;
+    private RenderTexture captureTexture;
+    private Texture2D cursorTexture;
+    private Coroutine warpLoop;
+    private bool cursorHidden, cursorWasVisible = true;
+
+    private void SetWarp(bool on)
+    {
+        if (!on)
+        {
+            if (warpLoop != null) { StopCoroutine(warpLoop); warpLoop = null; }
+            RestoreCursor();
+            return;
+        }
+        if (warpLoop != null) return;
+        if (warpMaterial == null)
+        {
+            Shader shader = Resources.Load<Shader>("PixelCrtWarp");
+            if (shader == null || !shader.isSupported) { Debug.LogWarning("PixelFilters: the CRT warp shader (Assets/Resources/PixelCrtWarp.shader) is missing or not supported, so this filter has no screen warp.", this); return; }
+            warpMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+        }
+        if (cursorTexture == null) cursorTexture = BuildCursorTexture();
+        warpMaterial.SetTexture("_CursorTex", cursorTexture);
+        warpLoop = StartCoroutine(WarpRoutine());
+    }
+
+    private void RestoreCursor()
+    {
+        if (!cursorHidden) return;
+        Cursor.visible = cursorWasVisible;
+        cursorHidden = false;
+    }
+
+    private System.Collections.IEnumerator WarpRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForEndOfFrame();
+            Preset p = active;
+            if (p == null || warpMaterial == null) continue;
+            int w = Screen.width, h = Screen.height;
+            if (w < 8 || h < 8) continue;
+            if (captureTexture == null || captureTexture.width != w || captureTexture.height != h)
+            {
+                if (captureTexture != null) { captureTexture.Release(); Destroy(captureTexture); }
+                captureTexture = new RenderTexture(w, h, 0, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                captureTexture.Create();
+            }
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(captureTexture);
+
+            float k = Strength;
+            warpMaterial.SetFloat("_Warp", p.warp * k);
+            warpMaterial.SetFloat("_Scan", p.shaderScan * k);
+            warpMaterial.SetFloat("_Chroma", p.shaderChroma * k);
+            warpMaterial.SetFloat("_Vignette", p.shaderVignette * k);
+            warpMaterial.SetFloat("_Round", Mathf.Max(0.002f, p.shaderRound * k));
+            warpMaterial.SetFloat("_Bright", Mathf.Lerp(1f, p.shaderBright, k));
+            warpMaterial.SetFloat("_Flicker", p.shaderFlicker * k);
+            warpMaterial.SetFloat("_TimeV", Time.unscaledTime);
+            warpMaterial.SetFloat("_Flip", flipVertical ? 1f : 0f);
+            warpMaterial.SetVector("_Res", new Vector4(w, h, 0f, 0f));
+
+            // The real pointer is a point of the UNWARPED picture; the warped picture shows that point at InverseWarp(point), so the cursor is drawn there.
+            Vector2 pointer = PixelInput.PointerPosition();
+            Vector2 shown = InverseWarp(new Vector2(pointer.x / w, pointer.y / h), p.warp * k);
+            bool inWindow = pointer.x >= 0f && pointer.y >= 0f && pointer.x <= w && pointer.y <= h;
+            warpMaterial.SetVector("_Cursor", new Vector4(shown.x * w, shown.y * h, cursorSize, inWindow ? 1f : 0f));
+            if (!cursorHidden) { cursorWasVisible = Cursor.visible; cursorHidden = true; }
+            Cursor.visible = false;
+
+            Graphics.Blit(captureTexture, (RenderTexture)null, warpMaterial);
+        }
+    }
+
+    /// <summary>Where the warped picture shows the point 's' (0..1 of the unwarped picture): solves s = c * (1 + k * c.yx^2) for the screen point c.</summary>
+    public static Vector2 InverseWarp(Vector2 s01, float k)
+    {
+        Vector2 s = s01 * 2f - Vector2.one;
+        Vector2 c = s;
+        for (int i = 0; i < 10; i++)
+        {
+            float cx = s.x / (1f + k * c.y * c.y);
+            float cy = s.y / (1f + k * c.x * c.x);
+            c = new Vector2(cx, cy);
+        }
+        return c * 0.5f + new Vector2(0.5f, 0.5f);
+    }
+
+    /// <summary>A small white arrow with a black outline (tip at the top left) for the software cursor.</summary>
+    private static Texture2D BuildCursorTexture()
+    {
+        const int n = 32;
+        Vector2[] poly = { new Vector2(0f, 0f), new Vector2(0f, 17f), new Vector2(4.2f, 13.2f), new Vector2(7.2f, 20.5f), new Vector2(10.2f, 19.2f), new Vector2(7.3f, 12.3f), new Vector2(12.6f, 12.3f) };
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+        Color32[] px = new Color32[n * n];
+        float scale = 20f / 12.6f;   // the arrow fills about 20 of the 32 pixels
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                Vector2 p = new Vector2((x + 0.5f) / scale, (n - 1 - y + 0.5f) / scale);   // y down from the tip
+                bool inside = false;
+                float edge = float.MaxValue;
+                for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+                {
+                    if (((poly[i].y > p.y) != (poly[j].y > p.y)) && (p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x)) inside = !inside;
+                    Vector2 a = poly[j], b = poly[i], ab = b - a;
+                    float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+                    edge = Mathf.Min(edge, (p - (a + ab * t)).magnitude);
+                }
+                float outline = 0.9f;
+                if (inside && edge > outline * 0.55f) px[y * n + x] = new Color32(255, 255, 255, 255);
+                else if (inside || edge < outline * 0.9f) px[y * n + x] = new Color32(0, 0, 0, 255);
+                else px[y * n + x] = new Color32(0, 0, 0, 0);
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        return tex;
+    }
 
     // ------------------------------------------------------------------
     // Overlay
@@ -397,15 +543,17 @@ public class PixelFilters : MonoBehaviour
     public static List<Preset> CreateDefaults() => new List<Preset>
     {
         new Preset { name = "Off" },
-        new Preset { name = "CRT TV", saturation = 12f, contrast = 14f, vignette = 0.3f, grain = 0.12f, chromatic = 0.3f, lens = -0.3f, bloom = 0.6f,
-                     scanlines = 0.28f, crtCorners = 0.95f, noise = 0.05f, overlayVignette = 0.25f },
+        new Preset { name = "CRT TV", saturation = 12f, contrast = 12f, vignette = 0.2f, grain = 0.12f, bloom = 0.6f, noise = 0.05f,
+                     warp = 0.13f, shaderScan = 0.38f, shaderChroma = 0.0045f, shaderVignette = 0.4f, shaderRound = 0.1f, shaderBright = 1.15f, shaderFlicker = 0.012f },
         new Preset { name = "VHS", saturation = -22f, contrast = -6f, temperature = 8f, vignette = 0.3f, grain = 0.5f, chromatic = 0.7f, bloom = 0.3f,
-                     scanlines = 0.1f, noise = 0.12f, band = 0.22f, overlayVignette = 0.15f },
+                     scanlines = 0.1f, noise = 0.12f, band = 0.22f, overlayVignette = 0.15f,
+                     warp = 0.03f, shaderChroma = 0.003f, shaderRound = 0.03f, shaderFlicker = 0.01f },
         new Preset { name = "Wild West", saturation = -58f, contrast = 12f, colorFilter = new Color(1f, 0.86f, 0.62f), temperature = 30f, vignette = 0.55f, grain = 0.35f,
                      dust = 0.5f, overlayVignette = 0.35f, tint = new Color(0.45f, 0.28f, 0.1f, 0.14f) },
         new Preset { name = "Noir", saturation = -100f, contrast = 32f, vignette = 0.5f, grain = 0.4f, dust = 0.18f, overlayVignette = 0.3f },
         new Preset { name = "Night Vision", saturation = -50f, exposure = 0.6f, colorFilter = new Color(0.45f, 1f, 0.5f), vignette = 0.6f, grain = 0.6f, bloom = 0.9f,
-                     scanlines = 0.14f, crtCorners = 0.45f, noise = 0.08f, overlayVignette = 0.4f, tint = new Color(0.1f, 0.6f, 0.15f, 0.1f) },
+                     noise = 0.08f, overlayVignette = 0.4f, tint = new Color(0.1f, 0.6f, 0.15f, 0.1f),
+                     warp = 0.07f, shaderScan = 0.2f, shaderChroma = 0.002f, shaderRound = 0.06f, shaderBright = 1.1f },
         new Preset { name = "Neon Dream", saturation = 55f, contrast = 12f, vignette = 0.2f, chromatic = 0.18f, bloom = 1.3f, overlayVignette = 0.15f },
     };
 }
