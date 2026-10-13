@@ -20,3 +20,8 @@ Tools tab tick box 'Inspector' opens a draggable, minimizable window (header not
 ## Dev Tools window (PixelWindowChrome)
 
 The Dev Tools panel is no longer a modal dialog: no dimmer, so the game stays clickable. `PixelWindowChrome` (header notes in the script) gives it drag by the title (kept between the black bars), Minimize ('-'), Pin ('P': a pinned panel ignores Escape and doesn't count as an open window) and docking to the left / right edge (drag against a side; slides out on hover or while typing; undock arrow). Prefs `PixelClicker.Dev.Window.*`. My Window, the Mock up window and the Inspector still have their own copies of this logic.
+
+
+## Dev Hub (PixelDevHub.cs) - replaces the Dev Tools panel, the Inspector window and the Mock up window
+
+One window for every dev tool: drag, minimize, pin, dock to a screen side (`PixelWindowChrome`), filing-cabinet tabs (Main, To-Do, Changelog, Inspector, Shapes, UI Mock) that can be reordered by dragging and popped out into floating windows (drag a tab down; 'Dock' button or dropping the window on the hub puts it back). The Main tab is `PixelDevTools`' rows as WIDGETS: every row is a card with a grip (`PixelWidgetBoard`, order saved as `PixelClicker.Dev.WidgetOrder`). The 'Inspector' and 'Mock up mode' tick boxes are gone (they are tabs now). Tools get their content with `PixelDevHub.TabRoot(id)` and `PixelDevHub.SetTabCallback(id, visible => ...)`; `PixelDevMockWindow` is only a doorway to the hub's tab roots. The Inspector applies an edited value while you type and again on Enter, reads it back and reports the result in its status line (so a value the game overwrites is visible).

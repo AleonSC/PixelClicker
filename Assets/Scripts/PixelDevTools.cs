@@ -275,9 +275,6 @@ public class PixelDevTools : MonoBehaviour
 
     private static PixelDevTools instance;
     private GameObject canvasRoot;
-    private PixelWindowChrome chrome;
-    private GameObject reportButtonObject;
-    private GameObject panel;
     private TMP_Dropdown pixelDropdown;
     private TMP_InputField amountField;
     private readonly List<PixelMinigame> dropdownMinigames = new List<PixelMinigame>();
@@ -289,7 +286,7 @@ public class PixelDevTools : MonoBehaviour
     public static string ButtonText => instance != null ? instance.title : "Dev Tools";
 
     /// <summary>Is the dev tools panel showing?</summary>
-    public static bool IsOpen => instance != null && instance.panel != null && instance.panel.activeSelf;
+    public static bool IsOpen => PixelDevHub.IsOpen;
 
     /// <summary>Opens the panel (called by the pause menu button).</summary>
     public static void OpenPanel() { if (instance != null) instance.Open(); }
@@ -345,7 +342,7 @@ public class PixelDevTools : MonoBehaviour
 
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle inspectorToggle, mockToggle, dockToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle dockToggle, clearToggle, infiniteToggle, selectorToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -415,7 +412,6 @@ public class PixelDevTools : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         BuildPanel();
         BuildDockButton();
-        PixelWindows.Register(this, 200, () => IsOpen && (chrome == null || !chrome.Pinned), Close); // Escape closes the panel first (a pinned panel ignores it and doesn't count as an open window)
     }
 
     private GameObject dockRoot;
@@ -446,9 +442,7 @@ public class PixelDevTools : MonoBehaviour
 
     private void OnDestroy()
     {
-        PixelWindows.Unregister(this);
-        PixelDevMockWindow.OpenChanged -= OnMockOpenChanged;
-        PixelDevInspector.OpenChanged -= OnInspectorOpenChanged;
+        PixelDevHub.OpenChanged -= OnHubOpenChanged;
         if (dockRoot != null) Destroy(dockRoot);
         if (instance == this)
         {
@@ -457,7 +451,6 @@ public class PixelDevTools : MonoBehaviour
             PixelClicker.DevClickCount = 1;
             PixelFarmerMinigame.DevAlwaysDragonSeeds = false;
         }
-        if (canvasRoot != null) Destroy(canvasRoot);
         if (selectorRoot != null) Destroy(selectorRoot);
         if (godRoot != null) Destroy(godRoot);
         PixelClicker.GodMode = false;
@@ -579,13 +572,10 @@ public class PixelDevTools : MonoBehaviour
 
     private void Open()
     {
-        if (panel == null) return;
-        FillDropdowns();
-        panel.SetActive(true);
+        PixelDevHub.Open();   // (the Dev Hub fills the drop-downs when it opens)
     }
 
     private GameObject toolsView, todoView, changelogView;
-    private Image toolsTabImage, todoTabImage, changelogTabImage;
     private TMP_Text changelogLabel;
     private ScrollRect changelogScroll;
     private GameObject changelogBar;
@@ -595,17 +585,6 @@ public class PixelDevTools : MonoBehaviour
     private GameObject todoBar;
     private RectTransform todoViewRect;
 
-    private void SetTab(int tab)
-    {
-        if (toolsView != null) toolsView.SetActive(tab == 0);
-        if (todoView != null) todoView.SetActive(tab == 1);
-        if (changelogView != null) changelogView.SetActive(tab == 2);
-        if (toolsTabImage != null) toolsTabImage.color = tab == 0 ? buttonColor : boxColor;
-        if (todoTabImage != null) todoTabImage.color = tab == 1 ? buttonColor : boxColor;
-        if (changelogTabImage != null) changelogTabImage.color = tab == 2 ? buttonColor : boxColor;
-        if (tab == 1) RebuildTodo();
-        if (tab == 2) RebuildChangelog();
-    }
 
     /// <summary>The Changelog tab: the lines of Resources/Changelog.txt, newest first, in one scrolling text.</summary>
     private void BuildChangelogView(Transform box, float top)
@@ -630,7 +609,6 @@ public class PixelDevTools : MonoBehaviour
         lr.pivot = new Vector2(0.5f, 1f);
         lr.offsetMin = new Vector2(0f, 0f);
         lr.offsetMax = new Vector2(-30f, 0f);
-        changelogView.SetActive(false);
     }
 
     private void RebuildChangelog()
@@ -668,7 +646,6 @@ public class PixelDevTools : MonoBehaviour
         todoViewRect.offsetMin = new Vector2(40f, 30f);
         todoViewRect.offsetMax = new Vector2(-40f, -top);
 
-        todoView.SetActive(false);
     }
 
     private readonly List<GameObject> todoLines = new List<GameObject>();
@@ -727,7 +704,7 @@ public class PixelDevTools : MonoBehaviour
 
     private void Close()
     {
-        if (panel != null) panel.SetActive(false);
+        PixelDevHub.Close();
     }
 
     /// <summary>Gives a pet of every pixel type, quietly (no popups).</summary>
@@ -774,87 +751,17 @@ public class PixelDevTools : MonoBehaviour
 
     private void BuildPanel()
     {
-        canvasRoot = PixelUIKit.CreateCanvas("PixelDevTools Canvas", panelSortingOrder, referenceResolution, true);
-
-        // Full-screen dimmer that also blocks clicks behind the panel.
-        GameObject dim = new GameObject("Dev Tools", typeof(RectTransform), typeof(Image));
-        dim.transform.SetParent(canvasRoot.transform, false);
-        dim.GetComponent<Image>().color = Color.clear;   // (no longer a modal dimmer: the panel is a draggable window you can leave open while playing)
-        dim.GetComponent<Image>().raycastTarget = false;
-        PixelUIKit.Stretch(dim.GetComponent<RectTransform>());
-        panel = dim;
-
-        GameObject box = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-        box.transform.SetParent(dim.transform, false);
-        PixelUIKit.StyleWindow(box.GetComponent<Image>(), panelColor);
-        RectTransform boxRect = box.GetComponent<RectTransform>();
-        boxRect.anchorMin = boxRect.anchorMax = boxRect.pivot = new Vector2(0f, 1f);   // top left, so PixelWindowChrome can drag / dock it
-        boxRect.anchoredPosition = Vector2.zero;
-
-        TMP_Text t = PixelUIKit.CreateText(font, box.transform, "Title", title, titleFontSize,
-                                           TextAlignmentOptions.Center, FontStyles.Bold, textColor);
-        PixelUIKit.Caps(t);
-        RectTransform tr = t.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
-        tr.sizeDelta = new Vector2(0f, titleFontSize * 1.6f);
-        tr.anchoredPosition = new Vector2(0f, -24f);
-
-        // Close "X" at the top right of the panel.
-        float xSize = titleFontSize * 1.6f;
-        Button closeX = PixelUIKit.CreateButton(font, box.transform, "Close Button", "X", new Vector2(xSize, xSize),
-                                                new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);
-        RectTransform cxr = closeX.GetComponent<RectTransform>();
-        cxr.anchorMin = cxr.anchorMax = cxr.pivot = new Vector2(1f, 1f);
-        cxr.sizeDelta = new Vector2(xSize, xSize);
-        cxr.anchoredPosition = new Vector2(-20f, -20f);
-        closeX.onClick.AddListener(Close);
-
+        // The Main tab of the Dev Hub (PixelDevHub): everything below lives in its content root.
+        PixelDevHub.Boot();
+        canvasRoot = PixelDevHub.CanvasObject;
+        RectTransform root = PixelDevHub.TabRoot("main");
         BuildTipBox();
 
-        // A file button at the top left opens the crash / error report folder.
-        if (PixelCrashLog.Available)
-        {
-            Button report = IconButton(box.transform, "Report Folder Button", DevIcons.FileSprite(), new Color(0.3f, 0.4f, 0.55f, 1f), xSize);
-            RectTransform rr = report.GetComponent<RectTransform>();
-            rr.anchorMin = rr.anchorMax = rr.pivot = new Vector2(0f, 1f);
-            rr.anchoredPosition = new Vector2(20f, -20f);
-            report.onClick.AddListener(PixelCrashLog.OpenFolder);
-            reportButtonObject = report.gameObject;
-            AddTip(report.gameObject, reportTipText);
-        }
-
-        float y = 24f + titleFontSize * 1.6f + 16f;
-        float inner = panelSize.x - 80f; // usable width (40 px each side)
-
-        // Tabs: Tools (everything below) | To-Do (a list read from Resources/Todo.txt).
-        float tabW = (inner - 10f) * 0.5f;
-        Button toolsTab = PixelUIKit.CreateButton(font, box.transform, "Tools Tab", toolsTabText, new Vector2(tabW, rowHeight),
-                                                  boxColor, textColor, fontSize);
-        PixelUIKit.Caps(toolsTab);
-        Place(toolsTab.GetComponent<RectTransform>(), 40f, y, tabW);
-        // The right half is shared by To-Do and Changelog (together exactly the space the To-Do tab used to take).
-        float halfW = (tabW - 10f) * 0.5f;
-        Button todoTab = PixelUIKit.CreateButton(font, box.transform, "Todo Tab", todoTabText, new Vector2(halfW, rowHeight),
-                                                 boxColor, textColor, fontSize);
-        PixelUIKit.Caps(todoTab);
-        Place(todoTab.GetComponent<RectTransform>(), 40f + tabW + 10f, y, halfW);
-        Button changelogTab = PixelUIKit.CreateButton(font, box.transform, "Changelog Tab", changelogTabText, new Vector2(halfW, rowHeight),
-                                                      boxColor, textColor, fontSize);
-        PixelUIKit.Caps(changelogTab);
-        Place(changelogTab.GetComponent<RectTransform>(), 40f + tabW + 10f + halfW + 10f, y, halfW);
-        foreach (Button b in new[] { todoTab, changelogTab })
-        {
-            TMP_Text tabLabel = b.GetComponentInChildren<TMP_Text>();
-            if (tabLabel != null) { tabLabel.enableAutoSizing = true; tabLabel.fontSizeMax = fontSize; tabLabel.fontSizeMin = 10f; }   // the shorter buttons shrink their text to fit
-        }
-        toolsTabImage = toolsTab.GetComponent<Image>();
-        todoTabImage = todoTab.GetComponent<Image>();
-        changelogTabImage = changelogTab.GetComponent<Image>();
-        float tabsBottom = y + rowHeight + 16f;
-        y = tabsBottom;
+        float y = 8f;
+        float inner = PixelDevHub.ContentW - 100f; // usable width of a row (40 px left, 60 right: room for the scroll bar)
 
         GameObject tools = new GameObject("Tools View", typeof(RectTransform));
-        tools.transform.SetParent(box.transform, false);
+        tools.transform.SetParent(root, false);
         PixelUIKit.Stretch(tools.GetComponent<RectTransform>());
         toolsView = tools;
 
@@ -884,55 +791,70 @@ public class PixelDevTools : MonoBehaviour
         RectTransform scrollRect = toolsScroll.GetComponent<RectTransform>();
         scrollRect.anchorMin = Vector2.zero;
         scrollRect.anchorMax = Vector2.one;
-        scrollRect.offsetMin = new Vector2(0f, 30f);
+        scrollRect.offsetMin = new Vector2(0f, 8f);
         scrollRect.offsetMax = new Vector2(0f, -scrollTop);
         y = 0f; // rows below are placed from the top of the scrolling content
 
 
+        int ws = content.childCount;
         // Row: tick box for the docked Dev Tools button (the key always opens the window)
         dockToggle = BuildToggleRow(content, "Show Dev Tools button", y, inner, showDockButton, SetDockVisible,
                                     "The glowing Dev Tools button at the bottom of the screen. The window always opens with its key (Settings > Key bindings, default F9).");
+        Widget(content, board, "dock", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: skip intro
         Button skip = PixelUIKit.CreateButton(font, content, "Skip Intro Button", skipIntroLabel,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
         skip.onClick.AddListener(SkipIntro);
+        Widget(content, board, "skip", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: snapshot of the view bounds / floor numbers (waits so the panel can be closed first)
         Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(snap.GetComponent<RectTransform>(), 40f, y, inner);
         snap.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelBoundsSnapshot.Capture(), "Bounds snapshot")));
+        Widget(content, board, "bounds", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Rows: mark this moment / UI layout dump (same wait; the keys F10 / F11 need no wait: mark this moment, inspect under the mouse)
         Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(moment.GetComponent<RectTransform>(), 40f, y, inner);
         moment.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.MarkMoment(), "Marked moment")));
+        Widget(content, board, "moment", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
         Button uiDump = PixelUIKit.CreateButton(font, content, "UI Layout Button", uiDumpText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(uiDump.GetComponent<RectTransform>(), 40f, y, inner);
         uiDump.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.UiLayoutDump(), "UI layout dump")));
+        Widget(content, board, "uidump", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: give the next Dragon Cube still needed
         Button giveDragon = PixelUIKit.CreateButton(font, content, "Give Dragon Cube Button", giveNextDragonCubeLabel,
                                                     new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(giveDragon.GetComponent<RectTransform>(), 40f, y, inner);
         giveDragon.onClick.AddListener(GiveDragonCube);
+        Widget(content, board, "dragon", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: unlock all
         Button unlock = PixelUIKit.CreateButton(font, content, "Unlock All Button", unlockAllText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
         Place(unlock.GetComponent<RectTransform>(), 40f, y, inner);
         unlock.onClick.AddListener(UnlockAll);
+        Widget(content, board, "unlock", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: reset every pixel count (inventory, Log, Bank) but keep the unlocks - needs a second click to confirm
         resetButton = PixelUIKit.CreateButton(font, content, "Reset Counts Button", resetCountsText,
@@ -940,20 +862,28 @@ public class PixelDevTools : MonoBehaviour
         Place(resetButton.GetComponent<RectTransform>(), 40f, y, inner);
         resetLabel = resetButton.GetComponentInChildren<TMP_Text>();
         resetButton.onClick.AddListener(ResetCountsClicked);
+        Widget(content, board, "reset", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box for the clear key
         clearToggle = BuildToggleRow(content, clearToggleText, y, inner, clearKeyEnabled, on => { clearKeyEnabled = on; SetBool("ClearKey", on); });
+        Widget(content, board, "clear", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box for infinite resources
         infiniteToggle = BuildToggleRow(content, infiniteToggleText, y, inner, infiniteResources,
                        on => { infiniteResources = on; PixelClicker.InfiniteResources = on; SetBool("Infinite", on); });
+        Widget(content, board, "infinite", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box for the on-screen spawn selector
         selectorToggle = BuildToggleRow(content, spawnSelectorToggleText, y, inner, spawnSelectorEnabled, SetSelector);
+        Widget(content, board, "selector", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box to stop old pixels despawning
         noDespawnToggle = BuildToggleRow(content, noDespawnToggleText, y, inner, disableDespawn, on =>
@@ -962,7 +892,9 @@ public class PixelDevTools : MonoBehaviour
             OldPixelDespawn.DevNoDespawn = on;
             SetBool("NoDespawn", on);
         });
+        Widget(content, board, "nodespawn", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box to remove the old pixel limit
         noLimitToggle = BuildToggleRow(content, noLimitToggleText, y, inner, disableOldPixelLimit, on =>
@@ -971,7 +903,9 @@ public class PixelDevTools : MonoBehaviour
             PixelClicker.DevNoOldPixelLimit = on;
             SetBool("NoLimit", on);
         });
+        Widget(content, board, "nolimit", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box so the Farmer always brings a Dragon Seed
         farmerSeedsToggle = BuildToggleRow(content, farmerSeedsToggleText, y, inner, farmerAlwaysSeeds, on =>
@@ -980,21 +914,17 @@ public class PixelDevTools : MonoBehaviour
             PixelFarmerMinigame.DevAlwaysDragonSeeds = on;
             SetBool("FarmerSeeds", on);
         });
+        Widget(content, board, "farmerseeds", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
         // Row: tick box for god pixel mode
         godToggle = BuildToggleRow(content, godModeLabel, y, inner, godMode, SetGodMode, godTipText);
+        Widget(content, board, "god", ws, y);
         y += rowHeight + 24f;
+        ws = content.childCount;
 
-        // Rows: the shape placer and the UI mockup builder (layout helpers for describing exact placements in screenshots)
-        mockToggle = BuildToggleRow(content, "Mock up mode", y, inner, PixelDevMockWindow.SavedOpen, PixelDevMockWindow.SetOpen,
-                                    "One draggable window with two tabs: the Shape placer (click the floor to drop cubes, spheres, ramps; drag, rotate, scale) and the UI mockup builder (windows, boxes, buttons, text, images). Copy the layout to describe exact placements. The '-' button shrinks it to a thin header. Saved. Each tab has a RESET ALL button.");
-        y += rowHeight + 24f;
 
-        // Row: the Inspector window (gravity, physics, time, and every value of whatever you click)
-        inspectorToggle = BuildToggleRow(content, "Inspector", y, inner, PixelDevInspector.SavedOpen, PixelDevInspector.SetOpen,
-                                         "A window to change values while playing. World tab: time scale, gravity, physics settings, live counts and every game system. Selected tab: turn Pick on, click any object and edit its fields (game scripts, Rigidbody, Collider, Light...). 'Copy edits' puts your changes on the clipboard.");
-        y += rowHeight + 24f;
 
         // Row: how many clicks one click counts as (payouts, tough-pixel hits and the combo all scale with it)
         TMP_Text clickLabel = PixelUIKit.CreateText(font, content, "Click Count Label", clickCountText, fontSize,
@@ -1012,51 +942,57 @@ public class PixelDevTools : MonoBehaviour
             SetInt("ClickCount", clickCount);
         });
         Place(clickCountField.GetComponent<RectTransform>(), 40f + inner * 0.6f, y, inner * 0.4f);
+        Widget(content, board, "clicks", ws, y);
         y += rowHeight + 24f;
 
-        // A fixed, smaller window: the rows scroll (mouse wheel / bar) when they don't fit.
-        float limit = panelHeightLimit > 200f ? panelHeightLimit : 760f;
-        float wanted = scrollTop + y + 30f + 12f;
-        float boxHeight = Mathf.Min(wanted, limit);
-        boxRect.sizeDelta = new Vector2(panelSize.x, boxHeight);
-        PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, y, boxHeight - scrollTop - 30f);
-        chrome = PixelWindowChrome.Attach(boxRect, font, "PixelClicker.Dev.Window", 24f + titleFontSize * 1.6f + 8f, 20f + xSize + 8f, 20f, xSize,
-                                          new Color(0.35f, 0.35f, 0.42f, 1f), textColor, fontSize);   // drag by the title, minimize, pin, dock to a side
-        chrome.Keep(closeX.gameObject);
-        chrome.Keep(t.gameObject);
-        chrome.Keep(reportButtonObject);
+        board.Finish();   // the saved order, the layout and the scroll size
 
-        BuildTodoView(box.transform, tabsBottom, inner);
-        BuildChangelogView(box.transform, tabsBottom);
-        toolsTab.onClick.AddListener(() => SetTab(0));
-        todoTab.onClick.AddListener(() => SetTab(1));
-        changelogTab.onClick.AddListener(() => SetTab(2));
-        SetTab(0);
+        BuildTodoView(PixelDevHub.TabRoot("todo"), 8f, inner);
+        BuildChangelogView(PixelDevHub.TabRoot("changelog"), 8f);
+        PixelDevHub.SetTabCallback("todo", visible => { if (visible) RebuildTodo(); });
+        PixelDevHub.SetTabCallback("changelog", visible => { if (visible) RebuildChangelog(); });
 
         FillDropdowns();
         pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("PixelIndex", 0), 0, pixelDropdown.options.Count - 1));
         pixelDropdown.RefreshShownValue();
         pixelDropdown.onValueChanged.AddListener(v => SetInt("PixelIndex", v));
-        panel.SetActive(false);
         if (spawnSelectorEnabled) SetSelector(true);
         if (godMode) SetGodMode(true);
-        // Saved shapes / mockup pieces come back even while their panels are closed.
+        // Saved shapes / mockup pieces come back even while the hub is closed.
         PixelDevShapes.Boot();
         PixelDevMockup.Boot();
-        PixelDevMockWindow.OpenChanged += OnMockOpenChanged;
-        PixelDevInspector.OpenChanged += OnInspectorOpenChanged;
-        if (PixelDevInspector.SavedOpen) PixelDevInspector.SetOpen(true);
-        if (PixelDevMockWindow.SavedOpen) PixelDevMockWindow.SetOpen(true);
+        PixelDevHub.OpenChanged += OnHubOpenChanged;
+        if (PixelDevHub.IsOpen) FillDropdowns();
     }
 
-    private void OnInspectorOpenChanged(bool open)
+    private void OnHubOpenChanged(bool open)
     {
-        if (inspectorToggle != null) inspectorToggle.SetIsOnWithoutNotify(open);
+        if (open && pixelDropdown != null) FillDropdowns();
     }
 
-    private void OnMockOpenChanged(bool open)
+    /// <summary>Turns the controls built since child number 'start' of 'content' (one row) into a draggable widget card at row position y.</summary>
+    private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y)
     {
-        if (mockToggle != null) mockToggle.SetIsOnWithoutNotify(open);
+        List<Transform> kids = new List<Transform>();
+        for (int i = start; i < content.childCount; i++) kids.Add(content.GetChild(i));
+        float cardH = rowHeight + 16f;
+        GameObject card = new GameObject("Widget " + id, typeof(RectTransform), typeof(Image));
+        card.transform.SetParent(content, false);
+        RectTransform cr = card.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0f, 1f);
+        cr.sizeDelta = new Vector2(PixelDevHub.ContentW - 24f, cardH);
+        cr.anchoredPosition = new Vector2(0f, -(y - 8f));
+        Image im = card.GetComponent<Image>();
+        im.color = new Color(1f, 1f, 1f, 0.05f);
+        im.raycastTarget = false;
+        PixelUIKit.StyleBox(im);
+        foreach (Transform k in kids)
+        {
+            k.SetParent(card.transform, false);
+            RectTransform kr = (RectTransform)k;
+            kr.anchoredPosition += new Vector2(0f, y - 8f);   // (they were placed at -y; the card starts 8 above that)
+        }
+        board.Add(id, cr, cardH);
     }
 
     // ------------------------------------------------------------------

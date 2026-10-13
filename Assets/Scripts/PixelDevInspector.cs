@@ -23,18 +23,16 @@ using UnityEngine.UI;
 
 public class PixelDevInspector : MonoBehaviour
 {
-    private const float Width = 620f, Height = 820f, HeaderHeight = 52f, TabsHeight = 50f, RowH = 38f, RowGap = 6f, FontSize = 21f, RefreshSeconds = 0.3f;
+    private const float Width = 700f, Height = PixelDevHub.ContentH, TabsHeight = 50f, StatusHeight = 30f, RowH = 38f, RowGap = 6f, FontSize = 21f, RefreshSeconds = 0.3f;
     private const int MaxRowsPerComponent = 150, EasyOpenCount = 14;
-    private const string PrefOpen = "PixelClicker.Dev.InspOn", PrefTab = "PixelClicker.Dev.InspTab", PrefMin = "PixelClicker.Dev.InspMin",
-                         PrefX = "PixelClicker.Dev.InspX", PrefY = "PixelClicker.Dev.InspY";
+    private const string PrefTab = "PixelClicker.Dev.InspTab";
 
     private static PixelDevInspector instance;
+    /// <summary>The Inspector tab is on screen (the hub is open and the tab is showing / floating).</summary>
     public static bool IsOpen { get; private set; }
-    public static event Action<bool> OpenChanged;
-    public static bool SavedOpen => PlayerPrefs.GetInt(PrefOpen, 0) != 0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; IsOpen = false; OpenChanged = null; }
+    private static void ResetStatics() { instance = null; IsOpen = false; }
 
     public static void Boot()
     {
@@ -42,7 +40,8 @@ public class PixelDevInspector : MonoBehaviour
         instance = new GameObject("Dev Inspector").AddComponent<PixelDevInspector>();
     }
 
-    public static void SetOpen(bool on)
+    /// <summary>Called by the Dev Hub when the Inspector tab appears / disappears.</summary>
+    public static void SetVisible(bool on)
     {
         Boot();
         instance.Apply(on);
@@ -208,12 +207,12 @@ public class PixelDevInspector : MonoBehaviour
                                   HeaderRow = new Color(0.22f, 0.3f, 0.46f, 1f), OnColor = new Color(0.2f, 0.55f, 0.3f, 1f), OffColor = new Color(0.35f, 0.25f, 0.25f, 1f);
 
     private TMP_FontAsset font;
-    private GameObject canvasRoot, body;
-    private RectTransform windowRect, worldContent, selContent;
+    private GameObject body;
+    private RectTransform worldContent, selContent;
     private GameObject worldView, selView, worldBar, selBar;
     private ScrollRect worldScroll, selScroll;
     private Image[] tabImages = new Image[2];
-    private TMP_Text minLabel, pickLabel, selectedLabel, activeLabel;
+    private TMP_Text pickLabel, selectedLabel, activeLabel, statusLabel;
     private TMP_Dropdown systemsDropdown;
     private TMP_InputField filterField;
     private readonly List<Row> worldRows = new List<Row>(), selRows = new List<Row>();
@@ -221,7 +220,7 @@ public class PixelDevInspector : MonoBehaviour
     private readonly Dictionary<int, bool> openState = new Dictionary<int, bool>();
     private readonly List<string> edits = new List<string>();
     private int tab;
-    private bool minimized, pickMode, pickBlocking, wasSelected;
+    private bool pickMode, pickBlocking, wasSelected;
     private GameObject selected;
     private string filter = "";
     private float refreshT, countT, fpsSmooth = 60f;
@@ -234,9 +233,8 @@ public class PixelDevInspector : MonoBehaviour
         font = clicker != null ? clicker.UIFont : null;
         PixelUIKit.EnsureEventSystem();
         tab = Mathf.Clamp(PlayerPrefs.GetInt(PrefTab, 0), 0, 1);
-        minimized = PlayerPrefs.GetInt(PrefMin, 0) != 0;
         Build();
-        canvasRoot.SetActive(false);
+        PixelDevHub.SetTabCallback("inspector", SetVisible);
     }
 
     private void OnDestroy()
@@ -264,38 +262,14 @@ public class PixelDevInspector : MonoBehaviour
 
     private void Build()
     {
-        canvasRoot = PixelUIKit.CreateCanvas("Dev Inspector UI", 565, new Vector2(1920f, 1080f), true);
-        canvasRoot.transform.SetParent(transform, false);
-        Canvas canvas = canvasRoot.GetComponent<Canvas>();
-
-        GameObject windowGo = new GameObject("Window", typeof(RectTransform), typeof(Image));
-        windowGo.transform.SetParent(canvasRoot.transform, false);
-        windowRect = windowGo.GetComponent<RectTransform>();
-        Vector2 saved = new Vector2(PlayerPrefs.GetFloat(PrefX, 1920f - Width - 20f), PlayerPrefs.GetFloat(PrefY, 100f));
-        saved.x = Mathf.Clamp(saved.x, 0f, 1920f - 160f);
-        saved.y = Mathf.Clamp(saved.y, 0f, 1080f - HeaderHeight);
-        PlaceTL(windowRect, saved.x, saved.y, Width, 0f);
-        PixelUIKit.StyleWindow(windowGo.GetComponent<Image>(), new Color(0.08f, 0.1f, 0.16f, 0.97f));
-
-        GameObject header = new GameObject("Header", typeof(RectTransform), typeof(Image), typeof(PixelPopoutDrag));
-        header.transform.SetParent(windowGo.transform, false);
-        PlaceTL(header.GetComponent<RectTransform>(), 0f, 0f, Width, HeaderHeight);
-        header.GetComponent<Image>().color = new Color(0.14f, 0.18f, 0.28f, 1f);
-        PixelPopoutDrag drag = header.GetComponent<PixelPopoutDrag>();
-        drag.target = windowRect;
-        drag.canvas = canvas;
-        drag.onMoved = SavePosition;
-        TMP_Text title = PixelUIKit.CreateText(font, header.transform, "Title", "INSPECTOR", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, TextColor);
-        PlaceTL(title.rectTransform, 16f, 0f, Width - 130f, HeaderHeight);
-        title.raycastTarget = false;
-        Button min = MakeButton(header.transform, "-", Width - 100f, 6f, 44f, 40f, new Color(0.3f, 0.36f, 0.5f, 1f), () => { minimized = !minimized; PlayerPrefs.SetInt(PrefMin, minimized ? 1 : 0); Layout(); }, 30f);
-        minLabel = min.GetComponentInChildren<TMP_Text>();
-        MakeButton(header.transform, "X", Width - 50f, 6f, 44f, 40f, new Color(0.6f, 0.2f, 0.2f, 1f), () => Apply(false), 26f);
-
-        float bodyHeight = Height - HeaderHeight;
-        body = new GameObject("Body", typeof(RectTransform));
-        body.transform.SetParent(windowGo.transform, false);
-        PlaceTL(body.GetComponent<RectTransform>(), 0f, HeaderHeight, Width, bodyHeight);
+        // The Inspector is a tab of the Dev Hub: its content root is given to it.
+        RectTransform root = PixelDevHub.TabRoot("inspector");
+        float bodyHeight = Height - StatusHeight;
+        body = root.gameObject;
+        statusLabel = PixelUIKit.CreateText(font, root, "Status", "Edit a value and press Enter (or click away): the change is applied at once.", FontSize - 4f, TextAlignmentOptions.MidlineLeft, FontStyles.Italic, new Color(0.7f, 0.78f, 0.9f, 1f));
+        PlaceTL(statusLabel.rectTransform, 14f, Height - StatusHeight, Width - 28f, StatusHeight);
+        statusLabel.raycastTarget = false;
+        statusLabel.enableAutoSizing = true; statusLabel.fontSizeMax = FontSize - 4f; statusLabel.fontSizeMin = 10f;
 
         float tabW = 200f;
         string[] names = { "World", "Selected" };
@@ -345,17 +319,8 @@ public class PixelDevInspector : MonoBehaviour
         Layout();
     }
 
-    private void SavePosition()
-    {
-        PlayerPrefs.SetFloat(PrefX, windowRect.anchoredPosition.x);
-        PlayerPrefs.SetFloat(PrefY, -windowRect.anchoredPosition.y);
-    }
-
     private void Layout()
     {
-        body.SetActive(!minimized);
-        windowRect.sizeDelta = new Vector2(Width, minimized ? HeaderHeight : Height);
-        minLabel.text = minimized ? "+" : "-";
         worldView.SetActive(tab == 0);
         selView.SetActive(tab == 1);
         for (int i = 0; i < 2; i++) if (tabImages[i] != null) tabImages[i].color = i == tab ? TabOn : TabOff;
@@ -371,13 +336,13 @@ public class PixelDevInspector : MonoBehaviour
 
     private void Apply(bool on)
     {
-        bool changed = IsOpen != on;
         IsOpen = on;
-        canvasRoot.SetActive(on);
-        PlayerPrefs.SetInt(PrefOpen, on ? 1 : 0);
         if (on) { RefreshSystems(); Layout(); if (tab == 0) RebuildWorld(); else RebuildSelected(); }
-        else if (pickMode) { pickMode = false; UpdatePickUi(); }
-        if (changed) OpenChanged?.Invoke(on);
+        else
+        {
+            if (pickMode) { pickMode = false; UpdatePickUi(); }
+            if (pickBlocking) { PixelClicker.ExternalClickBlock = false; pickBlocking = false; }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -427,11 +392,10 @@ public class PixelDevInspector : MonoBehaviour
                     object next;
                     if (isBool) next = !(bool)cur;
                     else { Array all = Enum.GetValues(m.type); next = all.GetValue((Array.IndexOf(all, cur) + 1) % all.Length); }
-                    m.set(next);
-                    RecordEdit(m, Format(next));
+                    ApplyValue(row, next, true);
                     ShowValue(row);
                 }
-                catch (Exception e) { Debug.LogWarning("PixelDevInspector: could not set " + m.label + ": " + e.Message); }
+                catch (Exception e) { SetStatus("Could not change " + m.label + ": " + e.Message); }
             });
         }
         else
@@ -440,10 +404,12 @@ public class PixelDevInspector : MonoBehaviour
             PlaceTL(f.GetComponent<RectTransform>(), ctlX, y, ctlW, RowH);
             f.interactable = !m.readOnly;
             f.gameObject.AddComponent<InspectorCaret>();
+            // Applied while you type (as soon as what is there makes sense) and again when you press Enter / click away.
+            f.onValueChanged.AddListener(s => { if (TryParse(m.type, s, out object v)) ApplyValue(row, v, false); });
             f.onEndEdit.AddListener(s =>
             {
-                if (!TryParse(m.type, s, out object v)) { ShowValue(row); return; }
-                try { m.set(v); RecordEdit(m, Format(v)); } catch (Exception e) { Debug.LogWarning("PixelDevInspector: could not set " + m.label + ": " + e.Message); }
+                if (TryParse(m.type, s, out object v)) ApplyValue(row, v, true);
+                else SetStatus("Could not read '" + s + "' as " + m.type.Name + " for " + m.label);
                 ShowValue(row);
             });
             row.field = f;
@@ -462,6 +428,23 @@ public class PixelDevInspector : MonoBehaviour
             else if (row.buttonLabel != null) row.buttonLabel.text = s;
         }
         catch { /* the object was destroyed */ }
+    }
+
+    private void SetStatus(string text) { if (statusLabel != null) statusLabel.text = text; }
+
+    /// <summary>Writes a value and tells you what happened (it reads the value back, so you can see when the game changes it again or refuses it).</summary>
+    private void ApplyValue(Row row, object value, bool record)
+    {
+        Member m = row.member;
+        try
+        {
+            m.set(value);
+            object back = m.get();
+            string shown = Format(back);
+            if (record) RecordEdit(m, Format(value));
+            SetStatus(Format(value) == shown ? "Set " + m.label + " = " + shown : "Set " + m.label + " to " + Format(value) + " but it reads back as " + shown + " (the game or Unity changed it)");
+        }
+        catch (Exception e) { SetStatus("Could not set " + m.label + ": " + e.Message); }
     }
 
     private void RecordEdit(Member m, string value)
