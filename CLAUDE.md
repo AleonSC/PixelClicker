@@ -63,6 +63,7 @@
 | `PixelTimeStop.cs` | Time Stop (shop pack with unlocksTimeStop, Upgrades tab): | in the header comment of `PixelTimeStop.cs` |
 | `PixelBank.cs` | Pixel Bank (shop pack with unlocksBank, Upgrades tab): | `docs/systems/PixelBank.md` |
 | `PixelSkills.cs` / `PixelSkillsWindow.cs` | Skill system SHELL (added by PixelClicker.Awake, PixelSkills.Instance, disableSkills): | `docs/systems/PixelSkills.md` |
+| `PixelTogglesTutorial.cs` | Toggles tutorial (first-time tips): after the Auto Clicker is bought Cubie narrates the Toggles tab / window, then hints at Skills and the Woodcutter's Pack; the skills tutorial waits for it. | in the header comment of `PixelTogglesTutorial.cs` |
 | `PixelSkillsTutorial.cs` / `PixelTutorialDim.cs` | Skills tutorial (part of partial class PixelSkills, started from the window's Update by UpdateTutorialStart the first time a skill pack is available and the screen is calm: | in the header comment of `PixelSkillsTutorial.cs` |
 | `PixelSkillsStandard.cs` | Part of partial class PixelSkills: Standard is a real skill. | in the header comment of `PixelSkillsStandard.cs` |
 | Skill tree window (`PixelSkillsWindow.cs`, `PixelScrollFadeX.cs`) | The tree's nodes sit in a SIDEWAYS scroll view (nodeView + nodeScroll, wheel / drag; | in the header comment of `PixelSkillsWindow.cs` |

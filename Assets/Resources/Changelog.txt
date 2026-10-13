@@ -862,3 +862,4 @@
 [2026-10-13 19:33 UTC] The Funnel no longer shrinks and pops back when switching out of first person (it is left out of the floor's props fade, which scaled its pinned cone and tube apart).
 [2026-10-13 19:41 UTC] Removed the Old Pixel Capacity upgrade from the shop (saved copies are taken out on load) and added a to-do to rebalance it into a Standard skill reward.
 [2026-10-13 19:41 UTC] To-do: rebalance Old Pixel Capacity into a Standard skill reward.
+[2026-10-13 19:49 UTC] After buying the Auto Clicker (with first-time tips on) Cubie now explains the Toggles window, then hints at Skills and buying the Woodcutter's Pack; it replays with Replay tutorial and the skills tutorial waits for it.

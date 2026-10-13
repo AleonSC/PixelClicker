@@ -2262,7 +2262,8 @@ public partial class PixelShop : MonoBehaviour
             if (pack.unlocksAutoClicker && autoClicker != null)
             {
                 autoClicker.UserDisabled = true;
-                PixelToggles.ShowHint();
+                if (PixelTogglesTutorial.WillRun) PixelTogglesTutorial.Request();   // Cubie explains the Toggles window (first-time tips)
+                else PixelToggles.ShowHint();
                 PixelHints.Announce("You unlocked the Auto Clicker!", PixelToggles.HintMessage);
             }
         }

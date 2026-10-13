@@ -133,6 +133,7 @@ public class PixelGuideVendor : MonoBehaviour
         PixelStats.Clear(Stage2Key);
         PixelStats.Clear(PixelShopTutorial.DoneKey);
         PixelStats.Clear(PixelSkills.TutorialDoneKey);
+        PixelTogglesTutorial.Replay();
         instance.replaying = true;
         instance.calmTimer = 0f;
     }

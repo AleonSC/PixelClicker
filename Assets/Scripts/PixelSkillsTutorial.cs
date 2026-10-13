@@ -77,7 +77,7 @@ public partial class PixelSkills
         if (PixelStats.Total(TutorialDoneKey) >= 1d || !PixelHints.TipsEnabled) return;
         PixelShop shop = PixelFind.First<PixelShop>();
         bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;
-        if (shopTutorialDue || PixelTutorialDim.Active || PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelGuideVendor.Pending ||
+        if (shopTutorialDue || PixelTogglesTutorial.Due || PixelTogglesTutorial.Running || PixelTutorialDim.Active || PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelGuideVendor.Pending ||
             PixelGuideVendor.Visiting || PixelNotice.IsShowing || PixelPauseMenu.IsPaused || PixelMinigame.TakeoverActive || Time.timeScale <= 0f)
         {
             tutorialReady = 0f;

@@ -219,7 +219,32 @@ public class PixelToggles : MonoBehaviour
         PixelUIKit.EnsureEventSystem();
         BuildUI();
         built = true;
+        if (PixelFind.First<PixelTogglesTutorial>() == null) new GameObject("Toggles Tutorial").AddComponent<PixelTogglesTutorial>();   // Cubie's intro to this window
     }
+
+    /// <summary>The Toggles window's rectangle (null before it is built).</summary>
+    public static RectTransform WindowRect => instance != null && instance.windowObject != null ? instance.windowObject.GetComponent<RectTransform>() : null;
+
+    /// <summary>The Toggles tab at the screen edge.</summary>
+    public static RectTransform TabRect => instance != null && instance.openObject != null ? instance.openObject.GetComponent<RectTransform>() : null;
+
+    /// <summary>Is the Toggles tab shown (the Auto Clicker, a pet, a skill pack or a switchable pixel is owned)?</summary>
+    public static bool TabVisible => instance != null && instance.openObject != null && instance.openObject.activeSelf;
+
+    /// <summary>Tutorial: opens the window on a group (0 Pixels .. 4 Pets).</summary>
+    public static void TutorialOpen(int group)
+    {
+        if (instance == null || !instance.built || instance.windowObject == null) return;
+        instance.CloseHint();
+        instance.current = (Group)Mathf.Clamp(group, 0, GroupCount - 1);
+        if (instance.content != null) instance.content.anchoredPosition = Vector2.zero;
+        if (!PixelPop.IsOpen(instance.windowObject)) PixelPop.Show(instance.windowObject);
+        instance.refreshTimer = 0f;
+        instance.Refresh();
+    }
+
+    /// <summary>Tutorial: closes the window.</summary>
+    public static void TutorialClose() { CloseWindowIfOpen(); }
 
     private void OnDestroy()
     {
