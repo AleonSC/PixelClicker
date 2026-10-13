@@ -515,20 +515,35 @@ public class PixelWoodChipper : MonoBehaviour
 
     private static Mesh FunnelMesh(Vector3[] b, Vector3[] m)
     {
-        // Eight corners, four walls; each wall gets both windings so it shows from either side.
-        List<Vector3> v = new List<Vector3>();
+        // Four walls, each with a front face (normal pointing out of the funnel) and its OWN back face (opposite normal, opposite winding) so it shows from either side.
+        // The two faces must not share vertices: shared vertices make RecalculateNormals average the opposite normals to zero, and a zero normal makes the lit shader output NaN,
+        // which bloom spreads into a huge white blob.
+        Vector3 centre = Vector3.zero;
+        for (int i = 0; i < 4; i++) centre += b[i] + m[i];
+        centre /= 8f;
+        List<Vector3> v = new List<Vector3>(), nrm = new List<Vector3>();
         List<int> tri = new List<int>();
         for (int i = 0; i < 4; i++)
         {
             int j = (i + 1) % 4;
+            Vector3 p0 = b[i], p1 = b[j], p2 = m[j], p3 = m[i];
+            Vector3 n = Vector3.Cross(p1 - p0, p3 - p0).normalized;
+            if (Vector3.Dot(n, (p0 + p1 + p2 + p3) * 0.25f - centre) < 0f) n = -n;   // outward
             int s = v.Count;
-            v.Add(b[i]); v.Add(b[j]); v.Add(m[j]); v.Add(m[i]);
-            tri.AddRange(new[] { s, s + 1, s + 2, s, s + 2, s + 3, s, s + 2, s + 1, s, s + 3, s + 2 });
+            for (int k = 0; k < 2; k++)
+            {
+                v.AddRange(new[] { p0, p1, p2, p3 });
+                Vector3 nn = k == 0 ? n : -n;
+                nrm.AddRange(new[] { nn, nn, nn, nn });
+            }
+            bool flip = Vector3.Dot(Vector3.Cross(p1 - p0, p2 - p0), n) < 0f;
+            if (!flip) tri.AddRange(new[] { s, s + 1, s + 2, s, s + 2, s + 3, s + 4, s + 6, s + 5, s + 4, s + 7, s + 6 });
+            else tri.AddRange(new[] { s, s + 2, s + 1, s, s + 3, s + 2, s + 4, s + 5, s + 6, s + 4, s + 6, s + 7 });
         }
         Mesh mesh = new Mesh { name = "Funnel" };
         mesh.SetVertices(v);
+        mesh.SetNormals(nrm);
         mesh.SetTriangles(tri, 0);
-        mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         return mesh;
     }
