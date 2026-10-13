@@ -62,8 +62,12 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float carryReach = 0f;
 
     [Min(0f)]
-    [Tooltip("Speed of a thrown cube, in old-pixel widths per second. 0 = the coded default (7).")]
+    [Tooltip("Speed of a full-power throw, in old-pixel widths per second. 0 = the coded default (14).")]
     [SerializeField] private float throwSpeed = 0f;
+
+    [Min(0f)]
+    [Tooltip("Seconds of holding the left button (after the first quarter second) to reach full throwing power. 0 = the coded default (1.2).")]
+    [SerializeField] private float throwChargeSeconds = 0f;
 
     [Header("Build controls (holding a cube)")]
     [Min(0f)]
@@ -282,6 +286,8 @@ public class PixelFirstPerson : MonoBehaviour
         if (fpCamera != null) Destroy(fpCamera.gameObject);
         if (player != null) Destroy(player);
         if (canvasRoot != null) Destroy(canvasRoot);
+        if (throwLine != null) Destroy(throwLine.gameObject);
+        throwLine = null; charging = false;
         if (grid != null) Destroy(grid.gameObject);
         grid = null;
         foreach (GameObject g in attachGhosts) if (g != null) Destroy(g);
@@ -389,12 +395,96 @@ public class PixelFirstPerson : MonoBehaviour
         bool snapped = FindCarriedSnap(unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target);
         UpdateAttachGhosts(snapped, hPos, hRot);
 
-        if (PixelInput.LeftPressed())
+        // Left button: a quick tap sticks it (white ghost) or sets it down; HOLD it to charge a throw (the ghost line shows the flight) and let go to throw.
+        if (PixelInput.LeftPressed()) { charging = true; chargeTime = 0f; }
+        if (charging)
         {
-            if (snapped) AttachCarried(hPos, hRot, member, target);
-            else DropCarried();
+            if (PixelInput.LeftHeld())
+            {
+                chargeTime += Time.unscaledDeltaTime;
+                if (chargeTime > TapSeconds)
+                {
+                    UpdateAttachGhosts(false, Vector3.zero, Quaternion.identity);
+                    UpdateThrowLine(true);
+                }
+            }
+            else
+            {
+                charging = false;
+                bool threw = chargeTime > TapSeconds;
+                HideThrowLine();
+                if (threw) DropCarried(ThrowVelocity());
+                else if (snapped) AttachCarried(hPos, hRot, member, target);
+                else DropCarried();
+            }
         }
     }
+
+    private const float TapSeconds = 0.25f;
+    private bool charging;
+    private float chargeTime;
+    private LineRenderer throwLine;
+    private Material throwLineMat;
+
+    private float ThrowPower01 => Mathf.Clamp01((chargeTime - TapSeconds) / V(throwChargeSeconds, 1.2f));
+
+    private Vector3 ThrowVelocity()
+    {
+        Vector3 dir = (fpCamera.transform.forward + Vector3.up * 0.12f).normalized;
+        return dir * clicker.OldPixelWorldSize * V(throwSpeed, 14f) * (0.25f + 0.75f * ThrowPower01);
+    }
+
+    /// <summary>The ghost line: the arc the held cube will fly, drawn up to where it lands - longer the longer the button is held.</summary>
+    private void UpdateThrowLine(bool show)
+    {
+        if (!show || carried.Count == 0 || carried[0] == null) { HideThrowLine(); return; }
+        if (throwLine == null)
+        {
+            GameObject go = new GameObject("Throw Line");
+            throwLine = go.AddComponent<LineRenderer>();
+            Shader sh = PixelShaders.SpriteDefault();
+            throwLineMat = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
+            throwLine.sharedMaterial = throwLineMat;
+            throwLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            throwLine.receiveShadows = false;
+            throwLine.numCapVertices = 4;
+        }
+        throwLine.gameObject.SetActive(true);
+        float unit = clicker.OldPixelWorldSize;
+        Vector3 p = carried[0].transform.position;
+        Vector3 v = ThrowVelocity();
+        ScaledGravity sg = carried[0].GetComponent<ScaledGravity>();
+        Vector3 g = Physics.gravity * (sg != null ? sg.scale : 1f);
+        const float dt = 0.04f;
+        const int maxSteps = 90;
+        var pts = throwPoints;
+        pts.Clear();
+        pts.Add(p);
+        for (int i = 0; i < maxSteps; i++)
+        {
+            Vector3 np = p + v * dt + 0.5f * g * dt * dt;
+            v += g * dt;
+            Vector3 seg = np - p;
+            bool hit = false;
+            if (Physics.Raycast(p, seg.normalized, out RaycastHit h, seg.magnitude, ~0, QueryTriggerInteraction.Ignore)
+                && h.collider.GetComponentInParent<OldPixelInfo>() == null)
+            { np = h.point; hit = true; }
+            pts.Add(np);
+            p = np;
+            if (hit) break;
+        }
+        throwLine.positionCount = pts.Count;
+        throwLine.SetPositions(pts.ToArray());
+        float w = unit * 0.07f;
+        throwLine.startWidth = w; throwLine.endWidth = w * 0.5f;
+        float t = ThrowPower01;
+        Color c = Color.Lerp(new Color(1f, 1f, 1f, 0.55f), new Color(1f, 0.55f, 0.15f, 0.9f), t);
+        throwLine.startColor = c; throwLine.endColor = new Color(c.r, c.g, c.b, 0.15f);
+    }
+
+    private readonly System.Collections.Generic.List<Vector3> throwPoints = new System.Collections.Generic.List<Vector3>();
+
+    private void HideThrowLine() { if (throwLine != null && throwLine.gameObject.activeSelf) throwLine.gameObject.SetActive(false); }
 
     /// <summary>Best spot for the carried cube / build: on another cube's face, or flat on the ground. Returns the handle's pose, which carried cube makes the contact and what it sticks to (null = ground).</summary>
     private bool FindCarriedSnap(float unit, out Vector3 hPos, out Quaternion hRot, out int member, out Rigidbody target)
@@ -512,7 +602,7 @@ public class PixelFirstPerson : MonoBehaviour
     private void UpdateHint(bool holding, bool canGrab, bool canPry, bool aimingCube)
     {
         if (hintLabel == null) return;
-        string text = holding ? "Wheel: closer / farther     Hold right + mouse: turn     Left: stick it where the white ghost shows (on a cube or the ground), or put it down"
+        string text = holding ? "Wheel: closer / farther     Hold right + mouse: turn     Tap left: stick it where the white ghost shows (cube or ground) or put it down     Hold left, release: throw"
                     : canGrab ? "Left click: pick up this cube"
                     : canPry ? "Left click: move the whole build     Hold right click: pry this cube loose"
                     : aimingCube ? "Left click: click the cube" : "";
@@ -617,7 +707,7 @@ public class PixelFirstPerson : MonoBehaviour
     }
 
     /// <summary>Sets what is in hand down in front of you (a build keeps its glue).</summary>
-    private void DropCarried()
+    private void DropCarried(Vector3? throwVelocity = null)
     {
         if (carried.Count == 0) return;
         Vector3 forward = fpCamera != null ? fpCamera.transform.forward : Vector3.forward;
@@ -631,13 +721,15 @@ public class PixelFirstPerson : MonoBehaviour
             if (gravity != null) gravity.enabled = true;
             OldPixelDespawn despawn = body.GetComponent<OldPixelDespawn>();
             if (despawn != null) despawn.Held = false;
-            SetBodyVelocity(body, forward * unit * 0.6f);
+            SetBodyVelocity(body, throwVelocity ?? forward * unit * 0.6f);
             OldPixelShatter shatter = body.GetComponent<OldPixelShatter>();
             if (shatter != null) shatter.Released(true, 3f);
         }
         foreach (PixelAttachment.Edge e in carriedEdges) PixelAttachment.Attach(e.a, e.b);   // (also freezes their lifetime again)
         ClearCarried();
+        charging = false;
         HideAttachGhost();
+        HideThrowLine();
         PixelAudio.Play("drop");
     }
 

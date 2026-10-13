@@ -21,3 +21,6 @@ Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point her
 
 ### Neon floor
 In first person the normal floor (and its wireframe circle) is hidden (PixelFloor.FloorOff includes PixelFirstPerson.Active; the ground collider stays) and PixelFirstPersonGrid draws a neon grid (Resources/PixelNeonGrid.shader) that only shows within a radius of the player, the clicker cube and old pixels lying on the ground. Colour, spacing, radii and brightness are on PixelFirstPerson ("Neon floor").
+
+### Throwing
+While holding a cube or build: a quick left tap (under 0.25 s) sticks it / sets it down as before; HOLD left to charge a throw - a ghost line (LineRenderer, Sprites/Default) draws the arc to where it lands, longer and orange as power builds (throwSpeed full power, throwChargeSeconds to charge) - and let go to throw along the view.
