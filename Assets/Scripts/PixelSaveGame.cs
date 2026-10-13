@@ -436,6 +436,9 @@ public class PixelSaveGame : MonoBehaviour
     /// <summary>Set when a New Game is started after the game has already been played this run: the scene reloads fresh and the title screen presses Play by itself.</summary>
     public static bool AutoStartNewGame;
 
+    /// <summary>Set with AutoStartNewGame (Restart / New Game). The title's Play clears AutoStartNewGame in its first update, which can be BEFORE this component's startup check runs one frame later: that check then took the newest save's settings (tips off...) into the new game. This flag outlives it and is used up by the check.</summary>
+    public static bool NewGameKeepsDefaults;
+
     /// <summary>Saves into this slot (it becomes the current slot). The Save / Load window asks before overwriting.</summary>
     public bool SaveToSlot(int slot, bool message = true)
     {
@@ -474,15 +477,17 @@ public class PixelSaveGame : MonoBehaviour
 
         // One frame later, so every other script has finished its own startup first.
         yield return null;
+        bool keepDefaults = AutoStartNewGame || NewGameKeepsDefaults;
+        NewGameKeepsDefaults = false;
         // With the main menu showing, nothing loads by itself: its Continue button (or the Load window) does.
         if (PixelTitleScreen.Showing)
         {
-            if (AutoStartNewGame) { }   // a fresh start (Restart / New Game): the defaults stay
+            if (keepDefaults) { }   // a fresh start (Restart / New Game): the defaults stay
             else
             // The main menu shows the settings of the profile Continue would load (a brand-new game, with no save, keeps the defaults).
             if (TryGetLatest(out int _, out string latestPath)) ApplyProfileSettings(latestPath);
         }
-        else if (loadOnStart && TryGetLatest(out int latestSlot, out string startPath))
+        else if (!keepDefaults && loadOnStart && TryGetLatest(out int latestSlot, out string startPath))
         {
             if (latestSlot > 0) CurrentSlot = latestSlot;
             Load(false, true, startPath);

@@ -1020,6 +1020,7 @@ public class PixelPauseMenu : MonoBehaviour
             PixelHints.ResetSeen(); // a new game shows the first-time tips (and the intro) again
             PixelSettingsSync.ResetToDefaults();   // ...and starts with the default settings
             PixelSaveGame.AutoStartNewGame = true;   // the main menu starts it by itself (no Continue detour)
+            PixelSaveGame.NewGameKeepsDefaults = true;   // (and the new game keeps the default settings, whatever the old saves say)
         }
         PixelCrashLog.EndSessionCleanly(); // a deliberate restart is not a crash
         PixelAchievements.ResetOnNextStart = true; // achievements start from nothing in the new game too

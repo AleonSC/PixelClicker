@@ -409,6 +409,7 @@ public class PixelTitleScreen : MonoBehaviour
         save.UseSlotForNewGame(slot);
         PixelSaveGame.HasLoadedSave = false;
         PixelSaveGame.AutoStartNewGame = true;   // (no Continue detour: OnPlay clears it)
+        PixelSaveGame.NewGameKeepsDefaults = true;   // (the save's startup check must not bring an old save's settings back either)
         PixelSettingsSync.ResetToDefaults();   // a new game starts with the default settings
         if (!PlayedOnce) { title.OnPlay(); return; }
         // The game has been played already: reload the scene fresh, the title presses Play by itself.
