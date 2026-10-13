@@ -6,7 +6,7 @@
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
 //   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes.
-//   WHETSTONE (PixelType.Whetstone, Woodcutting base block, 3 hits): while it is held, every manual click counts as whetstoneClicks (3) clicks (PixelBlockHold.ClickFactor, used by PixelClicker.CollectInternal).
+//   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = clicks x3.
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
@@ -47,9 +47,6 @@ public class PixelBlockHold : MonoBehaviour
     [SerializeField] private float sideDistance = 0f;
     [Tooltip("Colour the meter flashes when it ran dry.")]
     [SerializeField] private Color exhaustColor = new Color(1f, 0.2f, 0.15f, 1f);
-    [Min(1)]
-    [Tooltip("While a Whetstone is held, every manual click counts as this many clicks (damage on tough blocks and payout). 0 or 1 = the coded default (3).")]
-    [SerializeField] private int whetstoneClicks = 0;
     [Tooltip("Switch the whole feature off (even when the upgrade is bought).")]
     [SerializeField] private bool disableBlockHold = false;
 
@@ -81,6 +78,7 @@ public class PixelBlockHold : MonoBehaviour
     private GameObject canvasRoot;
     private RectTransform panel, canvasRect;
     private Image fill, back;
+    private TMPro.TMP_Text bonusLabel;
     private static Sprite arcSprite;
     private const float ArcHalfDegrees = 55f;
 
@@ -90,17 +88,17 @@ public class PixelBlockHold : MonoBehaviour
     /// <summary>The tier index of the block in hand (-1 when nothing is held).</summary>
     public int HeldTierIndex => holding ? heldTier : -1;
 
-    /// <summary>How many clicks one manual click counts as: more than 1 for as long as a Whetstone is held (right button), else 1.</summary>
-    public static int ClickFactor
+    /// <summary>The type of the block in hand (false when nothing is held).</summary>
+    public bool TryGetHeldType(out PixelClicker.PixelType type)
     {
-        get
-        {
-            PixelBlockHold h = Instance;
-            if (h == null || !h.holding || h.clicker == null || !h.clicker.IsValidTierIndex(h.heldTier)) return 1;
-            if (h.clicker.Tiers[h.heldTier].type != PixelClicker.PixelType.Whetstone) return 1;
-            return h.whetstoneClicks > 1 ? h.whetstoneClicks : 3;
-        }
+        type = PixelClicker.PixelType.White;
+        if (!holding || clicker == null || !clicker.IsValidTierIndex(heldTier)) return false;
+        type = clicker.Tiers[heldTier].type;
+        return true;
     }
+
+    /// <summary>How many clicks one manual click counts as (1 unless a hold block with a click bonus is held; see PixelBlockRules).</summary>
+    public static int ClickFactor => PixelBlockRules.HeldClickFactor;
     private float SlideSeconds => slideSeconds > 0f ? slideSeconds : 0.25f;
     private float SideDistance => sideDistance > 0f ? sideDistance : 2.3f;
 
@@ -321,6 +319,19 @@ public class PixelBlockHold : MonoBehaviour
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
             panel.anchoredPosition = local + new Vector2(-6f, 0f);
 
+        PixelBlockRules.HoldRule bonus = holding ? PixelBlockRules.ActiveHold : null;
+        if (bonusLabel != null)
+        {
+            bool on = bonus != null && !string.IsNullOrEmpty(bonus.label);
+            if (bonusLabel.gameObject.activeSelf != on) bonusLabel.gameObject.SetActive(on);
+            if (on)
+            {
+                if (bonusLabel.text != bonus.label) bonusLabel.text = bonus.label;
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 lp2))
+                    bonusLabel.rectTransform.anchoredPosition = lp2 + new Vector2(-120f, -118f);
+            }
+        }
+
         float k = Mathf.Clamp01(meter);
         // (the arc sprite shows 35..145 degrees of the circle, measured from the bottom, going round the right side)
         fill.fillAmount = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k) / 360f;
@@ -364,5 +375,13 @@ public class PixelBlockHold : MonoBehaviour
         fill.fillMethod = Image.FillMethod.Radial360;
         fill.fillOrigin = (int)Image.Origin360.Bottom;
         fill.fillClockwise = false;   // bottom -> right -> top
+
+        // The bonus text of a held bonus block (PixelBlockRules.HoldRule.label), under the arc.
+        bonusLabel = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Bonus Label", "", 30f, TMPro.TextAlignmentOptions.Center, TMPro.FontStyles.Bold, new Color(1f, 0.9f, 0.4f, 1f));
+        bonusLabel.raycastTarget = false;
+        RectTransform blr = bonusLabel.rectTransform;
+        blr.anchorMin = blr.anchorMax = blr.pivot = new Vector2(0.5f, 0.5f);
+        blr.sizeDelta = new Vector2(320f, 44f);
+        bonusLabel.gameObject.SetActive(false);
     }
 }

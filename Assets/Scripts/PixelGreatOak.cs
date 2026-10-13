@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelGreatOak.cs
-//   The GREAT OAK (PixelType.GreatOak 77, PixelClicker.EnsureGreatOakTier): a huge Woodcutting block that takes a random 50-100 clicks. While Woodcutting is the skill in play every rolled
-//   wood block (Wood, Bark, Sap, Leaf, Heartwood, Twig) has a greatOakChance (0 = 5%) of becoming one (PixelClicker.PickSpawnTier wrapper; no spawn weight of its own).
+//   The GREAT OAK (PixelType.GreatOak 77, PixelBlockRules special rule): a huge Woodcutting block that takes a random 50-100 clicks. While Woodcutting is the skill in play every rolled
+//   wood block (Wood, Bark, Sap, Leaf, Heartwood, Twig) has a 5% chance of becoming one (edit it in PixelBlockRules; no spawn weight of its own).
 //   While you hit it, BIRD NESTS fall out of the tree (this component, added by PixelClicker.Awake, listens to PixelClicker.PixelHit): each hit has a nestChance (0 = 40%) to drop one,
 //   a nest (a woven ring with eggs) lands on the ground near the cube and stays for nestSeconds (0 = 9, it blinks away in the last 2 s). Click it (the pointer, or the crosshair in
 //   first person - with any item selected) before it vanishes for nestXp (0 = 30) Woodcutting XP, a chirp and a puff of feathers. At most maxNests (0 = 10) lie about at once; they are thrown out to a random spot up to scatterCubes (0 = 5) cube widths from the cube.
@@ -12,10 +12,6 @@ using UnityEngine;
 public class PixelGreatOak : MonoBehaviour
 {
     [Header("Great Oak")]
-    [Range(0f, 1f)]
-    [Tooltip("Chance a rolled wood block becomes a Great Oak while Woodcutting is in play. 0 = the coded default (0.05).")]
-    [SerializeField] private float greatOakChance = 0f;
-
     [Range(0f, 1f)]
     [Tooltip("Chance that a hit on the Great Oak shakes a bird nest loose. 0 = the coded default (0.4).")]
     [SerializeField] private float nestChance = 0f;
@@ -37,9 +33,6 @@ public class PixelGreatOak : MonoBehaviour
     [SerializeField] private int maxNests = 0;
 
     public static PixelGreatOak Instance { get; private set; }
-
-    /// <summary>The chance a rolled wood block turns into a Great Oak.</summary>
-    public static float OakChance => Instance != null && Instance.greatOakChance > 0f ? Instance.greatOakChance : 0.05f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Instance = null; }

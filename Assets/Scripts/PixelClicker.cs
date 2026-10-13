@@ -1172,6 +1172,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
+        if (PixelFind.First<PixelBlockRules>() == null) gameObject.AddComponent<PixelBlockRules>();   // special blocks + hold blocks (data rules)
         if (PixelFind.First<PixelGreatOak>() == null) gameObject.AddComponent<PixelGreatOak>();   // Woodcutting's Great Oak bird nests
         if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
@@ -2208,7 +2209,7 @@ public partial class PixelClicker : MonoBehaviour
                 for (int roll = 0; roll < breaks; roll++) basePayout += UnityEngine.Random.Range(lo, hi + 1);
             }
         }
-        double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus);
+        double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus) * PixelBlockRules.HeldPayoutFactor;
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
         if (IsDragonCube(tier.type) && amount > 0d) PixelDragonFind.Play(tierIndex, pixelTransform.position);   // the "you found one" show
@@ -2600,38 +2601,12 @@ public partial class PixelClicker : MonoBehaviour
         });
     }
 
-    /// <summary>The Great Oak tier (made on first use; no spawn weight, PickSpawnTier turns rolled wood blocks into it). Returns its index.</summary>
-    public int EnsureGreatOakTier()
+    /// <summary>A special block's tier (PixelBlockRules.SpecialRule): made on first use, no spawn weight, unlocked so the cube can show it. Returns its index.</summary>
+    public int EnsureSpecialTier(PixelTier definition)
     {
-        int index = EnsureTier(new PixelTier
-        {
-            type = PixelType.GreatOak,
-            displayName = "Great Oak",
-            color = new Color(0.36f, 0.26f, 0.15f, 1f),
-            amountPerClick = 150,
-            clicksToCollect = 100,
-            randomClicks = true,
-            randomClicksMin = 50,
-            randomClicksMax = 100,
-            spawnWeight = 0f,
-            spawnSwitch = SpawnSwitch.AlwaysOn,
-            unlockMode = TierUnlockMode.ShopOnly,
-        });
-        if (IsValidTier(index)) tiers[index].unlocked = true;   // (the cube only shows unlocked blocks)
+        int index = EnsureTier(definition);
+        if (IsValidTier(index)) tiers[index].unlocked = true;
         return index;
-    }
-
-    /// <summary>While Woodcutting is in play a rolled wood block is a Great Oak instead now and then (PixelGreatOak.OakChance).</summary>
-    private int MaybeGreatOak(int pick)
-    {
-        if (devSpawnTiers != null || !IsValidTier(pick)) return pick;
-        PixelType type = tiers[pick].type;
-        if (!IsWoodBlock(type) || type == PixelType.GreatOak) return pick;
-        PixelSkills skills = PixelSkills.Instance;
-        if (skills == null || skills.ActiveId != PixelSkills.WoodcuttingId) return pick;
-        if (UnityEngine.Random.value >= PixelGreatOak.OakChance) return pick;
-        int oak = EnsureGreatOakTier();
-        return IsValidTier(oak) ? oak : pick;
     }
 
     private int[] devSpawnTiers; // dev tools: only these tiers spawn (locked ones too); null = normal spawning
@@ -2891,7 +2866,7 @@ public partial class PixelClicker : MonoBehaviour
             }
             if (!tiers[pick].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[pick].type)) pick = GetHighestUnlockedIndex();
         }
-        return MaybeGreatOak(pick);
+        return PixelBlockRules.TryReplace(this, pick);   // a rare special block (Great Oak...) may replace it
     }
 
     private int PickSpawnTierBase()

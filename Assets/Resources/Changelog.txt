@@ -820,3 +820,4 @@
 [2026-10-13 16:18] Spawn safety net: a block that is locked or belongs to a skill that is not in play is re-rolled (with a console warning naming it), after a Bait block showed up in the monochrome stage.
 [2026-10-13 16:28] To-do: added the machine jams / Cubie sends you to first person idea.
 [2026-10-13 16:31] Removed the pixel-assemble menu button effect and its Settings tick box; added a 'Custom UI button colour' tick box with an eyedropper that recolours the neutral buttons.
+[2026-10-13 16:34] Added PixelBlockRules: one data-driven place for special blocks (rare replacements, Great Oak moved into it) and hold blocks (bonus while held: click / payout / XP multipliers and a label next to the hold meter, Whetstone moved into it).
