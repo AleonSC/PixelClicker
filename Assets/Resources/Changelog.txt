@@ -816,3 +816,4 @@
 [2026-10-13 15:59] First person hotbar (wheel / keys 1-5) with an axe in slot 1: animated swing and sounds, chops wood blocks for Woodcutting XP and extra pay; new Great Oak block (5% replaces a wood block, 50-100 clicks) that shakes bird nests loose which you click for XP before they vanish.
 [2026-10-13 16:02] Added the Whetstone block to the Woodcutter's Pack (3 clicks): hold it with Block Hold and every manual click counts as 3 clicks for as long as you hold it; partly broken blocks keep their hits when grabbed.
 [2026-10-13 16:04] Great Oak drops more bird nests (40% per hit, up to 10 at once) and throws them out up to 5 cube widths away from the clicker.
+[2026-10-13 16:16] Save slots: hold the right mouse button on a slot that has a save (ring fills, about 1.4 s) to delete that save; the hover box says so.

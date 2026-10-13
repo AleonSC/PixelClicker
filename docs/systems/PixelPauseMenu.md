@@ -14,3 +14,6 @@ The pause menu has one **Game Guide** button (between Settings and Give feedback
 ## PixelPauseMenu Game Guide text tabs (Controls and How To Play are two panels; the third tab, Database, opens the database window)
 
 Two more screens that show **`Assets/Resources/HowToPlay.txt`** and **`Assets/Resources/Controls.txt`** (the user edits these files; `GuideScreen`, `BuildGuideScreen`, `RefreshGuideScreen`, `FormatGuideText`). File format: lines starting `//` are hidden notes, `# Heading` = coloured heading, `Key | Action` = two columns, anything else is shown as written (TMP rich text allowed). **When a keybind or control changes, update `Controls.txt`; when a major system is added, update `HowToPlay.txt`.**
+
+### Deleting a save slot
+Hold the RIGHT mouse button on a slot that has a save in the Save / Load window (PixelPauseMenu.UpdateSlotDeleteHold, deleteSlotHoldSeconds 0 = 1.4 s, a red PixelHoldMeter ring on the pointer): when the ring is full PixelSaveGame.DeleteSlot removes the file, its screenshot / meta and the pending name. The hover box shows 'Hold right click to delete'. Works from the main menu's Save / Load window too. The autosave list is not affected.

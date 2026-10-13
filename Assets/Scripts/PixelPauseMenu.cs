@@ -718,6 +718,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void Update()
     {
         UpdateSlotTip();
+        UpdateSlotDeleteHold();
         if (IsPaused && UpdateKeyCapture()) return;
 
         if (floorPopout != null)
@@ -1807,6 +1808,47 @@ public class PixelPauseMenu : MonoBehaviour
         RefreshSlots();
     }
 
+    [Min(0f)]
+    [Tooltip("Seconds the right mouse button is held on a save slot to delete its save. 0 = the coded default (1.4).")]
+    [SerializeField] private float deleteSlotHoldSeconds = 0f;
+
+    private int deleteHoldSlot = -1;
+    private float deleteHeld;
+    private PixelHoldMeter deleteMeter;
+
+    /// <summary>Hold the RIGHT mouse button on a slot that has a save: a ring fills, and when it is full the save is deleted.</summary>
+    private void UpdateSlotDeleteHold()
+    {
+        bool can = IsPaused && hoverSlot > 0 && saveGame != null && saveLoadPanel != null && saveLoadPanel.activeInHierarchy && saveGame.SlotHasSave(hoverSlot)
+                   && !(renameOverlay != null && renameOverlay.activeSelf) && !(overwriteOverlay != null && overwriteOverlay.activeSelf) && !(resultOverlay != null && resultOverlay.activeSelf);
+        if (deleteHoldSlot < 0)
+        {
+            if (can && PixelInput.RightPressed()) { deleteHoldSlot = hoverSlot; deleteHeld = 0f; }
+            else return;
+        }
+        if (!can || hoverSlot != deleteHoldSlot || !PixelInput.RightHeld())
+        {
+            deleteHoldSlot = -1; deleteHeld = 0f;
+            if (deleteMeter != null) deleteMeter.Hide();
+            return;
+        }
+        float need = deleteSlotHoldSeconds > 0f ? deleteSlotHoldSeconds : 1.4f;
+        deleteHeld += Time.unscaledDeltaTime;
+        if (deleteHeld >= need)
+        {
+            int slot = deleteHoldSlot;
+            deleteHoldSlot = -1; deleteHeld = 0f;
+            if (deleteMeter != null) deleteMeter.Hide();
+            bool ok = saveGame.DeleteSlot(slot);
+            RefreshSlots();
+            PixelAudio.Play("device_remove");
+            ShowResult(ok ? SlotRef(slot) + " deleted." : "Could not delete " + SlotRef(slot) + ".");
+            return;
+        }
+        if (deleteMeter == null) deleteMeter = new GameObject("Delete Hold Meter").AddComponent<PixelHoldMeter>();
+        deleteMeter.Show(PixelInput.PointerPosition(), deleteHeld / need, "", new Color(1f, 0.35f, 0.3f), true);
+    }
+
     /// <summary>The hover box over a save slot: when it was saved, time played and pixels. Follows the mouse.</summary>
     private void UpdateSlotTip()
     {
@@ -1888,7 +1930,7 @@ public class PixelPauseMenu : MonoBehaviour
             int slot = i + 1;
             string name = SlotNameOf(slot) + (slot == current ? currentSlotTag : "");
             slotDetails[i] = saveGame.TryGetSlotInfo(slot, out string savedAt, out double pixels, out double played)
-                ? savedAt + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played)) + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels))
+                ? savedAt + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played)) + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels)) + "\n<color=#ff9a90>Hold right click to delete</color>"
                 : emptySlotText;
             slotLabels[i].text = "<b>" + name + "</b>";
             slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;

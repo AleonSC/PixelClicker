@@ -371,6 +371,29 @@ public class PixelSaveGame : MonoBehaviour
         return PlayerPrefs.GetString(PendingNamePref + slot, "");
     }
 
+    /// <summary>Deletes a slot's save (file, screenshot and the pending name). The slot stays, empty. Returns false if the file could not be removed.</summary>
+    public bool DeleteSlot(int slot)
+    {
+        try
+        {
+            string path = PathFor(slot);
+            if (File.Exists(path)) File.Delete(path);
+            string meta = Path.ChangeExtension(path, ".meta"), thumb = PixelSaveShots.ThumbPath(path);
+            if (File.Exists(meta)) File.Delete(meta);
+            if (File.Exists(thumb)) File.Delete(thumb);
+            PixelSaveShots.Forget(thumb);
+            PlayerPrefs.DeleteKey(PendingNamePref + slot);
+            PlayerPrefs.Save();
+            if (logToConsole) Debug.Log("PixelSaveGame: deleted the save in slot " + slot + ".", this);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("PixelSaveGame: could not delete slot " + slot + " - " + e.Message, this);
+            return false;
+        }
+    }
+
     /// <summary>Renames a slot: a save's name is written into its file at once; a slot with no save keeps the name until it is saved.</summary>
     public void SetSlotName(int slot, string name)
     {
