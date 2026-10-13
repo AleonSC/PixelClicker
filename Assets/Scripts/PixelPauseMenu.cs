@@ -1118,6 +1118,7 @@ public class PixelPauseMenu : MonoBehaviour
         BuildSettingsPanel();
         PixelMenuFx.DecorateAll(statsPanel != null ? statsPanel.transform : null);      // the fancy menu's light button animation on these two screens
         PixelMenuFx.DecorateAll(settingsPanel != null ? settingsPanel.transform : null);
+        PixelMenuFx.DecorateAll(saveLoadPanel != null ? saveLoadPanel.transform : null);   // the Save / Load screen too (built before this point)
         BuildQuitPanel();
         BuildRestartPanel();
         if (showHowToPlay) howToPlayScreen = BuildGuideScreen("Game Guide Panel", guideMenuText, howToPlayResource, emptyHowToPlayText, false);

@@ -43,7 +43,14 @@ public static class PixelMenuFx
 
     public static void ReloadFromPrefs() { cache = -1; hudCache = -1; }
 
-    /// <summary>The light animation (brighten, shine, press) for every button under a screen (Settings, Stats).</summary>
+    /// <summary>The light animation for one docked HUD button (brighten, shine on hover, press); it follows the 'Pixel-assemble menu buttons' setting.</summary>
+    public static void DecorateHud(Button button)
+    {
+        if (button == null || button.GetComponent<PixelFancyButton>() != null || button.GetComponent<Image>() == null) return;
+        button.gameObject.AddComponent<PixelFancyButton>().Setup(Color.white, null, 0, true, true);
+    }
+
+    /// <summary>The light animation (brighten, shine, press) for every button under a screen (Settings, Stats, Save / Load).</summary>
     public static void DecorateAll(Transform root)
     {
         if (root == null) return;
@@ -121,7 +128,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private Color accent;
     private Texture2D icon;
     private int index;
-    private bool lightMode;
+    private bool lightMode, hudSetting;
     private Button button;
     private Image image;
     private RectTransform rect, labelRect;
@@ -135,7 +142,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private RectTransform shine;
     private float shineRange;
 
-    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false) { accent = accentColor; icon = iconTexture; index = i; lightMode = lighter; }
+    public void Setup(Color accentColor, Texture2D iconTexture, int i, bool lighter = false, bool followHudSetting = false) { accent = accentColor; icon = iconTexture; index = i; lightMode = lighter; hudSetting = followHudSetting; }
 
     private void Build()
     {
@@ -210,7 +217,7 @@ public class PixelFancyButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     {
         if (!built) Build();
         if (enterT < 0f) enterT = 0f;
-        bool on = PixelMenuFx.Enabled;
+        bool on = hudSetting ? PixelMenuFx.HudEnabled : PixelMenuFx.Enabled;   // (the docked HUD buttons follow 'Pixel-assemble menu buttons')
         if (fxRoot.activeSelf != on) fxRoot.SetActive(on);
         float dt = Time.unscaledDeltaTime;
         if (!on)

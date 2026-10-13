@@ -768,3 +768,4 @@
 [2026-10-13 10:21 UTC] Fixed compile warnings: renamed the fancy button 'light' field (it hid Component.light) and removed the unused removeText field in PixelConsumables.
 [2026-10-13 10:26 UTC] Widened the Key Bindings screen (1150 wide, new width setting) and made its labels and key buttons bigger.
 [2026-10-13 10:28 UTC] Fixed the pale slanted bar that showed on the left of Settings section headers and other animated menu buttons (the shine effect started visible).
+[2026-10-13 10:31 UTC] Added the hover shine to the Save / Load screen's buttons and to the docked HUD buttons (the HUD ones follow the 'Pixel-assemble menu buttons' toggle).
