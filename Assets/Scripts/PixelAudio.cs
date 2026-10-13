@@ -232,6 +232,8 @@ public class PixelAudio : MonoBehaviour
             Make("ultra_gain", 0.2f, 1f, 1f),
             Make("time_stop", 0.3f, 1f, 1f),
             Make("device_remove", 0.2f, 1f, 1f),
+            Make("hazard_warn", 0.4f, 1f, 1f),
+            Make("hornet_buzz", 0.5f, 0.95f, 1.05f),
             Make("axe_swing", 0.1f, 0.95f, 1.08f),
             Make("axe_chop", 0.05f, 0.92f, 1.08f),
             Make("nest_fall", 0.1f, 0.95f, 1.1f),
@@ -317,6 +319,8 @@ public class PixelAudio : MonoBehaviour
         if (ocean != null) return ocean;
         AudioClip[] axe = PixelAxeSynth.For(id);
         if (axe != null) return axe;
+        AudioClip[] hazard = PixelHazardSynth.For(id);
+        if (hazard != null) return hazard;
         switch (id)
         {
             case "pixel_bounce_electric": return new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };

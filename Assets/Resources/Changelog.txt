@@ -839,3 +839,4 @@
 [2026-10-13 17:27] A released held block now comes back AFTER the block on the cube (first in line, hits kept) instead of replacing it, so a hazard that came up while holding can be cleared first and hold / release can't be used to reroll the cube.
 [2026-10-13 17:29] The Next-up window (block predictor) now shows each block's real 3D model with its true look instead of a plain coloured cube; new shared PixelTierPicture helper.
 [2026-10-13 17:33] Destroying a Hornet Nest (letting it go off) now costs the Block Hold meter half of its current charge; clearing it safely does not (data: PixelBlockRules hazard penalties).
+[2026-10-13 17:45] Hazard blocks (Hornet Nest, Pest, Gas Pocket, Jellyfish, Mold) now have tells: a pulsing warning glow round the cube, a bobbing red warning triangle above it, a warning sound when one appears (plus an angry buzz for the Hornet Nest), all pulsing faster as it is about to leave.

@@ -1185,6 +1185,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
+        if (PixelFind.First<PixelHazardTell>() == null) gameObject.AddComponent<PixelHazardTell>();   // hazard blocks get warning tells (glow, sign, sound)
         if (PixelFind.First<PixelBlockRules>() == null) gameObject.AddComponent<PixelBlockRules>();   // special blocks + hold blocks (data rules)
         if (PixelFind.First<PixelGreatOak>() == null) gameObject.AddComponent<PixelGreatOak>();   // Woodcutting's Great Oak bird nests
         if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
@@ -4129,6 +4130,18 @@ public partial class PixelClicker : MonoBehaviour
         if (!disableClickPops) PixelBasicFx.Play(t.type, t.color, pixelTransform.position, PixelBaseSize, true, 1f, clickPopStrength);
         if (randomizeSpawnTier) currentTierIndex = RollTier();
         Materialize(GetClickTier());
+    }
+
+    /// <summary>Is the block on the cube a hazard right now? 'remaining' = 1 just appeared .. 0 about to leave by itself; 'since' = when it appeared (PixelHazardTell).</summary>
+    public bool TryGetLiveHazard(out PixelType type, out float remaining, out float since)
+    {
+        type = PixelType.White; remaining = 0f; since = liveSince;
+        if (pixelTransform == null || tiers == null || tiers.Length == 0 || CubeHidden) return false;
+        PixelTier t = GetClickTier();
+        if (!IsHazard(t.type)) return false;
+        type = t.type;
+        remaining = Mathf.Clamp01(1f - (Time.time - liveSince) / (hazardSeconds > 0f ? hazardSeconds : 7f));
+        return true;
     }
 
     private int defuseClicks;
