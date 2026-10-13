@@ -370,9 +370,16 @@ public class PixelWoodChipper : MonoBehaviour
                 m = new Material(sh != null ? sh : Shader.Find("Sprites/Default"));
                 m.color = col;
             }
+            // Dull, matt surfaces: the big flat tops of a shiny machine reflect the sun and sky as blown-out white blobs (and bloom), so metal / gloss are scaled right down and highlights switched off.
+            metal *= 0.15f; smooth *= 0.4f;
             if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", metal);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", smooth);
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", smooth);
+            if (m.HasProperty("_SpecularHighlights")) m.SetFloat("_SpecularHighlights", 0f);
+            if (m.HasProperty("_EnvironmentReflections")) m.SetFloat("_EnvironmentReflections", 0f);
+            if (m.HasProperty("_GlossyReflections")) m.SetFloat("_GlossyReflections", 0f);
+            m.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            m.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             // The cube's material (which the copy comes from) can glow: switch every trace of emission off, or the whole machine shines like the cube.
             if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", Color.black);
             m.DisableKeyword("_EMISSION");
