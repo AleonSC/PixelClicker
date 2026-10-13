@@ -1259,6 +1259,22 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 28)
+        {
+            // Woodcutting: the Acorn joins the Woodcutter's Pack as a base block.
+            PixelClicker.PixelTier acornDef = null;
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Acorn) acornDef = t;
+            if (packs != null && acornDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood) || Rewards(p, PixelClicker.PixelType.Acorn)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { acornDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 28);
+            changed = true;
+        }
+
         return changed;
     }
 

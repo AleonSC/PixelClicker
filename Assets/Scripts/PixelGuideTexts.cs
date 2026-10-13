@@ -138,6 +138,8 @@ public static class PixelGuideTexts
                 return "Woodcutting's filler block. One click, almost no pay. At low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.";
             case PixelClicker.PixelType.HornetNest:
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the hornets swarm out and chase off the old pixels around the cube, and Woodcutting XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your woodcutting level rises.";
+            case PixelClicker.PixelType.Acorn:
+                return "Woodcutting block: an acorn. One click, pays a little. The trick is its OLD pixel: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other old pixels, so keep them coming.";
             case PixelClicker.PixelType.Whetstone:
                 return "Woodcutting block: a hard grey stone for sharpening. It takes " + t.clicksToCollect + " clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too).";
             case PixelClicker.PixelType.GreatOak:

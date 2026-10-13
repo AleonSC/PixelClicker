@@ -143,6 +143,7 @@ public partial class PixelClicker : MonoBehaviour
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
+        Acorn = 79,       // Woodcutting's base block: acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules SpecialRule boost)
         Whetstone = 78,   // Woodcutting's base block that can be held (Block Hold): while it is held every manual click counts for more (PixelBlockHold.ClickFactor)
         GreatOak = 77,    // Woodcutting's rare giant block (50-100 clicks, shakes bird nests loose): see PixelGreatOak.cs
         WoodChips = 76,   // spat out by the Wood Chipper (every 5 wood pixels shredded): never spawns on the cube, only exists as an old pixel (PixelWoodChipper)
@@ -170,7 +171,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips || type == PixelType.GreatOak || type == PixelType.Whetstone;
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips || type == PixelType.GreatOak || type == PixelType.Whetstone || type == PixelType.Acorn;
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1847,6 +1848,16 @@ public partial class PixelClicker : MonoBehaviour
             if (def54 != null && PixelLooks.Find(list54.ToArray(), PixelType.Whetstone) == null) list54.Add(def54);
             looks = list54.ToArray();
             looksVersion = 54;
+        }
+
+        if (looksVersion < 55)
+        {
+            // The Acorn block got a look.
+            System.Collections.Generic.List<PixelLook> list55 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook def55 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.Acorn);
+            if (def55 != null && PixelLooks.Find(list55.ToArray(), PixelType.Acorn) == null) list55.Add(def55);
+            looks = list55.ToArray();
+            looksVersion = 55;
         }
 
         if (pixelRenderer != null)

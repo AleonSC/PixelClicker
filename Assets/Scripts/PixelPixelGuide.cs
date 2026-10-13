@@ -321,7 +321,7 @@ public class PixelPixelGuide : MonoBehaviour
         else if (t.clicksToCollect > 1) sb.Append("  -  ").Append(t.clicksToCollect).Append(" clicks");
         float share = clicker.SpawnShare(index);
         bool isSpecial = PixelBlockRules.TryGetSpecial(t.type, out PixelBlockRules.SpecialRule special);
-        if (isSpecial) sb.Append("  -  SPECIAL, ").Append(special.chance >= 0.1f ? Mathf.RoundToInt(special.chance * 100f).ToString() : (special.chance * 100f).ToString("0.#")).Append("% replaces a block");
+        if (isSpecial) sb.Append("  -  SPECIAL, ").Append(special.chance >= 0.1f ? Mathf.RoundToInt(special.chance * 100f).ToString() : (special.chance * 100f).ToString("0.#")).Append("% replaces a block").Append(special.hasBoost ? " (up to " + Mathf.RoundToInt(special.maxChance * 100f) + "% with " + special.boostBlock.ToString().ToLowerInvariant() + "s on the field)" : "");
         if (PixelBlockRules.TryGetHold(t.type, out PixelBlockRules.HoldRule _)) sb.Append("  -  HOLD block");
         if (t.rareDrop) sb.Append("  -  rare drop");
         else if (share > 0f && !isSpecial) sb.Append("  -  ").Append(share >= 0.1f ? Mathf.RoundToInt(share * 100f).ToString() : (share * 100f).ToString("0.#")).Append("% of pixels");

@@ -729,6 +729,8 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Leaf, "Leaf Pixels", new Color(0.35f, 0.78f, 0.3f, 1f), 1, 1, 0.9f),
                 Block(PixelClicker.PixelType.Heartwood, "Heartwood Pixels", new Color(0.78f, 0.35f, 0.28f, 1f), 4, 25, 0.1f),
                 Block(PixelClicker.PixelType.Twig, "Twig Pixels", new Color(0.82f, 0.72f, 0.52f, 1f), 1, 1, 1.0f),
+                // The Acorn: a base block, one click. Acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules).
+                Block(PixelClicker.PixelType.Acorn, "Acorn", new Color(0.68f, 0.46f, 0.22f, 1f), 1, 1, 0.5f),
                 // The Whetstone: a base block that takes 3 clicks. Hold it with Block Hold (right button) and every click counts for more while you hold it.
                 Block(PixelClicker.PixelType.Whetstone, "Whetstone", new Color(0.62f, 0.68f, 0.76f, 1f), 3, 2, 0.35f),
                 // The Hornet Nest: a hazard (hit it too often and the hornets chase off the old pixels around the cube; it pays nothing).

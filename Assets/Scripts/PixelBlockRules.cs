@@ -4,7 +4,7 @@
 //   if missing, so a copy on a scene object keeps its edits). Docs: docs/systems/PixelBlockRules.md.
 //   * SPECIAL BLOCK = a rare block that REPLACES a rolled block. SpecialRule: the block's tier definition (PixelTier: name, colour, clicks, pay...), the skill it belongs to (skillId; empty =
 //     any), the block types it can replace and the chance. PixelClicker.PickSpawnTier calls PixelBlockRules.TryReplace(clicker, pick) after every normal roll; the tier is created on first
-//     use (PixelClicker.EnsureSpecialTier, no spawn weight of its own). Defaults: Great Oak (Woodcutting, replaces any wood block, 5%). Fishing's Whale / Bottle / Pearl still use their own
+//     use (PixelClicker.EnsureSpecialTier, no spawn weight of its own). Defaults: Great Oak (Woodcutting, replaces any wood block, 1% rising to 25% with 12 Acorn old pixels lying on the field - SpecialRule.hasBoost). Fishing's Whale / Bottle / Pearl still use their own
 //     rolls (PixelFishingSpawns) - move them into this table when they are next touched (their chances feed the Pixel Guide's SpawnShare).
 //   * HOLD BLOCK = a base block of a skill that gives a bonus while it is held (Block Hold, the right button: PixelBlockHold). HoldRule: the block type, the skill, and what the bonus does:
 //     clickMultiplier (every manual click counts as n clicks: damage on tough blocks and payout; PixelBlockHold.ClickFactor -> PixelClicker.CollectInternal), payoutMultiplier (every
@@ -32,6 +32,16 @@ public class PixelBlockRules : MonoBehaviour
         [Range(0f, 1f)]
         [Tooltip("Chance a rolled block of those types becomes this special block.")]
         public float chance = 0.05f;
+        [Tooltip("The chance rises while old pixels of the 'Boost Block' lie on the field (they just have to exist; no gathering).")]
+        public bool hasBoost = false;
+        [Tooltip("The block whose old pixels lying on the field raise the chance (e.g. Acorn).")]
+        public PixelClicker.PixelType boostBlock = PixelClicker.PixelType.White;
+        [Min(1)]
+        [Tooltip("How many of those old pixels on the field give the full 'Max Chance'. Fewer give a proportional part.")]
+        public int boostFullCount = 12;
+        [Range(0f, 1f)]
+        [Tooltip("The chance with the full number of boost old pixels on the field.")]
+        public float maxChance = 0.25f;
     }
 
     [Serializable]
@@ -87,7 +97,8 @@ public class PixelBlockRules : MonoBehaviour
                 name = "Great Oak",
                 skillId = PixelSkills.WoodcuttingId,
                 replaces = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf, PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig },
-                chance = 0.05f,
+                chance = 0.01f,
+                hasBoost = true, boostBlock = PixelClicker.PixelType.Acorn, boostFullCount = 12, maxChance = 0.25f,   // 1%, up to 25% with 12 acorns lying on the field
                 tier = new PixelClicker.PixelTier
                 {
                     type = PixelClicker.PixelType.GreatOak, displayName = "Great Oak", color = new Color(0.36f, 0.26f, 0.15f, 1f),
@@ -114,11 +125,28 @@ public class PixelBlockRules : MonoBehaviour
             if (r == null || r.tier == null || r.replaces == null || r.chance <= 0f || r.tier.type == type) continue;
             if (!string.IsNullOrEmpty(r.skillId) && r.skillId != active) continue;
             if (Array.IndexOf(r.replaces, type) < 0) continue;
-            if (UnityEngine.Random.value >= r.chance) continue;
+            if (UnityEngine.Random.value >= EffectiveChance(clicker, r)) continue;
             int index = clicker.EnsureSpecialTier(r.tier);
             if (clicker.IsValidTierIndex(index)) return index;
         }
         return pick;
+    }
+
+    /// <summary>The rule's chance right now: its base chance, raised towards maxChance by the old pixels of the boost block lying on the field.</summary>
+    public static float EffectiveChance(PixelClicker clicker, SpecialRule r)
+    {
+        if (r == null) return 0f;
+        if (!r.hasBoost || clicker == null) return r.chance;
+        int count = 0;
+        var list = clicker.OldPixels;
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rigidbody b = list[i];
+            OldPixelInfo info = b != null ? b.GetComponent<OldPixelInfo>() : null;
+            if (info != null && clicker.IsValidTierIndex(info.tierIndex) && clicker.Tiers[info.tierIndex].type == r.boostBlock) count++;
+        }
+        float t = Mathf.Clamp01(count / (float)Mathf.Max(1, r.boostFullCount));
+        return Mathf.Lerp(r.chance, Mathf.Max(r.chance, r.maxChance), t);
     }
 
     // ---------------- hold blocks ----------------
@@ -223,6 +251,8 @@ public class PixelBlockRules : MonoBehaviour
             sb.Append("\n\n<b>Special block:</b> every ");
             for (int i = 0; i < s.replaces.Length; i++) sb.Append(i > 0 ? (i == s.replaces.Length - 1 ? " or " : ", ") : "").Append(s.replaces[i].ToString().ToLowerInvariant());
             sb.Append(" block that comes up has a ").Append(Pct(s.chance)).Append(" chance of being this one instead.");
+            if (s.hasBoost)
+                sb.Append(" Every ").Append(s.boostBlock.ToString().ToLowerInvariant()).Append(" old pixel lying on the field raises it (they only have to be there): with ").Append(s.boostFullCount).Append(" of them out it is ").Append(Pct(s.maxChance)).Append(".");
         }
         if (TryGetHold(type, out HoldRule h))
         {
