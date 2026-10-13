@@ -801,3 +801,4 @@
 [2026-10-13 14:25 UTC] Wood Chipper: the whole paint palette is darker (55%) so the sun and bloom no longer blow its sun-facing tops out to white.
 [2026-10-13 14:28 UTC] Wood Chipper: fixed the hopper's mesh normals (its front and back faces shared vertices, which gave zero normals and a NaN-white blob under bloom).
 [2026-10-13 14:33 UTC] Wood Chipper: wood pixels give Woodcutting XP, any other pixel damages it (darker paint, sparks, black smoke, a health bar) and enough damage breaks it for good; its full colours and gloss are back.
+[2026-10-13 14:39 UTC] First person: left click now grabs a cube (or clicks the clicker); while holding, the wheel moves it closer / farther, holding right click turns it, a white ghost shows when a face is near another cube's face and left click sticks it there; stuck cubes are pried off by holding right click.
