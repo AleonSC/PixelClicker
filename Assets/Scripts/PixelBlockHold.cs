@@ -5,7 +5,7 @@
 //   while it stays held). Letting go puts it back (PixelClicker.ReturnHeldTier: it takes the cube at once, with the hits it had; the block that was on the cube moves to next in line, hits kept - RollTier hands it out). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
-//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. The hold lasts 3.5 seconds by default.
+//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
@@ -19,8 +19,11 @@ public class PixelBlockHold : MonoBehaviour
 {
     [Header("Meter")]
     [Min(0f)]
-    [Tooltip("Seconds the right button can hold a block with a full meter. 0 = the default (3.5).")]
+    [Tooltip("Seconds the right button can hold a block with a full meter. 0 = the default (5).")]
     [SerializeField] private float holdSeconds = 0f;
+    [Min(0f)]
+    [Tooltip("Seconds the right button can hold a HOLD BLOCK (one with a bonus, see PixelBlockRules) with a full meter. 0 = the default (10).")]
+    [SerializeField] private float holdBlockSeconds = 0f;
     [Min(0f)]
     [Tooltip("Seconds the meter takes to recharge from empty to full. 0 = the default (8).")]
     [SerializeField] private float rechargeSeconds = 0f;
@@ -58,11 +61,12 @@ public class PixelBlockHold : MonoBehaviour
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Instance = null; dotSprite = null; arcSprite = null; }
 
-    private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 3.5f;
+    private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 5f;
     private float RechargeSeconds => rechargeSeconds > 0f ? rechargeSeconds : 8f;
     private float ReleaseCooldown => releaseCooldownSeconds > 0f ? releaseCooldownSeconds : 1f;
     private float ExhaustCooldown => exhaustCooldownSeconds > 0f ? exhaustCooldownSeconds : 3f;
     private float FlashSeconds => flashSeconds > 0f ? flashSeconds : 1.5f;
+    private float HoldBlockSeconds => holdBlockSeconds > 0f ? holdBlockSeconds : 10f;
     private float SpamGap => rightSpamGapSeconds > 0f ? rightSpamGapSeconds : 0.45f;
     private float lastRightPress = -99f;
     private float MinStart => minStartFraction > 0f ? minStartFraction : 0.1f;
@@ -97,6 +101,12 @@ public class PixelBlockHold : MonoBehaviour
     public bool Holding => holding;
 
     /// <summary>The tier index of the block in hand (-1 when nothing is held).</summary>
+    /// <summary>Is the block in hand a hold block (one with a bonus rule)? It can be held twice as long.</summary>
+    private bool HeldIsHoldBlock()
+    {
+        return TryGetHeldType(out PixelClicker.PixelType t) && PixelBlockRules.TryGetHold(t, out PixelBlockRules.HoldRule _);
+    }
+
     public int HeldTierIndex => holding ? heldTier : -1;
 
     /// <summary>The type of the block in hand (false when nothing is held).</summary>
@@ -142,7 +152,7 @@ public class PixelBlockHold : MonoBehaviour
             if (!PixelInput.RightHeld()) Release(false);
             else
             {
-                meter -= dt / HoldSeconds;
+                meter -= dt / (HeldIsHoldBlock() ? HoldBlockSeconds : HoldSeconds);
                 if (meter <= 0f) { meter = 0f; Release(true); }
             }
         }

@@ -831,3 +831,4 @@
 [2026-10-13 16:59] Auto clicker Multi-Click now tops out at 3x (levels above it removed); Great Oak nests are shot out of the cube's sides with no collider for the first half second and fly up to 9 cube widths.
 [2026-10-13 17:01] Block Hold ignores right presses that are part of a right-click spam (e.g. clearing a hazard), so the press that lands on the next block no longer grabs it and costs the meter.
 [2026-10-13 17:05] Block Hold lasts 3.5 seconds now; new Pesticide hold block in the Woodcutter's Pack (while held, a left click clears a Hornet Nest at once); the Toadstool is out of every rotation (the block stays in the game).
+[2026-10-13 17:09] Block Hold lasts 5 seconds by default and 10 seconds when the held block is a hold block (Whetstone, Pesticide...).
