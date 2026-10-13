@@ -9,7 +9,7 @@
 //   spot): middle-mouse drag (PixelInput.MiddleHeld, dragDegreesPerPixel 0 = 0.25) or arrow keys (keyDegreesPerSecond 0 = 90) turn /
 //   tilt (pitch min minPitch 0 = 6 so it never looks from under the floor), the wheel (or Shift + wheel) and the View window's zoom slider (DistanceFraction, MinFraction 0.35 .. MaxFraction 2) zoom, the
 //   window's Auto orbit tick box (AutoOrbit, AutoSpeed = autoOrbitDegreesPerSecond 0 = 10) turns the camera slowly round the cube by itself,
-//   and its hold buttons (HoldTurn / HoldTilt) add to the arrow keys; dragging / arrow keys still work, followSharpness smoothing, a hint line for hintSeconds. Clicks need no change (raycasts go through
+//   and its hold buttons (HoldTurn / HoldTilt) add to the arrow keys; dragging / arrow keys still work, followSharpness smoothing. Its controls are shown as a hover tooltip in the View window (no hint line on screen). Clicks need no change (raycasts go through
 //   TargetCamera). While PixelOrbitCamera.Active, PixelOrbitCamera.HomeCamera (a hidden disabled copy at the home pose) is what
 //   PixelViewBounds and PixelFloor.FitToView read, so old pixels stay inside the NORMAL view and fitted floors don't re-fit. Leaving
 //   glides back over returnSeconds (0 = 0.7); the title screen, the camera intro and takeover / zooming minigames (any Busy + Takeover
@@ -79,13 +79,6 @@ public class PixelOrbitCamera : MonoBehaviour
     [Tooltip("Base view: which side of the cube the camera sits on, in degrees round it. 180 = the -Z side, so the floor's +Z side is at the top of the screen (the original orientation of the game); 0 = the +Z side, which flips the picture.")]
     [SerializeField] private float baseTurn = 180f;
 
-    [Tooltip("Hint shown at the bottom of the screen while orbiting. {0} = the view key.")]
-    [SerializeField] private string hintTextV2 = "Orbit: middle mouse drag or arrow keys  -  mouse wheel zooms  -  {0} opens the View window (zoom slider, auto orbit, other views)";
-
-    [Min(0f)]
-    [Tooltip("How long the hint stays on screen (seconds). 0 = the default (6).")]
-    [SerializeField] private float hintSeconds = 0f;
-
     /// <summary>True while the camera is orbiting (or gliding back to its normal view).</summary>
     public static bool Active { get; private set; }
 
@@ -108,7 +101,6 @@ public class PixelOrbitCamera : MonoBehaviour
     private float returnT;
     private float returnFromYaw, returnFromPitch, returnFromDistance;
     private Vector2 lastPointer;
-    private GameObject hintRoot;
     private bool autoOrbit;
 
     /// <summary>True while the camera looks straight down at the cube (the 'top down' view; same component, pitch locked).</summary>
@@ -143,7 +135,6 @@ public class PixelOrbitCamera : MonoBehaviour
 
     /// <summary>Ends orbiting at once (back to the normal view without the glide); used when another view takes over.</summary>
     public void Cancel() { if (Active) Finish(true); }
-    private float hintTimer;
 
     private static float V(float value, float fallback) => value > 0f ? value : fallback;
 
@@ -178,7 +169,7 @@ public class PixelOrbitCamera : MonoBehaviour
         if (disableOrbit || Active || clicker == null || clicker.PixelTransform == null) return false;
         PixelZoom.ResetNow();   // (the orbit starts from the normal view, not a zoomed one)
         if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) return false;
-        foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.Takeover) return false;
+        foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return false;
         cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return false;
 
@@ -213,7 +204,6 @@ public class PixelOrbitCamera : MonoBehaviour
         autoOrbit = false;
         HoldTurn = HoldTilt = 0f;
         lastPointer = PixelInput.PointerPosition();
-        BuildHint();
         return true;
     }
 
@@ -224,7 +214,6 @@ public class PixelOrbitCamera : MonoBehaviour
         returning = true;
         returnT = 0f;
         returnFromYaw = yaw; returnFromPitch = pitch; returnFromDistance = distance;
-        HideHint();
     }
 
     private void Finish(bool snap)
@@ -235,7 +224,6 @@ public class PixelOrbitCamera : MonoBehaviour
         Active = false;
         returning = false;
         TopDown = false;
-        HideHint();
     }
 
     private void Update()
@@ -243,13 +231,8 @@ public class PixelOrbitCamera : MonoBehaviour
         if (!Active) return;
         if (cam == null || clicker == null || clicker.PixelTransform == null) { Finish(true); return; }
         if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) { Finish(true); return; }
-        if (!returning) foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.Takeover) { Exit(); break; }   // (a round that moves the cube about on screen needs the normal view)
+        if (!returning) foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) { Exit(); break; }   // (a round that moves the cube about on screen needs the normal view)
         if (orbitHome != null) orbitHome.aspect = cam.aspect;
-        if (hintRoot != null)
-        {
-            hintTimer -= Time.unscaledDeltaTime;
-            if (hintTimer <= 0f) HideHint();
-        }
         if (returning) return;
 
         bool playable = !PixelPauseMenu.IsPaused && !PixelKeys.Typing && (Time.timeScale > 0f || PixelTimeStop.IsStopped);
@@ -312,32 +295,5 @@ public class PixelOrbitCamera : MonoBehaviour
         Vector3 dir = new Vector3(Mathf.Sin(y) * Mathf.Cos(p), Mathf.Sin(p), Mathf.Cos(y) * Mathf.Cos(p));
         Vector3 position = pivot + dir * distance;
         cam.transform.SetPositionAndRotation(position, Quaternion.LookRotation(-dir, Vector3.up) * aimOffset);
-    }
-
-    // ------------------------------------------------------------------
-
-    private void BuildHint()
-    {
-        HideHint();
-        hintRoot = PixelUIKit.CreateCanvas("Orbit Hint", 300, new Vector2(1920f, 1080f), false);
-        hintRoot.transform.SetParent(transform, false);
-        TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, hintRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintTextV2, PixelKeys.Name(PixelAction.ViewWindow))),
-                                              26f, TextAlignmentOptions.Center, FontStyles.Normal, Color.white);
-        hint.raycastTarget = false;
-        hint.outlineWidth = 0.3f;
-        hint.outlineColor = new Color32(0, 0, 0, 255);
-        RectTransform hr = hint.rectTransform;
-        hr.anchorMin = new Vector2(0f, 0f);
-        hr.anchorMax = new Vector2(1f, 0f);
-        hr.pivot = new Vector2(0.5f, 0f);
-        hr.sizeDelta = new Vector2(0f, 44f);
-        hr.anchoredPosition = new Vector2(0f, (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f) + 14f);
-        hintTimer = V(hintSeconds, 6f);
-    }
-
-    private void HideHint()
-    {
-        if (hintRoot != null) Destroy(hintRoot);
-        hintRoot = null;
     }
 }

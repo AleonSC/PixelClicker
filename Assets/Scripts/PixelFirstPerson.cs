@@ -52,9 +52,6 @@ public class PixelFirstPerson : MonoBehaviour
     [Tooltip("The fastest an old pixel is shoved when you run into it, in old-pixel widths per second (it is pushed along gently and never sent flying). 0 = the coded default (3).")]
     [SerializeField] private float pushSpeed = 0f;
 
-    [Tooltip("Text shown at the bottom of the screen while in first person mode. {0} = the First Person key.")]
-    [SerializeField] private string hintLineV2 = "WASD move  -  Shift run  -  Space jump  -  click the cube to click it  -  right-click a cube to carry it (again = drop, left-click = throw)  -  Esc to leave, {0} opens the View window";
-
     /// <summary>True while first person mode is on (other scripts step aside: cube clicks, grabbing, the hose, Time Slow's S key).</summary>
     [Min(0)]
     [Tooltip("How many cubes you can carry at once (stacked in front of you). 0 = the coded default (3).")]
@@ -443,19 +440,6 @@ public class PixelFirstPerson : MonoBehaviour
         RectTransform rt = dot.GetComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(10f, 10f);
-
-        TMP_Text hint = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Hint", PixelKeys.Replace(string.Format(hintLineV2, PixelKeys.Name(PixelAction.ViewWindow))),
-                                              26f, TextAlignmentOptions.Center, FontStyles.Normal, new Color(1f, 1f, 1f, 0.75f));
-        hint.raycastTarget = false;
-        hint.color = Color.white;
-        hint.outlineWidth = 0.3f; // a dark edge so it stays readable over pale floors
-        hint.outlineColor = new Color32(0, 0, 0, 255);
-        RectTransform hr = hint.rectTransform;
-        hr.anchorMin = new Vector2(0f, 0f);
-        hr.anchorMax = new Vector2(1f, 0f);
-        hr.pivot = new Vector2(0.5f, 0f);
-        hr.sizeDelta = new Vector2(0f, 44f);
-        hr.anchoredPosition = new Vector2(0f, (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f) + 14f);
     }
 }
 

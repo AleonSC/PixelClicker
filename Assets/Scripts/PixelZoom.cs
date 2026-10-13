@@ -91,7 +91,7 @@ public class PixelZoom : MonoBehaviour
     {
         if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) return true;
         if (PixelFirstPerson.Active || PixelOrbitCamera.Active) return true;
-        foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.Takeover) return true;
+        foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return true;
         return false;
     }
 

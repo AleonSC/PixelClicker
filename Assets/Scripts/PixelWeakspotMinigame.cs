@@ -12,6 +12,8 @@
 //   it, pulseChance 0 = 0.3) and flickering (yellow, shows flickerOn s then vanishes flickerOff s, can't be hit while gone,
 //   flickerChance 0 = 0.2). Click all of them within huntSeconds (4 real seconds) for baseXp + speedXp x time left of XP for the skill
 //   in training via GrantSkillXp; running out of time pays nothing. Time Stop / Time Slow / the title screen end the round at once.
+//   The zoom camera starts / ends at the REAL camera's live pose every frame (PlaceCamera) and NeedsNormalCamera is false, so the player's orbit / zoom view is left alone and nothing pops when
+//   the round ends. Each round logs one line about the cube, its mesh and the spot collider (DescribeCube; the F10 'mark this moment' report carries it).
 //   Stats weakspot.rounds/wins, tip minigame_weakspot, sounds weakspot_start/_hit/_win/_lose (silent until clips are assigned).
 // ---------------------------------------------------
 using TMPro;
@@ -212,6 +214,7 @@ public class PixelWeakspotMinigame : PixelMinigame
     public override bool Running => startRunning || (PixelSkills.Instance != null && PixelSkills.Instance.ActiveId != PixelSkills.StandardId);
     public override bool Busy => phase != Phase.Idle;
     public override bool Takeover => true;   // nothing else starts meanwhile (the cube is not 'taken over': TakeoverActive stays off)
+    public override bool NeedsNormalCamera => false;   // it zooms its OWN camera: the player's view (orbit / zoom) is left alone, so nothing pops when the round ends
 
     public override void Activate() { startRunning = true; }
     public override void Deactivate() { startRunning = false; if (phase != Phase.Idle) Finish(); }
@@ -363,6 +366,10 @@ public class PixelWeakspotMinigame : PixelMinigame
     private void PlaceCamera(float k)
     {
         if (zoomCam == null || mainCam == null) return;
+        // The real camera may still be moving (orbit, auto orbit): start and end the zoom where it IS, so the zoom out lands exactly on it - no pop.
+        fromPos = mainCam.transform.position;
+        fromRot = mainCam.transform.rotation;
+        fromOrtho = mainCam.orthographicSize;
         k = k * k * (3f - 2f * k);
         zoomCam.transform.SetPositionAndRotation(Vector3.Lerp(fromPos, toPos, k), Quaternion.Slerp(fromRot, toRot, k));
         if (zoomCam.orthographic) zoomCam.orthographicSize = Mathf.Lerp(fromOrtho, toOrtho, k);
@@ -382,6 +389,18 @@ public class PixelWeakspotMinigame : PixelMinigame
         huntLeft = huntSeconds;
         phase = Phase.Hunt;
         phaseT = 0f;
+        DescribeCube(count);
+    }
+
+    /// <summary>One log line about the cube and the collider the spots were placed on (for chasing glitches: it lands in the marked-moment report's recent log).</summary>
+    private void DescribeCube(int wanted)
+    {
+        MeshFilter mf = clicker.PixelTransform != null ? clicker.PixelTransform.GetComponentInChildren<MeshFilter>() : null;
+        int tier = clicker.CurrentClickTierIndex;
+        string tierName = tier >= 0 && tier < clicker.Tiers.Length ? clicker.Tiers[tier].displayName : "?";
+        PixelDebug.Info("Weak Spots: cube=" + tierName + " mesh=" + (mf != null && mf.sharedMesh != null ? mf.sharedMesh.name + " tris=" + mf.sharedMesh.GetIndexCount(0) / 3 : "none") +
+                        " scale=" + (clicker.PixelTransform != null ? clicker.PixelTransform.localScale.ToString("F2") : "?") + " surface=" + (surface != null ? surface.bounds.size.ToString("F2") : "none") +
+                        " spots=" + spots.Count + "/" + wanted + (fishing ? " (fishing round)" : ""));
     }
 
     /// <summary>The point on the cube's face the zoom camera sees through a viewport position (false when it misses the cube).</summary>

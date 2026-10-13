@@ -1,5 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelMinigame.cs
+//   NeedsNormalCamera (default = Takeover): true while the minigame needs the camera at its normal pose (the orbit camera glides home, the zoom snaps back); Weak Spots overrides it to false.
 //   Abstract base for minigames (registry PixelMinigame.All/Find(id), Id, Running, Activate/Deactivate, optional goal tracker:
 //   HasTracker, TrackerTitle/Description/Count/Goal, RequirementFormat, GoalReached). Skill XP bonus: every
 //   Report(MinigameEvent.Clicked) (each success: ghost caught, meteor click, star collected, bomb defused, Ultra Hole drop, Snake /
@@ -129,6 +130,12 @@ public abstract class PixelMinigame : MonoBehaviour
     /// and while it does cube clicks and Pixel Grabbing are off.
     /// </summary>
     public virtual bool Takeover => false;
+
+    /// <summary>
+    /// True while this minigame needs the camera back at its normal pose (Dash / Blink / Evade move the cube about on screen): the orbit camera glides home
+    /// and the zoom snaps back. Defaults to <see cref="Takeover"/>; Weak Spots is a takeover only to stop other minigames, and uses its own camera, so it says false.
+    /// </summary>
+    public virtual bool NeedsNormalCamera => Takeover;
 
     /// <summary>True while a minigame wants the auto clicker switched off (Cube Dash: only your own clicks count). The cube stays clickable.</summary>
     public static bool AutoClickerPaused { get; protected set; }

@@ -7,7 +7,7 @@
 //   re-aims the same camera, PixelOrbitCamera.SetTopDown); an 'Orthographic (flat) view' tick box (PixelOrthoView.Enabled, the same
 //   setting as Settings > Flat view; greyed out in first person, which is always 3D); a Zoom slider (the normal view's PixelZoom.SetTarget,
 //   or the orbit / top down camera's DistanceFraction; not in first person); and, in Orbital / Top down, the orbit controls: Auto orbit tick
-//   box + speed slider, and hold buttons for turning (and, in Orbital only, tilting). While the window is open first person gives the
+//   box + speed slider, and hold buttons for turning (and, in Orbital only, tilting). Each view row shows its CONTROLS as a vertical hover tooltip (AddViewTip; the old hint lines at the bottom of the screen for first person and orbit are gone). While the window is open first person gives the
 //   mouse back (PixelFirstPerson checks PixelViewWindow.IsOpen). The choices are saved with the save file's settings (PlayerPrefs
 //   PixelClicker.Setting.ViewKind / ViewBaseZoom / ViewAutoOrbit / ViewAutoSpeed / ViewScrollInvert, listed in PixelSettingsSync): ApplySaved puts the
 //   view back once the title screen and camera intro are over. There is no separate Default view any more: TOP DOWN is the normal view (Default only means 'no view in use for a moment': the intro, a takeover minigame, first person ending) - Update puts the player's view back (ApplySaved every 0.4 s while Default; nothing saved = startView Top down at startZoom 1). Zoom 1.0 is the BASE view (PixelOrbitCamera: the scene camera is put 6 units from the cube at 89 degrees at start, useBaseView / baseDistance / baseTilt / baseTurn); the slider and the wheel zoom between 0.35x and 2x of that and the zoom is saved (ViewBaseZoom; the wheel too). 'Invert zoom scroll' tick (orbit section, PlayerPrefs ViewScrollInvert, default ON) flips the wheel direction in PixelOrbitCamera (scroll up = zoom in). (first person is never restored by itself; orthographic is the existing FlatView setting).
@@ -122,6 +122,8 @@ public class PixelViewWindow : MonoBehaviour
     private TMP_FontAsset font;
     private readonly Toggle[] viewTicks = new Toggle[3];   // First person, Orbital, Top down
     private Toggle orthoTick, autoTick, invertTick;
+    private RectTransform tipRect;
+    private TMP_Text tipLabel;
     private TMP_Text orthoNote, zoomValue, speedValue;
     private Slider zoomSlider, speedSlider;
     private GameObject zoomRow, orbitSection, tiltRow;
@@ -367,6 +369,29 @@ public class PixelViewWindow : MonoBehaviour
         return b.gameObject.AddComponent<PixelHoldPress>();
     }
 
+    /// <summary>Shows 'text' (one control per line) in the tooltip box beside the window while the mouse is over 'row' (the box sits left of the window, or right of it when there is no room).</summary>
+    private void AddViewTip(GameObject row, float rowY, string text)
+    {
+        PixelHoverTip hover = row.GetComponent<PixelHoverTip>();
+        if (hover == null) hover = row.AddComponent<PixelHoverTip>();
+        hover.onEnter = () =>
+        {
+            if (tipRect == null) return;
+            tipLabel.text = PixelKeys.Replace(text);
+            Vector2 pref = tipLabel.GetPreferredValues(tipLabel.text, 520f, 0f);
+            tipRect.sizeDelta = new Vector2(Mathf.Min(520f, pref.x) + 32f, pref.y + 24f);
+            Vector3[] corners = new Vector3[4];
+            windowRect.GetWorldCorners(corners);
+            bool left = corners[0].x / Mathf.Max(1, Screen.width) * 1920f > tipRect.sizeDelta.x + 24f;
+            tipRect.anchorMin = tipRect.anchorMax = new Vector2(left ? 0f : 1f, 1f);
+            tipRect.pivot = new Vector2(left ? 1f : 0f, 1f);
+            tipRect.anchoredPosition = new Vector2(left ? -12f : 12f, -rowY);
+            tipRect.gameObject.SetActive(true);
+            tipRect.SetAsLastSibling();
+        };
+        hover.onExit = () => { if (tipRect != null) tipRect.gameObject.SetActive(false); };
+    }
+
     private void Build()
     {
         canvasRoot = PixelUIKit.CreateCanvas("View Window Canvas", 135, new Vector2(1920f, 1080f), true);
@@ -399,6 +424,28 @@ public class PixelViewWindow : MonoBehaviour
         close.onClick.AddListener(Close);
         y = 78f;
 
+        // The controls of each view show as a vertical tooltip beside the window while the mouse is over its row (nothing is drawn at the bottom of the screen any more).
+        GameObject tip = new GameObject("View Tip", typeof(RectTransform), typeof(Image));
+        tip.transform.SetParent(window.transform, false);
+        tipRect = tip.GetComponent<RectTransform>();
+        tip.GetComponent<Image>().raycastTarget = false;
+        PixelUIKit.StyleWindow(tip.GetComponent<Image>(), new Color(0.06f, 0.08f, 0.13f, 0.97f));
+        tipLabel = Label(tip.transform, "", 22f, FontStyles.Normal, Color.white, TextAlignmentOptions.TopLeft);
+        tipLabel.raycastTarget = false;
+        tipLabel.enableAutoSizing = false;   // (the box is sized to the text instead)
+        tipLabel.fontSize = 22f;
+        tipLabel.overflowMode = TextOverflowModes.Overflow;
+        PixelUIKit.Stretch(tipLabel.rectTransform);
+        tipLabel.rectTransform.offsetMin = new Vector2(16f, 12f);
+        tipLabel.rectTransform.offsetMax = new Vector2(-16f, -12f);
+        tip.SetActive(false);
+        string[] tips =
+        {
+            "<b>First person controls</b>\nWASD  -  move\nShift  -  run\nSpace  -  jump\nClick the cube  -  click it\nRight-click a cube  -  carry it\n(again = drop, left-click = throw)\nEsc  -  leave\n{key:ViewWindow}  -  this window",
+            "<b>Orbital controls</b>\nMiddle mouse drag  -  turn and tilt\nArrow keys  -  turn and tilt\nMouse wheel  -  zoom\nTurn / tilt buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
+            "<b>Top down controls</b>\nMiddle mouse drag  -  turn\nLeft / right arrow keys  -  turn\nMouse wheel  -  zoom\nTurn buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
+        };
+
         // --- Views: ticking one unticks the others.
         string[] names = { "First person", "Orbital", "Top down" };
         PixelViewKind[] kinds = { PixelViewKind.FirstPerson, PixelViewKind.Orbital, PixelViewKind.TopDown };
@@ -409,7 +456,8 @@ public class PixelViewWindow : MonoBehaviour
             {
                 if (on && SetView(kind)) SaveKind(kind);
                 Sync();   // (a tick box can't be switched off by clicking it: one view is always in use)
-            }, out _);
+            }, out GameObject viewRow);
+            AddViewTip(viewRow, y, tips[i]);
             y += RowH + 6f;
         }
         y += 8f;
