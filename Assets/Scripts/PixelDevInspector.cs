@@ -310,7 +310,7 @@ public class PixelDevInspector : MonoBehaviour
         filterField = PixelUIKit.CreateInputField(font, selView.transform, "Filter", new Vector2(Width - 28f, RowH), BoxColor, TextColor, FontSize, "Filter fields...");
         PlaceTL(filterField.GetComponent<RectTransform>(), 14f, 2f * (RowH + 6f), Width - 28f, RowH);
         PixelUIKit.AddSearchIcon(filterField);
-        filterField.gameObject.AddComponent<InspectorCaret>();
+        filterField.gameObject.AddComponent<PixelInputCaret>();
         filterField.onValueChanged.AddListener(s => { filter = s.Trim(); RebuildSelected(); });
         float top = 3f * (RowH + 6f) + 4f;
         selScroll = PixelUIKit.CreateScrollView(selView.transform, "Selected Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 10f, 30f, out selContent, out selBar);
@@ -403,7 +403,7 @@ public class PixelDevInspector : MonoBehaviour
             TMP_InputField f = PixelUIKit.CreateInputField(font, content, m.label + " Field", new Vector2(ctlW, RowH), BoxColor, TextColor, FontSize - 2f, "");
             PlaceTL(f.GetComponent<RectTransform>(), ctlX, y, ctlW, RowH);
             f.interactable = !m.readOnly;
-            f.gameObject.AddComponent<InspectorCaret>();
+            f.gameObject.AddComponent<PixelInputCaret>();
             // Applied while you type (as soon as what is there makes sense) and again when you press Enter / click away.
             f.onValueChanged.AddListener(s => { if (TryParse(m.type, s, out object v)) ApplyValue(row, v, false); });
             f.onEndEdit.AddListener(s =>
@@ -702,48 +702,5 @@ public class PixelDevInspector : MonoBehaviour
         Rigidbody rb = bestCollider.attachedRigidbody;
         Select(rb != null ? rb.gameObject : bestCollider.gameObject);
         SetTab(1);
-    }
-
-    /// <summary>
-    /// The Inspector's own blinking text cursor (the built-in one did not show in these fields): a white bar that follows the caret while the field has focus.
-    /// The built-in caret is made invisible so there is never a second one.
-    /// </summary>
-    private sealed class InspectorCaret : MonoBehaviour
-    {
-        private TMP_InputField field;
-        private RectTransform bar;
-
-        private void LateUpdate()
-        {
-            if (field == null)
-            {
-                field = GetComponent<TMP_InputField>();
-                if (field == null || field.textComponent == null) return;
-                field.customCaretColor = true;
-                field.caretColor = Color.clear;
-                GameObject g = new GameObject("Inspector Caret", typeof(RectTransform), typeof(Image));
-                g.transform.SetParent(field.textComponent.transform, false);
-                g.GetComponent<Image>().color = Color.white;
-                g.GetComponent<Image>().raycastTarget = false;
-                bar = g.GetComponent<RectTransform>();
-                bar.anchorMin = bar.anchorMax = bar.pivot = new Vector2(0.5f, 0.5f);
-                g.SetActive(false);
-            }
-            bool show = field.isFocused && Mathf.Repeat(Time.unscaledTime, 1f) < 0.6f;
-            if (bar.gameObject.activeSelf != show) bar.gameObject.SetActive(show);
-            if (!show) return;
-            TMP_Text text = field.textComponent;
-            TMP_TextInfo info = text.textInfo;
-            int pos = Mathf.Clamp(field.stringPosition, 0, info.characterCount);
-            float x;
-            if (info.characterCount == 0) x = text.rectTransform.rect.xMin + text.margin.x;
-            else if (pos == 0) x = info.characterInfo[0].origin;
-            else x = info.characterInfo[pos - 1].xAdvance;
-            float y = info.lineCount > 0 ? (info.lineInfo[0].ascender + info.lineInfo[0].descender) * 0.5f : 0f;
-            float h = Mathf.Max(14f, text.fontSize * 1.1f);
-            bar.sizeDelta = new Vector2(2f, h);
-            bar.anchoredPosition = new Vector2(x, y);
-            bar.SetAsLastSibling();
-        }
     }
 }

@@ -443,6 +443,7 @@ public class PixelDevTools : MonoBehaviour
     private void OnDestroy()
     {
         PixelDevHub.OpenChanged -= OnHubOpenChanged;
+        PixelDevDocs.Shown -= OnDocsShown;
         if (dockRoot != null) Destroy(dockRoot);
         if (instance == this)
         {
@@ -956,10 +957,10 @@ public class PixelDevTools : MonoBehaviour
 
         board.Finish();   // the saved order, the layout and the scroll size
 
-        BuildTodoView(PixelDevHub.TabRoot("todo"), 8f, inner);
-        BuildChangelogView(PixelDevHub.TabRoot("changelog"), 8f);
-        PixelDevHub.SetTabCallback("todo", visible => { if (visible) RebuildTodo(); });
-        PixelDevHub.SetTabCallback("changelog", visible => { if (visible) RebuildChangelog(); });
+        // To-Do and Changelog are the first two sub-tabs of the hub's Docs tab (PixelDevDocs); they are rebuilt each time one is shown.
+        BuildTodoView(PixelDevDocs.Root(0), 8f, inner);
+        BuildChangelogView(PixelDevDocs.Root(1), 8f);
+        PixelDevDocs.Shown += OnDocsShown;
 
         FillDropdowns();
         pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("PixelIndex", 0), 0, pixelDropdown.options.Count - 1));
@@ -972,6 +973,12 @@ public class PixelDevTools : MonoBehaviour
         PixelDevMockup.Boot();
         PixelDevHub.OpenChanged += OnHubOpenChanged;
         if (PixelDevHub.IsOpen) FillDropdowns();
+    }
+
+    private void OnDocsShown(int sub)
+    {
+        if (sub == 0) RebuildTodo();
+        else if (sub == 1) RebuildChangelog();
     }
 
     private void OnHubOpenChanged(bool open)

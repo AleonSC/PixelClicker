@@ -19,7 +19,7 @@ using UnityEngine.UI;
 
 public class PixelDevHub : MonoBehaviour
 {
-    public const float ContentW = 700f, ContentH = 780f, HeaderH = 52f, TabStripH = 46f, Pad = 8f, FloatHeaderH = 44f;
+    public const float ContentW = 700f, ContentH = 780f, HeaderH = 52f, TabStripH = 36f, Pad = 8f, FloatHeaderH = 44f;
     private const string P = "PixelClicker.Dev.Hub.";
 
     public sealed class Tab
@@ -27,7 +27,9 @@ public class PixelDevHub : MonoBehaviour
         public string id, title;
         public Vector2 size;
         public RectTransform root, buttonRect, window, floatBody;
-        public Image image;
+        public Image image, icon;
+        public TMP_Text label;
+        public float labelWidth;
         public Action<bool> onVisible;
         public bool floating, minimized, visible;
         public float width;
@@ -136,7 +138,7 @@ public class PixelDevHub : MonoBehaviour
         // ---- the tabs ----
         string[,] defs =
         {
-            { "main", "Main", "700" }, { "todo", "To-Do", "700" }, { "changelog", "Changelog", "700" },
+            { "main", "Main", "700" }, { "docs", "Docs", "700" },
             { "inspector", "Inspector", "700" }, { "shapes", "Shapes", "500" }, { "uimock", "UI Mock", "500" },
         };
         string saved = PlayerPrefs.GetString(P + "Order", "");
@@ -172,8 +174,41 @@ public class PixelDevHub : MonoBehaviour
         Find("shapes").onVisible = PixelDevShapes.SetActive;
         Find("uimock").onVisible = PixelDevMockup.SetActive;
         PixelDevInspector.Boot();
+        PixelDevDocs.Boot();
         windowRect.gameObject.SetActive(true);
         canvasRoot.SetActive(false);
+    }
+
+    // ---- tab pictures: tiny pixel-art icons drawn from text ----
+
+    private static readonly Dictionary<string, Sprite> iconCache = new Dictionary<string, Sprite>();
+
+    private static Sprite TabIcon(string id)
+    {
+        if (iconCache.TryGetValue(id, out Sprite cached) && cached != null) return cached;
+        string[] rows;
+        switch (id)
+        {
+            case "main":       // sliders
+                rows = new[] { "............", ".##########.", "....##......", "............", ".##########.", "........##..", "............", ".##########.", "..##........", "............" }; break;
+            case "docs":       // a book
+                rows = new[] { "............", ".#########..", ".#.......##.", ".#.#####.#..", ".#.......#..", ".#.#####.#..", ".#.......#..", ".#.#####.#..", ".#########..", "............" }; break;
+            case "inspector":  // a magnifying glass
+                rows = new[] { "............", "...#####....", "..#.....#...", ".#.......#..", ".#.......#..", ".#.......#..", "..#.....#...", "...#####.#..", ".........##.", "..........##" }; break;
+            case "shapes":     // a square and a circle
+                rows = new[] { "#######.....", "#.....#.....", "#.....#.##..", "#.....####..", "#######.###.", "......#####.", "......#####.", ".......###..", "............", "............" }; break;
+            default:           // a window with a title bar (UI mock)
+                rows = new[] { "############", "#..........#", "############", "#..........#", "#..###.....#", "#..........#", "#..######..#", "#..........#", "############", "............" }; break;
+        }
+        int w = 12, h = rows.Length;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                tex.SetPixel(x, h - 1 - y, x < rows[y].Length && rows[y][x] == '#' ? Color.white : new Color(1f, 1f, 1f, 0f));
+        tex.Apply(false, true);
+        Sprite sp = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+        iconCache[id] = sp;
+        return sp;
     }
 
     private int DockedCount() { int n = 0; foreach (Tab t in tabs) if (!t.floating) n++; return n; }
@@ -187,10 +222,26 @@ public class PixelDevHub : MonoBehaviour
         PlaceTL(t.root, (ContentW - t.size.x) * 0.5f, 0f, t.size.x, t.size.y);
         r.SetActive(false);
 
-        Button b = PixelUIKit.CreateButton(font, strip, "Tab Button " + t.id, t.title, new Vector2(100f, TabStripH), TabOff, TextColor, 22f);
+        Button b = PixelUIKit.CreateButton(font, strip, "Tab Button " + t.id, t.title, new Vector2(100f, TabStripH), TabOff, TextColor, 18f);
         PixelUIKit.Caps(b);
         TMP_Text label = b.GetComponentInChildren<TMP_Text>();
-        t.width = Mathf.Max(96f, Mathf.Ceil(label.GetPreferredValues(t.title.ToUpperInvariant()).x) + 40f);
+        label.alignment = TextAlignmentOptions.MidlineLeft;
+        label.rectTransform.offsetMin = new Vector2(36f, 0f);
+        label.rectTransform.offsetMax = new Vector2(-8f, 0f);
+        t.label = label;
+        t.labelWidth = Mathf.Ceil(label.GetPreferredValues(t.title.ToUpperInvariant()).x);
+        t.width = 44f;
+        // The small picture (the only thing an inactive tab shows).
+        GameObject ig = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        ig.transform.SetParent(b.transform, false);
+        t.icon = ig.GetComponent<Image>();
+        t.icon.sprite = TabIcon(t.id);
+        t.icon.raycastTarget = false;
+        t.icon.color = TextColor;
+        RectTransform ir = ig.GetComponent<RectTransform>();
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0f, 0.5f);
+        ir.sizeDelta = new Vector2(22f, 22f);
+        ir.anchoredPosition = new Vector2(10f, 0f);
         t.buttonRect = b.GetComponent<RectTransform>();
         t.buttonRect.anchorMin = t.buttonRect.anchorMax = t.buttonRect.pivot = new Vector2(0f, 1f);
         t.image = b.GetComponent<Image>();
@@ -208,9 +259,11 @@ public class PixelDevHub : MonoBehaviour
             if (t.floating) { t.buttonRect.gameObject.SetActive(false); continue; }
             t.buttonRect.gameObject.SetActive(true);
             bool on = t == active;
-            float h = on ? TabStripH : TabStripH - 8f;
+            t.width = on ? 36f + t.labelWidth + 14f : 44f;   // the active tab shows its name, the others only their picture
+            t.label.text = on ? t.title.ToUpperInvariant() : "";
+            float h = on ? TabStripH : TabStripH - 6f;
             t.buttonRect.sizeDelta = new Vector2(t.width, h);
-            if (t != skip) t.buttonRect.anchoredPosition = new Vector2(x, on ? 0f : -8f);
+            if (t != skip) t.buttonRect.anchoredPosition = new Vector2(x, on ? 0f : -6f);
             t.image.color = on ? BodyColor : TabOff;
             x += t.width - 6f;
         }
