@@ -1,5 +1,6 @@
 // ---- System notes ----
 // PixelNextUp.cs
+//   The window has a header (title + '-' button) and is a PixelWindowChrome window: drag it by the header, minimize it to the header, dock it against the left / right screen side (slides out on hover); remembered in PlayerPrefs PixelClicker.NextUp.Window.*.
 //   The 'Next up' window (component added by PixelClicker.Awake; shown while the Block Hold upgrade is owned and Settings > Interface > 'Next-up window' is on, PlayerPrefs
 //   PixelClicker.Setting.NextUp, default on): a slim vertical window at the left edge with THREE spinning cubes - the block coming NEXT on top, the block on the cube NOW in the middle
 //   (bigger) and the block BEFORE it at the bottom (dim). When the block changes the cubes slide down one slot (the new next slides in from above, the old 'before' slides out below);
@@ -15,7 +16,7 @@ using UnityEngine.UI;
 public class PixelNextUp : MonoBehaviour
 {
     [Header("Window")]
-    [Tooltip("Where the window sits: offset from the middle of the left screen edge (pixels, canvas units).")]
+    [Tooltip("Where the window sits the first time: offset from the middle of the left screen edge (pixels, canvas units). After that the player drags it (it remembers), minimizes it with '-' or docks it by dragging it against a screen side.")]
     [SerializeField] private Vector2 position = new Vector2(24f, 0f);
     [Min(0f)]
     [Tooltip("Distance between two cubes (pixels). 0 = the default (112).")]
@@ -62,7 +63,9 @@ public class PixelNextUp : MonoBehaviour
 
     private PixelClicker clicker;
     private GameObject canvasRoot, panel;
-    private RectTransform chipHost;
+    private RectTransform chipHost, body;
+    private PixelWindowChrome chrome;
+    private const float HeaderH = 36f;
     private readonly List<Chip> chips = new List<Chip>();
     private readonly Chip[] slot = new Chip[3];   // 0 = next (top), 1 = now, 2 = before (bottom)
     private bool built, synced;
@@ -178,6 +181,7 @@ public class PixelNextUp : MonoBehaviour
     private void LateUpdate()
     {
         if (!built || canvasRoot == null || !canvasRoot.activeInHierarchy) return;
+        if (chrome != null && chrome.Minimized) return;   // (nothing to draw while it is folded up)
         float yaw = Time.unscaledTime * 45f;
         for (int i = 0; i < chips.Count; i++) if (chips[i] != null && chips[i].pic != null && chips[i].pic.texture != null) PixelTierPicture.Render(chips[i].tier, yaw);
     }
@@ -200,36 +204,51 @@ public class PixelNextUp : MonoBehaviour
     {
         if (clicker.UIFont == null) return;
         TMP_FontAsset font = clicker.UIFont;
-        canvasRoot = PixelUIKit.CreateCanvas("Next Up", sortingOrder, new Vector2(1920f, 1080f), false);
+        canvasRoot = PixelUIKit.CreateCanvas("Next Up", sortingOrder, new Vector2(1920f, 1080f), true);
         panel = new GameObject("Window", typeof(RectTransform), typeof(Image));
         panel.transform.SetParent(canvasRoot.transform, false);
         Image bg = panel.GetComponent<Image>();
-        bg.raycastTarget = false;
         PixelUIKit.StyleWindow(bg, windowColor);
         RectTransform pr = panel.GetComponent<RectTransform>();
-        pr.anchorMin = pr.anchorMax = new Vector2(0f, 0.5f);
-        pr.pivot = new Vector2(0f, 0.5f);
-        pr.sizeDelta = new Vector2(200f, Spacing * 3f + 36f);
-        pr.anchoredPosition = position;
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0f, 1f);   // top left (what PixelWindowChrome wants)
+        pr.sizeDelta = new Vector2(200f, HeaderH + Spacing * 3f + 8f);
+
+        TMP_Text title = PixelUIKit.CreateText(font, panel.transform, "Title", "NEXT UP", 22f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, captionColor);
+        title.raycastTarget = false;
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f); tr.anchorMax = new Vector2(1f, 1f); tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(-50f, HeaderH);
+        tr.anchoredPosition = new Vector2(-18f, 0f);
+
+        GameObject bodyGo = new GameObject("Body", typeof(RectTransform), typeof(RectMask2D));   // cubes slide in and out inside the body
+        bodyGo.transform.SetParent(panel.transform, false);
+        body = bodyGo.GetComponent<RectTransform>();
+        body.anchorMin = Vector2.zero; body.anchorMax = Vector2.one;
+        body.offsetMin = Vector2.zero; body.offsetMax = new Vector2(0f, -HeaderH);
 
         GameObject host = new GameObject("Cubes", typeof(RectTransform));
-        host.transform.SetParent(panel.transform, false);
+        host.transform.SetParent(body, false);
         chipHost = host.GetComponent<RectTransform>();
         chipHost.anchorMin = chipHost.anchorMax = chipHost.pivot = new Vector2(0.5f, 0.5f);
         chipHost.sizeDelta = Vector2.zero;
         chipHost.anchoredPosition = Vector2.zero;
-        if (panel.GetComponent<RectMask2D>() == null) panel.AddComponent<RectMask2D>();   // cubes slide in and out inside the window
 
         string[] names = { "NEXT", "NOW", "BEFORE" };
         for (int i = 0; i < 3; i++)
         {
-            TMP_Text t = PixelUIKit.CreateText(font, panel.transform, "Caption " + names[i], names[i], i == 1 ? 24f : 18f, TextAlignmentOptions.Center, FontStyles.Bold, captionColor);
+            TMP_Text t = PixelUIKit.CreateText(font, body, "Caption " + names[i], names[i], i == 1 ? 24f : 18f, TextAlignmentOptions.Center, FontStyles.Bold, captionColor);
             t.raycastTarget = false;
             RectTransform r = t.rectTransform;
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
             r.sizeDelta = new Vector2(100f, 30f);
             r.anchoredPosition = new Vector2(52f, i == 0 ? Spacing : i == 1 ? 0f : -Spacing);
         }
+
+        // Drag by the header, minimize with '-', dock against a screen side (PixelWindowChrome; remembered between sessions).
+        chrome = PixelWindowChrome.Attach(pr, font, "PixelClicker.NextUp.Window", HeaderH, 6f, 5f, 26f, new Color(0.3f, 0.36f, 0.5f, 1f), new Color(0.92f, 0.94f, 1f, 1f), 20f);
+        chrome.HidePin();
+        chrome.Keep(title.gameObject);
+        chrome.defaultPlacer = cs => new Vector2(position.x, -(cs.y - pr.sizeDelta.y) * 0.5f - position.y);
         built = true;
     }
 }

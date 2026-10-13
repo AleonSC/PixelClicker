@@ -8,6 +8,7 @@
 //   * PIN (button 'P', green while pinned): Pinned is a flag the owner reads (Dev Tools: a pinned window ignores Escape and doesn't count as an open window, so the game stays playable).
 //   * DOCK to the left / right edge: drag it against a side (a pale strip shows where) and it docks at that height with only a sliver showing; it slides out while the mouse is
 //     near it or you are typing in it; an undock arrow (replaces the pin button while docked) puts it back. Docked windows can't be dragged until undocked.
+//   Optional: HidePin() (nothing to pin), defaultPlacer (first-time position). Users: Dev Hub, the Next up window.
 //   Saved in PlayerPrefs prefKey + Pin / Min / Dock / DockY / X / Y (not part of the game save).
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -23,6 +24,13 @@ public class PixelWindowChrome : MonoBehaviour
     public bool Pinned { get; private set; }
     public bool Minimized => minimized;
     public bool Docked => dockSide != 0;
+
+    /// <summary>Optional: where the window goes the first time ever (canvas size in, anchored position from the top left out). Without it the window is centred.</summary>
+    public System.Func<Vector2, Vector2> defaultPlacer;
+
+    /// <summary>For windows that have nothing to pin: hides the pin button (the undock arrow still shows while docked).</summary>
+    public void HidePin() { noPin = true; ApplyState(); }
+    private bool noPin;
 
     private RectTransform window, canvasRect, hint;
     private Canvas canvas;
@@ -194,7 +202,7 @@ public class PixelWindowChrome : MonoBehaviour
             undockButton.gameObject.SetActive(dockSide != 0);
             undockButton.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 180f : 0f);
         }
-        if (pinButton != null) pinButton.gameObject.SetActive(dockSide == 0);
+        if (pinButton != null) pinButton.gameObject.SetActive(dockSide == 0 && !noPin);
         if (pinImage != null) pinImage.color = Pinned ? PinOn : buttonColorOff;
         if (drag != null) drag.locked = dockSide != 0;
     }
@@ -234,7 +242,7 @@ public class PixelWindowChrome : MonoBehaviour
         if (!placed)
         {
             placed = true;   // first time ever: centre it
-            window.anchoredPosition = new Vector2((cs.x - window.sizeDelta.x) * 0.5f, -(cs.y - window.sizeDelta.y) * 0.5f);
+            window.anchoredPosition = defaultPlacer != null ? defaultPlacer(cs) : new Vector2((cs.x - window.sizeDelta.x) * 0.5f, -(cs.y - window.sizeDelta.y) * 0.5f);
             Clamp();
         }
         else if (cs != lastCanvasSize) Clamp();
