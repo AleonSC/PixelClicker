@@ -745,3 +745,4 @@
 [2026-10-13 08:04 UTC] Block Hold: filler blocks can be held too, the held block is now wrapped in a telekinetic beam and aura and slides out to the side (and back in when released), and the meter is a curved vertical arc next to the mouse cursor.
 [2026-10-13 08:05 UTC] Block Hold meter now sits on the left side of the mouse cursor so it does not cover the block tooltips.
 [2026-10-13 08:06 UTC] Block Hold meter now sits on the left side of the mouse cursor so it does not cover the block tooltips.
+[2026-10-13 08:09 UTC] Block Hold: a held block returns to the cube instantly (the block that was there moves to next in line), and blocks that already have hits can be held and keep their damage.

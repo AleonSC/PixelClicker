@@ -2573,46 +2573,54 @@ public partial class PixelClicker : MonoBehaviour
     private int RollTier()
     {
         devSwapped = false;
-        if (queuedReturnTier >= 0)
+        while (nextInLine.Count > 0)
         {
-            int queued = queuedReturnTier;
-            queuedReturnTier = -1;
-            if (IsValidTier(queued)) return queued;   // a block put back from the hold (PixelBlockHold)
+            Vector2Int queued = nextInLine[0];   // a block bumped by the hold (PixelBlockHold) is next in line, with the hits it had taken
+            nextInLine.RemoveAt(0);
+            if (!IsValidTier(queued.x)) continue;
+            pendingHits = queued.y;
+            return queued.x;
         }
         return PickSpawnTier();
     }
 
     // ---- Block Hold (PixelBlockHold.cs) ----
 
-    private int queuedReturnTier = -1;
+    private readonly System.Collections.Generic.List<Vector2Int> nextInLine = new System.Collections.Generic.List<Vector2Int>();   // (tier, hits) of blocks waiting to come back
+    private int pendingHits;   // hits the next materialized block starts with (a held block keeps its damage)
 
     /// <summary>Where the block on the cube is.</summary>
     public Vector3 LiveWorldPosition => pixelTransform != null ? pixelTransform.position : transform.position;
 
     /// <summary>Block Hold: pulls the block on the cube out of the rotation (the cube rolls a new one at once). False if this block can't be held right now.</summary>
-    public bool TryPullLive(out int heldTier)
+    public bool TryPullLive(out int heldTier, out int heldHits)
     {
         heldTier = -1;
-        if (!randomizeSpawnTier || pixelTransform == null || tiers == null || tiers.Length == 0 || isSpawning || CubeHidden || fishingBusy || hitsOnCurrentPixel != 0) return false;
+        heldHits = 0;
+        if (!randomizeSpawnTier || pixelTransform == null || tiers == null || tiers.Length == 0 || isSpawning || CubeHidden || fishingBusy) return false;
         int index = GetClickTierIndex();
         PixelType type = tiers[index].type;
         if (IsHazard(type) || type == PixelType.Bottle || type == PixelType.Whale || type == PixelType.Fish || type == PixelType.Treasure) return false;
         heldTier = index;
+        heldHits = hitsOnCurrentPixel;   // a held block keeps the hits it had
         currentTierIndex = RollTier();
         Materialize(GetClickTier());
         return true;
     }
 
-    /// <summary>Block Hold: puts a held block back. It replaces the block on the cube if that one has no hits yet, otherwise it comes after that block breaks.</summary>
-    public void ReturnHeldTier(int tierIndex)
+    /// <summary>Block Hold: puts a held block back at once, with the hits it had. The block that was on the cube (hits and all) moves to next in line.</summary>
+    public void ReturnHeldTier(int tierIndex, int hits)
     {
         if (!IsValidTier(tierIndex)) return;
-        queuedReturnTier = tierIndex;
-        if (randomizeSpawnTier && pixelTransform != null && hitsOnCurrentPixel == 0 && !fishingBusy)
+        if (randomizeSpawnTier && pixelTransform != null && tiers.Length > 0 && !fishingBusy)
         {
-            currentTierIndex = RollTier();
+            nextInLine.Insert(0, new Vector2Int(GetClickTierIndex(), hitsOnCurrentPixel));
+            while (nextInLine.Count > 3) nextInLine.RemoveAt(nextInLine.Count - 1);
+            currentTierIndex = tierIndex;
+            pendingHits = hits;
             Materialize(GetClickTier());
         }
+        else nextInLine.Insert(0, new Vector2Int(tierIndex, hits));
     }
 
     /// <summary>Dev tools: replaces the pixel on the cube with this type at once (even a locked one) so its behaviour can be tested.</summary>
@@ -4099,6 +4107,13 @@ public partial class PixelClicker : MonoBehaviour
         if (liveRich && pixelTransform != null) richGlitter = OreFx.Glitter(pixelTransform, PixelBaseSize);
         if (materializeRoutine != null) StopCoroutine(materializeRoutine);
         materializeRoutine = StartCoroutine(MaterializeRoutine(tier));
+        if (pendingHits > 0)
+        {
+            // A block that comes back from the hold keeps its damage (and its cracks).
+            hitsOnCurrentPixel = Mathf.Clamp(pendingHits, 0, Mathf.Max(0, NeededClicks(tier) - 1));
+            if (hitsOnCurrentPixel > 0) SetLiveDamage(tier, hitsOnCurrentPixel);
+        }
+        pendingHits = 0;
     }
 
     private IEnumerator MaterializeRoutine(PixelTier tier)

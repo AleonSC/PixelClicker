@@ -2,11 +2,10 @@
 // PixelBlockHold.cs
 //   Block Hold (shop pack with unlocksBlockHold, Upgrades tab, cheap while testing; component added by PixelShop / PixelClicker.Awake, Activate / Deactivate like the Bank):
 //   HOLD the RIGHT mouse button on the block on the cube to pull it out of the rotation (PixelClicker.TryPullLive: the cube rolls a new block at once, so you can keep clicking
-//   while it stays held). Letting go puts it back (PixelClicker.ReturnHeldTier: it replaces the block on the cube if that one has no hits yet, else it comes after that block
-//   breaks - RollTier hands out the queued tier). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
+//   while it stays held). Letting go puts it back (PixelClicker.ReturnHeldTier: it takes the cube at once, with the hits it had; the block that was on the cube moves to next in line, hits kept - RollTier hands it out). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
-//   (exhaustCooldownSeconds). Can't be held: hazards, filler blocks, Bottle / Whale / Fish / Treasure, a block that already has hits, or while a fish is being reeled in.
-//   Releasing a held block over a fresh hazard replaces the hazard (a deliberate dodge, it costs the meter). A small meter bar (+ the held block's name) sits under the cube.
+//   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
+//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
 using TMPro;
@@ -62,7 +61,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private PixelClicker clicker;
     private bool unlocked, holding;
-    private int heldTier = -1;
+    private int heldTier = -1, heldHits;
     private float meter = 1f, cooldown, flash;
 
     // ---- state of the held block's picture ----
@@ -72,7 +71,7 @@ public class PixelBlockHold : MonoBehaviour
     private Material beamMaterial;
     private float slide;            // 0 = at the cube, 1 = hovering at the side
     private bool returning;         // sliding back in after the button was let go
-    private int returnTier = -1;
+    private int returnTier = -1, returnHits;
 
     // ---- the meter next to the cursor ----
     private GameObject canvasRoot;
@@ -138,7 +137,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private void Begin()
     {
-        if (!clicker.TryPullLive(out heldTier)) return;
+        if (!clicker.TryPullLive(out heldTier, out heldHits)) return;
         holding = true;
         slide = 0f;
         BuildVisual();
@@ -150,6 +149,7 @@ public class PixelBlockHold : MonoBehaviour
         holding = false;
         returning = holder != null;   // the block slides back in, then is put back
         returnTier = heldTier;
+        returnHits = heldHits;
         heldTier = -1;
         cooldown = exhausted ? ExhaustCooldown : ReleaseCooldown;
         if (exhausted) flash = FlashSeconds;
@@ -160,7 +160,7 @@ public class PixelBlockHold : MonoBehaviour
     /// <summary>The slide back is over (or skipped): the block goes back into the rotation and its picture goes away.</summary>
     private void FinishReturn()
     {
-        if (returnTier >= 0 && clicker != null) clicker.ReturnHeldTier(returnTier);
+        if (returnTier >= 0 && clicker != null) clicker.ReturnHeldTier(returnTier, returnHits);
         returnTier = -1;
         returning = false;
         DestroyVisual();
