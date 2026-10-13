@@ -9,12 +9,13 @@ Default: **Great Oak** (Woodcutting, replaces Wood / Bark / Sap / Leaf / Heartwo
 Not migrated yet: Fishing's Whale / Bottle / Pearl (PixelFishingSpawns, their chances feed the Pixel Guide's SpawnShare) - move them here when next touched.
 
 ## Hold blocks - bonus while held
-`HoldRule`: `type`, `skillId`, `extraClicks`, `burstGapSeconds`, `payoutMultiplier`, `xpMultiplier`, `label`. Held = Block Hold (right button on the cube, PixelBlockHold). While held:
+`HoldRule`: `type`, `skillId`, `extraClicks`, `burstGapSeconds`, `payoutMultiplier`, `xpMultiplier`, `clearsHazard` + `hazardType`, `label`. Held = Block Hold (right button on the cube, PixelBlockHold). While held:
 - `extraClicks`: RAPID CLICKS like Overcharge - every manual click is followed by n extra full clicks, `burstGapSeconds` apart (PixelClicker.CollectInternal -> PixelBlockRules.OnManualClick -> AutoCollect; the burst never starts another burst).
 - `payoutMultiplier`: every payout (CollectInternal).
 - `xpMultiplier`: that skill's XP (PixelSkills.AddXp).
 - `label`: shown beside the hold meter (e.g. "Clicks x3").
-Default: **Whetstone** (Woodcutting base block, 3 hits, 2 extra rapid clicks = 3 at once).
+- `clearsHazard` / `hazardType`: a manual left click on that hazard block clears it at once, safely (PixelClicker.CollectInternal -> ClearHazardNow; no explosion, no XP penalty, no payout).
+Defaults: **Pesticide** (Woodcutting base block, 3 hits, clears Hornet Nests) and **Whetstone** (Woodcutting base block, 3 hits, 2 extra rapid clicks = 3 at once).
 
 ## Adding one
 1. Append a `PixelType`, give it a look (PixelLooks default + a `looksVersion` migration) and spawn data.

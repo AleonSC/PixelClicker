@@ -8,7 +8,7 @@
 //     rolls (PixelFishingSpawns) - move them into this table when they are next touched (their chances feed the Pixel Guide's SpawnShare).
 //   * HOLD BLOCK = a base block of a skill that gives a bonus while it is held (Block Hold, the right button: PixelBlockHold). HoldRule: the block type, the skill, and what the bonus does:
 //     extraClicks (RAPID CLICKS like Overcharge: each manual click is followed by n extra full clicks, burstGapSeconds apart, via AutoCollect; PixelClicker.CollectInternal -> PixelBlockRules.OnManualClick), payoutMultiplier (every
-//     payout, CollectInternal) and xpMultiplier (skill XP of that skill, PixelSkills.AddXp) plus a label shown beside the hold meter. Defaults: Whetstone (Woodcutting, 2 extra rapid clicks = x3).
+//     payout, CollectInternal) and xpMultiplier (skill XP of that skill, PixelSkills.AddXp) plus a label shown beside the hold meter. Defaults: Whetstone (Woodcutting, 2 extra rapid clicks = x3), Pesticide (Woodcutting, clearsHazard: a left click clears a Hornet Nest at once, PixelClicker.CollectInternal -> ClearHazardNow).
 //   Add a new special / hold block: give it a PixelType (append), a look and spawn data like any block (hold blocks are normal base blocks of their pack: shop pack reward tier + the skill's
 //   types list), then add ONE rule here. Behaviour beyond the numbers (the Great Oak's nests) still lives in its own script and listens to PixelClicker.PixelHit.
 // ---------------------------------------------------
@@ -65,6 +65,10 @@ public class PixelBlockRules : MonoBehaviour
         [Min(0f)]
         [Tooltip("The skill's XP is multiplied by this while held (1 = no change).")]
         public float xpMultiplier = 1f;
+        [Tooltip("While held, a manual left click on the hazard block below clears it at once, safely (no explosion, no XP penalty).")]
+        public bool clearsHazard = false;
+        [Tooltip("The hazard this block clears instantly when held (e.g. HornetNest).")]
+        public PixelClicker.PixelType hazardType = PixelClicker.PixelType.HornetNest;
         [Tooltip("The text shown beside the hold meter while this block is held (e.g. 'Clicks x3').")]
         public string label = "";
     }
@@ -111,6 +115,8 @@ public class PixelBlockRules : MonoBehaviour
             });
         if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Whetstone))
             holdRules.Add(new HoldRule { name = "Whetstone", type = PixelClicker.PixelType.Whetstone, skillId = PixelSkills.WoodcuttingId, extraClicks = 2, label = "Rapid clicks x3" });
+        if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Pesticide))
+            holdRules.Add(new HoldRule { name = "Pesticide", type = PixelClicker.PixelType.Pesticide, skillId = PixelSkills.WoodcuttingId, clearsHazard = true, hazardType = PixelClicker.PixelType.HornetNest, label = "Hornet nests: instant clear" });
     }
 
     // ---------------- special blocks ----------------
@@ -169,6 +175,13 @@ public class PixelBlockRules : MonoBehaviour
                 if (r != null && r.type == held && (string.IsNullOrEmpty(r.skillId) || r.skillId == active)) return r;
             return null;
         }
+    }
+
+    /// <summary>True while a held hold block (Pesticide) clears this hazard type with one left click.</summary>
+    public static bool HeldClearsHazard(PixelClicker.PixelType hazard)
+    {
+        HoldRule r = ActiveHold;
+        return r != null && r.clearsHazard && r.hazardType == hazard;
     }
 
     private int pendingExtra;
@@ -286,6 +299,7 @@ public class PixelBlockRules : MonoBehaviour
             if (h.extraClicks > 0) parts.Add("every click is followed by " + h.extraClicks + " extra rapid click" + (h.extraClicks > 1 ? "s" : "") + " (" + (h.extraClicks + 1) + " clicks at once, like an overcharge)");
             if (h.payoutMultiplier > 0f && !Mathf.Approximately(h.payoutMultiplier, 1f)) parts.Add("every payout is x" + h.payoutMultiplier.ToString("0.##"));
             if (h.xpMultiplier > 0f && !Mathf.Approximately(h.xpMultiplier, 1f)) parts.Add((string.IsNullOrEmpty(h.skillId) ? "skill" : h.skillId) + " XP is x" + h.xpMultiplier.ToString("0.##"));
+            if (h.clearsHazard) parts.Add("a left click clears a " + (h.hazardType == PixelClicker.PixelType.HornetNest ? "hornet nest" : h.hazardType.ToString().ToLowerInvariant()) + " at once, safely");
             sb.Append(parts.Count > 0 ? string.Join(", ", parts) : "it gives a bonus").Append(". The bonus lasts exactly as long as you hold it.");
         }
         return sb.ToString();

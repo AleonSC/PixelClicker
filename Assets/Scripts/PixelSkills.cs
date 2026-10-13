@@ -201,7 +201,7 @@ public partial class PixelSkills : MonoBehaviour
                 unlockHint = "Buy the Woodcutter's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn },
+                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
                 fillerType = "Twig", hazardType = "HornetNest",
                 perks = new[]
                 {
@@ -355,7 +355,7 @@ public partial class PixelSkills : MonoBehaviour
                 // A saved Woodcutting pack could lack a block: make sure every one is in the rotation.
                 System.Collections.Generic.List<PixelClicker.PixelType> wood = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn })
+                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide })
                     if (!wood.Contains(t)) wood.Add(t);
                 pack.types = wood.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();
@@ -662,7 +662,7 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
-        if (PixelClicker.IsRetiredOre(type)) return true;   // the dropped Lead / Zinc / Nickel never spawn
+        if (PixelClicker.IsRetiredOre(type) || type == PixelClicker.PixelType.Toadstool) return true;   // the dropped Lead / Zinc / Nickel and the switched-off Toadstool never spawn (the blocks stay in the game for the dev tools)
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool || type == PixelClicker.PixelType.Mold;
         SkillPack owner = s.PackOfType(type);

@@ -587,6 +587,7 @@ public static class PixelLooks
                             jagged = true, farmFx = PixelLook.FarmAmbient.Sparkle },
             new PixelLook { type = PixelClicker.PixelType.Weeds, useColor = true, color = new Color(0.55f, 0.62f, 0.35f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain },
             new PixelLook { type = PixelClicker.PixelType.Acorn, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(0.68f, 0.46f, 0.22f, 1f), metallic = 0f, smoothness = 0.5f, basicSurface = PixelLook.BasicSurface.Grain, blob = true },
+            new PixelLook { type = PixelClicker.PixelType.Pesticide, useColor = true, color = new Color(0.72f, 0.88f, 0.22f, 1f), metallic = 0.1f, smoothness = 0.55f, emission = 0.12f, basicSurface = PixelLook.BasicSurface.Mosaic, shine = true },
             new PixelLook { type = PixelClicker.PixelType.Whetstone, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(0.62f, 0.68f, 0.76f, 1f), metallic = 0.25f, smoothness = 0.4f, blockSurface = PixelLook.BlockSurface.Stone, shine = true },
             new PixelLook { type = PixelClicker.PixelType.GreatOak, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(0.42f, 0.3f, 0.18f, 1f), metallic = 0f, smoothness = 0.08f, blockSurface = PixelLook.BlockSurface.Wood,
                             jagged = true, farmFx = PixelLook.FarmAmbient.Leaves },
