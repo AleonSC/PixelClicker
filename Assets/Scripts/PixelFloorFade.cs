@@ -57,7 +57,7 @@ public partial class PixelFloor
 
     private void UpdateEdgeFade()
     {
-        bool want = !disableEdgeFade && floorRenderer != null && ((visibility > 0.001f && !FloorOff && !groundShaderOn) || PlaneVisible);
+        bool want = !disableEdgeFade && floorRenderer != null && ((visibility > 0.001f && !FloorOff) || PlaneVisible);
         if (!want)
         {
             if (edgeRoot != null && edgeRoot.activeSelf) edgeRoot.SetActive(false);
@@ -68,9 +68,7 @@ public partial class PixelFloor
 
         float unit = Mathf.Max(0.05f, edgeClicker.PixelBaseSize);
         Bounds fb = floorRenderer.bounds;
-        float half = Mathf.Max(unit, Mathf.Min(fb.extents.x, fb.extents.z));
-        float r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
-        float r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.4f));
+        FadeRadii(edgeClicker, out float r0, out float r1);
         if (edgeRoot == null || !Mathf.Approximately(r0, ringR0) || !Mathf.Approximately(r1, ringR1)) BuildEdgeFade(r0, r1, fb);
         if (edgeRoot == null) return;
         if (!edgeRoot.activeSelf) edgeRoot.SetActive(true);
@@ -79,6 +77,8 @@ public partial class PixelFloor
         if (PixelFirstPerson.TryGetPlayerPosition(out Vector3 playerPos)) center = playerPos;
         float y = fb.max.y + unit * 0.012f;
         ringObject.transform.position = new Vector3(center.x, y, center.z);
+        bool ringOn = !(groundShaderOn && !FloorOff);   // a shader ground fades itself (see-through); only the wireframe rim is added to it
+        if (ringObject.activeSelf != ringOn) ringObject.SetActive(ringOn);
 
         Vector2 c2 = new Vector2(center.x, center.z);
         float moved = unit * 0.05f;
@@ -95,6 +95,26 @@ public partial class PixelFloor
         ringMat.color = new Color(ringBase.r, ringBase.g, ringBase.b, fadeAlpha);
         Color wc = wireColor.a > 0f ? wireColor : new Color(0.25f, 1f, 0.9f, 1f);
         wireMat.color = new Color(wc.r, wc.g, wc.b, FloorOff ? 0f : visibility * (wireStrength > 0f ? wireStrength : 0.9f));
+    }
+
+    /// <summary>
+    /// Where the floor's fade starts (r0) and ends (r1), in world units from the player. Normally from the floor's size; a painted picture that is
+    /// ONE clamped copy (stretchToFloor) must be gone before its own edge, or its edge pixels would show smeared outwards.
+    /// </summary>
+    private void FadeRadii(PixelClicker clicker, out float r0, out float r1)
+    {
+        float unit = Mathf.Max(0.05f, clicker.PixelBaseSize);
+        Bounds fb = floorRenderer.bounds;
+        float half = Mathf.Max(unit, Mathf.Min(fb.extents.x, fb.extents.z));
+        r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
+        r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.45f));
+        if (groundShaderOn || current < 0 || current >= styles.Count || !styles[current].stretchToFloor) return;
+        FloorStyle st = styles[current];
+        float aspect = st.tileAspect > 0.01f ? st.tileAspect : 1f;
+        float limit = Mathf.Min(st.tileWorldSize * aspect, st.tileWorldSize) * 0.5f * 0.94f;
+        if (r1 <= limit) return;
+        r1 = Mathf.Max(unit * 4f, limit);
+        r0 = Mathf.Max(unit * 1.5f, Mathf.Min(r0, r1 - Mathf.Max(unit * 3f, r1 * 0.45f)));
     }
 
     private Color ringBase = new Color(0.5f, 0.55f, 0.6f);
@@ -132,7 +152,7 @@ public partial class PixelFloor
         {
             float k = i / (float)steps;
             radii[i] = Mathf.Lerp(r0, r1, k);
-            alphas[i] = k * k * (3f - 2f * k);   // smooth from 0 to 1
+            alphas[i] = k * k * k * (k * (6f * k - 15f) + 10f);   // smoother-step from 0 to 1 (no visible band at either end)
         }
         radii[steps + 1] = outer; alphas[steps + 1] = 1f;
         for (int ring = 0; ring < radii.Length; ring++)

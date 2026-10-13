@@ -94,11 +94,7 @@ public partial class PixelFloor
         if (!groundShaderOn || activeMaterial == null || floorRenderer == null) return;
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
-        float unit = Mathf.Max(0.05f, clicker.PixelBaseSize);
-        Bounds fb = floorRenderer.bounds;
-        float half = Mathf.Max(unit, Mathf.Min(fb.extents.x, fb.extents.z));
-        float r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
-        float r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.4f));
+        FadeRadii(clicker, out float r0, out float r1);   // (the same rim as the wireframe)
         Vector3 centre = clicker.CubeBasePosition;
         if (PixelFirstPerson.TryGetPlayerPosition(out Vector3 playerPos)) centre = playerPos;
         activeMaterial.SetVector("_Center", new Vector4(centre.x, centre.z, 0f, 0f));

@@ -144,7 +144,9 @@ Shader "Pixel Clicker/World Ground"
                 }
 
                 float dist = distance(i.world.xz, _Center.xy);
-                float alpha = (1.0 - smoothstep(_FadeStart, max(_FadeStart + 0.01, _FadeEnd), dist)) * _Fade;
+                float k = saturate((dist - _FadeStart) / max(0.01, _FadeEnd - _FadeStart));
+                k = k * k * k * (k * (k * 6.0 - 15.0) + 10.0);   // the same smoother-step as the wireframe rim's fade
+                float alpha = (1.0 - k) * _Fade;
                 return fixed4(saturate(col), alpha);
             }
             ENDCG
