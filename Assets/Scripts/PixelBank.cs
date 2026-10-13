@@ -1282,9 +1282,6 @@ public class PixelBank : MonoBehaviour
     private CanvasGroup bankGroup, hoseGroup;
     private Image windowHoseImage;
 
-    [Tooltip("Seconds the Bank and Hose tabs take to fade back in (already tucked away) after the Bank window closes.")]
-    [SerializeField] private float buttonFadeSeconds = 1.2f;
-
     /// <summary>A hand-drawn hose icon button at the top left of the Bank window: switches the hose on / off (like the B key).</summary>
     private RectTransform tipRect;
     private TMP_Text tipLabel;
@@ -1377,10 +1374,10 @@ public class PixelBank : MonoBehaviour
     /// <summary>The tab is tucked away and invisible while the window is up; when it closes the tab fades back in (already tucked away), like the Toggles tab.</summary>
     private void FadeTab(PixelDockedButton dock, CanvasGroup group, bool windowOpen)
     {
-        if (dock != null) dock.ForceHidden = windowOpen || group.alpha < 0.05f;
-        if (windowOpen) { group.alpha = 0f; group.blocksRaycasts = false; return; }
+        // The Bank and hose buttons stay where they are while the window is open, so they can be clicked again to close it.
+        if (dock != null) dock.ForceHidden = false;
+        group.alpha = 1f;
         group.blocksRaycasts = true;
-        group.alpha = Mathf.MoveTowards(group.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
     }
 
     /// <summary>Both buttons stay out while the window is open or the mouse is near either of them.</summary>

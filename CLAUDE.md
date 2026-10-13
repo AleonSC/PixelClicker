@@ -123,7 +123,6 @@
 | Seed shell rework | Seed block: a glossy ridged seed POD (PixelLook.blockSurface Seed + blob rounded mesh, PixelBlockTextures.SeedShell(level, max): | `docs/systems/SkillBlocks.md` |
 | Woodcutting (`PixelSkills.WoodcuttingId`, `PixelClicker.IsWoodBlock`) | The first, simple skill (listed right under Standard / Offline): | `docs/systems/SkillBlocks.md` |
 | Hazard blocks (`PixelType.Pest` 49 = Farming, `GasPocket` 50 = Mining; `PixelClicker.IsHazard`, `TriggerHazard`, `UpdateHazardExpiry`, `PixelSkills.TryGetHazard` / `ApplyHazardPenalty` / `PenaltyFactor`) | Negative blocks in the skill packs: a tough block (Pest 6 hits, Gas Pocket 5, pays nothing) that makes up a small share of the spawns (SkillPack.hazardBaseShare 0 = 3% at level 1, hazardPerLevelShare | `docs/systems/SkillBlocks.md` |
-| `PixelWoodworking.cs` | Woodchipper + log rack (component added by PixelClicker.Awake; | in the header comment of `PixelWoodworking.cs` |
 | `PixelPestSwarm.cs` (Pest rework) | The Pest block (PixelLook.blockSurface Pest, PixelBlockTextures.PestHide(level,max): | in the header comment of `PixelPestSwarm.cs` |
 | Foraging pixels / Forager's Pack | Foraging (PixelSkills.ForagingId, second base gathering skill after Woodcutting; | `docs/systems/SkillBlocks.md` |
 | Fishing / ore rework | Fishing (PixelSkills.FishingId, third base gathering skill; | `docs/systems/SkillBlocks.md` |

@@ -820,9 +820,6 @@ public class PixelToggles : MonoBehaviour
     private PixelDockedButton myDock;
     private CanvasGroup myGroup;
     private CanvasGroup buttonGroup;
-    [Tooltip("Seconds the Toggles button takes to fade back in (already tucked away) after its window closes.")]
-    [SerializeField] private float buttonFadeSeconds = 1.2f;
-
     /// <summary>The window picture on the square My Window button, plus a small name box that shows while the mouse is over it.</summary>
     private void BuildMyWindowIcon(Button button, float size)
     {
@@ -875,11 +872,11 @@ public class PixelToggles : MonoBehaviour
         bool open = windowObject.activeSelf;
         if (open) FitBesideShop();
         if (myWindowButton != null && myWindowButton.gameObject.activeSelf != PixelMyWindow.Available) myWindowButton.gameObject.SetActive(PixelMyWindow.Available);   // My Window shows up once two pixel types are unlocked
-        if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f; // tucked away while the window is up and as the fade starts
-        if (myDock != null) myDock.ForceHidden = dock != null && dock.ForceHidden;
-        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; if (myGroup != null) { myGroup.alpha = 0f; myGroup.blocksRaycasts = false; } return; }
+        // The buttons stay where they are while the window is open, so they can be clicked again to close it.
+        if (dock != null) dock.ForceHidden = false;
+        if (myDock != null) myDock.ForceHidden = false;
+        buttonGroup.alpha = 1f;
         buttonGroup.blocksRaycasts = true;
-        buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
-        if (myGroup != null) { myGroup.blocksRaycasts = true; myGroup.alpha = buttonGroup.alpha; }
+        if (myGroup != null) { myGroup.blocksRaycasts = true; myGroup.alpha = 1f; }
     }
 }

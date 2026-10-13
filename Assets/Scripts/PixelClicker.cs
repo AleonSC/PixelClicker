@@ -1169,7 +1169,6 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
         if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
-        if (PixelFind.First<PixelWoodworking>() == null) gameObject.AddComponent<PixelWoodworking>();   // Woodcutting's woodchipper and log rack
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
         if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors

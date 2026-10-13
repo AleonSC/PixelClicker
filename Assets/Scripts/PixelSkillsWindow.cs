@@ -800,13 +800,10 @@ public partial class PixelSkills
 
         // The tab tucks away while the window is up and fades back in afterwards, like the Bank tabs.
         bool open = WindowOpen;
-        if (tabDock != null) tabDock.ForceHidden = open || tabGroup.alpha < 0.05f;
-        if (open) { tabGroup.alpha = 0f; tabGroup.blocksRaycasts = false; }
-        else
-        {
-            tabGroup.blocksRaycasts = true;
-            tabGroup.alpha = Mathf.MoveTowards(tabGroup.alpha, 1f, Time.unscaledDeltaTime / 1.2f);
-        }
+        // (The tab now stays where it is while the window is up, so it can be clicked again to close it.)
+        if (tabDock != null) tabDock.ForceHidden = false;
+        tabGroup.alpha = 1f;
+        tabGroup.blocksRaycasts = true;
 
         // The first time a skill pack becomes available Cubie walks through the window (the screen dims and the game pauses meanwhile).
         UpdateTutorialStart(available, open);

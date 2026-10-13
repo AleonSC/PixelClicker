@@ -62,9 +62,6 @@ public class PixelPixelGuide : MonoBehaviour
     [Tooltip("Text colour.")]
     [SerializeField] private Color textColor = Color.white;
 
-    [Tooltip("Seconds the button takes to fade back in (already tucked away) after its window closes.")]
-    [SerializeField] private float buttonFadeSeconds = 1.2f;
-
     [Header("Canvas")]
     [Tooltip("Sorting order of the canvas (just above the Toggles window).")]
     [SerializeField] private int sortingOrder = 131;
@@ -524,10 +521,10 @@ public class PixelPixelGuide : MonoBehaviour
         if (open) { FitBesideShop(); RenderVisible(); }
         UpdateTip();
         if (buttonGroup == null) return;
-        if (dock != null) dock.ForceHidden = open || buttonGroup.alpha < 0.05f;   // tucked away while the window is up and as the fade starts
-        if (open) { buttonGroup.alpha = 0f; buttonGroup.blocksRaycasts = false; return; }
+        // The button stays where it is while the window is open, so it can be clicked again to close it (like the Inventory and Log buttons).
+        if (dock != null) dock.ForceHidden = false;
+        buttonGroup.alpha = 1f;
         buttonGroup.blocksRaycasts = true;
-        buttonGroup.alpha = Mathf.MoveTowards(buttonGroup.alpha, 1f, Time.unscaledDeltaTime / Mathf.Max(0.05f, buttonFadeSeconds));
     }
 
     /// <summary>With the shop open the window is as tall as it and as wide as the Currency panel, on its right (mirrors the Toggles window).</summary>
