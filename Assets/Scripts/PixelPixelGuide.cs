@@ -8,7 +8,7 @@
 //   too; SpawnShare(i) = its share of spawns) as a row: a turning real-look 3D picture (a hidden studio per tier, CreateDisplayPixel,
 //   a camera rendering into a RenderTexture, re-rendered only for rows in view), the name in its colour, a line 'Pays N - clicks - X%
 //   of pixels' and an orange '!' box whose tooltip is PixelGuideTexts.Describe(type, tier) (the exact mechanics + what its old pixel
-//   does). A new pixel type needs a case in PixelGuideTexts.Mechanics (and OldPixel if its old pixel behaves differently).
+//   does). Special / hold blocks (PixelBlockRules) are tagged in the sub line and get their role sentences from PixelBlockRules.GuideNotes automatically. A new pixel type needs a case in PixelGuideTexts.Mechanics (and OldPixel if its old pixel behaves differently).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using System.Text;
@@ -320,14 +320,18 @@ public class PixelPixelGuide : MonoBehaviour
         if (t.randomClicks) sb.Append("  -  ").Append(t.randomClicksMin).Append("-").Append(t.randomClicksMax).Append(" clicks");
         else if (t.clicksToCollect > 1) sb.Append("  -  ").Append(t.clicksToCollect).Append(" clicks");
         float share = clicker.SpawnShare(index);
+        bool isSpecial = PixelBlockRules.TryGetSpecial(t.type, out PixelBlockRules.SpecialRule special);
+        if (isSpecial) sb.Append("  -  SPECIAL, ").Append(special.chance >= 0.1f ? Mathf.RoundToInt(special.chance * 100f).ToString() : (special.chance * 100f).ToString("0.#")).Append("% replaces a block");
+        if (PixelBlockRules.TryGetHold(t.type, out PixelBlockRules.HoldRule _)) sb.Append("  -  HOLD block");
         if (t.rareDrop) sb.Append("  -  rare drop");
-        else if (share > 0f) sb.Append("  -  ").Append(share >= 0.1f ? Mathf.RoundToInt(share * 100f).ToString() : (share * 100f).ToString("0.#")).Append("% of pixels");
+        else if (share > 0f && !isSpecial) sb.Append("  -  ").Append(share >= 0.1f ? Mathf.RoundToInt(share * 100f).ToString() : (share * 100f).ToString("0.#")).Append("% of pixels");
         return sb.ToString();
     }
 
     private void Refresh()
     {
         if (content == null) return;
+        PixelBlockRules.EnsureActiveSpecialTiers(clicker);   // special blocks of the skill in play are listed from the start
         // Which pixels, and their shares (a share changes when something unlocks).
         StringBuilder key = new StringBuilder();
         List<int> list = new List<int>();

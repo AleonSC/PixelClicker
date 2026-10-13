@@ -153,4 +153,86 @@ public class PixelBlockRules : MonoBehaviour
         if (r == null || r.xpMultiplier <= 0f) return 1d;
         return string.IsNullOrEmpty(r.skillId) || r.skillId == skillId ? r.xpMultiplier : 1d;
     }
+
+    // ---------------- the Pixel Guide (and anything else that lists blocks) ----------------
+
+    /// <summary>The special rule whose block this is (false if it is not a special block).</summary>
+    public static bool TryGetSpecial(PixelClicker.PixelType type, out SpecialRule rule)
+    {
+        rule = null;
+        PixelBlockRules rules = Instance;
+        if (rules == null) return false;
+        foreach (SpecialRule r in rules.specialRules) if (r != null && r.tier != null && r.tier.type == type) { rule = r; return true; }
+        return false;
+    }
+
+    /// <summary>The hold rule of this block (false if it gives no bonus when held).</summary>
+    public static bool TryGetHold(PixelClicker.PixelType type, out HoldRule rule)
+    {
+        rule = null;
+        PixelBlockRules rules = Instance;
+        if (rules == null) return false;
+        foreach (HoldRule r in rules.holdRules) if (r != null && r.type == type) { rule = r; return true; }
+        return false;
+    }
+
+    /// <summary>Makes sure the tiers of the special blocks of the skill in play exist, so the Pixel Guide can list them before the first one has come up.</summary>
+    public static void EnsureActiveSpecialTiers(PixelClicker clicker)
+    {
+        PixelBlockRules rules = Instance;
+        PixelSkills skills = PixelSkills.Instance;
+        if (rules == null || clicker == null || skills == null) return;
+        foreach (SpecialRule r in rules.specialRules)
+        {
+            if (r == null || r.tier == null || r.chance <= 0f) continue;
+            if (!string.IsNullOrEmpty(r.skillId) && r.skillId != skills.ActiveId) continue;
+            if (clicker.IndexOf(r.tier.type) < 0) clicker.EnsureSpecialTier(r.tier);
+        }
+    }
+
+    /// <summary>The spawn share of block i with the special rules worked in: a special block gets chance x the share of the blocks it replaces, and those blocks give up that part.</summary>
+    public static float AdjustShare(PixelClicker clicker, int i, float baseShare)
+    {
+        PixelBlockRules rules = Instance;
+        PixelSkills skills = PixelSkills.Instance;
+        if (rules == null || skills == null || !clicker.IsValidTierIndex(i)) return baseShare;
+        PixelClicker.PixelType type = clicker.Tiers[i].type;
+        foreach (SpecialRule r in rules.specialRules)
+        {
+            if (r == null || r.tier == null || r.replaces == null || r.chance <= 0f) continue;
+            if (!string.IsNullOrEmpty(r.skillId) && r.skillId != skills.ActiveId) continue;
+            if (r.tier.type == type)
+            {
+                float sum = 0f;
+                foreach (PixelClicker.PixelType t in r.replaces) { int k = clicker.IndexOf(t); if (k >= 0) sum += clicker.SpawnShareBase(k); }
+                return sum * r.chance;
+            }
+            if (Array.IndexOf(r.replaces, type) >= 0) baseShare *= 1f - r.chance;
+        }
+        return baseShare;
+    }
+
+    private static string Pct(float f) => (f * 100f >= 10f ? Mathf.RoundToInt(f * 100f).ToString() : (f * 100f).ToString("0.#")) + "%";
+
+    /// <summary>The sentences the Pixel Guide adds to a block's description for its special / hold role ("" for ordinary blocks).</summary>
+    public static string GuideNotes(PixelClicker.PixelType type)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        if (TryGetSpecial(type, out SpecialRule s))
+        {
+            sb.Append("\n\n<b>Special block:</b> every ");
+            for (int i = 0; i < s.replaces.Length; i++) sb.Append(i > 0 ? (i == s.replaces.Length - 1 ? " or " : ", ") : "").Append(s.replaces[i].ToString().ToLowerInvariant());
+            sb.Append(" block that comes up has a ").Append(Pct(s.chance)).Append(" chance of being this one instead.");
+        }
+        if (TryGetHold(type, out HoldRule h))
+        {
+            sb.Append("\n\n<b>Hold block:</b> hold it with Block Hold (the right button on the cube) to pull it out of the rotation. While you hold it: ");
+            var parts = new System.Collections.Generic.List<string>();
+            if (h.clickMultiplier > 1) parts.Add("every click counts as " + h.clickMultiplier + " clicks");
+            if (h.payoutMultiplier > 0f && !Mathf.Approximately(h.payoutMultiplier, 1f)) parts.Add("every payout is x" + h.payoutMultiplier.ToString("0.##"));
+            if (h.xpMultiplier > 0f && !Mathf.Approximately(h.xpMultiplier, 1f)) parts.Add((string.IsNullOrEmpty(h.skillId) ? "skill" : h.skillId) + " XP is x" + h.xpMultiplier.ToString("0.##"));
+            sb.Append(parts.Count > 0 ? string.Join(", ", parts) : "it gives a bonus").Append(". The bonus lasts exactly as long as you hold it.");
+        }
+        return sb.ToString();
+    }
 }

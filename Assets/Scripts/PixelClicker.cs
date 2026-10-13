@@ -2814,6 +2814,13 @@ public partial class PixelClicker : MonoBehaviour
     public float SpawnShare(int i)
     {
         if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
+        return PixelBlockRules.AdjustShare(this, i, SpawnShareBase(i));   // (special blocks take their chance off the blocks they replace)
+    }
+
+    /// <summary>The share before the special-block replacements are worked in.</summary>
+    public float SpawnShareBase(int i)
+    {
+        if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
         if (TryFishingShare(i, out float fishShare)) return fishShare;
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;

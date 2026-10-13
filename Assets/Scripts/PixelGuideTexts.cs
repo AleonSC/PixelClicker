@@ -14,6 +14,7 @@ public static class PixelGuideTexts
         // What every pixel shares, in short.
         if (t.clicksToCollect > 1 && !t.randomClicks && !PixelClicker.IsHazard(type))
             sb.Append("\n\n<b>Tough:</b> it takes ").Append(t.clicksToCollect).Append(" clicks; only the last click pays.");
+        sb.Append(PixelBlockRules.GuideNotes(type));   // special / hold role, from the rules
         sb.Append("\n\n<b>Old pixel:</b> ").Append(OldPixel(type));
         return sb.ToString();
     }
@@ -137,6 +138,10 @@ public static class PixelGuideTexts
                 return "Woodcutting's filler block. One click, almost no pay. At low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.";
             case PixelClicker.PixelType.HornetNest:
                 return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the hornets swarm out and chase off the old pixels around the cube, and Woodcutting XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your woodcutting level rises.";
+            case PixelClicker.PixelType.Whetstone:
+                return "Woodcutting block: a hard grey stone for sharpening. It takes " + t.clicksToCollect + " clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too).";
+            case PixelClicker.PixelType.GreatOak:
+                return "Woodcutting block, very rare: a mighty oak. It takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks, but pays a huge amount. Every hit has a chance to shake a bird nest out of the tree onto the ground round the cube: click the nest before it disappears (about 9 seconds) for bonus Woodcutting XP.";
             case PixelClicker.PixelType.Rock:
                 return "Stone: Mining's filler block. One click, almost no pay. At low mining level it is most of what appears; as you level up it gets rarer and the ores show up more.";
             case PixelClicker.PixelType.Dirt:
