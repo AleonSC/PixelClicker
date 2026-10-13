@@ -838,7 +838,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker != null) clicker.CollectOldPixelTransforms(propList);
         IReadOnlyList<PixelPlacedDevice> devices = PixelPlacedDevice.All;
-        for (int i = 0; i < devices.Count; i++) if (devices[i] != null) propList.Add(devices[i].transform);
+        for (int i = 0; i < devices.Count; i++) if (devices[i] != null && !(devices[i] is PixelFunnelDevice)) propList.Add(devices[i].transform);   // (the Funnel is left out: its cone and tube are pinned to the world, so scaling its root would pull them apart)
 
         bool done = propsK >= 0.999f;
         float k = Mathf.Max(0.001f, propsK);

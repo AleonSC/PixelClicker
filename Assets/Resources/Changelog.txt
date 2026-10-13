@@ -859,3 +859,4 @@
 [2026-10-13 19:22 UTC] Holding Shift while placing or turning a consumable or tester machine snaps it to a grid and to angle steps (Settings on PixelConsumables: Shift snapping).
 [2026-10-13 19:23 UTC] Fixed the Splitter compile error (CS1503) and removed 16 unused Dev Tools fields that caused the yellow CS0414 warnings.
 [2026-10-13 19:31 UTC] Holding Shift in first person while setting a block down on the ground now snaps it to the grid cells and to angle steps (the white ghost shows the snapped spot).
+[2026-10-13 19:33 UTC] The Funnel no longer shrinks and pops back when switching out of first person (it is left out of the floor's props fade, which scaled its pinned cone and tube apart).
