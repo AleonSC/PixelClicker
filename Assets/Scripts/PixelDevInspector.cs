@@ -625,7 +625,7 @@ public class PixelDevInspector : MonoBehaviour
             if (clicker != null && clicker.IsValidTierIndex(info.tierIndex))
             {
                 PixelClicker.PixelTier tier = clicker.Tiers[info.tierIndex];
-                y = AddObjectBlock(tier, "Tier data: " + tier.name, 1000000 + info.tierIndex, y);
+                y = AddObjectBlock(tier, "Tier data: " + tier.displayName, 1000000 + info.tierIndex, y);
             }
         }
         PixelUIKit.UpdateScrollView(selScroll, selBar, y + 10f, selScroll.GetComponent<RectTransform>().rect.height);

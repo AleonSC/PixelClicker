@@ -777,3 +777,4 @@
 [2026-10-13 12:32 UTC] The main menu buttons (Play, Load, Settings, Quit) now brighten on hover and shine like the pause menu buttons.
 [2026-10-13 12:32 UTC] The main menu's sky and floor pickers moved to the bottom right of the screen (sky above floor, a bit faded until the mouse comes near) and every entry in their lists now has a tiny preview picture.
 [2026-10-13 12:32 UTC] New Dev Tools 'Inspector' window: change time, gravity and physics settings, see live counts, and click any object to edit its fields (game scripts, Rigidbody, Collider, Light...), with a Copy edits button.
+[2026-10-13 12:36 UTC] Fixed two compile errors (Inspector tier name, title picker preview icons).
