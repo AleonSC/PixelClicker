@@ -238,7 +238,7 @@ public class PixelLook
     [Tooltip("Seed: draw a brown shell texture (tan with dark cracks that spread as the shell is hit) instead of the default dark surface texture. Needs Damage Cracks.")]
     public bool shellTexture = false;
 
-    [Tooltip("Water: old pixels of this type splash on the ground and are gone (whether or not anything needed watering); nearby Seed sprouts and the Seed pet are watered.")]
+    [Tooltip("Water: old pixels of this type splash on the ground (they break into smaller Water pixels that fly out and break into droplets, PixelClicker 'Water splash pieces') and are gone (whether or not anything needed watering); nearby Seed sprouts and the Seed pet are watered.")]
     public bool splash = false;
 
     [Tooltip("Ore pixels (Prospector's Pack): draw a rock texture speckled and veined with 'Ore Color' metal; cracks spread over it with every hit (needs Damage Cracks).")]

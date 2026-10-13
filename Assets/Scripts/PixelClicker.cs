@@ -3005,6 +3005,31 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>How long a sprout / Seed pet stays sun soaked after old Solar pixels were last near it.</summary>
     public float SeedSunSoakSeconds => seedSunSoakSeconds;
 
+    [Header("Water splash pieces")]
+    [Tooltip("Turn the splash pieces off: an old Water pixel then just puffs into droplets where it lands, as before.")]
+    [SerializeField] private bool disableWaterPieces = false;
+
+    [Min(0)]
+    [Tooltip("How many smaller Water pixels an old Water pixel breaks into when it splashes. 0 = 4.")]
+    [SerializeField] private int waterPieceCount = 0;
+
+    [Min(0f)]
+    [Tooltip("Size of each piece as a fraction of the old Water pixel. 0 = 0.4.")]
+    [SerializeField] private float waterPieceSize = 0f;
+
+    [Min(0f)]
+    [Tooltip("How fast the pieces are flung out (sideways; they go up about as fast). 0 = 2.2.")]
+    [SerializeField] private float waterPieceSpeed = 0f;
+
+    [Min(0f)]
+    [Tooltip("Longest a piece flies before it breaks into droplets anyway (seconds); it also breaks the moment it lands. 0 = 1.2.")]
+    [SerializeField] private float waterPieceSeconds = 0f;
+
+    public int WaterPieces => disableWaterPieces ? 0 : (waterPieceCount > 0 ? waterPieceCount : 4);
+    public float WaterPieceSize => waterPieceSize > 0f ? waterPieceSize : 0.4f;
+    public float WaterPieceSpeed => waterPieceSpeed > 0f ? waterPieceSpeed : 2.2f;
+    public float WaterPieceSeconds => waterPieceSeconds > 0f ? waterPieceSeconds : 1.2f;
+
     /// <summary>Minimum seconds between two waterings of the same sprout / Seed pet.</summary>
     public float SeedWaterCooldown => seedWaterCooldown;
 
@@ -5099,6 +5124,7 @@ public class OldPixelImpact : MonoBehaviour
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.collider.GetComponentInParent<OldPixelInfo>() != null) return; // another old pixel
+        if (collision.collider.GetComponent<WaterSplashPiece>() != null) return;      // a splash piece
 
         float speed = collision.relativeVelocity.magnitude;
         if (speed >= 0.6f && Time.time - lastPulseTime > 0.08f)

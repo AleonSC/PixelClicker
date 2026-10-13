@@ -512,6 +512,7 @@ public class OldPixelSplash : MonoBehaviour
         clicker.WaterSplashAt(point);
         WaterSplashFx.Play(point, size);
         PixelAudio.Play("water_splash");
+        WaterSplashPiece.Spawn(gameObject, point, clicker.WaterPieces, clicker.WaterPieceSize, clicker.WaterPieceSpeed, clicker.WaterPieceSeconds);
         Destroy(gameObject);
     }
 }
@@ -520,18 +521,50 @@ public class OldPixelSplash : MonoBehaviour
 public static class WaterSplashFx
 {
     private static Material material;
+    private const int MiniPoolSize = 24;
+    private const float MiniRefSize = 0.25f;
+    private static readonly System.Collections.Generic.List<ParticleSystem> miniPool = new System.Collections.Generic.List<ParticleSystem>();
+    private static int miniNext;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { material = null; }
+    private static void ResetStatics() { material = null; miniPool.Clear(); miniNext = 0; }
+
+    private static bool EnsureMaterial()
+    {
+        if (material != null) return true;
+        Shader shader = PixelShaders.SpriteDefault();
+        if (shader == null) return false;
+        material = new Material(shader) { name = "WaterDrops" };
+        return true;
+    }
+
+    /// <summary>A small puff of droplets for a splash piece breaking: ONE particle system taken from a reused pool (a busy Fishing session breaks many pieces a second).</summary>
+    public static void PlayMini(Vector3 point, float size)
+    {
+        if (!EnsureMaterial()) return;
+        if (miniPool.Count == 0 || miniPool[0] == null)
+        {
+            miniPool.Clear();
+            for (int i = 0; i < MiniPoolSize; i++)
+            {
+                GameObject root = new GameObject("Water Mini Splash");
+                miniPool.Add(Build(root.transform, "Drops", MiniRefSize, 7, new Vector2(0.4f, 0.75f), new Vector2(1.2f, 2.6f), new Vector2(0.07f, 0.13f), 2.6f,
+                                   new Color(0.45f, 0.78f, 1f, 0.95f), new Color(0.7f, 0.9f, 1f, 0.9f), false, 55f, false));
+            }
+        }
+        ParticleSystem ps = miniPool[miniNext];
+        miniNext = (miniNext + 1) % MiniPoolSize;
+        if (ps == null) { miniPool.Clear(); return; }
+        Transform root2 = ps.transform.parent;
+        root2.position = point;
+        root2.localScale = Vector3.one * Mathf.Max(0.2f, size / MiniRefSize);
+        ps.Clear(true);
+        ps.Play(true);
+    }
 
     public static void Play(Vector3 point, float size)
     {
-        if (material == null)
-        {
-            Shader shader = PixelShaders.SpriteDefault();
-            if (shader == null) return;
-            material = new Material(shader) { name = "WaterDrops" };
-        }
+        if (!EnsureMaterial()) return;
         GameObject root = new GameObject("Water Splash Fx");
         root.transform.position = point;
         Build(root.transform, "Drops", size, 14, new Vector2(0.5f, 0.9f), new Vector2(1.5f, 3.5f), new Vector2(0.07f, 0.14f), 2.6f,
@@ -541,8 +574,8 @@ public static class WaterSplashFx
         Object.Destroy(root, 2.5f);
     }
 
-    private static void Build(Transform parent, string name, float size, int count, Vector2 lifetime, Vector2 speed, Vector2 startSize, float gravity,
-                              Color colorA, Color colorB, bool fade, float coneAngle)
+    private static ParticleSystem Build(Transform parent, string name, float size, int count, Vector2 lifetime, Vector2 speed, Vector2 startSize, float gravity,
+                                        Color colorA, Color colorB, bool fade, float coneAngle, bool play = true)
     {
         GameObject go = new GameObject(name, typeof(ParticleSystem));
         go.transform.SetParent(parent, false);
@@ -560,6 +593,7 @@ public static class WaterSplashFx
         main.gravityModifier = gravity;
         main.startColor = new ParticleSystem.MinMaxGradient(colorA, colorB);
         main.maxParticles = 48;
+        main.scalingMode = ParticleSystemScalingMode.Hierarchy;   // (the pooled mini splash is scaled through its root)
 
         ParticleSystem.EmissionModule emission = ps.emission;
         emission.rateOverTime = 0f;
@@ -584,7 +618,77 @@ public static class WaterSplashFx
         r.sharedMaterial = material;
         r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         r.receiveShadows = false;
-        ps.Play();
+        if (play) ps.Play();
+        return ps;
+    }
+}
+
+/// <summary>
+/// One of the smaller Water pixels an old Water pixel breaks into when it splashes: flung out and up, it breaks completely (a small puff of droplets,
+/// <see cref="WaterSplashFx.PlayMini"/>) the moment it lands or after its flight time. Not an old pixel: no payout, never saved, never collected.
+/// </summary>
+public class WaterSplashPiece : MonoBehaviour
+{
+    private float life, age, size;
+    private bool done;
+
+    /// <summary>Breaks the splashing old Water pixel's look into 'count' small cubes flying out round 'point'.</summary>
+    public static void Spawn(GameObject source, Vector3 point, int count, float sizeFraction, float speed, float lifeSeconds)
+    {
+        if (count <= 0 || source == null) return;
+        MeshFilter mf = source.GetComponent<MeshFilter>();
+        MeshRenderer mr = source.GetComponent<MeshRenderer>();
+        if (mf == null || mr == null || mf.sharedMesh == null) return;
+        MaterialPropertyBlock block = new MaterialPropertyBlock();
+        mr.GetPropertyBlock(block);
+        Vector3 lossy = source.transform.lossyScale;
+        float baseSize = Mathf.Max(lossy.x, Mathf.Max(lossy.y, lossy.z));
+        float pieceSize = Mathf.Max(0.03f, baseSize * sizeFraction);
+        float start = Random.value * 360f;
+        for (int i = 0; i < count; i++)
+        {
+            float angle = (start + i * 360f / count + Random.Range(-20f, 20f)) * Mathf.Deg2Rad;
+            Vector3 dir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            GameObject piece = new GameObject("WaterPiece");
+            piece.layer = source.layer;
+            piece.transform.position = new Vector3(point.x, Mathf.Max(point.y, source.transform.position.y), point.z) + dir * baseSize * 0.2f + Vector3.up * pieceSize * 0.6f;
+            piece.transform.rotation = source.transform.rotation;
+            piece.transform.localScale = Vector3.one * pieceSize;
+            piece.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+            MeshRenderer pr = piece.AddComponent<MeshRenderer>();
+            pr.sharedMaterial = mr.sharedMaterial;
+            pr.SetPropertyBlock(block);
+            pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            piece.AddComponent<BoxCollider>();
+            Rigidbody rb = piece.AddComponent<Rigidbody>();
+            rb.mass = 0.02f;
+            rb.AddForce(dir * speed * Random.Range(0.7f, 1.2f) + Vector3.up * speed * Random.Range(0.9f, 1.4f), ForceMode.VelocityChange);
+            rb.AddTorque(Random.onUnitSphere * Random.Range(4f, 12f), ForceMode.VelocityChange);
+            piece.AddComponent<WaterSplashPiece>().Setup(lifeSeconds * Random.Range(0.8f, 1.1f), pieceSize);
+        }
+    }
+
+    private void Setup(float lifeSeconds, float pieceSize) { life = lifeSeconds; size = pieceSize; }
+
+    private void Update()
+    {
+        age += Time.deltaTime;
+        if (age >= life) Break();
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (done || age < 0.12f) return;   // (it starts on the ground the old pixel just hit: it first has to leave it)
+        if (collision.collider.GetComponent<WaterSplashPiece>() != null) return;
+        Break();
+    }
+
+    private void Break()
+    {
+        if (done) return;
+        done = true;
+        WaterSplashFx.PlayMini(transform.position, size);
+        Destroy(gameObject);
     }
 }
 

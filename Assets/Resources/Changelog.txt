@@ -724,3 +724,4 @@
 [2026-10-13 05:34 UTC] Whale now takes 15-50 clicks (was 15-100) and rests almost still for 2-3 clicks (drifting slowly) before dashing to a new spot, instead of fleeing the mouse and yanking on every click.
 [2026-10-13 05:40 UTC] The Default view is gone: Top down is the normal view, and the camera now starts at a new base view (6 units from the cube, tilted 89 degrees) which is zoom 1.0 of the View window slider and the wheel (0.35x to 2x of it); the zoom is saved including wheel changes, and the camera returns to your view after takeover minigames.
 [2026-10-13 05:42 UTC] The base view is back to the game's original orientation (turned 180 degrees from the flipped top down), same 6-unit distance and 89 degree tilt.
+[2026-10-13 05:47 UTC] Old Water pixels now break into 4 smaller Water pixels that splash outward and each break completely into droplets when they land (settings under 'Water splash pieces' on the PixelClicker).
