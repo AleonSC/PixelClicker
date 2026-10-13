@@ -850,3 +850,4 @@
 [2026-10-13 18:54 UTC] Added a Solar Panel to the Dev Hub feature tester (powered by Solar pixels, holds one linked device's countdown, blue link line) and all tester machines plus belt rider positions now save with the save file.
 [2026-10-13 19:01 UTC] Added the Funnel consumable: a wide glass funnel under the clicker cube catches falling old pixels and carries them down a see-through tube to an output on the floor that you click (a conveyor belt opening in front of it latches on).
 [2026-10-13 19:02 UTC] The Next up window now has a header and can be dragged, minimized with '-' and docked against the left or right screen side (PixelWindowChrome).
+[2026-10-13 19:04 UTC] First person now has out-of-bounds protection: the player is kept inside the play circle (and put back at the start spot if they fall out of the world), and a pink wireframe wall fades in when they get near the edge.

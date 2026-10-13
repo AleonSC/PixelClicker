@@ -137,6 +137,28 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float gridBrightness = 0f;
 
     private PixelFirstPersonGrid grid;
+
+    [Header("Out of bounds")]
+    [Tooltip("Tick to switch the edge protection off (the wall and the push back from the edge; falling out of the world is still undone).")]
+    [SerializeField] private bool disableEdgeWall = false;
+
+    [Tooltip("Colour of the wireframe wall drawn at the edge of the play area (all zero = the coded default, hot pink).")]
+    [SerializeField] private Color wallColor = new Color(0f, 0f, 0f, 0f);
+
+    [Min(0f)]
+    [Tooltip("How close to the edge (in old-pixel widths) the wall starts to appear. 0 = the coded default (10).")]
+    [SerializeField] private float wallVisibleCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("Height of the wall in old-pixel widths. 0 = the coded default (12).")]
+    [SerializeField] private float wallHeightCubes = 0f;
+
+    [Min(0f)]
+    [Tooltip("How far inside the floor's fade-out circle the wall stands (old-pixel widths). 0 = the coded default (1).")]
+    [SerializeField] private float wallMarginCubes = 0f;
+
+    private PixelFirstPersonWall wall;
+    private Vector3 spawnSpot;
     private PixelFirstPersonHotbar hotbar;
     private bool axeSwingActive;   // true while an axe hit is making its click (so PixelCollected adds the bonus)
 
@@ -322,6 +344,9 @@ public class PixelFirstPerson : MonoBehaviour
         savedMask = mainCamera.cullingMask;
         mainCamera.cullingMask = 0;
 
+        spawnSpot = spot;
+        wall = new GameObject("First Person Edge Wall").AddComponent<PixelFirstPersonWall>();
+        wall.Setup(clicker, wallColor.a > 0f ? wallColor : new Color(1f, 0.25f, 0.65f, 1f), V(wallVisibleCubes, 10f), V(wallHeightCubes, 12f), V(wallMarginCubes, 1f), spot);
         BuildHud();
         Active = true;
         Debug.Log("PixelFirstPerson: entered - gravity x" + V(gravityFactor, 2f) + ", jump height " + V(jumpHeight, 0.45f) + ", walk speed " + V(walkSpeed, 5f) + ", head bob " + V(headBobAmount, 0.022f) + " (Inspector values: gravityFactor " + gravityFactor + ", jumpHeight " + jumpHeight + ", headBobAmount " + headBobAmount + ")");
@@ -350,6 +375,8 @@ public class PixelFirstPerson : MonoBehaviour
         throwLine = null; charging = false;
         if (grid != null) Destroy(grid.gameObject);
         grid = null;
+        if (wall != null) Destroy(wall.gameObject);
+        wall = null;
         foreach (GameObject g in attachGhosts) if (g != null) Destroy(g);
         attachGhosts.Clear(); hintLabel = null;
         fpCamera = null; player = null; controller = null; canvasRoot = null;
@@ -407,6 +434,11 @@ public class PixelFirstPerson : MonoBehaviour
 
         Vector3 push = Time.unscaledTime < externalUntil ? externalVelocity : Vector3.zero;   // a conveyor belt carrying the player
         controller.Move((dir * speed + Vector3.up * verticalSpeed + push) * dt);
+        if (wall != null)
+        {
+            if (wall.gameObject.activeSelf == disableEdgeWall) wall.gameObject.SetActive(!disableEdgeWall);   // (the wall's picture; the checks below still run)
+            if (wall.Constrain(controller, !disableEdgeWall)) verticalSpeed = 0f;   // (put back at the start spot after falling out of the world)
+        }
 
         // Head bob: a phase that advances with the walking speed, faded in only while walking on the ground.
         float walking = grounded && dir.sqrMagnitude > 0.01f ? 1f : 0f;

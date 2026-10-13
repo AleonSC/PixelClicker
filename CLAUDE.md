@@ -120,6 +120,7 @@
 | `PixelTreasure.cs` | Treasure pixel (PixelType.Treasure 32, IsStandalone, spawn switch in Toggles; | in the header comment of `PixelTreasure.cs` |
 | `PixelDragonFind.cs` | Dragon Cube find show (component added by PixelClicker.Awake; | in the header comment of `PixelDragonFind.cs` |
 | `PixelRobotWorker.cs` | UFO Helper (class and shop pack keep the old name 'Robot Worker' so saves keep working; | `docs/systems/PixelRobotWorker.md` |
+| `PixelFirstPersonWall.cs` | First person out-of-bounds protection: the player is kept inside the circle old pixels use (PixelFloor.TryGetEdgeCircle), put back at the entry spot after falling out of the world, and a neon wireframe wall fades in when they get near the edge. | in the header comment of `PixelFirstPersonWall.cs` |
 | `PixelFirstPersonGrid.cs` | First person neon floor: grid shown only near the player, the cube and ground-resting old pixels. | in the header comment of `PixelFirstPersonGrid.cs` |
 | Farming pixels / Wood / Rock | Wood is part of the Woodcutting skill now (see the Woodcutting row; | `docs/systems/SkillBlocks.md` |
 | Filler blocks / base block textures (`PixelSkills.TryGetFiller`, `PixelClicker.FillerInfo`, `PixelBlockTextures.cs`) | Each skill pack can have a 'useless' FILLER block (SkillPack.fillerType = a pixel type name; | in the header comment of `PixelBlockTextures.cs` |
