@@ -711,3 +711,4 @@
 [2026-10-13 03:44 UTC] Less lag when clicking quickly (click particle bursts are pooled and the spawn path allocates less, with Profiler markers); old pixels can't be grabbed for 0.35 s after they appear
 [2026-10-13 03:47 UTC] Main menu: switching Live background or Blur background now crossfades gradually; letting go of the blur slider no longer unticks the Blur toggle
 [2026-10-13 03:54 UTC] Clicked pixels now burst out of the cube in random directions and land in a ring round it when the ground is far below, instead of dropping in one stack
+[2026-10-13 04:15 UTC] The View window's choices (view, zoom, orbit zoom, auto orbit and its speed) are now saved with the save file's settings and restored after the title screen.
