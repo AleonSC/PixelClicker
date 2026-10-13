@@ -267,9 +267,9 @@ public class PixelFirstPerson : MonoBehaviour
 
         BuildHud();
         Active = true;
-        float cube = clicker.OldPixelWorldSize;
+        float gridUnit = clicker.OldPixelWorldSize;
         grid = new GameObject("First Person Neon Grid").AddComponent<PixelFirstPersonGrid>();
-        grid.Setup(clicker, gridColor, cube * V(gridSpacingCubes, 1f), cube * V(gridPlayerRadiusCubes, 7f), cube * V(gridPixelRadiusCubes, 2.5f), V(gridBrightness, 1.2f));
+        grid.Setup(clicker, gridColor, gridUnit * V(gridSpacingCubes, 1f), gridUnit * V(gridPlayerRadiusCubes, 7f), gridUnit * V(gridPixelRadiusCubes, 2.5f), V(gridBrightness, 1.2f));
         SetCursor(true);
     }
 
