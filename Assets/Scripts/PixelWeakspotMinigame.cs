@@ -185,7 +185,7 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     private bool BeginFishing(System.Action<bool> done)
     {
-        if (phase != Phase.Idle || UserDisabled || !CanStartNow()) return false;
+        if (phase != Phase.Idle || UserDisabled || !CanStartNow(true)) return false;
         onFinished = done;
         fishing = true;
         if (TryStart()) return true;
@@ -290,9 +290,9 @@ public class PixelWeakspotMinigame : PixelMinigame
         }
     }
 
-    private bool CanStartNow()
+    private bool CanStartNow(bool playerStarted = false)
     {
-        return PixelMinigameLimits.AllowAnother(this) && !PixelPauseMenu.IsPaused && !TakeoverActive && !clicker.CubeHidden
+        return PixelMinigameLimits.AllowAnother(this, playerStarted) && !PixelPauseMenu.IsPaused && !TakeoverActive && !clicker.CubeHidden
             && !PixelTitleScreen.Showing && !PixelCameraIntro.Moving && !PixelCameraIntro.ClicksLocked
             && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed && !PixelFirstPerson.Active && !PixelRobotWorker.Piloting
             && Mathf.Approximately(Time.timeScale, 1f);
