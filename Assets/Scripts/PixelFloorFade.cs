@@ -9,7 +9,7 @@
 //   = cyan), wireStrength 0 = 0.9; rebuilt when the centre moves). fadeStartCubes / fadeWidthCubes 0 = automatic from the floor's size
 //   (start about half the way to the nearest edge) - BUT with a base view (PixelOrbitCamera) every floor uses the STANDARD area instead (StandardRadii: fade starts at standardFadeStart 0.9 of
 //   the screen's half width on the floor at 16:9, solid at standardFadeEnd 1.3, so the floor fills the screen and only the sides / corners show the wireframe; stretched one-copy pictures are
-//   enlarged to cover it, EffectiveTileSize). Scaled by the floor's own fade-in visibility; hidden with the floor / FloorOff.
+//   enlarged to cover it, EffectiveTileSize). The ring is solid only OVER the floor: past the floor's own edge its alpha melts away over ringSoft (UpdateRingAlpha, per-vertex, redone when the centre moves), so the sky below the horizon shows instead of a flat horizon-coloured band. Scaled by the floor's own fade-in visibility; hidden with the floor / FloorOff.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -64,6 +64,11 @@ public partial class PixelFloor
     private readonly List<int> wireTris = new List<int>();
 
     private const int RingSegments = 96;
+    private float[] ringRadii, ringBaseAlpha;     // the ring's rings (radius, alpha before the floor-coverage fade)
+    private Vector2 ringAlphaCentre = new Vector2(float.MaxValue, 0f);
+    private Bounds ringFloorBounds;
+    private float ringSoft;                         // how far past the floor's edge the solid ring melts away into the sky
+    private Color32[] ringColors;
 
     private void UpdateEdgeFade()
     {
@@ -93,6 +98,11 @@ public partial class PixelFloor
         Vector2 c2 = new Vector2(center.x, center.z);
         float moved = unit * 0.05f;
         if ((c2 - wireCenter).sqrMagnitude > moved * moved || !Mathf.Approximately(y, wireY)) RebuildWire(c2, y, r0, r1, unit);
+
+        // Past the floor's own edge the ring melts away (see UpdateRingAlpha), so the sky below the horizon shows instead of a flat band.
+        ringFloorBounds = fb;
+        ringSoft = Mathf.Max(unit * 8f, r1 * 0.6f);
+        if (ringOn && ((c2 - ringAlphaCentre).sqrMagnitude > (unit * 0.25f) * (unit * 0.25f) || ringColors == null)) UpdateRingAlpha(c2);
 
         edgeColorTimer -= Time.unscaledDeltaTime;
         if (edgeColorTimer <= 0f)
@@ -201,15 +211,21 @@ public partial class PixelFloor
         List<Color32> c = new List<Color32>();
         List<int> t = new List<int>();
         const int steps = 10;
-        float[] radii = new float[steps + 2];
-        float[] alphas = new float[steps + 2];
+        const int outerSteps = 28;   // finer rings out past r1: the ring fades away past the floor's edge, wherever that is
+        float[] radii = new float[steps + 1 + outerSteps];
+        float[] alphas = new float[steps + 1 + outerSteps];
         for (int i = 0; i <= steps; i++)
         {
             float k = i / (float)steps;
             radii[i] = Mathf.Lerp(r0, r1, k);
             alphas[i] = k * k * k * (k * (6f * k - 15f) + 10f);   // smoother-step from 0 to 1 (no visible band at either end)
         }
-        radii[steps + 1] = outer; alphas[steps + 1] = 1f;
+        for (int i = 1; i <= outerSteps; i++)
+        {
+            radii[steps + i] = r1 * Mathf.Pow(outer / r1, i / (float)outerSteps);   // geometric: fine near the player, coarse far away
+            alphas[steps + i] = 1f;
+        }
+        ringRadii = radii; ringBaseAlpha = alphas;
         for (int ring = 0; ring < radii.Length; ring++)
             for (int s = 0; s < RingSegments; s++)
             {
@@ -228,6 +244,8 @@ public partial class PixelFloor
         ringMesh = new Mesh { name = "Floor Fade Ring" };
         ringMesh.SetVertices(v);
         ringMesh.SetColors(c);
+        ringColors = new Color32[c.Count];
+        ringAlphaCentre = new Vector2(float.MaxValue, 0f);
         ringMesh.SetTriangles(t, 0);
         ringMesh.bounds = new Bounds(Vector3.zero, new Vector3(outer * 2f, 1f, outer * 2f));
 
@@ -253,6 +271,30 @@ public partial class PixelFloor
 
         wireCenter = new Vector2(float.MaxValue, 0f);
         edgeColorTimer = 0f;
+    }
+
+    /// <summary>
+    /// Ring alpha = its radial fade x "is this spot over the floor": 1 over the floor (so edges / seams stay hidden), melting to 0 over ringSoft past the floor's edge, so beyond the
+    /// floor the sky (also below the horizon) shows instead of a solid horizon-coloured band. Recomputed when the centre has moved.
+    /// </summary>
+    private void UpdateRingAlpha(Vector2 centre)
+    {
+        if (ringMesh == null || ringRadii == null) return;
+        ringAlphaCentre = centre;
+        Vector3 mn = ringFloorBounds.min, mx = ringFloorBounds.max;
+        float soft = Mathf.Max(0.01f, ringSoft);
+        int i = 0;
+        for (int ring = 0; ring < ringRadii.Length; ring++)
+            for (int sg = 0; sg < RingSegments; sg++, i++)
+            {
+                float ang = sg / (float)RingSegments * Mathf.PI * 2f;
+                float x = centre.x + Mathf.Cos(ang) * ringRadii[ring], z = centre.y + Mathf.Sin(ang) * ringRadii[ring];
+                float dx = Mathf.Max(Mathf.Max(mn.x - x, x - mx.x), 0f), dz = Mathf.Max(Mathf.Max(mn.z - z, z - mx.z), 0f);
+                float d = Mathf.Sqrt(dx * dx + dz * dz);
+                float cover = 1f - Mathf.SmoothStep(0f, 1f, d / soft);
+                ringColors[i] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(ringBaseAlpha[ring] * cover * 255f));
+            }
+        ringMesh.SetColors(ringColors);
     }
 
     /// <summary>The digital wireframe: grid lines on the ground (fixed in the world) and a few rings, only inside the fading rim, brightest in the middle of it.</summary>

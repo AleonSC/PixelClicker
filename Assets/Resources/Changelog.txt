@@ -926,3 +926,4 @@
 [2026-10-14 08:19 UTC] Potion timer and the minigame status lines now share one fancy box (PixelStatusBox) that slides out from under the top black bar, over the bar's edge effect.
 [2026-10-14 08:21 UTC] UFO ride along: the mouse now always looks around (higher sensitivity, no right click needed, no Leave button - Esc climbs out), and the middle of the cabin floor is a glass window you can see the ground through.
 [2026-10-14 08:22 UTC] Black hole counter, bomb timer and result, ghost caught text, meteor popups and evil tree wood popups now show in the top status box instead of floating in the world.
+[2026-10-14 08:25 UTC] Floor edge fade: the solid horizon-coloured ring now melts away past the floor's own edge, so the sky below the horizon is no longer cut off by a flat colour band.
