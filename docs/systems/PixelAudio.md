@@ -8,3 +8,6 @@ Sound system. **Alt-tab keeps the music track:** `OnApplicationFocus` pauses the
 
 
 **Track choice:** `MusicTrackCount` / `MusicTrackName(i)` / `CurrentMusicTrack` / `SelectMusicTrack(i)` (starts the track now, shuffle / order carries on after it); used by the main menu music selector (`PixelTitleMusic.cs`).
+
+
+**Shuffle / playlist:** the FIRST song after the game loads is always random (then `shuffleMusic` decides: random or in order). Settings > Audio > "Custom playlist" (shown with 2+ tracks) opens a checklist screen (`PixelPauseMenu.BuildPlaylistPanel`): only ticked songs play (`IsTrackEnabled` / `SetTrackEnabled` / `EnableAllTracks`, PlayerPrefs `PixelAudio.PlaylistOff` = unticked clip names, so new songs start ticked); the last ticked song cannot be unticked. The main menu selector can still start any song.

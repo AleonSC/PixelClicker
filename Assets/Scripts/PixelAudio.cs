@@ -723,6 +723,52 @@ public class PixelAudio : MonoBehaviour
         }
     }
 
+    // ---- Custom playlist: songs the player ticked off in Settings > Audio are skipped (all on by default; at least one stays on) ----
+
+    private const string PrefPlaylistOff = "PixelAudio.PlaylistOff";
+    private HashSet<string> playlistOff;
+
+    private HashSet<string> PlaylistOff
+    {
+        get
+        {
+            if (playlistOff == null)
+            {
+                playlistOff = new HashSet<string>();
+                foreach (string part in PlayerPrefs.GetString(PrefPlaylistOff, "").Split('|')) if (part.Length > 0) playlistOff.Add(part);
+            }
+            return playlistOff;
+        }
+    }
+
+    private string TrackKey(int i) => musicTracks != null && i >= 0 && i < musicTracks.Length && musicTracks[i] != null ? musicTracks[i].name : "#" + i;
+
+    /// <summary>Is this song in the playlist (ticked)?</summary>
+    public bool IsTrackEnabled(int i) => !PlaylistOff.Contains(TrackKey(i));
+
+    /// <summary>How many songs are in the playlist.</summary>
+    public int EnabledTrackCount
+    {
+        get { int n = 0; for (int i = 0; i < MusicTrackCount; i++) if (IsTrackEnabled(i)) n++; return n; }
+    }
+
+    /// <summary>Ticks / unticks a song (saved). The last ticked song cannot be unticked: returns false then.</summary>
+    public bool SetTrackEnabled(int i, bool on)
+    {
+        if (i < 0 || i >= MusicTrackCount) return false;
+        if (!on && IsTrackEnabled(i) && EnabledTrackCount <= 1) return false;
+        if (on) PlaylistOff.Remove(TrackKey(i)); else PlaylistOff.Add(TrackKey(i));
+        PlayerPrefs.SetString(PrefPlaylistOff, string.Join("|", PlaylistOff));
+        return true;
+    }
+
+    /// <summary>Puts every song back in the playlist.</summary>
+    public void EnableAllTracks()
+    {
+        PlaylistOff.Clear();
+        PlayerPrefs.SetString(PrefPlaylistOff, "");
+    }
+
     // ---- Track choice (the main menu's music selector) ----
 
     /// <summary>How many music tracks there are.</summary>
@@ -779,13 +825,22 @@ public class PixelAudio : MonoBehaviour
         musicLastClip = null;
         musicLastTime = 0f;
 
+        // Only the songs in the playlist (all of them unless the player made a custom one). The FIRST song after the game loads is always a random one.
+        List<int> pool = new List<int>();
+        for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null && IsTrackEnabled(i)) pool.Add(i);
+        if (pool.Count == 0) for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null) pool.Add(i);
+        if (pool.Count == 0) return;
         int next;
-        if (shuffleMusic && musicTracks.Length > 1)
+        if ((shuffleMusic || lastTrack < 0) && pool.Count > 1)
         {
-            next = UnityEngine.Random.Range(0, musicTracks.Length);
-            if (next == lastTrack) next = (next + 1) % musicTracks.Length;
+            do next = pool[UnityEngine.Random.Range(0, pool.Count)]; while (next == lastTrack);
         }
-        else next = (lastTrack + 1) % musicTracks.Length;
+        else if (pool.Count == 1) next = pool[0];
+        else
+        {
+            next = pool[0];
+            foreach (int c in pool) if (c > lastTrack) { next = c; break; }   // the next song in the list that is in the playlist
+        }
 
         lastTrack = next;
         if (musicTracks[next] == null) return;

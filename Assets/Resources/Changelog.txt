@@ -937,3 +937,4 @@
 [2026-10-14 08:56 UTC] Main menu: a background music selector (previous / next arrows and a track list) shows when the game loads and fades away after about 10 seconds without activity; hover its spot to bring it back.
 [2026-10-14 09:01 UTC] Meteor minigame: it now speeds up gradually as it crosses, has code-made sounds (entry whoosh, crossing rumble, rock hit, chunk clink) and mining effects on every click (sparks, rock chips, dust and a glow flash).
 [2026-10-14 09:05 UTC] To-do: credit links to the videos the songs came from.
+[2026-10-14 09:27 UTC] Music: the first song after loading is always random; Settings > Audio has a Custom playlist button that opens a checklist of the songs (only ticked songs play, at least one stays ticked).

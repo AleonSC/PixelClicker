@@ -292,6 +292,11 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string fullscreenLabel = "Fullscreen";
     [SerializeField] private string resolutionLabel = "Resolution";
     [SerializeField] private string keybindsButtonText = "Change keybinds";
+    [Tooltip("Settings > Audio button that opens the song checklist, and that window's title.")]
+    [SerializeField] private string customPlaylistText = "Custom playlist";
+    [SerializeField] private string playlistPanelTitle = "Custom playlist";
+    [SerializeField] private string playlistAllText = "Select all songs";
+    [SerializeField] private string playlistHintText = "Only ticked songs play. At least one stays ticked.";
     [SerializeField] private string keyBindingsPanelTitle = "Keybinds";
     [SerializeField] private string resetKeysText = "Reset keys to default";
     [SerializeField] private string pressAKeyText = "Press a key...";
@@ -591,7 +596,8 @@ public class PixelPauseMenu : MonoBehaviour
     private string statsSignature = "";
     private RectTransform statsPanelRect, statsRestartRect;
     private float statsContentHeight, statsListTop;
-    private GameObject keysPanel;
+    private GameObject keysPanel, playlistPanel;
+    private readonly List<Toggle> playlistToggles = new List<Toggle>();
     private readonly List<System.Action> settingsRefreshers = new List<System.Action>();
     private TMP_Text[] keyButtonLabels;
     private int capturingAction = -1;
@@ -932,7 +938,7 @@ public class PixelPauseMenu : MonoBehaviour
         GameObject[] views =
         {
             mainPanel, statsPanel, settingsPanel, changelogPanel, howToPlayScreen != null ? howToPlayScreen.panel : null,
-            controlsScreen != null ? controlsScreen.panel : null, restartPanel, quitPanel, saveLoadPanel, keysPanel
+            controlsScreen != null ? controlsScreen.panel : null, restartPanel, quitPanel, saveLoadPanel, keysPanel, playlistPanel
         };
         foreach (GameObject v in views) if (v != null && v.activeSelf) return v;
         return null;
@@ -1181,6 +1187,8 @@ public class PixelPauseMenu : MonoBehaviour
         if (quitPanel != null) SetView(quitPanel, view == quitPanel);
         if (saveLoadPanel != null) SetView(saveLoadPanel, view == saveLoadPanel);
         if (keysPanel != null) SetView(keysPanel, view == keysPanel);
+        if (playlistPanel != null) SetView(playlistPanel, view == playlistPanel);
+        if (view == playlistPanel) RefreshPlaylistToggles();
         if (view == keysPanel) { capturingAction = -1; RefreshKeyLabels(); }
         if (view == saveLoadPanel) OpenSaveLoad();
         if (view == restartPanel && restartHold != null) restartHold.ResetProgress();
@@ -2495,6 +2503,7 @@ public class PixelPauseMenu : MonoBehaviour
             masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
             effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);
             musicSlider = AddSliderRow(list, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
+            if (audio.MusicTrackCount > 1) AddWideButtonRow(list, customPlaylistText, () => ShowView(playlistPanel), ref y);
         }
 
         settingsScroll = scroll;
@@ -2503,6 +2512,7 @@ public class PixelPauseMenu : MonoBehaviour
         CaptureSettingsLayout(content, y);
         LayoutSettings();
         BuildKeysPanel();
+        BuildPlaylistPanel();
         // The two fixed buttons at the very bottom of the window: as wide as the section headers, not tall.
         void FooterButton(string label, UnityEngine.Events.UnityAction onClick, float offset)
         {
@@ -2694,6 +2704,80 @@ public class PixelPauseMenu : MonoBehaviour
     // ------------------------------------------------------------------
     // Key bindings
     // ------------------------------------------------------------------
+
+    /// <summary>A full-width button as a row of the settings list (opens a sub-screen).</summary>
+    private void AddWideButtonRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, ref float y)
+    {
+        Button b = MakeButton(parent, label + " Button", label, new Vector2(10f, rowHeight), menuButtonColor, rowFontSize * 0.7f);
+        RectTransform r = b.GetComponent<RectTransform>();
+        r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
+        r.sizeDelta = new Vector2(-SettingsRowInset, rowHeight);
+        r.anchoredPosition = new Vector2(0f, -y);
+        b.onClick.AddListener(onClick);
+        y += rowHeight + 6f;
+    }
+
+    // ------------------------------------------------------------------
+    // Custom playlist (Settings > Audio): a checklist of the songs
+    // ------------------------------------------------------------------
+
+    private void BuildPlaylistPanel()
+    {
+        PixelAudio audio = PixelFind.First<PixelAudio>();
+        if (audio == null || audio.MusicTrackCount < 2) return;
+        playlistPanel = BuildSectionPanel("Playlist Panel", playlistPanelTitle, out float top);
+        playlistToggles.Clear();
+
+        TMP_Text hint = MakeText(playlistPanel.transform, "Hint", playlistHintText, rowFontSize * 0.5f, FontStyles.Normal);
+        hint.color = new Color(1f, 1f, 1f, 0.7f);
+        RectTransform hr = hint.rectTransform;
+        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(-80f, rowHeight * 0.8f);
+        hr.anchoredPosition = new Vector2(0f, -top);
+        top += rowHeight * 0.8f + 8f;
+
+        float footerH = rowHeight * 0.8f, footer = 12f + footerH;
+        float viewHeight = FitViewHeight(settingsViewHeight, top + footer);
+        ScrollRect scroll = PixelUIKit.CreateScrollView(playlistPanel.transform, "Playlist List", scrollbarColor, 12f, rowHeight, out RectTransform content, out GameObject bar);
+        RectTransform vr = scroll.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0f, 1f); vr.anchorMax = new Vector2(1f, 1f); vr.pivot = new Vector2(0.5f, 1f);
+        vr.sizeDelta = new Vector2(0f, viewHeight);
+        vr.anchoredPosition = new Vector2(0f, -top);
+
+        float y = 0f;
+        for (int i = 0; i < audio.MusicTrackCount; i++)
+        {
+            int index = i;
+            Toggle t = null;
+            t = AddToggleRow(content, audio.MusicTrackName(i), audio.IsTrackEnabled(i), on =>
+            {
+                PixelAudio a = PixelAudio.Instance;
+                if (a != null && !a.SetTrackEnabled(index, on)) t.SetIsOnWithoutNotify(true);   // the last ticked song stays ticked
+            }, ref y);
+            playlistToggles.Add(t);
+        }
+        PixelUIKit.UpdateScrollView(scroll, bar, y, viewHeight);
+
+        Button all = MakeButton(playlistPanel.transform, "Select All Button", playlistAllText, new Vector2(10f, footerH), menuButtonColor, rowFontSize * 0.7f);
+        RectTransform ar = all.GetComponent<RectTransform>();
+        ar.anchorMin = new Vector2(0f, 1f); ar.anchorMax = new Vector2(1f, 1f); ar.pivot = new Vector2(0.5f, 1f);
+        ar.sizeDelta = new Vector2(-96f, footerH);
+        ar.anchoredPosition = new Vector2(0f, -(top + viewHeight + 12f));
+        all.onClick.AddListener(() =>
+        {
+            if (PixelAudio.Instance != null) PixelAudio.Instance.EnableAllTracks();
+            RefreshPlaylistToggles();
+        });
+        FinishSectionPanel(playlistPanel, top + viewHeight + footer, settingsPanel);
+    }
+
+    private void RefreshPlaylistToggles()
+    {
+        PixelAudio a = PixelAudio.Instance;
+        if (a == null) return;
+        for (int i = 0; i < playlistToggles.Count; i++)
+            if (playlistToggles[i] != null) playlistToggles[i].SetIsOnWithoutNotify(a.IsTrackEnabled(i));
+    }
 
     private void BuildKeysPanel()
     {
