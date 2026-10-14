@@ -10,7 +10,7 @@
 //   overrideSorting at alwaysOutSortingOrder (0 = 90, PixelDockedButton.UpdateSorting, plus a GraphicRaycaster), below every window
 //   canvas (100+), so windows overlay the buttons; other modes use the window's own canvas order again. Bar colour: Settings > Display
 //   'Custom bar colour' tick box + an eyedropper button beside it (PixelHud.BarColorOn / BarColorPicked / SetBarColorFromColor,
-//   PlayerPrefs PixelClicker.Setting.BarColorOn + BarColor (hex), per save via PixelSettingsSync); the game's top / bottom margins
+//   PlayerPrefs PixelClicker.Setting.BarColorOn + BarColor (hex); the player's own, NOT per save - see the note in PixelSettingsSync.Known_); the game's top / bottom margins
 //   (PixelHud.barImages) and the main menu's middle bar (PixelTitleScreen.bar) repaint when PixelHud.BarColorVersion changes, using
 //   PixelHud.BarTint(base) (the picked colour with the bar's own opacity; the menu bar stays 92% opaque). The docked buttons sit
 //   towards the screen edge, not centred in the bar (buttonEdgeBias, 0 = 0.55), to stay clear of the neon bar glow. The pause menu

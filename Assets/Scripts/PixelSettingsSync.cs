@@ -32,15 +32,16 @@ public static class PixelSettingsSync
     {
         if (known != null) return known;
         known = new List<Known>();
-        // Player settings.
+        // Player settings. The look of the interface (UI colour, button colour, neon bar glow + its colours, bar colour, clicker aura) is NOT listed here on purpose: it belongs to the
+        // player's machine, not to a save. Kept per save it was overwritten by the last save's copy on every start (anything changed after the last save was lost).
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewKind", "ViewAutoOrbit", "ViewScrollInvert", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "BlockTipsAlt", "Filter", "NextUp", "TalkMuted", "FancyMenu", "UiButtonColor", "ClickerAura", "AuraMode",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewKind", "ViewAutoOrbit", "ViewScrollInvert", "ButtonMode", "DayNight", "DayNightLength", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "BlockTipsAlt", "Filter", "NextUp", "TalkMuted", "FancyMenu", 
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
-        foreach (string k in new[] { "GlowHue", "UiHue", "UiSat", "UiButtonHue", "UiButtonSat", "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
-        foreach (string k in new[] { "GlowColor", "AuraColor", "BarColor", "SkillPack", "SkillGuests", "OptInOff", "MyWindow", "PetOutfits" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
+        foreach (string k in new[] { "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
+        foreach (string k in new[] { "SkillPack", "SkillGuests", "OptInOff", "MyWindow", "PetOutfits" }) known.Add(new Known("PixelClicker.Setting." + k, 2));
         // Volumes.
         known.Add(new Known("PixelAudio.Master", 1));
         known.Add(new Known("PixelAudio.Effects", 1));
