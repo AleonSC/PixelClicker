@@ -123,14 +123,14 @@ public partial class PixelSkills
             RefreshWindow();
         }
         PixelGuideVendor.PointOverride = () => TutorialTarget(step.focus);
-        PixelNotice.Show(step.text, 0f, small: true, beside: windowRect, onClosed: () => TutorialShowStep(index + 1), minHeight: TutorialBoxHeight(), onBack: index > 0 ? (System.Action)(() => TutorialShowStep(index - 1)) : null);
+        PixelNotice.Show(step.text, 0f, small: true, beside: windowRect, onClosed: () => TutorialShowStep(index + 1), minHeight: TutorialBoxHeight(), onBack: index > 0 ? (System.Action)(() => TutorialShowStep(index - 1)) : null, onSkip: () => TutorialShowStep(tutorialSteps.Count));
     }
 
     private float TutorialBoxHeight()
     {
         int longest = 0;
         foreach (TutorialStep st in tutorialSteps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
-        return Mathf.Max(260f, 84f + (Mathf.CeilToInt(longest / 28f) + 1) * 30f);
+        return Mathf.Max(260f, 124f + (Mathf.CeilToInt(longest / 28f) + 1) * 30f);
     }
 
     /// <summary>The middle of the focused part of the window, in screen pixels (null = the whole window).</summary>

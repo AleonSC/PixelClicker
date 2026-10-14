@@ -143,7 +143,7 @@ public class PixelShopTutorial : MonoBehaviour
         int longest = 0;
         foreach (Step st in steps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
         int lines = Mathf.CeilToInt(longest / 28f) + 1;
-        return Mathf.Max(boxHeight, 84f + lines * 30f);
+        return Mathf.Max(boxHeight, 124f + lines * 30f);
     }
 
     private void ShowStep(int index)
@@ -161,6 +161,6 @@ public class PixelShopTutorial : MonoBehaviour
         if (index == 0) PixelGuideVendor.BeginNarration();   // Cubie narrates his shop from the bottom right
         Step step = steps[index];
         shop.TutorialOpen(step.tab, step.subTab);
-        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: UniformHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null);
+        PixelNotice.Show(step.text, 0f, small: true, beside: shop.PanelRect, onClosed: () => ShowStep(index + 1), minHeight: UniformHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null, onSkip: () => ShowStep(steps.Count));
     }
 }
