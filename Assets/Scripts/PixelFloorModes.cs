@@ -46,6 +46,22 @@ public partial class PixelFloor
     private static Shader groundShaderCache;
     private static bool groundShaderMissing;
     private bool groundShaderOn;
+    private bool fadedTextureOn;   // a painted picture drawn with the Faded Floor shader (it melts into the sky itself)
+    private static Shader fadedShaderCache;
+    private static bool fadedShaderMissing;
+
+    /// <summary>The material fades itself out (a ground shader, or a painted picture on the Faded Floor shader): no solid sky-coloured ring and no see-through proxy copies.</summary>
+    private bool SelfFading => groundShaderOn || fadedTextureOn;
+
+    private static Shader FadedShader()
+    {
+        if (fadedShaderCache == null && !fadedShaderMissing)
+        {
+            fadedShaderCache = Resources.Load<Shader>("PixelFadedFloor");
+            if (fadedShaderCache == null) { fadedShaderMissing = true; Debug.LogWarning("PixelFloor: Resources/PixelFadedFloor.shader was not found; painted floors end in the solid sky-coloured ring instead."); }
+        }
+        return fadedShaderCache != null && fadedShaderCache.isSupported ? fadedShaderCache : null;
+    }
 
     private static Shader GroundShader()
     {
@@ -62,7 +78,7 @@ public partial class PixelFloor
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetGroundShader() { groundShaderCache = null; groundShaderMissing = false; }
+    private static void ResetGroundShader() { groundShaderCache = null; groundShaderMissing = false; fadedShaderCache = null; fadedShaderMissing = false; }
 
     /// <summary>Shows a style with the world-space ground shader. False (nothing changed) when the shader is missing or unsupported: the painted texture is used.</summary>
     private bool ApplyShaderGround(FloorStyle style)
@@ -91,7 +107,7 @@ public partial class PixelFloor
     /// <summary>The shader fades the ground out in a circle round the cube (or the first person player), like the edge fade does for painted floors.</summary>
     private void UpdateGroundShader()
     {
-        if (!groundShaderOn || activeMaterial == null || floorRenderer == null) return;
+        if (!SelfFading || activeMaterial == null || floorRenderer == null) return;
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
         FadeRadii(clicker, out float r0, out float r1);   // (the same rim as the wireframe)
@@ -100,6 +116,7 @@ public partial class PixelFloor
         activeMaterial.SetVector("_Center", new Vector4(centre.x, centre.z, 0f, 0f));
         activeMaterial.SetFloat("_FadeStart", r0);
         activeMaterial.SetFloat("_FadeEnd", r1);
+        if (fadedTextureOn) activeMaterial.SetFloat("_Light", PixelDayNight.Enabled ? Mathf.Lerp(0.4f, 1f, PixelDayNight.Level) : 1f);   // (an unlit picture follows the day / night cycle by hand)
     }
 
     // ------------------------------------------------------------------

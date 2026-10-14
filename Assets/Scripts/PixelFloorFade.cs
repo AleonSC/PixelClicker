@@ -1,5 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelFloorFade.cs
+//   FADE INTO THE SKY (fadeIntoSky, on by default): a painted floor uses Resources/PixelFadedFloor.shader (unlit, alpha) that fades the floor itself to fully see-through past the fade circle (_Center / _FadeStart / _FadeEnd set by
+//   UpdateGroundShader, _Light follows the day / night cycle), so the solid sky-coloured ring (below) is not needed and the skybox shows all the way down; only the wireframe rim stays. PixelFloor.SelfFading = ground shader or faded picture.
 //   Floor edge fade (partial class PixelFloor, UpdateEdgeFade from LateUpdate; disableEdgeFade): the floor fades out in a circle round
 //   the player (the cube, or the first person player via PixelFirstPerson.TryGetPlayerPosition) so its edges / seams are never seen: a
 //   flat annulus mesh with vertex alpha (BuildEdgeFade: see-through inside r0, solid from r1 and far past the floor's edges, coloured
@@ -25,6 +27,9 @@ public partial class PixelFloor
     [Header("Floor edge fade (the floor fades out round the player)")]
     [Tooltip("Turn the circular fade-out of the floor off (the floor then simply ends at its edges).")]
     [SerializeField] private bool disableEdgeFade = false;
+
+    [Tooltip("Painted floors melt into the sky: past the fade circle the floor itself goes completely see-through (a small unlit shader, Resources/PixelFadedFloor), instead of ending in a solid sky-coloured ring that cuts the sky off. Off = the old ring. (The picture is not lit by the scene lights then; it follows the day / night cycle by hand.)")]
+    [SerializeField] private bool fadeIntoSky = true;
 
     [Min(0f)]
     [Tooltip("Where the fade starts, in main-pixel widths from the player. 0 = automatic (about half the way to the nearest edge of the floor).")]
@@ -92,7 +97,7 @@ public partial class PixelFloor
         if (PixelFirstPerson.TryGetPlayerPosition(out Vector3 playerPos)) center = playerPos;
         float y = fb.max.y + unit * 0.012f;
         ringObject.transform.position = new Vector3(center.x, y, center.z);
-        bool ringOn = !(groundShaderOn && !FloorOff);   // a shader ground fades itself (see-through); only the wireframe rim is added to it
+        bool ringOn = !(SelfFading && !FloorOff);   // a shader ground fades itself (see-through); only the wireframe rim is added to it
         if (ringObject.activeSelf != ringOn) ringObject.SetActive(ringOn);
 
         Vector2 c2 = new Vector2(center.x, center.z);

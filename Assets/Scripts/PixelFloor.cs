@@ -539,7 +539,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         bool sliced = UsesSlicedFill(style);
         activeTexture = BuildTexture(style, 0, sliced);
         if (sliced) StartSlicedFill(activeTexture, style);
-        activeMaterial = new Material(source) { name = "Floor (" + style.name + ")" };
+        Shader faded = fadeIntoSky && !disableEdgeFade ? FadedShader() : null;
+        activeMaterial = faded != null ? new Material(faded) { name = "Floor (faded " + style.name + ")" } : new Material(source) { name = "Floor (" + style.name + ")" };
+        fadedTextureOn = faded != null;
         Material m = activeMaterial;
         SetColor(m, "_BaseColor", Color.white);
         SetColor(m, "_Color", Color.white);
@@ -592,6 +594,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         activeMaterial = null;
         activeTexture = null;
         groundShaderOn = false;
+        fadedTextureOn = false;
     }
 
     private bool floorWarned;
@@ -885,7 +888,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
         // Any other renderers on the floor object (a second mesh, trim) go with it.
         foreach (Renderer extra in floorRenderer.GetComponentsInChildren<Renderer>(true)) if (extra != floorRenderer) extra.forceRenderingOff = visibility < 0.999f;
-        if (groundShaderOn)
+        if (SelfFading)
         {
             // The ground shader fades itself: no see-through copies of the material are needed.
             DropProxies(true);
