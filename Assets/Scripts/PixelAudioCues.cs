@@ -32,15 +32,15 @@ public partial class PixelAudio
         [Tooltip("Use a track of the Music Tracks list instead (0 = the first). -1 = use the clip above.")]
         public int trackIndex = -1;
         [Range(0f, 1f)]
-        [Tooltip("Volume of this cue (multiplied by the music volume settings).")]
+        [Tooltip("Volume of this cue (multiplied by the music volume settings). 0 = the default (1): a cue added with the + button starts at 0, which would be silent.")]
         public float volume = 1f;
         [Tooltip("Repeat while the trigger lasts. Off = it plays once, then the normal playlist comes back.")]
         public bool loop = true;
         [Min(0f)]
-        [Tooltip("Seconds the cue takes to fade in (the playlist fades out over the same time).")]
+        [Tooltip("Seconds the cue takes to fade in (the playlist fades out over the same time). 0 = the default (2).")]
         public float fadeInSeconds = 2f;
         [Min(0f)]
-        [Tooltip("Seconds the cue takes to fade out when its trigger ends (the playlist fades back in over the same time).")]
+        [Tooltip("Seconds the cue takes to fade out when its trigger ends (the playlist fades back in over the same time). 0 = the default (2.5).")]
         public float fadeOutSeconds = 2.5f;
     }
 
@@ -90,6 +90,10 @@ public partial class PixelAudio
         foreach (MusicCue d in defaults)
             if (!musicCues.Exists(c => c != null && c.name == d.name)) musicCues.Add(d);
     }
+
+    private static float CueVolume(MusicCue c) => c.volume > 0f ? c.volume : 1f;   // (an element added in the Inspector starts with every number at 0)
+    private static float CueFadeIn(MusicCue c) => c.fadeInSeconds > 0f ? c.fadeInSeconds : 2f;
+    private static float CueFadeOut(MusicCue c) => c.fadeOutSeconds > 0f ? c.fadeOutSeconds : 2.5f;
 
     private AudioClip CueClip(MusicCue c)
     {
@@ -151,7 +155,7 @@ public partial class PixelAudio
         if (cueActive >= 0 && (cueActive >= musicCues.Count || cueTarget != cueActive))
         {
             // The cue's trigger ended (or another cue is wanted): fade this one out.
-            float f = Mathf.Max(0.05f, cueActive < musicCues.Count ? musicCues[cueActive].fadeOutSeconds : 0.5f);
+            float f = Mathf.Max(0.05f, cueActive < musicCues.Count ? CueFadeOut(musicCues[cueActive]) : 0.5f);
             cueGain = Mathf.MoveTowards(cueGain, 0f, dt / f);
             if (cueGain <= 0f) { cueSource.Stop(); cueReturnFade = f; cueActive = -1; }
         }
@@ -167,19 +171,19 @@ public partial class PixelAudio
         }
         if (cueActive >= 0 && cueTarget == cueActive && cueActive < musicCues.Count)
         {
-            cueGain = Mathf.MoveTowards(cueGain, 1f, dt / Mathf.Max(0.05f, musicCues[cueActive].fadeInSeconds));
+            cueGain = Mathf.MoveTowards(cueGain, 1f, dt / Mathf.Max(0.05f, CueFadeIn(musicCues[cueActive])));
             // A one-shot cue that has played to its end hands back to the playlist.
             if (!cueSource.loop && !cueSource.isPlaying && Application.isFocused && !AudioListener.pause && cueGain > 0.5f) { cueSpent = cueActive; cueTarget = -1; }
         }
 
         // The playlist: quiet (and paused where it was) while a cue is wanted or playing, back in when none is.
         bool wantPlaylist = cueActive < 0 && cueTarget < 0;
-        float step = dt / Mathf.Max(0.05f, wantPlaylist ? cueReturnFade : (cueActive >= 0 && cueActive < musicCues.Count ? musicCues[cueActive].fadeInSeconds : 1f));
+        float step = dt / Mathf.Max(0.05f, wantPlaylist ? cueReturnFade : (cueActive >= 0 && cueActive < musicCues.Count ? CueFadeIn(musicCues[cueActive]) : 1f));
         playlistGain = Mathf.MoveTowards(playlistGain, wantPlaylist ? 1f : 0f, step);
         if (!wantPlaylist && playlistGain <= 0f && !cueHoldsPlaylist && musicSource != null && musicSource.isPlaying) { musicSource.Pause(); cueHoldsPlaylist = true; }
         if (wantPlaylist && cueHoldsPlaylist && musicSource != null) { musicSource.UnPause(); cueHoldsPlaylist = false; }
 
         float baseVolume = muted || musicMuted || previewTrack >= 0 ? 0f : musicVolume * masterVolume * musicTrackVolume;
-        cueSource.volume = baseVolume * (cueActive >= 0 && cueActive < musicCues.Count ? musicCues[cueActive].volume : 0f) * cueGain;
+        cueSource.volume = baseVolume * (cueActive >= 0 && cueActive < musicCues.Count ? CueVolume(musicCues[cueActive]) : 0f) * cueGain;
     }
 }

@@ -950,3 +950,4 @@
 [2026-10-14 10:27 UTC] My Window has an Info button that pins the block hover tooltip into the window (it stops following the mouse and shows whatever you hover, keeping the last one while you read it); the old pixel vanish bloop now only plays when its own despawn timer ends it, not when the capacity limit or a minigame clears it.
 [2026-10-14 10:32 UTC] To-do: an early, forgiving Cube Dash to introduce minigames.
 [2026-10-14 10:35 UTC] Music cues: the gameplay music can now change at triggers (minigames, night, UFO ride, first person, a skill, the God Cube shows, the Dragon wish) with fade in / out; the playlist pauses and resumes where it was. Cues come without music - assign clips in the PixelAudio Music Cues list.
+[2026-10-14 10:42 UTC] Music cues: a cue added with the Inspector + button (volume 0, fades 0) now uses sensible defaults instead of staying silent, and picking a song in the main menu selector overrides a playing cue.

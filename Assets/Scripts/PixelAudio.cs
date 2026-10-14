@@ -812,6 +812,7 @@ public partial class PixelAudio : MonoBehaviour
     {
         if (i < 0 || musicTracks == null || i >= musicTracks.Length || musicTracks[i] == null) return;
         PlayerPrefs.SetString(PrefSong, TrackKey(i));
+        if (cueActive >= 0) { cueSpent = cueActive; cueTarget = -1; }   // picking a song overrides the cue that is playing (until its trigger has ended once)
         PlayTrack(i);
     }
 
