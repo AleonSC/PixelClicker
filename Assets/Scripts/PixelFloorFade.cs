@@ -137,8 +137,8 @@ public partial class PixelFloor
         if (!PixelOrbitCamera.TryGetBaseView(out Vector3 camPos, out float fov)) return false;
         float height = Mathf.Max(0.5f, camPos.y - fb.max.y);
         float halfWidth = height * Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * (16f / 9f);
-        r0 = halfWidth * Mathf.Max(0.1f, standardFadeStart);
-        r1 = halfWidth * Mathf.Max(standardFadeStart + 0.05f, standardFadeEnd);
+        r0 = halfWidth * Mathf.Max(0.1f, standardFadeStart) * AreaScale;
+        r1 = halfWidth * Mathf.Max(standardFadeStart + 0.05f, standardFadeEnd) * AreaScale;
         return true;
     }
 
@@ -184,12 +184,12 @@ public partial class PixelFloor
             if (r1 > cap) { float k = cap / r1; r0 *= k; r1 = cap; }
             return;
         }
-        r0 = fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f);
-        r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.45f));
+        r0 = (fadeStartCubes > 0f ? unit * fadeStartCubes : Mathf.Max(unit * 5f, half * 0.5f)) * AreaScale;
+        r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.45f)) * AreaScale;
         if (groundShaderOn || current < 0 || current >= styles.Count || !styles[current].stretchToFloor) return;
         FloorStyle st = styles[current];
         float aspect = StyleAspect(st);
-        float limit = Mathf.Min(st.tileWorldSize * aspect, st.tileWorldSize) * 0.5f * 0.94f;
+        float limit = Mathf.Min(st.tileWorldSize * aspect, st.tileWorldSize) * 0.5f * 0.94f * AreaScale;
         if (r1 <= limit) return;
         r1 = Mathf.Max(unit * 4f, limit);
         r0 = Mathf.Max(unit * 1.5f, Mathf.Min(r0, r1 - Mathf.Max(unit * 3f, r1 * 0.45f)));

@@ -737,9 +737,33 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         return true;
     }
 
+    /// <summary>Dev Hub tick box 'Double floor area': the floor circle (picture, wireframe, borders and the pixel / first person limits) is twice as wide.</summary>
+    public static bool DoubleArea { get; set; }
+    public static float AreaScale => DoubleArea ? 2f : 1f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetAreaScale() { DoubleArea = false; }
+
+    private float appliedAreaScale = 1f;
+
+    /// <summary>Scales the floor object itself (its sheet and collider) when the area setting changes, and makes the picture fit and the edge fade redo themselves.</summary>
+    private void ApplyAreaScale()
+    {
+        float want = AreaScale;
+        if (Mathf.Approximately(want, appliedAreaScale)) return;
+        float k = want / appliedAreaScale;
+        Transform t = floorRenderer.transform;
+        t.localScale = new Vector3(t.localScale.x * k, t.localScale.y, t.localScale.z * k);
+        appliedAreaScale = want;
+        lastFitAspect = -1f;       // (the picture fit is worked out again)
+        ringR0 = ringR1 = -1f;     // (so are the wireframe and the borders)
+        if (floorReady && current >= 0 && current < styles.Count) Apply(styles[current]);   // (the picture is drawn again at the new size)
+    }
+
     private void LateUpdate()
     {
         if (floorRenderer == null) return;
+        ApplyAreaScale();
         if (exitHold && PixelTitleScreen.Showing) exitHold = false;
         bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
         // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
@@ -1051,6 +1075,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (Mathf.Abs(du) < 1e-5f || Mathf.Abs(dv) < 1e-5f) return false;
         baseTiling = new Vector2(1f / du, 1f / dv);
         baseOffset = new Vector2(-uvBL.x * baseTiling.x, -uvBL.y * baseTiling.y);
+        if (AreaScale > 1.001f)
+        {
+            // A bigger floor: the picture is stretched by the same factor round the middle of the view.
+            Vector2 centreUv = uvBL + 0.5f * (uvBR - uvBL) + 0.5f * (uvTL - uvBL);
+            baseTiling /= AreaScale;
+            baseOffset = new Vector2(0.5f - centreUv.x * baseTiling.x, 0.5f - centreUv.y * baseTiling.y);
+        }
         float viewHeight = (tl - bl).magnitude;
         if (viewHeight > 1e-4f) viewAspect = (br - bl).magnitude / viewHeight;
         return true;

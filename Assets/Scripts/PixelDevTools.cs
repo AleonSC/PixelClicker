@@ -113,6 +113,11 @@ public class PixelDevTools : MonoBehaviour
     [SerializeField] private string farmerSeedsToggleText = "Farmer always has dragon seeds";
 
     private bool farmerAlwaysSeeds;
+    private bool doubleFloor;
+    private Toggle doubleFloorToggle;
+
+    [Tooltip("Label of the tick box that doubles the floor circle (picture, wireframe, borders and the limits for pixels and the first person player).")]
+    [SerializeField] private string doubleFloorToggleText = "Double floor area";
     private Toggle farmerSeedsToggle;
 
     [Tooltip("Label of the god-pixel-mode tick box.")]
@@ -295,6 +300,7 @@ public class PixelDevTools : MonoBehaviour
         if (noDespawnToggle != null) noDespawnToggle.SetIsOnWithoutNotify(disableDespawn);
         if (noLimitToggle != null) noLimitToggle.SetIsOnWithoutNotify(disableOldPixelLimit);
         if (farmerSeedsToggle != null) farmerSeedsToggle.SetIsOnWithoutNotify(farmerAlwaysSeeds);
+        if (doubleFloorToggle != null) doubleFloorToggle.SetIsOnWithoutNotify(doubleFloor);
         if (godToggle != null) godToggle.SetIsOnWithoutNotify(godMode);
         if (amountField != null) amountField.SetTextWithoutNotify(defaultAmount);
         if (pixelDropdown != null && pixelDropdown.options.Count > 0)
@@ -319,6 +325,8 @@ public class PixelDevTools : MonoBehaviour
         disableOldPixelLimit = GetBool("NoLimit", disableOldPixelLimit);
         farmerAlwaysSeeds = GetBool("FarmerSeeds", farmerAlwaysSeeds);
         PixelFarmerMinigame.DevAlwaysDragonSeeds = farmerAlwaysSeeds;
+        doubleFloor = GetBool("DoubleFloor", doubleFloor);
+        PixelFloor.DoubleArea = doubleFloor;
         godMode = GetBool("God", godMode);
         clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
         if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
@@ -871,6 +879,17 @@ public class PixelDevTools : MonoBehaviour
             SetBool("FarmerSeeds", on);
         });
         Widget(content, board, "farmerseeds", ws, y);
+        y += rowHeight + 24f;
+        ws = content.childCount;
+
+        // Row: tick box that makes the floor circle twice as big
+        doubleFloorToggle = BuildToggleRow(content, doubleFloorToggleText, y, inner, doubleFloor, on =>
+        {
+            doubleFloor = on;
+            PixelFloor.DoubleArea = on;
+            SetBool("DoubleFloor", on);
+        });
+        Widget(content, board, "doublefloor", ws, y);
         y += rowHeight + 24f;
         ws = content.childCount;
 
