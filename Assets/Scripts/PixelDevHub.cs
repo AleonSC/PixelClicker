@@ -764,7 +764,15 @@ public class PixelWidgetBoard
                 Item it = items.Find(x => x.id == id);
                 if (it != null && !ordered.Contains(it)) ordered.Add(it);
             }
-            foreach (Item it in items) if (!ordered.Contains(it)) ordered.Add(it);
+            // A card that is not in the saved order (a widget added since) goes right after the card built before it, not at the very end of a long list.
+            for (int i = 0; i < items.Count; i++)
+            {
+                Item it = items[i];
+                if (ordered.Contains(it)) continue;
+                int at = 0;
+                for (int k = i - 1; k >= 0; k--) { int p = ordered.IndexOf(items[k]); if (p >= 0) { at = p + 1; break; } }
+                ordered.Insert(at, it);
+            }
             items.Clear();
             items.AddRange(ordered);
         }

@@ -1211,6 +1211,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)
+        if (PixelFind.First<PixelFocus>() == null) gameObject.AddComponent<PixelFocus>();   // Focus potions (Lumberjack's Focus...: hold off a skill's hazard for a while)
         if (PixelFind.First<PixelBaitBucket>() == null) gameObject.AddComponent<PixelBaitBucket>();   // Fishing's bait bucket consumable
         if (PixelFind.First<PixelViewWindow>() == null) gameObject.AddComponent<PixelViewWindow>();   // the View window (key V): views, flat view, zoom, orbit controls
         if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
@@ -2901,6 +2902,7 @@ public partial class PixelClicker : MonoBehaviour
         if (!IsValidTier(upcomingTier) || devSpawnTiers != null) return false;
         if (IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
             return upcomingTier == forcedTierIndex || upcomingTier == forcedTierIndex2 || upcomingTier == forcedTierIndex3;
+        if (IsHazard(tiers[upcomingTier].type) && PixelFocus.HoldsOffHazardsNow()) return false;   // a focus potion drunk after the roll: the pre-rolled hazard is dropped
         return tiers[upcomingTier].CanSpawn && !PixelSkills.LeftOutOfSpawns(tiers[upcomingTier].type);
     }
 
