@@ -683,6 +683,7 @@ public partial class PixelSkills : MonoBehaviour
         if (s == null) return false;
         SkillPack pack = s.Find(s.ActiveId);
         if (pack == null || string.IsNullOrEmpty(pack.hazardType) || !Enum.TryParse(pack.hazardType, out type)) return false;
+        if (PreviewLevel <= 0 && PixelFocus.HoldsOffHazards(pack.id)) return false;   // a focus potion of this skill is active (PixelFocus): no hazard spawns
         float start = pack.hazardBaseShare > 0f ? pack.hazardBaseShare : 0.03f;
         float per = pack.hazardPerLevelShare > 0f ? pack.hazardPerLevelShare : 0.002f;
         float max = pack.hazardMaxShare > 0f ? pack.hazardMaxShare : 0.08f;

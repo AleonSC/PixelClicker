@@ -163,6 +163,12 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text of the Despawn button (removes the selected minigame's current round).")]
     [SerializeField] private string despawnText = "Despawn";
 
+    [Tooltip("Text of the button that drinks the focus potion picked in the 'Focus potions' widget.")]
+    [SerializeField] private string drinkFocusText = "Drink";
+
+    [Tooltip("Text of the button that cancels the active focus potion.")]
+    [SerializeField] private string cancelFocusText = "Cancel";
+
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
     [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
     [SerializeField] private string giveGodCubeLabel = "Give next God Cube";
@@ -299,6 +305,7 @@ public class PixelDevTools : MonoBehaviour
         if (clicker == null) return; // the panel isn't built yet: Start applies everything
         if (selectorDropdown != null) selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelPixel", 0), 0, Mathf.Max(0, selectorDropdown.options.Count - 1)));
         if (selectorMinigameDropdown != null) selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelMinigame", 0), 0, Mathf.Max(0, selectorMinigameDropdown.options.Count - 1)));
+        if (focusDropdown != null) focusDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelFocus", 0), 0, Mathf.Max(0, focusDropdown.options.Count - 1)));
         if (selectorDropdown != null) { if (spawnSelectorEnabled) ApplySelector(selectorDropdown.value); else clicker.SetDevSpawnTiers(null); RefreshSpawnedPixelButton(); }
         SetGodMode(godMode);
     }
@@ -937,6 +944,7 @@ public class PixelDevTools : MonoBehaviour
             case "spawnpixel": return "Spawned pixel";
             case "spawnminigame": return "Minigames";
             case "middleclick": return "Middle click";
+            case "focus": return "Focus potions";
             case "report": return "Crash reports";
             case "bounds": return "Snapshot bounds";
             case "balance": return "Balance report";
@@ -1061,6 +1069,48 @@ public class PixelDevTools : MonoBehaviour
         Place(swapDropdown.GetComponent<RectTransform>(), 40f, y, inner);
         swapDropdown.onValueChanged.AddListener(v => SetInt("SelSwap", v));
         Widget(root, board, "middleclick", start, y);
+
+        // ---- Focus potions: pick one, Drink it (60 s, replaces the active one) or Cancel the active one (PixelFocus). ----
+        start = root.childCount;
+        focusDropdown = PixelUIKit.CreateDropdown(font, root, "Focus Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(focusDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        focusDropdown.onValueChanged.AddListener(v => SetInt("SelFocus", v));
+        Button drink = PixelUIKit.CreateButton(font, root, "Drink Focus Button", drinkFocusText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(drink.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        drink.onClick.AddListener(DrinkFocus);
+        Button cancelFocus = PixelUIKit.CreateButton(font, root, "Cancel Focus Button", cancelFocusText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(cancelFocus.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
+        cancelFocus.onClick.AddListener(CancelFocus);
+        AddTip(drink.gameObject, "Drink the chosen focus potion: the skill's hazard block stops spawning while it lasts (replaces the one that is active).");
+        AddTip(cancelFocus.gameObject, "Stop the active focus potion early.");
+        Widget(root, board, "focus", start, y);
+    }
+
+    private TMP_Dropdown focusDropdown;
+
+    private void DrinkFocus()
+    {
+        PixelFocus focus = PixelFocus.Instance;
+        if (focus != null && focusDropdown != null) focus.Drink(focusDropdown.value);
+    }
+
+    private void CancelFocus()
+    {
+        if (PixelFocus.Instance != null) PixelFocus.Instance.Cancel();
+    }
+
+    /// <summary>Fills the focus potion drop-down from PixelFocus's list (keeps the pick).</summary>
+    private void FillFocusDropdown(bool first)
+    {
+        if (focusDropdown == null) return;
+        PixelFocus focus = PixelFocus.Instance;
+        int keep = first ? GetInt("SelFocus", 0) : focusDropdown.value;
+        List<string> focusNames = new List<string>();
+        if (focus != null) foreach (PixelFocus.FocusPotion p in focus.Potions) focusNames.Add(p != null ? p.displayName : "-");
+        focusDropdown.ClearOptions();
+        focusDropdown.AddOptions(focusNames);
+        focusDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, focusNames.Count - 1)));
+        focusDropdown.RefreshShownValue();
     }
 
     private void SpawnPixelClicked()
@@ -1146,6 +1196,8 @@ public class PixelDevTools : MonoBehaviour
         selectorMinigameDropdown.AddOptions(names);
         selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(keepGame, 0, Mathf.Max(0, names.Count - 1)));
         selectorMinigameDropdown.RefreshShownValue();
+
+        FillFocusDropdown(first);
     }
 
     private void ApplySelector(int index)
