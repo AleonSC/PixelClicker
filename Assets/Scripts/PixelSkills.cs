@@ -932,6 +932,12 @@ public partial class PixelSkills : MonoBehaviour
         AddXp(pack, automatic ? autoXpFactor : 1d);
     }
 
+    /// <summary>Extra XP for the skill being trained (the shuffle bonus): goes through AddXp, so penalties, minigame multipliers and the bonus bank apply as usual.</summary>
+    public void AddShuffleXp(double xp)
+    {
+        AddXp(Find(TrainingId), xp);
+    }
+
     public void AddXp(SkillPack pack, double xp, bool popup = true)
     {
         if (pack == null || xp <= 0d) return;

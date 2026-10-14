@@ -203,10 +203,13 @@ public class PixelBlockHold : MonoBehaviour
         return clicker.TryGetBlockAt(PixelInput.PointerPosition(), out int _, out bool live, out Rigidbody _) && live;
     }
 
+    private float holdStartedAt;
+
     private void Begin()
     {
         if (!clicker.TryPullLive(out heldTier, out heldHits)) return;
         holding = true;
+        holdStartedAt = Time.unscaledTime;
         returning = false;
         slide = 0f;
         BuildVisual();
@@ -216,6 +219,7 @@ public class PixelBlockHold : MonoBehaviour
     private void Release(bool exhausted)
     {
         holding = false;
+        if (heldTier >= 0 && !exhausted) PixelShuffleBonus.OnRelease(heldTier, Time.unscaledTime - holdStartedAt);   // a quick tap on a filler = a shuffle (PixelShuffleBonus)
         // The block goes first in line (it comes after the block on the cube now); the picture of it only slides back for show.
         if (heldTier >= 0 && clicker != null) clicker.ReturnHeldTier(heldTier, heldHits);
         heldTier = -1;

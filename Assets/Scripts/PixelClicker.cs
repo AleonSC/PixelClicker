@@ -1175,6 +1175,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
+        if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)
         if (PixelFind.First<PixelBaitBucket>() == null) gameObject.AddComponent<PixelBaitBucket>();   // Fishing's bait bucket consumable
         if (PixelFind.First<PixelViewWindow>() == null) gameObject.AddComponent<PixelViewWindow>();   // the View window (key V): views, flat view, zoom, orbit controls
         if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
@@ -2790,6 +2791,14 @@ public partial class PixelClicker : MonoBehaviour
         nextInLine.Insert(0, new Vector2Int(tierIndex, hits));
         while (nextInLine.Count > 3) nextInLine.RemoveAt(nextInLine.Count - 1);
         upcomingTier = -1;
+    }
+
+    /// <summary>Takes one waiting copy of this block out of the line (Block Hold's queue). True if there was one.</summary>
+    public bool DropQueuedTier(int tierIndex)
+    {
+        for (int i = 0; i < nextInLine.Count; i++)
+            if (nextInLine[i].x == tierIndex) { nextInLine.RemoveAt(i); upcomingTier = -1; return true; }
+        return false;
     }
 
     /// <summary>Dev tools: replaces the pixel on the cube with this type at once (even a locked one) so its behaviour can be tested.</summary>
