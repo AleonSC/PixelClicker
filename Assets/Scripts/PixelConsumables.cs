@@ -1443,7 +1443,7 @@ public class PixelConsumables : MonoBehaviour
         potionName = "";
         System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
         for (int i = 0; i < potions.Length; i++)
-            if (!potions[i].craftOnly && clicker.IsUnlocked(potions[i].type)) candidates.Add(i);
+            if (BuffPotionAllowed(i)) candidates.Add(i);
         if (candidates.Count == 0) return -1;
 
         int pick = candidates[UnityEngine.Random.Range(0, candidates.Count)];
@@ -1452,12 +1452,15 @@ public class PixelConsumables : MonoBehaviour
         return pick;
     }
 
-    /// <summary>Picks a random buff potion (unlocked pixel type, not craft-only) without starting it. -1 if none.</summary>
+    /// <summary>Can this potion be a free buff (the Ghost minigame)? Its pixel is unlocked, it is not craft-only and its pixel is in the rotation being played: the current skill pack's blocks or the standard pixels, not blocks the pack has replaced.</summary>
+    private bool BuffPotionAllowed(int i) => !potions[i].craftOnly && clicker.IsUnlocked(potions[i].type) && !PixelSkills.LeftOutOfSpawns(potions[i].type);
+
+    /// <summary>Picks a random buff potion (unlocked pixel type in the rotation in play, not craft-only) without starting it. -1 if none.</summary>
     public int PickRandomBuff()
     {
         System.Collections.Generic.List<int> candidates = new System.Collections.Generic.List<int>();
         for (int i = 0; i < potions.Length; i++)
-            if (!potions[i].craftOnly && clicker.IsUnlocked(potions[i].type)) candidates.Add(i);
+            if (BuffPotionAllowed(i)) candidates.Add(i);
         return candidates.Count == 0 ? -1 : candidates[UnityEngine.Random.Range(0, candidates.Count)];
     }
 
