@@ -1001,3 +1001,4 @@
 [2026-10-14 20:40 UTC] Dragging an old pixel with Pixel Grabbing now slides it over the floor when the camera is tilted (orbital view, free cam) instead of moving it up and down through the world.
 [2026-10-14 21:00 UTC] Funnel: blocks gathering at the opening now pile up with real physics on a solid cone surface and are taken down the tube one by one (replaces the locked pile).
 [2026-10-14 21:30 UTC] Added a 'Double floor area' tick box to the Dev Hub: the floor circle (picture, wireframe, borders, pixel limits and the first person wall) becomes twice as wide.
+[2026-10-14 21:50 UTC] Fixed the first person hint box showing its text as a tall column of single letters (its width was measured with a zero width limit).

@@ -51,7 +51,7 @@ public class PixelHintBox : MonoBehaviour
         if (boxImage.enabled != has) boxImage.enabled = has;
         if (!has || text == sizedFor) return;
         sizedFor = text;
-        Vector2 one = label.GetPreferredValues(text, 0f, 0f);   // width of the text on one line
+        Vector2 one = label.GetPreferredValues(text, 100000f, 0f);   // width of the text on one line (a 0 width limit would stack the letters)
         float w = Mathf.Min(one.x + Padding.x * 2f, MaxWidth);
         float h = label.GetPreferredValues(text, w - Padding.x * 2f, 0f).y + Padding.y * 2f;
         box.sizeDelta = new Vector2(w, h);
