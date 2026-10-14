@@ -5685,7 +5685,7 @@ public class OldPixelDespawn : MonoBehaviour
     }
 
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
-    private bool despawning;
+    private bool despawning, naturalEnd;
     private float ageRate = 1f, rateRefresh;
     private OldPixelInfo rateInfo;
     private static PixelClicker rateOwner;
@@ -5800,7 +5800,7 @@ public class OldPixelDespawn : MonoBehaviour
             rateRefresh -= Time.deltaTime;
             if (rateRefresh <= 0f) { rateRefresh = 0.5f; ageRate = CurrentAgeRate(); }
             age += Time.deltaTime * ageRate;
-            if (lifetime > 0f && age >= lifetime) Begin();
+            if (lifetime > 0f && age >= lifetime) { naturalEnd = true; Begin(); }   // its own timer ran out (not the cap, a minigame or a device)
             return;
         }
 
@@ -5813,7 +5813,7 @@ public class OldPixelDespawn : MonoBehaviour
         else
         {
             float k = (phaseTime - swellSeconds) / shrinkSeconds;
-            if (k >= 1f) { PixelAudio.Play("pixel_vanish"); Destroy(gameObject); return; }   // a small high bloop as it disappears
+            if (k >= 1f) { if (naturalEnd) PixelAudio.Play("pixel_vanish"); Destroy(gameObject); return; }   // a small high bloop, only when its own despawn timer ended it (cleared by the capacity limit or used up = silent)
             transform.localScale = baseScale * Mathf.Lerp(swellScale, 0f, k * k);
         }
     }

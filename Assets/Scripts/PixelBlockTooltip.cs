@@ -6,6 +6,7 @@
 //   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, real turning 3D model (PixelTierPicture), name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
 //   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose or god mode. THREE MODES (PixelBlockTooltip.Mode, Settings > Interface drop-down, PlayerPrefs BlockTipsMode, per save): 0 Full, 1 Minimal (the spinning 3D icon and the name only), 2 Off. ALT: a tap (released within altHoldSeconds 0.25) cycles Full -> Minimal -> Off -> Full and a small toast names the new mode; HOLDING Alt (longer than that) shows the other kind of the current mode while held (Full shows Minimal, Minimal shows Full, Off shows Full) and the release does not cycle. Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
+//   PINNED: My Window's Info button (PixelMyWindow.HoverDocked) moves the card into the window (UpdateDocked / Undock): it stops following the mouse, is scaled to the window's width, shows whatever is hovered (it keeps the last block while the mouse is over the window) and the window grows to fit it.
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -280,6 +281,14 @@ public class PixelBlockTooltip : MonoBehaviour
         }
         else hovering = !Suppressed() && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
 
+        // Pinned to My Window (its Info button): the card lives in the window instead of following the mouse, and keeps the last block shown while the mouse is over the window.
+        if (PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth) && !disableTooltip && EffectiveMode != ModeOff && !PixelTitleScreen.Showing && !PixelPauseMenu.IsPaused)
+        {
+            UpdateDocked(slot, slotWidth, hovering, tier, live, body);
+            return;
+        }
+        if (wasDocked) Undock();
+
         bool same = hovering && tier == shownTier && live == shownLive && body == shownBody;
         if (hovering && !same)
         {
@@ -320,6 +329,54 @@ public class PixelBlockTooltip : MonoBehaviour
         Animate();
         Follow();
         UpdateToast();
+    }
+
+    // ---- Pinned to My Window ----
+    private bool wasDocked;
+
+    private void UpdateDocked(RectTransform slot, float slotWidth, bool hovering, int tier, bool live, Rigidbody body)
+    {
+        if (canvasObject == null) Build();
+        if (hovering && (tier != shownTier || live != shownLive || body != shownBody))
+        {
+            shownTier = tier; shownLive = live; shownBody = body;
+            maxRemaining = 0f; nextRefresh = 0f; shownAt = Time.unscaledTime;
+        }
+        if (!wasDocked || card.parent != slot)
+        {
+            wasDocked = true;
+            card.SetParent(slot, false);
+            card.anchorMin = card.anchorMax = new Vector2(0f, 1f);
+            card.pivot = new Vector2(0f, 1f);
+            card.anchoredPosition = Vector2.zero;
+            nextRefresh = 0f; shownAt = Time.unscaledTime;
+        }
+        if (canvasObject.activeSelf) canvasObject.SetActive(false);   // (the floating canvas is not needed: the card lives in the window)
+        bool have = shownTier >= 0;
+        visible = have ? 1f : 0f;
+        group.alpha = have ? 1f : 0f;
+        if (!have) { PixelMyWindow.SetHoverHeight(0f); return; }
+        if (Time.unscaledTime >= nextRefresh) { nextRefresh = Time.unscaledTime + 0.25f; Refresh(); }
+        Animate();
+        float k = Mathf.Min(1f, slotWidth / Mathf.Max(1f, card.sizeDelta.x));
+        card.localScale = Vector3.one * k;
+        PixelMyWindow.SetHoverHeight(card.sizeDelta.y * k);
+    }
+
+    /// <summary>Back to the normal card that follows the mouse.</summary>
+    private void Undock()
+    {
+        wasDocked = false;
+        if (card != null && canvasObject != null)
+        {
+            card.SetParent(canvasObject.transform, false);
+            card.anchorMin = card.anchorMax = Vector2.zero;
+            card.pivot = new Vector2(0f, 1f);
+            card.localScale = Vector3.one;
+            group.alpha = 0f;
+        }
+        visible = 0f; shownTier = -1; shownBody = null; hoverTime = 0f; anchored = false;
+        PixelMyWindow.SetHoverHeight(-1f);
     }
 
     /// <summary>The little 'Tooltips: Minimal' note beside the pointer after an Alt tap.</summary>
@@ -473,7 +530,7 @@ public class PixelBlockTooltip : MonoBehaviour
         if (shownTier >= 0 && picture != null && picture.gameObject.activeSelf) PixelTierPicture.Render(shownTier, t * 55f);
         float ease = 1f - Mathf.Pow(1f - visible, 3f);
         group.alpha = ease;
-        card.localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, ease);
+        if (!wasDocked) card.localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, ease);   // (pinned in My Window the scale fits the window instead)
         Color g = glow.color;
         g.a = (0.25f + 0.15f * Mathf.Sin(t * 3f)) * ease;
         glow.color = g;

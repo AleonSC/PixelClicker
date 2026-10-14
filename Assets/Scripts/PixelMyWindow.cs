@@ -16,6 +16,9 @@
 //   geometry). It can only be dragged INSIDE the playfield between the black bars and the screen sides (ClampToScreen). MINIMIZE button in the header: only the
 //   header remains (still draggable); the full height is remembered. LOG button in the header (PixelMyWindow.LogDocked, kept on this machine): docks the EVENT LOG into the window as a tab (Pinned | Event log;
 //   the log lines of PixelHints.TryGetHistory, newest at the bottom, a click shows the full tip); while docked and the window is open the bottom-left log overlay stays away and the event log key opens the tab.
+//   INFO button in the header (PixelMyWindow.HoverDocked, kept on this machine): pins the block HOVER TOOLTIP into the window: while it is on and the window is open (Pinned tab, not minimized) the tooltip card
+//   no longer follows the mouse - PixelBlockTooltip moves its card into the window's hover slot (TryGetHoverSlot / SetHoverHeight), scaled to the window's width, and it shows whatever the mouse hovers (and stays on the last
+//   one while the mouse is over the window); a hint shows until something was hovered.
 //   The header buttons are laid out side by side from the right (LayoutHeaderButtons) so they never overlap. DOCKING: let go of a drag with the window against the left or right screen edge (edgeSnap px) and it docks
 //   there at that height (dockSide -1 / +1, dockY): only a sliver (dockSliver) stays on screen and it slides out while the mouse is near / over it or while editing
 //   (UpdateDock); an UNDOCK arrow button appears in the header while docked (it pulls the window back into the screen); a pale strip at the edge shows while a drag is close
@@ -110,6 +113,37 @@ public class PixelMyWindow : MonoBehaviour
 
     /// <summary>Is the window available yet (it shows up once two pixel types are unlocked)?</summary>
     public static bool Available => instance != null && instance.buttonAvailable;
+
+    private const string PrefHoverDocked = "PixelClicker.MyWindow.HoverDocked";
+
+    /// <summary>Is the hover tooltip pinned into My Window (the player's own choice, kept on this machine)? While it is and My Window is open, the block tooltip no longer follows the mouse: whatever is hovered shows in the window.</summary>
+    public static bool HoverDocked => PlayerPrefs.GetInt(PrefHoverDocked, 0) != 0;
+
+    private RectTransform hoverSlot;
+    private TMP_Text hoverPlaceholder;
+    private Button hoverDockButton;
+    private Image hoverDockImage;
+    private float hoverShownH = -1f, hoverLaidH = -1f;
+
+    /// <summary>The place in the window where the pinned hover card goes (null unless the tooltip is pinned and the window is open on its Pinned tab, not minimized).</summary>
+    public static bool TryGetHoverSlot(out RectTransform slot, out float width)
+    {
+        slot = null; width = 0f;
+        PixelMyWindow w = instance;
+        if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || w.minimized || !HoverDocked || (LogDocked && w.showLogTab)) return false;
+        slot = w.hoverSlot;
+        width = Mathf.Max(200f, w.windowRect.sizeDelta.x - 24f);
+        return true;
+    }
+
+    /// <summary>The pinned hover card tells the window how tall it is (0 = nothing hovered yet: a hint shows instead).</summary>
+    public static void SetHoverHeight(float height)
+    {
+        PixelMyWindow w = instance;
+        if (w == null) return;
+        w.hoverShownH = height;
+        if (Mathf.Abs(height - w.hoverLaidH) > 1f) w.Layout();
+    }
 
     private const string PrefLogDocked = "PixelClicker.MyWindow.LogDocked";
 
@@ -379,6 +413,13 @@ public class PixelMyWindow : MonoBehaviour
         logDockImage = logDockButton.GetComponent<Image>();
         logDockButton.onClick.AddListener(ToggleLogDock);
 
+        // Info: pins the hover tooltip into this window (and unpins it).
+        hoverDockButton = PixelUIKit.CreateButton(Font, header.transform, "Dock Info", "Info", new Vector2(76f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), Color.white, 22f);
+        RectTransform hr0 = hoverDockButton.GetComponent<RectTransform>();
+        hr0.anchorMin = hr0.anchorMax = hr0.pivot = new Vector2(1f, 0.5f);
+        hoverDockImage = hoverDockButton.GetComponent<Image>();
+        hoverDockButton.onClick.AddListener(ToggleHoverDock);
+
         // Tabs under the header while the log is docked: Pinned | Event log.
         GameObject tabs = new GameObject("Tabs", typeof(RectTransform));
         tabs.transform.SetParent(windowObject.transform, false);
@@ -392,6 +433,16 @@ public class PixelMyWindow : MonoBehaviour
         tabPinnedButton.onClick.AddListener(() => { showLogTab = false; Layout(); });
         tabLogButton.onClick.AddListener(() => { showLogTab = true; Layout(); RebuildLog(); });
         tabs.SetActive(false);
+
+        // The place for the pinned hover card (under the header / tabs); PixelBlockTooltip puts its card in here.
+        GameObject slotGo = new GameObject("Hover Slot", typeof(RectTransform));
+        slotGo.transform.SetParent(windowObject.transform, false);
+        hoverSlot = slotGo.GetComponent<RectTransform>();
+        hoverSlot.anchorMin = new Vector2(0f, 1f); hoverSlot.anchorMax = new Vector2(1f, 1f); hoverSlot.pivot = new Vector2(0.5f, 1f);
+        hoverPlaceholder = PixelUIKit.CreateText(Font, hoverSlot, "Hint", "Hover over a block to see its info here", 20f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(1f, 1f, 1f, 0.55f));
+        hoverPlaceholder.raycastTarget = false;
+        PixelUIKit.Stretch(hoverPlaceholder.rectTransform);
+        slotGo.SetActive(false);
 
         // Add bar (edit mode): what to add, which one, the Add button.
         GameObject bar = new GameObject("Add Bar", typeof(RectTransform), typeof(Image));
@@ -615,6 +666,13 @@ public class PixelMyWindow : MonoBehaviour
         return b;
     }
 
+    private void ToggleHoverDock()
+    {
+        PlayerPrefs.SetInt(PrefHoverDocked, HoverDocked ? 0 : 1);
+        hoverShownH = -1f;
+        Layout();
+    }
+
     private void ToggleLogDock()
     {
         bool now = !LogDocked;
@@ -645,6 +703,7 @@ public class PixelMyWindow : MonoBehaviour
         Place(minimizeButton, 44f, true);
         Place(undockButton, 44f, dockSide != 0);
         Place(logDockButton, 76f, !minimized);
+        Place(hoverDockButton, 76f, !minimized);
         GameObject editObject = editButtonObject;
         if (editObject != null)
         {
@@ -663,7 +722,18 @@ public class PixelMyWindow : MonoBehaviour
         if (!docked) showLogTab = false;
         bool logTab = docked && showLogTab;
         float tabs = docked ? TabBarHeight : 0f;
-        float top = 64f + tabs + (editing && !logTab ? 170f : 0f);
+        bool hoverOn = HoverDocked && !minimized && !logTab;
+        float hoverH = hoverOn ? Mathf.Max(hoverShownH, 64f) + 8f : 0f;   // the pinned hover card (or its hint) sits under the header / tabs
+        hoverLaidH = hoverShownH;
+        if (hoverSlot != null)
+        {
+            hoverSlot.gameObject.SetActive(hoverOn);
+            hoverSlot.sizeDelta = new Vector2(-24f, Mathf.Max(0f, hoverH - 8f));
+            hoverSlot.anchoredPosition = new Vector2(0f, -(64f + tabs));
+            if (hoverPlaceholder != null) hoverPlaceholder.gameObject.SetActive(hoverShownH <= 0f);
+        }
+        if (hoverDockImage != null) hoverDockImage.color = HoverDocked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
+        float top = 64f + tabs + hoverH + (editing && !logTab ? 170f : 0f);
         scroll.gameObject.SetActive(!minimized && !logTab);
         if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
         if (tabBar != null) tabBar.SetActive(docked && !minimized);
@@ -682,7 +752,7 @@ public class PixelMyWindow : MonoBehaviour
             lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
             lr.offsetMin = new Vector2(12f, 34f); lr.offsetMax = new Vector2(-12f, -top);
         }
-        addBar.anchoredPosition = new Vector2(0f, -(64f + tabs));
+        addBar.anchoredPosition = new Vector2(0f, -(64f + tabs + hoverH));
         addBar.gameObject.SetActive(editing && !minimized && !logTab);
         if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
         LayoutHeaderButtons();
