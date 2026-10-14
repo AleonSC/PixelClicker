@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelSnap.cs
-//   Hold SHIFT while placing (consumables: PixelConsumables placing; Dev Hub tester machines and belts: PixelFeatureTester) to snap the spot to a GRID (gridCubes old-pixel widths, the same spacing as the
+//   Placing SNAPS BY DEFAULT (Active = Shift NOT held); hold SHIFT for FREE placement (consumables: PixelConsumables placing; Dev Hub tester machines and belts: PixelFeatureTester; first person carried blocks). Snapping puts the spot to a GRID (gridCubes old-pixel widths, the same spacing as the
 //   first person neon floor) and the turn to ANGLE steps (angleDegrees, default 15 so 45 and 90 are hit exactly). The numbers are set on PixelConsumables (Inspector: "Shift snapping") and pushed here;
 //   until then the defaults apply. First person: PixelFirstPerson.SnapPoseToGrid snaps a carried block's resting spot (on the ground, not when it sticks to another cube) to cells of the same grid and its turn to the angle steps. Point() only snaps x / z (the height stays); Yaw() rounds a turn. Callers keep the un-snapped turn themselves so Q / E can still turn smoothly while Shift is held.
 // ---------------------------------------------------
@@ -19,7 +19,8 @@ public static class PixelSnap
         angleDegrees = angle > 0f ? angle : 15f;
     }
 
-    public static bool Active => PixelInput.ShiftHeld();
+    /// <summary>Snapping is ON by default; holding SHIFT switches to free placement (and releasing it goes back to the grid).</summary>
+    public static bool Active => !PixelInput.ShiftHeld();
 
     /// <summary>The grid spacing in old-pixel widths.</summary>
     public static float GridCubes => gridCubes;

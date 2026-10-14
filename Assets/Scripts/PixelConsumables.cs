@@ -419,11 +419,11 @@ public class PixelConsumables : MonoBehaviour
 
     [Header("Shift snapping")]
     [Min(0f)]
-    [Tooltip("Holding Shift while placing snaps the spot to a grid of this many old-pixel widths (also used by the Dev Hub tester). 0 = the coded default (1).")]
+    [Tooltip("Placing snaps the spot to a grid of this many old-pixel widths (also used by the Dev Hub tester); hold Shift for free placement. 0 = the coded default (1).")]
     [SerializeField] private float shiftSnapGridCubes = 0f;
 
     [Min(0f)]
-    [Tooltip("Holding Shift while placing or turning snaps the turn to steps of this many degrees. 0 = the coded default (15).")]
+    [Tooltip("Placing and turning snap the turn to steps of this many degrees; hold Shift for a free turn. 0 = the coded default (15).")]
     [SerializeField] private float shiftSnapAngleDegrees = 0f;
 
     [Header("Removing")]
@@ -2160,7 +2160,7 @@ public class PixelConsumables : MonoBehaviour
 
         PixelSnap.Configure(shiftSnapGridCubes, shiftSnapAngleDegrees);
         bool hasPoint = TryGetPlacePoint(out Vector3 point);
-        if (hasPoint && PixelSnap.Active) point = PixelSnap.Point(point, clicker.OldPixelWorldSize);   // Shift: snap to the grid
+        if (hasPoint && PixelSnap.Active) point = PixelSnap.Point(point, clicker.OldPixelWorldSize);   // snap to the grid (hold Shift for free placement)
         preview.SetActive(hasPoint);
         if (hasPoint) preview.transform.position = point;
 
@@ -2168,7 +2168,7 @@ public class PixelConsumables : MonoBehaviour
         if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel)
         {
             rawYaw += TurnInput();
-            placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // Shift: snap the turn to angle steps (the raw turn keeps counting so Q / E stay smooth)
+            placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // snap the turn to angle steps unless Shift is held (the raw turn keeps counting so Q / E stay smooth)
             preview.transform.rotation = Quaternion.Euler(0f, placingYaw, 0f);
         }
         chipperLatched = false;

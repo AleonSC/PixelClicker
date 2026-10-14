@@ -945,3 +945,4 @@
 [2026-10-14 09:58 UTC] New-game intro: a Got it box about the right mouse button (hold a block to put a stake on it) now comes right after the one about clicking.
 [2026-10-14 09:59 UTC] The hold stake now only works on the six basic blocks (black, gray, white, red, green, blue); their tooltips, the Pixel Guide and the database explain it with the live numbers, and the intro tip says so.
 [2026-10-14 10:02 UTC] Solar pixels no longer join the base rotation by themselves: they have a spawn switch in the Toggles window and start OFF (existing saves get Solar switched off once on load; switch it on in Toggles to see it).
+[2026-10-14 10:04 UTC] Placing devices, machines and carried blocks now snaps to the grid (and turn steps) by default; holding Shift gives free placement. Controls list updated (also for the UFO ride along).

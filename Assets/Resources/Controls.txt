@@ -31,6 +31,7 @@ Left-click the floor | Place a Vacuum Device or Fan
 Scroll or {key:RotateLeft} / {key:RotateRight} | Turn a Fan or the Sorter's pipe
 Left-click (Sorter) | Confirm the pipe's direction
 Left-click in the cone | Place the Sorter with that bend
+Hold Shift | Free placement (placing snaps to a grid and to turn steps by default)
 Right-click | Go back / cancel
 
 # Pixel Grabbing
@@ -46,12 +47,10 @@ Right-click | Suck up the old pixel the red dot is on
 Hold right-click | Suck up an area of the selected pixel type
 Click a Bank row | Select that pixel type
 
-# UFO Cockpit (Take control)
-Hold right mouse + move | Look around the cabin
-{key:RotateLeft} / {key:RotateRight} | Turn the saucer
-W A S D / Arrows | Fly (inside the screen, not up or down)
-Click on the console screen | Abduct the pixel you point at
-Esc | Leave the cockpit
+# UFO Helper (Ride along)
+Mouse | Look around the cabin
+W A S D / Arrows | Walk about the cabin
+Esc | Climb out
 
 # Devices and Minigames
 Click buttons 1-3 on the Sorter | Change how hard it spits

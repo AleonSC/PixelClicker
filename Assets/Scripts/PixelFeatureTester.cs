@@ -7,7 +7,7 @@
 //   CreateGhost / Place) and add one Register line here.
 //   Two-point features (RegisterLine, a conveyor belt) use a marker ghost, then a preview piece between the first point and the mouse; every click builds a piece and the end starts the next.
 //   DELETE: hold the right button on any placed tester object (not while placing) to remove it (PixelHold ring; a quick right click still flips a belt / re-links a panel: PixelRightTap). BELT SELECTION card:
-//   'Select belts' mode toggles belts by click or box-drag (teal glow, PixelConveyor.SetSelected) and sets speed / reverses them together. SHIFT while placing snaps to a grid and angle steps (PixelSnap).
+//   'Select belts' mode toggles belts by click or box-drag (teal glow, PixelConveyor.SetSelected) and sets speed / reverses them together. Placing snaps to a grid by default; SHIFT = free placement. (It used to be: SHIFT while placing snaps to a grid and angle steps (PixelSnap).
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
 //   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
