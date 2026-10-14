@@ -5727,7 +5727,7 @@ public class OldPixelDespawn : MonoBehaviour
         else
         {
             float k = (phaseTime - swellSeconds) / shrinkSeconds;
-            if (k >= 1f) { Destroy(gameObject); return; }
+            if (k >= 1f) { PixelAudio.Play("pixel_vanish"); Destroy(gameObject); return; }   // a small high bloop as it disappears
             transform.localScale = baseScale * Mathf.Lerp(swellScale, 0f, k * k);
         }
     }

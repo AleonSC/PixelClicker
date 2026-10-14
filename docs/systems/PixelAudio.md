@@ -11,3 +11,6 @@ Sound system. **Alt-tab keeps the music track:** `OnApplicationFocus` pauses the
 
 
 **Shuffle / playlist:** the FIRST song after the game loads is always random (then `shuffleMusic` decides: random or in order). Settings > Audio > "Custom playlist" (shown with 2+ tracks) opens a checklist screen (`PixelPauseMenu.BuildPlaylistPanel`): only ticked songs play (`IsTrackEnabled` / `SetTrackEnabled` / `EnableAllTracks`, PlayerPrefs `PixelAudio.PlaylistOff` = unticked clip names, so new songs start ticked); the last ticked song cannot be unticked. The main menu selector can still start any song.
+
+
+**Per save (PixelSettingsSync):** `MusicMuted` (the speaker button next to the main menu music selector + Settings > Audio "Mute music"), the custom playlist (`PixelClicker.Setting.PlaylistOff`) and the chosen song (`PixelClicker.Setting.Song`, set by `SelectMusicTrack`; on startup / save load that song plays instead of a random first pick). Named `PixelClicker.Setting.*` so a new game resets them. **Old pixel vanish:** `OldPixelDespawn` plays `pixel_vanish` (code-made `PixelSynth.Bloop`: a small high upward chirp, quiet, 0.04 s cooldown, pitch 0.88-1.3) when the shrink ends.

@@ -938,3 +938,4 @@
 [2026-10-14 09:01 UTC] Meteor minigame: it now speeds up gradually as it crosses, has code-made sounds (entry whoosh, crossing rumble, rock hit, chunk clink) and mining effects on every click (sparks, rock chips, dust and a glow flash).
 [2026-10-14 09:05 UTC] To-do: credit links to the videos the songs came from.
 [2026-10-14 09:27 UTC] Music: the first song after loading is always random; Settings > Audio has a Custom playlist button that opens a checklist of the songs (only ticked songs play, at least one stays ticked).
+[2026-10-14 09:29 UTC] Music: a speaker button next to the main menu music selector mutes the music (also a Mute music tick box in Settings > Audio), and the mute, the custom playlist and the chosen song are now per save; old pixels make a small high bloop when they disappear.

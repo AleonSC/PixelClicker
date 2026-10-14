@@ -365,6 +365,9 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Label of the mute tick box.")]
     [SerializeField] private string muteLabel = "Mute all sound";
 
+    [Tooltip("Label of the music-only mute tick box (Settings > Audio; saved per save file).")]
+    [SerializeField] private string muteMusicLabel = "Mute music";
+
     [Tooltip("Colour of the volume slider track.")]
     [SerializeField] private Color sliderTrackColor = new Color(0.25f, 0.25f, 0.3f, 1f);
 
@@ -597,6 +600,7 @@ public class PixelPauseMenu : MonoBehaviour
     private RectTransform statsPanelRect, statsRestartRect;
     private float statsContentHeight, statsListTop;
     private GameObject keysPanel, playlistPanel;
+    private Toggle muteMusicToggle;
     private readonly List<Toggle> playlistToggles = new List<Toggle>();
     private readonly List<System.Action> settingsRefreshers = new List<System.Action>();
     private TMP_Text[] keyButtonLabels;
@@ -1211,6 +1215,7 @@ public class PixelPauseMenu : MonoBehaviour
             effectsSlider.SetValueWithoutNotify(PixelAudio.Instance.EffectsVolume);
             musicSlider.SetValueWithoutNotify(PixelAudio.Instance.MusicVolume);
             muteToggle.SetIsOnWithoutNotify(PixelAudio.Instance.Muted);
+            if (muteMusicToggle != null) muteMusicToggle.SetIsOnWithoutNotify(PixelAudio.Instance.MusicMuted);
         }
     }
 
@@ -2499,6 +2504,7 @@ public class PixelPauseMenu : MonoBehaviour
         {
             AddSettingsSectionHeader(list, headerAudio, ref y);
             muteToggle = AddToggleRow(list, muteLabel, audio.Muted, on => audio.Muted = on, ref y);
+            muteMusicToggle = AddToggleRow(list, muteMusicLabel, audio.MusicMuted, on => audio.MusicMuted = on, ref y);
             AddSettingToggle(list, uiClicksLabel, () => PixelAudio.UiClicks, on => PixelAudio.UiClicks = on, ref y);
             masterSlider = AddSliderRow(list, masterVolumeLabel, audio.MasterVolume, v => audio.MasterVolume = v, ref y);
             effectsSlider = AddSliderRow(list, effectsVolumeLabel, audio.EffectsVolume, v => audio.EffectsVolume = v, ref y);

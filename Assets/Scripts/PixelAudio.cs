@@ -121,6 +121,10 @@ public class PixelAudio : MonoBehaviour
     private const string PrefEffects = "PixelAudio.Effects";
     private const string PrefMusic = "PixelAudio.Music";
     private const string PrefMuted = "PixelAudio.Muted";
+    // Per save (PixelSettingsSync): music mute, the playlist and the chosen song. (Named PixelClicker.Setting.* so a new game resets them; PixelAudio.* keys are the player's own and stay.)
+    private const string PrefMusicMuted = "PixelClicker.Setting.MusicMuted";
+    private const string PrefSong = "PixelClicker.Setting.Song";
+    private bool musicMuted;
 
     private float defaultMaster, defaultEffects, defaultMusic;
     private bool defaultMuted;
@@ -144,7 +148,10 @@ public class PixelAudio : MonoBehaviour
         instance.effectsVolume = PlayerPrefs.HasKey(PrefEffects) ? PlayerPrefs.GetFloat(PrefEffects) : instance.defaultEffects;
         instance.musicVolume = PlayerPrefs.HasKey(PrefMusic) ? PlayerPrefs.GetFloat(PrefMusic) : instance.defaultMusic;
         instance.muted = PlayerPrefs.HasKey(PrefMuted) ? PlayerPrefs.GetInt(PrefMuted) != 0 : instance.defaultMuted;
+        instance.musicMuted = PlayerPrefs.GetInt(PrefMusicMuted, 0) != 0;
+        instance.playlistOff = null;   // read again (per save)
         instance.ApplyMusicVolume();
+        instance.ApplySavedSong();
     }
 
     private static PixelAudio instance;
@@ -188,6 +195,13 @@ public class PixelAudio : MonoBehaviour
         set { muted = value; PlayerPrefs.SetInt(PrefMuted, muted ? 1 : 0); ApplyMusicVolume(); }
     }
 
+    /// <summary>The music alone off (saved per save file; the speaker button on the main menu and Settings > Audio).</summary>
+    public bool MusicMuted
+    {
+        get => musicMuted;
+        set { musicMuted = value; PlayerPrefs.SetInt(PrefMusicMuted, musicMuted ? 1 : 0); ApplyMusicVolume(); }
+    }
+
     // ------------------------------------------------------------------
     // Defaults
     // ------------------------------------------------------------------
@@ -225,6 +239,7 @@ public class PixelAudio : MonoBehaviour
             Make("meteor_spawn", 0.2f),
             Make("meteor_click", 0.03f, 0.9f, 1.1f),
             Make("meteor_hit", 0.05f, 0.9f, 1.12f),
+            new Sound { id = "pixel_vanish", cooldown = 0.04f, pitchMin = 0.88f, pitchMax = 1.3f, volume = 0.4f },
             new Sound { id = "meteor_rumble", cooldown = 0f, volume = 0.45f },
             Make("blackhole_spawn", 0.2f),
             Make("pad_spawn", 0.2f),
@@ -348,6 +363,7 @@ public class PixelAudio : MonoBehaviour
             case "pixel_bounce_ghost": return new[] { PixelSynth.GhostBounce(1), PixelSynth.GhostBounce(2), PixelSynth.GhostBounce(3) };
             case "ghost_float": return new[] { PixelSynth.GhostFloat() };
             case "ufo_beam": return new[] { PixelSynth.UfoBeam() };
+            case "pixel_vanish": return new[] { PixelSynth.Bloop(1), PixelSynth.Bloop(2), PixelSynth.Bloop(3) };
             case "talk_blip": return new[] { PixelSynth.TalkBlip(1), PixelSynth.TalkBlip(2), PixelSynth.TalkBlip(3), PixelSynth.TalkBlip(4), PixelSynth.TalkBlip(5), PixelSynth.TalkBlip(6) };
             case "stardust_fall": return new[] { PixelSynth.StarFall(1), PixelSynth.StarFall(2) };
             case "stardust_collect": return new[] { PixelSynth.StarChime() };
@@ -687,7 +703,7 @@ public class PixelAudio : MonoBehaviour
     private void ApplyMusicVolume()
     {
         if (musicSource == null) return;
-        musicSource.volume = muted ? 0f : musicVolume * masterVolume * musicTrackVolume;
+        musicSource.volume = muted || musicMuted ? 0f : musicVolume * masterVolume * musicTrackVolume;
     }
 
     private bool musicHeldByFocus;
@@ -725,7 +741,7 @@ public class PixelAudio : MonoBehaviour
 
     // ---- Custom playlist: songs the player ticked off in Settings > Audio are skipped (all on by default; at least one stays on) ----
 
-    private const string PrefPlaylistOff = "PixelAudio.PlaylistOff";
+    private const string PrefPlaylistOff = "PixelClicker.Setting.PlaylistOff";
     private HashSet<string> playlistOff;
 
     private HashSet<string> PlaylistOff
@@ -785,8 +801,15 @@ public class PixelAudio : MonoBehaviour
     /// <summary>The index of the track playing now (-1 = none yet).</summary>
     public int CurrentMusicTrack => musicSource != null && musicSource.clip != null && musicTracks != null ? System.Array.IndexOf(musicTracks, musicSource.clip) : -1;
 
-    /// <summary>Starts this track now from the beginning; the normal shuffle / order carries on after it.</summary>
+    /// <summary>Starts this track now from the beginning and remembers it as the chosen song of this save file; the normal shuffle / order carries on after it.</summary>
     public void SelectMusicTrack(int i)
+    {
+        if (i < 0 || musicTracks == null || i >= musicTracks.Length || musicTracks[i] == null) return;
+        PlayerPrefs.SetString(PrefSong, TrackKey(i));
+        PlayTrack(i);
+    }
+
+    private void PlayTrack(int i)
     {
         if (musicSource == null || musicTracks == null || i < 0 || i >= musicTracks.Length || musicTracks[i] == null || !playMusic) return;
         lastTrack = i;
@@ -794,6 +817,22 @@ public class PixelAudio : MonoBehaviour
         musicSource.clip = musicTracks[i];
         musicSource.time = 0f;
         musicSource.Play();
+    }
+
+    /// <summary>The index of this save file's chosen song (-1 = none chosen, or it is not in the list any more).</summary>
+    private int SavedSongIndex()
+    {
+        string name = PlayerPrefs.GetString(PrefSong, "");
+        if (name.Length == 0 || musicTracks == null) return -1;
+        for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null && musicTracks[i].name == name) return i;
+        return -1;
+    }
+
+    /// <summary>A save file was loaded: its chosen song starts playing (nothing changes when it has none or it is already playing).</summary>
+    private void ApplySavedSong()
+    {
+        int i = SavedSongIndex();
+        if (i >= 0 && i != CurrentMusicTrack) PlayTrack(i);
     }
 
     private void UpdateMusic()
@@ -831,7 +870,9 @@ public class PixelAudio : MonoBehaviour
         if (pool.Count == 0) for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null) pool.Add(i);
         if (pool.Count == 0) return;
         int next;
-        if ((shuffleMusic || lastTrack < 0) && pool.Count > 1)
+        int saved = lastTrack < 0 ? SavedSongIndex() : -1;
+        if (saved >= 0) next = saved;   // the song this save file was left on
+        else if ((shuffleMusic || lastTrack < 0) && pool.Count > 1)
         {
             do next = pool[UnityEngine.Random.Range(0, pool.Count)]; while (next == lastTrack);
         }
@@ -907,6 +948,26 @@ public class PixelAudio : MonoBehaviour
 /// <summary>Tiny sound synthesizer: makes AudioClips in code for sounds that have no audio file yet.</summary>
 public static class PixelSynth
 {
+    /// <summary>A small high bloop (a quick upward chirp with a soft overtone) for an old pixel vanishing. 'seed' picks the pitch.</summary>
+    public static AudioClip Bloop(int seed)
+    {
+        const int rate = 22050;
+        int n = (int)(rate * 0.12f);
+        float[] data = new float[n];
+        float start = 1100f + seed * 140f, end = 2300f + seed * 220f, phase = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)n, sec = i / (float)rate;
+            float hz = Mathf.Lerp(start, end, 1f - Mathf.Pow(1f - t, 2.2f));
+            phase += hz / rate;
+            float env = Mathf.Clamp01(sec / 0.004f) * Mathf.Exp(-sec * 30f);
+            data[i] = (Mathf.Sin(phase * Mathf.PI * 2f) + 0.25f * Mathf.Sin(phase * 2f * Mathf.PI * 2f)) * env * 0.6f;
+        }
+        AudioClip clip = AudioClip.Create("Bloop " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
     /// <summary>A short electric zap: a buzzing chirp falling in pitch under a burst of crackle, with a fast decay.</summary>
     public static AudioClip Zap(int seed)
     {
