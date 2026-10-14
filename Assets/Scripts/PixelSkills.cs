@@ -727,6 +727,21 @@ public partial class PixelSkills : MonoBehaviour
         return active != StandardId && PixelProspector.IsBase(type);
     }
 
+    /// <summary>
+    /// Is this pixel part of what you are playing right now? With a skill pack in play (Woodcutting, Fishing...) ONLY that pack's own blocks count (and guests its tree switched on):
+    /// the extra shop pixels (Meteor, Ghost, Glass...) are not in the pack even though they still spawn. On Standard it is the normal rotation. Used by the Ghost's potions and Ultra Holes' requests.
+    /// </summary>
+    public static bool InCurrentRotation(PixelClicker.PixelType type)
+    {
+        PixelSkills s = Instance;
+        if (s == null || s.disableSkills) return !LeftOutOfSpawns(type);
+        SkillPack active = s.Find(s.ActiveId);
+        if (active == null || active.id == StandardId || active.id == OfflineId) return !LeftOutOfSpawns(type);
+        if (PixelClicker.IsHazard(type)) return false;
+        if (active.types != null && Array.IndexOf(active.types, type) >= 0) return true;
+        return s.GuestOn(type);
+    }
+
     // ---- Guests: skill-only blocks a skill tree node lets the player switch on for other rotations ----
 
     private const string GuestPref = "PixelClicker.Setting.SkillGuests";

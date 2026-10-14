@@ -224,7 +224,7 @@ public class PixelPadMinigame : PixelMinigame
         for (int i = 0; i < clicker.Tiers.Length; i++)
         {
             PixelClicker.PixelTier t = clicker.Tiers[i];
-            if (t.unlocked && !t.rareDrop && !t.flyAway && i != avoid && !PixelClicker.IsHazard(t.type) && !PixelSkills.LeftOutOfSpawns(t.type)) candidates.Add(i);
+            if (t.unlocked && !t.rareDrop && !t.flyAway && i != avoid && !PixelClicker.IsHazard(t.type) && PixelSkills.InCurrentRotation(t.type)) candidates.Add(i);
         }
         if (candidates.Count == 0 && avoid >= 0) return avoid;
         return candidates.Count > 0 ? candidates[Random.Range(0, candidates.Count)] : -1;
