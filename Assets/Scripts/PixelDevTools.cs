@@ -738,10 +738,21 @@ public class PixelDevTools : MonoBehaviour
         scrollRect.anchorMin = Vector2.zero;
         scrollRect.anchorMax = Vector2.one;
         scrollRect.offsetMin = new Vector2(0f, 8f);
-        scrollRect.offsetMax = new Vector2(0f, -8f);
+        scrollRect.offsetMax = new Vector2(0f, -52f);   // (room above for the collapse-all bar)
         y = 0f; // rows are placed from the top of the scrolling content (each one becomes a draggable widget card)
         PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder2", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - 16f), toolsScroll.viewport);
         board.SearchTab = "main";   // (its cards show up in the hub's search bar)
+
+        // 'Collapse all' above the widgets: folds every card up to its header (and back: it reads 'Expand all' while everything is folded).
+        Button collapse = PixelUIKit.CreateButton(font, tools.transform, "Collapse All Button", "Collapse all", new Vector2(220f, 36f), new Color(0.3f, 0.36f, 0.5f, 1f), textColor, 22f);
+        RectTransform collapseRect = collapse.GetComponent<RectTransform>();
+        collapseRect.anchorMin = collapseRect.anchorMax = collapseRect.pivot = new Vector2(0f, 1f);
+        collapseRect.sizeDelta = new Vector2(220f, 36f);
+        collapseRect.anchoredPosition = new Vector2(10f, -8f);
+        TMP_Text collapseLabel = collapse.GetComponentInChildren<TMP_Text>();
+        System.Action refreshCollapse = () => { collapseLabel.text = board.AllMinimized ? "Expand all" : "Collapse all"; };
+        collapse.onClick.AddListener(() => board.SetAllMinimized(!board.AllMinimized));
+        board.MinimizeChanged = refreshCollapse;
 
         // Widget: pixel dropdown | amount field | Add | Give pet
         int pinStart = content.childCount;
@@ -920,6 +931,7 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
 
         board.Finish();   // the saved order, the layout and the scroll size
+        refreshCollapse();
 
         // To-Do and Changelog are the first two sub-tabs of the hub's Docs tab (PixelDevDocs); they are rebuilt each time one is shown.
         BuildTodoView(PixelDevDocs.Root(0), 8f, inner);

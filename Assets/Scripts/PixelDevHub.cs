@@ -697,6 +697,20 @@ public class PixelWidgetBoard
         flashUntil = Time.unscaledTime + 1.6f;
     }
 
+    /// <summary>Called after any card folds or unfolds (the 'collapse all' button follows it).</summary>
+    public Action MinimizeChanged;
+
+    /// <summary>Are all the cards folded up?</summary>
+    public bool AllMinimized { get { foreach (Item it in items) if (!it.minimized) return false; return items.Count > 0; } }
+
+    /// <summary>Folds every card up to its header (or unfolds them all).</summary>
+    public void SetAllMinimized(bool on)
+    {
+        foreach (Item it in items) SetMinimized(it, on, false);
+        SaveMinimized();
+        MinimizeChanged?.Invoke();
+    }
+
     private void SetMinimized(Item item, bool on, bool save)
     {
         if (item.minimized == on) return;
@@ -719,7 +733,7 @@ public class PixelWidgetBoard
         item.rect.sizeDelta = new Vector2(item.rect.sizeDelta.x, item.height);
         item.grip.sizeDelta = new Vector2(26f, Mathf.Min(40f, item.height - 6f));
         Layout();
-        if (save) SaveMinimized();
+        if (save) { SaveMinimized(); MinimizeChanged?.Invoke(); }
     }
 
     private void SaveMinimized()

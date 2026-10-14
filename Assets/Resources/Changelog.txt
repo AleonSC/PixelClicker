@@ -878,3 +878,4 @@
 [2026-10-14 04:30 UTC] Docked windows (Dev Hub, My Window, Next up) can now be dragged off the screen edge by their header, which undocks them.
 [2026-10-14 04:30 UTC] Dev Hub: added a search bar (tabs, widgets and tester features) and right click on any label to set your own text, saved with the save profile.
 [2026-10-14 04:30 UTC] Dialogue boxes (tip / tutorial boxes and Cubie's speech) now play talking blips while the text types out, with a speaker mute button next to the back button.
+[2026-10-14 04:35 UTC] Dev Hub: added a 'Collapse all' / 'Expand all' button above the widgets.
