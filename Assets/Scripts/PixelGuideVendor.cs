@@ -246,6 +246,70 @@ public class PixelGuideVendor : MonoBehaviour
 
     private float holdScale = 1f;
 
+    // ---- shop peek: while ShopHold is on Cubie sticks out from under the Shop button (top right) and points his stick up at it until the shop is opened ----
+    private bool peeking;
+    private Coroutine peekRoutine;
+    private const float PeekScale = 0.6f, StickLength = 422f;   // (stick length in his own drawing units: arm + stick + tip)
+
+    private IEnumerator PeekRoutine()
+    {
+        peeking = true;
+        BuildUI();
+        characterRect.anchorMin = characterRect.anchorMax = new Vector2(1f, 1f);
+        characterRect.pivot = new Vector2(0.5f, 1f);   // his top edge hangs from the point under the button
+        characterRect.localScale = Vector3.one * PeekScale;
+        if (armL != null) armL.gameObject.SetActive(false);
+        if (pointer != null) pointer.gameObject.SetActive(true);
+        Canvas canvas = canvasRoot.GetComponent<Canvas>();
+        float slide = 0f;
+        while (ShopHold && characterRect != null)
+        {
+            slide = Mathf.MoveTowards(slide, 1f, Time.unscaledDeltaTime / Mathf.Max(0.2f, slideSeconds * 0.5f));
+            float k = Mathf.SmoothStep(0f, 1f, slide);
+            RectTransform button = shop != null ? shop.ShopButtonRect : null;
+            float scale = canvas != null && canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
+            float w = characterRect.sizeDelta.x * PeekScale;
+            Vector3[] c = new Vector3[4];
+            if (button != null) button.GetWorldCorners(c);
+            else { c[0] = new Vector3(Screen.width - 200f, Screen.height - 120f, 0f); c[2] = c[0] + new Vector3(160f, 80f, 0f); }
+            Vector2 buttonMid = (c[0] + c[2]) * 0.5f;
+            // Resting spot: just under the button, kept inside the screen; he slides in from the right edge.
+            float restX = Mathf.Min(buttonMid.x - 40f, Screen.width - w * 0.5f * scale - 10f * scale);
+            float x = Mathf.Lerp(Screen.width + w * 0.5f * scale, restX, k);
+            float now = Time.unscaledTime;
+            characterRect.anchoredPosition = new Vector2((x - Screen.width) / scale, (c[0].y - 10f * scale - Screen.height) / scale + Mathf.Sin(now * 2.4f) * 2f);
+            characterRect.localRotation = Quaternion.identity;
+            if (pointer != null)
+            {
+                Vector3 target = new Vector3(buttonMid.x, c[0].y + (c[2].y - c[0].y) * 0.3f, 0f);
+                Vector2 dir = (Vector2)(target - pointer.position);
+                float ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f + Mathf.Sin(now * 1.6f) * 2f;
+                pointer.rotation = Quaternion.Euler(0f, 0f, ang);
+                // The stick is only as long as the way to the button, so it touches it instead of poking past it; it taps now and then.
+                float reach = pointer.lossyScale.x > 0f ? dir.magnitude / (StickLength * pointer.lossyScale.x) : 1f;
+                float tap = Mathf.Max(0f, Mathf.Sin(now * 3.2f)) * 0.06f;
+                pointer.localScale = new Vector3(1f, Mathf.Clamp(reach, 0.3f, 1f) * (1f - tap), 1f);
+            }
+            Glance();
+            yield return null;
+        }
+        // The shop was opened: he slips back out to the right.
+        if (pointer != null) pointer.gameObject.SetActive(false);
+        if (armL != null) armL.gameObject.SetActive(true);
+        if (characterRect != null)
+        {
+            float from = characterRect.anchoredPosition.x, to = characterRect.sizeDelta.x * PeekScale + 40f;
+            for (float t = 0f; t < 0.4f && characterRect != null; t += Time.unscaledDeltaTime)
+            {
+                characterRect.anchoredPosition = new Vector2(Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f, t / 0.4f)), characterRect.anchoredPosition.y);
+                yield return null;
+            }
+        }
+        if (!visiting && !narrating && canvasRoot != null) Destroy(canvasRoot);
+        peeking = false;
+        peekRoutine = null;
+    }
+
     private void UpdateHold()
     {
         bool leave = PixelTitleScreen.Showing || !PixelHints.TipsEnabled || shop == null || !shop.ShopAvailable || PixelStats.Total(PixelShopTutorial.DoneKey) >= 1d;
@@ -328,6 +392,7 @@ public class PixelGuideVendor : MonoBehaviour
     private void Update()
     {
         if (ShopHold) UpdateHold();
+        if (ShopHold && !peeking && !disableGuide && !visiting && !narrating) peekRoutine = StartCoroutine(PeekRoutine());
         if (disableGuide || clicker == null || visiting) { if (disableGuide && lastBlocker != "disabled") { lastBlocker = "disabled"; PixelDebug.Info("Cubie is off: disableGuide is ticked", this); } return; }
         if (shop == null) shop = PixelFind.First<PixelShop>();
         if (stats == null) stats = PixelFind.First<PixelStats>();

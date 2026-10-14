@@ -884,3 +884,4 @@
 [2026-10-14 04:50 UTC] Collapsed achievement popup: icon box and arrow button now have a clear gap and the same top and bottom (collapsed width is never smaller than the two plus margins).
 [2026-10-14 04:51 UTC] Save / Load window: the selected slot's blue highlight is now its own layer (and the gold outline is gone) so it follows the selection when you click a different slot.
 [2026-10-14 05:01 UTC] Added the UI unification plan (single button builder, compile-check guard, button roles, one theme object) to the to-do list.
+[2026-10-14 05:03 UTC] 'Buy the RGB pack' lead: the chevron arrows, rings and label are gone; the Shop button gets a soft slow glow and Cubie slides out from the right under the Shop button and points his stick up at it until the shop is opened.
