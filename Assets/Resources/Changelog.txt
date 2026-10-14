@@ -974,3 +974,5 @@
 [2026-10-14 12:32 UTC] The menu-open sound is now a soft, mellow water-drop tip (gentle rising tone, no thump) with a slight random pitch, so it stays pleasant when heard thousands of times.
 [2026-10-14 12:35 UTC] Removing placed machines (belts, kilns, splitters, elevators, solar panels...) now turns them red as the hold ring fills, like the wood chipper; the running potion line reddens and trembles slightly as its cancel fills.
 [2026-10-14 12:40 UTC] The Bank, UFO Helper and Autosaves windows now play the menu-open sound too; the Keybinds tab got a search bar that filters what you can add and the list of bound keys.
+[2026-10-14 12:48 UTC] My Window is now called Pocket (title, docked button tip, Database pin buttons).
+[2026-10-14 12:48 UTC] Pocket's Pinned tab is now a board of widgets: drag a card by its header to move it, '-' folds it, hold a small x to remove it (the card turns red), and a blank card with a + under the last one opens a search to pin something new (it comes back when the last widget is removed). Edit mode is gone.

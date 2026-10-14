@@ -1,5 +1,9 @@
 // ---- System notes (moved here from CLAUDE.md) ----
-// PixelMyWindow.cs
+// PixelMyWindow.cs   (the window is called POCKET now; the class and the saved keys keep the old name)
+//   POCKET'S PINNED TAB IS A BOARD OF WIDGETS (like the Dev Hub's): each pinned thing is a card (BuildCard) with a header you DRAG by (PixelPocketGrip: the cards slide round each other, the order is saved in the
+//   entries), a '-' that folds it up to its header (Entry.min, saved), and a small x you HOLD with the left button (0.6 s, a ring round the cursor, the card turns red: UpdateRemoveHold) to remove it. Under the last card a BLANK
+//   card with a + opens a search (OpenPicker / FillPicker: every currency, skill, goal, tool, item, achievement and a note, filtered as you type); picking one pins it and a new blank card follows. With no card left only the
+//   blank one shows. There is no Edit mode any more. (Old text below that talks about Edit mode / rows describes the earlier list.)
 //   My Window (the player's own window; component added by PixelClicker.Awake): a docked 'My Window' button on the right edge under
 //   the Pixel Guide (shows once two pixel types are unlocked, showFromStart) opens ONE free window (canvas 107, not registered with
 //   PixelWindows, not closed by other windows) that is dragged by its header, resized by the corner handle (position / size / open
@@ -44,12 +48,12 @@ using UnityEngine.UI;
 /// </summary>
 public class PixelMyWindow : MonoBehaviour
 {
-    [Header("My Window")]
-    [Tooltip("Show the docked 'My Window' button from the start. Off = it appears once two pixel types are unlocked (like the Pixel Guide).")]
+    [Header("Pocket")]
+    [Tooltip("Show the docked 'Pocket' button from the start. Off = it appears once two pixel types are unlocked (like the Pixel Guide).")]
     [SerializeField] private bool showFromStart = false;
 
     [Tooltip("Window title.")]
-    [SerializeField] private string windowTitle = "My Window";
+    [SerializeField] private string windowTitle = "Pocket";
 
     [Tooltip("Starting size of the window (canvas units). 0 = the coded default (450 x 660, tall).")]
     [SerializeField] private Vector2 defaultSize = Vector2.zero;
@@ -80,6 +84,7 @@ public class PixelMyWindow : MonoBehaviour
         public string key = "";
         public bool flag;              // currency: show the per-minute rate
         public string text = "";       // note text
+        public bool min;               // the widget is folded up to its header
     }
 
     [Serializable]
@@ -373,7 +378,7 @@ public class PixelMyWindow : MonoBehaviour
         drag.onMoved = () => { ClampToScreen(); UpdateDockHint(); geometryDirty = true; };
         drag.onEnd = () => { TryDock(); UpdateDockHint(); geometryDirty = true; };
 
-        TMP_Text title = PixelUIKit.CreateText(Font, header.transform, "Title", windowTitle, 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
+        TMP_Text title = PixelUIKit.CreateText(Font, header.transform, "Title", windowTitle == "My Window" ? "Pocket" : windowTitle, 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         PixelUIKit.Caps(title);
         title.textWrappingMode = TextWrappingModes.NoWrap;
         title.enableAutoSizing = true;
@@ -741,7 +746,7 @@ public class PixelMyWindow : MonoBehaviour
         GameObject editObject = editButtonObject;
         if (editObject != null)
         {
-            bool showEdit = !minimized && !logTab && !showKeysTab;
+            bool showEdit = false;   // (the Pinned tab is a board of widgets now: no Edit mode)
             editObject.SetActive(showEdit);
             if (showEdit) { editObject.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, 0f); x -= 96f + 8f; }
         }
@@ -771,6 +776,7 @@ public class PixelMyWindow : MonoBehaviour
         if (hoverDockImage != null) hoverDockImage.color = HoverDocked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
         float top = 64f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
         scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
+        if (pickerRoot != null && !scroll.gameObject.activeSelf) pickerRoot.SetActive(false);
         if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
         if (tabBar != null) tabBar.SetActive(!minimized);
         if (tabLogButton != null) tabLogButton.gameObject.SetActive(docked);
@@ -890,39 +896,377 @@ public class PixelMyWindow : MonoBehaviour
         return subs;
     }
 
+    // ------------------------------------------------------------------
+    // The Pinned tab as a board of WIDGETS (cards): each pinned thing is a card with a header you drag by, a '-' to fold it up and a small x you HOLD to remove it; a blank card with a +
+    // under the last one opens a search to pin something new. (Same look and moves as the Dev Hub's widgets.)
+    // ------------------------------------------------------------------
+
+    private class Card
+    {
+        public Entry entry;
+        public RectTransform rect, xRect;
+        public Image bg;
+        public TMP_Text minLabel;
+        public readonly List<Row> rows = new List<Row>();
+        public float full, height;
+    }
+
+    private readonly List<Card> cards = new List<Card>();
+    private RectTransform plusCard;
+    private Card dragging;
+    private float dragTop, boardTotal;
+    private const float CardHeader = 34f, CardGap = 8f, PlusHeight = 78f, RemoveHoldSeconds = 0.6f;
+    private static readonly Color CardColor = new Color(0.07f, 0.09f, 0.16f, 0.9f), CardRed = new Color(0.75f, 0.12f, 0.1f, 0.95f);
+
     private void RebuildRows()
     {
         if (listContent == null) return;
-        foreach (Row r in rows) if (r.rt != null) Destroy(r.rt.gameObject);
-        rows.Clear();
-        float y = 4f;
+        foreach (Card c in cards) if (c.rect != null) Destroy(c.rect.gameObject);
+        foreach (Row r in rows) if (r.rt != null) Destroy(r.rt.gameObject);   // (rows not yet inside a card)
+        if (plusCard != null) Destroy(plusCard.gameObject);
+        cards.Clear(); rows.Clear(); plusCard = null; dragging = null;
         for (int i = 0; i < blob.entries.Count; i++)
         {
             Entry e = blob.entries[i];
             List<string> subs = Expand(e);
+            List<Row> made = new List<Row>();
             for (int s = 0; s < subs.Count; s++)
             {
                 Row row = BuildRow(e, subs[s], s == 0, i);
-                if (row == null) continue;
-                row.rt.anchoredPosition = new Vector2(0f, -y);
-                y += row.height + 6f;
-                rows.Add(row);
+                if (row != null) made.Add(row);
+            }
+            if (made.Count == 0) continue;
+            cards.Add(BuildCard(e, made));
+        }
+        BuildPlusCard();
+        rowSignature = Signature();
+        LayoutBoard();
+        RefreshValues();
+    }
+
+    private string TitleFor(Entry e)
+    {
+        switch (e.type)
+        {
+            case "currency":
+            {
+                if (System.Enum.TryParse(e.key, out PixelClicker.PixelType t) && clicker != null)
+                {
+                    int ti = clicker.IndexOf(t);
+                    if (ti >= 0) { string n = clicker.Tiers[ti].displayName; return n.EndsWith(" Pixels") ? n.Substring(0, n.Length - 7) : n; }
+                }
+                return "Currency";
+            }
+            case "skill":
+            {
+                if (e.key == "training") return "Skill in training";
+                if (e.key == "all") return "All skills";
+                PixelSkills sk = PixelSkills.Instance;
+                if (sk != null) foreach (PixelSkills.SkillPack p in sk.Packs) if (p.id == e.key) return p.displayName;
+                return "Skill";
+            }
+            case "goal":
+            {
+                if (e.key == "next") return "Next goal";
+                if (e.key == "all") return "Goals";
+                if (e.key.StartsWith("mg:")) { PixelMinigame m = PixelMinigame.Find(e.key.Substring(3)); if (m != null) return m.TrackerTitle; }
+                return "Goal";
+            }
+            case "achievement":
+            {
+                PixelAchievements ach = PixelFind.First<PixelAchievements>();
+                if (ach != null) for (int i = 0; i < ach.Count; i++) if (ach.GetId(i) == e.key) return ach.GetTitle(i);
+                return "Achievement";
+            }
+            case "fav":
+            {
+                if (e.key.StartsWith("tool:") && TryGetTool(e.key.Substring(5), out string tn, out _)) return tn;
+                return e.key.StartsWith("item:") ? e.key.Substring(5) : e.key;
             }
         }
-        if (rows.Count == 0)
+        return "Note";
+    }
+
+    private Card BuildCard(Entry e, List<Row> made)
+    {
+        Card c = new Card { entry = e };
+        GameObject go = new GameObject("Widget", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(listContent, false);
+        c.bg = go.GetComponent<Image>();
+        c.bg.color = CardColor;
+        PixelUIKit.StyleBox(c.bg);
+        c.rect = go.GetComponent<RectTransform>();
+        c.rect.anchorMin = new Vector2(0f, 1f); c.rect.anchorMax = new Vector2(1f, 1f); c.rect.pivot = new Vector2(0.5f, 1f);
+
+        // The body: the entry's rows, one under the other.
+        float y = CardHeader + 2f;
+        foreach (Row r in made)
         {
-            Row hint = new Row { entry = null, height = 90f };
-            hint.rt = NewRow(90f);
-            TMP_Text t = Text(hint.rt, "Hint", "Nothing here yet.\nPress Edit to pin currencies, skills, goals, achievements, notes and favorites.", 20f, TextAlignmentOptions.Center, dimTextColor);
-            Stretch(t.rectTransform, 12f, 6f);
-            hint.rt.anchoredPosition = new Vector2(0f, -4f);
-            rows.Add(hint);
-            y = 100f;
+            r.rt.SetParent(c.rect, false);
+            r.rt.anchorMin = new Vector2(0f, 1f); r.rt.anchorMax = new Vector2(1f, 1f); r.rt.pivot = new Vector2(0.5f, 1f);
+            r.rt.sizeDelta = new Vector2(-12f, r.height);
+            r.rt.anchoredPosition = new Vector2(0f, -y);
+            y += r.height + 4f;
+            c.rows.Add(r);
+            rows.Add(r);
         }
-        contentHeight = y + 4f;
+        c.full = y + 4f;
+
+        // The header: a strip you drag by (with a grip), the title, '-' (fold) and a small x (hold to remove).
+        GameObject hgo = new GameObject("Header Handle", typeof(RectTransform), typeof(Image), typeof(PixelPocketGrip));
+        hgo.transform.SetParent(c.rect, false);
+        hgo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.03f);
+        RectTransform hr = hgo.GetComponent<RectTransform>();
+        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(0f, CardHeader); hr.anchoredPosition = Vector2.zero;
+        PixelPocketGrip grip = hgo.GetComponent<PixelPocketGrip>();
+        grip.owner = this; grip.card = c;
+        GameObject gi = new GameObject("Grip", typeof(RectTransform), typeof(Image));
+        gi.transform.SetParent(hr, false);
+        Image gim = gi.GetComponent<Image>();
+        gim.sprite = PixelUIKit.GripSprite(); gim.color = new Color(1f, 1f, 1f, 0.45f); gim.raycastTarget = false;
+        RectTransform gr = gi.GetComponent<RectTransform>();
+        gr.anchorMin = gr.anchorMax = gr.pivot = new Vector2(0f, 0.5f);
+        gr.sizeDelta = new Vector2(24f, 26f); gr.anchoredPosition = new Vector2(8f, 0f);
+        TMP_Text title = Text(hr, "Title", TitleFor(e).ToUpperInvariant(), 20f, TextAlignmentOptions.MidlineLeft, new Color(0.85f, 0.9f, 1f, 0.92f), FontStyles.Bold);
+        title.raycastTarget = false;
+        title.rectTransform.anchorMin = Vector2.zero; title.rectTransform.anchorMax = Vector2.one;
+        title.rectTransform.offsetMin = new Vector2(40f, 0f); title.rectTransform.offsetMax = new Vector2(-78f, 0f);
+
+        Button x = PixelUIKit.CreateButton(Font, c.rect, "Remove (hold)", "x", new Vector2(26f, 24f), new Color(0.55f, 0.2f, 0.2f, 0.9f), Color.white, 18f);
+        c.xRect = x.GetComponent<RectTransform>();
+        c.xRect.anchorMin = c.xRect.anchorMax = c.xRect.pivot = new Vector2(1f, 1f);
+        c.xRect.anchoredPosition = new Vector2(-6f, -5f);
+        Button fold = PixelUIKit.CreateButton(Font, c.rect, "Minimize", e.min ? "+" : "-", new Vector2(30f, 24f), new Color(0.3f, 0.36f, 0.5f, 0.9f), Color.white, 20f);
+        RectTransform fr = fold.GetComponent<RectTransform>();
+        fr.anchorMin = fr.anchorMax = fr.pivot = new Vector2(1f, 1f);
+        fr.anchoredPosition = new Vector2(-38f, -5f);
+        c.minLabel = fold.GetComponentInChildren<TMP_Text>();
+        fold.onClick.AddListener(() => { SetFolded(c, !c.entry.min); });
+        ApplyFold(c);
+        return c;
+    }
+
+    private void ApplyFold(Card c)
+    {
+        foreach (Row r in c.rows) if (r.rt != null) r.rt.gameObject.SetActive(!c.entry.min);
+        c.height = c.entry.min ? CardHeader : c.full;
+        c.rect.sizeDelta = new Vector2(-6f, c.height);
+        if (c.minLabel != null) c.minLabel.text = c.entry.min ? "+" : "-";
+    }
+
+    private void SetFolded(Card c, bool on)
+    {
+        c.entry.min = on;
+        ApplyFold(c);
+        SaveEntries();
+        LayoutBoard();
+    }
+
+    private void BuildPlusCard()
+    {
+        GameObject go = new GameObject("Blank Widget", typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(listContent, false);
+        Image bg = go.GetComponent<Image>();
+        bg.color = new Color(1f, 1f, 1f, 0.05f);
+        PixelUIKit.StyleBox(bg, true);
+        go.GetComponent<Button>().targetGraphic = bg;
+        plusCard = go.GetComponent<RectTransform>();
+        plusCard.anchorMin = new Vector2(0f, 1f); plusCard.anchorMax = new Vector2(1f, 1f); plusCard.pivot = new Vector2(0.5f, 1f);
+        plusCard.sizeDelta = new Vector2(-6f, PlusHeight);
+        TMP_Text plus = Text(plusCard, "Plus", "+", 56f, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.55f), FontStyles.Bold);
+        plus.raycastTarget = false;
+        PixelUIKit.Stretch(plus.rectTransform);
+        go.GetComponent<Button>().onClick.AddListener(OpenPicker);
+    }
+
+    private void LayoutBoard()
+    {
+        float y = 4f;
+        foreach (Card c in cards)
+        {
+            if (c != dragging) c.rect.anchoredPosition = new Vector2(0f, -y);
+            y += c.height + CardGap;
+        }
+        boardTotal = y;
+        if (plusCard != null) plusCard.anchoredPosition = new Vector2(0f, -y);
+        contentHeight = y + PlusHeight + 8f;
+        if (scroll != null) UpdateContentHeight();
+    }
+
+    internal void BeginCardDragObj(object o) { if (o is Card c) BeginCardDrag(c); }
+    internal void DragCardObj(object o, float dy) { if (o is Card c) DragCard(c, dy); }
+    internal void EndCardDragObj(object o) { if (o is Card c) EndCardDrag(c); }
+
+    private void BeginCardDrag(Card c) { dragging = c; dragTop = -c.rect.anchoredPosition.y; c.rect.SetAsLastSibling(); }
+
+    private void DragCard(Card c, float screenDeltaY)
+    {
+        if (dragging != c) return;
+        dragTop = Mathf.Clamp(dragTop - screenDeltaY / CanvasScale, 0f, Mathf.Max(0f, boardTotal - CardGap - c.height));
+        c.rect.anchoredPosition = new Vector2(0f, -dragTop);
+        float centre = dragTop + c.height * 0.5f, y = 4f;
+        int index = 0;
+        foreach (Card other in cards)
+        {
+            if (other == c) continue;
+            if (y + other.height * 0.5f < centre) index++;
+            y += other.height + CardGap;
+        }
+        int from = cards.IndexOf(c);
+        if (index != from) { cards.RemoveAt(from); cards.Insert(index, c); }
+        LayoutBoard();
+    }
+
+    private void EndCardDrag(Card c)
+    {
+        if (dragging != c) return;
+        dragging = null;
+        // The saved order follows the cards.
+        List<Entry> ordered = new List<Entry>();
+        foreach (Card k in cards) if (!ordered.Contains(k.entry)) ordered.Add(k.entry);
+        foreach (Entry e in blob.entries) if (!ordered.Contains(e)) ordered.Add(e);
+        blob.entries = ordered;
+        SaveEntries();
         rowSignature = Signature();
-        Layout();
-        RefreshValues();
+        LayoutBoard();
+    }
+
+    /// <summary>Hold the LEFT button on a card's small x to remove it: a ring fills round the cursor and the card turns red.</summary>
+    private void UpdateRemoveHold()
+    {
+        Card hot = null;
+        if (cards.Count > 0 && scroll != null && scroll.gameObject.activeInHierarchy && !minimized)
+        {
+            Vector2 p = PixelInput.PointerPosition();
+            foreach (Card c in cards)
+                if (c.xRect != null && c.xRect.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(c.xRect, p, null)) { hot = c; break; }
+        }
+        bool done = PixelHold.Update(this, hot, RemoveHoldSeconds, "", new Color(1f, 0.3f, 0.25f, 1f), true, "remove_buildup", true);
+        foreach (Card c in cards)
+            if (c.bg != null) c.bg.color = c == hot ? Color.Lerp(CardColor, CardRed, PixelHold.ProgressOf(c)) : CardColor;
+        if (done && hot != null)
+        {
+            blob.entries.Remove(hot.entry);
+            SaveEntries();
+            PixelAudio.Play("device_remove");
+            RebuildRows();   // (with no widget left, the blank one with the + is all that shows)
+        }
+    }
+
+    // ---- the picker: search for what to pin ----
+
+    private struct Option { public string label, type, key; }
+    private GameObject pickerRoot;
+    private TMP_InputField pickerSearch;
+    private RectTransform pickerContent;
+    private ScrollRect pickerScroll;
+    private GameObject pickerBar;
+    private string pickerText = "";
+
+    private List<Option> AllOptions()
+    {
+        List<Option> list = new List<Option>();
+        if (clicker == null) return list;
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+        {
+            if (!t.unlocked && t.count <= 0d) continue;
+            string n = t.displayName.EndsWith(" Pixels") ? t.displayName.Substring(0, t.displayName.Length - 7) : t.displayName;
+            list.Add(new Option { label = n, type = "currency", key = t.type.ToString() });
+        }
+        list.Add(new Option { label = "Skill in training (follows)", type = "skill", key = "training" });
+        list.Add(new Option { label = "All skills", type = "skill", key = "all" });
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills != null) foreach (PixelSkills.SkillPack p in skills.Packs) if (skills.IsAvailable(p)) list.Add(new Option { label = "Skill: " + p.displayName, type = "skill", key = p.id });
+        list.Add(new Option { label = "Next goal", type = "goal", key = "next" });
+        list.Add(new Option { label = "All current goals", type = "goal", key = "all" });
+        foreach (PixelMinigame m in PixelMinigame.All)
+            if (m != null && !(m is PixelVisitorMinigame) && m.HasTracker) list.Add(new Option { label = "Goal: " + m.TrackerTitle, type = "goal", key = "mg:" + m.Id });
+        foreach (var tool in Tools) list.Add(new Option { label = "Tool: " + tool.name, type = "fav", key = "tool:" + tool.id });
+        PixelConsumables consumables = PixelFind.First<PixelConsumables>();
+        if (consumables != null)
+            for (int i = 0; i < consumables.ItemCount; i++)
+                if (consumables.ItemListable(i)) list.Add(new Option { label = consumables.ItemName(i), type = "fav", key = "item:" + consumables.ItemName(i) });
+        PixelAchievements ach = PixelFind.First<PixelAchievements>();
+        if (ach != null) for (int i = 0; i < ach.Count; i++) list.Add(new Option { label = "Achievement: " + ach.GetTitle(i), type = "achievement", key = ach.GetId(i) });
+        list.Add(new Option { label = "A note", type = "note", key = "" });
+        return list;
+    }
+
+    private void OpenPicker()
+    {
+        if (pickerRoot == null) BuildPicker();
+        RectTransform sr = scroll.GetComponent<RectTransform>();
+        RectTransform pr = pickerRoot.GetComponent<RectTransform>();
+        pr.anchorMin = sr.anchorMin; pr.anchorMax = sr.anchorMax; pr.offsetMin = sr.offsetMin; pr.offsetMax = sr.offsetMax;
+        pickerRoot.SetActive(true);
+        pickerRoot.transform.SetAsLastSibling();
+        pickerText = "";
+        pickerSearch.SetTextWithoutNotify("");
+        FillPicker();
+        pickerSearch.ActivateInputField();
+    }
+
+    private void ClosePicker() { if (pickerRoot != null) pickerRoot.SetActive(false); }
+
+    private void BuildPicker()
+    {
+        pickerRoot = new GameObject("Pocket Picker", typeof(RectTransform), typeof(Image));
+        pickerRoot.transform.SetParent(windowObject.transform, false);
+        pickerRoot.GetComponent<Image>().color = new Color(0.08f, 0.1f, 0.17f, 0.98f);
+        PixelUIKit.StyleBox(pickerRoot.GetComponent<Image>());
+        RectTransform root = pickerRoot.GetComponent<RectTransform>();
+
+        pickerSearch = PixelUIKit.CreateInputField(Font, root, "Search", new Vector2(100f, 44f), new Color(0.12f, 0.15f, 0.22f, 1f), Color.white, 22f, "Search for something to pin...");
+        RectTransform sf = pickerSearch.GetComponent<RectTransform>();
+        sf.anchorMin = new Vector2(0f, 1f); sf.anchorMax = new Vector2(1f, 1f); sf.pivot = new Vector2(0.5f, 1f);
+        sf.offsetMin = new Vector2(8f, -56f); sf.offsetMax = new Vector2(-72f, -10f);
+        PixelUIKit.AddSearchIcon(pickerSearch);
+        pickerSearch.onValueChanged.AddListener(v => { pickerText = (v ?? "").Trim().ToLowerInvariant(); FillPicker(); });
+        Button close = PixelUIKit.CreateButton(Font, root, "Cancel", "X", new Vector2(54f, 44f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 24f);
+        RectTransform cr = close.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
+        cr.anchoredPosition = new Vector2(-8f, -10f);
+        close.onClick.AddListener(ClosePicker);
+
+        pickerScroll = PixelUIKit.CreateScrollView(root, "Options", new Color(1f, 1f, 1f, 0.35f), 12f, 60f, out pickerContent, out pickerBar);
+        RectTransform ps = pickerScroll.GetComponent<RectTransform>();
+        ps.anchorMin = Vector2.zero; ps.anchorMax = Vector2.one;
+        ps.offsetMin = new Vector2(6f, 6f); ps.offsetMax = new Vector2(-6f, -66f);
+    }
+
+    private void FillPicker()
+    {
+        for (int i = pickerContent.childCount - 1; i >= 0; i--) Destroy(pickerContent.GetChild(i).gameObject);
+        float y = 2f;
+        int shown = 0;
+        foreach (Option o in AllOptions())
+        {
+            if (pickerText.Length > 0 && !o.label.ToLowerInvariant().Contains(pickerText)) continue;
+            if (shown >= 70) break;
+            shown++;
+            bool already = o.type != "note" && blob.entries.Exists(e => e.type == o.type && e.key == o.key);
+            Option opt = o;
+            Button b = PixelUIKit.CreateButton(Font, pickerContent, "Option", o.label + (already ? "   (pinned)" : ""), new Vector2(100f, 42f), already ? new Color(0.2f, 0.22f, 0.28f, 1f) : buttonColor, Color.white, 21f);
+            RectTransform r = b.GetComponent<RectTransform>();
+            r.anchorMin = new Vector2(0f, 1f); r.anchorMax = new Vector2(1f, 1f); r.pivot = new Vector2(0.5f, 1f);
+            r.offsetMin = new Vector2(4f, -(y + 42f)); r.offsetMax = new Vector2(-4f, -y);
+            TMP_Text lbl = b.GetComponentInChildren<TMP_Text>();
+            lbl.alignment = TextAlignmentOptions.MidlineLeft; lbl.enableAutoSizing = true; lbl.fontSizeMax = 21f; lbl.fontSizeMin = 11f; lbl.textWrappingMode = TextWrappingModes.NoWrap;
+            lbl.rectTransform.offsetMin = new Vector2(12f, 0f);
+            b.interactable = !already;
+            b.onClick.AddListener(() => { blob.entries.Add(new Entry { type = opt.type, key = opt.key }); SaveEntries(); ClosePicker(); RebuildRows(); scroll.verticalNormalizedPosition = 0f; });
+            y += 46f;
+        }
+        if (shown == 0)
+        {
+            TMP_Text none = Text(pickerContent, "None", "Nothing matches.", 22f, TextAlignmentOptions.Center, dimTextColor, FontStyles.Italic);
+            none.rectTransform.anchorMin = new Vector2(0f, 1f); none.rectTransform.anchorMax = new Vector2(1f, 1f); none.rectTransform.pivot = new Vector2(0.5f, 1f);
+            none.rectTransform.sizeDelta = new Vector2(0f, 50f); none.rectTransform.anchoredPosition = new Vector2(0f, -10f);
+            y = 60f;
+        }
+        Canvas.ForceUpdateCanvases();
+        PixelUIKit.UpdateScrollView(pickerScroll, pickerBar, y + 4f, pickerScroll.GetComponent<RectTransform>().rect.height);
     }
 
     private RectTransform NewRow(float height)
@@ -1351,6 +1695,7 @@ public class PixelMyWindow : MonoBehaviour
         saveTimer -= Time.unscaledDeltaTime;
         if (geometryDirty && saveTimer <= 0f && !PixelInput.LeftHeld()) { SaveGeometry(); saveTimer = 0.5f; }
 
+        if (open) UpdateRemoveHold();
         if (open && dockSide != 0) UpdateDock();
         if (open) UpdateDockHint();
         if (!open) return;
@@ -1363,6 +1708,16 @@ public class PixelMyWindow : MonoBehaviour
         if (Signature() != rowSignature) RebuildRows();
         else RefreshValues();
     }
+}
+
+/// <summary>The header strip of a Pocket widget: dragging it slides the card up or down.</summary>
+public class PixelPocketGrip : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+{
+    internal PixelMyWindow owner;
+    internal object card;
+    public void OnBeginDrag(PointerEventData e) { owner.BeginCardDragObj(card); }
+    public void OnDrag(PointerEventData e) { owner.DragCardObj(card, e.delta.y); }
+    public void OnEndDrag(PointerEventData e) { owner.EndCardDragObj(card); }
 }
 
 /// <summary>The corner handle that resizes My Window.</summary>

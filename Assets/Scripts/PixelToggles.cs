@@ -928,7 +928,7 @@ public class PixelToggles : MonoBehaviour
         tipRect.pivot = new Vector2(1f, 1f);
         tipRect.sizeDelta = new Vector2(230f, fontSize * 1.9f);
         tipRect.anchoredPosition = new Vector2(size * 0.5f, -6f);
-        TMP_Text tipLabel = PixelUIKit.CreateText(font, tip.transform, "Text", "My Window", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.88f, 0.4f, 1f));
+        TMP_Text tipLabel = PixelUIKit.CreateText(font, tip.transform, "Text", "Pocket", fontSize, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.88f, 0.4f, 1f));
         PixelUIKit.Caps(tipLabel);
         PixelUIKit.Stretch(tipLabel.rectTransform);
         tip.SetActive(false);

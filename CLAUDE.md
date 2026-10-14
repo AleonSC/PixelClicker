@@ -60,7 +60,7 @@
 | `PixelPetsCustomize.cs` | Part of partial class PixelPets: names and outfits. | `docs/systems/PixelPetsCustomize.md` |
 | `PixelPetsStudio.cs` | Part of partial class PixelPets: the Outfit Studio (button 'Design outfits' in the Customize Pet window, own canvas customizeSortingOrder + 20, PixelWindows 170). | in the header comment of `PixelPetsStudio.cs` |
 | `PixelToggles.cs` | Toggles window: a button docked to the middle of the right edge (PixelHud.Dock with anchor (1, 0.5) = side docking, slides sideways) stays hidden until the Auto Clicker is bought (hideUntilAutoClicker | `docs/systems/PixelToggles.md` |
-| `PixelMyWindow.cs` | My Window (the player's own window; component added by PixelClicker.Awake): | in the header comment of `PixelMyWindow.cs` |
+| `PixelMyWindow.cs` | Pocket, formerly My Window (the player's own window; component added by PixelClicker.Awake): | in the header comment of `PixelMyWindow.cs` |
 | `PixelCustomKeys.cs` | Custom keybinds: bind any item (potion, device...) or tool to your own key; the window is the Keybinds tab of My Window; saved per save file. | in the header comment of `PixelCustomKeys.cs` |
 | `PixelBlockTooltip.cs` | Block hover tooltip (added by PixelClicker.Awake; | in the header comment of `PixelBlockTooltip.cs` |
 | `PixelPixelGuide.cs` / `PixelGuideTexts.cs` | Pixel Guide (added by PixelClicker.Awake): | in the header comment of `PixelPixelGuide.cs` |

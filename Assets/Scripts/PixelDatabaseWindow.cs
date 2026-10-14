@@ -205,7 +205,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         pr.anchoredPosition = new Vector2(-22f, -76f);
         picGo.SetActive(false);
         detailRect = detailLabel.rectTransform;
-        pinButton = PixelUIKit.CreateButton(Font, detail.transform, "Pin", "Pin to My Window", new Vector2(300f, 40f), new Color(0.25f, 0.45f, 0.8f, 1f), Color.white, 20f);
+        pinButton = PixelUIKit.CreateButton(Font, detail.transform, "Pin", "Pin to Pocket", new Vector2(300f, 40f), new Color(0.25f, 0.45f, 0.8f, 1f), Color.white, 20f);
         RectTransform pbr = pinButton.GetComponent<RectTransform>();
         pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 1f);
         pbr.anchoredPosition = new Vector2(-22f, -278f);
@@ -335,7 +335,7 @@ public class PixelDatabaseWindow : MonoBehaviour
     {
         bool can = selected != null && selected.pinType != null && Open(selected) && PixelMyWindow.CanPin;
         pinButton.gameObject.SetActive(can);
-        if (can) pinLabel.text = PixelMyWindow.IsPinned(selected.pinType, selected.pinKey) ? "Unpin from My Window" : "Pin to My Window";
+        if (can) pinLabel.text = PixelMyWindow.IsPinned(selected.pinType, selected.pinKey) ? "Unpin from Pocket" : "Pin to Pocket";
     }
 
     private bool Open(PixelDatabase.Entry e) => e.discovered || showAll;
