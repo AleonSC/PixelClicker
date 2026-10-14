@@ -4,7 +4,7 @@
 //   minInterval..maxInterval s with at least minPixels (30) old pixels around, up to maxBricks of them (random) become the bricks:
 //   frozen (kinematic, colliders off, OldPixelDespawn.HoldAll), scaled to fit and glided (slideSeconds) into a wall in a court plane
 //   facing the camera (flat Sprites/Default blocks under a root, depthFraction of the way to the cube so it is in front of the old
-//   pixels; courtWidth/Height/CentreY, wallHeightFraction, brickColumns); all other old pixels shrink away and come back after the
+//   pixels; court = the whole screen between the black bars (manualCourtSize ticked: courtWidth/Height/CentreY), wallHeightFraction, brickColumns); all other old pixels shrink away and come back after the
 //   game (bystanderSeconds, same as Sorting Race) and the cube shrinks away (hideCube); the court's background is transparent by
 //   default (backOpacity 0..1, colour backColor). Mouse (projected onto the court plane) or Left/Right arrows move the paddle; the
 //   ball is a spinning CreateDisplayPixel of a random brick's type, speeds up per brick (speedUpPerBrick, maxBallSpeed); lives balls;
@@ -80,6 +80,9 @@ public class PixelBreakoutMinigame : PixelMinigame
     [SerializeField] private bool hideCube = true;
 
     [Header("Court")]
+    [Tooltip("Tick to use the three numbers below by hand. Off (default): the court fills the screen between the black bars.")]
+    [SerializeField] private bool manualCourtSize = false;
+
     [Range(0.3f, 0.9f)]
     [Tooltip("Court width as a fraction of the screen width.")]
     [SerializeField] private float courtWidth = 0.5f;
@@ -372,9 +375,18 @@ public class PixelBreakoutMinigame : PixelMinigame
         Transform target = clicker.PixelTransform;
         float dist = target != null ? Vector3.Distance(cam.transform.position, target.position) * depthFraction : 6f;
         dist = Mathf.Max(cam.nearClipPlane + 0.5f, dist);
-        Vector3 centre = cam.ViewportToWorldPoint(new Vector3(0.5f, courtCentreY, dist));
-        Vector3 left = cam.ViewportToWorldPoint(new Vector3(0.5f - courtWidth * 0.5f, courtCentreY, dist));
-        Vector3 top = cam.ViewportToWorldPoint(new Vector3(0.5f, courtCentreY + courtHeight * 0.5f, dist));
+        // The court is just big enough to match the screen: the full width and the height between the black bars (unless sized by hand).
+        float cw = courtWidth, ch = courtHeight, cy = courtCentreY;
+        if (!manualCourtSize)
+        {
+            float barFrac = PixelHud.Instance != null ? Mathf.Clamp(PixelHud.Instance.BarHeight / Mathf.Max(1f, Screen.height), 0f, 0.3f) : 0f;
+            cw = 0.98f;
+            ch = Mathf.Max(0.3f, 1f - 2f * barFrac - 0.02f);
+            cy = 0.5f;
+        }
+        Vector3 centre = cam.ViewportToWorldPoint(new Vector3(0.5f, cy, dist));
+        Vector3 left = cam.ViewportToWorldPoint(new Vector3(0.5f - cw * 0.5f, cy, dist));
+        Vector3 top = cam.ViewportToWorldPoint(new Vector3(0.5f, cy + ch * 0.5f, dist));
         halfW = Vector3.Dot(centre - left, cam.transform.right);
         halfH = Vector3.Dot(top - centre, cam.transform.up);
         if (halfW <= 0.01f || halfH <= 0.01f) return false;

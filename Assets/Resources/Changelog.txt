@@ -910,3 +910,4 @@
 [2026-10-14 07:19 UTC] The shuffle combo block now glows: when the shuffled filler comes back onto the cube during a combo, the cube's aura lights up gold and pulses (even with the aura setting off), so it is easy to tell from an ordinary filler block.
 [2026-10-14 07:22 UTC] The Ghost minigame's free potions now only come from pixels in the rotation being played (the current skill pack's blocks or the standard pixels), not from pixels the pack has replaced.
 [2026-10-14 07:24 UTC] Ultra Holes now only ask for pixels in the rotation being played (the current skill pack's blocks or the standard pixels) and never for hazards.
+[2026-10-14 07:31 UTC] Breakout: the court now fills the screen between the black bars by default (tick 'Manual Court Size' on the minigame to size it by hand again).
