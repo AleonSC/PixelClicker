@@ -56,28 +56,7 @@ public partial class PixelSkills
         pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0f, 1f);
         pr.anchoredPosition = new Vector2(14f, -12f);
         trackerPinImage = pin.GetComponent<Image>();
-        // A little pushpin drawn from three rectangles, tilted.
-        GameObject icon = new GameObject("Pin Icon", typeof(RectTransform));
-        icon.transform.SetParent(pin.transform, false);
-        RectTransform ir = icon.GetComponent<RectTransform>();
-        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
-        ir.sizeDelta = new Vector2(40f, 40f);
-        ir.localRotation = Quaternion.Euler(0f, 0f, 35f);
-        void Part(Vector2 size, Vector2 at, Color c)
-        {
-            GameObject g = new GameObject("Part", typeof(RectTransform), typeof(Image));
-            g.transform.SetParent(icon.transform, false);
-            g.GetComponent<Image>().color = c;
-            g.GetComponent<Image>().raycastTarget = false;
-            RectTransform r = g.GetComponent<RectTransform>();
-            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
-            r.sizeDelta = size;
-            r.anchoredPosition = at;
-        }
-        Part(new Vector2(26f, 8f), new Vector2(0f, 14f), new Color(0.95f, 0.35f, 0.3f));      // the head
-        Part(new Vector2(14f, 16f), new Vector2(0f, 4f), new Color(0.85f, 0.25f, 0.22f));    // the body
-        Part(new Vector2(20f, 5f), new Vector2(0f, -4f), new Color(0.95f, 0.95f, 1f));       // the collar
-        Part(new Vector2(4f, 16f), new Vector2(0f, -14f), new Color(0.85f, 0.88f, 0.95f));   // the needle
+        PixelUIKit.AddPinIcon(pin, 40f);   // the shared pushpin icon (the Inventory's pin button uses it too)
         pin.onClick.AddListener(PinTracker);
         PixelHoverTip tip = pin.gameObject.AddComponent<PixelHoverTip>();
         System.Func<string> source = () => "Pin your active skill with an XP bar in a small window you can move";

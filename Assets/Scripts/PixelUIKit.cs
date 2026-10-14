@@ -675,6 +675,33 @@ public static class PixelUIKit
     }
 
     /// <summary>Swaps a "&lt;" / "&gt;" arrow button's letter for a drawn triangle pointing left or right, tinted with the label's colour.</summary>
+    /// <summary>Draws the little tilted pushpin (the Skills window's pin button) on a button; 'size' is the icon's size in canvas units (the Skills button uses 40). One icon for every pin button.</summary>
+    public static void AddPinIcon(Button button, float size = 40f)
+    {
+        GameObject icon = new GameObject("Pin Icon", typeof(RectTransform));
+        icon.transform.SetParent(button.transform, false);
+        RectTransform ir = icon.GetComponent<RectTransform>();
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
+        ir.sizeDelta = new Vector2(size, size);
+        ir.localRotation = Quaternion.Euler(0f, 0f, 35f);
+        float k = size / 40f;
+        void Part(Vector2 partSize, Vector2 at, Color c)
+        {
+            GameObject g = new GameObject("Part", typeof(RectTransform), typeof(Image));
+            g.transform.SetParent(icon.transform, false);
+            g.GetComponent<Image>().color = c;
+            g.GetComponent<Image>().raycastTarget = false;
+            RectTransform r = g.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+            r.sizeDelta = partSize * k;
+            r.anchoredPosition = at * k;
+        }
+        Part(new Vector2(26f, 8f), new Vector2(0f, 14f), new Color(0.95f, 0.35f, 0.3f));      // the head
+        Part(new Vector2(14f, 16f), new Vector2(0f, 4f), new Color(0.85f, 0.25f, 0.22f));    // the body
+        Part(new Vector2(20f, 5f), new Vector2(0f, -4f), new Color(0.95f, 0.95f, 1f));       // the collar
+        Part(new Vector2(4f, 16f), new Vector2(0f, -14f), new Color(0.85f, 0.88f, 0.95f));   // the needle
+    }
+
     public static void UseArrowGlyph(Button button, bool pointLeft)
     {
         if (button == null) return;

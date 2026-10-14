@@ -1716,20 +1716,7 @@ public class PixelUI : MonoBehaviour
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
         rt.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
 
-        // Icon: four small squares (a tiny grid = "just the swatches").
-        float cell = size * 0.22f, gap = size * 0.1f;
-        for (int k = 0; k < 4; k++)
-        {
-            GameObject sq = new GameObject("Icon " + k, typeof(RectTransform), typeof(Image));
-            sq.transform.SetParent(compactButton.transform, false);
-            Image im = sq.GetComponent<Image>();
-            im.raycastTarget = false;
-            im.color = headerTextColor;
-            RectTransform sr = sq.GetComponent<RectTransform>();
-            sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0.5f, 0.5f);
-            sr.sizeDelta = new Vector2(cell, cell);
-            sr.anchoredPosition = new Vector2((k % 2 == 0 ? -1f : 1f) * (cell + gap) * 0.5f, (k < 2 ? 1f : -1f) * (cell + gap) * 0.5f);
-        }
+        PixelUIKit.AddPinIcon(compactButton, size * 0.57f);   // the same pushpin as the Skills window's pin button
 
         BuildCompactSwitch(size);
         BuildCompactWindowButtons(size);
