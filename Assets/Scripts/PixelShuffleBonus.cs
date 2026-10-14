@@ -5,7 +5,7 @@
 //   shuffle starts a combo: a 'SHUFFLE x1' box with a bar that runs down (barSeconds, 6) shows under the top bar. The combo only GROWS when the block it was shuffled behind has been broken
 //   (waiting = true until a PixelCollected arrives); when the filler comes back, shuffle it again before the bar runs out for x2, x3... (no cap yet). BREAKING the filler instead cashes the
 //   combo in: bonus XP = xpPerShuffle (3) x the combo, on top of the normal XP (PixelSkills.AddShuffleXp). If the bar runs out first the filler breaks by itself (dropped from the queue, or
-//   auto-collected if it is on the cube) and a smaller consolation bonus (expireFactor 0.35 of the cash-out) is paid. A skill switch (other filler) or the title screen ends the combo.
+//   auto-collected if it is on the cube) and a smaller consolation bonus (expireFactor 0.35 of the cash-out) is paid. The combo block on the cube (the shuffled filler that came back from the queue, not a freshly rolled one) lights up gold: PixelClickerAura.ComboHighlight forces the cube's glow aura on in gold and makes it pulse. A skill switch (other filler) or the title screen ends the combo.
 //   Fields are Inspector values on this component (0 = the coded default); disableShuffleBonus switches the whole thing off. Not saved.
 // ---------------------------------------------------
 using TMPro;
@@ -55,7 +55,7 @@ public class PixelShuffleBonus : MonoBehaviour
 
     private void Awake() { instance = this; clicker = GetComponent<PixelClicker>(); }
     private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); if (clicker != null) clicker.PixelCollected += OnCollected; }
-    private void OnDisable() { if (clicker != null) clicker.PixelCollected -= OnCollected; }
+    private void OnDisable() { PixelClickerAura.ComboHighlight = false; if (clicker != null) clicker.PixelCollected -= OnCollected; }
     private void OnDestroy() { if (instance == this) instance = null; if (canvasObject != null) Destroy(canvasObject); }
 
     private void Shuffled(int tierIndex, float heldFor)
@@ -109,6 +109,9 @@ public class PixelShuffleBonus : MonoBehaviour
             }
         }
         UpdateVisual();
+        // The combo block on the cube (the shuffled filler that came back, not a fresh filler) lights up gold, so it is easy to tell from an ordinary filler.
+        PixelClickerAura.ComboHighlight = chain > 0 && !waiting && clicker != null && clicker.LiveCameFromQueue
+                                          && clicker.CurrentClickTierIndex == clicker.IndexOf(fillerType);
     }
 
     /// <summary>The bar ran out: the filler breaks by itself and pays a smaller bonus.</summary>

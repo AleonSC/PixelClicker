@@ -2719,9 +2719,13 @@ public partial class PixelClicker : MonoBehaviour
 
     private bool devSwapped; // dev tools: the pixel on the cube was swapped by hand and stays until it is clicked (even a locked type)
 
+    /// <summary>True while the block on the cube is one that came back from Block Hold's queue (a shuffled block), not a fresh roll. The shuffle bonus uses it to light up the combo block.</summary>
+    public bool LiveCameFromQueue { get; private set; }
+
     private int RollTier()
     {
         devSwapped = false;
+        LiveCameFromQueue = false;
         if (IsValidTier(currentTierIndex)) previousTier = currentTierIndex;   // (what the 'Next up' window shows as 'before')
         while (nextInLine.Count > 0)
         {
@@ -2729,6 +2733,7 @@ public partial class PixelClicker : MonoBehaviour
             nextInLine.RemoveAt(0);
             if (!IsValidTier(queued.x)) continue;
             pendingHits = queued.y;
+            LiveCameFromQueue = true;
             return queued.x;
         }
         int pick = UpcomingValid() ? upcomingTier : PickSpawnTier();   // the block the 'Next up' window showed (if it was still valid)

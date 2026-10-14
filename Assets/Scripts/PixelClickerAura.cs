@@ -22,6 +22,10 @@ public class PixelClickerAura : MonoBehaviour
         set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
     }
 
+    /// <summary>Set every frame by the shuffle bonus: the block on the cube is a combo block, so the aura lights up gold and pulses (even when the aura setting is off).</summary>
+    public static bool ComboHighlight;
+    private float comboBlend;
+
     private const string PrefMode = "PixelClicker.Setting.AuraMode", PrefColor = "PixelClicker.Setting.AuraColor";
     private static int modeCache = -1;
     private static string colorCache;
@@ -179,7 +183,8 @@ public class PixelClickerAura : MonoBehaviour
     private void LateUpdate()
     {
         if (clicker == null || clicker.PixelTransform == null) return;
-        bool on = Enabled && clicker.PixelTransform.gameObject.activeInHierarchy;
+        comboBlend = Mathf.MoveTowards(comboBlend, ComboHighlight ? 1f : 0f, Time.unscaledDeltaTime * 5f);
+        bool on = (Enabled || comboBlend > 0.001f) && clicker.PixelTransform.gameObject.activeInHierarchy;
         if (quad == null) { if (!on) return; Build(); if (quad == null) return; }
         if (quadRenderer.enabled != on) quadRenderer.enabled = on;
         UpdateMask(on);
@@ -194,7 +199,7 @@ public class PixelClickerAura : MonoBehaviour
         Vector3 toCam = (cam.transform.position - clicker.PixelTransform.position).normalized;
         quad.position = clicker.PixelTransform.position - toCam * baseSize * behindCubes;
         quad.rotation = Quaternion.LookRotation(cam.transform.forward, cam.transform.up);
-        quad.localScale = Vector3.one * baseSize * sizeInCubes * (1f + breathe * breatheAmount * 0.3f);
+        quad.localScale = Vector3.one * baseSize * sizeInCubes * (1f + breathe * breatheAmount * 0.3f) * (1f + 0.3f * comboBlend);
         quad.gameObject.layer = clicker.PixelTransform.gameObject.layer;
 
         Color target = Color.white;
@@ -207,8 +212,9 @@ public class PixelClickerAura : MonoBehaviour
             if (clicker.IsValidTierIndex(tier)) target = clicker.Tiers[tier].color;
             target = Color.Lerp(target, Color.white, whiten);
         }
+        if (comboBlend > 0f) target = Color.Lerp(target, new Color(1f, 0.82f, 0.25f, 1f), comboBlend);   // a combo block glows gold
         color = Color.Lerp(color, target, 1f - Mathf.Exp(-colorFollow * Time.unscaledDeltaTime));
-        color.a = strength * (1f + breathe * breatheAmount);
+        color.a = strength * (1f + breathe * breatheAmount) * Mathf.Lerp(1f, 2.3f, comboBlend) + comboBlend * 0.18f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f));
         material.color = color;
     }
 }
