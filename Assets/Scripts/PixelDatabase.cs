@@ -12,6 +12,11 @@
 //   window (canvas 108, PixelWindows 16, PixelPop): search box + results list on the left, the selected entry's description and its
 //   references on the right (click a reference to jump to it, '< Back' returns). Not covered yet: floors / skies / pets / vendors'
 //   wares. A new kind of game data should be added to PixelDatabase.Build.
+//   BROWSE / PICTURES / DISCOVERY: the window has category tabs under the search box (All, Pixels, Packs, Skills, Items, Recipes, Minigames, Awards, Tips; PixelDatabase.Search(query, max,
+//   category, showAll)), a turning 3D picture of the pixel (PixelTierPicture, Entry.tierIndex) beside a pixel's description, and a 'Show ???' switch. Entry.discovered: pixel = unlocked or
+//   collected, shop pack = bought or a reward pixel unlocked, skill = PixelSkills.IsAvailable, consumable = its required pixel unlocked; recipes, minigames, achievements and tips are always
+//   shown. An undiscovered entry is listed as '???' (name, text, picture and references hidden, searchable only by its category) unless 'Show ???' is on; other entries' references to it
+//   read 'Label: ???'. Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -28,6 +33,7 @@ public static class PixelDatabase
     public class Ref
     {
         public string text;
+        public string label;  // the part before the target's name ('Rewards pixel'): a reference to something undiscovered shows 'label: ???'
         public string key;    // the entry this reference points to (null = just text)
     }
 
@@ -36,6 +42,9 @@ public static class PixelDatabase
         public string category, name, detail = "";
         public readonly List<Ref> refs = new List<Ref>();
         public string blob;   // lower-case text the search looks through
+        public string maskedBlob;   // what it is searchable by while undiscovered entries are hidden (just '???' and the category)
+        public bool discovered = true;   // pixels / packs / skills / consumables the player has not met yet are marked '???' (the window can show everything)
+        public int tierIndex = -1;       // pixel entries: the tier's index (the window draws its turning 3D picture)
         public string Key => category + "|" + name;
     }
 
@@ -85,7 +94,7 @@ public static class PixelDatabase
         if (from == null || to == null || from == to) return;
         string text = label + ": " + to.name + "  (" + to.category + ")";
         foreach (Ref r in from.refs) if (r.key == to.Key && r.text == text) return;
-        from.refs.Add(new Ref { text = text, key = to.Key });
+        from.refs.Add(new Ref { text = text, label = label, key = to.Key });
     }
 
     /// <summary>Two-way link: 'a' lists b under labelA, b lists a under labelB.</summary>
@@ -125,6 +134,8 @@ public static class PixelDatabase
                 string desc;
                 try { desc = Plain(PixelGuideTexts.Describe(t.type, t)); } catch (Exception) { desc = ""; }
                 Entry e = Add("Pixel", PixelName(t), desc + "\nPays " + t.amountPerClick + " per collect, " + Mathf.Max(1, t.clicksToCollect) + " click" + (t.clicksToCollect > 1 ? "s" : "") + ", spawn weight " + t.spawnWeight + ". Internal type: " + t.type + ".");
+                e.discovered = clicker.IsUnlocked(t.type) || t.totalCollected > 0d;
+                e.tierIndex = System.Array.IndexOf(clicker.Tiers, t);
                 pixels[t.type] = e;
             }
         Entry PixelOf(PixelClicker.PixelType type) => pixels.TryGetValue(type, out Entry e) ? e : null;
@@ -147,7 +158,11 @@ public static class PixelDatabase
             {
                 PixelShop.ShopPack p = packs[i];
                 if (p == null) { packEntries.Add(null); continue; }
-                packEntries.Add(Add("Shop pack", p.displayName, Plain(p.description) + "\nShop tab: " + p.tab + (p.purchased ? "\nBought." : "")));
+                Entry packEntry = Add("Shop pack", p.displayName, Plain(p.description) + "\nShop tab: " + p.tab + (p.purchased ? "\nBought." : ""));
+                bool rewardKnown = false;
+                if (p.rewardTiers != null && clicker != null) foreach (PixelClicker.PixelTier rt in p.rewardTiers) if (rt != null && clicker.IsUnlocked(rt.type)) rewardKnown = true;
+                packEntry.discovered = p.purchased || rewardKnown;
+                packEntries.Add(packEntry);
             }
             for (int i = 0; i < packs.Count; i++)
             {
@@ -182,6 +197,7 @@ public static class PixelDatabase
                 if (s.perks != null) foreach (PixelSkills.Perk perk in s.perks) sb.Append("\nLevel ").Append(perk.level).Append(": ").Append(Plain(perk.text));
                 if (s.nodes != null) foreach (PixelSkills.TreeNode n in s.nodes) sb.Append("\nSkill tree - ").Append(n.displayName).Append(": ").Append(Plain(n.description));
                 Entry se = Add("Skill", s.displayName, sb.ToString());
+                se.discovered = skills.IsAvailable(s);
                 skillEntries[s.id] = se;
                 if (s.types != null) foreach (PixelClicker.PixelType t in s.types) Link(se, "Pixel block", PixelOf(t), "Block of skill");
                 if (Enum.TryParse(s.fillerType, out PixelClicker.PixelType filler)) Link(se, "Filler block", PixelOf(filler), "Filler block of skill");
@@ -206,6 +222,7 @@ public static class PixelDatabase
                 string desc = "";
                 try { desc = Plain(consumables.ItemDescription(i)); } catch (Exception) { }
                 Entry ie = Add("Consumable", name, desc);
+                try { ie.discovered = clicker != null && clicker.IsUnlocked(consumables.ItemRequiredType(i)); } catch (Exception) { }
                 itemEntries[name] = ie;
                 try
                 {
@@ -266,6 +283,7 @@ public static class PixelDatabase
             sb.Append(e.name).Append('\n').Append(e.category).Append('\n').Append(e.detail);
             foreach (Ref r in e.refs) sb.Append('\n').Append(r.text);
             e.blob = sb.ToString().ToLowerInvariant();
+            e.maskedBlob = ("???\n" + e.category).ToLowerInvariant();
         }
         entries.Sort((a, b) => { int c = string.CompareOrdinal(a.category, b.category); return c != 0 ? c : string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase); });
     }
@@ -285,34 +303,43 @@ public static class PixelDatabase
         return false;
     }
 
-    /// <summary>Entries matching a search (every word must appear somewhere), best matches first. An empty query lists everything.</summary>
-    public static List<Entry> Search(string query, int max)
+    /// <summary>What the lists show as the entry's name: the real one, or '???' for something undiscovered while those are hidden.</summary>
+    public static string ShownName(Entry e, bool showAll) => e.discovered || showAll ? e.name : "???";
+
+    /// <summary>Entries matching a search (every word must appear somewhere), best matches first. An empty query lists everything. 'category' (null = all) narrows it to one kind;
+    /// with showAll off an undiscovered entry only matches its category (its name and text stay secret).</summary>
+    public static List<Entry> Search(string query, int max, string category = null, bool showAll = true)
     {
         List<Entry> result = new List<Entry>();
         string q = (query ?? "").Trim().ToLowerInvariant();
-        if (q.Length == 0)
-        {
-            for (int i = 0; i < entries.Count && i < max; i++) result.Add(entries[i]);
-            return result;
-        }
         string[] words = q.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         List<KeyValuePair<int, Entry>> scored = new List<KeyValuePair<int, Entry>>();
         foreach (Entry e in entries)
         {
+            if (category != null && e.category != category) continue;
+            bool open = e.discovered || showAll;
+            if (q.Length == 0) { scored.Add(new KeyValuePair<int, Entry>(open ? 1 : 0, e)); continue; }
+            string blob = open ? e.blob : e.maskedBlob;
             bool all = true;
-            foreach (string w in words) if (e.blob.IndexOf(w, StringComparison.Ordinal) < 0) { all = false; break; }
+            foreach (string w in words) if (blob.IndexOf(w, StringComparison.Ordinal) < 0) { all = false; break; }
             if (!all) continue;
-            string name = e.name.ToLowerInvariant();
+            string name = open ? e.name.ToLowerInvariant() : "???";
             int score = 10;
             if (name == q) score = 100;
             else if (name.StartsWith(q, StringComparison.Ordinal)) score = 80;
             else if (name.Contains(q)) score = 60;
             else if (e.category.ToLowerInvariant().Contains(q)) score = 40;
-            else if (e.detail.ToLowerInvariant().Contains(q)) score = 20;
+            else if (open && e.detail.ToLowerInvariant().Contains(q)) score = 20;
             if (e.category == "Tip") score -= 5;
             scored.Add(new KeyValuePair<int, Entry>(score, e));
         }
-        scored.Sort((a, b) => b.Key != a.Key ? b.Key.CompareTo(a.Key) : string.Compare(a.Value.name, b.Value.name, StringComparison.OrdinalIgnoreCase));
+        if (q.Length == 0) scored.Sort((a, b) =>   // discovered first, then by category and name (List.Sort is not stable, so the tie-break is spelled out)
+        {
+            if (b.Key != a.Key) return b.Key.CompareTo(a.Key);
+            int c = string.CompareOrdinal(a.Value.category, b.Value.category);
+            return c != 0 ? c : string.Compare(a.Value.name, b.Value.name, StringComparison.OrdinalIgnoreCase);
+        });
+        else scored.Sort((a, b) => b.Key != a.Key ? b.Key.CompareTo(a.Key) : string.Compare(a.Value.name, b.Value.name, StringComparison.OrdinalIgnoreCase));
         for (int i = 0; i < scored.Count && i < max; i++) result.Add(scored[i].Value);
         return result;
     }

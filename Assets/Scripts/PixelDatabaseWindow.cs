@@ -37,6 +37,13 @@ public class PixelDatabaseWindow : MonoBehaviour
     private TMP_Text titleLabel, tagLabel, detailLabel, refHeader, emptyLabel;
     private PixelDatabase.Entry selected;
     private readonly List<string> history = new List<string>();
+    private string category;            // the active tab (null = All)
+    private bool showAll;               // show undiscovered entries by name (otherwise they are '???')
+    private readonly List<KeyValuePair<Button, string>> tabs = new List<KeyValuePair<Button, string>>();
+    private Button showAllButton;
+    private RawImage picture;           // the turning 3D picture of a pixel entry
+    private int pictureTier = -1;
+    private RectTransform detailRect;
 
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
 
@@ -127,12 +134,42 @@ public class PixelDatabaseWindow : MonoBehaviour
         sr.anchoredPosition = new Vector2(30f, -104f);
         search.onValueChanged.AddListener(_ => { selected = null; Refresh(); });
 
+        // Category tabs under the search box (two rows) and the 'show undiscovered' switch as the last cell.
+        string[,] tabDefs = { { "All", null }, { "Pixels", "Pixel" }, { "Packs", "Shop pack" }, { "Skills", "Skill" }, { "Items", "Consumable" },
+                              { "Recipes", "Recipe" }, { "Minigames", "Minigame" }, { "Awards", "Achievement" }, { "Tips", "Tip" } };
+        float cellW = (640f - 4f * 6f) / 5f;
+        for (int i = 0; i < tabDefs.GetLength(0) + 1; i++)
+        {
+            bool isToggle = i == tabDefs.GetLength(0);
+            string tabLabel = isToggle ? "Show ???" : tabDefs[i, 0];
+            string tabCategory = isToggle ? null : tabDefs[i, 1];
+            Button tb = PixelUIKit.CreateButton(Font, windowObject.transform, "Tab " + tabLabel, tabLabel, new Vector2(cellW, 44f), new Color(0.2f, 0.22f, 0.3f, 1f), Color.white, 20f);
+            RectTransform tr2 = tb.GetComponent<RectTransform>();
+            tr2.anchorMin = tr2.anchorMax = tr2.pivot = new Vector2(0f, 1f);
+            tr2.anchoredPosition = new Vector2(30f + (i % 5) * (cellW + 6f), -190f - (i / 5) * 50f);
+            TMP_Text tl = tb.GetComponentInChildren<TMP_Text>();
+            tl.enableAutoSizing = true; tl.fontSizeMax = 20f; tl.fontSizeMin = 11f;
+            tl.margin = new Vector4(4f, 0f, 4f, 0f);
+            if (isToggle)
+            {
+                showAllButton = tb;
+                tb.onClick.AddListener(() => { showAll = !showAll; selected = null; RefreshTabs(); Refresh(); });
+            }
+            else
+            {
+                string chosen = tabCategory;
+                tabs.Add(new KeyValuePair<Button, string>(tb, chosen));
+                tb.onClick.AddListener(() => { category = chosen; selected = null; history.Clear(); RefreshTabs(); Refresh(); });
+            }
+        }
+        RefreshTabs();
+
         // Left: the results.
         results = new RowList(this, windowObject.transform, "Results", 62f, 24f);
         RectTransform lr = results.scroll.GetComponent<RectTransform>();
         lr.anchorMin = new Vector2(0f, 0f); lr.anchorMax = new Vector2(0f, 1f); lr.pivot = new Vector2(0f, 0.5f);
         lr.offsetMin = new Vector2(30f, 30f);
-        lr.offsetMax = new Vector2(30f + 640f, -190f);
+        lr.offsetMax = new Vector2(30f + 640f, -298f);
 
         // Right: the selected entry.
         GameObject detail = new GameObject("Detail", typeof(RectTransform), typeof(Image));
@@ -153,6 +190,16 @@ public class PixelDatabaseWindow : MonoBehaviour
         detailLabel = PixelUIKit.CreateText(Font, detail.transform, "Info", "", 24f, TextAlignmentOptions.TopLeft, FontStyles.Normal, new Color(0.85f, 0.87f, 0.92f));
         detailLabel.enableAutoSizing = true; detailLabel.fontSizeMax = 24f; detailLabel.fontSizeMin = 14f;
         Place(detailLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -272f), new Vector2(-22f, -76f));
+        GameObject picGo = new GameObject("Picture", typeof(RectTransform), typeof(RawImage));
+        picGo.transform.SetParent(detail.transform, false);
+        picture = picGo.GetComponent<RawImage>();
+        picture.raycastTarget = false;
+        RectTransform pr = picGo.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(1f, 1f);
+        pr.sizeDelta = new Vector2(190f, 190f);
+        pr.anchoredPosition = new Vector2(-22f, -76f);
+        picGo.SetActive(false);
+        detailRect = detailLabel.rectTransform;
         refHeader = PixelUIKit.CreateText(Font, detail.transform, "References Header", "", 28f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, new Color(1f, 0.85f, 0.4f));
         Place(refHeader.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -318f), new Vector2(-22f, -276f));
 
@@ -163,7 +210,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         rr.offsetMax = new Vector2(-16f, -326f);
 
         emptyLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Empty", "Nothing found.", 30f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(1f, 1f, 1f, 0.5f));
-        Place(emptyLabel.rectTransform, 0f, 0f, 0f, 1f, new Vector2(30f, 300f), new Vector2(670f, -300f));
+        Place(emptyLabel.rectTransform, 0f, 0f, 0f, 1f, new Vector2(30f, 250f), new Vector2(670f, -350f));
         emptyLabel.gameObject.SetActive(false);
 
         PixelWindows.Register(this, 16, () => windowObject != null && PixelPop.IsOpen(windowObject), () => PixelPop.Hide(windowObject));
@@ -178,14 +225,14 @@ public class PixelDatabaseWindow : MonoBehaviour
 
     private void Refresh()
     {
-        List<PixelDatabase.Entry> found = PixelDatabase.Search(search != null ? search.text : "", maxResults);
+        List<PixelDatabase.Entry> found = PixelDatabase.Search(search != null ? search.text : "", maxResults, category, showAll);
         List<RowData> rows = new List<RowData>();
         foreach (PixelDatabase.Entry e in found)
         {
             PixelDatabase.Entry entry = e;
             rows.Add(new RowData
             {
-                text = Tag(e.category) + "[" + e.category + "]</color>  " + e.name + (e.refs.Count > 0 ? "   <size=70%><alpha=#99>" + e.refs.Count + " ref" + (e.refs.Count == 1 ? "" : "s") + "</size>" : ""),
+                text = Tag(e.category) + "[" + e.category + "]</color>  " + (Open(e) ? e.name : "<alpha=#80>???") + (Open(e) && e.refs.Count > 0 ? "   <size=70%><alpha=#99>" + e.refs.Count + " ref" + (e.refs.Count == 1 ? "" : "s") + "</size>" : ""),
                 click = () => Select(entry, true),
                 highlight = selected == e,
             });
@@ -210,15 +257,27 @@ public class PixelDatabaseWindow : MonoBehaviour
         {
             titleLabel.text = "";
             tagLabel.text = "";
+            SetPicture(-1);
             detailLabel.text = "Search the whole game: a pixel, a pack, a skill, a potion, a tip... Then click a result to see what it is and every place in the game that refers to it.";
             refHeader.text = "";
             refList.Fill(new List<RowData>());
             return;
         }
-        titleLabel.text = e.name;
         tagLabel.text = Tag(e.category) + e.category.ToUpperInvariant() + "</color>";
+        if (!Open(e))
+        {
+            titleLabel.text = "???";
+            detailLabel.text = "You haven't discovered this yet. Keep playing to unlock it - or switch 'Show ???' on to look it up anyway.";
+            refHeader.text = "";
+            SetPicture(-1);
+            refList.Fill(new List<RowData>());
+            results.Highlight(e);
+            return;
+        }
+        titleLabel.text = e.name;
         detailLabel.text = string.IsNullOrEmpty(e.detail) ? "(no description)" : e.detail;
         refHeader.text = "References in the game (" + e.refs.Count + ")";
+        SetPicture(e.tierIndex);
 
         List<RowData> rows = new List<RowData>();
         if (history.Count > 0)
@@ -238,9 +297,10 @@ public class PixelDatabaseWindow : MonoBehaviour
         {
             PixelDatabase.Ref r = e.refs[i];
             PixelDatabase.Entry target = PixelDatabase.Find(r.key);
+            bool hidden = target != null && !Open(target);
             rows.Add(new RowData
             {
-                text = target != null ? Tag(target.category) + r.text + "</color>" : r.text,
+                text = hidden ? Tag(target.category) + r.label + ": ??? (" + target.category + ")</color>" : target != null ? Tag(target.category) + r.text + "</color>" : r.text,
                 click = target != null ? (System.Action)(() => Select(target, true)) : null,
             });
         }
@@ -249,10 +309,34 @@ public class PixelDatabaseWindow : MonoBehaviour
         results.Highlight(e);
     }
 
+    private bool Open(PixelDatabase.Entry e) => e.discovered || showAll;
+
+    private void RefreshTabs()
+    {
+        foreach (KeyValuePair<Button, string> t in tabs)
+        {
+            bool on = t.Value == category;
+            t.Key.GetComponent<Image>().color = on ? (t.Value == null ? new Color(0.35f, 0.45f, 0.7f, 1f) : Color.Lerp(new Color(0.2f, 0.22f, 0.3f), PixelDatabase.CategoryColor(t.Value), 0.55f)) : new Color(0.2f, 0.22f, 0.3f, 1f);
+        }
+        if (showAllButton != null) showAllButton.GetComponent<Image>().color = showAll ? new Color(0.2f, 0.6f, 0.3f, 1f) : new Color(0.2f, 0.22f, 0.3f, 1f);
+    }
+
+    /// <summary>The turning 3D picture of a pixel type next to the description (tier index, -1 = none; the text narrows to make room).</summary>
+    private void SetPicture(int tier)
+    {
+        pictureTier = tier;
+        Texture tex = tier >= 0 ? PixelTierPicture.Get(clicker, tier, 256) : null;
+        if (tex == null) pictureTier = -1;
+        picture.texture = tex;
+        picture.gameObject.SetActive(tex != null);
+        detailRect.offsetMax = new Vector2(tex != null ? -(22f + 200f) : -22f, -76f);
+    }
+
     private void Update()
     {
         results?.Layout();
         refList?.Layout();
+        if (pictureTier >= 0 && windowObject != null && windowObject.activeInHierarchy) PixelTierPicture.Render(pictureTier, Time.unscaledTime * 55f);
     }
 
     // ------------------------------------------------------------------
