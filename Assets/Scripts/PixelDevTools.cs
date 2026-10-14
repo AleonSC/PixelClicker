@@ -737,8 +737,16 @@ public class PixelDevTools : MonoBehaviour
         pinnedRoot.anchorMin = pinnedRoot.anchorMax = pinnedRoot.pivot = new Vector2(0f, 1f);
         pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, 400f);
         pinnedRoot.anchoredPosition = new Vector2(0f, -8f);
-        float pinnedHeight = 0f;
-        PixelWidgetBoard pinned = new PixelWidgetBoard(pinnedRoot, PrefPrefix + "PinnedOrder", 8f, height => pinnedHeight = height);
+        float pinnedHeight = 0f, scrollTop = 0f, pinnedStartY = y;
+        RectTransform scrollRectLive = null;
+        // The pinned cards can be folded up: the scrolling list below follows their height.
+        PixelWidgetBoard pinned = new PixelWidgetBoard(pinnedRoot, PrefPrefix + "PinnedOrder", 8f, height =>
+        {
+            pinnedHeight = height;
+            pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, height);
+            scrollTop = pinnedStartY + height + 8f;
+            if (scrollRectLive != null) scrollRectLive.offsetMax = new Vector2(0f, -scrollTop);
+        });
 
         // Widget: pixel dropdown | amount field | Add | Give pet
         int pinStart = pinnedRoot.childCount;
@@ -765,7 +773,7 @@ public class PixelDevTools : MonoBehaviour
         pinned.Finish();
         pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, pinnedHeight);
         y += pinnedHeight + 8f;
-        float scrollTop = y; // the pinned widgets above stay fixed; the rest scrolls
+        scrollTop = y; // the pinned widgets above stay fixed; the rest scrolls
 
         ScrollRect toolsScroll = PixelUIKit.CreateScrollView(tools.transform, "Tools Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 16f, 60f,
                                                              out RectTransform content, out GameObject toolsBar);
@@ -774,6 +782,7 @@ public class PixelDevTools : MonoBehaviour
         scrollRect.anchorMax = Vector2.one;
         scrollRect.offsetMin = new Vector2(0f, 8f);
         scrollRect.offsetMax = new Vector2(0f, -scrollTop);
+        scrollRectLive = scrollRect;
         y = 0f; // rows below are placed from the top of the scrolling content (each one becomes a draggable widget card)
         PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - scrollTop - 8f));
         int ws = content.childCount;
@@ -964,11 +973,40 @@ public class PixelDevTools : MonoBehaviour
     }
 
     /// <summary>Turns the controls built since child number 'start' of 'content' (one row) into a draggable widget card at row position y.</summary>
+    private static string WidgetTitle(string id)
+    {
+        switch (id)
+        {
+            case "addpixel": return "Add pixels";
+            case "spawnpixel": return "Spawned pixel";
+            case "spawnminigame": return "Minigames";
+            case "middleclick": return "Middle click";
+            case "report": return "Crash reports";
+            case "dock": return "Dev Tools button";
+            case "skip": return "Skip intro";
+            case "bounds": return "Snapshot bounds";
+            case "moment": return "Mark this moment";
+            case "uidump": return "UI layout dump";
+            case "dragon": return "Dragon cubes";
+            case "unlock": return "Unlock everything";
+            case "reset": return "Reset counts";
+            case "clear": return "Clear key";
+            case "infinite": return "Infinite resources";
+            case "nodespawn": return "Old pixel despawns";
+            case "nolimit": return "Old pixel limit";
+            case "farmerseeds": return "Farmer seeds";
+            case "god": return "God mode";
+            case "clicks": return "Click count";
+            default: return id;
+        }
+    }
+
     private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y)
     {
         List<Transform> kids = new List<Transform>();
         for (int i = start; i < content.childCount; i++) kids.Add(content.GetChild(i));
-        float cardH = rowHeight + 16f;
+        float hdr = PixelWidgetBoard.CardHeaderH;   // the card's header strip (title + minimize button) sits above the controls
+        float cardH = rowHeight + 16f + hdr;
         GameObject card = new GameObject("Widget " + id, typeof(RectTransform), typeof(Image));
         card.transform.SetParent(content, false);
         RectTransform cr = card.GetComponent<RectTransform>();
@@ -983,9 +1021,10 @@ public class PixelDevTools : MonoBehaviour
         {
             k.SetParent(card.transform, false);
             RectTransform kr = (RectTransform)k;
-            kr.anchoredPosition += new Vector2(0f, y - 8f);   // (they were placed at -y; the card starts 8 above that)
+            kr.anchoredPosition += new Vector2(0f, y - 8f - hdr);   // (they were placed at -y; the card starts 8 above that, and its header strip takes the top)
+            foreach (Button b in k.GetComponentsInChildren<Button>(true)) PixelUIKit.FitOneLine(b.GetComponentInChildren<TMP_Text>(true));   // (long labels such as DESPAWN shrink to fit their button)
         }
-        board.Add(id, cr, cardH);
+        board.Add(id, cr, cardH, WidgetTitle(id));
     }
 
     // ------------------------------------------------------------------

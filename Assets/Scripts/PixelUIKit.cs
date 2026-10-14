@@ -583,6 +583,21 @@ public static class PixelUIKit
 
     private static Sprite gripSprite;
 
+    /// <summary>Keeps a label on one line and shrinks its text (down to minSize) when it is too wide for its box, instead of spilling out of a button.</summary>
+    public static void FitOneLine(TMP_Text t, float minSize = 10f)
+    {
+        if (t == null) return;
+        t.enableAutoSizing = true;
+        t.fontSizeMax = t.fontSize;
+        t.fontSizeMin = minSize;
+        t.overflowMode = TextOverflowModes.Overflow;
+#if UNITY_2023_1_OR_NEWER
+        t.textWrappingMode = TextWrappingModes.NoWrap;
+#else
+        t.enableWordWrapping = false;
+#endif
+    }
+
     /// <summary>A resize grip for a window's bottom-right corner: three short diagonal lines, transparent elsewhere (white; tint it with the Image colour).</summary>
     public static Sprite GripSprite()
     {

@@ -43,3 +43,8 @@ The hub's **Tester** tab (`PixelFeatureTester.cs`) lists things that are not in 
 
 
 **Wood Chipper rules:** a wood pixel (`PixelClicker.IsWoodBlock`) gives Woodcutting XP (`woodXp`, 3, via `PixelSkills.AddXp` with the usual popup); any other pixel does `damagePerOtherPixel` (14) of `maxHealth` (100): the paint darkens, sparks fly, the exhaust gets thicker and blacker, a health bar floats over it; at 0 it is broken for good (stops, no beacon, 'BROKEN' label) and has to be cleared and replaced.
+
+## Hub resize, widget headers
+- The Dev Hub window has a grip in its bottom-right corner (`PixelWindowChrome.EnableResize`): dragging it SCALES the whole hub (0.55x - 1.6x, remembered as `PixelClicker.Dev.Hub.Window.Scale`). It is a scale, not a re-layout: the tabs keep the layout they were built with. A real re-layout would need every tab to build against a variable size.
+- Every widget card (`PixelWidgetBoard`) has a header strip with its title and a '-' button: it folds the card up to just the header (hidden controls are restored on '+'); remembered per board (`<board prefKey>.Min`). The pinned cards at the top push the scrolling list down / up as they fold.
+- Button labels inside widgets shrink to fit (`PixelUIKit.FitOneLine`), so long labels like DESPAWN no longer spill out of their button.

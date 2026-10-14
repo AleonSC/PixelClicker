@@ -159,6 +159,7 @@ public class PixelDevHub : MonoBehaviour
         chrome = PixelWindowChrome.Attach(windowRect, font, P + "Window", HeaderH, 8f + 40f + 8f, 6f, 40f, new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 26f);
         chrome.Keep(title.gameObject);
         chrome.Keep(close.gameObject);
+        chrome.EnableResize();   // the grip in the bottom-right corner scales the whole hub
 
         // Tabs that were floating when the game last closed come back where they were.
         foreach (string id in PlayerPrefs.GetString(P + "Floating", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
@@ -492,7 +493,19 @@ public class PixelHubTabHandle : MonoBehaviour, IBeginDragHandler, IDragHandler,
 /// </summary>
 public class PixelWidgetBoard
 {
-    public sealed class Item { public string id; public RectTransform rect; public float height; }
+    public sealed class Item
+    {
+        public string id, title;
+        public RectTransform rect, grip;
+        public float height, fullHeight;
+        public bool minimized;
+        public TMP_Text toggleLabel, titleLabel;
+        public readonly List<GameObject> hidden = new List<GameObject>();
+    }
+
+    /// <summary>Height of a widget card's header strip (title + minimize button): all a minimized card shows.</summary>
+    public const float CardHeaderH = 30f;
+    private const float MinimizedH = CardHeaderH;
 
     private readonly RectTransform content;
     private readonly string prefKey;
@@ -508,9 +521,9 @@ public class PixelWidgetBoard
     }
 
     /// <summary>Adds a card (top-left anchored, 'height' tall) with a grip on its left edge.</summary>
-    public void Add(string id, RectTransform rect, float height)
+    public void Add(string id, RectTransform rect, float height, string title = null)
     {
-        Item item = new Item { id = id, rect = rect, height = height };
+        Item item = new Item { id = id, rect = rect, height = height, fullHeight = height, title = string.IsNullOrEmpty(title) ? id : title };
         items.Add(item);
         GameObject g = new GameObject("Grip", typeof(RectTransform), typeof(Image), typeof(PixelWidgetGrip));
         g.transform.SetParent(rect, false);
@@ -523,6 +536,56 @@ public class PixelWidgetBoard
         r.anchoredPosition = new Vector2(8f, 0f);
         PixelWidgetGrip grip = g.GetComponent<PixelWidgetGrip>();
         grip.board = this; grip.item = item;
+        item.grip = r;
+
+        // Every card has a header strip (title + a small '-' button at its right end): '-' folds the card up to just that header, a cheap way to hide a widget.
+        PixelClicker owner = PixelFind.First<PixelClicker>();
+        TMP_FontAsset font = owner != null ? owner.UIFont : null;
+        Button toggle = PixelUIKit.CreateButton(font, rect, "Minimize", "-", new Vector2(30f, 24f), new Color(0.3f, 0.36f, 0.5f, 0.9f), Color.white, 20f);
+        RectTransform tr = toggle.GetComponent<RectTransform>();
+        tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(1f, 1f);
+        tr.sizeDelta = new Vector2(30f, 24f);
+        tr.anchoredPosition = new Vector2(-8f, -3f);
+        item.toggleLabel = toggle.GetComponentInChildren<TMP_Text>();
+        toggle.onClick.AddListener(() => { SetMinimized(item, !item.minimized, true); });
+        TMP_Text label = PixelUIKit.CreateText(font, rect, "Minimized Title", item.title.ToUpperInvariant(), 20f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, new Color(0.85f, 0.9f, 1f, 0.9f));
+        label.raycastTarget = false;
+        RectTransform lr = label.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f); lr.anchorMax = new Vector2(1f, 1f); lr.pivot = new Vector2(0f, 1f);
+        lr.offsetMin = new Vector2(44f, -MinimizedH); lr.offsetMax = new Vector2(-48f, 0f);   // (the header strip: the title is always shown, the '-' button sits at its right end)
+        item.titleLabel = label;
+    }
+
+    private void SetMinimized(Item item, bool on, bool save)
+    {
+        if (item.minimized == on) return;
+        item.minimized = on;
+        Transform keep1 = item.grip, keep2 = item.toggleLabel != null ? item.toggleLabel.transform.parent : null, keep3 = item.titleLabel != null ? item.titleLabel.transform : null;
+        if (on)
+        {
+            item.hidden.Clear();
+            foreach (Transform child in item.rect)
+                if (child.gameObject.activeSelf && child != keep1 && child != keep2 && child != keep3) { item.hidden.Add(child.gameObject); child.gameObject.SetActive(false); }
+            item.height = MinimizedH;
+        }
+        else
+        {
+            foreach (GameObject g in item.hidden) if (g != null) g.SetActive(true);
+            item.hidden.Clear();
+            item.height = item.fullHeight;
+        }
+        if (item.toggleLabel != null) item.toggleLabel.text = on ? "+" : "-";
+        item.rect.sizeDelta = new Vector2(item.rect.sizeDelta.x, item.height);
+        item.grip.sizeDelta = new Vector2(26f, Mathf.Min(40f, item.height - 6f));
+        Layout();
+        if (save) SaveMinimized();
+    }
+
+    private void SaveMinimized()
+    {
+        List<string> ids = new List<string>();
+        foreach (Item it in items) if (it.minimized) ids.Add(it.id);
+        PlayerPrefs.SetString(prefKey + ".Min", string.Join(",", ids));
     }
 
     /// <summary>Applies the saved order and lays everything out (call once after adding every card).</summary>
@@ -541,6 +604,11 @@ public class PixelWidgetBoard
             items.Clear();
             items.AddRange(ordered);
         }
+        foreach (string id in PlayerPrefs.GetString(prefKey + ".Min", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            Item it = items.Find(x => x.id == id);
+            if (it != null) SetMinimized(it, true, false);
+        }
         Layout();
     }
 
@@ -556,7 +624,7 @@ public class PixelWidgetBoard
         onHeight?.Invoke(total);
     }
 
-    private float CanvasScale { get { Canvas c = content.GetComponentInParent<Canvas>(); return c != null && c.rootCanvas.scaleFactor > 0f ? c.rootCanvas.scaleFactor : 1f; } }
+    private float CanvasScale { get { float s = content.lossyScale.x; return s > 0.0001f ? s : 1f; } }   // screen pixels per unit (canvas scale x the window's resize scale)
 
     internal void BeginDrag(Item item)
     {
