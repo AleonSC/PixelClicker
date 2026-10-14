@@ -75,7 +75,35 @@ public abstract class PixelMinigame : MonoBehaviour
     protected void Report(MinigameEvent what)
     {
         Happened?.Invoke(this, what);
+        if (what == MinigameEvent.Spawned) ShowStartNotice();
         if (what == MinigameEvent.Clicked) GrantSkillXp();   // every 'Clicked' report is a success (caught, defused, won...)
+    }
+
+    [Header("Start notice (top status box)")]
+    [Tooltip("Turn off the 'it has started' message that slides out under the top bar when this minigame spawns its thing.")]
+    [SerializeField] private bool disableStartNotice = false;
+
+    [Tooltip("The message. Empty = this minigame's own default (Ghost, Meteor, Black Hole, Bomb and Evil Tree have one; the others show nothing).")]
+    [SerializeField] private string startNotice = "";
+
+    [Tooltip("Colour of that message. Fully see-through (alpha 0) = the default colour.")]
+    [SerializeField] private Color startNoticeColor = new Color(1f, 1f, 1f, 0f);
+
+    private void ShowStartNotice()
+    {
+        if (disableStartNotice) return;
+        string text = startNotice;
+        Color color = startNoticeColor.a > 0f ? startNoticeColor : new Color(1f, 0.88f, 0.45f, 1f);
+        if (string.IsNullOrEmpty(text))
+            switch (Id)
+            {
+                case "ghost": text = "A ghost appeared!"; break;
+                case "meteor": text = "Meteor incoming!"; break;
+                case "blackhole": text = "A black hole opened!"; break;
+                case "bomb": text = "BOMB!"; if (startNoticeColor.a <= 0f) color = new Color(1f, 0.4f, 0.3f, 1f); break;
+                case "eviltree": text = "An evil tree is growing!"; break;
+            }
+        if (!string.IsNullOrEmpty(text)) PixelStatusLines.Set("start." + Id, text, color, 2.5f);
     }
 
     [Header("Skill XP Bonus")]

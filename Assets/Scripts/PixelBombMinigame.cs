@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelBombMinigame.cs
 //   Bomb Defusal minigame (pack unlocksMinigame = "bomb", Minigames tab, needs the RGB pack): every 2-4 min a code-built rectangular
-//   bomb (casing, darker front panel, end blocks, blinking indicator light, timer low on the front; the red/green/blue wires run
+//   bomb (casing, darker front panel, end blocks, corner screws, rails, blinking indicator light, an LCD timer (bezel + lit green screen, red when time is low) low on the front; the red/green/blue wires run
 //   straight across the top of the panel, each as two pieces hanging from pivots at its ends plus one wide invisible click box)
 //   appears beside the cube, kept fully in view (PixelUIKit.KeepOnScreen also keeps the hint / rising texts and the black hole counter
 //   on screen); cutting a wire only snaps that wire in two (CutWire: the pieces swing down); click the wire of the RGB pixel with the
@@ -318,6 +318,14 @@ public class PixelBombMinigame : PixelMinigame
         return m;
     }
 
+    private static void SetLcd(Material m, Color c)
+    {
+        if (m == null) return;
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+        if (m.HasProperty("_Color")) m.SetColor("_Color", c);
+        m.SetColor("_EmissionColor", c * 0.6f);
+    }
+
     private TextMeshPro MakeText(Transform parent, string name, string text, float size, Color color, Vector3 localPos, float width)
     {
         GameObject go = new GameObject(name);
@@ -391,11 +399,32 @@ public class PixelBombMinigame : PixelMinigame
         Material sparkMat = MakeMaterial(new Color(1f, 0.35f, 0.2f, 1f), 2.5f);
         if (sparkMat != null) spark.GetComponent<Renderer>().sharedMaterial = sparkMat;
 
-        // The timer sits low on the front, under the wires.
+        // Fancy details: corner screws and a pair of darker rails.
+        Material screwMat = MakeMaterial(new Color(0.75f, 0.77f, 0.8f, 1f), 0f);
+        float sx = bw * 0.45f, sy = bh * 0.43f;
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject screw = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            screw.name = "Screw " + i;
+            Destroy(screw.GetComponent<Collider>());
+            screw.transform.SetParent(root.transform, false);
+            screw.transform.localPosition = new Vector3(i % 2 == 0 ? -sx : sx, i < 2 ? sy : -sy, -(bd * 0.5f + 0.045f));
+            screw.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            screw.transform.localScale = new Vector3(bombSize * 0.07f, 0.02f, bombSize * 0.07f);
+            if (screwMat != null) screw.GetComponent<Renderer>().sharedMaterial = screwMat;
+        }
+        AddBox("Rail L", root.transform, new Vector3(-bw * 0.36f, 0f, -(bd * 0.5f + 0.035f)), new Vector3(bw * 0.025f, bh * 0.7f, 0.02f), blockMat);
+        AddBox("Rail R", root.transform, new Vector3(bw * 0.36f, 0f, -(bd * 0.5f + 0.035f)), new Vector3(bw * 0.025f, bh * 0.7f, 0.02f), blockMat);
+
+        // The LCD timer low on the front, under the wires: a dark bezel, a lit screen and dark digits (the screen goes red when time is nearly up).
         float frontZ = -(bd * 0.5f + 0.06f);
-        TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, timerColor,
-                                     new Vector3(0f, -bh * 0.37f, frontZ), bw * 0.9f);
-        timer.enabled = false;   // (kept as the value holder; the text is shown up in the status box)
+        float lcdY = -bh * 0.37f;
+        AddBox("LCD Bezel", root.transform, new Vector3(0f, lcdY, -(bd * 0.5f + 0.05f)), new Vector3(bw * 0.64f, bh * 0.23f, 0.05f), MakeMaterial(new Color(0.05f, 0.05f, 0.07f, 1f), 0f));
+        Color lcdOk = new Color(0.62f, 0.85f, 0.45f, 1f), lcdHot = new Color(1f, 0.38f, 0.28f, 1f), digitColor = new Color(0.06f, 0.14f, 0.05f, 1f);
+        Material lcdMat = MakeMaterial(lcdOk, 0.6f);
+        AddBox("LCD Screen", root.transform, new Vector3(0f, lcdY, -(bd * 0.5f + 0.08f)), new Vector3(bw * 0.58f, bh * 0.17f, 0.012f), lcdMat);
+        TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, digitColor,
+                                     new Vector3(0f, lcdY, frontZ - 0.035f), bw * 0.56f);
 
         // Three wires run straight across the top of the front panel: red, green, blue. Each is two pieces that meet in the middle.
         Color[] colors = { redWireColor, greenWireColor, blueWireColor };
@@ -435,9 +464,8 @@ public class PixelBombMinigame : PixelMinigame
             root.transform.rotation = baseRot * Quaternion.Euler(0f, 0f, sway);
             bool warning = left <= warningSeconds;
             timer.text = string.Format(timerFormat, Mathf.Max(0f, left));
-            timer.color = warning && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? timerWarningColor
-                        : warning ? Color.Lerp(timerColor, timerWarningColor, 0.5f) : timerColor;
-            PixelStatusLines.Set("bomb", timer.text, timer.color, 0.4f);   // the countdown shows in the top status box (refreshed every frame: gone by itself if the bomb is despawned)
+            timer.color = digitColor;
+            SetLcd(lcdMat, warning && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? lcdHot : warning ? Color.Lerp(lcdOk, lcdHot, 0.5f) : lcdOk);
             spark.transform.localScale = Vector3.one * sparkBase * (1f + 0.35f * Mathf.Sin(Time.time * (left <= warningSeconds ? 26f : 10f)));
             int whole = Mathf.CeilToInt(Mathf.Max(0f, left));
             if (whole != lastWhole)
@@ -476,16 +504,13 @@ public class PixelBombMinigame : PixelMinigame
             Report(MinigameEvent.Clicked);
             onDefused?.Invoke();
             timer.text = "OK";
-            timer.color = defusedColor;
-            PixelStatusLines.Set("bomb", timer.text, timer.color, defusedLingerSeconds + 0.1f);
+            SetLcd(lcdMat, new Color(0.45f, 1f, 0.55f, 1f));
             StartCoroutine(RisingMessage(position, cam, string.Format(defusedFormat, parts), defusedColor));
             yield return new WaitForSeconds(defusedLingerSeconds);
-            PixelStatusLines.Clear("bomb");
             Destroy(root);
         }
         else
         {
-            PixelStatusLines.Clear("bomb");
             Destroy(root);
             PixelStats.Count("bomb.exploded");
             Explode(position, cam);
