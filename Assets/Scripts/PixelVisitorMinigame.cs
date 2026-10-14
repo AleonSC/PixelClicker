@@ -485,6 +485,15 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         return list;
     }
 
+    /// <summary>The names of the wares this visitor could sell right now (the Game Database lists them).</summary>
+    public List<string> WareNames()
+    {
+        List<string> names = new List<string>();
+        if (consumables == null) return names;
+        foreach (int i in Wares()) names.Add(consumables.ItemName(i));
+        return names;
+    }
+
     private PixelShop.PackCost[] PriceOf(int item)
     {
         PixelShop.PackCost[] baseCosts = consumables.ItemCosts(item);

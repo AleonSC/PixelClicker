@@ -109,6 +109,24 @@ public class PixelMyWindow : MonoBehaviour
     /// <summary>Is the window available yet (it shows up once two pixel types are unlocked)?</summary>
     public static bool Available => instance != null && instance.buttonAvailable;
 
+    /// <summary>Can things be pinned to My Window right now (the window exists)? The Game Database's Pin button uses this.</summary>
+    public static bool CanPin => instance != null && instance.canvasRoot != null;
+
+    /// <summary>Is a row of this type (currency, skill, achievement, fav...) and key already pinned?</summary>
+    public static bool IsPinned(string type, string key) => instance != null && instance.blob.entries.Exists(e => e.type == type && e.key == key);
+
+    /// <summary>Pins the row, or takes it away again when it is already pinned. Returns true when it is pinned afterwards.</summary>
+    public static bool TogglePin(string type, string key)
+    {
+        if (instance == null) return false;
+        int at = instance.blob.entries.FindIndex(e => e.type == type && e.key == key);
+        if (at >= 0) instance.blob.entries.RemoveAt(at);
+        else instance.blob.entries.Add(new Entry { type = type, key = key });
+        instance.SaveEntries();
+        if (instance.open) instance.RebuildRows();
+        return at < 0;
+    }
+
     /// <summary>Is the window open right now?</summary>
     public static bool IsOpen => instance != null && instance.open;
 

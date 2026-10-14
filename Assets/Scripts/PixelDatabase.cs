@@ -16,7 +16,10 @@
 //   category, showAll)), a turning 3D picture of the pixel (PixelTierPicture, Entry.tierIndex) beside a pixel's description, and a 'Show ???' switch. Entry.discovered: pixel = unlocked or
 //   collected, shop pack = bought or a reward pixel unlocked, skill = PixelSkills.IsAvailable, consumable = its required pixel unlocked; recipes, minigames, achievements and tips are always
 //   shown. An undiscovered entry is listed as '???' (name, text, picture and references hidden, searchable only by its category) unless 'Show ???' is on; other entries' references to it
-//   read 'Label: ???'. Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
+//   read 'Label: ???'. MORE ENTRIES: Pet (one per pixel type that can have a pet; discovered = owned; numbers from PixelPets.SpawnWeightFactor / DespawnSlowDown / FindChancePerClick),
+//   Floor and Sky (the looks of PixelFloor / PixelSkybox, IPixelLookSource) and vendors' wares (PixelVisitorMinigame.WareNames -> 'Sells' / 'Sold by' links on minigame + consumable entries).
+//   PIN: Entry.pinType / pinKey (pixel = currency row, skill, achievement, listable consumable = favorite) drive the window's 'Pin to My Window' button (PixelMyWindow.CanPin / IsPinned / TogglePin).
+//   Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -45,6 +48,7 @@ public static class PixelDatabase
         public string maskedBlob;   // what it is searchable by while undiscovered entries are hidden (just '???' and the category)
         public bool discovered = true;   // pixels / packs / skills / consumables the player has not met yet are marked '???' (the window can show everything)
         public int tierIndex = -1;       // pixel entries: the tier's index (the window draws its turning 3D picture)
+        public string pinType, pinKey;   // what 'Pin to My Window' adds (a My Window row type + key; null = this entry cannot be pinned)
         public string Key => category + "|" + name;
     }
 
@@ -71,6 +75,9 @@ public static class PixelDatabase
             case "Minigame": return new Color(1f, 0.5f, 0.55f);
             case "Achievement": return new Color(1f, 0.9f, 0.4f);
             case "Tip": return new Color(0.7f, 0.75f, 0.85f);
+            case "Floor": return new Color(0.55f, 0.85f, 0.8f);
+            case "Sky": return new Color(0.6f, 0.7f, 1f);
+            case "Pet": return new Color(1f, 0.75f, 0.85f);
             default: return new Color(0.6f, 0.65f, 0.7f);
         }
     }
@@ -136,17 +143,25 @@ public static class PixelDatabase
                 Entry e = Add("Pixel", PixelName(t), desc + "\nPays " + t.amountPerClick + " per collect, " + Mathf.Max(1, t.clicksToCollect) + " click" + (t.clicksToCollect > 1 ? "s" : "") + ", spawn weight " + t.spawnWeight + ". Internal type: " + t.type + ".");
                 e.discovered = clicker.IsUnlocked(t.type) || t.totalCollected > 0d;
                 e.tierIndex = System.Array.IndexOf(clicker.Tiers, t);
+                e.pinType = "currency"; e.pinKey = t.type.ToString();
                 pixels[t.type] = e;
             }
         Entry PixelOf(PixelClicker.PixelType type) => pixels.TryGetValue(type, out Entry e) ? e : null;
 
         // ---- Minigames and vendors ----
         Dictionary<string, Entry> minigames = new Dictionary<string, Entry>();
+        List<KeyValuePair<Entry, List<string>>> vendorWares = new List<KeyValuePair<Entry, List<string>>>();
         foreach (PixelMinigame m in PixelMinigame.All)
         {
             if (m == null) continue;
             string desc = m.HasTracker ? Plain(m.TrackerDescription) : "";
-            minigames[m.Id] = Add("Minigame", m.DisplayName, (string.IsNullOrEmpty(desc) ? "" : desc + "\n") + "Id: " + m.Id + (m.HasTracker ? "\nHas a goal counter: " + Plain(m.TrackerTitle) : ""));
+            Entry mgEntry = Add("Minigame", m.DisplayName, (string.IsNullOrEmpty(desc) ? "" : desc + "\n") + "Id: " + m.Id + (m.HasTracker ? "\nHas a goal counter: " + Plain(m.TrackerTitle) : ""));
+            minigames[m.Id] = mgEntry;
+            if (m is PixelVisitorMinigame visitor)
+            {
+                List<string> ware = visitor.WareNames();
+                if (ware.Count > 0) { vendorWares.Add(new KeyValuePair<Entry, List<string>>(mgEntry, ware)); mgEntry.detail += "\nSells: " + string.Join(", ", ware) + "."; }
+            }
         }
 
         // ---- Shop packs ----
@@ -198,6 +213,7 @@ public static class PixelDatabase
                 if (s.nodes != null) foreach (PixelSkills.TreeNode n in s.nodes) sb.Append("\nSkill tree - ").Append(n.displayName).Append(": ").Append(Plain(n.description));
                 Entry se = Add("Skill", s.displayName, sb.ToString());
                 se.discovered = skills.IsAvailable(s);
+                se.pinType = "skill"; se.pinKey = s.id;
                 skillEntries[s.id] = se;
                 if (s.types != null) foreach (PixelClicker.PixelType t in s.types) Link(se, "Pixel block", PixelOf(t), "Block of skill");
                 if (Enum.TryParse(s.fillerType, out PixelClicker.PixelType filler)) Link(se, "Filler block", PixelOf(filler), "Filler block of skill");
@@ -223,6 +239,7 @@ public static class PixelDatabase
                 try { desc = Plain(consumables.ItemDescription(i)); } catch (Exception) { }
                 Entry ie = Add("Consumable", name, desc);
                 try { ie.discovered = clicker != null && clicker.IsUnlocked(consumables.ItemRequiredType(i)); } catch (Exception) { }
+                if (consumables.ItemListable(i)) { ie.pinType = "fav"; ie.pinKey = "item:" + name; }
                 itemEntries[name] = ie;
                 try
                 {
@@ -230,6 +247,47 @@ public static class PixelDatabase
                     if (costs != null) foreach (PixelShop.PackCost c in costs) if (string.IsNullOrEmpty(c.minigameCurrency)) Link(ie, "Costs " + c.amount, PixelOf(c.type), "Pays for consumable");
                 }
                 catch (Exception) { }
+            }
+
+        // ---- Vendors' wares (a vendor's entry lists what it sells; the consumable points back) ----
+        foreach (KeyValuePair<Entry, List<string>> vw in vendorWares)
+            foreach (string wareName in vw.Value)
+                if (itemEntries.TryGetValue(wareName, out Entry wareEntry)) Link(vw.Key, "Sells", wareEntry, "Sold by");
+
+        // ---- Floors and skies (the looks the Settings pickers list) ----
+        System.Action<string, IPixelLookSource, string> addLooks = (cat, src, where) =>
+        {
+            if (src == null) return;
+            for (int i = 0; i < src.StyleCount; i++)
+            {
+                string styleName = src.StyleName(i);
+                if (string.IsNullOrEmpty(styleName)) continue;
+                Add(cat, styleName, "A " + cat.ToLowerInvariant() + " style for the game. Pick it in Settings > Gameplay > " + where + "." + (src.Current == i ? "\nIn use now." : ""));
+            }
+        };
+        addLooks("Floor", PixelFloor.Instance, "Floor style");
+        addLooks("Sky", PixelSkybox.Instance, "Sky style");
+
+        // ---- Pets: one per pixel type that can have one ----
+        PixelPets petSystem = PixelPets.Instance;
+        if (clicker != null && petSystem != null)
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            {
+                if (t == null || t.rareDrop || PixelClicker.IsStandalone(t.type)) continue;
+                string pixelName = PixelName(t);
+                string special = "";
+                switch (t.type.ToString())
+                {
+                    case "Seed": special = "\nThis pet plants itself in the ground and sows seeds."; break;
+                    case "Ghost": special = "\nThis pet only hovers."; break;
+                    case "Glass": special = "\nThis pet shatters now and then and pulls itself back together."; break;
+                    case "Vacuum": special = "\nThis pet sucks up nearby old pixels and counts them."; break;
+                }
+                Entry pet = Add("Pet", pixelName + " Pet",
+                    "A companion of the " + pixelName + " pixel. Every click has a small chance (" + (petSystem.FindChancePerClick * 100f).ToString("0.###") + "%) of finding it; automatic clicks count less, a Pet Treat helps. " +
+                    "While it is out, " + pixelName + " comes up " + petSystem.SpawnWeightFactor.ToString("0.#") + "x as often and its old pixels last " + petSystem.DespawnSlowDown.ToString("0.#") + "x longer." + special);
+                pet.discovered = petSystem.IsOwned(t.type);
+                Link(pet, "Pet of pixel", PixelOf(t.type), "Has a pet");
             }
 
         // ---- Recipes ----
@@ -250,6 +308,7 @@ public static class PixelDatabase
                 PixelAchievements.Achievement a = achievements.Get(i);
                 if (a == null) continue;
                 Entry ae = Add("Achievement", Plain(a.title), Plain(a.description));
+                ae.pinType = "achievement"; ae.pinKey = achievements.GetId(i);
                 if (a.kind == PixelAchievements.Kind.CollectPixelType || a.kind == PixelAchievements.Kind.ClickPixelType) Link(ae, "About pixel", PixelOf(a.pixelType), "Achievement");
             }
 
@@ -272,7 +331,7 @@ public static class PixelDatabase
             }
         }
         List<Entry> mentionable = new List<Entry>();
-        foreach (Entry e in entries) if (e.category != "Tip" && e.category != "Achievement" && e.category != "Recipe" && e.name.Length >= 3) mentionable.Add(e);
+        foreach (Entry e in entries) if (e.category != "Tip" && e.category != "Achievement" && e.category != "Recipe" && e.category != "Floor" && e.category != "Sky" && e.category != "Pet" && e.name.Length >= 3) mentionable.Add(e);
         foreach (Entry t in texts)
             foreach (Entry target in mentionable)
                 if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) Link(t, "Mentions", target, "Mentioned in tip / guide");

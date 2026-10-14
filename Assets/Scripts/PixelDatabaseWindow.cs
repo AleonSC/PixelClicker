@@ -44,6 +44,8 @@ public class PixelDatabaseWindow : MonoBehaviour
     private RawImage picture;           // the turning 3D picture of a pixel entry
     private int pictureTier = -1;
     private RectTransform detailRect;
+    private Button pinButton;
+    private TMP_Text pinLabel;
 
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
 
@@ -136,7 +138,8 @@ public class PixelDatabaseWindow : MonoBehaviour
 
         // Category tabs under the search box (two rows) and the 'show undiscovered' switch as the last cell.
         string[,] tabDefs = { { "All", null }, { "Pixels", "Pixel" }, { "Packs", "Shop pack" }, { "Skills", "Skill" }, { "Items", "Consumable" },
-                              { "Recipes", "Recipe" }, { "Minigames", "Minigame" }, { "Awards", "Achievement" }, { "Tips", "Tip" } };
+                              { "Recipes", "Recipe" }, { "Minigames", "Minigame" }, { "Awards", "Achievement" }, { "Tips", "Tip" },
+                              { "Pets", "Pet" }, { "Floors", "Floor" }, { "Skies", "Sky" } };
         float cellW = (640f - 4f * 6f) / 5f;
         for (int i = 0; i < tabDefs.GetLength(0) + 1; i++)
         {
@@ -163,13 +166,15 @@ public class PixelDatabaseWindow : MonoBehaviour
             }
         }
         RefreshTabs();
+        int tabRows = (tabDefs.GetLength(0) + 1 + 4) / 5;
+        float listTop = 190f + tabRows * 50f + 8f;
 
         // Left: the results.
         results = new RowList(this, windowObject.transform, "Results", 62f, 24f);
         RectTransform lr = results.scroll.GetComponent<RectTransform>();
         lr.anchorMin = new Vector2(0f, 0f); lr.anchorMax = new Vector2(0f, 1f); lr.pivot = new Vector2(0f, 0.5f);
         lr.offsetMin = new Vector2(30f, 30f);
-        lr.offsetMax = new Vector2(30f + 640f, -298f);
+        lr.offsetMax = new Vector2(30f + 640f, -listTop);
 
         // Right: the selected entry.
         GameObject detail = new GameObject("Detail", typeof(RectTransform), typeof(Image));
@@ -200,6 +205,19 @@ public class PixelDatabaseWindow : MonoBehaviour
         pr.anchoredPosition = new Vector2(-22f, -76f);
         picGo.SetActive(false);
         detailRect = detailLabel.rectTransform;
+        pinButton = PixelUIKit.CreateButton(Font, detail.transform, "Pin", "Pin to My Window", new Vector2(300f, 40f), new Color(0.25f, 0.45f, 0.8f, 1f), Color.white, 20f);
+        RectTransform pbr = pinButton.GetComponent<RectTransform>();
+        pbr.anchorMin = pbr.anchorMax = pbr.pivot = new Vector2(1f, 1f);
+        pbr.anchoredPosition = new Vector2(-22f, -278f);
+        pinLabel = pinButton.GetComponentInChildren<TMP_Text>();
+        pinLabel.enableAutoSizing = true; pinLabel.fontSizeMax = 20f; pinLabel.fontSizeMin = 11f;
+        pinButton.onClick.AddListener(() =>
+        {
+            if (selected == null || selected.pinType == null) return;
+            PixelMyWindow.TogglePin(selected.pinType, selected.pinKey);
+            RefreshPin();
+        });
+        pinButton.gameObject.SetActive(false);
         refHeader = PixelUIKit.CreateText(Font, detail.transform, "References Header", "", 28f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, new Color(1f, 0.85f, 0.4f));
         Place(refHeader.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -318f), new Vector2(-22f, -276f));
 
@@ -210,7 +228,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         rr.offsetMax = new Vector2(-16f, -326f);
 
         emptyLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Empty", "Nothing found.", 30f, TextAlignmentOptions.Center, FontStyles.Italic, new Color(1f, 1f, 1f, 0.5f));
-        Place(emptyLabel.rectTransform, 0f, 0f, 0f, 1f, new Vector2(30f, 250f), new Vector2(670f, -350f));
+        Place(emptyLabel.rectTransform, 0f, 0f, 0f, 1f, new Vector2(30f, 250f), new Vector2(670f, -(listTop + 50f)));
         emptyLabel.gameObject.SetActive(false);
 
         PixelWindows.Register(this, 16, () => windowObject != null && PixelPop.IsOpen(windowObject), () => PixelPop.Hide(windowObject));
@@ -258,6 +276,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             titleLabel.text = "";
             tagLabel.text = "";
             SetPicture(-1);
+            RefreshPin();
             detailLabel.text = "Search the whole game: a pixel, a pack, a skill, a potion, a tip... Then click a result to see what it is and every place in the game that refers to it.";
             refHeader.text = "";
             refList.Fill(new List<RowData>());
@@ -270,6 +289,7 @@ public class PixelDatabaseWindow : MonoBehaviour
             detailLabel.text = "You haven't discovered this yet. Keep playing to unlock it - or switch 'Show ???' on to look it up anyway.";
             refHeader.text = "";
             SetPicture(-1);
+            RefreshPin();
             refList.Fill(new List<RowData>());
             results.Highlight(e);
             return;
@@ -278,6 +298,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         detailLabel.text = string.IsNullOrEmpty(e.detail) ? "(no description)" : e.detail;
         refHeader.text = "References in the game (" + e.refs.Count + ")";
         SetPicture(e.tierIndex);
+        RefreshPin();
 
         List<RowData> rows = new List<RowData>();
         if (history.Count > 0)
@@ -307,6 +328,14 @@ public class PixelDatabaseWindow : MonoBehaviour
         if (e.refs.Count == 0) rows.Add(new RowData { text = "<alpha=#80>Nothing else in the game refers to this.", click = null });
         refList.Fill(rows);
         results.Highlight(e);
+    }
+
+    /// <summary>The Pin button: shown for an entry My Window can hold (a pixel, skill, achievement or consumable) while My Window exists.</summary>
+    private void RefreshPin()
+    {
+        bool can = selected != null && selected.pinType != null && Open(selected) && PixelMyWindow.CanPin;
+        pinButton.gameObject.SetActive(can);
+        if (can) pinLabel.text = PixelMyWindow.IsPinned(selected.pinType, selected.pinKey) ? "Unpin from My Window" : "Pin to My Window";
     }
 
     private bool Open(PixelDatabase.Entry e) => e.discovered || showAll;

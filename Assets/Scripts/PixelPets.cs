@@ -299,6 +299,11 @@ public partial class PixelPets : MonoBehaviour
 
     private float treatTimer;
 
+    /// <summary>For the Game Database: the spawn chance factor of an active pet, how much slower its pixels age, and the chance per click of finding a pet.</summary>
+    public float SpawnWeightFactor => Mathf.Max(1f, spawnWeightMultiplier);
+    public float DespawnSlowDown => Mathf.Max(1f, despawnSlowFactor);
+    public float FindChancePerClick => chancePerClick;
+
     /// <summary>True while a Pet Treat is working.</summary>
     public static bool TreatActive => Instance != null && Instance.treatTimer > 0f;
 

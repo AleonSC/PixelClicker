@@ -894,3 +894,4 @@
 [2026-10-14 05:23 UTC] Renamed the Pixel Guide button to 'Rotation' and its window to 'Pixel Rotation' (it only lists the pixels in your current rotation).
 [2026-10-14 05:26 UTC] Added an orange ! box at the top left of the Rotation window that explains what the window is for.
 [2026-10-14 05:31 UTC] Game Database: category tabs (All / Pixels / Packs / Skills / Items / Recipes / Minigames / Awards / Tips), a turning 3D picture on pixel entries, and undiscovered pixels / packs / skills / items shown as ??? with a 'Show ???' switch.
+[2026-10-14 05:38 UTC] Game Database: added Pet, Floor and Sky entries and vendor wares (vendors list what they sell, items say who sells them), and a 'Pin to My Window' button on pixels, skills, achievements and consumables.
