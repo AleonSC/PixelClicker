@@ -5,12 +5,11 @@
 //   on a window whose RectTransform is anchored + pivoted at the TOP LEFT of a full-screen canvas gives it:
 //   * DRAG by its header strip (a transparent handle behind the header's buttons), kept inside the playfield: between the black bars (PixelHud.BarHeight) and the screen sides.
 //   * MINIMIZE (button '-'): everything except the header, the handle and the chrome buttons is hidden and the window shrinks to the header (restores exactly what was showing).
-//   * PIN (button 'P', green while pinned): Pinned is a flag the owner reads (Dev Tools: a pinned window ignores Escape and doesn't count as an open window, so the game stays playable).
 //   * DOCK to the left / right edge: drag it against a side (a pale strip shows where) and it docks at that height with only a sliver showing; it slides out while the mouse is
-//     near it or you are typing in it; an undock arrow (replaces the pin button while docked) puts it back. Dragging a docked window by its header also undocks it and carries it off.
-//   Optional: HidePin() (nothing to pin), defaultPlacer (first-time position). Users: Dev Hub, the Next up window.
+//     near it or you are typing in it; an undock arrow puts it back. Dragging a docked window by its header also undocks it and carries it off.
+//   Optional: defaultPlacer (first-time position). Users: Dev Hub, the Next up window.
 //   RESIZE: EnableResize() adds a grip in the bottom-right corner that SCALES the window (0.55x - 1.6x, saved as prefKey + Scale; the Dev Hub uses it).
-//   Saved in PlayerPrefs prefKey + Pin / Min / Dock / DockY / X / Y (not part of the game save).
+//   Saved in PlayerPrefs prefKey + Min / Dock / DockY / X / Y (not part of the game save).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -22,7 +21,6 @@ public class PixelWindowChrome : MonoBehaviour
 {
     private const float EdgeSnap = 70f, DockSliver = 36f, EdgeMargin = 14f, SlideSeconds = 0.22f;
 
-    public bool Pinned { get; private set; }
     public bool Minimized => minimized;
     public bool Docked => dockSide != 0;
 
@@ -73,10 +71,6 @@ public class PixelWindowChrome : MonoBehaviour
     /// <summary>Optional: where the window goes the first time ever (canvas size in, anchored position from the top left out). Without it the window is centred.</summary>
     public System.Func<Vector2, Vector2> defaultPlacer;
 
-    /// <summary>For windows that have nothing to pin: hides the pin button (the undock arrow still shows while docked).</summary>
-    public void HidePin() { noPin = true; ApplyState(); }
-    private bool noPin;
-
     private RectTransform window, canvasRect, hint;
     private Canvas canvas;
     private string prefKey;
@@ -85,11 +79,9 @@ public class PixelWindowChrome : MonoBehaviour
     private int dockSide;               // 0 = free, -1 = left edge, 1 = right edge
     private float dockY, dockSlide = 1f;
     private PixelPopoutDrag drag;
-    private Button pinButton, undockButton;
-    private Image pinImage;
+    private Button undockButton;
     private Vector2 lastCanvasSize;
     private readonly List<GameObject> keep = new List<GameObject>(), hidden = new List<GameObject>();
-    private static readonly Color PinOn = new Color(0.2f, 0.6f, 0.3f, 1f);
     private Color buttonColorOff;
 
     /// <summary>Adds the chrome to a top-left anchored window. 'firstButtonRight' = distance from the window's right edge to the right edge of the first (Minimize) button.</summary>
@@ -134,13 +126,10 @@ public class PixelWindowChrome : MonoBehaviour
 
         Button min = MakeButton(font, "Chrome Minimize", "-", right, top, size, buttonColor, labelColor, labelSize);
         min.onClick.AddListener(() => SetMinimized(!minimized));
-        pinButton = MakeButton(font, "Chrome Pin", "P", right + size + 8f, top, size, buttonColor, labelColor, labelSize);
-        pinImage = pinButton.GetComponent<Image>();
-        pinButton.onClick.AddListener(() => { Pinned = !Pinned; PlayerPrefs.SetInt(prefKey + ".Pin", Pinned ? 1 : 0); ApplyState(); });
         undockButton = MakeButton(font, "Chrome Undock", ">", right + size + 8f, top, size, buttonColor, labelColor, labelSize);
         PixelUIKit.UseArrowGlyph(undockButton, false);
         undockButton.onClick.AddListener(Undock);
-        keep.Add(min.gameObject); keep.Add(pinButton.gameObject); keep.Add(undockButton.gameObject);
+        keep.Add(min.gameObject); keep.Add(undockButton.gameObject);
 
         GameObject hintGo = new GameObject("Chrome Dock Hint", typeof(RectTransform), typeof(Image));
         hintGo.transform.SetParent(win.parent, false);
@@ -149,7 +138,6 @@ public class PixelWindowChrome : MonoBehaviour
         hint = hintGo.GetComponent<RectTransform>();
         hintGo.SetActive(false);
 
-        Pinned = Get(prefKey + ".Pin", 0) != 0;
         dockSide = Mathf.Clamp(Get(prefKey + ".Dock", 0), -1, 1);
         dockY = PlayerPrefs.GetFloat(prefKey + ".DockY", -120f);
         restoreHeight = win.sizeDelta.y;
@@ -256,8 +244,6 @@ public class PixelWindowChrome : MonoBehaviour
             undockButton.gameObject.SetActive(dockSide != 0);
             undockButton.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 180f : 0f);
         }
-        if (pinButton != null) pinButton.gameObject.SetActive(dockSide == 0 && !noPin);
-        if (pinImage != null) pinImage.color = Pinned ? PinOn : buttonColorOff;
         if (drag != null) drag.locked = false;   // (a docked window can be dragged off by its header: the drag undocks it)
     }
 

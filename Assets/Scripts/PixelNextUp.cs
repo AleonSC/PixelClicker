@@ -246,7 +246,6 @@ public class PixelNextUp : MonoBehaviour
 
         // Drag by the header, minimize with '-', dock against a screen side (PixelWindowChrome; remembered between sessions).
         chrome = PixelWindowChrome.Attach(pr, font, "PixelClicker.NextUp.Window", HeaderH, 6f, 5f, 26f, new Color(0.3f, 0.36f, 0.5f, 1f), new Color(0.92f, 0.94f, 1f, 1f), 20f);
-        chrome.HidePin();
         chrome.Keep(title.gameObject);
         chrome.defaultPlacer = cs => new Vector2(position.x, -(cs.y - pr.sizeDelta.y) * 0.5f - position.y);
         built = true;

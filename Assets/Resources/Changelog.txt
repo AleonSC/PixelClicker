@@ -889,3 +889,4 @@
 [2026-10-14 05:07 UTC] Dev Hub search: choosing a result now wakes the hub window itself (un-minimizes it, slides a docked one out, brings it to front) and scrolls to the item one frame later once the window has its size back.
 [2026-10-14 05:10 UTC] Settings window: added a search bar under the title that filters the rows in place, and the close X on every pause-menu section window now sits level with the title.
 [2026-10-14 05:14 UTC] Settings window: Replay tutorial and Change keybinds are now two slim fixed buttons at the very bottom of the window (header width), and the empty Keybinds header is gone.
+[2026-10-14 05:16 UTC] Removed the 'P' pin button from the Dev Hub and the Next up window (windows undock by dragging now; Escape closes the hub again). My Window never had one.

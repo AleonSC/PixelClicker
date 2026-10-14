@@ -2,7 +2,7 @@
 // PixelDevHub.cs
 //   The DEV HUB: ONE window for every dev tool (opens with PixelAction.DevTools, F9, the pause menu's Dev Tools button or the docked Dev Tools button; PixelDevTools.OpenPanel / Close
 //   delegate here). It replaces the old Dev Tools panel, the Inspector window and the Mock up window.
-//   * The window itself is a PixelWindowChrome window: drag by the header (kept between the black bars), minimize, pin (a pinned hub ignores Escape) and dock to the left / right screen edge.
+//   * The window itself is a PixelWindowChrome window: drag by the header (kept between the black bars), minimize and dock to the left / right screen edge.
 //   * FILING-CABINET TABS along the top: Main (PixelDevTools' widgets), To-Do, Changelog, Inspector (PixelDevInspector), Shapes (PixelDevShapes), UI Mock (PixelDevMockup). Drag a tab
 //     sideways to REARRANGE the tabs; drag it down out of the strip to POP IT OUT into its own floating window (drag that window by its header, '-' minimizes it); the 'Dock' button or
 //     dropping the floating window on the hub puts it back as a tab. Order, active tab, floating tabs + their places and the hub's open state are saved (PlayerPrefs PixelClicker.Dev.Hub.*).
@@ -553,7 +553,7 @@ public class PixelDevHub : MonoBehaviour
     private void Start()
     {
         if (PlayerPrefs.GetInt(P + "Open", 0) != 0) SetOpen(true);   // (here, not in Awake: the tools that boot the hub from their own Awake must be finished first)
-        PixelWindows.Register(this, 200, () => open && !(chrome != null && chrome.Pinned), () => SetOpen(false));   // Escape closes it (not while pinned)
+        PixelWindows.Register(this, 200, () => open, () => SetOpen(false));   // Escape closes it
     }
 
     private void OnDestroy()
