@@ -117,6 +117,22 @@ public class PixelConveyor : MonoBehaviour
         return best;
     }
 
+    /// <summary>The belt nearest to a ground point, with the distance along it: true when the point is within the belt's half width plus 'slackCubes' (default 0.5 cube widths) of it.</summary>
+    public static bool NearestOn(PixelClicker c, Vector3 point, out PixelConveyor best, out float s, float slackCubes = 0.5f)
+    {
+        best = null; s = 0f;
+        float u = Mathf.Max(0.05f, c.OldPixelWorldSize), bestD = float.MaxValue;
+        foreach (PixelConveyor belt in all)
+        {
+            if (belt == null || belt.ghostMode) continue;
+            float along = Mathf.Clamp(belt.Along(point), 0f, belt.hLength);
+            Vector3 p = belt.PointAt(along);
+            float d = new Vector3(p.x - point.x, 0f, p.z - point.z).magnitude;
+            if (d < belt.width * 0.5f + slackCubes * u && d < bestD) { bestD = d; best = belt; s = along; }
+        }
+        return best != null;
+    }
+
     /// <summary>Keeps a belt from being steeper than about 37 degrees: returns 'to' with its height pulled in if needed.</summary>
     public static Vector3 ClampEnd(Vector3 from, Vector3 to)
     {
@@ -684,6 +700,7 @@ public class PixelConveyorSystem : MonoBehaviour
             float limit = belt.Length;
             foreach (Rider o in riders) if (o != r && o.belt == belt && o.lane == r.lane && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);
             float want = r.s + belt.RunSpeed * dt;
+            if (PixelBeltSorter.TryDivert(clicker, belt, r.s, r.rb)) { riding.Remove(r.rb); riders.RemoveAt(i); continue; }   // a Belt Sorter kicked it off the side
             bool atEnd = want >= belt.Length - 0.001f && limit >= belt.Length - 0.001f;
             r.s = Mathf.Clamp(Mathf.Min(want, limit), 0f, belt.Length);
             if (atEnd)

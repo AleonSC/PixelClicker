@@ -42,21 +42,7 @@ public class PixelTinyRobot : MonoBehaviour
 
     // ---------------- placing ----------------
 
-    /// <summary>The belt nearest to a ground point and the distance along it; false if no belt is close enough to count as 'on the belt'.</summary>
-    private static bool FindSpot(PixelClicker c, Vector3 point, out PixelConveyor best, out float s)
-    {
-        best = null; s = 0f;
-        float u = Mathf.Max(0.05f, c.OldPixelWorldSize), bestD = float.MaxValue;
-        foreach (PixelConveyor belt in PixelConveyor.All)
-        {
-            if (belt == null || belt.IsGhost) continue;
-            float along = Mathf.Clamp(belt.Along(point), 0f, belt.Length);
-            Vector3 p = belt.PointAt(along);
-            float d = new Vector3(p.x - point.x, 0f, p.z - point.z).magnitude;
-            if (d < belt.Width * 0.5f + 0.5f * u && d < bestD) { bestD = d; best = belt; s = along; }
-        }
-        return best != null;
-    }
+    private static bool FindSpot(PixelClicker c, Vector3 point, out PixelConveyor best, out float s) => PixelConveyor.NearestOn(c, point, out best, out s);
 
     public static bool TrySnap(PixelClicker c, Vector3 point, float yaw, GameObject ghostRoot, out Vector3 snappedPoint, out float snappedYaw)
     {

@@ -135,6 +135,13 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
+        Register("Belt Sorter",
+                 "A low gantry you place anywhere on a conveyor belt (the ghost snaps to the belt under the mouse; the chute is on the side the mouse is). It kicks every pixel of one type off the side - onto the floor, or onto a belt that starts at the chute's mouth. A new sorter is learning: the first pixel that rides past sets the filter (the label shows it). Left click the gantry to make it learn a new filter.",
+                 c => PixelBeltSorter.CreateGhost(c), (c, p, yw) => PixelBeltSorter.Place(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelBeltSorter.TrySnap;
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelBeltSorter.ExportState;
+        features[features.Count - 1].import = PixelBeltSorter.ImportState;
         Register("Tiny Robot",
                  "A little hover robot (to become an Electrician consumable). Pick a SPOT ON A CONVEYOR BELT (the ghost snaps to the belt under the mouse; a click off the belts does nothing). For a minute it keeps fetching the nearest loose old pixel to that spot, flies it over and puts it down on the belt, where the belt carries it away. Pixels you grab are left alone.",
                  c => PixelTinyRobot.CreateGhost(c), (c, p, yw) => PixelTinyRobot.Place(c, p, yw));
