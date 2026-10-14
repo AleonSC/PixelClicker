@@ -288,6 +288,11 @@ public class PixelGrab : MonoBehaviour
         // Drag on the plane facing the camera that passes through the pixel.
         dragPlane = new Plane(-cam.transform.forward, body.position);
         grabOffset = dragPlane.Raycast(ray, out float enter) ? body.position - ray.GetPoint(enter) : Vector3.zero;
+        // A tilted camera (orbital, free cam) drags on the HORIZONTAL plane through the pixel instead, so moving the mouse slides it over the floor rather than up / down through the world.
+        dragLevelY = body.position.y;
+        Plane level = new Plane(Vector3.up, new Vector3(0f, dragLevelY, 0f));
+        levelOffset = level.Raycast(ray, out float enterLevel) ? body.position - ray.GetPoint(enterLevel) : Vector3.zero;
+        levelOffset.y = 0f;
 
         heldShatter = body.GetComponent<OldPixelShatter>();
         if (heldShatter != null) heldShatter.Grabbed(); // can't break while carried
@@ -298,6 +303,11 @@ public class PixelGrab : MonoBehaviour
     }
 
     private OldPixelShatter heldShatter;
+    private float dragLevelY;
+    private Vector3 levelOffset;
+
+    /// <summary>Drag on the floor-parallel plane when the camera looks down at more than about 20 degrees (top down and orbital views); near the horizon the camera-facing plane is steadier.</summary>
+    private const float LevelDragMinDown = 0.35f;
 
     // ---- Gentle collisions: a carried / thrown pixel is light, and anything it hits is kept from flying far ----
     private readonly System.Collections.Generic.Dictionary<Rigidbody, float> normalMass = new System.Collections.Generic.Dictionary<Rigidbody, float>();
@@ -446,8 +456,19 @@ public class PixelGrab : MonoBehaviour
         if (cam == null) { Release(); return; }
 
         Ray ray = cam.ScreenPointToRay(PointerPosition());
-        if (!dragPlane.Raycast(ray, out float enter)) return;
-        Vector3 target = ray.GetPoint(enter) + grabOffset + Vector3.up * liftOffset;
+        Vector3 target;
+        if (-ray.direction.y > LevelDragMinDown)
+        {
+            Plane level = new Plane(Vector3.up, new Vector3(0f, dragLevelY, 0f));
+            if (!level.Raycast(ray, out float enterLevel)) return;
+            target = ray.GetPoint(enterLevel) + levelOffset + Vector3.up * liftOffset;
+            target.y = dragLevelY + liftOffset;
+        }
+        else
+        {
+            if (!dragPlane.Raycast(ray, out float enter)) return;
+            target = ray.GetPoint(enter) + grabOffset + Vector3.up * liftOffset;
+        }
 
         // While time is slowed, velocities are per slowed second: scale so the pixel still follows the mouse at normal speed.
         float slow = PixelTimeStop.SlowFactor;
