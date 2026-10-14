@@ -5480,6 +5480,42 @@ public class OldPixelImpact : MonoBehaviour
     }
 
     private float lastPulseTime = -99f;
+    private Rigidbody pulseBody;
+    private float lastFallSpeed;
+
+    /// <summary>
+    /// Safety net for the landing pulse: a pixel that was falling fast and has just stopped (or bounced) gets its ripple even when no collision event reached
+    /// OnCollisionEnter (a pixel dropped from high up can come down hard enough for the physics to resolve the landing without one). A short ray straight down finds the surface.
+    /// Only runs while the landing pulse is on and only for pixels that were falling fast, so it costs nothing otherwise.
+    /// </summary>
+    private void FixedUpdate()
+    {
+        if (!PixelFloor.PulseActive) { lastFallSpeed = 0f; return; }
+        if (pulseBody == null) pulseBody = GetComponent<Rigidbody>();
+        if (pulseBody == null || pulseBody.isKinematic) { lastFallSpeed = 0f; return; }
+#if UNITY_6000_0_OR_NEWER
+        float vy = pulseBody.linearVelocity.y;
+#else
+        float vy = pulseBody.velocity.y;
+#endif
+        float fell = lastFallSpeed;
+        lastFallSpeed = Mathf.Max(0f, -vy);
+        if (fell < 2.5f || vy > -fell * 0.5f) return;   // was not falling fast, or is still falling
+        if (Time.time - lastPulseTime < 0.15f) return;   // the collision event already made one
+        float reach = Mathf.Max(0.3f, fell * Time.fixedDeltaTime * 3f + transform.lossyScale.y);
+        RaycastHit[] hits = Physics.RaycastAll(transform.position, Vector3.down, reach, ~0, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue; RaycastHit surface = default; bool found = false;
+        foreach (RaycastHit h in hits)
+        {
+            if (h.collider == null || h.collider.transform.IsChildOf(transform) || h.distance >= best) continue;
+            if (h.collider.GetComponentInParent<OldPixelInfo>() != null || h.collider.GetComponent<WaterSplashPiece>() != null) continue;
+            best = h.distance; surface = h; found = true;
+        }
+        if (!found) return;
+        lastPulseTime = Time.time;
+        OldPixelInfo info = GetComponent<OldPixelInfo>();
+        PixelFloorPulse.LandedAt(surface.point, surface.normal, transform, info != null ? info.tierIndex : -1, Mathf.Clamp01(fell / fullSpeed));
+    }
 
     private void OnCollisionEnter(Collision collision)
     {

@@ -3,7 +3,7 @@
 //   What the floor does while 'Display floor' is OFF (Settings > Display, 'When floor is off': PixelFloor.OffMode, PlayerPrefs
 //   PixelClicker.Setting.FloorOffMode, global): 0 Invisible (only the sky, the default), 1 Flat plane (PixelFloor.UpdatePlane: a flat
 //   opaque lit sheet in the floor style's average colour just under the floor top, receives shadows; the edge fade melts its rim into
-//   the sky), 2 Landing pulse (PixelFloorPulse.Landed, called from OldPixelImpact: a soft rounded-square ripple, tinted by the pixel's
+//   the sky), 2 Landing pulse (PixelFloorPulse.Landed / LandedAt, called from OldPixelImpact - OnCollisionEnter plus a fall check in its FixedUpdate for pixels that stop after a fast fall without a collision event: a soft rounded-square ripple, tinted by the pixel's
 //   colour, lies on the surface the pixel landed on - turned to the contact normal and the pixel's heading, sized by the pixel and the
 //   impact - grows and fades in about 0.7 s; at most 24 at once, so it also works on slopes / shapes / any other solid surface).
 // ---------------------------------------------------
@@ -210,7 +210,15 @@ public class PixelFloorPulse : MonoBehaviour
     /// <summary>An old pixel hit a surface: puts a ripple there (if the landing pulse is switched on).</summary>
     public static void Landed(Collision collision, Transform pixel, int tierIndex, float intensity)
     {
-        if (!PixelFloor.PulseActive || collision.contactCount == 0 || pixel == null) return;
+        if (collision.contactCount == 0) return;
+        ContactPoint contact = collision.GetContact(0);
+        LandedAt(contact.point, contact.normal, pixel, tierIndex, intensity);
+    }
+
+    /// <summary>An old pixel came down on a surface at this point (found by a collision, or by OldPixelImpact's fall check when the collision event never came): puts a ripple there.</summary>
+    public static void LandedAt(Vector3 point, Vector3 normal, Transform pixel, int tierIndex, float intensity)
+    {
+        if (!PixelFloor.PulseActive || pixel == null) return;
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (clicker == null) return;
         if (instance == null)
@@ -218,9 +226,8 @@ public class PixelFloorPulse : MonoBehaviour
             GameObject go = new GameObject("Floor Pulses");
             instance = go.AddComponent<PixelFloorPulse>();
         }
-        ContactPoint contact = collision.GetContact(0);
         Color color = clicker.IsValidTierIndex(tierIndex) ? clicker.Tiers[tierIndex].UIColor : Color.white;
-        instance.Add(contact.point, contact.normal, pixel.eulerAngles.y, clicker.OldPixelWorldSize, intensity, color);
+        instance.Add(point, normal, pixel.eulerAngles.y, clicker.OldPixelWorldSize, intensity, color);
     }
 
     private void Add(Vector3 point, Vector3 normal, float yaw, float pixelSize, float intensity, Color color)
