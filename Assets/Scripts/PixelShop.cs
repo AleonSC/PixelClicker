@@ -722,6 +722,7 @@ public partial class PixelShop : MonoBehaviour
         // The built-in minigames must exist in the scene (the shop switches them on).
         EnsureMinigame<PixelGhostMinigame>();
         EnsureMinigame<PixelMeteorMinigame>();
+        EnsureMinigame<PixelEvilTreeMinigame>();
         EnsureMinigame<PixelBlackholeMinigame>();
         EnsureMinigame<PixelBombMinigame>();
         EnsureMinigame<PixelPadMinigame>();
@@ -1622,6 +1623,7 @@ public partial class PixelShop : MonoBehaviour
             EditorEnsureComponent<PixelBank>();
             EditorEnsureComponent<PixelGhostMinigame>();
             EditorEnsureComponent<PixelMeteorMinigame>();
+            EditorEnsureComponent<PixelEvilTreeMinigame>();
             EditorEnsureComponent<PixelBlackholeMinigame>();
             EditorEnsureComponent<PixelBombMinigame>();
             EditorEnsureComponent<PixelPadMinigame>();

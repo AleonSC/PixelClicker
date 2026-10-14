@@ -7,7 +7,7 @@
 //   Sorting / Breakout win, Dash round) calls GrantSkillXp(), which gives bonus XP to the skill in training (none while Standard is
 //   trained) via PixelSkills.AddXp (so the XP popup shows too); defaults in DefaultSkillXp by id (meteor 1, black hole 1 per swallowed
 //   pixel, pad 6, stardust 8, ghost 12, dash 15, bomb 20, snake / sort / breakout 25, others 5); per minigame skillXpReward (0 =
-//   default) and disableSkillXp in the Inspector. Bought minigames get an on/off row in the Toggles window
+//   default) and disableSkillXp in the Inspector. A minigame can name its own skill with SkillXpTarget (meteor = Mining, evil tree = Woodcutting): its XP then always goes there, whatever is in training (nothing if that skill is not bought). Bought minigames get an on/off row in the Toggles window
 //   (PixelMinigame.UserDisabled, saved per minigame; the shop never auto-starts a disabled one). Shop packs refer to minigames by id
 //   (unlocksMinigame; goals via a PackRequirement of kind MinigameGoal); the shop shows tracker rows and the save system stores counts
 //   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
@@ -92,6 +92,7 @@ public abstract class PixelMinigame : MonoBehaviour
         switch (Id)
         {
             case "meteor": return 1f;
+            case "eviltree": return 30f;
             case "blackhole": return 1f;
             case "pad": return 6f;
             case "stardust": return 8f;
@@ -108,13 +109,25 @@ public abstract class PixelMinigame : MonoBehaviour
         }
     }
 
-    /// <summary>Gives bonus XP to the skill in training (nothing while no skill is in training). Turning minigames on is part of the reward.</summary>
+    /// <summary>The skill this minigame's XP always goes to (a skill id), or null = whichever skill is in training. The meteor trains Mining and the evil tree Woodcutting, whatever you are training.</summary>
+    protected virtual string SkillXpTarget => null;
+
+    /// <summary>Gives bonus XP to the skill in training (nothing while no skill is in training), or to the minigame's own skill (<see cref="SkillXpTarget"/>) when it has one. Turning minigames on is part of the reward.</summary>
     protected void GrantSkillXp(float amount = 0f)
     {
         if (disableSkillXp || PixelSkills.Instance == null) return;
         PixelSkills skills = PixelSkills.Instance;
-        PixelSkills.SkillPack pack = skills.Find(skills.TrainingId);
-        if (pack == null || pack.id == PixelSkills.StandardId) return;
+        PixelSkills.SkillPack pack;
+        if (!string.IsNullOrEmpty(SkillXpTarget))
+        {
+            pack = skills.Find(SkillXpTarget);
+            if (pack == null || !skills.IsAvailable(pack)) return;   // its skill has not been bought yet: no XP
+        }
+        else
+        {
+            pack = skills.Find(skills.TrainingId);
+            if (pack == null || pack.id == PixelSkills.StandardId) return;
+        }
         float xp = amount > 0f ? amount : (skillXpReward > 0f ? skillXpReward : DefaultSkillXp());
         skills.AddXp(pack, xp);
     }

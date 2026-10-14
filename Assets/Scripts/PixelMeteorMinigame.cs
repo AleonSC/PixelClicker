@@ -23,6 +23,9 @@ using static PixelInput;
 /// </summary>
 public class PixelMeteorMinigame : PixelMinigame
 {
+    /// <summary>The meteor only trains Mining, whatever skill is in training.</summary>
+    protected override string SkillXpTarget => PixelSkills.MiningId;
+
     [Header("References")]
     [Tooltip("The PixelClicker (for the camera and the cube's position). Found automatically if left empty.")]
     [SerializeField] private PixelClicker clicker;

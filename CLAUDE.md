@@ -18,6 +18,7 @@
 | `PixelMinigameLimits.cs` | Limits how many minigames have something on screen together (minAtOnce 2 / maxAtOnce 3, limitAtOnce, quietSecondsAfterPlay 30 (nothing spawns that soon after Play; | in the header comment of `PixelMinigameLimits.cs` |
 | `PixelGhostMinigame.cs` | Ghost minigame (bought in the shop's Minigames tab via a pack with unlocksMinigame = "ghost"): | in the header comment of `PixelGhostMinigame.cs` |
 | `PixelMeteorMinigame.cs` | Meteor minigame (pack unlocksMinigame = "meteor", Minigames tab): | in the header comment of `PixelMeteorMinigame.cs` |
+| `PixelEvilTreeMinigame.cs` | Evil Tree minigame (id eviltree, pack unlocksMinigame = "eviltree", Minigames tab, needs the Woodcutter's Pack): a sapling sprouts, grows into a giant, flails so it is hard to click and has a health bar; felling it pays Magic Wood (the minigame's material / tracker) and Woodcutting XP only (PixelMinigame.SkillXpTarget). | in the header comment of `PixelEvilTreeMinigame.cs` |
 | `PixelStardustMinigame.cs` | Stardust minigame (id stardust, passive: Running = the Meteor pixel is unlocked, no pack of its own; | in the header comment of `PixelStardustMinigame.cs` |
 | `PixelMeteorSolar.cs` | Meteor and Solar rework. Meteor (PixelLook.meteorTexture + damageCracks + cometTail; | `docs/systems/PixelMeteorSolar.md` |
 | `PixelRockMesh.cs` | Jagged rocky pixels: PixelLook.jagged (Obsidian, Meteor, Rock, the six ores; | in the header comment of `PixelRockMesh.cs` |

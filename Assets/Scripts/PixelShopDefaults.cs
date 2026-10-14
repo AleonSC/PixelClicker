@@ -263,6 +263,25 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Default Evil Tree pack (Minigames tab): switches on the evil tree minigame. Needs the Woodcutter's Pack first.</summary>
+    private static ShopPack CreateEvilTreePack(int requiresWoodIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Evil Tree",
+            tab = ShopTab.Minigames,
+            description = "Now and then an evil tree sprouts on the floor and grows into a giant. It flails about, so it is hard to hit. Chop through its health bar to fell it for Magic Wood and Woodcutting XP; if you take too long it sinks back into the ground.",
+            requirements = Needs(requiresWoodIndex),
+            costs = new[]
+            {
+                new PackCost { type = PixelClicker.PixelType.Wood, amount = 600 },
+                new PackCost { type = PixelClicker.PixelType.Bark, amount = 250 },
+            },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksMinigame = "eviltree",
+        };
+    }
+
     /// <summary>Default Meteor Pixel pack (Pixels tab): needs Meteor Strike AND enough meteor chunks.</summary>
     private static ShopPack CreateMeteorPixelPack(int requiresMeteorIndex)
     {
@@ -1223,6 +1242,8 @@ public partial class PixelShop
                           requires = p => Rewards(p, PixelClicker.PixelType.Obsidian), create = CreateMeteorStrikePack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Meteor),
                           requires = p => Unlocks(p, "meteor"), create = CreateMeteorPixelPack },
+        new DefaultPack { isThis = p => Unlocks(p, "eviltree"),
+                          requires = p => Rewards(p, PixelClicker.PixelType.Wood), create = CreateEvilTreePack },
         new DefaultPack { isThis = p => Rewards(p, PixelClicker.PixelType.Solar),
                           requires = p => Rewards(p, PixelClicker.PixelType.Meteor), create = CreateSolarPixelPack },
         new DefaultPack { isThis = p => Unlocks(p, "pad"),
