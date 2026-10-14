@@ -360,7 +360,7 @@ public partial class PixelClicker : MonoBehaviour
         }
 
         /// <summary>Can this pixel spawn right now (unlocked and not switched off)?</summary>
-        public bool CanSpawn => (unlocked || rareDrop) && !(spawnDisabled && CanSwitchOff);
+        public bool CanSpawn => (unlocked || rareDrop || PixelSkills.PreviewForces(type)) && !(spawnDisabled && CanSwitchOff);
 
         /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
         public Color UIColor => new Color(color.r, color.g, color.b, 1f);

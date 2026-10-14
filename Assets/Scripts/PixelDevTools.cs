@@ -492,6 +492,21 @@ public class PixelDevTools : MonoBehaviour
     }
 
 
+    [Header("Balance report")]
+    [Tooltip("Label of the Tools tab button that writes the skill balance report (PixelBalanceReport) - paste the file / clipboard into any AI.")]
+    [SerializeField] private string balanceReportText = "Balance report (copies to clipboard)";
+
+    [Min(0.1f)]
+    [Tooltip("Manual clicks per second the balance report assumes.")]
+    [SerializeField] private float balanceManualCps = 4f;
+
+    [Min(0.1f)]
+    [Tooltip("Auto clicks per second the balance report assumes (auto clicks earn only a share of the XP).")]
+    [SerializeField] private float balanceAutoCps = 2f;
+
+    [Tooltip("Skill levels the balance report compares (ascending; the second one is the level the outlier check judges).")]
+    [SerializeField] private int[] balanceLevels = { 1, 10, 20, 30 };
+
     [Header("Bounds snapshot")]
     [Tooltip("Label of the Tools tab button that writes the view bounds snapshot (PixelBoundsSnapshot).")]
     [SerializeField] private string boundsSnapshotText = "Snapshot bounds (waits 3 s)";
@@ -812,6 +827,15 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
         ws = content.childCount;
 
+        // Row: skill balance report (text for an AI; no wait needed)
+        Button balance = PixelUIKit.CreateButton(font, content, "Balance Report Button", balanceReportText,
+                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(balance.GetComponent<RectTransform>(), 40f, y, inner);
+        balance.onClick.AddListener(() => PixelBalanceReport.Capture(balanceManualCps, balanceAutoCps, (int[])balanceLevels.Clone()));
+        Widget(content, board, "balance", ws, y);
+        y += rowHeight + 24f;
+        ws = content.childCount;
+
         // Rows: mark this moment / UI layout dump (same wait; the keys F10 / F11 need no wait: mark this moment, inspect under the mouse)
         Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText,
                                                 new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
@@ -977,6 +1001,7 @@ public class PixelDevTools : MonoBehaviour
             case "dock": return "Dev Tools button";
             case "skip": return "Skip intro";
             case "bounds": return "Snapshot bounds";
+            case "balance": return "Balance report";
             case "moment": return "Mark this moment";
             case "uidump": return "UI layout dump";
             case "dragon": return "Dragon cubes";
