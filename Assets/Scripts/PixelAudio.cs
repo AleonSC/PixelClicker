@@ -269,6 +269,7 @@ public class PixelAudio : MonoBehaviour
             Make("pixel_bounce_ghost", 0.05f, 0.9f, 1.15f),
             Make("ghost_float", 0.3f, 0.95f, 1.05f),
             Make("ufo_beam", 0.3f, 1f, 1f),
+            Make("talk_blip", 0.035f, 0.92f, 1.08f),
             Make("stardust_collect", 0.1f, 0.97f, 1.04f),
             Make("farm_hit", 0.04f, 0.85f, 1.2f),
             Make("wood_chop", 0.04f, 0.9f, 1.15f),
@@ -343,6 +344,7 @@ public class PixelAudio : MonoBehaviour
             case "pixel_bounce_ghost": return new[] { PixelSynth.GhostBounce(1), PixelSynth.GhostBounce(2), PixelSynth.GhostBounce(3) };
             case "ghost_float": return new[] { PixelSynth.GhostFloat() };
             case "ufo_beam": return new[] { PixelSynth.UfoBeam() };
+            case "talk_blip": return new[] { PixelSynth.TalkBlip(1), PixelSynth.TalkBlip(2), PixelSynth.TalkBlip(3), PixelSynth.TalkBlip(4), PixelSynth.TalkBlip(5), PixelSynth.TalkBlip(6) };
             case "stardust_fall": return new[] { PixelSynth.StarFall(1), PixelSynth.StarFall(2) };
             case "stardust_collect": return new[] { PixelSynth.StarChime() };
             case "pixel_wire": return new[] { PixelSynth.Elec(0, 1), PixelSynth.Elec(0, 2), PixelSynth.Elec(0, 3) };
@@ -855,6 +857,33 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.85f;
 
         AudioClip clip = AudioClip.Create("Zap " + seed, n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>One speech blip for dialogue boxes: a short voiced squeak (a few harmonics of a falling pitch under a soft envelope), about 70 ms. 'variant' picks the base pitch.</summary>
+    public static AudioClip TalkBlip(int variant)
+    {
+        const int rate = 22050;
+        const float length = 0.075f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        float baseHz = 190f + variant * 26f, phase = 0f, lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate, t = i / (float)n;
+            float hz = baseHz * (1.12f - 0.16f * t) * (1f + 0.018f * Mathf.Sin(sec * 70f));   // a little downward glide and wobble
+            phase += hz / rate;
+            phase -= Mathf.Floor(phase);
+            float w = Mathf.Sin(phase * 6.2832f) + 0.5f * Mathf.Sin(phase * 12.566f) + 0.28f * Mathf.Sin(phase * 18.85f) + 0.12f * Mathf.Sin(phase * 25.13f);
+            lp += (w - lp) * 0.35f;   // soften the buzz
+            float env = Mathf.Clamp01(sec / 0.006f) * Mathf.Exp(-sec * 26f) * (1f - t * t);
+            data[i] = lp * env;
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.5f;
+        AudioClip clip = AudioClip.Create("TalkBlip " + variant, n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

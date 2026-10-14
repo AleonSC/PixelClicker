@@ -3266,8 +3266,10 @@ public class PixelHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHan
 }
 
 /// <summary>Drags a UI box by this handle (the pause menu's floor-style pop-out).</summary>
-public class PixelPopoutDrag : MonoBehaviour, UnityEngine.EventSystems.IDragHandler, UnityEngine.EventSystems.IEndDragHandler
+public class PixelPopoutDrag : MonoBehaviour, UnityEngine.EventSystems.IBeginDragHandler, UnityEngine.EventSystems.IDragHandler, UnityEngine.EventSystems.IEndDragHandler
 {
+    public System.Action onBegin;   // a drag starts (a docked window undocks itself here, so it can be carried off by its header)
+    public void OnBeginDrag(UnityEngine.EventSystems.PointerEventData e) { onBegin?.Invoke(); }
     public RectTransform target;
     public Canvas canvas;
     public System.Action onMoved;

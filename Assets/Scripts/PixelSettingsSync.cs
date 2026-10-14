@@ -36,7 +36,7 @@ public static class PixelSettingsSync
         foreach (string k in new[]
         {
             "Rotation", "Pulsing", "RunInBackground", "AbbreviateNumbers", "CameraIntro", "Tips", "EventLog", "EventLogSize",
-            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewKind", "ViewAutoOrbit", "ViewScrollInvert", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "BlockTipsAlt", "Filter", "NextUp", "FancyMenu", "UiButtonColor", "ClickerAura", "AuraMode",
+            "PauseStopsGame", "AutoSave", "AutoSaveMessage", "HidePurchased", "Popups", "PopupSize", "ColorBlind", "DropGuide", "FlatView", "ViewKind", "ViewAutoOrbit", "ViewScrollInvert", "BarGlow", "ButtonMode", "GlowCycle", "DayNight", "DayNightLength", "UiColor", "BarColorOn", "Prospector", "SkillOffline", "ClickFx", "BlockTips", "BlockTipsAlt", "Filter", "NextUp", "TalkMuted", "FancyMenu", "UiButtonColor", "ClickerAura", "AuraMode",
         }) known.Add(new Known("PixelClicker.Setting." + k, 0));
         // Floats and strings (they used to be listed as ints, which stored 0 and wiped the picked glow colour, the hues and the skill pack on every load).
         foreach (string k in new[] { "GlowHue", "UiHue", "UiSat", "UiButtonHue", "UiButtonSat", "ViewBaseZoom", "ViewAutoSpeed", "FilterStrength" }) known.Add(new Known("PixelClicker.Setting." + k, 1));
@@ -53,6 +53,7 @@ public static class PixelSettingsSync
         foreach (string k in new[] { "ClearKey", "Infinite", "Selector", "NoDespawn", "NoLimit", "FarmerSeeds", "God", "PixelIndex", "SelPixel", "SelMinigame", "GodChoice", "ClickCount" })
             known.Add(new Known("PixelClicker.Dev." + k, 0));
         known.Add(new Known("PixelClicker.Dev.Amount", 2));
+        known.Add(new Known("PixelClicker.Dev.CustomText", 2));   // the Dev Hub's edited label texts (PixelDevTextEdit)
         return known;
     }
 
@@ -142,6 +143,8 @@ public static class PixelSettingsSync
         if (menu != null) menu.ReloadSettingsFromPrefs();
         PixelHints.RefreshLog();
         PixelDevTools.ReloadFromPrefs();
+        PixelDevTextEdit.ReloadFromPrefs();
+        PixelTalk.ReloadFromPrefs();
         PixelOrthoView.ReloadFromPrefs();
         PixelViewWindow.ReloadFromPrefs();
         PixelHud.ReloadGlowFromPrefs();

@@ -7,7 +7,7 @@
 //   * MINIMIZE (button '-'): everything except the header, the handle and the chrome buttons is hidden and the window shrinks to the header (restores exactly what was showing).
 //   * PIN (button 'P', green while pinned): Pinned is a flag the owner reads (Dev Tools: a pinned window ignores Escape and doesn't count as an open window, so the game stays playable).
 //   * DOCK to the left / right edge: drag it against a side (a pale strip shows where) and it docks at that height with only a sliver showing; it slides out while the mouse is
-//     near it or you are typing in it; an undock arrow (replaces the pin button while docked) puts it back. Docked windows can't be dragged until undocked.
+//     near it or you are typing in it; an undock arrow (replaces the pin button while docked) puts it back. Dragging a docked window by its header also undocks it and carries it off.
 //   Optional: HidePin() (nothing to pin), defaultPlacer (first-time position). Users: Dev Hub, the Next up window.
 //   RESIZE: EnableResize() adds a grip in the bottom-right corner that SCALES the window (0.55x - 1.6x, saved as prefKey + Scale; the Dev Hub uses it).
 //   Saved in PlayerPrefs prefKey + Pin / Min / Dock / DockY / X / Y (not part of the game save).
@@ -127,6 +127,7 @@ public class PixelWindowChrome : MonoBehaviour
         drag = handle.GetComponent<PixelPopoutDrag>();
         drag.target = win;
         drag.canvas = canvas;
+        drag.onBegin = () => { if (dockSide != 0) Undock(); };   // grab the header of a docked window and it comes off the edge with the mouse
         drag.onMoved = () => { Clamp(); UpdateHint(); };
         drag.onEnd = () => { TryDock(); UpdateHint(); Save(); };
         keep.Add(handle);
@@ -249,7 +250,7 @@ public class PixelWindowChrome : MonoBehaviour
         }
         if (pinButton != null) pinButton.gameObject.SetActive(dockSide == 0 && !noPin);
         if (pinImage != null) pinImage.color = Pinned ? PinOn : buttonColorOff;
-        if (drag != null) drag.locked = dockSide != 0;
+        if (drag != null) drag.locked = false;   // (a docked window can be dragged off by its header: the drag undocks it)
     }
 
     private void UpdateHint()

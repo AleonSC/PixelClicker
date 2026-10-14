@@ -108,6 +108,7 @@ public class PixelNoticeBox : MonoBehaviour
         backRect = back.GetComponent<RectTransform>();
         backRect.anchorMin = backRect.anchorMax = backRect.pivot = new Vector2(0f, 1f);
         backRect.anchoredPosition = new Vector2(10f, -10f);
+        muteRect = PixelTalk.AddMuteButton(font, box.GetComponent<RectTransform>(), new Vector2(40f, 40f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(62f, -10f), new Color(0.2f, 0.35f, 0.5f, 1f)).GetComponent<RectTransform>();   // mutes the talking blips
         GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
         fillGo.transform.SetParent(back.transform, false);
         Image fillImage = fillGo.GetComponent<Image>();
@@ -129,7 +130,7 @@ public class PixelNoticeBox : MonoBehaviour
         });
     }
 
-    private RectTransform backRect;
+    private RectTransform backRect, muteRect;
     private System.Action backCallback;
     private const float backHoldSeconds = 0.6f;
 
@@ -265,6 +266,7 @@ public class PixelNoticeBox : MonoBehaviour
         timed = seconds > 0f;
         timer = seconds;
         if (backRect != null) backRect.gameObject.SetActive(backCallback != null);
+        if (muteRect != null) muteRect.anchoredPosition = new Vector2(backCallback != null ? 62f : 10f, -10f);   // (next to the back arrow, or in its place)
         if (!timed)
         {
             label.ForceMeshUpdate();
@@ -368,7 +370,9 @@ public class PixelNoticeBox : MonoBehaviour
     {
         if (typing && label != null)
         {
+            int wasShown = (int)typeShown;
             typeShown += Time.unscaledDeltaTime * TypeCharsPerSecond;
+            PixelTalk.Typed(label, wasShown, Mathf.Min(typeTotal, (int)typeShown));   // talking blips
             if (typeShown >= typeTotal) FinishTyping();
             else label.maxVisibleCharacters = (int)typeShown;
         }

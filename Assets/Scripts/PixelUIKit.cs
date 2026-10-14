@@ -592,6 +592,17 @@ public static class PixelUIKit
         if (dd != null && dd.GetComponent<PixelDropdownListEscape>() == null) dd.gameObject.AddComponent<PixelDropdownListEscape>();
     }
 
+    /// <summary>Scrolls a vertical scroll view so a top-left anchored item in its content is at the top of the view (nothing happens if everything fits).</summary>
+    public static void ScrollTo(ScrollRect scroll, RectTransform item)
+    {
+        if (scroll == null || scroll.content == null || item == null) return;
+        RectTransform viewport = scroll.viewport != null ? scroll.viewport : scroll.GetComponent<RectTransform>();
+        float total = scroll.content.rect.height, view = viewport.rect.height;
+        if (total <= view + 1f) return;
+        float top = Mathf.Clamp(-item.anchoredPosition.y - 8f, 0f, total - view);
+        scroll.verticalNormalizedPosition = 1f - top / (total - view);
+    }
+
     /// <summary>Keeps a label on one line and shrinks its text (down to minSize) when it is too wide for its box, instead of spilling out of a button.</summary>
     public static void FitOneLine(TMP_Text t, float minSize = 10f)
     {

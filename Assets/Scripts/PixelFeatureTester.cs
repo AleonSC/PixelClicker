@@ -178,6 +178,8 @@ public class PixelFeatureTester : MonoBehaviour
             GameObject card = new GameObject("Card " + f.name, typeof(RectTransform), typeof(Image));
             card.transform.SetParent(content, false);
             PlaceTL(card.GetComponent<RectTransform>(), 0f, y, W - 40f, CardH);
+            RectTransform cardRect = card.GetComponent<RectTransform>();
+            PixelDevHub.RegisterSearch("Tester: " + f.name, "tester", () => PixelUIKit.ScrollTo(scroll, cardRect), f.description);
             card.GetComponent<Image>().color = BoxColor;
             card.GetComponent<Image>().raycastTarget = false;
             PixelUIKit.StyleBox(card.GetComponent<Image>());

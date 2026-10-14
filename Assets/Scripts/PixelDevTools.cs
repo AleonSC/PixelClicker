@@ -741,6 +741,7 @@ public class PixelDevTools : MonoBehaviour
         scrollRect.offsetMax = new Vector2(0f, -8f);
         y = 0f; // rows are placed from the top of the scrolling content (each one becomes a draggable widget card)
         PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder2", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - 16f), toolsScroll.viewport);
+        board.SearchTab = "main";   // (its cards show up in the hub's search bar)
 
         // Widget: pixel dropdown | amount field | Add | Give pet
         int pinStart = content.childCount;

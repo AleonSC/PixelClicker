@@ -491,8 +491,10 @@ public class PixelGuideVendor : MonoBehaviour
                 }
                 else if (shown < total)
                 {
+                    int wasShown = (int)shown;
                     shown += Time.unscaledDeltaTime * speed;
                     message.maxVisibleCharacters = Mathf.Min(total, (int)shown);
+                    PixelTalk.Typed(message, wasShown, Mathf.Min(total, (int)shown), 0.92f);   // Cubie's voice: talking blips, a touch lower
                 }
 
                 characterRect.anchoredPosition = new Vector2(restX, barH + 24f + Mathf.Sin(Time.unscaledTime * 3f) * 4f);
@@ -719,6 +721,7 @@ public class PixelGuideVendor : MonoBehaviour
         fillRect.SetSiblingIndex(1);
         PixelHoldButton hold = backButton.gameObject.AddComponent<PixelHoldButton>();
         hold.Setup(fillRect, 0.6f, () => { hold.ResetProgress(); wantBack = true; advance++; });
+        PixelTalk.AddMuteButton(Font, panel, new Vector2(56f, 56f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(104f, 42f), new Color(0.15f, 0.4f, 0.4f, 1f));   // mutes the talking blips
         panel.gameObject.SetActive(false);
     }
 

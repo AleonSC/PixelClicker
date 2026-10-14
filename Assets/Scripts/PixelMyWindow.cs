@@ -275,6 +275,7 @@ public class PixelMyWindow : MonoBehaviour
         drag.target = windowRect;
         drag.canvas = canvas;
         headerDrag = drag;
+        drag.onBegin = () => { if (dockSide != 0) Undock(); };   // grab the header of a docked window and it comes off the edge with the mouse
         drag.onMoved = () => { ClampToScreen(); UpdateDockHint(); geometryDirty = true; };
         drag.onEnd = () => { TryDock(); UpdateDockHint(); geometryDirty = true; };
 
@@ -476,7 +477,7 @@ public class PixelMyWindow : MonoBehaviour
             undockButton.gameObject.SetActive(dockSide != 0);
             undockButton.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 180f : 0f);   // points into the screen
         }
-        if (headerDrag != null) headerDrag.locked = dockSide != 0;   // a docked window is moved by undocking it first
+        if (headerDrag != null) headerDrag.locked = false;   // (a docked window can be dragged off by its header: the drag undocks it)
         geometryDirty = true;
     }
 

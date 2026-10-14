@@ -35,6 +35,106 @@ public class PixelDevHub : MonoBehaviour
         public float width;
     }
 
+    // ---- search bar (header): finds tabs, widgets and tester features; picking a result opens its tab and reveals the item ----
+
+    private sealed class SearchEntry { public string label, keywords, tabId; public Action reveal; }
+    private readonly List<SearchEntry> searchEntries = new List<SearchEntry>();
+    private TMP_InputField searchField;
+    private RectTransform searchPanel;
+    private readonly List<Button> searchRows = new List<Button>();
+    private readonly List<SearchEntry> shownResults = new List<SearchEntry>();
+    private const int MaxResults = 8;
+
+    /// <summary>Adds something to the hub's search: its label (shown in the results), the tab it lives in, what to do once its tab is open (scroll to it...), and extra words that also match.</summary>
+    public static void RegisterSearch(string label, string tabId, Action reveal, string keywords = "")
+    {
+        Boot();
+        instance.searchEntries.Add(new SearchEntry { label = label, tabId = tabId, reveal = reveal, keywords = keywords ?? "" });
+    }
+
+    private void BuildSearch()
+    {
+        searchField = PixelUIKit.CreateInputField(font, windowRect, "Search Field", new Vector2(356f, 34f), new Color(0.06f, 0.07f, 0.1f, 1f), TextColor, 20f, "Search the hub...");
+        PlaceTL(searchField.GetComponent<RectTransform>(), 190f, 9f, 356f, 34f);
+        searchField.onValueChanged.AddListener(RefreshSearch);
+        searchField.onSubmit.AddListener(_ => { if (shownResults.Count > 0) ChooseResult(shownResults[0]); });
+        GameObject panelGo = new GameObject("Search Results", typeof(RectTransform), typeof(Image));
+        panelGo.transform.SetParent(windowRect, false);
+        panelGo.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.18f, 0.98f);
+        PixelUIKit.StyleBox(panelGo.GetComponent<Image>());
+        searchPanel = panelGo.GetComponent<RectTransform>();
+        PlaceTL(searchPanel, 190f, 46f, 356f, 40f);
+        panelGo.SetActive(false);
+        foreach (Tab t in tabs) searchEntries.Add(new SearchEntry { label = "Tab: " + t.title, tabId = t.id, keywords = t.id });
+    }
+
+    private void RefreshSearch(string text)
+    {
+        string q = (text ?? "").Trim().ToLowerInvariant();
+        shownResults.Clear();
+        if (q.Length > 0)
+        {
+            List<SearchEntry> starts = new List<SearchEntry>(), contains = new List<SearchEntry>();
+            foreach (SearchEntry e in searchEntries)
+            {
+                string label = e.label.ToLowerInvariant();
+                int at = label.IndexOf(q, StringComparison.Ordinal);
+                bool afterColon = at >= 0 && label.IndexOf(": ", StringComparison.Ordinal) is int c && c >= 0 && at >= c + 2 && at == c + 2;
+                if (afterColon) starts.Add(e);
+                else if (at >= 0 || e.keywords.ToLowerInvariant().Contains(q)) contains.Add(e);
+            }
+            shownResults.AddRange(starts);
+            shownResults.AddRange(contains);
+            if (shownResults.Count > MaxResults) shownResults.RemoveRange(MaxResults, shownResults.Count - MaxResults);
+        }
+        searchPanel.gameObject.SetActive(shownResults.Count > 0 || q.Length > 0);
+        while (searchRows.Count < MaxResults)
+        {
+            int index = searchRows.Count;
+            Button b = PixelUIKit.CreateButton(font, searchPanel, "Result " + index, "", new Vector2(340f, 32f), new Color(0.2f, 0.26f, 0.38f, 1f), TextColor, 18f);
+            TMP_Text l = b.GetComponentInChildren<TMP_Text>();
+            l.alignment = TextAlignmentOptions.MidlineLeft;
+            l.rectTransform.offsetMin = new Vector2(10f, 0f);
+            PixelUIKit.FitOneLine(l, 11f);
+            b.onClick.AddListener(() => { if (index < shownResults.Count) ChooseResult(shownResults[index]); });
+            searchRows.Add(b);
+        }
+        for (int i = 0; i < searchRows.Count; i++)
+        {
+            bool on = i < shownResults.Count;
+            searchRows[i].gameObject.SetActive(on);
+            if (!on) continue;
+            searchRows[i].GetComponentInChildren<TMP_Text>().text = shownResults[i].label;
+            PlaceTL((RectTransform)searchRows[i].transform, 8f, 4f + i * 34f, 340f, 32f);
+        }
+        if (q.Length > 0 && shownResults.Count == 0 && searchRows.Count > 0)
+        {
+            searchRows[0].gameObject.SetActive(true);
+            searchRows[0].GetComponentInChildren<TMP_Text>().text = "Nothing found";
+            PlaceTL((RectTransform)searchRows[0].transform, 8f, 4f, 340f, 32f);
+            searchPanel.sizeDelta = new Vector2(356f, 40f);
+        }
+        else searchPanel.sizeDelta = new Vector2(356f, 8f + shownResults.Count * 34f);
+        searchPanel.SetAsLastSibling();
+    }
+
+    private void ChooseResult(SearchEntry e)
+    {
+        searchField.SetTextWithoutNotify("");
+        searchPanel.gameObject.SetActive(false);
+        shownResults.Clear();
+        RevealTab(e.tabId);
+        e.reveal?.Invoke();
+    }
+
+    private void RevealTab(string id)
+    {
+        Tab t = Find(id);
+        if (t == null) return;
+        if (t.floating) { if (t.window != null) t.window.SetAsLastSibling(); }
+        else { active = t; LayoutTabs(null); SaveState(); }
+    }
+
     private static PixelDevHub instance;
     public static bool IsOpen => instance != null && instance.open;
     public static event Action<bool> OpenChanged;
@@ -160,6 +260,9 @@ public class PixelDevHub : MonoBehaviour
         chrome.Keep(title.gameObject);
         chrome.Keep(close.gameObject);
         chrome.EnableResize();   // the grip in the bottom-right corner scales the whole hub
+        BuildSearch();
+        chrome.Keep(searchField.gameObject);
+        gameObject.AddComponent<PixelDevTextEdit>().Setup(canvasRoot.transform, font);   // right click any label to set your own text
 
         // Tabs that were floating when the game last closed come back where they were.
         foreach (string id in PlayerPrefs.GetString(P + "Floating", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
@@ -521,6 +624,11 @@ public class PixelWidgetBoard
     private static readonly Color CardColor = new Color(1f, 1f, 1f, 0.05f), FavoriteColor = new Color(1f, 0.82f, 0.25f, 0.16f), FavoriteText = new Color(1f, 0.88f, 0.4f, 1f), NormalText = new Color(0.85f, 0.9f, 1f, 0.9f);
     private const float FavoriteHoldSeconds = 0.7f;
 
+    /// <summary>The hub tab these cards live in: when set, every card is registered with the hub's search bar (PixelDevHub.RegisterSearch).</summary>
+    public string SearchTab;
+    private Item flashItem;
+    private float flashUntil;
+
     /// <summary>'viewport' = the visible window of the scrolling list the cards live in (hovering a card scrolled out of view does not count).</summary>
     public PixelWidgetBoard(RectTransform content, string prefKey, float gap, Action<float> onHeight, RectTransform viewport = null)
     {
@@ -575,6 +683,18 @@ public class PixelWidgetBoard
         lr.anchorMin = new Vector2(0f, 1f); lr.anchorMax = new Vector2(1f, 1f); lr.pivot = new Vector2(0f, 1f);
         lr.offsetMin = new Vector2(44f, -MinimizedH); lr.offsetMax = new Vector2(-48f, 0f);   // (the header strip: the title is always shown, the '-' button sits at its right end)
         item.titleLabel = label;
+        if (!string.IsNullOrEmpty(SearchTab)) PixelDevHub.RegisterSearch("Widget: " + item.title, SearchTab, () => Reveal(item), item.id);
+    }
+
+    /// <summary>Search result picked: unfold the card, scroll it into view and flash it.</summary>
+    public void Reveal(Item item)
+    {
+        if (item == null) return;
+        if (item.minimized) SetMinimized(item, false, true);
+        ScrollRect scroll = content.GetComponentInParent<ScrollRect>();
+        PixelUIKit.ScrollTo(scroll, item.rect);
+        flashItem = item;
+        flashUntil = Time.unscaledTime + 1.6f;
     }
 
     private void SetMinimized(Item item, bool on, bool save)
@@ -738,6 +858,11 @@ public class PixelWidgetBoard
 
     internal void HoldUpdate()
     {
+        if (flashItem != null)
+        {
+            if (Time.unscaledTime >= flashUntil) { ApplyFavoriteLook(flashItem); flashItem = null; }
+            else if (flashItem.bg != null) flashItem.bg.color = Color.Lerp(flashItem.favorite ? FavoriteColor : CardColor, new Color(0.4f, 0.8f, 1f, 0.4f), 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f));
+        }
         Item target = PixelInput.RightPressed() || PixelInput.RightHeld() ? CardUnderPointer() : null;
         if (PixelHold.Update(driver, target, FavoriteHoldSeconds, "", FavoriteText, true, null) && target != null) ToggleFavorite(target);
     }
