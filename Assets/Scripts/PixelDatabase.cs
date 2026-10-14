@@ -327,7 +327,7 @@ public static class PixelDatabase
         if (clicker != null && petSystem != null)
             foreach (PixelClicker.PixelTier t in clicker.Tiers)
             {
-                if (t == null || t.rareDrop || PixelClicker.IsStandalone(t.type)) continue;
+                if (t == null || !PixelPets.CanHavePet(t.type)) continue;
                 string pixelName = PixelName(t);
                 string special = "";
                 switch (t.type.ToString())

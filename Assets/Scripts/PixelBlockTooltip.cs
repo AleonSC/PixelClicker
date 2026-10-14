@@ -3,7 +3,7 @@
 //   Block hover tooltip (added by PixelClicker.Awake; Settings > Interface 'Block tooltips', PixelBlockTooltip.Enabled, PlayerPrefs
 //   PixelClicker.Setting.BlockTips, default on, per save; disableTooltip, hoverDelay 0 = 0.18, cardWidth 0 = 560):
 //   PixelClicker.TryGetBlockAt(screen, ...) finds the nearest of the clickable cube / an old pixel under the pointer; after the hover
-//   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, spinning PixelCubeIcon, name, rarity tag from
+//   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, real turning 3D model (PixelTierPicture), name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
 //   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose or god mode. THREE MODES (PixelBlockTooltip.Mode, Settings > Interface drop-down, PlayerPrefs BlockTipsMode, per save): 0 Full, 1 Minimal (the spinning 3D icon and the name only), 2 Off. ALT: a tap (released within altHoldSeconds 0.25) cycles Full -> Minimal -> Off -> Full and a small toast names the new mode; HOLDING Alt (longer than that) shows the other kind of the current mode while held (Full shows Minimal, Minimal shows Full, Off shows Full) and the release does not cycle. Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
 // ---------------------------------------------------
@@ -65,6 +65,7 @@ public class PixelBlockTooltip : MonoBehaviour
     private CanvasGroup group;
     private Image glow, accent, bar, barFill, shine, iconFrame;
     private PixelCubeIcon icon;
+    private RawImage picture;      // the block's REAL 3D model (PixelTierPicture); the flat cube icon is only the fallback
     private TMP_Text nameText, tagText, statsText, descText, barText;
     private RectTransform barRect;
 
@@ -144,6 +145,14 @@ public class PixelBlockTooltip : MonoBehaviour
         icon = iconObject.GetComponent<PixelCubeIcon>();
         icon.fill = 0.75f;
         PixelUIKit.Stretch(icon.rectTransform);
+
+        GameObject pictureObject = new GameObject("Model", typeof(RectTransform), typeof(RawImage));
+        pictureObject.transform.SetParent(iconFrame.transform, false);
+        picture = pictureObject.GetComponent<RawImage>();
+        picture.raycastTarget = false;
+        PixelUIKit.Stretch(picture.rectTransform);
+        picture.rectTransform.offsetMin = new Vector2(4f, 4f); picture.rectTransform.offsetMax = new Vector2(-4f, -4f);
+        picture.gameObject.SetActive(false);
 
         nameText = PixelUIKit.CreateText(font, body.transform, "Name", "", 38f, TextAlignmentOptions.TopLeft, FontStyles.Bold, Color.white);
         PlaceText(nameText, 146f, -22f, w - 166f, 46f);
@@ -355,6 +364,10 @@ public class PixelBlockTooltip : MonoBehaviour
         glow.color = new Color(c.r, c.g, c.b, 0.35f);
         iconFrame.color = new Color(c.r * 0.25f, c.g * 0.25f, c.b * 0.25f, 1f);
         icon.color = c;
+        Texture model = PixelTierPicture.Get(clicker, shownTier, 192);   // the real model, turning (null if the block has none: then the flat icon shows)
+        picture.texture = model;
+        picture.gameObject.SetActive(model != null);
+        icon.gameObject.SetActive(model == null);
         nameText.text = pretty;
         nameText.color = Color.Lerp(c, Color.white, 0.25f);
 
@@ -449,6 +462,7 @@ public class PixelBlockTooltip : MonoBehaviour
     private void Animate()
     {
         float t = Time.unscaledTime;
+        if (shownTier >= 0 && picture != null && picture.gameObject.activeSelf) PixelTierPicture.Render(shownTier, t * 55f);
         float ease = 1f - Mathf.Pow(1f - visible, 3f);
         group.alpha = ease;
         card.localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, ease);

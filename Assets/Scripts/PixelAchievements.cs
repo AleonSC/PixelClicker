@@ -196,6 +196,9 @@ public class PixelAchievements : MonoBehaviour
     // Defaults
     // ------------------------------------------------------------------
 
+    /// <summary>Pixel types without a Collect / Click achievement: the Dragon Cubes (their own find show) and the hazards (they pay nothing and are not collected).</summary>
+    private static bool NoPixelAchievements(PixelClicker.PixelType type) => PixelClicker.IsDragonCube(type) || PixelClicker.IsHazard(type);
+
     private static readonly double[] BuiltInTiers = { 10, 100, 1000, 10000, 100000, 1000000 };
 
     private static readonly double[] BuiltInClickTiers = { 10, 50, 250, 1000, 5000, 25000 };
@@ -231,7 +234,7 @@ public class PixelAchievements : MonoBehaviour
         List<Achievement> list = new List<Achievement>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue; // Dragon Cubes, the Fire pixel and the ores have no achievements of their own
+            if (NoPixelAchievements(type)) continue; // Dragon Cubes, the Fire pixel and the ores have no achievements of their own
             list.Add(CreateCollectAchievement(type, BuiltInTiers));
             list.Add(CreateClickAchievement(type));
         }
@@ -266,7 +269,7 @@ public class PixelAchievements : MonoBehaviour
 
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
+            if (NoPixelAchievements(type)) continue;
             // Skip a type that already has any 'Collect Pixel Type' achievement.
             if (achievements.Exists(a => a != null && a.kind == Kind.CollectPixelType && a.pixelType == type)) continue;
             achievements.Add(CreateCollectAchievement(type, tiers));
@@ -276,7 +279,7 @@ public class PixelAchievements : MonoBehaviour
         // The "times clicked" achievement of each pixel type.
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type) || PixelClicker.IsStandalone(type)) continue;
+            if (NoPixelAchievements(type)) continue;
             if (achievements.Exists(a => a != null && a.kind == Kind.ClickPixelType && a.pixelType == type)) continue;
             achievements.Add(CreateClickAchievement(type));
             changed = true;
@@ -583,20 +586,24 @@ public class PixelAchievements : MonoBehaviour
     private void RegisterPetAchievements()
     {
         if (!addPetAchievements || clicker == null) return;
-        foreach (PixelClicker.PixelTier tier in clicker.Tiers)
+        // One for every pixel type that can have a pet (all of them, also the ones whose block is not in the game's tier list yet: they get a plain name and a grey badge until it is).
+        foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (tier.rareDrop || PixelClicker.IsStandalone(tier.type)) continue; // no pets for Dragon Cubes, Fire or the ores
-            PixelClicker.PixelType type = tier.type;
+            if (!PixelPets.CanHavePet(type)) continue;
+            PixelClicker.PixelType petType = type;
+            int index = clicker.IndexOf(type);
+            string name = index >= 0 ? SingularPixel(clicker.Tiers[index].displayName) : System.Text.RegularExpressions.Regex.Replace(type.ToString(), "(?<=[a-z])(?=[A-Z0-9])", " ");
+            Color tint = index >= 0 ? clicker.Tiers[index].color : new Color(0.7f, 0.72f, 0.78f, 1f);
             Register(new Achievement
             {
                 id = "pet_" + type,
-                title = SingularPixel(tier.displayName) + " Pet",
-                description = "Find the " + SingularPixel(tier.displayName) + " Pet. Clicking a pixel very rarely gives you its pet.",
+                title = name + " Pet",
+                description = "Find the " + name + " Pet. Clicking a pixel very rarely gives you its pet.",
                 pixelType = type,
                 tiers = new double[0],
                 target = 1,
-                iconColor = new Color(tier.color.r, tier.color.g, tier.color.b, 1f),
-            }, () => PixelPets.Instance != null && PixelPets.Instance.IsOwned(type) ? 1d : 0d);
+                iconColor = new Color(tint.r, tint.g, tint.b, 1f),
+            }, () => PixelPets.Instance != null && PixelPets.Instance.IsOwned(petType) ? 1d : 0d);
         }
     }
 
