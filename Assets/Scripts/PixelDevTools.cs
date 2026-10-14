@@ -636,7 +636,7 @@ public class PixelDevTools : MonoBehaviour
     private void GiveGodCube()
     {
         if (clicker == null) return;
-        for (int ti = (int)PixelClicker.PixelType.GodSlifer; ti <= (int)PixelClicker.PixelType.StoneSoul; ti++)   // the Gods, then the six Infinity Stones
+        for (int ti = (int)PixelClicker.PixelType.GodSlifer; ti <= (int)PixelClicker.PixelType.StoneSoul; ti++)   // the Gods, then the six Prime Cubes
         {
             int index = clicker.IndexOf((PixelClicker.PixelType)ti);
             if (index < 0 || clicker.Tiers[index].count >= 1d) continue;

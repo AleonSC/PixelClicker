@@ -216,7 +216,7 @@ public class PixelHints : MonoBehaviour
             case "pixel_Rock": return "You unlocked Stone Pixels!";
             case "dragon_first": return "You found a Dragon Cube!";
             case "god_first": return "You found a God Cube!";
-            case "stone_first": return "You found an Infinity Stone!";
+            case "stone_first": return "You found a Prime Cube!";
             case "pixel_Red": return "You unlocked Red, Green and Blue Pixels!";
             case "bank_hose": return "Hose equipped!";
             case "bank_suck": return "Pixel stored in the Bank!";
@@ -288,7 +288,7 @@ public class PixelHints : MonoBehaviour
         H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!"),
         H("pixel_Seed", "Seed Pixels unlocked! Old Seed pixels slowly grow bigger and worth more. Vacuum them, hose them up or click a ripe one to harvest."),
         H("pixel_Mirror", "Mirror Pixels unlocked! Clicking one also counts as a click on the last other pixel you collected, so it pays that pixel's amount again."),
-        H("stone_first", "AN INFINITY STONE! There are six (Space, Mind, Reality, Power, Time and Soul), each rarer than a Dragon Cube, and only ONE of each can be held. Gather all six and the Wizard may know what to do with them."),
+        H("stone_first", "A PRIME CUBE! There are six (Space, Mind, Reality, Power, Time and Soul), each rarer than a Dragon Cube, and only ONE of each can be held. Gather all six and the Wizard may know what to do with them."),
         H("god_first", "A GOD CUBE! Slifer the Sky Dragon, Ra the Winged Dragon and Obelisk the Tormentor are the rarest things in the game: roughly one pixel in millions. Only ONE of each can ever be held, so keep it safe in your backpack."),
         H("dragon_first", "A Dragon Cube! There are seven of them, each with a different number of small cubes inside, and they turn up extremely rarely among the pixels. Gather all seven and a button will appear to summon the cube dragon and make a wish."),
         H("pixel_Meteor", "Meteor Pixels unlocked! They streak away across the screen instead of falling."),

@@ -666,7 +666,7 @@ public static class PixelLooks
                             metallic = 0.25f, smoothness = 0.5f, emission = 0.4f, shine = true, farmFx = PixelLook.FarmAmbient.Crumbs,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.45f, 0.85f, 1f, 1f), outlineBevel = true, outlineThickness = 0.035f, outlineStrength = 0.85f },
 
-            // The six Infinity Stones (glassy gems with a small cube inside) and the Infinity Cubelette.
+            // The six Prime Cubes (glassy gems with a small cube inside) and the Prime Cubelette.
             StoneLook(PixelClicker.PixelType.StoneSpace, 0),
             StoneLook(PixelClicker.PixelType.StoneMind, 1),
             StoneLook(PixelClicker.PixelType.StoneReality, 2),
@@ -685,7 +685,7 @@ public static class PixelLooks
         };
     }
 
-    /// <summary>An Infinity Stone: a glassy cube in the stone's colour with one small bright cube inside, plus a signature effect (Space lightning, Reality flames, Power lightning, Soul mist).</summary>
+    /// <summary>An Prime Cube: a glassy cube in the stone's colour with one small bright cube inside, plus a signature effect (Space lightning, Reality flames, Power lightning, Soul mist).</summary>
     private static PixelLook StoneLook(PixelClicker.PixelType type, int stone)
     {
         Color c = PixelInfinity.StoneColor(stone);

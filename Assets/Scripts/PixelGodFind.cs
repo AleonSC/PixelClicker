@@ -33,7 +33,7 @@ public class PixelGodFind : MonoBehaviour
     [SerializeField] private float cubeSize = 520f;
     [Tooltip("Heading text. {0} = the god's name.")]
     [SerializeField] private string foundFormat = "You found {0}!";
-    [Tooltip("Heading text for the Infinity Cubelette (made with the Gauntlet). {0} = its name.")]
+    [Tooltip("Heading text for the Prime Cubelette (made with the Gauntlet). {0} = its name.")]
     [SerializeField] private string forgedFormat = "You forged the {0}!";
     [Tooltip("Text under the heading while the cube goes into the backpack.")]
     [SerializeField] private string stashedText = "Only one of each exists. It's yours now";

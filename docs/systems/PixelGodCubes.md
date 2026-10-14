@@ -10,7 +10,7 @@
 
 Tips: `god_first` on the first find of any. Dev Hub: 'Give next God Cube' (plays the show) and 'Play next God show (preview)'.
 
-## Infinity Stones, Gauntlet, Cubelette (PixelInfinity.cs)
+## Prime Cubes, Gauntlet, Cubelette (PixelInfinity.cs)
 - Six stones (`PixelType.StoneSpace..StoneSoul` 85-90) reuse the God Cube machinery completely: `IsGodCube` is true for them (and for `InfinityCubelette` 91), so the one-of-each clamp, `CanSpawn`, the backpack stash and `EnsureGodCubes` apply. `IsInfinityStone` picks them out. Looks: `PixelLooks.StoneLook` (looksVersion 60).
 - Shows: `PixelGodFind.DrawStone(stone, ...)` (shared timeline, climax at 3.2 s, a different signature effect per stone) and `DrawCubelette` (six colour streams, hexagon, snap at 3.4 s). Sounds `stone_*` / `stone_cubelette` in `PixelGodSynth`.
 - Gauntlet: `DeviceKind.Gauntlet` 17 (vendorOnly, hold 1, costs in the Device list). The Wizard offers it (`PixelWizardMinigame.ModifyWares`) when all six stones are held and there is no Cubelette / Gauntlet. Right-click it -> `PixelInfinity.Open`: place a stone on each face of the flat golden cube, Forge uses up the Gauntlet and the stones, adds the Cubelette and plays its show (`PixelGodFind.PlayAtScreen`).

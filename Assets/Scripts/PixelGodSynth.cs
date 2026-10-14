@@ -2,7 +2,7 @@
 // PixelGodSynth.cs
 //   Code-made sounds of the three Egyptian God Cube find shows (PixelAudio.SynthFor -> PixelGodSynth.For; put your own clips in the Sounds list to replace them). Each clip is one long piece that is
 //   timed to its show in PixelGodFind (start of the show = start of the clip): god_slifer (storm rumble, three thunder cracks at 0.5 / 1.0 / 1.4 s, the dragon's roar from 1.5 s, a final blast at 4.9 s),
-//   stone_space / stone_mind / stone_reality / stone_power / stone_time / stone_soul (the Infinity Stones, 5.5 s, each one's own voice, the climax at 3.2 s) and stone_cubelette (six rising notes, the snap at 3.4 s, a chime at 5.0 s),
+//   stone_space / stone_mind / stone_reality / stone_power / stone_time / stone_soul (the Prime Cubes, 5.5 s, each one's own voice, the climax at 3.2 s) and stone_cubelette (six rising notes, the snap at 3.4 s, a chime at 5.0 s),
 //   god_ra (a rising shimmering choir, a swell at 1.2 s, wing beats from 1.6 s, a golden chime at 4.0 s) and god_obelisk (a growing rumble, the fist rising, the slam at 2.55 s, falling stone).
 // ----------------------
 using UnityEngine;
@@ -164,7 +164,7 @@ public static class PixelGodSynth
         return Finish("God Obelisk", data, 0.95f);
     }
 
-    /// <summary>One Infinity Stone: a build-up in its own voice, then the climax at 3.2 s (matching the show) and a ringing tail.</summary>
+    /// <summary>One Prime Cube: a build-up in its own voice, then the climax at 3.2 s (matching the show) and a ringing tail.</summary>
     private static AudioClip Stone(int stone)
     {
         float length = 6.2f;
@@ -246,7 +246,7 @@ public static class PixelGodSynth
         return Finish("stone_" + stone, data, 0.85f);
     }
 
-    /// <summary>The Infinity Cubelette: six notes climb (one per stone), the snap at 3.4 s, a golden chime at 5.0 s.</summary>
+    /// <summary>The Prime Cubelette: six notes climb (one per stone), the snap at 3.4 s, a golden chime at 5.0 s.</summary>
     private static AudioClip Cubelette()
     {
         float length = 8f;

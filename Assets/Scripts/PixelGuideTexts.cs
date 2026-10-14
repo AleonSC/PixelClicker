@@ -218,9 +218,9 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.StonePower:
             case PixelClicker.PixelType.StoneTime:
             case PixelClicker.PixelType.StoneSoul:
-                return "One of the six Infinity Stones, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.";
+                return "One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.";
             case PixelClicker.PixelType.InfinityCubelette:
-                return "Forged with the Infinity Gauntlet from all six Infinity Stones. It never drops and only one can exist.";
+                return "Forged with the Prime Gauntlet from all six Prime Cubes. It never drops and only one can exist.";
             default:
                 return "A pixel with no special effects.";
         }

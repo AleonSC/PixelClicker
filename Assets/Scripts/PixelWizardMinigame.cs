@@ -30,7 +30,7 @@ public class PixelWizardMinigame : PixelVisitorMinigame
         consumables != null && clicker != null && !consumables.IsDevice(item) && !consumables.ItemCraftOnly(item)
         && (consumables.ItemOwned(item) > 0 || clicker.IsUnlocked(consumables.ItemRequiredType(item)));
 
-    // Once all six Infinity Stones are held the Wizard also offers the Gauntlet (first in the list, with a second line of dialogue).
+    // Once all six Prime Cubes are held the Wizard also offers the Gauntlet (first in the list, with a second line of dialogue).
     private int GauntletItem()
     {
         if (consumables == null) return -1;

@@ -115,7 +115,7 @@ public class PixelConsumables : MonoBehaviour
         WoodChipper = 15,
         /// <summary>Placed, permanent, one at a time: a wide glass funnel under the clicker cube that catches falling old pixels and carries them down a tube to an output on the floor you click (PixelFunnel). A conveyor belt opening in front of the output latches on.</summary>
         Funnel = 16,
-        /// <summary>Not placed: right-click in the inventory to open the Gauntlet window (PixelInfinity) and set the six Infinity Stones in a golden cube to forge the Infinity Cubelette. Sold only by the Wizard once all six stones are held.</summary>
+        /// <summary>Not placed: right-click in the inventory to open the Gauntlet window (PixelInfinity) and set the six Prime Cubes in a golden cube to forge the Prime Cubelette. Sold only by the Wizard once all six stones are held.</summary>
         Gauntlet = 17,
         /// <summary>Not consumed: a belt-laying tool on sale from Electrician level 5. Right-click starts placing conveyor belts (PixelFeatureTester.StartFeature); hold the right button on a belt to remove it.</summary>
         ConveyorBelt = 18,
@@ -823,8 +823,8 @@ public class PixelConsumables : MonoBehaviour
         return new Device
         {
             kind = DeviceKind.Gauntlet,
-            displayName = "Infinity Gauntlet",
-            description = "Right-click to use. A golden cube with a socket on every face: set the six Infinity Stones in it and forge the Infinity Cubelette. The Gauntlet and the stones are used up. You can only hold one.",
+            displayName = "Prime Gauntlet",
+            description = "Right-click to use. A golden cube with a socket on every face: set the six Prime Cubes in it and forge the Prime Cubelette. The Gauntlet and the cubes are used up. You can only hold one.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -1040,6 +1040,10 @@ public class PixelConsumables : MonoBehaviour
                 }
             }
         }
+
+        if (devices != null)
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.Gauntlet && d.displayName != null && d.displayName.StartsWith("Infinity")) { Device fresh = CreateDefaultGauntlet(); d.displayName = fresh.displayName; d.description = fresh.description; }   // renamed (Prime Gauntlet)
 
         if (devices != null)
             foreach (Device d in devices)

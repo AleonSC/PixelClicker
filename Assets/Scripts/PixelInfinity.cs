@@ -1,13 +1,13 @@
 // ---- System notes ----
 // PixelInfinity.cs
-//   The Infinity Stones, the Gauntlet and the Infinity Cubelette (a homage; names are work in progress). Component added by PixelClicker.Awake.
+//   The Prime Cubes, the Gauntlet and the Prime Cubelette (a homage; names are work in progress). Component added by PixelClicker.Awake.
 //   * Six stones (PixelType.StoneSpace..StoneSoul 85-90, PixelClicker.IsInfinityStone, tiers made by EnsureGodCubes) are rare drops with exactly the God Cubes' rules (IsGodCube is true for them:
 //     one of each, same spawn weight godCubeSpawnWeight, CanSpawn false once held, backpack stash) and each has its OWN find show (PixelGodFind.DrawStone: Space tesseract, Mind thought-bolts,
 //     Reality tearing shapes, Power detonation, Time's backwards clock, Soul wisps) and code-made sound (PixelGodSynth.Stone). Looks: PixelLooks.StoneLook, looksVersion 60.
-//   * When the player holds all six (and has no Cubelette and no Gauntlet) the WIZARD offers the Infinity Gauntlet (PixelWizardMinigame.ModifyWares + aside line): DeviceKind.Gauntlet 17,
+//   * When the player holds all six (and has no Cubelette and no Gauntlet) the WIZARD offers the Prime Gauntlet (PixelWizardMinigame.ModifyWares + aside line): DeviceKind.Gauntlet 17,
 //     a golden cube consumable (vendorOnly, hold 1; price = the Device's costs, editable in the Consumables Inspector).
 //   * Right-click the Gauntlet in the inventory (PixelConsumables.TryUseItem) -> this window: a golden cube laid out flat (six faces). Pick a stone from the tray, click a face to place it (click a
-//     placed one to take it back). With all six in place the Forge button makes the Infinity Cubelette: the Gauntlet and the six stones are used up, the Cubelette tier (PixelType.InfinityCubelette 91,
+//     placed one to take it back). With all six in place the Forge button makes the Prime Cubelette: the Gauntlet and the six stones are used up, the Cubelette tier (PixelType.InfinityCubelette 91,
 //     never rolled) is added and its show plays (PixelGodFind.DrawCubelette). Closing the window just puts the stones back (nothing is spent until the forge).
 //   The Cubelette is a trophy for now (it has no use yet).
 // ----------------------
@@ -24,9 +24,9 @@ public class PixelInfinity : MonoBehaviour
     [Tooltip("Seconds of glowing before the forge makes the Cubelette. 0 = 1.6.")]
     [SerializeField] private float forgeSeconds = 0f;
     [Tooltip("What the Wizard says in his second speech box when he offers the Gauntlet.")]
-    [SerializeField] private string wizardAside = "Six stones! In one pocket! Well, well, well... I have a little thing here, a Gauntlet, golden and rather shiny. Set them in its faces and something very small and very powerful will come out. For a fee, naturally.";
+    [SerializeField] private string wizardAside = "Six cubes! In one pocket! Well, well, well... I have a little thing here, a Gauntlet, golden and rather shiny. Set them in its faces and something very small and very powerful will come out. For a fee, naturally.";
 
-    public static readonly string[] StoneNames = { "Space Stone", "Mind Stone", "Reality Stone", "Power Stone", "Time Stone", "Soul Stone" };
+    public static readonly string[] StoneNames = { "Space Cube", "Mind Cube", "Reality Cube", "Power Cube", "Time Cube", "Soul Cube" };
     private static readonly Color[] StoneColors =
     {
         new Color(0.2f, 0.45f, 1f, 1f), new Color(1f, 0.85f, 0.15f, 1f), new Color(0.95f, 0.1f, 0.1f, 1f),
@@ -139,7 +139,7 @@ public class PixelInfinity : MonoBehaviour
     private void Build()
     {
         TMP_FontAsset font = clicker.UIFont;
-        canvasRoot = PixelUIKit.CreateCanvas("Infinity Gauntlet", 610, new Vector2(1920f, 1080f), true);
+        canvasRoot = PixelUIKit.CreateCanvas("Prime Gauntlet", 610, new Vector2(1920f, 1080f), true);
         PixelClicker.ExternalClickBlock = true;   // clicks in the window must not hit the cube
 
         Image dim = NewImage("Dim", canvasRoot.transform, new Color(0f, 0f, 0f, 0.55f));
@@ -151,7 +151,7 @@ public class PixelInfinity : MonoBehaviour
         panel.sizeDelta = new Vector2(1180f, 760f);
         PixelUIKit.StyleWindow(panelGo.GetComponent<Image>(), new Color(0.1f, 0.08f, 0.04f, 0.97f));
 
-        TMP_Text title = PixelUIKit.CreateText(font, panel, "Title", "Infinity Gauntlet", 52f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
+        TMP_Text title = PixelUIKit.CreateText(font, panel, "Title", "Prime Gauntlet", 52f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
         title.rectTransform.anchorMin = new Vector2(0f, 1f); title.rectTransform.anchorMax = new Vector2(1f, 1f); title.rectTransform.pivot = new Vector2(0.5f, 1f);
         title.rectTransform.sizeDelta = new Vector2(0f, 80f); title.rectTransform.anchoredPosition = new Vector2(0f, -16f);
         Button x = PixelUIKit.CreateButton(font, panel, "Close", "X", new Vector2(60f, 60f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 34f);
@@ -190,7 +190,7 @@ public class PixelInfinity : MonoBehaviour
 
         // The tray of stones on the right.
         trayImages = new Image[6]; trayGems = new Image[6]; trayLabels = new TMP_Text[6];
-        TMP_Text trayTitle = PixelUIKit.CreateText(font, panel, "Tray Title", "Your stones", 34f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        TMP_Text trayTitle = PixelUIKit.CreateText(font, panel, "Tray Title", "Your cubes", 34f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
         trayTitle.rectTransform.sizeDelta = new Vector2(380f, 50f); trayTitle.rectTransform.anchoredPosition = new Vector2(380f, 230f);
         for (int i = 0; i < 6; i++)
         {
@@ -240,10 +240,10 @@ public class PixelInfinity : MonoBehaviour
         int cub = clicker.IndexOf(PixelClicker.PixelType.InfinityCubelette);
         bool haveCub = cub >= 0 && clicker.Tiers[cub].count >= 1d;
         forge.interactable = placedCount == 6 && !haveCub && !forging;
-        status.text = haveCub ? "You already hold an Infinity Cubelette. Only one can exist."
+        status.text = haveCub ? "You already hold an Prime Cubelette. Only one can exist."
             : placedCount == 6 ? "All six are set. Forge it!"
-            : selected >= 0 ? "Now click a face of the cube to set the " + StoneNames[selected]
-            : "Pick a stone, then click a face to set it in. (" + placedCount + " / 6)";
+            : selected >= 0 ? "Now click a face of the gauntlet to set the " + StoneNames[selected]
+            : "Pick a cube, then click a face to set it in. (" + placedCount + " / 6)";
     }
 
     private void ClickStone(int stone)

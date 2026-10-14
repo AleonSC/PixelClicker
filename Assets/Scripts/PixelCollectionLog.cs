@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelCollectionLog.cs
-//   The Collection Log: a book of the rare collectibles (the seven Dragon Cubes, the three God Cubes, the six Infinity Stones and the Infinity Cubelette). Component added by PixelClicker.Awake;
+//   The Collection Log: a book of the rare collectibles (the seven Dragon Cubes, the three God Cubes, the six Prime Cubes and the Prime Cubelette). Component added by PixelClicker.Awake;
 //   opened by the small BOOK button at the top-left of the Log window (PixelLog.BuildUI -> PixelCollectionLog.Toggle()); Escape / the X close it (PixelWindows priority 70).
 //   A spread of two pages: a title page (with how many are found), then one entry per page. Click the right page to turn forward, the left page to turn back (the page squashes like a turning leaf).
 //   An entry is '???' (name, text and a black silhouette of its picture) until the cube is KNOWN = its tier's totalCollected > 0 (lifetime total, so spending it - the wish, the Gauntlet - never hides it).
@@ -41,8 +41,8 @@ public class PixelCollectionLog : MonoBehaviour
             "Unbelievable power, packed into a tiny cube.", "Its clock hands run backwards and forwards at will.", "Wisps of orange mist circle it. It remembers.",
         };
         for (int i = 0; i < 6; i++)
-            list.Add(new Entry { type = PixelClicker.PixelType.StoneSpace + i, section = "Infinity Stones", flavour = stone[i] });
-        list.Add(new Entry { type = PixelClicker.PixelType.InfinityCubelette, section = "Infinity", flavour = "Forged in the Gauntlet from all six stones. Only one can exist." });
+            list.Add(new Entry { type = PixelClicker.PixelType.StoneSpace + i, section = "Prime Cubes", flavour = stone[i] });
+        list.Add(new Entry { type = PixelClicker.PixelType.InfinityCubelette, section = "Prime", flavour = "Forged in the Gauntlet from all six Prime Cubes. Only one can exist." });
         return list.ToArray();
     }
 
