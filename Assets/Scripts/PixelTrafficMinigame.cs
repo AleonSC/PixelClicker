@@ -509,12 +509,7 @@ public class PixelTrafficMinigame : PixelMinigame
         uiRoot.transform.SetParent(transform, false);
         Track(uiRoot);
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        statusLabel = PixelUIKit.CreateText(clicker.UIFont, uiRoot.transform, "Status", "", statusFontSize, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        statusLabel.raycastTarget = false;
-        RectTransform sr = statusLabel.rectTransform;
-        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0.5f, 1f);
-        sr.sizeDelta = new Vector2(1200f, statusFontSize * 1.5f);
-        sr.anchoredPosition = new Vector2(0f, -(bar + 12f));
+        statusLabel = PixelStatusBox.Create(clicker.UIFont, uiRoot.transform, statusFontSize);   // slides out from under the top bar
         UpdateStatus();
     }
 

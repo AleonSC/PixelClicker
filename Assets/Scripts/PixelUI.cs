@@ -277,7 +277,7 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Timer text size.")]
     [SerializeField] private float activeHudFontSize = 44f;
 
-    [Tooltip("Distance of the timer from the top of the screen.")]
+    [Tooltip("No longer used: the timer now lives in the shared status box (PixelStatusBox) that slides out from under the top bar.")]
     [SerializeField] private float activeHudTopMargin = 30f;
 
     [Tooltip("Use the potion's pixel colour for the timer. Off = white.")]
@@ -2374,19 +2374,12 @@ public class PixelUI : MonoBehaviour
     {
         if (!showActivePotionHud) return;
 
-        hudLabel = MakeText(popupCanvasRect, "Active Potion Timer", "", activeHudFontSize,
-                            TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        hudLabel = PixelStatusBox.Create(font, popupCanvasRect, activeHudFontSize);   // slides out from under the top bar
         if (popupOutlineWidth > 0f)
         {
             hudLabel.outlineColor = popupOutlineColor;
             hudLabel.outlineWidth = popupOutlineWidth;
         }
-
-        RectTransform rt = hudLabel.rectTransform;
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = new Vector2(900f, activeHudFontSize * 1.4f);
-        rt.anchoredPosition = new Vector2(0f, -(activeHudTopMargin + (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f)));
-        hudLabel.gameObject.SetActive(false);
     }
 
     private void UpdateActiveHud()
@@ -2396,7 +2389,7 @@ public class PixelUI : MonoBehaviour
         // While placing a device the line tells you what to do; otherwise it shows the running potion.
         bool placing = consumables != null && consumables.IsPlacing;
         bool active = placing || (consumables != null && consumables.IsActive);
-        if (hudLabel.gameObject.activeSelf != active) hudLabel.gameObject.SetActive(active);
+        PixelStatusBox.Show(hudLabel, active);
         if (!active) return;
 
         if (placing)
@@ -2426,7 +2419,7 @@ public class PixelUI : MonoBehaviour
     /// <summary>Is the mouse on the text of the active-potion line?</summary>
     private bool PointerOverHudLabel()
     {
-        if (hudLabel == null || !hudLabel.gameObject.activeSelf) return false;
+        if (hudLabel == null || !PixelStatusBox.IsShown(hudLabel)) return false;
         RectTransform rt = hudLabel.rectTransform;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rt, PixelInput.PointerPosition(), null, out Vector2 local)) return false;
         float halfWidth = Mathf.Min(hudLabel.preferredWidth, rt.rect.width) * 0.5f + 12f;

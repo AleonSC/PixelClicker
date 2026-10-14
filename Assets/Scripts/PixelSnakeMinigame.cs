@@ -731,11 +731,7 @@ public class PixelSnakeMinigame : PixelMinigame
         uiRoot.transform.SetParent(transform, false);
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
 
-        statusLabel = PixelUIKit.CreateText(font, uiRoot.transform, "Status", "", statusFontSize, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
-        RectTransform sr = statusLabel.rectTransform;
-        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0.5f, 1f);
-        sr.sizeDelta = new Vector2(900f, statusFontSize * 1.5f);
-        sr.anchoredPosition = new Vector2(0f, -(bar + 12f));
+        statusLabel = PixelStatusBox.Create(font, uiRoot.transform, statusFontSize);   // slides out from under the top bar
 
         if (!showArrowButtons) return;
         float s = arrowButtonSize, gap = 10f;

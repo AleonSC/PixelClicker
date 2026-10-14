@@ -407,13 +407,7 @@ public class PixelPadMinigame : PixelMinigame
         // The timer line at the top of the screen.
         GameObject hudCanvas = PixelUIKit.CreateCanvas("Ultra Holes HUD", 140, new Vector2(1920f, 1080f), false);
         Track(hudCanvas);
-        TMP_Text hud = PixelUIKit.CreateText(clicker.UIFont, hudCanvas.transform, "Timer", "", 34f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
-        hud.raycastTarget = false;
-        RectTransform hr = hud.rectTransform;
-        float top = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
-        hr.sizeDelta = new Vector2(0f, 50f);
-        hr.anchoredPosition = new Vector2(0f, -(top + 8f));
+        TMP_Text hud = PixelStatusBox.Create(clicker.UIFont, hudCanvas.transform, 34f);   // slides out from under the top bar
 
         int correct = Random.Range(0, holes.Count);
         float anim = 0f, idle = 0f;

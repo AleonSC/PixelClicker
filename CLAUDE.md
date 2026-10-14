@@ -74,6 +74,7 @@
 | `PixelSkillsTracker.cs` | Part of partial class PixelSkills: the pinned skill tracker. | in the header comment of `PixelSkillsTracker.cs` |
 | `PixelSkillsPopups.cs` | Part of partial class PixelSkills: '+n <Skill> XP' popups while a skill trains (AddXp calls QueueXpPopup; | in the header comment of `PixelSkillsPopups.cs` |
 | `PixelTube.cs` | Static PixelTube.Build(points, radius, sides, mesh): | in the header comment of `PixelTube.cs` |
+| `PixelStatusBox.cs` | Shared top status box: potion timer, placing line and the takeover minigames' status lines sit in a window-style box that slides out from under the black bar (over its edge effect) and back; PixelStatusBox.Create / Show / IsShown. | in the header comment of `PixelStatusBox.cs` |
 | `PixelHud.cs` | Screen frame: black bar along the top and bottom (barHeight) and the docked buttons. | in the header comment of `PixelHud.cs` |
 | `PixelBarEdgeFx.cs` | Bar styles (Settings > Display 'Bar style', PixelBarStyle.Current): what glows along the black bars' inner edge - Neon glow, Pixel equalizer (audio-reactive pixel columns), Pixel wave, Marquee, Scanner, Thin line; one PixelBarEdgeFx per edge, ticked by PixelHud and PixelTitleScreen. | in the header comment of `PixelBarEdgeFx.cs` |
 | `PixelAudio.cs` (UFO beam) | The main-menu UFO's abduction plays ufo_beam (code-made PixelSynth.UfoBeam: | in the header comment of `PixelAudio.cs` |
