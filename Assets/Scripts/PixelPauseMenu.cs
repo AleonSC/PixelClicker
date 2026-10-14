@@ -1238,7 +1238,7 @@ public class PixelPauseMenu : MonoBehaviour
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.sizeDelta = new Vector2(60f, 60f);
-        cr.anchoredPosition = new Vector2(-24f, -24f);
+        cr.anchoredPosition = new Vector2(-24f, -(30f + titleFontSize * 0.8f - 30f));   // its middle sits level with the middle of the title line
         close.onClick.AddListener(() => ShowView(backTo != null ? backTo : mainPanel));
     }
 
@@ -2273,6 +2273,8 @@ public class PixelPauseMenu : MonoBehaviour
     private List<MenuEntry> mainEntries;
     private string menuSearch = "";
     private string settingsFilter = "";
+    private TMP_InputField settingsSearchField;
+    [SerializeField] private string settingsSearchPlaceholder = "Search settings...";
 
     private static string RowText(SettingsItem item)
     {
@@ -2348,6 +2350,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void OpenFilteredSettings()
     {
         settingsFilter = menuSearch;
+        if (settingsSearchField != null) settingsSearchField.SetTextWithoutNotify(menuSearch);
         ShowView(settingsPanel);
         LayoutSettings();
         if (settingsScroll != null && settingsScroll.content != null) settingsScroll.content.anchoredPosition = Vector2.zero;
@@ -2356,6 +2359,7 @@ public class PixelPauseMenu : MonoBehaviour
     private void ClearMenuSearch()
     {
         settingsFilter = "";
+        if (settingsSearchField != null) settingsSearchField.SetTextWithoutNotify("");
         if (menuSearchField != null && menuSearchField.text.Length > 0) menuSearchField.text = "";   // notifies: the main buttons come back
         else if (menuSearch.Length > 0) OnMenuSearchChanged("");
     }
@@ -2364,6 +2368,23 @@ public class PixelPauseMenu : MonoBehaviour
     {
         settingsPanel = BuildSectionPanel("Settings Panel", settingsTitle, out float top);
         settingsRefreshers.Clear();
+
+        // Search bar under the title: filters the rows in place (the same filter the main menu's search hands over).
+        float searchH = rowHeight * 0.9f;
+        settingsSearchField = PixelUIKit.CreateInputField(font, settingsPanel.transform, "Settings Search", new Vector2(100f, searchH),
+                                                          tickBoxColor, textColor, rowFontSize * 0.85f, settingsSearchPlaceholder);
+        RectTransform ssr = settingsSearchField.GetComponent<RectTransform>();
+        ssr.anchorMin = new Vector2(0f, 1f); ssr.anchorMax = new Vector2(1f, 1f); ssr.pivot = new Vector2(0.5f, 1f);
+        ssr.sizeDelta = new Vector2(-80f, searchH);
+        ssr.anchoredPosition = new Vector2(0f, -top);
+        StyleSearchBox(settingsSearchField);
+        settingsSearchField.onValueChanged.AddListener(text =>
+        {
+            settingsFilter = (text ?? "").Trim().ToLowerInvariant();
+            LayoutSettings();
+            if (settingsScroll != null && settingsScroll.content != null) settingsScroll.content.anchoredPosition = Vector2.zero;
+        });
+        top += searchH + 12f;
 
         // Everything scrolls: there are more rows than fit between the black bars.
         float viewHeight = FitViewHeight(settingsViewHeight, top);
