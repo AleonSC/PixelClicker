@@ -125,6 +125,10 @@ public class PixelHints : MonoBehaviour
     [SerializeField] private string introEarnText = "Clicking the pixel is the main way to earn currency. As you play, upgrades, minigames and managing the old pixels that fall to the floor will open up other ways to earn.";
 
     [TextArea(2, 5)]
+    [Tooltip("Fourth new-game intro tip, right after the one about clicking: the right click (Block Hold and its stake). Empty = the built-in text.")]
+    [SerializeField] private string introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. The longer you hold (watch the meter by your cursor), the more it is worth when it comes round again - but the stake can also go bad and pay nothing.";
+
+    [TextArea(2, 5)]
     [Tooltip("Tip shown with the Inventory open.")]
     [SerializeField] private string introInventoryText = "This is your Inventory. Currency shows how many of each pixel you hold - you spend them in the shop. Consumables holds your potions and devices. Open it any time with the Inventory button at the top left.";
 
@@ -923,9 +927,17 @@ public class PixelHints : MonoBehaviour
                     : introEarnText;
                 PixelNotice.Show(earn, 0f, compact: true, onClosed: () =>
                 {
-                    introRunning = false; // the tier guide may show now
-                    MarkSeen("intro_log"); // only counts once the player has been through all the tips
-                    if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
+                    // Fourth tip, right after the one about clicking: the right click (Block Hold + stake).
+                    string right = string.IsNullOrEmpty(introRightClickText)
+                        ? "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. The longer you hold (watch the meter by your cursor), the more it is worth when it comes round again - but the stake can also go bad and pay nothing."
+                        : introRightClickText;
+                    MarkSeen("stake_intro");   // (the later 25-click reminder is not needed now)
+                    PixelNotice.Show(right, 0f, compact: true, onClosed: () =>
+                    {
+                        introRunning = false; // the tier guide may show now
+                        MarkSeen("intro_log"); // only counts once the player has been through all the tips
+                        if (replay) ShowEventLogTip(); // the tutorial's last step: what the event log is
+                    });
                 });
             });
         });

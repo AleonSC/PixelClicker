@@ -942,3 +942,4 @@
 [2026-10-14 09:31 UTC] Old pixel hover tooltip vanish timer: the bar now shows how much of the whole lifespan is left (it used to restart from whatever time you first saw), the time accounts for slowed ageing, shows (paused) while frozen, Vanishing... while it shrinks away, and minutes for long times.
 [2026-10-14 09:46 UTC] Custom playlist: a small play button left of each song's tick box plays an 8 second snippet; right clicking the main menu speaker opens Settings > Audio directly.
 [2026-10-14 09:57 UTC] Block Hold is available from the start and holding a plain block puts a growing stake on it: when the block comes round again it glows green and pays more (about 6 in 10 times) or glows red and pays nothing; shows the value and chance by the meter, with a first-time tip after 25 clicks.
+[2026-10-14 09:58 UTC] New-game intro: a Got it box about the right mouse button (hold a block to put a stake on it) now comes right after the one about clicking.
