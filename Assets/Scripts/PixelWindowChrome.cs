@@ -193,6 +193,14 @@ public class PixelWindowChrome : MonoBehaviour
         if (dockSide != 0) dockY = p.y;
     }
 
+    /// <summary>Brings the window into view for the owner: un-minimizes it, slides a docked one fully out and puts it on top.</summary>
+    public void Wake()
+    {
+        SetMinimized(false);
+        dockSlide = 1f;
+        window.SetAsLastSibling();
+    }
+
     public void SetMinimized(bool on, bool save = true)
     {
         if (on == minimized) return;

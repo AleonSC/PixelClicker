@@ -123,8 +123,16 @@ public class PixelDevHub : MonoBehaviour
         searchField.SetTextWithoutNotify("");
         searchPanel.gameObject.SetActive(false);
         shownResults.Clear();
-        if (chrome != null && chrome.Minimized) chrome.SetMinimized(false);   // a minimized hub opens up to show the result
+        if (!open) SetOpen(true);
+        if (chrome != null) chrome.Wake();   // a minimized (or tucked away docked) hub opens up to show the result
         RevealTab(e.tabId);
+        StartCoroutine(RevealNextFrame(e));   // (the window has its full size again by then, so scrolling to the item lands right)
+    }
+
+    private System.Collections.IEnumerator RevealNextFrame(SearchEntry e)
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
         e.reveal?.Invoke();
     }
 
