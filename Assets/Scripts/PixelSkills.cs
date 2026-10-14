@@ -21,6 +21,9 @@ public partial class PixelSkills : MonoBehaviour
         public string text = "";
         [Tooltip("Off = shown as 'coming soon' (the effect is not built yet).")]
         public bool implemented = false;
+        [TextArea(2, 5)]
+        [Tooltip("A tutorial popup shown once when this level is reached (empty = none). Only with first-time tips on.")]
+        public string noticeText = "";
     }
 
     [Serializable]
@@ -96,6 +99,11 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     public const string StandardId = "standard";
+    private const string WoodChipperPerkText = "Wood Chipper: the Lumberjack's wood chipper goes on sale in the Shop";
+    private const string WoodChipperNotice = "Woodcutting level 2! The <b>Wood Chipper</b> is now for sale in the Shop. Open the Shop and look under Consumables, or just type <b>chipper</b> into the search bar at the top of the Shop: searching finds every pack, potion and device in one go.";
+    private const string WoodLifespanPerkText = "Seasoned wood: old wood pixels last longer before they vanish";
+    private const string WoodLifespanNotice = "Woodcutting level 3! Old wood pixels now <b>last longer</b> before they vanish (the Seasoned wood perk), so more of them are still lying there when you collect or chip them.";
+
     private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. While you train another skill it still gains a tiny 5% of the XP.";
     public const string MiningId = "mining";
     public const string WoodcuttingId = "woodcutting";
@@ -209,7 +217,8 @@ public partial class PixelSkills : MonoBehaviour
                 fillerType = "Twig", hazardType = "HornetNest",
                 perks = new[]
                 {
-                    new Perk { level = 2, text = "Sharp axe: wood blocks take a little less effort" },
+                    new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice },
+                    new Perk { level = 3, text = WoodLifespanPerkText, implemented = true, noticeText = WoodLifespanNotice },
                     new Perk { level = 4, text = "Sap collector: sap shows up more often" },
                     new Perk { level = 6, text = "Heart of the forest: heartwood shows up more often" },
                 },
@@ -364,6 +373,15 @@ public partial class PixelSkills : MonoBehaviour
                 pack.types = wood.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.HornetNest.ToString();
+                // Perks: the old 'Sharp axe' level 2 perk becomes the Wood Chipper unlock; level 3 is new (a saved pack keeps any text you edited).
+                System.Collections.Generic.List<Perk> woodPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
+                woodPerks.RemoveAll(pk => pk != null && pk.text != null && pk.text.StartsWith("Sharp axe"));
+                if (!woodPerks.Exists(pk => pk != null && pk.level == 2)) woodPerks.Add(new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice });
+                if (!woodPerks.Exists(pk => pk != null && pk.level == 3)) woodPerks.Add(new Perk { level = 3, text = WoodLifespanPerkText, implemented = true, noticeText = WoodLifespanNotice });
+                foreach (Perk pk in woodPerks) if (pk != null && pk.level == 2 && pk.text == WoodChipperPerkText) { pk.implemented = true; if (string.IsNullOrEmpty(pk.noticeText)) pk.noticeText = WoodChipperNotice; }
+                foreach (Perk pk in woodPerks) if (pk != null && pk.level == 3 && pk.text == WoodLifespanPerkText) { pk.implemented = true; if (string.IsNullOrEmpty(pk.noticeText)) pk.noticeText = WoodLifespanNotice; }
+                woodPerks.Sort((a, b) => a.level.CompareTo(b.level));
+                pack.perks = woodPerks.ToArray();
             }
             if (pack.id == FishingId)
             {
@@ -418,7 +436,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = hazard.ToString();
             }
             // Built-in trees: add any default node the saved pack is missing (ones you edited are kept).
-            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId) continue;
+            if (pack.id != MiningId && pack.id != OfflineId && pack.id != FarmingId && pack.id != ElectricianId && pack.id != WoodcuttingId) continue;
             System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
             foreach (TreeNode def in DefaultNodes(pack.id))
                 if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
@@ -482,6 +500,12 @@ public partial class PixelSkills : MonoBehaviour
                 new TreeNode { id = "compost", displayName = "Compost heap", description = "Fertilizer blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "seeds", row = 2, implemented = true, guestType = "Fertilizer" },
                 new TreeNode { id = "hive", displayName = "Beehive", description = "Pollen blocks can be switched on in the Toggles window to spawn in any rotation.", requires = "rain", row = 0, cost = 2, implemented = true, guestType = "Pollen" },
                 new TreeNode { id = "thumb", displayName = "Green thumb", description = "Sprouts grow a little faster.", requires = "compost", row = 2, cost = 2 },
+            };
+        if (id == WoodcuttingId)
+            return new[]
+            {
+                // The first node of the Woodcutting tree: the axe. For now the axe is simply always available; this node is what the first person axe will be tied to later.
+                new TreeNode { id = "axe", displayName = "Axe", description = "Unlock the axe to get the job done yourself.", row = 1, cost = 1, implemented = false },
             };
         if (id == ElectricianId)
             return new[]
@@ -961,6 +985,52 @@ public partial class PixelSkills : MonoBehaviour
         AddXp(Find(TrainingId), xp);
     }
 
+    // ---- Perk popups and level-gated unlocks ----
+    private readonly System.Collections.Generic.Queue<string> perkNotices = new System.Collections.Generic.Queue<string>();
+
+    /// <summary>A level was reached: every perk of that level with a popup text queues its tutorial box once (it waits for a calm moment, see UpdatePerkNotices).</summary>
+    private void QueuePerkNotices(SkillPack pack, int before, int after)
+    {
+        if (pack.perks == null) return;
+        foreach (Perk perk in pack.perks)
+        {
+            if (perk == null || perk.level <= before || perk.level > after || string.IsNullOrEmpty(perk.noticeText)) continue;
+            string key = "perknotice." + pack.id + "." + perk.level;
+            if (PixelStats.Total(key) >= 1d) continue;
+            PixelStats.Count(key);
+            perkNotices.Enqueue(perk.noticeText);
+        }
+    }
+
+    private void UpdatePerkNotices()
+    {
+        if (perkNotices.Count == 0) return;
+        if (!PixelHints.TipsEnabled) { perkNotices.Clear(); return; }
+        if (PixelNotice.IsShowing || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PixelMinigame.TakeoverActive || PixelGuideVendor.Visiting) return;
+        PixelNotice.Show(perkNotices.Dequeue());
+    }
+
+    /// <summary>The level of a skill by id (1 when the skill or the system is missing).</summary>
+    public static int LevelOfId(string id)
+    {
+        PixelSkills s = Instance;
+        SkillPack pack = s != null ? s.Find(id) : null;
+        return pack != null ? s.LevelOf(pack) : 1;
+    }
+
+    [Header("Skill perks")]
+    [Min(0f)]
+    [Tooltip("Woodcutting perk 'Seasoned wood' (level 3): old wood pixels last this much longer (0.5 = 50% longer). 0 = the coded default (0.5).")]
+    [SerializeField] private float woodcuttingLifespanBonus = 0f;
+
+    /// <summary>Multiplier on how long an old pixel of this type lasts, from skill perks (1 = none). Woodcutting level 3: wood blocks last longer.</summary>
+    public static float SkillLifetimeFactor(PixelClicker.PixelType type)
+    {
+        PixelSkills s = Instance;
+        if (s == null || s.disableSkills || !PixelClicker.IsWoodBlock(type) || LevelOfId(WoodcuttingId) < 3) return 1f;
+        return 1f + (s.woodcuttingLifespanBonus > 0f ? s.woodcuttingLifespanBonus : 0.5f);
+    }
+
     public void AddXp(SkillPack pack, double xp, bool popup = true)
     {
         if (pack == null || xp <= 0d) return;
@@ -972,6 +1042,7 @@ public partial class PixelSkills : MonoBehaviour
         PixelStats.Count("skill." + pack.id + ".xp", xp);
         if (popup) QueueXpPopup(pack, xp);
         int after = LevelOf(pack);
+        if (after > before) QueuePerkNotices(pack, before, after);
         if (after > before && (pack.id != StandardId || AnyTrainable))
             PixelHints.Announce(pack.displayName + " level " + after, "Your " + pack.displayName + " skill reached level " + after + " (+" + (after - before) + " skill point" + (after - before == 1 ? "" : "s") + ").");
         Changed?.Invoke();

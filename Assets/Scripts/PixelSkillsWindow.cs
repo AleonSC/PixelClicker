@@ -793,6 +793,7 @@ public partial class PixelSkills
         UpdateTracker();
         UpdateXpPopups();
         CheckFarmBundle();
+        UpdatePerkNotices();
         UpdateTreeLayout();
         if (!built) return;
 

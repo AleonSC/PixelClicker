@@ -3157,8 +3157,9 @@ public partial class PixelClicker : MonoBehaviour
 
     private float LifetimeFactor(int tierIndex)
     {
-        if (!IsValidTier(tierIndex) || tiers[tierIndex].type != PixelType.Solar) return 1f;
-        return solarLifetimeFactor > 0f ? solarLifetimeFactor : 1.6f;
+        if (!IsValidTier(tierIndex)) return 1f;
+        float factor = tiers[tierIndex].type == PixelType.Solar ? (solarLifetimeFactor > 0f ? solarLifetimeFactor : 1.6f) : 1f;
+        return factor * PixelSkills.SkillLifetimeFactor(tiers[tierIndex].type);   // + a skill perk (Woodcutting level 3: wood lasts longer)
     }
 
     /// <summary>The edge length of an old pixel in world units.</summary>

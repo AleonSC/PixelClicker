@@ -248,8 +248,14 @@ public class PixelConsumables : MonoBehaviour
         [Tooltip("Craft-only: never sold in the shop or by visitors (you make it in the Crafting window).")]
         public bool craftOnly = false;
 
-        [Tooltip("Not sold in the shop: only a visiting vendor (the Lumberjack) sells it.")]
+        [Tooltip("Not sold in the shop: only a visiting vendor (the Lumberjack) sells it - until the skill below reaches its level, then the shop sells it too.")]
         public bool vendorOnly = false;
+
+        [Tooltip("Optional: the skill (id, e.g. woodcutting) whose level opens this item in the shop even though it is 'vendor only'. Empty = never.")]
+        public string shopSkillId = "";
+        [Min(0)]
+        [Tooltip("The level of that skill that puts the item on sale in the shop.")]
+        public int shopSkillLevel = 0;
 
         [Range(20f, 170f)]
         [Tooltip("Magnetized Sorter: opening angle (degrees) of the arc in front of the magnet that pulls pixels in. Its length is 'Radius'.")]
@@ -628,6 +634,8 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.WoodChipper,
             vendorOnly = true,
+            shopSkillId = "woodcutting",   // Woodcutting level 2 puts it on sale in the shop as well
+            shopSkillLevel = 2,
             displayName = "Wood Chipper",
             description = "A trailer-mounted wood chipper, bought from the Lumberjack. Wood pixels dropped into its hopper are shredded for Woodcutting XP and every few of them make a Wood Chips block that shoots out of its chute (a conveyor belt opening in front of the chute latches on). Anything that is not wood damages it, and enough of that breaks it for good.",
             requiredType = PixelClicker.PixelType.Wood,
@@ -987,6 +995,10 @@ public class PixelConsumables : MonoBehaviour
             }
         }
 
+        if (devices != null)
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.WoodChipper && string.IsNullOrEmpty(d.shopSkillId)) { d.shopSkillId = "woodcutting"; d.shopSkillLevel = 2; }   // saved scenes: the chipper opens at Woodcutting 2
+
         if (addDefaultDevices && devices != null && !Array.Exists(devices, d => d != null && d.beans))
         {
             Array.Resize(ref devices, devices.Length + 1);
@@ -1202,7 +1214,17 @@ public class PixelConsumables : MonoBehaviour
     public bool ItemNotSold(int item) => IsDevice(item) && devices[item - potions.Length].craftOnly;
 
     /// <summary>A device only a visiting vendor sells (not listed in the shop).</summary>
-    public bool ItemVendorOnly(int item) => IsDevice(item) && devices[item - potions.Length].vendorOnly;
+    public bool ItemVendorOnly(int item)
+    {
+        if (!IsDevice(item)) return false;
+        Device d = devices[item - potions.Length];
+        if (!d.vendorOnly) return false;
+        // A skill level can open a vendor-only item in the shop (Woodcutting 2 -> the Wood Chipper).
+        return string.IsNullOrEmpty(d.shopSkillId) || d.shopSkillLevel <= 0 || PixelSkills.LevelOfId(d.shopSkillId) < d.shopSkillLevel;
+    }
+
+    /// <summary>True for an item whose shop sale is tied to a skill level (the Tinkerer does not sell those).</summary>
+    public bool ItemSkillGated(int item) => IsDevice(item) && !string.IsNullOrEmpty(devices[item - potions.Length].shopSkillId);
 
     /// <summary>The second pixel type of a combo potion.</summary>
     public PixelClicker.PixelType ItemSecondType(int item) => potions[item].secondType;
