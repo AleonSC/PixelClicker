@@ -957,12 +957,7 @@ public class PixelFirstPerson : MonoBehaviour
         rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(10f, 10f);
 
-        hintLabel = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Hint", "", 26f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
-        hintLabel.raycastTarget = false;
-        RectTransform hr = hintLabel.rectTransform;
-        hr.anchorMin = new Vector2(0.1f, 0f); hr.anchorMax = new Vector2(0.9f, 0f); hr.pivot = new Vector2(0.5f, 0f);
-        hr.sizeDelta = new Vector2(0f, 44f);
-        hr.anchoredPosition = new Vector2(0f, 110f);
+        hintLabel = PixelHintBox.Create(clicker.UIFont, canvasRoot.transform, 26f, 100f);   // the bottom instruction line, in a box (empty = no box)
     }
 }
 
