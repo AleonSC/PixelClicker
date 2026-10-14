@@ -234,7 +234,7 @@ public static class PixelKeys
     /// <summary>True on the frame the action's key went down.</summary>
     public static bool Pressed(PixelAction action)
     {
-        if (Typing) return false;
+        if (Typing || PixelCollectionGallery.Active) return false;
         KeyCode key = Get(action);
         if (key == KeyCode.None) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
@@ -271,7 +271,7 @@ public static class PixelKeys
     /// <summary>True while the action's key is held.</summary>
     public static bool Held(PixelAction action)
     {
-        if (Typing) return false;
+        if (Typing || PixelCollectionGallery.Active) return false;
         KeyCode key = Get(action);
         if (key == KeyCode.None) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER

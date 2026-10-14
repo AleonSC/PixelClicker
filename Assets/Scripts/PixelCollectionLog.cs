@@ -4,6 +4,8 @@
 //   opened by the small BOOK button at the top-left of the Log window (PixelLog.BuildUI -> PixelCollectionLog.Toggle()); Escape / the X close it (PixelWindows priority 70).
 //   A spread of two pages: a title page (with how many are found), then one entry per page. Click the right page to turn forward, the left page to turn back (the page squashes like a turning leaf).
 //   An entry is '???' (name, text and a black silhouette of its picture) until the cube is KNOWN = its tier's totalCollected > 0 (lifetime total, so spending it - the wish, the Gauntlet - never hides it).
+//   GALLERY: every entry page has a small CAMERA button (top right of the page) that walks you into PixelCollectionGallery (a pitch black first person room with all the cubes floating and lit, built on entering and
+//   destroyed on leaving); the settings are under the Gallery header here, and leaving brings the book back on the same page.
 //   Pictures are PixelTierPicture (a real model, turning). To add an entry: add a line to Entries (type + flavour text).
 // ----------------------
 using TMPro;
@@ -21,6 +23,26 @@ public class PixelCollectionLog : MonoBehaviour
     [SerializeField] private string unknownText = "???";
     [Tooltip("Hint at the bottom of the book.")]
     [SerializeField] private string hintText = "Click the right page to turn forward, the left page to turn back";
+
+    [Header("Gallery (the camera button on an entry)")]
+    [Tooltip("Size of the gallery room's floor (canvas = world units). 0 = 20.")]
+    [SerializeField] private float galleryRoomSize = 0f;
+    [Tooltip("Size of the square you can walk in (the room is bigger). 0 = 10.")]
+    [SerializeField] private float galleryBoundsSize = 0f;
+    [Tooltip("Walking speed in the gallery (units per second). 0 = 4.")]
+    [SerializeField] private float galleryWalkSpeed = 0f;
+    [Tooltip("How much faster Shift makes you. 0 = 1.8.")]
+    [SerializeField] private float galleryRunFactor = 0f;
+    [Tooltip("Mouse look speed in the gallery. 0 = 0.12.")]
+    [SerializeField] private float galleryLookSensitivity = 0f;
+    [Tooltip("Size of a floating cube. 0 = 0.9.")]
+    [SerializeField] private float galleryItemSize = 0f;
+    [Tooltip("Height of the floating cubes above the floor. 0 = 1.5.")]
+    [SerializeField] private float galleryItemHeight = 0f;
+    [Tooltip("How far each cube's light reaches. 0 = 5.")]
+    [SerializeField] private float galleryLightRange = 0f;
+    [Tooltip("Brightness of each cube's light. 0 = 3.")]
+    [SerializeField] private float galleryLightIntensity = 0f;
 
     private struct Entry { public PixelClicker.PixelType type; public string section, flavour; }
 
@@ -46,8 +68,32 @@ public class PixelCollectionLog : MonoBehaviour
         return list.ToArray();
     }
 
+    // The Gallery reads the entries through these.
+    public static int EntryCount => Entries.Length;
+    public static PixelClicker.PixelType EntryType(int i) => Entries[i].type;
+    public static string EntryFlavour(int i) => Entries[i].flavour;
+
+    /// <summary>Has this entry's cube been found (its tier's lifetime total is above 0)? 'tier' = the tier's index (-1 when there is none).</summary>
+    public static bool EntryKnown(PixelClicker clicker, int i, out int tier)
+    {
+        tier = clicker != null ? clicker.IndexOf(Entries[i].type) : -1;
+        return tier >= 0 && (clicker.Tiers[tier].totalCollected > 0d || clicker.Tiers[tier].count > 0d);
+    }
+
+    public static string EntryName(PixelClicker clicker, int i) => EntryKnown(clicker, i, out int tier) ? clicker.Tiers[tier].displayName : "???";
+
+    /// <summary>Opens the book on this entry's page (the gallery returns here).</summary>
+    public static void ShowEntry(int entry)
+    {
+        if (instance == null) return;
+        instance.Open();
+        instance.ShowSpread((Mathf.Clamp(entry, 0, Entries.Length - 1) + 2) / 2);
+    }
+
     private struct Page
     {
+        public Button cameraButton;
+        public int entry;
         public RectTransform root;
         public TMP_Text section, title, body, foot, number;
         public RawImage picture;
@@ -112,6 +158,17 @@ public class PixelCollectionLog : MonoBehaviour
         return bookSprite;
     }
 
+    private void EnterGallery(int entry)
+    {
+        if (entry < 0 || entry >= Entries.Length || clicker == null) return;
+        Close();   // the book goes away while you are in the room; the gallery brings it back
+        PixelCollectionGallery.Enter(clicker, entry, new PixelCollectionGallery.Settings
+        {
+            roomSize = galleryRoomSize, boundsSize = galleryBoundsSize, walkSpeed = galleryWalkSpeed, runFactor = galleryRunFactor, lookSensitivity = galleryLookSensitivity,
+            itemSize = galleryItemSize, itemHeight = galleryItemHeight, lightRange = galleryLightRange, lightIntensity = galleryLightIntensity,
+        });
+    }
+
     private void Open()
     {
         clicker = PixelFind.First<PixelClicker>();
@@ -148,6 +205,8 @@ public class PixelCollectionLog : MonoBehaviour
         left = BuildPage(font, br, "Left Page", new Vector2(1f, 0.5f), new Vector2(-4f, 8f), new Vector2(pageW, pageH));
         right = BuildPage(font, br, "Right Page", new Vector2(0f, 0.5f), new Vector2(4f, 8f), new Vector2(pageW, pageH));
         // Pages: click right = forward, click left = back.
+        left.cameraButton.onClick.AddListener(() => EnterGallery(left.entry));
+        right.cameraButton.onClick.AddListener(() => EnterGallery(right.entry));
         left.root.gameObject.AddComponent<Button>().onClick.AddListener(() => Turn(false));
         right.root.gameObject.AddComponent<Button>().onClick.AddListener(() => Turn(true));
         left.root.GetComponent<Button>().transition = Selectable.Transition.None;
@@ -185,6 +244,17 @@ public class PixelCollectionLog : MonoBehaviour
         go.GetComponent<Image>().color = new Color(0.94f, 0.89f, 0.76f, 1f);
 
         Color ink = new Color(0.22f, 0.14f, 0.07f, 1f);
+        // The camera: walk round all the collection in the gallery, starting beside this entry.
+        GameObject camGo = new GameObject("Gallery Button", typeof(RectTransform), typeof(Image), typeof(Button));
+        camGo.transform.SetParent(p.root, false);
+        Image camImg = camGo.GetComponent<Image>();
+        camImg.sprite = PixelCollectionGallery.CameraSprite(); camImg.preserveAspect = true;
+        camGo.GetComponent<Button>().targetGraphic = camImg;
+        RectTransform camR = camGo.GetComponent<RectTransform>();
+        camR.anchorMin = camR.anchorMax = camR.pivot = new Vector2(1f, 1f);
+        camR.sizeDelta = new Vector2(64f, 48f); camR.anchoredPosition = new Vector2(-14f, -12f);
+        p.cameraButton = camGo.GetComponent<Button>();
+        p.cameraButton.onClick.AddListener(() => PixelAudio.Play("ui_click"));
         p.section = PixelUIKit.CreateText(font, p.root, "Section", "", 24f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(0.5f, 0.35f, 0.15f, 1f));
         Anchor(p.section.rectTransform, 1f, -16f, 36f);
         p.title = PixelUIKit.CreateText(font, p.root, "Title", "", 44f, TextAlignmentOptions.Center, FontStyles.Bold, ink);
@@ -240,6 +310,8 @@ public class PixelCollectionLog : MonoBehaviour
         p.root.gameObject.SetActive(pageIndex >= 0 && pageIndex < PageCount);
         if (!p.root.gameObject.activeSelf) return;
         p.number.text = (pageIndex + 1).ToString();
+        p.entry = pageIndex - 1;
+        if (p.cameraButton != null) p.cameraButton.gameObject.SetActive(pageIndex >= 1);
         p.picture.texture = null; p.picture.enabled = false;
         if (pageIndex == 0)
         {
