@@ -549,7 +549,9 @@ public class PixelMyWindow : MonoBehaviour
         if (undockButton != null)
         {
             undockButton.gameObject.SetActive(dockSide != 0);
-            undockButton.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 180f : 0f);   // points into the screen
+            undockButton.GetComponent<RectTransform>().localRotation = Quaternion.identity;   // (turning the button itself swung it round its pivot, off the row and over its neighbours)
+            Transform glyph = undockButton.transform.Find("Triangle");
+            if (glyph != null) glyph.localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 270f : 90f);   // the arrow inside points into the screen
         }
         if (headerDrag != null) headerDrag.locked = false;   // (a docked window can be dragged off by its header: the drag undocks it)
         LayoutHeaderButtons();

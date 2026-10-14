@@ -248,7 +248,10 @@ public class PixelWindowChrome : MonoBehaviour
         if (undockButton != null)
         {
             undockButton.gameObject.SetActive(dockSide != 0);
-            undockButton.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 180f : 0f);
+            // Turn the ARROW inside the button, not the button: turning the button swings it round its corner pivot, off the header row.
+            undockButton.GetComponent<RectTransform>().localRotation = Quaternion.identity;
+            Transform glyph = undockButton.transform.Find("Triangle");
+            if (glyph != null) glyph.localRotation = Quaternion.Euler(0f, 0f, dockSide > 0 ? 270f : 90f);   // points into the screen
         }
         if (drag != null) drag.locked = false;   // (a docked window can be dragged off by its header: the drag undocks it)
     }
