@@ -1937,6 +1937,15 @@ public class PixelPauseMenu : MonoBehaviour
                 : emptySlotText;
             slotLabels[i].text = "<b>" + name + "</b>";
             slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;
+            // The selected slot also gets a bright outline so it stands out from the other rows.
+            Outline ring = slotButtons[i].GetComponent<Outline>();
+            if (ring == null)
+            {
+                ring = slotButtons[i].gameObject.AddComponent<Outline>();
+                ring.effectColor = new Color(1f, 0.92f, 0.45f, 1f);
+                ring.effectDistance = new Vector2(3f, -3f);
+            }
+            ring.enabled = slot == selectedSlot;
         }
         bool hasSave = saveGame.SlotHasSave(selectedSlot);
         bool newGame = openedFromTitle && !hasSave;   // from the main menu an empty slot starts a new game there

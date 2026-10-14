@@ -193,7 +193,7 @@ public class PixelWindowChrome : MonoBehaviour
         if (dockSide != 0) dockY = p.y;
     }
 
-    private void SetMinimized(bool on, bool save = true)
+    public void SetMinimized(bool on, bool save = true)
     {
         if (on == minimized) return;
         if (on) restoreHeight = window.sizeDelta.y;

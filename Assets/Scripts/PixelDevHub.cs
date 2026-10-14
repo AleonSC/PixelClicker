@@ -123,6 +123,7 @@ public class PixelDevHub : MonoBehaviour
         searchField.SetTextWithoutNotify("");
         searchPanel.gameObject.SetActive(false);
         shownResults.Clear();
+        if (chrome != null && chrome.Minimized) chrome.SetMinimized(false);   // a minimized hub opens up to show the result
         RevealTab(e.tabId);
         e.reveal?.Invoke();
     }

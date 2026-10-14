@@ -128,7 +128,7 @@ public static class PixelAutosaves
 public static class PixelSaveShots
 {
     public const int ThumbWidth = 320;
-    private const float CacheSeconds = 4f;
+    private const float CacheSeconds = 2.5f;
 
     private static byte[] cached;
     private static ShotRunner runner;
@@ -136,6 +136,13 @@ public static class PixelSaveShots
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { cached = null; runner = null; textures.Clear(); }
+
+    // The rolling copy only runs once the runner exists; start it with the game, otherwise the first manual save (made from the pause menu) has no picture to use.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void StartRunner()
+    {
+        if (runner == null) { runner = new GameObject("Save Shots").AddComponent<ShotRunner>(); UnityEngine.Object.DontDestroyOnLoad(runner.gameObject); }
+    }
 
     /// <summary>The screenshot file that belongs to a save file.</summary>
     public static string ThumbPath(string savePath) => Path.ChangeExtension(savePath, ".jpg");

@@ -879,3 +879,5 @@
 [2026-10-14 04:30 UTC] Dev Hub: added a search bar (tabs, widgets and tester features) and right click on any label to set your own text, saved with the save profile.
 [2026-10-14 04:30 UTC] Dialogue boxes (tip / tutorial boxes and Cubie's speech) now play talking blips while the text types out, with a speaker mute button next to the back button.
 [2026-10-14 04:35 UTC] Dev Hub: added a 'Collapse all' / 'Expand all' button above the widgets.
+[2026-10-14 04:48 UTC] Manual saves now always get a screenshot for the slot tooltip (the screenshot recorder starts with the game, not at the first save); picking a Dev Hub search result un-minimizes the hub; My Window header buttons reordered like the Dev Hub (close, minimize, undock, then Edit).
+[2026-10-14 04:48 UTC] The selected save slot in the Save / Load window now has a bright gold outline as well as the blue highlight.

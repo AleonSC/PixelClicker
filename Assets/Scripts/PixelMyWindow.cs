@@ -297,7 +297,7 @@ public class PixelMyWindow : MonoBehaviour
         Button edit = PixelUIKit.CreateButton(Font, header.transform, "Edit", "Edit", new Vector2(96f, 44f), buttonColor, Color.white, 22f);
         RectTransform er = edit.GetComponent<RectTransform>();
         er.anchorMin = er.anchorMax = er.pivot = new Vector2(1f, 0.5f);
-        er.anchoredPosition = new Vector2(-62f, 0f);
+        er.anchoredPosition = new Vector2(-166f, 0f);
         editLabel = edit.GetComponentInChildren<TMP_Text>();
         edit.onClick.AddListener(() => { editing = !editing; RebuildRows(); });
         editButtonObject = edit.gameObject;
@@ -306,7 +306,7 @@ public class PixelMyWindow : MonoBehaviour
         minimizeButton = PixelUIKit.CreateButton(Font, header.transform, "Minimize", "", new Vector2(44f, 44f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 22f);
         RectTransform mr = minimizeButton.GetComponent<RectTransform>();
         mr.anchorMin = mr.anchorMax = mr.pivot = new Vector2(1f, 0.5f);
-        mr.anchoredPosition = new Vector2(-166f, 0f);
+        mr.anchoredPosition = new Vector2(-62f, 0f);
         GameObject minBar = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         minBar.transform.SetParent(minimizeButton.transform, false);
         minBar.GetComponent<Image>().color = Color.white;
@@ -320,7 +320,7 @@ public class PixelMyWindow : MonoBehaviour
         undockButton = PixelUIKit.CreateButton(Font, header.transform, "Undock", ">", new Vector2(44f, 44f), buttonColor, Color.white, 22f);
         RectTransform ur = undockButton.GetComponent<RectTransform>();
         ur.anchorMin = ur.anchorMax = ur.pivot = new Vector2(1f, 0.5f);
-        ur.anchoredPosition = new Vector2(-218f, 0f);
+        ur.anchoredPosition = new Vector2(-114f, 0f);
         PixelUIKit.UseArrowGlyph(undockButton, false);
         undockButton.onClick.AddListener(Undock);
         undockButton.gameObject.SetActive(false);
