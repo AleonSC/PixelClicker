@@ -2271,7 +2271,7 @@ public partial class PixelClicker : MonoBehaviour
                 for (int roll = 0; roll < breaks; roll++) basePayout += UnityEngine.Random.Range(lo, hi + 1);
             }
         }
-        double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus) * PixelBlockRules.HeldPayoutFactor;
+        double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus) * PixelBlockRules.HeldPayoutFactor * liveStake;
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
         if (IsDragonCube(tier.type) && amount > 0d) PixelDragonFind.Play(tierIndex, pixelTransform.position);   // the "you found one" show
@@ -2730,9 +2730,12 @@ public partial class PixelClicker : MonoBehaviour
         while (nextInLine.Count > 0)
         {
             Vector2Int queued = nextInLine[0];   // a block bumped by the hold (PixelBlockHold) is next in line, with the hits it had taken
+            float queuedStake = nextInLineStake.Count > 0 ? nextInLineStake[0] : 1f;
             nextInLine.RemoveAt(0);
+            if (nextInLineStake.Count > 0) nextInLineStake.RemoveAt(0);
             if (!IsValidTier(queued.x)) continue;
             pendingHits = queued.y;
+            pendingStake = queuedStake;
             LiveCameFromQueue = true;
             return queued.x;
         }
@@ -2744,7 +2747,15 @@ public partial class PixelClicker : MonoBehaviour
     // ---- Block Hold (PixelBlockHold.cs) ----
 
     private readonly System.Collections.Generic.List<Vector2Int> nextInLine = new System.Collections.Generic.List<Vector2Int>();   // (tier, hits) of blocks waiting to come back
+    private readonly System.Collections.Generic.List<float> nextInLineStake = new System.Collections.Generic.List<float>();   // the stake multiplier each waiting block carries (parallel to nextInLine; 1 = none)
+    private float pendingStake = 1f, liveStake = 1f;
     private int pendingHits;   // hits the next materialized block starts with (a held block keeps its damage)
+
+    /// <summary>Block Hold's stake on the block on the cube: its payout is multiplied by this (1 = no stake, 0 = the gamble was lost).</summary>
+    public float LiveStake => liveStake;
+
+    /// <summary>A block carrying a stake (not 1) just appeared on the cube (its multiplier).</summary>
+    public event System.Action<float> StakeAppeared;
     private int upcomingTier = -1, previousTier = -1;   // the pre-rolled next block (only while the 'Next up' window asks for it) and the block that was on the cube before this one
 
     /// <summary>Is the pre-rolled next block still a legal spawn (a potion, skill or switch may have changed the rules since)?</summary>
@@ -2788,13 +2799,14 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     /// <summary>Block Hold: puts a held block back at once, with the hits it had. The block that was on the cube (hits and all) moves to next in line.</summary>
-    public void ReturnHeldTier(int tierIndex, int hits)
+    public void ReturnHeldTier(int tierIndex, int hits, float stake = 1f)
     {
         if (!IsValidTier(tierIndex)) return;
         // The held block comes back AFTER the block that is on the cube now (it goes first in line, hits kept). That way a hazard that came up while you held can be dealt with first,
         // and picking a block up and putting it down can never reroll the cube: the two blocks just keep taking turns.
         nextInLine.Insert(0, new Vector2Int(tierIndex, hits));
-        while (nextInLine.Count > 3) nextInLine.RemoveAt(nextInLine.Count - 1);
+        nextInLineStake.Insert(0, stake);
+        while (nextInLine.Count > 3) { nextInLine.RemoveAt(nextInLine.Count - 1); if (nextInLineStake.Count > 0) nextInLineStake.RemoveAt(nextInLineStake.Count - 1); }
         upcomingTier = -1;
     }
 
@@ -2802,7 +2814,7 @@ public partial class PixelClicker : MonoBehaviour
     public bool DropQueuedTier(int tierIndex)
     {
         for (int i = 0; i < nextInLine.Count; i++)
-            if (nextInLine[i].x == tierIndex) { nextInLine.RemoveAt(i); upcomingTier = -1; return true; }
+            if (nextInLine[i].x == tierIndex) { nextInLine.RemoveAt(i); if (i < nextInLineStake.Count) nextInLineStake.RemoveAt(i); upcomingTier = -1; return true; }
         return false;
     }
 
@@ -4367,6 +4379,9 @@ public partial class PixelClicker : MonoBehaviour
             if (hitsOnCurrentPixel > 0) SetLiveDamage(tier, hitsOnCurrentPixel);
         }
         pendingHits = 0;
+        liveStake = pendingStake;   // a staked block (Block Hold) comes back worth more... or nothing
+        pendingStake = 1f;
+        if (!Mathf.Approximately(liveStake, 1f)) StakeAppeared?.Invoke(liveStake);
     }
 
     private IEnumerator MaterializeRoutine(PixelTier tier)

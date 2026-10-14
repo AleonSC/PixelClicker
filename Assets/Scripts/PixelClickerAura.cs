@@ -24,7 +24,10 @@ public class PixelClickerAura : MonoBehaviour
 
     /// <summary>Set every frame by the shuffle bonus: the block on the cube is a combo block, so the aura lights up gold and pulses (even when the aura setting is off).</summary>
     public static bool ComboHighlight;
-    private float comboBlend;
+    private float comboBlend, stakeBlend;
+
+    /// <summary>Block Hold: the block on the cube carries a stake - its colour (green = it pays, red = lost). Alpha 0 = none. The aura lights up in that colour (even when the aura setting is off).</summary>
+    public static Color StakeHighlight = new Color(0f, 0f, 0f, 0f);
 
     private const string PrefMode = "PixelClicker.Setting.AuraMode", PrefColor = "PixelClicker.Setting.AuraColor";
     private static int modeCache = -1;
@@ -184,7 +187,8 @@ public class PixelClickerAura : MonoBehaviour
     {
         if (clicker == null || clicker.PixelTransform == null) return;
         comboBlend = Mathf.MoveTowards(comboBlend, ComboHighlight ? 1f : 0f, Time.unscaledDeltaTime * 5f);
-        bool on = (Enabled || comboBlend > 0.001f) && clicker.PixelTransform.gameObject.activeInHierarchy;
+        stakeBlend = Mathf.MoveTowards(stakeBlend, StakeHighlight.a > 0f ? 1f : 0f, Time.unscaledDeltaTime * 5f);
+        bool on = (Enabled || comboBlend > 0.001f || stakeBlend > 0.001f) && clicker.PixelTransform.gameObject.activeInHierarchy;
         if (quad == null) { if (!on) return; Build(); if (quad == null) return; }
         if (quadRenderer.enabled != on) quadRenderer.enabled = on;
         UpdateMask(on);
@@ -213,8 +217,9 @@ public class PixelClickerAura : MonoBehaviour
             target = Color.Lerp(target, Color.white, whiten);
         }
         if (comboBlend > 0f) target = Color.Lerp(target, new Color(1f, 0.82f, 0.25f, 1f), comboBlend);   // a combo block glows gold
+        if (stakeBlend > 0f) target = Color.Lerp(target, new Color(StakeHighlight.r, StakeHighlight.g, StakeHighlight.b, 1f), stakeBlend);   // a staked block glows green (it pays) or red (lost)
         color = Color.Lerp(color, target, 1f - Mathf.Exp(-colorFollow * Time.unscaledDeltaTime));
-        color.a = strength * (1f + breathe * breatheAmount) * Mathf.Lerp(1f, 2.3f, comboBlend) + comboBlend * 0.18f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f));
+        color.a = strength * (1f + breathe * breatheAmount) * Mathf.Lerp(1f, 2.3f, Mathf.Max(comboBlend, stakeBlend)) + Mathf.Max(comboBlend, stakeBlend) * 0.18f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 7f));
         material.color = color;
     }
 }

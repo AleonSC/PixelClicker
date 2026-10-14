@@ -10,6 +10,11 @@
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
 //   STALL: PixelTier.stallsHold / stallSeconds (Great Oak): every click on such a block freezes the drain for stallSeconds and adds stallRefill (0.04) of the meter (PixelBlockHold.Stall), the meter turns icy while frozen.
+//   AVAILABLE FROM THE START (requireShopPack off; the shop pack is no longer needed). STAKE (disableStake, stake* fields): holding a PLAIN block (no HoldRule, not the filler) for at least stakeMinSeconds
+//   (0.75) puts a stake on it: the value grows 1 + stakeGrowthPerSecond (0.6) x seconds held; on release the outcome is rolled (stakeWinChance 0.6, +/- stakeWinChanceChangeAtFullHold over a full meter) -
+//   pays that multiplier or stakeLossValue (0 = nothing) - and travels with the block through the queue (PixelClicker.nextInLineStake -> liveStake, payout x liveStake). It is revealed when the block comes
+//   round again: its aura glows green / red (PixelClickerAura.StakeHighlight), a top status line says what it is worth and a good / bad sound plays. While holding, the label by the meter shows the value and the chance.
+//   A first-time tip (stake_intro) shows after 25 manual clicks. Skill XP is not changed by the stake.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
 using TMPro;
@@ -40,6 +45,34 @@ public class PixelBlockHold : MonoBehaviour
     [Range(0f, 1f)]
     [Tooltip("A hold can only start when the meter is at least this full. 0 = the default (0.1).")]
     [SerializeField] private float minStartFraction = 0f;
+
+    [Header("Availability")]
+    [Tooltip("Off (default) = Block Hold works from the very start of the game. On = it needs the shop pack (unlocksBlockHold) first, like it used to.")]
+    [SerializeField] private bool requireShopPack = false;
+
+    [Header("Stake (hold a plain block to gamble on it)")]
+    [Tooltip("Turn the stake off (holding then only pulls the block out of the rotation).")]
+    [SerializeField] private bool disableStake = false;
+
+    [Min(0f)]
+    [Tooltip("How much the block's value grows per second of holding if the stake pays off (0 = the default 0.6: a 5 s hold pays x4).")]
+    [SerializeField] private float stakeGrowthPerSecond = 0f;
+
+    [Range(0f, 1f)]
+    [Tooltip("The chance the stake pays off (0 = the default 0.6). Upgrades can raise it.")]
+    [SerializeField] private float stakeWinChance = 0f;
+
+    [Range(-0.5f, 0.5f)]
+    [Tooltip("How the win chance changes by a full-meter hold (0 = the same chance however long you hold; negative = holding longer is riskier).")]
+    [SerializeField] private float stakeWinChanceChangeAtFullHold = 0f;
+
+    [Min(0f)]
+    [Tooltip("A hold shorter than this many seconds is just a pull (no stake; quick taps still shuffle a filler). 0 = the default (0.75).")]
+    [SerializeField] private float stakeMinSeconds = 0f;
+
+    [Range(0f, 1f)]
+    [Tooltip("What a LOST stake pays, as a fraction of the normal value (0 = the block is worth nothing).")]
+    [SerializeField] private float stakeLossValue = 0f;
 
     [Header("Look")]
     [Tooltip("Colour of the meter, the beam and the aura around the held block.")]
@@ -99,7 +132,7 @@ public class PixelBlockHold : MonoBehaviour
     private static Sprite arcSprite;
     private const float ArcHalfDegrees = 55f;
 
-    public bool Active => unlocked && !disableBlockHold;
+    public bool Active => (unlocked || !requireShopPack) && !disableBlockHold;
     public bool Holding => holding;
 
     /// <summary>A click landed on a stalling block (PixelTier.stallsHold): the hold meter stops draining for this many seconds.</summary>
@@ -205,6 +238,24 @@ public class PixelBlockHold : MonoBehaviour
 
     private float holdStartedAt;
 
+    private float StakeGrowth => stakeGrowthPerSecond > 0f ? stakeGrowthPerSecond : 0.6f;
+    private float StakeMin => stakeMinSeconds > 0f ? stakeMinSeconds : 0.75f;
+    private float StakeBaseWin => stakeWinChance > 0f ? stakeWinChance : 0.6f;
+
+    /// <summary>Can the block in hand carry a stake? Plain blocks only: no hold blocks (they have their own bonus) and no filler (it pays nothing).</summary>
+    private bool StakeEligible()
+    {
+        if (disableStake || clicker == null || !clicker.IsValidTierIndex(heldTier)) return false;   // (heldTier is still set while Release runs: 'holding' already is false then)
+        PixelClicker.PixelType type = clicker.Tiers[heldTier].type;
+        if (PixelBlockRules.TryGetHold(type, out PixelBlockRules.HoldRule _)) return false;
+        if (PixelSkills.TryGetFiller(out PixelClicker.PixelType filler, out float _) && filler == type) return false;
+        return true;
+    }
+
+    private float StakeProgress(float heldSeconds) => Mathf.Clamp01(heldSeconds / HoldSeconds);
+    private float StakeValue(float heldSeconds) => 1f + StakeGrowth * heldSeconds;
+    private float StakeWin(float heldSeconds) => Mathf.Clamp(StakeBaseWin + stakeWinChanceChangeAtFullHold * StakeProgress(heldSeconds), 0.05f, 0.95f);
+
     private void Begin()
     {
         if (!clicker.TryPullLive(out heldTier, out heldHits)) return;
@@ -221,7 +272,11 @@ public class PixelBlockHold : MonoBehaviour
         holding = false;
         if (heldTier >= 0 && !exhausted) PixelShuffleBonus.OnRelease(heldTier, Time.unscaledTime - holdStartedAt);   // a quick tap on a filler = a shuffle (PixelShuffleBonus)
         // The block goes first in line (it comes after the block on the cube now); the picture of it only slides back for show.
-        if (heldTier >= 0 && clicker != null) clicker.ReturnHeldTier(heldTier, heldHits);
+        float stake = 1f;
+        float heldFor = Time.unscaledTime - holdStartedAt;
+        if (heldTier >= 0 && heldFor >= StakeMin && StakeEligible())
+            stake = Random.value < StakeWin(heldFor) ? StakeValue(heldFor) : stakeLossValue;   // the outcome is decided now but only shown when the block comes round again
+        if (heldTier >= 0 && clicker != null) clicker.ReturnHeldTier(heldTier, heldHits, stake);
         heldTier = -1;
         returning = holder != null;
         cooldown = exhausted ? ExhaustCooldown : ReleaseCooldown;
@@ -237,9 +292,32 @@ public class PixelBlockHold : MonoBehaviour
         DestroyVisual();
     }
 
+    private void OnEnable() { if (clicker == null) clicker = GetComponent<PixelClicker>(); if (clicker != null) clicker.StakeAppeared += OnStakeAppeared; }
+    private void OnDisable() { if (clicker != null) clicker.StakeAppeared -= OnStakeAppeared; PixelClickerAura.StakeHighlight = new Color(0f, 0f, 0f, 0f); }
+
+    private bool introTried;
+
+    /// <summary>A staked block came round: green and a message when it pays, red when the stake was lost.</summary>
+    private void OnStakeAppeared(float stake)
+    {
+        bool win = stake > 1f;
+        string name = clicker != null && clicker.IsValidTierIndex(clicker.CurrentClickTierIndex) ? clicker.Tiers[clicker.CurrentClickTierIndex].type.ToString() : "block";
+        PixelStatusLines.Set("stake.live", win ? "Stake paid off: this " + name + " is worth x" + stake.ToString("0.0") : (stake <= 0f ? "Stake lost: this " + name + " is worth nothing" : "Stake lost: this " + name + " is worth x" + stake.ToString("0.0")),
+                             win ? new Color(0.45f, 1f, 0.55f, 1f) : new Color(1f, 0.4f, 0.35f, 1f), 3f);
+        PixelAudio.Play(win ? "traffic_good" : "traffic_bad");
+    }
+
     private void LateUpdate()
     {
         if (clicker == null) return;
+        // The block on the cube carries a stake: its aura glows green (it pays) or red (lost).
+        float live = clicker.LiveStake;
+        PixelClickerAura.StakeHighlight = Active && !Mathf.Approximately(live, 1f) ? (live > 1f ? new Color(0.3f, 1f, 0.45f, 1f) : new Color(1f, 0.25f, 0.2f, 1f)) : new Color(0f, 0f, 0f, 0f);
+        if (!introTried && Active && !disableStake && !PixelTitleScreen.Showing && !PixelHints.IntroHoldsGuide)
+        {
+            PixelStats stats = PixelFind.First<PixelStats>();
+            if (stats != null && stats.ManualClicks >= 25) { introTried = true; PixelHints.Trigger("stake_intro"); }   // (shown once)
+        }
         UpdateVisual();
         UpdateMeter();
     }
@@ -403,13 +481,19 @@ public class PixelBlockHold : MonoBehaviour
             panel.anchoredPosition = local + new Vector2(-6f, 0f);
 
         PixelBlockRules.HoldRule bonus = holding ? PixelBlockRules.ActiveHold : null;
+        string labelText = bonus != null && !string.IsNullOrEmpty(bonus.label) ? bonus.label : null;
+        if (labelText == null && holding && StakeEligible() && Time.unscaledTime - holdStartedAt >= StakeMin)
+        {
+            float heldFor = Time.unscaledTime - holdStartedAt;
+            labelText = "Stake x" + StakeValue(heldFor).ToString("0.0") + "  (" + Mathf.RoundToInt(StakeWin(heldFor) * 100f) + "% pays)";   // the value grows while you hold; the chance is shown too
+        }
         if (bonusLabel != null)
         {
-            bool on = bonus != null && !string.IsNullOrEmpty(bonus.label);
+            bool on = labelText != null;
             if (bonusLabel.gameObject.activeSelf != on) bonusLabel.gameObject.SetActive(on);
             if (on)
             {
-                if (bonusLabel.text != bonus.label) bonusLabel.text = bonus.label;
+                if (bonusLabel.text != labelText) bonusLabel.text = labelText;
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 lp2))
                     bonusLabel.rectTransform.anchoredPosition = lp2 + new Vector2(-120f, -118f);
             }
