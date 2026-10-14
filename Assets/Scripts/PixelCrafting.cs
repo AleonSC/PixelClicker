@@ -880,6 +880,7 @@ public class PixelCrafting : MonoBehaviour
         PixelPop.Show(windowObject);
         refreshTimer = 0f;
         Refresh();
+        if (!BookOpen && !hideBookOnOpen) OpenBook();   // the recipe book comes open with the window
     }
 
     // ------------------------------------------------------------------
@@ -887,6 +888,9 @@ public class PixelCrafting : MonoBehaviour
     // ------------------------------------------------------------------
 
     [Header("Recipe Book")]
+    [Tooltip("Tick to have the recipe book start closed when Crafting opens (the Book button in the window opens it).")]
+    [SerializeField] private bool hideBookOnOpen = false;
+
     [Tooltip("Title of the recipe book window.")]
     [SerializeField] private string bookTitle = "Recipe Book";
 

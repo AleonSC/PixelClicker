@@ -25,6 +25,13 @@ public partial class PixelShop
         if (shop != null && shop.panelObject != null && PixelPop.IsOpen(shop.panelObject)) PixelPop.Hide(shop.panelObject);
     }
 
+    // ---- the arrow that pulls the currency panel out of the shop window's left edge (hidden by default; the choice is remembered) ----
+    private const string PrefCurrencyOut = "PixelClicker.Setting.ShopCurrencyOut";
+    private Button currencyArrow;
+    private Transform currencyArrowGlyph;
+    private bool currencyOut;
+    private float currencySlide;   // 0 = tucked away, 1 = fully out
+
     private GameObject currencyPanel;
     private RectTransform currencyContent;
     private ScrollRect currencyScroll;
@@ -131,6 +138,37 @@ public partial class PixelShop
         }
 
         BuildCurrencyTooltip();
+
+        // The pull-out arrow sits at the top left of the shop window (it rides the left edge of the currency panel when that is out).
+        currencyOut = PlayerPrefs.GetInt(PrefCurrencyOut, 0) != 0;
+        currencySlide = currencyOut ? 1f : 0f;
+        currencyArrow = PixelUIKit.CreateButton(font, shopPanel, "Currency Arrow", "", new Vector2(52f, 68f), new Color(0.3f, 0.34f, 0.46f, 1f), Color.white, 28f);
+        RectTransform ar2 = currencyArrow.GetComponent<RectTransform>();
+        ar2.anchorMin = ar2.anchorMax = new Vector2(0f, 1f);
+        ar2.pivot = new Vector2(1f, 1f);
+        PixelUIKit.UseArrowGlyph(currencyArrow, false);
+        currencyArrowGlyph = currencyArrow.transform.Find("Triangle");
+        currencyArrow.onClick.AddListener(() =>
+        {
+            currencyOut = !currencyOut;
+            PlayerPrefs.SetInt(PrefCurrencyOut, currencyOut ? 1 : 0);
+            PixelAudio.Play("ui_click");
+        });
+        ApplyCurrencySlide();
+    }
+
+    /// <summary>Positions the currency panel (it grows out of the shop window's left edge) and the arrow for the current slide amount.</summary>
+    private void ApplyCurrencySlide()
+    {
+        if (currencyPanel == null || currencyArrow == null) return;
+        float ease = Mathf.SmoothStep(0f, 1f, currencySlide);
+        bool visible = currencySlide > 0.001f;
+        if (currencyPanel.activeSelf != visible) currencyPanel.SetActive(visible);
+        RectTransform pr = currencyPanel.GetComponent<RectTransform>();
+        pr.localScale = new Vector3(Mathf.Max(0.001f, ease), 1f, 1f);   // (pivot on its right edge: it unfolds leftwards out of the shop window)
+        float edge = Mathf.Max(0f, currencyPanelGap) + CurrencyWidth * ease;
+        currencyArrow.GetComponent<RectTransform>().anchoredPosition = new Vector2(-edge - 4f, -headerHeight * 0.25f);
+        if (currencyArrowGlyph != null) currencyArrowGlyph.localRotation = Quaternion.Euler(0f, 0f, currencyOut ? 0f : 180f);   // points left to pull it out, right to put it away
     }
 
     private void BuildCurrencyTooltip()
@@ -185,6 +223,11 @@ public partial class PixelShop
     private void UpdateCurrencyAndWindows()
     {
         bool open = panelObject != null && PixelPop.IsOpen(panelObject);
+        if (currencyArrow != null)
+        {
+            currencySlide = Mathf.MoveTowards(currencySlide, currencyOut ? 1f : 0f, Time.unscaledDeltaTime / 0.22f);
+            ApplyCurrencySlide();
+        }
         if (open && !shopWasOpen)
         {
             // The shop replaces the Inventory and Log windows (its currency panel shows what they would).

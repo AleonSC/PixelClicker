@@ -911,3 +911,4 @@
 [2026-10-14 07:22 UTC] The Ghost minigame's free potions now only come from pixels in the rotation being played (the current skill pack's blocks or the standard pixels), not from pixels the pack has replaced.
 [2026-10-14 07:24 UTC] Ultra Holes now only ask for pixels in the rotation being played (the current skill pack's blocks or the standard pixels) and never for hazards.
 [2026-10-14 07:31 UTC] Breakout: the court now fills the screen between the black bars by default (tick 'Manual Court Size' on the minigame to size it by hand again).
+[2026-10-14 07:36 UTC] The Crafting recipe book now opens by default with the window, and the shop's currency panel is hidden by default with a small arrow at the shop window's top left that pulls it out (and puts it away); the choice is remembered.
