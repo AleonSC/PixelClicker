@@ -139,7 +139,7 @@ public class PixelDatabaseWindow : MonoBehaviour
         // Category tabs under the search box (two rows) and the 'show undiscovered' switch as the last cell.
         string[,] tabDefs = { { "All", null }, { "Pixels", "Pixel" }, { "Packs", "Shop pack" }, { "Skills", "Skill" }, { "Items", "Consumable" },
                               { "Recipes", "Recipe" }, { "Minigames", "Minigame" }, { "Awards", "Achievement" }, { "Tips", "Tip" },
-                              { "Pets", "Pet" }, { "Floors", "Floor" }, { "Skies", "Sky" } };
+                              { "Pets", "Pet" }, { "Floors", "Floor" }, { "Skies", "Sky" }, { "Rules", "Block rule" }, { "Nodes", "Skill node" } };
         float cellW = (640f - 4f * 6f) / 5f;
         for (int i = 0; i < tabDefs.GetLength(0) + 1; i++)
         {

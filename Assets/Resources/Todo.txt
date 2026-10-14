@@ -39,3 +39,9 @@
 [ ] UI unification step 3: button ROLES table in PixelUIKit (Neutral, Primary, Danger, Success, Selected...; each = colour, follows-custom-colour flag, optional extras; Neutral/Primary derived from the theme, Danger/Success fixed) plus a per-button colorOverride for rare outliers; convert call sites to roles; decide whether the custom colour also recolours accent buttons and the selected-slot highlight
 [ ] UI unification step 4 (later): one theme object for window colour, button colour, text colour and highlight so one change refreshes everything
 [ ] Game Database: each system declares its own database entries, 'discovered' rule and pin rule (a small data-source interface) so PixelDatabase.Build stops being one 400-line hand-written list and a new feature appears in the database automatically
+[ ] Game Database: add Operation upgrades (PixelOperationUpgrade table, shop Upgrades > Operation) as entries
+[ ] Game Database: add Goals (the Log's goal list) as entries
+[ ] Game Database: add pet outfits (generated + named special outfits, Outfit Studio) - a category or inside the pet entries
+[ ] Game Database: add a Settings category (screen filters, day / night lengths, floor off-modes, display options) so players can find them by searching
+[ ] Game Database: add Cubie, the Prospector and the Lumberjack as character entries (who they are, when they visit, what they do)
+[ ] Game Database: hand-written entries for the Fishing specials (whale fight, treasure map) and the Dragon Cubes / wish - their data lives in code, not in tables

@@ -18,6 +18,8 @@
 //   shown. An undiscovered entry is listed as '???' (name, text, picture and references hidden, searchable only by its category) unless 'Show ???' is on; other entries' references to it
 //   read 'Label: ???'. MORE ENTRIES: Pet (one per pixel type that can have a pet; discovered = owned; numbers from PixelPets.SpawnWeightFactor / DespawnSlowDown / FindChancePerClick),
 //   Floor and Sky (the looks of PixelFloor / PixelSkybox, IPixelLookSource) and vendors' wares (PixelVisitorMinigame.WareNames -> 'Sells' / 'Sold by' links on minigame + consumable entries).
+//   RULES / NODES: 'Block rule' entries (PixelBlockRules special-block and hold-block rules; text = PixelBlockRules.GuideNotes, links to the pixel, the blocks it replaces, the boost block, the hazard it clears and the skill) and
+//   'Skill node' entries (every PixelSkills.TreeNode: description, cost, 'coming soon', links to its skill, the node it needs and the block toggle it unlocks); both are discovered when their pixel / skill is.
 //   PIN: Entry.pinType / pinKey (pixel = currency row, skill, achievement, listable consumable = favorite) drive the window's 'Pin to My Window' button (PixelMyWindow.CanPin / IsPinned / TogglePin).
 //   Known leak: a discovered entry's reference text still contains the hidden name, so searching for that exact name finds the discovered entry.
 // ---------------------------------------------------
@@ -78,6 +80,8 @@ public static class PixelDatabase
             case "Floor": return new Color(0.55f, 0.85f, 0.8f);
             case "Sky": return new Color(0.6f, 0.7f, 1f);
             case "Pet": return new Color(1f, 0.75f, 0.85f);
+            case "Block rule": return new Color(0.85f, 0.7f, 1f);
+            case "Skill node": return new Color(0.7f, 0.95f, 0.6f);
             default: return new Color(0.6f, 0.65f, 0.7f);
         }
     }
@@ -219,6 +223,56 @@ public static class PixelDatabase
                 if (Enum.TryParse(s.fillerType, out PixelClicker.PixelType filler)) Link(se, "Filler block", PixelOf(filler), "Filler block of skill");
                 if (Enum.TryParse(s.hazardType, out PixelClicker.PixelType hazard)) Link(se, "Hazard block", PixelOf(hazard), "Hazard block of skill");
             }
+        // ---- Skill tree nodes (each its own entry, linked to its skill, the node it needs and the block it unlocks) ----
+        if (skills != null)
+            foreach (PixelSkills.SkillPack s in skills.Packs)
+            {
+                if (s == null || s.nodes == null || !skillEntries.TryGetValue(s.id, out Entry owner)) continue;
+                Dictionary<string, Entry> nodeEntries = new Dictionary<string, Entry>();
+                foreach (PixelSkills.TreeNode n in s.nodes)
+                {
+                    if (n == null || string.IsNullOrEmpty(n.displayName)) continue;
+                    string text = Plain(n.description) + "\nCosts " + n.cost + " skill point" + (n.cost == 1 ? "" : "s") + " (a skill earns one per level above 1)." + (n.implemented ? "" : "\nComing soon: the effect is not built yet.");
+                    Entry ne = Add("Skill node", s.displayName + ": " + n.displayName, text);
+                    ne.discovered = owner.discovered;
+                    nodeEntries[n.id] = ne;
+                    Link(ne, "Node of skill", owner, "Tree node");
+                    if (Enum.TryParse(n.guestType, out PixelClicker.PixelType guest)) Link(ne, "Unlocks the block toggle for", PixelOf(guest), "Toggle unlocked by tree node");
+                }
+                foreach (PixelSkills.TreeNode n in s.nodes)
+                    if (n != null && !string.IsNullOrEmpty(n.requires) && nodeEntries.TryGetValue(n.id, out Entry mine) && nodeEntries.TryGetValue(n.requires, out Entry needed))
+                        Link(mine, "Needs node", needed, "Needed by node");
+            }
+
+        // ---- Special and hold blocks (the rules from PixelBlockRules) ----
+        PixelBlockRules blockRules = PixelBlockRules.Instance;
+        if (blockRules != null)
+        {
+            foreach (PixelBlockRules.SpecialRule r in blockRules.SpecialRules)
+            {
+                if (r == null || r.tier == null) continue;
+                Entry px = PixelOf(r.tier.type);
+                string blockName = px != null ? px.name : r.tier.type.ToString();
+                Entry re = Add("Block rule", blockName + ": special block", Plain(PixelBlockRules.GuideNotes(r.tier.type)).Trim());
+                re.discovered = px != null && px.discovered;
+                Link(re, "Special block", px, "Has a special-block rule");
+                if (r.replaces != null) foreach (PixelClicker.PixelType t in r.replaces) Link(re, "Replaces", PixelOf(t), "Can be replaced by a special block");
+                if (r.hasBoost) Link(re, "Raised by old pixels of", PixelOf(r.boostBlock), "Raises a special block's chance");
+                if (!string.IsNullOrEmpty(r.skillId) && skillEntries.TryGetValue(r.skillId, out Entry sk)) Link(re, "Skill", sk, "Special block of skill");
+            }
+            foreach (PixelBlockRules.HoldRule r in blockRules.HoldRules)
+            {
+                if (r == null) continue;
+                Entry px = PixelOf(r.type);
+                string blockName = px != null ? px.name : r.type.ToString();
+                Entry re = Add("Block rule", blockName + ": hold bonus", Plain(PixelBlockRules.GuideNotes(r.type)).Trim());
+                re.discovered = px != null && px.discovered;
+                Link(re, "Hold block", px, "Has a hold bonus");
+                if (r.clearsHazard) Link(re, "Clears hazard", PixelOf(r.hazardType), "Cleared by a held block");
+                if (!string.IsNullOrEmpty(r.skillId) && skillEntries.TryGetValue(r.skillId, out Entry sk)) Link(re, "Skill", sk, "Hold bonus of skill");
+            }
+        }
+
         if (shop != null)
         {
             IReadOnlyList<PixelShop.ShopPack> packs = shop.AllPacks;
@@ -331,7 +385,7 @@ public static class PixelDatabase
             }
         }
         List<Entry> mentionable = new List<Entry>();
-        foreach (Entry e in entries) if (e.category != "Tip" && e.category != "Achievement" && e.category != "Recipe" && e.category != "Floor" && e.category != "Sky" && e.category != "Pet" && e.name.Length >= 3) mentionable.Add(e);
+        foreach (Entry e in entries) if (e.category != "Tip" && e.category != "Achievement" && e.category != "Recipe" && e.category != "Floor" && e.category != "Sky" && e.category != "Pet" && e.category != "Block rule" && e.category != "Skill node" && e.name.Length >= 3) mentionable.Add(e);
         foreach (Entry t in texts)
             foreach (Entry target in mentionable)
                 if (ContainsWord(t.detail, target.name) || ContainsWord(t.name, target.name)) Link(t, "Mentions", target, "Mentioned in tip / guide");

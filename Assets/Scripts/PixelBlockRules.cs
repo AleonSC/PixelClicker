@@ -96,6 +96,10 @@ public class PixelBlockRules : MonoBehaviour
     [Tooltip("Add the built-in rules that are missing from the lists above (at start).")]
     [SerializeField] private bool addDefaultRules = true;
 
+    /// <summary>For the Game Database: the special-block and hold-block rules.</summary>
+    public IReadOnlyList<SpecialRule> SpecialRules => specialRules;
+    public IReadOnlyList<HoldRule> HoldRules => holdRules;
+
     public static PixelBlockRules Instance { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
