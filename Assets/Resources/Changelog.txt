@@ -958,3 +958,6 @@
 [2026-10-14 10:59 UTC] Main menu logo: a small star next to the style arrows makes the logo showing the favourite of the save (shown on load instead of a random one).
 [2026-10-14 11:03 UTC] Added custom keybinds: a Keybinds tab in My Window lets you bind any item (a potion, a fan to place...) or tool to your own key, saved per save file.
 [2026-10-14 11:03 UTC] The Conveyor Belt is now a real item: Electrician level 5 puts the Conveyor Belt Kit on sale in the Shop; right-click it to lay belts (the kit is not used up).
+[2026-10-14 11:53 UTC] Conveyor belts get wider with the Electrician: two cubes wide at level 10 and three at level 20 (every belt rebuilds itself; pixels ride in lanes).
+[2026-10-14 11:53 UTC] Dev tools: removed the Skip intro button and the Show Dev Tools button (with the glowing docked button itself).
+[2026-10-14 11:53 UTC] Dev tools: the unlock button is now called Unlock All and also unlocks every ordinary pixel type and gives every skill its maximum XP.

@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelDevHub.cs
-//   The DEV HUB: ONE window for every dev tool (opens with PixelAction.DevTools, F9, the pause menu's Dev Tools button or the docked Dev Tools button; PixelDevTools.OpenPanel / Close
+//   The DEV HUB: ONE window for every dev tool (opens with PixelAction.DevTools, F9, the pause menu's Dev Tools button; PixelDevTools.OpenPanel / Close
 //   delegate here). It replaces the old Dev Tools panel, the Inspector window and the Mock up window.
 //   * The window itself is a PixelWindowChrome window: drag by the header (kept between the black bars), minimize and dock to the left / right screen edge.
 //   * FILING-CABINET TABS along the top: Main (PixelDevTools' widgets), To-Do, Changelog, Inspector (PixelDevInspector), Shapes (PixelDevShapes), UI Mock (PixelDevMockup). Drag a tab

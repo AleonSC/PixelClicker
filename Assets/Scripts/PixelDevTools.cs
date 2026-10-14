@@ -124,31 +124,17 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Label of the minigame spawn button.")]
     [SerializeField] private string spawnText = "Spawn";
 
-    [Tooltip("Label of the skip-intro button (it unlocks Gray, Black, the RGB pack and the Auto Clicker).")]
-    [SerializeField] private string skipIntroLabel = "Skip intro";
-
     [Tooltip("Tooltip of the file button at the top left that opens the folder with the crash / error reports (for sending to the developer).")]
     [SerializeField] private string reportTipText = "Open the crash / error report folder";
 
-    [Tooltip("Label of the unlock-everything button.")]
-    [SerializeField] private string unlockAllText = "Unlock all shop items";
+    [Tooltip("Label of the unlock-everything button (every shop item, every pixel, every minigame and max XP in every skill).")]
+    [SerializeField] private string unlockAllText = "Unlock All";
 
     [Tooltip("Text of the button that sets every pixel count to 0 (inventory, Log and Bank) but keeps unlocks.")]
     [SerializeField] private string resetCountsText = "Reset all counts to 0";
 
     [Tooltip("Text the reset button shows after the first click (click again within a few seconds to confirm).")]
     [SerializeField] private string resetConfirmText = "Click again to erase all counts";
-
-    [Header("Auto-hide (fades when not used, comes back on hover)")]
-
-
-    [Min(0.2f)]
-    [Tooltip("Seconds the Dev Tools button stays visible without being touched before it fades away (a bit longer than the selector).")]
-    [SerializeField] private float dockHideSeconds = 6f;
-
-    [Min(0.05f)]
-    [Tooltip("Seconds the Dev Tools button takes to fade out / in.")]
-    [SerializeField] private float dockFadeSeconds = 0.7f;
 
     [Tooltip("Label of the clear-old-pixels tick box.")]
     [SerializeField] private string clearToggleText = "Press Q to clear old pixels";
@@ -176,30 +162,6 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Text of the Despawn button (removes the selected minigame's current round).")]
     [SerializeField] private string despawnText = "Despawn";
-
-    [Header("Docked button (bottom of the screen)")]
-    [Tooltip("Text of the glowing slide-out button at the bottom of the screen that opens the dev tools.")]
-    [SerializeField] private string dockButtonText = "Dev Tools";
-
-    [Tooltip("Colour of the button.")]
-    [SerializeField] private Color dockButtonColor = new Color(1f, 0.86f, 0.45f, 1f);
-
-    [Tooltip("Text colour of the button.")]
-    [SerializeField] private Color dockTextColor = new Color(0.32f, 0.18f, 0f, 1f);
-
-    [Tooltip("Colour of the glow, the halo ring and the sparkles.")]
-    [SerializeField] private Color divineColor = new Color(1f, 0.9f, 0.55f, 1f);
-
-    [Min(0f)]
-    [Tooltip("How far the glow reaches past the button (canvas units).")]
-    [SerializeField] private float dockGlowSize = 46f;
-
-    [Range(0, 40)]
-    [Tooltip("How many sparkles drift up from the button.")]
-    [SerializeField] private int dockSparkles = 16;
-
-    [Tooltip("Sorting order of the docked button's canvas (it must be below the dev panel, 700).")]
-    [SerializeField] private int dockSortingOrder = 135;
 
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
     [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
@@ -304,13 +266,9 @@ public class PixelDevTools : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    [Header("Dev Tools button")]
-    [Tooltip("Show the glowing Dev Tools button at the bottom of the screen. Off by default: the Dev Tools window opens with its key (Settings > Key bindings, default F9) and this tick box turns the button back on.")]
-    [SerializeField] private bool showDockButton = false;
-
     private int clickCount = 1;
     private TMP_InputField clickCountField;
-    private Toggle dockToggle, clearToggle, infiniteToggle, noDespawnToggle, noLimitToggle, godToggle;
+    private Toggle clearToggle, infiniteToggle, noDespawnToggle, noLimitToggle, godToggle;
 
     /// <summary>A save file with its own settings was loaded: read the dev tool choices again and update the panel.</summary>
     public static void ReloadFromPrefs()
@@ -332,8 +290,6 @@ public class PixelDevTools : MonoBehaviour
         if (noLimitToggle != null) noLimitToggle.SetIsOnWithoutNotify(disableOldPixelLimit);
         if (farmerSeedsToggle != null) farmerSeedsToggle.SetIsOnWithoutNotify(farmerAlwaysSeeds);
         if (godToggle != null) godToggle.SetIsOnWithoutNotify(godMode);
-        if (dockToggle != null) dockToggle.SetIsOnWithoutNotify(showDockButton);
-        if (dockRoot != null) dockRoot.SetActive(showDockButton);
         if (amountField != null) amountField.SetTextWithoutNotify(defaultAmount);
         if (pixelDropdown != null && pixelDropdown.options.Count > 0)
         {
@@ -357,7 +313,6 @@ public class PixelDevTools : MonoBehaviour
         farmerAlwaysSeeds = GetBool("FarmerSeeds", farmerAlwaysSeeds);
         PixelFarmerMinigame.DevAlwaysDragonSeeds = farmerAlwaysSeeds;
         godMode = GetBool("God", godMode);
-        showDockButton = GetBool("ShowButton", showDockButton);
         clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
         if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
     }
@@ -378,40 +333,12 @@ public class PixelDevTools : MonoBehaviour
         if (clicker.UIFont != null) font = clicker.UIFont; // one shared font for the whole game
         PixelUIKit.EnsureEventSystem();
         BuildPanel();
-        BuildDockButton();
-    }
-
-    private GameObject dockRoot;
-
-    /// <summary>A glowing, divine slide-out button at the bottom-centre of the screen that opens the dev panel.</summary>
-    private void BuildDockButton()
-    {
-        dockRoot = PixelUIKit.CreateCanvas("PixelDevTools Button", dockSortingOrder, referenceResolution, true);
-        dockRoot.transform.SetParent(transform, false);
-
-        Button button = PixelUIKit.CreateButton(font, dockRoot.transform, "Dev Tools Button", dockButtonText, new Vector2(230f, 64f),
-                                                dockButtonColor, dockTextColor, fontSize);
-        RectTransform rt = button.GetComponent<RectTransform>();
-        PixelHud.Ensure(gameObject).Dock(rt, new Vector2(0.5f, 0f), () => IsOpen);
-        rt.GetComponent<PixelDockedButton>().useOwnColor = true;
-        button.onClick.AddListener(Open);
-
-        PixelDevButtonFx fx = dockRoot.AddComponent<PixelDevButtonFx>();
-        PixelDockedButton docked = rt.GetComponent<PixelDockedButton>();
-        fx.Setup(rt, docked, divineColor, dockGlowSize, dockSparkles);
-
-        // Fades away when it hasn't been used for a while; the mouse near its spot (or an open panel) brings it back.
-        PixelFadeOnIdle fade = dockRoot.AddComponent<PixelFadeOnIdle>();
-        fade.Setup(dockRoot.AddComponent<CanvasGroup>(), dockHideSeconds > 0f ? dockHideSeconds : 6f,
-                   dockFadeSeconds > 0f ? dockFadeSeconds : 0.7f, () => IsOpen || (docked != null && docked.PointerNear()));
-        dockRoot.SetActive(showDockButton);   // hidden unless the Dev Tools tick box says so (the key always opens the window)
     }
 
     private void OnDestroy()
     {
         PixelDevHub.OpenChanged -= OnHubOpenChanged;
         PixelDevDocs.Shown -= OnDocsShown;
-        if (dockRoot != null) Destroy(dockRoot);
         if (instance == this)
         {
             instance = null;
@@ -529,18 +456,6 @@ public class PixelDevTools : MonoBehaviour
         yield return new WaitForSecondsRealtime(boundsSnapshotDelay);
         yield return new WaitForEndOfFrame();
         run();
-    }
-
-    private void SetDockVisible(bool on)
-    {
-        showDockButton = on;
-        SetBool("ShowButton", on);
-        if (dockRoot != null) dockRoot.SetActive(on);
-    }
-
-    private void SkipIntro()
-    {
-        if (shop != null) shop.DevSkipIntro();
     }
 
     private void UnlockAll()
@@ -829,22 +744,6 @@ public class PixelDevTools : MonoBehaviour
             y += rowHeight + 24f;
             ws = content.childCount;
         }
-        // Row: tick box for the docked Dev Tools button (the key always opens the window)
-        dockToggle = BuildToggleRow(content, "Show Dev Tools button", y, inner, showDockButton, SetDockVisible,
-                                    "The glowing Dev Tools button at the bottom of the screen. The window always opens with its key (Settings > Key bindings, default F9).");
-        Widget(content, board, "dock", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
-        // Row: skip intro
-        Button skip = PixelUIKit.CreateButton(font, content, "Skip Intro Button", skipIntroLabel,
-                                              new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(skip.GetComponent<RectTransform>(), 40f, y, inner);
-        skip.onClick.AddListener(SkipIntro);
-        Widget(content, board, "skip", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
         // Row: snapshot of the view bounds / floor numbers (waits so the panel can be closed first)
         Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
@@ -1039,8 +938,6 @@ public class PixelDevTools : MonoBehaviour
             case "spawnminigame": return "Minigames";
             case "middleclick": return "Middle click";
             case "report": return "Crash reports";
-            case "dock": return "Dev Tools button";
-            case "skip": return "Skip intro";
             case "bounds": return "Snapshot bounds";
             case "balance": return "Balance report";
             case "moment": return "Mark this moment";
@@ -1520,237 +1417,6 @@ public class PixelDevTools : MonoBehaviour
             tipRect.SetAsLastSibling();
         };
         hover.onExit = () => { if (tipRect != null) tipRect.gameObject.SetActive(false); };
-    }
-}
-
-/// <summary>
-/// The glowing, divine look of the dev tools button: a pulsing golden halo behind it, a gently floating halo ring above it
-/// and sparkles drifting up. Everything is drawn at runtime and follows the button as it slides.
-/// </summary>
-public class PixelDevButtonFx : MonoBehaviour
-{
-    private RectTransform button;
-    private PixelDockedButton dock;
-    private Color colour;
-    private float glowSize;
-
-    private RectTransform haloRect, ringRect;
-    private Image haloImage, ringImage;
-    private Image[] sparkles;
-    private float[] sparkAge, sparkLife, sparkX, sparkDrift;
-    private Texture2D haloTexture, ringTexture, dotTexture;
-    private Sprite haloSprite, ringSprite, dotSprite;
-    private Vector2 size;
-
-    public void Setup(RectTransform buttonRect, PixelDockedButton dockedButton, Color divine, float glowReach, int sparkleCount)
-    {
-        button = buttonRect;
-        dock = dockedButton;
-        colour = divine;
-        glowSize = glowReach;
-        size = button.sizeDelta;
-
-        haloImage = MakeImage("Halo", BuildHalo(size, glowSize), new Vector2(size.x + glowSize * 2f, size.y + glowSize * 2f), out haloRect);
-        ringImage = MakeImage("Halo Ring", BuildRing(), new Vector2(size.x * 0.75f, 34f), out ringRect);
-
-        sparkles = new Image[sparkleCount];
-        sparkAge = new float[sparkleCount]; sparkLife = new float[sparkleCount];
-        sparkX = new float[sparkleCount]; sparkDrift = new float[sparkleCount];
-        for (int i = 0; i < sparkleCount; i++)
-        {
-            RectTransform sr;
-            sparkles[i] = MakeImage("Sparkle", BuildDot(), new Vector2(10f, 10f), out sr);
-            Respawn(i, true);
-        }
-
-        // Everything sits behind the button itself.
-        for (int i = sparkleCount - 1; i >= 0; i--) sparkles[i].transform.SetAsFirstSibling();
-        ringImage.transform.SetAsFirstSibling();
-        haloImage.transform.SetAsFirstSibling();
-    }
-
-    private Image MakeImage(string objectName, Sprite sprite, Vector2 imageSize, out RectTransform rect)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(Image));
-        go.transform.SetParent(transform, false);
-        Image img = go.GetComponent<Image>();
-        img.sprite = sprite;
-        img.raycastTarget = false;
-        rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = imageSize;
-        return img;
-    }
-
-    private void Respawn(int i, bool stagger)
-    {
-        sparkLife[i] = Random.Range(1.2f, 2.4f);
-        sparkAge[i] = stagger ? Random.value * sparkLife[i] : 0f;
-        sparkX[i] = Random.Range(-0.5f, 0.5f) * size.x;
-        sparkDrift[i] = Random.Range(-14f, 14f);
-    }
-
-    private void Update()
-    {
-        if (button == null) return;
-        float t = Time.unscaledTime;
-        float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
-        float slide = dock != null ? dock.SlideAmount : 1f;
-        float presence = Mathf.Lerp(0.4f, 1f, slide); // a faint glow even while the button is tucked away
-
-        Vector2 p = button.anchoredPosition;
-
-        // Halo glow, pulsing.
-        float pulse = 0.72f + 0.28f * Mathf.Sin(t * 2.4f);
-        Color c = colour; c.a = presence * pulse;
-        haloImage.color = c;
-        haloRect.anchoredPosition = p + new Vector2(0f, size.y * 0.5f);
-        haloRect.localScale = Vector3.one * (1f + 0.04f * Mathf.Sin(t * 1.6f));
-
-        // Halo ring floating above the button.
-        float bob = Mathf.Sin(t * 1.7f) * 4f;
-        Color rc = Color.Lerp(colour, Color.white, 0.4f); rc.a = presence * (0.85f + 0.15f * Mathf.Sin(t * 3.1f));
-        ringImage.color = rc;
-        ringRect.anchoredPosition = p + new Vector2(0f, size.y + 16f + bob);
-
-        // Sparkles rising from the top edge.
-        bool show = slide > 0.15f;
-        for (int i = 0; i < sparkles.Length; i++)
-        {
-            if (sparkles[i].gameObject.activeSelf != show) sparkles[i].gameObject.SetActive(show);
-            if (!show) continue;
-
-            sparkAge[i] += dt;
-            if (sparkAge[i] >= sparkLife[i]) Respawn(i, false);
-            float k = sparkAge[i] / sparkLife[i];
-            RectTransform sr = sparkles[i].rectTransform;
-            sr.anchoredPosition = p + new Vector2(sparkX[i] + sparkDrift[i] * k, size.y * 0.8f + k * 80f);
-            float s = Mathf.Lerp(12f, 3f, k) * (0.8f + 0.2f * Mathf.Sin(t * 9f + i));
-            sr.sizeDelta = new Vector2(s, s);
-            Color sc = Color.Lerp(Color.white, colour, k);
-            sc.a = Mathf.Clamp01(1f - k) * slide;
-            sparkles[i].color = sc;
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (haloSprite != null) Destroy(haloSprite);
-        if (ringSprite != null) Destroy(ringSprite);
-        if (dotSprite != null) Destroy(dotSprite);
-        if (haloTexture != null) Destroy(haloTexture);
-        if (ringTexture != null) Destroy(ringTexture);
-        if (dotTexture != null) Destroy(dotTexture);
-    }
-
-    // ---- runtime-drawn textures (white; tinted by the Image colour) ----
-
-    private Sprite BuildHalo(Vector2 buttonSize, float reach)
-    {
-        float w = buttonSize.x + reach * 2f, h = buttonSize.y + reach * 2f;
-        int tw = Mathf.Clamp(Mathf.RoundToInt(w / 4f), 8, 256), th = Mathf.Clamp(Mathf.RoundToInt(h / 4f), 8, 256);
-        haloTexture = new Texture2D(tw, th, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-        Color32[] px = new Color32[tw * th];
-        for (int y = 0; y < th; y++)
-        {
-            for (int x = 0; x < tw; x++)
-            {
-                float dx = Mathf.Max(0f, Mathf.Abs((x + 0.5f) / tw * w - w * 0.5f) - buttonSize.x * 0.5f);
-                float dy = Mathf.Max(0f, Mathf.Abs((y + 0.5f) / th * h - h * 0.5f) - buttonSize.y * 0.5f);
-                float a = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy) / reach);
-                a *= a;
-                px[y * tw + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
-            }
-        }
-        haloTexture.SetPixels32(px);
-        haloTexture.Apply(false, false);
-        haloSprite = Sprite.Create(haloTexture, new Rect(0, 0, tw, th), new Vector2(0.5f, 0.5f), 100f);
-        return haloSprite;
-    }
-
-    /// <summary>A thin glowing ellipse (the angel ring).</summary>
-    private Sprite BuildRing()
-    {
-        const int tw = 128, th = 32;
-        ringTexture = new Texture2D(tw, th, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-        Color32[] px = new Color32[tw * th];
-        for (int y = 0; y < th; y++)
-        {
-            for (int x = 0; x < tw; x++)
-            {
-                float u = ((x + 0.5f) / tw - 0.5f) * 2f, v = ((y + 0.5f) / th - 0.5f) * 2f;
-                float d = Mathf.Abs(Mathf.Sqrt(u * u + v * v) - 0.82f); // distance from the ellipse line
-                float core = Mathf.Clamp01(1f - d / 0.06f);
-                float glow = Mathf.Clamp01(1f - d / 0.22f) * 0.45f;
-                float a = Mathf.Clamp01(core + glow);
-                px[y * tw + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
-            }
-        }
-        ringTexture.SetPixels32(px);
-        ringTexture.Apply(false, false);
-        ringSprite = Sprite.Create(ringTexture, new Rect(0, 0, tw, th), new Vector2(0.5f, 0.5f), 100f);
-        return ringSprite;
-    }
-
-    /// <summary>A soft four-point star-ish dot.</summary>
-    private Sprite BuildDot()
-    {
-        const int s = 32;
-        dotTexture = new Texture2D(s, s, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-        Color32[] px = new Color32[s * s];
-        for (int y = 0; y < s; y++)
-        {
-            for (int x = 0; x < s; x++)
-            {
-                float u = ((x + 0.5f) / s - 0.5f) * 2f, v = ((y + 0.5f) / s - 0.5f) * 2f;
-                float round = Mathf.Clamp01(1f - Mathf.Sqrt(u * u + v * v));
-                float cross = Mathf.Clamp01(1f - Mathf.Min(Mathf.Abs(u), Mathf.Abs(v)) * 6f) * Mathf.Clamp01(1f - Mathf.Max(Mathf.Abs(u), Mathf.Abs(v)));
-                float a = Mathf.Clamp01(round * round + cross);
-                px[y * s + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
-            }
-        }
-        dotTexture.SetPixels32(px);
-        dotTexture.Apply(false, false);
-        dotSprite = Sprite.Create(dotTexture, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 100f);
-        return dotSprite;
-    }
-}
-
-/// <summary>
-/// Fades a CanvasGroup out when nothing has used it for a while, and back in as soon as 'inUse' says so (the mouse is over it...).
-/// While it is faded out it can't be clicked, so invisible buttons never catch a click by accident.
-/// </summary>
-public class PixelFadeOnIdle : MonoBehaviour
-{
-    private CanvasGroup group;
-    private float hideAfter, fadeSeconds, lastUse;
-    private System.Func<bool> inUse;
-    /// <summary>While this returns true the group is hidden whatever else happens (an interface is open).</summary>
-    public System.Func<bool> hideWhen;
-
-    public void Setup(CanvasGroup canvasGroup, float hideAfterSeconds, float fadeDuration, System.Func<bool> isInUse)
-    {
-        group = canvasGroup;
-        hideAfter = hideAfterSeconds;
-        fadeSeconds = Mathf.Max(0.05f, fadeDuration);
-        inUse = isInUse;
-        lastUse = Time.unscaledTime;
-        group.alpha = 1f;
-    }
-
-    private void OnEnable() => lastUse = Time.unscaledTime;
-
-    private void Update()
-    {
-        if (group == null) return;
-        if (inUse != null && inUse()) lastUse = Time.unscaledTime;
-        float target = Time.unscaledTime - lastUse < hideAfter ? 1f : 0f;
-        if (hideWhen != null && hideWhen()) target = 0f;
-        group.alpha = Mathf.MoveTowards(group.alpha, target, Time.unscaledDeltaTime / fadeSeconds);
-        bool usable = group.alpha > 0.3f;
-        group.interactable = usable;
-        group.blocksRaycasts = usable;
     }
 }
 

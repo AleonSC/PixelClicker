@@ -110,6 +110,10 @@ public partial class PixelSkills : MonoBehaviour
 
     private const string ConveyorPerkText = "Conveyor belts: the Conveyor Belt Kit goes on sale in the Shop";
     private const string ConveyorNotice = "Electrician level 5! The Conveyor Belt Kit is on sale in the Shop (Utilities).";
+    private const string ConveyorWidePerkText = "Wide belts: conveyor belts are two cubes wide";
+    private const string ConveyorWideNotice = "Electrician level 10! Every conveyor belt is now two cubes wide.";
+    private const string ConveyorWidestPerkText = "Wider belts: conveyor belts are three cubes wide";
+    private const string ConveyorWidestNotice = "Electrician level 20! Every conveyor belt is now three cubes wide.";
     private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. While you train another skill it still gains a tiny 5% of the XP.";
     public const string MiningId = "mining";
     public const string WoodcuttingId = "woodcutting";
@@ -395,9 +399,12 @@ public partial class PixelSkills : MonoBehaviour
             {
                 // Level 5: the Conveyor Belt Kit goes on sale in the shop (PixelConsumables DeviceKind.ConveyorBelt, shopSkillId electrician / level 5).
                 System.Collections.Generic.List<Perk> elPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
-                if (!elPerks.Exists(pk => pk != null && pk.level == 5))
+                bool changedPerks = false;
+                if (!elPerks.Exists(pk => pk != null && pk.level == 5)) { elPerks.Add(new Perk { level = 5, text = ConveyorPerkText, implemented = true, noticeText = ConveyorNotice }); changedPerks = true; }
+                if (!elPerks.Exists(pk => pk != null && pk.level == 10)) { elPerks.Add(new Perk { level = 10, text = ConveyorWidePerkText, implemented = true, noticeText = ConveyorWideNotice }); changedPerks = true; }
+                if (!elPerks.Exists(pk => pk != null && pk.level == 20)) { elPerks.Add(new Perk { level = 20, text = ConveyorWidestPerkText, implemented = true, noticeText = ConveyorWidestNotice }); changedPerks = true; }
+                if (changedPerks)
                 {
-                    elPerks.Add(new Perk { level = 5, text = ConveyorPerkText, implemented = true, noticeText = ConveyorNotice });
                     elPerks.Sort((a, b) => a.level.CompareTo(b.level));
                     pack.perks = elPerks.ToArray();
                 }

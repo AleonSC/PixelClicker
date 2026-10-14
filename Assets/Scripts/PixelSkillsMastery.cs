@@ -47,6 +47,18 @@ public partial class PixelSkills
         return total;
     }
 
+    /// <summary>Dev tools (Unlock All): gives every skill (except Standard) the XP up to its level cap. No popups or perk notices.</summary>
+    public void DevMaxAllSkills()
+    {
+        foreach (SkillPack p in packs)
+        {
+            if (p == null || p.id == StandardId) continue;
+            double missing = CapXp(p) - Xp(p);
+            if (missing > 0d) PixelStats.Count("skill." + p.id + ".xp", missing);
+        }
+        Changed?.Invoke();
+    }
+
     /// <summary>Mastery progress 0..1 (1 only when every skill is at its cap), plus the XP counted and the XP needed in all.</summary>
     public double MasteryProgress(out double xp, out double totalXp)
     {

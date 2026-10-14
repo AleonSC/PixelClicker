@@ -4,6 +4,8 @@
 //   ClampEnd keeps the slope under about 37 degrees); posts (BuildSupports) stand on the floor (FloorY) under a raised belt. Riders measure their place along the GROUND (Length = horizontal length), PointAt gives the
 //   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
 //   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
+//   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
+//   captured into the lane it landed in, riders keep their gap per lane, and a hand-on to the next belt picks the nearest lane there.
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
 //   starts the next belt, so a series of short straight pieces makes a curve; right click ends the chain, a second right click stops placing). Clicks near the end of an existing belt
 //   snap to it. RIGHT CLICK a placed belt (not while placing) to reverse its direction (PixelConveyorSystem). A belt is a low solid slab with side rails and moving chevrons that show
@@ -40,6 +42,37 @@ public class PixelConveyor : MonoBehaviour
     [Min(0f)]
     [Tooltip("How fast the belt carries things, in cube widths per second. 0 = the coded default (1.6).")]
     [SerializeField] private float beltSpeedCubes = 0f;
+
+    /// <summary>How many cubes wide every belt is: 1, 2 at Electrician level 10, 3 at level 20 (each belt rebuilds itself when this changes).</summary>
+    public static int LaneCount
+    {
+        get
+        {
+            int level = PixelSkills.LevelOfId(PixelSkills.ElectricianId);
+            return 1 + (level >= 10 ? 1 : 0) + (level >= 20 ? 1 : 0);
+        }
+    }
+
+    private int lanesBuilt = 1;
+    /// <summary>The number of lanes this belt was built with (a pixel rides in the middle of one lane).</summary>
+    public int Lanes => lanesBuilt;
+    private float LanePitch => 1.1f * unit;
+    /// <summary>The sideways place of a lane (belt-local x, so it does not change when the belt is reversed).</summary>
+    public float LaneOffset(int lane) => (lane - (lanesBuilt - 1) * 0.5f) * LanePitch;
+    /// <summary>The lane nearest a world point.</summary>
+    public int NearestLane(Vector3 world)
+    {
+        float x = Vector3.Dot(world - transform.position, transform.right);
+        return Mathf.Clamp(Mathf.RoundToInt(x / LanePitch + (lanesBuilt - 1) * 0.5f), 0, lanesBuilt - 1);
+    }
+    /// <summary>The point of a lane at distance s from the belt's start (at the belt's ground height).</summary>
+    public Vector3 LanePointAt(int lane, float s) => PointAt(s) + transform.right * LaneOffset(lane);
+    /// <summary>The electrician's upgrade changed the width: build the belt again at the new width (nothing else about it changes).</summary>
+    public void RefreshLanes()
+    {
+        if (ghostMode || LaneCount == lanesBuilt || a == b) return;
+        Rebuild(a, b);
+    }
 
     private PixelClicker clicker;
     private Vector3 a, b;
@@ -243,7 +276,8 @@ public class PixelConveyor : MonoBehaviour
         Vector3 d = b - a; d.y = 0f;
         hLength = d.magnitude;
         length = (b - a).magnitude;
-        width = 1.35f * unit;
+        lanesBuilt = LaneCount;
+        width = (1.35f + (lanesBuilt - 1) * 1.1f) * unit;   // one cube wide, plus a cube for every upgrade (Electrician levels 10 and 20)
         height = 0.16f * unit;
         transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation((b - a).normalized, Vector3.up));
 
@@ -437,6 +471,7 @@ public class PixelConveyorSystem : MonoBehaviour
         public PixelConveyor belt;
         public float s;
         public float half;     // half the pixel's height (it rides with its bottom on the belt)
+        public int lane;       // which lane of a wide belt it rides in
     }
 
     [Header("Player on a belt (first person)")]
@@ -478,7 +513,7 @@ public class PixelConveyorSystem : MonoBehaviour
     public static void Ensure(PixelClicker c) { if (system == null) { GameObject go = new GameObject("Conveyor System"); system = go.AddComponent<PixelConveyorSystem>(); system.clicker = c; } }
 
     [System.Serializable]
-    public class RiderSave { public string type; public double amount; public float s; }
+    public class RiderSave { public string type; public double amount; public float s; public int lane; }
 
     /// <summary>Is this old pixel locked onto a belt right now (it is saved with the belt, not with the loose old pixels)?</summary>
     public static bool IsRiding(Rigidbody rb) => system != null && rb != null && system.riding.Contains(rb);
@@ -492,7 +527,7 @@ public class PixelConveyorSystem : MonoBehaviour
             if (r.belt != belt || r.rb == null) continue;
             OldPixelInfo info = r.rb.GetComponent<OldPixelInfo>();
             if (info == null || !system.clicker.IsValidTierIndex(info.tierIndex)) continue;
-            list.Add(new RiderSave { type = system.clicker.Tiers[info.tierIndex].type.ToString(), amount = info.amount, s = r.s });
+            list.Add(new RiderSave { type = system.clicker.Tiers[info.tierIndex].type.ToString(), amount = info.amount, s = r.s, lane = r.lane });
         }
         return list;
     }
@@ -506,14 +541,15 @@ public class PixelConveyorSystem : MonoBehaviour
         int tier = c.IndexOf(type);
         if (tier < 0) return;
         float s = Mathf.Clamp(save.s, 0f, belt.Length);
-        Vector3 p = belt.PointAt(s) + Vector3.up * (belt.SurfaceHeight + belt.Unit * 0.5f);
+        int lane = Mathf.Clamp(save.lane, 0, belt.Lanes - 1);
+        Vector3 p = belt.LanePointAt(lane, s) + Vector3.up * (belt.SurfaceHeight + belt.Unit * 0.5f);
         int before = c.OldPixels.Count;
         if (!c.SpawnStoredPixel(tier, save.amount, p, Vector3.zero) || c.OldPixels.Count <= before) return;
         Rigidbody rb = c.OldPixels[c.OldPixels.Count - 1];
         if (rb == null) return;
         OldPixelPopIn pop = rb.GetComponent<OldPixelPopIn>();
         if (pop != null) pop.Finish();
-        system.Capture(rb, belt, s);
+        system.Capture(rb, belt, s, lane);
     }
 
     /// <summary>A belt was reversed: its riders now travel the other way (their distance along it is mirrored).</summary>
@@ -544,19 +580,19 @@ public class PixelConveyorSystem : MonoBehaviour
     }
 
     /// <summary>Is there room for another pixel at distance s on this belt (no rider closer than a gap)?</summary>
-    private bool RoomAt(PixelConveyor belt, float s, Rider ignore = null)
+    private bool RoomAt(PixelConveyor belt, float s, int lane, Rider ignore = null)
     {
         float gap = belt.Unit * 1.1f;
-        foreach (Rider r in riders) if (r != ignore && r.belt == belt && Mathf.Abs(r.s - s) < gap) return false;
+        foreach (Rider r in riders) if (r != ignore && r.belt == belt && r.lane == lane && Mathf.Abs(r.s - s) < gap) return false;
         return true;
     }
 
-    private void Capture(Rigidbody rb, PixelConveyor belt, float s)
+    private void Capture(Rigidbody rb, PixelConveyor belt, float s, int lane)
     {
         SetVelocity(rb, Vector3.zero);
         rb.isKinematic = true;
         float half = PixelAttachment.HalfExtents(rb, belt.Unit).y;
-        riders.Add(new Rider { rb = rb, belt = belt, s = Mathf.Clamp(s, 0f, belt.Length), half = half });
+        riders.Add(new Rider { rb = rb, belt = belt, s = Mathf.Clamp(s, 0f, belt.Length), half = half, lane = Mathf.Clamp(lane, 0, belt.Lanes - 1) });
         riding.Add(rb);
     }
 
@@ -588,7 +624,8 @@ public class PixelConveyorSystem : MonoBehaviour
                     PixelConveyor belt = belts[j];
                     if (belt == null || belt.IsGhost || !belt.Carries(c)) continue;
                     float s = belt.Along(c);
-                    if (RoomAt(belt, s)) Capture(rb, belt, s);
+                    int lane = belt.NearestLane(c);
+                    if (RoomAt(belt, s, lane)) Capture(rb, belt, s, lane);
                     break;
                 }
             }
@@ -616,7 +653,7 @@ public class PixelConveyorSystem : MonoBehaviour
             PixelConveyor belt = r.belt;
             float gap = belt.Unit * 1.1f;
             float limit = belt.Length;
-            foreach (Rider o in riders) if (o != r && o.belt == belt && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);
+            foreach (Rider o in riders) if (o != r && o.belt == belt && o.lane == r.lane && o.s > r.s) limit = Mathf.Min(limit, o.s - gap);
             float want = r.s + belt.RunSpeed * dt;
             bool atEnd = want >= belt.Length - 0.001f && limit >= belt.Length - 0.001f;
             r.s = Mathf.Clamp(Mathf.Min(want, limit), 0f, belt.Length);
@@ -638,10 +675,11 @@ public class PixelConveyorSystem : MonoBehaviour
                     Release(r, true);      // an end: the pixel leaves the belt
                     continue;
                 }
-                if (RoomAt(next, 0f, r)) { r.belt = next; r.s = 0f; belt = next; }
+                int nextLane = next.NearestLane(belt.LanePointAt(r.lane, belt.Length));   // (the lane of the next belt nearest to where it leaves this one)
+                if (RoomAt(next, 0f, nextLane, r)) { r.belt = next; r.s = 0f; r.lane = nextLane; belt = next; }
             }
             // Position: on the line, bottom on the belt surface; glides to it (a pixel that landed from above settles onto the belt).
-            Vector3 p = belt.PointAt(r.s);
+            Vector3 p = belt.LanePointAt(r.lane, r.s);
             p.y += (belt.SurfaceHeight + r.half) * belt.LiftFactor;
             Vector3 current = r.rb.position;
             r.rb.MovePosition(Vector3.Lerp(current, p, 0.55f));
@@ -672,6 +710,13 @@ public class PixelConveyorSystem : MonoBehaviour
     {
         if (editorOpen && PixelKeys.KeyPressed(KeyCode.Escape)) { CloseEditor(); return; }   // Esc backs out (the number box swallows the key for itself, so it is checked here too)
         if (clicker != null && PixelConveyor.All.Count > 0) CarryPlayer();
+        laneCheckTimer -= Time.unscaledDeltaTime;
+        if (laneCheckTimer <= 0f)
+        {
+            laneCheckTimer = 1f;
+            int wanted = PixelConveyor.LaneCount;
+            if (wanted != lanesShown) { lanesShown = wanted; foreach (PixelConveyor each in PixelConveyor.All) if (each != null) each.RefreshLanes(); }   // the Electrician's width upgrade
+        }
         if (clicker == null || PixelPauseMenu.IsPaused || editorOpen) return;
         bool fp = PixelFirstPerson.Active;
         if (PixelClicker.ExternalClickBlock && !fp) { flipTap.Update(null); return; }
@@ -690,6 +735,8 @@ public class PixelConveyorSystem : MonoBehaviour
         if (flipTap.Update(belt) && belt != null) belt.Flip();
     }
 
+    private float laneCheckTimer;
+    private int lanesShown = 1;
     private readonly PixelRightTap flipTap = new PixelRightTap();
 
     /// <summary>The belt under a ray (the cube or an old pixel in front of it wins: then null).</summary>
