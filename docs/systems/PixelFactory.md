@@ -30,3 +30,6 @@ PixelVisitorMinigame got `BuySellTabs` (a vendor that sells wares AND buys pixel
 ## Heights, ramps and the Conveyor Elevator
 - Belt ends are 3D points (y = underside). Scroll while placing a belt raises / lowers the point (posts appear), so belts can slope; `Snap` finds belt ends / elevator tops by screen distance. Riders move by ground distance (`Length`), with `PointAt` / `RunSpeed` / `LiftFactor` handling the slope.
 - `PixelElevator` (tester feature): magnetizes to a belt end, click for the base, mouse height, click to confirm. Entry on its -Z face (an `IPixelBeltAcceptor`), exit on the +Z face at `OutputPoint`, where a new belt can start. Uses `PixelPathCarrier`.
+
+## Conveyor Connector
+`PixelConnector.cs` (tester feature, two clicks, one piece): see its header comment. Machines with an opening implement `IPixelPort` (Kiln, Storage Crate) so the connector can magnetize to them; `PixelConveyorSystem.FindAcceptorAt / ForEachPort` expose the registered acceptors.

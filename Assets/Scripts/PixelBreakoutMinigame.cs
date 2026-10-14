@@ -99,6 +99,10 @@ public class PixelBreakoutMinigame : PixelMinigame
     [Tooltip("How far in front of the camera the court floats, as a fraction of the distance to the cube (it must be in front of the old pixels).")]
     [SerializeField] private float depthFraction = 0.6f;
 
+    [Range(0.4f, 1f)]
+    [Tooltip("When the court is sized automatically, how much of the available screen it fills (1 = all of it; lower = a smaller, less zoomed-in court). 0 = coded default 0.75.")]
+    [SerializeField] private float autoFill = 0f;
+
     [Min(3)]
     [Tooltip("Bricks per row (more columns are used if the wall would get too tall).")]
     [SerializeField] private int brickColumns = 9;
@@ -380,8 +384,9 @@ public class PixelBreakoutMinigame : PixelMinigame
         if (!manualCourtSize)
         {
             float barFrac = PixelHud.Instance != null ? Mathf.Clamp(PixelHud.Instance.BarHeight / Mathf.Max(1f, Screen.height), 0f, 0.3f) : 0f;
-            cw = 0.98f;
-            ch = Mathf.Max(0.3f, 1f - 2f * barFrac - 0.02f);
+            float fill = autoFill > 0.01f ? autoFill : 0.75f;
+            cw = 0.98f * fill;
+            ch = Mathf.Max(0.3f, (1f - 2f * barFrac - 0.02f) * fill);
             cy = 0.5f;
         }
         Vector3 centre = cam.ViewportToWorldPoint(new Vector3(0.5f, cy, dist));

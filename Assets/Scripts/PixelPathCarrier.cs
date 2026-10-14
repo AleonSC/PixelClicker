@@ -17,7 +17,7 @@ public sealed class PixelPathCarrier
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { carriedAll.Clear(); }
 
-    /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Splitter)? Such pixels cannot be grabbed with the mouse.</summary>
+    /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Splitter, a Conveyor Connector)? Such pixels cannot be grabbed with the mouse.</summary>
     public static bool IsCarried(Rigidbody rb) => rb != null && carriedAll.Contains(rb);
 
     private readonly List<Item> items = new List<Item>();
@@ -52,13 +52,14 @@ public sealed class PixelPathCarrier
     }
 
     /// <summary>Locks the pixel (it is drawn to the path's start by the next Step calls).</summary>
-    public void Add(Rigidbody rb)
+    /// <summary>Locks the pixel. startD >= 0: it is already on the path at that distance (no approach to the start first).</summary>
+    public void Add(Rigidbody rb, float startD = -1f)
     {
         if (rb == null || !set.Add(rb)) return;
         carriedAll.Add(rb);
         SetVelocity(rb, Vector3.zero);
         rb.isKinematic = true;
-        items.Add(new Item { rb = rb, from = rb.position });
+        items.Add(startD >= 0f ? new Item { rb = rb, from = rb.position, approach = 1f, d = startD } : new Item { rb = rb, from = rb.position });
     }
 
     public void Step(Vector3[] path, float[] cum, float speed, float gap, float dt, Action<Rigidbody> onEnd, float approachSeconds = 0.25f)

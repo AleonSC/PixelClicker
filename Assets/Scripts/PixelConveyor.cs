@@ -489,6 +489,25 @@ public class PixelConveyorSystem : MonoBehaviour
     public static void Register(IPixelBeltAcceptor a) { if (a != null && !acceptors.Contains(a)) acceptors.Add(a); }
     public static void Unregister(IPixelBeltAcceptor a) { acceptors.Remove(a); }
 
+    /// <summary>The first machine (not 'exclude') whose opening contains this world point; null if none.</summary>
+    public static IPixelBeltAcceptor FindAcceptorAt(Vector3 world, IPixelBeltAcceptor exclude)
+    {
+        for (int i = acceptors.Count - 1; i >= 0; i--)
+        {
+            IPixelBeltAcceptor a = acceptors[i];
+            if (a == null || (a is Object o && o == null)) { acceptors.RemoveAt(i); continue; }
+            if (a != exclude && a.AcceptsAt(world)) return a;
+        }
+        return null;
+    }
+
+    /// <summary>Calls 'visit' with the opening point of every machine that has one (IPixelPort): the Conveyor Connector magnetizes to them.</summary>
+    public static void ForEachPort(System.Action<Vector3> visit)
+    {
+        foreach (IPixelBeltAcceptor a in acceptors)
+            if (a is IPixelPort port && !(a is Object o && o == null)) visit(port.PortWorld);
+    }
+
     private IPixelBeltAcceptor FindAcceptor(PixelConveyor belt)
     {
         Vector3 end = belt.ExitPoint + belt.Direction * belt.Unit * 0.5f;
