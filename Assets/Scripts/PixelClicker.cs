@@ -2128,7 +2128,7 @@ public partial class PixelClicker : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             // Old pixels are skipped unless they're allowed to block clicks.
-            if (!oldPixelsBlockClicks && !GrabEnabled && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;
+            if ((rightClick || (!oldPixelsBlockClicks && !GrabEnabled)) && hit.rigidbody != null && oldPixels.Contains(hit.rigidbody)) continue;   // (a right click on a hazard goes through old pixels in front of the cube)
             if (PixelRobotWorker.BelongsToUfo(hit.transform)) continue;   // the UFO is see-through: clicks go straight through it to the cube
 
             if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform))
@@ -2175,6 +2175,20 @@ public partial class PixelClicker : MonoBehaviour
                 body = rb;
                 return true;
             }
+        }
+        return false;
+    }
+
+    /// <summary>Is the clickable cube under this screen point, even with old pixels lying / falling in front of it (Block Hold: a pixel dropped by clearing a hazard must not stop you grabbing the next block)?</summary>
+    public bool IsLiveCubeAt(Vector2 screen)
+    {
+        if (targetCamera == null || pixelTransform == null || isSpawning || CubeHidden) return false;
+        Ray ray = targetCamera.ScreenPointToRay(screen);
+        RaycastHit[] hits = Physics.RaycastAll(ray, maxRayDistance, clickableLayers, QueryTriggerInteraction.Collide);
+        foreach (RaycastHit hit in hits)
+        {
+            if (PixelRobotWorker.BelongsToUfo(hit.transform)) continue;
+            if (hit.transform == hitbox || hit.transform == pixelTransform || hit.transform.IsChildOf(pixelTransform)) return true;
         }
         return false;
     }

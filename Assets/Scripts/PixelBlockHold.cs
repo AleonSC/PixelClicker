@@ -244,7 +244,7 @@ public class PixelBlockHold : MonoBehaviour
     private bool CanStart()
     {
         if (meter < MinStart || PixelInput.PointerOverUI() || PixelClicker.ExternalClickBlock) return false;
-        return clicker.TryGetBlockAt(PixelInput.PointerPosition(), out int _, out bool live, out Rigidbody _) && live;
+        return clicker.IsLiveCubeAt(PixelInput.PointerPosition());   // (old pixels in front of the cube, e.g. the one a cleared hazard drops, do not stop the grab)
     }
 
     private float holdStartedAt;
