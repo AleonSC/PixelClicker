@@ -169,6 +169,7 @@ public class PixelDragonWish : MonoBehaviour
     private IEnumerator SummonRoutine()
     {
         busy = true;
+        PixelAudio.SetMusicCue("Dragon wish", true);   // a music cue (if it has music) takes over
         if (buttonObject != null) buttonObject.SetActive(false);
         if (buttonGlow != null) buttonGlow.gameObject.SetActive(false);
 
@@ -288,6 +289,7 @@ public class PixelDragonWish : MonoBehaviour
         PixelWindows.Unregister(this);
         Unfreeze();
         busy = false;
+        PixelAudio.SetMusicCue("Dragon wish", false);
     }
 
     private void BuildScene()

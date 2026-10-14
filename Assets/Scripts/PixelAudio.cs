@@ -20,7 +20,7 @@ using UnityEngine;
 ///
 /// Add this to any GameObject. The pause menu adds one automatically if the scene has none.
 /// </summary>
-public class PixelAudio : MonoBehaviour
+public partial class PixelAudio : MonoBehaviour
 {
     /// <summary>One named sound effect.</summary>
     [Serializable]
@@ -500,6 +500,7 @@ public class PixelAudio : MonoBehaviour
 
         EnsureDefaultSounds();
         FillSynthesizedClips();
+        EnsureDefaultCues();
         RebuildLookup();
 
         voices = new AudioSource[Mathf.Max(1, maxVoices)];
@@ -708,7 +709,7 @@ public class PixelAudio : MonoBehaviour
     private void ApplyMusicVolume()
     {
         if (musicSource == null) return;
-        musicSource.volume = muted || musicMuted || previewTrack >= 0 ? 0f : musicVolume * masterVolume * musicTrackVolume;
+        musicSource.volume = muted || musicMuted || previewTrack >= 0 ? 0f : musicVolume * masterVolume * musicTrackVolume * playlistGain;   // (playlistGain: faded down while a music cue plays)
     }
 
     private bool musicHeldByFocus;
@@ -893,8 +894,10 @@ public class PixelAudio : MonoBehaviour
     private void UpdateMusic()
     {
         if (musicSource == null) return;
+        UpdateCues();
         ApplyMusicVolume();
         UpdatePreview();
+        if (cueHoldsPlaylist) return;   // the playlist is paused while a music cue plays (it resumes where it was)
 
         if (!playMusic || musicTracks == null || musicTracks.Length == 0)
         {

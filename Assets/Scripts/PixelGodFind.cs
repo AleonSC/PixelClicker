@@ -87,6 +87,7 @@ public class PixelGodFind : MonoBehaviour
     private void OnDestroy()
     {
         if (instance == this) instance = null;
+        PixelAudio.SetMusicCue("God find", false);
         PixelWindows.Unregister(this);
         Cleanup();
     }
@@ -148,6 +149,7 @@ public class PixelGodFind : MonoBehaviour
         title.color = tint; subtitle.text = "";
         PixelAudio.Play(god == God.Slifer ? "god_slifer" : god == God.Ra ? "god_ra" : "god_obelisk");
 
+        PixelAudio.SetMusicCue("God find", true);   // a music cue (if it has music) takes over for the show
         flash = 0f; shake = 0f; stormAlpha = 0f; fired = new bool[10]; cracks.Clear(); impactTime = -99f;
         boltRng = new System.Random(Random.Range(0, 100000));
 
@@ -213,6 +215,7 @@ public class PixelGodFind : MonoBehaviour
             yield return null;
         }
 
+        PixelAudio.SetMusicCue("God find", false);
         float tail = 0.5f;
         while (tail > 0f) { tail -= Time.unscaledDeltaTime; UpdateBits(Time.unscaledDeltaTime); UpdateRings(Time.unscaledDeltaTime); yield return null; }
         Cleanup();
