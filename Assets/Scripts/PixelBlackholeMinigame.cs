@@ -434,20 +434,15 @@ public class PixelBlackholeMinigame : PixelMinigame
                 counterAlpha = Mathf.MoveTowards(counterAlpha, wanted, Time.deltaTime / counterFadeSeconds);
                 // Only the vertex alpha changes (it fades the outline with the face); the outline colour / material stay untouched,
                 // because changing them every frame made the text glitch.
-                counter.alpha = counterAlpha;
-                counter.enabled = counterAlpha > 0.001f;
-                counter.transform.localScale = Vector3.one * (size * (1f + punch * 0.35f));
-                counter.transform.position = center + Vector3.up * (0.9f + radius * 0.15f);
-                if (cam != null)
-                {
-                    counter.transform.rotation = cam.transform.rotation;
-                    counter.transform.position = PixelUIKit.KeepOnScreen(cam, counter, counter.transform.position); // never off screen
-                }
+                counter.enabled = false;   // the number shows in the top status box now (PixelStatusLines)
+                if (wanted > 0f) PixelStatusLines.Set("blackhole", counter.text, Color.white);
+                else PixelStatusLines.Clear("blackhole");
             }
 
             yield return null;
         }
 
+        PixelStatusLines.Clear("blackhole");
         Destroy(root);
         OldPixelDespawn.Frozen = false;
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));

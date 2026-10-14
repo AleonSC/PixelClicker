@@ -367,26 +367,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
 
     private IEnumerator PopupRoutine(Vector3 start, Camera cam, string message)
     {
-        GameObject go = new GameObject("Magic Wood Popup");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = 8f;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(20f, 3f);
-        float t = 0f;
-        while (t < 2f)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / 2f);
-            go.transform.position = start + cam.transform.up * (k * 1.6f) - cam.transform.forward * 0.5f;
-            go.transform.rotation = cam.transform.rotation;
-            Color c = new Color(0.8f, 0.5f, 1f, 1f - k * k);
-            text.color = c;
-            yield return null;
-        }
-        Destroy(go);
+        PixelStatusLines.Set("eviltree", message, new Color(0.8f, 0.5f, 1f, 1f), 2f);   // shown in the top status box
+        yield break;
     }
 }

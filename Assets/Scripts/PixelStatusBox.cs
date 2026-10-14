@@ -4,7 +4,7 @@
 //   Traffic, Weak Spots, Ultra Holes). PixelStatusBox.Create(font, canvasTransform, fontSize) returns the TMP label (use it as before: PixelUIKit.SetText, .color);
 //   the label sits in a rounded window-style box that SLIDES OUT FROM UNDER THE BLACK BAR (a RectMask2D strip starts at the bar's inner edge, so the box is
 //   clipped until it has slid below it and is drawn OVER the bar's edge effect). It slides back under the bar when the text is empty or Show(label, false).
-//   Show(label, bool) / IsShown(label). Box size follows the text (boxPadding, maxWidth). A thin accent line along the bottom takes the label's colour.
+//   Create(..., stackBelow: true) hangs the box under the other boxes (PixelStatusLines uses it). Show(label, bool) / IsShown(label). Box size follows the text (boxPadding, maxWidth). A thin accent line along the bottom takes the label's colour.
 //   Fixed look values live in the consts at the top (not Inspector fields: the box has no component of its own in the scene).
 // ----------------------
 using TMPro;
@@ -21,11 +21,13 @@ public class PixelStatusBox : MonoBehaviour
     private TMP_Text label;
     private RectTransform clip, box;
     private Image boxImage, accent;
-    private bool wanted = true;
+    private static readonly System.Collections.Generic.List<PixelStatusBox> all = new System.Collections.Generic.List<PixelStatusBox>();
+    private bool wanted = true, stackBelow;
+    private float shownBottom;   // how far below the bar this box currently reaches (so a stackBelow box starts under it)
     private float slide;   // 0 = hidden under the bar, 1 = fully out
 
-    /// <summary>Makes the box (inside a clipping strip under the top bar) and returns its text label.</summary>
-    public static TMP_Text Create(TMP_FontAsset font, Transform canvas, float fontSize)
+    /// <summary>Makes the box (inside a clipping strip under the top bar) and returns its text label. stackBelow = it hangs under the other status boxes instead of right under the bar.</summary>
+    public static TMP_Text Create(TMP_FontAsset font, Transform canvas, float fontSize, bool stackBelow = false)
     {
         GameObject clipGo = new GameObject("Status Strip", typeof(RectTransform), typeof(RectMask2D));
         clipGo.transform.SetParent(canvas, false);
@@ -51,7 +53,7 @@ public class PixelStatusBox : MonoBehaviour
 
         PixelStatusBox sb = clipGo.AddComponent<PixelStatusBox>();
         sb.label = text; sb.clip = clipGo.GetComponent<RectTransform>(); sb.box = boxGo.GetComponent<RectTransform>();
-        sb.boxImage = bg; sb.accent = acc;
+        sb.boxImage = bg; sb.accent = acc; sb.stackBelow = stackBelow;
         sb.Layout(0f);
         return text;
     }
@@ -70,6 +72,12 @@ public class PixelStatusBox : MonoBehaviour
         return sb != null && sb.wanted && sb.slide > 0.5f;
     }
 
+    private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
+    private void OnDisable() { all.Remove(this); }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { all.Clear(); }
+
     private void LateUpdate()
     {
         if (label == null) return;
@@ -86,13 +94,18 @@ public class PixelStatusBox : MonoBehaviour
 
         clip.anchorMin = new Vector2(0f, 1f); clip.anchorMax = new Vector2(1f, 1f); clip.pivot = new Vector2(0.5f, 1f);
         clip.sizeDelta = new Vector2(0f, h + GapBelowBar + 24f);
-        clip.anchoredPosition = new Vector2(0f, -bar);
+        float below = 0f;
+        if (stackBelow)
+            foreach (PixelStatusBox other in all)
+                if (other != null && other != this && !other.stackBelow) below = Mathf.Max(below, other.shownBottom);
+        clip.anchoredPosition = new Vector2(0f, -(bar + below));
 
         float e = 1f - (1f - t) * (1f - t) * (1f - t);   // ease out
         box.anchorMin = box.anchorMax = box.pivot = new Vector2(0.5f, 1f);
         box.sizeDelta = new Vector2(w, h);
         box.anchoredPosition = new Vector2(0f, Mathf.Lerp(h + 4f, -GapBelowBar, e));
         box.gameObject.SetActive(t > 0.001f);
+        shownBottom = t > 0.001f ? (h + GapBelowBar) * e : 0f;
 
         Color c = label.color;
         accent.color = new Color(c.r, c.g, c.b, 0.85f * c.a);

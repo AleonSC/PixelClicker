@@ -635,28 +635,7 @@ public class PixelMeteorMinigame : PixelMinigame
     /// <summary>Text that rises from the click point and fades away.</summary>
     private IEnumerator PopupRoutine(Vector3 start, Camera cam, string message)
     {
-        GameObject go = new GameObject("Chunk Popup");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = popupTextSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(20f, 3f);
-
-        float t = 0f;
-        while (t < popupSeconds)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / popupSeconds);
-            go.transform.position = start + cam.transform.up * (k * 1.2f) - cam.transform.forward * 0.5f; // a little toward the camera
-            go.transform.rotation = cam.transform.rotation;
-            Color c = popupColor;
-            c.a *= popupOpacity * (1f - k * k);
-            text.color = c;
-            yield return null;
-        }
-        Destroy(go);
+        PixelStatusLines.Set("meteor", message, popupColor, popupSeconds);   // shown in the top status box
+        yield break;
     }
 }

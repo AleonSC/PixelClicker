@@ -925,3 +925,4 @@
 [2026-10-14 08:17 UTC] UFO Helper: the dome now holds a small cabin (floor, ring console with blinking buttons, tiny alien); instead of flying it you ride along inside, walking about and looking around while the saucer flies by itself.
 [2026-10-14 08:19 UTC] Potion timer and the minigame status lines now share one fancy box (PixelStatusBox) that slides out from under the top black bar, over the bar's edge effect.
 [2026-10-14 08:21 UTC] UFO ride along: the mouse now always looks around (higher sensitivity, no right click needed, no Leave button - Esc climbs out), and the middle of the cabin floor is a glass window you can see the ground through.
+[2026-10-14 08:22 UTC] Black hole counter, bomb timer and result, ghost caught text, meteor popups and evil tree wood popups now show in the top status box instead of floating in the world.

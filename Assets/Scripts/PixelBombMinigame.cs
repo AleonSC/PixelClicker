@@ -395,6 +395,7 @@ public class PixelBombMinigame : PixelMinigame
         float frontZ = -(bd * 0.5f + 0.06f);
         TextMeshPro timer = MakeText(root.transform, "Timer", string.Format(timerFormat, timeLimit), timerTextSize, timerColor,
                                      new Vector3(0f, -bh * 0.37f, frontZ), bw * 0.9f);
+        timer.enabled = false;   // (kept as the value holder; the text is shown up in the status box)
 
         // Three wires run straight across the top of the front panel: red, green, blue. Each is two pieces that meet in the middle.
         Color[] colors = { redWireColor, greenWireColor, blueWireColor };
@@ -436,6 +437,7 @@ public class PixelBombMinigame : PixelMinigame
             timer.text = string.Format(timerFormat, Mathf.Max(0f, left));
             timer.color = warning && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? timerWarningColor
                         : warning ? Color.Lerp(timerColor, timerWarningColor, 0.5f) : timerColor;
+            PixelStatusLines.Set("bomb", timer.text, timer.color);   // the countdown shows in the top status box
             spark.transform.localScale = Vector3.one * sparkBase * (1f + 0.35f * Mathf.Sin(Time.time * (left <= warningSeconds ? 26f : 10f)));
             int whole = Mathf.CeilToInt(Mathf.Max(0f, left));
             if (whole != lastWhole)
@@ -475,12 +477,15 @@ public class PixelBombMinigame : PixelMinigame
             onDefused?.Invoke();
             timer.text = "OK";
             timer.color = defusedColor;
+            PixelStatusLines.Set("bomb", timer.text, timer.color);
             StartCoroutine(RisingMessage(position, cam, string.Format(defusedFormat, parts), defusedColor));
             yield return new WaitForSeconds(defusedLingerSeconds);
+            PixelStatusLines.Clear("bomb");
             Destroy(root);
         }
         else
         {
+            PixelStatusLines.Clear("bomb");
             Destroy(root);
             PixelStats.Count("bomb.exploded");
             Explode(position, cam);
@@ -613,28 +618,7 @@ public class PixelBombMinigame : PixelMinigame
     /// <summary>Text that rises from the bomb and fades.</summary>
     private IEnumerator RisingMessage(Vector3 start, Camera cam, string message, Color color)
     {
-        GameObject go = new GameObject("Bomb Message");
-        Track(go);
-        TextMeshPro text = go.AddComponent<TextMeshPro>();
-        text.text = message;
-        text.fontSize = messageFontSize;
-        text.fontStyle = FontStyles.Bold;
-        text.alignment = TextAlignmentOptions.Center;
-        if (clicker.UIFont != null) text.font = clicker.UIFont;
-        text.rectTransform.sizeDelta = new Vector2(24f, 3f);
-
-        float t = 0f;
-        while (t < messageSeconds)
-        {
-            t += Time.unscaledDeltaTime;
-            float k = Mathf.Clamp01(t / messageSeconds);
-            go.transform.rotation = cam.transform.rotation;
-            go.transform.position = PixelUIKit.KeepOnScreen(cam, text, start + cam.transform.up * (bombSize * 0.8f + k * 1.5f) - cam.transform.forward * 0.5f);
-            Color c = color;
-            c.a *= 1f - k * k;
-            text.color = c;
-            yield return null;
-        }
-        Destroy(go);
+        PixelStatusLines.Set("bomb.message", message, color, messageSeconds);   // shown in the top status box
+        yield break;
     }
 }
