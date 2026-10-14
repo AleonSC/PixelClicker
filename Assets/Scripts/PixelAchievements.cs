@@ -313,6 +313,8 @@ public class PixelAchievements : MonoBehaviour
     private Image popupImage;
     private RectTransform popupCanvasRect;
     private bool popupPinned, popupPlacing, popupCollapsed;
+    // Collapsed: 15 margin + icon box + 12 gap + button + 15 margin, so the box and the button sit side by side with the same top and bottom (never narrower than popupCollapsedWidth).
+    private float CollapsedWidth => Mathf.Max(popupCollapsedWidth, 15f + (popupExpandedSize.y - 30f) + 12f + popupButtonWidth + 15f);
     private float popupWidth;
     private RectTransform popupButtonRect, popupTextRoot;
     private TMP_Text popupArrow;
@@ -729,7 +731,7 @@ public class PixelAchievements : MonoBehaviour
         popupRect.anchorMin = popupRect.anchorMax = new Vector2(0.5f, 0.5f);
         popupRect.pivot = new Vector2(0f, 0.5f);   // positions are the popup's LEFT edge, measured from the middle of the screen (so collapsing it does not move the icon)
         popupCollapsed = PlayerPrefs.GetInt(PrefPopupCollapsed, 0) != 0;
-        popupWidth = popupCollapsed ? popupCollapsedWidth : popupExpandedSize.x;
+        popupWidth = popupCollapsed ? CollapsedWidth : popupExpandedSize.x;
         popupRect.sizeDelta = new Vector2(popupWidth, popupExpandedSize.y);
         popupPinned = PlayerPrefs.HasKey(PrefPopupX) && PlayerPrefs.HasKey(PrefPopupY);
         popupPinnedPos = new Vector2(PlayerPrefs.GetFloat(PrefPopupX, 0f), PlayerPrefs.GetFloat(PrefPopupY, 0f));
@@ -868,11 +870,11 @@ public class PixelAchievements : MonoBehaviour
         if (PixelPauseMenu.IsPaused) return;
 
         // The width eases between the open and the collapsed size; the texts show only while it is open enough for them.
-        float targetWidth = popupCollapsed ? popupCollapsedWidth : popupExpandedSize.x;
+        float targetWidth = popupCollapsed ? CollapsedWidth : popupExpandedSize.x;
         popupWidth = Mathf.Lerp(popupWidth, targetWidth, 1f - Mathf.Exp(-18f * Time.unscaledDeltaTime));
         if (Mathf.Abs(popupWidth - targetWidth) < 0.5f) popupWidth = targetWidth;
         popupRect.sizeDelta = new Vector2(popupWidth, popupExpandedSize.y);
-        bool textsOn = !popupCollapsed && popupWidth > popupCollapsedWidth + 220f;
+        bool textsOn = !popupCollapsed && popupWidth > CollapsedWidth + 220f;
         if (popupTextRoot.gameObject.activeSelf != textsOn) popupTextRoot.gameObject.SetActive(textsOn);
         if (!popupPinned && !popupPlacing) PositionPopup();   // (the default spot is centred: it follows the width)
         else if (!popupPlacing) popupRect.anchoredPosition = ClampToCanvas(popupPinnedPos);
