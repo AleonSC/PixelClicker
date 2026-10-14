@@ -4,7 +4,9 @@
 //   rock mesh lumpiness, lava-crack albedo/emission textures lavaCracks, a camera-facing glow sprite haloOpacity, a two-layer tail
 //   incl. a white-hot hotCoreTail, a particle-system ember stream embersPerSecond, flickering light) drifts slowly across the screen;
 //   each click gives chunksPerClick meteor chunks but never destroys it. Tracker "Meteor Chunks" (saved generically); the Meteor Pixel
-//   pack has a MinigameGoal requirement for meteor. Extends PixelMinigame (id meteor).
+//   pack has a MinigameGoal requirement for meteor. Extends PixelMinigame (id meteor). It speeds up gradually across the screen (disableSpeedUp / speedUpAmount, same total time), a rumble loop
+//   (meteor_rumble) plays while it crosses, every click plays meteor_hit and throws mining effects (sparks, rock chips, dust: BuildImpactFx / EmitImpact, disableImpactFx, impactChips / impactSparks)
+//   and the glow flashes; a chunk plays meteor_click. The sounds are code-made (PixelMeteorSynth) and replaceable in the PixelAudio Sounds list.
 // ---------------------------------------------------
 using System.Collections;
 using TMPro;
@@ -180,6 +182,26 @@ public class PixelMeteorMinigame : PixelMinigame
     [Tooltip("Click sound volume.")]
     [SerializeField] private float soundVolume = 1f;
 
+    [Header("Speed")]
+    [Tooltip("Keep the meteor at one steady speed across the screen (off = it picks up speed gradually, same total crossing time).")]
+    [SerializeField] private bool disableSpeedUp = false;
+
+    [Range(0f, 1f)]
+    [Tooltip("How much faster it gets: 0 = the default (0.5: it starts at half its average speed and ends at one and a half times it), 1 = it starts almost still and ends at twice the average speed.")]
+    [SerializeField] private float speedUpAmount = 0f;
+
+    [Header("Mining effects (each click)")]
+    [Tooltip("Turn off the sparks, rock chips and dust that fly off the meteor where you click (and the brightening of its glow).")]
+    [SerializeField] private bool disableImpactFx = false;
+
+    [Min(0)]
+    [Tooltip("Rock chips thrown off by each click. 0 = the default (10).")]
+    [SerializeField] private int impactChips = 0;
+
+    [Min(0)]
+    [Tooltip("Hot sparks thrown off by each click. 0 = the default (14).")]
+    [SerializeField] private int impactSparks = 0;
+
     [Header("Events")]
     [Tooltip("Fired when a meteor appears.")]
     public UnityEvent onMeteorAppeared;
@@ -197,6 +219,7 @@ public class PixelMeteorMinigame : PixelMinigame
 
     protected override void OnDespawned()
     {
+        PixelAudio.StopLoop("meteor_rumble");
         meteorActive = false;
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
     }
@@ -406,6 +429,12 @@ public class PixelMeteorMinigame : PixelMinigame
             glow.shadows = LightShadows.None;
         }
 
+        // Mining effects thrown off where it is clicked, and the rumble while it crosses.
+        ParticleSystem sparkFx = null, chipFx = null, dustFx = null;
+        if (!disableImpactFx) BuildImpactFx(root.transform, out sparkFx, out chipFx, out dustFx);
+        PixelAudio.StartLoop("meteor_rumble");
+        float flash = 0f;
+
         // ---- Fly.
         float t = 0f;
         float punch = 0f;
@@ -416,7 +445,8 @@ public class PixelMeteorMinigame : PixelMinigame
         while (t < crossSeconds)
         {
             t += Time.deltaTime;
-            float k = Mathf.Clamp01(t / crossSeconds);
+            float u = Mathf.Clamp01(t / crossSeconds);
+            float k = disableSpeedUp ? u : u + SpeedUp * (u * u - u);   // gradually faster, same total time (speed = 1 + SpeedUp * (2u - 1) times the average)
 
             root.transform.position = Path(k);
             rock.transform.rotation = spin * Quaternion.AngleAxis(t * tumbleDegrees, spinAxis);
@@ -428,10 +458,11 @@ public class PixelMeteorMinigame : PixelMinigame
                 halo.transform.rotation = cam.transform.rotation;
                 halo.transform.position = root.transform.position + cam.transform.forward * (meteorSize * 0.6f); // just behind the rock
                 Color hc = Color.Lerp(flameColor, Color.white, 0.15f);
-                hc.a = haloOpacity * flicker;
+                hc.a = Mathf.Min(1f, haloOpacity * flicker * (1f + flash * 0.8f));
                 halo.color = hc;
             }
-            if (glow != null) glow.intensity = glowIntensity * 2f * flicker;
+            flash = Mathf.Max(0f, flash - Time.deltaTime / 0.25f);
+            if (glow != null) glow.intensity = glowIntensity * 2f * flicker * (1f + flash * 1.5f);
 
             punch = Mathf.Max(0f, punch - Time.deltaTime / 0.15f);
             rock.transform.localScale = baseScale * (1f - punchAmount * punch);
@@ -442,6 +473,9 @@ public class PixelMeteorMinigame : PixelMinigame
                 if (hit.Raycast(ray, out RaycastHit info, 1000f))
                 {
                     punch = 1f;
+                    flash = 1f;
+                    PixelAudio.Play("meteor_hit");   // every click on the rock: a pick striking it
+                    if (!disableImpactFx) EmitImpact(info.point, cam, sparkFx, chipFx, dustFx);
                     if (Time.time - lastChunkTime >= chunkClickCooldown)
                     {
                         lastChunkTime = Time.time;
@@ -453,6 +487,7 @@ public class PixelMeteorMinigame : PixelMinigame
             yield return null;
         }
 
+        PixelAudio.StopLoop("meteor_rumble");
         Destroy(root);
         if (rockMat != null) Destroy(rockMat);
         spawnTimer = Random.Range(Mathf.Min(minInterval, maxInterval), Mathf.Max(minInterval, maxInterval));
@@ -605,6 +640,109 @@ public class PixelMeteorMinigame : PixelMinigame
         }
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
         system.Play();
+    }
+
+    private float SpeedUp => speedUpAmount > 0f ? Mathf.Clamp01(speedUpAmount) : 0.5f;
+
+    // ------------------------------------------------------------------
+    // Mining effects: rock chips, hot sparks and a puff of dust thrown off where the meteor is clicked
+    // ------------------------------------------------------------------
+
+    private static Texture2D chipTexture;
+
+    private ParticleSystem MakeBurstSystem(Transform parent, string objectName, Texture texture, int max)
+    {
+        GameObject go = new GameObject(objectName);
+        go.transform.SetParent(parent, false);
+        ParticleSystem system = go.AddComponent<ParticleSystem>();
+        system.Stop();
+        var main = system.main;
+        main.loop = false;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.maxParticles = max;
+        var emission = system.emission;
+        emission.enabled = false;   // only the manual Emit calls
+        var shape = system.shape;
+        shape.enabled = false;
+        var life = system.colorOverLifetime;
+        life.enabled = true;
+        Gradient fade = new Gradient();
+        fade.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                     new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0.9f, 0.6f), new GradientAlphaKey(0f, 1f) });
+        life.color = new ParticleSystem.MinMaxGradient(fade);
+        var size = system.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.15f)));
+        var drag = system.limitVelocityOverLifetime;
+        drag.enabled = true;
+        drag.dampen = 0.08f;
+        drag.limit = 1000f;
+        ParticleSystemRenderer renderer = go.GetComponent<ParticleSystemRenderer>();
+        Shader shader = PixelShaders.SpriteDefault();
+        if (shader != null) renderer.sharedMaterial = new Material(shader) { mainTexture = texture };
+        renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        renderer.sortingOrder = 2;
+        return system;
+    }
+
+    private void BuildImpactFx(Transform parent, out ParticleSystem sparks, out ParticleSystem chips, out ParticleSystem dust)
+    {
+        if (haloSprite == null) haloSprite = BuildSoftSprite();
+        if (chipTexture == null) chipTexture = Texture2D.whiteTexture;
+        sparks = MakeBurstSystem(parent, "Impact Sparks", haloSprite.texture, 200);
+        chips = MakeBurstSystem(parent, "Impact Chips", chipTexture, 200);
+        dust = MakeBurstSystem(parent, "Impact Dust", haloSprite.texture, 40);
+    }
+
+    /// <summary>One click's worth of mining effect at the hit point: chips and sparks fly out towards the camera and sideways, a dust puff hangs for a moment.</summary>
+    private void EmitImpact(Vector3 point, Camera cam, ParticleSystem sparks, ParticleSystem chips, ParticleSystem dust)
+    {
+        if (cam == null) return;
+        float scale = meteorSize / 2.8f;
+        int chipCount = impactChips > 0 ? impactChips : 10, sparkCount = impactSparks > 0 ? impactSparks : 14;
+        Vector3 toward = -cam.transform.forward;
+        Vector3 Dir(float forwardBias)
+        {
+            float a = Random.value * Mathf.PI * 2f;
+            return (cam.transform.right * Mathf.Cos(a) + cam.transform.up * Mathf.Sin(a) + toward * forwardBias).normalized;
+        }
+        Color[] rocks = { new Color(0.38f, 0.27f, 0.2f), new Color(0.5f, 0.4f, 0.32f), new Color(0.26f, 0.2f, 0.17f), new Color(0.62f, 0.5f, 0.38f) };
+        ParticleSystem.EmitParams p = new ParticleSystem.EmitParams();
+        if (chips != null)
+            for (int i = 0; i < chipCount; i++)
+            {
+                p.position = point + Dir(0.3f) * 0.05f * scale;
+                p.velocity = Dir(0.5f) * Random.Range(2.2f, 6.5f) * scale;
+                p.startLifetime = Random.Range(0.5f, 1.0f);
+                p.startSize = meteorSize * Random.Range(0.025f, 0.075f);
+                p.startColor = rocks[Random.Range(0, rocks.Length)];
+                p.rotation = Random.value * 360f;
+                p.angularVelocity = Random.Range(-360f, 360f);
+                chips.Emit(p, 1);
+            }
+        if (sparks != null)
+            for (int i = 0; i < sparkCount; i++)
+            {
+                p.position = point;
+                p.velocity = Dir(0.8f) * Random.Range(3.5f, 9f) * scale;
+                p.startLifetime = Random.Range(0.2f, 0.45f);
+                p.startSize = meteorSize * Random.Range(0.02f, 0.05f);
+                p.startColor = Color.Lerp(new Color(1f, 0.95f, 0.6f), flameColor, Random.value);
+                p.rotation = 0f; p.angularVelocity = 0f;
+                sparks.Emit(p, 1);
+            }
+        if (dust != null)
+            for (int i = 0; i < 3; i++)
+            {
+                p.position = point + Dir(0.2f) * 0.1f * scale;
+                p.velocity = Dir(0.6f) * Random.Range(0.3f, 1.1f) * scale;
+                p.startLifetime = Random.Range(0.5f, 0.9f);
+                p.startSize = meteorSize * Random.Range(0.18f, 0.3f);
+                p.startColor = new Color(0.45f, 0.36f, 0.3f, 0.35f);
+                p.rotation = 0f; p.angularVelocity = 0f;
+                dust.Emit(p, 1);
+            }
     }
 
     private void CollectChunk(Vector3 point, Camera cam)

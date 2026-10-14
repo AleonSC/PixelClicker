@@ -935,3 +935,4 @@
 [2026-10-14 08:53 UTC] Landing pulse: old pixels let go from high up now also get their ripple through a fall check (fast fall then stop, ray down) in case the collision event never arrives.
 [2026-10-14 08:54 UTC] UFO dome is now only the upper half of the glass (the lower half hung a see-through ball under the saucer that showed when hovering and blocked the view up through the floor window).
 [2026-10-14 08:56 UTC] Main menu: a background music selector (previous / next arrows and a track list) shows when the game loads and fades away after about 10 seconds without activity; hover its spot to bring it back.
+[2026-10-14 09:01 UTC] Meteor minigame: it now speeds up gradually as it crosses, has code-made sounds (entry whoosh, crossing rumble, rock hit, chunk clink) and mining effects on every click (sparks, rock chips, dust and a glow flash).
