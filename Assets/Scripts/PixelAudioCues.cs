@@ -5,7 +5,7 @@
 //   in play), Night (the day / night cycle is in deep night), FirstPerson, UfoRide (riding the UFO), TitleScreen, Manual (code calls PixelAudio.SetMusicCue(name, on): the God Cube shows and the Dragon wish do).
 //   Every 0.25 s the highest-priority cue whose condition is true wins (the later one on a tie); a cue with neither a clip nor a track number is ignored. While a cue plays the normal playlist fades to silence and is PAUSED
 //   where it was (cueHoldsPlaylist) and fades back in, resuming, when no cue is wanted; a change from one cue to another fades the first out (its fade out), then the second in (its fade in). A cue that does not loop and
-//   ends by itself hands back to the playlist and is not restarted until its condition has gone false once. Built-in cues (addDefaultCues: Night, Bomb, Black hole, Evil tree, Ghost hunt, UFO ride, God find, Dragon wish)
+//   ends by itself hands back to the playlist and is not restarted until its condition has gone false once. GameStart = the song you choose to play right after the clicker loads in (give the built-in "After load" cue a clip; Loop off = it plays once, then the playlist carries on; the param may be a number of seconds to cap it). Built-in cues (addDefaultCues: After load, Night, Bomb, Black hole, Evil tree, Ghost hunt, UFO ride, God find, Dragon wish)
 //   are added to the list by name when missing, WITHOUT clips: drop a clip (or a playlist track number) into the ones you want. disableCues turns the whole thing off. Mute / music volume apply to cues too.
 // ----------------------
 using System;
@@ -14,7 +14,7 @@ using UnityEngine;
 
 public partial class PixelAudio
 {
-    public enum CueTrigger { Minigame, Skill, Night, FirstPerson, UfoRide, TitleScreen, Manual }
+    public enum CueTrigger { Minigame, Skill, Night, FirstPerson, UfoRide, TitleScreen, Manual, GameStart }
 
     [Serializable]
     public class MusicCue
@@ -23,7 +23,7 @@ public partial class PixelAudio
         public string name = "Cue";
         [Tooltip("What makes the cue play.")]
         public CueTrigger trigger = CueTrigger.Manual;
-        [Tooltip("Minigame: the minigame id (ghost, bomb, blackhole, eviltree, meteor...; empty = any takeover minigame). Skill: the skill id in play (woodcutting, mining...). Not used by the others.")]
+        [Tooltip("GameStart: how many seconds the cue may last after the clicker loads in (0 = until its music ends; turn Loop off then). Minigame: the minigame id (ghost, bomb, blackhole, eviltree, meteor...; empty = any takeover minigame). Skill: the skill id in play (woodcutting, mining...). Not used by the others.")]
         public string param = "";
         [Tooltip("When several cues are wanted at once the highest priority plays.")]
         public int priority = 1;
@@ -67,9 +67,9 @@ public partial class PixelAudio
         if (on) instance.manualCues.Add(name); else instance.manualCues.Remove(name);
     }
 
-    private static MusicCue Cue(string name, CueTrigger trigger, string param, int priority, float fadeIn = 2f, float fadeOut = 2.5f)
+    private static MusicCue Cue(string name, CueTrigger trigger, string param, int priority, float fadeIn = 2f, float fadeOut = 2.5f, bool loop = true)
     {
-        return new MusicCue { name = name, trigger = trigger, param = param, priority = priority, fadeInSeconds = fadeIn, fadeOutSeconds = fadeOut };
+        return new MusicCue { name = name, trigger = trigger, param = param, priority = priority, fadeInSeconds = fadeIn, fadeOutSeconds = fadeOut, loop = loop };
     }
 
     private void EnsureDefaultCues()
@@ -86,6 +86,7 @@ public partial class PixelAudio
             Cue("UFO ride", CueTrigger.UfoRide, "", 3),
             Cue("God find", CueTrigger.Manual, "", 10, 0.6f, 2f),
             Cue("Dragon wish", CueTrigger.Manual, "", 10, 0.6f, 2f),
+            Cue("After load", CueTrigger.GameStart, "", 1, 3f, 3f, false),
         };
         foreach (MusicCue d in defaults)
             if (!musicCues.Exists(c => c != null && c.name == d.name)) musicCues.Add(d);
@@ -116,6 +117,13 @@ public partial class PixelAudio
             case CueTrigger.UfoRide: return PixelRobotWorker.Piloting;
             case CueTrigger.TitleScreen: return PixelTitleScreen.Showing;
             case CueTrigger.Manual: return manualCues.Contains(c.name);
+            case CueTrigger.GameStart:
+            {
+                // True once the title screen has closed (the clicker loaded in); for 'param' seconds when that is a number, else until its music ends.
+                if (PixelTitleScreen.Showing) return false;
+                float span = float.TryParse(c.param, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float s) ? s : 0f;
+                return span <= 0f || Time.unscaledTime - gameLoadedAt < span;
+            }
         }
         return false;
     }
@@ -137,9 +145,15 @@ public partial class PixelAudio
         return best;
     }
 
+    private bool titleWasShowing = true;
+    private float gameLoadedAt;
+
     private void UpdateCues()
     {
         float dt = Time.unscaledDeltaTime;
+        bool titleNow = PixelTitleScreen.Showing;
+        if (titleWasShowing && !titleNow) gameLoadedAt = Time.unscaledTime;   // the clicker just loaded in (the GameStart cue's clock)
+        titleWasShowing = titleNow;
         cueEvalTimer -= dt;
         if (cueEvalTimer <= 0f) { cueEvalTimer = 0.25f; cueTarget = EvaluateCues(); }
         if (cueActive < 0 && cueTarget < 0 && playlistGain >= 1f && !cueHoldsPlaylist) return;   // nothing going on

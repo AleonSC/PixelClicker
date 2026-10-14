@@ -52,6 +52,7 @@ public static class PixelSettingsSync
         known.Add(new Known("PixelClicker.Setting.MusicMuted", 0));
         known.Add(new Known("PixelClicker.Setting.PlaylistOff", 2));
         known.Add(new Known("PixelClicker.Setting.Song", 2));
+        known.Add(new Known("PixelClicker.Setting.LogoFavorite", 0));   // the favourite main menu logo style (+ 1)
         // Key bindings.
         foreach (string name in Enum.GetNames(typeof(PixelAction))) known.Add(new Known("PixelClicker.Key." + name, 0));
         // Dev tools.
@@ -143,6 +144,7 @@ public static class PixelSettingsSync
         PixelShop.ReloadSettingsFromPrefs();
         PixelKeys.ReloadFromPrefs();
         PixelAudio.ReloadFromPrefs();
+        PixelLogoView.ReloadFavorite();
         PixelDisplaySettings.ReloadFromPrefs();
         PixelPauseMenu menu = PixelFind.First<PixelPauseMenu>();
         if (menu != null) menu.ReloadSettingsFromPrefs();

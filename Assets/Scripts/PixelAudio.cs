@@ -807,12 +807,32 @@ public partial class PixelAudio : MonoBehaviour
     public string MusicTrackName(int i)
     {
         if (musicTracks == null || i < 0 || i >= musicTracks.Length || musicTracks[i] == null) return "Track " + (i + 1);
-        string n = musicTracks[i].name.Replace('_', ' ').Replace('-', ' ').Trim();
-        return n.Length > 0 ? char.ToUpperInvariant(n[0]) + n.Substring(1) : "Track " + (i + 1);
+        return PrettyClipName(musicTracks[i], "Track " + (i + 1));
     }
 
+    /// <summary>A clip's name for lists and captions (underscores / dashes turned into spaces).</summary>
+    public static string PrettyClipName(AudioClip clip, string fallback)
+    {
+        if (clip == null) return fallback;
+        string n = clip.name.Replace('_', ' ').Replace('-', ' ').Trim();
+        return n.Length > 0 ? char.ToUpperInvariant(n[0]) + n.Substring(1) : fallback;
+    }
+
+    /// <summary>The clip that is audible now: the music cue's while one plays (it may not be one of the Music Tracks), otherwise the playlist's track.</summary>
+    public AudioClip PlayingClip
+    {
+        get
+        {
+            if (cueActive >= 0 && cueSource != null && cueSource.clip != null && cueGain > 0.05f) return cueSource.clip;
+            return musicSource != null ? musicSource.clip : null;
+        }
+    }
+
+    /// <summary>The Music Tracks index of a clip (-1 = not one of them).</summary>
+    public int TrackIndexOf(AudioClip clip) => clip != null && musicTracks != null ? System.Array.IndexOf(musicTracks, clip) : -1;
+
     /// <summary>The index of the track playing now (-1 = none yet).</summary>
-    public int CurrentMusicTrack => musicSource != null && musicSource.clip != null && musicTracks != null ? System.Array.IndexOf(musicTracks, musicSource.clip) : -1;
+    public int CurrentMusicTrack => TrackIndexOf(PlayingClip);
 
     /// <summary>Starts this track now from the beginning and remembers it as the chosen song of this save file; the normal shuffle / order carries on after it.</summary>
     public void SelectMusicTrack(int i)

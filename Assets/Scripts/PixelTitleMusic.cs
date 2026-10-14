@@ -1,5 +1,6 @@
 // ---- System notes ----
 // PixelTitleMusic.cs
+//   (The list always shows what is audible now: a cue's clip that is not one of the tracks is named in the caption: PixelAudio.PlayingClip.)
 //   The main menu's background music selector (created by PixelTitleScreen.Build under its foreground, showMusicPicker): a small bottom-centre box with a MUSIC caption, previous / next arrows
 //   and a drop-down listing every track (PixelAudio.MusicTrackCount / MusicTrackName / CurrentMusicTrack / SelectMusicTrack; the track names are the clips' names). It is SHOWN when the
 //   title screen opens and fades away after hideSeconds (musicPickerHideSeconds, 0 = 10) without activity (the mouse over it, a click, the list open); it fades back in while the mouse is over
@@ -19,7 +20,8 @@ public class PixelTitleMusic : MonoBehaviour
     private TMP_Dropdown dropdown;
     private float hideSeconds = 10f, lastActivity, alpha;
     private bool wasShowing, refreshing, built;
-    private int shownTrack = -2, shownCount = -1;
+    private int shownCount = -1;
+    private AudioClip shownClip;
     private Button speaker;
     private Image speakerIcon;
     private int shownMuted = -1;
@@ -131,14 +133,16 @@ public class PixelTitleMusic : MonoBehaviour
         wasShowing = showing;
 
         // Keep the list and the shown name in step with the music (it moves on by itself when a track ends).
-        if (count != shownCount) { Rebuild(audio, count); shownTrack = -2; }
-        int track = audio != null ? audio.CurrentMusicTrack : -1;
-        if (track != shownTrack && count > 0 && track >= 0)
+        if (count != shownCount) { Rebuild(audio, count); shownClip = null; }
+        // What is audible now: a playlist track (picked in the list) or a music cue's clip (named in the caption: it need not be in the list).
+        AudioClip clip = audio != null ? audio.PlayingClip : null;
+        if (clip != shownClip && count > 0 && clip != null)
         {
-            shownTrack = track;
+            shownClip = clip;
+            int track = audio.TrackIndexOf(clip);
             refreshing = true;
-            dropdown.SetValueWithoutNotify(track);
-            dropdown.RefreshShownValue();
+            if (track >= 0) { dropdown.SetValueWithoutNotify(track); dropdown.RefreshShownValue(); }
+            else if (dropdown.captionText != null) dropdown.captionText.text = PixelAudio.PrettyClipName(clip, "Music");
             refreshing = false;
         }
 

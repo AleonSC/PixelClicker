@@ -734,6 +734,20 @@ public class PixelLog : MonoBehaviour
         cr.anchoredPosition = new Vector2(-panelPadding, -panelPadding * 0.5f);
         close.onClick.AddListener(() => PixelPop.Hide(panelObject));
 
+        // The Collection Log: a book button at the top left of the window.
+        Button book = CreateButton(panelObject.transform, "Collection Log Button", "", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 30f);
+        RectTransform bkr = book.GetComponent<RectTransform>();
+        bkr.anchorMin = bkr.anchorMax = bkr.pivot = new Vector2(0f, 1f);
+        bkr.anchoredPosition = new Vector2(panelPadding, -panelPadding * 0.5f);
+        GameObject bookIcon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        bookIcon.transform.SetParent(book.transform, false);
+        Image bookImage = bookIcon.GetComponent<Image>();
+        bookImage.sprite = PixelCollectionLog.BookSprite(); bookImage.raycastTarget = false; bookImage.preserveAspect = true;
+        RectTransform bir = bookIcon.GetComponent<RectTransform>();
+        bir.anchorMin = bir.anchorMax = bir.pivot = new Vector2(0.5f, 0.5f);
+        bir.sizeDelta = new Vector2(52f, 39f);
+        book.onClick.AddListener(PixelCollectionLog.Toggle);
+
         BuildTabs();
         BuildAchievementsGroup();
         BuildGoalsGroup();

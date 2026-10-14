@@ -952,3 +952,7 @@
 [2026-10-14 10:35 UTC] Music cues: the gameplay music can now change at triggers (minigames, night, UFO ride, first person, a skill, the God Cube shows, the Dragon wish) with fade in / out; the playlist pauses and resumes where it was. Cues come without music - assign clips in the PixelAudio Music Cues list.
 [2026-10-14 10:42 UTC] Music cues: a cue added with the Inspector + button (volume 0, fades 0) now uses sensible defaults instead of staying silent, and picking a song in the main menu selector overrides a playing cue.
 [2026-10-14 10:56 UTC] Added the six Infinity Stones (rare one-of-each drops with their own find shows and sounds), the Wizard's Infinity Gauntlet (a golden cube you use from the inventory to set the stones in its six faces) and the Infinity Cubelette it forges (name work in progress).
+[2026-10-14 10:59 UTC] The main menu music list now shows whatever is audible (also a music cue's song, named in the caption).
+[2026-10-14 10:59 UTC] New music cue trigger GameStart plus a built-in "After load" cue: give it a song and it plays once the clicker has loaded in.
+[2026-10-14 10:59 UTC] Added the Collection Log: a book button at the top left of the Log window opens a page-turning book of the Dragon Cubes, God Cubes, Infinity Stones and Cubelette, all ??? (black silhouettes) until found.
+[2026-10-14 10:59 UTC] Main menu logo: a small star next to the style arrows makes the logo showing the favourite of the save (shown on load instead of a random one).

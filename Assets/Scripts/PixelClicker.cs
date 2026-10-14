@@ -1201,7 +1201,8 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelTreasureMap>() == null) gameObject.AddComponent<PixelTreasureMap>();   // Fishing: the treasure map from a message in a bottle
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelGodFind>() == null) gameObject.AddComponent<PixelGodFind>();   // the God Cubes' shows
-        if (PixelFind.First<PixelInfinity>() == null) gameObject.AddComponent<PixelInfinity>();   // the Infinity Stones' Gauntlet window
+        if (PixelFind.First<PixelInfinity>() == null) gameObject.AddComponent<PixelInfinity>();
+        if (PixelFind.First<PixelCollectionLog>() == null) gameObject.AddComponent<PixelCollectionLog>();   // the Collection Log book (opened from the Log window)   // the Infinity Stones' Gauntlet window
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)

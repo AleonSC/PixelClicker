@@ -5,6 +5,8 @@
 //   * STYLES: a table (Styles) of 20 looks, each a small static function (Cell + time -> offset / scale / rotation / colour / glow, 'S') plus an INTRO kind that plays every time the style
 //     is shown (Drop, Fly, Zoom, Wipe, Spiral, Stack, Flip): Classic, Rainbow Wave, Neon, Shatter, Matrix, Inferno, Frost, Glitch, Jelly, Flip, Blocks, Plasma, Synthwave, Gold, Ghost,
 //     Storm, Shockwave, Disco, Ocean, Hologram. To add one: write a function, add a line to Styles. A style may also scale a whole LETTER (S.lsx / lsy, about its base / centre).
+//   * FAVORITE: a small star under each arrow (fades in with it) makes the style showing now the favourite of the save (PlayerPrefs PixelClicker.Setting.LogoFavorite = index + 1, in PixelSettingsSync, so it is per save);
+//     that style is shown instead of a random one, and ReloadFavorite switches to it when a save loads. Click the star again to clear it.
 //   * ARROWS: two invisible buttons at the far left / right of the logo fade in while the mouse is near them and step to the previous / next style (wraps); the style's name shows
 //     under the logo for a moment. A random style is picked at every launch (never the same as last time; PlayerPrefs PixelClicker.Setting.LogoStyle remembers the last one only for that).
 //   * PixelTitleScreen only positions / bobs / fades (SetAlpha) the container. Runs on unscaled time (the game is frozen while the title shows).
@@ -18,6 +20,96 @@ using UnityEngine.UI;
 public class PixelLogoView : MonoBehaviour
 {
     private const string Pref = "PixelClicker.Setting.LogoStyle";
+    /// <summary>The favourite logo style + 1 (0 = none); saved per save file (PixelSettingsSync).</summary>
+    public const string FavoritePref = "PixelClicker.Setting.LogoFavorite";
+    private static PixelLogoView current;
+    private static Sprite starFilled, starHollow;
+    private Image[] starImages;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStarStatics() { current = null; starFilled = starHollow = null; }
+
+    /// <summary>A save was loaded: show its favourite logo (if it has one).</summary>
+    public static void ReloadFavorite()
+    {
+        if (current == null) return;
+        int fav = PlayerPrefs.GetInt(FavoritePref, 0) - 1;
+        if (fav >= 0 && fav < Styles.Length && fav != current.style) current.SetStyle(fav);
+        else current.RefreshStars();
+    }
+
+    private static Sprite StarSprite(bool filled)
+    {
+        if (filled ? starFilled != null : starHollow != null) return filled ? starFilled : starHollow;
+        const int n = 64;
+        Vector2[] poly = new Vector2[10];
+        for (int i = 0; i < 10; i++)
+        {
+            float a = Mathf.PI * 0.5f + i * Mathf.PI / 5f, r = i % 2 == 0 ? 1f : 0.42f;
+            poly[i] = new Vector2(Mathf.Cos(a) * r, Mathf.Sin(a) * r);
+        }
+        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                Vector2 p = new Vector2((x + 0.5f) / n * 2f - 1f, (y + 0.5f) / n * 2f - 1f) * 1.05f;
+                bool inside = InStar(poly, p), core = InStar(poly, p / 0.72f);
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, inside && (filled || !core) ? 1f : 0f));
+            }
+        tex.Apply();
+        Sprite s = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
+        if (filled) starFilled = s; else starHollow = s;
+        return s;
+    }
+
+    private static bool InStar(Vector2[] poly, Vector2 p)
+    {
+        bool inside = false;
+        for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
+            if ((poly[i].y > p.y) != (poly[j].y > p.y) && p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x) inside = !inside;
+        return inside;
+    }
+
+    private bool IsFavorite => PlayerPrefs.GetInt(FavoritePref, 0) - 1 == style;
+
+    private void RefreshStars()
+    {
+        if (starImages == null) return;
+        bool fav = IsFavorite;
+        foreach (Image im in starImages)
+        {
+            if (im == null) continue;
+            im.sprite = StarSprite(fav);
+            im.color = fav ? new Color(1f, 0.85f, 0.2f, 1f) : new Color(1f, 1f, 1f, 0.8f);
+        }
+    }
+
+    private void ToggleFavorite()
+    {
+        if (group != null && group.alpha < 0.9f) return;
+        bool wasFav = IsFavorite;
+        PlayerPrefs.SetInt(FavoritePref, wasFav ? 0 : style + 1);
+        RefreshStars();
+        PixelAudio.Play("ui_click");
+        nameT = 0f;
+        if (nameLabel != null) nameLabel.text = wasFav ? "FAVORITE CLEARED" : "FAVORITE LOGO SAVED";
+    }
+
+    /// <summary>A small star under an arrow (it fades in and out with the arrow): click to make the logo showing now the favourite of this save.</summary>
+    private Image MakeStar(RectTransform arrow)
+    {
+        GameObject go = new GameObject("Favorite Star", typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(arrow, false);
+        RectTransform r = go.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
+        r.pivot = new Vector2(0.5f, 1f);
+        r.sizeDelta = new Vector2(44f, 44f);
+        r.anchoredPosition = new Vector2(0f, -8f);
+        Image im = go.GetComponent<Image>();
+        go.GetComponent<Button>().targetGraphic = im;
+        go.GetComponent<Button>().onClick.AddListener(ToggleFavorite);
+        return im;
+    }
     private const int GridRows = 15, TotalCols = 41;
     private const float BodyBase = 0.88f;   // brightness of the bevel sprite's middle (tints are divided by it)
 
@@ -170,8 +262,11 @@ public class PixelLogoView : MonoBehaviour
         unit = width / (TotalCols + 3);
         // A different style every time the game starts (never the one used last time).
         int last = PlayerPrefs.GetInt(Pref, -1);
-        do style = Random.Range(0, Styles.Length); while (style == last && Styles.Length > 1);
+        int fav = PlayerPrefs.GetInt(FavoritePref, 0) - 1;   // the favourite logo of this save (0 = none)
+        if (fav >= 0 && fav < Styles.Length) style = fav;
+        else do style = Random.Range(0, Styles.Length); while (style == last && Styles.Length > 1);
         PlayerPrefs.SetInt(Pref, style);
+        current = this;
 
         RectTransform glowLayer = MakeLayer("Glows"), shadowLayer = MakeLayer("Shadows"), bodyLayer = MakeLayer("Bodies");
         string[] words = { "PIXEL", "CLICKER" };
@@ -224,6 +319,8 @@ public class PixelLogoView : MonoBehaviour
         arrowRight = MakeArrow(font, "Logo Arrow Right", false, width * 0.5f + unit * 5f, -h * 0.5f, out arrowRightGroup);
         arrowLeft.GetComponent<Button>().onClick.AddListener(() => Step(-1));
         arrowRight.GetComponent<Button>().onClick.AddListener(() => Step(1));
+        starImages = new[] { MakeStar(arrowLeft), MakeStar(arrowRight) };
+        RefreshStars();
 
         nameLabel = PixelUIKit.CreateText(font, transform, "Logo Style Name", "", 26f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
         nameLabel.raycastTarget = false;
@@ -262,6 +359,7 @@ public class PixelLogoView : MonoBehaviour
         introT = 0f;
         nameT = 0f;
         PlayerPrefs.SetInt(Pref, style);
+        RefreshStars();
         if (nameLabel != null) nameLabel.text = Styles[style].name.ToUpperInvariant() + "   " + (style + 1) + " / " + Styles.Length;
     }
 
