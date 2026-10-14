@@ -2811,6 +2811,7 @@ public partial class PixelClicker : MonoBehaviour
         currentTierIndex = index;
         devSwapped = true;
         Materialize(tiers[index]);
+        PixelSkillSwitchFx.Play(pixelTransform, PixelBaseSize);   // it spins and flashes as it appears
     }
 
     /// <summary>True while a potion (or other effect) restricts spawning to one pixel type.</summary>

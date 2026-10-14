@@ -1,4 +1,5 @@
 using System.Text;
+using UnityEngine;
 
 /// <summary>
 /// The explanations shown in the Pixel Guide's orange '!' boxes: what each pixel type does, in terms of the game's real rules. Numbers that come from a
@@ -6,6 +7,20 @@ using System.Text;
 /// </summary>
 public static class PixelGuideTexts
 {
+    private static PixelClicker cachedClicker;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { cachedClicker = null; }
+
+    /// <summary>The game's numbers for the bait text come from the real settings (PixelClicker's Fishing group), so the text can't drift from what the game does.</summary>
+    private static void BaitNumbers(out int pellets, out int percent, out int seconds)
+    {
+        if (cachedClicker == null) cachedClicker = PixelFind.First<PixelClicker>();
+        pellets = cachedClicker != null ? cachedClicker.BaitPellets : 6;
+        percent = Mathf.RoundToInt((cachedClicker != null ? cachedClicker.BaitPerPellet : 0.35f) * 100f);
+        seconds = Mathf.RoundToInt(cachedClicker != null ? cachedClicker.BaitLifetime : 60f);
+    }
+
     public static string Describe(PixelClicker.PixelType type, PixelClicker.PixelTier t)
     {
         StringBuilder sb = new StringBuilder();
@@ -24,6 +39,11 @@ public static class PixelGuideTexts
     {
         switch (type)
         {
+            case PixelClicker.PixelType.Bait:
+            {
+                BaitNumbers(out int pellets, out int percent, out int seconds);
+                return "falls beside the cube like any other and does nothing more itself. It is the " + pellets + " pellets it dropped when you collected it that attract fish: each one makes Fish +" + percent + "% more common while it lies there (about " + seconds + " seconds).";
+            }
             case PixelClicker.PixelType.Glass: return "shatters when it lands on the ground and is gone (set it down gently with Pixel Grabbing and it survives).";
             case PixelClicker.PixelType.Ghost: return "bounces slowly a few times, then floats up and drifts off the screen.";
             case PixelClicker.PixelType.Meteor: return "streaks away across the screen in a fiery trail instead of falling.";
@@ -86,7 +106,7 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Bedrock:
                 return "The toughest rock: it takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks to break (decided when it appears), but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
             case PixelClicker.PixelType.Fish:
-                return "Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you. With the Weak Spots minigame switched off in Toggles, a fish takes a random 7-25 clicks to reel in instead.";
+                return "Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you. Bait pellets on the floor (and fish and water in a Bait Bucket) make fish come up more often. With the Weak Spots minigame switched off in Toggles, a fish takes a random 7-25 clicks to reel in instead.";
             case PixelClicker.PixelType.Seaweed:
                 return "Fishing block: see-through seaweed. One click, pays little. An old Seaweed pixel sinks slowly instead of dropping.";
             case PixelClicker.PixelType.Shell:
@@ -96,7 +116,10 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Driftwood:
                 return "Fishing's filler block. One click, almost no pay. At low fishing level it is most of what appears; as you level up it gets rarer and the good catches show up more.";
             case PixelClicker.PixelType.Bait:
-                return "Fishing block: a lump of bait. One click, pays a little, and drops a handful of bait pellets round the cube. While pellets lie there Fish show up much more often (+35% each). They rot away after a minute, and a Jellyfish going off fries every one of them.";
+            {
+                BaitNumbers(out int pellets, out int percent, out int seconds);
+                return "Fishing block: a lump of bait. One click, pays a little, and drops " + pellets + " bait pellets round the cube. While pellets lie there Fish show up much more often (+" + percent + "% each). They rot away after about " + seconds + " seconds, and a Jellyfish going off fries every one of them.";
+            }
             case PixelClicker.PixelType.Bottle:
                 return "Fishing SPECIAL block, rare: a message in a bottle. It takes " + t.clicksToCollect + " clicks to break. When the glass breaks a scroll flies out and unrolls into a <b>treasure map</b>, then an <b>X</b> appears on the ground somewhere in view: click it several times to dig up the buried treasure, a haul of good fishing pixels (mostly bait). <b>Right-click the bottle</b> to let it drift away instead, if you don't want to bother with the map.";
             case PixelClicker.PixelType.Whale:
