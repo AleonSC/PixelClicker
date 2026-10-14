@@ -15,15 +15,17 @@ Today's Woodcutting (blocks, perks, Termite Hive, filler family) is described in
 
 The cube no longer rolls a fresh random block on every click while Woodcutting is in play. Instead:
 
-1. **A tree grows.** The game fills a *bag* with a set mix of blocks for this tree (see "Bag contents") and shuffles it.
+1. **A tree grows.** The game picks a tree **species** (oak, pine...), fills a *bag* from that species' recipe (see "Species and undergrowth") and shuffles it.
 2. **Every click draws the next block from the bag.** The order is random, so it still feels random click to click.
-3. **When the bag is empty, the tree falls: "Timber!"** A short felling effect and sound, a small reward (see "Timber reward"), and the next tree's bag is filled.
+3. **When the bag is empty, the tree falls: "Timber!"** A short felling effect and sound, a small reward (see "Timber reward").
+4. **Undergrowth.** Before the next tree grows, a short run of 0-3 loose blocks comes up (twigs, moss, sap...): a breather between trees, drawn from a separate undergrowth pool.
 
 Why it works:
 
 - **Random but fair.** Every tree has the same kind of mix. No long dry streaks, no clusters of bad luck.
 - **Predictable hazards.** A tree holds **at most one** Termite Hive. Once it has shown up you know the rest of the tree is safe.
-- **Something to look at.** A small **tree bar** shows how much of the tree is left (e.g. `Tree 7 / 18`), so there is always a short goal in sight.
+- **Something to look at.** A small **tree bar** shows the species and how much of it is left (e.g. `Pine 7 / 18`), so there is always a short goal in sight.
+- **Easy to expand.** A species is just a recipe (data). A new tree type is a new entry in a list, not new code - and the same system works for other skills (see "The bag system for other skills").
 - **Levels you can see.** Levelling changes what goes *into* the bag (bigger trees, more wood and heartwood, less canopy junk) instead of changing hidden percentages.
 
 ### How the existing mechanics fit in
@@ -44,7 +46,7 @@ How far ahead you can see into the bag is itself a reward: early on you react, l
 
 | Source | What you see |
 |---|---|
-| Level 1 | The next block (the Next Up window, as now) and the tree bar (`Tree 7 / 18`). |
+| Level 1 | The next block (the Next Up window, as now) and the tree bar (`Oak 7 / 18`). |
 | Level 7 | **Keen eye** (perk): the next **two** blocks. |
 | Level 20 | **Woodsman's eye** (perk): the tree bar shows a small Hive icon while this tree still has a Hive in it. |
 | Skill tree: **Read the grain** | The next **three** blocks. |
@@ -59,11 +61,12 @@ How far ahead you can see into the bag is itself a reward: early on you react, l
 | Block | Part of the tree | Hits | Role |
 |---|---|---|---|
 | Leaf | canopy | 1 | Fast filler-ish block, floats down. |
-| Twig / Pinecone / Moss | canopy | 1 | The filler family: quick, nearly worthless, the "speed" part of a tree. |
+| Twig / Moss | undergrowth | 1 | The filler family, now mostly BETWEEN trees: quick, nearly worthless breathers. |
+| Pinecone | pine tree | 1 | Part of the Pine tree's recipe (no longer a plain filler). |
 | Wood | trunk | 2 | The bread and butter. |
 | Bark | trunk | 1 | Common, cheap trunk block. |
-| Sap | trunk | 1 | Sticky old pixel, pays a bit more. |
-| Acorn | canopy | 1 | Its old pixel on the floor raises the Great Oak chance. |
+| Sap | undergrowth, maple | 1 | Sticky old pixel, pays a bit more. Mostly undergrowth; the Maple tree is full of it. |
+| Acorn | oak tree | 1 | Part of the Oak recipe; its old pixel on the floor raises the Great Oak chance. |
 | Heartwood | core | 4 | Rare payoff. |
 | Termite Hive | hazard | 4 left / 10 right | At most one per tree. |
 | Great Oak | special tree | - | A whole special tree, not a single block (see below). |
@@ -74,37 +77,68 @@ How far ahead you can see into the bag is itself a reward: early on you react, l
 
 | Level | What changes |
 |---|---|
-| 1 | Bag holds only **Leaf, Twig (+ Pinecone, Moss) and Wood**. Small trees. |
-| 2 | **Sap** and the **Termite Hive** can be in the bag. Perk: Wood Chipper (as now). |
-| 3 | **Acorn** can be in the bag; **Great Oak** trees can grow. Perk: wood pixels last longer (as now). |
-| 4 | Bark joins the trunk. |
+| 1 | **Oak** trees only, with just **Wood and Leaf**; undergrowth is Twig and Moss. Small trees. |
+| 2 | **Sap** joins the undergrowth; trees can be **infested** (a Termite Hive inside). Perk: Wood Chipper (as now). |
+| 3 | Oaks drop **Acorns**; **Great Oak** trees can grow. Perk: wood pixels last longer (as now). |
+| 4 | **Pine** trees (log, needles, pinecones). Bark joins the oak's trunk. |
 | 5 | Perk: Wood can spawn in any skill (as now). |
-| 6 | **Heartwood** can be in the bag (the tree core). |
+| 6 | **Heartwood** cores can be in a tree. |
 | 7 | Perk: Keen eye - see the next two blocks. |
-| 8 | First skill point for the Woodcutting tree (see "Skill tree"). |
+| 8 | **Birch** trees (light, bark-rich, quick). First skill point (see "Skill tree"). |
 | 10 | Evil Tree minigame can appear (it needs the Woodcutter's Pack today; gate it at 10). |
-| 12 | Lumberjack sells Lumberjack's Focus. |
+| 12 | **Maple** trees (sap-rich). Lumberjack sells Lumberjack's Focus. |
 | 15, 20, 25, 30 | Mastery perks (see "Perks"). |
 
-## Bag contents
+## Species and undergrowth
 
-Every tree is built from a **recipe** that depends on the level. Proposed starting numbers (all of them Inspector data, tuned later with the Balance report):
+### A species is a recipe
 
-| | Level 1 | Level 5 | Level 10 | Level 20 |
-|---|---|---|---|---|
-| Tree size (blocks) | 12 | 15 | 18 | 24 |
-| Canopy (leaf, filler family, acorn from 3) | 8 | 8 | 7 | 7 |
-| Trunk (wood, bark from 4, sap from 2) | 4 | 6 | 9 | 13 |
-| Heartwood (from 6) | 0 | 0 | 0-1 (35%) | 1, sometimes 2 |
-| Termite Hive (from 2) | 0 | 0-1 (30%) | 0-1 (40%) | 0-1 (55%) |
+Each tree species is one entry in a list (Inspector data). An entry says:
 
-- The canopy share falls from about 65% to about 30%, replacing today's filler fade (75% -> 25% over 20 levels) with something you can see in the tree.
-- Inside each part the exact block is still a weighted random pick (e.g. canopy = leaf / twig / pinecone / moss / acorn), so trees never look identical.
-- The Hive, when a tree has one, is never the first or last block of the tree.
+| Field | Meaning |
+|---|---|
+| name, unlock level | e.g. "Pine", level 4 |
+| weight | how often it is picked among the unlocked species |
+| blocks | each block with a **min-max count** (e.g. Wood 3-6): the counts are rolled when the tree grows, so trees of one species come in different sizes |
+| growth per level | how much the counts grow with the skill level (e.g. +1 max wood every 5 levels), so trees get bigger and richer as you level |
+| core | an optional block that always goes in (e.g. heartwood for the Great Oak) |
+| infested chance | the chance that this tree hides a Termite Hive (never the first or last block) |
+| Timber reward | what felling it gives (XP bonus, a drop) |
+
+The log count is what mainly sets a tree's size, so "a big oak" and "a small oak" are just different rolls of the same recipe.
+
+### Proposed species
+
+| Species | Unlock | Recipe (counts at its unlock level) | Character |
+|---|---|---|---|
+| **Oak** | 1 | Wood 3-6, Leaf 3-5; Acorn 0-1 from level 3; Bark 0-2 from level 4; Heartwood 0-1 (20%) from level 6 | The all-rounder; feeds the Great Oak through acorns. |
+| **Pine** | 4 | Wood 4-8, Leaf (needles) 2-4, Pinecone 2-4 | Tall, more logs, cones instead of acorns. |
+| **Birch** | 8 | Wood 2-4, Bark 3-5, Leaf 2-3 | Short and quick: many Timbers in a row. |
+| **Maple** | 12 | Wood 3-6, Sap 3-5, Leaf 2-4; Heartwood 0-1 (25%) | Sticky and well paid. |
+| **Great Oak** | 3, rare | Wood 8-12, Bark 2-4, Leaf 3-5, core: Heartwood | Special: 1% per tree, up to 25% with acorns lying on the floor; never infested. |
+
+Infested chance: about 25% at level 2, rising slowly with the level (to about 45% at 20), per tree; the Focus potion sets it to 0 while it lasts.
+
+### Undergrowth between trees
+
+After a tree falls, 0-3 loose blocks come up before the next one grows (rolled from an undergrowth pool): **Twig, Moss**, and from level 2 **Sap**. This is where the filler family now lives - a short, cheap breather between trees instead of most of every tree. The Shuffle bonus works on undergrowth fillers as before.
+
+As you level, trees grow (more logs, more cores) while the undergrowth stays short, so the share of junk falls naturally - replacing today's filler fade (75% -> 25% over 20 levels).
+
+### The bag system for other skills
+
+The same three pieces - species recipes, the bag, undergrowth - fit the other skills without new spawn code:
+
+| Skill | "Species" | Undergrowth |
+|---|---|---|
+| Mining | ore veins (copper vein, iron vein...), a rich vein as the special | stone, gravel |
+| Foraging | bushes (berry bush, mushroom ring, herb patch), a truffle spot as the special | weeds |
+| Fishing | schools / spots (shallows, reef), the whale as the special | water |
+| Farming | crop rows | dirt |
 
 ## Special trees
 
-- **Great Oak tree.** Chance per tree: 1% base, up to 25% with acorns lying on the floor (the current numbers, moved from "per block" to "per tree"). A big bag (about 1.5x a normal tree), mostly trunk, a **guaranteed heartwood core**, no Hive, and its blocks stall the Block Hold meter (as the Great Oak block does today). Felling it gives a bigger Timber reward.
+- **Great Oak.** A species (see the table above) with a guaranteed heartwood core; its blocks stall the Block Hold meter (as the Great Oak block does today) and felling it gives a bigger Timber reward.
 - **Later special trees** (the to-do's "special-block tier" for Woodcutting): ideas to pick from - a *Beehive tree* (honey that sticks pixels together), a *Hollow Log* (a creature hides in it), a *Lightning-struck tree* (a quick-click event). Fishing's bottle -> map -> treasure is the model.
 
 ## Timber reward
@@ -180,15 +214,15 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 
 ## Saves and migrations
 
-- **Bag state** (the tree's remaining blocks and its size) is saved with the skill state so a reload does not reroll a half-chopped tree; an old save simply starts a fresh tree.
+- **Bag state** (the species, the tree's remaining blocks and its size) is saved with the skill state so a reload does not reroll a half-chopped tree; an old save simply starts a fresh tree.
 - **Whetstone** leaves the Woodcutter's Pack: a `packDataVersion` bump removes it from saved packs (the tier stays unlocked so counts are not lost) and adds it to Mining's side.
 - The Hive's per-pack shares (`hazardBaseShare` / `hazardPerLevelShare`) and the filler fade (`fillerStartShare` / `fillerEndShare`) are no longer used while the bag mode is on; they stay for the other skills.
 
 ## Build plan (in steps)
 
-1. **Bag spawn mode (shared system).** A `SkillPack.bagMode` with level-based recipes (data, Inspector-editable); `PixelClicker.RollTier` draws from the bag when the pack in play has one. Built generic so Mining (a rock vein) or Foraging (a bush) can use it later.
-2. **Tree bar + Timber + lookahead.** The `Tree 7 / 18` bar (near the Next Up window), the felling show, sound, Timber reward and stats; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
-3. **Woodcutting recipes + gating.** The level table above; remove the per-block filler / hazard shares for Woodcutting.
+1. **Bag spawn mode (shared system).** Data: a list of species recipes (blocks with min-max counts, unlock level, weight, growth per level, core, infested chance) and an undergrowth pool per skill pack. `PixelClicker.RollTier` draws from the bag when the pack in play has species. Built generic so Mining (veins), Foraging (bushes) and Fishing (spots) can use it later.
+2. **Tree bar + Timber + lookahead.** The tree bar (`Pine 7 / 18`, near the Next Up window), the felling show, sound, Timber reward and stats; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
+3. **Woodcutting species + gating.** Oak, Pine, Birch, Maple, Great Oak and the undergrowth pool; remove the per-block filler / hazard shares for Woodcutting.
 4. **Hook the existing mechanics into the bag.** Shuffle swaps inside the bag; Great Oak becomes a tree; Focus potion affects new trees; Hive never first / last.
 5. **XP curve bands + XP per hit.** Then retune with the Balance report (which will need a "per tree" view).
 6. **Perks and skill tree nodes.**
@@ -197,9 +231,9 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 
 ## Open questions
 
-- Tree sizes: the 12 -> 24 growth above is a proposal.
+- Species recipes and counts, unlock levels and the infested chance are proposals.
+- Should Pine bring its own block types later (e.g. Pine Log, Resin) or keep sharing Wood / Leaf?
 - Lookahead steps: the levels above (7 / 20 / 30 and the tree node) are a proposal.
-- Hive chance per tree: the 30% -> 55% ramp above is a proposal.
 - Pesticide: leave it in Woodcutting, or move it to Farming / Foraging?
 - XP per hit vs XP per block.
 - Should the auto clicker be able to fell whole trees, or stop at the core so heartwood is always hand-chopped?
