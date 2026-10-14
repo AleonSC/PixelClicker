@@ -1004,3 +1004,4 @@
 [2026-10-14 21:50 UTC] Fixed the first person hint box showing its text as a tall column of single letters (its width was measured with a zero width limit).
 [2026-10-14 22:05 UTC] The main menu music selector now fades away after 5 seconds without activity instead of 10.
 [2026-10-14 15:47 UTC] Wrote the Woodcutting progression design doc (docs/systems/WoodcuttingProgression.md: the shuffled tree bag, level gating, Timber reward, XP curve, perks, skill tree, cross-skill upgrades) and added its build steps to the to-do list.
+[2026-10-14 15:55 UTC] Woodcutting design doc: lookahead now grows with the skill (next block at level 1, two at level 7, a Hive icon at 20, three from a tree node, the full remaining mix at 30).

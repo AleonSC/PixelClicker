@@ -38,6 +38,22 @@ Why it works:
 | **Auto clicker** | Draws from the bag like a manual click. It still never touches a Termite Hive (it waits for you), as today. |
 | **Focus potion** | Lumberjack's Focus: new trees get no Hive while it lasts (instead of removing the Hive's spawn share). |
 
+## Lookahead grows with the skill
+
+How far ahead you can see into the bag is itself a reward: early on you react, later you plan.
+
+| Source | What you see |
+|---|---|
+| Level 1 | The next block (the Next Up window, as now) and the tree bar (`Tree 7 / 18`). |
+| Level 7 | **Keen eye** (perk): the next **two** blocks. |
+| Level 20 | **Woodsman's eye** (perk): the tree bar shows a small Hive icon while this tree still has a Hive in it. |
+| Skill tree: **Read the grain** | The next **three** blocks. |
+| Level 30 | **Master forester** (perk): the tree bar lists what is left in the tree as counts (e.g. `3 wood, 1 sap, 1 heartwood`). |
+
+- The Next Up window grows a slot per extra block (the next block on top, then the ones after it, smaller), so the same window just gets taller.
+- Blocks bumped back by Block Hold show first, then the bag's next draws, so the preview is always the real order.
+- Cross-skill angle (later): a Mining or Electrician item could give a temporary "see the whole tree" boost.
+
 ## Blocks and their roles
 
 | Block | Part of the tree | Hits | Role |
@@ -64,6 +80,7 @@ Why it works:
 | 4 | Bark joins the trunk. |
 | 5 | Perk: Wood can spawn in any skill (as now). |
 | 6 | **Heartwood** can be in the bag (the tree core). |
+| 7 | Perk: Keen eye - see the next two blocks. |
 | 8 | First skill point for the Woodcutting tree (see "Skill tree"). |
 | 10 | Evil Tree minigame can appear (it needs the Woodcutter's Pack today; gate it at 10). |
 | 12 | Lumberjack sells Lumberjack's Focus. |
@@ -124,10 +141,11 @@ Also proposed: **XP per block = its hits** (Wood 2, Heartwood 4) instead of 1 pe
 | 2 | Wood Chipper (built) |
 | 3 | Seasoned wood: wood pixels last longer (built) |
 | 5 | Wood can spawn in any skill (built) |
+| 7 | Keen eye: see the next two blocks (see "Lookahead") |
 | 15 | Clean cut: Wood sometimes breaks in one hit |
-| 20 | Woodsman's eye: the tree bar shows whether this tree has a Hive |
+| 20 | Woodsman's eye: the tree bar shows whether this tree still has a Hive |
 | 25 | Old growth: Great Oak chance +5% |
-| 30 | Master forester: every tree has a heartwood core |
+| 30 | Master forester: every tree has a heartwood core, and the tree bar lists what is left in the tree |
 
 The current placeholder perks at 4 ("Sap collector") and 6 ("Heart of the forest") are replaced by the gating unlocks above.
 
@@ -142,6 +160,7 @@ Points: 1 at level 8, then one every 4 levels (12, 16, 20...). Proposed nodes:
 | Tapper | More sap in each trunk. |
 | Acorn hoard | Acorns count double for the Great Oak chance. |
 | Big timber | Trees are 3 blocks bigger (more XP per Timber). |
+| Read the grain | See the next three blocks. |
 | Chipper tune | The Wood Chipper gives more XP per wood pixel. |
 
 ## Cross-skill upgrades
@@ -168,7 +187,7 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 ## Build plan (in steps)
 
 1. **Bag spawn mode (shared system).** A `SkillPack.bagMode` with level-based recipes (data, Inspector-editable); `PixelClicker.RollTier` draws from the bag when the pack in play has one. Built generic so Mining (a rock vein) or Foraging (a bush) can use it later.
-2. **Tree bar + Timber.** The `Tree 7 / 18` bar (near the Next Up window), the felling show, sound, Timber reward and stats.
+2. **Tree bar + Timber + lookahead.** The `Tree 7 / 18` bar (near the Next Up window), the felling show, sound, Timber reward and stats; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
 3. **Woodcutting recipes + gating.** The level table above; remove the per-block filler / hazard shares for Woodcutting.
 4. **Hook the existing mechanics into the bag.** Shuffle swaps inside the bag; Great Oak becomes a tree; Focus potion affects new trees; Hive never first / last.
 5. **XP curve bands + XP per hit.** Then retune with the Balance report (which will need a "per tree" view).
@@ -179,7 +198,7 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 ## Open questions
 
 - Tree sizes: the 12 -> 24 growth above is a proposal.
-- Lookahead: Next Up shows one block ahead today. Show two or three? Or only the tree bar plus the level 20 "Woodsman's eye"?
+- Lookahead steps: the levels above (7 / 20 / 30 and the tree node) are a proposal.
 - Hive chance per tree: the 30% -> 55% ramp above is a proposal.
 - Pesticide: leave it in Woodcutting, or move it to Farming / Foraging?
 - XP per hit vs XP per block.
