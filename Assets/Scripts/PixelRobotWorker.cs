@@ -675,6 +675,20 @@ public partial class PixelRobotWorker : MonoBehaviour
         return m;
     }
 
+    /// <summary>Glass: an UNLIT, alpha-blended, two-sided part (a lit transparent material blew out into solid white / cyan next to the cabin lamp, and a one-sided dome was invisible from inside).</summary>
+    private GameObject GlassPrim(PrimitiveType type, Transform parent, string name, Vector3 pos, Vector3 scale, Color color)
+    {
+        GameObject g = Prim(type, parent, name, pos, scale, color, true);
+        Shader sh = PixelShaders.SpriteDefault();
+        if (sh != null)
+        {
+            Material gm = new Material(sh) { name = "UFO Glass", color = color };
+            g.GetComponent<Renderer>().sharedMaterial = gm;
+            parts[parts.Count - 1].solidMaterial = gm;
+        }
+        return g;
+    }
+
     private Transform Pivot(Transform parent, string name, Vector3 pos)
     {
         GameObject g = new GameObject(name);
@@ -701,11 +715,11 @@ public partial class PixelRobotWorker : MonoBehaviour
         Prim(PrimitiveType.Sphere, b, "Rim", new Vector3(0f, 0.05f, 0f), new Vector3(1.72f, 0.09f, 1.72f), accentColor);
 
         // The glass dome with a small CABIN inside: a floor, a ring console with buttons round the edge and a little alien at its station. The player can ride along in here (see PixelRobotCockpit.cs).
-        domeRenderer = Prim(PrimitiveType.Sphere, b, "Dome", new Vector3(0f, CabinFloorY, 0f), new Vector3(1.16f, 0.9f, 1.16f), new Color(0.6f, 0.95f, 1f, 0.35f), true).GetComponent<Renderer>();
+        domeRenderer = GlassPrim(PrimitiveType.Sphere, b, "Dome", new Vector3(0f, CabinFloorY, 0f), new Vector3(1.16f, 0.9f, 1.16f), new Color(0.6f, 0.95f, 1f, 0.22f)).GetComponent<Renderer>();
         Color steel = new Color(0.2f, 0.22f, 0.29f, 1f), deepSteel = new Color(0.1f, 0.11f, 0.15f, 1f);
         MeshPrim(b, "Cabin Floor", new[] { new Vector2(WindowRadius, CabinFloorY), new Vector2(0.52f, CabinFloorY) }, new Color(0.15f, 0.17f, 0.21f, 1f));
         MeshPrim(b, "Cabin Floor Ring", new[] { new Vector2(WindowRadius, CabinFloorY + 0.002f), new Vector2(0.31f, CabinFloorY + 0.002f) }, new Color(0.22f, 0.25f, 0.32f, 1f));
-        Prim(PrimitiveType.Cylinder, b, "Floor Window", new Vector3(0f, CabinFloorY - 0.002f, 0f), new Vector3(WindowRadius * 2f, 0.002f, WindowRadius * 2f), new Color(0.6f, 0.95f, 1f, 0.16f), true);
+        GlassPrim(PrimitiveType.Cylinder, b, "Floor Window", new Vector3(0f, CabinFloorY - 0.002f, 0f), new Vector3(WindowRadius * 2f, 0.002f, WindowRadius * 2f), new Color(0.6f, 0.95f, 1f, 0.12f));
         Color[] buttonColors = { new Color(0.95f, 0.25f, 0.2f), new Color(0.3f, 0.95f, 0.45f), new Color(1f, 0.75f, 0.2f), new Color(0.3f, 0.85f, 1f), new Color(0.95f, 0.95f, 1f) };
         const int panels = 16;
         System.Collections.Generic.List<Renderer> buttonList = new System.Collections.Generic.List<Renderer>();

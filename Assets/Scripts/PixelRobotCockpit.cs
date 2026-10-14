@@ -177,16 +177,10 @@ public partial class PixelRobotWorker
     private void BuildCockpitUi()
     {
         TMP_FontAsset font = clicker.UIFont;
-        cockpitCanvas = PixelUIKit.CreateCanvas("UFO Cabin", 500, new Vector2(1920f, 1080f), true);
+        cockpitCanvas = PixelUIKit.CreateCanvas("UFO Cabin", 500, new Vector2(1920f, 1080f), false);
         Transform c = cockpitCanvas.transform;
 
-        TMP_Text hint = PixelUIKit.CreateText(font, c, "Hint", rideHint, 26f, TextAlignmentOptions.Center, FontStyles.Bold, new Color(1f, 1f, 1f, 0.9f));
-        hint.raycastTarget = false;
-        hint.enableAutoSizing = true; hint.fontSizeMax = 26f; hint.fontSizeMin = 14f;
-        RectTransform hr = hint.rectTransform;
-        float top = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
-        hr.offsetMin = new Vector2(360f, -(top + 70f)); hr.offsetMax = new Vector2(-360f, -(top + 14f));
-
+        TMP_Text hint = PixelStatusBox.Create(font, c, 28f);   // the same box that slides out from under the top bar
+        hint.text = rideHint;
     }
 }
