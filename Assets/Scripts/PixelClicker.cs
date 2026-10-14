@@ -2803,6 +2803,16 @@ public partial class PixelClicker : MonoBehaviour
         Materialize(tiers[index]);
     }
 
+    /// <summary>Skill switch test block: the pixel on the cube is replaced by a Glass pixel at once (it stays until it is clicked, like a dev swap). Called when a skill is chosen.</summary>
+    public void ShowSkillSwitchBlock()
+    {
+        int index = IndexOf(PixelType.Glass);
+        if (index < 0 || pixelTransform == null || !randomizeSpawnTier) return;
+        currentTierIndex = index;
+        devSwapped = true;
+        Materialize(tiers[index]);
+    }
+
     /// <summary>True while a potion (or other effect) restricts spawning to one pixel type.</summary>
     public bool HasForcedSpawnTier => forcedTierIndex >= 0;
 

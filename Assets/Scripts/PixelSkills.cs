@@ -105,6 +105,10 @@ public partial class PixelSkills : MonoBehaviour
     public const string FarmingId = "farming";
     public const string ElectricianId = "electrician";
 
+    [Header("Skill switch block (test)")]
+    [Tooltip("Tick to turn the test off: choosing a skill normally swaps the block on the cube for a Glass pixel at once (a 'skill switch' block).")]
+    [SerializeField] private bool disableSkillSwitchBlock;
+
     [Header("Skill Packs")]
     [Tooltip("The packs, in the order they are listed. Missing built-in ones (by id) are added automatically.")]
     [SerializeField] private List<SkillPack> packs = new List<SkillPack>();
@@ -797,7 +801,15 @@ public partial class PixelSkills : MonoBehaviour
         else
         {
             if (OfflineMode) { OfflineMode = false; changed = true; }
-            if (id != ActiveId) { PackSetting = id; changed = true; }   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected
+            if (id != ActiveId)
+            {
+                PackSetting = id; changed = true;   // takes effect from the NEXT spawn: the cube you are clicking stays until it is collected
+                if (!disableSkillSwitchBlock && !PixelTitleScreen.Showing)
+                {
+                    if (clicker == null) clicker = PixelFind.First<PixelClicker>();
+                    if (clicker != null) clicker.ShowSkillSwitchBlock();   // ...except for this test: a Glass 'skill switch' block replaces it right away
+                }
+            }
         }
         if (changed) Changed?.Invoke();
     }

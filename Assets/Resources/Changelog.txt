@@ -898,3 +898,4 @@
 [2026-10-14 05:49 UTC] Added the Game Database data-source idea (systems declare their own entries) to the to-do list.
 [2026-10-14 05:58 UTC] Game Database: added Block rule entries (special blocks and hold bonuses) and Skill node entries (each skill tree node, linked to its skill, the node it needs and the block it unlocks), with Rules and Nodes tabs; the remaining database gaps went on the to-do list.
 [2026-10-14 06:07 UTC] Fixed the custom UI colour / neon glow / button colour / bar colour / clicker aura settings not sticking: they are now the player's own settings (not stored per save), so a start or load no longer overwrites them with the last save's copy.
+[2026-10-14 06:12 UTC] Test: choosing a different skill now swaps the block on the cube for a Glass 'skill switch' block at once (tick 'Disable Skill Switch Block' on PixelSkills to turn it off).
