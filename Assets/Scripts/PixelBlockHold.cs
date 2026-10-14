@@ -34,7 +34,7 @@ public class PixelBlockHold : MonoBehaviour
     [Tooltip("Seconds the meter takes to recharge from empty to full. 0 = the default (8).")]
     [SerializeField] private float rechargeSeconds = 0f;
     [Min(0f)]
-    [Tooltip("Seconds after you let go before the meter starts to recharge. 0 = the default (1).")]
+    [Tooltip("Seconds after you let go before the meter starts to recharge. 0 = the default (0.5).")]
     [SerializeField] private float releaseCooldownSeconds = 0f;
     [Min(0f)]
     [Tooltip("Seconds before recharging when the meter ran dry while holding (a longer wait). 0 = the default (3).")]
@@ -97,7 +97,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 5f;
     private float RechargeSeconds => rechargeSeconds > 0f ? rechargeSeconds : 8f;
-    private float ReleaseCooldown => releaseCooldownSeconds > 0f ? releaseCooldownSeconds : 1f;
+    private float ReleaseCooldown => releaseCooldownSeconds > 0f ? releaseCooldownSeconds : 0.5f;
     private float ExhaustCooldown => exhaustCooldownSeconds > 0f ? exhaustCooldownSeconds : 3f;
     private float FlashSeconds => flashSeconds > 0f ? flashSeconds : 1.5f;
     private float HoldBlockSeconds => holdBlockSeconds > 0f ? holdBlockSeconds : 10f;
@@ -125,7 +125,9 @@ public class PixelBlockHold : MonoBehaviour
     private RectTransform panel, canvasRect;
     private Image fill, back;
     private TMPro.TMP_Text bonusLabel;
-    private Image glow, ready, tip;
+    private Image glow, ready, tip, pill;
+    private TMPro.TMP_Text readout, caption;
+    private RectTransform readoutRect;
     private readonly Image[] ticks = new Image[3];
     private bool wasFull = true;
     private static Sprite dotSprite;
@@ -437,7 +439,7 @@ public class PixelBlockHold : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
-    // The meter: a curved vertical arc to the LEFT of the mouse cursor (tooltips pop up on the right)
+    // The meter: a curved vertical arc to the RIGHT of the mouse cursor with a big percentage, a state caption and the bonus text beside it
     // ------------------------------------------------------------------
 
     private static Sprite BuildArcSprite()
@@ -498,7 +500,7 @@ public class PixelBlockHold : MonoBehaviour
         if (readyPop > 0f) readyPop -= dt;
 
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local))
-            panel.anchoredPosition = local + new Vector2(-6f, 0f);
+            panel.anchoredPosition = local + new Vector2(-22f, 0f);   // (the arc sits on the right of the panel, ~30-90 px right of the cursor)
 
         PixelBlockRules.HoldRule bonus = holding ? PixelBlockRules.ActiveHold : null;
         string labelText = bonus != null && !string.IsNullOrEmpty(bonus.label) ? bonus.label : null;
@@ -515,8 +517,20 @@ public class PixelBlockHold : MonoBehaviour
             {
                 if (bonusLabel.text != labelText) bonusLabel.text = labelText;
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 lp2))
-                    bonusLabel.rectTransform.anchoredPosition = lp2 + new Vector2(-120f, -118f);
+                    bonusLabel.rectTransform.anchoredPosition = lp2 + new Vector2(104f, -62f);
             }
+        }
+
+        // The big readout beside the arc: the percentage and what the meter is doing.
+        if (readout != null)
+        {
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 lp3))
+                readoutRect.anchoredPosition = lp3 + new Vector2(100f, 0f);
+            string state = holding ? (Stalled ? "FROZEN" : "HOLDING") : flash > 0f ? "EMPTY" : cooldown > 0f ? "WAIT" : !full ? "RECHARGING" : "READY";
+            int pct = Mathf.RoundToInt(Mathf.Clamp01(shown) * 100f);
+            string text = pct + "%";
+            if (readout.text != text) readout.text = text;
+            if (caption.text != state) caption.text = state;
         }
 
         // The drawn fill glides to the real value (smooth drain and recharge).
@@ -539,6 +553,7 @@ public class PixelBlockHold : MonoBehaviour
         if (!holding && !flashing) c = Color.Lerp(c, new Color(0.35f, 0.5f, 0.75f, 1f), 0.45f);   // recharging: subdued
         if (!holding && cooldown > 0f && !flashing) c.a = 0.6f;   // waiting for the recharge to begin
         fill.color = c;
+        if (readout != null) { Color rc2 = Color.Lerp(c, Color.white, 0.55f); rc2.a = 1f; readout.color = rc2; Color cc = c; cc.a = 1f; caption.color = cc; if (pill != null) pill.color = flashing ? Color.Lerp(new Color(0.04f, 0.05f, 0.09f, 0.78f), new Color(0.45f, 0f, 0f, 0.85f), pulse) : new Color(0.04f, 0.05f, 0.09f, 0.78f); }
         back.color = flashing ? Color.Lerp(new Color(0f, 0f, 0f, 0.6f), new Color(0.55f, 0f, 0f, 0.85f), pulse) : new Color(0f, 0f, 0f, 0.6f);
 
         // The soft glow behind the fill, pulsing while held.
@@ -584,9 +599,8 @@ public class PixelBlockHold : MonoBehaviour
         GameObject p = new GameObject("Meter", typeof(RectTransform));
         p.transform.SetParent(canvasRoot.transform, false);
         panel = p.GetComponent<RectTransform>();
-        panel.sizeDelta = new Vector2(190f, 190f);
+        panel.sizeDelta = new Vector2(230f, 230f);
         panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
-        panel.localScale = new Vector3(-1f, 1f, 1f);   // the arc sprite is on the right: mirrored it sits on the LEFT of the cursor (the block tooltips pop up on the right)
 
         Image Arc(string name, float scale)
         {
@@ -638,12 +652,33 @@ public class PixelBlockHold : MonoBehaviour
         }
         tip = Dot("Tip", Vector2.zero, 34f);
 
+        // The readout: a dark pill with the percentage and a state caption, just right of the arc.
+        GameObject pg = new GameObject("Readout", typeof(RectTransform), typeof(Image));
+        pg.transform.SetParent(canvasRoot.transform, false);
+        pill = pg.GetComponent<Image>();
+        pill.raycastTarget = false;
+        PixelUIKit.StyleBox(pill);
+        readoutRect = pg.GetComponent<RectTransform>();
+        readoutRect.anchorMin = readoutRect.anchorMax = new Vector2(0.5f, 0.5f);
+        readoutRect.pivot = new Vector2(0f, 0.5f);
+        readoutRect.sizeDelta = new Vector2(132f, 74f);
+        readout = PixelUIKit.CreateText(clicker.UIFont, pg.transform, "Percent", "100%", 40f, TMPro.TextAlignmentOptions.Center, TMPro.FontStyles.Bold, Color.white);
+        readout.raycastTarget = false;
+        RectTransform rr = readout.rectTransform;
+        rr.anchorMin = new Vector2(0f, 0.38f); rr.anchorMax = Vector2.one; rr.offsetMin = rr.offsetMax = Vector2.zero;
+        caption = PixelUIKit.CreateText(clicker.UIFont, pg.transform, "Caption", "READY", 17f, TMPro.TextAlignmentOptions.Center, TMPro.FontStyles.Bold, Color.white);
+        caption.raycastTarget = false;
+        RectTransform cr = caption.rectTransform;
+        cr.anchorMin = Vector2.zero; cr.anchorMax = new Vector2(1f, 0.4f); cr.offsetMin = cr.offsetMax = Vector2.zero;
+
         // The bonus text of a held bonus block (PixelBlockRules.HoldRule.label), under the arc.
         bonusLabel = PixelUIKit.CreateText(clicker.UIFont, canvasRoot.transform, "Bonus Label", "", 30f, TMPro.TextAlignmentOptions.Center, TMPro.FontStyles.Bold, new Color(1f, 0.9f, 0.4f, 1f));
         bonusLabel.raycastTarget = false;
         RectTransform blr = bonusLabel.rectTransform;
         blr.anchorMin = blr.anchorMax = blr.pivot = new Vector2(0.5f, 0.5f);
         blr.sizeDelta = new Vector2(320f, 44f);
+        blr.pivot = new Vector2(0f, 0.5f);
+        bonusLabel.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
         bonusLabel.gameObject.SetActive(false);
     }
 }
