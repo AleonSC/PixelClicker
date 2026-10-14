@@ -29,7 +29,7 @@ public class PixelPixelGuide : MonoBehaviour
 
     [Header("Button")]
     [Tooltip("Text on the button under Toggles.")]
-    [SerializeField] private string buttonText = "Pixel Guide";
+    [SerializeField] private string buttonText = "Rotation";
 
     [Tooltip("Button colour.")]
     [SerializeField] private Color buttonColor = new Color(0.2f, 0.55f, 0.6f, 1f);
@@ -39,7 +39,7 @@ public class PixelPixelGuide : MonoBehaviour
 
     [Header("Window")]
     [Tooltip("Window title.")]
-    [SerializeField] private string windowTitle = "Pixel Guide";
+    [SerializeField] private string windowTitle = "Pixel Rotation";
 
     [Tooltip("Window size (canvas units) when it stands alone.")]
     [SerializeField] private Vector2 windowSize = new Vector2(640f, 720f);
