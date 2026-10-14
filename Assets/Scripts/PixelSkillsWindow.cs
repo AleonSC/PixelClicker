@@ -150,11 +150,15 @@ public partial class PixelSkills
         BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
         // Header: "Training: Mining  Lv 3" + an XP bar.
         headerLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Header", "", 34f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
-        Place(headerLabel.rectTransform, 0f, 1f, 1f, 1f, new Vector2(30f, -158f), new Vector2(-30f, -100f));
+        Place(headerLabel.rectTransform, 0f, 1f, 0.6f, 1f, new Vector2(30f, -158f), new Vector2(-6f, -100f));   // the left part of the row (the minigame bonus has the right part, so they never overlap)
+        headerLabel.enableAutoSizing = true; headerLabel.fontSizeMax = 34f; headerLabel.fontSizeMin = 16f;
+        headerLabel.textWrappingMode = TextWrappingModes.NoWrap;
         // Right side of the header: the XP multiplier from the minigames that are switched on.
         minigameBonusLabel = PixelUIKit.CreateText(Font, windowObject.transform, "Minigame Bonus", "", 28f, TextAlignmentOptions.MidlineRight, FontStyles.Bold, new Color(1f, 0.85f, 0.35f, 1f));
-        Place(minigameBonusLabel.rectTransform, 0.4f, 1f, 1f, 1f, new Vector2(0f, -158f), new Vector2(-30f, -100f));
+        Place(minigameBonusLabel.rectTransform, 0.6f, 1f, 1f, 1f, new Vector2(0f, -158f), new Vector2(-30f, -100f));
         minigameBonusLabel.raycastTarget = false;
+        minigameBonusLabel.enableAutoSizing = true; minigameBonusLabel.fontSizeMax = 28f; minigameBonusLabel.fontSizeMin = 13f;
+        minigameBonusLabel.textWrappingMode = TextWrappingModes.NoWrap;
         GameObject track = new GameObject("XP Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(windowObject.transform, false);
         Image trackImage = track.GetComponent<Image>();
