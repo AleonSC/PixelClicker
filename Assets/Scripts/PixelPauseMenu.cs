@@ -250,7 +250,6 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string headerAccessibility = "Accessibility";
     [SerializeField] private string headerDisplay = "Display";
     [SerializeField] private string headerAudio = "Audio";
-    [SerializeField] private string headerKeybinds = "Keybinds";
     [SerializeField] private string tipsLabel = "Show first-time tips";
     [SerializeField] private string replayTutorialText = "Replay tutorial";
 
@@ -2387,7 +2386,8 @@ public class PixelPauseMenu : MonoBehaviour
         top += searchH + 12f;
 
         // Everything scrolls: there are more rows than fit between the black bars.
-        float viewHeight = FitViewHeight(settingsViewHeight, top);
+        float footerH = rowHeight * 0.8f, footerGap = 6f, footer = 12f + 2f * footerH + footerGap;   // two slim buttons under the list (Replay tutorial, Change keybinds)
+        float viewHeight = FitViewHeight(settingsViewHeight, top + footer);
         ScrollRect scroll = PixelUIKit.CreateScrollView(settingsPanel.transform, "Settings List", scrollbarColor, 12f, rowHeight,
                                                         out RectTransform content, out GameObject bar);
         RectTransform vr = scroll.GetComponent<RectTransform>();
@@ -2402,13 +2402,6 @@ public class PixelPauseMenu : MonoBehaviour
 
         // ---- Gameplay ----
         AddSettingsSectionHeader(list, headerGameplay, ref y);
-        // Replay tutorial sits at the top of Gameplay.
-        AddWideButtonRow(list, replayTutorialText, () =>
-        {
-            PixelHints.ReplayTutorial();
-            SetPaused(false); // so the tips show over the game
-        }, ref y);
-
         abbreviateToggle = AddToggleRow(list, abbreviateLabel.Replace(" (1.2K)", ""), PixelClicker.AbbreviateNumbers,
                                         on => PixelClicker.AbbreviateNumbers = on, ref y);
         hidePurchasedToggle = AddToggleRow(list, hidePurchasedLabel, PixelShop.HidePurchased,
@@ -2504,17 +2497,25 @@ public class PixelPauseMenu : MonoBehaviour
             musicSlider = AddSliderRow(list, musicVolumeLabel, audio.MusicVolume, v => audio.MusicVolume = v, ref y);
         }
 
-        // ---- Controls ----
-        AddSettingsSectionHeader(list, headerKeybinds, ref y);
-        AddWideButtonRow(list, keybindsButtonText, () => ShowView(keysPanel), ref y);   // swap the key bindings
-
         settingsScroll = scroll;
         settingsBar = bar;
         settingsListHeight = viewHeight;
         CaptureSettingsLayout(content, y);
         LayoutSettings();
         BuildKeysPanel();
-        FinishSectionPanel(settingsPanel, top + viewHeight);
+        // The two fixed buttons at the very bottom of the window: as wide as the section headers, not tall.
+        void FooterButton(string label, UnityEngine.Events.UnityAction onClick, float offset)
+        {
+            Button fb = MakeButton(settingsPanel.transform, label + " Button", label, new Vector2(10f, footerH), menuButtonColor, rowFontSize * 0.7f);
+            RectTransform fr = fb.GetComponent<RectTransform>();
+            fr.anchorMin = new Vector2(0f, 1f); fr.anchorMax = new Vector2(1f, 1f); fr.pivot = new Vector2(0.5f, 1f);
+            fr.sizeDelta = new Vector2(-96f, footerH);
+            fr.anchoredPosition = new Vector2(0f, -(top + viewHeight + 12f + offset));
+            fb.onClick.AddListener(onClick);
+        }
+        FooterButton(replayTutorialText, () => { PixelHints.ReplayTutorial(); SetPaused(false); }, 0f);   // (so the tips show over the game)
+        FooterButton(keybindsButtonText, () => ShowView(keysPanel), footerH + footerGap);
+        FinishSectionPanel(settingsPanel, top + viewHeight + footer);
         AddCubiePeek(settingsPanel);
         AddCubiePeek(keysPanel);
     }
