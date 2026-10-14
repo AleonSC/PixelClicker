@@ -435,7 +435,7 @@ public class PixelBlackholeMinigame : PixelMinigame
                 // Only the vertex alpha changes (it fades the outline with the face); the outline colour / material stay untouched,
                 // because changing them every frame made the text glitch.
                 counter.enabled = false;   // the number shows in the top status box now (PixelStatusLines)
-                if (wanted > 0f) PixelStatusLines.Set("blackhole", counter.text, Color.white);
+                if (wanted > 0f) PixelStatusLines.Set("blackhole", counter.text, Color.white, 0.3f);   // refreshed every frame: it vanishes by itself if the hole is despawned
                 else PixelStatusLines.Clear("blackhole");
             }
 

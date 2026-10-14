@@ -437,7 +437,7 @@ public class PixelBombMinigame : PixelMinigame
             timer.text = string.Format(timerFormat, Mathf.Max(0f, left));
             timer.color = warning && Mathf.Repeat(Time.time * 4f, 1f) < 0.5f ? timerWarningColor
                         : warning ? Color.Lerp(timerColor, timerWarningColor, 0.5f) : timerColor;
-            PixelStatusLines.Set("bomb", timer.text, timer.color);   // the countdown shows in the top status box
+            PixelStatusLines.Set("bomb", timer.text, timer.color, 0.4f);   // the countdown shows in the top status box (refreshed every frame: gone by itself if the bomb is despawned)
             spark.transform.localScale = Vector3.one * sparkBase * (1f + 0.35f * Mathf.Sin(Time.time * (left <= warningSeconds ? 26f : 10f)));
             int whole = Mathf.CeilToInt(Mathf.Max(0f, left));
             if (whole != lastWhole)
@@ -477,7 +477,7 @@ public class PixelBombMinigame : PixelMinigame
             onDefused?.Invoke();
             timer.text = "OK";
             timer.color = defusedColor;
-            PixelStatusLines.Set("bomb", timer.text, timer.color);
+            PixelStatusLines.Set("bomb", timer.text, timer.color, defusedLingerSeconds + 0.1f);
             StartCoroutine(RisingMessage(position, cam, string.Format(defusedFormat, parts), defusedColor));
             yield return new WaitForSeconds(defusedLingerSeconds);
             PixelStatusLines.Clear("bomb");
