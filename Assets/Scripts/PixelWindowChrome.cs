@@ -94,7 +94,13 @@ public class PixelWindowChrome : MonoBehaviour
     }
 
     /// <summary>Anything else that must stay visible while minimized (the owner's own header buttons).</summary>
-    public void Keep(GameObject go) { if (go != null && !keep.Contains(go)) keep.Add(go); }
+    public void Keep(GameObject go)
+    {
+        if (go == null || keep.Contains(go)) return;
+        keep.Add(go);
+        // A window that starts minimized (its saved state) has already hidden everything that was not kept yet: a button the owner keeps afterwards (the X) must come back.
+        if (minimized && hidden.Remove(go)) go.SetActive(true);
+    }
 
     private static int Get(string k, int d) => PlayerPrefs.GetInt(k, d);
 
