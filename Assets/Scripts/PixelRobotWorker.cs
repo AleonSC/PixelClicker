@@ -715,7 +715,16 @@ public partial class PixelRobotWorker : MonoBehaviour
         Prim(PrimitiveType.Sphere, b, "Rim", new Vector3(0f, 0.05f, 0f), new Vector3(1.72f, 0.09f, 1.72f), accentColor);
 
         // The glass dome with a small CABIN inside: a floor, a ring console with buttons round the edge and a little alien at its station. The player can ride along in here (see PixelRobotCockpit.cs).
-        domeRenderer = GlassPrim(PrimitiveType.Sphere, b, "Dome", new Vector3(0f, CabinFloorY, 0f), new Vector3(1.16f, 0.9f, 1.16f), new Color(0.6f, 0.95f, 1f, 0.22f)).GetComponent<Renderer>();
+        // The dome is only the UPPER half of the ellipsoid (a whole sphere would hang a glass ball below the cabin floor, under the saucer, blocking the view up through the floor window).
+        GameObject domeGo = GlassPrim(PrimitiveType.Cube, b, "Dome", Vector3.zero, Vector3.one, new Color(0.6f, 0.95f, 1f, 0.22f));
+        Vector2[] domeProfile = new Vector2[17];
+        for (int i = 0; i < domeProfile.Length; i++)
+        {
+            float t = i / 16f * Mathf.PI * 0.5f;
+            domeProfile[i] = new Vector2(0.58f * Mathf.Sin(t), CabinFloorY + 0.45f * Mathf.Cos(t));
+        }
+        domeGo.GetComponent<MeshFilter>().sharedMesh = LatheMesh(domeProfile, 36);
+        domeRenderer = domeGo.GetComponent<Renderer>();
         Color steel = new Color(0.2f, 0.22f, 0.29f, 1f), deepSteel = new Color(0.1f, 0.11f, 0.15f, 1f);
         MeshPrim(b, "Cabin Floor", new[] { new Vector2(WindowRadius, CabinFloorY), new Vector2(0.52f, CabinFloorY) }, new Color(0.15f, 0.17f, 0.21f, 1f));
         MeshPrim(b, "Cabin Floor Ring", new[] { new Vector2(WindowRadius, CabinFloorY + 0.002f), new Vector2(0.31f, CabinFloorY + 0.002f) }, new Color(0.22f, 0.25f, 0.32f, 1f));

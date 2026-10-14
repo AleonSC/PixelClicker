@@ -933,3 +933,4 @@
 [2026-10-14 08:32 UTC] Woodcutting level 5 perk 'Lumber stock': Wood can be switched on in the Toggles window to spawn in every rotation (perks can now unlock guest blocks like tree nodes do).
 [2026-10-14 08:37 UTC] Ghost, meteor, black hole, bomb and evil tree now announce themselves with a message in the top status box when they start (Bomb says BOMB!); the bomb is a fancier model with an LCD screen showing the timer, and the counts stay next to each minigame.
 [2026-10-14 08:53 UTC] Landing pulse: old pixels let go from high up now also get their ripple through a fall check (fast fall then stop, ray down) in case the collision event never arrives.
+[2026-10-14 08:54 UTC] UFO dome is now only the upper half of the glass (the lower half hung a see-through ball under the saucer that showed when hovering and blocked the view up through the floor window).
