@@ -226,7 +226,7 @@ public partial class PixelSkills : MonoBehaviour
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
                                 PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
-                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.75f, fillerEndShare = 0.25f, hazardType = "HornetNest",
+                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", fillerStartShare = 0.75f, fillerEndShare = 0.25f, hazardType = "HornetNest", hazardBaseShare = 0.015f, hazardPerLevelShare = 0.001f,
                 perks = new[]
                 {
                     new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice },
@@ -388,6 +388,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (string.IsNullOrEmpty(pack.extraFillerTypes)) pack.extraFillerTypes = "Pinecone,Moss";   // the filler family
                 if (pack.fillerStartShare <= 0f && pack.fillerEndShare <= 0f) { pack.fillerStartShare = 0.75f; pack.fillerEndShare = 0.25f; }   // the fillers show up a little more (was 60% -> 10%)
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.HornetNest.ToString();
+                if (pack.hazardBaseShare <= 0f && pack.hazardPerLevelShare <= 0f) { pack.hazardBaseShare = 0.015f; pack.hazardPerLevelShare = 0.001f; }   // the Termite Hive: half as common as before (3% + 0.2%/level)
                 // Perks: the old 'Sharp axe' level 2 perk becomes the Wood Chipper unlock; level 3 is new (a saved pack keeps any text you edited).
                 System.Collections.Generic.List<Perk> woodPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
                 woodPerks.RemoveAll(pk => pk != null && pk.text != null && pk.text.StartsWith("Sharp axe"));

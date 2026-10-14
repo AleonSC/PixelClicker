@@ -759,7 +759,7 @@ public partial class PixelShop
                 // The Whetstone: a base block that takes 3 clicks. Hold it with Block Hold (right button) and every click counts for more while you hold it.
                 Block(PixelClicker.PixelType.Whetstone, "Whetstone", new Color(0.62f, 0.68f, 0.76f, 1f), 3, 2, 0.35f),
                 // The Termite Hive (enum HornetNest): a hazard - break it and termites go for your old pixels (click the pixels to save them); it pays nothing.
-                Block(PixelClicker.PixelType.HornetNest, "Termite Hive", new Color(0.85f, 0.78f, 0.5f, 1f), 5, 0, 0.05f),
+                Block(PixelClicker.PixelType.HornetNest, "Termite Hive", new Color(0.85f, 0.78f, 0.5f, 1f), 4, 0, 0.05f),
             }
         };
     }

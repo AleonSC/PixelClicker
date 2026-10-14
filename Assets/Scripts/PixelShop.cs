@@ -1326,6 +1326,18 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 32)
+        {
+            // The Termite Hive takes 4 hits to break now (was 5).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && p.rewardTiers != null)
+                        foreach (PixelClicker.PixelTier t in p.rewardTiers)
+                            if (t != null && t.type == PixelClicker.PixelType.HornetNest && t.clicksToCollect == 5) t.clicksToCollect = 4;
+            packDataVersion = Mathf.Max(packDataVersion, 32);
+            changed = true;
+        }
+
         return changed;
     }
 

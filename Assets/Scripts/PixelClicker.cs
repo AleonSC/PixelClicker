@@ -4328,6 +4328,14 @@ public partial class PixelClicker : MonoBehaviour
     [Min(0)]
     [Tooltip("The most termites (= old pixels attacked) one hive releases. 0 = the coded default (60).")]
     [SerializeField] private int termiteMax = 0;
+
+    [Min(0)]
+    [Tooltip("Right clicks that clear a Termite Hive (left clicks needed to break it are the pack's Clicks To Collect, 4). 0 = the coded default (10).")]
+    [SerializeField] private int termiteRightClicks = 0;
+
+    [Min(0)]
+    [Tooltip("What clearing a hazard with RIGHT clicks pays, in that hazard's own currency (it also drops as an old pixel). Breaking one with left clicks pays nothing. 0 = the coded default (1).")]
+    [SerializeField] private int hazardClearReward = 0;
     public float TermiteSpeed => termiteSpeed > 0f ? termiteSpeed : 3.8f;
     public float TermiteEatSeconds => termiteEatSeconds > 0f ? termiteEatSeconds : 5f;
     public int TermiteMax => termiteMax > 0 ? termiteMax : 60;
@@ -4406,14 +4414,14 @@ public partial class PixelClicker : MonoBehaviour
     {
         PixelTier tier = GetClickTier();
         if (!IsHazard(tier.type) || pixelTransform == null) return;
-        int required = NeededClicks(tier) + hitsOnCurrentPixel;
+        int required = tier.type == PixelType.HornetNest ? (termiteRightClicks > 0 ? termiteRightClicks : 10) : NeededClicks(tier) + hitsOnCurrentPixel;   // (the Termite Hive: a flat 10 right clicks)
         LastDefuseTime = Time.unscaledTime;
         defuseClicks++;
         hitPunchTimer = hitPunchDuration;
         PixelAudio.Play("click");
         StartCoroutine(DefusePopup(Mathf.Min(defuseClicks, required) + "/" + required, pixelTransform.position + Vector3.up * PixelBaseSize * 0.7f));
         if (defuseClicks < required) return;
-        FinishDefuse(tier);
+        FinishDefuse(tier, true);
     }
 
     /// <summary>A held Pesticide (PixelBlockRules): the hazard on the cube is cleared by this one click, safely (no explosion / swarm, no XP penalty, no payout).</summary>
@@ -4426,8 +4434,15 @@ public partial class PixelClicker : MonoBehaviour
         FinishDefuse(tier);
     }
 
-    private void FinishDefuse(PixelTier tier)
+    private void FinishDefuse(PixelTier tier, bool byRightClick = false)
     {
+        if (byRightClick)
+        {
+            // Worked away with right clicks: it is collected as currency and drops as an old pixel (left clicking a hazard to pieces pays nothing).
+            int idx = CurrentClickTierIndex;
+            double reward = hazardClearReward > 0 ? hazardClearReward : 1;
+            if (IsValidTier(idx)) { AddCurrency(idx, reward); if (spawnFallingCopy) SpawnFallingCopy(idx, reward); }
+        }
         defuseClicks = 0;
         hitsOnCurrentPixel = 0;
         PixelStats.Count("hazards.defused", 1);
