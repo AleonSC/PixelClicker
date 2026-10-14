@@ -49,3 +49,4 @@
 [ ] Game Database: check that every skill, perk, skill-tree node, tool and hazard has a searchable entry (name + description)
 [ ] Pixel facts: one place that holds each block's attributes and description pieces with the numbers read LIVE from the real settings (today PixelGuideTexts.Describe has many hand-typed numbers that can drift from the Inspector values); tooltip, Pixel Rotation window and Game Database already all read Describe, so they would pick it up
 [ ] Credits: add credit links to the videos the music tracks came from (a credits screen / the music selector, with each track's source link)
+[ ] Early Cube Dash: introduce minigames early with a forgiving, Cubie-introduced one-time / rare Cube Dash before the RGB pack (long timer, bonus scales with performance, no penalty); buying the RGB pack later unlocks the real one. Space it from the stake / right-click tips.
