@@ -728,6 +728,7 @@ public class PixelPauseMenu : MonoBehaviour
 
     private void Update()
     {
+        Update_PlaylistPreview();
         UpdateSlotTip();
         UpdateSlotDeleteHold();
         if (IsPaused && UpdateKeyCapture()) return;
@@ -952,6 +953,27 @@ public class PixelPauseMenu : MonoBehaviour
 
     /// <summary>Opens the Settings screen straight from the title screen (Back / Escape return to the title).</summary>
     public static void OpenSettingsFromTitle() { PixelFind.First<PixelPauseMenu>()?.OpenFromTitle(true); }
+
+    /// <summary>Opens the Settings screen straight from the title screen with the Audio section unfolded and scrolled into view (the speaker button's right click).</summary>
+    public static void OpenAudioSettingsFromTitle() { PixelFind.First<PixelPauseMenu>()?.OpenAudioFromTitle(); }
+
+    private void OpenAudioFromTitle()
+    {
+        if (IsPaused) return;
+        OpenFromTitle(true);
+        settingsFilter = "";
+        if (settingsSearchField != null) settingsSearchField.SetTextWithoutNotify("");
+        expandedSettingsSections.Add(headerAudio);
+        LayoutSettings();
+        foreach (KeyValuePair<RectTransform, string> h in settingsHeaders)
+            if (h.Value == headerAudio && h.Key != null && settingsScroll != null)
+            {
+                float top = -h.Key.anchoredPosition.y;
+                float max = Mathf.Max(0f, settingsScroll.content.sizeDelta.y - settingsListHeight);
+                settingsScroll.content.anchoredPosition = new Vector2(0f, Mathf.Clamp(top - 8f, 0f, max));
+                break;
+            }
+    }
 
     /// <summary>Opens the Save / Load window straight from the title screen.</summary>
     public static void OpenLoadFromTitle() { PixelFind.First<PixelPauseMenu>()?.OpenFromTitle(false); }
@@ -2761,6 +2783,7 @@ public class PixelPauseMenu : MonoBehaviour
                 if (a != null && !a.SetTrackEnabled(index, on)) t.SetIsOnWithoutNotify(true);   // the last ticked song stays ticked
             }, ref y);
             playlistToggles.Add(t);
+            AddPreviewButton(t, index);
         }
         PixelUIKit.UpdateScrollView(scroll, bar, y, viewHeight);
 
@@ -2776,6 +2799,46 @@ public class PixelPauseMenu : MonoBehaviour
         });
         FinishSectionPanel(playlistPanel, top + viewHeight + footer, settingsPanel);
     }
+
+    private readonly List<Image> previewButtons = new List<Image>();
+
+    /// <summary>A small play button just left of a song's tick box: plays a short snippet of it (again = stops).</summary>
+    private void AddPreviewButton(Toggle toggle, int track)
+    {
+        RectTransform row = toggle.transform.parent as RectTransform;
+        Button b = MakeButton(row, "Preview Button", "", new Vector2(tickBoxSize, tickBoxSize), tickBoxColor, rowFontSize * 0.7f);
+        RectTransform br = b.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = br.pivot = new Vector2(1f, 0.5f);
+        br.sizeDelta = new Vector2(tickBoxSize, tickBoxSize);
+        br.anchoredPosition = new Vector2(-(tickBoxSize + 10f), 0f);
+        PixelUIKit.UseArrowGlyph(b, false);   // a right-pointing triangle = play
+        b.onClick.AddListener(() => { if (PixelAudio.Instance != null) PixelAudio.Instance.PreviewTrack(track); RefreshPreviewButtons(); });
+        TMP_Text label = row.GetComponentInChildren<TMP_Text>();
+        if (label != null) label.rectTransform.offsetMax = new Vector2(-(tickBoxSize * 2f + 24f), 0f);
+        while (previewButtons.Count <= track) previewButtons.Add(null);
+        previewButtons[track] = b.GetComponent<Image>();
+    }
+
+    private void RefreshPreviewButtons()
+    {
+        int playing = PixelAudio.Instance != null ? PixelAudio.Instance.PreviewingTrack : -1;
+        for (int i = 0; i < previewButtons.Count; i++)
+            if (previewButtons[i] != null) previewButtons[i].color = i == playing ? new Color(0.25f, 0.65f, 0.4f, 1f) : tickBoxColor;
+    }
+
+    private void Update_PlaylistPreview()
+    {
+        if (playlistPanel == null) return;
+        if (!playlistPanel.activeInHierarchy)
+        {
+            if (PixelAudio.Instance != null && PixelAudio.Instance.PreviewingTrack >= 0) PixelAudio.Instance.StopPreview();   // leaving the checklist ends a snippet
+            return;
+        }
+        int now = PixelAudio.Instance != null ? PixelAudio.Instance.PreviewingTrack : -1;
+        if (now != shownPreview) { shownPreview = now; RefreshPreviewButtons(); }
+    }
+
+    private int shownPreview = -1;
 
     private void RefreshPlaylistToggles()
     {

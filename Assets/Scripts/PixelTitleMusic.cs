@@ -3,7 +3,7 @@
 //   The main menu's background music selector (created by PixelTitleScreen.Build under its foreground, showMusicPicker): a small bottom-centre box with a MUSIC caption, previous / next arrows
 //   and a drop-down listing every track (PixelAudio.MusicTrackCount / MusicTrackName / CurrentMusicTrack / SelectMusicTrack; the track names are the clips' names). It is SHOWN when the
 //   title screen opens and fades away after hideSeconds (musicPickerHideSeconds, 0 = 10) without activity (the mouse over it, a click, the list open); it fades back in while the mouse is over
-//   the spot. A speaker button at its right end mutes / unmutes the music (PixelAudio.MusicMuted, per save file, also a Settings > Audio tick box); the chosen song and the playlist are per save too. Starts the chosen track at once; the usual shuffle / order carries on after it. Hidden entirely when there are no tracks.
+//   the spot. A speaker button at its right end mutes / unmutes the music (right click opens Settings > Audio directly: PixelPauseMenu.OpenAudioSettingsFromTitle) (PixelAudio.MusicMuted, per save file, also a Settings > Audio tick box); the chosen song and the playlist are per save too. Starts the chosen track at once; the usual shuffle / order carries on after it. Hidden entirely when there are no tracks.
 // ----------------------
 using System.Collections.Generic;
 using TMPro;
@@ -85,6 +85,11 @@ public class PixelTitleMusic : MonoBehaviour
         RectTransform ir = icon.GetComponent<RectTransform>();
         ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
         ir.sizeDelta = new Vector2(Height * 0.74f, Height * 0.62f);
+        speaker.gameObject.AddComponent<SpeakerRightClick>().onRightClick = () =>
+        {
+            lastActivity = Time.unscaledTime;
+            PixelPauseMenu.OpenAudioSettingsFromTitle();   // right click: the audio settings
+        };
         speaker.onClick.AddListener(() =>
         {
             PixelAudio a = PixelAudio.Instance;
@@ -173,5 +178,15 @@ public class PixelTitleMusic : MonoBehaviour
         for (int i = 0; i < count; i++) options.Add(new TMP_Dropdown.OptionData(audio.MusicTrackName(i)));
         dropdown.AddOptions(options);
         refreshing = false;
+    }
+}
+
+/// <summary>Reports a right click on a button (a UI Button only reacts to the left one).</summary>
+public class SpeakerRightClick : MonoBehaviour, UnityEngine.EventSystems.IPointerClickHandler
+{
+    public System.Action onRightClick;
+    public void OnPointerClick(UnityEngine.EventSystems.PointerEventData eventData)
+    {
+        if (eventData.button == UnityEngine.EventSystems.PointerEventData.InputButton.Right) onRightClick?.Invoke();
     }
 }

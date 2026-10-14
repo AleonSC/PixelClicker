@@ -703,7 +703,7 @@ public class PixelAudio : MonoBehaviour
     private void ApplyMusicVolume()
     {
         if (musicSource == null) return;
-        musicSource.volume = muted || musicMuted ? 0f : musicVolume * masterVolume * musicTrackVolume;
+        musicSource.volume = muted || musicMuted || previewTrack >= 0 ? 0f : musicVolume * masterVolume * musicTrackVolume;
     }
 
     private bool musicHeldByFocus;
@@ -809,6 +809,56 @@ public class PixelAudio : MonoBehaviour
         PlayTrack(i);
     }
 
+    // ---- Playlist preview: a short snippet of a song (the custom playlist's play buttons); the music itself goes quiet meanwhile ----
+
+    private AudioSource previewSource;
+    private float previewEnds;
+    private int previewTrack = -1;
+    private const float PreviewSeconds = 8f;
+
+    /// <summary>The song whose snippet is playing (-1 = none).</summary>
+    public int PreviewingTrack => previewTrack;
+
+    /// <summary>Plays a snippet (about 8 s from a bit into the song). Calling it again for the same song stops it.</summary>
+    public void PreviewTrack(int i)
+    {
+        if (musicTracks == null || i < 0 || i >= musicTracks.Length || musicTracks[i] == null) return;
+        if (previewTrack == i) { StopPreview(); return; }
+        if (previewSource == null)
+        {
+            GameObject go = new GameObject("Music Preview");
+            go.transform.SetParent(transform, false);
+            previewSource = go.AddComponent<AudioSource>();
+            previewSource.playOnAwake = false;
+            previewSource.loop = false;
+        }
+        AudioClip clip = musicTracks[i];
+        previewSource.clip = clip;
+        previewSource.time = Mathf.Clamp(clip.length * 0.3f, 0f, Mathf.Max(0f, clip.length - PreviewSeconds - 0.5f));
+        previewSource.Play();
+        previewTrack = i;
+        previewEnds = Time.unscaledTime + PreviewSeconds;
+        ApplyMusicVolume();
+    }
+
+    /// <summary>Ends a snippet (the music comes back).</summary>
+    public void StopPreview()
+    {
+        if (previewSource != null && previewSource.isPlaying) previewSource.Stop();
+        previewTrack = -1;
+        ApplyMusicVolume();
+    }
+
+    private void UpdatePreview()
+    {
+        if (previewTrack < 0) return;
+        bool over = Time.unscaledTime >= previewEnds || previewSource == null || (!previewSource.isPlaying && Application.isFocused && !AudioListener.pause);
+        if (over) { StopPreview(); return; }
+        // Fade out over the last second.
+        float left = previewEnds - Time.unscaledTime;
+        previewSource.volume = (muted ? 0f : musicVolume * masterVolume * musicTrackVolume) * Mathf.Clamp01(left);
+    }
+
     private void PlayTrack(int i)
     {
         if (musicSource == null || musicTracks == null || i < 0 || i >= musicTracks.Length || musicTracks[i] == null || !playMusic) return;
@@ -839,6 +889,7 @@ public class PixelAudio : MonoBehaviour
     {
         if (musicSource == null) return;
         ApplyMusicVolume();
+        UpdatePreview();
 
         if (!playMusic || musicTracks == null || musicTracks.Length == 0)
         {
