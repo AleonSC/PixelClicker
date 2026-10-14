@@ -9,6 +9,7 @@ using static PixelNoise;
 /// <item>Large textures (up to 1024 px, one copy over ~36-40 world units) are drawn a few milliseconds per frame (<see cref="FillSliced"/>) so picking a style never freezes the game.</item>
 /// <item>Animated floors that used to redraw the whole texture many times a second (Radar, Circuit Flow, Watching Eyes) now draw their still picture once and only repaint the
 ///   small parts that move (<see cref="OverlayFrame"/>: radar blips, circuit sparks, blinking eyes).</item>
+/// <item>FLOOR CACHE: a finished picture is saved (gzip) to <persistentDataPath>/FloorCache and loaded at once the next time that style is picked (key = style settings + build stamp; <c>cacheFloors</c> turns it off). The Aura floors also draw on all CPU cores (<c>ShadeKiAura</c> is pure).</item>
 /// <item>The crater floors (Battle Crater, Moon Surface, Red Planet): a few big craters plus small ones and pits, lit from the upper left.</item>
 /// </list>
 /// </summary>
@@ -60,9 +61,100 @@ public partial class PixelFloor
     private void StartSlicedFill(Texture2D tex, FloorStyle s)
     {
         StopSlicedFill();
+        if (TryLoadCache(tex, s)) return;   // drawn before (this build, this style): the finished picture is there at once, no blur, no wait
         FillPreview(tex, s);   // a soft version of the finished picture shows at once; the sharp one replaces it when it is done
         fillRoutine = StartCoroutine(FillSliced(tex, s));
         PixelDebug.Info("PixelFloor: drawing '" + s.name + "' (" + tex.width + " px) over several frames.", this);
+    }
+
+    // ------------------------------------------------------------------
+    // Disk cache of the finished pictures (<persistentDataPath>/FloorCache, gzip, one file per style): a style drawn once loads at once the next time.
+    // The key is the style's settings + the view aspect (fitted pictures) + a stamp of the build (in the Editor the compiled script assembly's time, so a code change redraws).
+    // ------------------------------------------------------------------
+
+    [Header("Floor cache")]
+    [Tooltip("Keep the finished big floor pictures on disk so a style that was drawn before shows up at once (no blurry preview, no wait). Turn off to always draw them again.")]
+    [SerializeField] private bool cacheFloors = true;
+
+    private static string BuildStamp()
+    {
+#if UNITY_EDITOR
+        try { return System.IO.File.GetLastWriteTimeUtc(typeof(PixelFloor).Assembly.Location).Ticks.ToString(); } catch (System.Exception) { return "editor"; }
+#else
+        return Application.version + "|" + Application.buildGUID;
+#endif
+    }
+
+    private static string CacheFolder => System.IO.Path.Combine(Application.persistentDataPath, "FloorCache");
+
+    private static string CacheFileStem(FloorStyle s)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (char ch in s.name) sb.Append(char.IsLetterOrDigit(ch) ? ch : '_');
+        return sb.ToString();
+    }
+
+    private string CachePath(FloorStyle s, int n)
+    {
+        string key = JsonUtility.ToJson(s) + "|" + n + "|" + (s.fitToView ? viewAspect.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) : "") + "|" + BuildStamp();
+        uint h = 2166136261u;   // FNV-1a
+        foreach (char ch in key) { h ^= ch; h *= 16777619u; }
+        return System.IO.Path.Combine(CacheFolder, CacheFileStem(s) + "_" + h.ToString("x8") + ".fcz");
+    }
+
+    private bool TryLoadCache(Texture2D tex, FloorStyle s)
+    {
+        if (!cacheFloors || tex == null) return false;
+        try
+        {
+            int n = tex.width;
+            string path = CachePath(s, n);
+            if (!System.IO.File.Exists(path)) return false;
+            byte[] raw = new byte[n * n * 4];
+            using (System.IO.FileStream fs = System.IO.File.OpenRead(path))
+            using (System.IO.Compression.GZipStream gz = new System.IO.Compression.GZipStream(fs, System.IO.Compression.CompressionMode.Decompress))
+            {
+                int got = 0;
+                while (got < raw.Length) { int r = gz.Read(raw, got, raw.Length - got); if (r <= 0) break; got += r; }
+                if (got != raw.Length) return false;
+            }
+            Color32[] px = new Color32[n * n];
+            for (int i = 0; i < px.Length; i++) px[i] = new Color32(raw[i * 4], raw[i * 4 + 1], raw[i * 4 + 2], raw[i * 4 + 3]);
+            tex.SetPixels32(px);
+            tex.Apply(tex.mipmapCount > 1);
+            if (IsOverlayPattern(s.pattern)) BuildLayers(tex);
+            PixelDebug.Info("PixelFloor: '" + s.name + "' loaded from the floor cache.", this);
+            return true;
+        }
+        catch (System.Exception) { return false; }   // (a bad cache file just means the picture is drawn again)
+    }
+
+    private void SaveCache(Texture2D tex, FloorStyle s)
+    {
+        if (!cacheFloors || tex == null) return;
+        try
+        {
+            int n = tex.width;
+            Color32[] px = tex.GetPixels32();
+            byte[] raw = new byte[px.Length * 4];
+            for (int i = 0; i < px.Length; i++) { raw[i * 4] = px[i].r; raw[i * 4 + 1] = px[i].g; raw[i * 4 + 2] = px[i].b; raw[i * 4 + 3] = px[i].a; }
+            string path = CachePath(s, n), folder = CacheFolder, stem = CacheFileStem(s);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    System.IO.Directory.CreateDirectory(folder);
+                    foreach (string old in System.IO.Directory.GetFiles(folder, stem + "_*.fcz")) if (old != path) System.IO.File.Delete(old);   // (an older version of this style)
+                    string tmp = path + ".tmp";
+                    using (System.IO.FileStream fs = System.IO.File.Create(tmp))
+                    using (System.IO.Compression.GZipStream gz = new System.IO.Compression.GZipStream(fs, System.IO.Compression.CompressionLevel.Fastest)) gz.Write(raw, 0, raw.Length);
+                    if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+                    System.IO.File.Move(tmp, path);
+                }
+                catch (System.Exception) { }
+            });
+        }
+        catch (System.Exception) { }
     }
 
     private void StopSlicedFill()
@@ -130,6 +222,33 @@ public partial class PixelFloor
     private IEnumerator FillSliced(Texture2D tex, FloorStyle s)
     {
         int n = tex.width;
+#if !UNITY_WEBGL
+        // The Aura floors draw their rows on every CPU core in the background (their pixel function is pure): a second or less instead of several seconds.
+        if (s.pattern == FloorPattern.KiAura)
+        {
+            Color32[] fast = new Color32[n * n];
+            int detail = Mathf.Max(1, s.detail);
+            System.Threading.Tasks.Task job = System.Threading.Tasks.Task.Run(() =>
+                System.Threading.Tasks.Parallel.For(0, n, y =>
+                {
+                    for (int x = 0; x < n; x++)
+                    {
+                        Color c = ShadeKiAura(s, (x + 0.5f) / n, (y + 0.5f) / n, x, y, detail);
+                        c.a = 1f;
+                        fast[y * n + x] = c;
+                    }
+                }));
+            while (!job.IsCompleted) { yield return null; if (tex == null) yield break; }
+            if (!job.IsFaulted)
+            {
+                tex.SetPixels32(fast);
+                tex.Apply(tex.mipmapCount > 1);
+                fillRoutine = null;
+                SaveCache(tex, s);
+                yield break;
+            }
+        }
+#endif
         Color[] px = new Color[n * n];
         int cells = Mathf.Max(1, s.cells);
         bool overlay = IsOverlayPattern(s.pattern);
@@ -155,6 +274,7 @@ public partial class PixelFloor
         tex.SetPixels(px);
         tex.Apply(tex.mipmapCount > 1);
         fillRoutine = null;
+        SaveCache(tex, s);
         PixelDebug.Info("PixelFloor: finished drawing '" + s.name + "' in " + (watch.ElapsedMilliseconds / 1000f).ToString("0.0") + " s of work.", this);
         if (overlay) BuildLayers(tex);
     }

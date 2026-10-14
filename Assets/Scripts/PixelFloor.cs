@@ -1303,6 +1303,21 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         return Color.Lerp(c, crossColor, cross * 0.8f);
     }
 
+    /// <summary>The Aura floors' pixel. PURE (reads only its arguments and the style, no static state), so the rows can be drawn on several threads at once (PixelFloorLayers.FillSliced).</summary>
+    private static Color ShadeKiAura(FloorStyle s, float u, float v, int x, int y, int D)
+    {
+        // Tall streaks (stretched noise) that scroll upward like flames; the lattices are scaled up so the streaks keep their width on a big texture.
+        float warp = Fbm(u, v, 3 * D, 3, s.seed) * 0.15f;
+        float flame = Fbm(u + warp, v, 10 * D, 2 * D, 3, s.seed + 1);
+        float flicker = Fbm(u, v, 4 * D, 4 * D, 3, s.seed + 2);
+        float k = Mathf.Clamp01((flame * 0.75f + flicker * 0.35f - 0.35f) * 2f);
+        k = k * k;
+        Color c = Color.Lerp(s.colorA, s.colorB, Mathf.Clamp01(k * 1.6f));
+        c = Color.Lerp(c, s.colorC, Mathf.Clamp01(k * 2.2f - 1.1f));
+        if (Hash(x, y, s.seed + 9) > 0.998f) c = s.colorC;            // sparks
+        return c;
+    }
+
     private static Color Shade(FloorStyle s, float u, float v, int x, int y, int n, int cells)
     {
         switch (s.pattern)
@@ -1674,19 +1689,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             }
 
             case FloorPattern.KiAura:
-            {
-                // Tall streaks (stretched noise) that scroll upward like flames; the lattices are scaled up so the streaks keep their width on a big texture.
-                int D = shadeDetail;
-                float warp = Fbm(u, v, 3 * D, 3, s.seed) * 0.15f;
-                float flame = Fbm(u + warp, v, 10 * D, 2 * D, 3, s.seed + 1);
-                float flicker = Fbm(u, v, 4 * D, 4 * D, 3, s.seed + 2);
-                float k = Mathf.Clamp01((flame * 0.75f + flicker * 0.35f - 0.35f) * 2f);
-                k = k * k;
-                Color c = Color.Lerp(s.colorA, s.colorB, Mathf.Clamp01(k * 1.6f));
-                c = Color.Lerp(c, s.colorC, Mathf.Clamp01(k * 2.2f - 1.1f));
-                if (Hash(x, y, s.seed + 9) > 0.998f) c = s.colorC;            // sparks
-                return c;
-            }
+                return ShadeKiAura(s, u, v, x, y, shadeDetail);
             case FloorPattern.Craters:
                 return ShadeCraterField(s, u, v, x, y, n);
             case FloorPattern.GravityRoom:

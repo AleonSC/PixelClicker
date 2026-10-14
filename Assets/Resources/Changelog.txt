@@ -962,3 +962,4 @@
 [2026-10-14 11:53 UTC] Dev tools: removed the Skip intro button and the Show Dev Tools button (with the glowing docked button itself).
 [2026-10-14 11:53 UTC] Dev tools: the unlock button is now called Unlock All and also unlocks every ordinary pixel type and gives every skill its maximum XP.
 [2026-10-14 11:54 UTC] Renamed the Infinity Stones to Prime Cubes (Space Cube, Mind Cube, Reality Cube, Power Cube, Time Cube, Soul Cube), the Gauntlet to Prime Gauntlet and the Cubelette to Prime Cubelette, in every popup, tip, window and the Collection Log (saved scenes get the new names too).
+[2026-10-14 11:56 UTC] Big floors no longer show a blurry zoomed-in preview for seconds: finished pictures are cached on disk and load at once, and the Aura floors draw on all CPU cores the first time.
