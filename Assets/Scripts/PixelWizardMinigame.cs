@@ -30,6 +30,27 @@ public class PixelWizardMinigame : PixelVisitorMinigame
         consumables != null && clicker != null && !consumables.IsDevice(item) && !consumables.ItemCraftOnly(item)
         && (consumables.ItemOwned(item) > 0 || clicker.IsUnlocked(consumables.ItemRequiredType(item)));
 
+    // Once all six Infinity Stones are held the Wizard also offers the Gauntlet (first in the list, with a second line of dialogue).
+    private int GauntletItem()
+    {
+        if (consumables == null) return -1;
+        for (int i = 0; i < consumables.ItemCount; i++)
+            if (consumables.IsDevice(i) && consumables.DeviceKindOf(i) == PixelConsumables.DeviceKind.Gauntlet) return i;
+        return -1;
+    }
+
+    protected override void ModifyWares(System.Collections.Generic.List<int> wares)
+    {
+        int g = GauntletItem();
+        if (!PixelInfinity.ShouldOfferGauntlet(clicker, consumables, g)) return;
+        wares.Insert(0, g);
+        AsideText = PixelInfinity.WizardAside;
+    }
+
+    protected override bool Highlighted(int item) => item >= 0 && item == GauntletItem();
+
+    protected override int StockFor(int item) => Highlighted(item) ? 1 : base.StockFor(item);
+
     protected override string DefaultName => "Wizard";
     protected override string DefaultGreeting => "Ah, a customer! I am the Wizard, brewer of fine potions. For you, a mere {0}% off every bottle. Shall we deal?";
     protected override string DefaultWaresTitle => "Wizard's Potions";

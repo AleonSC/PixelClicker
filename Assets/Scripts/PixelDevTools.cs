@@ -721,9 +721,9 @@ public class PixelDevTools : MonoBehaviour
     private void GiveGodCube()
     {
         if (clicker == null) return;
-        foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.GodSlifer, PixelClicker.PixelType.GodRa, PixelClicker.PixelType.GodObelisk })
+        for (int ti = (int)PixelClicker.PixelType.GodSlifer; ti <= (int)PixelClicker.PixelType.StoneSoul; ti++)   // the Gods, then the six Infinity Stones
         {
-            int index = clicker.IndexOf(t);
+            int index = clicker.IndexOf((PixelClicker.PixelType)ti);
             if (index < 0 || clicker.Tiers[index].count >= 1d) continue;
             clicker.AddCurrency(index, 1d);
             PixelGodFind.Play(index, clicker.LiveWorldPosition);
@@ -737,8 +737,7 @@ public class PixelDevTools : MonoBehaviour
     private void PlayGodShow()
     {
         if (clicker == null) return;
-        PixelClicker.PixelType[] gods = { PixelClicker.PixelType.GodSlifer, PixelClicker.PixelType.GodRa, PixelClicker.PixelType.GodObelisk };
-        int index = clicker.IndexOf(gods[godPreview % 3]);
+        int index = clicker.IndexOf((PixelClicker.PixelType)((int)PixelClicker.PixelType.GodSlifer + godPreview % 10));   // 3 Gods, 6 stones, the Cubelette
         godPreview++;
         if (index >= 0) PixelGodFind.Play(index, clicker.LiveWorldPosition);
     }

@@ -147,6 +147,13 @@ public partial class PixelClicker : MonoBehaviour
         GodSlifer = 82,   // the three Egyptian God Cubes (PixelGodFind.cs): the rarest drops in the game, only one of each can be held
         GodRa = 83,
         GodObelisk = 84,
+        StoneSpace = 85,  // the six Infinity Stones (PixelGodFind.cs, same one-of-each rules as the God Cubes) ...
+        StoneMind = 86,
+        StoneReality = 87,
+        StonePower = 88,
+        StoneTime = 89,
+        StoneSoul = 90,
+        InfinityCubelette = 91,   // ... and what the Infinity Gauntlet makes of all six (PixelInfinity.cs): never drops
         Pesticide = 80,   // Woodcutting's base block that can be held (Block Hold): while it is held a left click clears a Hornet Nest at once (PixelBlockRules HoldRule.clearsHazard)
         Acorn = 79,       // Woodcutting's base block: acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules SpecialRule boost)
         Whetstone = 78,   // Woodcutting's base block that can be held (Block Hold): while it is held every manual click is followed by a rapid burst of extra clicks (PixelBlockRules HoldRule.extraClicks)
@@ -182,7 +189,10 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
 
     /// <summary>Is this one of the three Egyptian God Cubes (Slifer, Ra, Obelisk): the rarest drops of all, only one of each can ever be held?</summary>
-    public static bool IsGodCube(PixelType type) => type == PixelType.GodSlifer || type == PixelType.GodRa || type == PixelType.GodObelisk;
+    public static bool IsGodCube(PixelType type) => type == PixelType.GodSlifer || type == PixelType.GodRa || type == PixelType.GodObelisk || IsInfinityStone(type) || type == PixelType.InfinityCubelette;   // (the Infinity Stones and the Cubelette follow the same one-of-each rules and get a show of their own)
+
+    /// <summary>One of the six Infinity Stones (Space, Mind, Reality, Power, Time, Soul).</summary>
+    public static bool IsInfinityStone(PixelType type) => type >= PixelType.StoneSpace && type <= PixelType.StoneSoul;
 
     /// <summary>A Dragon Cube or a God Cube: the rare collectible drops kept out of potions, crafting, pets, achievements and the Value upgrades.</summary>
     public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type);
@@ -1191,6 +1201,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelTreasureMap>() == null) gameObject.AddComponent<PixelTreasureMap>();   // Fishing: the treasure map from a message in a bottle
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelGodFind>() == null) gameObject.AddComponent<PixelGodFind>();   // the God Cubes' shows
+        if (PixelFind.First<PixelInfinity>() == null) gameObject.AddComponent<PixelInfinity>();   // the Infinity Stones' Gauntlet window
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)
@@ -1941,6 +1952,20 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 59;
         }
 
+        if (looksVersion < 60)
+        {
+            // The six Infinity Stones and the Infinity Cubelette got their looks.
+            System.Collections.Generic.List<PixelLook> list60 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults60 = PixelLooks.CreateDefaults();
+            for (int t = (int)PixelType.StoneSpace; t <= (int)PixelType.InfinityCubelette; t++)
+            {
+                PixelLook def = PixelLooks.Find(defaults60, (PixelType)t);
+                if (def != null && PixelLooks.Find(list60.ToArray(), (PixelType)t) == null) list60.Add(def);
+            }
+            looks = list60.ToArray();
+            looksVersion = 60;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2034,6 +2059,14 @@ public partial class PixelClicker : MonoBehaviour
         Add(PixelType.GodSlifer, "Slifer the Sky Dragon", new Color(0.92f, 0.12f, 0.1f, 1f), 1.6f);
         Add(PixelType.GodRa, "Ra the Winged Dragon", new Color(1f, 0.82f, 0.15f, 1f), 2.2f);
         Add(PixelType.GodObelisk, "Obelisk the Tormentor", new Color(0.2f, 0.38f, 0.95f, 1f), 1.4f);
+        // The six Infinity Stones drop like the God Cubes (same weight); the Cubelette is only ever made with the Gauntlet (weight 0 = never rolled).
+        for (int i = 0; i < 6; i++) Add(PixelType.StoneSpace + i, PixelInfinity.StoneName(i), PixelInfinity.StoneColor(i), 1.5f);
+        if (IndexOf(PixelType.InfinityCubelette) < 0)
+            EnsureTier(new PixelTier
+            {
+                type = PixelType.InfinityCubelette, displayName = "Infinity Cubelette", color = new Color(1f, 0.9f, 0.55f, 1f), amountPerClick = 1, spawnWeight = 0f,
+                rareDrop = true, glow = true, glowIntensity = 2.2f, spawnSwitch = SpawnSwitch.AlwaysOn, unlockMode = TierUnlockMode.ShopOnly,
+            });
     }
 
     private void Start()
@@ -2400,10 +2433,21 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>The first time each Dragon Cube turns up: a log line (and a tip the very first time), plus a note when all seven are held.</summary>
     private void AnnounceDragonCube(int tierIndex)
     {
+        if (IsInfinityStone(tiers[tierIndex].type))
+        {
+            PixelHints.Announce("You found the " + tiers[tierIndex].displayName + "! Only one of each Infinity Stone can exist.");
+            PixelHints.Trigger("stone_first");
+            return;
+        }
         if (IsGodCube(tiers[tierIndex].type))
         {
             PixelHints.Announce("You found " + tiers[tierIndex].displayName + "! Only one of each God Cube can exist.");
             PixelHints.Trigger("god_first");
+            return;
+        }
+        if (tiers[tierIndex].type == PixelType.InfinityCubelette)
+        {
+            PixelHints.Announce("You forged the Infinity Cubelette!");
             return;
         }
         PixelHints.Announce("You found a " + tiers[tierIndex].displayName + "!");

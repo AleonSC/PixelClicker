@@ -212,6 +212,15 @@ public static class PixelGuideTexts
                 return "One of the three Egyptian God Cubes: Ra the Winged Dragon, a blazing golden cube wrapped in a sun's corona. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
             case PixelClicker.PixelType.GodObelisk:
                 return "One of the three Egyptian God Cubes: Obelisk the Tormentor, a deep blue stone cube that sheds dust. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
+            case PixelClicker.PixelType.StoneSpace:
+            case PixelClicker.PixelType.StoneMind:
+            case PixelClicker.PixelType.StoneReality:
+            case PixelClicker.PixelType.StonePower:
+            case PixelClicker.PixelType.StoneTime:
+            case PixelClicker.PixelType.StoneSoul:
+                return "One of the six Infinity Stones, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.";
+            case PixelClicker.PixelType.InfinityCubelette:
+                return "Forged with the Infinity Gauntlet from all six Infinity Stones. It never drops and only one can exist.";
             default:
                 return "A pixel with no special effects.";
         }

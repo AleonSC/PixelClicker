@@ -115,6 +115,8 @@ public class PixelConsumables : MonoBehaviour
         WoodChipper = 15,
         /// <summary>Placed, permanent, one at a time: a wide glass funnel under the clicker cube that catches falling old pixels and carries them down a tube to an output on the floor you click (PixelFunnel). A conveyor belt opening in front of the output latches on.</summary>
         Funnel = 16,
+        /// <summary>Not placed: right-click in the inventory to open the Gauntlet window (PixelInfinity) and set the six Infinity Stones in a golden cube to forge the Infinity Cubelette. Sold only by the Wizard once all six stones are held.</summary>
+        Gauntlet = 17,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -814,6 +816,25 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultGauntlet()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Gauntlet,
+            displayName = "Infinity Gauntlet",
+            description = "Right-click to use. A golden cube with a socket on every face: set the six Infinity Stones in it and forge the Infinity Cubelette. The Gauntlet and the stones are used up. You can only hold one.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 2000000 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Black, amount = 1000000 },
+            },
+            maxHeld = 1,
+            vendorOnly = true,
+            color = new Color(1f, 0.82f, 0.22f, 1f),
+        };
+    }
+
     private static Device CreateDefaultPetTreat()
     {
         return new Device
@@ -984,6 +1005,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.BaitBucket, CreateDefaultBaitBucket),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.WoodChipper, CreateDefaultWoodChipper),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Funnel, CreateDefaultFunnel),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Gauntlet, CreateDefaultGauntlet),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1777,6 +1799,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.GhostBait:
                 case DeviceKind.PetTreat:
                 case DeviceKind.BaitBucket:
+                case DeviceKind.Gauntlet:
                     root = BuildItemModel(kind, d);
                     break;
             }
@@ -1847,6 +1870,21 @@ public class PixelConsumables : MonoBehaviour
             tail.transform.localScale = new Vector3(0.4f, 0.12f, 0.4f);
             tail.transform.localPosition = new Vector3(0f, 0.12f, 0f);
         }
+        else if (kind == DeviceKind.Gauntlet)
+        {
+            // A golden cube with a gem socket on each of its faces (the six stone colours).
+            GameObject cube = MakePrimitive(PrimitiveType.Cube, "Gold Cube", root.transform, main, false);
+            cube.transform.localScale = Vector3.one * 0.8f;
+            cube.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            Vector3[] dirs = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+            for (int i = 0; i < 6; i++)
+            {
+                GameObject gem = MakePrimitive(PrimitiveType.Cube, "Socket", root.transform, PixelInfinity.StoneColor(i), false);
+                gem.transform.localScale = Vector3.one * 0.26f;
+                gem.transform.localPosition = new Vector3(0f, 0.5f, 0f) + dirs[i] * 0.42f;
+                gem.transform.localRotation = Quaternion.Euler(45f, 45f, 0f);
+            }
+        }
         else if (kind == DeviceKind.BaitBucket)
         {
             GameObject body = MakePrimitive(PrimitiveType.Cylinder, "Bucket", root.transform, main, false);
@@ -1914,7 +1952,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return false;
         DeviceKind k = devices[item - potions.Length].kind;
-        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket;
+        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet;
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
@@ -1972,6 +2010,8 @@ public class PixelConsumables : MonoBehaviour
                 PixelHints.Announce("Your pets are hyper!");
                 return true;
             }
+            case DeviceKind.Gauntlet:
+                return PixelInfinity.Open(this, item);   // the window uses up the Gauntlet when the Cubelette is forged
             case DeviceKind.BaitBucket:
             {
                 if (!PixelBaitBucket.TryPlace(out string bucketMessage)) { if (!string.IsNullOrEmpty(bucketMessage)) PixelHints.Announce(bucketMessage); return false; }

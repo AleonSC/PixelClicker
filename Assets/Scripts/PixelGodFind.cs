@@ -33,6 +33,8 @@ public class PixelGodFind : MonoBehaviour
     [SerializeField] private float cubeSize = 520f;
     [Tooltip("Heading text. {0} = the god's name.")]
     [SerializeField] private string foundFormat = "You found {0}!";
+    [Tooltip("Heading text for the Infinity Cubelette (made with the Gauntlet). {0} = its name.")]
+    [SerializeField] private string forgedFormat = "You forged the {0}!";
     [Tooltip("Text under the heading while the cube goes into the backpack.")]
     [SerializeField] private string stashedText = "Only one of each exists. It's yours now";
     [Tooltip("Size of the backpack icon (canvas units).")]
@@ -40,7 +42,7 @@ public class PixelGodFind : MonoBehaviour
     [Tooltip("Distance of the backpack icon from the right edge and the bottom bar (canvas units).")]
     [SerializeField] private Vector2 backpackMargin = new Vector2(40f, 40f);
 
-    private enum God { Slifer, Ra, Obelisk }
+    private enum God { Slifer, Ra, Obelisk, Stone, Cubelette }
     private struct Request { public int tier; public Vector2 screenPos; }
     private struct Bit { public RectTransform rect; public Image image; public Vector2 pos, vel; public float life, maxLife, size, spin, gravity; public bool alive; }
     private struct Ring { public RectTransform rect; public Image image; public Vector2 pos; public float age, life, from, to; public Color color; public bool alive; }
@@ -69,6 +71,7 @@ public class PixelGodFind : MonoBehaviour
     // show state
     private float flash, shake, stormAlpha;
     private bool[] fired;
+    private int stoneIdx;
     private Vector2 shakeOffset;
     private readonly List<Vector2[]> cracks = new List<Vector2[]>();
     private Vector2 impactPoint;
@@ -97,6 +100,16 @@ public class PixelGodFind : MonoBehaviour
     {
         if (instance == null || instance.disableShow) return;
         instance.Enqueue(tierIndex, worldPosition);
+    }
+
+    /// <summary>Starts (or queues) the show of a tier at a screen position (the Gauntlet's forge: the Cubelette is not collected from the cube).</summary>
+    public static void PlayAtScreen(int tierIndex, Vector2 screenPosition)
+    {
+        if (instance == null || instance.disableShow) return;
+        if (instance.clicker == null) instance.clicker = PixelFind.First<PixelClicker>();
+        if (instance.clicker == null || !instance.clicker.IsValidTierIndex(tierIndex)) return;
+        instance.queue.Enqueue(new Request { tier = tierIndex, screenPos = screenPosition });
+        if (!instance.playing) instance.StartCoroutine(instance.Show());
     }
 
     private void Enqueue(int tierIndex, Vector3 worldPosition)
@@ -131,8 +144,10 @@ public class PixelGodFind : MonoBehaviour
         yield return null;   // the canvas scaler sets the canvas size on the first frame
 
         PixelClicker.PixelType type = clicker.Tiers[req.tier].type;
-        God god = type == PixelClicker.PixelType.GodSlifer ? God.Slifer : type == PixelClicker.PixelType.GodRa ? God.Ra : God.Obelisk;
-        float mainT = god == God.Slifer ? 5.9f : god == God.Ra ? 5.2f : 5.5f;
+        stoneIdx = PixelClicker.IsInfinityStone(type) ? (int)type - (int)PixelClicker.PixelType.StoneSpace : -1;
+        God god = type == PixelClicker.PixelType.GodSlifer ? God.Slifer : type == PixelClicker.PixelType.GodRa ? God.Ra : type == PixelClicker.PixelType.GodObelisk ? God.Obelisk
+                : type == PixelClicker.PixelType.InfinityCubelette ? God.Cubelette : God.Stone;
+        float mainT = god == God.Slifer ? 5.9f : god == God.Ra ? 5.2f : god == God.Obelisk ? 5.5f : god == God.Stone ? 5.0f : 6.4f;
         const float stashT = 1.0f, fadeT = 0.5f;
         float total = mainT + stashT;
 
@@ -143,11 +158,17 @@ public class PixelGodFind : MonoBehaviour
         Vector2 pack = new Vector2(size.x - backpackMargin.x - backpackSize * 0.5f, bar + backpackMargin.y + backpackSize * 0.5f);
         backpack.rectTransform.anchoredPosition = pack;
 
-        Color tint = god == God.Slifer ? new Color(1f, 0.35f, 0.25f, 1f) : god == God.Ra ? new Color(1f, 0.85f, 0.35f, 1f) : new Color(0.5f, 0.78f, 1f, 1f);
-        Color dimTint = god == God.Slifer ? new Color(0.09f, 0f, 0.02f, 1f) : god == God.Ra ? new Color(0.07f, 0.03f, 0f, 1f) : new Color(0f, 0.02f, 0.09f, 1f);
-        title.text = string.Format(foundFormat, clicker.Tiers[req.tier].displayName);
+        Color tint, dimTint;
+        if (god == God.Stone) { tint = Color.Lerp(PixelInfinity.StoneColor(stoneIdx), Color.white, 0.25f); dimTint = PixelInfinity.StoneColor(stoneIdx) * 0.12f; dimTint.a = 1f; }
+        else if (god == God.Cubelette) { tint = new Color(1f, 0.93f, 0.6f, 1f); dimTint = new Color(0.06f, 0.05f, 0.02f, 1f); }
+        else
+        {
+            tint = god == God.Slifer ? new Color(1f, 0.35f, 0.25f, 1f) : god == God.Ra ? new Color(1f, 0.85f, 0.35f, 1f) : new Color(0.5f, 0.78f, 1f, 1f);
+            dimTint = god == God.Slifer ? new Color(0.09f, 0f, 0.02f, 1f) : god == God.Ra ? new Color(0.07f, 0.03f, 0f, 1f) : new Color(0f, 0.02f, 0.09f, 1f);
+        }
+        title.text = string.Format(god == God.Cubelette ? forgedFormat : foundFormat, clicker.Tiers[req.tier].displayName);
         title.color = tint; subtitle.text = "";
-        PixelAudio.Play(god == God.Slifer ? "god_slifer" : god == God.Ra ? "god_ra" : "god_obelisk");
+        PixelAudio.Play(god == God.Slifer ? "god_slifer" : god == God.Ra ? "god_ra" : god == God.Obelisk ? "god_obelisk" : god == God.Cubelette ? "stone_cubelette" : PixelInfinity.StoneSoundId(stoneIdx));
 
         PixelAudio.SetMusicCue("God find", true);   // a music cue (if it has music) takes over for the show
         flash = 0f; shake = 0f; stormAlpha = 0f; fired = new bool[10]; cracks.Clear(); impactTime = -99f;
@@ -180,6 +201,8 @@ public class PixelGodFind : MonoBehaviour
                 darkAmount = Smooth(t / 0.9f);
                 if (god == God.Slifer) DrawSlifer(t, dt, size, centre, start, ref cubePos, ref cubeScale, ref euler);
                 else if (god == God.Ra) DrawRa(t, dt, size, centre, start, ref cubePos, ref cubeScale, ref euler);
+                else if (god == God.Stone) DrawStone(stoneIdx, t, dt, size, centre, start, ref cubePos, ref cubeScale, ref euler);
+                else if (god == God.Cubelette) DrawCubelette(t, dt, size, centre, start, ref cubePos, ref cubeScale, ref euler);
                 else DrawObelisk(t, dt, size, centre, start, ref cubePos, ref cubeScale, ref euler);
                 lastPos = cubePos; lastScale = cubeScale;
             }
@@ -630,6 +653,210 @@ public class PixelGodFind : MonoBehaviour
             rings[i].rect.sizeDelta = new Vector2(s, s);
             Color c = rings[i].color; c.a *= 1f - k; rings[i].image.color = c;
         }
+    }
+
+    // ------------------------------------------------------------------
+    // INFINITY STONES: one shared timeline (cube arrives, a signature effect builds, a climax at 3.2 s), a different effect each
+    // ------------------------------------------------------------------
+
+    private void DrawStone(int stone, float t, float dt, Vector2 size, Vector2 centre, Vector2 start, ref Vector2 cubePos, ref float cubeScale, ref Vector3 euler)
+    {
+        Color c = PixelInfinity.StoneColor(stone);
+        Color bright = Color.Lerp(c, Color.white, 0.6f);
+        float arrive = EaseOut((t - 0.3f) / 1.4f);
+        cubePos = Vector2.Lerp(start, centre, arrive);
+        float pop = t > 3.2f && t < 3.4f ? 1.18f : 1f;
+        cubeScale = Mathf.Lerp(cubeSize * 0.12f, cubeSize * 0.7f, arrive) * pop;
+        euler = new Vector3(20f + 12f * Mathf.Sin(t * 1.7f), t * 80f * (0.6f + arrive), 0f);
+
+        // The glow behind the cube swells with the build-up.
+        float build = Mathf.Clamp01(t / 3.2f);
+        float g = Mathf.Lerp(200f, 900f, build * build) * (1f + 0.05f * Mathf.Sin(t * 14f));
+        Put(glowBehind, centre, new Vector2(g, g), 0f, new Color(c.r, c.g, c.b, 0.5f * Smooth(t / 0.6f) * (1f - Smooth((t - 4.2f) / 0.8f))));
+
+        switch (stone)
+        {
+            case 0: // SPACE: a tesseract of two turning squares joined at the corners, a swirl of stars pulled in, rings that shrink to the cube.
+            {
+                float r = Mathf.Lerp(140f, 330f, arrive) * (1f - 0.35f * Smooth((t - 3.0f) / 0.4f));
+                for (int sq = 0; sq < 2; sq++)
+                {
+                    float rad = r * (sq == 0 ? 1f : 0.62f), rot = t * (sq == 0 ? 55f : -85f);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float a0 = (rot + i * 90f) * Mathf.Deg2Rad, a1 = (rot + (i + 1) * 90f) * Mathf.Deg2Rad;
+                        Line(centre + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * rad * 1.41f, centre + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * rad * 1.41f, 6f, new Color(bright.r, bright.g, bright.b, 0.9f * arrive));
+                    }
+                }
+                for (int i = 0; i < 4; i++)
+                {
+                    float a = (t * 55f + i * 90f) * Mathf.Deg2Rad, b = (-t * 85f + i * 90f) * Mathf.Deg2Rad;
+                    Line(centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r * 1.41f, centre + new Vector2(Mathf.Cos(b), Mathf.Sin(b)) * r * 0.62f * 1.41f, 4f, new Color(c.r, c.g, c.b, 0.7f * arrive));
+                }
+                if (t < 3.2f && Random.value < dt * 70f)
+                {
+                    float a = Random.value * 6.283f; Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    SpawnBit(softSprite, centre + dir * 620f, -dir * 380f + new Vector2(-dir.y, dir.x) * 170f, 1.5f, Random.Range(10f, 26f), Color.Lerp(c, Color.white, Random.value * 0.7f), 0f);
+                }
+                if (t < 3.0f && Random.value < dt * 2.5f) SpawnRing(centre, 1000f, 240f, 1.2f, new Color(c.r, c.g, c.b, 0.8f));
+                break;
+            }
+            case 1: // MIND: thought-bolts crackle in from the screen's edges, rings pulse out in time, a bright scalar sparkle.
+            {
+                if (t > 0.6f && t < 3.2f && Random.value < dt * 9f)
+                {
+                    System.Random r = new System.Random(Random.Range(0, 99999));
+                    float a = Random.value * 6.283f;
+                    Bolt(centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * size.x * 0.55f, centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 160f, 9, 40f, 7f, new Color(1f, 1f, 0.85f, 1f), new Color(c.r, c.g, c.b, 0.5f), r);
+                }
+                float beat = Mathf.Repeat(t * 1.8f, 1f);
+                if (beat < dt * 1.8f && t > 0.4f && t < 3.4f) SpawnRing(centre, 200f, 900f, 1.0f, new Color(c.r, c.g, c.b, 0.7f));
+                if (t > 0.8f && Random.value < dt * 30f) SpawnBit(softSprite, centre + Random.insideUnitCircle * 220f, Random.insideUnitCircle * 60f, 0.9f, 22f, bright, 0f);
+                break;
+            }
+            case 2: // REALITY: shapes tear loose and tumble, the screen warps (shaking harder), red and white flickers, a wobbling ring of squares.
+            {
+                shake = Mathf.Max(shake, 2f + 8f * build);
+                if (Random.value < dt * 45f && t < 3.4f)
+                {
+                    Vector2 p = new Vector2(Random.Range(0.1f, 0.9f) * size.x, Random.Range(0.1f, 0.9f) * size.y);
+                    SpawnBit(squareSprite, p, (centre - p) * 0.25f + Random.insideUnitCircle * 80f, Random.Range(0.8f, 1.6f), Random.Range(14f, 60f), Random.value < 0.3f ? Color.white : c, 0f);
+                }
+                if (Random.value < dt * 3f && t < 3.2f) flash = Mathf.Max(flash, 0.35f);
+                for (int i = 0; i < 12; i++)
+                {
+                    float a = i / 12f * 6.283f + t * 1.4f; float rad = 300f + 40f * Mathf.Sin(t * 5f + i * 1.7f);
+                    Put(feathers[i], centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * rad, new Vector2(40f, 40f), a * Mathf.Rad2Deg + t * 90f, new Color(c.r, c.g, c.b, 0.85f * arrive));
+                    feathers[i].sprite = squareSprite;
+                }
+                break;
+            }
+            case 3: // POWER: energy converges along rays, the shaking grows, then everything detonates.
+            {
+                shake = Mathf.Max(shake, 2f + 16f * build * build);
+                if (t < 3.2f)
+                {
+                    int rays = 14;
+                    for (int i = 0; i < rays; i++)
+                    {
+                        float a = i / (float)rays * 6.283f + t * 0.5f;
+                        Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                        float head = Mathf.Repeat(t * 1.5f + i * 0.37f, 1f);
+                        Line(centre + dir * Mathf.Lerp(800f, 150f, head), centre + dir * Mathf.Lerp(800f, 150f, Mathf.Min(1f, head + 0.12f)), 5f + 8f * build, new Color(bright.r, bright.g, bright.b, 0.4f + 0.5f * build));
+                    }
+                }
+                break;
+            }
+            case 4: // TIME: a clock face whose hands run backwards, then forwards, with ticks, and sand flowing the wrong way.
+            {
+                float rad = Mathf.Lerp(200f, 380f, arrive);
+                for (int i = 0; i < 24; i++)
+                {
+                    float a = i / 24f * 6.283f;
+                    Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    float len = i % 6 == 0 ? 36f : 18f;
+                    Line(centre + d * rad, centre + d * (rad - len), i % 6 == 0 ? 8f : 4f, new Color(bright.r, bright.g, bright.b, 0.85f * arrive));
+                }
+                float rev = t < 2.6f ? -1f : 1f;
+                float minuteDeg = t < 2.6f ? -t * 130f : -2.6f * 130f + (t - 2.6f) * 520f;   // backwards first, then a fast forward
+                float am = Mathf.Deg2Rad * (90f + minuteDeg);
+                float ah = Mathf.Deg2Rad * (90f + minuteDeg / 12f);
+                Line(centre, centre + new Vector2(Mathf.Cos(am), Mathf.Sin(am)) * rad * 0.85f, 8f, new Color(1f, 1f, 1f, 0.95f * arrive));
+                Line(centre, centre + new Vector2(Mathf.Cos(ah), Mathf.Sin(ah)) * rad * 0.55f, 12f, new Color(bright.r, bright.g, bright.b, 0.95f * arrive));
+                if (Random.value < dt * 50f && t < 3.4f)
+                {
+                    float a = Random.value * 6.283f; Vector2 d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    SpawnBit(softSprite, centre + d * Random.Range(rad * 0.4f, rad * 1.3f), -d * 90f * rev * -1f, 1.1f, Random.Range(8f, 18f), bright, 0f);
+                }
+                if (Random.value < dt * 2f && t < 2.6f) SpawnRing(centre, 120f, 700f, 1.2f, new Color(c.r, c.g, c.b, 0.6f));
+                break;
+            }
+            default: // SOUL: orange wisps rise from the bottom of the screen, two ribbons of light weave across, a halo of spirits circles the cube.
+            {
+                if (Random.value < dt * 55f && t < 3.6f)
+                    SpawnBit(softSprite, new Vector2(Random.value * size.x, -20f), new Vector2(Random.Range(-30f, 30f), Random.Range(240f, 460f)), Random.Range(1.4f, 2.4f), Random.Range(18f, 44f), new Color(c.r, c.g, c.b, 0.8f), 0f);
+                for (int rb = 0; rb < 2; rb++)
+                {
+                    Vector2 prev = Vector2.zero;
+                    for (int i = 0; i <= 22; i++)
+                    {
+                        float u = i / 22f;
+                        Vector2 p = new Vector2(u * size.x, centre.y + Mathf.Sin(u * 7f + t * 2.2f + rb * 3.1f) * 90f * Smooth(t / 1.0f) + (rb == 0 ? 60f : -60f));
+                        if (i > 0) Line(prev, p, rb == 0 ? 10f : 6f, new Color(bright.r, bright.g, bright.b, 0.55f * Smooth(t / 0.8f) * (1f - Smooth((t - 3.8f) / 0.8f))));
+                        prev = p;
+                    }
+                }
+                for (int i = 0; i < 6; i++)
+                {
+                    float a = t * 1.6f + i / 6f * 6.283f;
+                    Put(segs[i], centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a) * 0.45f) * 330f, new Vector2(46f, 46f), 0f, new Color(1f, 0.9f, 0.7f, 0.8f * arrive));
+                }
+                break;
+            }
+        }
+
+        // The climax, the same shape for every stone: a flash, a burst of bits and two shock rings.
+        if (!fired[0] && t >= 3.2f)
+        {
+            fired[0] = true; flash = 1f; shake = Mathf.Max(shake, stone == 3 ? 26f : 12f);
+            for (int i = 0; i < (stone == 3 ? 110 : 60); i++) SpawnBit(softSprite, centre, Random.insideUnitCircle.normalized * Random.Range(160f, stone == 3 ? 900f : 560f), Random.Range(0.7f, 1.5f), Random.Range(14f, 40f), Color.Lerp(c, Color.white, Random.value * 0.6f), 0f);
+            SpawnRing(centre, 200f, 1500f, 0.9f, new Color(1f, 1f, 1f, 0.8f));
+            SpawnRing(centre, 150f, 1000f, 1.2f, new Color(c.r, c.g, c.b, 0.9f));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // INFINITY CUBELETTE: six streams of colour converge, a gold hexagon of light closes round the cube, the snap
+    // ------------------------------------------------------------------
+
+    private void DrawCubelette(float t, float dt, Vector2 size, Vector2 centre, Vector2 start, ref Vector2 cubePos, ref float cubeScale, ref Vector3 euler)
+    {
+        float form = Smooth((t - 3.4f) / 0.6f);
+        cubePos = centre;
+        cubeScale = cubeSize * 0.85f * form * (t > 4.0f && t < 4.2f ? 1.15f : 1f);
+        euler = new Vector3(18f, t * 100f, 0f);
+        float build = Mathf.Clamp01(t / 3.4f);
+
+        // Six streams, one per stone colour, swirl in from six directions.
+        if (t < 3.4f)
+        {
+            for (int s = 0; s < 6; s++)
+            {
+                Color c = PixelInfinity.StoneColor(s);
+                float baseA = s / 6f * 6.283f + 0.5f;
+                if (Random.value < dt * 28f)
+                {
+                    float a = baseA + Random.Range(-0.15f, 0.15f); Vector2 dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    SpawnBit(softSprite, centre + dir * 760f, -dir * 520f + new Vector2(-dir.y, dir.x) * 260f, 1.4f, Random.Range(14f, 34f), c, 0f);
+                }
+                float ang = baseA + t * 0.9f;
+                float rad = Mathf.Lerp(480f, 120f, build * build);
+                Put(segs[s], centre + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * rad, new Vector2(70f, 70f), 0f, new Color(c.r, c.g, c.b, 0.9f));
+            }
+            float g = Mathf.Lerp(80f, 700f, build * build);
+            Put(glowBehind, centre, new Vector2(g, g), 0f, new Color(1f, 0.95f, 0.7f, 0.6f * build));
+        }
+
+        // The hexagon of light between the six, once they meet.
+        if (t > 2.4f && t < 4.8f)
+        {
+            float k = Smooth((t - 2.4f) / 0.8f) * (1f - Smooth((t - 4.2f) / 0.6f));
+            float rad = 330f * (1f - 0.2f * Smooth((t - 3.0f) / 0.6f));
+            for (int i = 0; i < 6; i++)
+            {
+                float a0 = (i / 6f * 360f + t * 20f) * Mathf.Deg2Rad, a1 = ((i + 1) / 6f * 360f + t * 20f) * Mathf.Deg2Rad;
+                Color c = PixelInfinity.StoneColor(i);
+                Line(centre + new Vector2(Mathf.Cos(a0), Mathf.Sin(a0)) * rad, centre + new Vector2(Mathf.Cos(a1), Mathf.Sin(a1)) * rad, 9f, new Color(c.r, c.g, c.b, k));
+            }
+        }
+
+        if (!fired[0] && t >= 3.4f)
+        {
+            fired[0] = true; flash = 1f; shake = 18f;
+            for (int i = 0; i < 6; i++) SpawnRing(centre, 150f, 1100f + i * 120f, 1.1f + i * 0.1f, PixelInfinity.StoneColor(i));
+            for (int i = 0; i < 90; i++) SpawnBit(softSprite, centre, Random.insideUnitCircle.normalized * Random.Range(180f, 800f), Random.Range(0.8f, 1.6f), Random.Range(14f, 40f), PixelInfinity.StoneColor(i % 6), 0f);
+        }
+        if (!fired[1] && t >= 5.0f) { fired[1] = true; flash = 0.8f; for (int i = 0; i < 40; i++) SpawnBit(softSprite, centre + Random.insideUnitCircle * 150f, Random.insideUnitCircle * 160f + Vector2.up * 80f, Random.Range(1f, 1.8f), Random.Range(8f, 20f), new Color(1f, 0.95f, 0.7f, 1f), -40f); }
     }
 
     // ------------------------------------------------------------------

@@ -2,6 +2,7 @@
 // PixelGodSynth.cs
 //   Code-made sounds of the three Egyptian God Cube find shows (PixelAudio.SynthFor -> PixelGodSynth.For; put your own clips in the Sounds list to replace them). Each clip is one long piece that is
 //   timed to its show in PixelGodFind (start of the show = start of the clip): god_slifer (storm rumble, three thunder cracks at 0.5 / 1.0 / 1.4 s, the dragon's roar from 1.5 s, a final blast at 4.9 s),
+//   stone_space / stone_mind / stone_reality / stone_power / stone_time / stone_soul (the Infinity Stones, 5.5 s, each one's own voice, the climax at 3.2 s) and stone_cubelette (six rising notes, the snap at 3.4 s, a chime at 5.0 s),
 //   god_ra (a rising shimmering choir, a swell at 1.2 s, wing beats from 1.6 s, a golden chime at 4.0 s) and god_obelisk (a growing rumble, the fist rising, the slam at 2.55 s, falling stone).
 // ----------------------
 using UnityEngine;
@@ -17,7 +18,11 @@ public static class PixelGodSynth
             case "god_slifer": return new[] { Slifer() };
             case "god_ra": return new[] { Ra() };
             case "god_obelisk": return new[] { Obelisk() };
+            case "stone_cubelette": return new[] { Cubelette() };
         }
+        if (id != null && id.StartsWith("stone_"))
+            for (int i = 0; i < 6; i++)
+                if (id == PixelInfinity.StoneSoundId(i)) return new[] { Stone(i) };
         return null;
     }
 
@@ -157,5 +162,123 @@ public static class PixelGodSynth
             data[i] = rumble * 0.7f + rise + impact;
         }
         return Finish("God Obelisk", data, 0.95f);
+    }
+
+    /// <summary>One Infinity Stone: a build-up in its own voice, then the climax at 3.2 s (matching the show) and a ringing tail.</summary>
+    private static AudioClip Stone(int stone)
+    {
+        float length = 6.2f;
+        int n = (int)(Rate * length);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(9100 + stone);
+        float lp = 0f, ph1 = 0f, ph2 = 0f, ph3 = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)Rate;
+            float build = Mathf.Clamp01(t / 3.2f);
+            float after = Mathf.Max(0f, t - 3.2f);
+            float noise = Noise(rng);
+            lp += (noise - lp) * 0.05f;
+            float v = 0f;
+            switch (stone)
+            {
+                case 0: // space: a whoosh that sweeps up, a gliding sine, a deep boom
+                {
+                    ph1 += (200f + 900f * build * build) / Rate;
+                    v += Mathf.Sin(ph1 * 6.2832f) * 0.35f * build + lp * 2.2f * build * Win(t, 0f, 3.2f, 0.4f);
+                    ph2 += (55f * Mathf.Exp(-after * 1.2f)) / Rate;
+                    v += Mathf.Sin(ph2 * 6.2832f) * 1.6f * Mathf.Exp(-after * 1.4f) * (t >= 3.2f ? 1f : 0f);
+                    v += Mathf.Sin(t * 6.2832f * 1320f) * 0.18f * Mathf.Exp(-after * 2f) * (t >= 3.2f ? 1f : 0f);
+                    break;
+                }
+                case 1: // mind: bright pulsing chimes on the 1.8 Hz beat, a sparkling chord at the end
+                {
+                    float beat = Mathf.Repeat(t * 1.8f, 1f);
+                    float env = Mathf.Exp(-beat * 5f) * (0.25f + 0.75f * build);
+                    v += (Mathf.Sin(t * 6.2832f * 880f) + 0.5f * Mathf.Sin(t * 6.2832f * 1320f) + 0.3f * Mathf.Sin(t * 6.2832f * 1760f)) * 0.3f * env * (t < 3.2f ? 1f : 0.2f);
+                    if (t >= 3.2f) v += (Mathf.Sin(t * 6.2832f * 523f) + Mathf.Sin(t * 6.2832f * 659f) + Mathf.Sin(t * 6.2832f * 784f) + Mathf.Sin(t * 6.2832f * 1047f)) * 0.3f * Mathf.Exp(-after * 1.1f);
+                    break;
+                }
+                case 2: // reality: a warbling detuned drone, ring-modulated glitches, a crack
+                {
+                    float wob = 1f + 0.04f * Mathf.Sin(t * 9f);
+                    ph1 += 70f * wob / Rate; ph2 += 74.5f * wob / Rate;
+                    float drone = (Mathf.Sin(ph1 * 6.2832f) + Mathf.Sin(ph2 * 6.2832f)) * 0.5f * (0.3f + 0.7f * build);
+                    float gate = Mathf.Sin(t * 6.2832f * (7f + 20f * build)) > 0.2f ? 1f : 0.35f;
+                    v += drone * gate * Mathf.Sign(Mathf.Sin(t * 6.2832f * 190f));
+                    if (t < 3.2f && rng.NextDouble() < 0.0006 * (1f + 4f * build)) ph3 = 1f;
+                    ph3 *= 0.9992f; v += noise * ph3 * 0.7f;
+                    if (t >= 3.2f) v += (noise * Mathf.Exp(-after * 18f) + Mathf.Sin(t * 6.2832f * 60f) * Mathf.Exp(-after * 2f)) * 1.2f;
+                    break;
+                }
+                case 3: // power: a rising rumble and surge, then a huge boom with a long tail
+                {
+                    ph1 += (40f + 70f * build) / Rate;
+                    v += (Mathf.Sin(ph1 * 6.2832f) * 0.8f + lp * 3f) * build * build * (t < 3.2f ? 1f : 0f);
+                    ph2 += (30f * Mathf.Exp(-after * 0.7f)) / Rate;
+                    if (t >= 3.2f) v += Mathf.Sin(ph2 * 6.2832f) * 2.2f * Mathf.Exp(-after * 0.9f) + noise * 0.9f * Mathf.Exp(-after * 5f) + lp * 1.5f * Mathf.Exp(-after * 1.6f);
+                    break;
+                }
+                case 4: // time: ticking that slows and reverses, a rising whir, a bell
+                {
+                    float rate = t < 2.6f ? 5f : 12f;
+                    float tick = Mathf.Repeat(t * rate, 1f);
+                    v += Mathf.Sin(t * 6.2832f * (t < 2.6f ? 900f : 1500f)) * Mathf.Exp(-tick * 40f) * 0.6f;
+                    ph1 += (120f + 700f * build * build) / Rate;
+                    v += Mathf.Sin(ph1 * 6.2832f) * 0.2f * build * (t < 3.2f ? 1f : 0f);
+                    if (t >= 3.2f) v += (Mathf.Sin(t * 6.2832f * 660f) + 0.6f * Mathf.Sin(t * 6.2832f * 990f * 1.01f) + 0.4f * Mathf.Sin(t * 6.2832f * 1585f)) * 0.6f * Mathf.Exp(-after * 1.4f);
+                    break;
+                }
+                default: // soul: a breathy choir that swells, whispers, a warm chord
+                {
+                    float vib = 1f + 0.012f * Mathf.Sin(t * 5.5f);
+                    float choir = 0f;
+                    float[] f = { 220f, 277f, 330f, 440f };
+                    for (int k = 0; k < f.Length; k++) choir += Mathf.Sin(t * 6.2832f * f[k] * vib * (1f + 0.03f * build) + k);
+                    v += choir * 0.2f * Mathf.Pow(build, 1.3f) * (t < 3.2f ? 1f : Mathf.Exp(-after * 0.6f) * 1.4f);
+                    v += lp * 1.6f * Mathf.Sin(t * 3f) * Mathf.Sin(t * 3f) * build;
+                    if (t >= 3.2f) v += Mathf.Sin(t * 6.2832f * 110f) * Mathf.Exp(-after * 1.5f);
+                    break;
+                }
+            }
+            data[i] = v;
+        }
+        return Finish("stone_" + stone, data, 0.85f);
+    }
+
+    /// <summary>The Infinity Cubelette: six notes climb (one per stone), the snap at 3.4 s, a golden chime at 5.0 s.</summary>
+    private static AudioClip Cubelette()
+    {
+        float length = 8f;
+        int n = (int)(Rate * length);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(9200);
+        float[] notes = { 262f, 330f, 392f, 494f, 587f, 784f };
+        float lp = 0f, ph = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)Rate;
+            float noise = Noise(rng);
+            lp += (noise - lp) * 0.04f;
+            float v = 0f;
+            for (int k = 0; k < 6; k++)
+            {
+                float on = k * 0.5f;
+                if (t < on) continue;
+                float held = Mathf.Exp(-(t - on) * 0.35f) * Mathf.Clamp01((t - on) / 0.05f) * (t < 3.4f ? 1f : Mathf.Exp(-(t - 3.4f) * 2.5f));
+                v += Mathf.Sin(t * 6.2832f * notes[k]) * 0.22f * held;
+            }
+            v += lp * 1.4f * Mathf.Pow(Mathf.Clamp01(t / 3.4f), 2f) * (t < 3.4f ? 1f : 0f);
+            if (t >= 3.4f)
+            {
+                float a = t - 3.4f;
+                ph += (50f * Mathf.Exp(-a * 1.3f)) / Rate;
+                v += Mathf.Sin(ph * 6.2832f) * 2f * Mathf.Exp(-a * 1.3f) + noise * Mathf.Exp(-a * 14f) * 0.9f;
+                for (int k = 0; k < 6; k++) v += Mathf.Sin(t * 6.2832f * notes[k] * 2f) * 0.12f * Mathf.Exp(-a * 0.9f);
+            }
+            if (t >= 5.0f) v += (Mathf.Sin(t * 6.2832f * 1568f) + 0.5f * Mathf.Sin(t * 6.2832f * 2349f)) * 0.3f * Mathf.Exp(-(t - 5f) * 1.6f);
+            data[i] = v;
+        }
+        return Finish("stone_cubelette", data, 0.85f);
     }
 }

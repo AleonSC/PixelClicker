@@ -666,12 +666,43 @@ public static class PixelLooks
                             metallic = 0.25f, smoothness = 0.5f, emission = 0.4f, shine = true, farmFx = PixelLook.FarmAmbient.Crumbs,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.45f, 0.85f, 1f, 1f), outlineBevel = true, outlineThickness = 0.035f, outlineStrength = 0.85f },
 
+            // The six Infinity Stones (glassy gems with a small cube inside) and the Infinity Cubelette.
+            StoneLook(PixelClicker.PixelType.StoneSpace, 0),
+            StoneLook(PixelClicker.PixelType.StoneMind, 1),
+            StoneLook(PixelClicker.PixelType.StoneReality, 2),
+            StoneLook(PixelClicker.PixelType.StonePower, 3),
+            StoneLook(PixelClicker.PixelType.StoneTime, 4),
+            StoneLook(PixelClicker.PixelType.StoneSoul, 5),
+            new PixelLook { type = PixelClicker.PixelType.InfinityCubelette, useColor = true, color = new Color(1f, 0.9f, 0.5f, 0.55f),
+                            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 1f, shine = true, starCubes = 6, starColor = new Color(1f, 0.75f, 0.15f, 1f),
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.95f, 0.75f, 1f), outlineBevel = true, outlineThickness = 0.035f, outlineStrength = 1f },
+
             // Singularity: a box of dark matter.
             new PixelLook { type = PixelClicker.PixelType.Singularity, useColor = true, color = new Color(0.07f, 0.02f, 0.14f, 0.5f),
                             forceTranslucent = true, smoothness = 0.95f, metallic = 0f, glowScale = 0.3f,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 0.25f, 1f, 1f),
                             outlineThickness = 0.04f, darkMatter = true, gravityWell = true },
         };
+    }
+
+    /// <summary>An Infinity Stone: a glassy cube in the stone's colour with one small bright cube inside, plus a signature effect (Space lightning, Reality flames, Power lightning, Soul mist).</summary>
+    private static PixelLook StoneLook(PixelClicker.PixelType type, int stone)
+    {
+        Color c = PixelInfinity.StoneColor(stone);
+        PixelLook look = new PixelLook
+        {
+            type = type, useColor = true, color = new Color(c.r * 0.8f, c.g * 0.8f, c.b * 0.8f, 0.55f),
+            forceTranslucent = true, smoothness = 1f, metallic = 0f, emission = 0.9f, shine = true,
+            starCubes = 1, starColor = Color.Lerp(c, Color.white, 0.55f),
+            outline = true, outlineUsesTierColor = false, outlineColor = Color.Lerp(c, Color.white, 0.5f), outlineBevel = true, outlineThickness = 0.035f, outlineStrength = 0.9f,
+        };
+        if (stone == 0 || stone == 3)
+        {
+            look.lightning = true; look.lightningCoreColor = Color.Lerp(c, Color.white, 0.8f); look.lightningGlowColor = c; look.lightningJitter = 0.1f;
+        }
+        if (stone == 2) look.flames = true;
+        if (stone == 5) look.gelFx = true;
+        return look;
     }
 
     private static PixelLook DragonCubeLook(PixelClicker.PixelType type, int stars)

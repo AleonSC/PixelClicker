@@ -951,3 +951,4 @@
 [2026-10-14 10:32 UTC] To-do: an early, forgiving Cube Dash to introduce minigames.
 [2026-10-14 10:35 UTC] Music cues: the gameplay music can now change at triggers (minigames, night, UFO ride, first person, a skill, the God Cube shows, the Dragon wish) with fade in / out; the playlist pauses and resumes where it was. Cues come without music - assign clips in the PixelAudio Music Cues list.
 [2026-10-14 10:42 UTC] Music cues: a cue added with the Inspector + button (volume 0, fades 0) now uses sensible defaults instead of staying silent, and picking a song in the main menu selector overrides a playing cue.
+[2026-10-14 10:56 UTC] Added the six Infinity Stones (rare one-of-each drops with their own find shows and sounds), the Wizard's Infinity Gauntlet (a golden cube you use from the inventory to set the stones in its six faces) and the Infinity Cubelette it forges (name work in progress).
