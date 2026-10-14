@@ -133,7 +133,7 @@ public partial class PixelAudio : MonoBehaviour
     private const string PrefUiClicks = "PixelAudio.UiClicks";
     private static int uiClicksCache = -1;
 
-    /// <summary>Settings > Audio > 'UI click sounds': the click sound of every UI button / tick box (sound id ui_click). On by default.</summary>
+    /// <summary>Settings > Audio > 'UI click sounds': the click sound of every UI button / tick box (sound ids ui_click, ui_scroll and menu_open: the click, the scroll tick and the menu bloop). On by default.</summary>
     public static bool UiClicks
     {
         get { if (uiClicksCache < 0) uiClicksCache = PlayerPrefs.GetInt(PrefUiClicks, 1); return uiClicksCache != 0; }
@@ -687,7 +687,7 @@ public partial class PixelAudio : MonoBehaviour
     private void PlaySound(string id, float pitchMultiplier, float volumeMultiplier = 1f)
     {
         if (muted || voices == null || !byId.TryGetValue(id, out Sound s)) return;
-        if (!UiClicks && id == "ui_click") return;   // the UI click sounds can be switched off in Settings > Audio
+        if (!UiClicks && (id == "ui_click" || id == "menu_open" || id == "ui_scroll")) return;   // the UI click sounds can be switched off in Settings > Audio
         if (s.clips == null || s.clips.Length == 0) return;
 
         float now = Time.unscaledTime;
