@@ -39,6 +39,27 @@ public static class PixelUIKit
         return root;
     }
 
+    /// <summary>
+    /// Places a HOVER TOOLTIP: at the BOTTOM LEFT of the pointer (the lower right when there is no room on the left, above the pointer when there is no room below). 'tip' must be centre-anchored with its
+    /// sizeDelta set; 'pointerLocal' = the pointer in the canvas rect's local space. Every hover tooltip uses this, so they all sit in the same place.
+    /// </summary>
+    public static void PlaceTooltip(RectTransform tip, RectTransform canvasRect, Vector2 pointerLocal, float gap = 18f)
+    {
+        if (tip == null || canvasRect == null) return;
+        Vector2 size = tip.sizeDelta;
+        Rect r = canvasRect.rect;
+        float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        const float edge = 8f;
+        bool left = pointerLocal.x - gap - size.x >= r.xMin + edge;
+        bool down = pointerLocal.y - gap - size.y >= r.yMin + bar + edge;
+        tip.pivot = new Vector2(left ? 1f : 0f, down ? 1f : 0f);
+        Vector2 pos = pointerLocal + new Vector2(left ? -gap : gap, down ? -gap : gap);
+        pos.x = Mathf.Clamp(pos.x, r.xMin + edge + (left ? size.x : 0f), Mathf.Max(r.xMin + edge + (left ? size.x : 0f), r.xMax - edge - (left ? 0f : size.x)));
+        float lo = r.yMin + bar + edge + (down ? size.y : 0f), hi = r.yMax - bar - edge - (down ? 0f : size.y);
+        pos.y = Mathf.Clamp(pos.y, lo, Mathf.Max(lo, hi));
+        tip.anchoredPosition = pos;
+    }
+
     /// <summary>The height of the camera's view (world units) at 'depth' in front of it - works for the normal and the flat (orthographic) view.</summary>
     public static float ViewHeightAt(Camera cam, float depth)
     {

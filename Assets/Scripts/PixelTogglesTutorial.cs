@@ -100,7 +100,7 @@ public class PixelTogglesTutorial : MonoBehaviour
     {
         int longest = 0;
         foreach (Step st in steps) if (st != null && st.text != null) longest = Mathf.Max(longest, st.text.Length);
-        return Mathf.Max(260f, 84f + (Mathf.CeilToInt(longest / 28f) + 1) * 30f);
+        return Mathf.Max(260f, 124f + (Mathf.CeilToInt(longest / 28f) + 1) * 30f);
     }
 
     private static Vector3? Centre(RectTransform r)
@@ -154,6 +154,6 @@ public class PixelTogglesTutorial : MonoBehaviour
                 default: return Centre(PixelToggles.WindowRect) ?? Centre(PixelToggles.TabRect);
             }
         };
-        PixelNotice.Show(step.text, 0f, small: true, nearScreen: BoxAnchor, onClosed: () => ShowStep(index + 1), minHeight: BoxHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null);
+        PixelNotice.Show(step.text, 0f, small: true, nearScreen: BoxAnchor, onClosed: () => ShowStep(index + 1), minHeight: BoxHeight(), onBack: index > 0 ? (System.Action)(() => ShowStep(index - 1)) : null, onSkip: () => ShowStep(steps.Count));
     }
 }

@@ -1481,9 +1481,7 @@ public class PixelDevTip : MonoBehaviour
     {
         if (canvasRect == null || rect == null) return;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
-        bool rightHalf = local.x > 0f;
-        rect.pivot = new Vector2(rightHalf ? 1f : 0f, local.y < -canvasRect.rect.height * 0.3f ? 0f : 1f);   // flips so it never leaves the screen
-        rect.anchoredPosition = local + new Vector2(rightHalf ? -14f : 14f, rect.pivot.y > 0.5f ? -22f : 22f);
+        PixelUIKit.PlaceTooltip(rect, canvasRect, local, 16f);   // bottom left of the pointer (bottom right / above when there is no room)
     }
 }
 

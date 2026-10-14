@@ -2,7 +2,7 @@
 // PixelHazardTell.cs
 //   TELLS that the block on the cube is a HAZARD (component added by PixelClicker.Awake; applies to every hazard block - PixelClicker.IsHazard: Hornet Nest, Pest, Gas Pocket, Jellyfish,
 //   Mold - while it sits on the cube): a pulsing warning-orange glow shell round the cube, a bobbing red warning triangle with a '!' floating above it (a billboard), and a warning
-//   sound (hazard_warn, a two-tone warble) the moment the hazard appears, plus an angry buzz (hornet_buzz) for the Hornet Nest. Everything pulses FASTER as the hazard's time on the
+//   sound (hazard_warn, a two-tone warble) the moment the hazard appears, plus a dry skittering chitter (termite_chitter) for the Termite Hive. Everything pulses FASTER as the hazard's time on the
 //   cube runs out (it leaves by itself after hazardSeconds), so the pulse also tells how long is left. Switch off with disableTells; colours / sizes are serialized.
 //   Sounds (code-made): PixelHazardSynth, hooked into PixelAudio.SynthFor.
 // ---------------------------------------------------
@@ -55,7 +55,7 @@ public class PixelHazardTell : MonoBehaviour
         {
             lastLiveSince = since;
             PixelAudio.Play("hazard_warn");
-            if (type == PixelClicker.PixelType.HornetNest) PixelAudio.Play("hornet_buzz");
+            if (type == PixelClicker.PixelType.HornetNest) PixelAudio.Play("termite_chitter");
         }
 
         // The glow shell.
@@ -135,7 +135,7 @@ public class PixelHazardTell : MonoBehaviour
     }
 }
 
-/// <summary>Code-made hazard sounds: hazard_warn (a two-tone warble) and hornet_buzz (an angry droning buzz).</summary>
+/// <summary>Code-made hazard sounds: hazard_warn (a two-tone warble) and termite_chitter (rapid dry clicks).</summary>
 public static class PixelHazardSynth
 {
     private const int Rate = 22050;
@@ -143,7 +143,7 @@ public static class PixelHazardSynth
     public static AudioClip[] For(string id)
     {
         if (id == "hazard_warn") return new[] { Warn() };
-        if (id == "hornet_buzz") return new[] { Buzz() };
+        if (id == "termite_chitter") return new[] { Chitter() };
         return null;
     }
 
@@ -174,22 +174,23 @@ public static class PixelHazardSynth
         return Finish("Hazard Warn", data, 0.5f);
     }
 
-    private static AudioClip Buzz()
+    private static AudioClip Chitter()
     {
-        int n = (int)(Rate * 0.6f);
+        int n = (int)(Rate * 0.55f);
         float[] data = new float[n];
-        float phase = 0f;
-        System.Random rng = new System.Random(31);
+        System.Random rng = new System.Random(37);
+        // A burst of tiny dry ticks (high filtered noise) at uneven gaps, like many little legs on wood.
+        float next = 0f; float tick = 99f; float lp = 0f;
         for (int i = 0; i < n; i++)
         {
             float sec = i / (float)Rate;
-            float hz = 190f + 35f * Mathf.Sin(sec * 38f) + 20f * Mathf.Sin(sec * 91f);   // wobbling drone
-            phase += hz / Rate;
-            float saw = Mathf.Repeat(phase, 1f) * 2f - 1f;
-            float noise = ((float)rng.NextDouble() * 2f - 1f) * 0.25f;
-            float env = Mathf.Clamp01(sec / 0.05f) * Mathf.Clamp01((0.6f - sec) / 0.2f);
-            data[i] = (saw * 0.7f + noise) * env * (0.7f + 0.3f * Mathf.Sin(sec * 60f));
+            if (sec >= next) { tick = 0f; next = sec + 0.018f + (float)rng.NextDouble() * 0.03f; }
+            tick += 1f / Rate;
+            float noise = (float)rng.NextDouble() * 2f - 1f;
+            lp += (noise - lp) * 0.6f;
+            float v = (noise - lp) * Mathf.Exp(-tick * 380f);
+            data[i] = v * Mathf.Clamp01((0.55f - sec) / 0.2f);
         }
-        return Finish("Hornet Buzz", data, 0.45f);
+        return Finish("Termite Chitter", data, 0.4f);
     }
 }

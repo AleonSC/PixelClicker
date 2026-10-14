@@ -555,9 +555,9 @@ public class PixelBlockTooltip : MonoBehaviour
         Vector2 size = card.sizeDelta;
         Vector2 canvasSize = new Vector2(Screen.width, Screen.height) / scaleFactor;
         float bar = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
-        // To the lower right of the anchor; flipped to the other side when it would leave the screen.
-        float x = p.x + 40f;
-        if (x + size.x > canvasSize.x - 8f) x = p.x - 40f - size.x;
+        // To the lower LEFT of the anchor; flipped to the lower right when it would leave the screen.
+        float x = p.x - 40f - size.x;
+        if (x < 8f) x = p.x + 40f;
         float y = p.y - 24f;
         if (y - size.y < bar + 8f) y = p.y + 30f + size.y;
         x = Mathf.Clamp(x, 8f, Mathf.Max(8f, canvasSize.x - size.x - 8f));

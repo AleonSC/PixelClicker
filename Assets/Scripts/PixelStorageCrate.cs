@@ -27,7 +27,7 @@ using UnityEngine;
 /// value is kept). Left-click a stored pixel to take it out again - it is handed to the mouse like a grabbed pixel. Removing the crate lets everything out.
 /// NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs in <c>OnTick</c>.
 /// </summary>
-public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor
+public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPort
 {
     private const int Columns = 5, Rows = 2, Sections = Columns * Rows;
 
@@ -70,6 +70,9 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor
     }
 
     private void OnDestroy() { PixelConveyorSystem.Unregister(this); }
+
+    /// <summary>The middle of the crate's front edge at floor level (where a Conveyor Connector latches on).</summary>
+    public Vector3 PortWorld => transform.TransformPoint(new Vector3(0f, 0.1f, -depth * 0.5f));
 
     /// <summary>A belt's end: is this point over the crate (with some give round its edge) and is there a free section?</summary>
     public bool AcceptsAt(Vector3 world)

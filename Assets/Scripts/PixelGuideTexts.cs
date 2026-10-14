@@ -155,17 +155,21 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.Sap:
                 return "Woodcutting block: a blob of sticky sap. It pays well for one chop, and an old Sap pixel does not bounce when it lands.";
             case PixelClicker.PixelType.Leaf:
-                return "Woodcutting block that flutters. One chop, pays little. An old Leaf pixel drifts down slowly instead of dropping.";
+                return "Woodcutting block: a flat green leaf with a pale midrib. One chop, pays little. An old Leaf pixel drifts down slowly instead of dropping.";
             case PixelClicker.PixelType.Heartwood:
                 return "Woodcutting block, rare: the glowing red core of a tree. It takes " + t.clicksToCollect + " chops but pays a lot.";
             case PixelClicker.PixelType.Twig:
-                return "Woodcutting's filler block. One click, almost no pay. At low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.";
+                return "Woodcutting filler block: a tangle of thin twigs. One click, almost no pay. Pinecone and Moss are its two siblings and share its spot: at low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.";
+            case PixelClicker.PixelType.Pinecone:
+                return "Woodcutting filler block: a scaly pinecone. One click, almost no pay. It shares the filler's spot with Twig and Moss, so it comes up a lot at low woodcutting level and less as you level up.";
+            case PixelClicker.PixelType.Moss:
+                return "Woodcutting filler block: a soft cushion of moss. One click, almost no pay. It shares the filler's spot with Twig and Pinecone, so it comes up a lot at low woodcutting level and less as you level up.";
             case PixelClicker.PixelType.HornetNest:
-                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the hornets swarm out and chase off the old pixels around the cube, and Woodcutting XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your woodcutting level rises.";
+                return "The TERMITE HIVE, a HAZARD. Never worth clicking: break it (" + t.clicksToCollect + " hits) and the termites pour out, one for every old pixel lying on the floor. Each one runs to an old pixel, and a small bar over the pixel counts down while it chews - click the pixel before the bar runs out to save it, or it is eaten for good. Breaking it also drops Woodcutting XP 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Hold a Pesticide with Block Hold and one left click clears it at once, safely, like the beehive. Right-click clears it safely too: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your woodcutting level rises.";
             case PixelClicker.PixelType.Acorn:
                 return "Woodcutting block: an acorn. One click, pays a little. The trick is its OLD pixel: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other old pixels, so keep them coming.";
             case PixelClicker.PixelType.Pesticide:
-                return "Woodcutting block: a canister of pesticide. It takes " + t.clicksToCollect + " clicks and pays a little - grab it with Block Hold instead. While you hold it, one left click on a Hornet Nest clears it at once, safely (no swarm, no XP penalty).";
+                return "Woodcutting block: a canister of pesticide. It takes " + t.clicksToCollect + " clicks and pays a little - grab it with Block Hold instead. While you hold it, one left click on a Termite Hive clears it at once, safely (no termites, no XP penalty).";
             case PixelClicker.PixelType.Whetstone:
                 return "Woodcutting block: a hard grey stone for sharpening. It takes " + t.clicksToCollect + " clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too). While you hold it every click fires off a rapid burst of extra clicks.";
             case PixelClicker.PixelType.GreatOak:

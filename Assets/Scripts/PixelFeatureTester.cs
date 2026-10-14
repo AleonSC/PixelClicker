@@ -41,6 +41,7 @@ public class PixelFeatureTester : MonoBehaviour
         public Func<PixelClicker, Vector3, float, GameObject> place;
         // Two-point features (a conveyor belt): click a start, click an end, repeat (the end starts the next piece).
         public bool line;
+        public bool singleLine;       // a line feature that is ONE piece (the Conveyor Connector): after the second click it starts over instead of chaining
         public Func<PixelClicker, GameObject> preview;
         public Func<PixelClicker, Vector3, Vector3, GameObject> placeLine;
         public Action<GameObject, Vector3, Vector3> updatePreview;
@@ -120,6 +121,13 @@ public class PixelFeatureTester : MonoBehaviour
                      (c, a, b) => PixelConveyor.Place(c, a, b), PixelConveyor.Snap);
         features[features.Count - 1].export = PixelConveyor.ExportState;
         features[features.Count - 1].import = PixelConveyor.ImportState;
+        RegisterLine("Conveyor Connector",
+                     "A boxed channel for gaps in turns or for joining a belt to a machine. Click one end, then the other: it magnetizes to belt ends, elevator tops, splitter outputs, the Kiln's mouth, the Storage Crate and other connectors, and a box forms between the two (scroll raises / lowers the point). Any old pixel inside the box - handed in by a belt or dropped / spat into it - is forced along it and put onto the belt that starts at the far end or into the machine there.",
+                     c => PixelConveyor.CreateMarker(c), c => PixelConnector.CreatePreview(c), (g, a, b) => PixelConnector.UpdatePreview(g, a, b),
+                     (c, a, b) => PixelConnector.Place(c, a, b), PixelConnector.Snap);
+        features[features.Count - 1].singleLine = true;
+        features[features.Count - 1].export = PixelConnector.ExportState;
+        features[features.Count - 1].import = PixelConnector.ImportState;
         Register("Conveyor Elevator",
                  "A tower that lifts pixels from the end of a belt to a higher belt. Bring the ghost near the end of a belt and it magnetizes to it (turned the belt's way). Click to fix the base, then move the mouse up or down to set the height and click again to confirm (right click goes back a step). Place a new belt starting at the top: its first point snaps to the tower's top. Pixels from the belt are lifted and come out of the top.",
                  c => PixelElevator.CreateGhost(c), (c, p, yw) => PixelElevator.Place(c, p, yw));
@@ -668,6 +676,12 @@ public class PixelFeatureTester : MonoBehaviour
             {
                 GameObject go = placing.placeLine(clicker, lineStart, p);
                 if (go != null) { placing.placed.Add(go); lineStart = p; }
+                if (placing.singleLine)
+                {
+                    hasStart = false;
+                    if (previewGhost != null) Destroy(previewGhost);
+                    previewGhost = null;
+                }
                 Refresh();
             }
         }

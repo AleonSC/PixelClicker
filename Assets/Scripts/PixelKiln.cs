@@ -10,7 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor
+public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor, IPixelPort
 {
     [Header("Burning")]
     [Min(0f)]
@@ -200,6 +200,9 @@ public class PixelKiln : MonoBehaviour, IPixelBeltAcceptor
 
     private void OnEnable() { if (clicker == null) clicker = PixelFind.First<PixelClicker>(); PixelConveyorSystem.Register(this); }
     private void OnDisable() { PixelConveyorSystem.Unregister(this); }
+
+    /// <summary>The middle of the mouth's front, at floor level (where a Conveyor Connector latches on).</summary>
+    public Vector3 PortWorld => transform.TransformPoint(new Vector3((MouthCenter.x + MouthHalf.x * 0.5f) * unit, 0.1f * unit, 0f));
 
     /// <summary>A belt's end: the pixel is at the mouth when it is in the mouth zone (a bit roomier than the zone things fall into).</summary>
     public bool AcceptsAt(Vector3 world)

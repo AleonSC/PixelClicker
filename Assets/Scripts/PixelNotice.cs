@@ -28,12 +28,13 @@ public static class PixelNotice
     /// <summary>'aboveCombo' = a small box at the bottom of the screen, just above the combo meter.</summary>
     /// <summary>'nearScreen' = the box follows a point on screen (pixels; null = nowhere), sitting beside it, e.g. next to the ghost. 'freezeTime' = Time.timeScale is 0 until the box is closed.</summary>
     /// <summary>'onBack' = a small back arrow appears at the box's top left; holding it closes this box (without running onClosed) and calls onBack (tutorial steps go to the previous step).</summary>
+    /// <summary>'onSkip' = a small Skip button at the top right; holding it closes this box (without running onClosed) and calls onSkip (a tutorial ends the whole tutorial).</summary>
     /// <summary>'beside' = a window (Inventory, Log): the box sits right next to it, to its right, never overlapping it. 'besideBottom' aligns the bottoms (for a window at the bottom of the screen), else the tops.</summary>
     public static void Show(string message, float seconds = 0f, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f, System.Action onBack = null)
+                            RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f, System.Action onBack = null, System.Action onSkip = null)
     {
         if (box == null) box = new GameObject("Pixel Notice").AddComponent<PixelNoticeBox>();
-        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime, minHeight, onBack); // {key:...} placeholders show the player's keys
+        box.Open(PixelKeys.Replace(message), seconds, onClosed, compact, small || aboveCombo || nearLog, aboveCombo, nearLog, beside, besideBottom, nearScreen, freezeTime, minHeight, onBack, onSkip); // {key:...} placeholders show the player's keys
     }
 
     /// <summary>A fixed box size (canvas units) for every tip box, shown centred on screen. Vector2.zero = size to the text, at the top.</summary>
@@ -119,6 +120,7 @@ public class PixelNoticeBox : MonoBehaviour
         fillRect.anchorMax = new Vector2(0f, 1f);
         fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
         fillRect.SetSiblingIndex(1);
+        BuildSkip(box.transform, font);
         PixelHoldButton hold = back.gameObject.AddComponent<PixelHoldButton>();
         hold.Setup(fillRect, backHoldSeconds, () =>
         {
@@ -130,7 +132,37 @@ public class PixelNoticeBox : MonoBehaviour
         });
     }
 
-    private RectTransform backRect, muteRect;
+    private RectTransform backRect, muteRect, skipRect;
+    private System.Action skipCallback;
+    private const float skipHoldSeconds = 0.9f;
+
+    /// <summary>The Skip button (top right, hold to use): ends the whole tutorial this box belongs to.</summary>
+    private void BuildSkip(Transform parent, TMPro.TMP_FontAsset font)
+    {
+        Button skip = PixelUIKit.CreateButton(font, parent, "Skip", "Skip", new Vector2(86f, 40f), new Color(0.35f, 0.25f, 0.3f, 1f), Color.white, 22f);
+        skipRect = skip.GetComponent<RectTransform>();
+        skipRect.anchorMin = skipRect.anchorMax = skipRect.pivot = new Vector2(1f, 1f);
+        skipRect.anchoredPosition = new Vector2(-10f, -10f);
+        GameObject fillGo = new GameObject("Hold Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(skip.transform, false);
+        Image fillImage = fillGo.GetComponent<Image>();
+        fillImage.color = new Color(1f, 1f, 1f, 0.45f);
+        fillImage.raycastTarget = false;
+        RectTransform fillRect = fillGo.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = new Vector2(0f, 1f);
+        fillRect.offsetMin = fillRect.offsetMax = Vector2.zero;
+        fillRect.SetSiblingIndex(1);
+        PixelHoldButton hold = skip.gameObject.AddComponent<PixelHoldButton>();
+        hold.Setup(fillRect, skipHoldSeconds, () =>
+        {
+            hold.ResetProgress();
+            System.Action go = skipCallback;
+            closedCallback = null;   // skipping is not 'Got it'
+            Close();
+            go?.Invoke();
+        });
+    }
     private System.Action backCallback;
     private const float backHoldSeconds = 0.6f;
 
@@ -155,9 +187,10 @@ public class PixelNoticeBox : MonoBehaviour
     private const float BesideWidth = 640f;
 
     public void Open(string message, float seconds, System.Action onClosed = null, bool compact = false, bool small = false, bool aboveCombo = false, bool nearLog = false,
-                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f, System.Action onBack = null)
+                     RectTransform beside = null, bool besideBottom = false, System.Func<Vector2?> nearScreen = null, bool freezeTime = false, float minHeight = 0f, System.Action onBack = null, System.Action onSkip = null)
     {
         closedCallback = onClosed;
+        skipCallback = onSkip;
         backCallback = onBack; // a tip replaced by a new one never runs the old callback
         besideTarget = null;
         Unfreeze();
@@ -170,7 +203,7 @@ public class PixelNoticeBox : MonoBehaviour
         float textSize = small ? 22f : 30f;
         label.fontSize = textSize;
         label.rectTransform.offsetMin = small ? new Vector2(18f, 62f) : new Vector2(30f, 90f);
-        label.rectTransform.offsetMax = small ? new Vector2(-18f, -12f) : new Vector2(-30f, -20f);
+        label.rectTransform.offsetMax = small ? new Vector2(-18f, onSkip != null ? -52f : -12f) : new Vector2(-30f, -20f);   // (a Skip button sits at the top right)
         okRect.sizeDelta = small ? new Vector2(150f, 44f) : new Vector2(200f, 60f);
         okRect.anchoredPosition = new Vector2(0f, small ? 10f : 18f);
         if (okLabel != null) okLabel.fontSize = small ? 22f : 30f;
@@ -266,6 +299,7 @@ public class PixelNoticeBox : MonoBehaviour
         timed = seconds > 0f;
         timer = seconds;
         if (backRect != null) backRect.gameObject.SetActive(backCallback != null);
+        if (skipRect != null) skipRect.gameObject.SetActive(skipCallback != null);
         if (muteRect != null) muteRect.anchoredPosition = new Vector2(backCallback != null ? 62f : 10f, -10f);   // (next to the back arrow, or in its place)
         if (!timed)
         {
@@ -344,6 +378,7 @@ public class PixelNoticeBox : MonoBehaviour
         System.Action callback = closedCallback;
         closedCallback = null;
         backCallback = null;
+        skipCallback = null;
         FinishTyping();
         if (wasOpen) callback?.Invoke();
     }

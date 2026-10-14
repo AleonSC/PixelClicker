@@ -46,6 +46,7 @@ public class PixelShuffleBonus : MonoBehaviour
     private PixelClicker clicker;
     private int chain;                    // shuffles counted so far (0 = no combo)
     private PixelClicker.PixelType fillerType;
+    private int comboTier = -1;
     private float bar;                    // seconds left
     private bool waiting;                 // the block it was shuffled behind has not been broken yet
 
@@ -61,10 +62,11 @@ public class PixelShuffleBonus : MonoBehaviour
     private void Shuffled(int tierIndex, float heldFor)
     {
         if (disableShuffleBonus || clicker == null || heldFor > TapSeconds || !clicker.IsValidTierIndex(tierIndex)) return;
-        if (!PixelSkills.TryGetFiller(out PixelClicker.PixelType filler, out float share) || clicker.Tiers[tierIndex].type != filler) return;
+        if (!PixelSkills.TryGetFiller(out PixelClicker.PixelType filler, out float share) || !PixelSkills.IsFillerType(clicker.Tiers[tierIndex].type)) return;   // (any filler of the pack counts: Twig, Pinecone, Moss)
         if (chain > 0 && fillerType != filler) EndCombo();   // another skill's filler: start over
-        if (chain == 0) { chain = 1; fillerType = filler; waiting = true; Refill(true); return; }
+        if (chain == 0) { chain = 1; fillerType = filler; comboTier = tierIndex; waiting = true; Refill(true); return; }
         if (waiting) return;   // it came back before the block in front was broken: nothing counts
+        comboTier = tierIndex;
         chain++;
         waiting = true;
         Refill(true);
@@ -80,7 +82,7 @@ public class PixelShuffleBonus : MonoBehaviour
     {
         if (chain <= 0 || clicker == null || !clicker.IsValidTierIndex(tierIndex)) return;
         if (waiting) { waiting = false; punchTime = Time.unscaledTime; return; }   // the block it hides behind is broken: the next shuffle counts
-        if (clicker.Tiers[tierIndex].type != fillerType) return;
+        if (!PixelSkills.IsFillerType(clicker.Tiers[tierIndex].type)) return;
         // The filler itself was broken instead of shuffled again: cash the combo in.
         Pay(1f, "Shuffle x" + chain);
         EndCombo();
@@ -111,13 +113,13 @@ public class PixelShuffleBonus : MonoBehaviour
         UpdateVisual();
         // The combo block on the cube (the shuffled filler that came back, not a fresh filler) lights up gold, so it is easy to tell from an ordinary filler.
         PixelClickerAura.ComboHighlight = chain > 0 && !waiting && clicker != null && clicker.LiveCameFromQueue
-                                          && clicker.CurrentClickTierIndex == clicker.IndexOf(fillerType);
+                                          && clicker.IsValidTierIndex(clicker.CurrentClickTierIndex) && PixelSkills.IsFillerType(clicker.Tiers[clicker.CurrentClickTierIndex].type);
     }
 
     /// <summary>The bar ran out: the filler breaks by itself and pays a smaller bonus.</summary>
     private void Expire()
     {
-        int index = clicker != null ? clicker.IndexOf(fillerType) : -1;
+        int index = clicker != null ? comboTier : -1;   // (the filler that was shuffled: Twig, Pinecone or Moss)
         bool onCube = !waiting && index >= 0 && clicker.CurrentClickTierIndex == index;
         int shown = chain;
         Pay(ExpireFactor, "Shuffle x" + shown + " (auto-break)");

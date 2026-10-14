@@ -18,7 +18,7 @@ using UnityEngine;
 /// </summary>
 public static class PixelBlockTextures
 {
-    private static Texture2D wood, dirt, stone, whale;
+    private static Texture2D wood, dirt, stone, whale, twigs, pinecone, moss, leafBlock, hive;
 
     public static Texture2D Get(PixelLook.BlockSurface surface)
     {
@@ -28,6 +28,11 @@ public static class PixelBlockTextures
             case PixelLook.BlockSurface.Dirt: return dirt != null ? dirt : (dirt = Make("Dirt Surface", DirtPixel));
             case PixelLook.BlockSurface.Stone: return stone != null ? stone : (stone = Make("Stone Surface", StonePixel));
             case PixelLook.BlockSurface.Whale: return whale != null ? whale : (whale = Make("Whale Surface", WhalePixel));
+            case PixelLook.BlockSurface.Twigs: return twigs != null ? twigs : (twigs = Make("Twigs Surface", TwigsPixel));
+            case PixelLook.BlockSurface.Pinecone: return pinecone != null ? pinecone : (pinecone = Make("Pinecone Surface", PineconePixel));
+            case PixelLook.BlockSurface.Moss: return moss != null ? moss : (moss = Make("Moss Surface", MossPixel));
+            case PixelLook.BlockSurface.LeafBlock: return leafBlock != null ? leafBlock : (leafBlock = Make("Leaf Surface", LeafPixel));
+            case PixelLook.BlockSurface.Hive: return hive != null ? hive : (hive = Make("Termite Hive Surface", HivePixel));
         }
         return null;
     }
@@ -50,6 +55,110 @@ public static class PixelBlockTextures
     }
 
     private static float H(int x, int y, int seed) => PixelNoise.Hash(x, y, seed);
+
+    // ---- Twigs: a tangle of thin sticks criss-crossing over a dark gap, so the cube reads as a bundle of twigs ----
+    private static Vector4[] twigLines;
+    private static Color TwigsPixel(int x, int y)
+    {
+        if (twigLines == null)
+        {
+            twigLines = new Vector4[26];
+            for (int i = 0; i < twigLines.Length; i++)
+            {
+                // Each twig is a straight stick through a random point at a random angle, long enough to cross the tile (wrapped copies keep the faces seamless).
+                float cx = H(i, 3, 301) * N, cy = H(i, 5, 302) * N, a = H(i, 7, 303) * Mathf.PI;
+                twigLines[i] = new Vector4(cx, cy, Mathf.Cos(a), Mathf.Sin(a));
+            }
+        }
+        Color c = new Color(0.1f, 0.07f, 0.04f);
+        c *= 0.8f + H(x, y, 304) * 0.4f;
+        float best = 99f; int bestI = -1; float bestAlong = 0f;
+        for (int i = 0; i < twigLines.Length; i++)
+        {
+            Vector4 l = twigLines[i];
+            for (int wy = -1; wy <= 1; wy++)
+                for (int wx = -1; wx <= 1; wx++)
+                {
+                    float px = x - (l.x + wx * N), py = y - (l.y + wy * N);
+                    float along = px * l.z + py * l.w, perp = -px * l.w + py * l.z;
+                    float half = 20f + H(i, 9, 305) * 16f;
+                    if (Mathf.Abs(along) > half) continue;
+                    float d = Mathf.Abs(perp) - (0.9f + H(i, 11, 306) * 0.9f) * (1f - Mathf.Abs(along) / half * 0.35f);
+                    // Later twigs lie on top of earlier ones.
+                    if (d < 0f && (bestI < i || d < best)) { best = d; bestI = i; bestAlong = along; }
+                }
+        }
+        if (bestI >= 0)
+        {
+            Color wood = Color.Lerp(new Color(0.42f, 0.28f, 0.16f), new Color(0.74f, 0.58f, 0.38f), H(bestI, 13, 307));
+            float rim = Mathf.Clamp01(-best / 1.4f);
+            c = wood * (0.65f + rim * 0.45f) * (0.92f + H(Mathf.FloorToInt(bestAlong / 3f), bestI, 308) * 0.16f);
+            if (H(Mathf.FloorToInt(bestAlong / 9f), bestI, 309) > 0.88f && rim > 0.6f) c *= 0.7f;   // knots / bud scars
+        }
+        return c;
+    }
+
+    // ---- Pinecone: overlapping woody scales in staggered rows, each lit on top and shaded under its rounded tip ----
+    private static Color PineconePixel(int x, int y)
+    {
+        const float rowH = 8f, scaleW = 11f;
+        int row = Mathf.FloorToInt(y / rowH);
+        float ox = (row % 2 == 0) ? 0f : scaleW * 0.5f;
+        float gx = (x + ox) / scaleW;
+        int col = Mathf.FloorToInt(gx);
+        float u = gx - col, v = (y - row * rowH) / rowH;
+        float tone = H(col, row, 321);
+        Color baseC = Color.Lerp(new Color(0.34f, 0.2f, 0.1f), new Color(0.56f, 0.36f, 0.2f), tone);
+        // Rounded bottom tip: the scale's lower edge curves down in the middle.
+        float tip = 0.18f + 0.5f * (1f - Mathf.Abs(u - 0.5f) * 2f);
+        Color c = baseC * (0.7f + v * 0.5f);
+        if (v < tip * 0.35f) c = new Color(0.08f, 0.04f, 0.02f);                              // shadow tucked under the scale above
+        if (u < 0.08f || u > 0.92f) c *= 0.55f;                                              // seam between neighbours
+        if (v > 0.8f) c = Color.Lerp(c, baseC * 1.3f, 0.5f);                                 // lit rim
+        return c * (0.92f + H(x, y, 322) * 0.16f);
+    }
+
+    // ---- Moss: soft green cushions of fuzz with lighter tufts and a few dark damp hollows ----
+    private static Color MossPixel(int x, int y)
+    {
+        float u = x / (float)N, v = y / (float)N;
+        float f = PixelNoise.Fbm(u, v, 5, 3, 331);
+        Color c = Color.Lerp(new Color(0.12f, 0.26f, 0.08f), new Color(0.42f, 0.66f, 0.2f), f);
+        float tuft = H(x / 2, y / 2, 332);
+        if (tuft > 0.78f) c = Color.Lerp(c, new Color(0.7f, 0.86f, 0.38f), 0.6f);
+        else if (tuft < 0.12f) c *= 0.6f;
+        float damp = PixelNoise.Fbm(u, v, 3, 2, 333);
+        if (damp < 0.3f) c = Color.Lerp(c, new Color(0.06f, 0.14f, 0.05f), 0.5f);
+        return c * (0.9f + H(x, y, 334) * 0.2f);
+    }
+
+    // ---- Leaf: a flat matte green blade with a pale midrib, diagonal veins and a darker edge (not glossy, so it never reads as slime) ----
+    private static Color LeafPixel(int x, int y)
+    {
+        float u = x / (float)N, v = y / (float)N;
+        float d = Mathf.Abs(u - 0.5f);
+        Color c = Color.Lerp(new Color(0.16f, 0.46f, 0.12f), new Color(0.3f, 0.64f, 0.2f), PixelNoise.Fbm(u, v, 4, 2, 341));
+        // Side veins slant up and away from the midrib.
+        float vein = Mathf.Abs(Mathf.Repeat(v * 7f - d * 5f, 1f) - 0.5f);
+        if (vein < 0.07f && d > 0.03f) c = Color.Lerp(c, new Color(0.5f, 0.78f, 0.34f), 0.7f);
+        if (d < 0.035f) c = new Color(0.62f, 0.82f, 0.4f);                                   // midrib
+        if (Mathf.Min(d, Mathf.Min(v, 1f - v)) > 0.44f || v < 0.04f || v > 0.96f || d > 0.46f) c = new Color(0.08f, 0.26f, 0.07f);   // edge
+        return c * (0.94f + H(x, y, 342) * 0.12f);
+    }
+
+    // ---- Termite hive: layered reddish mud with ridges and dark tunnel holes ----
+    private static Color HivePixel(int x, int y)
+    {
+        float u = x / (float)N, v = y / (float)N;
+        float band = Mathf.Sin((v + PixelNoise.Fbm(u, v, 4, 2, 351) * 0.25f) * 6.28f * 5f) * 0.5f + 0.5f;
+        Color c = Color.Lerp(new Color(0.38f, 0.22f, 0.13f), new Color(0.64f, 0.42f, 0.26f), band * 0.6f + PixelNoise.Fbm(u, v, 6, 3, 352) * 0.4f);
+        PixelNoise.Voronoi(u, v, 5, 353, out float f1, out float f2, out int id);
+        float hole = (f2 - f1);
+        if (H(id, 1, 354) > 0.45f && f1 < 0.09f) c = new Color(0.04f, 0.02f, 0.01f);          // tunnel entrance
+        else if (H(id, 1, 354) > 0.45f && f1 < 0.12f) c *= 0.6f;                              // its shadowed lip
+        else if (hole < 0.02f) c *= 0.75f;                                                    // cracks between mud lumps
+        return c * (0.92f + H(x, y, 355) * 0.16f);
+    }
 
     // ---- Wood: tree bark - tall, uneven ridges split by deep dark furrows, vertical fibres, flaking and a little moss ----
     private static Color WoodPixel(int x, int y)
