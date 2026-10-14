@@ -561,11 +561,34 @@ public partial class PixelSkills : MonoBehaviour
         set { packCache = value ?? ""; PlayerPrefs.SetString(PackPref, packCache); }
     }
 
+    // ---- Preview (PixelBalanceReport only): pretend a pack is in play at a skill level, with all of its pixels unlocked. Always set / cleared in a try-finally. ----
+
+    /// <summary>Pack id the balance report pretends is in play (null = off). Read by ActiveId and PreviewForces.</summary>
+    public static string PreviewPackId;
+
+    /// <summary>Skill level the balance report pretends the previewed pack has (0 = the real level; used by the filler / hazard share).</summary>
+    public static int PreviewLevel;
+
+    /// <summary>True while the balance report previews a pack that owns this pixel type (so PixelTier.CanSpawn counts it as unlocked).</summary>
+    public static bool PreviewForces(PixelClicker.PixelType type)
+    {
+        if (PreviewPackId == null || PreviewPackId == StandardId || Instance == null) return false;
+        SkillPack p = Instance.Find(PreviewPackId);
+        return p != null && p.types != null && Array.IndexOf(p.types, type) >= 0;
+    }
+
+    /// <summary>Share of the XP an automatic click gives compared with a manual click (autoXpFactor).</summary>
+    public float AutoXpFactor => autoXpFactor;
+
+    /// <summary>The level a skill counts as maxed at for Mastery (its levelCap, else the component's default).</summary>
+    public int LevelCapOf(SkillPack pack) => CapOf(pack);
+
     /// <summary>The pixel pack in play (a bought, chosen pack, else Standard). The Toggles switches and the Skills window share this one setting.</summary>
     public string ActiveId
     {
         get
         {
+            if (PreviewPackId != null) return PreviewPackId;   // the balance report is pretending this pack is in play
             string id = PackSetting;
             SkillPack p = Find(id);
             return p != null && id != StandardId && id != OfflineId && IsAvailable(p) ? id : StandardId;
@@ -596,7 +619,7 @@ public partial class PixelSkills : MonoBehaviour
         float start = pack.fillerStartShare > 0f ? pack.fillerStartShare : 0.6f;
         float end = pack.fillerEndShare > 0f ? pack.fillerEndShare : 0.1f;
         int fade = pack.fillerFadeLevel > 1 ? pack.fillerFadeLevel : 20;
-        float k = Mathf.Clamp01((s.LevelOf(pack) - 1) / (float)(fade - 1));
+        float k = Mathf.Clamp01(((PreviewLevel > 0 ? PreviewLevel : s.LevelOf(pack)) - 1) / (float)(fade - 1));
         share = Mathf.Clamp(Mathf.Lerp(start, end, k), 0f, 0.95f);
         return true;
     }
@@ -613,7 +636,7 @@ public partial class PixelSkills : MonoBehaviour
         float start = pack.hazardBaseShare > 0f ? pack.hazardBaseShare : 0.03f;
         float per = pack.hazardPerLevelShare > 0f ? pack.hazardPerLevelShare : 0.002f;
         float max = pack.hazardMaxShare > 0f ? pack.hazardMaxShare : 0.08f;
-        share = Mathf.Clamp(start + per * (s.LevelOf(pack) - 1), 0f, max);
+        share = Mathf.Clamp(start + per * ((PreviewLevel > 0 ? PreviewLevel : s.LevelOf(pack)) - 1), 0f, max);
         return true;
     }
 

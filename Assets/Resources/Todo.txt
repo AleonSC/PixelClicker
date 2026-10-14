@@ -45,4 +45,6 @@
 [ ] Game Database: add a Settings category (screen filters, day / night lengths, floor off-modes, display options) so players can find them by searching
 [ ] Game Database: add Cubie, the Prospector and the Lumberjack as character entries (who they are, when they visit, what they do)
 [ ] Game Database: hand-written entries for the Fishing specials (whale fight, treasure map) and the Dragon Cubes / wish - their data lives in code, not in tables
+[ ] Tutorials: audit which skills / tools have their own tip boxes and turn the ones that can be into tooltips or Game Database entries (one shared Skills tutorial; per-tool help lives in tooltips)
+[ ] Game Database: check that every skill, perk, skill-tree node, tool and hazard has a searchable entry (name + description)
 [ ] Pixel facts: one place that holds each block's attributes and description pieces with the numbers read LIVE from the real settings (today PixelGuideTexts.Describe has many hand-typed numbers that can drift from the Inspector values); tooltip, Pixel Rotation window and Game Database already all read Describe, so they would pick it up
