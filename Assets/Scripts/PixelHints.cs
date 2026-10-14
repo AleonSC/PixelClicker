@@ -506,6 +506,21 @@ public class PixelHints : MonoBehaviour
     // The event log (bottom-left box)
     // ------------------------------------------------------------------
 
+    /// <summary>Goes up whenever the event log's lines change (My Window's docked Event log tab redraws on it).</summary>
+    public static int HistoryVersion { get; private set; }
+
+    public static int HistoryCount => instance != null ? instance.history.Count : 0;
+
+    /// <summary>One line of the event log by index (0 = oldest); false when there is none.</summary>
+    public static bool TryGetHistory(int index, out string text, out string full)
+    {
+        text = full = "";
+        if (instance == null || index < 0 || index >= instance.history.Count) return false;
+        text = instance.history[index].text;
+        full = instance.history[index].full ?? "";
+        return true;
+    }
+
     /// <summary>One line of the event log.</summary>
     public class Entry
     {
@@ -555,6 +570,7 @@ public class PixelHints : MonoBehaviour
     {
         if (instance == null) return;
         instance.history.Clear();
+        HistoryVersion++;
         if (texts != null)
         {
             for (int i = 0; i < texts.Length; i++)
@@ -577,6 +593,7 @@ public class PixelHints : MonoBehaviour
         if (!hintsEnabled || string.IsNullOrEmpty(shortText)) return;
         if (Time.timeSinceLevelLoad < startupQuietSeconds || Time.realtimeSinceStartup < suppressUntil) return;
         history.Add(new Entry { text = shortText, full = fullText ?? "" });
+        HistoryVersion++;
         TrimHistory();
         rowsDirty = true;
         scrollOffset = 0f;
@@ -589,6 +606,7 @@ public class PixelHints : MonoBehaviour
     private void DisplayOverlay(bool showAll = false)
     {
         if (history.Count == 0 || !EventLogEnabled) return;
+        if (PixelMyWindow.LogDocked && PixelMyWindow.IsOpen) return;   // the log lives in My Window's Event log tab while that is open
         if (overlayRoot == null) BuildOverlay();
         if (fullView != showAll) { fullView = showAll; rowsDirty = true; }
         forceFade = false;
@@ -767,6 +785,16 @@ public class PixelHints : MonoBehaviour
         bool typing = es != null && es.currentSelectedGameObject != null && es.currentSelectedGameObject.GetComponent<TMP_InputField>() != null;
 
         bool visible = overlayRoot != null && overlayRoot.activeSelf;
+        if (!typing && PixelMyWindow.LogDocked && PixelMyWindow.Available && ReopenKeyPressed())
+        {
+            PixelMyWindow.ShowLogTab();   // docked: the log key opens My Window on the Event log tab
+            return;
+        }
+        if (PixelMyWindow.LogDocked && PixelMyWindow.IsOpen)
+        {
+            if (visible) overlayRoot.SetActive(false);
+            return;
+        }
         if (!EventLogEnabled)
         {
             if (overlayRoot != null && overlayRoot.activeSelf) overlayRoot.SetActive(false);
