@@ -407,13 +407,21 @@ public class PixelBlockTooltip : MonoBehaviour
         else if (shownBody != null)
         {
             OldPixelDespawn d = shownBody.GetComponent<OldPixelDespawn>();
-            float rem = d != null ? d.Remaining : -1f;
-            if (rem >= 0f)
+            if (d != null && d.IsDespawning)
             {
                 showBar = true;
-                if (rem > maxRemaining) maxRemaining = rem;
-                frac = maxRemaining > 0.01f ? Mathf.Clamp01(rem / maxRemaining) : 0f;
-                barLabel = "Vanishes in " + Mathf.CeilToInt(rem) + "s";
+                frac = 0.04f;
+                barLabel = "Vanishing...";
+                barColor = new Color(1f, 0.35f, 0.25f);
+            }
+            else if (d != null && d.Remaining >= 0f)
+            {
+                showBar = true;
+                frac = Mathf.Clamp01(1f - d.AgeFraction);   // how much of its whole lifespan is left (not 'of the longest time seen while hovering')
+                float rem = d.RemainingReal;
+                int whole = Mathf.CeilToInt(rem);
+                string time = whole >= 60 ? (whole / 60) + "m " + (whole % 60) + "s" : whole + "s";
+                barLabel = "Vanishes in " + time + (d.Paused ? " (paused)" : "");
                 barColor = Color.Lerp(new Color(1f, 0.35f, 0.25f), c, frac);
             }
             else stats += "\nIt stays until it is collected";

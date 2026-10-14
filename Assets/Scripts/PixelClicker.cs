@@ -5660,6 +5660,12 @@ public class OldPixelDespawn : MonoBehaviour
     /// <summary>Seconds left before it starts to vanish (-1 = it never expires).</summary>
     public float Remaining => lifetime > 0f ? Mathf.Max(0f, lifetime - age) : -1f;
 
+    /// <summary>Real seconds left before it starts to vanish: the aged-seconds left divided by its ageing speed (a pet of its type slows the ageing). -1 = it never expires.</summary>
+    public float RemainingReal => lifetime > 0f ? Mathf.Max(0f, lifetime - age) / Mathf.Max(0.05f, ageRate) : -1f;
+
+    /// <summary>Its lifespan is standing still right now (held, a black hole open, a minigame holding everything, kept alive by a gravity well, the dev switch).</summary>
+    public bool Paused => !despawning && lifetime > 0f && (Held || Frozen || DevNoDespawn || HoldAll || Time.time < keepUntil);
+
     /// <summary>Loading a save: the pixel has this many seconds left (-1 = never expires).</summary>
     public void SetRemaining(float seconds)
     {
