@@ -70,6 +70,12 @@ public static class PixelFarmFx
                 s.gravity = 0f; s.colorA = new Color(1f, 0.85f, 0.15f, 1f); s.colorB = new Color(0.12f, 0.1f, 0.05f, 1f); s.rate = 12f;
                 boxScale = size * 1.4f;
                 break;
+            case PixelLook.FarmAmbient.Termites:
+                // Pale and brown specks skittering round the hive.
+                s.lifetime = new Vector2(0.5f, 1f); s.speed = new Vector2(0.3f, 0.9f) * unit; s.size = new Vector2(0.04f, 0.07f) * unit;
+                s.gravity = 0f; s.colorA = new Color(0.9f, 0.82f, 0.62f, 1f); s.colorB = new Color(0.4f, 0.24f, 0.12f, 1f); s.rate = 8f;
+                boxScale = size * 1.3f;
+                break;
             case PixelLook.FarmAmbient.Bugs:
                 // Tiny dark specks scurrying about along the bottom of the cube.
                 s.lifetime = new Vector2(0.5f, 1f); s.speed = new Vector2(0.3f, 0.8f) * unit; s.size = new Vector2(0.05f, 0.09f) * unit;
@@ -245,8 +251,8 @@ public static class PixelFarmFx
                 PixelFxRing.Spawn(centre, new Color(1f, 0.6f, 0.95f, 0.8f), size * 0.5f, size * 4f, 0.6f, 0f);
                 break;
             case PixelClicker.PixelType.HornetNest:
-                Burst("Hornets", new Vector2(0.8f, 1.5f), new Vector2(1.5f, 4.2f), new Vector2(0.06f, 0.11f), 0f, new Color(1f, 0.85f, 0.15f), new Color(0.12f, 0.1f, 0.05f), 40, 0.5f, false).Play();
-                Burst("Paper", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 1.6f, new Color(0.9f, 0.84f, 0.6f), new Color(0.7f, 0.62f, 0.4f), 18, 0.5f, false).Play();
+                Burst("Termites", new Vector2(0.8f, 1.5f), new Vector2(1.5f, 4.2f), new Vector2(0.05f, 0.09f), 0f, new Color(0.92f, 0.84f, 0.64f), new Color(0.4f, 0.24f, 0.12f), 40, 0.5f, false).Play();
+                Burst("Mud", new Vector2(0.6f, 1.1f), new Vector2(1.2f, 3f), new Vector2(0.07f, 0.15f), 1.6f, new Color(0.62f, 0.4f, 0.26f), new Color(0.42f, 0.26f, 0.16f), 18, 0.5f, false).Play();
                 break;
             case PixelClicker.PixelType.Bottle:
                 Burst("Shards", new Vector2(0.7f, 1.3f), new Vector2(1.6f, 4.2f), new Vector2(0.05f, 0.13f), 2.6f, new Color(0.7f, 0.95f, 0.9f, 0.9f), new Color(0.25f, 0.65f, 0.5f, 0.9f), 34, 0.5f, false).Play();

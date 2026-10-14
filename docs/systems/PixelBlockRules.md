@@ -15,7 +15,7 @@ Not migrated yet: Fishing's Whale / Bottle / Pearl (PixelFishingSpawns, their ch
 - `xpMultiplier`: that skill's XP (PixelSkills.AddXp).
 - `label`: shown beside the hold meter (e.g. "Clicks x3").
 - `clearsHazard` / `hazardType`: a manual left click on that hazard block clears it at once, safely (PixelClicker.CollectInternal -> ClearHazardNow; no explosion, no XP penalty, no payout).
-Defaults: **Pesticide** (Woodcutting base block, 3 hits, clears Hornet Nests) and **Whetstone** (Woodcutting base block, 3 hits, 2 extra rapid clicks = 3 at once).
+Defaults: **Pesticide** (Woodcutting base block, 3 hits, clears Termite Hives (enum HornetNest)) and **Whetstone** (Woodcutting base block, 3 hits, 2 extra rapid clicks = 3 at once).
 
 ## Adding one
 1. Append a `PixelType`, give it a look (PixelLooks default + a `looksVersion` migration) and spawn data.

@@ -725,7 +725,7 @@ public partial class PixelShop
 
     /// <summary>
     /// Default Woodcutter's Pack (Pixels tab): cheap, the intro skill. Six wood blocks for the Woodcutting skill: Wood, Bark, Sap, Leaf, Heartwood and
-    /// the filler Twig, plus the Hornet Nest hazard. They only spawn while Woodcutting is the pack in play (Skills window).
+    /// the fillers Twig, Pinecone and Moss, plus the Termite Hive hazard. They only spawn while Woodcutting is the pack in play (Skills window).
     /// </summary>
     private static ShopPack CreateWoodPixelPack()
     {
@@ -738,7 +738,7 @@ public partial class PixelShop
         {
             displayName = "Woodcutter's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Woodcutting skill and six wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and Twig, plus a Hornet Nest to watch out for and a Whetstone (hold it with Block Hold and your clicks count for more). They only spawn while Woodcutting is the pack in play (Skills window). Twig is a useless filler that is most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
+            description = "Adds the Woodcutting skill and the wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and the fillers Twig, Pinecone and Moss, plus a Termite Hive to watch out for and a Whetstone (hold it with Block Hold and your clicks count for more). They only spawn while Woodcutting is the pack in play (Skills window). The fillers are useless and most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
@@ -749,14 +749,17 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Leaf, "Leaf Pixels", new Color(0.35f, 0.78f, 0.3f, 1f), 1, 1, 0.9f),
                 Block(PixelClicker.PixelType.Heartwood, "Heartwood Pixels", new Color(0.78f, 0.35f, 0.28f, 1f), 4, 25, 0.1f),
                 Block(PixelClicker.PixelType.Twig, "Twig Pixels", new Color(0.82f, 0.72f, 0.52f, 1f), 1, 1, 1.0f),
+                // The other two fillers (Woodcutting's filler FAMILY: they share the filler's share with the Twig, spawn weight 0 = never rolled on their own).
+                Block(PixelClicker.PixelType.Pinecone, "Pinecone Pixels", new Color(0.6f, 0.4f, 0.24f, 1f), 1, 1, 0f),
+                Block(PixelClicker.PixelType.Moss, "Moss Pixels", new Color(0.36f, 0.6f, 0.24f, 1f), 1, 1, 0f),
                 // The Acorn: a base block, one click. Acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules).
                 Block(PixelClicker.PixelType.Acorn, "Acorn", new Color(0.68f, 0.46f, 0.22f, 1f), 1, 1, 0.5f),
-                // The Pesticide: a base block, 3 clicks. Hold it with Block Hold and a left click clears a Hornet Nest at once.
+                // The Pesticide: a base block, 3 clicks. Hold it with Block Hold and a left click clears a Termite Hive at once.
                 Block(PixelClicker.PixelType.Pesticide, "Pesticide", new Color(0.72f, 0.88f, 0.22f, 1f), 3, 2, 0.25f),
                 // The Whetstone: a base block that takes 3 clicks. Hold it with Block Hold (right button) and every click counts for more while you hold it.
                 Block(PixelClicker.PixelType.Whetstone, "Whetstone", new Color(0.62f, 0.68f, 0.76f, 1f), 3, 2, 0.35f),
-                // The Hornet Nest: a hazard (hit it too often and the hornets chase off the old pixels around the cube; it pays nothing).
-                Block(PixelClicker.PixelType.HornetNest, "Hornet Nest", new Color(0.85f, 0.78f, 0.5f, 1f), 5, 0, 0.05f),
+                // The Termite Hive (enum HornetNest): a hazard - break it and termites go for your old pixels (click the pixels to save them); it pays nothing.
+                Block(PixelClicker.PixelType.HornetNest, "Termite Hive", new Color(0.85f, 0.78f, 0.5f, 1f), 5, 0, 0.05f),
             }
         };
     }

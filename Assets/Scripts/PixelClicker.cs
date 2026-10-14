@@ -123,7 +123,7 @@ public partial class PixelClicker : MonoBehaviour
         Leaf = 53,
         Heartwood = 54,
         Twig = 55,        // Woodcutting's filler block
-        HornetNest = 56,  // Woodcutting's hazard block
+        HornetNest = 56,  // Woodcutting's hazard block: now the TERMITE HIVE (the enum value keeps its old name so saves stay valid)
         Berry = 57,       // Foraging
         Mushroom = 58,
         Herb = 59,
@@ -153,6 +153,8 @@ public partial class PixelClicker : MonoBehaviour
         StonePower = 88,
         StoneTime = 89,
         StoneSoul = 90,
+        Pinecone = 92,    // Woodcutting's second filler block (the filler family: Twig, Pinecone, Moss share the filler share)
+        Moss = 93,        // Woodcutting's third filler block
         InfinityCubelette = 91,   // ... and what the Prime Gauntlet makes of all six (PixelInfinity.cs): never drops
         Pesticide = 80,   // Woodcutting's base block that can be held (Block Hold): while it is held a left click clears a Hornet Nest at once (PixelBlockRules HoldRule.clearsHazard)
         Acorn = 79,       // Woodcutting's base block: acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules SpecialRule boost)
@@ -171,7 +173,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsForageBlock(PixelType type) => type >= PixelType.Berry && type <= PixelType.Weeds;
 
     /// <summary>The Woodcutting skill pack's blocks: Wood, Bark, Sap, Leaf, Heartwood and the filler Twig (the Hornet Nest is its hazard).</summary>
-    public static bool IsWoodBlock(PixelType type) => type == PixelType.Wood || (type >= PixelType.Bark && type <= PixelType.Twig) || type == PixelType.GreatOak;
+    public static bool IsWoodBlock(PixelType type) => type == PixelType.Wood || type == PixelType.Pinecone || type == PixelType.Moss || (type >= PixelType.Bark && type <= PixelType.Twig) || type == PixelType.GreatOak;
 
     /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
     public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
@@ -183,7 +185,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips || type == PixelType.GreatOak || type == PixelType.Whetstone || type == PixelType.Acorn || type == PixelType.Pesticide || type == PixelType.Charcoal;
+    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips || type == PixelType.GreatOak || type == PixelType.Whetstone || type == PixelType.Acorn || type == PixelType.Pesticide || type == PixelType.Charcoal || type == PixelType.Pinecone || type == PixelType.Moss;
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
@@ -1970,6 +1972,22 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 60;
         }
 
+        if (looksVersion < 61)
+        {
+            // Twig, Leaf and the Termite Hive got new looks (replacing the saved ones); Pinecone and Moss got theirs.
+            System.Collections.Generic.List<PixelLook> list61 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults61 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Twig, PixelType.Leaf, PixelType.HornetNest, PixelType.Pinecone, PixelType.Moss })
+            {
+                PixelLook def = PixelLooks.Find(defaults61, t);
+                if (def == null) continue;
+                list61.RemoveAll(l => l != null && l.type == t);
+                list61.Add(def);
+            }
+            looks = list61.ToArray();
+            looksVersion = 61;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2019,6 +2037,7 @@ public partial class PixelClicker : MonoBehaviour
 
         EnsureDragonCubes();
         EnsureGodCubes();
+        foreach (PixelTier legacy in tiers) if (legacy != null && legacy.type == PixelType.HornetNest && legacy.displayName == "Hornet Nest") legacy.displayName = "Termite Hive";   // renamed
     }
 
     /// <summary>The seven Dragon Cube tiers: orange, 1 payout each, an extremely low spawn weight and no requirements (rare drops).</summary>
@@ -2305,7 +2324,8 @@ public partial class PixelClicker : MonoBehaviour
                 if (tier.type == PixelType.Seed || tier.type == PixelType.Dirt) SeedDigEffect(Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // digging noises + falling dirt
                 if (tier.type != PixelType.Seed && (IsFarm(tier.type) || IsWoodBlock(tier.type) || IsForageBlock(tier.type) || IsFishBlock(tier.type) || tier.type == PixelType.HornetNest || tier.type == PixelType.Toadstool || tier.type == PixelType.Mold || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelFarmFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Dirt) digShrinkTarget = Mathf.Lerp(1f, oldPixelScale, Mathf.Clamp01(hitsOnCurrentPixel / (float)need));   // each dig shrinks it towards old-pixel size
-                if ((tier.type == PixelType.Pest || tier.type == PixelType.HornetNest) && !disablePestSwarm) PixelPestSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // bugs spill out of it
+                if (tier.type == PixelType.Pest && !disablePestSwarm) PixelPestSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // bugs spill out of it
+                if (tier.type == PixelType.HornetNest && !disableTermites) PixelTermiteSwarm.Scatter(this, pixelTransform.position, 2 + Mathf.RoundToInt(3f * hitsOnCurrentPixel / (float)need));   // termites spill out of the hive
                 if ((IsElectricalBlock(tier.type) || tier.type == PixelType.Jellyfish) && !disableFarmFx) PixelElectricFx.Hit(tier.type, pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (tier.type == PixelType.Obsidian && !disableFarmFx) PixelObsidianFx.Hit(pixelTransform.position, PixelBaseSize, hitsOnCurrentPixel / (float)need);
                 if (IsOre(tier.type) && !disableProspectorFx) OreFx.Hit(pixelTransform.position, PixelBaseSize, tier.color, hitsOnCurrentPixel / (float)need);
@@ -2737,6 +2757,7 @@ public partial class PixelClicker : MonoBehaviour
         int existing = IndexOf(definition.type);
         if (existing >= 0)
         {
+            if (definition.type == PixelType.HornetNest && tiers[existing].displayName == "Hornet Nest") tiers[existing].displayName = "Termite Hive";   // renamed
             // The Tiers list already has this type: still honour a Starting Amount set on the shop's definition.
             if (definition.startingAmount > 0 && tiers[existing].startingAmount <= 0)
             {
@@ -3045,6 +3066,18 @@ public partial class PixelClicker : MonoBehaviour
     public float SpawnShareBase(int i)
     {
         if (!IsValidTier(i) || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[i].type)) return 0f;
+        // The pack's fillers (Twig, Pinecone, Moss) split the filler's share evenly.
+        if (PixelSkills.GetFillerFamily(fillerFamilyScratch) && fillerFamilyScratch.Contains(tiers[i].type))
+        {
+            int count = 0, primary = IndexOf(fillerFamilyScratch[0]);
+            foreach (PixelType t in fillerFamilyScratch) { int k = IndexOf(t); if (k >= 0 && tiers[k].CanSpawn && !PixelSkills.LeftOutOfSpawns(t)) count++; }
+            return primary >= 0 && count > 0 ? SpawnShareCore(primary) / count : 0f;
+        }
+        return SpawnShareCore(i);
+    }
+
+    private float SpawnShareCore(int i)
+    {
         if (TryFishingShare(i, out float fishShare)) return fishShare;
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
@@ -3097,8 +3130,26 @@ public partial class PixelClicker : MonoBehaviour
             }
             if (!tiers[pick].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[pick].type)) pick = GetHighestUnlockedIndex();
         }
+        pick = SwapFiller(pick);   // the filler share is split between the pack's fillers (Woodcutting: Twig, Pinecone, Moss)
         return PixelBlockRules.TryReplace(this, pick);   // a rare special block (Great Oak...) may replace it
     }
+
+    /// <summary>When the roll lands on the pack's main filler, one of its filler FAMILY (the main one and the pack's extra fillers that can spawn) is picked at random.</summary>
+    private int SwapFiller(int pick)
+    {
+        if (!IsValidTier(pick) || devSpawnTiers != null || !PixelSkills.GetFillerFamily(fillerFamilyScratch) || !fillerFamilyScratch.Contains(tiers[pick].type)) return pick;
+        int count = 0, chosen = pick;
+        foreach (PixelType t in fillerFamilyScratch)
+        {
+            int i = IndexOf(t);
+            if (i < 0 || !tiers[i].CanSpawn || PixelSkills.LeftOutOfSpawns(t)) continue;
+            count++;
+            if (UnityEngine.Random.value < 1f / count) chosen = i;
+        }
+        return chosen;
+    }
+
+    private readonly System.Collections.Generic.List<PixelType> fillerFamilyScratch = new System.Collections.Generic.List<PixelType>();
 
     private int PickSpawnTierBase()
     {
@@ -4263,6 +4314,22 @@ public partial class PixelClicker : MonoBehaviour
     public float PestBugSpeed => pestBugSpeed > 0f ? pestBugSpeed : 3.5f;
     public float PestChewSeconds => pestChewSeconds > 0f ? pestChewSeconds : 4f;
 
+    [Header("Termite Hive (Woodcutting's hazard)")]
+    [Tooltip("Turns off the termites: a Termite Hive that goes off then only costs the usual hazard XP penalty.")]
+    [SerializeField] private bool disableTermites = false;
+    [Min(0f)]
+    [Tooltip("How fast a termite runs, in cube widths per second. 0 = the coded default (3.8).")]
+    [SerializeField] private float termiteSpeed = 0f;
+    [Min(0f)]
+    [Tooltip("Seconds a termite needs to eat an old pixel; the bar over the pixel counts this down. Click the pixel before it ends to save it. 0 = the coded default (5).")]
+    [SerializeField] private float termiteEatSeconds = 0f;
+    [Min(0)]
+    [Tooltip("The most termites (= old pixels attacked) one hive releases. 0 = the coded default (60).")]
+    [SerializeField] private int termiteMax = 0;
+    public float TermiteSpeed => termiteSpeed > 0f ? termiteSpeed : 3.8f;
+    public float TermiteEatSeconds => termiteEatSeconds > 0f ? termiteEatSeconds : 5f;
+    public int TermiteMax => termiteMax > 0 ? termiteMax : 60;
+
     [Min(0f)]
     [Tooltip("Gas Pocket blast: old pixels within this many old-pixel widths of the cube are blown away (no payout). 0 = the coded default (4).")]
     [SerializeField] private float gasBlastWidths = 0f;
@@ -4435,17 +4502,11 @@ public partial class PixelClicker : MonoBehaviour
             PixelMold.Spread(pos, 2f);
             if (!disableFarmFx) PixelFarmFx.Break(PixelType.Mold, pos, PixelBaseSize, tier.color);
         }
-        else if (tier.type == PixelType.HornetNest)
+        else if (tier.type == PixelType.HornetNest)   // (the Termite Hive: the enum value kept its old name so saves stay valid)
         {
-            what = "The hornets swarmed out and chased everything off!";
-            if (!disablePestSwarm) PixelPestSwarm.Scatter(this, pos, 14);
+            int targeted = disableTermites ? 0 : PixelTermiteSwarm.Release(this, pos);
+            what = targeted > 0 ? "Termites poured out of the hive and are going for " + targeted + " old pixel" + (targeted == 1 ? "" : "s") + " - click them to save them!" : "The termites poured out but found nothing to eat.";
             if (!disableFarmFx) PixelFarmFx.Break(PixelType.HornetNest, pos, PixelBaseSize, tier.color);
-            float stingReach = OldPixelWorldSize * (gasBlastWidths > 0f ? gasBlastWidths : 4f);
-            for (int i = oldPixels.Count - 1; i >= 0; i--)
-            {
-                Rigidbody b = oldPixels[i];
-                if (b != null && (b.position - pos).sqrMagnitude <= stingReach * stingReach) ReleaseOldPixel(b, false);
-            }
         }
         else
         {

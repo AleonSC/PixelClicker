@@ -1307,6 +1307,25 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 31)
+        {
+            // Woodcutting: Pinecone and Moss (the other two fillers) join the Woodcutter's Pack, and the Hornet Nest became the Termite Hive.
+            System.Collections.Generic.List<PixelClicker.PixelTier> fillerDefs = new System.Collections.Generic.List<PixelClicker.PixelTier>();
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Pinecone || t.type == PixelClicker.PixelType.Moss) fillerDefs.Add(t);
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers);
+                    foreach (PixelClicker.PixelTier d in fillerDefs) if (!Rewards(p, d.type)) list.Add(d.Clone());
+                    foreach (PixelClicker.PixelTier t in list) if (t != null && t.type == PixelClicker.PixelType.HornetNest && t.displayName == "Hornet Nest") t.displayName = "Termite Hive";
+                    p.rewardTiers = list.ToArray();
+                    if (p.description != null) p.description = p.description.Replace("Hornet Nest", "Termite Hive");
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 31);
+            changed = true;
+        }
+
         return changed;
     }
 

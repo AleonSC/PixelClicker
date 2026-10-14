@@ -137,7 +137,8 @@ public class PixelBlockRules : MonoBehaviour
         if (!hazardPenalties.Exists(h => h != null && h.hazard == PixelClicker.PixelType.HornetNest))
             hazardPenalties.Add(new HazardHoldPenalty { hazard = PixelClicker.PixelType.HornetNest, loseFraction = 0.5f });
         if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Pesticide))
-            holdRules.Add(new HoldRule { name = "Pesticide", type = PixelClicker.PixelType.Pesticide, skillId = PixelSkills.WoodcuttingId, clearsHazard = true, hazardType = PixelClicker.PixelType.HornetNest, label = "Hornet nests: instant clear" });
+            holdRules.Add(new HoldRule { name = "Pesticide", type = PixelClicker.PixelType.Pesticide, skillId = PixelSkills.WoodcuttingId, clearsHazard = true, hazardType = PixelClicker.PixelType.HornetNest, label = "Termite hives: instant clear" });
+        foreach (HoldRule r in holdRules) if (r != null && r.label == "Hornet nests: instant clear") r.label = "Termite hives: instant clear";
     }
 
     // ---------------- special blocks ----------------
@@ -329,7 +330,7 @@ public class PixelBlockRules : MonoBehaviour
             if (h.extraClicks > 0) parts.Add("every click is followed by " + h.extraClicks + " extra rapid click" + (h.extraClicks > 1 ? "s" : "") + " (" + (h.extraClicks + 1) + " clicks at once, like an overcharge)");
             if (h.payoutMultiplier > 0f && !Mathf.Approximately(h.payoutMultiplier, 1f)) parts.Add("every payout is x" + h.payoutMultiplier.ToString("0.##"));
             if (h.xpMultiplier > 0f && !Mathf.Approximately(h.xpMultiplier, 1f)) parts.Add((string.IsNullOrEmpty(h.skillId) ? "skill" : h.skillId) + " XP is x" + h.xpMultiplier.ToString("0.##"));
-            if (h.clearsHazard) parts.Add("a left click clears a " + (h.hazardType == PixelClicker.PixelType.HornetNest ? "hornet nest" : h.hazardType.ToString().ToLowerInvariant()) + " at once, safely");
+            if (h.clearsHazard) parts.Add("a left click clears a " + (h.hazardType == PixelClicker.PixelType.HornetNest ? "termite hive" : h.hazardType.ToString().ToLowerInvariant()) + " at once, safely");
             sb.Append(parts.Count > 0 ? string.Join(", ", parts) : "it gives a bonus").Append(". The bonus lasts exactly as long as you hold it.");
         }
         if (PixelBlockHold.IsStakeBlock(type)) sb.Append(PixelBlockHold.StakeNote());   // the basic pixels can carry a stake (Block Hold)

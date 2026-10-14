@@ -75,6 +75,8 @@ public partial class PixelSkills : MonoBehaviour
         public PixelClicker.PixelType[] types = new PixelClicker.PixelType[0];
         [Tooltip("Name of this pack's FILLER block (a pixel type, e.g. Dirt for Farming, Rock = Stone for Mining): a 'useless' base block that makes up a large share of the spawns at low skill level and fades as the skill levels up. Empty = none.")]
         public string fillerType = "";
+        [Tooltip("More FILLER blocks of this pack, as a comma separated list of pixel type names (Woodcutting: Pinecone,Moss). They share the filler's share of the spawns evenly with the main filler above (when the roll lands on the main filler, one of the family is picked). They must also be in the pack's Types list.")]
+        public string extraFillerTypes = "";
         [Range(0f, 0.95f)]
         [Tooltip("The filler's share of all spawns at level 1. 0 = the default (0.6).")]
         public float fillerStartShare = 0f;
@@ -217,14 +219,14 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(Mathf.Min(packs.Count, 1), new SkillPack
             {
                 id = WoodcuttingId, displayName = "Woodcutting", accent = new Color(0.62f, 0.42f, 0.24f),
-                description = "Swap the basic cubes for six wood blocks: wood, bark, sap, leaves, rare heartwood and twigs. Twig is a useless filler block that is most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more. Watch out for the hornet nest. Chop blocks for woodcutting XP: the simple first skill.",
+                description = "Swap the basic cubes for wood blocks: wood, bark, sap, leaves and rare heartwood, plus three useless filler blocks (twigs, pinecones and moss) that are most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more. Watch out for the termite hive. Chop blocks for woodcutting XP: the simple first skill.",
                 replaces = "Monochrome, RGB", spawns = "Twig, Wood, Bark, Sap, Leaf, Heartwood",
                 xpFrom = "Collecting wood blocks",
                 unlockHint = "Buy the Woodcutter's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
-                fillerType = "Twig", hazardType = "HornetNest",
+                                PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
+                fillerType = "Twig", extraFillerTypes = "Pinecone,Moss", hazardType = "HornetNest",
                 perks = new[]
                 {
                     new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice },
@@ -379,10 +381,11 @@ public partial class PixelSkills : MonoBehaviour
                 // A saved Woodcutting pack could lack a block: make sure every one is in the rotation.
                 System.Collections.Generic.List<PixelClicker.PixelType> wood = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
-                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide })
+                                                             PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide })
                     if (!wood.Contains(t)) wood.Add(t);
                 pack.types = wood.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Twig.ToString();
+                if (string.IsNullOrEmpty(pack.extraFillerTypes)) pack.extraFillerTypes = "Pinecone,Moss";   // the filler family
                 if (string.IsNullOrEmpty(pack.hazardType)) pack.hazardType = PixelClicker.PixelType.HornetNest.ToString();
                 // Perks: the old 'Sharp axe' level 2 perk becomes the Wood Chipper unlock; level 3 is new (a saved pack keeps any text you edited).
                 System.Collections.Generic.List<Perk> woodPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
@@ -673,6 +676,26 @@ public partial class PixelSkills : MonoBehaviour
         share = Mathf.Clamp(Mathf.Lerp(start, end, k), 0f, 0.95f);
         return true;
     }
+
+    /// <summary>The filler FAMILY of the pack in play: the main filler first, then the pack's extra fillers. False when the pack has no filler.</summary>
+    public static bool GetFillerFamily(System.Collections.Generic.List<PixelClicker.PixelType> into)
+    {
+        into.Clear();
+        PixelSkills s = Instance;
+        if (s == null) return false;
+        SkillPack pack = s.Find(s.ActiveId);
+        if (pack == null || string.IsNullOrEmpty(pack.fillerType) || !Enum.TryParse(pack.fillerType, out PixelClicker.PixelType main)) return false;
+        into.Add(main);
+        if (!string.IsNullOrEmpty(pack.extraFillerTypes))
+            foreach (string part in pack.extraFillerTypes.Split(','))
+                if (Enum.TryParse(part.Trim(), out PixelClicker.PixelType extra) && !into.Contains(extra)) into.Add(extra);
+        return true;
+    }
+
+    private static readonly System.Collections.Generic.List<PixelClicker.PixelType> familyScratch = new System.Collections.Generic.List<PixelClicker.PixelType>();
+
+    /// <summary>Is this type one of the fillers (the main one or an extra) of the pack in play?</summary>
+    public static bool IsFillerType(PixelClicker.PixelType type) => GetFillerFamily(familyScratch) && familyScratch.Contains(type);
 
     /// <summary>The hazard block of the pack in play and its share of the spawns now (grows a little with level). False when there is none.</summary>
     public static bool TryGetHazard(out PixelClicker.PixelType type, out float share)

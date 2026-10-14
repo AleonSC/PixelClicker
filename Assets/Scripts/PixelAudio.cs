@@ -261,7 +261,7 @@ public partial class PixelAudio : MonoBehaviour
             Make("time_stop", 0.3f, 1f, 1f),
             Make("device_remove", 0.2f, 1f, 1f),
             Make("hazard_warn", 0.4f, 1f, 1f),
-            Make("hornet_buzz", 0.5f, 0.95f, 1.05f),
+            Make("termite_chitter", 0.5f, 0.95f, 1.05f),
             Make("axe_swing", 0.1f, 0.95f, 1.08f),
             Make("axe_chop", 0.05f, 0.92f, 1.08f),
             Make("nest_fall", 0.1f, 0.95f, 1.1f),
