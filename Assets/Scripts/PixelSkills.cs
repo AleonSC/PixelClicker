@@ -24,6 +24,8 @@ public partial class PixelSkills : MonoBehaviour
         [TextArea(2, 5)]
         [Tooltip("A tutorial popup shown once when this level is reached (empty = none). Only with first-time tips on.")]
         public string noticeText = "";
+        [Tooltip("A pixel type (name) this perk unlocks as a toggle: from this level the skill-only block can be switched on in the Toggles window so it also spawns in other rotations (like a tree node's Guest Type).")]
+        public string guestType = "";
     }
 
     [Serializable]
@@ -101,6 +103,8 @@ public partial class PixelSkills : MonoBehaviour
     public const string StandardId = "standard";
     private const string WoodChipperPerkText = "Wood Chipper: the Lumberjack's wood chipper goes on sale in the Shop";
     private const string WoodChipperNotice = "Woodcutting level 2! The <b>Wood Chipper</b> is now for sale in the Shop. Open the Shop and look under Consumables, or just type <b>chipper</b> into the search bar at the top of the Shop: searching finds every pack, potion and device in one go.";
+    private const string WoodGuestPerkText = "Lumber stock: Wood can be switched on in the Toggles window to spawn in every rotation";
+    private const string WoodGuestNotice = "Woodcutting level 5! <b>Wood</b> can now be switched on in the <b>Toggles</b> window (listed as Wood (Woodcutting)), so wood pixels also spawn when you play other rotations.";
     private const string WoodLifespanPerkText = "Seasoned wood: old wood pixels last longer before they vanish";
     private const string WoodLifespanNotice = "Woodcutting level 3! Old wood pixels now <b>last longer</b> before they vanish (the Seasoned wood perk), so more of them are still lying there when you collect or chip them.";
 
@@ -220,6 +224,7 @@ public partial class PixelSkills : MonoBehaviour
                     new Perk { level = 2, text = WoodChipperPerkText, implemented = true, noticeText = WoodChipperNotice },
                     new Perk { level = 3, text = WoodLifespanPerkText, implemented = true, noticeText = WoodLifespanNotice },
                     new Perk { level = 4, text = "Sap collector: sap shows up more often" },
+                    new Perk { level = 5, text = WoodGuestPerkText, implemented = true, noticeText = WoodGuestNotice, guestType = "Wood" },
                     new Perk { level = 6, text = "Heart of the forest: heartwood shows up more often" },
                 },
             });
@@ -380,6 +385,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (!woodPerks.Exists(pk => pk != null && pk.level == 3)) woodPerks.Add(new Perk { level = 3, text = WoodLifespanPerkText, implemented = true, noticeText = WoodLifespanNotice });
                 foreach (Perk pk in woodPerks) if (pk != null && pk.level == 2 && pk.text == WoodChipperPerkText) { pk.implemented = true; if (string.IsNullOrEmpty(pk.noticeText)) pk.noticeText = WoodChipperNotice; }
                 foreach (Perk pk in woodPerks) if (pk != null && pk.level == 3 && pk.text == WoodLifespanPerkText) { pk.implemented = true; if (string.IsNullOrEmpty(pk.noticeText)) pk.noticeText = WoodLifespanNotice; }
+                if (!woodPerks.Exists(pk => pk != null && pk.guestType == "Wood")) woodPerks.Add(new Perk { level = 5, text = WoodGuestPerkText, implemented = true, noticeText = WoodGuestNotice, guestType = "Wood" });
                 woodPerks.Sort((a, b) => a.level.CompareTo(b.level));
                 pack.perks = woodPerks.ToArray();
             }
@@ -798,6 +804,10 @@ public partial class PixelSkills : MonoBehaviour
             if (p.nodes != null)
                 foreach (TreeNode n in p.nodes)
                     if (n.guestType == name && NodeUnlocked(p, n)) return true;
+        foreach (SkillPack p in packs)   // a perk can unlock one too (Woodcutting level 5: Wood)
+            if (p.perks != null && IsAvailable(p))
+                foreach (Perk pk in p.perks)
+                    if (pk != null && pk.guestType == name && LevelOf(p) >= pk.level) return true;
         return false;
     }
 
@@ -819,6 +829,10 @@ public partial class PixelSkills : MonoBehaviour
             if (p.nodes != null)
                 foreach (TreeNode n in p.nodes)
                     if (!string.IsNullOrEmpty(n.guestType) && NodeUnlocked(p, n) && Enum.TryParse(n.guestType, out PixelClicker.PixelType t) && !list.Contains(t)) list.Add(t);
+        foreach (SkillPack p in packs)
+            if (p.perks != null && IsAvailable(p))
+                foreach (Perk pk in p.perks)
+                    if (pk != null && !string.IsNullOrEmpty(pk.guestType) && LevelOf(p) >= pk.level && Enum.TryParse(pk.guestType, out PixelClicker.PixelType t2) && !list.Contains(t2)) list.Add(t2);
         return list;
     }
 

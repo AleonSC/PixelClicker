@@ -930,3 +930,4 @@
 [2026-10-14 08:27 UTC] UFO glass (dome and floor window) is now unlit see-through glass so it no longer blows out solid white next to the cabin lamp; the ride-along hint uses the sliding status box.
 [2026-10-14 08:27 UTC] Black hole counter and bomb timer lines in the top status box now expire by themselves, so they can't stay behind when the minigame is despawned.
 [2026-10-14 08:29 UTC] Meteor chunk popups, the ghost's caught message and the black hole counter float in the world again (the ghost's potion timer stays at the top); the black hole counter never shows once its goal is reached.
+[2026-10-14 08:32 UTC] Woodcutting level 5 perk 'Lumber stock': Wood can be switched on in the Toggles window to spawn in every rotation (perks can now unlock guest blocks like tree nodes do).
