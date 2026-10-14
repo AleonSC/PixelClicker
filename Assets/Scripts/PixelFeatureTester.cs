@@ -307,13 +307,19 @@ public class PixelFeatureTester : MonoBehaviour
     // ---------------- deleting: hold the right button on a placed tester object ----------------
 
     private const float DeleteHoldSeconds = 0.8f;
+    private GameObject redTarget;   // the tester object that is turning red while it is held
 
     private void UpdateDelete()
     {
         GameObject target = null;
         if (clicker != null && !PixelFirstPerson.Active && !PixelPauseMenu.IsPaused && (PixelInput.RightPressed() || PixelInput.RightHeld()) && !PixelInput.PointerOverUI())
             target = ObjectUnderPointer();
-        if (!PixelHold.Update(this, target, DeleteHoldSeconds, "", new Color(0.9f, 0.3f, 0.3f, 1f), true, "remove_buildup") || target == null) return;
+        bool deleted = PixelHold.Update(this, target, DeleteHoldSeconds, "", new Color(0.9f, 0.3f, 0.3f, 1f), true, "remove_buildup");
+        if (redTarget != null && redTarget != target) PixelRemoveTint.Set(redTarget, 0f);   // (the hold moved off it: back to normal)
+        redTarget = target;
+        if (target != null) PixelRemoveTint.Set(target, deleted ? 1f : PixelHold.ProgressOf(target));   // it turns red as the ring fills
+        if (!deleted || target == null) return;
+        redTarget = null;
         foreach (Feature f in features) f.placed.Remove(target);
         Destroy(target);   // (a belt's riders are let go by the belt system; a chipper just vanishes)
         PixelAudio.Play("device_remove");

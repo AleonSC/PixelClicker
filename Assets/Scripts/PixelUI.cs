@@ -2390,7 +2390,7 @@ public class PixelUI : MonoBehaviour
         bool placing = consumables != null && consumables.IsPlacing;
         bool active = placing || (consumables != null && consumables.IsActive);
         PixelStatusBox.Show(hudLabel, active);
-        if (!active) return;
+        if (!active) { PixelRemoveTint.Shake(hudLabel.transform, 0f); return; }
 
         if (placing)
         {
@@ -2406,6 +2406,7 @@ public class PixelUI : MonoBehaviour
                              string.Format(consumables.CancelPotionText, running.displayName), consumables.RemoveMeterColor))
         {
             consumables.CancelActive();
+            PixelRemoveTint.Shake(hudLabel.transform, 0f);
             return;
         }
 
@@ -2413,7 +2414,10 @@ public class PixelUI : MonoBehaviour
         hudLabel.text = string.Format(activeHudFormat, potion.displayName, Mathf.CeilToInt(consumables.Remaining));
 
         int tierIndex = clicker.IndexOf(potion.type);
-        hudLabel.color = activeHudUsesTierColor && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : Color.white;
+        Color lineColor = activeHudUsesTierColor && tierIndex >= 0 ? clicker.Tiers[tierIndex].UIColor : Color.white;
+        float cancel = PixelHold.ProgressOf(hudLabel);   // the line reddens and trembles a little as the hold fills (like a placed device being removed)
+        hudLabel.color = PixelRemoveTint.RedText(lineColor, cancel);
+        PixelRemoveTint.Shake(hudLabel.transform, cancel);
     }
 
     /// <summary>Is the mouse on the text of the active-potion line?</summary>
