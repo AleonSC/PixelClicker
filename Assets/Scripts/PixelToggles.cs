@@ -17,6 +17,12 @@ using UnityEngine.UI;
 public class PixelToggles : MonoBehaviour
 {
     private enum Group { Pixels = 0, Upgrades = 1, Minigames = 2, Vendors = 3, Pets = 4 }
+
+    [Header("Search")]
+    [Tooltip("Hint text in the Toggles window's search bar.")]
+    [SerializeField] private string searchPlaceholder = "Search toggles...";
+    private TMP_InputField searchField;
+    private string searchText = "";
     private const int GroupCount = 5;
 
     [Header("References")]
@@ -397,6 +403,13 @@ public class PixelToggles : MonoBehaviour
         return list;
     }
 
+    /// <summary>Picking a group tab leaves the search (the search covers every group, the tab picks one).</summary>
+    private void ClearSearch()
+    {
+        searchText = "";
+        if (searchField != null && searchField.text.Length > 0) searchField.SetTextWithoutNotify("");
+    }
+
     private void Refresh()
     {
         if (groupDropdown != null && groupDropdown.value != (int)current) groupDropdown.SetValueWithoutNotify((int)current);
@@ -405,10 +418,28 @@ public class PixelToggles : MonoBehaviour
                 groupImages[i].color = i == (int)current ? groupActiveColor : groupColor;
         ApplyGroupControl();
 
-        List<Entry> entries = Collect(current);
+        bool searching = searchText.Length > 0;
+        List<Entry> entries;
+        if (searching)
+        {
+            // A search looks through EVERY group (named in front of each match) and replaces the list while it has text.
+            entries = new List<Entry>();
+            for (int g = 0; g < GroupCount; g++)
+            {
+                string groupName = tabNames != null && g < tabNames.Length && !string.IsNullOrEmpty(tabNames[g]) ? tabNames[g] : ((Group)g).ToString();
+                foreach (Entry e in Collect((Group)g))
+                    if ((e.label ?? "").ToLowerInvariant().Contains(searchText) || groupName.ToLowerInvariant().Contains(searchText))
+                    {
+                        Entry match = e;   // (a copy: the label gets the group name in front)
+                        match.label = groupName + ": " + e.label;
+                        entries.Add(match);
+                    }
+            }
+        }
+        else entries = Collect(current);
         entries.Sort((a, b) => string.Compare(a.label, b.label, System.StringComparison.OrdinalIgnoreCase));   // alphabetical
         List<Entry> switchable = entries.FindAll(e => !e.skipAll);
-        if (switchable.Count >= 2)
+        if (!searching && switchable.Count >= 2)
         {
             // A 'Toggle all' row on top: ticked while everything below is on; clicking it sets everything to its new value.
             bool allOn = switchable.TrueForAll(e => e.on);
@@ -443,7 +474,7 @@ public class PixelToggles : MonoBehaviour
         }
 
         emptyObject.SetActive(entries.Count == 0);
-        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = (current == Group.Pets ? noPetsText : current == Group.Vendors ? noVendorsText : emptyText).ToUpperInvariant();
+        if (entries.Count == 0 && emptyLabel != null) emptyLabel.text = (searching ? "Nothing found" : current == Group.Pets ? noPetsText : current == Group.Vendors ? noVendorsText : emptyText).ToUpperInvariant();
         float contentHeight = entries.Count * (rowHeight + 8f);
         float viewHeight = scroll.GetComponent<RectTransform>().rect.height;
         PixelUIKit.UpdateScrollView(scroll, bar, Mathf.Max(contentHeight - 8f, 0f), viewHeight);
@@ -616,6 +647,7 @@ public class PixelToggles : MonoBehaviour
         groupDropdown.onValueChanged.AddListener(value =>
         {
             current = (Group)value;
+            ClearSearch();
             content.anchoredPosition = Vector2.zero;
             Refresh();
         });
@@ -656,11 +688,25 @@ public class PixelToggles : MonoBehaviour
             b.onClick.AddListener(() =>
             {
                 current = (Group)captured;
+                ClearSearch();
                 content.anchoredPosition = Vector2.zero;
                 Refresh();
             });
         }
-        y = listTop;   // same y as the shop's list
+        // --- The search bar under the tabs: looks through every group.
+        float searchH = 52f;
+        searchField = PixelUIKit.CreateInputField(font, windowObject.transform, "Toggle Search", new Vector2(0f, searchH), groupColor, textColor, fontSize * 0.8f, searchPlaceholder);
+        PixelUIKit.AddSearchIcon(searchField);
+        RectTransform sbr = searchField.GetComponent<RectTransform>();
+        sbr.anchorMin = new Vector2(0f, 1f); sbr.anchorMax = new Vector2(1f, 1f); sbr.pivot = new Vector2(0.5f, 1f);
+        sbr.offsetMin = new Vector2(sidePad, -(listTop - 2f + searchH)); sbr.offsetMax = new Vector2(-sidePad, -(listTop - 2f));
+        searchField.onValueChanged.AddListener(text =>
+        {
+            searchText = (text ?? "").Trim().ToLowerInvariant();
+            content.anchoredPosition = Vector2.zero;
+            Refresh();
+        });
+        y = listTop + searchH + 6f;   // the list starts under the search bar
 
         // --- The list of switches.
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Toggle List", scrollbarColor, 12f, rowHeight, out content, out bar);
