@@ -7,7 +7,12 @@
 //   opening in front of the spout makes it latch on like the Wood Chipper); at the end the pixel is put back as an ordinary old pixel (physics again) with a small push, or dropped onto the
 //   belt. While placing, the output can only be put within maxReach cube widths of the cube. Placing a second funnel MOVES the first (no extra one is used up).
 //   Ghost / display (shop picture) models are built by the same code (Mode); the cone and tube are pinned to the WORLD (the object's yaw only turns the spout). Riders in the tube are plain
+//   HOLD (backpressure): caught pixels first wait in a PILE inside the cone (locked, settling into hexagonal layers from the throat up, up to maxPile) and leave for the tube ONE BY ONE (holdFeedSeconds) while the tube has room; at the spout the tube
+//   waits (PixelPathCarrier canExit) when a belt starts there and has no room (PixelConveyorSystem.StartHasRoom) or a connector there is full, so a flooding hose queues up the tube and then builds a pile in the cone instead of overflowing the belt. disableHold = the old direct behaviour.
 //   old pixels for the save (they come back where they were); a rider you grab or that despawns is simply let go. Layout is in cube widths, recomputed when the object / floor moves.
+//   HOLD (backpressure): caught pixels first wait in a PILE inside the cone (locked, settling into hexagonal layers from the throat upwards, up to maxPile) and leave for the tube ONE BY ONE (holdFeedSeconds) while the tube has room. At the spout
+//   the tube waits (PixelPathCarrier canExit = ExitHasRoom) when a belt starts there and has no room for another pixel (PixelConveyorSystem.StartHasRoom) or a connector there is full, so a flooding hose queues up the tube and then builds a pile in the cone
+//   instead of overflowing the belt. Pile pixels cannot be grabbed (PixelPathCarrier.MarkCarried). disableHold = the old direct behaviour.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -33,6 +38,18 @@ public class PixelFunnel : MonoBehaviour
     [Tooltip("How far from the cube the output may be put. 0 = the coded default (16).")]
     [SerializeField] private float maxReach = 0f;
 
+    [Header("Hold (backpressure)")]
+    [Tooltip("Turn the hold off: every pixel the cone catches goes straight into the tube (the old behaviour, which can flood a belt).")]
+    [SerializeField] private bool disableHold = false;
+
+    [Min(0f)]
+    [Tooltip("Seconds between two pixels leaving the cone's pile for the tube (they come out one by one). 0 = the coded default (0.3).")]
+    [SerializeField] private float holdFeedSeconds = 0f;
+
+    [Min(0)]
+    [Tooltip("The most pixels that can pile up inside the cone while the tube is busy or backed up (more fall through). 0 = the coded default (60).")]
+    [SerializeField] private int maxPile = 0;
+
     [Header("Carrying")]
     [Min(0f)]
     [Tooltip("How fast pixels travel down the tube, in cube widths per second. 0 = the coded default (5).")]
@@ -48,6 +65,8 @@ public class PixelFunnel : MonoBehaviour
     private float Reach => maxReach > 0f ? maxReach : 16f;
     private float Speed => tubeSpeed > 0f ? tubeSpeed : 5f;
     private float Gap => pixelGap > 0f ? pixelGap : 0.9f;
+    private float FeedSeconds => holdFeedSeconds > 0f ? holdFeedSeconds : 0.3f;
+    private int PileMax => maxPile > 0 ? maxPile : 60;
 
     private const float SpoutLen = 0.6f;      // cube widths: the straight bit of the spout past the output point
     private const float OutletH = 0.55f;      // cube widths: height of the tube's end above the floor
@@ -88,7 +107,11 @@ public class PixelFunnel : MonoBehaviour
     private Vector3 lastPos = new Vector3(1e9f, 0f, 0f);
     private float lastYaw = 1e9f;
     private bool displayDone;
-    private readonly PixelPathCarrier carrier = new PixelPathCarrier();   // locks the caught pixels and moves them down the tube
+    private readonly PixelPathCarrier carrier = new PixelPathCarrier();
+    private readonly List<Rigidbody> pile = new List<Rigidbody>();   // caught pixels waiting in the cone, in order (the first goes down the tube next)
+    private readonly List<Vector3> slots = new List<Vector3>();
+    private string slotKey;
+    private float nextFeed;   // locks the caught pixels and moves them down the tube
 
     // ---------------- building ----------------
 
@@ -305,6 +328,7 @@ public class PixelFunnel : MonoBehaviour
     {
         real.Remove(this);
         carrier.ReleaseAll();
+        ReleasePile();
     }
 
     private bool InMouth(Vector3 c)
@@ -340,12 +364,100 @@ public class PixelFunnel : MonoBehaviour
             for (int i = 0; i < list.Count; i++)
             {
                 Rigidbody rb = list[i];
-                if (CanCatch(rb) && InMouth(rb.worldCenterOfMass)) carrier.Add(rb);
+                if (!CanCatch(rb) || !InMouth(rb.worldCenterOfMass)) continue;
+                if (disableHold) { carrier.Add(rb); continue; }
+                if (pile.Count >= PileMax) continue;   // (a full cone lets the rest fall through)
+                pile.Add(rb);
+                rb.isKinematic = true;
+                PixelPathCarrier.SetVelocity(rb, Vector3.zero);
+                PixelPathCarrier.MarkCarried(rb);
             }
         }
+        if (removing) ReleasePile();
 
-        // 2. Carry them down the tube (a gap apart); at the end each one is put back into the world.
-        carrier.Step(path, pathDist, Speed * unit, Gap * unit, Time.fixedDeltaTime, Release, ApproachSeconds);
+        // 2. The pile in the cone: pixels settle into their places and go down the tube ONE BY ONE, only while the tube has room.
+        UpdatePile();
+
+        // 3. Carry them down the tube (a gap apart); at the end each one is put back into the world - but only when the way out has room (a full belt makes them queue, then the pile builds up).
+        carrier.Step(path, pathDist, Speed * unit, Gap * unit, Time.fixedDeltaTime, Release, ApproachSeconds, ExitHasRoom);
+    }
+
+    private bool ExitHasRoom()
+    {
+        float u = unit;
+        Vector3 end = path[path.Length - 1];
+        foreach (PixelConveyor belt in PixelConveyor.All)
+        {
+            if (belt == null || belt.IsGhost) continue;
+            Vector3 d = belt.StartPoint - end; d.y = 0f;
+            if (d.magnitude > 1.3f * u) continue;
+            return PixelConveyorSystem.StartHasRoom(belt);
+        }
+        foreach (PixelConnector con in PixelConnector.All) if (con != null && !con.HasRoomAt(end + (path[path.Length - 1] - path[path.Length - 2]).normalized * 0.4f * u)) return false;
+        return true;
+    }
+
+    private void UpdatePile()
+    {
+        for (int i = pile.Count - 1; i >= 0; i--)
+        {
+            Rigidbody rb = pile[i];
+            OldPixelInfo info = rb != null ? rb.GetComponent<OldPixelInfo>() : null;
+            if (rb == null || !rb.isKinematic || (info != null && info.heldByPlayer)) { if (rb != null) PixelPathCarrier.Unmark(rb); pile.RemoveAt(i); }
+        }
+        if (pile.Count == 0) return;
+        BuildSlots();
+        for (int i = 0; i < pile.Count; i++)
+        {
+            Rigidbody rb = pile[i];
+            OldPixelDespawn despawn = rb.GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.KeepAlive();
+            if (i < slots.Count) rb.MovePosition(Vector3.Lerp(rb.position, slots[i], 0.25f));
+        }
+        // The first in line goes down the tube when it has room (one at a time).
+        int tubeCap = Mathf.Max(1, Mathf.FloorToInt(pathLen / (Gap * unit)));
+        if (Time.time >= nextFeed && carrier.Count < tubeCap)
+        {
+            Rigidbody first = pile[0];
+            pile.RemoveAt(0);
+            PixelPathCarrier.Unmark(first);
+            carrier.Add(first);
+            nextFeed = Time.time + FeedSeconds;
+        }
+    }
+
+    /// <summary>Places for the pile inside the cone: layers from the throat upwards, each a hexagonal pattern (centre, then rings of 6, 12...) as wide as the cone is at that height.</summary>
+    private void BuildSlots()
+    {
+        string key = axisBottom.ToString("F2") + throatY.ToString("F2") + mouthY.ToString("F2");
+        if (key == slotKey) return;
+        slotKey = key;
+        slots.Clear();
+        float u = unit;
+        int max = PileMax;
+        for (int layer = 0; slots.Count < max; layer++)
+        {
+            float y = throatY + (0.55f + 0.9f * layer) * u;
+            if (y > mouthY + 0.6f * u) break;
+            float t = Mathf.Clamp01((y - throatY) / Mathf.Max(0.01f, mouthY - throatY));
+            float radius = Mathf.Max(0f, Mathf.Lerp(throatR, mouthR, t) - 0.55f * u);
+            slots.Add(new Vector3(axisBottom.x, y, axisBottom.z));
+            for (int ring = 1; ring * 1.0f * u <= radius && slots.Count < max; ring++)
+            {
+                int n = 6 * ring;
+                for (int k = 0; k < n && slots.Count < max; k++)
+                {
+                    float a = (k / (float)n) * Mathf.PI * 2f + layer * 0.5f;
+                    slots.Add(new Vector3(axisBottom.x + Mathf.Cos(a) * ring * u, y, axisBottom.z + Mathf.Sin(a) * ring * u));
+                }
+            }
+        }
+    }
+
+    private void ReleasePile()
+    {
+        foreach (Rigidbody rb in pile) if (rb != null) { rb.isKinematic = false; PixelPathCarrier.Unmark(rb); }
+        pile.Clear();
     }
 
     /// <summary>The pixel leaves the spout: ordinary physics again, or dropped onto a belt opening in front of it.</summary>

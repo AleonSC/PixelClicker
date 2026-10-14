@@ -515,6 +515,23 @@ public class PixelConveyorSystem : MonoBehaviour
     public static void Register(IPixelBeltAcceptor a) { if (a != null && !acceptors.Contains(a)) acceptors.Add(a); }
     public static void Unregister(IPixelBeltAcceptor a) { acceptors.Remove(a); }
 
+    /// <summary>Is there room to put a pixel on the start of this belt (no rider within a gap of the drop spot, no loose pixel lying there)? The Funnel waits when it is false.</summary>
+    public static bool StartHasRoom(PixelConveyor belt)
+    {
+        if (system == null || belt == null) return true;
+        float u = belt.Unit, oldSize = system.clicker != null ? system.clicker.OldPixelWorldSize : u;
+        Vector3 over = belt.PointAt(0.6f * oldSize);
+        int lane = belt.NearestLane(over);
+        if (!system.RoomAt(belt, 0.6f * oldSize, lane)) return false;
+        if (system.clicker != null)
+        {
+            Vector3 drop = new Vector3(over.x, over.y + belt.SurfaceHeight + oldSize * 0.7f, over.z);
+            foreach (Rigidbody rb in system.clicker.OldPixels)
+                if (rb != null && !rb.isKinematic && (rb.position - drop).sqrMagnitude < (0.9f * u) * (0.9f * u)) return false;
+        }
+        return true;
+    }
+
     /// <summary>The first machine (not 'exclude') whose opening contains this world point; null if none.</summary>
     public static IPixelBeltAcceptor FindAcceptorAt(Vector3 world, IPixelBeltAcceptor exclude)
     {

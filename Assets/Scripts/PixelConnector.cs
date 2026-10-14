@@ -147,6 +147,9 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
         return a + dir * (length * 0.7f) + right * (side * (width * 0.5f + 0.12f * unit));
     }
 
+    /// <summary>Does this connector contain the world point and have room for another pixel? (False when it is full; true when the point is not in it at all.)</summary>
+    public bool HasRoomAt(Vector3 world) => ghost || InsideAt(world) < 0f || carrier.Count < Cap;
+
     public bool IsAdapter => adapter && !ghost;
 
     private void Rebuild(Vector3 from, Vector3 to)

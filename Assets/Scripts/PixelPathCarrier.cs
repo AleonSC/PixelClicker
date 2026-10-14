@@ -2,7 +2,7 @@
 // PixelPathCarrier.cs
 //   Shared helper for machines that CARRY old pixels along a path (users: the Funnel and the Conveyor Elevator; the belts have their own rider system). Add(rb) locks a loose old pixel (kinematic, no velocity); Step(...) each FixedUpdate draws new ones to the path's start (approachSeconds), then moves every
 //   pixel along the polyline at 'speed' keeping 'gap' behind the one ahead, keeps them from despawning, lets go of ones that were grabbed or destroyed, and calls onEnd(rb) when one reaches
-//   the end (the caller then puts it back into the world with ReleaseAt). ReleaseAll() lets everything go (the machine was removed).
+//   the end (optional canExit gate: while it returns false the pixel waits at the end and the ones behind queue up) (the caller then puts it back into the world with ReleaseAt). ReleaseAll() lets everything go (the machine was removed).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,10 @@ public sealed class PixelPathCarrier
     private static void ResetStatics() { carriedAll.Clear(); }
 
     /// <summary>Is this pixel inside any carrier (a Funnel tube, an Elevator shaft, a Splitter, a Conveyor Connector)? Such pixels cannot be grabbed with the mouse.</summary>
+    /// <summary>Marks a pixel as held by some machine (it cannot be grabbed with the mouse) without it being on a path (the Funnel's pile). Unmark when it is let go.</summary>
+    public static void MarkCarried(Rigidbody rb) { if (rb != null) carriedAll.Add(rb); }
+    public static void Unmark(Rigidbody rb) { if (rb != null) carriedAll.Remove(rb); }
+
     public static bool IsCarried(Rigidbody rb) => rb != null && carriedAll.Contains(rb);
 
     private readonly List<Item> items = new List<Item>();
@@ -62,7 +66,7 @@ public sealed class PixelPathCarrier
         items.Add(startD >= 0f ? new Item { rb = rb, from = rb.position, approach = 1f, d = startD } : new Item { rb = rb, from = rb.position });
     }
 
-    public void Step(Vector3[] path, float[] cum, float speed, float gap, float dt, Action<Rigidbody> onEnd, float approachSeconds = 0.25f)
+    public void Step(Vector3[] path, float[] cum, float speed, float gap, float dt, Action<Rigidbody> onEnd, float approachSeconds = 0.25f, Func<bool> canExit = null)
     {
         float len = cum[cum.Length - 1];
         for (int i = items.Count - 1; i >= 0; i--)
@@ -88,6 +92,12 @@ public sealed class PixelPathCarrier
             float limit = len;
             foreach (Item o in items) if (o != c && o.approach >= 1f && o.d > c.d) limit = Mathf.Min(limit, o.d - gap);
             c.d = Mathf.Max(c.d, Mathf.Min(c.d + speed * dt, limit));
+            if (c.d >= len - 0.001f && canExit != null && !canExit())
+            {
+                c.d = len - 0.002f;   // the way out is blocked: wait at the end (the ones behind queue up)
+                c.rb.MovePosition(Vector3.Lerp(c.rb.position, PointAt(path, cum, c.d), 0.6f));
+                continue;
+            }
             if (c.d >= len - 0.001f)
             {
                 Rigidbody rb = c.rb;
