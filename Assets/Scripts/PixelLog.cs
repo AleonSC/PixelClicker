@@ -574,7 +574,20 @@ public class PixelLog : MonoBehaviour
         }
         int tiers = achievements.GetTierCount(a);
         string tier = tiers > 1 ? "\nTier " + Math.Min(achievements.GetEarnedTiers(a) + 1, tiers) + " of " + tiers : "";
-        return "<b>" + head + "</b>\n" + body + "\nProgress: " + FormatAmount(have) + " / " + FormatAmount(target) + tier;
+        // The log of what was earned and when (the exact date and time, in your own time).
+        string earned = "";
+        int got = Math.Min(achievements.GetEarnedTiers(a), tiers);
+        if (got > 0)
+        {
+            System.Text.StringBuilder log = new System.Text.StringBuilder("\n\n<b>EARNED</b>");
+            for (int t = 0; t < got; t++)
+            {
+                string when = achievements.TryGetEarnedAt(a, t, out DateTime at) ? at.ToString("yyyy-MM-dd  HH:mm:ss") : "date not recorded";
+                log.Append('\n').Append(tiers > 1 ? "Tier " + (t + 1) + ":  " : "").Append(when);
+            }
+            earned = log.ToString();
+        }
+        return "<b>" + head + "</b>\n" + body + "\nProgress: " + FormatAmount(have) + " / " + FormatAmount(target) + tier + earned;
     }
 
     private string GoalTipText(Goal g)

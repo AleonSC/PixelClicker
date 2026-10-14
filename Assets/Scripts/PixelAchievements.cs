@@ -86,6 +86,20 @@ public class PixelAchievements : MonoBehaviour
         [Tooltip("Runtime: how many tiers have been earned. (Saved with the game.)")]
         public int earnedTiers = 0;
 
+        /// <summary>Runtime: when each tier was earned (UTC ticks; 0 = not recorded, e.g. earned before dates were kept). Saved with the game.</summary>
+        [NonSerialized] public long[] earnedAt;
+
+        /// <summary>When a tier was earned (UTC ticks, 0 = unknown).</summary>
+        public long EarnedAtOf(int tier) => earnedAt != null && tier >= 0 && tier < earnedAt.Length ? earnedAt[tier] : 0L;
+
+        /// <summary>Records when a tier was earned.</summary>
+        public void StampTier(int tier, long ticks)
+        {
+            if (tier < 0) return;
+            if (earnedAt == null || earnedAt.Length <= tier) System.Array.Resize(ref earnedAt, Mathf.Max(tier + 1, TierCount));
+            earnedAt[tier] = ticks;
+        }
+
         /// <summary>Number of tiers (1 for a single-target achievement).</summary>
         public int TierCount => tiers != null && tiers.Length > 0 ? tiers.Length : 1;
 
@@ -353,6 +367,16 @@ public class PixelAchievements : MonoBehaviour
         }
     }
 
+    /// <summary>When a tier of an achievement was earned, in the player's local time (false = no date was recorded for it).</summary>
+    public bool TryGetEarnedAt(int index, int tier, out DateTime local)
+    {
+        long ticks = achievements[index].EarnedAtOf(tier);
+        local = default;
+        if (ticks <= 0L) return false;
+        local = new DateTime(ticks, DateTimeKind.Utc).ToLocalTime();
+        return true;
+    }
+
     /// <summary>Tiers earned so far for one achievement.</summary>
     public int GetEarnedTiers(int index) => achievements[index].earnedTiers;
 
@@ -394,7 +418,7 @@ public class PixelAchievements : MonoBehaviour
     /// <summary>Forgets every earned tier.</summary>
     public void ResetAll()
     {
-        foreach (Achievement a in achievements) a.earnedTiers = 0;
+        foreach (Achievement a in achievements) { a.earnedTiers = 0; a.earnedAt = null; }
     }
 
     private void Start()
@@ -492,7 +516,7 @@ public class PixelAchievements : MonoBehaviour
 
             double progress = GetProgress(i);
             int before = a.earnedTiers;
-            while (!a.Complete && progress >= a.TargetOf(a.earnedTiers)) a.earnedTiers++;
+            while (!a.Complete && progress >= a.TargetOf(a.earnedTiers)) { a.StampTier(a.earnedTiers, silent ? 0L : DateTime.UtcNow.Ticks); a.earnedTiers++; }   // (a quiet re-earn on load has no date to give)
 
             // One popup per achievement, for the highest tier just reached (no spam if several tiers pass at once).
             if (a.earnedTiers > before && !silent)
@@ -691,7 +715,13 @@ public class PixelAchievements : MonoBehaviour
     {
         List<string> entries = new List<string>();
         foreach (Achievement a in achievements)
-            if (a.earnedTiers > 0) entries.Add(a.id + ":" + a.earnedTiers);
+            if (a.earnedTiers > 0)
+            {
+                // "id:tiers:ticks,ticks,..." (the dates of the tiers; older saves have only "id:tiers")
+                List<string> times = new List<string>();
+                for (int t = 0; t < a.earnedTiers; t++) times.Add(a.EarnedAtOf(t).ToString());
+                entries.Add(a.id + ":" + a.earnedTiers + ":" + string.Join(",", times));
+            }
         return entries.ToArray();
     }
 
@@ -704,13 +734,22 @@ public class PixelAchievements : MonoBehaviour
         foreach (Achievement a in achievements)
         {
             a.earnedTiers = 0;
+            a.earnedAt = null;
             if (entries == null) continue;
 
             foreach (string entry in entries)
             {
                 string[] parts = entry.Split(':');
-                if (parts.Length == 2 && parts[0] == a.id && int.TryParse(parts[1], out int tiers))
+                if (parts.Length >= 2 && parts[0] == a.id && int.TryParse(parts[1], out int tiers))
+                {
                     a.earnedTiers = Mathf.Clamp(tiers, 0, a.TierCount);
+                    if (parts.Length >= 3)
+                    {
+                        string[] times = parts[2].Split(',');
+                        for (int t = 0; t < times.Length && t < a.earnedTiers; t++)
+                            if (long.TryParse(times[t], out long ticks) && ticks > 0L) a.StampTier(t, ticks);
+                    }
+                }
             }
         }
         Evaluate(true);

@@ -976,3 +976,5 @@
 [2026-10-14 12:40 UTC] The Bank, UFO Helper and Autosaves windows now play the menu-open sound too; the Keybinds tab got a search bar that filters what you can add and the list of bound keys.
 [2026-10-14 12:48 UTC] My Window is now called Pocket (title, docked button tip, Database pin buttons).
 [2026-10-14 12:48 UTC] Pocket's Pinned tab is now a board of widgets: drag a card by its header to move it, '-' folds it, hold a small x to remove it (the card turns red), and a blank card with a + under the last one opens a search to pin something new (it comes back when the last widget is removed). Edit mode is gone.
+[2026-10-14 12:51 UTC] Added "Shared widget board (Pocket + Dev Hub)" to the to-do list.
+[2026-10-14 12:51 UTC] Hovering an achievement in the Log now also shows an EARNED log with the exact date and time (to the second, in your local time) of every tier you got; older saves show "date not recorded" for tiers earned before dates were kept.
