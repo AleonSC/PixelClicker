@@ -33,3 +33,6 @@ PixelVisitorMinigame got `BuySellTabs` (a vendor that sells wares AND buys pixel
 
 ## Conveyor Connector
 `PixelConnector.cs` (tester feature, two clicks, one piece): see its header comment. Machines with an opening implement `IPixelPort` (Kiln, Storage Crate) so the connector can magnetize to them; `PixelConveyorSystem.FindAcceptorAt / ForEachPort` expose the registered acceptors.
+
+## Corner joints
+`PixelConveyorJoint.cs`: belts chained at an angle get a corner filler (slab + outer rails) on the outside of the turn, built automatically by each belt every 0.5 s (see the file header).

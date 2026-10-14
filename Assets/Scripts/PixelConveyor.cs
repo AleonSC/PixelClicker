@@ -4,6 +4,7 @@
 //   ClampEnd keeps the slope under about 37 degrees); posts (BuildSupports) stand on the floor (FloorY) under a raised belt. Riders measure their place along the GROUND (Length = horizontal length), PointAt gives the
 //   sloped height, RunSpeed / LiftFactor adjust speed and rest height for the slope. Snap() matches belt ends and elevator tops by SCREEN distance, so raised ends can be snapped to; FindNext only chains belts
 //   whose heights match. The Conveyor Elevator (PixelElevator.cs) lifts pixels between heights.
+//   CORNERS: where belts chain at an angle the gap on the outside of the turn is filled automatically (PixelConveyorJoint.cs).
 //   WIDTH: PixelConveyor.LaneCount = 1 cube wide, 2 at Electrician level 10, 3 at level 20 (every belt, PixelConveyorSystem.Update rebuilds them when it changes). Each rider travels in a LANE (belt-local x, PixelConveyor.LaneOffset / NearestLane): a pixel is
 //   captured into the lane it landed in, riders keep their gap per lane, and a hand-on to the next belt picks the nearest lane there.
 //   CONVEYOR BELT (a Dev Hub > Tester feature, PixelFeatureTester 'Conveyor Belt'). Placing: click a point, then click another: a belt is built between the two (the second point
@@ -126,6 +127,8 @@ public class PixelConveyor : MonoBehaviour
     }
     public float Unit => unit;
     public float SurfaceHeight => height;
+    /// <summary>The belt slab's width (all lanes).</summary>
+    public float Width => width;
     /// <summary>The end things enter at / leave from (in the direction of travel).</summary>
     public Vector3 StartPoint => reversed ? b : a;
     public Vector3 ExitPoint => reversed ? a : b;
@@ -272,6 +275,7 @@ public class PixelConveyor : MonoBehaviour
     {
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
         ribs.Clear();
+        jointKey = null; joint = null;   // (the corner filler was a child: gone with the rest)
         a = from; b = to;
         Vector3 d = b - a; d.y = 0f;
         hLength = d.magnitude;
@@ -354,11 +358,16 @@ public class PixelConveyor : MonoBehaviour
         }
     }
 
+    private string jointKey;
+    private GameObject joint;
+    private float nextJointCheck;
+
     private void Update()
     {
         if (ghostMode) return;
         ribOffset += Time.deltaTime * Speed;
         PlaceRibs();
+        if (Time.time >= nextJointCheck) { nextJointCheck = Time.time + 0.5f + Random.value * 0.1f; PixelConveyorJoint.Refresh(this, clicker, ref jointKey, ref joint); }
     }
 
     /// <summary>Right click: the belt runs the other way.</summary>
