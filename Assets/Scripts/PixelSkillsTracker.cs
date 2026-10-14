@@ -6,7 +6,7 @@
 //   (RefreshTracker: TrainingId, LevelOf; Standard shows 'No skill in training'). Left / right arrows either side of the skill name
 //   (trackerPrev/Next, CycleTrainedSkill) switch the skill in training through Standard and every available pack. Its buttons: a
 //   padlock stick (trackerStuck: can't be dragged), downsize ('-' / '+': a one-line small version) and X (closes it; the Skills menu
-//   is NOT reopened). Open / small / stuck / position are PlayerPrefs PixelClicker.Skills.Tracker* (global, not per save); hidden on
+//   is NOT reopened). DOUBLE CLICKING the name (small or full; PixelDoubleClick) opens the Skills window on the skill in training with its tree beside it (never the expanded tree). Open / small / stuck / position are PlayerPrefs PixelClicker.Skills.Tracker* (global, not per save); hidden on
 //   the title screen and when no skill is trainable.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -64,6 +64,26 @@ public partial class PixelSkills
         tip.onExit = () => { if (hoverTip == source) hoverTip = null; };
     }
 
+    /// <summary>Double click on the tracker's name (small or full): opens the Skills window on the skill in training with its tree beside it (the normal tree, not the expanded one).</summary>
+    private void OpenTrainedSkillWithTree()
+    {
+        if (PixelTutorialDim.Active || packs == null || packs.Count == 0) return;
+        if (!WindowOpen) OpenWindow();
+        int index = packs.FindIndex(p => p.id == TrainingId);
+        if (index < 0) return;
+        selected = index;
+        selectedNode = 0;
+        treeExpanded = false;
+        ApplyTreeExpandGlyph();
+        RefreshWindow();
+        SkillPack pack = packs[index];
+        if (IsAvailable(pack) && pack.nodes != null && pack.nodes.Length > 0)
+        {
+            PixelPop.Show(treeWindow);
+            RefreshWindow();
+        }
+    }
+
     private void PinTracker()
     {
         SetTracker(!trackerOn);
@@ -100,7 +120,8 @@ public partial class PixelSkills
         trackerDrag.onMoved = () => { trackerDesired = trackerRect.anchoredPosition; KeepTrackerOnScreen(); trackerDesired = trackerRect.anchoredPosition; PlayerPrefs.SetFloat(TrackerXPref, trackerDesired.x); PlayerPrefs.SetFloat(TrackerYPref, trackerDesired.y); };
 
         trackerName = PixelUIKit.CreateText(Font, trackerPanel.transform, "Name", "", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
-        trackerName.raycastTarget = false;
+        trackerName.raycastTarget = true;   // double click the name: open that skill and its tree (drags still reach the panel behind it)
+        trackerName.gameObject.AddComponent<PixelDoubleClick>().onDouble = OpenTrainedSkillWithTree;
         trackerName.enableAutoSizing = true;
         trackerName.fontSizeMin = 12f;
         trackerName.alignment = TextAlignmentOptions.Center;   // between the two arrows
@@ -340,5 +361,19 @@ public partial class PixelSkills
         trackerTimer = 0.25f;
         RefreshTracker();
         KeepTrackerOnScreen();
+    }
+}
+
+/// <summary>Calls 'onDouble' on a double click (a double click on a UI element that is not draggable itself: drags go to the parent that handles them).</summary>
+public class PixelDoubleClick : MonoBehaviour, UnityEngine.EventSystems.IPointerClickHandler
+{
+    public System.Action onDouble;
+    private float lastClick = -10f;
+
+    public void OnPointerClick(UnityEngine.EventSystems.PointerEventData e)
+    {
+        bool dbl = e.clickCount >= 2 || Time.unscaledTime - lastClick < 0.35f;
+        lastClick = dbl ? -10f : Time.unscaledTime;
+        if (dbl) onDouble?.Invoke();
     }
 }
