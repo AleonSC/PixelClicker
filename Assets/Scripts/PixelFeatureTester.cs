@@ -10,6 +10,7 @@
 //   'Select belts' mode toggles belts by click or box-drag (teal glow, PixelConveyor.SetSelected) and sets speed / reverses them together. Placing snaps to a grid by default; SHIFT = free placement. (It used to be: SHIFT while placing snaps to a grid and angle steps (PixelSnap).
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
+//   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, on sale at Electrician level 5): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
 //   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
 // ---------------------------------------------------
 using System;
@@ -147,7 +148,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].import = PixelSolarPanel.ImportState;
         features[features.Count - 1].linkAfterPlace = true;
 
-        Build(PixelDevHub.TabRoot("tester"));
+        if (PixelDevTools.Available) Build(PixelDevHub.TabRoot("tester"));   // (in a normal build there is no tab: the Conveyor Belt item starts placing through StartFeature)
         PixelWindows.Register(this, 210, () => placing != null || selecting, StopPlacing);   // Escape stops placing first
     }
 
@@ -239,8 +240,23 @@ public class PixelFeatureTester : MonoBehaviour
         Refresh();
     }
 
+    private bool gameplayPlacing;   // placing started by the game (StartFeature), not from the Dev Hub card: it does not need the hub open
+
+    /// <summary>Starts placing a feature by name from the game itself (the Conveyor Belt item). Returns false when there is no such feature.</summary>
+    public static bool StartFeature(string featureName)
+    {
+        Boot();
+        if (instance == null) return false;
+        Feature f = instance.features.Find(x => x.name == featureName);
+        if (f == null) return false;
+        instance.StartPlacing(f);
+        instance.gameplayPlacing = true;
+        return true;
+    }
+
     private void StopPlacing()
     {
+        gameplayPlacing = false;
         if (ghost != null) Destroy(ghost);
         ghost = null;
         if (previewGhost != null) Destroy(previewGhost);
@@ -430,7 +446,7 @@ public class PixelFeatureTester : MonoBehaviour
     {
         PixelClicker.ExternalClickBlock = true;
         blocking = true;
-        if (!PixelDevHub.IsOpen) { StopPlacing(); return; }
+        if (!PixelDevHub.IsOpen && !gameplayPlacing) { StopPlacing(); return; }
         Vector2 m = PixelInput.PointerPosition();
         if (Time.frameCount != placeStartFrame)
         {

@@ -19,6 +19,7 @@
 //   INFO button in the header (PixelMyWindow.HoverDocked, kept on this machine): pins the block HOVER TOOLTIP into the window: while it is on and the window is open (Pinned tab, not minimized) the tooltip card
 //   no longer follows the mouse - PixelBlockTooltip moves its card into the window's hover slot (TryGetHoverSlot / SetHoverHeight), scaled to the window's width, and it shows whatever the mouse hovers (and stays on the last
 //   one while the mouse is over the window); a hint shows until something was hovered.
+//   TABS (always shown under the header): Pinned | Event log (only while the log is docked) | Keybinds (PixelCustomKeys.BuildView: bind items / tools to your own keys).
 //   The header buttons are laid out side by side from the right (LayoutHeaderButtons) so they never overlap. DOCKING: let go of a drag with the window against the left or right screen edge (edgeSnap px) and it docks
 //   there at that height (dockSide -1 / +1, dockY): only a sliver (dockSliver) stays on screen and it slides out while the mouse is near / over it or while editing
 //   (UpdateDock); an UNDOCK arrow button appears in the header while docked (it pulls the window back into the screen); a pale strip at the edge shows while a drag is close
@@ -130,7 +131,7 @@ public class PixelMyWindow : MonoBehaviour
     {
         slot = null; width = 0f;
         PixelMyWindow w = instance;
-        if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || w.minimized || !HoverDocked || (LogDocked && w.showLogTab)) return false;
+        if (w == null || w.canvasRoot == null || w.hoverSlot == null || !w.open || w.minimized || !HoverDocked || (LogDocked && w.showLogTab) || w.showKeysTab) return false;
         slot = w.hoverSlot;
         width = Mathf.Max(200f, w.windowRect.sizeDelta.x - 24f);
         return true;
@@ -206,7 +207,10 @@ public class PixelMyWindow : MonoBehaviour
     private float restoreHeight = 660f;
     private int dockSide;          // 0 = free, -1 = docked on the left edge, 1 = docked on the right edge
     private float dockY, dockSlide;
-    private Button minimizeButton, undockButton, closeButton, logDockButton, tabPinnedButton, tabLogButton;
+    private Button minimizeButton, undockButton, closeButton, logDockButton, tabPinnedButton, tabLogButton, tabKeysButton;
+    private Image tabKeysImage;
+    private RectTransform keysRoot;
+    private bool showKeysTab;         // the Keybinds tab is showing (PixelCustomKeys builds its contents)
     private Image logDockImage, tabPinnedImage, tabLogImage;
     private GameObject editButtonObject, resizeHandleObject, tabBar;
     private TMP_Text titleLabel;
@@ -238,6 +242,17 @@ public class PixelMyWindow : MonoBehaviour
         ("bank", "Open Pixel Bank", PixelAction.Bank),
         ("skills", "Open Skills", PixelAction.Skills),
     };
+
+    /// <summary>A tool a favourite / keybind can use: its display name and the menu action it clicks (the hose is handled by the caller).</summary>
+    public static bool TryGetTool(string id, out string name, out PixelAction action)
+    {
+        foreach (var t in Tools) if (t.id == id) { name = t.name; action = t.action; return true; }
+        name = null; action = PixelAction.Hose;
+        return false;
+    }
+
+    /// <summary>The ids of every tool.</summary>
+    public static IEnumerable<string> ToolIds() { foreach (var t in Tools) yield return t.id; }
 
     // ------------------------------------------------------------------
     // Lifecycle
@@ -430,8 +445,10 @@ public class PixelMyWindow : MonoBehaviour
         tbr.anchoredPosition = new Vector2(0f, -(HeaderHeight + 4f));
         tabPinnedButton = MakeTab(tabs.transform, "Pinned", 0f, 0.5f, out tabPinnedImage);
         tabLogButton = MakeTab(tabs.transform, "Event log", 0.5f, 1f, out tabLogImage);
-        tabPinnedButton.onClick.AddListener(() => { showLogTab = false; Layout(); });
-        tabLogButton.onClick.AddListener(() => { showLogTab = true; Layout(); RebuildLog(); });
+        tabKeysButton = MakeTab(tabs.transform, "Keybinds", 0.5f, 1f, out tabKeysImage);
+        tabPinnedButton.onClick.AddListener(() => { showLogTab = false; showKeysTab = false; Layout(); });
+        tabLogButton.onClick.AddListener(() => { showLogTab = true; showKeysTab = false; Layout(); RebuildLog(); });
+        tabKeysButton.onClick.AddListener(() => { showLogTab = false; showKeysTab = true; Layout(); });
         tabs.SetActive(false);
 
         // The place for the pinned hover card (under the header / tabs); PixelBlockTooltip puts its card in here.
@@ -482,6 +499,15 @@ public class PixelMyWindow : MonoBehaviour
         PixelScrollBarFade logFade = logScrollBar != null ? logScrollBar.GetComponent<PixelScrollBarFade>() : null;
         if (logFade != null) logFade.hideBar = true;
         logScroll.gameObject.SetActive(false);
+
+        // The Keybinds tab (PixelCustomKeys builds what is in it).
+        GameObject keysGo = new GameObject("Keybinds", typeof(RectTransform));
+        keysGo.transform.SetParent(windowObject.transform, false);
+        keysRoot = keysGo.GetComponent<RectTransform>();
+        keysRoot.anchorMin = Vector2.zero; keysRoot.anchorMax = Vector2.one;
+        PixelCustomKeys keys = PixelCustomKeys.Instance != null ? PixelCustomKeys.Instance : PixelFind.First<PixelCustomKeys>();
+        if (keys != null) keys.BuildView(keysRoot, Font);
+        keysGo.SetActive(false);
 
         // Resize handle (bottom-right).
         GameObject handle = new GameObject("Resize", typeof(RectTransform), typeof(Image), typeof(PixelMyWindowResizer));
@@ -666,6 +692,14 @@ public class PixelMyWindow : MonoBehaviour
         return b;
     }
 
+    private static void SetTabAnchors(Button b, float x0, float x1)
+    {
+        if (b == null) return;
+        RectTransform r = b.GetComponent<RectTransform>();
+        r.anchorMin = new Vector2(x0, 0f); r.anchorMax = new Vector2(x1, 1f);
+        r.offsetMin = new Vector2(x0 > 0f ? 3f : 0f, 0f); r.offsetMax = new Vector2(x1 < 1f ? -3f : 0f, 0f);
+    }
+
     private void ToggleHoverDock()
     {
         PlayerPrefs.SetInt(PrefHoverDocked, HoverDocked ? 0 : 1);
@@ -707,7 +741,7 @@ public class PixelMyWindow : MonoBehaviour
         GameObject editObject = editButtonObject;
         if (editObject != null)
         {
-            bool showEdit = !minimized && !logTab;
+            bool showEdit = !minimized && !logTab && !showKeysTab;
             editObject.SetActive(showEdit);
             if (showEdit) { editObject.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, 0f); x -= 96f + 8f; }
         }
@@ -720,9 +754,11 @@ public class PixelMyWindow : MonoBehaviour
         if (scroll == null) return;
         bool docked = LogDocked;
         if (!docked) showLogTab = false;
+        if (showLogTab) showKeysTab = false;
         bool logTab = docked && showLogTab;
-        float tabs = docked ? TabBarHeight : 0f;
-        bool hoverOn = HoverDocked && !minimized && !logTab;
+        bool keysTab = showKeysTab && !logTab;
+        float tabs = TabBarHeight;
+        bool hoverOn = HoverDocked && !minimized && !logTab && !keysTab;
         float hoverH = hoverOn ? Mathf.Max(hoverShownH, 64f) + 8f : 0f;   // the pinned hover card (or its hint) sits under the header / tabs
         hoverLaidH = hoverShownH;
         if (hoverSlot != null)
@@ -733,12 +769,25 @@ public class PixelMyWindow : MonoBehaviour
             if (hoverPlaceholder != null) hoverPlaceholder.gameObject.SetActive(hoverShownH <= 0f);
         }
         if (hoverDockImage != null) hoverDockImage.color = HoverDocked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
-        float top = 64f + tabs + hoverH + (editing && !logTab ? 170f : 0f);
-        scroll.gameObject.SetActive(!minimized && !logTab);
+        float top = 64f + tabs + hoverH + (editing && !logTab && !keysTab ? 170f : 0f);
+        scroll.gameObject.SetActive(!minimized && !logTab && !keysTab);
         if (logScroll != null) logScroll.gameObject.SetActive(!minimized && logTab);
-        if (tabBar != null) tabBar.SetActive(docked && !minimized);
+        if (tabBar != null) tabBar.SetActive(!minimized);
+        if (tabLogButton != null) tabLogButton.gameObject.SetActive(docked);
+        SetTabAnchors(tabPinnedButton, 0f, docked ? 1f / 3f : 0.5f);
+        SetTabAnchors(tabLogButton, 1f / 3f, 2f / 3f);
+        SetTabAnchors(tabKeysButton, docked ? 2f / 3f : 0.5f, 1f);
+        if (keysRoot != null)
+        {
+            keysRoot.gameObject.SetActive(!minimized && keysTab);
+            keysRoot.offsetMin = new Vector2(12f, 34f); keysRoot.offsetMax = new Vector2(-12f, -(64f + tabs));
+            PixelCustomKeys keysView = PixelCustomKeys.Instance;
+            if (keysView != null) keysView.SetVisible(!minimized && keysTab);
+        }
+        Color tabOff = new Color(0.2f, 0.24f, 0.34f, 1f), tabOn = new Color(0.25f, 0.45f, 0.8f, 1f);
+        if (tabKeysImage != null) tabKeysImage.color = keysTab ? tabOn : tabOff;
         if (logDockImage != null) logDockImage.color = docked ? new Color(0.25f, 0.6f, 0.4f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
-        if (tabPinnedImage != null) tabPinnedImage.color = logTab ? new Color(0.2f, 0.24f, 0.34f, 1f) : new Color(0.25f, 0.45f, 0.8f, 1f);
+        if (tabPinnedImage != null) tabPinnedImage.color = logTab || keysTab ? new Color(0.2f, 0.24f, 0.34f, 1f) : new Color(0.25f, 0.45f, 0.8f, 1f);
         if (tabLogImage != null) tabLogImage.color = logTab ? new Color(0.25f, 0.45f, 0.8f, 1f) : new Color(0.2f, 0.24f, 0.34f, 1f);
         if (resizeHandleObject != null) resizeHandleObject.SetActive(!minimized);
         RectTransform vr = scroll.GetComponent<RectTransform>();
@@ -753,7 +802,7 @@ public class PixelMyWindow : MonoBehaviour
             lr.offsetMin = new Vector2(12f, 34f); lr.offsetMax = new Vector2(-12f, -top);
         }
         addBar.anchoredPosition = new Vector2(0f, -(64f + tabs + hoverH));
-        addBar.gameObject.SetActive(editing && !minimized && !logTab);
+        addBar.gameObject.SetActive(editing && !minimized && !logTab && !keysTab);
         if (editLabel != null) PixelUIKit.SetText(editLabel, editing ? "Done" : "Edit");
         LayoutHeaderButtons();
         UpdateContentHeight();

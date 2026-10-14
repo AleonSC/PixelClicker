@@ -1202,6 +1202,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
         if (PixelFind.First<PixelGodFind>() == null) gameObject.AddComponent<PixelGodFind>();   // the God Cubes' shows
         if (PixelFind.First<PixelInfinity>() == null) gameObject.AddComponent<PixelInfinity>();
+        if (PixelFind.First<PixelCustomKeys>() == null) gameObject.AddComponent<PixelCustomKeys>();   // custom keybinds (My Window > Keybinds)
         if (PixelFind.First<PixelCollectionLog>() == null) gameObject.AddComponent<PixelCollectionLog>();   // the Collection Log book (opened from the Log window)   // the Infinity Stones' Gauntlet window
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window

@@ -117,6 +117,8 @@ public class PixelConsumables : MonoBehaviour
         Funnel = 16,
         /// <summary>Not placed: right-click in the inventory to open the Gauntlet window (PixelInfinity) and set the six Infinity Stones in a golden cube to forge the Infinity Cubelette. Sold only by the Wizard once all six stones are held.</summary>
         Gauntlet = 17,
+        /// <summary>Not consumed: a belt-laying tool on sale from Electrician level 5. Right-click starts placing conveyor belts (PixelFeatureTester.StartFeature); hold the right button on a belt to remove it.</summary>
+        ConveyorBelt = 18,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -835,6 +837,27 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultConveyorBelt()
+    {
+        return new Device
+        {
+            kind = DeviceKind.ConveyorBelt,
+            vendorOnly = true,
+            shopSkillId = "electrician",   // Electrician level 5 puts it on sale in the shop
+            shopSkillLevel = 5,
+            displayName = "Conveyor Belt Kit",
+            description = "Right-click to lay conveyor belts: click a point, then another, and a belt is built between them (short pieces make curves; scroll raises or lowers the end). Old pixels that land on a belt are carried along it. Right click ends a chain; hold the right button on a belt to remove it. The kit is not used up. You can only hold one.",
+            requiredType = PixelClicker.PixelType.Wire,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Electric, amount = 400 },
+                new PixelShop.PackCost { type = PixelClicker.PixelType.Wire, amount = 150 },
+            },
+            maxHeld = 1,
+            color = new Color(0.95f, 0.8f, 0.2f, 1f),
+        };
+    }
+
     private static Device CreateDefaultPetTreat()
     {
         return new Device
@@ -1006,6 +1029,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.WoodChipper, CreateDefaultWoodChipper),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Funnel, CreateDefaultFunnel),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Gauntlet, CreateDefaultGauntlet),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorBelt, CreateDefaultConveyorBelt),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1800,6 +1824,7 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.PetTreat:
                 case DeviceKind.BaitBucket:
                 case DeviceKind.Gauntlet:
+                case DeviceKind.ConveyorBelt:
                     root = BuildItemModel(kind, d);
                     break;
             }
@@ -1869,6 +1894,23 @@ public class PixelConsumables : MonoBehaviour
             GameObject tail = MakePrimitive(PrimitiveType.Cylinder, "Tail", root.transform, bright, false);
             tail.transform.localScale = new Vector3(0.4f, 0.12f, 0.4f);
             tail.transform.localPosition = new Vector3(0f, 0.12f, 0f);
+        }
+        else if (kind == DeviceKind.ConveyorBelt)
+        {
+            // A short belt: a dark slab with a bright stripe and a roller at each end.
+            GameObject slab = MakePrimitive(PrimitiveType.Cube, "Belt", root.transform, new Color(0.14f, 0.14f, 0.17f, 1f), false);
+            slab.transform.localScale = new Vector3(1.4f, 0.14f, 0.55f);
+            slab.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            GameObject stripe = MakePrimitive(PrimitiveType.Cube, "Stripe", root.transform, main, false);
+            stripe.transform.localScale = new Vector3(1.2f, 0.02f, 0.12f);
+            stripe.transform.localPosition = new Vector3(0f, 0.28f, 0f);
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                GameObject roller = MakePrimitive(PrimitiveType.Cylinder, "Roller", root.transform, bright, false);
+                roller.transform.localScale = new Vector3(0.2f, 0.28f, 0.2f);
+                roller.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                roller.transform.localPosition = new Vector3(sx * 0.7f, 0.2f, 0f);
+            }
         }
         else if (kind == DeviceKind.Gauntlet)
         {
@@ -1952,7 +1994,7 @@ public class PixelConsumables : MonoBehaviour
     {
         if (!IsDevice(item)) return false;
         DeviceKind k = devices[item - potions.Length].kind;
-        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet;
+        return k == DeviceKind.ComboFuel || k == DeviceKind.GhostBait || k == DeviceKind.PetTreat || k == DeviceKind.BaitBucket || k == DeviceKind.Gauntlet || k == DeviceKind.ConveyorBelt;
     }
 
     /// <summary>0 = potion, 1 = placeable device (Utilities), 2 = seed, 3 = supply (instant-use item).</summary>
@@ -2010,6 +2052,10 @@ public class PixelConsumables : MonoBehaviour
                 PixelHints.Announce("Your pets are hyper!");
                 return true;
             }
+            case DeviceKind.ConveyorBelt:
+                if (!PixelFeatureTester.StartFeature("Conveyor Belt")) return false;   // a tool: it is not used up
+                PixelHints.Announce("Click a point, then another to lay a belt. Right click stops");
+                return true;
             case DeviceKind.Gauntlet:
                 return PixelInfinity.Open(this, item);   // the window uses up the Gauntlet when the Cubelette is forged
             case DeviceKind.BaitBucket:

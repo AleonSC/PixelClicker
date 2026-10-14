@@ -108,6 +108,8 @@ public partial class PixelSkills : MonoBehaviour
     private const string WoodLifespanPerkText = "Seasoned wood: old wood pixels last longer before they vanish";
     private const string WoodLifespanNotice = "Woodcutting level 3! Old wood pixels now <b>last longer</b> before they vanish (the Seasoned wood perk), so more of them are still lying there when you collect or chip them.";
 
+    private const string ConveyorPerkText = "Conveyor belts: the Conveyor Belt Kit goes on sale in the Shop";
+    private const string ConveyorNotice = "Electrician level 5! The Conveyor Belt Kit is on sale in the Shop (Utilities).";
     private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. While you train another skill it still gains a tiny 5% of the XP.";
     public const string MiningId = "mining";
     public const string WoodcuttingId = "woodcutting";
@@ -388,6 +390,17 @@ public partial class PixelSkills : MonoBehaviour
                 if (!woodPerks.Exists(pk => pk != null && pk.guestType == "Wood")) woodPerks.Add(new Perk { level = 5, text = WoodGuestPerkText, implemented = true, noticeText = WoodGuestNotice, guestType = "Wood" });
                 woodPerks.Sort((a, b) => a.level.CompareTo(b.level));
                 pack.perks = woodPerks.ToArray();
+            }
+            if (pack.id == ElectricianId)
+            {
+                // Level 5: the Conveyor Belt Kit goes on sale in the shop (PixelConsumables DeviceKind.ConveyorBelt, shopSkillId electrician / level 5).
+                System.Collections.Generic.List<Perk> elPerks = new System.Collections.Generic.List<Perk>(pack.perks ?? new Perk[0]);
+                if (!elPerks.Exists(pk => pk != null && pk.level == 5))
+                {
+                    elPerks.Add(new Perk { level = 5, text = ConveyorPerkText, implemented = true, noticeText = ConveyorNotice });
+                    elPerks.Sort((a, b) => a.level.CompareTo(b.level));
+                    pack.perks = elPerks.ToArray();
+                }
             }
             if (pack.id == FishingId)
             {
