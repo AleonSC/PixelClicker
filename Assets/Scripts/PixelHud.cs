@@ -168,7 +168,7 @@ public class PixelHud : MonoBehaviour
 
     private const string PrefBarGlow = "PixelClicker.Setting.BarGlow";
     private static int barGlowCache = -1;
-    private readonly UnityEngine.UI.Image[][] glowParts = new UnityEngine.UI.Image[2][];   // per bar: outer, inner, line
+    private readonly PixelBarEdgeFx[] glowParts = new PixelBarEdgeFx[2];   // per bar: the glow / bar style on its inner edge
 
     /// <summary>The player's switch for the neon bar glow (Settings > Display). On by default.</summary>
     public static bool BarGlow
@@ -346,14 +346,14 @@ public class PixelHud : MonoBehaviour
             if (barRects[i] != null) barRects[i].anchoredPosition = new Vector2(0f, (i == 0 ? 1f : -1f) * out01 * (barHeight + 16f));
         for (int i = 0; i < 2; i++)
         {
-            UnityEngine.UI.Image[] g = glowParts[i];
+            PixelBarEdgeFx g = glowParts[i];
             if (g == null) continue;
             bool on = barGlowAllowed && BarGlow;
-            if (g[0].gameObject.activeSelf != on) { g[0].gameObject.SetActive(on); g[1].gameObject.SetActive(on); g[2].gameObject.SetActive(on); }
+            if (g.gameObject.activeSelf != on) g.gameObject.SetActive(on);
             if (!on) continue;
             float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);
             Color c = GlowColourNow(Time.unscaledTime, glowColorSpeed, GlowCustomColor.HasValue && !GlowCycle ? 0f : (i == 0 ? 0f : glowEdgeOffset), glowSaturation);
-            PixelBarGlow.Colorize(g[0], g[1], g[2], c, Mathf.Clamp01(glowStrength) * shimmer);
+            g.Tick(c, Mathf.Clamp01(glowStrength) * shimmer);
         }
     }
 
@@ -377,12 +377,7 @@ public class PixelHud : MonoBehaviour
             barRects[i] = r;
 
             // The glow sits on the bar's inner edge (the one facing the play area): the top bar's bottom edge, the bottom bar's top edge.
-            glowParts[i] = new[]
-            {
-                PixelBarGlow.AddStrip(r, "Glow", !top, true, glowSize),
-                PixelBarGlow.AddStrip(r, "Glow Inner", !top, false, glowInnerReach),
-                PixelBarGlow.AddLine(r, "Glow Line", !top),
-            };
+            glowParts[i] = PixelBarEdgeFx.Create(r, !top, glowSize, glowInnerReach);
         }
     }
 

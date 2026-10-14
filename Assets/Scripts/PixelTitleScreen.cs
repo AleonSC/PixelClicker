@@ -233,7 +233,6 @@ public class PixelTitleScreen : MonoBehaviour
     private bool lastLive, lastBlur, haveLastToggles;
     private float fadeAmount;
     private RectTransform barRect, logoRect;
-    private readonly List<Image> glowImages = new List<Image>();   // [0,1] top outer/inner, [2,3] bottom outer/inner, [4] top line, [5] bottom line
     private float glowFade = 1f;
     private readonly List<RectTransform> shrinkRects = new List<RectTransform>();
     private readonly List<Button> buttons = new List<Button>();
@@ -369,27 +368,25 @@ public class PixelTitleScreen : MonoBehaviour
         chainDivisors.Clear();
     }
 
+    private PixelBarEdgeFx glowTop, glowBottom;
+
     private void BuildBarGlow()
     {
-        glowImages.Clear();
-        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Top", true, true, glowSize));
-        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Top Inner", true, false, glowInnerSize));
-        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Bottom", false, true, glowSize));
-        glowImages.Add(PixelBarGlow.AddStrip(barRect, "Glow Bottom Inner", false, false, glowInnerSize));
-        glowImages.Add(PixelBarGlow.AddLine(barRect, "Line Top", true));
-        glowImages.Add(PixelBarGlow.AddLine(barRect, "Line Bottom", false));
+        // The title bar has two glowing edges (top and bottom), drawn in the player's bar style (PixelBarStyle).
+        glowTop = PixelBarEdgeFx.Create(barRect, true, glowSize, glowInnerSize);
+        glowBottom = PixelBarEdgeFx.Create(barRect, false, glowSize, glowInnerSize);
     }
 
     private void UpdateBarGlow()
     {
-        if (glowImages.Count < 6) return;
+        if (glowTop == null || glowBottom == null) return;
         bool on = PixelHud.BarGlow;   // the Settings switch covers every bar glow
-        if (glowImages[0].gameObject.activeSelf != on) foreach (Image g in glowImages) g.gameObject.SetActive(on);
+        if (glowTop.gameObject.activeSelf != on) { glowTop.gameObject.SetActive(on); glowBottom.gameObject.SetActive(on); }
         if (!on) return;
         float shimmer = 0.93f + 0.07f * Mathf.Sin(Time.unscaledTime * 1.3f);   // a very slight breathing
         float a = Mathf.Clamp01(glowStrength) * glowFade * shimmer;
-        PixelBarGlow.Colorize(glowImages[0], glowImages[1], glowImages[4], PixelHud.GlowColourNow(Time.unscaledTime, glowColorSpeed, 0f, glowSaturation), a);
-        PixelBarGlow.Colorize(glowImages[2], glowImages[3], glowImages[5], PixelHud.GlowColourNow(Time.unscaledTime, glowColorSpeed, PixelHud.GlowCustomColor.HasValue && !PixelHud.GlowCycle ? 0f : glowEdgeOffset, glowSaturation), a);
+        glowTop.Tick(PixelHud.GlowColourNow(Time.unscaledTime, glowColorSpeed, 0f, glowSaturation), a);
+        glowBottom.Tick(PixelHud.GlowColourNow(Time.unscaledTime, glowColorSpeed, PixelHud.GlowCustomColor.HasValue && !PixelHud.GlowCycle ? 0f : glowEdgeOffset, glowSaturation), a);
     }
 
     private int titleBarVersion = -1;

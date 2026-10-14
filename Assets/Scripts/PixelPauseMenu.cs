@@ -333,6 +333,8 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Label of the Settings tick box for the neon glow along the black bars.")]
     [SerializeField] private string barGlowLabel = "Neon bar glow";
+    [Tooltip("Label of the drop-down that picks what glows along the black bars (neon glow, pixel equalizer, wave, marquee, scanner, thin line).")]
+    [SerializeField] private string barStyleLabel = "Bar style";
 
     [Tooltip("Label of the tick box for the soft glow behind the clicker cube.")]
     [SerializeField] private string clickerAuraLabel = "Clicker glow aura";
@@ -2445,6 +2447,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, cameraIntroLabel, () => PixelCameraIntro.Enabled, on => PixelCameraIntro.Enabled = on, ref y);
         AddDropdownRow(list, buttonModeLabel, ButtonModeNames(), () => PixelHud.ButtonMode, v => PixelHud.ButtonMode = v, ref y);
         Toggle glowToggle = AddToggleRow(list, barGlowLabel, PixelHud.BarGlow, on => PixelHud.BarGlow = on, ref y);
+        AddDropdownRow(list, barStyleLabel, PixelBarStyle.Names, () => PixelBarStyle.Current, v => PixelBarStyle.Current = v, ref y);
         settingsRefreshers.Add(() => glowToggle.SetIsOnWithoutNotify(PixelHud.BarGlow));
         AddEyedropperButton(glowToggle, () => PixelEyedropper.Begin(c => { PixelHud.SetGlowFromColor(c); settingsRefreshersRun(); }));
         AddCycleButton(glowToggle, () => PixelHud.GlowCycle, on => PixelHud.GlowCycle = on);   // a small rainbow button beside the eyedropper: the glow colour cycles

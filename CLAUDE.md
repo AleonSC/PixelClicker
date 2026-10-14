@@ -74,6 +74,7 @@
 | `PixelSkillsPopups.cs` | Part of partial class PixelSkills: '+n <Skill> XP' popups while a skill trains (AddXp calls QueueXpPopup; | in the header comment of `PixelSkillsPopups.cs` |
 | `PixelTube.cs` | Static PixelTube.Build(points, radius, sides, mesh): | in the header comment of `PixelTube.cs` |
 | `PixelHud.cs` | Screen frame: black bar along the top and bottom (barHeight) and the docked buttons. | in the header comment of `PixelHud.cs` |
+| `PixelBarEdgeFx.cs` | Bar styles (Settings > Display 'Bar style', PixelBarStyle.Current): what glows along the black bars' inner edge - Neon glow, Pixel equalizer (audio-reactive pixel columns), Pixel wave, Marquee, Scanner, Thin line; one PixelBarEdgeFx per edge, ticked by PixelHud and PixelTitleScreen. | in the header comment of `PixelBarEdgeFx.cs` |
 | `PixelAudio.cs` (UFO beam) | The main-menu UFO's abduction plays ufo_beam (code-made PixelSynth.UfoBeam: | in the header comment of `PixelAudio.cs` |
 | `PixelAudio.cs` | Sound system. Alt-tab keeps the music track: | `docs/systems/PixelAudio.md` |
 | `PixelKeys.cs` | Rebindable keys: PixelAction enum (TimeStop, Hose, RotateLeft, RotateRight, EventLog, TimeSlow, FirstPerson), defaults + the player's choices (PlayerPrefs PixelClicker.Key.*), PixelKeys.Pressed/Held(action) (both input systems; | in the header comment of `PixelKeys.cs` |
