@@ -990,3 +990,4 @@
 [2026-10-14 15:05 UTC] Block Hold meter moved to the right of the mouse, made bigger, with a big percentage and a state caption (Holding / Recharging / Ready) in a dark pill; the wait after dropping a block before the meter recharges is now 0.5 s instead of 1 s.
 [2026-10-14 13:41 UTC] Lumberjack's Focus note: the hazard it holds off is the Termite Hive (the Hornet Nest block, renamed); nothing else changed.
 [2026-10-14 15:40 UTC] Termite Hive is half as common, breaks in 4 left clicks and clears in 10 right clicks; clearing any hazard with right clicks now collects it as currency and drops it as an old pixel (left-click breaking pays nothing).
+[2026-10-14 16:05 UTC] Block Hold: a right press that came too soon after clearing a hazard (or while the new block was still appearing) now starts the hold as soon as it is allowed while the button is still held, so you no longer have to let go and move the mouse.

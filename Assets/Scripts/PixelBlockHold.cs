@@ -227,10 +227,19 @@ public class PixelBlockHold : MonoBehaviour
                 bool spam = Time.unscaledTime - lastRightPress < SpamGap || Time.unscaledTime - clicker.LastDefuseTime < SpamGap;
                 lastRightPress = Time.unscaledTime;
                 if (!spam && CanStart()) Begin();
+                else deferredSince = Time.unscaledTime;   // too soon / the new block is still materializing: if the button is STILL held a moment later, the hold starts then (no need to let go and move the mouse)
+            }
+            else if (deferredSince > 0f)
+            {
+                if (!PixelInput.RightHeld() || Time.unscaledTime - deferredSince > DeferWindow) deferredSince = -1f;
+                else if (Time.unscaledTime - lastRightPress >= SpamGap && Time.unscaledTime - clicker.LastDefuseTime >= SpamGap && CanStart()) { deferredSince = -1f; Begin(); }
             }
         }
         if (flash > 0f) flash -= dt;
     }
+
+    private float deferredSince = -1f;
+    private const float DeferWindow = 1.5f;
 
     private bool CanStart()
     {
@@ -280,6 +289,7 @@ public class PixelBlockHold : MonoBehaviour
 
     private void Begin()
     {
+        deferredSince = -1f;
         if (!clicker.TryPullLive(out heldTier, out heldHits)) return;
         holding = true;
         holdStartedAt = Time.unscaledTime;
