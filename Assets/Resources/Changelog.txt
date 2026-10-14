@@ -929,3 +929,4 @@
 [2026-10-14 08:25 UTC] Floor edge fade: the solid horizon-coloured ring now melts away past the floor's own edge, so the sky below the horizon is no longer cut off by a flat colour band.
 [2026-10-14 08:27 UTC] UFO glass (dome and floor window) is now unlit see-through glass so it no longer blows out solid white next to the cabin lamp; the ride-along hint uses the sliding status box.
 [2026-10-14 08:27 UTC] Black hole counter and bomb timer lines in the top status box now expire by themselves, so they can't stay behind when the minigame is despawned.
+[2026-10-14 08:29 UTC] Meteor chunk popups, the ghost's caught message and the black hole counter float in the world again (the ghost's potion timer stays at the top); the black hole counter never shows once its goal is reached.

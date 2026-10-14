@@ -582,8 +582,29 @@ public class PixelGhostMinigame : PixelMinigame
     /// <summary>Text that rises from where the ghost was and fades away.</summary>
     private IEnumerator CaughtMessage(Vector3 start, Camera cam, string message)
     {
-        PixelStatusLines.Set("ghost", message, caughtColor, caughtSeconds);   // shown in the top status box
-        yield break;
+        GameObject go = new GameObject("Ghost Message");
+        Track(go);
+        TextMeshPro text = go.AddComponent<TextMeshPro>();
+        text.text = message;
+        text.fontSize = caughtTextSize;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        if (clicker.UIFont != null) text.font = clicker.UIFont;
+        text.rectTransform.sizeDelta = new Vector2(20f, 3f);
+
+        float t = 0f;
+        while (t < caughtSeconds)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.Clamp01(t / caughtSeconds);
+            go.transform.position = KeepOnScreen(cam, text, start + cam.transform.up * (k * 1.2f), caughtScreenMargin);
+            go.transform.rotation = cam.transform.rotation;
+            Color col = caughtColor;
+            col.a *= 1f - k * k;
+            text.color = col;
+            yield return null;
+        }
+        Destroy(go);
     }
 
     // ------------------------------------------------------------------
