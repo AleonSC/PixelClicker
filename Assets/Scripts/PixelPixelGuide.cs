@@ -38,6 +38,10 @@ public class PixelPixelGuide : MonoBehaviour
     [SerializeField] private bool hideUntilSecondPixel = true;
 
     [Header("Window")]
+    [Tooltip("Text of the orange ! box at the top left of the window (what the window is for).")]
+    [TextArea(2, 6)]
+    [SerializeField] private string infoText = "<b>Pixel Rotation</b>\nEvery pixel type that can come up on the cube right now - the ones in your current rotation - with a turning 3D picture, what it pays and how often it shows up.\nNew pixels appear here as you unlock them. Hover a row's orange ! to see exactly how that pixel works.";
+
     [Tooltip("Window title.")]
     [SerializeField] private string windowTitle = "Pixel Rotation";
 
@@ -202,6 +206,11 @@ public class PixelPixelGuide : MonoBehaviour
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(Close);
+
+        // The orange ! at the top left (opposite the X): what this window is for.
+        RectTransform infoRect = CreateInfoBox(windowObject.transform, 64f, () => infoText);
+        infoRect.anchorMin = infoRect.anchorMax = infoRect.pivot = new Vector2(0f, 1f);
+        infoRect.anchoredPosition = new Vector2(14f, -12f);
 
         scroll = PixelUIKit.CreateScrollView(windowObject.transform, "Pixel List", new Color(1f, 1f, 1f, 0.35f), 12f, rowHeight, out content, out bar);
         PixelScrollBarFade barFade = bar != null ? bar.GetComponent<PixelScrollBarFade>() : null;

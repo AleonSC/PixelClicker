@@ -892,3 +892,4 @@
 [2026-10-14 05:16 UTC] Removed the 'P' pin button from the Dev Hub and the Next up window (windows undock by dragging now; Escape closes the hub again). My Window never had one.
 [2026-10-14 05:20 UTC] Pressing Space while the Inventory is pinned now flips it between the currency and the consumables (not in first person, paused, or while typing); Escape works as before.
 [2026-10-14 05:23 UTC] Renamed the Pixel Guide button to 'Rotation' and its window to 'Pixel Rotation' (it only lists the pixels in your current rotation).
+[2026-10-14 05:26 UTC] Added an orange ! box at the top left of the Rotation window that explains what the window is for.
