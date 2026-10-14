@@ -258,9 +258,7 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string eventLogLabel = "Event log";
     [SerializeField] private string eventLogSizeLabel = "Event log text size";
     [SerializeField] private string popupsLabel = "Number popups (+N)";
-    [SerializeField] private string blockTipsLabel = "Block tooltips (hover a block)";
-    [Tooltip("Label of the tick box that lets you hold Alt to hide the block tooltips.")]
-    [SerializeField] private string blockTipsAltLabel = "Hold Alt to hide block tooltips";
+    [SerializeField] private string blockTipsLabel = "Block tooltips (Alt: tap = next, hold = peek)";
     [SerializeField] private string popupSizeLabel = "Popup size";
     [Tooltip("Label of the Settings choice for how the docked menu buttons behave.")]
     [SerializeField] private string buttonModeLabel = "Menu buttons";
@@ -2433,8 +2431,7 @@ public class PixelPauseMenu : MonoBehaviour
         AddSettingToggle(list, tipsLabel, () => PixelHints.TipsEnabled, on => PixelHints.TipsEnabled = on, ref y);
         AddSettingToggle(list, eventLogLabel, () => PixelHints.EventLogEnabled, on => PixelHints.EventLogEnabled = on, ref y);
         AddSettingToggle(list, popupsLabel, () => PixelUI.PopupsEnabled, on => PixelUI.PopupsEnabled = on, ref y);
-        AddSettingToggle(list, blockTipsLabel, () => PixelBlockTooltip.Enabled, on => PixelBlockTooltip.Enabled = on, ref y);
-        AddSettingToggle(list, blockTipsAltLabel, () => PixelBlockTooltip.HideWithAlt, on => PixelBlockTooltip.HideWithAlt = on, ref y);
+        AddDropdownRow(list, blockTipsLabel, PixelBlockTooltip.ModeNames, () => PixelBlockTooltip.Mode, v => PixelBlockTooltip.Mode = v, ref y);   // Full / Minimal / Off (Alt cycles it in the game)
         Toggle auraToggle = AddToggleRow(list, clickerAuraLabel, PixelClickerAura.Enabled, on => PixelClickerAura.Enabled = on, ref y);
         settingsRefreshers.Add(() => auraToggle.SetIsOnWithoutNotify(PixelClickerAura.Enabled));
         AddEyedropperButton(auraToggle, () => PixelEyedropper.Begin(c => { PixelClickerAura.SetCustomColor(c); PixelClickerAura.Mode = 1; settingsRefreshersRun(); }));   // pick any colour on screen for the aura

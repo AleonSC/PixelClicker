@@ -5,7 +5,7 @@
 //   PixelClicker.TryGetBlockAt(screen, ...) finds the nearest of the clickable cube / an old pixel under the pointer; after the hover
 //   delay a card (canvas 655, glow + fancy window + accent strip in the pixel colour, spinning PixelCubeIcon, name, rarity tag from
 //   SpawnShare, worth, a bar for hits (GetLiveProgress) or old-pixel time left, PixelGuideTexts.Describe / OldPixel text, a sheen
-//   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose, god mode or while Alt is held (Settings > Interface, PixelBlockTooltip.HideWithAlt, default on). Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
+//   sweep) fades in beside the pointer. Hidden over UI, paused, title, first person, UFO cockpit, hose or god mode. THREE MODES (PixelBlockTooltip.Mode, Settings > Interface drop-down, PlayerPrefs BlockTipsMode, per save): 0 Full, 1 Minimal (the spinning 3D icon and the name only), 2 Off. ALT: a tap (released within altHoldSeconds 0.25) cycles Full -> Minimal -> Off -> Full and a small toast names the new mode; HOLDING Alt (longer than that) shows the other kind of the current mode while held (Full shows Minimal, Minimal shows Full, Off shows Full) and the release does not cycle. Grabbing a block keeps its tooltip open. The card keeps its spot until the pointer moves 70 units away from where it was placed, then glides there (so it no longer jitters with every mouse move).
 // ---------------------------------------------------
 using TMPro;
 using UnityEngine;
@@ -21,23 +21,29 @@ public class PixelBlockTooltip : MonoBehaviour
 {
     private const string PrefEnabled = "PixelClicker.Setting.BlockTips";
 
-    private const string PrefAlt = "PixelClicker.Setting.BlockTipsAlt";
+    private const string PrefMode = "PixelClicker.Setting.BlockTipsMode";
+    private const int ModeFull = 0, ModeMinimal = 1, ModeOff = 2;
+    public static readonly string[] ModeNames = { "Full", "Minimal", "Off" };
 
-    /// <summary>Hold Alt to hide the tooltip (it comes back when Alt is let go)? Default on.</summary>
-    public static bool HideWithAlt
+    /// <summary>0 = full card, 1 = minimal (3D icon + name), 2 = off. Old saves: the former on / off tick box (BlockTips) maps to Full / Off.</summary>
+    public static int Mode
     {
-        get => PlayerPrefs.GetInt(PrefAlt, 1) != 0;
-        set { PlayerPrefs.SetInt(PrefAlt, value ? 1 : 0); PlayerPrefs.Save(); }
+        get
+        {
+            if (PlayerPrefs.HasKey(PrefMode)) return Mathf.Clamp(PlayerPrefs.GetInt(PrefMode, 0), 0, 2);
+            return PlayerPrefs.GetInt(PrefEnabled, 1) != 0 ? ModeFull : ModeOff;
+        }
+        set { PlayerPrefs.SetInt(PrefMode, Mathf.Clamp(value, 0, 2)); PlayerPrefs.Save(); }
+    }
+
+    /// <summary>Show the tooltip when hovering a block at all? (Mode is not Off.)</summary>
+    public static bool Enabled
+    {
+        get => Mode != ModeOff;
+        set { if (value && Mode == ModeOff) Mode = ModeFull; else if (!value) Mode = ModeOff; }
     }
 
     private static bool AltHeld() => PixelKeys.KeyHeld(KeyCode.LeftAlt) || PixelKeys.KeyHeld(KeyCode.RightAlt);
-
-    /// <summary>Show the tooltip when hovering a block? Default on.</summary>
-    public static bool Enabled
-    {
-        get => PlayerPrefs.GetInt(PrefEnabled, 1) != 0;
-        set { PlayerPrefs.SetInt(PrefEnabled, value ? 1 : 0); PlayerPrefs.Save(); }
-    }
 
     [Header("Block Tooltip")]
     [SerializeField, Tooltip("Turns the tooltip off completely.")]
@@ -48,6 +54,8 @@ public class PixelBlockTooltip : MonoBehaviour
     private float cardWidth;
     [SerializeField, Tooltip("Text size of the description. 0 = 21.")]
     private float descriptionSize;
+    [SerializeField, Tooltip("Seconds Alt must be held before it counts as 'peek the other kind' (a shorter press cycles the mode instead). 0 = 0.25.")]
+    private float altHoldSeconds;
 
     private PixelClicker clicker;
     private PixelGrab grab;
@@ -173,6 +181,13 @@ public class PixelBlockTooltip : MonoBehaviour
         shine.rectTransform.sizeDelta = new Vector2(70f, 900f);
         shine.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 18f);
 
+        toast = PixelUIKit.CreateText(font, canvasObject.transform, "Mode Toast", "", 30f, TextAlignmentOptions.Left, FontStyles.Bold, Color.white);
+        toast.raycastTarget = false;
+        toast.rectTransform.anchorMin = toast.rectTransform.anchorMax = Vector2.zero;
+        toast.rectTransform.pivot = new Vector2(0f, 0f);
+        toast.rectTransform.sizeDelta = new Vector2(420f, 40f);
+        toast.gameObject.SetActive(false);
+
         canvasObject.SetActive(false);
     }
 
@@ -194,11 +209,47 @@ public class PixelBlockTooltip : MonoBehaviour
         r.sizeDelta = new Vector2(width, height);
     }
 
+    // ---- Alt: a tap cycles the mode, holding peeks at the other kind ----
+    private bool altWas, altPeek;
+    private int lastMode = -1;
+    private float altDownAt, toastUntil;
+    private string toastText = "";
+    private TMP_Text toast;
+
+    /// <summary>The kind of card shown right now: the saved mode, or - while Alt is held long enough - the other kind (Full shows Minimal, Minimal and Off show Full).</summary>
+    private int EffectiveMode
+    {
+        get
+        {
+            int m = Mode;
+            if (!altPeek) return m;
+            return m == ModeFull ? ModeMinimal : ModeFull;
+        }
+    }
+
+    private void UpdateAlt()
+    {
+        bool alt = !(PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) && AltHeld();
+        if (alt && !altWas) { altDownAt = Time.unscaledTime; altPeek = false; }
+        if (alt && !altPeek && Time.unscaledTime - altDownAt >= (altHoldSeconds > 0f ? altHoldSeconds : 0.25f)) altPeek = true;
+        if (!alt && altWas)
+        {
+            if (!altPeek)
+            {
+                Mode = (Mode + 1) % 3;   // a tap: Full -> Minimal -> Off -> Full
+                toastText = "Tooltips: " + ModeNames[Mode];
+                toastUntil = Time.unscaledTime + 1.3f;
+                shownTier = -1; shownBody = null; hoverTime = 0f;   // (the card re-forms in the new kind)
+            }
+            altPeek = false;
+        }
+        altWas = alt;
+    }
+
     private bool Suppressed(bool whileHeld = false)
     {
-        return disableTooltip || !Enabled || clicker == null || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused ||
+        return disableTooltip || EffectiveMode == ModeOff || clicker == null || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused ||
                PixelFirstPerson.Active || PixelRobotWorker.Piloting || PixelClicker.GodMode || PixelCameraIntro.Moving ||
-               (HideWithAlt && AltHeld()) ||
                (!whileHeld && (PointerOverUI() || (grab != null && grab.HeldBody != null))) || PixelBank.HoseOn;
     }
 
@@ -206,6 +257,8 @@ public class PixelBlockTooltip : MonoBehaviour
     {
         if (clicker == null) { clicker = PixelFind.First<PixelClicker>(); return; }
         if (grab == null) grab = PixelFind.First<PixelGrab>();
+        UpdateAlt();
+        if (EffectiveMode != lastMode) { lastMode = EffectiveMode; nextRefresh = 0f; }   // (peeking at the other kind re-lays the card at once)
 
         int tier = -1; bool live = false; Rigidbody body = null;
         bool hovering;
@@ -231,6 +284,14 @@ public class PixelBlockTooltip : MonoBehaviour
         bool want = hovering && hoverTime >= delay;
         float before = visible;
         visible = Mathf.MoveTowards(visible, want ? 1f : 0f, Time.unscaledDeltaTime * (want ? 7f : 10f));
+        if (visible <= 0f && Time.unscaledTime < toastUntil)
+        {
+            if (canvasObject == null) Build();
+            if (!canvasObject.activeSelf) canvasObject.SetActive(true);
+            group.alpha = 0f;
+            UpdateToast();
+            return;
+        }
         if (visible <= 0f)
         {
             if (canvasObject != null && canvasObject.activeSelf) canvasObject.SetActive(false);
@@ -249,6 +310,21 @@ public class PixelBlockTooltip : MonoBehaviour
         }
         Animate();
         Follow();
+        UpdateToast();
+    }
+
+    /// <summary>The little 'Tooltips: Minimal' note beside the pointer after an Alt tap.</summary>
+    private void UpdateToast()
+    {
+        if (toast == null) return;
+        float left = toastUntil - Time.unscaledTime;
+        bool on = left > 0f;
+        if (toast.gameObject.activeSelf != on) toast.gameObject.SetActive(on);
+        if (!on) return;
+        toast.text = toastText;
+        toast.color = new Color(1f, 0.9f, 0.5f, Mathf.Clamp01(left / 0.4f));
+        float scaleFactor = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
+        toast.rectTransform.anchoredPosition = PointerPosition() / scaleFactor + new Vector2(30f, 36f);
     }
 
     private static string RarityOf(PixelClicker.PixelTier t, float share, out Color color)
@@ -331,10 +407,29 @@ public class PixelBlockTooltip : MonoBehaviour
         }
         statsText.text = stats;
 
+        bool mini = EffectiveMode == ModeMinimal;
+        tagText.gameObject.SetActive(!mini);
+        statsText.gameObject.SetActive(!mini);
+        descText.gameObject.SetActive(!mini);
+        RectTransform fr = iconFrame.rectTransform;
+        if (mini)
+        {
+            // Minimal: the spinning 3D icon and the name, nothing else.
+            bar.gameObject.SetActive(false);
+            fr.anchoredPosition = new Vector2(20f, -20f); fr.sizeDelta = new Vector2(100f, 100f);
+            float nameWidth = nameText.GetPreferredValues(pretty, 600f, 0f).x;
+            float mw = Mathf.Clamp(140f + nameWidth + 24f, 280f, 600f);
+            PlaceText(nameText, 140f, -36f, mw - 160f, 46f);
+            card.sizeDelta = new Vector2(mw, 140f);
+            return;
+        }
+        fr.anchoredPosition = new Vector2(20f, -26f); fr.sizeDelta = new Vector2(110f, 110f);
+        PlaceText(nameText, 146f, -22f, (cardWidth > 0f ? cardWidth : 560f) - 166f, 46f);
+
         string desc = shownLive ? PixelGuideTexts.Describe(t.type, t) : "<b>Old pixel:</b> " + PixelGuideTexts.OldPixel(t.type);
         descText.text = desc;
 
-        float w = card.sizeDelta.x;
+        float w = cardWidth > 0f ? cardWidth : 560f;
         float y = 98f + statsText.GetPreferredValues(statsText.text, w - 166f, 0f).y;
         y = Mathf.Max(y, 26f + 110f) + 14f;
         bar.gameObject.SetActive(showBar);
