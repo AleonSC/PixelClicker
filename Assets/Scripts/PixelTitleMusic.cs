@@ -3,7 +3,7 @@
 //   (The list always shows what is audible now: a cue's clip that is not one of the tracks is named in the caption: PixelAudio.PlayingClip.)
 //   The main menu's background music selector (created by PixelTitleScreen.Build under its foreground, showMusicPicker): a small bottom-centre box with a MUSIC caption, previous / next arrows
 //   and a drop-down listing every track (PixelAudio.MusicTrackCount / MusicTrackName / CurrentMusicTrack / SelectMusicTrack; the track names are the clips' names). It is SHOWN when the
-//   title screen opens and fades away after hideSeconds (musicPickerHideSeconds, 0 = 10) without activity (the mouse over it, a click, the list open); it fades back in while the mouse is over
+//   title screen opens and fades away after hideSeconds (musicPickerHideSeconds, 0 = 5) without activity (the mouse over it, a click, the list open); it fades back in while the mouse is over
 //   the spot. A speaker button at its right end mutes / unmutes the music (right click opens Settings > Audio directly: PixelPauseMenu.OpenAudioSettingsFromTitle) (PixelAudio.MusicMuted, per save file, also a Settings > Audio tick box); the chosen song and the playlist are per save too. Starts the chosen track at once; the usual shuffle / order carries on after it. Hidden entirely when there are no tracks.
 // ----------------------
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ public class PixelTitleMusic : MonoBehaviour
     private CanvasGroup group;
     private RectTransform rect;
     private TMP_Dropdown dropdown;
-    private float hideSeconds = 10f, lastActivity, alpha;
+    private float hideSeconds = 5f, lastActivity, alpha;
     private bool wasShowing, refreshing, built;
     private int shownCount = -1;
     private AudioClip shownClip;
@@ -31,7 +31,7 @@ public class PixelTitleMusic : MonoBehaviour
         GameObject go = new GameObject("Music Picker", typeof(RectTransform), typeof(CanvasGroup));
         go.transform.SetParent(parent, false);
         PixelTitleMusic m = go.AddComponent<PixelTitleMusic>();
-        m.hideSeconds = hideSeconds > 0.5f ? hideSeconds : 10f;
+        m.hideSeconds = hideSeconds > 0.5f ? hideSeconds : 5f;
         m.Build(font);
         return m;
     }

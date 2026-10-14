@@ -604,7 +604,7 @@ public class PixelTitleScreen : MonoBehaviour
     [SerializeField] private bool showMusicPicker = true;
 
     [Min(0f)]
-    [Tooltip("Seconds without activity before the music selector fades away. 0 = 10.")]
+    [Tooltip("Seconds without activity before the music selector fades away. 0 = 5.")]
     [SerializeField] private float musicPickerHideSeconds = 0f;
 
     private string hoveredText;
