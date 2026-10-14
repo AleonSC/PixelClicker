@@ -9,7 +9,7 @@ using static PixelNoise;
 /// <item>Large textures (up to 1024 px, one copy over ~36-40 world units) are drawn a few milliseconds per frame (<see cref="FillSliced"/>) so picking a style never freezes the game.</item>
 /// <item>Animated floors that used to redraw the whole texture many times a second (Radar, Circuit Flow, Watching Eyes) now draw their still picture once and only repaint the
 ///   small parts that move (<see cref="OverlayFrame"/>: radar blips, circuit sparks, blinking eyes).</item>
-/// <item>FLOOR CACHE: a finished picture is saved (gzip) to <persistentDataPath>/FloorCache and loaded at once the next time that style is picked (key = style settings + build stamp; <c>cacheFloors</c> turns it off). The Aura floors also draw on all CPU cores (<c>ShadeKiAura</c> is pure).</item>
+/// <item>FLOOR CACHE: a finished picture is saved (gzip) to <persistentDataPath>/FloorCache and loaded at once the next time that style is picked (key = style settings + build stamp; <c>cacheFloors</c> turns it off). Every big still pattern whose Shade code only reads state (<c>ThreadSafePattern</c>: the Auras, Death Energy, Liquid Flow, the craters, Moon / Mars and the ten world floors) is drawn on worker threads (all cores but one) in a second or two; others use the time-sliced fill.</item>
 /// <item>The crater floors (Battle Crater, Moon Surface, Red Planet): a few big craters plus small ones and pits, lit from the upper left.</item>
 /// </list>
 /// </summary>
@@ -32,9 +32,11 @@ public partial class PixelFloor
     {
         shadeTime = time;
         shadeDetail = Mathf.Max(1, s.detail);
-        if (s.pattern == FloorPattern.BattleCrater || s.pattern == FloorPattern.Craters) PrepareCraters(s);
+        if (UsesCraters(s.pattern)) PrepareCraters(s);
         if (s.pattern == FloorPattern.DragonRadar) PrepareRadar(s);
     }
+
+    private static bool UsesCraters(FloorPattern p) { return p == FloorPattern.BattleCrater || p == FloorPattern.Craters || p == FloorPattern.MoonSurface || p == FloorPattern.MarsSurface; }
 
     private static bool IsOverlayPattern(FloorPattern p)
     {
@@ -157,8 +159,26 @@ public partial class PixelFloor
         catch (System.Exception) { }
     }
 
+    private sealed class ThreadCancel { public volatile bool stop; }
+    private ThreadCancel fillCancel;
+
+    /// <summary>Patterns drawn on worker threads: their Shade code only reads (shadeDetail / shadeTime / craters are set before the rows start).</summary>
+    private static bool ThreadSafePattern(FloorPattern p)
+    {
+        switch (p)
+        {
+            case FloorPattern.KiAura: case FloorPattern.EnergyWisps: case FloorPattern.Liquid:
+            case FloorPattern.BattleCrater: case FloorPattern.Craters: case FloorPattern.MoonSurface: case FloorPattern.MarsSurface:
+            case FloorPattern.LushGrass: case FloorPattern.NebulaField: case FloorPattern.StillPond: case FloorPattern.GraffitiWall: case FloorPattern.LeafLitter:
+            case FloorPattern.ZenGarden: case FloorPattern.PersianRug: case FloorPattern.CoralReef: case FloorPattern.CasinoFelt: case FloorPattern.StainedGlass:
+                return true;
+        }
+        return false;
+    }
+
     private void StopSlicedFill()
     {
+        if (fillCancel != null) { fillCancel.stop = true; fillCancel = null; }
         if (fillRoutine != null) StopCoroutine(fillRoutine);
         fillRoutine = null;
     }
@@ -223,23 +243,28 @@ public partial class PixelFloor
     {
         int n = tex.width;
 #if !UNITY_WEBGL
-        // The Aura floors draw their rows on every CPU core in the background (their pixel function is pure): a second or less instead of several seconds.
-        if (s.pattern == FloorPattern.KiAura)
+        // Patterns whose pixel function only READS (no scratch statics, no Unity objects) draw their rows on every CPU core but one, in the background: a second or two instead of many.
+        if (ThreadSafePattern(s.pattern))
         {
             Color32[] fast = new Color32[n * n];
-            int detail = Mathf.Max(1, s.detail);
+            int cellsFast = Mathf.Max(1, s.cells);
+            ThreadCancel cancel = new ThreadCancel();
+            fillCancel = cancel;
+            ResumeShade(s, false);   // (the statics it reads - detail, time, craters - are set here, on the main thread, before the workers start)
+            System.Threading.Tasks.ParallelOptions opt = new System.Threading.Tasks.ParallelOptions { MaxDegreeOfParallelism = Mathf.Max(1, System.Environment.ProcessorCount - 1) };
             System.Threading.Tasks.Task job = System.Threading.Tasks.Task.Run(() =>
-                System.Threading.Tasks.Parallel.For(0, n, y =>
+                System.Threading.Tasks.Parallel.For(0, n, opt, y =>
                 {
+                    if (cancel.stop) return;
                     for (int x = 0; x < n; x++)
                     {
-                        Color c = ShadeKiAura(s, (x + 0.5f) / n, (y + 0.5f) / n, x, y, detail);
+                        Color c = Shade(s, (x + 0.5f) / n, (y + 0.5f) / n, x, y, n, cellsFast);
                         c.a = 1f;
                         fast[y * n + x] = c;
                     }
                 }));
-            while (!job.IsCompleted) { yield return null; if (tex == null) yield break; }
-            if (!job.IsFaulted)
+            while (!job.IsCompleted) { yield return null; if (tex == null) { cancel.stop = true; yield break; } }
+            if (!job.IsFaulted && !cancel.stop)
             {
                 tex.SetPixels32(fast);
                 tex.Apply(tex.mipmapCount > 1);
@@ -727,7 +752,7 @@ public partial class PixelFloor
     private void SetCraterFocus(FloorStyle style)
     {
         craterFocus = new Vector2(0.5f, 0.56f);
-        if (style.pattern != FloorPattern.Craters && style.pattern != FloorPattern.BattleCrater) return;
+        if (!UsesCraters(style.pattern)) return;
         if (floorRenderer == null) return;
         Camera cam = Camera.main;
         if (cam == null) return;

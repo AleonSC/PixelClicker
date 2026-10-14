@@ -108,7 +108,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         PersianRug,      // a woven rug with a medallion and borders on a wooden floor
         CoralReef,       // seabed with brain / polyp / fan corals, seagrass, starfish and caustics
         CasinoFelt,      // green baize with gold rings, chips, dice and cards
-        StainedGlass     // jewel panes in lead with a rose window under the cube
+        StainedGlass,    // jewel panes in lead with a rose window under the cube
+        MoonSurface,     // grey regolith, dark basalt seas, a terraced crater with a central peak, ray and secondary crater chains, rilles, boulders and rover tracks
+        MarsSurface      // rust dunes with lee slopes, dark basalt streaks, dust-filled craters, cracked lakebed, boulders and dust devil trails
     }
 
     [Serializable]
@@ -185,6 +187,9 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         [Tooltip("Big textures that cover a large area with one copy: multiplies the noise lattices so features keep their size (0 / 1 = off).")]
         public int detail = 0;
+
+        [Tooltip("Painted pictures that are ONE stretched copy: make the picture a little narrower than tall by the camera's tilt (sin of the base view's pitch), so round things do not look squashed from above at an angle.")]
+        public bool tiltCorrect = false;
 
         [Tooltip("Pattern variation (crater floors: 0 = battle, 1 = moon, 2 = red planet).")]
         public int variant = 0;
@@ -278,7 +283,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (floorRenderer == null || current < 0 || current >= styles.Count) return false;
         FloorStyle st = styles[current];
         if (st.pattern == FloorPattern.Classic || st.fitToView || st.stretchToFloor || st.scrollSpeed != Vector2.zero || st.cells < 1) return false;
-        float aspect = st.tileAspect > 0.01f ? st.tileAspect : 1f;
+        float aspect = StyleAspect(st);
         float cellX = st.tileWorldSize * aspect / st.cells, cellZ = st.tileWorldSize / st.cells;
         if (cellX < 0.05f || cellZ < 0.05f) return false;
         Vector3 c = floorRenderer.bounds.center;
@@ -571,7 +576,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         Vector3 size = floorRenderer.bounds.size;
         float tile = EffectiveTileSize(style);   // (a stretched picture is at least as big as the standard floor area)
         // Tile by world size so every pattern has the same scale on any floor, centred on the floor's middle.
-        float aspect = style.tileAspect > 0.01f ? style.tileAspect : 1f;
+        float aspect = StyleAspect(style);
         baseTiling = new Vector2(Mathf.Max(0.02f, size.x / (tile * aspect)), Mathf.Max(0.02f, size.z / tile));
         baseOffset = new Vector2(0.5f - Frac(0.5f * baseTiling.x), 0.5f - Frac(0.5f * baseTiling.y));
         // A single clamped copy must sit exactly on the floor's middle: the repeating formula above jumps a whole copy away once the floor is 2+ pictures wide, which showed only the picture's edge colour.
@@ -1695,6 +1700,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
                 return ShadeKiAura(s, u, v, x, y, shadeDetail);
             case FloorPattern.Craters:
                 return ShadeCraterField(s, u, v, x, y, n);
+            case FloorPattern.MoonSurface:
+                return ShadeMoon(s, u, v, x, y, n);
+            case FloorPattern.MarsSurface:
+                return ShadeMars(s, u, v, x, y, n);
             case FloorPattern.GravityRoom:
             {
                 float pu = Frac(u * cells), pv = Frac(v * cells);
@@ -2293,6 +2302,19 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 12;
         }
 
+        // Moon Surface and Red Planet became their own patterns (not one crater field in two colours); Stained Glass, Casino Felt and Nebula Field correct the camera's tilt.
+        if (defaultsVersion < 13)
+        {
+            foreach (FloorStyle st in styles)
+            {
+                if (st == null) continue;
+                if (st.name == "Moon Surface") { st.pattern = FloorPattern.MoonSurface; }
+                if (st.name == "Red Planet") { st.pattern = FloorPattern.MarsSurface; st.colorA = new Color(0.72f, 0.36f, 0.2f); st.colorB = new Color(0.52f, 0.25f, 0.14f); st.colorC = new Color(0.12f, 0.07f, 0.06f); }
+                if (st.name == "Stained Glass" || st.name == "Casino Felt" || st.name == "Nebula Field") st.tiltCorrect = true;
+            }
+            defaultsVersion = 13;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }
@@ -2509,10 +2531,10 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         // ---- Space ----
         yield return St("Hyperspace", FloorPattern.Hyperspace, new Color(0f, 0f, 0.03f), new Color(0.5f, 0.7f, 1f), new Color(0.9f, 0.5f, 1f), 192, 8f, 6, 24f, true, 1f);
         // (Moon Surface and Red Planet: one big picture with a big crater, smaller ones and pits, like Battle Crater; cells = how many smaller craters.)
-        FloorStyle moon = St("Moon Surface", FloorPattern.Craters, new Color(0.55f, 0.55f, 0.57f), new Color(0.4f, 0.4f, 0.43f), new Color(0.15f, 0.15f, 0.17f), 1024, 40f, 10, 0f, false, 0f, 0.1f);
+        FloorStyle moon = St("Moon Surface", FloorPattern.MoonSurface, new Color(0.55f, 0.55f, 0.57f), new Color(0.4f, 0.4f, 0.43f), new Color(0.15f, 0.15f, 0.17f), 1024, 40f, 10, 0f, false, 0f, 0.1f);
         moon.stretchToFloor = true; moon.detail = 6; moon.variant = 1;
         yield return moon;
-        FloorStyle red = St("Red Planet", FloorPattern.Craters, new Color(0.7f, 0.35f, 0.2f), new Color(0.55f, 0.26f, 0.15f), new Color(0.25f, 0.1f, 0.06f), 1024, 40f, 8, 0f, false, 0f, 0.1f);
+        FloorStyle red = St("Red Planet", FloorPattern.MarsSurface, new Color(0.72f, 0.36f, 0.2f), new Color(0.52f, 0.25f, 0.14f), new Color(0.12f, 0.07f, 0.06f), 1024, 40f, 8, 0f, false, 0f, 0.1f);
         red.stretchToFloor = true; red.detail = 6; red.variant = 2;
         yield return red;
         // ---- Digital / tech ----

@@ -142,12 +142,20 @@ public partial class PixelFloor
         return true;
     }
 
+    /// <summary>The style's picture width / height on the floor: its tileAspect, narrowed (tiltCorrect) by how far the base view looks down at an angle, so the picture does not look squashed.</summary>
+    private static float StyleAspect(FloorStyle st)
+    {
+        float a = st.tileAspect > 0.01f ? st.tileAspect : 1f;
+        if (st.tiltCorrect && PixelOrbitCamera.TryGetBaseTilt(out float pitch)) a *= Mathf.Lerp(1f, Mathf.Clamp(Mathf.Sin(pitch), 0.5f, 1f), 0.9f);
+        return a;
+    }
+
     /// <summary>Size of the ONE copy of a stretched picture, in world units: at least the standard area (so the picture covers it instead of fading out early), else the style's own size.</summary>
     private float EffectiveTileSize(FloorStyle style)
     {
         float tile = Mathf.Max(0.1f, style.tileWorldSize);
         if (!style.stretchToFloor || floorRenderer == null || !StandardRadii(floorRenderer.bounds, out _, out float r1)) return tile;
-        float aspect = style.tileAspect > 0.01f ? style.tileAspect : 1f;
+        float aspect = StyleAspect(style);
         return Mathf.Max(tile, 2f * r1 / 0.94f / Mathf.Min(1f, aspect));
     }
 
@@ -180,7 +188,7 @@ public partial class PixelFloor
         r1 = r0 + (fadeWidthCubes > 0f ? unit * fadeWidthCubes : Mathf.Max(unit * 3f, half * 0.45f));
         if (groundShaderOn || current < 0 || current >= styles.Count || !styles[current].stretchToFloor) return;
         FloorStyle st = styles[current];
-        float aspect = st.tileAspect > 0.01f ? st.tileAspect : 1f;
+        float aspect = StyleAspect(st);
         float limit = Mathf.Min(st.tileWorldSize * aspect, st.tileWorldSize) * 0.5f * 0.94f;
         if (r1 <= limit) return;
         r1 = Mathf.Max(unit * 4f, limit);

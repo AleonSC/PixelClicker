@@ -156,6 +156,15 @@ public class PixelOrbitCamera : MonoBehaviour
         return baseViewKnown;
     }
 
+    private static float baseViewPitch = Mathf.PI * 0.5f;
+
+    /// <summary>The base view's tilt above the floor (radians; pi / 2 = straight down). False when the base view is off.</summary>
+    public static bool TryGetBaseTilt(out float pitchRadians)
+    {
+        pitchRadians = baseViewPitch;
+        return baseViewKnown;
+    }
+
     private void Start() { ApplyBaseView(); }
 
     /// <summary>Puts the scene camera at the base view (before the camera intro records its end pose in its first LateUpdate).</summary>
@@ -170,6 +179,7 @@ public class PixelOrbitCamera : MonoBehaviour
         baseViewPosition = c.transform.position;
         baseViewFov = c.fieldOfView;
         baseViewKnown = true;
+        baseViewPitch = p;
     }
 
     private void OnDestroy()

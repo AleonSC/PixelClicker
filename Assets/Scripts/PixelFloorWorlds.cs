@@ -34,6 +34,7 @@ public partial class PixelFloor
         {
             FloorStyle f = S(name, p, a, b, c, 1024, false, tile, 1, smooth, glow);
             f.stretchToFloor = true; f.detail = 6; f.seed = seed;
+            f.tiltCorrect = p == FloorPattern.StainedGlass || p == FloorPattern.CasinoFelt || p == FloorPattern.NebulaField;   // (round things in these look squashed from the tilted base view)
             return f;
         }
         yield return W("Lush Grass", FloorPattern.LushGrass, new Color(0.12f, 0.36f, 0.1f), new Color(0.38f, 0.66f, 0.2f), new Color(1f, 0.95f, 0.6f), 40, 0.1f, 0f, 3);
@@ -226,6 +227,23 @@ public partial class PixelFloor
         float net2 = 1f - Sstep(0f, 0.2f, (g2 - g1) * Per(s, 1.0f));
         c += new Color(0.9f, 1f, 0.95f) * (net * 0.14f + net2 * 0.08f) * (0.35f + shallow);
 
+        // Murk: greener water where the algae bloom, and soft reflections of the sky on the open water.
+        c = ScMix(c, new Color(0.08f, 0.3f, 0.12f), Sstep(0.55f, 0.8f, Fbm(u, v, Per(s, 6f), 3, s.seed + 90)) * 0.28f);
+        c += new Color(0.5f, 0.65f, 0.8f) * Sstep(0.55f, 0.85f, Fbm(u, v, Per(s, 22f), 2, s.seed + 91)) * 0.07f * (1f - shallow * 0.5f);
+
+        // Pebbles on the bottom, seen through the shallows.
+        if (shallow > 0.7f)
+        {
+            int pc = Per(s, 0.5f);
+            Voronoi(u, v, pc, s.seed + 92, out float p1, out float p2, out int pid);
+            float pr = (0.3f + 0.14f * HashId(pid, s.seed + 93)) / pc;
+            if (p1 < pr)
+            {
+                Color pebble = Color.Lerp(new Color(0.45f, 0.42f, 0.36f), new Color(0.62f, 0.6f, 0.55f), HashId(pid, s.seed + 94));
+                c = ScMix(c, pebble * (0.7f + 0.5f * (1f - p1 / pr)) * new Color(0.8f, 1f, 1f, 1f), 0.5f * Sstep(0.7f, 0.9f, shallow));
+            }
+        }
+
         // Ripples from a few drops.
         for (int i = 0; i < 7; i++)
         {
@@ -245,12 +263,48 @@ public partial class PixelFloor
             float body = ScEll(lx, ly, 0f, 0f, 0.95f, 0.3f, 0.04f);
             float tail = ScEll(lx, ly, -1.15f, 0f, 0.35f, 0.18f * (1f + 0.5f * Mathf.Sin(lx * 8f)), 0.04f);
             float fish = Mathf.Max(body, tail * 0.8f);
+            // The koi's shadow on the bottom, its side fins and the ring of ripples at its nose.
+            Rot2(-0.3f, 0.35f, ang, out float shx, out float shy);
+            float shadowKoi = Mathf.Max(ScEll(lx, ly, shx, shy, 0.95f, 0.3f, 0.04f), ScEll(lx, ly, shx - 1.15f, shy, 0.35f, 0.16f, 0.04f) * 0.7f);
+            c *= 1f - 0.25f * shadowKoi * (1f - fish);
+            float fins = Mathf.Max(ScEll(lx, ly, 0.3f, 0.34f, 0.22f, 0.07f, 0.04f), ScEll(lx, ly, 0.3f, -0.34f, 0.22f, 0.07f, 0.04f));
+            fish = Mathf.Max(fish, fins * 0.75f);
+            float wake = Mathf.Exp(-Mathf.Abs(Mathf.Sqrt((lx - 1.1f) * (lx - 1.1f) + ly * ly) - 0.5f) * 9f) * 0.07f;
+            c += Color.white * wake;
             if (fish > 0f)
             {
                 Color koi = i % 2 == 0 ? new Color(1f, 0.5f, 0.15f) : new Color(0.95f, 0.9f, 0.85f);
                 if (Fbm(lx * 0.3f + 0.5f, ly * 0.3f + 0.5f, 3, 2, s.seed + i) > 0.55f) koi = new Color(0.9f, 0.12f, 0.1f);
                 c = ScMix(c, c * 0.45f + koi * 0.35f, fish * 0.8f);
             }
+        }
+
+        // Reeds: clumps of blades with a brown cattail in the middle, at the edge of the shallows.
+        float rcell = 7f;
+        int rx0 = Mathf.FloorToInt(wx / rcell), ry0 = Mathf.FloorToInt(wy / rcell);
+        if (Hash(rx0, ry0, s.seed + 100) > 0.55f)
+        {
+            float rcx = (rx0 + 0.25f + 0.5f * Hash(rx0, ry0, s.seed + 101)) * rcell, rcy = (ry0 + 0.25f + 0.5f * Hash(rx0, ry0, s.seed + 102)) * rcell;
+            float rdx = wx - rcx, rdy = wy - rcy, rd = Mathf.Sqrt(rdx * rdx + rdy * rdy);
+            if (rd < 1.1f)
+            {
+                c *= 1f - 0.3f * Sstep(1.1f, 0.5f, rd);                                   // a soft shadow on the water
+                float ra = Mathf.Atan2(rdy, rdx);
+                float blade = Mathf.Abs(Mathf.Sin(ra * 7f + Hash(rx0, ry0, s.seed + 103) * 6f + rd * 3f));
+                if (blade > 0.82f && rd > 0.12f && rd < 0.95f) c = Color.Lerp(new Color(0.12f, 0.38f, 0.14f), new Color(0.5f, 0.8f, 0.3f), rd);
+                if (rd < 0.16f) c = rd < 0.07f ? new Color(0.35f, 0.2f, 0.1f) : new Color(0.45f, 0.3f, 0.14f);
+            }
+        }
+
+        // Petals floating on the water.
+        float pcell = 1.3f;
+        int ppx = Mathf.FloorToInt(wx / pcell), ppy = Mathf.FloorToInt(wy / pcell);
+        if (Hash(ppx, ppy, s.seed + 110) > 0.94f)
+        {
+            float qx = (ppx + 0.5f + 0.3f * (Hash(ppx, ppy, s.seed + 111) - 0.5f)) * pcell, qy = (ppy + 0.5f + 0.3f * (Hash(ppx, ppy, s.seed + 112) - 0.5f)) * pcell;
+            Rot2(wx - qx, wy - qy, Hash(ppx, ppy, s.seed + 113) * 180f, out float ex, out float ey);
+            float petal = ScEll(ex, ey, 0f, 0f, 0.13f, 0.06f, 0.04f);
+            c = ScMix(c, Color.Lerp(new Color(1f, 0.7f, 0.8f), Color.white, Hash(ppx, ppy, s.seed + 114)), petal * 0.9f);
         }
 
         // Lily pads (one chance per 3.2 unit cell), some with a pink lotus flower.
@@ -279,6 +333,7 @@ public partial class PixelFloor
                 if (d < lotus) c = d < 0.07f ? new Color(1f, 0.85f, 0.2f) : Color.Lerp(new Color(1f, 0.6f, 0.78f), Color.white, d / 0.34f);
             }
         }
+        if (Hash(x, y, s.seed + 95) > 0.9985f) c += Color.white * 0.45f;   // a glint of sun on the water
         return Fin(c);
     }
 
@@ -664,7 +719,7 @@ public partial class PixelFloor
         c *= 1f - 0.35f * shadowRing;
         if (colony && f1 < rim)
         {
-            int type = Mathf.FloorToInt(HashId(id, s.seed + 7) * 3f);
+            int type = Mathf.FloorToInt(HashId(id, s.seed + 7) * 5f);
             float k = f1 / rim;
             Color baseCol = HashId(id, s.seed + 8) < 0.5f ? s.colorB : s.colorC;
             baseCol = Color.Lerp(baseCol, Hue(HashId(id, s.seed + 9), 0.55f, 1f), 0.25f);
@@ -683,11 +738,27 @@ public partial class PixelFloor
                 coral = baseCol * (0.7f + 0.4f * (1f - dot * 1.4f));
                 if (dot < 0.16f) coral = ScMix(coral, Color.white, 0.45f);
             }
-            else
+            else if (type == 2)
             {
                 // fan coral: lines fanning out from the middle
                 float ang = Mathf.Atan2((v * cc - Mathf.Floor(v * cc)) - 0.5f, (u * cc - Mathf.Floor(u * cc)) - 0.5f);
                 coral = baseCol * (0.65f + 0.55f * Mathf.Abs(Mathf.Sin(ang * 16f + f1 * 40f)));
+            }
+            else if (type == 3)
+            {
+                // staghorn: thin branches radiating and forking, bright tips
+                float ang = Mathf.Atan2((v * cc - Mathf.Floor(v * cc)) - 0.5f, (u * cc - Mathf.Floor(u * cc)) - 0.5f);
+                float br = Mathf.Abs(Mathf.Sin(ang * 8f + Mathf.Sin(f1 * 70f + id) * 1.4f));
+                float branch = Sstep(0.72f, 0.95f, br);
+                coral = Color.Lerp(baseCol * 0.35f, baseCol * 1.25f + new Color(0.1f, 0.1f, 0.1f, 0f), branch);
+                if (branch > 0.5f && k > 0.7f) coral = ScMix(coral, Color.white, 0.35f);
+            }
+            else
+            {
+                // table coral: flat stacked plates, a ring for each, lit on the upper edge
+                float ring = Frac(k * 3.6f);
+                coral = baseCol * (0.7f + 0.4f * ring);
+                if (ring < 0.12f) coral *= 0.55f;
             }
             coral *= 0.6f + 0.55f * (1f - k * 0.6f);                                      // domed: darker toward the rim
             c = ScMix(c, coral, Sstep(1f, 0.9f, k));
@@ -708,6 +779,52 @@ public partial class PixelFloor
                 }
             }
 
+        // Sea urchins: dark purple balls of spines.
+        float ucell = 4.3f;
+        int ux0 = Mathf.FloorToInt(wx / ucell), uy0 = Mathf.FloorToInt(wy / ucell);
+        if (Hash(ux0, uy0, s.seed + 50) > 0.5f)
+        {
+            float px = (ux0 + 0.2f + 0.6f * Hash(ux0, uy0, s.seed + 51)) * ucell, py = (uy0 + 0.2f + 0.6f * Hash(ux0, uy0, s.seed + 52)) * ucell;
+            float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
+            float ang = Mathf.Atan2(dy, dx);
+            float spike = 0.2f + 0.14f * Mathf.Pow(Mathf.Abs(Mathf.Cos(8f * ang)), 9f);
+            c *= 1f - 0.25f * Sstep(0.5f, 0.2f, d);
+            if (d < spike) c = Color.Lerp(new Color(0.08f, 0.03f, 0.14f), new Color(0.45f, 0.2f, 0.6f), Sstep(0.12f, spike, d));
+        }
+
+        // Fish seen from above: a little school, each with its shadow on the sand.
+        float fcell = 9f;
+        int fx0 = Mathf.FloorToInt(wx / fcell), fy0 = Mathf.FloorToInt(wy / fcell);
+        for (int oy = -1; oy <= 0; oy++)
+            for (int ox = -1; ox <= 0; ox++)
+            {
+                int ix = fx0 + ox, iy = fy0 + oy;
+                if (Hash(ix, iy, s.seed + 60) < 0.5f) continue;
+                float scx = (ix + 0.5f) * fcell, scy = (iy + 0.5f) * fcell;
+                float heading = Hash(ix, iy, s.seed + 61) * 360f;
+                Color fishCol = Hash(ix, iy, s.seed + 62) < 0.5f ? new Color(1f, 0.82f, 0.15f) : new Color(0.2f, 0.45f, 1f);
+                for (int i = 0; i < 6; i++)
+                {
+                    float fx = scx + (Hash(ix, iy * 7 + i, s.seed + 63) - 0.5f) * 2.4f, fy = scy + (Hash(ix, iy * 7 + i, s.seed + 64) - 0.5f) * 2.4f;
+                    Rot2(wx - fx, wy - fy, -(heading + (Hash(ix, i, s.seed + 65) - 0.5f) * 30f), out float lx, out float ly);
+                    float shadow = Mathf.Max(ScEll(lx - 0.18f, ly + 0.2f, 0f, 0f, 0.26f, 0.09f, 0.04f), ScEll(lx - 0.18f, ly + 0.2f, -0.3f, 0f, 0.12f, 0.07f, 0.04f));
+                    c *= 1f - 0.22f * shadow;
+                    float body = ScEll(lx, ly, 0f, 0f, 0.26f, 0.09f, 0.04f), tail = ScEll(lx, ly, -0.3f, 0f, 0.12f, 0.07f * (1f + Mathf.Abs(Mathf.Sin(lx * 20f))), 0.04f);
+                    float f = Mathf.Max(body, tail * 0.85f);
+                    if (f > 0f) c = ScMix(c, fishCol * (0.8f + 0.4f * Mathf.Clamp01(0.5f + ly * 5f)), f);
+                }
+            }
+
+        // Spiral shells in the sand.
+        float shcell = 2.6f;
+        int shx = Mathf.FloorToInt(wx / shcell), shy = Mathf.FloorToInt(wy / shcell);
+        if (Hash(shx, shy, s.seed + 70) > 0.82f)
+        {
+            float px = (shx + 0.2f + 0.6f * Hash(shx, shy, s.seed + 71)) * shcell, py = (shy + 0.2f + 0.6f * Hash(shx, shy, s.seed + 72)) * shcell;
+            float dx = wx - px, dy = wy - py, d = Mathf.Sqrt(dx * dx + dy * dy);
+            if (d < 0.11f) c = Color.Lerp(new Color(0.95f, 0.88f, 0.78f), new Color(0.85f, 0.55f, 0.45f), 0.5f + 0.5f * Mathf.Sin(Mathf.Atan2(dy, dx) * 2f + d * 70f)) * (0.8f + 0.3f * Mathf.Clamp01(0.5f - dy * 4f));
+        }
+
         // Starfish.
         float scell = 6f;
         int sx0 = Mathf.FloorToInt(wx / scell), sy0 = Mathf.FloorToInt(wy / scell);
@@ -724,6 +841,12 @@ public partial class PixelFloor
                 c = star * (0.75f + 0.4f * (1f - d / r));
             }
         }
+
+        // Deeper blue patches (a drop-off) and sunbeams slanting through the water.
+        float deep = Sstep(0.58f, 0.75f, Fbm(u, v, Per(s, 16f), 3, s.seed + 80));
+        c = ScMix(c, c * new Color(0.2f, 0.45f, 0.8f, 1f), deep * 0.6f);
+        float beam = Mathf.Pow(0.5f + 0.5f * Mathf.Sin((u * 0.9f + v * 0.5f) * 38f + Fbm(u, v, 3, 2, s.seed + 99) * 4f), 6f);
+        c += new Color(0.8f, 1f, 1f) * beam * 0.05f * (1f - deep * 0.6f);
 
         // Water tint and caustic light on top.
         c *= new Color(0.82f, 1f, 1.05f, 1f);
