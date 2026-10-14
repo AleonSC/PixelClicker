@@ -126,7 +126,7 @@ public class PixelHints : MonoBehaviour
 
     [TextArea(2, 5)]
     [Tooltip("Fourth new-game intro tip, right after the one about clicking: the right click (Block Hold and its stake). Empty = the built-in text.")]
-    [SerializeField] private string introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. The longer you hold (watch the meter by your cursor), the more it is worth when it comes round again - but the stake can also go bad and pay nothing.";
+    [SerializeField] private string introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing.";
 
     [TextArea(2, 5)]
     [Tooltip("Tip shown with the Inventory open.")]
@@ -293,7 +293,7 @@ public class PixelHints : MonoBehaviour
         H("bank_suck", "Stored in the Bank! Open the Bank tab on the left edge to see what you have. Stored pixels keep their value when you spit them back out."),
         H("bank_spit", "Spat a stored pixel back out! It is worth what it was worth when you stored it."),
         H("bank_full", "The Bank is full! Spit some pixels out, or buy Bank Storage upgrades in the shop to hold more."),
-        H("stake_intro", "Try this: HOLD the right mouse button on the block on the cube. A stake grows on it the longer you hold (watch the number by the meter). Let go and the block goes back in line; when it comes round again it glows green and pays more - or red and pays nothing. Most stakes pay off, but not all of them."),
+        H("stake_intro", "Try this: HOLD the right mouse button on a basic block (black, gray, white, red, green or blue) on the cube. A stake grows on it the longer you hold (watch the number by the meter). Let go and the block goes back in line; when it comes round again it glows green and pays more - or red and pays nothing. Most stakes pay off, but not all of them."),
         H("blockhold", "Block Hold unlocked! HOLD the right mouse button on the block on the cube to pull it out of the rotation: you get a new block while it stays held. Let go and it goes back. Holding drains the meter under the cube; if it runs dry the block is put back and the meter recharges more slowly."),
         H("robot", "UFO Helper hired! It hovers off to the side of the screen. Click him, pick a consumable and place its ghost where you want it: whenever that device runs out, he puts a new one there as long as you have one to spare."),
         H("timeslow", "Time Slow unlocked! Press {key:TimeSlow} to slow time and again to return to normal. It uses the same energy meter as Time Stop, but drains it more slowly. Meteor pixels crawl while time is slow - grab one with Pixel Grabbing and put it where you like."),
@@ -929,7 +929,7 @@ public class PixelHints : MonoBehaviour
                 {
                     // Fourth tip, right after the one about clicking: the right click (Block Hold + stake).
                     string right = string.IsNullOrEmpty(introRightClickText)
-                        ? "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. The longer you hold (watch the meter by your cursor), the more it is worth when it comes round again - but the stake can also go bad and pay nothing."
+                        ? "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing."
                         : introRightClickText;
                     MarkSeen("stake_intro");   // (the later 25-click reminder is not needed now)
                     PixelNotice.Show(right, 0f, compact: true, onClosed: () =>

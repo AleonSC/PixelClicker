@@ -332,6 +332,7 @@ public class PixelBlockRules : MonoBehaviour
             if (h.clearsHazard) parts.Add("a left click clears a " + (h.hazardType == PixelClicker.PixelType.HornetNest ? "hornet nest" : h.hazardType.ToString().ToLowerInvariant()) + " at once, safely");
             sb.Append(parts.Count > 0 ? string.Join(", ", parts) : "it gives a bonus").Append(". The bonus lasts exactly as long as you hold it.");
         }
+        if (PixelBlockHold.IsStakeBlock(type)) sb.Append(PixelBlockHold.StakeNote());   // the basic pixels can carry a stake (Block Hold)
         return sb.ToString();
     }
 }
