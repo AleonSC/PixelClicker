@@ -128,6 +128,13 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].singleLine = true;
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
+        Register("Hose Adapter",
+                 "A long open trough that snaps onto the end of a working Funnel's spout (bring the ghost near the spout) and carries what comes out of the hose. Start a conveyor belt at one of its two sides (the belt's first point snaps to the teal ports) or at its far end: the adapter hands the pixels to the belt that starts there, so the hose-to-belt connection is always clean.",
+                 c => PixelConnector.CreateAdapterGhost(c), (c, p, yw) => PixelConnector.PlaceAdapter(c, p, yw));
+        features[features.Count - 1].placeSnap = PixelConnector.TrySnapAdapter;
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelConnector.ExportState;
+        features[features.Count - 1].import = PixelConnector.ImportState;
         Register("Conveyor Elevator",
                  "A tower that lifts pixels from the end of a belt to a higher belt. Bring the ghost near the end of a belt and it magnetizes to it (turned the belt's way). Click to fix the base, then move the mouse up or down to set the height and click again to confirm (right click goes back a step). Place a new belt starting at the top: its first point snaps to the tower's top. Pixels from the belt are lifted and come out of the top.",
                  c => PixelElevator.CreateGhost(c), (c, p, yw) => PixelElevator.Place(c, p, yw));

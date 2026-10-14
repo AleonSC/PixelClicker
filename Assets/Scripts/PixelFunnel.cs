@@ -62,6 +62,14 @@ public class PixelFunnel : MonoBehaviour
     private static void ResetStatics() { real.Clear(); glassMat = null; }
 
     /// <summary>Is a working funnel standing in the world (placing another one then moves it)?</summary>
+    /// <summary>The working funnels (the Hose Adapter snaps to their spouts).</summary>
+    public static IReadOnlyList<PixelFunnel> Working => real;
+
+    /// <summary>Where the spout ends, at floor level (the Hose Adapter starts here), and the way it points (yaw in degrees).</summary>
+    public Vector3 SpoutEndFloor => transform.position + Quaternion.Euler(0f, transform.eulerAngles.y, 0f) * Vector3.forward * (SpoutLen * unit);
+    public float SpoutYaw => transform.eulerAngles.y;
+    public bool IsWorking => mode == Mode.Real;
+
     public static bool Exists { get { real.RemoveAll(f => f == null); return real.Count > 0; } }
 
     private Mode mode;

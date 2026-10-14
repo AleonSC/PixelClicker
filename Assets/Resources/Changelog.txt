@@ -992,3 +992,4 @@
 [2026-10-14 15:40 UTC] Termite Hive is half as common, breaks in 4 left clicks and clears in 10 right clicks; clearing any hazard with right clicks now collects it as currency and drops it as an old pixel (left-click breaking pays nothing).
 [2026-10-14 16:05 UTC] Block Hold: a right press that came too soon after clearing a hazard (or while the new block was still appearing) now starts the hold as soon as it is allowed while the button is still held, so you no longer have to let go and move the mouse.
 [2026-10-14 16:30 UTC] Block Hold and right-clicking a hazard now reach the cube through old pixels lying or falling in front of it (the pixel dropped by clearing a hazard was blocking the next grab until the mouse moved).
+[2026-10-14 17:10 UTC] Added the Hose Adapter tester part: a long trough that snaps onto a Funnel spout and feeds a conveyor belt snapped to its side ports (or its far end), for a clean hose-to-belt connection.

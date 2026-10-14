@@ -265,6 +265,7 @@ public class PixelConveyor : MonoBehaviour
         }
         foreach (PixelElevator lift in PixelElevator.All) if (lift != null && !lift.IsGhost) Try(lift.OutputPoint);
         foreach (PixelSplitter split in PixelSplitter.All) if (split != null && !split.IsGhost) for (int i = 0; i < 3; i++) Try(split.OutputPoint(i));
+        foreach (PixelConnector con in PixelConnector.All) if (con != null && !con.IsGhost) { Try(con.EndPoint); if (con.IsAdapter) { Try(con.SidePort(1)); Try(con.SidePort(-1)); } }
         snapped = found;
         return result;
     }

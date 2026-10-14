@@ -5,6 +5,9 @@
 //   BEHAVIOUR: it FORCES old pixels along it. A belt that ends at the first point hands its pixels in (IPixelBeltAcceptor), and any loose old pixel (not held, not already carried / riding) that is inside the box volume is captured as well - its
 //   own path is thrown away and it is carried from where it entered to the far end (PixelPathCarrier, speedCubes cube widths per second, one gap behind the pixel ahead). At the far end the pixel goes onto a belt that STARTS there, or into a machine whose
 //   opening is there (PixelConveyorSystem.FindAcceptorAt, e.g. the Kiln or another connector), otherwise it is thrown on along the connector's direction. Width matches the belts (PixelConveyor.LaneCount). Saved with the tester save (the two points).
+//   HOSE ADAPTER (the same class, adapter = true; tester feature 'Hose Adapter'): a longer trough (3.2 cubes) that SNAPS onto a working Funnel's spout (PixelFunnel.SpoutEndFloor / SpoutYaw, TrySnapAdapter) and turns the spout's way. Its side walls only cover
+//   the entry part; the open part has teal port strips and two SIDE PORTS (SidePort(+1 right / -1 left)): a belt placed so its first point snaps to a port (PixelConveyor.Snap / PixelConnector.Snap know them) is fed from the side, else the far end is the exit
+//   (UpdateExit, every 0.25 s, picks a port that has a belt starting at it). The funnel's pixels simply fall into the trough's box and are carried to the chosen exit like any connector's.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -44,6 +47,11 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
     private Vector3[] path;
     private float[] cum;
     private int lanesBuilt = 1;
+    private bool adapter;               // the Hose Adapter: a longer trough made for a funnel spout, with side ports for belts
+    private float AdapterLenCubes => 3.2f;
+    private Vector3 exitPoint;          // where pixels leave now: the far end, or a side port that has a belt
+    private bool exitSide;
+    private float nextExitCheck;
 
     public bool IsGhost => ghost;
     public Vector3 StartPoint => a;
@@ -82,6 +90,65 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
         return root;
     }
 
+    /// <summary>The Hose Adapter ghost: a see-through adapter that stands at the origin pointing +Z (the tester moves / turns the wrapper).</summary>
+    public static GameObject CreateAdapterGhost(PixelClicker c)
+    {
+        GameObject wrapper = new GameObject("Hose Adapter (Ghost)");
+        float u = Mathf.Max(0.05f, c.OldPixelWorldSize);
+        GameObject root = new GameObject("Body");
+        PixelConnector p = root.AddComponent<PixelConnector>();
+        p.clicker = c; p.ghost = true; p.unit = u; p.adapter = true;
+        p.Rebuild(Vector3.zero, Vector3.forward * (p.AdapterLenCubes * u));
+        root.transform.SetParent(wrapper.transform, true);
+        return wrapper;
+    }
+
+    /// <summary>A working Hose Adapter whose entry is at 'start' (a funnel's spout end) pointing along 'yaw'.</summary>
+    public static GameObject PlaceAdapter(PixelClicker c, Vector3 start, float yaw)
+    {
+        float u = Mathf.Max(0.05f, c.OldPixelWorldSize);
+        GameObject root = new GameObject("Hose Adapter");
+        PixelConnector p = root.AddComponent<PixelConnector>();
+        p.clicker = c; p.unit = u; p.adapter = true;
+        p.Rebuild(start, start + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * (p.AdapterLenCubes * u));
+        PixelConveyorSystem.Ensure(c);
+        PixelAudio.Play("device_place");
+        return root;
+    }
+
+    /// <summary>While placing the adapter: latches onto the nearest working funnel's spout (turned the spout's way).</summary>
+    public static bool TrySnapAdapter(PixelClicker c, Vector3 point, float yaw, GameObject ghostRoot, out Vector3 snappedPoint, out float snappedYaw)
+    {
+        snappedPoint = point; snappedYaw = yaw;
+        float u = Mathf.Max(0.05f, c.OldPixelWorldSize);
+        Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
+        Vector2 mouse = PixelInput.PointerPosition();
+        PixelFunnel best = null; float bestScore = float.MaxValue;
+        foreach (PixelFunnel f in PixelFunnel.Working)
+        {
+            if (f == null || !f.IsWorking) continue;
+            Vector3 e = f.SpoutEndFloor;
+            float score = float.MaxValue;
+            float flat = new Vector3(e.x - point.x, 0f, e.z - point.z).magnitude;
+            if (flat < 3.5f * u) score = flat / (3.5f * u);
+            if (cam != null) { Vector3 sp = cam.WorldToScreenPoint(e); if (sp.z > 0f) { float px = (new Vector2(sp.x, sp.y) - mouse).magnitude; if (px < 110f) score = Mathf.Min(score, px / 110f); } }
+            if (score < bestScore) { bestScore = score; best = f; }
+        }
+        if (best == null) return false;
+        snappedPoint = best.SpoutEndFloor;
+        snappedYaw = best.SpoutYaw;
+        return true;
+    }
+
+    /// <summary>The place on the adapter's side (belt-world) where a belt can start: side +1 = its right, -1 = its left, a bit past the middle.</summary>
+    public Vector3 SidePort(int side)
+    {
+        Vector3 dir = (b - a).normalized, right = new Vector3(dir.z, 0f, -dir.x);
+        return a + dir * (length * 0.7f) + right * (side * (width * 0.5f + 0.12f * unit));
+    }
+
+    public bool IsAdapter => adapter && !ghost;
+
     private void Rebuild(Vector3 from, Vector3 to)
     {
         for (int i = transform.childCount - 1; i >= 0; i--) { GameObject old = transform.GetChild(i).gameObject; old.SetActive(false); Destroy(old); }
@@ -94,8 +161,18 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
         PixelFactoryKit k = new PixelFactoryKit(clicker, ghost);
         Color dark = new Color(0.2f, 0.22f, 0.27f, 1f), steel = new Color(0.55f, 0.58f, 0.64f, 1f), accent = new Color(1f, 0.78f, 0.15f, 1f), teal = new Color(0.2f, 0.85f, 0.8f, 1f);
         k.Box("Floor", transform, new Vector3(0f, deck * 0.5f, 0f), new Vector3(width, deck, length), dark, default, false, 0.3f, 0.4f);
-        k.Box("Wall L", transform, new Vector3(-(width * 0.5f + wall * 0.5f), wallH * 0.5f, 0f), new Vector3(wall, wallH, length), steel, default, false, 0.7f, 0.5f);
-        k.Box("Wall R", transform, new Vector3(width * 0.5f + wall * 0.5f, wallH * 0.5f, 0f), new Vector3(wall, wallH, length), steel, default, false, 0.7f, 0.5f);
+        // The adapter keeps its side walls only along the entry part: the far part is open at the sides, where belts can snap on.
+        float wallLen = adapter ? length * 0.62f : length, wallZ = adapter ? -length * 0.5f + wallLen * 0.5f : 0f;
+        k.Box("Wall L", transform, new Vector3(-(width * 0.5f + wall * 0.5f), wallH * 0.5f, wallZ), new Vector3(wall, wallH, wallLen), steel, default, false, 0.7f, 0.5f);
+        k.Box("Wall R", transform, new Vector3(width * 0.5f + wall * 0.5f, wallH * 0.5f, wallZ), new Vector3(wall, wallH, wallLen), steel, default, false, 0.7f, 0.5f);
+        if (adapter)
+        {
+            // Teal port strips on both edges of the open part, a collar round the entry (where the hose spout sits) and a low end lip.
+            float pz = length * 0.2f;
+            k.Box("Port Strip L", transform, new Vector3(-(width * 0.5f - 0.1f * u), deck + 0.012f * u, pz), new Vector3(0.2f * u, 0.024f * u, length * 0.34f), teal);
+            k.Box("Port Strip R", transform, new Vector3(width * 0.5f - 0.1f * u, deck + 0.012f * u, pz), new Vector3(0.2f * u, 0.024f * u, length * 0.34f), teal);
+            k.Box("Collar", transform, new Vector3(0f, wallH * 0.5f, -length * 0.5f + 0.06f * u), new Vector3(width + wall * 2f, wallH, 0.12f * u), accent, default, false, 0.5f, 0.5f);
+        }
         // Top ribs (a cage rather than a solid lid, so the pixels inside stay visible) and an arrow strip showing the way.
         int ribs = Mathf.Max(2, Mathf.RoundToInt(length / (1.4f * u)) + 1);
         for (int i = 0; i < ribs; i++)
@@ -106,13 +183,22 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
         k.Box("Arrow Strip", transform, new Vector3(0f, deck + 0.01f * u, 0f), new Vector3(0.18f * u, 0.02f * u, Mathf.Max(0.2f * u, length - 0.5f * u)), teal);
         k.Box("Head", transform, new Vector3(0f, deck + 0.012f * u, length * 0.5f - 0.2f * u), new Vector3(0.5f * u, 0.02f * u, 0.2f * u), teal);
         path = null;
+        exitPoint = b; exitSide = false;
     }
 
     private void EnsurePath()
     {
         if (path != null) return;
         float lift = DeckCubes * unit + clicker.OldPixelWorldSize * 0.5f + 0.02f * unit;
-        path = new[] { transform.TransformPoint(new Vector3(0f, lift, -length * 0.5f)), transform.TransformPoint(new Vector3(0f, lift, length * 0.5f)) };
+        Vector3 up = Vector3.up * lift;
+        Vector3 start = transform.TransformPoint(new Vector3(0f, lift, -length * 0.5f));
+        Vector3 dir = (b - a).normalized;
+        if (exitSide)
+        {
+            Vector3 mid = a + dir * (length * 0.7f) + up;
+            path = new[] { start, new Vector3(mid.x, start.y + (mid.y - start.y), mid.z), exitPoint + up };
+        }
+        else path = new[] { start, transform.TransformPoint(new Vector3(0f, lift, length * 0.5f)) };
         cum = PixelPathCarrier.Cumulative(path);
     }
 
@@ -134,7 +220,7 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
             float d = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
             if (d < best) { best = d; result = end; found = true; }
         }
-        foreach (PixelConnector con in all) if (con != null && !con.ghost) { Try(con.a); Try(con.b); }
+        foreach (PixelConnector con in all) if (con != null && !con.ghost) { Try(con.a); Try(con.b); if (con.adapter) { Try(con.SidePort(1)); Try(con.SidePort(-1)); } }
         PixelConveyorSystem.ForEachPort(Try);
         snapped = found;
         return result;
@@ -143,18 +229,21 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
     // ---------------- saving (PixelFeatureTester) ----------------
 
     [System.Serializable]
-    private class Save { public Vector3 a, b; }
+    private class Save { public Vector3 a, b; public bool adapter; }
 
     public static string ExportState(GameObject root)
     {
         PixelConnector p = root != null ? root.GetComponent<PixelConnector>() : null;
-        return p == null ? null : JsonUtility.ToJson(new Save { a = p.a, b = p.b });
+        return p == null ? null : JsonUtility.ToJson(new Save { a = p.a, b = p.b, adapter = p.adapter });
     }
 
     public static GameObject ImportState(PixelClicker c, string json)
     {
         Save s = JsonUtility.FromJson<Save>(json);
-        return s == null ? null : Place(c, s.a, s.b);
+        if (s == null) return null;
+        if (!s.adapter) return Place(c, s.a, s.b);
+        Vector3 d = s.b - s.a;
+        return PlaceAdapter(c, s.a, Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg);
     }
 
     // ---------------- behaviour ----------------
@@ -192,6 +281,7 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
     private void FixedUpdate()
     {
         if (ghost || clicker == null) return;
+        if (adapter && Time.time >= nextExitCheck) { nextExitCheck = Time.time + 0.25f; UpdateExit(); }
         EnsurePath();
         IReadOnlyList<Rigidbody> list = clicker.OldPixels;
         if (carrier.Count < Cap)
@@ -209,30 +299,48 @@ public class PixelConnector : MonoBehaviour, IPixelBeltAcceptor
         if (carrier.Count > 0) carrier.Step(path, cum, Speed * unit, unit, Time.fixedDeltaTime, PutOut);
     }
 
+    /// <summary>The adapter's exit: a side port with a belt starting at it (the right side first), else the far end.</summary>
+    private void UpdateExit()
+    {
+        Vector3 chosen = b; bool side = false;
+        for (int s = 1; s >= -1 && !side; s -= 2)
+        {
+            Vector3 port = SidePort(s);
+            foreach (PixelConveyor belt in PixelConveyor.All)
+            {
+                if (belt == null || belt.IsGhost) continue;
+                Vector3 d = belt.StartPoint - port;
+                if (new Vector3(d.x, 0f, d.z).magnitude < 1.3f * unit && Mathf.Abs(d.y) < 1.2f * unit) { chosen = port; side = true; break; }
+            }
+        }
+        if (side != exitSide || (chosen - exitPoint).sqrMagnitude > 1e-4f) { exitPoint = chosen; exitSide = side; path = null; }
+    }
+
     /// <summary>A pixel reaches the far end: onto a belt that starts there, into a machine / connector opening there, or thrown on.</summary>
     private void PutOut(Rigidbody rb)
     {
-        Vector3 dir = (b - a).normalized, flat = new Vector3(dir.x, 0f, dir.z);
+        Vector3 dir = exitSide ? (path[path.Length - 1] - path[path.Length - 2]).normalized : (b - a).normalized, flat = new Vector3(dir.x, 0f, dir.z);
+        Vector3 end = exitSide ? exitPoint : b;
         float oldSize = clicker.OldPixelWorldSize;
         foreach (PixelConveyor belt in PixelConveyor.All)
         {
             if (belt == null || belt.IsGhost) continue;
-            Vector3 d = belt.StartPoint - b;
+            Vector3 d = belt.StartPoint - end;
             if (new Vector3(d.x, 0f, d.z).magnitude > 1.3f * unit || Mathf.Abs(d.y) > 1.2f * unit) continue;
             Vector3 over = belt.PointAt(0.6f * oldSize);
             rb.position = new Vector3(over.x, over.y + belt.SurfaceHeight + oldSize * 0.7f, over.z);
             PixelPathCarrier.SetVelocity(rb, belt.Direction * belt.Speed * 0.5f);
             return;
         }
-        IPixelBeltAcceptor acceptor = PixelConveyorSystem.FindAcceptorAt(b + flat * 0.4f * unit + Vector3.up * 0.5f * unit, this) ?? PixelConveyorSystem.FindAcceptorAt(b + Vector3.up * 0.4f * unit, this);
+        IPixelBeltAcceptor acceptor = PixelConveyorSystem.FindAcceptorAt(end + flat * 0.4f * unit + Vector3.up * 0.5f * unit, this) ?? PixelConveyorSystem.FindAcceptorAt(end + Vector3.up * 0.4f * unit, this);
         if (acceptor != null)
         {
-            rb.position = b + Vector3.up * oldSize * 0.6f;
+            rb.position = end + Vector3.up * oldSize * 0.6f;
             rb.isKinematic = true;
             if (acceptor.AcceptFromBelt(rb)) return;
             rb.isKinematic = false;
         }
-        rb.position = path[1];
+        rb.position = path[path.Length - 1];
         PixelPathCarrier.SetVelocity(rb, dir * unit * 2f);
     }
 }
