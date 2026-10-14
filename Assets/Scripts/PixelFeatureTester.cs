@@ -135,8 +135,14 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
+        Register("Trash Can",
+                 "A plain cylinder that deletes things. Put it on the floor: every loose old pixel within a small radius (the teal ring) - thrown out of a Funnel hose, a machine or the end of a conveyor belt - is pulled to its mouth and vanishes, no credit. Belts and connectors that end at it feed it directly.",
+                 c => PixelTrashCan.CreateGhost(c), (c, p, yw) => PixelTrashCan.Place(c, p, yw));
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelTrashCan.ExportState;
+        features[features.Count - 1].import = PixelTrashCan.ImportState;
         Register("Belt Sorter",
-                 "A low gantry you place anywhere on a conveyor belt (the ghost snaps to the belt under the mouse; the chute is on the side the mouse is). It kicks every pixel of one type off the side - onto the floor, or onto a belt that starts at the chute's mouth. A new sorter is learning: the first pixel that rides past sets the filter (the label shows it). Left click the gantry to make it learn a new filter.",
+                 "A low gantry you place anywhere on a conveyor belt (the ghost snaps to the belt under the mouse; the chute is on the side the mouse is). It kicks every pixel of one type off the side - onto the floor, or onto a belt that starts at the chute's mouth. Drop a block on its tray (drag one over it and let go) to choose what it filters; left click the shown block to take it out again (an empty tray lets everything pass). Right click the sorter to swap sides.",
                  c => PixelBeltSorter.CreateGhost(c), (c, p, yw) => PixelBeltSorter.Place(c, p, yw));
         features[features.Count - 1].placeSnap = PixelBeltSorter.TrySnap;
         features[features.Count - 1].groundPlane = true;

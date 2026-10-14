@@ -1,13 +1,13 @@
 // ---- System notes ----
 // PixelBeltSorter.cs
-//   BELT SORTER (a Dev Hub > Tester feature, PixelFeatureTester 'Belt Sorter'): a low gantry that straddles a conveyor belt anywhere along it and kicks every pixel of ITS TYPE off the side. Placing: the ghost snaps to the belt under the mouse (TrySnap) and the chute
-//   is on whichever side of the belt the mouse is (the snapped yaw is turned round for the left side, the chute is always the model's +X). A new sorter is LEARNING: the first pixel that rides past sets the filter (it carries on); the label over the gantry shows
-//   the filter (a swatch-coloured name) or 'Learning...'. LEFT CLICK the gantry to learn a new filter. While a pixel of the filter type rides under the beam, PixelConveyorSystem asks PixelBeltSorter.TryDivert (called from its rider loop): the pixel leaves
-//   the belt (a paddle sweeps across), and is thrown out of the side - or put onto a belt that STARTS at the chute's mouth (within ~1.3 cubes), so a second belt can be fed from the side. Pixels of other types are untouched. The spot is stored as a distance along
-//   the belt (it follows the belt); saved with the tester save (spot, side, filter type).
+//   BELT SORTER (a Dev Hub > Tester feature, PixelFeatureTester 'Belt Sorter'): a low gantry that straddles a conveyor belt anywhere along it and kicks every pixel of ITS TYPE off the side. Placing: the ghost snaps to the belt under the mouse (TrySnap) and the
+//   chute is on whichever side of the belt the mouse is (the snapped yaw is turned round for the left side, the chute is always the model's +X). RIGHT CLICK (a quick tap; holding deletes it) turns the sorter round: it swaps to the other side of the belt
+//   and its chute / output swaps with it. FILTER SLOT: a tray on top of the beam holds ONE block, shown spinning above it (like a Storage Crate section): let go of a pixel you are dragging over the tray (or throw / drop one onto it: PixelGrab's 'recently held' tag) and it
+//   goes into the slot (a block already there is handed back); the slot's type is the filter. LEFT CLICK the shown block to take it out again (it jumps into your hand; PixelBeltSorter.ClaimsPointer makes PixelGrab step aside). With an empty slot the sorter lets everything
+//   pass. While a pixel of the filter type rides under the beam, PixelConveyorSystem asks PixelBeltSorter.TryDivert (called from its rider loop): the pixel leaves the belt (a paddle sweeps across), and is thrown out of the side - or put onto a belt that STARTS at the chute's
+//   mouth (within ~1.3 cubes), so a second belt can be fed from the side. Other types are untouched. The spot is stored as a distance along the belt (it follows the belt); saved with the tester save (spot, yaw, slot type + amount).
 // ---------------------------------------------------
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class PixelBeltSorter : MonoBehaviour
@@ -28,9 +28,12 @@ public class PixelBeltSorter : MonoBehaviour
     private PixelConveyor belt;
     private float along;
     private Vector3 sideDir = Vector3.right;
-    private bool learning = true;
+    private bool hasFilter;
     private PixelClicker.PixelType filter;
-    private TextMeshPro label;
+    private double slotAmount;
+    private Transform slotModel;
+    private float beamTopY;
+    private readonly PixelRightTap flipTap = new PixelRightTap();
     private Transform paddle;
     private float kickT = -1f;
     private int placedFrame;
@@ -52,19 +55,19 @@ public class PixelBeltSorter : MonoBehaviour
         return true;
     }
 
-    public static GameObject Place(PixelClicker c, Vector3 point, float yaw) { return PlaceWith(c, point, yaw, true, default); }
+    public static GameObject Place(PixelClicker c, Vector3 point, float yaw) { return PlaceWith(c, point, yaw, false, default, 0d); }
 
-    private static GameObject PlaceWith(PixelClicker c, Vector3 point, float yaw, bool learn, PixelClicker.PixelType type)
+    private static GameObject PlaceWith(PixelClicker c, Vector3 point, float yaw, bool withFilter, PixelClicker.PixelType type, double amount)
     {
         if (!PixelConveyor.NearestOn(c, point, out PixelConveyor belt, out float s, 1.6f)) { PixelHints.Announce("Click a spot on a conveyor belt for the sorter."); return null; }
         GameObject root = Build(c, false, "Belt Sorter", belt.Width);
         PixelBeltSorter b = root.GetComponent<PixelBeltSorter>();
         b.belt = belt; b.along = s;
-        b.learning = learn; b.filter = type;
         b.placedFrame = Time.frameCount;
         Vector3 p = belt.PointAt(s);
         root.transform.SetPositionAndRotation(new Vector3(p.x, p.y + belt.SurfaceHeight, p.z), Quaternion.Euler(0f, yaw, 0f));
         b.sideDir = root.transform.right;
+        if (withFilter) b.SetFilter(c.IndexOf(type), amount);
         PixelAudio.Play("device_place");
         return root;
     }
@@ -95,23 +98,12 @@ public class PixelBeltSorter : MonoBehaviour
         k.Box("Chute", transform, new Vector3(half + 0.55f * u, 0.12f * u, 0f), new Vector3(1.1f * u, 0.07f * u, 0.9f * u), dark, new Vector3(0f, 0f, -8f), false, 0.4f, 0.4f);
         k.Box("Chute Wall F", transform, new Vector3(half + 0.55f * u, 0.3f * u, 0.46f * u), new Vector3(1.1f * u, 0.3f * u, 0.07f * u), steel, default, false, 0.7f, 0.5f);
         k.Box("Chute Wall B", transform, new Vector3(half + 0.55f * u, 0.3f * u, -0.46f * u), new Vector3(1.1f * u, 0.3f * u, 0.07f * u), steel, default, false, 0.7f, 0.5f);
-        if (!ghost)
-        {
-            GameObject t = new GameObject("Label", typeof(TextMeshPro));
-            t.transform.SetParent(transform, false);
-            t.transform.localPosition = new Vector3(0f, beamY + 0.7f * u, 0f);
-            label = t.GetComponent<TextMeshPro>();
-            if (clicker.UIFont != null) label.font = clicker.UIFont;
-            label.alignment = TextAlignmentOptions.Center;
-            label.fontStyle = FontStyles.Bold;
-            label.fontSize = 4.2f * u;
-#if UNITY_2023_1_OR_NEWER
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-#else
-            label.enableWordWrapping = false;
-#endif
-            RefreshLabel();
-        }
+        // The filter slot: a tray on top of the beam (a block placed in it is shown spinning above the tray).
+        beamTopY = beamY + 0.13f * u;
+        k.Box("Tray", transform, new Vector3(0f, beamTopY + 0.04f * u, 0f), new Vector3(0.8f * u, 0.07f * u, 0.8f * u), dark, default, false, 0.4f, 0.5f);
+        k.Box("Tray Rim", transform, new Vector3(0f, beamTopY + 0.085f * u, 0f), new Vector3(0.86f * u, 0.02f * u, 0.86f * u), teal);
+        slotModel = null;
+        if (!ghost && hasFilter) MakeModel();
     }
 
     // ---------------- behaviour ----------------
@@ -119,13 +111,26 @@ public class PixelBeltSorter : MonoBehaviour
     private void OnEnable() { if (!all.Contains(this)) all.Add(this); }
     private void OnDisable() { all.Remove(this); }
 
-    private void RefreshLabel()
+    private Vector3 SlotWorld() => transform.TransformPoint(new Vector3(0f, beamTopY + 0.6f * unit, 0f));
+
+    private void MakeModel()
     {
-        if (label == null) return;
-        if (learning) { label.text = "Learning..."; label.color = new Color(1f, 0.9f, 0.4f, 1f); return; }
         int idx = clicker.IndexOf(filter);
-        label.text = idx >= 0 ? clicker.Tiers[idx].displayName : filter.ToString();
-        label.color = idx >= 0 ? Color.Lerp(clicker.Tiers[idx].color, Color.white, 0.35f) : Color.white;
+        if (idx < 0) return;
+        GameObject model = clicker.CreateDisplayPixel(idx, transform, 0.62f * unit);
+        if (model == null) return;
+        model.transform.localPosition = new Vector3(0f, beamTopY + 0.6f * unit, 0f);
+        slotModel = model.transform;
+    }
+
+    /// <summary>Puts a block in the slot (tier index; -1 clears it).</summary>
+    private void SetFilter(int tierIndex, double amount)
+    {
+        if (slotModel != null) Destroy(slotModel.gameObject);
+        slotModel = null;
+        hasFilter = clicker.IsValidTierIndex(tierIndex);
+        slotAmount = hasFilter ? amount : 0d;
+        if (hasFilter) { filter = clicker.Tiers[tierIndex].type; MakeModel(); }
     }
 
     private void Update()
@@ -134,11 +139,7 @@ public class PixelBeltSorter : MonoBehaviour
         if (belt == null) { Destroy(gameObject); return; }
         Vector3 p = belt.PointAt(Mathf.Clamp(along, 0f, belt.Length));
         transform.position = new Vector3(p.x, p.y + belt.SurfaceHeight, p.z);
-        if (label != null)
-        {
-            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-            if (cam != null) label.transform.rotation = cam.transform.rotation;
-        }
+        if (slotModel != null) slotModel.Rotate(0f, 35f * Time.deltaTime, 0f, Space.Self);
         if (paddle != null)
         {
             float half = beltWidth * 0.5f;
@@ -146,21 +147,109 @@ public class PixelBeltSorter : MonoBehaviour
             if (kickT >= 0f) { kickT += Time.deltaTime; k = kickT < 0.12f ? kickT / 0.12f : Mathf.Max(0f, 1f - (kickT - 0.12f) / 0.2f); if (kickT > 0.32f) kickT = -1f; }
             paddle.localPosition = new Vector3(Mathf.Lerp(-half + 0.1f * unit, half - 0.1f * unit, k), 0.55f * unit, 0f);
         }
-        if (Time.frameCount != placedFrame && PixelInput.LeftPressed()) CheckClick();
+        if (Time.frameCount != placedFrame)
+        {
+            if (PixelInput.LeftPressed() && SlotPicked()) TakeOut();
+            if (PixelInput.RightPressed() || PixelInput.RightHeld() || flipTap.Pending)
+            {
+                bool on = !PixelFirstPerson.Active && !PixelInput.PointerOverUI() && PointerOnMe();
+                if (flipTap.Update(on ? this : null)) Flip();
+            }
+        }
+        if (Time.time >= nextCapture) { nextCapture = Time.time + 0.1f; CaptureIntoSlot(); }
     }
 
-    private void CheckClick()
+    private float nextCapture;
+
+    private Ray PointerRay(out bool ok)
     {
-        Ray ray;
-        if (PixelFirstPerson.Active) { if (!PixelFirstPerson.TryGetViewRay(out ray)) return; }
-        else
-        {
-            Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-            if (cam == null || PixelInput.PointerOverUI()) return;
-            ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
-        }
+        ok = true;
+        if (PixelFirstPerson.Active) { ok = PixelFirstPerson.TryGetViewRay(out Ray r); return r; }
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null) { ok = false; return new Ray(); }
+        return cam.ScreenPointToRay(PixelInput.PointerPosition());
+    }
+
+    private bool PointerOnMe()
+    {
+        Ray ray = PointerRay(out bool ok);
+        if (!ok) return false;
         foreach (RaycastHit h in Physics.RaycastAll(ray, 500f, ~0, QueryTriggerInteraction.Ignore))
-            if (h.transform.IsChildOf(transform)) { learning = true; RefreshLabel(); PixelAudio.Play("ui_click"); return; }
+            if (h.transform.IsChildOf(transform)) return true;
+        return false;
+    }
+
+    /// <summary>The sorter turns round: it moves to the other side of the belt and its chute (the output side) goes with it.</summary>
+    private void Flip()
+    {
+        transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y + 180f, 0f);
+        sideDir = transform.right;
+        PixelAudio.Play("device_place", 1.2f);
+    }
+
+    private bool SlotPicked()
+    {
+        if (slotModel == null || PixelInput.PointerOverUI()) return false;
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        if (cam == null || PixelFirstPerson.Active) return false;
+        Vector3 sp = cam.WorldToScreenPoint(slotModel.position);
+        if (sp.z <= 0f) return false;
+        Vector3 edge = cam.WorldToScreenPoint(slotModel.position + cam.transform.right * 0.4f * unit);
+        float radius = Mathf.Max(18f, Mathf.Abs(edge.x - sp.x));
+        return Vector2.Distance(PixelInput.PointerPosition(), new Vector2(sp.x, sp.y)) <= radius;
+    }
+
+    /// <summary>Would a left click at the pointer take a block out of a sorter's slot? Pixel Grabbing steps aside then.</summary>
+    public static bool ClaimsPointer()
+    {
+        foreach (PixelBeltSorter b in all) if (b != null && !b.ghost && b.clicker != null && b.SlotPicked()) return true;
+        return false;
+    }
+
+    private void TakeOut()
+    {
+        if (!hasFilter || slotModel == null) return;
+        Vector3 at = slotModel.position;
+        int idx = clicker.IndexOf(filter);
+        double amount = slotAmount;
+        SetFilter(-1, 0d);
+        if (idx < 0 || !clicker.SpawnStoredPixel(idx, amount, at, Vector3.zero)) return;
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        Rigidbody body = pixels.Count > 0 ? pixels[pixels.Count - 1] : null;
+        if (body == null) return;
+        ignoreUntil[body] = Time.time + 1.5f;
+        PixelGrab grab = PixelFind.First<PixelGrab>();
+        if (grab != null) grab.BeginHold(body);
+        PixelAudio.Play("ui_click");
+    }
+
+    private readonly Dictionary<Rigidbody, float> ignoreUntil = new Dictionary<Rigidbody, float>();
+
+    /// <summary>A pixel the player let go of over the tray goes into the slot (a block already there is handed back).</summary>
+    private void CaptureIntoSlot()
+    {
+        float window = PixelGrab.RecentlyHeldSeconds;
+        Vector3 slot = SlotWorld();
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        for (int i = pixels.Count - 1; i >= 0; i--)
+        {
+            Rigidbody body = pixels[i];
+            if (body == null || body.isKinematic) continue;
+            OldPixelInfo info = body.GetComponent<OldPixelInfo>();
+            if (info == null || info.heldByPlayer || !info.RecentlyHeld(window)) continue;
+            if (ignoreUntil.TryGetValue(body, out float until) && Time.time < until) continue;
+            if (!clicker.IsValidTierIndex(info.tierIndex) || clicker.Tiers[info.tierIndex].flyAway || clicker.IsFlyingPixel(body)) continue;
+            Vector3 d = body.position - slot; d.y = 0f;
+            float up = body.position.y - slot.y;
+            if (d.magnitude > 0.9f * unit || up < -0.9f * unit || up > 3f * unit) continue;
+            int tier = info.tierIndex; double amount = info.amount; GameObject go = body.gameObject;
+            if (!clicker.ReleaseOldPixel(body, false)) continue;
+            if (hasFilter) { int old = clicker.IndexOf(filter); double oldAmount = slotAmount; if (old >= 0) clicker.SpawnStoredPixel(old, oldAmount, slot + Vector3.up * 0.5f * unit, Vector3.up * unit); }
+            Destroy(go);
+            SetFilter(tier, amount);
+            PixelAudio.Play("device_place", 1.3f);
+            return;
+        }
     }
 
     /// <summary>Called by the belt system for every riding pixel: true when a sorter took it off the belt (the system then forgets it).</summary>
@@ -173,8 +262,7 @@ public class PixelBeltSorter : MonoBehaviour
             OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
             if (info == null || !c.IsValidTierIndex(info.tierIndex)) continue;
             PixelClicker.PixelType type = c.Tiers[info.tierIndex].type;
-            if (b.learning) { b.filter = type; b.learning = false; b.RefreshLabel(); PixelAudio.Play("ui_click", 1.3f); continue; }   // the example carries on
-            if (type != b.filter) continue;
+            if (!b.hasFilter || type != b.filter) continue;   // (an empty slot lets everything pass)
             b.Eject(rb);
             return true;
         }
@@ -207,12 +295,12 @@ public class PixelBeltSorter : MonoBehaviour
     // ---------------- saving ----------------
 
     [System.Serializable]
-    private class Save { public Vector3 spot; public float yaw; public bool learning; public string filter; }
+    private class Save { public Vector3 spot; public float yaw; public bool has; public string filter; public double amount; }
 
     public static string ExportState(GameObject root)
     {
         PixelBeltSorter b = root != null ? root.GetComponent<PixelBeltSorter>() : null;
-        return b == null || b.belt == null ? null : JsonUtility.ToJson(new Save { spot = root.transform.position, yaw = root.transform.eulerAngles.y, learning = b.learning, filter = b.filter.ToString() });
+        return b == null || b.belt == null ? null : JsonUtility.ToJson(new Save { spot = root.transform.position, yaw = root.transform.eulerAngles.y, has = b.hasFilter, filter = b.filter.ToString(), amount = b.slotAmount });
     }
 
     public static GameObject ImportState(PixelClicker c, string json)
@@ -220,7 +308,7 @@ public class PixelBeltSorter : MonoBehaviour
         Save s = JsonUtility.FromJson<Save>(json);
         if (s == null) return null;
         PixelClicker.PixelType type = default;
-        bool learn = s.learning || !System.Enum.TryParse(s.filter, out type);
-        return PlaceWith(c, s.spot, s.yaw, learn, type);
+        bool has = s.has && System.Enum.TryParse(s.filter, out type);
+        return PlaceWith(c, s.spot, s.yaw, has, type, s.amount);
     }
 }

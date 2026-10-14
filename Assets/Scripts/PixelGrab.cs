@@ -196,7 +196,7 @@ public class PixelGrab : MonoBehaviour
             return;
         }
 
-        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelRobotWorker.Piloting || PixelMinigame.TakeoverActive || PixelClicker.GodMode || PixelPets.HoveringPet || !LeftPressed() || PointerOverUI() || PixelStorageCrate.ClaimsPointer() || PixelBaitBucket.ClaimsPointer()) return;
+        if (Time.timeScale <= 0f || PixelPauseMenu.IsPaused || PixelBank.HoseOn || PixelRobotWorker.Piloting || PixelMinigame.TakeoverActive || PixelClicker.GodMode || PixelPets.HoveringPet || !LeftPressed() || PointerOverUI() || PixelStorageCrate.ClaimsPointer() || PixelBeltSorter.ClaimsPointer() || PixelBaitBucket.ClaimsPointer()) return;
         TryGrab();
     }
 
