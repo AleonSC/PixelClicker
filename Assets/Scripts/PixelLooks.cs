@@ -654,6 +654,18 @@ public static class PixelLooks
             DragonCubeLook(PixelClicker.PixelType.DragonCube6, 6),
             DragonCubeLook(PixelClicker.PixelType.DragonCube7, 7),
 
+            // The three Egyptian God Cubes. Slifer: a red glass cube held together by storm lightning. Ra: polished gold with a sun's corona. Obelisk: deep blue stone that sheds dust.
+            new PixelLook { type = PixelClicker.PixelType.GodSlifer, useColor = true, color = new Color(0.55f, 0.03f, 0.03f, 0.4f),
+                            forceTranslucent = true, smoothness = 0.95f, metallic = 0f, emission = 0.8f, lightning = true,
+                            lightningCoreColor = new Color(1f, 0.92f, 0.55f, 1f), lightningGlowColor = new Color(1f, 0.15f, 0.08f, 1f), lightningJitter = 0.12f,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.78f, 0.25f, 1f), outlineBevel = true, outlineThickness = 0.03f, outlineStrength = 0.9f },
+            new PixelLook { type = PixelClicker.PixelType.GodRa, useColor = true, color = new Color(1f, 0.78f, 0.18f, 1f),
+                            metallic = 0.85f, smoothness = 0.9f, emission = 1.1f, sunFx = true, shine = true,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(1f, 0.97f, 0.8f, 1f), outlineBevel = true, outlineThickness = 0.03f, outlineStrength = 0.9f },
+            new PixelLook { type = PixelClicker.PixelType.GodObelisk, useColor = true, color = new Color(0.1f, 0.2f, 0.62f, 1f),
+                            metallic = 0.25f, smoothness = 0.5f, emission = 0.4f, shine = true, farmFx = PixelLook.FarmAmbient.Crumbs,
+                            outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.45f, 0.85f, 1f, 1f), outlineBevel = true, outlineThickness = 0.035f, outlineStrength = 0.85f },
+
             // Singularity: a box of dark matter.
             new PixelLook { type = PixelClicker.PixelType.Singularity, useColor = true, color = new Color(0.07f, 0.02f, 0.14f, 0.5f),
                             forceTranslucent = true, smoothness = 0.95f, metallic = 0f, glowScale = 0.3f,

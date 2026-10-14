@@ -426,7 +426,7 @@ public class PixelCrafting : MonoBehaviour
         List<Recipe> list = new List<Recipe>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsRareCube(type)) continue;
             list.Add(new Recipe
             {
                 label = type + " Potion",
@@ -446,7 +446,7 @@ public class PixelCrafting : MonoBehaviour
         bool changed = false;
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsRareCube(type)) continue;
             if (recipes.Exists(r => r != null && r.resultKind == ResultKind.Potion && r.resultPotion == type)) continue;
             recipes.Add(new Recipe
             {
@@ -1757,7 +1757,7 @@ public class PixelCrafting : MonoBehaviour
         if (potion.hasThird) return null;
         if (PixelClicker.IsStandalone(potion.type)) return null;   // standalone pixels only have single potions
         if (potion.type == pixel.type || (potion.combo && potion.second == pixel.type)) return null;
-        if (PixelClicker.IsDragonCube(pixel.type) || PixelClicker.IsStandalone(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
+        if (PixelClicker.IsRareCube(pixel.type) || PixelClicker.IsStandalone(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
         if (clicker.IndexOf(pixel.type) < 0) return null;
 
         if (potion.combo)

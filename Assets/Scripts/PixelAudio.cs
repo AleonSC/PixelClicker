@@ -239,6 +239,9 @@ public class PixelAudio : MonoBehaviour
             Make("meteor_spawn", 0.2f),
             Make("meteor_click", 0.03f, 0.9f, 1.1f),
             Make("meteor_hit", 0.05f, 0.9f, 1.12f),
+            new Sound { id = "god_slifer", cooldown = 0f, pitchMin = 1f, pitchMax = 1f },
+            new Sound { id = "god_ra", cooldown = 0f, pitchMin = 1f, pitchMax = 1f },
+            new Sound { id = "god_obelisk", cooldown = 0f, pitchMin = 1f, pitchMax = 1f },
             new Sound { id = "pixel_vanish", cooldown = 0.04f, pitchMin = 0.88f, pitchMax = 1.3f, volume = 0.4f },
             new Sound { id = "meteor_rumble", cooldown = 0f, volume = 0.45f },
             Make("blackhole_spawn", 0.2f),
@@ -335,6 +338,8 @@ public class PixelAudio : MonoBehaviour
     {
         AudioClip[] ocean = PixelOceanSynth.For(id);
         if (ocean != null) return ocean;
+        AudioClip[] godSounds = PixelGodSynth.For(id);
+        if (godSounds != null) return godSounds;
         AudioClip[] meteorSounds = PixelMeteorSynth.For(id);
         if (meteorSounds != null) return meteorSounds;
         AudioClip[] axe = PixelAxeSynth.For(id);

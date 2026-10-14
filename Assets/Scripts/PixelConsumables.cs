@@ -878,7 +878,7 @@ public class PixelConsumables : MonoBehaviour
 
     /// <summary>True for the pixel types that have a seed: not rare drops, not fly-away types (they never land) and not the Seed pixel itself.</summary>
     private static bool HasSeed(PixelClicker.PixelType type) =>
-        !PixelClicker.IsDragonCube(type) && !PixelClicker.IsStandalone(type) && type != PixelClicker.PixelType.Seed && type != PixelClicker.PixelType.Meteor;
+        !PixelClicker.IsRareCube(type) && !PixelClicker.IsStandalone(type) && type != PixelClicker.PixelType.Seed && type != PixelClicker.PixelType.Meteor;
 
     /// <summary>The Dragon Seed: a rare seed only the Farmer offers; it grows a Dragon Cube the player doesn't hold (marked by seedType = DragonCube1).</summary>
     private Device CreateDefaultDragonSeed()
@@ -928,7 +928,7 @@ public class PixelConsumables : MonoBehaviour
     {
         System.Collections.Generic.List<Potion> list = new System.Collections.Generic.List<Potion>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
-            if (!PixelClicker.IsDragonCube(type)) list.Add(CreateDefaultPotion(type)); // a potion for every pixel (only the Dragon Cubes have none)
+            if (!PixelClicker.IsRareCube(type)) list.Add(CreateDefaultPotion(type)); // a potion for every pixel (only the Dragon Cubes have none)
         return list.ToArray();
     }
 
@@ -1031,7 +1031,7 @@ public class PixelConsumables : MonoBehaviour
 
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (PixelClicker.IsDragonCube(type)) continue;
+            if (PixelClicker.IsRareCube(type)) continue;
             if (Array.Exists(potions, p => p != null && p.type == type)) continue;
             Array.Resize(ref potions, potions.Length + 1);
             potions[potions.Length - 1] = CreateDefaultPotion(type);

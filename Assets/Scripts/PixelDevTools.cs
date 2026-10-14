@@ -203,6 +203,8 @@ public class PixelDevTools : MonoBehaviour
 
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
     [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
+    [SerializeField] private string giveGodCubeLabel = "Give next God Cube";
+    [SerializeField] private string playGodShowLabel = "Play next God show (preview)";
 
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
@@ -715,6 +717,32 @@ public class PixelDevTools : MonoBehaviour
         }
     }
 
+    /// <summary>Gives the next Egyptian God Cube you don't hold yet (Slifer, Ra, Obelisk; its show plays like a real find).</summary>
+    private void GiveGodCube()
+    {
+        if (clicker == null) return;
+        foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.GodSlifer, PixelClicker.PixelType.GodRa, PixelClicker.PixelType.GodObelisk })
+        {
+            int index = clicker.IndexOf(t);
+            if (index < 0 || clicker.Tiers[index].count >= 1d) continue;
+            clicker.AddCurrency(index, 1d);
+            PixelGodFind.Play(index, clicker.LiveWorldPosition);
+            return;
+        }
+    }
+
+    private int godPreview;
+
+    /// <summary>Plays the shows of the three Gods one after another (a preview: nothing is given).</summary>
+    private void PlayGodShow()
+    {
+        if (clicker == null) return;
+        PixelClicker.PixelType[] gods = { PixelClicker.PixelType.GodSlifer, PixelClicker.PixelType.GodRa, PixelClicker.PixelType.GodObelisk };
+        int index = clicker.IndexOf(gods[godPreview % 3]);
+        godPreview++;
+        if (index >= 0) PixelGodFind.Play(index, clicker.LiveWorldPosition);
+    }
+
     private void FillDropdowns()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
@@ -858,6 +886,20 @@ public class PixelDevTools : MonoBehaviour
         Place(giveDragon.GetComponent<RectTransform>(), 40f, y, inner);
         giveDragon.onClick.AddListener(GiveDragonCube);
         Widget(content, board, "dragon", ws, y);
+        y += rowHeight + 24f;
+        ws = content.childCount;
+
+        // Rows: the Egyptian God Cubes (give the next one / preview the shows)
+        Button giveGod = PixelUIKit.CreateButton(font, content, "Give God Cube Button", giveGodCubeLabel, new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(giveGod.GetComponent<RectTransform>(), 40f, y, inner);
+        giveGod.onClick.AddListener(GiveGodCube);
+        Widget(content, board, "godgive", ws, y);
+        y += rowHeight + 24f;
+        ws = content.childCount;
+        Button playGod = PixelUIKit.CreateButton(font, content, "Play God Show Button", playGodShowLabel, new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
+        Place(playGod.GetComponent<RectTransform>(), 40f, y, inner);
+        playGod.onClick.AddListener(PlayGodShow);
+        Widget(content, board, "godshow", ws, y);
         y += rowHeight + 24f;
         ws = content.childCount;
 
@@ -1005,6 +1047,8 @@ public class PixelDevTools : MonoBehaviour
             case "moment": return "Mark this moment";
             case "uidump": return "UI layout dump";
             case "dragon": return "Dragon cubes";
+            case "godgive": return "Give God Cube";
+            case "godshow": return "God Cube shows";
             case "unlock": return "Unlock everything";
             case "reset": return "Reset counts";
             case "clear": return "Clear key";

@@ -94,7 +94,7 @@ public class PixelLightningRod : PixelPlacedDevice
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
             if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) continue;
             PixelClicker.PixelTier tier = clicker.Tiers[info.tierIndex];
-            if (tier.type == PixelClicker.PixelType.Electric || tier.flyAway || PixelClicker.IsDragonCube(tier.type)) continue;
+            if (tier.type == PixelClicker.PixelType.Electric || tier.flyAway || PixelClicker.IsRareCube(tier.type)) continue;
             OldPixelDespawn dd = body.GetComponent<OldPixelDespawn>();
             if (dd != null && dd.IsDespawning) continue;
             targets.Add(body);

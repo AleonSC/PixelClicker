@@ -144,6 +144,9 @@ public partial class PixelClicker : MonoBehaviour
         Whale = 74,       // Fishing's special block: a whale that fights the line
         Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
         Charcoal = 81,    // made by the Kiln (PixelKiln): a standalone block that only exists as an old pixel
+        GodSlifer = 82,   // the three Egyptian God Cubes (PixelGodFind.cs): the rarest drops in the game, only one of each can be held
+        GodRa = 83,
+        GodObelisk = 84,
         Pesticide = 80,   // Woodcutting's base block that can be held (Block Hold): while it is held a left click clears a Hornet Nest at once (PixelBlockRules HoldRule.clearsHazard)
         Acorn = 79,       // Woodcutting's base block: acorn old pixels lying on the field raise the Great Oak's spawn chance (PixelBlockRules SpecialRule boost)
         Whetstone = 78,   // Woodcutting's base block that can be held (Block Hold): while it is held every manual click is followed by a rapid burst of extra clicks (PixelBlockRules HoldRule.extraClicks)
@@ -177,6 +180,12 @@ public partial class PixelClicker : MonoBehaviour
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
     public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
+
+    /// <summary>Is this one of the three Egyptian God Cubes (Slifer, Ra, Obelisk): the rarest drops of all, only one of each can ever be held?</summary>
+    public static bool IsGodCube(PixelType type) => type == PixelType.GodSlifer || type == PixelType.GodRa || type == PixelType.GodObelisk;
+
+    /// <summary>A Dragon Cube or a God Cube: the rare collectible drops kept out of potions, crafting, pets, achievements and the Value upgrades.</summary>
+    public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type);
 
     /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
     public static int DragonCubeStars(PixelType type) => IsDragonCube(type) ? (int)type - (int)PixelType.DragonCube1 + 1 : 0;
@@ -360,7 +369,7 @@ public partial class PixelClicker : MonoBehaviour
         }
 
         /// <summary>Can this pixel spawn right now (unlocked and not switched off)?</summary>
-        public bool CanSpawn => (unlocked || rareDrop || PixelSkills.PreviewForces(type)) && !(spawnDisabled && CanSwitchOff);
+        public bool CanSpawn => (unlocked || rareDrop || PixelSkills.PreviewForces(type)) && !(spawnDisabled && CanSwitchOff) && !(IsGodCube(type) && count >= 1d);   // (a God Cube you hold never comes again: one of each)
 
         /// <summary>The tier colour with full opacity, for text and icons (a glass tier's colour is see-through).</summary>
         public Color UIColor => new Color(color.r, color.g, color.b, 1f);
@@ -380,6 +389,14 @@ public partial class PixelClicker : MonoBehaviour
     [Min(0f)]
     [Tooltip("Spawn weight of EACH Dragon Cube in the random pixel spawns (a normal pixel is 1; 0 = the default 0.0001, i.e. about 1 in 70,000 pixels each).")]
     [SerializeField] private float dragonCubeSpawnWeight = 0f;
+
+    [Header("God Cubes (Egyptian gods)")]
+    [Tooltip("Turn the three Egyptian God Cubes (Slifer, Ra, Obelisk) off entirely. They are the rarest random pixels in the game and only one of each can be held.")]
+    [SerializeField] private bool disableGodCubes = false;
+
+    [Min(0f)]
+    [Tooltip("Spawn weight of EACH God Cube in the random pixel spawns (a normal pixel is 1; 0 = the default 0.000001, about 1 in 7 million pixels each - 100 times rarer than a Dragon Cube).")]
+    [SerializeField] private float godCubeSpawnWeight = 0f;
 
     [Header("Glow (tiers with Glow ticked)")]
     [Range(0f, 1f)]
@@ -1173,6 +1190,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelShopNudge>() == null) gameObject.AddComponent<PixelShopNudge>();   // points the player at the Shop button after Cubie's second visit
         if (PixelFind.First<PixelTreasureMap>() == null) gameObject.AddComponent<PixelTreasureMap>();   // Fishing: the treasure map from a message in a bottle
         if (PixelFind.First<PixelWhaleFight>() == null) gameObject.AddComponent<PixelWhaleFight>();   // Fishing: the whale that fights the line
+        if (PixelFind.First<PixelGodFind>() == null) gameObject.AddComponent<PixelGodFind>();   // the God Cubes' shows
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)
@@ -1909,6 +1927,20 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 58;
         }
 
+        if (looksVersion < 59)
+        {
+            // The three Egyptian God Cubes got their looks.
+            System.Collections.Generic.List<PixelLook> list59 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults59 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.GodSlifer, PixelType.GodRa, PixelType.GodObelisk })
+            {
+                PixelLook def = PixelLooks.Find(defaults59, t);
+                if (def != null && PixelLooks.Find(list59.ToArray(), t) == null) list59.Add(def);
+            }
+            looks = list59.ToArray();
+            looksVersion = 59;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -1957,6 +1989,7 @@ public partial class PixelClicker : MonoBehaviour
         }
 
         EnsureDragonCubes();
+        EnsureGodCubes();
     }
 
     /// <summary>The seven Dragon Cube tiers: orange, 1 payout each, an extremely low spawn weight and no requirements (rare drops).</summary>
@@ -1981,6 +2014,26 @@ public partial class PixelClicker : MonoBehaviour
                 unlockMode = TierUnlockMode.ShopOnly,
             });
         }
+    }
+
+    /// <summary>The three Egyptian God Cube tiers (Slifer red, Ra gold, Obelisk blue): 1 payout, an insanely low spawn weight, no requirements, only one of each can be held.</summary>
+    private void EnsureGodCubes()
+    {
+        if (disableGodCubes) return;
+        float weight = godCubeSpawnWeight > 0f ? godCubeSpawnWeight : 0.000001f;
+        void Add(PixelType type, string name, Color color, float glowIntensity)
+        {
+            if (IndexOf(type) >= 0) return;
+            EnsureTier(new PixelTier
+            {
+                type = type, displayName = name, color = color, amountPerClick = 1, spawnWeight = weight,
+                rareDrop = true, glow = true, glowIntensity = glowIntensity,
+                spawnSwitch = SpawnSwitch.AlwaysOn, unlockMode = TierUnlockMode.ShopOnly,
+            });
+        }
+        Add(PixelType.GodSlifer, "Slifer the Sky Dragon", new Color(0.92f, 0.12f, 0.1f, 1f), 1.6f);
+        Add(PixelType.GodRa, "Ra the Winged Dragon", new Color(1f, 0.82f, 0.15f, 1f), 2.2f);
+        Add(PixelType.GodObelisk, "Obelisk the Tormentor", new Color(0.2f, 0.38f, 0.95f, 1f), 1.4f);
     }
 
     private void Start()
@@ -2274,7 +2327,8 @@ public partial class PixelClicker : MonoBehaviour
         double amount = basePayout * PayoutMultiplier(tierIndex) * clickMultiplier * (automatic ? 1d : ManualClickBonus) * PixelBlockRules.HeldPayoutFactor * liveStake;
         tier.timesCollected += breaks;
         AddCurrency(tierIndex, amount);
-        if (IsDragonCube(tier.type) && amount > 0d) PixelDragonFind.Play(tierIndex, pixelTransform.position);   // the "you found one" show
+        if (IsGodCube(tier.type) && amount > 0d) PixelGodFind.Play(tierIndex, pixelTransform.position);   // each God has its own show
+        else if (IsDragonCube(tier.type) && amount > 0d) PixelDragonFind.Play(tierIndex, pixelTransform.position);   // the "you found one" show
         PixelCollected?.Invoke(tierIndex, amount, automatic);
 
         // A Mirror pixel also counts as a click on the last other pixel type collected: it pays that click's amount again.
@@ -2327,6 +2381,11 @@ public partial class PixelClicker : MonoBehaviour
     public void AddCurrency(int tierIndex, double amount)
     {
         if (!IsValidTier(tierIndex) || amount <= 0) return;
+        if (IsGodCube(tiers[tierIndex].type))
+        {
+            if (tiers[tierIndex].count >= 1d) return;   // one of each God Cube, ever: a second one is never added
+            amount = 1d;
+        }
 
         bool firstOfRareDrop = tiers[tierIndex].rareDrop && tiers[tierIndex].totalCollected <= 0d;
         tiers[tierIndex].count += amount;
@@ -2341,6 +2400,12 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>The first time each Dragon Cube turns up: a log line (and a tip the very first time), plus a note when all seven are held.</summary>
     private void AnnounceDragonCube(int tierIndex)
     {
+        if (IsGodCube(tiers[tierIndex].type))
+        {
+            PixelHints.Announce("You found " + tiers[tierIndex].displayName + "! Only one of each God Cube can exist.");
+            PixelHints.Trigger("god_first");
+            return;
+        }
         PixelHints.Announce("You found a " + tiers[tierIndex].displayName + "!");
         PixelHints.Trigger("dragon_first");
         if (HasAllDragonCubes) PixelHints.Announce("You hold all seven Dragon Cubes! Summon the dragon.");
@@ -2969,7 +3034,7 @@ public partial class PixelClicker : MonoBehaviour
         int pick = PickSpawnTierBase();
         // Safety net: a block that is locked or belongs to a skill that is not in play must never come up on its own (dev spawning and forced blocks are exempt).
         if (devSpawnTiers == null && IsValidTier(pick) && !(IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)
-            && (!tiers[pick].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[pick].type)) && !IsDragonCube(tiers[pick].type))
+            && (!tiers[pick].CanSpawn || PixelSkills.LeftOutOfSpawns(tiers[pick].type)) && !IsRareCube(tiers[pick].type))
         {
             PixelSkills sk = PixelSkills.Instance;
             Debug.LogWarning("PixelClicker: the spawn roll picked '" + tiers[pick].displayName + "' (" + tiers[pick].type + ") but it may not spawn now (unlocked " + tiers[pick].unlocked
@@ -5114,7 +5179,7 @@ public partial class PixelClicker : MonoBehaviour
                     copy.AddComponent<OldPixelFloat>().Setup(this, styled.floatAfterBounces, styled.floatLift, styled.floatDriftSpeed);
                 if (styled.splash)
                     copy.AddComponent<OldPixelSplash>().Setup(this);
-                if (styled.sunFx)
+                if (styled.sunFx && !IsGodCube(styled.type))   // (Ra shows the sun's corona but does not hover or pay a trickle)
                 {
                     copy.AddComponent<OldPixelSolarHover>().Setup(this);
                     copy.AddComponent<OldPixelSolarAura>();

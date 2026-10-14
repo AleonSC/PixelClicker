@@ -300,7 +300,7 @@ public partial class PixelPets : MonoBehaviour
     private float treatTimer;
 
     /// <summary>Does this pixel type have a pet? Every pixel does, except the seven Dragon Cubes (their own find show) and the hazards (nothing to collect). Pets, their achievements and the Game Database all use this.</summary>
-    public static bool CanHavePet(PixelClicker.PixelType type) => !PixelClicker.IsDragonCube(type) && !PixelClicker.IsHazard(type);
+    public static bool CanHavePet(PixelClicker.PixelType type) => !PixelClicker.IsRareCube(type) && !PixelClicker.IsHazard(type);
 
     /// <summary>For the Game Database: the spawn chance factor of an active pet, how much slower its pixels age, and the chance per click of finding a pet.</summary>
     public float SpawnWeightFactor => Mathf.Max(1f, spawnWeightMultiplier);

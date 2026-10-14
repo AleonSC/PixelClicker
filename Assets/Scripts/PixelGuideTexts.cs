@@ -206,6 +206,12 @@ public static class PixelGuideTexts
             case PixelClicker.PixelType.DragonCube6:
             case PixelClicker.PixelType.DragonCube7:
                 return "A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.";
+            case PixelClicker.PixelType.GodSlifer:
+                return "One of the three Egyptian God Cubes: Slifer the Sky Dragon, a red cube held together by storm lightning. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
+            case PixelClicker.PixelType.GodRa:
+                return "One of the three Egyptian God Cubes: Ra the Winged Dragon, a blazing golden cube wrapped in a sun's corona. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
+            case PixelClicker.PixelType.GodObelisk:
+                return "One of the three Egyptian God Cubes: Obelisk the Tormentor, a deep blue stone cube that sheds dust. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
             default:
                 return "A pixel with no special effects.";
         }

@@ -40,6 +40,7 @@
 | `PixelElectricFx.cs` | Looks / effects of the Electrician pixels: | in the header comment of `PixelElectricFx.cs` |
 | `PixelObsidianFx.cs` | Obsidian flair: natural black glass (dark neutral bevel rim, no emission / violet; | in the header comment of `PixelObsidianFx.cs` |
 | `PixelDragonWish.cs` | Dragon Cubes + the wish. Seven rare-drop tiers (PixelType.DragonCube1..7, PixelTier.rareDrop, helpers PixelClicker.IsDragonCube/DragonCubeStars; | `docs/systems/PixelDragonWish.md` |
+| `PixelGodFind.cs` / `PixelGodSynth.cs` | The three Egyptian God Cubes (PixelType.GodSlifer / GodRa / GodObelisk, rare drops about 1 in 7 million, only one of each can be held): own looks, find shows (storm + lightning serpent / sun + wings / fist slam) and code-made sounds. | `docs/systems/PixelGodCubes.md` |
 | `PixelSnakeMinigame.cs` | Snake minigame (pack unlocksMinigame = "snake", Minigames tab, needs the RGB pack; | in the header comment of `PixelSnakeMinigame.cs` |
 | `PixelSortMinigame.cs` | Sorting Race minigame (id sort, pack unlocksMinigame = "sort", Minigames tab, needs the RGB pack; | in the header comment of `PixelSortMinigame.cs` |
 | `PixelDashMinigame.cs` | Cube Dash minigame (id dash, pack unlocksMinigame = "dash", Minigames tab, needs the RGB pack, 50K each; | in the header comment of `PixelDashMinigame.cs` |
