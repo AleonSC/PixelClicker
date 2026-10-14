@@ -1,5 +1,6 @@
 // ---- System notes ----
 // PixelViewWindow.cs
+//   FREE CAM (4th tick box, PixelFreeCam.cs): a detached camera flown by hand (WASD, Space / C, Shift, middle drag to look); never saved as the player's view, no zoom slider, no flat view.
 //   The View window (component added by PixelClicker.Awake; opens ONLY with its key, PixelAction.ViewWindow, default V; closes with the
 //   key, its X or Escape (PixelWindows 130); a small draggable window that does not pause the game; disableViewWindow). It replaces the
 //   old F (view) and X (zoom) keys, which are retired: View tick boxes - First person, Orbital, Top down (the normal view) - where ticking
@@ -17,7 +18,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public enum PixelViewKind { Default, FirstPerson, Orbital, TopDown }
+public enum PixelViewKind { Default, FirstPerson, Orbital, TopDown, FreeCam }
 
 /// <summary>Hold-to-repeat helper for the View window's buttons.</summary>
 public class PixelHoldPress : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
@@ -77,7 +78,7 @@ public class PixelViewWindow : MonoBehaviour
         if (instance != null) instance.pendingApply = true;
     }
 
-    private static void SaveKind(PixelViewKind kind) { PlayerPrefs.SetInt(PrefKind, kind == PixelViewKind.FirstPerson ? 0 : (int)kind); }   // (first person is never restored by itself)
+    private static void SaveKind(PixelViewKind kind) { if (kind == PixelViewKind.FreeCam) return; PlayerPrefs.SetInt(PrefKind, kind == PixelViewKind.FirstPerson ? 0 : (int)kind); }   // (the free cam is never the saved view)   // (first person is never restored by itself)
     private static Vector2 savedPosition = new Vector2(-40f, 0f);
 
     /// <summary>True while the window is open (first person gives the mouse back meanwhile).</summary>
@@ -89,6 +90,7 @@ public class PixelViewWindow : MonoBehaviour
     /// <summary>The view in use right now.</summary>
     public static PixelViewKind CurrentView =>
         PixelFirstPerson.Active ? PixelViewKind.FirstPerson :
+        PixelFreeCam.Active ? PixelViewKind.FreeCam :
         PixelOrbitCamera.Active ? (PixelOrbitCamera.TopDown ? PixelViewKind.TopDown : PixelViewKind.Orbital) : PixelViewKind.Default;
 
     /// <summary>Switches to a view: leaves the current one and enters the new one. Returns false if the new view can't start now (the game is back to the Default view then).</summary>
@@ -103,6 +105,7 @@ public class PixelViewWindow : MonoBehaviour
             return true;
         }
         if (cur == PixelViewKind.FirstPerson) PixelFirstPerson.Leave();
+        else if (cur == PixelViewKind.FreeCam) PixelFreeCam.Leave();
         else if (cur != PixelViewKind.Default && orbit != null) orbit.Cancel();
 
         bool ok = true;
@@ -111,6 +114,7 @@ public class PixelViewWindow : MonoBehaviour
             case PixelViewKind.FirstPerson: ok = PixelFirstPerson.TryEnter(); break;
             case PixelViewKind.Orbital: ok = orbit != null && orbit.Enter(false); break;
             case PixelViewKind.TopDown: ok = orbit != null && orbit.Enter(true); break;
+            case PixelViewKind.FreeCam: ok = PixelFreeCam.TryEnter(); break;
         }
         if (!ok) { if (announceFailure) PixelHints.Announce("That view can't start right now"); return false; }
         return true;
@@ -120,7 +124,7 @@ public class PixelViewWindow : MonoBehaviour
     private GameObject canvasRoot, window;
     private RectTransform windowRect;
     private TMP_FontAsset font;
-    private readonly Toggle[] viewTicks = new Toggle[3];   // First person, Orbital, Top down
+    private readonly Toggle[] viewTicks = new Toggle[4];   // First person, Orbital, Top down, Free cam
     private Toggle orthoTick, autoTick, invertTick;
     private RectTransform tipRect;
     private TMP_Text tipLabel;
@@ -232,8 +236,10 @@ public class PixelViewWindow : MonoBehaviour
         if (viewTicks[0] != null) viewTicks[0].SetIsOnWithoutNotify(cur == PixelViewKind.FirstPerson);
         if (viewTicks[1] != null) viewTicks[1].SetIsOnWithoutNotify(cur == PixelViewKind.Orbital);
         if (viewTicks[2] != null) viewTicks[2].SetIsOnWithoutNotify(cur == PixelViewKind.TopDown || cur == PixelViewKind.Default);
+        if (viewTicks[3] != null) viewTicks[3].SetIsOnWithoutNotify(cur == PixelViewKind.FreeCam);
 
-        bool fp = cur == PixelViewKind.FirstPerson;
+        bool free = cur == PixelViewKind.FreeCam;
+        bool fp = cur == PixelViewKind.FirstPerson || free;   // (first person and the free cam are always the 3D view, and have no zoom slider)
         orthoTick.SetIsOnWithoutNotify(PixelOrthoView.Enabled && !fp);
         orthoTick.interactable = !fp;
         orthoNote.gameObject.SetActive(fp);
@@ -444,11 +450,12 @@ public class PixelViewWindow : MonoBehaviour
             "<b>First person controls</b>\nWASD  -  move\nShift  -  run\nSpace  -  jump\nClick the cube  -  click it\nRight-click a cube  -  carry it\n(again = drop, left-click = throw)\nEsc  -  leave\n{key:ViewWindow}  -  this window",
             "<b>Orbital controls</b>\nMiddle mouse drag  -  turn and tilt\nArrow keys  -  turn and tilt\nCtrl + mouse wheel  -  zoom\nTurn / tilt buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
             "<b>Top down controls</b>\nMiddle mouse drag  -  turn\nLeft / right arrow keys  -  turn\nCtrl + mouse wheel  -  zoom\nTurn buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
+            "<b>Free cam controls</b>\nW / A / S / D  -  fly\nSpace / C  -  up / down\nShift  -  fast\nMiddle mouse drag or arrow keys  -  look\nCtrl + mouse wheel  -  flying speed\n{key:ViewWindow}  -  this window",
         };
 
         // --- Views: ticking one unticks the others.
-        string[] names = { "First person", "Orbital", "Top down" };
-        PixelViewKind[] kinds = { PixelViewKind.FirstPerson, PixelViewKind.Orbital, PixelViewKind.TopDown };
+        string[] names = { "First person", "Orbital", "Top down", "Free cam" };
+        PixelViewKind[] kinds = { PixelViewKind.FirstPerson, PixelViewKind.Orbital, PixelViewKind.TopDown, PixelViewKind.FreeCam };
         for (int i = 0; i < names.Length; i++)
         {
             PixelViewKind kind = kinds[i];
@@ -464,7 +471,7 @@ public class PixelViewWindow : MonoBehaviour
 
         // --- Flat (orthographic) view: not in first person.
         orthoTick = TickRow(window.transform, y, "Orthographic (flat) view", on => { PixelOrthoView.Enabled = on; Sync(); }, out GameObject orthoRow);
-        orthoNote = Label(orthoRow.transform, "(not in first person)", 17f, FontStyles.Italic, new Color(1f, 0.8f, 0.4f), TextAlignmentOptions.MidlineRight);
+        orthoNote = Label(orthoRow.transform, "(not in first person / free cam)", 17f, FontStyles.Italic, new Color(1f, 0.8f, 0.4f), TextAlignmentOptions.MidlineRight);
         RectTransform nr = orthoNote.rectTransform;
         nr.anchorMin = Vector2.zero; nr.anchorMax = Vector2.one;
         nr.offsetMin = new Vector2(Width * 0.5f, 0f); nr.offsetMax = new Vector2(-(RowH + 20f), 0f);

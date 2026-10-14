@@ -85,7 +85,7 @@ public class PixelOrbitCamera : MonoBehaviour
     public static PixelOrbitCamera Instance { get; private set; }
 
     /// <summary>A hidden, disabled copy of the camera at its normal pose while orbiting (null otherwise): the view bounds and fitted floors read it.</summary>
-    public static Camera HomeCamera => orbitHome != null ? orbitHome : PixelZoom.HomeCamera;   // (the zoom key's copy counts too)
+    public static Camera HomeCamera => orbitHome != null ? orbitHome : PixelFreeCam.Home != null ? PixelFreeCam.Home : PixelZoom.HomeCamera;   // (the zoom key's copy counts too)
     private static Camera orbitHome;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

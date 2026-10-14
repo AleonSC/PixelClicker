@@ -231,6 +231,7 @@ public class PixelFirstPerson : MonoBehaviour
     public static bool TryEnter()
     {
         if (instance == null || Active || !instance.CanEnter()) return Active;
+        PixelFreeCam.Leave();   // (the free cam gives the camera back first)
         instance.Enter();
         return Active;
     }

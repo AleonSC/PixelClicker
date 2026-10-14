@@ -94,7 +94,7 @@ public class PixelOrthoView : MonoBehaviour
 
         // The intro and the title screen's close-up work on the field of view, so they get the normal perspective camera.
         bool busy = PixelCameraIntro.Moving || PixelTitleScreen.Showing;
-        float target = Enabled && !disableFlatView && !busy && !PixelTitleScreen.Reversing && !PixelFirstPerson.Active ? 1f : 0f;   // (first person is always the 3D view)
+        float target = Enabled && !disableFlatView && !busy && !PixelTitleScreen.Reversing && !PixelFirstPerson.Active && !PixelFreeCam.Active ? 1f : 0f;   // (first person and the free cam are always the 3D view)
         if (busy) Blend = 0f;
         else
         {
