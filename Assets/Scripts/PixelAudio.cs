@@ -231,6 +231,7 @@ public partial class PixelAudio : MonoBehaviour
             Make("device_place", 0.1f),
             Make("achievement", 0.2f),
             Make("ui_click", 0.05f),
+            new Sound { id = "menu_open", cooldown = 0.12f, pitchMin = 0.96f, pitchMax = 1.04f, volume = 0.7f },
             Make("grab", 0.05f),
             Make("drop", 0.05f),
             Make("ui_scroll", 0.03f, 0.95f, 1.05f),
@@ -357,6 +358,7 @@ public partial class PixelAudio : MonoBehaviour
         {
             case "pixel_bounce_electric": return new[] { PixelSynth.Zap(1), PixelSynth.Zap(2), PixelSynth.Zap(3) };
             case "overcharge": return new[] { PixelSynth.Charge() };
+            case "menu_open": return new[] { PixelSynth.MenuBloop() };
             case "remove_buildup": return new[] { PixelSynth.Buildup() };
             case "dragon_summon": return new[] { PixelSynth.Summon() };
             case "seed_dig": return new[] { PixelSynth.Dig(1), PixelSynth.Dig(2), PixelSynth.Dig(3) };
@@ -1658,6 +1660,31 @@ public static class PixelSynth
         for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
         for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.7f;
         AudioClip clip = AudioClip.Create("RemoveBuildup", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    /// <summary>A soft, deep raindrop: a round sine "bloop" that dips in pitch as it fades, a tiny muffled plop at the start and a quiet low overtone. About a third of a second.</summary>
+    public static AudioClip MenuBloop()
+    {
+        const int rate = 44100;
+        int n = (int)(rate * 0.42f);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(77);
+        float phase = 0f, phase2 = 0f, lp = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float hz = 105f + 150f * Mathf.Exp(-sec * 22f);          // starts near 255 Hz and sinks to ~105 Hz: the drop falling into deep water
+            phase += hz / rate; phase2 += hz * 0.5f / rate;
+            float attack = Mathf.Clamp01(sec / 0.006f);                // a soft 6 ms attack (no click)
+            float env = attack * Mathf.Exp(-sec * 9f);
+            float tone = Mathf.Sin(phase * 6.2832f) * 0.85f + Mathf.Sin(phase2 * 6.2832f) * 0.3f;
+            lp += (((float)rng.NextDouble() * 2f - 1f) - lp) * 0.07f;   // muffled noise for the plop
+            float plop = lp * Mathf.Exp(-sec * 70f) * 0.9f;
+            data[i] = (tone * env + plop) * 0.55f;
+        }
+        AudioClip clip = AudioClip.Create("menu_bloop", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }

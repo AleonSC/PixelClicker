@@ -26,6 +26,10 @@ public class PixelPop : MonoBehaviour
     [Tooltip("Size a window starts to grow from / ends shrinking at (fraction of full size).")]
     [SerializeField] private float smallScale = 0.05f;
 
+    private static float lastOpenSound = -10f;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetOpenSound() { lastOpenSound = -10f; }
+
     private enum Mode { Idle, Grow, Shrink }
     private Mode mode = Mode.Idle;
     private float t;
@@ -112,6 +116,7 @@ public class PixelPop : MonoBehaviour
 
     private void StartGrow()
     {
+        if (Time.unscaledTime - lastOpenSound > 0.1f && Time.realtimeSinceStartup > 3f) { lastOpenSound = Time.unscaledTime; PixelAudio.Play("menu_open"); }   // a deep soft bloop whenever a menu / tip opens
         mode = Mode.Grow;
         t = 0f;
         hideTarget = null;

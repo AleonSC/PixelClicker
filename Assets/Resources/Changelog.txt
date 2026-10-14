@@ -969,3 +969,4 @@
 [2026-10-14 12:12 UTC] Stained Glass, Casino Felt and Nebula Field are corrected for the camera's tilt so they no longer look squashed vertically.
 [2026-10-14 12:12 UTC] Moon Surface and Red Planet are now their own floors (terraced crater, rays, rille, rover tracks / dunes, cracked lakebed, dust devils) instead of recolours; Coral Reef and Still Pond got many more details (staghorn and table corals, urchins, fish, shells, sunbeams / reeds, pebbles, petals, koi shadows and fins).
 [2026-10-14 12:13 UTC] Fixed the dark square cut out of the glow aura round the cube while the game loads: the aura now always cuts out the cube's own mesh instead of the biggest mesh under it.
+[2026-10-14 12:26 UTC] Opening a menu, window or tip box now plays a soft, deep raindrop bloop (sound menu_open, code-made; replace it in the Sounds list if you like).
