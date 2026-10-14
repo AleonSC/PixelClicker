@@ -801,7 +801,7 @@ public class PixelCrafting : MonoBehaviour
         BuildBook();
 
         windowObject.SetActive(false);
-        PixelWindows.Register(this, 25, () => windowObject != null && PixelPop.IsOpen(windowObject), () => { if (BookOpen) CloseBook(); else Close(); }); // Escape closes the recipe book first
+        PixelWindows.Register(this, 25, () => windowObject != null && PixelPop.IsOpen(windowObject), Close); // Escape closes the whole Crafting window, the recipe book with it (the book only toggles from its button)
     }
 
     private float SideWidth { get { PixelShop shop = PixelFind.First<PixelShop>(); return shop != null ? shop.CurrencyPanelWidth : 380f; } }
