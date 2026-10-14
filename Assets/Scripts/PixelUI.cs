@@ -654,11 +654,21 @@ public class PixelUI : MonoBehaviour
         UpdateTooltip();
         UpdateActiveHud();
         UpdateGuide();
+        UpdatePinnedSpaceSwitch();
         if (autoMode && !boxObject.activeSelf) { boxWasOpen = false; return; } // closed box: nothing to update
         if (boxWasOpen && Time.unscaledTime < nextRefreshTime) return;
         boxWasOpen = true;
         nextRefreshTime = Time.unscaledTime + refreshSeconds;
         Refresh();
+    }
+
+    /// <summary>Space flips the pinned Inventory between the currency and the consumables without closing it (Escape is untouched). Not in first person (Space jumps there) or while paused.</summary>
+    private void UpdatePinnedSpaceSwitch()
+    {
+        if (!autoMode || !Compact || boxObject == null || !boxObject.activeSelf || compactSwitch == null) return;
+        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelFirstPerson.Active) return;
+        if (!PixelKeys.KeyPressed(KeyCode.Space)) return;   // (ignored while typing in a text box)
+        compactSwitch.onClick.Invoke();
     }
 
     private bool boxWasOpen;
