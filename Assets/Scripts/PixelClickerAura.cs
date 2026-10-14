@@ -139,9 +139,15 @@ public class PixelClickerAura : MonoBehaviour
     private void UpdateMask(bool on)
     {
         if (maskShader == null) return;
-        if (on && (maskSource == null || !maskSource.gameObject.activeInHierarchy) && Time.unscaledTime >= maskSearchAt)
+        if (on && Time.unscaledTime >= maskSearchAt)
         {
+            // The cube's OWN mesh is the silhouette. (Picking the biggest mesh under the cube cut a square hole in the glow while something bigger - a shell or a spawn effect - existed, e.g. while the game loads.)
             maskSearchAt = Time.unscaledTime + 0.25f;
+            MeshFilter own = clicker.MainRenderer != null ? clicker.MainRenderer.GetComponent<MeshFilter>() : null;
+            if (own != null && own.sharedMesh != null && clicker.MainRenderer.enabled && own.gameObject.activeInHierarchy) maskSource = own;
+        }
+        if (on && (maskSource == null || !maskSource.gameObject.activeInHierarchy) && Time.unscaledTime >= maskSearchAt - 0.2f)
+        {
             maskSource = null;
             float best = 0f;
             foreach (MeshFilter mf in clicker.PixelTransform.GetComponentsInChildren<MeshFilter>(false))

@@ -547,6 +547,8 @@ public partial class PixelClicker : MonoBehaviour
 
     [Tooltip("Renderer of the pixel. Auto-found on the pixel if empty.")]
     [SerializeField] private Renderer pixelRenderer;
+    /// <summary>The clicker cube's own renderer (the aura cuts the cube out of its glow with a copy of this mesh).</summary>
+    public Renderer MainRenderer => pixelRenderer;
 
     [Tooltip("Camera used for raycasting. Defaults to Camera.main.")]
     [SerializeField] private Camera targetCamera;
