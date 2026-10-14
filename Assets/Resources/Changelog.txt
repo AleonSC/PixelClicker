@@ -922,3 +922,4 @@
 [2026-10-14 08:04 UTC] Escape in the Crafting window now closes the whole window including the recipe book (the book only toggles from its button).
 [2026-10-14 08:05 UTC] Skills window: the 'Training: ... Lv' line and the minigame XP bonus now share their row without overlapping (each shrinks to fit its own part).
 [2026-10-14 08:07 UTC] Added a search bar to the Toggles window: it looks through every group (Pixels, Upgrades, Minigames, Vendors, Pets) and shows the matching switches with their group in front; picking a group tab clears it.
+[2026-10-14 08:17 UTC] UFO Helper: the dome now holds a small cabin (floor, ring console with blinking buttons, tiny alien); instead of flying it you ride along inside, walking about and looking around while the saucer flies by itself.

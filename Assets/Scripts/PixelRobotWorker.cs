@@ -106,6 +106,11 @@ public partial class PixelRobotWorker : MonoBehaviour
     private Transform bodyT, lightsPivot, alienHead;
     private Renderer[] lightRenderers;
     private Renderer domeRenderer;
+    private Renderer[] consoleButtons;
+    private Color[] consoleColors;
+    private Light cabinLamp;
+    /// <summary>Height of the cabin floor inside the dome, in model units.</summary>
+    private const float CabinFloorY = 0.225f;
     private BoxCollider box;
     private Vector3 pos, velocity, wanderTarget;
     private bool hasPos;
@@ -245,21 +250,16 @@ public partial class PixelRobotWorker : MonoBehaviour
         if (root == null) BuildUfo();
         if (!root.activeSelf) root.SetActive(true);
 
-        if (Piloting)
-        {
-            Hovering = false;
-            UpdateCockpit();
-            return;
-        }
-
         UpdateFloor();
         UpdateSaver();
         UpdateMovement();
-        UpdateHoverAndClick();
+        if (Piloting) { Hovering = false; hovering = false; }   // you are riding along inside: the saucer's own mouse hover / click is off
+        else UpdateHoverAndClick();
         UpdateJob();
         UpdateBeam();
         Animate();
-        UpdateBubble();
+        if (Piloting) UpdateCockpit();   // after everything has moved: the passenger's camera follows the cabin
+        else UpdateBubble();
     }
 
     private Camera Cam => clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
@@ -645,11 +645,64 @@ public partial class PixelRobotWorker : MonoBehaviour
         Prim(PrimitiveType.Cylinder, b, "Emitter", new Vector3(0f, -0.22f, 0f), new Vector3(0.42f, 0.03f, 0.42f), accentColor);
         Prim(PrimitiveType.Sphere, b, "Rim", new Vector3(0f, 0.05f, 0f), new Vector3(1.72f, 0.09f, 1.72f), accentColor);
 
-        domeRenderer = Prim(PrimitiveType.Sphere, b, "Dome", new Vector3(0f, 0.3f, 0f), new Vector3(0.8f, 0.6f, 0.8f), new Color(0.6f, 0.95f, 1f, 0.45f), true).GetComponent<Renderer>();
-        alienHead = Pivot(b, "Alien", new Vector3(0f, 0.3f, 0f));
-        Prim(PrimitiveType.Sphere, alienHead, "Head", Vector3.zero, new Vector3(0.36f, 0.32f, 0.34f), alienColor);
-        Prim(PrimitiveType.Sphere, alienHead, "Eye L", new Vector3(-0.09f, 0.02f, -0.12f), new Vector3(0.11f, 0.15f, 0.06f), Color.black);
-        Prim(PrimitiveType.Sphere, alienHead, "Eye R", new Vector3(0.09f, 0.02f, -0.12f), new Vector3(0.11f, 0.15f, 0.06f), Color.black);
+        // The glass dome with a small CABIN inside: a floor, a ring console with buttons round the edge and a little alien at its station. The player can ride along in here (see PixelRobotCockpit.cs).
+        domeRenderer = Prim(PrimitiveType.Sphere, b, "Dome", new Vector3(0f, CabinFloorY, 0f), new Vector3(1.16f, 0.9f, 1.16f), new Color(0.6f, 0.95f, 1f, 0.35f), true).GetComponent<Renderer>();
+        Color steel = new Color(0.2f, 0.22f, 0.29f, 1f), deepSteel = new Color(0.1f, 0.11f, 0.15f, 1f);
+        Prim(PrimitiveType.Cylinder, b, "Cabin Floor", new Vector3(0f, CabinFloorY - 0.004f, 0f), new Vector3(1.04f, 0.012f, 1.04f), new Color(0.15f, 0.17f, 0.21f, 1f));
+        Prim(PrimitiveType.Cylinder, b, "Cabin Floor Ring", new Vector3(0f, CabinFloorY - 0.002f, 0f), new Vector3(0.56f, 0.014f, 0.56f), new Color(0.22f, 0.25f, 0.32f, 1f));
+        Color[] buttonColors = { new Color(0.95f, 0.25f, 0.2f), new Color(0.3f, 0.95f, 0.45f), new Color(1f, 0.75f, 0.2f), new Color(0.3f, 0.85f, 1f), new Color(0.95f, 0.95f, 1f) };
+        const int panels = 16;
+        System.Collections.Generic.List<Renderer> buttonList = new System.Collections.Generic.List<Renderer>();
+        for (int i = 0; i < panels; i++)
+        {
+            float ang = i / (float)panels * Mathf.PI * 2f;
+            Vector3 radial = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang));
+            Vector3 tangent = new Vector3(-Mathf.Sin(ang), 0f, Mathf.Cos(ang));
+            Quaternion face = Quaternion.LookRotation(radial, Vector3.up);   // local z = outwards, local x = along the ring
+            Vector3 centre = radial * 0.455f + Vector3.up * (CabinFloorY + 0.035f);
+            GameObject panel = Prim(PrimitiveType.Cube, b, "Console " + i, centre, new Vector3(0.2f, 0.07f, 0.1f), i % 2 == 0 ? steel : deepSteel);
+            panel.transform.localRotation = face;
+            // A sloped lip on the inner side with two buttons on it.
+            for (int k = 0; k < 2; k++)
+            {
+                Vector3 bp = centre - radial * 0.01f + tangent * (k == 0 ? -0.045f : 0.045f) + Vector3.up * 0.042f;
+                GameObject btn = Prim(PrimitiveType.Cube, b, "Button " + i + "-" + k, bp, new Vector3(0.032f, 0.016f, 0.032f), buttonColors[(i * 2 + k) % buttonColors.Length]);
+                btn.transform.localRotation = face;
+                buttonList.Add(btn.GetComponent<Renderer>());
+            }
+        }
+        consoleButtons = buttonList.ToArray();
+        consoleColors = new Color[consoleButtons.Length];
+        for (int i = 0; i < consoleButtons.Length; i++) consoleColors[i] = buttonColors[i % buttonColors.Length];   // (the order the buttons were made in: i * 2 + k)
+        // A few big gauges / a screen on the front of the console.
+        GameObject screenGo = Prim(PrimitiveType.Cube, b, "Console Screen", new Vector3(0f, CabinFloorY + 0.09f, 0.49f), new Vector3(0.22f, 0.07f, 0.012f), new Color(0.1f, 0.35f, 0.3f, 1f));
+        screenGo.transform.localRotation = Quaternion.Euler(-35f, 0f, 0f);
+
+        // The little alien at its station (on the left of the console), facing the middle of the cabin. 'alienHead' is the animated pivot (it sways); the parts hang under a fixed facing.
+        Vector3 alienAt = new Vector3(-0.2f, CabinFloorY, 0.23f);
+        alienHead = Pivot(b, "Alien", alienAt);
+        Transform alienFace = Pivot(alienHead, "Facing", Vector3.zero);
+        alienFace.localRotation = Quaternion.LookRotation(new Vector3(0.05f - alienAt.x, 0f, -alienAt.z), Vector3.up);
+        Prim(PrimitiveType.Capsule, alienFace, "Alien Body", new Vector3(0f, 0.05f, 0f), new Vector3(0.07f, 0.05f, 0.07f), alienColor);
+        Prim(PrimitiveType.Sphere, alienFace, "Head", new Vector3(0f, 0.118f, 0f), new Vector3(0.085f, 0.078f, 0.08f), alienColor);
+        Prim(PrimitiveType.Sphere, alienFace, "Eye L", new Vector3(-0.022f, 0.122f, 0.032f), new Vector3(0.028f, 0.036f, 0.014f), Color.black);
+        Prim(PrimitiveType.Sphere, alienFace, "Eye R", new Vector3(0.022f, 0.122f, 0.032f), new Vector3(0.028f, 0.036f, 0.014f), Color.black);
+        GameObject armL = Prim(PrimitiveType.Capsule, alienFace, "Arm L", new Vector3(-0.045f, 0.06f, 0.025f), new Vector3(0.016f, 0.03f, 0.016f), alienColor);
+        armL.transform.localRotation = Quaternion.Euler(60f, 0f, 20f);
+        GameObject armR = Prim(PrimitiveType.Capsule, alienFace, "Arm R", new Vector3(0.045f, 0.06f, 0.025f), new Vector3(0.016f, 0.03f, 0.016f), alienColor);
+        armR.transform.localRotation = Quaternion.Euler(60f, 0f, -20f);
+
+        // A soft cabin lamp (only on while somebody rides along).
+        GameObject lampGo = new GameObject("Cabin Lamp");
+        lampGo.transform.SetParent(b, false);
+        lampGo.transform.localPosition = new Vector3(0f, CabinFloorY + 0.36f, 0f);
+        cabinLamp = lampGo.AddComponent<Light>();
+        cabinLamp.type = LightType.Point;
+        cabinLamp.color = new Color(0.8f, 0.95f, 1f, 1f);
+        cabinLamp.range = 1.4f;   // (in model units: the saucer is scaled)
+        cabinLamp.intensity = 1.2f;
+        cabinLamp.shadows = LightShadows.None;
+        cabinLamp.enabled = false;
 
         lightsPivot = Pivot(b, "Lights", new Vector3(0f, 0.05f, 0f));
         const int lights = 8;
@@ -837,6 +890,13 @@ public partial class PixelRobotWorker : MonoBehaviour
             float pulse = 0.5f + 0.5f * Mathf.Sin(t * (working ? 12f : 4f) + i * 0.8f);
             SetRendererColor(lightRenderers[i], Color.Lerp(eyeColor * 0.35f, working ? Color.white : eyeColor, pulse), fadeAlpha);
         }
+        if (consoleButtons != null)
+            for (int i = 0; i < consoleButtons.Length; i++)
+            {
+                if (consoleButtons[i] == null) continue;
+                float blink = 0.55f + 0.45f * Mathf.Sin(t * (working ? 9f : 2.2f) + i * 1.7f);
+                SetRendererColor(consoleButtons[i], Color.Lerp(new Color(0.1f, 0.1f, 0.12f), consoleColors[i], blink), fadeAlpha);
+            }
         if (alienHead != null) alienHead.localRotation = Quaternion.Euler(0f, hovering ? Mathf.Sin(t * 6f) * 35f : Mathf.Sin(t * 0.8f) * 20f, Mathf.Sin(t * 1.6f) * 5f);
     }
 
@@ -956,7 +1016,7 @@ public partial class PixelRobotWorker : MonoBehaviour
             }
             if (CanPilot())
             {
-                AddRow(content, y, rowH, takeControlText, "", dim, false, () => { CloseWindow(); EnterCockpit(); });
+                AddRow(content, y, rowH, boardText, "", dim, false, () => { CloseWindow(); EnterCockpit(); });
                 y += rowH + gap;
             }
             if (bankSys != null && bankSys.Active)
