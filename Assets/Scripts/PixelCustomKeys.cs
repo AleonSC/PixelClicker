@@ -29,6 +29,8 @@ public class PixelCustomKeys : MonoBehaviour
     // view
     private RectTransform viewRoot;
     private TMP_Dropdown dropdown;
+    private TMP_InputField searchField;
+    private string search = "";
     private readonly List<string> targets = new List<string>();
     private ScrollRect scroll;
     private RectTransform content;
@@ -145,7 +147,15 @@ public class PixelCustomKeys : MonoBehaviour
         statusLabel = hint;
         RectTransform hr = hint.rectTransform;
         hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
-        hr.sizeDelta = new Vector2(-8f, 52f); hr.anchoredPosition = new Vector2(0f, -62f);
+        hr.sizeDelta = new Vector2(-8f, 52f); hr.anchoredPosition = new Vector2(0f, -112f);
+
+        // The search bar: filters the drop-down above (what you can add) and the list below (what is bound).
+        searchField = PixelUIKit.CreateInputField(font, root, "Search", new Vector2(100f, 44f), new Color(0.12f, 0.15f, 0.22f, 1f), Color.white, 22f, "Search items, tools and keys...");
+        RectTransform sfr = searchField.GetComponent<RectTransform>();
+        sfr.anchorMin = new Vector2(0f, 1f); sfr.anchorMax = new Vector2(1f, 1f); sfr.pivot = new Vector2(0.5f, 1f);
+        sfr.offsetMin = new Vector2(4f, -104f); sfr.offsetMax = new Vector2(-4f, -60f);
+        PixelUIKit.AddSearchIcon(searchField);
+        searchField.onValueChanged.AddListener(v => { search = (v ?? "").Trim().ToLowerInvariant(); FillTargets(); dirty = true; });
 
         dropdown = PixelUIKit.CreateDropdown(font, root, "Targets", new Vector2(100f, 50f), new Color(0.2f, 0.3f, 0.5f, 1f), new Color(0.1f, 0.12f, 0.18f, 1f), Color.white, 22f);
         RectTransform dr = dropdown.GetComponent<RectTransform>();
@@ -160,7 +170,7 @@ public class PixelCustomKeys : MonoBehaviour
         scroll = PixelUIKit.CreateScrollView(root, "Bindings", new Color(1f, 1f, 1f, 0.35f), 12f, 60f, out content, out scrollBar);
         RectTransform sr = scroll.GetComponent<RectTransform>();
         sr.anchorMin = Vector2.zero; sr.anchorMax = Vector2.one;
-        sr.offsetMin = new Vector2(0f, 0f); sr.offsetMax = new Vector2(0f, -120f);
+        sr.offsetMin = new Vector2(0f, 0f); sr.offsetMax = new Vector2(0f, -150f);
         dirty = true;
     }
 
@@ -177,11 +187,17 @@ public class PixelCustomKeys : MonoBehaviour
         if (dropdown == null) return;
         targets.Clear();
         List<string> names = new List<string>();
-        foreach (string id in PixelMyWindow.ToolIds()) { PixelMyWindow.TryGetTool(id, out string toolName, out _); names.Add("Tool: " + toolName); targets.Add("tool:" + id); }
+        foreach (string id in PixelMyWindow.ToolIds())
+        {
+            PixelMyWindow.TryGetTool(id, out string toolName, out _);
+            if (search.Length > 0 && !("tool " + toolName).ToLowerInvariant().Contains(search)) continue;
+            names.Add("Tool: " + toolName); targets.Add("tool:" + id);
+        }
         PixelConsumables consumables = PixelFind.First<PixelConsumables>();
         if (consumables != null)
             for (int i = 0; i < consumables.ItemCount; i++)
-                if (consumables.ItemListable(i)) { names.Add(consumables.ItemName(i)); targets.Add("item:" + consumables.ItemName(i)); }
+                if (consumables.ItemListable(i) && (search.Length == 0 || consumables.ItemName(i).ToLowerInvariant().Contains(search))) { names.Add(consumables.ItemName(i)); targets.Add("item:" + consumables.ItemName(i)); }
+        if (names.Count == 0) { names.Add("(nothing matches)"); }
         int keep = dropdown.value;
         dropdown.ClearOptions();
         dropdown.AddOptions(names);
@@ -216,6 +232,7 @@ public class PixelCustomKeys : MonoBehaviour
         {
             int index = i;
             Binding b = bindings[i];
+            if (search.Length > 0 && !DisplayName(b.target).ToLowerInvariant().Contains(search) && !PixelKeys.KeyName((KeyCode)b.key).ToLowerInvariant().Contains(search)) continue;
             GameObject go = new GameObject("Binding " + i, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(content, false);
             go.GetComponent<Image>().color = new Color(0.14f, 0.17f, 0.26f, 1f);

@@ -1000,7 +1000,7 @@ public partial class PixelRobotWorker : MonoBehaviour
         windowPage = 0;
         BuildWindow();
         windowRoot.SetActive(true);
-        PixelAudio.Play("ui_click");
+        PixelAudio.Play("menu_open");
     }
 
     private void CloseWindow()

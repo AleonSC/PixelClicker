@@ -376,6 +376,7 @@ public class PixelAutosaveWindow : MonoBehaviour
         statusLabel.text = "";
         Refresh();
         root.SetActive(true);
+        PixelAudio.Play("menu_open");
         root.transform.SetAsLastSibling();
     }
 

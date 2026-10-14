@@ -973,3 +973,4 @@
 [2026-10-14 12:31 UTC] The menu bloop and the UI scroll tick now follow the Settings > Audio 'UI click sounds' switch together with the button clicks.
 [2026-10-14 12:32 UTC] The menu-open sound is now a soft, mellow water-drop tip (gentle rising tone, no thump) with a slight random pitch, so it stays pleasant when heard thousands of times.
 [2026-10-14 12:35 UTC] Removing placed machines (belts, kilns, splitters, elevators, solar panels...) now turns them red as the hold ring fills, like the wood chipper; the running potion line reddens and trembles slightly as its cancel fills.
+[2026-10-14 12:40 UTC] The Bank, UFO Helper and Autosaves windows now play the menu-open sound too; the Keybinds tab got a search bar that filters what you can add and the list of bound keys.

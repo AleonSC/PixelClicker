@@ -1406,6 +1406,7 @@ public class PixelBank : MonoBehaviour
             PixelLog.SetLogOpen(false);
             PixelSkills.CloseWindowIfOpen();
             windowObject.SetActive(true);
+            PixelAudio.Play("menu_open");   // (the Bank window has no PixelPop, so it plays the open sound itself)
             refreshTimer = 0f;
             RefreshWindow();
         }
