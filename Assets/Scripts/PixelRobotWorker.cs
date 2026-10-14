@@ -111,6 +111,7 @@ public partial class PixelRobotWorker : MonoBehaviour
     private Light cabinLamp;
     /// <summary>Height of the cabin floor inside the dome, in model units.</summary>
     private const float CabinFloorY = 0.225f;
+    private const float WindowRadius = 0.2f;   // the glass window in the cabin floor (model units)
     private BoxCollider box;
     private Vector3 pos, velocity, wanderTarget;
     private bool hasPos;
@@ -624,6 +625,56 @@ public partial class PixelRobotWorker : MonoBehaviour
         return g;
     }
 
+    /// <summary>A turned (lathe) mesh part: the profile points are (radius, height) pairs spun round the vertical axis. Two-sided, so it needs no winding care.</summary>
+    private GameObject MeshPrim(Transform parent, string name, Vector2[] profile, Color color)
+    {
+        GameObject g = Prim(PrimitiveType.Cube, parent, name, Vector3.zero, Vector3.one, color);
+        g.GetComponent<MeshFilter>().sharedMesh = LatheMesh(profile, 36);
+        return g;
+    }
+
+    /// <summary>Profile of an ellipsoid (horizontal radius a, vertical radius c, centre height y0) from polar fraction 'from' (0 = top, 1 = bottom) down to the bottom, minus the window opening.</summary>
+    private static Vector2[] EllipsoidProfile(float a, float c, float y0, float fromFraction, float toFraction, int steps)
+    {
+        float open = Mathf.Asin(Mathf.Min(0.99f, WindowRadius / a));   // polar angle where the shell reaches the window radius
+        float t0 = Mathf.Lerp(open, Mathf.PI - open, fromFraction), t1 = Mathf.Lerp(open, Mathf.PI - open, toFraction);
+        Vector2[] pts = new Vector2[steps + 1];
+        for (int i = 0; i <= steps; i++)
+        {
+            float t = Mathf.Lerp(t0, t1, i / (float)steps);
+            pts[i] = new Vector2(a * Mathf.Sin(t), y0 + c * Mathf.Cos(t));
+        }
+        return pts;
+    }
+
+    private static Mesh LatheMesh(Vector2[] profile, int segments)
+    {
+        int n = profile.Length, ring = segments + 1, half = n * ring;
+        Vector3[] v = new Vector3[half * 2];
+        Vector2[] uv = new Vector2[half * 2];
+        for (int j = 0; j < n; j++)
+            for (int k = 0; k < ring; k++)
+            {
+                float ang = k / (float)segments * Mathf.PI * 2f;
+                Vector3 p = new Vector3(profile[j].x * Mathf.Cos(ang), profile[j].y, profile[j].x * Mathf.Sin(ang));
+                v[j * ring + k] = v[half + j * ring + k] = p;
+                uv[j * ring + k] = uv[half + j * ring + k] = new Vector2(k / (float)segments, j / (float)Mathf.Max(1, n - 1));
+            }
+        int[] tris = new int[(n - 1) * segments * 12];
+        int ti = 0;
+        for (int j = 0; j < n - 1; j++)
+            for (int k = 0; k < segments; k++)
+            {
+                int a = j * ring + k, b = a + 1, c = a + ring, d = c + 1;
+                tris[ti++] = a; tris[ti++] = c; tris[ti++] = b; tris[ti++] = b; tris[ti++] = c; tris[ti++] = d;
+                tris[ti++] = a + half; tris[ti++] = b + half; tris[ti++] = c + half; tris[ti++] = b + half; tris[ti++] = d + half; tris[ti++] = c + half;
+            }
+        Mesh m = new Mesh { name = "UFO Lathe" };
+        m.vertices = v; m.uv = uv; m.triangles = tris;
+        m.RecalculateNormals(); m.RecalculateBounds();
+        return m;
+    }
+
     private Transform Pivot(Transform parent, string name, Vector3 pos)
     {
         GameObject g = new GameObject(name);
@@ -640,16 +691,21 @@ public partial class PixelRobotWorker : MonoBehaviour
         bodyT = Pivot(root.transform, "Body", Vector3.zero);
         Transform b = bodyT;
 
-        Prim(PrimitiveType.Sphere, b, "Hull", new Vector3(0f, 0.05f, 0f), new Vector3(1.6f, 0.34f, 1.6f), bodyColor);
-        Prim(PrimitiveType.Sphere, b, "Underside", new Vector3(0f, -0.1f, 0f), new Vector3(1.05f, 0.24f, 1.05f), darkColor);
-        Prim(PrimitiveType.Cylinder, b, "Emitter", new Vector3(0f, -0.22f, 0f), new Vector3(0.42f, 0.03f, 0.42f), accentColor);
+        // Hull and underside are turned meshes with a round WINDOW in the middle (radius WindowRadius): a dark shaft joins the two openings and the cabin floor has a glass disc
+        // over it, so from inside you can look straight down through the saucer at the floor below.
+        Color shaft = new Color(0.07f, 0.08f, 0.1f, 1f);
+        MeshPrim(b, "Hull", EllipsoidProfile(0.8f, 0.17f, 0.05f, 0f, 1f, 14), bodyColor);
+        MeshPrim(b, "Underside", EllipsoidProfile(0.525f, 0.12f, -0.1f, 0.5f, 1f, 12), darkColor);
+        MeshPrim(b, "Window Shaft", new[] { new Vector2(WindowRadius, 0.2146f), new Vector2(WindowRadius, -0.211f) }, shaft);
+        MeshPrim(b, "Emitter", new[] { new Vector2(WindowRadius, -0.213f), new Vector2(WindowRadius + 0.06f, -0.213f) }, accentColor);
         Prim(PrimitiveType.Sphere, b, "Rim", new Vector3(0f, 0.05f, 0f), new Vector3(1.72f, 0.09f, 1.72f), accentColor);
 
         // The glass dome with a small CABIN inside: a floor, a ring console with buttons round the edge and a little alien at its station. The player can ride along in here (see PixelRobotCockpit.cs).
         domeRenderer = Prim(PrimitiveType.Sphere, b, "Dome", new Vector3(0f, CabinFloorY, 0f), new Vector3(1.16f, 0.9f, 1.16f), new Color(0.6f, 0.95f, 1f, 0.35f), true).GetComponent<Renderer>();
         Color steel = new Color(0.2f, 0.22f, 0.29f, 1f), deepSteel = new Color(0.1f, 0.11f, 0.15f, 1f);
-        Prim(PrimitiveType.Cylinder, b, "Cabin Floor", new Vector3(0f, CabinFloorY - 0.004f, 0f), new Vector3(1.04f, 0.012f, 1.04f), new Color(0.15f, 0.17f, 0.21f, 1f));
-        Prim(PrimitiveType.Cylinder, b, "Cabin Floor Ring", new Vector3(0f, CabinFloorY - 0.002f, 0f), new Vector3(0.56f, 0.014f, 0.56f), new Color(0.22f, 0.25f, 0.32f, 1f));
+        MeshPrim(b, "Cabin Floor", new[] { new Vector2(WindowRadius, CabinFloorY), new Vector2(0.52f, CabinFloorY) }, new Color(0.15f, 0.17f, 0.21f, 1f));
+        MeshPrim(b, "Cabin Floor Ring", new[] { new Vector2(WindowRadius, CabinFloorY + 0.002f), new Vector2(0.31f, CabinFloorY + 0.002f) }, new Color(0.22f, 0.25f, 0.32f, 1f));
+        Prim(PrimitiveType.Cylinder, b, "Floor Window", new Vector3(0f, CabinFloorY - 0.002f, 0f), new Vector3(WindowRadius * 2f, 0.002f, WindowRadius * 2f), new Color(0.6f, 0.95f, 1f, 0.16f), true);
         Color[] buttonColors = { new Color(0.95f, 0.25f, 0.2f), new Color(0.3f, 0.95f, 0.45f), new Color(1f, 0.75f, 0.2f), new Color(0.3f, 0.85f, 1f), new Color(0.95f, 0.95f, 1f) };
         const int panels = 16;
         System.Collections.Generic.List<Renderer> buttonList = new System.Collections.Generic.List<Renderer>();

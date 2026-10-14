@@ -8,10 +8,9 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// "Ride along" for the UFO Helper (part of <see cref="PixelRobotWorker"/>): choose it in the UFO's window and you are inside the saucer's glass dome as it flies about on its own.
-/// The dome holds a small cabin (a floor, a ring console with blinking buttons and a little alien at its station; see BuildUfo). Your head is a camera inside it: hold the
-/// right mouse button and move the mouse to look around, WASD walk about the cabin (kept inside the ring of the console and out of the alien's way), and the whole cabin leans and bobs
+/// The dome holds a small cabin (a floor, a ring console with blinking buttons and a little alien at its station; see BuildUfo). Your head is a camera inside it: move the mouse to look around, WASD walk about the cabin (kept inside the ring of the console and out of the alien's way), and the whole cabin leans and bobs
 /// with the saucer's flight, so you see the cube and the floor from up there. The UFO keeps doing its job (dropping devices, banking pixels) and wandering; you are only a passenger.
-/// Escape or the Leave button climbs out.
+/// Escape climbs out.
 /// </summary>
 public partial class PixelRobotWorker
 {
@@ -31,13 +30,11 @@ public partial class PixelRobotWorker
     [Tooltip("Field of view of your view from the cabin (degrees).")]
     [SerializeField] private float cockpitFov = 80f;
 
-    [Tooltip("Mouse look speed (degrees per mouse count) while the right mouse button is held.")]
-    [SerializeField] private float cockpitLookSpeed = 0.15f;
+    [Tooltip("Mouse look speed (degrees per mouse count). The mouse always looks around while you ride.")]
+    [SerializeField] private float cockpitLookSpeed = 0.35f;
 
     [TextArea(1, 3)]
-    [SerializeField] private string rideHint = "Hold right mouse: look around  -  WASD: walk about the cabin  -  Esc: climb out";
-
-    [SerializeField] private string leaveText = "Leave";
+    [SerializeField] private string rideHint = "Mouse: look around  -  WASD: walk about the cabin  -  Esc: climb out";
 
     /// <summary>True while you ride inside the UFO (cube clicks, Pixel Grabbing, the block tooltip and first person mode step aside).</summary>
     public static bool Piloting { get; private set; }
@@ -133,9 +130,8 @@ public partial class PixelRobotWorker
         float dt = Time.deltaTime;
         bool playable = !PixelPauseMenu.IsPaused && Time.timeScale > 0f && !PixelPets.PopupOpen && !PixelGuideVendor.Visiting;
 
-        // Looking round: hold the right mouse button (the cursor is hidden meanwhile); release it to reach the Leave button.
-        if (playable && RightPressed() && !PointerOverUI()) lookActive = true;
-        if (!RightHeld() || !playable) lookActive = false;
+        // Looking round: the mouse always turns your head (the cursor is locked and hidden while you ride; Esc climbs out, a paused game frees the cursor).
+        lookActive = playable;
         SetPilotCursor(lookActive);
         if (lookActive)
         {
@@ -192,11 +188,5 @@ public partial class PixelRobotWorker
         hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
         hr.offsetMin = new Vector2(360f, -(top + 70f)); hr.offsetMax = new Vector2(-360f, -(top + 14f));
 
-        Button leave = PixelUIKit.CreateButton(font, c, "Leave", leaveText, new Vector2(220f, 64f), new Color(0.5f, 0.2f, 0.2f, 1f), Color.white, 28f);
-        PixelUIKit.Caps(leave);
-        RectTransform lr = leave.GetComponent<RectTransform>();
-        lr.anchorMin = lr.anchorMax = lr.pivot = new Vector2(1f, 1f);
-        lr.anchoredPosition = new Vector2(-30f, -(top + 14f));
-        leave.onClick.AddListener(ExitCockpit);
     }
 }
