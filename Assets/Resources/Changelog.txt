@@ -882,3 +882,4 @@
 [2026-10-14 04:48 UTC] Manual saves now always get a screenshot for the slot tooltip (the screenshot recorder starts with the game, not at the first save); picking a Dev Hub search result un-minimizes the hub; My Window header buttons reordered like the Dev Hub (close, minimize, undock, then Edit).
 [2026-10-14 04:48 UTC] The selected save slot in the Save / Load window now has a bright gold outline as well as the blue highlight.
 [2026-10-14 04:50 UTC] Collapsed achievement popup: icon box and arrow button now have a clear gap and the same top and bottom (collapsed width is never smaller than the two plus margins).
+[2026-10-14 04:51 UTC] Save / Load window: the selected slot's blue highlight is now its own layer (and the gold outline is gone) so it follows the selection when you click a different slot.

@@ -1936,16 +1936,23 @@ public class PixelPauseMenu : MonoBehaviour
                 ? savedAt + "\n" + string.Format(slotTimeFormat, PixelStats.FormatTime(played)) + "\n" + string.Format(slotPixelsFormat, FormatCount(pixels)) + "\n<color=#ff9a90>Hold right click to delete</color>"
                 : emptySlotText;
             slotLabels[i].text = "<b>" + name + "</b>";
-            slotButtons[i].GetComponent<Image>().color = slot == selectedSlot ? slotSelectedColor : slotColor;
-            // The selected slot also gets a bright outline so it stands out from the other rows.
-            Outline ring = slotButtons[i].GetComponent<Outline>();
-            if (ring == null)
+            // The selected row shows a blue highlight layer (a child behind the label, so it never depends on the button's own colour / tint state).
+            Transform hl = slotButtons[i].transform.Find("Selected Highlight");
+            if (hl == null)
             {
-                ring = slotButtons[i].gameObject.AddComponent<Outline>();
-                ring.effectColor = new Color(1f, 0.92f, 0.45f, 1f);
-                ring.effectDistance = new Vector2(3f, -3f);
+                GameObject hg = new GameObject("Selected Highlight", typeof(RectTransform), typeof(Image));
+                hg.transform.SetParent(slotButtons[i].transform, false);
+                hg.transform.SetAsFirstSibling();
+                Image hi = hg.GetComponent<Image>();
+                hi.sprite = slotButtons[i].GetComponent<Image>().sprite;
+                hi.type = Image.Type.Sliced;
+                hi.color = slotSelectedColor;
+                hi.raycastTarget = false;
+                PixelUIKit.Stretch(hg.GetComponent<RectTransform>());
+                hl = hg.transform;
             }
-            ring.enabled = slot == selectedSlot;
+            slotButtons[i].GetComponent<Image>().color = slotColor;
+            hl.gameObject.SetActive(slot == selectedSlot);
         }
         bool hasSave = saveGame.SlotHasSave(selectedSlot);
         bool newGame = openedFromTitle && !hasSave;   // from the main menu an empty slot starts a new game there
