@@ -217,14 +217,14 @@ public class PixelPadMinigame : PixelMinigame
     // Picking what and where
     // ------------------------------------------------------------------
 
-    /// <summary>A random unlocked pixel type that can actually lie on the floor, or -1.</summary>
+    /// <summary>A random unlocked pixel type that can actually lie on the floor and is in the rotation being played (the current skill pack's blocks, or the standard pixels; never a hazard), or -1.</summary>
     private int PickTargetTier(int avoid = -1)
     {
         List<int> candidates = new List<int>();
         for (int i = 0; i < clicker.Tiers.Length; i++)
         {
             PixelClicker.PixelTier t = clicker.Tiers[i];
-            if (t.unlocked && !t.rareDrop && !t.flyAway && i != avoid) candidates.Add(i);
+            if (t.unlocked && !t.rareDrop && !t.flyAway && i != avoid && !PixelClicker.IsHazard(t.type) && !PixelSkills.LeftOutOfSpawns(t.type)) candidates.Add(i);
         }
         if (candidates.Count == 0 && avoid >= 0) return avoid;
         return candidates.Count > 0 ? candidates[Random.Range(0, candidates.Count)] : -1;
