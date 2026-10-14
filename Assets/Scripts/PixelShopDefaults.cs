@@ -436,7 +436,8 @@ public partial class PixelShop
                     type = PixelClicker.PixelType.Solar, displayName = "Solar Pixels",
                     color = new Color(1f, 0.82f, 0.2f, 1f), glow = true, glowIntensity = 3f,
                     amountPerClick = 25, spawnWeight = 0.2f,
-                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly,
+                    spawnDisabled = true,   // OFF in the rotation until the player switches it on in the Toggles window (the base rotation stays the pure pixels)
                 },
             }
         };

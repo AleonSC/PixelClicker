@@ -79,6 +79,7 @@ public class PixelSaveGame : MonoBehaviour
     private class SaveData
     {
         public int version = 1;
+        public int solarOptInDone;   // 1 = written by a build where Solar spawns only when switched on (older saves get Solar switched OFF once on load)
         public string savedAt;
         public string slotName = "";   // the save's own name (Save / Load window > Rename): lives in the file, so it travels with it
         public long savedAtTicks;   // UTC, used for offline progress
@@ -617,7 +618,7 @@ public class PixelSaveGame : MonoBehaviour
 
         try
         {
-            SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks };
+            SaveData data = new SaveData { savedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), savedAtTicks = DateTime.UtcNow.Ticks, solarOptInDone = 1 };
             if (slot > 0) data.slotName = GetSlotName(slot);   // the save keeps its own name (a name waiting from a rename of an empty slot, or the one already in the file)
 
             PixelClicker.PixelTier[] tiers = clicker.Tiers;
@@ -814,7 +815,8 @@ public class PixelSaveGame : MonoBehaviour
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
                 clicker.LoadTierState(tier.type, 0d, 0d, false);
             foreach (TierSave t in data.tiers)
-                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked, t.spawnDisabled, t.timesCollected, t.ultraCount, t.ultraLevel, t.valueLevel);
+                clicker.LoadTierState((PixelClicker.PixelType)t.type, t.count, t.total, t.unlocked,
+                                      t.spawnDisabled || (data.solarOptInDone == 0 && (PixelClicker.PixelType)t.type == PixelClicker.PixelType.Solar), t.timesCollected, t.ultraCount, t.ultraLevel, t.valueLevel);
             clicker.RestoreUltra(data.ultraPixels);
 
             // Shop: match packs by name.
