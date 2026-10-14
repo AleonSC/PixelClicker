@@ -48,3 +48,8 @@ The hub's **Tester** tab (`PixelFeatureTester.cs`) lists things that are not in 
 - The Dev Hub window has a grip in its bottom-right corner (`PixelWindowChrome.EnableResize`): dragging it SCALES the whole hub (0.55x - 1.6x, remembered as `PixelClicker.Dev.Hub.Window.Scale`). It is a scale, not a re-layout: the tabs keep the layout they were built with. A real re-layout would need every tab to build against a variable size.
 - Every widget card (`PixelWidgetBoard`) has a header strip with its title and a '-' button: it folds the card up to just the header (hidden controls are restored on '+'); remembered per board (`<board prefKey>.Min`). The pinned cards at the top push the scrolling list down / up as they fold.
 - Button labels inside widgets shrink to fit (`PixelUIKit.FitOneLine`), so long labels like DESPAWN no longer spill out of their button.
+
+## One widget board, favorites
+- The Main tab is ONE scrolling `PixelWidgetBoard` (saved order key `Dev.WidgetOrder2`): the old fixed "pinned" top half is gone. Drag a card by its whole header strip (title bar, easy to hit); the small grip icon is part of it.
+- HOLD the right button on a card (0.7 s, a ring fills round the cursor, `PixelWidgetBoardDriver` -> `PixelHold`) to make it a FAVORITE: it snaps to the top, is tinted gold, and stays above the non-favorites (`Partition`); hold again to let it go back to the top of the others. Saved as `<board key>.Fav`.
+- Drop-downs inside the scrolling board: `PixelUIKit.LetListEscapeMasks` moves an opened list to the root canvas so the scroll view's mask cannot clip it (untested in Unity: if a list still looks cut off, this is the place).

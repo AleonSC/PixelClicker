@@ -498,7 +498,8 @@ public class PixelWidgetBoard
         public string id, title;
         public RectTransform rect, grip;
         public float height, fullHeight;
-        public bool minimized;
+        public bool minimized, favorite;
+        public Image bg;
         public TMP_Text toggleLabel, titleLabel;
         public readonly List<GameObject> hidden = new List<GameObject>();
     }
@@ -515,9 +516,17 @@ public class PixelWidgetBoard
     private Item dragging;
     private float dragTop, total;
 
-    public PixelWidgetBoard(RectTransform content, string prefKey, float gap, Action<float> onHeight)
+    private readonly RectTransform viewport;
+    private readonly PixelWidgetBoardDriver driver;
+    private static readonly Color CardColor = new Color(1f, 1f, 1f, 0.05f), FavoriteColor = new Color(1f, 0.82f, 0.25f, 0.16f), FavoriteText = new Color(1f, 0.88f, 0.4f, 1f), NormalText = new Color(0.85f, 0.9f, 1f, 0.9f);
+    private const float FavoriteHoldSeconds = 0.7f;
+
+    /// <summary>'viewport' = the visible window of the scrolling list the cards live in (hovering a card scrolled out of view does not count).</summary>
+    public PixelWidgetBoard(RectTransform content, string prefKey, float gap, Action<float> onHeight, RectTransform viewport = null)
     {
-        this.content = content; this.prefKey = prefKey; this.gap = gap; this.onHeight = onHeight;
+        this.content = content; this.prefKey = prefKey; this.gap = gap; this.onHeight = onHeight; this.viewport = viewport;
+        driver = content.gameObject.AddComponent<PixelWidgetBoardDriver>();
+        driver.board = this;
     }
 
     /// <summary>Adds a card (top-left anchored, 'height' tall) with a grip on its left edge.</summary>
@@ -525,6 +534,18 @@ public class PixelWidgetBoard
     {
         Item item = new Item { id = id, rect = rect, height = height, fullHeight = height, title = string.IsNullOrEmpty(title) ? id : title };
         items.Add(item);
+        item.bg = rect.GetComponent<Image>();
+        // The whole header strip is the handle you drag the card by (a wide, easy target); the little grip icon is part of it.
+        GameObject hgo = new GameObject("Header Handle", typeof(RectTransform), typeof(Image), typeof(PixelWidgetGrip));
+        hgo.transform.SetParent(rect, false);
+        Image him = hgo.GetComponent<Image>();
+        him.color = new Color(1f, 1f, 1f, 0.02f);
+        RectTransform hr = hgo.GetComponent<RectTransform>();
+        hr.anchorMin = new Vector2(0f, 1f); hr.anchorMax = new Vector2(1f, 1f); hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(0f, CardHeaderH);
+        hr.anchoredPosition = Vector2.zero;
+        PixelWidgetGrip handleGrip = hgo.GetComponent<PixelWidgetGrip>();
+        handleGrip.board = this; handleGrip.item = item;
         GameObject g = new GameObject("Grip", typeof(RectTransform), typeof(Image), typeof(PixelWidgetGrip));
         g.transform.SetParent(rect, false);
         Image im = g.GetComponent<Image>();
@@ -560,12 +581,12 @@ public class PixelWidgetBoard
     {
         if (item.minimized == on) return;
         item.minimized = on;
-        Transform keep1 = item.grip, keep2 = item.toggleLabel != null ? item.toggleLabel.transform.parent : null, keep3 = item.titleLabel != null ? item.titleLabel.transform : null;
+        Transform keep1 = item.grip, keep2 = item.toggleLabel != null ? item.toggleLabel.transform.parent : null, keep3 = item.titleLabel != null ? item.titleLabel.transform : null, keep4 = item.rect.Find("Header Handle");
         if (on)
         {
             item.hidden.Clear();
             foreach (Transform child in item.rect)
-                if (child.gameObject.activeSelf && child != keep1 && child != keep2 && child != keep3) { item.hidden.Add(child.gameObject); child.gameObject.SetActive(false); }
+                if (child.gameObject.activeSelf && child != keep1 && child != keep2 && child != keep3 && child != keep4) { item.hidden.Add(child.gameObject); child.gameObject.SetActive(false); }
             item.height = MinimizedH;
         }
         else
@@ -609,6 +630,12 @@ public class PixelWidgetBoard
             Item it = items.Find(x => x.id == id);
             if (it != null) SetMinimized(it, true, false);
         }
+        foreach (string id in PlayerPrefs.GetString(prefKey + ".Fav", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            Item it = items.Find(x => x.id == id);
+            if (it != null) { it.favorite = true; ApplyFavoriteLook(it); }
+        }
+        Partition();
         Layout();
     }
 
@@ -656,11 +683,71 @@ public class PixelWidgetBoard
     {
         if (dragging != item) return;
         dragging = null;
+        Partition();   // favorites always stay above the rest
         Layout();
+        SaveOrder();
+    }
+
+    private void SaveOrder()
+    {
         List<string> ids = new List<string>();
         foreach (Item it in items) ids.Add(it.id);
         PlayerPrefs.SetString(prefKey, string.Join(",", ids));
     }
+
+    /// <summary>Favorites first (keeping their order), then the others (keeping theirs).</summary>
+    private void Partition()
+    {
+        List<Item> favs = items.FindAll(x => x.favorite), rest = items.FindAll(x => !x.favorite);
+        items.Clear();
+        items.AddRange(favs);
+        items.AddRange(rest);
+    }
+
+    private void ApplyFavoriteLook(Item item)
+    {
+        if (item.bg != null) item.bg.color = item.favorite ? FavoriteColor : CardColor;
+        if (item.titleLabel != null) item.titleLabel.color = item.favorite ? FavoriteText : NormalText;
+    }
+
+    /// <summary>Hold the right button on a card: it becomes a favorite and snaps to the top (or, if it already was one, goes back to the top of the others).</summary>
+    internal void ToggleFavorite(Item item)
+    {
+        item.favorite = !item.favorite;
+        ApplyFavoriteLook(item);
+        items.Remove(item);
+        if (item.favorite) items.Insert(0, item);
+        else items.Insert(items.FindAll(x => x.favorite).Count, item);
+        Layout();
+        SaveOrder();
+        List<string> favs = new List<string>();
+        foreach (Item it in items) if (it.favorite) favs.Add(it.id);
+        PlayerPrefs.SetString(prefKey + ".Fav", string.Join(",", favs));
+        PixelAudio.Play("ui_click");
+    }
+
+    /// <summary>The card under the pointer (inside the visible part of the list), or null.</summary>
+    internal Item CardUnderPointer()
+    {
+        Vector2 pointer = PixelInput.PointerPosition();
+        if (viewport != null && !RectTransformUtility.RectangleContainsScreenPoint(viewport, pointer, null)) return null;
+        foreach (Item it in items)
+            if (it.rect != null && it.rect.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(it.rect, pointer, null)) return it;
+        return null;
+    }
+
+    internal void HoldUpdate()
+    {
+        Item target = PixelInput.RightPressed() || PixelInput.RightHeld() ? CardUnderPointer() : null;
+        if (PixelHold.Update(driver, target, FavoriteHoldSeconds, "", FavoriteText, true, null) && target != null) ToggleFavorite(target);
+    }
+}
+
+/// <summary>Runs the right-hold-for-favorite check of a widget board every frame (the board itself is a plain class).</summary>
+public class PixelWidgetBoardDriver : MonoBehaviour
+{
+    public PixelWidgetBoard board;
+    private void Update() { if (board != null && gameObject.activeInHierarchy) board.HoldUpdate(); }
 }
 
 /// <summary>The grip of a widget card.</summary>

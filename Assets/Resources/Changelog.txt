@@ -874,3 +874,4 @@
 [2026-10-13 20:22 UTC] Fixed Continue loading the most recent save over a new game that had just been started from the Save / Load window: a started new game now counts as the game in progress.
 [2026-10-13 21:40 UTC] Added a compile check (tools/compile-check/check.sh) that compiles Assets/Scripts without Unity and reports errors such as wrong argument types or missing members, so they are caught before you open Unity.
 [2026-10-14 04:18 UTC] Dev Hub: a corner grip scales the whole window, every widget card has a header with a minimize button that folds it up to just the header, and long button labels such as DESPAWN now shrink to fit.
+[2026-10-14 04:25 UTC] Dev Hub widgets: the whole header strip of a card is now the drag handle, the fixed top half is gone (one list for every widget), and holding the right button on a widget makes it a gold favorite that snaps to the top.

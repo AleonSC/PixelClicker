@@ -730,61 +730,40 @@ public class PixelDevTools : MonoBehaviour
         PixelUIKit.Stretch(tools.GetComponent<RectTransform>());
         toolsView = tools;
 
-        // The PINNED widgets at the top (they hold drop-downs, whose lists would be clipped inside the scrolling board): add pixels, spawned pixel, minigames, middle click.
-        GameObject pinnedGo = new GameObject("Pinned Widgets", typeof(RectTransform));
-        pinnedGo.transform.SetParent(tools.transform, false);
-        RectTransform pinnedRoot = pinnedGo.GetComponent<RectTransform>();
-        pinnedRoot.anchorMin = pinnedRoot.anchorMax = pinnedRoot.pivot = new Vector2(0f, 1f);
-        pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, 400f);
-        pinnedRoot.anchoredPosition = new Vector2(0f, -8f);
-        float pinnedHeight = 0f, scrollTop = 0f, pinnedStartY = y;
-        RectTransform scrollRectLive = null;
-        // The pinned cards can be folded up: the scrolling list below follows their height.
-        PixelWidgetBoard pinned = new PixelWidgetBoard(pinnedRoot, PrefPrefix + "PinnedOrder", 8f, height =>
-        {
-            pinnedHeight = height;
-            pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, height);
-            scrollTop = pinnedStartY + height + 8f;
-            if (scrollRectLive != null) scrollRectLive.offsetMax = new Vector2(0f, -scrollTop);
-        });
-
-        // Widget: pixel dropdown | amount field | Add | Give pet
-        int pinStart = pinnedRoot.childCount;
-        float fieldW = inner * 0.30f, dropW = inner - fieldW - rowHeight * 2f - 30f;
-        pixelDropdown = PixelUIKit.CreateDropdown(font, pinnedRoot, "Pixel Dropdown", new Vector2(dropW, rowHeight),
-                                                  boxColor, listColor, textColor, fontSize);
-        Place(pixelDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
-        amountField = PixelUIKit.CreateInputField(font, pinnedRoot, "Amount Field", new Vector2(fieldW, rowHeight),
-                                                  boxColor, textColor, fontSize, "amount");
-        amountField.text = defaultAmount;
-        amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
-        Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
-        Button add = IconButton(pinnedRoot, "Add Button", DevIcons.PlusSprite(), new Color(0.3f, 0.78f, 0.38f, 1f), rowHeight);
-        Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, rowHeight);
-        add.onClick.AddListener(AddSelected);
-        AddTip(add.gameObject, addTipText);
-        Button pet = IconButton(pinnedRoot, "Give Pet Button", DevIcons.PawSprite(), new Color(0.97f, 0.82f, 0.22f, 1f), rowHeight);
-        Place(pet.GetComponent<RectTransform>(), 40f + dropW + fieldW + 30f + rowHeight, y, rowHeight);
-        pet.onClick.AddListener(GivePet);
-        AddTip(pet.gameObject, petTipText);
-        Widget(pinnedRoot, pinned, "addpixel", pinStart, y);
-
-        BuildSpawnWidgets(pinnedRoot, pinned, inner, y);
-        pinned.Finish();
-        pinnedRoot.sizeDelta = new Vector2(PixelDevHub.ContentW, pinnedHeight);
-        y += pinnedHeight + 8f;
-        scrollTop = y; // the pinned widgets above stay fixed; the rest scrolls
-
+        // ONE widget board: every widget (add pixels, spawned pixel, minigames, middle click and the tools below) is a card in the same scrolling list. Drag a card by its header to
+        // move it; HOLD the right button on a card to make it a FAVORITE (it snaps to the top and is tinted gold; hold again to let it go back).
         ScrollRect toolsScroll = PixelUIKit.CreateScrollView(tools.transform, "Tools Scroll", new Color(0.5f, 0.5f, 0.6f, 1f), 16f, 60f,
                                                              out RectTransform content, out GameObject toolsBar);
         RectTransform scrollRect = toolsScroll.GetComponent<RectTransform>();
         scrollRect.anchorMin = Vector2.zero;
         scrollRect.anchorMax = Vector2.one;
         scrollRect.offsetMin = new Vector2(0f, 8f);
-        scrollRect.offsetMax = new Vector2(0f, -scrollTop);
-        scrollRectLive = scrollRect;
-        y = 0f; // rows below are placed from the top of the scrolling content (each one becomes a draggable widget card)
-        PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - scrollTop - 8f));
+        scrollRect.offsetMax = new Vector2(0f, -8f);
+        y = 0f; // rows are placed from the top of the scrolling content (each one becomes a draggable widget card)
+        PixelWidgetBoard board = new PixelWidgetBoard(content, PrefPrefix + "WidgetOrder2", 8f, height => PixelUIKit.UpdateScrollView(toolsScroll, toolsBar, height, PixelDevHub.ContentH - 16f), toolsScroll.viewport);
+
+        // Widget: pixel dropdown | amount field | Add | Give pet
+        int pinStart = content.childCount;
+        float fieldW = inner * 0.30f, dropW = inner - fieldW - rowHeight * 2f - 30f;
+        pixelDropdown = PixelUIKit.CreateDropdown(font, content, "Pixel Dropdown", new Vector2(dropW, rowHeight),
+                                                  boxColor, listColor, textColor, fontSize);
+        Place(pixelDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        amountField = PixelUIKit.CreateInputField(font, content, "Amount Field", new Vector2(fieldW, rowHeight),
+                                                  boxColor, textColor, fontSize, "amount");
+        amountField.text = defaultAmount;
+        amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
+        Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
+        Button add = IconButton(content, "Add Button", DevIcons.PlusSprite(), new Color(0.3f, 0.78f, 0.38f, 1f), rowHeight);
+        Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, rowHeight);
+        add.onClick.AddListener(AddSelected);
+        AddTip(add.gameObject, addTipText);
+        Button pet = IconButton(content, "Give Pet Button", DevIcons.PawSprite(), new Color(0.97f, 0.82f, 0.22f, 1f), rowHeight);
+        Place(pet.GetComponent<RectTransform>(), 40f + dropW + fieldW + 30f + rowHeight, y, rowHeight);
+        pet.onClick.AddListener(GivePet);
+        AddTip(pet.gameObject, petTipText);
+        Widget(content, board, "addpixel", pinStart, y);
+
+        BuildSpawnWidgets(content, board, inner, y);
         int ws = content.childCount;
         if (PixelCrashLog.Available)
         {
@@ -1022,6 +1001,7 @@ public class PixelDevTools : MonoBehaviour
             k.SetParent(card.transform, false);
             RectTransform kr = (RectTransform)k;
             kr.anchoredPosition += new Vector2(0f, y - 8f - hdr);   // (they were placed at -y; the card starts 8 above that, and its header strip takes the top)
+            foreach (TMP_Dropdown dd in k.GetComponentsInChildren<TMP_Dropdown>(true)) PixelUIKit.LetListEscapeMasks(dd);   // (an opened drop-down list must not be clipped by the scrolling board)
             foreach (Button b in k.GetComponentsInChildren<Button>(true)) PixelUIKit.FitOneLine(b.GetComponentInChildren<TMP_Text>(true));   // (long labels such as DESPAWN shrink to fit their button)
         }
         board.Add(id, cr, cardH, WidgetTitle(id));

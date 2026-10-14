@@ -583,6 +583,15 @@ public static class PixelUIKit
 
     private static Sprite gripSprite;
 
+    /// <summary>
+    /// A drop-down inside a scroll view has its opened list clipped by the view's mask. This moves the list (which TMP_Dropdown makes as a child called 'Dropdown List', with its own
+    /// override-sorting canvas) up to the root canvas while it is open, at the same place and size on screen, so it can be seen and used in full.
+    /// </summary>
+    public static void LetListEscapeMasks(TMP_Dropdown dd)
+    {
+        if (dd != null && dd.GetComponent<PixelDropdownListEscape>() == null) dd.gameObject.AddComponent<PixelDropdownListEscape>();
+    }
+
     /// <summary>Keeps a label on one line and shrinks its text (down to minSize) when it is too wide for its box, instead of spilling out of a button.</summary>
     public static void FitOneLine(TMP_Text t, float minSize = 10f)
     {
@@ -1163,5 +1172,23 @@ public class PixelDropdownScroll : MonoBehaviour
             }
         }
         wasOpen = open;
+    }
+}
+
+/// <summary>Moves a drop-down's opened list to the root canvas (see PixelUIKit.LetListEscapeMasks).</summary>
+public class PixelDropdownListEscape : MonoBehaviour
+{
+    private Transform moved;
+
+    private void LateUpdate()
+    {
+        if (moved != null) return;   // (it is destroyed when the list closes, then this looks for the next one)
+        Transform list = transform.Find("Dropdown List");
+        if (list == null) return;
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null) return;
+        list.SetParent(canvas.rootCanvas.transform, true);
+        list.SetAsLastSibling();
+        moved = list;
     }
 }
