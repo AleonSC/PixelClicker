@@ -38,3 +38,4 @@
 [ ] UI unification step 2: add a compile-check guard (tools/compile-check) that fails when a Button is hand-built or a private button maker appears outside PixelUIKit
 [ ] UI unification step 3: button ROLES table in PixelUIKit (Neutral, Primary, Danger, Success, Selected...; each = colour, follows-custom-colour flag, optional extras; Neutral/Primary derived from the theme, Danger/Success fixed) plus a per-button colorOverride for rare outliers; convert call sites to roles; decide whether the custom colour also recolours accent buttons and the selected-slot highlight
 [ ] UI unification step 4 (later): one theme object for window colour, button colour, text colour and highlight so one change refreshes everything
+[ ] Game Database: each system declares its own database entries, 'discovered' rule and pin rule (a small data-source interface) so PixelDatabase.Build stops being one 400-line hand-written list and a new feature appears in the database automatically
