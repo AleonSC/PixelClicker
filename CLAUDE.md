@@ -102,6 +102,7 @@
 | `PixelNotice.cs` | PixelNotice.Show(message, seconds, onClosed, compact, small, aboveCombo, nearLog) (nearLog = small box at the bottom left beside the event log, used by the event_log tip shown at the first tier unlock; | `docs/systems/PixelNotice.md` |
 | `PixelHints.cs` | First-time tips: Inspector list of Hint (id, enabled, text; | `docs/systems/PixelHints.md` |
 | `PixelTitleScreen.cs` | Start screen (added by PixelClicker.Awake): | `docs/systems/PixelTitleScreen.md` |
+| `PixelTitleMusic.cs` | Main menu background music selector (previous / next arrows + track drop-down; PixelAudio.SelectMusicTrack): shown when the title opens, fades after ~10 s without activity, back on hover. | in the header comment of `PixelTitleMusic.cs` |
 | `PixelEyedropper.cs` | Eyedropper (created on demand by PixelEyedropper.Begin(callback)): | in the header comment of `PixelEyedropper.cs` |
 | `PixelHold.cs` | PixelHold.Update(caller, target, seconds, label, colour): | in the header comment of `PixelHold.cs` |
 | `PixelFanDevice.cs` | (extends PixelPlacedDevice) Runtime behaviour of a placed fan (device kind = Fan): | in the header comment of `PixelFanDevice.cs` |

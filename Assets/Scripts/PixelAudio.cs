@@ -719,6 +719,33 @@ public class PixelAudio : MonoBehaviour
         }
     }
 
+    // ---- Track choice (the main menu's music selector) ----
+
+    /// <summary>How many music tracks there are.</summary>
+    public int MusicTrackCount => musicTracks != null ? musicTracks.Length : 0;
+
+    /// <summary>A track's name for lists (the clip's name, underscores / dashes turned into spaces).</summary>
+    public string MusicTrackName(int i)
+    {
+        if (musicTracks == null || i < 0 || i >= musicTracks.Length || musicTracks[i] == null) return "Track " + (i + 1);
+        string n = musicTracks[i].name.Replace('_', ' ').Replace('-', ' ').Trim();
+        return n.Length > 0 ? char.ToUpperInvariant(n[0]) + n.Substring(1) : "Track " + (i + 1);
+    }
+
+    /// <summary>The index of the track playing now (-1 = none yet).</summary>
+    public int CurrentMusicTrack => musicSource != null && musicSource.clip != null && musicTracks != null ? System.Array.IndexOf(musicTracks, musicSource.clip) : -1;
+
+    /// <summary>Starts this track now from the beginning; the normal shuffle / order carries on after it.</summary>
+    public void SelectMusicTrack(int i)
+    {
+        if (musicSource == null || musicTracks == null || i < 0 || i >= musicTracks.Length || musicTracks[i] == null || !playMusic) return;
+        lastTrack = i;
+        musicLastClip = null; musicLastTime = 0f; musicHeldByFocus = false;
+        musicSource.clip = musicTracks[i];
+        musicSource.time = 0f;
+        musicSource.Play();
+    }
+
     private void UpdateMusic()
     {
         if (musicSource == null) return;

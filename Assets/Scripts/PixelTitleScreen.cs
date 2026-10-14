@@ -576,6 +576,9 @@ public class PixelTitleScreen : MonoBehaviour
         MakeIconButton(font, "Settings Button", PixelMenuIcons.Cog, settingsText, iconSize, smallButtonColor, centre, new Vector2(firstX + iconStep, smallY), OnSettings);
         if (showQuit) MakeIconButton(font, "Quit Button", PixelMenuIcons.Door, quitText, iconSize, quitColor, centre, new Vector2(firstX + iconStep * 2f, smallY), OnQuit);
 
+        // The background music selector (shown at the start, gone after a few quiet seconds).
+        if (showMusicPicker) PixelTitleMusic.Create(foreground.transform, font, musicPickerHideSeconds);
+
         // Quick floor / sky pickers either side of the button group.
         if (showLookPickers)
         {
@@ -595,6 +598,14 @@ public class PixelTitleScreen : MonoBehaviour
         }
 
     }
+
+    [Header("Music selector")]
+    [Tooltip("Show the background music selector on the start screen (it appears when the screen opens and fades away after a few seconds without activity; hover its spot to bring it back).")]
+    [SerializeField] private bool showMusicPicker = true;
+
+    [Min(0f)]
+    [Tooltip("Seconds without activity before the music selector fades away. 0 = 10.")]
+    [SerializeField] private float musicPickerHideSeconds = 0f;
 
     private string hoveredText;
 
