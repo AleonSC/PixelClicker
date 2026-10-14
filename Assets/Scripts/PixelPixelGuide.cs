@@ -268,11 +268,7 @@ public class PixelPixelGuide : MonoBehaviour
         tipRect.sizeDelta = size;
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
-        Vector2 half = canvasRect.rect.size * 0.5f;
-        Vector2 pos = local + new Vector2(-size.x - 18f, -18f);   // the window is on the right edge: the box opens to the left of the pointer
-        if (pos.x < -half.x) pos.x = local.x + 18f;
-        if (pos.y - size.y < -half.y) pos.y = local.y + size.y + 18f;
-        tipRect.anchoredPosition = pos;
+        PixelUIKit.PlaceTooltip(tipRect, canvasRect, local);
         tipRect.SetAsLastSibling();
     }
 

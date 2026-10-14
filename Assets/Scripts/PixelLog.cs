@@ -637,11 +637,7 @@ public class PixelLog : MonoBehaviour
 
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local);
-        Vector2 pos = local + new Vector2(26f, -22f);
-        Rect r = canvasRect.rect;
-        pos.x = Mathf.Clamp(pos.x, r.xMin + 8f, r.xMax - width - 8f);
-        pos.y = Mathf.Clamp(pos.y, r.yMin + h + 8f, r.yMax - 8f);
-        tipRect.anchoredPosition = pos;
+        PixelUIKit.PlaceTooltip(tipRect, canvasRect, local, 22f);
     }
 
     private bool panelWasOpen;

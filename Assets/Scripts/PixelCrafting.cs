@@ -614,9 +614,7 @@ public class PixelCrafting : MonoBehaviour
 
         RectTransform canvasRect = canvasRoot.GetComponent<RectTransform>();
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 local)) return;
-        bool rightHalf = local.x > 0f;
-        tipRect.pivot = new Vector2(rightHalf ? 1f : 0f, local.y < -canvasRect.rect.height * 0.25f ? 0f : 1f);
-        tipRect.anchoredPosition = local + new Vector2(rightHalf ? -18f : 18f, tipRect.pivot.y > 0.5f ? -24f : 24f);
+        PixelUIKit.PlaceTooltip(tipRect, canvasRect, local);
     }
 
     // ------------------------------------------------------------------

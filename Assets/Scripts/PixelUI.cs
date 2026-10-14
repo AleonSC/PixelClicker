@@ -769,7 +769,7 @@ public class PixelUI : MonoBehaviour
         float measured = tooltipLabel.preferredWidth;
         float width = Mathf.Max(measured, text.Length * tooltipFontSize * 0.55f) + 36f; // generous, so the text always fits
         tooltipRect.sizeDelta = new Vector2(width, tooltipFontSize * 1.8f);
-        tooltipRect.anchoredPosition = CursorLocal() + tooltipOffset;
+        PixelUIKit.PlaceTooltip(tooltipRect, popupCanvasRect, CursorLocal(), 20f);   // bottom left of the pointer
     }
 
     private Vector2 CursorScreenPosition()
