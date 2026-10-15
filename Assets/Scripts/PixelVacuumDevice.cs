@@ -12,8 +12,8 @@ using UnityEngine;
 /// A placed vacuum device (the cylinder). Created and configured by <see cref="PixelConsumables"/>.
 ///
 /// While it is active it pulls every old pixel inside its radius toward the top of the cylinder and,
-/// when a pixel gets close enough, collects it again (the original reward is re-added, like the Vacuum
-/// pixel). The countdown, timer text and shrink-away come from <see cref="PixelPlacedDevice"/>.
+/// when a pixel gets close enough, consumes it (PixelClicker.AbsorbOldPixel: pixel rules = husk XP; with husksPayCurrency
+/// the original reward is re-added, like the Vacuum pixel). The countdown, timer text and shrink-away come from <see cref="PixelPlacedDevice"/>.
 /// </summary>
 public class PixelVacuumDevice : PixelPlacedDevice
 {

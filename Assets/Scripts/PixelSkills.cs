@@ -1054,6 +1054,17 @@ public partial class PixelSkills : MonoBehaviour
         AddXp(pack, automatic ? autoXpFactor : 1d);
     }
 
+    /// <summary>
+    /// Pixel rules: XP from consumed husks (PixelClicker.GiveHuskXp: Vacuum pixel, Vacuum Device, Ultra Holes). A husk trains the skill it belongs to
+    /// (wood husks Woodcutting, ores Mining...), pure husks train Standard. Popups only once the Skills tab exists, like Standard's click XP.
+    /// </summary>
+    public void AddHuskXp(int tierIndex, double xp)
+    {
+        if (disableSkills || xp <= 0d) return;
+        SkillPack pack = PackForTier(tierIndex) ?? Find(StandardId);
+        AddXp(pack, xp, pack != null && (pack.id != StandardId || AnyTrainable));
+    }
+
     /// <summary>Extra XP for the skill being trained (the shuffle bonus): goes through AddXp, so penalties, minigame multipliers and the bonus bank apply as usual.</summary>
     public void AddShuffleXp(double xp)
     {

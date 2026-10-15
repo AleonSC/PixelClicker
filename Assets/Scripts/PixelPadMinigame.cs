@@ -512,7 +512,8 @@ public class PixelPadMinigame : PixelMinigame
                 OldPixelInfo info = body.GetComponent<OldPixelInfo>();
                 if (info == null) break;
                 bool right = hi == correct && info.tierIndex == target;
-                if (!clicker.ReleaseOldPixel(body, right)) break;
+                if (!clicker.ReleaseOldPixel(body, right)) break;   // (the credit only pays with husksPayCurrency on)
+                if (right) clicker.GiveHuskXp(info.tierIndex, 1);   // pixel rules: a correctly sorted husk gives husk XP
                 if (despawn != null) despawn.Begin();   // it turns into a trigger and shrinks as it tumbles down through the floor
 
                 Vector3 at = body.position;

@@ -929,7 +929,7 @@ public class PixelUI : MonoBehaviour
     /// <summary>"+X" popup over the cube totalling everything a Vacuum pixel just sucked up.</summary>
     private void OnPixelsVacuumed(int vacuumTierIndex, double total, int count)
     {
-        if (!PopupsEnabled || !showVacuumPopup || count <= 0) return;
+        if (!PopupsEnabled || !showVacuumPopup || count <= 0 || total <= 0d) return;   // (pixel rules: a vacuum pays XP, not currency, so total is 0)
 
         Color color = clicker.Tiers[vacuumTierIndex].UIColor;
         string text = string.Format(vacuumPopupFormat, FormatAmount(total));

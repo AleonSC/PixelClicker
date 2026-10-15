@@ -508,9 +508,12 @@ public class PixelFirstPerson : MonoBehaviour
             {
                 PixelFarmFx.Break(tier.type, pos, clicker.OldPixelWorldSize, tier.color);
                 Destroy(chop.gameObject);
-                double pay = System.Math.Max(1d, tier.amountPerClick) * (1d + V(axeBonusPay, 0.5f));
-                clicker.AddCurrency(info.tierIndex, pay);
-                AddWoodXp(V(axeBonusXp, 4f) * 2f);
+                if (clicker.HusksPayCurrency)   // pixel rules off: the old payout for chopping a husk
+                {
+                    double pay = System.Math.Max(1d, tier.amountPerClick) * (1d + V(axeBonusPay, 0.5f));
+                    clicker.AddCurrency(info.tierIndex, pay);
+                }
+                AddWoodXp(V(axeBonusXp, 4f) * 2f);   // pixel rules: a chopped husk gives Woodcutting XP only
                 PixelAudio.Play("axe_chop");
             }
             return;

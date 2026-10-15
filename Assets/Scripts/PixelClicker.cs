@@ -619,6 +619,13 @@ public partial class PixelClicker : MonoBehaviour
     [Tooltip("Spawn a falling copy of the pixel on every click.")]
     [SerializeField] private bool spawnFallingCopy = true;
 
+    [Header("Pixel rules (docs/systems/PixelRules.md)")]
+    [Tooltip("OFF (the pixel rules) = old pixels are husks: material that never pays currency again. The Vacuum pixel and Vacuum Device give XP for what they suck up, the first-person axe gives only XP, a hovering Solar pixel keeps daylight up, and the black hole / Ultra Holes no longer pay a husk's value. ON = the old behaviour (husks pay their value again).")]
+    [SerializeField] private bool husksPayCurrency = false;
+    [Min(0f)]
+    [Tooltip("XP one consumed husk gives (Vacuum pixel, Vacuum Device, Ultra Holes), as a share of the XP a manual click gives. Pure husks train Standard, a skill's husks train that skill. 0 = the coded default (0.5).")]
+    [SerializeField] private float huskXpShare = 0f;
+
     [Header("Vacuum Pixel")]
     [Tooltip("Print a console line listing what each Vacuum click re-collected, per pixel type (for checking the numbers).")]
     [SerializeField] private bool logVacuum = true;
@@ -4613,7 +4620,7 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     /// <summary>
-    /// Vacuum pixel effect: every old pixel flies into the cube and its original reward is added again.
+    /// Vacuum pixel effect: every old pixel flies into the cube (pixel rules: husk XP; with husksPayCurrency its original reward is added again).
     /// </summary>
     // The tier of each pixel the last vacuum click sucked up, waiting for the old Vacuum pixel that drops in the same click.
     private readonly System.Collections.Generic.List<int> vacuumContents = new System.Collections.Generic.List<int>();
@@ -4627,6 +4634,7 @@ public partial class PixelClicker : MonoBehaviour
         double total = 0d;
         int count = 0;
         double[] perTier = new double[tiers.Length];
+        int[] huskCounts = new int[tiers.Length];   // pixel rules: what was sucked up, per type, for the XP it gives
         vacuumContents.Clear();
 
         for (int i = 0; i < oldPixels.Count; i++)
@@ -4637,10 +4645,14 @@ public partial class PixelClicker : MonoBehaviour
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
             if (info != null && IsValidTier(info.tierIndex))
             {
-                AddCurrency(info.tierIndex, info.amount);
+                if (husksPayCurrency)
+                {
+                    AddCurrency(info.tierIndex, info.amount);
+                    perTier[info.tierIndex] += info.amount;
+                    total += info.amount;
+                }
+                else huskCounts[info.tierIndex]++;
                 PixelSkills.OldPixelConsumed(info.tierIndex);
-                perTier[info.tierIndex] += info.amount;
-                total += info.amount;
                 count++;
                 if (!hideVacuumContents) vacuumContents.Add(info.tierIndex);
             }
@@ -4659,11 +4671,25 @@ public partial class PixelClicker : MonoBehaviour
             Debug.Log(sb.Append(")").ToString(), this);
         }
 
+        for (int i = 0; i < huskCounts.Length; i++)
+            if (huskCounts[i] > 0) GiveHuskXp(i, huskCounts[i]);
+
         if (count > 0)
         {
-            VacuumBreakdown?.Invoke(perTier);
-            PixelsVacuumed?.Invoke(vacuumTierIndex, total, count);
+            if (total > 0d) VacuumBreakdown?.Invoke(perTier);
+            PixelsVacuumed?.Invoke(vacuumTierIndex, total, count);   // total is 0 under the pixel rules (the sound and stats still use the count)
         }
+    }
+
+    /// <summary>Pixel rules: true = old pixels pay their value again when consumed (the old behaviour); false = they are husks (material, XP).</summary>
+    public bool HusksPayCurrency => husksPayCurrency;
+
+    /// <summary>Pixel rules: the XP 'count' consumed husks of one type give (a share of a manual click's XP; pure husks train Standard, a skill's husks that skill).</summary>
+    public void GiveHuskXp(int tierIndex, int count)
+    {
+        if (husksPayCurrency || count <= 0 || !IsValidTier(tierIndex)) return;
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills != null) skills.AddHuskXp(tierIndex, count * (huskXpShare > 0f ? huskXpShare : 0.5f));
     }
 
     /// <summary>Removes every old pixel lying around (no payout). Used by the dev tools.</summary>
@@ -4778,7 +4804,7 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     /// <summary>
-    /// Collects one old pixel again (its reward is re-added) and pulls it into 'target' while it shrinks.
+    /// Consumes one old pixel (pixel rules: it gives husk XP; with husksPayCurrency its reward is re-added) and pulls it into 'target' while it shrinks.
     /// Returns false if it isn't an old pixel any more.
     /// </summary>
     public bool AbsorbOldPixel(Rigidbody body, Transform target)
@@ -4789,11 +4815,15 @@ public partial class PixelClicker : MonoBehaviour
         OldPixelInfo info = body.GetComponent<OldPixelInfo>();
         if (info != null && IsValidTier(info.tierIndex))
         {
-            AddCurrency(info.tierIndex, info.amount);
             PixelSkills.OldPixelConsumed(info.tierIndex);
-            double[] perTier = new double[tiers.Length];
-            perTier[info.tierIndex] = info.amount;
-            VacuumBreakdown?.Invoke(perTier);
+            if (husksPayCurrency)
+            {
+                AddCurrency(info.tierIndex, info.amount);
+                double[] perTier = new double[tiers.Length];
+                perTier[info.tierIndex] = info.amount;
+                VacuumBreakdown?.Invoke(perTier);
+            }
+            else GiveHuskXp(info.tierIndex, 1);
         }
 
         StartCoroutine(SuckRoutine(body, target));
@@ -4825,14 +4855,14 @@ public partial class PixelClicker : MonoBehaviour
 
     /// <summary>
     /// Takes an old pixel out of the game's old-pixel list so something else (the black hole) can handle it.
-    /// 'credit' re-adds its original reward. The caller is responsible for removing the object. Returns false if it wasn't listed.
+    /// 'credit' re-adds its original reward, but only with husksPayCurrency on (pixel rules). The caller is responsible for removing the object. Returns false if it wasn't listed.
     /// </summary>
     public bool ReleaseOldPixel(Rigidbody body, bool credit)
     {
         if (body == null || !oldPixels.Remove(body)) return false;
         QuietParticles(body.gameObject);   // a pixel being taken away stops emitting (the Vacuum's suction wind, embers, motes...)
 
-        if (credit)
+        if (credit && husksPayCurrency)   // pixel rules: a husk never pays its value again
         {
             OldPixelInfo info = body.GetComponent<OldPixelInfo>();
             if (info != null && IsValidTier(info.tierIndex)) AddCurrency(info.tierIndex, info.amount);

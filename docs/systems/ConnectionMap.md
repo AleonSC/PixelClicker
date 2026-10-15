@@ -46,7 +46,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 
 | Item | Takes in | Gives out | Pressure it answers | Skill home | State |
 |---|---|---|---|---|---|
-| Vacuum Device | loose old pixels | currency today; husks to a Recycler / storage under the pixel rules | despawn | ? | Built (needs a new job, `PixelRules.md`) |
+| Vacuum Device | loose old pixels | husk XP (pixel rules); later maybe husks to a Recycler / storage | despawn | ? | Built |
 | Fan | - | moves old pixels | space | ? | Built |
 | Sorter (ring) | collected pixels | streams them out of a pipe | space | ? | Built |
 | Magnet | loose old pixels | holds them in a heap | despawn, space | ? | Built |
@@ -127,12 +127,12 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 |---|---|---|---|
 | Glass | potion and Pixel Bank material | Crafting, Bank | Built |
 | Luminescent | glowing trail | ? | Built |
-| Vacuum | sucks up old pixels and pays them | husks (needs a new job under the pixel rules) | Built |
+| Vacuum | sucks up old pixels for husk XP | husks, skills (XP) | Built |
 | Obsidian | a tough Mining ore | Mining | Built |
 | Singularity | gravity well holding old pixels | despawn, space | Built |
 | Ghost | drifting old pixel, Ghost minigame | Ghost minigame | Built |
 | Meteor | flying old pixel, Stardust | Stardust minigame | Built |
-| Solar | daylight that speeds growth; hovering old pixel pays a trickle | Farming (growth); the trickle needs a new job | Built |
+| Solar | daylight that speeds growth; a hovering Solar husk keeps daylight up | Farming (growth) | Built |
 | Electric | Overcharge, device power | Electrician, auto clicker | Built |
 | Mirror | repeats the last payout | the rotation | Built |
 | Fire | ring of flames | ? (Kiln fuel? Idea) | Built |
@@ -159,7 +159,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 4. **Electrician as the factory skill:** confirm it is the home of belts, splitters, elevators, connectors, sorters and the Tiny Robot.
 5. **Dead-end outputs:** Charcoal, Wood Chips and Magic Wood need a use.
 6. **Minigames:** give each one a skill it feeds.
-7. **Pixel rules rework:** the Vacuum and the Solar trickle need their new jobs (the Pixel Bank's is decided: husk storage, no payout).
+7. **Pixel rules rework:** step 1 built (husks stop paying; Vacuum gives husk XP, Solar keeps daylight up, Bank is storage). Open: should the husk minigames (Snake, Sorting Race, Breakout) keep paying currency per husk?
 8. **Shop relics:** most shop pixels and devices are left over from early development. Decide which consumables stay shop-only from the start and which move to unlocks later (and from which skill).
 9. **Breakdowns:** which machines can break, which inputs break each one, whether wear exists, and which husks repair which machines.
 

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// The Meteor and Solar pixels' own looks and behaviour (see CLAUDE.md): Meteor = a dark cratered rock whose glowing cracks spread with every
 /// hit (3 hits), a few rising embers on the cube and a fiery wake behind the old pixel that streaks away; Solar = a clean golden sun-cube with a
-/// pulsing corona and slowly turning rays, an old pixel that HOVERS and pays a small trickle, and the daylight bar that every Solar click raises.
+/// pulsing corona and slowly turning rays, an old pixel that HOVERS and (pixel rules) keeps daylight up while it floats (old behaviour: a small currency trickle), and the daylight bar that every Solar click raises.
 /// </summary>
 public static class PixelStarTextures
 {
@@ -302,6 +302,7 @@ public class OldPixelSolarHover : MonoBehaviour
         float every = PixelDaylight.TrickleSeconds;
         if (payTimer < every) return;
         payTimer = 0f;
+        if (!clicker.HusksPayCurrency) { PixelDaylight.OnHoverTick(); return; }   // pixel rules: a hovering Solar husk keeps daylight up instead of paying
         double pay = info.amount * PixelDaylight.TrickleFraction * PixelDaylight.PayMultiplier;
         if (pay > 0d) clicker.AddCurrency(info.tierIndex, pay);
     }
@@ -328,6 +329,8 @@ public class PixelDaylight : MonoBehaviour
     [SerializeField] private float trickleFraction = 0f;
     [Tooltip("Seconds between a hovering Solar pixel's payments. 0 = 4.")]
     [SerializeField] private float trickleSeconds = 0f;
+    [Tooltip("Pixel rules (PixelClicker.husksPayCurrency off): daylight a hovering Solar husk adds every trickleSeconds instead of paying (1 = full). 0 = 0.02 (one husk slows the fade by about 40%).")]
+    [SerializeField] private float hoverDaylight = 0f;
 
     [Header("Bar")]
     [Tooltip("Hide the daylight bar (the effects still work).")]
@@ -360,6 +363,13 @@ public class PixelDaylight : MonoBehaviour
     {
         if (instance == null || instance.Off) return;
         instance.level = Mathf.Clamp01(instance.level + (instance.perClick > 0f ? instance.perClick : 0.1f));
+    }
+
+    /// <summary>Pixel rules: a hovering Solar husk ticked - daylight goes up a little (it keeps the day going instead of paying).</summary>
+    public static void OnHoverTick()
+    {
+        if (instance == null || instance.Off) return;
+        instance.level = Mathf.Clamp01(instance.level + (instance.hoverDaylight > 0f ? instance.hoverDaylight : 0.02f));
     }
 
     private void Awake() { instance = this; }

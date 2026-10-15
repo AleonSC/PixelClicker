@@ -1,6 +1,6 @@
 # Pixel rules: value, body and use (design, not built yet)
 
-Status: **agreed rule, not built.** This is a game-wide rule; every skill, machine and block should follow it. Woodcutting's design (`WoodcuttingProgression.md`) is the first place it is applied.
+Status: **agreed rule; step 1 built (husks stop paying currency, 2026-10-15).** Switch: `PixelClicker.husksPayCurrency` (off = the rules; on = the old behaviour, for comparing). Still to build: the Recycler, charges from holding utility blocks, the drained look. This is a game-wide rule; every skill, machine and block should follow it. Woodcutting's design (`WoodcuttingProgression.md`) is the first place it is applied.
 
 ## The problem
 
@@ -104,18 +104,19 @@ Some machines break, and the player goes into first person to repair them.
 
 Open questions: which machines can break, which inputs break each one, whether wear exists at all, and which husks repair which machines.
 
-## Systems that need a new job under this rule
+## Systems that needed a new job under this rule
 
-These pay old pixels out as currency today and must change (each to be designed when it is touched):
+Step 1 (built): with `husksPayCurrency` off none of these pay a husk's value any more. Consumed husks give **husk XP** instead (`PixelClicker.GiveHuskXp` -> `PixelSkills.AddHuskXp`: a share of a manual click's XP, `huskXpShare` 0 = 0.5; pure husks train Standard, a skill's husks train that skill).
 
 | System | Today | Direction |
 |---|---|---|
-| Vacuum pixel / Vacuum Device | pays the stored value of every old pixel it sucks up | collects husks as material or XP, or hands them to a Recycler / machines / a crate |
+| Vacuum pixel / Vacuum Device | paid the stored value of every old pixel it sucked up | **built:** gives husk XP per husk sucked up (no '+N' popup any more). Later it may hand husks to a Recycler / crate instead |
 | Pixel Bank (hose) | stores old pixels with their payout, which comes back when they are spat out | **decided:** husk storage for their EFFECT, never to cash in: keep husks you cannot use yet (e.g. Electric husks before Electrician) and spit them out when a machine wants them. Stored husks carry no payout; capacity is one shared total (already how `PixelBank.IsFull` works) |
-| Solar old pixel | hovers and pays a small currency trickle | its trickle becomes something else (daylight, XP, or powering devices) |
-| `PixelClicker.ReleaseOldPixel(body, credit: true)` | re-adds the old pixel's reward | callers should not credit currency any more |
+| Solar old pixel | hovered and paid a small currency trickle | **built:** each trickle tick adds a little daylight instead (`PixelDaylight.hoverDaylight`, 0 = 0.02 per tick), so a hovering Solar husk keeps the day going |
+| `PixelClicker.ReleaseOldPixel(body, credit: true)` | re-added the old pixel's reward (black hole option, Ultra Holes right hole) | **built:** the credit only pays with `husksPayCurrency` on; Ultra Holes gives husk XP for a correctly sorted husk; the black hole already gives its minigame XP |
+| First-person axe | paid 1.5x a block's value for chopping a wood husk | **built:** Woodcutting XP only (swinging the axe at a wood block on the cube still adds its tool bonus: that is a click) |
 
-Until each is reworked the old behaviour stays, so nothing breaks in the meantime.
+Not changed (open question for the developer): the minigames that use husks as play pieces (Snake, Sorting Race, Breakout) still pay currency per husk as their minigame reward. The Pixel Bank's stored payout is kept in the data but nothing pays it any more.
 
 ## Open questions
 
