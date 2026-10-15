@@ -1,0 +1,65 @@
+PIXEL CLICKER - GAME REFERENCE FOR AI READERS
+FORMAT: plain text. Sections start with "=== NAME ===". Lines are dense facts; "->" = leads to / produces; "x" = multiplier; numbers in parentheses are code defaults (0 in an Inspector field usually means "use the coded default"). Code identifiers are kept verbatim so they can be searched (grep) in Assets/Scripts.
+SCOPE: section 1 is a hand-written overview of how the game plays and fits together. Sections 2+ are GENERATED from the code (enums, block catalog, packs, devices, skills) and from every system's own notes (CLAUDE.md index, script header comments, docs/systems/*.md). Regenerate with: python3 tools/game-reference/build.py
+NAMING: player-facing name "husk" = code name "old pixel" (OldPixelInfo, oldPixels, OldPixelDespawn). "Pixel type" = "tier" = "block type" (PixelClicker.PixelTier, enum PixelType). "Pure" pixels = the six basic types (White, Gray, Black, Red, Green, Blue).
+
+=== 1. OVERVIEW ===
+ENGINE: Unity 6 (also guarded for older Unity), C#, TextMeshPro, URP. Single scene. All code in Assets/Scripts (~250 scripts, ~120k lines). Almost all UI and 3D models are built at runtime in code (no prefabs). PixelClicker.Awake adds most systems as components. Both input systems supported (legacy + new Input System) via PixelInput.
+GENRE: 3D incremental clicker with skills (RuneScape-like), crafting, devices / light factory building, minigames, visitors / vendors and collectibles.
+
+CORE LOOP
+- One clicker CUBE in the middle of the screen shows a BLOCK of some pixel type. Left click = hit. Normal blocks break in 1 click; TOUGH blocks need clicksToCollect hits (only the last pays; PixelHit / PixelFinalHit events).
+- Breaking a block pays CURRENCY of that block's own type (each pixel type is its own currency): amountPerClick (or a random payoutMin..payoutMax) x PayoutMultiplier (Ultra x Value x wish) x clickMultiplier. Click flow: CollectInternal -> AddCurrency -> PixelCollected event -> effects -> SpawnFallingCopy (the husk) -> RollTier (next block) -> Materialize.
+- Next block = weighted random (spawnWeight) among UNLOCKED, spawn-enabled types of the current rotation (PickSpawnTier). Basic types unlock by thresholds of the previous type (TierUnlockMode.PreviousTierThreshold) or by shop purchase (ShopOnly).
+- Every break drops a HUSK: a small physical cube (Rigidbody) of that type that falls to the floor. Husks despawn after a lifetime (oldPixelLifetime 15 s + Standard perk), are capped in number (OldPixelCap, base 50 + Standard perk), can be grabbed and thrown with the mouse (Pixel Grabbing, PixelGrab), and are the MATERIAL of the game.
+- PIXEL RULES (docs/systems/PixelRules.md): a click gives the block's VALUE (currency); the HUSK is material and never pays currency by itself (PixelClicker.husksPayCurrency = off). Consumed husks give skill XP instead (GiveHuskXp -> PixelSkills.AddHuskXp, huskXpShare 0.5 of a click's XP; pure husks train Standard, a skill's husks train that skill). The only husk -> currency path is the RECYCLER device (10 husks, 2 s shake, pays 50% of what a click on that block pays now). Holding a UTILITY block gives CHARGES (e.g. Pesticide: 3 Hornet Nest charges that auto-clear hazards).
+- AUTO CLICKER (shop) clicks on a timer; auto clicks give reduced skill XP (autoXpFactor 0.25) but Standard still gets its flat 1 XP.
+
+BLOCK HOLD (right mouse button, PixelBlockHold)
+- Hold right on the cube: the block is pulled out of the rotation and floats beside the cube while a meter drains (5 s, 10 s for hold blocks); the cube rolls a new block so you keep clicking. Letting go puts it back next in line (keeps its hits). Recharge 8 s; running dry = longer cooldown. Hazards and some specials can't be held.
+- STAKE: holding one of the six pure blocks for >= 0.75 s stakes it: value 1 + 0.6 x seconds held + 0.1 per click during the hold; on release a win roll (60%) decides: it later pays that multiplier or nothing (revealed with a green / red aura when it comes round).
+- Meter energy: every 5 own clicks +1% meter. Meter UI is an arc beside the cursor, shown only while hovering the cube or holding.
+- HOLD BLOCKS (PixelBlockRules.HoldRule): data rules for bonuses while held (Whetstone = extra rapid clicks; Pesticide = charges; XP / payout multipliers). SPECIAL blocks = rare replacements of rolled blocks (Great Oak etc.).
+
+SKILLS (PixelSkills + partial files; window PixelSkillsWindow)
+- STANDARD: the always-on skill. Every collected block = flat 1 Standard XP (standardXpPerBlock), manual or auto, any skill, no multipliers. Perks: husks last +5 s per level, floor holds +5 husks per level from level 4. Level 2 popup opens the Skills window beside a highlighted Standard card.
+- GATHERING SKILL PACKS: Woodcutting, Foraging, Fishing, Mining (= Prospector mode), Farming, Electrician. Choosing a pack (Skills window only, never Toggles) replaces the basic rotation with that pack's blocks; you train that skill. Packs have a FILLER block (useless, shrinks in share with level), HAZARD blocks (Pest, Gas Pocket, Hornet Nest, Toadstool...: tough, pay nothing, penalise XP; right click to clear), SPECIAL blocks and perks per level, a skill TREE (1 point per level), XP curve baseXp x xpGrowth.
+- OFFLINE PROGRESSION skill: trains from every click while the chosen pixel pack still gets 50% XP.
+- XP multipliers: minigames enabled add a global multiplier; bonus XP bank doubles gains while it lasts; hazards apply a temporary penalty; Mastery = progress of all skills together.
+- VALUE CAP: a pixel type's Value upgrade level can't exceed the level of the skill that owns it (pure / non-pack types -> Standard) x valueLevelsPerSkillLevel (1).
+
+ECONOMY / SHOP (PixelShop, PixelShopUI, PixelShopDefaults)
+- Shop button appears once Black is unlocked. Tabs: Pixels (base pixels, toggleable single pixels, skill packs), Upgrades (sub-tabs Features = packs/upgrades, Value = per-type value levels, Operation = consumable stat upgrades), Consumables (potion / utility / seed cards), Minigames (packs that unlock minigames).
+- Packs = ShopPack entries (BuiltInPacks table adds missing ones). Testing packs are hideInShop (Fire, Nuclear, Farmer's, Prospector's, Block Hold, Oak Trees test); the Dev Tools 'Shop unlocks' widget unlocks / relocks any pack.
+- VALUE upgrades: per pixel type, paid in that type, cost valueBaseCost 25 x amountPerClick x 1.15^level; payout x (1 + level x valueBonusPerLevel) x milestone multiplier; capped by skill level (above). Hazards have no Value row.
+- VENDORS sell / buy for pure currency: Lumberjack (Woodcutting) and Prospector (Mining) BUY skill blocks for pure pixels at a rarity-based rate (UnitValue = 1 / (spawnWeight x amountPerClick / clicks)) x sellRate 0.8 x luck, and sell devices / potions. Other visitors: Tinkerer, Wizard, Entrepreneur (trades), Farmer; rare cats Egg and Bean.
+- CUBIE (PixelGuideVendor): the guide / shopkeeper. Visit 1 comes after 25 manual clicks and gives a Recycler ({recycler} page token); visit 2 holds time until the shop is opened (shop nudge + shop tutorial). Page texts are Inspector lists.
+
+CONSUMABLES (PixelConsumables)
+- POTIONS: one single potion per pixel type (all non-rare types): for N seconds only that type spawns. COMBO potions (crafted): 2-type for every pair of types; 3-type only among non-standalone types (pre-built at start). Potions can be auto-priced from expected return.
+- DEVICES (DeviceKind): placed in the world by right-clicking them in the Inventory: Fan, Vacuum Device, Sorter, Magnet, Magnetized Sorter, Quantum Organizer, Storage Crate (10 slots), Sprinkler, Funnel, Wood Chipper, Recycler, Charge Booster, Lightning Rod, Bait Bucket, seeds, Prime Gauntlet... Some timed (countdown, shrink away), some permanent. Attuned devices (crafted with a potion) only affect husks of one type. Placed devices are saved (PlacedState: position, yaw, remaining, extra data).
+- CARRY HANDLES (PixelCarryHandles): Storage Crate, Recycler and the Bait Bucket can be dragged by their handles (scroll / Q / E turns).
+- CRAFTING (PixelCrafting): recipes, potion + pixel -> combo potion, device + potion -> attuned device.
+- TESTER MACHINES (factory, not final): conveyor belts, kiln, splitter, elevator, belt sorter, trash can, tiny robot, connector.
+
+MINIGAMES (PixelMinigame base; PixelMinigameLimits caps how many are on screen)
+- Bought as packs (Minigames tab): Black Hole, Ghost, Meteor, Evil Tree, Snake, Sorting Race, Cube Dash, Red Light Green Light, Cube Evasion, Cube Blink, Breakout, Bomb Defusal, Ultra Holes. Passive: Stardust. Skill minigame: Weak Spots (Fishing catch). Some are TAKEOVER minigames (PixelMinigame.TakeoverActive pauses the normal game).
+- Each enabled minigame raises the global XP multiplier.
+
+COLLECTIBLES / RARE DROPS
+- 7 Dragon Cubes (gather all -> wish), 3 God Cubes (~1 in 7 million, one of each), 6 Prime Cubes + the Wizard's Prime Gauntlet forging the Prime Cubelette. Rare drops sit at the END of the tier list; Collection Log book and a walkable gallery show them.
+
+OTHER SYSTEMS
+- PETS: one pet per block type (all except the rare collectible cubes), roam the floor, perks per type, outfits / names / Outfit Studio.
+- FIRST PERSON: walk the floor, carry and stack husks, axe; out-of-bounds wall.
+- CAMERA: base view, View window (V): orbital, top-down, first person, free cam, orthographic, zoom. Camera intro on start.
+- WORLD LOOK: floor styles, sky styles, day / night, screen filters, bar edge styles, flat view.
+- UI: Inventory (Currency groups, Consumables with Devices tab), Log (events, goals), Toggles window (after Auto Clicker), Pocket window + custom keybinds, Pixel Guide, Game Database, block tooltips, notices / tips (PixelNotice, PixelHints), status boxes, achievements, stats, title screen with music player, pause menu (settings, save / load, game guide, feedback, music player with shuffle).
+- SAVES: JSON in persistentDataPath (PixelSaveGame); per-save settings sync (PlayerPrefs keys "PixelClicker.Setting.*"); autosave history with screenshots; offline progress on startup load. Inspector data upgrades: version ints (packDataVersion, looksVersion, ...) gate one-time fix-ups that RUN EVERY PLAY (play-mode changes are not saved to the scene), so removing them breaks the scene's old data.
+- SHARED HELPERS: PixelCalm (InMenu / CameraBusy / ForTip), PixelPointerClaim (a world object owns the click), PixelHighlight (gold frame round any UI), PixelFind (find with version guard), PixelUIKit (UI builders), PixelFactoryKit (primitive builder), PixelBlockCatalog (one card per block type with TAGS), PixelStatusLines / PixelStatusBox, PixelWindows (one window at a time).
+- DEV TOOLS (Editor / dev builds): Dev Hub (F9) with widgets, To-Do (Assets/Resources/Todo.txt), Changelog (Assets/Resources/Changelog.txt, never cleared), inspector, shapes, mockups, balance report, snapshot probe (F10 / F11).
+
+PROJECT RULES (from CLAUDE.md)
+- Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
+- Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
+- Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
