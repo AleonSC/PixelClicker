@@ -11,6 +11,7 @@
 //   into payoutShare (10%) of its stored value as currency of its own type (pixel rules: the Recycler is the one machine that turns husks back into
 //   money, at a loss), the husks are destroyed, and the lid slides back open. ButtonHot (the pointer is over a button) is part of
 //   PixelClicker.ExternalClickBlock and PixelGrab's guard, so pressing it neither clicks the cube nor grabs a pixel.
+//   Captured husks that lie still for 0.3 s are frozen in place (kinematic: Settle), so the pile cannot jitter or bounce; grabbing one unfreezes it.
 //   SAVED: the husks inside go into PlacedState.extra ('Type,amount;', ExportState / ImportState via PixelConsumables) and are spawned back into the bin on
 //   load. A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
@@ -55,6 +56,7 @@ public class PixelRecycler : MonoBehaviour
     private Vector3 buttonScale;
     private TextMeshPro counter;
     private readonly List<Rigidbody> inside = new List<Rigidbody>();
+    private readonly Dictionary<Rigidbody, float> restSeconds = new Dictionary<Rigidbody, float>();   // how long each captured husk has lain still
     private float tick;
     private bool processing;
     private float innerW, innerD, wallH;
@@ -163,6 +165,12 @@ public class PixelRecycler : MonoBehaviour
         if (counter != null && cam != null) counter.transform.rotation = Quaternion.LookRotation(counter.transform.position - cam.transform.position, cam.transform.up);
 
         UpdateButtonFlash();
+        foreach (Rigidbody b in inside)   // a frozen husk you start to grab is let loose at once (Pixel Grabbing steers it with its velocity)
+        {
+            if (b == null || !b.isKinematic) continue;
+            OldPixelInfo i = b.GetComponent<OldPixelInfo>();
+            if (i != null && i.heldByPlayer) Unfreeze(b);
+        }
         bool hot = !processing && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
         if (hot) hotFrame = Time.frameCount;
         if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
@@ -246,8 +254,9 @@ public class PixelRecycler : MonoBehaviour
             OldPixelDespawn hold = inside[i].GetComponent<OldPixelDespawn>();
             OldPixelInfo heldInfo = inside[i].GetComponent<OldPixelInfo>();
             bool inHand = heldInfo != null && heldInfo.heldByPlayer;
-            if (Inside(inside[i].position) || inHand) { if (hold != null) hold.Held = true; continue; }
+            if (Inside(inside[i].position) || inHand) { if (hold != null) hold.Held = true; Settle(inside[i], inHand); continue; }
             if (hold != null) hold.Held = false;
+            Unfreeze(inside[i]);
             inside.RemoveAt(i);
             changed = true;
         }
@@ -273,6 +282,35 @@ public class PixelRecycler : MonoBehaviour
             changed = true;
         }
         if (changed) { RefreshCounter(); PixelAudio.Play("click"); }
+    }
+
+    /// <summary>A captured husk that has lain still for a moment is frozen in place (kinematic), so the pile can't jitter or bounce; picking it up unfreezes it.</summary>
+    private void Settle(Rigidbody b, bool inHand)
+    {
+        if (inHand) { Unfreeze(b); return; }
+        if (b.isKinematic) return;
+#if UNITY_6000_0_OR_NEWER
+        float speed = b.linearVelocity.sqrMagnitude;
+#else
+        float speed = b.velocity.sqrMagnitude;
+#endif
+        restSeconds.TryGetValue(b, out float rest);
+        rest = speed < 0.04f ? rest + 0.1f : 0f;
+        restSeconds[b] = rest;
+        if (rest < 0.3f) return;
+#if UNITY_6000_0_OR_NEWER
+        b.linearVelocity = Vector3.zero;
+#else
+        b.velocity = Vector3.zero;
+#endif
+        b.angularVelocity = Vector3.zero;
+        b.isKinematic = true;
+    }
+
+    private void Unfreeze(Rigidbody b)
+    {
+        restSeconds.Remove(b);
+        if (b != null && b.isKinematic) b.isKinematic = false;
     }
 
     private bool Inside(Vector3 world)
@@ -312,6 +350,7 @@ public class PixelRecycler : MonoBehaviour
             count++;
         }
         inside.Clear();
+        restSeconds.Clear();
         RefreshCounter();
 
         yield return new WaitForSeconds(Mathf.Max(0f, processSeconds));
