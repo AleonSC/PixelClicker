@@ -77,7 +77,7 @@ public partial class PixelFloor
 
     private void UpdateEdgeFade()
     {
-        bool want = !disableEdgeFade && floorRenderer != null && ((visibility > 0.001f && !FloorOff) || PlaneVisible);
+        bool want = !disableEdgeFade && floorRenderer != null && !HideBaseNow && ((visibility > 0.001f && !FloorOff) || PlaneVisible);
         if (!want)
         {
             if (edgeRoot != null && edgeRoot.activeSelf) edgeRoot.SetActive(false);

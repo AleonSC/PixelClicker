@@ -110,8 +110,18 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         CasinoFelt,      // green baize with gold rings, chips, dice and cards
         StainedGlass,    // jewel panes in lead with a rose window under the cube
         MoonSurface,     // grey regolith, dark basalt seas, a terraced crater with a central peak, ray and secondary crater chains, rilles, boulders and rover tracks
-        MarsSurface      // rust dunes with lee slopes, dark basalt streaks, dust-filled craters, cracked lakebed, boulders and dust devil trails
+        MarsSurface,     // rust dunes with lee slopes, dark basalt streaks, dust-filled craters, cracked lakebed, boulders and dust devil trails
+        WildMeadow,      // big meadow drawn blade by blade: hue patches, wind-bent blades, wildflower clusters, seed heads (PixelFloorLive.cs)
+        CloverLawn,      // mown lawn with curving mower stripes, clover patches, daisies, worn spots and a fairy ring of mushrooms
+        MossyGlade,      // forest floor: speckled moss, ferns, mossy stones, twigs and little puddles
+        PrairieGrass,    // tall golden wind-swept grass with green patches, purple wildflowers and rocks
+        NeonLasers,      // see-through floor: neon laser beams drifting and pulsing over nothing (3D beams, PixelFloorOverlay)
+        LaserTracker,    // see-through floor: laser beams from emitters round the cube that all converge on the mouse pointer
+        PicnicBlanket    // a gingham picnic blanket on grass, with a little 3D ant that follows the mouse
     }
+
+    /// <summary>Live 3D extras drawn on top of (or instead of) the floor picture, updated every frame (PixelFloorOverlay).</summary>
+    public enum FloorOverlay { None = 0, Lasers = 1, LaserTracker = 2, Ant = 3 }
 
     [Serializable]
     public class FloorStyle
@@ -199,6 +209,12 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
 
         [Tooltip("World units one 'cell' of the shader pattern spans (0 = the default 6).")]
         public float shaderScale = 0f;
+
+        [Tooltip("Hide the floor picture itself (a see-through floor: only the sky and the overlay show; the floor still catches pixels).")]
+        public bool hideBase = false;
+
+        [Tooltip("Live 3D extras drawn over the floor every frame: lasers, lasers that converge on the mouse, an ant that follows the mouse.")]
+        public FloorOverlay overlay = FloorOverlay.None;
 
         public FloorStyle Clone() => (FloorStyle)MemberwiseClone();
     }
@@ -520,6 +536,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (floorRenderer == null) return;
         DropProxies(false);   // the style sets the real materials itself; the fade rebuilds its copies if it is still going
         ReleaseActive();
+        ApplyLive(style);   // the live overlay (lasers, ant) and the see-through switch (PixelFloorLive.cs)
         offset = Vector2.zero;
         beatTimer = 0f;
 
@@ -914,7 +931,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     {
         ApplyProps();
         UpdateFlatBase();
-        floorRenderer.forceRenderingOff = visibility <= 0.001f;   // (the renderer stays enabled so bounds and the fog's checks keep working)
+        floorRenderer.forceRenderingOff = visibility <= 0.001f || HideBaseNow;   // (a see-through style hides the picture but keeps the collider)   // (the renderer stays enabled so bounds and the fog's checks keep working)
         // Any other renderers on the floor object (a second mesh, trim) go with it.
         foreach (Renderer extra in floorRenderer.GetComponentsInChildren<Renderer>(true)) if (extra != floorRenderer) extra.forceRenderingOff = visibility < 0.999f;
         if (SelfFading)
@@ -2548,6 +2565,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         foreach (FloorStyle extra in ExtraStyles()) yield return extra;
         foreach (FloorStyle retro in RetroStyles()) yield return retro;
         foreach (FloorStyle world in WorldStyles()) yield return world;
+        foreach (FloorStyle live in LiveStyles()) yield return live;
     }
 
     /// <summary>The second batch: space, tech, trippy, horror, a noir smoker, a skyline and ground-and-sky scenes (patterns in PixelFloorScenes.cs).</summary>

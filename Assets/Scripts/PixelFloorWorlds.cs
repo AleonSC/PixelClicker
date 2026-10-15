@@ -25,7 +25,7 @@ public partial class PixelFloor
             case FloorPattern.CasinoFelt: return ShadeCasino(s, u, v, x, y, n);
             case FloorPattern.StainedGlass: return ShadeGlass(s, u, v, x, y, n);
         }
-        return s.colorA;
+        return ShadeLive(s, u, v, x, y, n);   // the fifth batch (PixelFloorLive.cs)
     }
 
     private static IEnumerable<FloorStyle> WorldStyles()
