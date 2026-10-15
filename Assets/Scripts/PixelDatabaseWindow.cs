@@ -219,7 +219,8 @@ public class PixelDatabaseWindow : MonoBehaviour
         });
         pinButton.gameObject.SetActive(false);
         refHeader = PixelUIKit.CreateText(Font, detail.transform, "References Header", "", 28f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, new Color(1f, 0.85f, 0.4f));
-        Place(refHeader.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -318f), new Vector2(-22f, -276f));
+        Place(refHeader.rectTransform, 0f, 1f, 1f, 1f, new Vector2(22f, -318f), new Vector2(-(22f + 300f + 16f), -276f));   // (stops short of the Pin to Pocket button on its right)
+        refHeader.enableAutoSizing = true; refHeader.fontSizeMax = 28f; refHeader.fontSizeMin = 16f;
 
         refList = new RowList(this, detail.transform, "References", 52f, 22f);
         RectTransform rr = refList.scroll.GetComponent<RectTransform>();

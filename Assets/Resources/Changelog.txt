@@ -1090,3 +1090,4 @@
 [2026-10-15 15:45 UTC] The Woodcutter's Pack is now the Lumberjack's Pack and costs 250 of each pure pixel (White, Gray, Black, Red, Green, Blue).
 [2026-10-15 15:50 UTC] To-do: added the crank clicker idea (Auto Clicker starts as a crank that stores clicks, a Motor upgrade makes it fully automatic).
 [2026-10-15 16:10 UTC] The shop's Upgrades tab now lists the Pixel Bank above Time Stop.
+[2026-10-15 16:12 UTC] Game Database: the 'References in the game' heading no longer runs under the Pin to Pocket button (it stops short of it and shrinks to fit).
