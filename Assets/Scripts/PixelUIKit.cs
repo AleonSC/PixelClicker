@@ -605,6 +605,42 @@ public static class PixelUIKit
     private static Sprite gripSprite;
 
     /// <summary>
+    /// Fills a drop-down with 'labels' in ALPHABETICAL order (case-insensitive) and returns the map option index -> index in 'labels'. The first
+    /// 'fixedCount' labels stay at the top in their own order (an 'All' / 'off' entry). 'keys' (same length, optional) are what is sorted by, so a
+    /// changing suffix like ' (locked)' never reorders the list between refills. Read a pick back as labels[map[dropdown.value]].
+    /// </summary>
+    public static int[] AddSortedOptions(TMP_Dropdown dd, System.Collections.Generic.IList<string> labels, int fixedCount = 0, System.Collections.Generic.IList<string> keys = null)
+    {
+        int n = labels != null ? labels.Count : 0;
+        int[] map = new int[n];
+        for (int i = 0; i < n; i++) map[i] = i;
+        int start = Mathf.Clamp(fixedCount, 0, n);
+        System.Array.Sort(map, start, n - start, System.Collections.Generic.Comparer<int>.Create((a, b) =>
+        {
+            string ka = keys != null && a < keys.Count ? keys[a] : labels[a], kb = keys != null && b < keys.Count ? keys[b] : labels[b];
+            int c = string.Compare(ka, kb, System.StringComparison.OrdinalIgnoreCase);
+            return c != 0 ? c : a.CompareTo(b);   // (stable for equal names)
+        }));
+        if (dd == null) return map;
+        System.Collections.Generic.List<string> sorted = new System.Collections.Generic.List<string>(n);
+        for (int i = 0; i < n; i++) sorted.Add(labels[map[i]]);
+        dd.ClearOptions();
+        dd.AddOptions(sorted);
+        return map;
+    }
+
+    /// <summary>The option index that shows original entry 'original' of a map from <see cref="AddSortedOptions"/> (0 when it is not there; 'original' itself without a map).</summary>
+    public static int OptionOf(int[] map, int original)
+    {
+        if (map == null) return original;
+        for (int i = 0; i < map.Length; i++) if (map[i] == original) return i;
+        return 0;
+    }
+
+    /// <summary>The original entry behind option 'option' of a map from <see cref="AddSortedOptions"/> ('option' itself without a map or out of range).</summary>
+    public static int Original(int[] map, int option) => map != null && option >= 0 && option < map.Length ? map[option] : option;
+
+    /// <summary>
     /// A drop-down inside a scroll view has its opened list clipped by the view's mask. This moves the list (which TMP_Dropdown makes as a child called 'Dropdown List', with its own
     /// override-sorting canvas) up to the root canvas while it is open, at the same place and size on screen, so it can be seen and used in full.
     /// </summary>

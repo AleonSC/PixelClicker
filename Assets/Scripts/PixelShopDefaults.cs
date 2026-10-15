@@ -636,7 +636,7 @@ public partial class PixelShop
         unlockMode = PixelClicker.TierUnlockMode.ShopOnly
     };
 
-    /// <summary>The Prospector's Pack's price (Mining is a mid-game skill: well above the 150-White starter packs).</summary>
+    /// <summary>The Prospector's Pack's price (Mining is a mid-game skill: well above the 150-250 White starter packs).</summary>
     private static PackCost[] ProspectorCosts() => new[]
     {
         new PackCost { type = PixelClicker.PixelType.White, amount = 2000 }, new PackCost { type = PixelClicker.PixelType.Gray, amount = 1000 }
@@ -778,7 +778,7 @@ public partial class PixelShop
             tab = ShopTab.Pixels,
             description = "Adds the Woodcutting skill and the wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and the fillers Twig, Pinecone and Moss, plus a Termite Hive to watch out for and a Whetstone (hold it with Block Hold and your clicks count for more). They only spawn while Woodcutting is the pack in play (Skills window). The fillers are useless and most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
             requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 250 } },
             rewardTiers = new[]
             {
                 Block(PixelClicker.PixelType.Wood, "Wood Pixels", new Color(0.6f, 0.4f, 0.22f, 1f), 2, 3, 1.0f),

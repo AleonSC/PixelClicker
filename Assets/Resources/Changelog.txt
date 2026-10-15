@@ -1066,3 +1066,5 @@
 [2026-10-15 14:17 UTC] Fixed a husk surviving a Recycler cycle: counted husks are frozen into the bin before the shake (a settling one could be jostled out, let go and caught again), and uncounted husks lying in the bin are tipped out over the rim.
 [2026-10-15 14:17 UTC] Fixed the Neon Lasers and Laser Tracker floors: the beams lay edge-on to the camera (a broken rotation) so nothing showed, and the menu icon was one flat pink colour - it is now a real picture of glowing beams.
 [2026-10-15 14:21 UTC] Added random 'Did you know?' tips (Assets/Resources/DidYouKnow.txt): they slide out from a box docked at the top right only when the game is calm, a click or 12 seconds slides them away, hold the box to move it or dock it at either side edge, and Settings > Gameplay has a switch for them.
+[2026-10-15 14:24 UTC] The Woodcutter's Pack (the starter skill pack) now costs 250 White instead of 150.
+[2026-10-15 14:24 UTC] Every drop-down in the Dev Hub is now in alphabetical order (pixel, spawn, swap, minigame, focus potion and shop pack lists keep their 'All' / 'off' entry first; Shapes kind / mode too), through one shared helper PixelUIKit.AddSortedOptions.

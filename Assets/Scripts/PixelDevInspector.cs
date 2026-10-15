@@ -526,7 +526,7 @@ public class PixelDevInspector : MonoBehaviour
         foreach (MonoBehaviour mb in all)
             if (mb != null && IsGameType(mb.GetType()) && mb.GetType() != typeof(PixelDevInspector) && mb.GetType() != typeof(OldPixelInfo) && mb.GetType() != typeof(OldPixelDespawn) && seen.Add(mb.GetType()))
                 sorted.Add(mb);
-        sorted.Sort((a, b) => string.CompareOrdinal(a.GetType().Name, b.GetType().Name));
+        sorted.Sort((a, b) => string.Compare(a.GetType().Name, b.GetType().Name, StringComparison.OrdinalIgnoreCase));
         foreach (MonoBehaviour mb in sorted) { systems.Add(mb); options.Add(new TMP_Dropdown.OptionData(mb.GetType().Name)); }
         systemsDropdown.ClearOptions();
         systemsDropdown.AddOptions(options);

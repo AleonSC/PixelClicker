@@ -653,7 +653,7 @@ public class PixelDevMockup : MonoBehaviour
             }
         }
         catch (Exception) { /* no folder access: only the placeholder is offered */ }
-        imageFiles.Sort();
+        imageFiles.Sort(StringComparer.OrdinalIgnoreCase);
         if (imageDropdown == null) return;
         updatingFields = true;
         imageDropdown.ClearOptions();

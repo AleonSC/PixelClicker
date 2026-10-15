@@ -1407,6 +1407,16 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 36)
+        {
+            // The Woodcutter's Pack (the first skill pack, Cubie's 'starter set') costs a little more: 250 White (was 150).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && p.displayName == "Woodcutter's Pack") p.costs = CreateWoodPixelPack().costs;
+            packDataVersion = Mathf.Max(packDataVersion, 36);
+            changed = true;
+        }
+
         if (packDataVersion < 34)
         {
             // The Prospector's Pack (testing price) leaves the shop too.

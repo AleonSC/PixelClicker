@@ -113,6 +113,9 @@ public class PixelDevShapes : MonoBehaviour
     // Panel
     private GameObject canvasRoot, window;
     private TMP_Dropdown kindDropdown, modeDropdown;
+    private int[] kindMap, modeMap;   // option -> enum value (the lists are alphabetical)
+    private int PickedKind => kindDropdown != null ? PixelUIKit.Original(kindMap, kindDropdown.value) : 0;
+    private int PickedMode => modeDropdown != null ? PixelUIKit.Original(modeMap, modeDropdown.value) : 0;
     private TMP_Text readout, colourLabel;
     private bool buildingUi;
 
@@ -297,8 +300,8 @@ public class PixelDevShapes : MonoBehaviour
         ShapeData data = new ShapeData
         {
             id = blob.nextId++,
-            kind = kindDropdown != null ? kindDropdown.value : 0,
-            mode = modeDropdown != null ? modeDropdown.value : 0,
+            kind = PickedKind,
+            mode = PickedMode,
             color = brushColor,
             size = brushSize,
             yaw = brushYaw,
@@ -329,8 +332,8 @@ public class PixelDevShapes : MonoBehaviour
         if (s != null && kindDropdown != null)
         {
             buildingUi = true;
-            kindDropdown.SetValueWithoutNotify(s.data.kind);
-            modeDropdown.SetValueWithoutNotify(s.data.mode);
+            kindDropdown.SetValueWithoutNotify(PixelUIKit.OptionOf(kindMap, s.data.kind));
+            modeDropdown.SetValueWithoutNotify(PixelUIKit.OptionOf(modeMap, s.data.mode));
             kindDropdown.RefreshShownValue();
             modeDropdown.RefreshShownValue();
             brushColor = s.data.color;
@@ -548,15 +551,13 @@ public class PixelDevShapes : MonoBehaviour
 
         // Shape + mode
         kindDropdown = PixelUIKit.CreateDropdown(font, windowGo.transform, "Kind", new Vector2(200f, 46f), box, box, text, 26f);
-        kindDropdown.ClearOptions();
-        kindDropdown.AddOptions(new List<string>(Enum.GetNames(typeof(ShapeKind))));
+        kindMap = PixelUIKit.AddSortedOptions(kindDropdown, Enum.GetNames(typeof(ShapeKind)));   // (alphabetical; enum names are in value order)
         PlaceTL(kindDropdown.GetComponent<RectTransform>(), 20f, y, 200f, 46f);
         modeDropdown = PixelUIKit.CreateDropdown(font, windowGo.transform, "Mode", new Vector2(200f, 46f), box, box, text, 26f);
-        modeDropdown.ClearOptions();
-        modeDropdown.AddOptions(new List<string>(Enum.GetNames(typeof(ShapeMode))));
+        modeMap = PixelUIKit.AddSortedOptions(modeDropdown, Enum.GetNames(typeof(ShapeMode)));
         PlaceTL(modeDropdown.GetComponent<RectTransform>(), 250f, y, 200f, 46f);
-        kindDropdown.onValueChanged.AddListener(v => { if (!buildingUi && selected != null) { selected.data.kind = v; Rebuild(selected); dirty = true; } });
-        modeDropdown.onValueChanged.AddListener(v => { if (!buildingUi && selected != null) { selected.data.mode = v; Rebuild(selected); dirty = true; } });
+        kindDropdown.onValueChanged.AddListener(v => { if (!buildingUi && selected != null) { selected.data.kind = PickedKind; Rebuild(selected); dirty = true; } });
+        modeDropdown.onValueChanged.AddListener(v => { if (!buildingUi && selected != null) { selected.data.mode = PickedMode; Rebuild(selected); dirty = true; } });
         y += 62f;
 
         // Colour / delete / copy
@@ -618,7 +619,7 @@ public class PixelDevShapes : MonoBehaviour
             ghostMat = new Material(shader != null ? shader : Shader.Find("Sprites/Default"));
             mr.sharedMaterial = ghostMat;
         }
-        ShapeKind kind = (ShapeKind)Mathf.Clamp(kindDropdown.value, 0, Enum.GetValues(typeof(ShapeKind)).Length - 1);
+        ShapeKind kind = (ShapeKind)Mathf.Clamp(PickedKind, 0, Enum.GetValues(typeof(ShapeKind)).Length - 1);
         ghostFilter.sharedMesh = MeshOf(kind);
         ghost.transform.rotation = Quaternion.Euler(0f, brushYaw, 0f);
         ghost.transform.localScale = BaseScale(kind) * (Unit * Mathf.Max(0.05f, brushSize));

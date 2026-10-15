@@ -226,6 +226,9 @@ public class PixelDevTools : MonoBehaviour
     private static PixelDevTools instance;
     private GameObject canvasRoot;
     private TMP_Dropdown pixelDropdown;
+    private int[] pixelMap;   // option -> entry (0 = All pixels, n = tier n - 1): the list is alphabetical
+    /// <summary>The tier index picked in the pixel drop-down (-1 = All pixels).</summary>
+    private int PickedPixelTier => PixelUIKit.Original(pixelMap, pixelDropdown.value) - 1;
     private TMP_InputField amountField;
     private readonly List<PixelMinigame> dropdownMinigames = new List<PixelMinigame>();
 
@@ -440,8 +443,8 @@ public class PixelDevTools : MonoBehaviour
         if (pixelDropdown == null || amountField == null) return;
         string text = amountField.text.Trim().Replace(",", "");
         if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double amount)) return;
-        if (pixelDropdown.value == 0) AddToAll(amount); // "All pixels"
-        else GiveAmount(pixelDropdown.value - 1, amount);
+        if (PickedPixelTier < 0) AddToAll(amount); // "All pixels"
+        else GiveAmount(PickedPixelTier, amount);
     }
 
 
@@ -634,7 +637,7 @@ public class PixelDevTools : MonoBehaviour
     {
         PixelPets pets = PixelPets.Instance;
         if (pets == null || clicker == null || pixelDropdown == null) return;
-        int selected = pixelDropdown.value - 1; // 0 = All pixels
+        int selected = PickedPixelTier; // -1 = All pixels
         if (selected < 0)
         {
             foreach (PixelClicker.PixelTier t in clicker.Tiers) pets.Award(t.type, false, true);   // switched off, so they can be turned on one by one in Toggles > Pets
@@ -685,11 +688,10 @@ public class PixelDevTools : MonoBehaviour
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         int keep = pixelDropdown.value;
-        List<string> names = new List<string>();
-        names.Add(allPixelsText);
-        foreach (PixelClicker.PixelTier t in tiers) names.Add(t.unlocked ? t.displayName : t.displayName + " (locked)");
-        pixelDropdown.ClearOptions();
-        pixelDropdown.AddOptions(names);
+        List<string> names = new List<string>(), keys = new List<string>();
+        names.Add(allPixelsText); keys.Add("");
+        foreach (PixelClicker.PixelTier t in tiers) { names.Add(t.unlocked ? t.displayName : t.displayName + " (locked)"); keys.Add(t.displayName); }
+        pixelMap = PixelUIKit.AddSortedOptions(pixelDropdown, names, 1, keys);   // (alphabetical; 'All pixels' stays first)
         pixelDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
         pixelDropdown.RefreshShownValue();
 
@@ -1131,12 +1133,13 @@ public class PixelDevTools : MonoBehaviour
     }
 
     private TMP_Dropdown shopUnlockDropdown;
+    private int[] shopUnlockMap;   // option -> entry (0 = All, n = pack n - 1)
 
     /// <summary>Unlock (true) or relock (false) the shop pack picked in the 'Shop unlocks' widget; entry 0 = every pack.</summary>
     private void ShopUnlockPicked(bool unlock)
     {
         if (shop == null || shopUnlockDropdown == null) return;
-        int v = shopUnlockDropdown.value;
+        int v = PixelUIKit.Original(shopUnlockMap, shopUnlockDropdown.value);
         if (v == 0) { if (unlock) shop.DevUnlockAllPacks(); else shop.DevRelockAllPacks(); }
         else if (unlock) shop.DevUnlockPack(v - 1);
         else shop.DevRelockPack(v - 1);
@@ -1148,27 +1151,28 @@ public class PixelDevTools : MonoBehaviour
     {
         if (shopUnlockDropdown == null) return;
         int keep = first ? GetInt("SelShopPack", 0) : shopUnlockDropdown.value;
-        List<string> names = new List<string> { shopAllText };
+        List<string> names = new List<string> { shopAllText }, keys = new List<string> { "" };
         if (shop != null && shop.AllPacks != null)
             for (int i = 0; i < shop.AllPacks.Count; i++)
             {
                 PixelShop.ShopPack p = shop.AllPacks[i];
-                if (p == null) { names.Add("-"); continue; }
+                if (p == null) { names.Add("-"); keys.Add("~"); continue; }
                 string state = shop.IsPurchased(i) ? "  (unlocked)" : shop.GetPackLevel(i) > 0 ? "  (level " + shop.GetPackLevel(i) + ")" : "";
                 names.Add(p.displayName + (p.hideInShop ? "  [not in shop]" : "") + state);
+                keys.Add(p.displayName);
             }
-        shopUnlockDropdown.ClearOptions();
-        shopUnlockDropdown.AddOptions(names);
+        shopUnlockMap = PixelUIKit.AddSortedOptions(shopUnlockDropdown, names, 1, keys);   // (alphabetical; 'All' stays first)
         shopUnlockDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
         shopUnlockDropdown.RefreshShownValue();
     }
 
     private TMP_Dropdown focusDropdown;
+    private int[] focusMap;   // option -> focus potion index
 
     private void DrinkFocus()
     {
         PixelFocus focus = PixelFocus.Instance;
-        if (focus != null && focusDropdown != null) focus.Drink(focusDropdown.value);
+        if (focus != null && focusDropdown != null) focus.Drink(PixelUIKit.Original(focusMap, focusDropdown.value));
     }
 
     private void CancelFocus()
@@ -1184,8 +1188,7 @@ public class PixelDevTools : MonoBehaviour
         int keep = first ? GetInt("SelFocus", 0) : focusDropdown.value;
         List<string> focusNames = new List<string>();
         if (focus != null) foreach (PixelFocus.FocusPotion p in focus.Potions) focusNames.Add(p != null ? p.displayName : "-");
-        focusDropdown.ClearOptions();
-        focusDropdown.AddOptions(focusNames);
+        focusMap = PixelUIKit.AddSortedOptions(focusDropdown, focusNames);   // (alphabetical)
         focusDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, focusNames.Count - 1)));
         focusDropdown.RefreshShownValue();
     }
@@ -1231,14 +1234,20 @@ public class PixelDevTools : MonoBehaviour
         names.Add(spawnRgbText);
         selectorChoices.Add(new[] { PixelClicker.PixelType.Red, PixelClicker.PixelType.Green, PixelClicker.PixelType.Blue });
 
+        List<string> keys = new List<string> { "", "", "" };
         foreach (PixelClicker.PixelTier tier in clicker.Tiers)
         {
             names.Add(tier.displayName + (tier.unlocked ? "" : " (locked)"));
+            keys.Add(tier.displayName);
             selectorChoices.Add(new[] { tier.type });
         }
 
-        selectorDropdown.ClearOptions();
-        selectorDropdown.AddOptions(names);
+        // Alphabetical (normal / Monochrome / RGB stay first); the choices are put in the same order as the options.
+        int[] selMap = PixelUIKit.AddSortedOptions(selectorDropdown, names, 3, keys);
+        List<PixelClicker.PixelType[]> selSorted = new List<PixelClicker.PixelType[]>();
+        foreach (int i in selMap) selSorted.Add(selectorChoices[i]);
+        selectorChoices.Clear();
+        selectorChoices.AddRange(selSorted);
         selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, names.Count - 1));
         selectorDropdown.RefreshShownValue();
 
@@ -1247,14 +1256,18 @@ public class PixelDevTools : MonoBehaviour
         {
             int keepSwap = first ? GetInt("SelSwap", 0) : swapDropdown.value;
             swapChoices.Clear();
-            List<string> swapNames = new List<string> { swapPrefix + "off" };
+            List<string> swapNames = new List<string> { swapPrefix + "off" }, swapKeys = new List<string> { "" };
             foreach (PixelClicker.PixelTier tier in clicker.Tiers)
             {
                 swapNames.Add(swapPrefix + tier.displayName + (tier.unlocked ? "" : " (locked)"));
+                swapKeys.Add(tier.displayName);
                 swapChoices.Add(tier.type);
             }
-            swapDropdown.ClearOptions();
-            swapDropdown.AddOptions(swapNames);
+            int[] swapMap = PixelUIKit.AddSortedOptions(swapDropdown, swapNames, 1, swapKeys);   // (alphabetical; 'off' stays first)
+            List<PixelClicker.PixelType> swapSorted = new List<PixelClicker.PixelType>();
+            for (int i = 1; i < swapMap.Length; i++) swapSorted.Add(swapChoices[swapMap[i] - 1]);
+            swapChoices.Clear();
+            swapChoices.AddRange(swapSorted);
             swapDropdown.SetValueWithoutNotify(Mathf.Clamp(keepSwap, 0, Mathf.Max(0, swapNames.Count - 1)));
             swapDropdown.RefreshShownValue();
         }
@@ -1269,8 +1282,11 @@ public class PixelDevTools : MonoBehaviour
             dropdownMinigames.Add(game);
             names.Add(game.DisplayName);
         }
-        selectorMinigameDropdown.ClearOptions();
-        selectorMinigameDropdown.AddOptions(names);
+        int[] gameMap = PixelUIKit.AddSortedOptions(selectorMinigameDropdown, names);   // (alphabetical)
+        List<PixelMinigame> gamesSorted = new List<PixelMinigame>();
+        foreach (int i in gameMap) gamesSorted.Add(dropdownMinigames[i]);
+        dropdownMinigames.Clear();
+        dropdownMinigames.AddRange(gamesSorted);
         selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(keepGame, 0, Mathf.Max(0, names.Count - 1)));
         selectorMinigameDropdown.RefreshShownValue();
 
