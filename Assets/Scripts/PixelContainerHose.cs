@@ -2,13 +2,15 @@
 // PixelContainerHose.cs
 //   CONTAINER HOSE (a Dev Hub > Tester feature, PixelFeatureTester 'Container Hose', a single two-click line like the Conveyor Connector): a see-through hose like the
 //   Funnel's that joins one container to another. Click the SOURCE (a Storage Crate or a Quantum Organizer), then the TARGET (a Recycler, another Storage Crate, a
-//   Quantum Organizer or a Trash Can); both clicks magnetize to the nearest container's top (Snap, screen distance). The hose arches between their tops.
+//   Quantum Organizer or a Trash Can); both clicks magnetize to the nearest container's top (Snap: the container under the mouse, else the nearest top within 120 px). Clicked the other way round (target first) the hose runs from the crate / organizer anyway.
+//   Placed devices have NO colliders, so a container's place and top come from its MESH RENDERERS' bounds (Collect / Port; not its texts or the husks in it).
+//   An idle hose says why over its middle (IdleReason: no source / no target / waiting / source empty). The hose arches between their tops.
 //   Every pumpSeconds (0.5 s) it pulls one stored pixel out of the source (TakeOneForHose on PixelStorageCrate / PixelQuantumDevice), spawns it as a husk at the
 //   hose's start (SpawnStoredPixel) and carries it along the tube (PixelPathCarrier, can't be grabbed on the way). At the far end: a crate / trash can takes it
 //   directly (IPixelBeltAcceptor.AcceptFromBelt); for a Recycler / Quantum Organizer it is let fall into the bin / onto the pad (PixelRecycler.HoseDropPoint),
 //   marked Held for a moment so no other machine snatches it on the way down. It only pumps while the target has room (PixelRecycler.HoseCanTake + its
 //   count, the crate's free sections, the organizer's capacity) counting what is already in the tube or falling; otherwise pixels wait in the tube.
-//   The ends follow the containers when they are carried or turned (each frame: bounds of their colliders -> top centre; the tube is rebuilt when an end moves).
+//   The ends follow the containers when they are carried or turned (each frame: bounds of their mesh renderers -> top centre; the tube is rebuilt when an end moves).
 //   A container that is removed leaves its end where it was (the hose idles). Removing the hose lets what is inside it fall out. Saved with the tester save
 //   (both end points; on load each end latches onto the container found there).
 // ---------------------------------------------------
@@ -34,7 +36,9 @@ public class PixelContainerHose : MonoBehaviour
     private float unit = 1f;
     private Vector3 a, b;                       // the ends (world), the tops of the two containers
     private Component source, target;
-    private readonly List<Collider> sourceCols = new List<Collider>(), targetCols = new List<Collider>();
+    private readonly List<Renderer> sourceParts = new List<Renderer>(), targetParts = new List<Renderer>();
+    private TMPro.TextMeshPro status;
+    private string statusText;
     private Mesh mesh;
     private Vector3[] path;
     private float[] cum;
@@ -61,13 +65,16 @@ public class PixelContainerHose : MonoBehaviour
     {
         GameObject root = Build(c, false, "Container Hose");
         PixelContainerHose h = root.GetComponent<PixelContainerHose>();
-        h.source = FindContainer(c, from, true);
-        h.target = FindContainer(c, to, false);
-        if (h.target == h.source) h.target = null;
-        Collect(h.source, h.sourceCols);
-        Collect(h.target, h.targetCols);
-        h.a = h.source != null ? Port(h.sourceCols, from, h.unit) : from;
-        h.b = h.target != null ? Port(h.targetCols, to, h.unit) : to;
+        Component first = FindContainer(c, from), second = FindContainer(c, to);
+        if (second == first) second = null;
+        // The source must be a crate / organizer: clicked the other way round (a Recycler first), the hose simply runs the other way.
+        if (!CanBeSource(first) && CanBeSource(second)) { Component t = first; first = second; second = t; Vector3 tp = from; from = to; to = tp; }
+        h.source = CanBeSource(first) ? first : null;
+        h.target = second;
+        Collect(h.source, h.sourceParts);
+        Collect(h.target, h.targetParts);
+        h.a = h.source != null ? Port(h.sourceParts, from, h.unit) : from;
+        h.b = h.target != null ? Port(h.targetParts, to, h.unit) : to;
         h.Rebuild();
         PixelAudio.Play("device_place");
         return root;
@@ -80,13 +87,21 @@ public class PixelContainerHose : MonoBehaviour
         Camera cam = c.TargetCamera != null ? c.TargetCamera : Camera.main;
         if (cam == null) return p;
         Vector2 mouse = PixelInput.PointerPosition();
-        float best = 80f * 80f, u = Mathf.Max(0.05f, c.OldPixelWorldSize);
+        Ray ray = cam.ScreenPointToRay(mouse);
+        float best = 120f * 120f, bestHit = float.MaxValue, u = Mathf.Max(0.05f, c.OldPixelWorldSize);
         Vector3 result = p;
-        List<Collider> cols = new List<Collider>();
+        List<Renderer> parts = new List<Renderer>();
         foreach (Component k in Containers())
         {
-            Collect(k, cols);
-            Vector3 port = Port(cols, k.transform.position, u);
+            Collect(k, parts);
+            Vector3 port = Port(parts, k.transform.position, u);
+            // The mouse is on the container itself: that one (the nearest such).
+            if (TryBounds(parts, out Bounds bb) && bb.IntersectRay(ray, out float hit))
+            {
+                if (hit < bestHit) { bestHit = hit; result = port; snapped = true; }
+                continue;
+            }
+            if (bestHit < float.MaxValue) continue;
             Vector3 sp = cam.WorldToScreenPoint(port);
             if (sp.z <= 0f) continue;
             float d = (new Vector2(sp.x, sp.y) - mouse).sqrMagnitude;
@@ -109,41 +124,48 @@ public class PixelContainerHose : MonoBehaviour
 
     private static bool CanBeSource(Component k) => k is PixelStorageCrate || k is PixelQuantumDevice;
 
-    /// <summary>The container whose top is nearest 'p' (within a few cube widths); sources are only crates / organizers.</summary>
-    private static Component FindContainer(PixelClicker c, Vector3 p, bool asSource)
+    /// <summary>The container at 'p': the one whose footprint (seen from above, with a cube width to spare) holds it, else the nearest top within a few cube widths.</summary>
+    private static Component FindContainer(PixelClicker c, Vector3 p)
     {
-        float u = Mathf.Max(0.05f, c.OldPixelWorldSize), best = (3f * u) * (3f * u);
+        float u = Mathf.Max(0.05f, c.OldPixelWorldSize), best = (4f * u) * (4f * u);
         Component found = null;
-        List<Collider> cols = new List<Collider>();
+        List<Renderer> parts = new List<Renderer>();
         foreach (Component k in Containers())
         {
-            if (asSource && !CanBeSource(k)) continue;
-            Collect(k, cols);
-            float d = (Port(cols, k.transform.position, u) - p).sqrMagnitude;
+            Collect(k, parts);
+            if (!TryBounds(parts, out Bounds bb)) bb = new Bounds(k.transform.position, Vector3.one * u);
+            Vector3 flat = new Vector3(Mathf.Clamp(p.x, bb.min.x, bb.max.x), p.y, Mathf.Clamp(p.z, bb.min.z, bb.max.z));
+            float d = new Vector2(flat.x - p.x, flat.z - p.z).sqrMagnitude * 0.25f + 0.0001f * (bb.center - p).sqrMagnitude;   // (inside the footprint = ~0; ties: the nearer centre)
             if (d < best) { best = d; found = k; }
         }
         return found;
     }
 
-    private static void Collect(Component k, List<Collider> into)
+    /// <summary>A container's solid model parts (placed devices have no colliders, so the mesh renderers say where it is). Not the husks lying in it, not its texts.</summary>
+    private static void Collect(Component k, List<Renderer> into)
     {
         into.Clear();
         if (k == null) return;
-        foreach (Collider col in k.GetComponentsInChildren<Collider>())
-            if (col != null && !col.isTrigger && col.GetComponentInParent<OldPixelInfo>() == null) into.Add(col);   // (not the husks lying in it)
+        foreach (MeshRenderer r in k.GetComponentsInChildren<MeshRenderer>())
+            if (r != null && r.GetComponent<TMPro.TMP_Text>() == null && r.GetComponentInParent<OldPixelInfo>() == null) into.Add(r);
     }
 
-    /// <summary>The top centre of a container (its solid colliders' bounds), a little above it.</summary>
-    private static Vector3 Port(List<Collider> cols, Vector3 fallback, float unit)
+    private static bool TryBounds(List<Renderer> parts, out Bounds bb)
     {
+        bb = default;
         bool any = false;
-        Bounds bb = new Bounds(fallback, Vector3.zero);
-        foreach (Collider col in cols)
+        foreach (Renderer r in parts)
         {
-            if (col == null || !col.enabled) continue;
-            if (!any) { bb = col.bounds; any = true; } else bb.Encapsulate(col.bounds);
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (!any) { bb = r.bounds; any = true; } else bb.Encapsulate(r.bounds);
         }
-        return any ? new Vector3(bb.center.x, bb.max.y + 0.15f * unit, bb.center.z) : fallback;
+        return any;
+    }
+
+    /// <summary>The top centre of a container (its model's bounds), a little above it.</summary>
+    private static Vector3 Port(List<Renderer> parts, Vector3 fallback, float unit)
+    {
+        return TryBounds(parts, out Bounds bb) ? new Vector3(bb.center.x, bb.max.y + 0.15f * unit, bb.center.z) : fallback;
     }
 
     // ------------------------------------------------------------------
@@ -188,13 +210,55 @@ public class PixelContainerHose : MonoBehaviour
     // Pumping
     // ------------------------------------------------------------------
 
+    /// <summary>Why the hose is idle (shown over its middle), or "" while it works.</summary>
+    private string IdleReason()
+    {
+        if (source == null) return "No source: start the hose on a Storage Crate or Quantum Organizer";
+        if (target == null) return "No target: end it on a Recycler, crate, organizer or trash can";
+        if (Room() <= 0 && carrier.Count > 0) return target is PixelRecycler ? "Waiting: the Recycler is full or working" : "Waiting: the target is full";
+        if (carrier.Count == 0 && pumpedNothing) return "The source is empty";
+        return "";
+    }
+
+    private bool pumpedNothing;
+
+    private void UpdateStatus()
+    {
+        string want = IdleReason();
+        if (want == statusText) { if (status != null && path != null) Face(); return; }
+        statusText = want;
+        if (status == null)
+        {
+            GameObject g = new GameObject("Hose Status");
+            g.transform.SetParent(transform, false);
+            status = g.AddComponent<TMPro.TextMeshPro>();
+            status.fontSize = 2.4f * unit;
+            status.alignment = TMPro.TextAlignmentOptions.Center;
+            status.color = new Color(1f, 0.85f, 0.4f, 1f);
+            status.rectTransform.sizeDelta = new Vector2(14f * unit, 3f * unit);
+            if (clicker.UIFont != null) status.font = clicker.UIFont;
+        }
+        status.text = want;
+        status.gameObject.SetActive(want.Length > 0);
+        Face();
+    }
+
+    private void Face()
+    {
+        if (status == null || path == null || !status.gameObject.activeSelf) return;
+        Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
+        status.transform.position = path[path.Length / 2] + Vector3.up * 1.2f * unit;
+        if (cam != null) status.transform.rotation = Quaternion.LookRotation(status.transform.position - cam.transform.position, cam.transform.up);
+    }
+
     private void Update()
     {
         if (ghost || clicker == null) return;
+        UpdateStatus();
         // The ends follow their containers (carried by the handles, turned...).
         if (source != null || target != null)
         {
-            Vector3 na = source != null ? Port(sourceCols, a, unit) : a, nb = target != null ? Port(targetCols, b, unit) : b;
+            Vector3 na = source != null ? Port(sourceParts, a, unit) : a, nb = target != null ? Port(targetParts, b, unit) : b;
             if ((na - a).sqrMagnitude > 0.0004f || (nb - b).sqrMagnitude > 0.0004f) { a = na; b = nb; Rebuild(); }
         }
         // Husks let fall into a bin: done when the container took them (they left the husk list) or after a moment.
@@ -247,6 +311,7 @@ public class PixelContainerHose : MonoBehaviour
         bool got = source is PixelStorageCrate crate ? crate.TakeOneForHose(out tier, out amount)
                  : source is PixelQuantumDevice q ? q.TakeOneForHose(out tier, out amount)
                  : Fail(out tier, out amount);
+        pumpedNothing = !got;
         if (!got) return;
         if (!clicker.SpawnStoredPixel(tier, amount, path[0], Vector3.zero)) return;   // (a normal husk: a 'streamed' one passes through walls until it lands)
         IReadOnlyList<Rigidbody> list = clicker.OldPixels;

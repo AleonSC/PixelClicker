@@ -11,7 +11,7 @@
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
 //   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, on sale at Electrician level 5): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
-//   Features now: Vacuum Cleaner (PixelVacuumCleaner.cs: drive with W A S D / arrows, hold left to suck with the nozzle, hold right to blow out), Container Hose (PixelContainerHose.cs: a single line from a crate / organizer to a Recycler / crate / organizer / trash can), Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
+//   Features now: Vacuum Cleaner (PixelVacuumCleaner.cs: drive with W A S D / arrows, the front intake sucks husks up and the hose spits them out where the mouse aims), Container Hose (PixelContainerHose.cs: a single line from a crate / organizer to a Recycler / crate / organizer / trash can), Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -146,7 +146,7 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
         Register("Vacuum Cleaner",
-                 "A canister vacuum on wheels with a hose and a floor nozzle (to become a consumable). Left-click its body to drive it: W A S D or the arrow keys move it (diagonals too), relative to the camera. HOLD the left button to put the nozzle down where the mouse points (within the hose's reach) - husks round the nozzle are sucked into the tank (25 max, the counter shows how full). HOLD the right button away from it to blow the tank's husks back out towards the mouse - into a Recycler, a crate, wherever. Click the body again or press Escape to stop driving.",
+                 "A big canister vacuum on wheels (to become a consumable). Left-click its body to drive it: W A S D or the arrow keys move it (diagonals too), relative to the camera. Husks that come near its wide front intake are sucked in and automatically spat back out of its hose - the mouse aims the hose, and they land where it points. Click the body again or press Escape to stop driving.",
                  c => PixelVacuumCleaner.CreateGhost(c), (c, p, yw) => PixelVacuumCleaner.Place(c, p, yw));
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelVacuumCleaner.ExportState;

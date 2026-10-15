@@ -1072,3 +1072,5 @@
 [2026-10-15 14:31 UTC] Added the Container Hose tester tool: click a Storage Crate or Quantum Organizer, then a Recycler, crate, organizer or Trash Can, and a see-through hose pumps the stored pixels across one by one while the target has room.
 [2026-10-15 14:32 UTC] Cubie's first intro visit now waits until 50 White pixels have been clicked (was 25 clicks of any pixel).
 [2026-10-15 14:33 UTC] The visitors' peek speech bubble is now a dark box, so its white text is readable (it was white on white).
+[2026-10-15 14:44 UTC] Reworked the Vacuum Cleaner tester feature: it is over twice as big and faster, W A S D / arrows drive it, its wide front intake sucks husks up and the hose spits them back out automatically wherever the mouse aims (no mouse buttons needed).
+[2026-10-15 14:44 UTC] Fixed the Container Hose: placed containers have no colliders, so it often could not find what was clicked and sat idle; it now finds containers by their model, snaps to the one under the mouse, works if clicked target-first, and shows why it is idle over its middle.
