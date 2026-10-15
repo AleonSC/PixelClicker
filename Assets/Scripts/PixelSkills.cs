@@ -1185,7 +1185,7 @@ public partial class PixelSkills : MonoBehaviour
 
     /// <summary>A level was reached: every perk of that level with a popup text queues its tutorial box once (it waits for a calm moment, see UpdatePerkNotices).</summary>
     /// <summary>
-    /// The Skills tab shows once Standard has reached level 2 and its level-2 popup (which opens the Skills window beside it) is no longer waiting -
+    /// The Skills tab shows once a skill pack is owned, or once Standard has reached level 2 and its level-2 popup (which opens the Skills window beside it) is no longer waiting -
     /// skills are introduced by that popup, not by Cubie. Older saves past Standard level 2 simply have the tab.
     /// </summary>
     public bool SkillsTabUnlocked
@@ -1193,6 +1193,7 @@ public partial class PixelSkills : MonoBehaviour
         get
         {
             if (disableSkills || clicker == null) return false;
+            if (AnyTrainable) return true;   // a skill pack is owned (bought, or Dev Tools unlocked everything): the button is needed whatever Standard's level
             if (LevelOfId(StandardId) < 2) return false;
             foreach (PerkNotice n in perkNotices) if (n.packId == StandardId) return false;
             return true;
