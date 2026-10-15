@@ -116,7 +116,7 @@ public partial class PixelSkills : MonoBehaviour
     private const string ConveyorWideNotice = "Electrician level 10! Every conveyor belt is now two cubes wide.";
     private const string ConveyorWidestPerkText = "Wider belts: conveyor belts are three cubes wide";
     private const string ConveyorWidestNotice = "Electrician level 20! Every conveyor belt is now three cubes wide.";
-    private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. While you train another skill it still gains a tiny 5% of the XP.";
+    private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. Every block you collect gives it 1 XP, whatever skill you train.";
     public const string MiningId = "mining";
     public const string WoodcuttingId = "woodcutting";
     public const string ForagingId = "foraging";
@@ -213,7 +213,7 @@ public partial class PixelSkills : MonoBehaviour
                 id = StandardId, displayName = "Standard", accent = new Color(0.5f, 0.55f, 0.65f),
                 baseXp = 80f, xpGrowth = 1.5f, perks = StandardPerks(),
                 description = StandardDescription,
-                replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "Every pixel you collect (5% while another skill is trained)",
+                replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "1 XP for every block you collect, whatever skill is trained",
             });
         if (!packs.Exists(p => p.id == WoodcuttingId))
             packs.Insert(Mathf.Min(packs.Count, 1), new SkillPack
@@ -495,7 +495,7 @@ public partial class PixelSkills : MonoBehaviour
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.text != null && perk.text.Contains("last 2 seconds longer")) perk.text = perk.text.Replace("last 2 seconds longer", "last 5 seconds longer");
                 if (pack.description != null && pack.description.Contains("No skill is trained")) pack.description = StandardDescription;
-                if (pack.xpFrom == "Nothing") pack.xpFrom = "Every pixel you collect (5% while another skill is trained)";
+                if (pack.xpFrom == "Nothing") pack.xpFrom = "1 XP for every block you collect, whatever skill is trained";
                 if (pack.description != null && pack.description.StartsWith("The usual rotation: monochrome, RGB, Glass and Luminescent"))
                     pack.description = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). No skill is trained.";
                 if (pack.spawns == "White, Gray, Black, Red, Green, Blue, Glass, Luminescent")
@@ -1037,9 +1037,10 @@ public partial class PixelSkills : MonoBehaviour
 
     private void OnCollectedInner(int tierIndex, double amount, bool automatic)
     {
-        // Standard is a skill too: full XP while it is the one trained, a tiny share while another skill is.
+        // Standard is the skill that levels no matter what: every collected block gives it a flat standardXpPerBlock (1), manual or auto, whatever
+        // skill is trained, with no multipliers. Popups only while Standard is the one trained (from the very first click).
         SkillPack standard = Find(StandardId);
-        if (standard != null) AddXp(standard, (automatic ? autoXpFactor : 1d) * (TrainingId == StandardId ? 1d : StandardSideRate), TrainingId == StandardId);   // Standard's XP shows from the very first click
+        if (standard != null) AddXpFlat(standard, StandardXpPerBlock, TrainingId == StandardId);
 
         // Offline Progression: every click trains it; the pack assigned to it (the pixels in play) still earns half of its normal XP,
         // and with no skill pack in play Offline Progression itself earns 50% more.
@@ -1127,6 +1128,13 @@ public partial class PixelSkills : MonoBehaviour
         xp *= MinigameXpMultiplier;   // every enabled minigame adds to all XP
         xp *= PixelBlockRules.HeldXpFactor(pack.id);   // a held hold block (Block Hold) with an XP bonus
         xp += DrawBonus(pack, xp);   // bonus bank: doubles the gain, the extra comes out of the bank
+        AddXpFlat(pack, xp, popup);
+    }
+
+    /// <summary>Adds exactly 'xp' (no penalty, minigame, hold or bonus bank multipliers): Standard's flat XP per block.</summary>
+    private void AddXpFlat(SkillPack pack, double xp, bool popup)
+    {
+        if (pack == null || xp <= 0d) return;
         int before = LevelOf(pack);
         PixelStats.Count("skill." + pack.id + ".xp", xp);
         if (popup) QueueXpPopup(pack, xp);

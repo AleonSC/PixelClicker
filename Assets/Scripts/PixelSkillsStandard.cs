@@ -1,7 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelSkillsStandard.cs
-//   Part of partial class PixelSkills: Standard is a real skill. Every collected pixel gives it XP (full while Standard is the pack in
-//   play, standardSideXp 5% while another skill / Offline is trained; popups only when Standard is the one trained and the Skills tab
+//   Part of partial class PixelSkills: Standard is a real skill. Every collected block gives it a FLAT standardXpPerBlock (1) XP - manual
+//   or auto, any block, whatever skill / Offline is trained, no multipliers (AddXpFlat); popups only when Standard is the one trained and the Skills tab
 //   exists; level-up log lines only once AnyTrainable). Its perks apply in EVERY rotation: Lingering pixels (StandardLifetimeBonus =
 //   (level-1) x lifetimePerLevel 5 s (old pixels last oldPixelLifetime 15 s by default, so Standard level 2 = 20 s; the field was
 //   renamed from fallingCopyLifetime so the old saved 6 s is dropped), added in PixelClicker.FallingCopyLifetime, which all old-pixel
@@ -16,17 +16,17 @@
 using UnityEngine;
 
 /// <summary>
-/// Part of <see cref="PixelSkills"/>: <b>Standard is a real skill</b>. It levels from the very first click (every collected pixel gives it XP while
-/// it is the pack in play; while another skill is trained it still gets a tiny <c>standardSideXp</c> share, 5%) and its perks are the base
+/// Part of <see cref="PixelSkills"/>: <b>Standard is a real skill</b>. It levels from the very first click (every collected block gives it a flat
+/// <c>standardXpPerBlock</c>, 1 XP, manual or auto, whatever skill is trained) and its perks are the base
 /// bonuses that apply in EVERY rotation: old pixels last longer (<c>lifetimePerLevel</c> seconds a level), the floor holds more old pixels from
 /// level 4 on (<c>capacityPerLevel</c> a level). It does not count towards Mastery and has no bonus bank, filler or hazard.
 /// </summary>
 public partial class PixelSkills
 {
     [Header("Standard skill")]
-    [Range(0f, 0.5f)]
-    [Tooltip("While another skill is trained, Standard still earns this share of the XP (0.05 = 5%). 0 = the coded default (5%).")]
-    [SerializeField] private float standardSideXp = 0f;
+    [Min(0f)]
+    [Tooltip("Standard XP for every collected block - manual or auto, any block, whatever skill is trained, no multipliers. 0 = the coded default (1).")]
+    [SerializeField] private float standardXpPerBlock = 0f;
 
     [Min(0f)]
     [Tooltip("Perk 'Lingering pixels': seconds every old pixel lasts longer for each Standard level above 1. 0 = the coded default (5: level 2 = 20 s with the 15 s base).")]
@@ -74,7 +74,7 @@ public partial class PixelSkills
         }
     }
 
-    private float StandardSideRate => standardSideXp > 0f ? standardSideXp : 0.05f;
+    private double StandardXpPerBlock => standardXpPerBlock > 0f ? standardXpPerBlock : 1d;
 
     /// <summary>The popup at Standard level 2: it introduces skills (the perk's noticeText, editable on the Standard pack's level 2 perk).</summary>
     private const string StandardLevel2Notice = "Standard level 2! Surprise: you have been training a skill all along. Every pixel you click gives Standard XP, and every level unlocks a perk.\n\nYour first perk, Lingering pixels: old pixels on the floor last 5 seconds longer for every Standard level, so you have more time to use them.\n\nLater, skill packs from the shop add new skills with blocks of their own.";
