@@ -1041,3 +1041,4 @@
 [2026-10-15 11:50 UTC] The Bait Bucket's handle now works like the Storage Crate's: drag it to move the bucket anywhere on the floor (scroll / Q / E turns it).
 [2026-10-15 11:55 UTC] Value upgrades are capped by skill level: a pixel type's Value level can't pass the level of the skill that owns it (Standard for the pure pixels), the row says 'Needs Standard level N' when it is held back, and potion / device prices no longer grow with Value.
 [2026-10-15 12:03 UTC] No more blocks left out: skill blocks and hazards now have pets and achievements, skill blocks have Value upgrades (capped by their own skill) and every block can go into 2-type combo potions (3-type combos stay the basic / special pixels only, to keep the potion count sane).
+[2026-10-15 12:09 UTC] To-do: added the 3-type combo potion rework (build combos on demand so skill blocks can be in 3-type combos).
