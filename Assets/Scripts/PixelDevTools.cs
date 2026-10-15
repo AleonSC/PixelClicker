@@ -186,10 +186,10 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("First entry of the 'Max XP' drop-down: acts on every skill.")]
     [SerializeField] private string allSkillsText = "All skills";
 
-    [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
-    [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
-    [SerializeField] private string giveGodCubeLabel = "Give next God Cube";
-    [SerializeField] private string playGodShowLabel = "Play next God show (preview)";
+    [Tooltip("Text of the 'Super Rares' widget's button that puts the picked rare cube on the clicker cube (replacing the block there).")]
+    [SerializeField] private string spawnRareText = "Spawn";
+    [Tooltip("Text of the 'Super Rares' widget's button that puts a Prime Gauntlet in your inventory.")]
+    [SerializeField] private string giveGauntletText = "Gauntlet";
 
     [Tooltip("Label of the click-count row (how many clicks one click counts as).")]
     [SerializeField] private string clickCountText = "Clicks per click";
@@ -644,44 +644,6 @@ public class PixelDevTools : MonoBehaviour
         if (selected < clicker.Tiers.Length) pets.Award(clicker.Tiers[selected].type, true, true);
     }
 
-    /// <summary>Gives the lowest-numbered Dragon Cube you don't hold yet (nothing once you hold all seven).</summary>
-    private void GiveDragonCube()
-    {
-        if (clicker == null) return;
-        for (int s = 0; s < 7; s++)
-        {
-            int index = clicker.IndexOf((PixelClicker.PixelType)((int)PixelClicker.PixelType.DragonCube1 + s));
-            if (index < 0 || clicker.Tiers[index].count >= 1d) continue;
-            clicker.AddCurrency(index, 1d);
-            return;
-        }
-    }
-
-    /// <summary>Gives the next Egyptian God Cube you don't hold yet (Slifer, Ra, Obelisk; its show plays like a real find).</summary>
-    private void GiveGodCube()
-    {
-        if (clicker == null) return;
-        for (int ti = (int)PixelClicker.PixelType.GodSlifer; ti <= (int)PixelClicker.PixelType.StoneSoul; ti++)   // the Gods, then the six Prime Cubes
-        {
-            int index = clicker.IndexOf((PixelClicker.PixelType)ti);
-            if (index < 0 || clicker.Tiers[index].count >= 1d) continue;
-            clicker.AddCurrency(index, 1d);
-            PixelGodFind.Play(index, clicker.LiveWorldPosition);
-            return;
-        }
-    }
-
-    private int godPreview;
-
-    /// <summary>Plays the shows of the three Gods one after another (a preview: nothing is given).</summary>
-    private void PlayGodShow()
-    {
-        if (clicker == null) return;
-        int index = clicker.IndexOf((PixelClicker.PixelType)((int)PixelClicker.PixelType.GodSlifer + godPreview % 10));   // 3 Gods, 6 stones, the Cubelette
-        godPreview++;
-        if (index >= 0) PixelGodFind.Play(index, clicker.LiveWorldPosition);
-    }
-
     private void FillDropdowns()
     {
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
@@ -799,29 +761,6 @@ public class PixelDevTools : MonoBehaviour
         Place(uiDump.GetComponent<RectTransform>(), 40f, y, inner);
         uiDump.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.UiLayoutDump(), "UI layout dump")));
         Widget(content, board, "uidump", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
-        // Row: give the next Dragon Cube still needed
-        Button giveDragon = PixelUIKit.CreateButton(font, content, "Give Dragon Cube Button", giveNextDragonCubeLabel,
-                                                    new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(giveDragon.GetComponent<RectTransform>(), 40f, y, inner);
-        giveDragon.onClick.AddListener(GiveDragonCube);
-        Widget(content, board, "dragon", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
-        // Rows: the Egyptian God Cubes (give the next one / preview the shows)
-        Button giveGod = PixelUIKit.CreateButton(font, content, "Give God Cube Button", giveGodCubeLabel, new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(giveGod.GetComponent<RectTransform>(), 40f, y, inner);
-        giveGod.onClick.AddListener(GiveGodCube);
-        Widget(content, board, "godgive", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-        Button playGod = PixelUIKit.CreateButton(font, content, "Play God Show Button", playGodShowLabel, new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(playGod.GetComponent<RectTransform>(), 40f, y, inner);
-        playGod.onClick.AddListener(PlayGodShow);
-        Widget(content, board, "godshow", ws, y);
         y += rowHeight + 24f;
         ws = content.childCount;
 
@@ -971,9 +910,7 @@ public class PixelDevTools : MonoBehaviour
             case "balance": return "Balance report";
             case "moment": return "Mark this moment";
             case "uidump": return "UI layout dump";
-            case "dragon": return "Dragon cubes";
-            case "godgive": return "Give God Cube";
-            case "godshow": return "God Cube shows";
+            case "superrares": return "Super Rares";
             case "reset": return "Reset counts";
             case "clear": return "Clear key";
             case "infinite": return "Infinite resources";
@@ -1134,6 +1071,65 @@ public class PixelDevTools : MonoBehaviour
         AddTip(resetXp.gameObject, "Take all XP away from the picked skill (or every skill): back to level 1.");
         Widget(root, board, "maxxp", start, y);
         FillSkillXpDropdown();
+
+        // ---- Super Rares: pick a Dragon / God / Prime Cube, the Cubelette or the Golden Snitch and Spawn it on the clicker cube; Gauntlet gives a Prime Gauntlet. ----
+        start = root.childCount;
+        rareDropdown = PixelUIKit.CreateDropdown(font, root, "Super Rares Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(rareDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        rareDropdown.onValueChanged.AddListener(v => SetInt("SelRare", v));
+        Button spawnRare = PixelUIKit.CreateButton(font, root, "Spawn Rare Button", spawnRareText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(spawnRare.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        spawnRare.onClick.AddListener(SpawnPickedRare);
+        Button gauntlet = PixelUIKit.CreateButton(font, root, "Give Gauntlet Button", giveGauntletText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(gauntlet.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
+        gauntlet.onClick.AddListener(GiveGauntlet);
+        AddTip(spawnRare.gameObject, "Replace the block on the clicker cube with the picked super rare (click it to collect it like a real find; the Golden Snitch waits for your click and flies).");
+        AddTip(gauntlet.gameObject, "Put a Prime Gauntlet in your inventory (right-click it there to set the six Prime Cubes and forge the Cubelette).");
+        Widget(root, board, "superrares", start, y);
+        FillRareDropdown();
+    }
+
+    private TMP_Dropdown rareDropdown;
+    private readonly List<PixelClicker.PixelType> rareTypes = new List<PixelClicker.PixelType>();   // dropdown option -> pixel type (in the game's own order)
+
+    /// <summary>Fills the 'Super Rares' drop-down with every rare collectible tier: Dragon Cubes, God Cubes, Prime Cubes, the Cubelette, the Golden Snitch.</summary>
+    private void FillRareDropdown()
+    {
+        if (rareDropdown == null || clicker == null) return;
+        int keep = rareDropdown.options.Count > 0 ? rareDropdown.value : GetInt("SelRare", 0);
+        rareTypes.Clear();
+        List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>();
+        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+        {
+            if (t == null || !(t.rareDrop || PixelClicker.IsRareCube(t.type) || t.type == PixelClicker.PixelType.InfinityCubelette)) continue;
+            if (rareTypes.Contains(t.type)) continue;
+            rareTypes.Add(t.type);
+            options.Add(new TMP_Dropdown.OptionData(t.displayName + (t.count >= 1d ? "  (held)" : "")));
+        }
+        rareDropdown.ClearOptions();
+        rareDropdown.AddOptions(options);
+        rareDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, options.Count - 1)));
+        rareDropdown.RefreshShownValue();
+    }
+
+    /// <summary>Puts the picked super rare on the clicker cube in place of the current block.</summary>
+    private void SpawnPickedRare()
+    {
+        if (clicker == null || rareDropdown == null) return;
+        int v = rareDropdown.value;
+        if (v < 0 || v >= rareTypes.Count) return;
+        if (PixelGoldenSnitch.Active && rareTypes[v] == PixelClicker.PixelType.GoldenSnitch) return;   // (one snitch at a time)
+        clicker.DevSwapCurrentPixel(rareTypes[v]);
+        FillRareDropdown();
+    }
+
+    /// <summary>Gives one Prime Gauntlet (DeviceKind.Gauntlet) to the inventory.</summary>
+    private void GiveGauntlet()
+    {
+        PixelConsumables consumables = PixelFind.First<PixelConsumables>();
+        if (consumables == null) return;
+        for (int i = 0; i < consumables.ItemCount; i++)
+            if (consumables.IsDevice(i) && consumables.DeviceKindOf(i) == PixelConsumables.DeviceKind.Gauntlet) { consumables.AddItem(i, 1); return; }
     }
 
     private TMP_Dropdown skillXpDropdown;
@@ -1328,6 +1324,7 @@ public class PixelDevTools : MonoBehaviour
         FillFocusDropdown(first);
         FillShopUnlockDropdown(first);
         FillSkillXpDropdown();
+        FillRareDropdown();
     }
 
     private void ApplySelector(int index)

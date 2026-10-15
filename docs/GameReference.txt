@@ -63,7 +63,7 @@ PROJECT RULES (from CLAUDE.md)
 - Every variable editable in Unity ([SerializeField] private + [Tooltip]); field initializers don't reach already-serialized components (use Awake / OnValidate fix-ups).
 - Enum values are only appended. Copy the whole Assets/Scripts folder together. Compile check: tools/compile-check/check.sh.
 - Save compatibility is not a concern during development. Skill packs are chosen only in the Skills window. Player-facing texts say "husk".
-GENERATED: 2026-10-15 17:45 UTC
+GENERATED: 2026-10-15 17:50 UTC
 
 === 2. DATA MODEL (from CLAUDE.md) ===
 - PixelTier: name, colour/UIColor, PixelType enum (see PixelClicker.cs; values are only ever appended so saves stay valid), TierUnlockMode (PreviousTierThreshold / ShopOnly), spawnWeight, randomPayout + payoutMin/Max (a random whole amount per harvest, e.g. Electric 1-15; amountPerClick = the average for estimates; migrated by packDataVersion 3), clicksToCollect (tough pixels: only the last click pays; PixelClicker.PixelHit event for the others), startingAmount, translucent / materialOverride, glow + glowIntensity (emission on a runtime material copy + point light), vacuum flag, spawnSwitch (Auto = Glass, Luminescent and the IsSpecialType types get a spawn toggle in the Toggles window, see PixelTier.CanSwitchOff; spawnDisabled saved; CanSpawn used by PickSpawnTier), flyAway/flyDirection/flySpeed (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; flyRandomDirection + flyAngleRange 10-170 deg = a random direction on the top half of the screen), count, totalCollected, unlocked.
@@ -1177,6 +1177,10 @@ Search bar, custom text, docked drag
 Unlock and Max XP widgets
 
 Main tab widget Unlock (shopunlock): a drop-down with 'All shop items' and then every shop pack (marked [not in shop] for hideInShop packs and (unlocked) / (level n) for owned ones), an Unlock button (free, as if bought; upgrades go to their top level) and a Relock button (takes the pack back, locks its reward pixels, upgrades to level 0). 'All shop items' + Unlock = PixelShop.DevUnlockAll (every pack AND every ordinary pixel type, switchable things left off; it no longer touches skills); + Relock = every pack relocked. The old separate Unlock everything button is gone. Main tab widget Max XP (maxxp): a drop-down with 'All skills' and then every skill with its level, a Max XP button (that skill / every skill, Standard included, to its level cap: PixelSkills.DevSetSkillXp(pack, true)) and Reset XP (back to level 1). Texts shopUnlockText, shopRelockText, shopAllText, maxXpText, resetXpText, allSkillsText; the shop pick is remembered (SelShopPack).
+
+Super Rares widget
+
+Main tab widget Super Rares (superrares) replaced the three separate 'Give next Dragon Cube', 'Give next God Cube' and 'Play next God show' widgets: a drop-down of every rare collectible tier in the game's order (the seven Dragon Cubes, the three God Cubes, the six Prime Cubes, the Prime Cubelette, the Golden Snitch; (held) marks ones you have), a Spawn button that puts the picked one on the clicker cube in place of the current block (PixelClicker.DevSwapCurrentPixel; click it to collect it like a real find, the God / Prime shows play then; the Golden Snitch waits for your click and flies) and a Gauntlet button that adds one Prime Gauntlet (DeviceKind.Gauntlet) to the inventory. Texts spawnRareText, giveGauntletText; the pick is remembered (SelRare).
 --- docs/systems/PixelDragonWish.md ---
 PixelDragonWish
 
