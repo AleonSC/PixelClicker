@@ -37,7 +37,7 @@ public partial class PixelSkills
     public double CapXp(SkillPack pack)
     {
         if (pack == null) return 0d;
-        double total = 0d, need = Math.Max(1d, pack.baseXp);
+        double total = 0d, need = BaseXpOf(pack);
         int cap = CapOf(pack);
         for (int level = 1; level < cap; level++)
         {

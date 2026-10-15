@@ -1085,11 +1085,19 @@ public partial class PixelSkills : MonoBehaviour
     public double Xp(SkillPack pack) => pack == null ? 0d : PixelStats.Total("skill." + pack.id + ".xp");
 
     /// <summary>Level (1 = none yet) and the XP inside it: 'into' of 'need' to the next level.</summary>
+    [Header("XP curve")]
+    [Min(0.1f)]
+    [Tooltip("Multiplies EVERY skill's XP curve (each pack's baseXp, so every level takes this many times as long). 2 = twice as long as the packs' own numbers.")]
+    [SerializeField] private float xpCurveScale = 2f;
+
+    /// <summary>XP from level 1 to 2 for a pack, with the global curve scale (xpCurveScale) applied. Every level-up step grows from this by the pack's xpGrowth.</summary>
+    public double BaseXpOf(SkillPack pack) => pack == null ? 1d : Math.Max(1d, pack.baseXp * Math.Max(0.1f, xpCurveScale));
+
     public int LevelOf(SkillPack pack, out double into, out double need)
     {
         double xp = Xp(pack);
         int level = 1;
-        need = Math.Max(1d, pack.baseXp);
+        need = BaseXpOf(pack);
         while (xp >= need && level < 99)
         {
             xp -= need;

@@ -66,7 +66,7 @@ public static class PixelBalanceReport
     {
         var r = new PackReport { pack = p };
         double minManual = 0d, minAuto = 0d;
-        double growth = Math.Max(1.05d, p.xpGrowth), need = Math.Max(1d, p.baseXp);
+        double growth = Math.Max(1.05d, p.xpGrowth), need = skills.BaseXpOf(p);   // (with the global xpCurveScale)
         float autoFactor = skills.AutoXpFactor;
         try
         {
@@ -226,7 +226,7 @@ public static class PixelBalanceReport
             for (int i = 0; i < nodes; i++) if (p.nodes[i] != null) { pts += p.nodes[i].cost; if (p.nodes[i].implemented) nodesOn++; }
             string filler = string.IsNullOrEmpty(p.fillerType) ? "-" : p.fillerType + " (" + F(p.fillerStartShare > 0f ? p.fillerStartShare : 0.6f) + " / " + F(p.fillerEndShare > 0f ? p.fillerEndShare : 0.1f) + ", lvl " + (p.fillerFadeLevel > 1 ? p.fillerFadeLevel : 20) + ")";
             string hazard = string.IsNullOrEmpty(p.hazardType) ? "-" : p.hazardType + " (" + F(p.hazardBaseShare > 0f ? p.hazardBaseShare : 0.03f) + " / " + F(p.hazardPerLevelShare > 0f ? p.hazardPerLevelShare : 0.002f) + " / " + F(p.hazardMaxShare > 0f ? p.hazardMaxShare : 0.08f) + ")";
-            sb.AppendLine("| " + p.displayName + " | " + F(p.baseXp) + " | " + F(p.xpGrowth) + " | " + skills.LevelCapOf(p) + " | " + filler + " | " + hazard + " | " + perksOn + "/" + perks + " | " + nodesOn + "/" + nodes + " (" + pts + ") |");
+            sb.AppendLine("| " + p.displayName + " | " + F(skills.BaseXpOf(p)) + " | " + F(p.xpGrowth) + " | " + skills.LevelCapOf(p) + " | " + filler + " | " + hazard + " | " + perksOn + "/" + perks + " | " + nodesOn + "/" + nodes + " (" + pts + ") |");
         }
         sb.AppendLine("Global: autoXpFactor " + F(skills.AutoXpFactor) + " (PixelSkills). Per-block numbers (amountPerClick, clicksToCollect, spawnWeight) are on the PixelClicker tier list.");
 
