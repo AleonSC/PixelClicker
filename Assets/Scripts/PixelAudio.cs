@@ -314,6 +314,7 @@ public partial class PixelAudio : MonoBehaviour
             Make("forage_pick", 0.04f, 0.9f, 1.15f),
             Make("fish_splash", 0.04f, 0.9f, 1.15f),
             Make("chipper_feed", 0.08f, 0.95f, 1.05f),
+            Make("recycler_shake", 0.5f, 1f, 1f),
             Make("rack_store", 0.05f, 0.9f, 1.1f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
             Make("traffic_start", 0.2f, 1f, 1f),
@@ -400,6 +401,7 @@ public partial class PixelAudio : MonoBehaviour
             case "pixel_capacitor": return new[] { PixelSynth.Elec(2, 1), PixelSynth.Elec(2, 2) };
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "chipper_feed": return new[] { PixelSynth.Chipper(1), PixelSynth.Chipper(2), PixelSynth.Chipper(3) };
+            case "recycler_shake": return new[] { PixelSynth.RecyclerShake(2f) };
             case "rack_store": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(4, 2) };
             case "fish_splash": return new[] { PixelSynth.Fishing(0, 1), PixelSynth.Fishing(0, 2), PixelSynth.Fishing(0, 3) };
             case "pixel_fish": return new[] { PixelSynth.Fishing(0, 4), PixelSynth.Fishing(0, 5), PixelSynth.Fishing(0, 6) };
@@ -1430,6 +1432,56 @@ public static class PixelSynth
     }
 
     /// <summary>The woodchipper taking a block in: a motor whine that revs up, a grinding crunch of chips, then a rattle as they spit out.</summary>
+    /// <summary>
+    /// The Recycler working: a low motor hum that climbs in pitch, a rattle of husks banging round the bin that gets faster and louder over
+    /// 'seconds', and a heavy clunk at the end (when it pays).
+    /// </summary>
+    public static AudioClip RecyclerShake(float seconds)
+    {
+        const int rate = 22050;
+        float length = Mathf.Max(0.5f, seconds) + 0.25f;
+        int n = (int)(rate * length);
+        float[] data = new float[n];
+        System.Random rng = new System.Random(4242);
+        float phase = 0f, lp = 0f, nextRattle = 0f, rattleT = 99f, rattleHz = 900f;
+        for (int i = 0; i < n; i++)
+        {
+            float sec = i / (float)rate;
+            float k = Mathf.Clamp01(sec / seconds);                       // 0 -> 1 over the shake
+            float hum = 0f, rattle = 0f, clunk = 0f;
+            if (sec < seconds)
+            {
+                float hz = 55f + 70f * k * k;                               // the motor winds up
+                phase += hz / rate * Mathf.PI * 2f;
+                hum = (Mathf.Sin(phase) + 0.45f * Mathf.Sin(phase * 2f) + 0.2f * Mathf.Sign(Mathf.Sin(phase * 3f))) * (0.18f + 0.3f * k);
+                // Rattles: short bright knocks, closer together and louder as it shakes harder.
+                if (sec >= nextRattle)
+                {
+                    rattleT = 0f;
+                    rattleHz = 600f + (float)rng.NextDouble() * 900f;
+                    nextRattle = sec + Mathf.Lerp(0.16f, 0.03f, k) * (0.6f + (float)rng.NextDouble() * 0.8f);
+                }
+                rattleT += 1f / rate;
+                float noise = (float)rng.NextDouble() * 2f - 1f;
+                lp += (noise - lp) * 0.35f;
+                rattle = (Mathf.Sin(rattleT * rattleHz * Mathf.PI * 2f) * 0.6f + lp * 0.8f) * Mathf.Exp(-rattleT * 70f) * (0.25f + 0.75f * k);
+            }
+            else
+            {
+                float t = sec - seconds;                                     // the clunk as the lid lets go
+                float noise = (float)rng.NextDouble() * 2f - 1f;
+                clunk = (Mathf.Sin(t * 70f * Mathf.PI * 2f) * 1.2f + noise * 0.5f * Mathf.Exp(-t * 60f)) * Mathf.Exp(-t * 14f);
+            }
+            data[i] = (hum + rattle + clunk) * Mathf.Clamp01(sec / 0.05f);
+        }
+        float peak = 0.0001f;
+        for (int i = 0; i < n; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        for (int i = 0; i < n; i++) data[i] = data[i] / peak * 0.75f;
+        AudioClip clip = AudioClip.Create("Recycler Shake", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
     public static AudioClip Chipper(int seed)
     {
         const int rate = 22050;

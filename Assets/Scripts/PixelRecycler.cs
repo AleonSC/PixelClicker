@@ -11,7 +11,8 @@
 //   Pixel Grabbing cannot start its timer; one taken out of the bin is let go again; with the bin full, extra husks lying in it get KeepAlive). Click the
 //   red BUTTON on its front: a slatted LID extends out of the inner back edge and STRETCHES over the opening (Lid Pivot z scale 0.02 -> 1, lidSeconds), the
 //   bin SHAKES harder and harder for processSeconds (2 s, shakeStrength) while the band pulses amber, then every husk inside is recycled into
-//   payoutShare (50%) of its stored value as currency of its own type (pixel rules: the Recycler is the one machine that turns husks back into
+//   payoutShare (50%) of what a click on that block pays NOW (CurrentValue: base payout x the current Value / Ultra / wish multiplier, so Value upgrades
+//   bought after the husk dropped count) as currency of its own type; the shake plays recycler_shake (PixelSynth.RecyclerShake: motor wind-up, faster rattles, clunk) (pixel rules: the Recycler is the one machine that turns husks back into
 //   money, at a loss), the husks are destroyed and the lid pulls back. Nothing is captured while it works, and the shut lid (it has colliders) keeps
 //   husks out: ones dropped on it fall in once it opens. ButtonHot (the pointer is over a button) is part of
 //   PixelClicker.ExternalClickBlock and PixelGrab's guard, so pressing it neither clicks the cube nor grabs a pixel.
@@ -473,7 +474,7 @@ public class PixelRecycler : MonoBehaviour
         Vector3 home = transform.localPosition;
         Quaternion homeRot = transform.localRotation;
         float u = Unit(clicker), seconds = Mathf.Max(0.1f, processSeconds), tShake = 0f;
-        PixelAudio.Play("chipper_feed");
+        PixelAudio.Play("recycler_shake");   // (its own code-made sound: motor wind-up, rattles getting faster, a clunk at the end)
         while (tShake < seconds)
         {
             tShake += Time.deltaTime;
@@ -495,7 +496,7 @@ public class PixelRecycler : MonoBehaviour
             OldPixelInfo info = b.GetComponent<OldPixelInfo>();
             if (info != null && clicker.IsValidTierIndex(info.tierIndex))
             {
-                double pay = System.Math.Max(0d, info.amount) * payoutShare;
+                double pay = CurrentValue(info.tierIndex) * payoutShare;   // what a click on that block pays NOW (Value upgrades bought since count)
                 paid.TryGetValue(info.tierIndex, out double sum);
                 paid[info.tierIndex] = sum + pay;
             }
@@ -522,6 +523,13 @@ public class PixelRecycler : MonoBehaviour
         yield return StretchLid(LidClosedScale, LidOpenScale);
         SetGlow(IdleGlow, 1f);
         processing = false;
+    }
+
+    /// <summary>What one click on this pixel type pays right now: its base payout times the current Value (and Ultra / wish) multiplier.</summary>
+    private double CurrentValue(int tierIndex)
+    {
+        PixelClicker.PixelTier t = clicker.Tiers[tierIndex];
+        return System.Math.Max(0d, t.amountPerClick) * clicker.PayoutMultiplier(tierIndex);
     }
 
     /// <summary>Stretches the lid out of the inner back edge over the opening (or pulls it back in).</summary>
