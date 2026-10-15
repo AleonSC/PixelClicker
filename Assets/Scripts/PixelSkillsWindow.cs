@@ -167,6 +167,7 @@ public partial class PixelSkills
         minigameBonusLabel.textWrappingMode = TextWrappingModes.NoWrap;
         GameObject track = new GameObject("XP Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(windowObject.transform, false);
+        AddXpTip(track, () => Find(TrainingId));   // hover the header's XP bar: the XP box of the skill in training
         Image trackImage = track.GetComponent<Image>();
         trackImage.color = new Color(0.05f, 0.05f, 0.08f, 1f);
         PixelUIKit.StyleBox(trackImage, true);
@@ -582,8 +583,8 @@ public partial class PixelSkills
         bool show = !string.IsNullOrEmpty(text);
         if (tipRect.gameObject.activeSelf != show) tipRect.gameObject.SetActive(show);
         if (!show) return;
-        const float wrap = 460f;
         PixelUIKit.SetText(tipText, text);
+        float wrap = Mathf.Min(460f, tipText.GetPreferredValues(text).x + 4f);   // (short tips like the XP box fit their text; long ones wrap at 460)
         Vector2 pref = tipText.GetPreferredValues(text, wrap, 0f);
         tipText.rectTransform.sizeDelta = new Vector2(wrap, pref.y);
         Vector2 size = new Vector2(wrap + 28f, pref.y + 20f);
@@ -601,6 +602,32 @@ public partial class PixelSkills
         string tip = p.description;
         if (p.id != StandardId) tip += "\n\n<b>Replaces:</b> " + p.replaces + "\n<b>Spawns:</b> " + p.spawns + "\n<b>XP from:</b> " + p.xpFrom;
         return tip;
+    }
+
+    /// <summary>
+    /// The XP hover box (same layout everywhere: skill cards' bars, the header bar, the pinned tracker's bar):
+    /// 'Woodcutting: 12/12', 'Current XP: 53,218' (the running total), 'Next level: 57,563' (the total the next level needs), 'Remainder: 4,345'.
+    /// </summary>
+    private string XpTip(SkillPack p)
+    {
+        if (p == null) return null;
+        int level = LevelOf(p, out double into, out double need);
+        double total = Xp(p);
+        string N(double v) => System.Math.Floor(v).ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+        string text = p.displayName + ": " + level + "/" + level + "\nCurrent XP: " + N(total);
+        if (level >= CapOf(p)) return text + "\nNext level: -\nRemainder: 0";
+        return text + "\nNext level: " + N(total - into + need) + "\nRemainder: " + N(need - into);
+    }
+
+    /// <summary>Hovering 'target' shows the XP box for the skill 'pack()' returns (through the window's shared tooltip).</summary>
+    private void AddXpTip(GameObject target, System.Func<SkillPack> pack)
+    {
+        Image img = target.GetComponent<Image>();
+        if (img != null) img.raycastTarget = true;   // (clicks / drags still go to the button / panel behind it)
+        PixelHoverTip tip = target.AddComponent<PixelHoverTip>();
+        System.Func<string> source = () => XpTip(pack());
+        tip.onEnter = () => hoverTip = source;
+        tip.onExit = () => { if (hoverTip == source) hoverTip = null; };
     }
 
     private RectTransform CreateInfoBox(Transform parent, float size, System.Func<string> source)
@@ -720,7 +747,8 @@ public partial class PixelSkills
         GameObject track = new GameObject("Bar", typeof(RectTransform), typeof(Image));
         track.transform.SetParent(c.button.transform, false);
         track.GetComponent<Image>().color = new Color(0.05f, 0.05f, 0.08f, 1f);
-        track.GetComponent<Image>().raycastTarget = false;
+        SkillPack cardPack = packs[index];
+        AddXpTip(track, () => cardPack);   // hover the card's XP bar: the XP box
         Place(track.GetComponent<RectTransform>(), 0f, 0f, 1f, 0f, new Vector2(136f, 18f), new Vector2(-16f, 32f));
         GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
         fill.transform.SetParent(track.transform, false);
