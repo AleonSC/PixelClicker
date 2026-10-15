@@ -39,9 +39,6 @@ public class PixelWoodChipper : MonoBehaviour
     // Tunables
     // ------------------------------------------------------------------
 
-    [Header("Size")]
-    [Tooltip("World size of the machine as a multiple of the cube's size.")]
-    [SerializeField] private float sizeInCubes = 0.9f;
 
     [Header("Feeding")]
     [Tooltip("How hard a pixel inside the hopper is pulled towards the rollers (world units per second squared).")]

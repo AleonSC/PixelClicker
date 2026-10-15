@@ -18,7 +18,7 @@ public class PixelRemoveTint : MonoBehaviour
 
     private List<Entry> entries;
     private MaterialPropertyBlock block;
-    private Light light;
+    private Light glowLight;
     private float amount;
 
     /// <summary>Turns the object red by 'k' (0 = normal again, 1 = fully red). Safe to call every frame with the same value.</summary>
@@ -56,23 +56,23 @@ public class PixelRemoveTint : MonoBehaviour
         }
         if (k > 0f)
         {
-            if (light == null)
+            if (glowLight == null)
             {
                 GameObject lg = new GameObject("Remove Glow");
                 lg.transform.SetParent(transform, false);
                 Bounds b = Bounds();
                 lg.transform.position = b.center + Vector3.up * b.extents.y;
-                light = lg.AddComponent<Light>();
-                light.type = LightType.Point;
-                light.color = Red;
-                light.range = Mathf.Max(3f, b.size.magnitude * 1.5f);
-                light.shadows = LightShadows.None;
+                glowLight = lg.AddComponent<Light>();
+                glowLight.type = LightType.Point;
+                glowLight.color = Red;
+                glowLight.range = Mathf.Max(3f, b.size.magnitude * 1.5f);
+                glowLight.shadows = LightShadows.None;
             }
-            light.intensity = k * k * 4f;
+            glowLight.intensity = k * k * 4f;
         }
         else
         {
-            if (light != null) Destroy(light.gameObject);
+            if (glowLight != null) Destroy(glowLight.gameObject);
             Destroy(this);   // (nothing left to undo)
         }
     }
@@ -109,7 +109,7 @@ public class PixelRemoveTint : MonoBehaviour
     private void OnDestroy()
     {
         if (entries != null) foreach (Entry e in entries) if (e.renderer != null) e.renderer.SetPropertyBlock(null);
-        if (light != null) Destroy(light.gameObject);
+        if (glowLight != null) Destroy(glowLight.gameObject);
     }
 
     // ---- text (the potion timer line) ----

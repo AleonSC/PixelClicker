@@ -277,8 +277,6 @@ public class PixelUI : MonoBehaviour
     [Tooltip("Timer text size.")]
     [SerializeField] private float activeHudFontSize = 44f;
 
-    [Tooltip("No longer used: the timer now lives in the shared status box (PixelStatusBox) that slides out from under the top bar.")]
-    [SerializeField] private float activeHudTopMargin = 30f;
 
     [Tooltip("Use the potion's pixel colour for the timer. Off = white.")]
     [SerializeField] private bool activeHudUsesTierColor = true;

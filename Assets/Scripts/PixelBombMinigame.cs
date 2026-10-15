@@ -169,8 +169,6 @@ public class PixelBombMinigame : PixelMinigame
     [Tooltip("Colour of that text.")]
     [SerializeField] private Color explodedColor = new Color(1f, 0.45f, 0.25f, 1f);
 
-    [Tooltip("Size of the rising text (3D text: about 10 per world unit).")]
-    [SerializeField] private float messageFontSize = 6f;
 
     [Min(0.1f)]
     [Tooltip("How long the rising text lasts (seconds).")]

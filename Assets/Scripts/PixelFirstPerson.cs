@@ -53,9 +53,6 @@ public class PixelFirstPerson : MonoBehaviour
     [SerializeField] private float pushSpeed = 0f;
 
     /// <summary>True while first person mode is on (other scripts step aside: cube clicks, grabbing, the hose, Time Slow's S key).</summary>
-    [Min(0)]
-    [Tooltip("(Not used any more: you hold ONE cube, which you can move away / closer with the wheel, turn with the right button and stick to other cubes.)")]
-    [SerializeField] private int maxCarried = 0;
 
     [Min(0f)]
     [Tooltip("How far away you can pick a cube up, in your own heights. 0 = the coded default (3.5).")]

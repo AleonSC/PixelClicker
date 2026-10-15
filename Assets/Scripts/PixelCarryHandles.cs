@@ -34,7 +34,7 @@ public class PixelCarryHandles : MonoBehaviour
     public bool Dragging => dragging;
 
     private readonly List<Renderer> handles = new List<Renderer>();
-    private Func<Camera> camera;
+    private Func<Camera> cameraSource;
     private PixelConsumables consumables;
     private bool dragging;
     private Vector3 dragOffset;
@@ -57,7 +57,7 @@ public class PixelCarryHandles : MonoBehaviour
     /// <summary>Starts working: finds the "Handle" parts under this object. 'cam' gives the camera to use (the clicker's).</summary>
     public void Init(Func<Camera> cam)
     {
-        camera = cam;
+        cameraSource = cam;
         handles.Clear();
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) if (r.name == "Handle") handles.Add(r);
     }
@@ -70,7 +70,7 @@ public class PixelCarryHandles : MonoBehaviour
         return false;
     }
 
-    private Camera Cam => camera != null && camera() != null ? camera() : Camera.main;
+    private Camera Cam => cameraSource != null && cameraSource() != null ? cameraSource() : Camera.main;
 
     private void Update()
     {

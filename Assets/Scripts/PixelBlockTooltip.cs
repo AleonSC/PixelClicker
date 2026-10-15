@@ -76,7 +76,6 @@ public class PixelBlockTooltip : MonoBehaviour
     private float hoverTime;
     private float visible;          // 0..1 fade
     private float nextRefresh;
-    private float maxRemaining;     // longest time-left seen for the hovered old pixel (the bar's full length)
     private float shownAt;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -293,7 +292,7 @@ public class PixelBlockTooltip : MonoBehaviour
         if (hovering && !same)
         {
             shownTier = tier; shownLive = live; shownBody = body;
-            hoverTime = 0f; maxRemaining = 0f; nextRefresh = 0f;
+            hoverTime = 0f; nextRefresh = 0f;
         }
         else if (hovering) hoverTime += Time.unscaledDeltaTime;
         else hoverTime = 0f;
@@ -340,7 +339,7 @@ public class PixelBlockTooltip : MonoBehaviour
         if (hovering && (tier != shownTier || live != shownLive || body != shownBody))
         {
             shownTier = tier; shownLive = live; shownBody = body;
-            maxRemaining = 0f; nextRefresh = 0f; shownAt = Time.unscaledTime;
+            nextRefresh = 0f; shownAt = Time.unscaledTime;
         }
         if (!wasDocked || card.parent != slot)
         {
