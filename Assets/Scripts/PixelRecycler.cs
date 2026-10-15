@@ -11,7 +11,8 @@
 //   into payoutShare (10%) of its stored value as currency of its own type (pixel rules: the Recycler is the one machine that turns husks back into
 //   money, at a loss), the husks are destroyed, and the lid slides back open. ButtonHot (the pointer is over a button) is part of
 //   PixelClicker.ExternalClickBlock and PixelGrab's guard, so pressing it neither clicks the cube nor grabs a pixel.
-//   Not saved: husks inside are lost on reload, and removing the Recycler destroys them. Not a belt acceptor yet.
+//   SAVED: the husks inside go into PlacedState.extra ('Type,amount;', ExportState / ImportState via PixelConsumables) and are spawned back into the bin on
+//   load. A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -50,6 +51,8 @@ public class PixelRecycler : MonoBehaviour
     private PixelClicker clicker;
     private Transform lidPivot, button;
     private Collider buttonCollider;
+    private Renderer buttonRenderer;
+    private Vector3 buttonScale;
     private TextMeshPro counter;
     private readonly List<Rigidbody> inside = new List<Rigidbody>();
     private float tick;
@@ -127,6 +130,8 @@ public class PixelRecycler : MonoBehaviour
         lidPivot = transform.Find("Lid Pivot");
         button = transform.Find("Button");
         buttonCollider = button != null ? button.GetComponent<Collider>() : null;
+        buttonRenderer = button != null ? button.GetComponent<Renderer>() : null;
+        if (button != null) buttonScale = button.localScale;
 
         GameObject cg = new GameObject("Counter");
         cg.transform.SetParent(transform, false);
@@ -157,6 +162,7 @@ public class PixelRecycler : MonoBehaviour
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (counter != null && cam != null) counter.transform.rotation = Quaternion.LookRotation(counter.transform.position - cam.transform.position, cam.transform.up);
 
+        UpdateButtonFlash();
         bool hot = !processing && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
         if (hot) hotFrame = Time.frameCount;
         if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
@@ -165,6 +171,62 @@ public class PixelRecycler : MonoBehaviour
         if (tick > 0f || processing) return;
         tick = 0.1f;
         Capture();
+    }
+
+    [Tooltip("Colour the button flashes towards while the bin is full.")]
+    [SerializeField] private Color flashColor = new Color(1f, 0.95f, 0.45f, 1f);
+
+    /// <summary>A full bin makes its button flash and pulse, so the player knows to press it.</summary>
+    private void UpdateButtonFlash()
+    {
+        if (button == null || buttonRenderer == null) return;
+        bool full = !processing && inside.Count >= Mathf.Max(1, capacity);
+        float wave = full ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 9f) : 0f;
+        Material m = buttonRenderer.material;
+        m.color = Color.Lerp(ButtonColor, flashColor, wave);
+        if (m.HasProperty("_EmissionColor"))
+        {
+            if (full) m.EnableKeyword("_EMISSION");
+            m.SetColor("_EmissionColor", flashColor * (wave * 1.5f));
+        }
+        button.localScale = new Vector3(buttonScale.x, buttonScale.y, buttonScale.z) * (1f + 0.12f * wave);
+    }
+
+    // ---- Saving (PixelConsumables puts this in PlacedState.extra) ----
+
+    /// <summary>The husks in the bin, as 'Type,amount;' (by pixel type name, so it survives tier list changes).</summary>
+    public string ExportState()
+    {
+        StringBuilder sb = new StringBuilder();
+        foreach (Rigidbody b in inside)
+        {
+            if (b == null) continue;
+            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            if (info == null || !clicker.IsValidTierIndex(info.tierIndex)) continue;
+            sb.Append(clicker.Tiers[info.tierIndex].type).Append(',').Append(info.amount.ToString("R", System.Globalization.CultureInfo.InvariantCulture)).Append(';');
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Puts saved husks back in the bin (they are captured again on the next check).</summary>
+    public void ImportState(string data)
+    {
+        if (string.IsNullOrEmpty(data) || clicker == null) return;
+        float u = Unit(clicker);
+        int n = 0, perRow = Mathf.Max(1, Mathf.FloorToInt(WidthHusks));
+        foreach (string entry in data.Split(';'))
+        {
+            string[] parts = entry.Split(',');
+            if (parts.Length < 2 || !System.Enum.TryParse(parts[0], out PixelClicker.PixelType type)) continue;
+            int tier = clicker.IndexOf(type);
+            if (tier < 0) continue;
+            double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double amount);
+            int col = n % perRow, row = (n / perRow) % Mathf.Max(1, Mathf.FloorToInt(DepthHusks)), layer = n / (perRow * Mathf.Max(1, Mathf.FloorToInt(DepthHusks)));
+            Vector3 local = new Vector3((col - (perRow - 1) * 0.5f) * u, u * (0.8f + layer), (row - (DepthHusks - 1f) * 0.5f) * u);
+            clicker.SpawnStoredPixel(tier, amount, transform.TransformPoint(local), Vector3.zero);
+            n++;
+        }
+        tick = 0f;   // capture them at once
     }
 
     private bool PointerOnButton(Camera cam)

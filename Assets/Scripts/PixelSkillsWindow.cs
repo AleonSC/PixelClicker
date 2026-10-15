@@ -139,13 +139,19 @@ public partial class PixelSkills
 
         TMP_Text title = PixelUIKit.CreateText(Font, windowObject.transform, "Title", windowTitle, 56f, TextAlignmentOptions.Center, FontStyles.Bold, textColor);
         PixelUIKit.Caps(title);
-        Place(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(100f, -84f), new Vector2(-100f, -14f));
+        Place(title.rectTransform, 0f, 1f, 1f, 1f, new Vector2(180f, -84f), new Vector2(-180f, -14f));   // (room for the pin button on the left and the ? and X buttons on the right)
 
         Button close = PixelUIKit.CreateButton(Font, windowObject.transform, "Close", "X", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
         RectTransform cr = close.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
         cr.anchoredPosition = new Vector2(-14f, -12f);
         close.onClick.AddListener(() => PixelPop.Hide(windowObject));
+        // '?' next to the X: plays Cubie's skills intro again, for anyone who wants to go into it more.
+        Button help = PixelUIKit.CreateButton(Font, windowObject.transform, "Help", "?", new Vector2(70f, 70f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 36f);
+        RectTransform hr = help.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = hr.pivot = new Vector2(1f, 1f);
+        hr.anchoredPosition = new Vector2(-14f - 70f - 10f, -12f);
+        help.onClick.AddListener(StartTutorial);
         PixelMenuFx.AddWindowLine(windowObject.transform, 90f);
         BuildPinButton();   // top left: pins the training skill with an XP bar in a small window you can move
         // Header: "Training: Mining  Lv 3" + an XP bar.

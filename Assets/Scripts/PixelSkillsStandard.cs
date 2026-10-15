@@ -9,6 +9,9 @@
 //   PixelClicker.OldPixelCap); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
 //   and the tracker like any skill, has no bonus bank, filler, hazard or tree and does not count towards Mastery. Minigame bonus XP
 //   still skips Standard.
+//   Standard's XP popups and level-up log lines show from the very FIRST click (no longer only once a skill pack exists). Its level 2 perk carries the
+//   intro popup (StandardLevel2Notice, the perk's noticeText: 'you have been training a skill all along...'), shown once through the perk notices.
+//   The Skills window has a '?' button next to the X that plays Cubie's skills intro again (StartTutorial).
 // ---------------------------------------------------
 using UnityEngine;
 
@@ -73,9 +76,12 @@ public partial class PixelSkills
 
     private float StandardSideRate => standardSideXp > 0f ? standardSideXp : 0.05f;
 
+    /// <summary>The popup at Standard level 2: it introduces skills (the perk's noticeText, editable on the Standard pack's level 2 perk).</summary>
+    private const string StandardLevel2Notice = "Standard level 2! Surprise: you have been training a skill all along. Every pixel you click gives Standard XP, and every level unlocks a perk.\n\nYour first perk, Lingering pixels: old pixels on the floor last 5 seconds longer for every Standard level, so you have more time to use them.\n\nLater, skill packs from the shop add new skills with blocks of their own.";
+
     private static Perk[] StandardPerks() => new[]
     {
-        new Perk { level = 2, text = "Lingering pixels: old pixels last 5 seconds longer for every level", implemented = true },
+        new Perk { level = 2, text = "Lingering pixels: old pixels last 5 seconds longer for every level", implemented = true, noticeText = StandardLevel2Notice },
         new Perk { level = 4, text = "Roomy floor: room for 5 more old pixels for every level", implemented = true },
         new Perk { level = 7, text = "Sharper clicks: a small bonus to every pixel" },
     };

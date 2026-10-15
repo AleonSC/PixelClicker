@@ -2633,6 +2633,8 @@ public class PixelConsumables : MonoBehaviour
             if (placed is PixelMagnetSorterDevice magSorter) state.extra = magSorter.ExportState();
             if (placed is PixelQuantumDevice organizer) state.extra = organizer.ExportState();
             if (placed is PixelStorageCrate storageCrate) state.extra = storageCrate.ExportState();
+            PixelRecycler recycler = placed.GetComponent<PixelRecycler>();
+            if (recycler != null) state.extra = recycler.ExportState();   // the husks waiting in a Recycler
             if (placed is PixelSorterDevice sorter)
             {
                 state.aim = sorter.AimDegrees;
@@ -2663,6 +2665,8 @@ public class PixelConsumables : MonoBehaviour
         if (restored is PixelSorterDevice restoredSorter && state.forceValue > 0f) restoredSorter.SetForceValue(state.forceValue);
         if (restored is PixelMagnetSorterDevice restoredMag) restoredMag.ImportState(state.extra);
         if (restored is PixelQuantumDevice restoredOrganizer) restoredOrganizer.ImportState(state.extra);
+        PixelRecycler restoredRecycler = restored != null ? restored.GetComponent<PixelRecycler>() : null;
+        if (restoredRecycler != null) restoredRecycler.ImportState(state.extra);
         if (restored is PixelStorageCrate restoredCrate) restoredCrate.ImportState(state.extra);
     }
 

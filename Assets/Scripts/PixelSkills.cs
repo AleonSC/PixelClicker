@@ -488,6 +488,9 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == StandardId)
             {
                 if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
+                if (pack.perks != null)   // the level 2 popup that introduces the skill
+                    foreach (Perk perk in pack.perks)
+                        if (perk != null && perk.level == 2 && string.IsNullOrEmpty(perk.noticeText)) perk.noticeText = StandardLevel2Notice;
                 if (pack.perks != null)
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.text != null && perk.text.Contains("last 2 seconds longer")) perk.text = perk.text.Replace("last 2 seconds longer", "last 5 seconds longer");
@@ -1036,7 +1039,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         // Standard is a skill too: full XP while it is the one trained, a tiny share while another skill is.
         SkillPack standard = Find(StandardId);
-        if (standard != null) AddXp(standard, (automatic ? autoXpFactor : 1d) * (TrainingId == StandardId ? 1d : StandardSideRate), TrainingId == StandardId && AnyTrainable);   // (no popups before the Skills tab exists)
+        if (standard != null) AddXp(standard, (automatic ? autoXpFactor : 1d) * (TrainingId == StandardId ? 1d : StandardSideRate), TrainingId == StandardId);   // Standard's XP shows from the very first click
 
         // Offline Progression: every click trains it; the pack assigned to it (the pixels in play) still earns half of its normal XP,
         // and with no skill pack in play Offline Progression itself earns 50% more.
@@ -1129,7 +1132,7 @@ public partial class PixelSkills : MonoBehaviour
         if (popup) QueueXpPopup(pack, xp);
         int after = LevelOf(pack);
         if (after > before) QueuePerkNotices(pack, before, after);
-        if (after > before && (pack.id != StandardId || AnyTrainable))
+        if (after > before)
             PixelHints.Announce(pack.displayName + " level " + after, "Your " + pack.displayName + " skill reached level " + after + " (+" + (after - before) + " skill point" + (after - before == 1 ? "" : "s") + ").");
         Changed?.Invoke();
     }
