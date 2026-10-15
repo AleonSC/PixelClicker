@@ -220,6 +220,7 @@
 - **Compile check before committing:** run `tools/compile-check/check.sh` (compiles `Assets/Scripts` without Unity; details in `tools/compile-check/README.md`) and fix every error it reports. It does not replace testing in Unity (editor-only / Unity-6-only / UI-TMP-stub gaps, run-time bugs).
 - Git: develop on the branch the session names (recently `claude/intelligent-cori-y2qt3d`); commit + push when work is done; no PRs unless asked.
 
+- **Save compatibility is not a concern during development (standing instruction from the user):** nobody tests old saves, so do not plan save migrations, keep code only for old saves, or warn about breaking saves. Still append new enum values at the end (Unity stores enums as numbers in the scene and Inspector).
 - **Skill packs (Mining, Farming, Electrician, future ones) are chosen in the Skills window only - never add a switch for one to the Toggles window.**
 
 ## Big-picture check on every new feature (standing instruction from the user)
