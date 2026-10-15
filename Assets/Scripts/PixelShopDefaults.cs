@@ -594,6 +594,7 @@ public partial class PixelShop
         return new ShopPack
         {
             displayName = "Fire Pixel",
+            hideInShop = true,   // testing pack: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
             description = "TEST: Adds the Fire pixel, a glowing orange cube with flames rising off it. Clicking it bursts a ring of fire round the cube, and the old pixel burns away as it falls.",
             requirements = Needs(-1),
@@ -621,6 +622,7 @@ public partial class PixelShop
         return new ShopPack
         {
             displayName = "Nuclear Pixel",
+            hideInShop = true,   // testing pack: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
             description = "TEST: Adds the Nuclear pixel, a radioactive cube. Its old pixel is so radioactive that every old pixel lying near it despawns almost at once.",
             requirements = Needs(-1),
@@ -855,6 +857,7 @@ public partial class PixelShop
         return new ShopPack
         {
             displayName = "Farmer's Pack",
+            hideInShop = true,   // testing pack: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
             description = "TEST: Adds eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles or Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",
             requirements = Needs(-1),
@@ -1018,6 +1021,7 @@ public partial class PixelShop
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 5 } },
             rewardTiers = new PixelClicker.PixelTier[0],
             unlocksBlockHold = true,
+            hideInShop = true,   // Block Hold is free from the start
         };
     }
 

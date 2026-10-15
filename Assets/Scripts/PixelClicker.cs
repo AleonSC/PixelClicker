@@ -2770,6 +2770,15 @@ public partial class PixelClicker : MonoBehaviour
         return true;
     }
 
+    /// <summary>Dev tools (relocking a shop pack): locks a tier again so it stops spawning. Its count is kept. Returns false if invalid or already locked.</summary>
+    public bool LockTier(int index)
+    {
+        if (!IsValidTier(index) || !tiers[index].unlocked) return false;
+        tiers[index].unlocked = false;
+        NotifyChanged();
+        return true;
+    }
+
     /// <summary>
     /// Makes sure a tier of this type exists, appending a locked copy of <paramref name="definition"/> if not.
     /// Returns its index. Lets the shop add Red/Green/Blue without editing the Tiers list by hand.

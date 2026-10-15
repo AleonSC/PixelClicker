@@ -59,3 +59,7 @@ The hub's **Tester** tab (`PixelFeatureTester.cs`) lists things that are not in 
 - RIGHT CLICK any label in the hub (a quick click; a hold is the widget favorite) to type your own text (`PixelDevTextEdit`: Save / Reset / Cancel). Labels are found by hierarchy path; edits live in PlayerPrefs `PixelClicker.Dev.CustomText` and are stored per save profile by `PixelSettingsSync`. Drop-down captions, typed text and search results are left alone.
 - Docked windows (`PixelWindowChrome`, My Window) can be dragged off the edge by their header: the drag undocks them (`PixelPopoutDrag.onBegin`).
 - A 'Collapse all' button above the Main tab's widgets folds every card up to its header (it reads 'Expand all' while everything is folded; PixelWidgetBoard.SetAllMinimized).
+
+## Shop unlocks widget
+
+Main tab widget **Shop unlocks** (`shopunlock`): a drop-down with 'All shop items' and then every shop pack (marked `[not in shop]` for `hideInShop` packs and `(unlocked)` / `(level n)` for owned ones), an **Unlock** button (free, as if bought; upgrades go to their top level) and a **Relock** button (takes the pack back, locks its reward pixels, upgrades to level 0). Shop packs only: the separate **Unlock everything** button still unlocks every pixel and maxes every skill as well. Texts `shopUnlockText`, `shopRelockText`, `shopAllText`; the pick is remembered (`SelShopPack`).

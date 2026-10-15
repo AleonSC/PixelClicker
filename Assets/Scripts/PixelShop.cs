@@ -178,6 +178,9 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Id of a minigame that buying this pack switches on (e.g. ghost, blackhole). Empty = none.")]
         public string unlocksMinigame = "";
 
+        [Tooltip("Left out of the shop (never listed). It still exists and works: unlock or relock it with the Dev Tools 'Shop unlocks' widget. Used for the testing packs.")]
+        public bool hideInShop = false;
+
         // Older versions used one tick box per minigame. They are read once and turned into the ids above.
         // Older versions had one required pack index and one minigame goal id here; they are moved into 'requirements'.
         [HideInInspector] public int requiresPackIndex = -1;
@@ -1338,8 +1341,22 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 33)
+        {
+            // The testing packs (Fire, Nuclear, Farmer's) and Block Hold (free from the start) leave the shop: unlock them with the Dev Tools 'Shop unlocks' widget.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && IsDevOnlyPack(p)) p.hideInShop = true;
+            packDataVersion = Mathf.Max(packDataVersion, 33);
+            changed = true;
+        }
+
         return changed;
     }
+
+    /// <summary>Packs kept out of the shop (testing packs and Block Hold); the Dev Tools 'Shop unlocks' widget handles them.</summary>
+    private static bool IsDevOnlyPack(ShopPack p) =>
+        p.unlocksBlockHold || Rewards(p, PixelClicker.PixelType.Fire) || Rewards(p, PixelClicker.PixelType.Nuclear) || Rewards(p, PixelClicker.PixelType.Dirt);
 
     private static void ApplyWhaleClicks(PixelClicker.PixelTier t)
     {
@@ -2220,6 +2237,56 @@ public partial class PixelShop : MonoBehaviour
         if (skills != null) skills.DevMaxAllSkills();
         RefreshRows();
     }
+
+    // ---- Dev Tools 'Shop unlocks' widget: shop packs only (the Unlock All button also unlocks pixels and maxes skills) ----
+
+    /// <summary>Dev tools: unlocks one shop pack for free, as if bought (an upgrade goes to its top level). Ignores requirements, costs and hideInShop.</summary>
+    public void DevUnlockPack(int index)
+    {
+        if (packs == null || index < 0 || index >= packs.Length || packs[index] == null) return;
+        ShopPack pack = packs[index];
+        if (IsLeveled(pack))
+        {
+            if (pack.level >= pack.levels.Length) return;
+            pack.level = pack.levels.Length;
+            ApplyUpgrade(pack);
+        }
+        else
+        {
+            pack.purchased = true;
+            ApplyPackEffects(pack);
+        }
+        onPackPurchased?.Invoke(index);
+        RefreshRows();
+    }
+
+    /// <summary>Dev tools: takes one shop pack back (an upgrade goes to level 0; its reward pixels are locked again and their features switched off).</summary>
+    public void DevRelockPack(int index)
+    {
+        if (packs == null || index < 0 || index >= packs.Length || packs[index] == null) return;
+        ShopPack pack = packs[index];
+        if (IsLeveled(pack))
+        {
+            pack.level = 0;
+            ApplyUpgrade(pack);
+            pack.appliedLevel = 0;
+        }
+        else
+        {
+            SetPackState(index, false, 0);
+            if (pack.unlocksAutoClicker && autoClicker != null) autoClicker.UserDisabled = true;
+            if (pack.rewardTiers != null)
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    if (reward != null) clicker.LockTier(clicker.IndexOf(reward.type));
+        }
+        RefreshRows();
+    }
+
+    /// <summary>Dev tools: unlocks every shop pack (shop only: no pixels outside packs, no skill XP).</summary>
+    public void DevUnlockAllPacks() { for (int i = 0; i < packs.Length; i++) DevUnlockPack(i); }
+
+    /// <summary>Dev tools: relocks every shop pack.</summary>
+    public void DevRelockAllPacks() { for (int i = 0; i < packs.Length; i++) DevRelockPack(i); }
 
     /// <summary>Buys a pack: spends all costs, unlocks the reward tiers. Returns false if not possible.</summary>
     public bool TryBuy(int packIndex)

@@ -174,6 +174,15 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text of the button that cancels the active focus potion.")]
     [SerializeField] private string cancelFocusText = "Cancel";
 
+    [Tooltip("Text of the button that unlocks the shop pack picked in the 'Shop unlocks' widget (or every pack when 'All' is picked).")]
+    [SerializeField] private string shopUnlockText = "Unlock";
+
+    [Tooltip("Text of the button that relocks the shop pack picked in the 'Shop unlocks' widget (or every pack when 'All' is picked).")]
+    [SerializeField] private string shopRelockText = "Relock";
+
+    [Tooltip("First entry of the 'Shop unlocks' drop-down: acts on every shop pack.")]
+    [SerializeField] private string shopAllText = "All shop items";
+
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
     [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
     [SerializeField] private string giveGodCubeLabel = "Give next God Cube";
@@ -964,6 +973,7 @@ public class PixelDevTools : MonoBehaviour
             case "spawnminigame": return "Minigames";
             case "middleclick": return "Middle click";
             case "focus": return "Focus potions";
+            case "shopunlock": return "Shop unlocks";
             case "report": return "Crash reports";
             case "bounds": return "Snapshot bounds";
             case "balance": return "Balance report";
@@ -1103,6 +1113,54 @@ public class PixelDevTools : MonoBehaviour
         AddTip(drink.gameObject, "Drink the chosen focus potion: the skill's hazard block stops spawning while it lasts (replaces the one that is active).");
         AddTip(cancelFocus.gameObject, "Stop the active focus potion early.");
         Widget(root, board, "focus", start, y);
+
+        // ---- Shop unlocks: pick a shop pack (or All), Unlock it for free or Relock it. Shop packs only; 'Unlock everything' also unlocks pixels and maxes skills. ----
+        start = root.childCount;
+        shopUnlockDropdown = PixelUIKit.CreateDropdown(font, root, "Shop Unlock Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(shopUnlockDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        shopUnlockDropdown.onValueChanged.AddListener(v => SetInt("SelShopPack", v));
+        Button shopUnlock = PixelUIKit.CreateButton(font, root, "Shop Unlock Button", shopUnlockText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(shopUnlock.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        shopUnlock.onClick.AddListener(() => ShopUnlockPicked(true));
+        Button shopRelock = PixelUIKit.CreateButton(font, root, "Shop Relock Button", shopRelockText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(shopRelock.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
+        shopRelock.onClick.AddListener(() => ShopUnlockPicked(false));
+        AddTip(shopUnlock.gameObject, "Unlock the picked shop pack for free (an upgrade goes to its top level). 'All' unlocks every shop pack. Shop packs only: pixels outside packs and skills are left alone.");
+        AddTip(shopRelock.gameObject, "Take the picked shop pack back: its pixels are locked again and its feature switched off (an upgrade goes to level 0). 'All' relocks every shop pack.");
+        Widget(root, board, "shopunlock", start, y);
+    }
+
+    private TMP_Dropdown shopUnlockDropdown;
+
+    /// <summary>Unlock (true) or relock (false) the shop pack picked in the 'Shop unlocks' widget; entry 0 = every pack.</summary>
+    private void ShopUnlockPicked(bool unlock)
+    {
+        if (shop == null || shopUnlockDropdown == null) return;
+        int v = shopUnlockDropdown.value;
+        if (v == 0) { if (unlock) shop.DevUnlockAllPacks(); else shop.DevRelockAllPacks(); }
+        else if (unlock) shop.DevUnlockPack(v - 1);
+        else shop.DevRelockPack(v - 1);
+        FillShopUnlockDropdown(false);
+    }
+
+    /// <summary>Fills the 'Shop unlocks' drop-down: 'All', then every shop pack with its state (keeps the pick).</summary>
+    private void FillShopUnlockDropdown(bool first)
+    {
+        if (shopUnlockDropdown == null) return;
+        int keep = first ? GetInt("SelShopPack", 0) : shopUnlockDropdown.value;
+        List<string> names = new List<string> { shopAllText };
+        if (shop != null && shop.AllPacks != null)
+            for (int i = 0; i < shop.AllPacks.Count; i++)
+            {
+                PixelShop.ShopPack p = shop.AllPacks[i];
+                if (p == null) { names.Add("-"); continue; }
+                string state = shop.IsPurchased(i) ? "  (unlocked)" : shop.GetPackLevel(i) > 0 ? "  (level " + shop.GetPackLevel(i) + ")" : "";
+                names.Add(p.displayName + (p.hideInShop ? "  [not in shop]" : "") + state);
+            }
+        shopUnlockDropdown.ClearOptions();
+        shopUnlockDropdown.AddOptions(names);
+        shopUnlockDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
+        shopUnlockDropdown.RefreshShownValue();
     }
 
     private TMP_Dropdown focusDropdown;
@@ -1217,6 +1275,7 @@ public class PixelDevTools : MonoBehaviour
         selectorMinigameDropdown.RefreshShownValue();
 
         FillFocusDropdown(first);
+        FillShopUnlockDropdown(first);
     }
 
     private void ApplySelector(int index)

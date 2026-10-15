@@ -624,6 +624,7 @@ public partial class PixelShop
     /// </summary>
     private bool HiddenAsPurchased(int index)
     {
+        if (packs[index].hideInShop) return true;   // testing packs: Dev Tools 'Shop unlocks' only
         if (!HidePurchased || !IsPurchased(index)) return false;
         for (int i = 0; i < packs.Length; i++)
             if (IsChild(i) && packs[i].ParentIndex == index && !IsPurchased(i)) return false;
