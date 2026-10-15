@@ -81,13 +81,24 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Trash Can | loose husks | deletes them | space | ? | Built (tester) |
 | Tiny Robot | loose husks | puts them on a belt | space | Electrician (planned consumable) | Built (tester) |
 
+### Hands (first person)
+
+| Action | Takes in | Gives out | Pressure | Later replaced / kept by | State |
+|---|---|---|---|---|---|
+| Break husks by hand | loose husks | skill XP (a fraction of the click's XP) | despawn | machines (Chipper, Recycler) | Built |
+| Pick up and carry husks | loose husks | husks fed to a machine by hand | despawn, space | belts, Funnel, connectors, Tiny Robot | Built |
+| **Repair a broken machine** | husks from other skills (Mining metals, Electrician Wire) | the machine runs again | machine breakdowns | stays a hands-only job | Designed (`PixelRules.md`) |
+
+Machines can **break** from the wrong input (main cause) or gentle wear (optional); a broken machine stops and keeps its contents until it is repaired in first person (`PixelRules.md`, "Machine breakdowns and repair").
+
 **Gaps:** Charcoal (Kiln) and Wood Chips (Chipper) have no use yet; most factory machines have no decided skill home (Electrician is the natural one); several shop devices have no skill home (fine for early-game tools, but say so).
 
 ## 4. Pressures and what answers them
 
 | Pressure | Answered by |
 |---|---|
-| **Despawn** (husks vanish) | Wood Chipper, Storage Crate, Magnet, Quantum Organizer, Funnel, Recycler (Designed), Kiln |
+| **Despawn** (husks vanish) | first person by hand (the first answer), Wood Chipper, Storage Crate, Magnet, Quantum Organizer, Funnel, Recycler (Designed), Kiln |
+| **Machine breakdowns** (wrong input, wear) | sorting before the machine (Belt Sorter, Splitter), repairs in first person (Designed) |
 | **Space** (the floor circle is small) | belts, Splitter, Elevator, Connector, Fan, Sorter, Trash Can, free cam; a bigger floor as a reward (Idea, the dev toggle exists) |
 | **Hazards** | right-click clearing, Pesticide charges / Sprayer (Designed), Focus potions, Infestation dial (open), sap bait (Designed), Belt Sorter |
 | **One skill at a time** | auto clicker + machines working while you focus elsewhere; Offline Progression |
@@ -144,11 +155,13 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 
 1. **Foraging:** what does it give other skills, and what does it need? (e.g. Herbs -> potions, Mushrooms -> Farming fertilizer)
 2. **Fishing:** an outgoing link (e.g. Water -> Farming, Pearls -> crafting).
-3. **Mining:** an incoming link (e.g. Electrician powers a drill; Charcoal fuels a smelter).
+3. **Mining:** an incoming link (e.g. Electrician powers a drill; Charcoal fuels a smelter). Its metal husks as machine repair material (Designed) give it an outgoing link.
 4. **Electrician as the factory skill:** confirm it is the home of belts, splitters, elevators, connectors, sorters and the Tiny Robot.
 5. **Dead-end outputs:** Charcoal, Wood Chips and Magic Wood need a use.
 6. **Minigames:** give each one a skill it feeds.
 7. **Pixel rules rework:** Vacuum, Pixel Bank and the Solar trickle need their new jobs.
+8. **Shop relics:** most shop pixels and devices are left over from early development. Decide which consumables stay shop-only from the start and which move to unlocks later (and from which skill).
+9. **Breakdowns:** which machines can break, which inputs break each one, whether wear exists, and which husks repair which machines.
 
 ## The pruning test
 

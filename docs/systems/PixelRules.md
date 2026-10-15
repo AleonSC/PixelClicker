@@ -62,6 +62,48 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 - **A home for the old systems:** the Vacuum and the Pixel Bank can collect husks and hand them to a Recycler instead of paying currency out directly.
 - **Never better than clicking:** whatever its upgrades, the rate stays well below 100%, so a block never pays twice in full.
 
+## Hands first, machines later (first person)
+
+First person is **not** a second clicker mode. You can still click the cube high above you, but the mode exists for **handling husks by hand**: breaking old pixels for XP, picking them up and carrying them, and feeding machines yourself (e.g. carrying wood to the Wood Chipper).
+
+The progression:
+
+1. **The cube** makes currency and husks.
+2. **Hands (first person)**: you save husks from despawning, break them for XP and carry them to machines. Free but slow.
+3. **Machines** take the carrying and processing over (belts, Funnel, connectors, sorters, Chipper, Kiln, Recycler). Faster, but they cost something to buy and place.
+4. **Machines break** (see below), and your hands are needed again. That sends you back to fix the layout properly.
+
+Rules that keep it balanced:
+
+- **Hand-breaking a husk never beats clicking.** It gives a fraction of the XP the click on that block gave, so clicking stays the main source and camping in first person is never the best play.
+- **Hands are free but slow, machines are fast but cost something.** Otherwise machines lose their point, or hands do.
+- **Its first moment:** before the player owns any machine, first person is the only way to save husks from despawning. Cubie can point at it the first time husks start to vanish.
+- **Jobs only hands can do keep it alive later:** repairing machines (below), grabbing a rare husk before a sorter takes it, carrying a Hive to the Pesticide Sprayer, clearing a jam.
+
+## Machine breakdowns and repair (design)
+
+Some machines break, and the player goes into first person to repair them.
+
+**Wrong input (the main cause).** A machine that gets something it should not take (e.g. a Gas Pocket husk in the Kiln) bangs, smokes and stops.
+- This makes sorting matter: a Belt Sorter or Splitter protects the machine, not just tidies.
+- The player caused it and can fix it for good with a better layout; it teaches what each machine takes.
+- Each machine lists what it accepts (shown in its tooltip / the Database), so a breakdown is never a surprise rule.
+
+**Wear over time (optional, gentle).** If used at all:
+- a worn machine **slows down**, it does not stop;
+- **nothing wears while offline**;
+- upgrades / perks (Electrician) reduce or remove wear.
+
+**What a breakdown does.** The machine **stops and keeps its contents**; nothing is lost. It holds things up instead of destroying them, so being busy elsewhere never costs material.
+
+**Seeing it.** Smoke, sparks and a warning icon over the machine, visible from the normal clicker view, so the player chooses *when* to go down and fix it instead of checking all the time.
+
+**Repairing.**
+- Quick: a few hits or a short hold on the machine in first person (a small bonus for doing it well is optional). The real cost is the walk, not a long minigame.
+- **Repairs use husks from other skills**: metal husks from Mining, Wire from Electrician. This gives Mining a link the connection map says it is missing, and gives those husks another use.
+
+Open questions: which machines can break, which inputs break each one, whether wear exists at all, and which husks repair which machines.
+
 ## Systems that need a new job under this rule
 
 These pay old pixels out as currency today and must change (each to be designed when it is touched):
