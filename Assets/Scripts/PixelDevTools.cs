@@ -132,9 +132,6 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Tooltip of the file button at the top left that opens the folder with the crash / error reports (for sending to the developer).")]
     [SerializeField] private string reportTipText = "Open the crash / error report folder";
 
-    [Tooltip("Label of the unlock-everything button (every shop item, every pixel, every minigame and max XP in every skill).")]
-    [SerializeField] private string unlockAllText = "Unlock All";
-
     [Tooltip("Text of the button that sets every pixel count to 0 (inventory, Log and Bank) but keeps unlocks.")]
     [SerializeField] private string resetCountsText = "Reset all counts to 0";
 
@@ -180,8 +177,14 @@ public class PixelDevTools : MonoBehaviour
     [Tooltip("Text of the button that relocks the shop pack picked in the 'Shop unlocks' widget (or every pack when 'All' is picked).")]
     [SerializeField] private string shopRelockText = "Relock";
 
-    [Tooltip("First entry of the 'Shop unlocks' drop-down: acts on every shop pack.")]
+    [Tooltip("First entry of the 'Unlock' drop-down: every shop pack and every pixel.")]
     [SerializeField] private string shopAllText = "All shop items";
+    [Tooltip("Text of the 'Max XP' widget's button that fills the picked skill(s) to their level cap.")]
+    [SerializeField] private string maxXpText = "Max XP";
+    [Tooltip("Text of the 'Max XP' widget's button that takes the picked skill(s) back to level 1.")]
+    [SerializeField] private string resetXpText = "Reset XP";
+    [Tooltip("First entry of the 'Max XP' drop-down: acts on every skill.")]
+    [SerializeField] private string allSkillsText = "All skills";
 
     [Tooltip("Label of the button that gives the next Dragon Cube you still need.")]
     [SerializeField] private string giveNextDragonCubeLabel = "Give next Dragon Cube";
@@ -483,11 +486,6 @@ public class PixelDevTools : MonoBehaviour
         yield return new WaitForSecondsRealtime(boundsSnapshotDelay);
         yield return new WaitForEndOfFrame();
         run();
-    }
-
-    private void UnlockAll()
-    {
-        if (shop != null) shop.DevUnlockAll();
     }
 
     // ------------------------------------------------------------------
@@ -827,15 +825,6 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
         ws = content.childCount;
 
-        // Row: unlock all
-        Button unlock = PixelUIKit.CreateButton(font, content, "Unlock All Button", unlockAllText,
-                                                new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
-        Place(unlock.GetComponent<RectTransform>(), 40f, y, inner);
-        unlock.onClick.AddListener(UnlockAll);
-        Widget(content, board, "unlock", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
         // Row: reset every pixel count (inventory, Log, Bank) but keep the unlocks - needs a second click to confirm
         resetButton = PixelUIKit.CreateButton(font, content, "Reset Counts Button", resetCountsText,
                                               new Vector2(inner, rowHeight), buttonColor, textColor, fontSize);
@@ -975,7 +964,8 @@ public class PixelDevTools : MonoBehaviour
             case "spawnminigame": return "Minigames";
             case "middleclick": return "Middle click";
             case "focus": return "Focus potions";
-            case "shopunlock": return "Shop unlocks";
+            case "shopunlock": return "Unlock";
+            case "maxxp": return "Max XP";
             case "report": return "Crash reports";
             case "bounds": return "Snapshot bounds";
             case "balance": return "Balance report";
@@ -984,7 +974,6 @@ public class PixelDevTools : MonoBehaviour
             case "dragon": return "Dragon cubes";
             case "godgive": return "Give God Cube";
             case "godshow": return "God Cube shows";
-            case "unlock": return "Unlock everything";
             case "reset": return "Reset counts";
             case "clear": return "Clear key";
             case "infinite": return "Infinite resources";
@@ -1127,9 +1116,55 @@ public class PixelDevTools : MonoBehaviour
         Button shopRelock = PixelUIKit.CreateButton(font, root, "Shop Relock Button", shopRelockText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
         Place(shopRelock.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
         shopRelock.onClick.AddListener(() => ShopUnlockPicked(false));
-        AddTip(shopUnlock.gameObject, "Unlock the picked shop pack for free (an upgrade goes to its top level). 'All' unlocks every shop pack. Shop packs only: pixels outside packs and skills are left alone.");
+        AddTip(shopUnlock.gameObject, "Unlock the picked shop pack for free (an upgrade goes to its top level). 'All shop items' unlocks every pack and every pixel (their switches are left off). Skills are not touched: use Max XP.");
         AddTip(shopRelock.gameObject, "Take the picked shop pack back: its pixels are locked again and its feature switched off (an upgrade goes to level 0). 'All' relocks every shop pack.");
         Widget(root, board, "shopunlock", start, y);
+
+        // ---- Max XP: pick a skill (or All skills), give it the XP up to its level cap, or take its XP away. ----
+        start = root.childCount;
+        skillXpDropdown = PixelUIKit.CreateDropdown(font, root, "Skill XP Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
+        Place(skillXpDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        Button maxXp = PixelUIKit.CreateButton(font, root, "Max XP Button", maxXpText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(maxXp.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
+        maxXp.onClick.AddListener(() => SkillXpPicked(true));
+        Button resetXp = PixelUIKit.CreateButton(font, root, "Reset XP Button", resetXpText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
+        Place(resetXp.GetComponent<RectTransform>(), 40f + dropW + gap + bw + gap, y, bw);
+        resetXp.onClick.AddListener(() => SkillXpPicked(false));
+        AddTip(maxXp.gameObject, "Give the picked skill (or every skill, Standard included) the XP up to its level cap. No popups.");
+        AddTip(resetXp.gameObject, "Take all XP away from the picked skill (or every skill): back to level 1.");
+        Widget(root, board, "maxxp", start, y);
+        FillSkillXpDropdown();
+    }
+
+    private TMP_Dropdown skillXpDropdown;
+    private int[] skillXpMap;   // option -> entry (0 = All skills, n = pack n - 1)
+
+    /// <summary>Fills the 'Max XP' drop-down: 'All skills', then every skill with its level (alphabetical).</summary>
+    private void FillSkillXpDropdown()
+    {
+        if (skillXpDropdown == null) return;
+        PixelSkills s = PixelSkills.Instance;
+        int keep = skillXpDropdown.options.Count > 0 ? skillXpDropdown.value : 0;
+        List<string> names = new List<string> { allSkillsText }, keys = new List<string> { "" };
+        if (s != null && s.Packs != null)
+            foreach (PixelSkills.SkillPack p in s.Packs)
+            {
+                names.Add(p != null ? p.displayName + "  (lv " + s.LevelOf(p) + ")" : "-");
+                keys.Add(p != null ? p.displayName : "~");
+            }
+        skillXpMap = PixelUIKit.AddSortedOptions(skillXpDropdown, names, 1, keys);
+        skillXpDropdown.SetValueWithoutNotify(Mathf.Clamp(keep, 0, Mathf.Max(0, names.Count - 1)));
+        skillXpDropdown.RefreshShownValue();
+    }
+
+    private void SkillXpPicked(bool max)
+    {
+        PixelSkills s = PixelSkills.Instance;
+        if (s == null || skillXpDropdown == null) return;
+        int v = PixelUIKit.Original(skillXpMap, skillXpDropdown.value);
+        if (v == 0) { foreach (PixelSkills.SkillPack p in s.Packs) s.DevSetSkillXp(p, max); }
+        else if (v - 1 < s.Packs.Count) s.DevSetSkillXp(s.Packs[v - 1], max);
+        FillSkillXpDropdown();
     }
 
     private TMP_Dropdown shopUnlockDropdown;
@@ -1140,7 +1175,7 @@ public class PixelDevTools : MonoBehaviour
     {
         if (shop == null || shopUnlockDropdown == null) return;
         int v = PixelUIKit.Original(shopUnlockMap, shopUnlockDropdown.value);
-        if (v == 0) { if (unlock) shop.DevUnlockAllPacks(); else shop.DevRelockAllPacks(); }
+        if (v == 0) { if (unlock) shop.DevUnlockAll(); else shop.DevRelockAllPacks(); }   // ('All shop items' = every pack AND every pixel, switches left off)
         else if (unlock) shop.DevUnlockPack(v - 1);
         else shop.DevRelockPack(v - 1);
         FillShopUnlockDropdown(false);
@@ -1292,6 +1327,7 @@ public class PixelDevTools : MonoBehaviour
 
         FillFocusDropdown(first);
         FillShopUnlockDropdown(first);
+        FillSkillXpDropdown();
     }
 
     private void ApplySelector(int index)

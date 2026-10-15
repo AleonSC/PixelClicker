@@ -47,7 +47,16 @@ public partial class PixelSkills
         return total;
     }
 
-    /// <summary>Dev tools (Unlock All): gives every skill (except Standard) the XP up to its level cap. No popups or perk notices.</summary>
+    /// <summary>Dev tools 'Max XP' widget: fills one skill to its level cap (max) or takes all its XP away (back to level 1). No popups or perk notices.</summary>
+    public void DevSetSkillXp(SkillPack p, bool max)
+    {
+        if (p == null) return;
+        PixelStats.Clear("skill." + p.id + ".xp");
+        if (max) { double cap = CapXp(p); if (cap > 0d) PixelStats.Count("skill." + p.id + ".xp", cap); }
+        Changed?.Invoke();
+    }
+
+    /// <summary>Dev tools: gives every skill (except Standard) the XP up to its level cap. No popups or perk notices.</summary>
     public void DevMaxAllSkills()
     {
         foreach (SkillPack p in packs)

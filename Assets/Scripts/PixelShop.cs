@@ -2385,11 +2385,10 @@ public partial class PixelShop : MonoBehaviour
                 if (PixelSkills.IsOptIn(tier.type)) skills.SetOptIn(tier.type, false);
         foreach (PixelMinigame game in PixelMinigame.All)
             if (game != null) game.UserDisabled = true;
-        if (skills != null) skills.DevMaxAllSkills();
-        RefreshRows();
+        RefreshRows();   // (skills are left alone: the Dev Tools 'Max XP' widget does those)
     }
 
-    // ---- Dev Tools 'Shop unlocks' widget: shop packs only (the Unlock All button also unlocks pixels and maxes skills) ----
+    // ---- Dev Tools 'Unlock' widget: one pack, or 'All shop items' = DevUnlockAll (every pack + every pixel) ----
 
     /// <summary>Dev tools: unlocks one shop pack for free, as if bought (an upgrade goes to its top level). Ignores requirements, costs and hideInShop.</summary>
     public void DevUnlockPack(int index)
