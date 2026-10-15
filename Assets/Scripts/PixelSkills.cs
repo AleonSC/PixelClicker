@@ -1118,6 +1118,23 @@ public partial class PixelSkills : MonoBehaviour
         PixelNotice.Show(notice.text, 0f, () => PixelHighlight.Clear(perkHighlightKey), small: true, beside: windowRect);
     }
 
+    /// <summary>
+    /// The skill that owns a pixel type for the Value cap (a skill pack's blocks: that skill; every other type: Standard) and its level.
+    /// False while skills are switched off.
+    /// </summary>
+    public static bool TryGetOwnerLevel(PixelClicker.PixelType type, out string skillName, out int level)
+    {
+        skillName = ""; level = 1;
+        PixelSkills s = Instance;
+        if (s == null || s.disableSkills) return false;
+        SkillPack pack = s.PackOfType(type);
+        if (pack == null || pack.id == OfflineId) pack = s.Find(StandardId);
+        if (pack == null) return false;
+        skillName = pack.displayName;
+        level = s.LevelOf(pack);
+        return true;
+    }
+
     /// <summary>The level of a skill by id (1 when the skill or the system is missing).</summary>
     public static int LevelOfId(string id)
     {

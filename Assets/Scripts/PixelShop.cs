@@ -600,6 +600,19 @@ public partial class PixelShop : MonoBehaviour
     [Tooltip("Highest Value level a pixel type can reach. 0 = no limit.")]
     [SerializeField] private int valueMaxLevel = 0;
 
+    [Tooltip("A pixel type's Value level can't go above the level of the skill that owns it (pure / basic pixels: Standard; a skill's blocks: that skill), times 'Value Levels Per Skill Level'. Levels already above the cap are kept. Off = no skill cap.")]
+    [SerializeField] private bool valueCapBySkill = true;
+
+    [Min(1)]
+    [Tooltip("Value levels allowed for each level of the owning skill (1 = Standard level 5 allows Value 5 on the pure pixels).")]
+    [SerializeField] private int valueLevelsPerSkillLevel = 1;
+
+    [Tooltip("Value button text while the skill cap stops the next level.")]
+    [SerializeField] private string valueCappedButtonText = "Locked";
+
+    [Tooltip("Cost line while the skill cap stops the next level. {0} = skill name, {1} = the skill level needed.")]
+    [SerializeField] private string valueCappedFormat = "Needs {0} level {1}";
+
     [Min(1)]
     [Tooltip("Shift-click on a Value button buys up to this many levels at once.")]
     [SerializeField] private int valueMaxBulk = 1000;
@@ -2182,16 +2195,35 @@ public partial class PixelShop : MonoBehaviour
         return Math.Ceiling(valueBaseCost * Math.Max(1d, tier.amountPerClick) * Math.Pow(valueCostGrowth, tier.valueLevel));
     }
 
-    /// <summary>True when a pixel type has reached its highest Value level.</summary>
+    /// <summary>True when a pixel type has reached its highest Value level (the absolute limit, valueMaxLevel).</summary>
     public bool ValueUpgradeMaxed(int tierIndex) =>
         valueMaxLevel > 0 && clicker.IsValidTierIndex(tierIndex) && clicker.Tiers[tierIndex].valueLevel >= valueMaxLevel;
+
+    /// <summary>
+    /// True when the owning skill's level stops the next Value level (Value level >= skill level x valueLevelsPerSkillLevel). 'skillName' and
+    /// 'needLevel' say which skill and level the next Value level needs. False with the cap off or no skill system.
+    /// </summary>
+    public bool ValueSkillCapped(int tierIndex, out string skillName, out int needLevel)
+    {
+        skillName = ""; needLevel = 0;
+        if (!valueCapBySkill || !clicker.IsValidTierIndex(tierIndex)) return false;
+        if (!PixelSkills.TryGetOwnerLevel(clicker.Tiers[tierIndex].type, out skillName, out int level)) return false;
+        int per = Mathf.Max(1, valueLevelsPerSkillLevel);
+        int value = clicker.Tiers[tierIndex].valueLevel;
+        if (value < level * per) return false;
+        needLevel = value / per + 1;
+        return true;
+    }
+
+    /// <summary>Can the next Value level be bought at all (not maxed, not held back by the skill cap)? Cost aside.</summary>
+    private bool ValueLevelOpen(int tierIndex) => !ValueUpgradeMaxed(tierIndex) && !ValueSkillCapped(tierIndex, out _, out _);
 
     /// <summary>Buys one Value level (or, with Shift held, as many as you can afford). Returns how many were bought.</summary>
     public int TryBuyValueUpgrade(int tierIndex, bool bulk)
     {
         int bought = 0;
         int limit = bulk ? Mathf.Max(1, valueMaxBulk) : 1;
-        while (bought < limit && !ValueUpgradeMaxed(tierIndex) && clicker.TryBuyValueLevel(tierIndex, ValueUpgradeCost(tierIndex)))
+        while (bought < limit && ValueLevelOpen(tierIndex) && clicker.TryBuyValueLevel(tierIndex, ValueUpgradeCost(tierIndex)))
             bought++;
         if (bought > 0)
         {

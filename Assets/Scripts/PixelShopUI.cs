@@ -1221,6 +1221,8 @@ public partial class PixelShop
             visibleCount++;
 
             bool maxed = ValueUpgradeMaxed(t);
+            string capSkill = ""; int capLevel = 0;
+            bool capped = !maxed && ValueSkillCapped(t, out capSkill, out capLevel);   // the owning skill's level holds the next one back
             double cost = ValueUpgradeCost(t);
             double now = clicker.ValueMultiplierAt(tier.valueLevel);
             double next = clicker.ValueMultiplierAt(tier.valueLevel + 1);
@@ -1233,12 +1235,12 @@ public partial class PixelShop
             row.descLabel.text = valueInfoText;
 
             bool enough = PixelClicker.InfiniteResources || tier.count >= cost;
-            row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
+            row.costLabel.text = maxed ? "" : capped ? "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(valueCappedFormat, capSkill, capLevel) + "</color>" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
                                  string.Format(NoHave(valueCostFormat), PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.count)) + "</color>";
 
-            bool canBuy = !maxed && enough;
+            bool canBuy = !maxed && !capped && enough;
             row.buyButton.interactable = canBuy;
-            row.buyLabel.text = maxed ? maxedText : valueButtonText;
+            row.buyLabel.text = maxed ? maxedText : capped ? valueCappedButtonText : valueButtonText;
             row.buyImage.color = canBuy ? buyColor : disabledColor;
         }
 

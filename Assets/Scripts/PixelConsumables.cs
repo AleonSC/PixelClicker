@@ -371,7 +371,7 @@ public class PixelConsumables : MonoBehaviour
 
     [Header("Prices")]
     [Tooltip("Potion and device prices paid in a pixel type are multiplied by that pixel's Value upgrade multiplier, so they stay worth the same as its payout grows. Off = the prices typed above, always.")]
-    [SerializeField] private bool pricesScaleWithValue = true;
+    [SerializeField] private bool scalePricesWithValue = false;   // (renamed from pricesScaleWithValue so it starts off: Value is capped by skill levels now, prices stay as typed)
 
     [Tooltip("Potion prices are worked out from what the potion is expected to make (its duration x your clicks per second x that pixel's payout, Value and Ultra included) divided by 'Potion Target Return', paid in that pixel. The typed potion costs above are then ignored. Off = the typed costs (scaled by Value if that is on).")]
     [SerializeField] private bool potionPriceFromOutput = true;
@@ -1655,7 +1655,7 @@ public class PixelConsumables : MonoBehaviour
             PixelClicker.PixelTier tier = clicker.Tiers[t];
             double rarity = seedRarityPricePower > 0f ? System.Math.Pow(1d / System.Math.Max(0.02d, tier.spawnWeight), seedRarityPricePower) : 1d;
             rarity = System.Math.Max(1d, rarity);
-            double price = tier.amountPerClick * seedPriceFactor * rarity * (pricesScaleWithValue ? clicker.ValueMultiplier(t) : 1d);
+            double price = tier.amountPerClick * seedPriceFactor * rarity * (scalePricesWithValue ? clicker.ValueMultiplier(t) : 1d);
             return new[] { new PixelShop.PackCost { type = tier.type, amount = System.Math.Max(seedMinPrice, System.Math.Ceiling(price)) } };
         }
 
@@ -1666,7 +1666,7 @@ public class PixelConsumables : MonoBehaviour
         }
 
         PixelShop.PackCost[] baseCosts = IsDevice(item) ? devices[item - potions.Length].costs : potions[item].costs;
-        if (!pricesScaleWithValue || clicker == null || baseCosts == null) return baseCosts;
+        if (!scalePricesWithValue || clicker == null || baseCosts == null) return baseCosts;
 
         PixelShop.PackCost[] scaled = new PixelShop.PackCost[baseCosts.Length];
         for (int i = 0; i < baseCosts.Length; i++)
