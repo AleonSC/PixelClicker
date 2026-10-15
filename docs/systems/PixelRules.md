@@ -13,7 +13,7 @@ Today one block can pay twice: the click gives currency, and the old pixel it dr
 | What you get | What it is | What it is for |
 |---|---|---|
 | **Currency** (from the click) | the block's value | spending in the shop, selling to vendors |
-| **Old pixel** (the body) | the drained, physical leftover - material | machines, crafting, charges, XP; **never currency by itself** |
+| **Old pixel** (the body) | the drained, physical leftover - material | machines, crafting, charges, XP; **never currency by itself** (only the Recycler machine turns husks into currency, at a loss) |
 | **Charges** (from holding a utility block) | the block's use | Pesticide, Whetstone and other tools |
 
 ### Why it makes sense in the world: extraction
@@ -33,12 +33,19 @@ Idea for the look: old pixels could be slightly duller than the block on the cub
 - Clicking is the reliable way to earn currency, at every stage of the game; going back to farm currency is a real choice.
 - Holding a plain block keeps today's Block Hold behaviour (pull it out of the rotation, the stake); holding a **utility** block converts it to charges.
 
+### The rule, word for word
+
+> **Husks are never currency by themselves. Only a machine can turn them into something - and the Recycler is the machine that turns them into currency, at a loss.**
+
+This keeps the world consistent (a machine is processing husks, like every other machine) while clicking stays the real way to earn currency.
+
 ## What husks are for
 
 Machines exist to turn husks into something useful; despawning hurts because unused **material** is lost, not money.
 
 | Machine / system | Turns husks into |
 |---|---|
+| **Recycler** (planned) | currency, at **15%** of the block's click value |
 | Wood Chipper | skill XP (and Wood Chips) |
 | Kiln | Charcoal (fuel / material) |
 | Storage Crate | stored material for later |
@@ -46,20 +53,31 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 | Crafting (planned) | recipe ingredients |
 | Conveyor belts, sorters, connectors | moving husks to the right machine |
 
+## The Recycler (planned machine)
+
+- **What it does:** takes husks in and pays out currency of that block's type at **15% of the block's click value** per husk (start value, to be tuned). A Wood husk from a Wood block that pays 3 gives 0.45 Wood.
+- **Takes time and setup:** it processes one husk every so often (proposed: one every 1.5 seconds), so throughput is a real limit; husks are fed by belt, Funnel, Conveyor Connector or by hand (it is a belt acceptor like the Kiln).
+- **Upgrades through other skills:** Electrician power raises its speed; a later tier raises its rate (e.g. to 25%). Another cross-skill link.
+- **It competes with the other uses:** the same husk can go to the Recycler (a little currency), the Wood Chipper (XP), crafting (material) or the Pesticide Sprayer (charges). Choosing where husks go is the builder's puzzle.
+- **A home for the old systems:** the Vacuum and the Pixel Bank can collect husks and hand them to a Recycler instead of paying currency out directly.
+- **Never better than clicking:** whatever its upgrades, the rate stays well below 100%, so a block never pays twice in full.
+
 ## Systems that need a new job under this rule
 
 These pay old pixels out as currency today and must change (each to be designed when it is touched):
 
 | System | Today | Direction |
 |---|---|---|
-| Vacuum pixel / Vacuum Device | pays the stored value of every old pixel it sucks up | collects husks as material or XP, or hands them to machines / a crate |
-| Pixel Bank (hose) | stores old pixels as banked currency | stores husks as material (a big storage), or becomes a currency-only bank fed by clicks |
+| Vacuum pixel / Vacuum Device | pays the stored value of every old pixel it sucks up | collects husks as material or XP, or hands them to a Recycler / machines / a crate |
+| Pixel Bank (hose) | stores old pixels as banked currency | stores husks as material (a big storage) that can feed a Recycler, or becomes a currency-only bank fed by clicks |
 | Solar old pixel | hovers and pays a small currency trickle | its trickle becomes something else (daylight, XP, or powering devices) |
 | `PixelClicker.ReleaseOldPixel(body, credit: true)` | re-adds the old pixel's reward | callers should not credit currency any more |
 
 Until each is reworked the old behaviour stays, so nothing breaks in the meantime.
 
 ## Open questions
+
+- Recycler: is 15% right, how fast does it process, what does it cost, and is there one per save or many?
 
 - Should vendors buy only currency counts (as now), or also husks (e.g. the Lumberjack buys a pile of wood husks for a little)?
 - The "drained" look for old pixels: worth doing, and how subtle?
