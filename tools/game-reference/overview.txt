@@ -33,7 +33,7 @@ ECONOMY / SHOP (PixelShop, PixelShopUI, PixelShopDefaults)
 - Packs = ShopPack entries (BuiltInPacks table adds missing ones). Testing packs are hideInShop (Fire, Nuclear, Farmer's, Prospector's, Block Hold, Oak Trees test); the Dev Tools 'Shop unlocks' widget unlocks / relocks any pack.
 - VALUE upgrades: per pixel type, paid in that type, cost valueBaseCost 25 x amountPerClick x 1.15^level; payout x (1 + level x valueBonusPerLevel) x milestone multiplier; capped by skill level (above). Hazards have no Value row.
 - VENDORS sell / buy for pure currency: Lumberjack (Woodcutting) and Prospector (Mining) BUY skill blocks for pure pixels at a rarity-based rate (UnitValue = 1 / (spawnWeight x amountPerClick / clicks)) x sellRate 0.8 x luck, and sell devices / potions. Other visitors: Tinkerer, Wizard, Entrepreneur (trades), Farmer; rare cats Egg and Bean.
-- CUBIE (PixelGuideVendor): the guide / shopkeeper. Visit 1 comes after 25 manual clicks and gives a Recycler ({recycler} page token); visit 2 holds time until the shop is opened (shop nudge + shop tutorial). Page texts are Inspector lists.
+- CUBIE (PixelGuideVendor): the guide / shopkeeper. Visit 1 comes after 50 White pixel clicks and gives a Recycler ({recycler} page token); visit 2 holds time until the shop is opened (shop nudge + shop tutorial). Page texts are Inspector lists.
 
 CONSUMABLES (PixelConsumables)
 - POTIONS: one single potion per pixel type (all non-rare types): for N seconds only that type spawns. COMBO potions (crafted): 2-type for every pair of types; 3-type only among non-standalone types (pre-built at start). Potions can be auto-priced from expected return.

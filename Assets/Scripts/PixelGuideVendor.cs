@@ -18,7 +18,7 @@
 //   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
 //   Inspector fields (disableGuide turns it all off). The page lists (visitOnePages / visitTwoPages) are filled with the built-in lines when empty
 //   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
-//   Visit 1 waits until the player has clicked visitOneAfterClicks (25) pixels by hand. A visit-1 page containing {recycler} hands over a Recycler
+//   Visit 1 waits until visitOneAfterWhiteClicks (50) White pixels have been clicked (the White tier's timesCollected). A visit-1 page containing {recycler} hands over a Recycler
 //   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
 // ---------------------------------------------------
 using System.Collections;
@@ -54,8 +54,16 @@ public class PixelGuideVendor : MonoBehaviour
     [SerializeField] private float calmSeconds = 1.5f;
 
     [Min(0)]
-    [Tooltip("Visit 1 waits until the player has clicked this many pixels by hand (so Cubie does not turn up the moment the game starts).")]
-    [SerializeField] private int visitOneAfterClicks = 25;
+    [Tooltip("Visit 1 waits until this many White pixels have been clicked (so Cubie does not turn up the moment the game starts).")]
+    [SerializeField] private int visitOneAfterWhiteClicks = 50;
+
+    /// <summary>How many White pixels have been clicked so far (PixelTier.timesCollected, saved).</summary>
+    private long WhiteClicks()
+    {
+        PixelClicker c = PixelFind.First<PixelClicker>();
+        int i = c != null ? c.IndexOf(PixelClicker.PixelType.White) : -1;
+        return i >= 0 ? c.Tiers[i].timesCollected : 0L;
+    }
 
     [Tooltip("Text that replaces {recycler} on the page where Cubie hands over the Recycler (visit 1).")]
     [SerializeField] private string recyclerGiftText = "<b>+1 Recycler</b> (in your Consumables)";
@@ -459,7 +467,7 @@ public class PixelGuideVendor : MonoBehaviour
                 }
             }
             else if (ShopThere) StartCoroutine(Visit(true));
-            else if (!s1 && stats.ManualClicks < visitOneAfterClicks) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info("Cubie visit 1 waits for " + visitOneAfterClicks + " clicks", this); } }
+            else if (!s1 && WhiteClicks() < visitOneAfterWhiteClicks) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info("Cubie visit 1 waits for " + visitOneAfterWhiteClicks + " White pixel clicks", this); } }
             else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(false)); }
             else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
             return;
