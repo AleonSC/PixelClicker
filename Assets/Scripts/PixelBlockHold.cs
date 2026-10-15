@@ -14,6 +14,8 @@
 //   (0.75) puts a stake on it: the value grows 1 + stakeGrowthPerSecond (0.6) x seconds held; on release the outcome is rolled (stakeWinChance 0.6, +/- stakeWinChanceChangeAtFullHold over a full meter) -
 //   pays that multiplier or stakeLossValue (0 = nothing) - and travels with the block through the queue (PixelClicker.nextInLineStake -> liveStake, payout x liveStake). It is revealed when the block comes
 //   round again: its aura glows green / red (PixelClickerAura.StakeHighlight), a top status line says what it is worth and a good / bad sound plays. While holding, the label by the meter shows the value and the chance.
+//   CLICKS: every click during a stake hold adds stakePerClick (0.1) to the stake (stakeClickBonus, in StakeValue); every energyEveryClicks (5) clicks give the meter
+//   energyPerClicks (1%), holding or not (OnClick from PixelClicker.CollectInternal; autoClicksCount off = only your own clicks).
 //   A first-time tip (stake_intro) shows after 25 manual clicks. Skill XP is not changed by the stake.
 //   Not saved (the meter starts full); the pack itself is saved like any pack. No Toggles switch (right click does nothing else on normal blocks).
 // ---------------------------------------------------
@@ -73,6 +75,19 @@ public class PixelBlockHold : MonoBehaviour
     [Range(0f, 1f)]
     [Tooltip("What a LOST stake pays, as a fraction of the normal value (0 = the block is worth nothing).")]
     [SerializeField] private float stakeLossValue = 0f;
+
+    [Header("Clicks")]
+    [Min(0f)]
+    [Tooltip("Each click while you hold a stake block adds this to its stake multiplier (0.1 = x1.5 becomes x1.6). 0 = off.")]
+    [SerializeField] private float stakePerClick = 0.1f;
+    [Min(0)]
+    [Tooltip("Every this many clicks gives the hold meter 'Energy Per Clicks' (0 = off).")]
+    [SerializeField] private int energyEveryClicks = 5;
+    [Range(0f, 1f)]
+    [Tooltip("Share of the hold meter given every 'Energy Every Clicks' clicks (0.01 = 1%).")]
+    [SerializeField] private float energyPerClicks = 0.01f;
+    [Tooltip("Do auto clicks count for the stake bonus and the meter energy? Off = only your own clicks.")]
+    [SerializeField] private bool autoClicksCount = false;
 
     [Header("Look")]
     [Tooltip("Colour of the meter, the beam and the aura around the held block.")]
@@ -147,6 +162,22 @@ public class PixelBlockHold : MonoBehaviour
         {
             h.meter = Mathf.Min(1f, h.meter + refill);   // the click also tops the meter up (while holding or recharging)
             if (!h.holding) h.cooldown = 0f;              // ...and a waiting recharge starts at once
+        }
+    }
+
+    private int energyClicks;     // clicks counted towards the next bit of meter energy
+    private float stakeClickBonus; // what the clicks during this hold added to the stake
+
+    /// <summary>A click on the cube (PixelClicker.CollectInternal): while a stake block is held it raises the stake by stakePerClick, and every energyEveryClicks clicks top the meter up by energyPerClicks.</summary>
+    public static void OnClick(bool automatic)
+    {
+        PixelBlockHold h = Instance;
+        if (h == null || !h.Active || (automatic && !h.autoClicksCount)) return;
+        if (h.holding && h.stakePerClick > 0f && h.StakeEligible()) h.stakeClickBonus += h.stakePerClick;
+        if (h.energyEveryClicks > 0 && ++h.energyClicks >= h.energyEveryClicks)
+        {
+            h.energyClicks = 0;
+            h.meter = Mathf.Min(1f, h.meter + h.energyPerClicks);
         }
     }
 
@@ -285,7 +316,7 @@ public class PixelBlockHold : MonoBehaviour
     }
 
     private float StakeProgress(float heldSeconds) => Mathf.Clamp01(heldSeconds / HoldSeconds);
-    private float StakeValue(float heldSeconds) => 1f + StakeGrowth * heldSeconds;
+    private float StakeValue(float heldSeconds) => 1f + StakeGrowth * heldSeconds + stakeClickBonus;   // (+ stakePerClick for every click during the hold)
     private float StakeWin(float heldSeconds) => Mathf.Clamp(StakeBaseWin + stakeWinChanceChangeAtFullHold * StakeProgress(heldSeconds), 0.05f, 0.95f);
 
     // ---- Charge blocks (PixelBlockRules.HoldRule.chargesWhenHeld: Pesticide) ----
@@ -350,6 +381,7 @@ public class PixelBlockHold : MonoBehaviour
         chargeTimer = 0f;
         chargesGiven = 0;
         holding = true;
+        stakeClickBonus = 0f;
         holdStartedAt = Time.unscaledTime;
         returning = false;
         slide = 0f;

@@ -2302,6 +2302,7 @@ public partial class PixelClicker : MonoBehaviour
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
+        PixelBlockHold.OnClick(automatic);   // a stake being held grows +0.1 per click; every 5 clicks give the hold meter 1%
         if (tier.stallsHold) PixelBlockHold.Stall(tier.stallSeconds > 0f ? tier.stallSeconds : 1.5f, tier.stallRefill > 0f ? tier.stallRefill : 0.04f);   // every click on a stalling block freezes the hold meter and refills it a little
         if (!automatic && IsHazard(tier.type) && PixelBlockRules.HeldClearsHazard(tier.type)) { ClearHazardNow(tier); return; }   // a held Pesticide: one left click clears it
         if (automatic && IsHazard(tier.type) && !HazardAutoClear) return;   // the auto clicker never touches a hazard: it waits until you deal with it (or it goes away)
