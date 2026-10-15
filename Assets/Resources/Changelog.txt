@@ -1079,3 +1079,4 @@
 [2026-10-15 14:48 UTC] Cubie no longer introduces skills (the Toggles tutorial's skills hint and the automatic Skills walk-through are off); the Skills button now appears with the Standard level 2 popup instead.
 [2026-10-15 14:59 UTC] Mold and Truffles look clearly different now: Mold (the block, its zone and the shells on moldy husks) is a pale, fuzzy, faintly glowing blue-green that turns whiter instead of dark, and Truffles are near-black and glossy with a gold sparkle.
 [2026-10-15 14:59 UTC] Shaking the mold off a moldy husk now gives 3 Foraging XP.
+[2026-10-15 15:09 UTC] Fixed old status lines (like the Oak tree bar) coming back after Settings > Restart: the top status lines are now cleared whenever the scene reloads.

@@ -2,7 +2,7 @@
 // PixelStatusLines.cs
 //   Keyed text lines for the top status box (PixelStatusBox, hanging under the potion / minigame status boxes): PixelStatusLines.Set(key, text, colour, seconds) shows
 //   or replaces the line for that key (seconds > 0 = it goes away by itself, 0 = stays until Clear(key)); Clear(key) removes it. Several lines stack in one box
-//   (first line's colour = the accent). Used for the Black Hole counter, the Bomb timer / result, the Ghost / Meteor / Evil Tree messages that used to float in the world.
+//   (first line's colour = the accent). The lines are cleared when a scene unloads (Restart reloads the scene; old lines must not come back). Used for the Black Hole counter, the Bomb timer / result, the Ghost / Meteor / Evil Tree messages that used to float in the world.
 // ----------------------
 using System.Collections.Generic;
 using TMPro;
@@ -16,7 +16,16 @@ public static class PixelStatusLines
     private static Host host;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { lines.Clear(); host = null; }
+    private static void ResetStatics()
+    {
+        lines.Clear(); host = null;
+        // The list is static, so it outlives a scene reload (Settings > Restart reloads the scene): a line from the old game (the tree bar's 'Oak 3 / 9')
+        // came back the next time anything set a line. Every scene change starts with no lines.
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { lines.Clear(); host = null; }
 
     public static void Set(string key, string text, Color color, float seconds = 0f)
     {
