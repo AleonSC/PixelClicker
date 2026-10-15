@@ -16,7 +16,8 @@
 //   saved lists); the guide starts them (StartVendors: Wizard right after visit 2 with a first visit in wizardFirstVisitMin..Max s,
 //   Farmer at farmerAtTiers (5), Tinkerer at tinkererAtTiers (6) unlocked pixel types, Entrepreneur at entrepreneurAtTiers (8); a
 //   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
-//   Inspector fields (disableGuide turns it all off).
+//   Inspector fields (disableGuide turns it all off). The page lists (visitOnePages / visitTwoPages) are filled with the built-in lines when empty
+//   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
 // ---------------------------------------------------
 using System.Collections;
 using System.Text;
@@ -63,11 +64,11 @@ public class PixelGuideVendor : MonoBehaviour
     [SerializeField] private string characterName = "Cubie";
 
     [TextArea(2, 4)]
-    [Tooltip("Visit 1, one entry per page. Empty = the built-in lines.")]
+    [Tooltip("Visit 1, one entry per page. Filled with the built-in lines when empty, so they can be edited here.")]
     [SerializeField] private string[] visitOnePages = new string[0];
 
     [TextArea(2, 4)]
-    [Tooltip("Visit 2, one entry per page. The page that contains {gift} shows the gift and is when it is handed over. Empty = the built-in lines.")]
+    [Tooltip("Visit 2, one entry per page. The page that contains {gift} shows the gift and is when it is handed over. Filled with the built-in lines when empty, so they can be edited here.")]
     [SerializeField] private string[] visitTwoPages = new string[0];
 
     [Tooltip("Button label for the next page.")]
@@ -342,9 +343,31 @@ public class PixelGuideVendor : MonoBehaviour
     private int advance; // incremented by the button / Escape
     private TMP_FontAsset Font => clicker != null ? clicker.UIFont : null;
 
+    /// <summary>Copies the built-in pages into empty page lists, so the Inspector shows Cubie's real lines and they can be edited there (like the first-time tips).</summary>
+    private bool EnsureDefaultPages()
+    {
+        bool changed = false;
+        if (visitOnePages == null || visitOnePages.Length == 0) { visitOnePages = DefaultOne; changed = true; }
+        if (visitTwoPages == null || visitTwoPages.Length == 0) { visitTwoPages = DefaultTwo; changed = true; }
+        return changed;
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (Application.isPlaying) return;
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this == null || Application.isPlaying) return;
+            if (EnsureDefaultPages()) UnityEditor.EditorUtility.SetDirty(this);
+        };
+    }
+#endif
+
     private void Awake()
     {
         instance = this;
+        EnsureDefaultPages();
         if (characterName == "Cubby") characterName = "Cubie"; // a scene saved before the rename
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (shop == null) shop = PixelFind.First<PixelShop>();
