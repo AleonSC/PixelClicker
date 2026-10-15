@@ -283,6 +283,20 @@ public class PixelDevTools : MonoBehaviour
         PixelPrefs.Save();
     }
 
+    // Every remembered Dev Tools choice, per save file (PixelSettingsSync stores each declared key in the save). A new remembered choice is
+    // added HERE with its kind, so it can never be left out of the save again (the drop-downs added later once were).
+    private static readonly string[] IntPrefs =
+        { "ClearKey", "Infinite", "Selector", "NoDespawn", "NoLimit", "FarmerSeeds", "DoubleFloor", "God", "ClickCount",
+          "PixelIndex", "SelPixel", "SelMinigame", "GodChoice", "SelSwap", "SelFocus", "SelShopPack", "SelSkillXp", "SelRare" };
+    private static readonly string[] StringPrefs = { "Amount" };
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void DeclarePerSavePrefs()
+    {
+        foreach (string k in IntPrefs) PixelPrefs.DeclarePerSave(PrefPrefix + k, PixelPrefs.Kind.Int);
+        foreach (string k in StringPrefs) PixelPrefs.DeclarePerSave(PrefPrefix + k, PixelPrefs.Kind.String);
+    }
+
     private int GetInt(string key, int fallback) => !rememberSettings ? fallback : PixelPrefs.GetInt(PrefPrefix + key, fallback);
 
     private void SetInt(string key, int value)
@@ -327,8 +341,20 @@ public class PixelDevTools : MonoBehaviour
         if (selectorDropdown != null) selectorDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelPixel", 0), 0, Mathf.Max(0, selectorDropdown.options.Count - 1)));
         if (selectorMinigameDropdown != null) selectorMinigameDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelMinigame", 0), 0, Mathf.Max(0, selectorMinigameDropdown.options.Count - 1)));
         if (focusDropdown != null) focusDropdown.SetValueWithoutNotify(Mathf.Clamp(GetInt("SelFocus", 0), 0, Mathf.Max(0, focusDropdown.options.Count - 1)));
+        ReselectFromPrefs(swapDropdown, "SelSwap");
+        ReselectFromPrefs(shopUnlockDropdown, "SelShopPack");
+        ReselectFromPrefs(skillXpDropdown, "SelSkillXp");
+        ReselectFromPrefs(rareDropdown, "SelRare");
         if (selectorDropdown != null) { if (spawnSelectorEnabled) ApplySelector(selectorDropdown.value); else clicker.SetDevSpawnTiers(null); RefreshSpawnedPixelButton(); }
         SetGodMode(godMode);
+    }
+
+    /// <summary>Puts a drop-down back on the choice remembered for this save (after a save is loaded).</summary>
+    private void ReselectFromPrefs(TMP_Dropdown dd, string key)
+    {
+        if (dd == null || dd.options.Count == 0) return;
+        dd.SetValueWithoutNotify(Mathf.Clamp(GetInt(key, 0), 0, dd.options.Count - 1));
+        dd.RefreshShownValue();
     }
 
     private void LoadSettings()
@@ -1049,6 +1075,7 @@ public class PixelDevTools : MonoBehaviour
         start = root.childCount;
         skillXpDropdown = PixelUIKit.CreateDropdown(font, root, "Skill XP Dropdown", new Vector2(dropW, rowHeight), boxColor, listColor, textColor, fontSize);
         Place(skillXpDropdown.GetComponent<RectTransform>(), 40f, y, dropW);
+        skillXpDropdown.onValueChanged.AddListener(v => SetInt("SelSkillXp", v));
         Button maxXp = PixelUIKit.CreateButton(font, root, "Max XP Button", maxXpText, new Vector2(bw, rowHeight), buttonColor, textColor, fontSize);
         Place(maxXp.GetComponent<RectTransform>(), 40f + dropW + gap, y, bw);
         maxXp.onClick.AddListener(() => SkillXpPicked(true));
@@ -1136,7 +1163,7 @@ public class PixelDevTools : MonoBehaviour
     {
         if (skillXpDropdown == null) return;
         PixelSkills s = PixelSkills.Instance;
-        int keep = skillXpDropdown.options.Count > 0 ? skillXpDropdown.value : 0;
+        int keep = skillXpDropdown.options.Count > 0 ? skillXpDropdown.value : GetInt("SelSkillXp", 0);
         List<string> names = new List<string> { allSkillsText }, keys = new List<string> { "" };
         if (s != null && s.Packs != null)
             foreach (PixelSkills.SkillPack p in s.Packs)

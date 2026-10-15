@@ -73,10 +73,7 @@ public static class PixelSettingsSync
         known.Add(new Known("PixelClicker.Setting.LogoFavorite", 0));   // the favourite main menu logo style (+ 1)
         // Key bindings.
         foreach (string name in Enum.GetNames(typeof(PixelAction))) known.Add(new Known("PixelClicker.Key." + name, 0));
-        // Dev tools.
-        foreach (string k in new[] { "ClearKey", "Infinite", "Selector", "NoDespawn", "NoLimit", "FarmerSeeds", "God", "PixelIndex", "SelPixel", "SelMinigame", "GodChoice", "ClickCount" })
-            known.Add(new Known("PixelClicker.Dev." + k, 0));
-        known.Add(new Known("PixelClicker.Dev.Amount", 2));
+        // Dev tools: PixelDevTools declares its own remembered choices (PixelDevTools.IntPrefs / StringPrefs) with PixelPrefs.DeclarePerSave.
         known.Add(new Known("PixelClicker.Dev.CustomText", 2));   // the Dev Hub's edited label texts (PixelDevTextEdit)
         return known;
     }
