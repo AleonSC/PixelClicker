@@ -5,7 +5,7 @@
 //   - InMenu: the game is not in front of the player (pause menu, title screen or its reverse swing). Autosave screenshots, saving,
 //     the View window.
 //   - CameraBusy: something else owns the camera (title screen / its swing, the camera intro, a takeover minigame). Orbital / free cam / zoom.
-//   - ForTip: a calm moment for a tip box or tutorial (in the game, no other tip or tutorial dim, Cubie not visiting or about to, the
+//   - ForTip: a calm moment for a tip box or tutorial (in the game, no other tip or tutorial dim, Cubie not visiting or about to (a visit whose trigger is met: AboutToVisit, not the whole time before his second visit), the
 //     new-game intro over, no takeover minigame, time running). Perk popups, the shop / skills / toggles tutorials.
 //   Scripts with their own extra conditions keep them next to the shared check.
 // ---------------------------------------------------
@@ -23,5 +23,5 @@ public static class PixelCalm
     /// <summary>A calm moment for a tip box or a tutorial: in the game, nothing else talking, Cubie not visiting, no takeover, time running.</summary>
     public static bool ForTip =>
         !InMenu && !PixelCameraIntro.Moving && !PixelHints.IntroHoldsGuide && !PixelNotice.IsShowing && !PixelTutorialDim.Active &&
-        !PixelGuideVendor.Pending && !PixelGuideVendor.Visiting && !PixelMinigame.TakeoverActive && Time.timeScale > 0f;
+        !PixelGuideVendor.AboutToVisit && !PixelGuideVendor.Visiting && !PixelMinigame.TakeoverActive && Time.timeScale > 0f;
 }

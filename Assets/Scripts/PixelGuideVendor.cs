@@ -143,6 +143,21 @@ public class PixelGuideVendor : MonoBehaviour
     /// <summary>True while the guide still has to show visit 2 (the shop tutorial waits for it).</summary>
     public static bool Pending => instance != null && !instance.disableGuide && PixelStats.Total(Stage2Key) < 1d;
 
+    /// <summary>
+    /// A visit is due RIGHT NOW (its trigger is met: visit 1's White clicks, or the shop for visit 2) and only waits for a calm moment. Tips and popups
+    /// step aside for this - not for the whole stretch before visit 2 (Pending), which held back e.g. Standard's level 2 popup until after the shop intro.
+    /// </summary>
+    public static bool AboutToVisit
+    {
+        get
+        {
+            if (instance == null || instance.disableGuide || !PixelHints.TipsEnabled) return false;
+            if (PixelStats.Total(Stage2Key) >= 1d) return false;
+            bool s1 = PixelStats.Total(Stage1Key) >= 1d;
+            return instance.ShopThere || (!s1 && instance.WhiteClicks() >= instance.visitOneAfterWhiteClicks);
+        }
+    }
+
     /// <summary>Settings > Replay tutorial: Cubie's two visits play again (without a second gift).</summary>
     public static void Replay()
     {
@@ -427,7 +442,7 @@ public class PixelGuideVendor : MonoBehaviour
         return why;
     }
 
-    private bool ShopThere => shop != null && shop.ShopAvailable;
+    private bool ShopThere => (shop != null ? shop : (shop = PixelFind.First<PixelShop>())) != null && shop.ShopAvailable;
 
     private void Update()
     {
