@@ -989,7 +989,7 @@ public partial class PixelAudio : MonoBehaviour
         {
             PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
             // Obsidian: the clicks climb in pitch, the breaking one is the highest.
-            PlaySound("pixel_" + type.ToString().ToLowerInvariant(), type == PixelClicker.PixelType.Obsidian ? 1.6f : 1f);
+            PlaySound("pixel_" + PixelBlockCatalog.SoundType(type).ToString().ToLowerInvariant(), type == PixelClicker.PixelType.Obsidian ? 1.6f : 1f);   // (a card can borrow another block's sounds: soundAs)
         }
     }
 
@@ -1003,7 +1003,7 @@ public partial class PixelAudio : MonoBehaviour
             float ramp = Mathf.Clamp01(hits / (float)Mathf.Max(1, needed));
             PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
             float pitch = type == PixelClicker.PixelType.Obsidian ? Mathf.Lerp(0.6f, 1.45f, ramp) : 1f;   // starts low, rises each click
-            PlaySound("pixel_" + type.ToString().ToLowerInvariant(), pitch, Mathf.Max(0.1f, ramp * ramp));
+            PlaySound("pixel_" + PixelBlockCatalog.SoundType(type).ToString().ToLowerInvariant(), pitch, Mathf.Max(0.1f, ramp * ramp));
         }
     }
 

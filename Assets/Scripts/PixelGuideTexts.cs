@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// The explanations shown in the Pixel Guide's orange '!' boxes: what each pixel type does, in terms of the game's real rules. Numbers that come from a
-/// pixel's own data (payout, clicks) are read from its tier; the rest describe the mechanics in words. A new pixel type needs a case in <c>Mechanics</c>.
+/// pixel's own data (payout, clicks) are read from its tier; the rest describe the mechanics in words. A new pixel type gets its text on its entry in PixelBlockCatalog.cs (guide / oldPixel); the switches below only keep the texts that need this class's own helpers.
 /// </summary>
 public static class PixelGuideTexts
 {
@@ -37,6 +37,8 @@ public static class PixelGuideTexts
 
     public static string OldPixel(PixelClicker.PixelType type)
     {
+        string fromCard = PixelBlockCatalog.OldPixelText(type);   // most texts live on the block's entry in PixelBlockCatalog.cs
+        if (fromCard != null) return fromCard;
         switch (type)
         {
             case PixelClicker.PixelType.Bait:
@@ -44,187 +46,21 @@ public static class PixelGuideTexts
                 BaitNumbers(out int pellets, out int percent, out int seconds);
                 return "falls beside the cube like any other and does nothing more itself. It is the " + pellets + " pellets it dropped when you collected it that attract fish: each one makes Fish +" + percent + "% more common while it lies there (about " + seconds + " seconds).";
             }
-            case PixelClicker.PixelType.Glass: return "shatters when it lands on the ground and is gone (set it down gently with Pixel Grabbing and it survives).";
-            case PixelClicker.PixelType.Ghost: return "bounces slowly a few times, then floats up and drifts off the screen.";
-            case PixelClicker.PixelType.Meteor: return "streaks away across the screen in a fiery trail instead of falling.";
-            case PixelClicker.PixelType.Solar: return "hovers above the floor, lasts 1.6 times longer than other old pixels and pays a small trickle.";
-            case PixelClicker.PixelType.Singularity: return "becomes a gravity well that holds up to 20 other old pixels for 5 minutes.";
-            case PixelClicker.PixelType.Water: return "splashes the first time it lands (no payout) and speeds up growing sprouts nearby.";
-            case PixelClicker.PixelType.Fire: return "burns away slowly over about 6 seconds without paying.";
-            case PixelClicker.PixelType.Nuclear: return "radiates: other old pixels near it age 40 times faster and vanish.";
             default: return "falls beside the cube and lies there for a while before it despawns.";
         }
     }
 
     private static string Mechanics(PixelClicker.PixelType type, PixelClicker.PixelTier t)
     {
+        System.Func<PixelClicker.PixelTier, string> fromCard = PixelBlockCatalog.GuideText(type);   // most texts live on the block's entry in PixelBlockCatalog.cs
+        if (fromCard != null) return fromCard(t);
         switch (type)
         {
-            case PixelClicker.PixelType.White:
-            case PixelClicker.PixelType.Gray:
-            case PixelClicker.PixelType.Black:
-                return "A plain pixel: one click, one payout. Nothing special happens.";
-            case PixelClicker.PixelType.Red:
-            case PixelClicker.PixelType.Green:
-            case PixelClicker.PixelType.Blue:
-                return "One of the RGB pixels: one click, one payout. In Bomb Defusal the right wire to cut is the colour of the RGB pixel you hold the most of.";
-            case PixelClicker.PixelType.Glass:
-                return "A see-through pixel. It is also the material for potions and the Pixel Bank's storage upgrade.";
-            case PixelClicker.PixelType.Vacuum:
-                return "Clicking it sucks up every old pixel lying around: they swirl into it and their stored value is paid out at once. The old Vacuum pixel then keeps those pixels floating inside its glass body. While a Vacuum potion is running only every 10th click vacuums.";
-            case PixelClicker.PixelType.Obsidian:
-                return "A Mining ore: black volcanic glass that takes " + t.clicksToCollect + " clicks and cracks more with every hit, but pays a lot; the click sound rises in pitch as it breaks. Breaking it throws dust and glass shards.";
-            case PixelClicker.PixelType.Luminescent:
-                return "A glowing pixel. Its old pixel stays bright as it falls and leaves a fading trail of light.";
-            case PixelClicker.PixelType.Singularity:
-                return "Rare. Its old pixel becomes a gravity well: for 5 minutes it drags up to 20 nearby old pixels toward it, keeps them from despawning, and captures meteors that fly close. Wells packed close together starve each other, so space them out. Feeding one to a black hole counts toward the Event Horizon achievement.";
-            case PixelClicker.PixelType.Ghost:
-                return "A gray, gelatinous blob. Clicking it is just a payout; its old pixel is the one that drifts away.";
-            case PixelClicker.PixelType.Meteor:
-                return "A cratered rock that needs 3 hits; the lava cracks glow brighter with each one. Its old pixel shoots off across the screen, and every one that does has a chance of knocking a star (Stardust) down beside the cube.";
-            case PixelClicker.PixelType.Solar:
-                return "A blazing sun. Every Solar click raises <b>Daylight</b> (it fades slowly): the higher it is, the faster seeds and Seed pets grow and the more hovering Solar pixels pay. Old Solar pixels hover and pay 8% of their value every 4 seconds; five touching ones never despawn and glow with a yellow aura.";
-            case PixelClicker.PixelType.Electric:
-                return "Pays a random whole amount (" + t.payoutMin + "-" + t.payoutMax + "). Clicking it triggers <b>Overcharge</b>: a burst of auto clicks (needs the Auto Clicker bought). Old Electric pixels link to each other and to placed devices with arcs, power timed devices (their countdown pauses) and never age while linked.";
-            case PixelClicker.PixelType.Mirror:
-                return "A chrome pixel. Clicking it pays its own value and then repeats the last payout of the previous different pixel you clicked.";
-            case PixelClicker.PixelType.Seed:
-                return "A shell you dig open. Every hit throws dirt; the click that cracks it pays and plants three sprouts. Each sprout grows a random unlocked pixel over about 6 seconds (rarer types are likelier; never Vacuum or Singularity) and then pops off as an old pixel.";
-            case PixelClicker.PixelType.Water:
-                return "A wobbly blue jelly. Its old pixel splashes the first time it lands, paying nothing, and instantly speeds up every growing sprout and planted Seed pet within about 5 pixel-widths (each only accepts water every 0.75 seconds).";
-            case PixelClicker.PixelType.Fire:
-                return "A flaming pixel. Clicking it blasts a ring of flames outward from the cube.";
-            case PixelClicker.PixelType.Copper:
-            case PixelClicker.PixelType.Tin:
-            case PixelClicker.PixelType.Iron:
-            case PixelClicker.PixelType.Lead:
-            case PixelClicker.PixelType.Zinc:
-            case PixelClicker.PixelType.Nickel:
-            case PixelClicker.PixelType.Silver:
-            case PixelClicker.PixelType.Gold:
-                return "A tough ore that chips with every hit (cracks spread, rock and metal flecks fly). There is an 8% chance a fresh ore is a <b>rich vein</b>: it glitters and pays 5 times as much. Ores only come up while Mining is the skill pack in play.";
-            case PixelClicker.PixelType.Bedrock:
-                return "The toughest rock: it takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks to break (decided when it appears), but it pays a big chunk of currency and skill XP. Like the other ores it can be a glittering rich vein (5x).";
-            case PixelClicker.PixelType.Fish:
-                return "Fishing block, rare: a silvery fish. Clicking it starts a Weak Spots round (the camera zooms in and time slows): hit every spot to catch it and get paid, miss one and it gets away. The auto clicker leaves fish for you. Bait pellets on the floor (and fish and water in a Bait Bucket) make fish come up more often. With the Weak Spots minigame switched off in Toggles, a fish takes a random 7-25 clicks to reel in instead.";
-            case PixelClicker.PixelType.Seaweed:
-                return "Fishing block: see-through seaweed. One click, pays little. An old Seaweed pixel sinks slowly instead of dropping.";
-            case PixelClicker.PixelType.Shell:
-                return "Fishing block: a glossy shell. One click, pays a fair amount.";
-            case PixelClicker.PixelType.Pearl:
-                return "Fishing block, rare: a shining pearl. It takes " + t.clicksToCollect + " clicks but pays a lot.";
-            case PixelClicker.PixelType.Driftwood:
-                return "Fishing's filler block. One click, almost no pay. At low fishing level it is most of what appears; as you level up it gets rarer and the good catches show up more.";
             case PixelClicker.PixelType.Bait:
             {
                 BaitNumbers(out int pellets, out int percent, out int seconds);
                 return "Fishing block: a lump of bait. One click, pays a little, and drops " + pellets + " bait pellets round the cube. While pellets lie there Fish show up much more often (+" + percent + "% each). They rot away after about " + seconds + " seconds, and a Jellyfish going off fries every one of them.";
             }
-            case PixelClicker.PixelType.Bottle:
-                return "Fishing SPECIAL block, rare: a message in a bottle. It takes " + t.clicksToCollect + " clicks to break. When the glass breaks a scroll flies out and unrolls into a <b>treasure map</b>, then an <b>X</b> appears on the ground somewhere in view: click it several times to dig up the buried treasure, a haul of good fishing pixels (mostly bait). <b>Right-click the bottle</b> to let it drift away instead, if you don't want to bother with the map.";
-            case PixelClicker.PixelType.Whale:
-                return "Fishing SPECIAL block, very rare: a whale. Click it once and you hook it: it yanks the line and swims fast away from your mouse, dashing about the screen, while you chase it and click. It needs a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks, and the more it took the more it pays (pay x clicks x (1 + clicks x 0.05)). A thin fishing line is drawn from your cursor to the whale; it is invisible within a pixel of the cursor and fades in beyond that. Take too long (about 80 seconds) and it breaks the line and swims away. The auto clicker waits while a whale is fighting.";
-            case PixelClicker.PixelType.Jellyfish:
-                return "A HAZARD, and an electric one. Never worth clicking: hit it " + t.clicksToCollect + " times and it discharges, stinging everything around it (a wide blast that wipes out the old pixels near the cube), frying every bait pellet, and Fishing XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your fishing level rises.";
-            case PixelClicker.PixelType.Treasure:
-                return "A chest that needs a random 1-20 hits, decided when it appears. Opening it pays the pixel's value x the hits x (1 + 0.15 x hits) and pours out a pile of random unlocked pixels at once: 2 plus one per hit, up to 24.";
-            case PixelClicker.PixelType.Nuclear:
-                return "A radioactive pixel with a toxic glow. Its old pixel ages every other old pixel within about 4 pixel-widths 40 times faster, so they disappear without paying - clear space before it lands.";
-            case PixelClicker.PixelType.Pest:
-                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and a swarm of bugs pours out and eats the sprouts you have growing (the more bugs on a sprout, the faster it goes), and Farming XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it flies off by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your farming level rises.";
-            case PixelClicker.PixelType.GasPocket:
-                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and the gas explodes, blowing away the old pixels around the cube, and Mining XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your mining level rises.";
-            case PixelClicker.PixelType.Berry:
-                return "Foraging block: a juicy berry. One pick, pays a little. It squelches.";
-            case PixelClicker.PixelType.Mushroom:
-                return "Foraging block: a mushroom. It takes " + t.clicksToCollect + " picks and releases a puff of spores.";
-            case PixelClicker.PixelType.Herb:
-                return "Foraging block that is light and leafy. One pick, pays little. An old Herb pixel drifts down slowly instead of dropping.";
-            case PixelClicker.PixelType.Truffle:
-                return "Foraging block, rare: a buried treasure. It takes " + t.clicksToCollect + " digs but pays a lot.";
-            case PixelClicker.PixelType.Weeds:
-                return "Foraging's filler block. One click, almost no pay. At low foraging level it is most of what appears; as you level up it gets rarer and the good finds show up more.";
-            case PixelClicker.PixelType.Mold:
-                return "A HAZARD. Every click on it spreads mold further over the old pixels lying around the cube, and moldy pixels die after a while. Right-click it to stop it spreading (that does NOT undo the mold already spread). To save a moldy pixel, grab it and shake it hard until the mold falls off. It leaves by itself after a few seconds. The auto clicker never touches it.";
-            case PixelClicker.PixelType.Toadstool:
-                return "A HAZARD. Never worth clicking: hit it " + t.clicksToCollect + " times and it bursts in poison spores that wipe out the old pixels around the cube, and Foraging XP drops 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Right-click it to clear it safely: that takes as many right clicks as it takes to break, plus the hits you already made. They get a bit more common as your foraging level rises.";
-            case PixelClicker.PixelType.Wood:
-                return "Woodcutting block: a solid log. A couple of chops and it pays a fair amount.";
-            case PixelClicker.PixelType.Bark:
-                return "Woodcutting block: rough bark. One chop, pays a little.";
-            case PixelClicker.PixelType.Sap:
-                return "Woodcutting block: a blob of sticky sap. It pays well for one chop, and an old Sap pixel does not bounce when it lands.";
-            case PixelClicker.PixelType.Leaf:
-                return "Woodcutting block: a flat green leaf with a pale midrib. One chop, pays little. An old Leaf pixel drifts down slowly instead of dropping.";
-            case PixelClicker.PixelType.Heartwood:
-                return "Woodcutting block, rare: the glowing red core of a tree. It takes " + t.clicksToCollect + " chops but pays a lot.";
-            case PixelClicker.PixelType.Twig:
-                return "Woodcutting filler block: a tangle of thin twigs. One click, almost no pay. Pinecone and Moss are its two siblings and share its spot: at low woodcutting level it is most of what appears; as you level up it gets rarer and the other wood blocks show up more.";
-            case PixelClicker.PixelType.Pinecone:
-                return "Woodcutting filler block: a scaly pinecone. One click, almost no pay. It shares the filler's spot with Twig and Moss, so it comes up a lot at low woodcutting level and less as you level up.";
-            case PixelClicker.PixelType.Moss:
-                return "Woodcutting filler block: a soft cushion of moss. One click, almost no pay. It shares the filler's spot with Twig and Pinecone, so it comes up a lot at low woodcutting level and less as you level up.";
-            case PixelClicker.PixelType.HornetNest:
-                return "The TERMITE HIVE, a HAZARD. Never worth clicking: break it (" + t.clicksToCollect + " hits) and the termites pour out, one for every old pixel lying on the floor. Each one runs to an old pixel, and a small bar over the pixel counts down while it chews - click the pixel before the bar runs out to save it, or it is eaten for good. Breaking it also drops Woodcutting XP 10% for a minute (it stacks with each one you set off in that minute). Left alone it drifts away by itself after a few seconds. The auto clicker never touches it. Hold a Pesticide with Block Hold and one left click clears it at once, safely, like the beehive. Right-click works it away instead: 10 right clicks clear it safely, it is collected as currency and drops as an old pixel (breaking it with left clicks pays nothing). They are rare (about half as common as other hazards) and get a bit more common as your woodcutting level rises.";
-            case PixelClicker.PixelType.Acorn:
-                return "Woodcutting block: an acorn. One click, pays a little. The trick is its OLD pixel: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other old pixels, so keep them coming.";
-            case PixelClicker.PixelType.Pesticide:
-                return "Woodcutting block: a canister of pesticide. It takes " + t.clicksToCollect + " clicks and pays a little - grab it with Block Hold instead. While you hold it, one left click on a Termite Hive clears it at once, safely (no termites, no XP penalty).";
-            case PixelClicker.PixelType.Whetstone:
-                return "Woodcutting block: a hard grey stone for sharpening. It takes " + t.clicksToCollect + " clicks and pays a little - but do not just break it: grab it with Block Hold while it is on the cube (a partly broken one can be held too). While you hold it every click fires off a rapid burst of extra clicks.";
-            case PixelClicker.PixelType.GreatOak:
-                return "Woodcutting block, very rare: a mighty oak. It takes a random " + t.randomClicksMin + "-" + t.randomClicksMax + " clicks, but pays a huge amount. Every hit has a chance to shake a bird nest out of the tree onto the ground round the cube: click the nest before it disappears (about 9 seconds) for bonus Woodcutting XP.";
-            case PixelClicker.PixelType.Rock:
-                return "Stone: Mining's filler block. One click, almost no pay. At low mining level it is most of what appears; as you level up it gets rarer and the ores show up more.";
-            case PixelClicker.PixelType.Dirt:
-                return "Farming's filler block: it takes a few digs (shrinking each time, with digging noises) and pays almost nothing. At low farming level it is most of what appears; as you level up it gets rarer and the other farm blocks show up more. Old Dirt pixels lying near a growing sprout also make it grow faster.";
-            case PixelClicker.PixelType.Fertilizer:
-                return "Farming block. Clicking it gives every growing sprout and Seed pet on the field an instant jump in growth.";
-            case PixelClicker.PixelType.Pollen:
-                return "Farming block that floats. An old Pollen pixel close to a sprout when it pops doubles the pay of the pixel that sprout grows.";
-            case PixelClicker.PixelType.Wheat:
-                return "Farming block. It pays more for every sprout currently growing on the field (up to a cap).";
-            case PixelClicker.PixelType.Weevil:
-                return "Farming pest. While a Weevil sits on the cube it eats one growing sprout every few seconds until you click it away.";
-            case PixelClicker.PixelType.GoldenFruit:
-                return "Farming prize. A growing sprout has a 3% chance to produce one instead of a normal pixel; it pays a lot.";
-            case PixelClicker.PixelType.Wire:
-                return "A copper wire, and a <b>conductor</b>: old Wire pixels carry the arcs that link devices and other conductors.";
-            case PixelClicker.PixelType.Battery:
-                return "A conductor that takes " + t.clicksToCollect + " clicks and also sets off an Overcharge when you click it. Linked old Batteries power timed devices.";
-            case PixelClicker.PixelType.Capacitor:
-                return "Every other click you make stores one charge in it (up to 40). When you click the Capacitor it pays its value x (1 + 0.15 per stored charge), then the charge resets.";
-            case PixelClicker.PixelType.Resistor:
-                return "A conductor that takes " + t.clicksToCollect + " clicks. Old Resistors link into the electric network like Electric pixels.";
-            case PixelClicker.PixelType.Transistor:
-                return "Clicking it makes the NEXT pixel you collect pay double.";
-            case PixelClicker.PixelType.Fuse:
-                return "Pays 3 times as much if you collect it within 3 seconds of it appearing, and only 0.3 times as much if you are slower.";
-            case PixelClicker.PixelType.Bulb:
-                return "Pays 10% more for every old conductor pixel (Electric, Wire, Battery, Resistor) lying around, up to 30 of them.";
-            case PixelClicker.PixelType.DragonCube1:
-            case PixelClicker.PixelType.DragonCube2:
-            case PixelClicker.PixelType.DragonCube3:
-            case PixelClicker.PixelType.DragonCube4:
-            case PixelClicker.PixelType.DragonCube5:
-            case PixelClicker.PixelType.DragonCube6:
-            case PixelClicker.PixelType.DragonCube7:
-                return "A very rare drop (roughly 1 in 70,000 pixels). It pays 1 of itself and is kept in your backpack. Collect all seven stars and you can Summon the Dragon and make a wish.";
-            case PixelClicker.PixelType.GodSlifer:
-                return "One of the three Egyptian God Cubes: Slifer the Sky Dragon, a red cube held together by storm lightning. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
-            case PixelClicker.PixelType.GodRa:
-                return "One of the three Egyptian God Cubes: Ra the Winged Dragon, a blazing golden cube wrapped in a sun's corona. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
-            case PixelClicker.PixelType.GodObelisk:
-                return "One of the three Egyptian God Cubes: Obelisk the Tormentor, a deep blue stone cube that sheds dust. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one.";
-            case PixelClicker.PixelType.StoneSpace:
-            case PixelClicker.PixelType.StoneMind:
-            case PixelClicker.PixelType.StoneReality:
-            case PixelClicker.PixelType.StonePower:
-            case PixelClicker.PixelType.StoneTime:
-            case PixelClicker.PixelType.StoneSoul:
-                return "One of the six Prime Cubes, an extremely rare drop (like the God Cubes, roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one of each. Hold all six and the Wizard will offer you a Gauntlet to bind them.";
-            case PixelClicker.PixelType.InfinityCubelette:
-                return "Forged with the Prime Gauntlet from all six Prime Cubes. It never drops and only one can exist.";
             default:
                 return "A pixel with no special effects.";
         }

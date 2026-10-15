@@ -116,6 +116,7 @@ public static class PixelFarmFx
     public static void Break(PixelClicker.PixelType type, Vector3 centre, float size, Color color)
     {
         if (PixelFx.Material == null) return;
+        type = PixelBlockCatalog.FxType(type);   // (a card can borrow another block's break burst: fxAs)
         GameObject root = Root("Farm Break", centre);
         Transform t = root.transform;
         ParticleSystem Burst(string name, Vector2 life, Vector2 speed, Vector2 psize, float gravity, Color a, Color b, int count, float radius, bool fade, Vector2 sizeLife = default)
