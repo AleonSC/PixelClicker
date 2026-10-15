@@ -232,7 +232,9 @@ public class PixelGrab : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             Rigidbody body = hit.rigidbody;
-            if (body == null || !IsOldPixel(body)) continue;
+            if (body == null) continue;
+            bool inRecycler = PixelRecycler.Holds(body);   // a husk kept in a Recycler can be picked back out
+            if (!inRecycler && !IsOldPixel(body)) continue;
             if (PixelPathCarrier.IsCarried(body)) continue;   // inside a Funnel tube / Elevator / Splitter: not to be dragged out
             if (clicker.IsFlyingPixel(body) && !PixelTimeStop.IsSlowed) continue; // a flying meteor can only be caught while time is slowed
 
@@ -247,6 +249,7 @@ public class PixelGrab : MonoBehaviour
             foreach (RaycastHit h in exact)
                 if (h.rigidbody == body && h.distance < pixelExact) pixelExact = h.distance;
             if (cubeExact < pixelExact) return;
+            if (inRecycler && !PixelRecycler.TakeOut(body)) continue;   // back on the floor's old-pixel list, loose and steerable
             Grab(body, despawn, ray);
             return;
         }
@@ -493,7 +496,7 @@ public class PixelGrab : MonoBehaviour
         heldShatter = null;
 
         if (heldGravity != null) heldGravity.enabled = true;
-        if (heldDespawn != null) heldDespawn.Held = false;
+        if (heldDespawn != null) { heldDespawn.Held = false; PixelRecycler.KeepIfOver(held); }   // let go over a Recycler: its timer can't run out before the bin takes it
         held = null;
         heldDespawn = null;
         heldGravity = null;

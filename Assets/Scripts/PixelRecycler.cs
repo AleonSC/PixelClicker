@@ -13,7 +13,9 @@
 //   PixelClicker.ExternalClickBlock and PixelGrab's guard, so pressing it neither clicks the cube nor grabs a pixel.
 //   Captured husks that lie still for 0.3 s are frozen in place (kinematic + parented to the bin: Settle / Freeze), so the pile cannot jitter or bounce
 //   and the husks scale with the bin when the floor's props fade (main menu, after a load: while the bin is scaled everything inside is frozen into it
-//   and nothing is captured or let go). Grabbing one unfreezes and unparents it. Loaded husks are put straight into the bin, frozen (ImportState).
+//   and nothing is captured or let go). Grabbing one takes it OUT (TakeOut: unfrozen, unparented, back on the old-pixel list, so it is a normal husk again
+//   and is captured anew if dropped back in). Husks above or in the opening get KeepAlive every check, and PixelGrab calls KeepIfOver on letting go, so an
+//   old husk's timer cannot run out in the moment before the bin captures it (that used to make a dropped husk vanish uncounted). Loaded husks are put straight into the bin, frozen (ImportState).
 //   SAVED: the husks inside go into PlacedState.extra ('Type,amount;', ExportState / ImportState via PixelConsumables) and are spawned back into the bin on
 //   load. A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
@@ -51,7 +53,36 @@ public class PixelRecycler : MonoBehaviour
         return false;
     }
 
+    /// <summary>Takes a husk out of the Recycler that holds it (Pixel Grabbing picking it up): loose, unparented and back on the floor's old-pixel list. False if no Recycler holds it.</summary>
+    public static bool TakeOut(Rigidbody body)
+    {
+        if (body == null) return false;
+        foreach (PixelRecycler r in all)
+        {
+            if (r == null || !r.inside.Remove(body)) continue;
+            r.Unfreeze(body);
+            if (r.clicker != null) r.clicker.AdoptOldPixel(body);
+            r.RefreshCounter();
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>A husk let go above or inside a Recycler's opening gets a moment more life, so an old husk's timer can't run out in the instant before the bin captures it.</summary>
+    public static void KeepIfOver(Rigidbody body)
+    {
+        if (body == null) return;
+        foreach (PixelRecycler r in all)
+        {
+            if (r == null || !r.Over(body.position)) continue;
+            OldPixelDespawn d = body.GetComponent<OldPixelDespawn>();
+            if (d != null && !d.IsDespawning) d.KeepAlive();
+            return;
+        }
+    }
+
     private PixelClicker clicker;
+    private Vector3 baseScale = Vector3.one;
     private Transform lidPivot, button;
     private Collider buttonCollider;
     private Renderer buttonRenderer;
@@ -131,6 +162,7 @@ public class PixelRecycler : MonoBehaviour
         clicker = owner;
         float u = Unit(clicker);
         innerW = WidthHusks * u; innerD = DepthHusks * u; wallH = HeightHusks * u;
+        baseScale = transform.localScale;
         lidPivot = transform.Find("Lid Pivot");
         button = transform.Find("Button");
         buttonCollider = button != null ? button.GetComponent<Collider>() : null;
@@ -267,7 +299,8 @@ public class PixelRecycler : MonoBehaviour
         bool changed = false;
         inside.RemoveAll(b => b == null);
         // While the floor's props fade (main menu, after a load) the bin is being scaled: everything inside is frozen into it and moves with it; no capturing or letting go.
-        if (Mathf.Abs(transform.localScale.x - 1f) > 0.01f)
+        bool fading = (transform.localScale - baseScale).sqrMagnitude > 0.0001f;
+        if (fading)
         {
             foreach (Rigidbody b in inside) Freeze(b);
             return;
@@ -288,7 +321,10 @@ public class PixelRecycler : MonoBehaviour
         for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody b = pixels[i];
-            if (b == null || !Inside(b.position)) continue;
+            if (b == null || !Over(b.position)) continue;
+            OldPixelDespawn alive = b.GetComponent<OldPixelDespawn>();
+            if (alive != null && !alive.IsDespawning) alive.KeepAlive();   // falling into the bin (or resting in it): its timer waits until it is captured
+            if (!Inside(b.position)) continue;
             if (inside.Count >= Mathf.Max(1, capacity))   // the bin is full: husks lying in it anyway still never fade while they are inside
             {
                 OldPixelDespawn keep = b.GetComponent<OldPixelDespawn>();
@@ -354,6 +390,13 @@ public class PixelRecycler : MonoBehaviour
     {
         Vector3 p = transform.InverseTransformPoint(world);
         return Mathf.Abs(p.x) <= innerW * 0.5f && Mathf.Abs(p.z) <= innerD * 0.5f && p.y >= -0.05f && p.y <= wallH;
+    }
+
+    /// <summary>Inside the walls or in the column of air above the opening (a husk falling in).</summary>
+    private bool Over(Vector3 world)
+    {
+        Vector3 p = transform.InverseTransformPoint(world);
+        return Mathf.Abs(p.x) <= innerW * 0.5f + 0.1f && Mathf.Abs(p.z) <= innerD * 0.5f + 0.1f && p.y >= -0.05f && p.y <= wallH * 4f;
     }
 
     private void RefreshCounter()

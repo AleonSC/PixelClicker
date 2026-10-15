@@ -4907,6 +4907,12 @@ public partial class PixelClicker : MonoBehaviour
         return true;
     }
 
+    /// <summary>Puts a husk that was taken off the list (ReleaseOldPixel) back on it as a normal old pixel (a husk picked back out of a Recycler).</summary>
+    public void AdoptOldPixel(Rigidbody body)
+    {
+        if (body != null && !oldPixels.Contains(body)) oldPixels.Add(body);
+    }
+
     /// <summary>The sound id of a pixel type's own bounce ("pixel_bounce_electric"), or null for an invalid tier. PixelAudio falls back to the plain landing sound if no such sound has clips.</summary>
     private string BounceSoundId(int tierIndex) =>
         IsValidTier(tierIndex) ? "pixel_bounce_" + tiers[tierIndex].type.ToString().ToLowerInvariant() : null;
