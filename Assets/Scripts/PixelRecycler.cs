@@ -663,6 +663,10 @@ public class PixelRecycler : MonoBehaviour
                 sb.Append('+').Append(PixelClicker.FormatNumberShort(kv.Value)).Append(' ').Append(clicker.Tiers[kv.Key].displayName);
             }
             PixelStats.Count("recycler.husks", count);
+            PixelStats.Count("recycler.cycles");
+            double paidTotal = 0d;
+            foreach (KeyValuePair<int, double> kv in paid) if (kv.Value > 0d) paidTotal += kv.Value;
+            PixelStats.Count("recycler.paid", paidTotal);   // (pixels of every type added up)
             PixelAudio.Play("purchase");
             PixelHints.Announce("Recycled " + count + " husk" + (count == 1 ? "" : "s") + (sb.Length > 0 ? ": " + sb : "."));
         }

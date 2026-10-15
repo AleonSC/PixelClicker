@@ -405,6 +405,7 @@ public class PixelBlockHold : MonoBehaviour
         chargeTimer = 0f;
         chargesGiven = 0;
         holding = true;
+        PixelStats.Count("hold.count");   // (Stats: blocks held)
         stakeClickBonus = 0f;
         holdStartedAt = Time.unscaledTime;
         returning = false;
@@ -453,6 +454,9 @@ public class PixelBlockHold : MonoBehaviour
     private void OnStakeAppeared(float stake)
     {
         bool win = stake > 1f;
+        // Stats: counted when the outcome is SHOWN (not when it is rolled), so the Stats screen never gives it away early.
+        PixelStats.Count(win ? "stake.won" : "stake.lost");
+        if (win) PixelStats.Best("stake.best", stake);
         string name = clicker != null && clicker.IsValidTierIndex(clicker.CurrentClickTierIndex) ? clicker.Tiers[clicker.CurrentClickTierIndex].type.ToString() : "block";
         PixelStatusLines.Set("stake.live", win ? "Stake paid off: this " + name + " is worth x" + stake.ToString("0.0") : (stake <= 0f ? "Stake lost: this " + name + " is worth nothing" : "Stake lost: this " + name + " is worth x" + stake.ToString("0.0")),
                              win ? new Color(0.45f, 1f, 0.55f, 1f) : new Color(1f, 0.4f, 0.35f, 1f), 3f);

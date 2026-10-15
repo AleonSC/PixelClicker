@@ -4537,6 +4537,14 @@ public partial class PixelClicker : MonoBehaviour
         FinishDefuse(tier);
     }
 
+    /// <summary>Per-skill hazard counters for the Stats screen ('hazards.triggered.woodcutting'...): the skill whose pack owns the hazard block.</summary>
+    private static void CountHazardForSkill(string prefix, PixelTier tier)
+    {
+        PixelSkills s = PixelSkills.Instance;
+        PixelSkills.SkillPack pack = s != null && tier != null ? s.PackOfType(tier.type) : null;
+        if (pack != null) PixelStats.Count(prefix + pack.id, 1);
+    }
+
     private void FinishDefuse(PixelTier tier, bool byRightClick = false)
     {
         if (byRightClick)
@@ -4549,6 +4557,7 @@ public partial class PixelClicker : MonoBehaviour
         defuseClicks = 0;
         hitsOnCurrentPixel = 0;
         PixelStats.Count("hazards.defused", 1);
+        CountHazardForSkill("hazards.defused.", tier);
         PixelHints.Announce(tier.type == PixelType.Mold ? "You scraped the mold off the cube. What it already spread stays - shake infected pixels clean." : "You cleared the " + tier.displayName.ToLowerInvariant() + " safely.");
         if (!disableClickPops) PixelBasicFx.Play(tier.type, tier.color, pixelTransform.position, PixelBaseSize, false, 1f, clickPopStrength);
         if (randomizeSpawnTier) currentTierIndex = RollTier();
@@ -4657,6 +4666,7 @@ public partial class PixelClicker : MonoBehaviour
             }
         }
         PixelStats.Count("hazards.triggered", 1);
+        CountHazardForSkill("hazards.triggered.", tier);
         string penalty = PixelSkills.ApplyHazardPenalty();
         PixelHints.Announce(what, what + " " + penalty);
         PlayClickEffects(tier);

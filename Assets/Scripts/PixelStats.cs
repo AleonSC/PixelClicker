@@ -7,7 +7,7 @@
 //   snake.length, sort.fastest, bomb.defused/exploded, ultra.<minigame id> (PixelMinigame.UltraRoll + the Pad), ghost.kept,
 //   combo.tier, old.vacuumed/banked/grabbed/shattered, crafts, holes.fed, sessions, session.longest, rate.best (best pixels per
 //   minute, sampled each second), timestop/timeslow.seconds/uses. GetLines(number) builds the Stats screen's rows (headings General /
-//   Pixels / Old pixels / Combo and time / Minigames; per-pixel-type earned rows; a minigame's rows only once it runs or has data;
+//   Pixels / Clicks per pixel / Husks (+ Recycler cycles and payout) / Block Hold (holds, stakes won / lost - counted when shown - best stake) / Skills (level + hazards set off / cleared per skill: hazards.triggered.<id>, hazards.defused.<id>) / Combo and time / Crafting and items / Devices placed (every DeviceKind) / Rare finds (Dragon x/7, God x/3, Prime x/6) / Pets / Minigames (Ultra sources from PixelMinigame.All); per-pixel-type earned rows; a minigame's rows only once it runs or has data;
 //   Ultra earned, stardust, bomb parts and achievements are read from their owners); the pause menu's Stats screen just renders that
 //   list (RebuildStatRows, rebuilt only when the row list changes). To add a stat: record it with PixelStats.Count/Best/Fastest and
 //   add a row in GetLines. Saved by PixelSaveGame (ExtraData).
@@ -403,6 +403,18 @@ public class PixelStats : MonoBehaviour
     // The list shown on the Stats screen
     // ------------------------------------------------------------------
 
+    /// <summary>'QuantumOrganizer' -> 'Quantum Organizer' (device kinds on the Stats screen).</summary>
+    private static string SpacedName(string name)
+    {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder(name.Length + 4);
+        for (int i = 0; i < name.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(name[i]) && !char.IsUpper(name[i - 1])) sb.Append(' ');
+            sb.Append(name[i]);
+        }
+        return sb.ToString();
+    }
+
     /// <summary>One row of the Stats screen: a heading (no value) or a label with its value.</summary>
     public struct Line
     {
@@ -486,11 +498,34 @@ public class PixelStats : MonoBehaviour
         Cnt("Stored in the bank", "old.banked");
         Cnt("Grabbed", "old.grabbed");
         Cnt("Shattered (glass)", "old.shattered");
-        Cnt("Items crafted", "crafts");
-        Num("Potions used", TotalPotionsUsed);
-        Num("Fans placed", fansUsed);
-        Num("Vacuum devices placed", vacuumDevicesUsed);
-        Num("Sorters placed", sortersUsed);
+        if (Counter("recycler.cycles") > 0d)
+        {
+            Cnt("Recycled", "recycler.husks");
+            Cnt("   Recycler cycles", "recycler.cycles");
+            Cnt("   Pixels paid back", "recycler.paid");
+        }
+        if (Counter("old.shredded") > 0d) Cnt("Shredded (Wood Chipper)", "old.shredded");
+
+        Head("Block Hold");
+        Cnt("Blocks held", "hold.count");
+        Cnt("Stakes won", "stake.won");
+        Cnt("Stakes lost", "stake.lost");
+        double bestStake = Counter("stake.best");
+        Row("Best stake", bestStake > 0d ? "x" + bestStake.ToString("0.0") : "-");
+
+        PixelSkills skills = PixelSkills.Instance;
+        if (skills != null && skills.Packs != null)
+        {
+            // Every skill you can train (Standard always) with its level, and the hazards of its pack set off / cleared.
+            Head("Skills");
+            foreach (PixelSkills.SkillPack sp in skills.Packs)
+            {
+                if (sp == null || (sp.id != PixelSkills.StandardId && !skills.IsAvailable(sp))) continue;
+                Row(sp.displayName, "Level " + skills.LevelOf(sp));
+                if (Counter("hazards.triggered." + sp.id) > 0d) Cnt("   Hazards set off", "hazards.triggered." + sp.id);
+                if (Counter("hazards.defused." + sp.id) > 0d) Cnt("   Hazards cleared", "hazards.defused." + sp.id);
+            }
+        }
 
         Head("Combo and time");
         Num("Highest combo", highestCombo);
@@ -501,6 +536,48 @@ public class PixelStats : MonoBehaviour
             Cnt("   Times used", "timestop.uses");
             Row("Time slowed", FormatTime(Counter("timeslow.seconds")));
             Cnt("   Times used", "timeslow.uses");
+        }
+
+        Head("Crafting and items");
+        Cnt("Items crafted", "crafts");
+        Num("Potions used", TotalPotionsUsed);
+        if (Counter("fuel.used") > 0d) Cnt("Combo Fuel used", "fuel.used");
+        if (Counter("bait.used") > 0d) Cnt("Ghost Bait used", "bait.used");
+        if (Counter("treat.used") > 0d) Cnt("Pet Treats used", "treat.used");
+
+        // Every device kind that has been placed at least once (the fan / vacuum device / sorter keep their old typed counters).
+        Head("Devices placed");
+        bool anyDevice = false;
+        foreach (PixelConsumables.DeviceKind kind in (PixelConsumables.DeviceKind[])Enum.GetValues(typeof(PixelConsumables.DeviceKind)))
+        {
+            double placed = kind == PixelConsumables.DeviceKind.Fan ? fansUsed
+                          : kind == PixelConsumables.DeviceKind.Vacuum ? vacuumDevicesUsed
+                          : kind == PixelConsumables.DeviceKind.Sorter ? sortersUsed
+                          : Counter("device.placed." + kind);
+            if (placed <= 0d) continue;
+            anyDevice = true;
+            Num(kind == PixelConsumables.DeviceKind.Vacuum ? "Vacuum Device" : SpacedName(kind.ToString()), placed);
+        }
+        if (!anyDevice) Row("None yet", "-");
+
+        // The rare finds: how many of each set you have ever found (the Collection Log shows which).
+        if (clicker != null)
+        {
+            int dragons = 0, gods = 0, primes = 0;
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+            {
+                if (t.totalCollected <= 0d && t.count <= 0d) continue;
+                if (PixelClicker.IsDragonCube(t.type)) dragons++;
+                else if (t.type == PixelClicker.PixelType.GodSlifer || t.type == PixelClicker.PixelType.GodRa || t.type == PixelClicker.PixelType.GodObelisk) gods++;
+                else if ((int)t.type >= (int)PixelClicker.PixelType.StoneSpace && (int)t.type < (int)PixelClicker.PixelType.InfinityCubelette) primes++;
+            }
+            Head("Rare finds");
+            Row("Dragon Cubes found", dragons + " / 7");
+            if (Counter("dragon.summons") > 0d) Cnt("   Dragons summoned", "dragon.summons");
+            if (Counter("dragon.wishes") > 0d) Cnt("   Wishes made", "dragon.wishes");
+            Row("God Cubes found", gods + " / 3");
+            Row("Prime Cubes found", primes + " / 6");
+            if (Counter("infinity.forged") > 0d) Cnt("   Prime Cubelettes forged", "infinity.forged");
         }
 
         PixelPets petSystem = PixelPets.Instance;
@@ -519,10 +596,13 @@ public class PixelStats : MonoBehaviour
         Head("Minigames");
         double ultra = clicker != null ? clicker.UltraEarned : 0d;
         Num("Ultra pixels earned", ultra);
-        string[] ultraIds = { "pad", "snake", "sort", "breakout", "blackhole" };
-        string[] ultraNames = { "Ultra Holes", "Snake", "Sorting Race", "Breakout", "Black Hole" };
-        for (int i = 0; i < ultraIds.Length; i++)
-            if (Counter("ultra." + ultraIds[i]) > 0d) Num("   from " + ultraNames[i], Counter("ultra." + ultraIds[i]));
+        foreach (PixelMinigame g in PixelMinigame.All)   // (every minigame that has given any: a new Ultra source is listed by itself)
+            if (g != null && Counter("ultra." + g.Id) > 0d) Num("   from " + g.DisplayName, Counter("ultra." + g.Id));
+        if (Seen("weakspot", "weakspot.rounds"))
+        {
+            Cnt("Weak Spots rounds", "weakspot.rounds");
+            Cnt("Weak Spots won", "weakspot.wins");
+        }
         if (Seen("ghost", "ghost.kept") || ghostsClicked > 0)
         {
             Num("Ghosts clicked", ghostsClicked);
