@@ -810,17 +810,6 @@ public class PixelDevTools : MonoBehaviour
         y += rowHeight + 24f;
         ws = content.childCount;
 
-        // Row: tick box so the Farmer always brings a Dragon Seed
-        farmerSeedsToggle = BuildToggleRow(content, farmerSeedsToggleText, y, inner, farmerAlwaysSeeds, on =>
-        {
-            farmerAlwaysSeeds = on;
-            PixelFarmerMinigame.DevAlwaysDragonSeeds = on;
-            SetBool("FarmerSeeds", on);
-        });
-        Widget(content, board, "farmerseeds", ws, y);
-        y += rowHeight + 24f;
-        ws = content.childCount;
-
         // Row: tick box that makes the floor circle twice as big
         doubleFloorToggle = BuildToggleRow(content, doubleFloorToggleText, y, inner, doubleFloor, on =>
         {
@@ -916,19 +905,18 @@ public class PixelDevTools : MonoBehaviour
             case "infinite": return "Infinite resources";
             case "nodespawn": return "Old pixel despawns";
             case "nolimit": return "Old pixel limit";
-            case "farmerseeds": return "Farmer seeds";
             case "god": return "God mode";
             case "clicks": return "Click count";
             default: return id;
         }
     }
 
-    private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y)
+    private void Widget(RectTransform content, PixelWidgetBoard board, string id, int start, float y, int rows = 1)
     {
         List<Transform> kids = new List<Transform>();
         for (int i = start; i < content.childCount; i++) kids.Add(content.GetChild(i));
         float hdr = PixelWidgetBoard.CardHeaderH;   // the card's header strip (title + minimize button) sits above the controls
-        float cardH = rowHeight + 16f + hdr;
+        float cardH = rows * rowHeight + (rows - 1) * WidgetRowGap + 16f + hdr;   // (a widget with more rows places them WidgetRowGap apart)
         GameObject card = new GameObject("Widget " + id, typeof(RectTransform), typeof(Image));
         card.transform.SetParent(content, false);
         RectTransform cr = card.GetComponent<RectTransform>();
@@ -1085,10 +1073,18 @@ public class PixelDevTools : MonoBehaviour
         gauntlet.onClick.AddListener(GiveGauntlet);
         AddTip(spawnRare.gameObject, "Replace the block on the clicker cube with the picked super rare (click it to collect it like a real find; the Golden Snitch waits for your click and flies).");
         AddTip(gauntlet.gameObject, "Put a Prime Gauntlet in your inventory (right-click it there to set the six Prime Cubes and forge the Cubelette).");
-        Widget(root, board, "superrares", start, y);
+        // Second row: the Farmer always brings a Dragon Seed.
+        farmerSeedsToggle = BuildToggleRow(root, farmerSeedsToggleText, y + rowHeight + WidgetRowGap, inner, farmerAlwaysSeeds, on =>
+        {
+            farmerAlwaysSeeds = on;
+            PixelFarmerMinigame.DevAlwaysDragonSeeds = on;
+            SetBool("FarmerSeeds", on);
+        });
+        Widget(root, board, "superrares", start, y, 2);
         FillRareDropdown();
     }
 
+    private const float WidgetRowGap = 10f;   // space between the rows of a multi-row widget card
     private TMP_Dropdown rareDropdown;
     private readonly List<PixelClicker.PixelType> rareTypes = new List<PixelClicker.PixelType>();   // dropdown option -> pixel type (in the game's own order)
 

@@ -1105,3 +1105,4 @@
 [2026-10-15 17:43 UTC] Made the Golden Snitch bigger (64 to 110 px on screen) and slower (top speed about half, calmer darts) so it can actually be caught.
 [2026-10-15 17:45 UTC] The Golden Snitch is now a polished gold cube: it lands on the clicker cube and waits for your click (slips away after 2 minutes), then the gold cube sprouts wings and flies.
 [2026-10-15 17:50 UTC] Dev Hub: the Dragon Cube / God Cube / God show widgets became one 'Super Rares' widget - pick any rare cube (Golden Snitch included) and Spawn it on the clicker cube, plus a button that gives a Prime Gauntlet.
+[2026-10-15 17:51 UTC] Dev Hub: the 'Farmer always has dragon seeds' tick box moved into the Super Rares widget (second row).
