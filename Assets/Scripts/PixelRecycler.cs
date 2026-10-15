@@ -11,7 +11,9 @@
 //   into payoutShare (10%) of its stored value as currency of its own type (pixel rules: the Recycler is the one machine that turns husks back into
 //   money, at a loss), the husks are destroyed, and the lid slides back open. ButtonHot (the pointer is over a button) is part of
 //   PixelClicker.ExternalClickBlock and PixelGrab's guard, so pressing it neither clicks the cube nor grabs a pixel.
-//   Captured husks that lie still for 0.3 s are frozen in place (kinematic: Settle), so the pile cannot jitter or bounce; grabbing one unfreezes it.
+//   Captured husks that lie still for 0.3 s are frozen in place (kinematic + parented to the bin: Settle / Freeze), so the pile cannot jitter or bounce
+//   and the husks scale with the bin when the floor's props fade (main menu, after a load: while the bin is scaled everything inside is frozen into it
+//   and nothing is captured or let go). Grabbing one unfreezes and unparents it. Loaded husks are put straight into the bin, frozen (ImportState).
 //   SAVED: the husks inside go into PlacedState.extra ('Type,amount;', ExportState / ImportState via PixelConsumables) and are spawned back into the bin on
 //   load. A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
@@ -231,10 +233,26 @@ public class PixelRecycler : MonoBehaviour
             double.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double amount);
             int col = n % perRow, row = (n / perRow) % Mathf.Max(1, Mathf.FloorToInt(DepthHusks)), layer = n / (perRow * Mathf.Max(1, Mathf.FloorToInt(DepthHusks)));
             Vector3 local = new Vector3((col - (perRow - 1) * 0.5f) * u, u * (0.8f + layer), (row - (DepthHusks - 1f) * 0.5f) * u);
+            int before = clicker.OldPixels.Count;
             clicker.SpawnStoredPixel(tier, amount, transform.TransformPoint(local), Vector3.zero);
             n++;
+            if (clicker.OldPixels.Count <= before) continue;
+            Rigidbody b = clicker.OldPixels[clicker.OldPixels.Count - 1];
+            if (b == null) continue;
+            OldPixelPopIn pop = b.GetComponent<OldPixelPopIn>();
+            if (pop != null) pop.Finish();   // full size and solid at once
+            Vector3 size = b.transform.localScale;   // (its world size: it had no parent)
+            if (!clicker.ReleaseOldPixel(b, false)) continue;
+            OldPixelDespawn despawn = b.GetComponent<OldPixelDespawn>();
+            if (despawn != null) despawn.Held = true;
+            b.isKinematic = true;
+            b.transform.SetParent(transform, false);   // placed straight into the bin in its own space (the bin may still be scaled by the load fade)
+            b.transform.localPosition = local;
+            b.transform.localRotation = Quaternion.identity;
+            b.transform.localScale = size;
+            inside.Add(b);
         }
-        tick = 0f;   // capture them at once
+        RefreshCounter();
     }
 
     private bool PointerOnButton(Camera cam)
@@ -248,6 +266,12 @@ public class PixelRecycler : MonoBehaviour
     {
         bool changed = false;
         inside.RemoveAll(b => b == null);
+        // While the floor's props fade (main menu, after a load) the bin is being scaled: everything inside is frozen into it and moves with it; no capturing or letting go.
+        if (Mathf.Abs(transform.localScale.x - 1f) > 0.01f)
+        {
+            foreach (Rigidbody b in inside) Freeze(b);
+            return;
+        }
         // Husks in the bin never despawn: their timer stays held every tick (Pixel Grabbing lets go of 'Held' when you poke one); one taken out of the bin is let go again.
         for (int i = inside.Count - 1; i >= 0; i--)
         {
@@ -288,7 +312,7 @@ public class PixelRecycler : MonoBehaviour
     private void Settle(Rigidbody b, bool inHand)
     {
         if (inHand) { Unfreeze(b); return; }
-        if (b.isKinematic) return;
+        if (b.isKinematic) { Freeze(b); return; }
 #if UNITY_6000_0_OR_NEWER
         float speed = b.linearVelocity.sqrMagnitude;
 #else
@@ -298,19 +322,32 @@ public class PixelRecycler : MonoBehaviour
         rest = speed < 0.04f ? rest + 0.1f : 0f;
         restSeconds[b] = rest;
         if (rest < 0.3f) return;
+        Freeze(b);
+    }
+
+    /// <summary>Freezes a husk into the bin: kinematic and parented to it, so it scales and moves with the Recycler (the menu fade shrinks the bin with its contents).</summary>
+    private void Freeze(Rigidbody b)
+    {
+        if (b == null) return;
+        if (!b.isKinematic)
+        {
 #if UNITY_6000_0_OR_NEWER
-        b.linearVelocity = Vector3.zero;
+            b.linearVelocity = Vector3.zero;
 #else
-        b.velocity = Vector3.zero;
+            b.velocity = Vector3.zero;
 #endif
-        b.angularVelocity = Vector3.zero;
-        b.isKinematic = true;
+            b.angularVelocity = Vector3.zero;
+            b.isKinematic = true;
+        }
+        if (b.transform.parent != transform) b.transform.SetParent(transform, true);
     }
 
     private void Unfreeze(Rigidbody b)
     {
         restSeconds.Remove(b);
-        if (b != null && b.isKinematic) b.isKinematic = false;
+        if (b == null) return;
+        if (b.transform.parent == transform) b.transform.SetParent(null, true);
+        if (b.isKinematic) b.isKinematic = false;
     }
 
     private bool Inside(Vector3 world)
