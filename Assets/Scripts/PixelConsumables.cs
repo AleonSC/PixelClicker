@@ -1163,20 +1163,21 @@ public class PixelConsumables : MonoBehaviour
     private void AppendComboPotions()
     {
         System.Collections.Generic.List<Potion> bases = new System.Collections.Generic.List<Potion>();
-        // (The standalone types - ores, skill blocks, Fire... - have single potions only: combining all of them would make tens of thousands of combos, and their enum values are past the 64 bits of the lookup mask.)
-        foreach (Potion p in potions) if (p != null && !p.craftOnly && p.type != PixelClicker.PixelType.Vacuum && !PixelClicker.IsStandalone(p.type)) bases.Add(p);
+        // Every block can be in a 2-type combo. 3-type combos are only made from non-standalone types: with the skill blocks in too it would be
+        // ~75,000 potions built up front (they are all made here, once, so item indexes never shift).
+        foreach (Potion p in potions) if (p != null && !p.craftOnly && p.type != PixelClicker.PixelType.Vacuum && !PixelClicker.IsRareCube(p.type)) bases.Add(p);
         bases.Sort((x, y) => ((int)x.type).CompareTo((int)y.type));
 
         System.Collections.Generic.List<Potion> all = new System.Collections.Generic.List<Potion>(potions);
         comboLookup.Clear();
         for (int i = 0; i < potions.Length; i++)
-            if (potions[i] != null && potions[i].craftOnly) comboLookup[ComboMask(potions[i])] = i;
+            if (potions[i] != null && potions[i].craftOnly) comboLookup[ComboKey(potions[i])] = i;
 
         for (int i = 0; i < bases.Count; i++)
         for (int j = i + 1; j < bases.Count; j++)
         {
             Potion a = bases[i], b = bases[j];
-            long pairMask = Bit(a.type) | Bit(b.type);
+            long pairMask = Key(a.type, b.type);
             if (comboLookup.ContainsKey(pairMask)) continue;
             comboLookup[pairMask] = all.Count;
             all.Add(new Potion
@@ -1190,10 +1191,12 @@ public class PixelConsumables : MonoBehaviour
                 durationSeconds = (a.durationSeconds + b.durationSeconds) * 0.5f,
             });
 
+            if (PixelClicker.IsStandalone(a.type) || PixelClicker.IsStandalone(b.type)) continue;   // (no 3-type combos with skill blocks, see above)
             for (int k = j + 1; k < bases.Count; k++)
             {
                 Potion c = bases[k];
-                long tripleMask = pairMask | Bit(c.type);
+                if (PixelClicker.IsStandalone(c.type)) continue;
+                long tripleMask = Key(a.type, b.type, c.type);
                 if (comboLookup.ContainsKey(tripleMask)) continue;
                 comboLookup[tripleMask] = all.Count;
                 all.Add(new Potion
@@ -1260,16 +1263,23 @@ public class PixelConsumables : MonoBehaviour
     }
 
     private readonly System.Collections.Generic.Dictionary<long, int> comboLookup = new System.Collections.Generic.Dictionary<long, int>();
-    private static long Bit(PixelClicker.PixelType type) => 1L << (int)type;
-    private static long ComboMask(Potion p) => Bit(p.type) | Bit(p.secondType) | (p.hasThird ? Bit(p.thirdType) : 0L);
+    /// <summary>Lookup key of a set of 2 or 3 pixel types (order doesn't matter): the sorted enum values packed 16 bits each, so any enum value fits.</summary>
+    private static long Key(PixelClicker.PixelType a, PixelClicker.PixelType b, PixelClicker.PixelType? c = null)
+    {
+        int x = (int)a + 1, y = (int)b + 1, z = c.HasValue ? (int)c.Value + 1 : 0;
+        if (x > y) { int t = x; x = y; y = t; }
+        if (z != 0) { if (y > z) { int t = y; y = z; z = t; } if (x > y) { int t = x; x = y; y = t; } }
+        return ((long)x << 32) | ((long)y << 16) | (long)z;
+    }
+    private static long ComboKey(Potion p) => p.hasThird ? Key(p.type, p.secondType, p.thirdType) : Key(p.type, p.secondType);
 
     /// <summary>Index of the 2-type combo potion for these two pixel types (either order), or -1.</summary>
     public int FindComboPotion(PixelClicker.PixelType a, PixelClicker.PixelType b)
-        => a != b && comboLookup.TryGetValue(Bit(a) | Bit(b), out int index) ? index : -1;
+        => a != b && comboLookup.TryGetValue(Key(a, b), out int index) ? index : -1;
 
     /// <summary>Index of the 3-type combo potion for these three pixel types (any order), or -1.</summary>
     public int FindComboPotion(PixelClicker.PixelType a, PixelClicker.PixelType b, PixelClicker.PixelType c)
-        => a != b && b != c && a != c && comboLookup.TryGetValue(Bit(a) | Bit(b) | Bit(c), out int index) ? index : -1;
+        => a != b && b != c && a != c && comboLookup.TryGetValue(Key(a, b, c), out int index) ? index : -1;
 
     /// <summary>True for a combo potion (craft-only, never in the shop).</summary>
     public bool ItemCraftOnly(int item) => !IsDevice(item) && potions[item].craftOnly;

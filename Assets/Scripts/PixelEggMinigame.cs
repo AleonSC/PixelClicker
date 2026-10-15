@@ -166,7 +166,7 @@ public class PixelEgg : MonoBehaviour
         PixelPets pets = PixelPets.Instance;
         if (pets == null || clicker == null) return list;
         foreach (PixelClicker.PixelTier t in clicker.Tiers)
-            if (!t.rareDrop && !PixelClicker.IsStandalone(t.type) && !pets.IsOwned(t.type)) list.Add(t.type);
+            if (!t.rareDrop && PixelPets.CanHavePet(t.type) && !pets.IsOwned(t.type)) list.Add(t.type);
         return list;
     }
 

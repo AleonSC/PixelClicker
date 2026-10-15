@@ -211,7 +211,7 @@ public class PixelAchievements : MonoBehaviour
     // ------------------------------------------------------------------
 
     /// <summary>Pixel types without a Collect / Click achievement: the Dragon Cubes (their own find show) and the hazards (they pay nothing and are not collected).</summary>
-    private static bool NoPixelAchievements(PixelClicker.PixelType type) => PixelClicker.IsRareCube(type) || PixelClicker.IsHazard(type);
+    private static bool NoPixelAchievements(PixelClicker.PixelType type) => PixelClicker.IsRareCube(type);
 
     private static readonly double[] BuiltInTiers = { 10, 100, 1000, 10000, 100000, 1000000 };
 
@@ -248,7 +248,7 @@ public class PixelAchievements : MonoBehaviour
         List<Achievement> list = new List<Achievement>();
         foreach (PixelClicker.PixelType type in Enum.GetValues(typeof(PixelClicker.PixelType)))
         {
-            if (NoPixelAchievements(type)) continue; // Dragon Cubes, the Fire pixel and the ores have no achievements of their own
+            if (NoPixelAchievements(type)) continue; // only the rare collectible cubes have no achievements of their own
             list.Add(CreateCollectAchievement(type, BuiltInTiers));
             list.Add(CreateClickAchievement(type));
         }

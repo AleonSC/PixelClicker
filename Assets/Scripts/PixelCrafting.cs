@@ -1753,14 +1753,14 @@ public class PixelCrafting : MonoBehaviour
         else return null;
 
         if (potion.hasThird) return null;
-        if (PixelClicker.IsStandalone(potion.type)) return null;   // standalone pixels only have single potions
         if (potion.type == pixel.type || (potion.combo && potion.second == pixel.type)) return null;
-        if (PixelClicker.IsRareCube(pixel.type) || PixelClicker.IsStandalone(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
+        if (PixelClicker.IsRareCube(pixel.type) || pixel.type == PixelClicker.PixelType.Vacuum || potion.type == PixelClicker.PixelType.Vacuum) return null;
         if (clicker.IndexOf(pixel.type) < 0) return null;
 
         if (potion.combo)
         {
             if (potion.second == PixelClicker.PixelType.Vacuum) return null;
+            if (consumables != null && consumables.FindComboPotion(potion.type, potion.second, pixel.type) < 0) return null;   // no such triple (a skill block can only be in 2-type combos)
             return new Recipe
             {
                 label = "Triple Combo Potion",

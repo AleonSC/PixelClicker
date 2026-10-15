@@ -144,7 +144,7 @@
 | `PixelConnector.cs` | Conveyor Connector (tester feature): a boxed channel between two clicked points (belt ends, elevator tops, splitter outputs, machine openings via IPixelPort) that captures old pixels inside it and forces them onto the next belt / into the machine at its far end. | in the header comment of `PixelConnector.cs` |
 | `PixelConveyor.cs` / `PixelKiln.cs` / `PixelFactoryKit.cs` (+ `PixelConveyorJoint.cs` corner filler for angled belt chains) | Tester machines: conveyor belt (two-click placing, carries old pixels, right click reverses) and kiln (burns what enters its mouth into Charcoal old pixels); PixelFactoryKit = shared primitive builder. | `docs/systems/PixelFactory.md` |
 | `PixelFirePixel.cs` / `PixelProspector.cs` | Fire pixel + Prospector's Pack (PixelType.Fire 25, ores Copper..Nickel 26-31; | `docs/systems/PixelFirePixel.md` |
-| `PixelNuclearPixel.cs` | Nuclear pixel (PixelType.Nuclear 33, IsStandalone (no potions / seeds / crafting / pets / achievements / Value upgrades), spawn switch in Toggles; | in the header comment of `PixelNuclearPixel.cs` |
+| `PixelNuclearPixel.cs` | Nuclear pixel (PixelType.Nuclear 33, IsStandalone (no seeds, no 3-type combo potions), spawn switch in Toggles; | in the header comment of `PixelNuclearPixel.cs` |
 | `PixelTreasure.cs` | Treasure pixel (PixelType.Treasure 32, IsStandalone, spawn switch in Toggles; | in the header comment of `PixelTreasure.cs` |
 | `PixelDragonFind.cs` | Dragon Cube find show (component added by PixelClicker.Awake; | in the header comment of `PixelDragonFind.cs` |
 | `PixelRobotWorker.cs` | UFO Helper (class and shop pack keep the old name 'Robot Worker' so saves keep working; | `docs/systems/PixelRobotWorker.md` |

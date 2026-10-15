@@ -17,7 +17,7 @@ public enum PixelTag
     Hazard = 1 << 4,          // negative blocks: hit them and they go off (IsHazard)
     Ore = 1 << 5,             // the Prospector / Mining ores (IsOre)
     RetiredOre = 1 << 6,      // ores that no longer spawn (IsRetiredOre)
-    Standalone = 1 << 7,      // no potions / seeds / crafting / pets / achievements / Value upgrades (IsStandalone)
+    Standalone = 1 << 7,      // a skill / special block: no seeds, not in 3-type combo potions, not in visitor gifts / trades (it HAS potions, 2-type combos, pets, achievements and Value upgrades) (IsStandalone)
     DragonCube = 1 << 8,      // the seven Dragon Cubes (IsDragonCube)
     RareCollectible = 1 << 9, // God Cubes, Prime Cubes and the Cubelette: one of each, own find shows (IsGodCube)
     PrimeCube = 1 << 10,      // the six Prime Cubes (IsInfinityStone)

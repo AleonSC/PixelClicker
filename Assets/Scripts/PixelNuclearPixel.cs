@@ -1,6 +1,6 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelNuclearPixel.cs
-//   Nuclear pixel (PixelType.Nuclear 33, IsStandalone (no potions / seeds / crafting / pets / achievements / Value upgrades), spawn
+//   Nuclear pixel (PixelType.Nuclear 33, IsStandalone (no seeds, no 3-type combo potions), spawn
 //   switch in Toggles; testing pack 'Nuclear Pixel': 10 White, no requirements, spawn weight 0.3, pays 8; looksVersion 27): glowing
 //   toxic-green look with PixelLook.radiation (PixelRadiationFx.Attach: drifting green motes). Its OLD pixel gets OldPixelRadiation
 //   (added in SpawnFallingCopy; nuclearRadiusPixels 0 = 4 main-pixel widths, nuclearAgeRate 0 = 40 age-seconds per real second,

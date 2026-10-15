@@ -1212,7 +1212,7 @@ public partial class PixelShop
             PackRow row = valueRows[t];
             PixelClicker.PixelTier tier = clicker.Tiers[t];
             bool valueMatch = searching && TextMatches(string.Format(valueRowNameFormat, tier.displayName) + " value upgrade");
-            bool visible = (onUpgrades && upgradesSubTab == 1 || valueMatch) && tier.unlocked && !PixelClicker.IsStandalone(tier.type) && !(HidePurchased && ValueUpgradeMaxed(t));
+            bool visible = (onUpgrades && upgradesSubTab == 1 || valueMatch) && tier.unlocked && !PixelClicker.IsHazard(tier.type) && !(HidePurchased && ValueUpgradeMaxed(t));
             row.rect.gameObject.SetActive(visible);
             if (!visible) continue;
 

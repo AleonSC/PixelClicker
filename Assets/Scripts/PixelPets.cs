@@ -300,7 +300,7 @@ public partial class PixelPets : MonoBehaviour
     private float treatTimer;
 
     /// <summary>Does this pixel type have a pet? Every pixel does, except the seven Dragon Cubes (their own find show) and the hazards (nothing to collect). Pets, their achievements and the Game Database all use this.</summary>
-    public static bool CanHavePet(PixelClicker.PixelType type) => !PixelClicker.IsRareCube(type) && !PixelClicker.IsHazard(type);
+    public static bool CanHavePet(PixelClicker.PixelType type) => !PixelClicker.IsRareCube(type);   // every block has a pet (skill blocks and hazards too); only the rare collectible cubes don't
 
     /// <summary>For the Game Database: the spawn chance factor of an active pet, how much slower its pixels age, and the chance per click of finding a pet.</summary>
     public float SpawnWeightFactor => Mathf.Max(1f, spawnWeightMultiplier);
@@ -427,7 +427,7 @@ public partial class PixelPets : MonoBehaviour
     private void OnCollected(int tierIndex, double amount, bool automatic)
     {
         if (!petsEnabled || PopupOpen || clicker == null || !clicker.IsValidTierIndex(tierIndex)) return;
-        if (!CanHavePet(clicker.Tiers[tierIndex].type)) return; // only the Dragon Cubes and the hazards have no pet
+        if (!CanHavePet(clicker.Tiers[tierIndex].type)) return; // only the rare collectible cubes have no pet
         PixelClicker.PixelType type = clicker.Tiers[tierIndex].type;
         if (IsOwned(type) || waiting.Contains(type)) return;
 
