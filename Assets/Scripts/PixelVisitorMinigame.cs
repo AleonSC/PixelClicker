@@ -58,6 +58,8 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     [SerializeField] private float missedReturnFactor = 0.5f;
     [Tooltip("The peek bubble's text. {0} = the visitor's name.")]
     [SerializeField] private string peekText = "Psst! {0} is here. Click me to see what I've got!";
+    [Tooltip("Background colour of the peek bubble (the text is white).")]
+    [SerializeField] private Color peekBubbleColor = new Color(0.08f, 0.09f, 0.13f, 0.96f);
     [Tooltip("Event log line when a peeking visitor leaves unanswered. {0} = the visitor's name.")]
     [SerializeField] private string missedLog = "{0} stopped by and left.";
 
@@ -524,6 +526,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         GameObject b = new GameObject("Peek Bubble", typeof(RectTransform), typeof(Image), typeof(Button));
         b.transform.SetParent(canvasRoot.transform, false);
         Image bg = b.GetComponent<Image>();
+        bg.color = peekBubbleColor;   // (a dark box: the Image's default white made the white text unreadable)
         PixelUIKit.StyleBox(bg);
         b.GetComponent<Button>().onClick.AddListener(() => accept());
         RectTransform br = b.GetComponent<RectTransform>();
