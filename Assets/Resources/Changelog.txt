@@ -1099,3 +1099,5 @@
 [2026-10-15 17:00 UTC] The Skills button (and the pinned tracker) now also appears as soon as a skill pack is owned - e.g. after Dev Tools unlocks everything - not only at Standard level 2.
 [2026-10-15 17:06 UTC] Dev Hub: the two unlock-everything buttons became one 'Unlock' widget (drop-down: All shop items - every pack and pixel - or one pack; Unlock / Relock) and a new 'Max XP' widget (drop-down: All skills or one skill; Max XP / Reset XP).
 [2026-10-15 17:07 UTC] To-do: added the golden snitch idea.
+[2026-10-15 17:38 UTC] Added the Golden Snitch: an extremely rare pixel that sprouts silver wings on the cube and darts round the screen; keep your mouse on it to charge its bar (it never charges otherwise), then click when the closing white ring meets the gold one to catch it for 400 clicks' worth of your best pixel and maybe an Ultra pixel (3 misses or 30 seconds and it escapes). Detailed model, gold trail, sparkles, own sounds, Stats rows.
+[2026-10-15 17:38 UTC] To-do: the golden snitch is done.

@@ -182,6 +182,7 @@ public partial class PixelClicker : MonoBehaviour
         Ember = 98,       // Firemaking: a glowing coal
         Ash = 99,         // Firemaking's filler block
         Wildfire = 100,   // Firemaking's hazard block: set it off and the flames spread over the husks around the cube
+        GoldenSnitch = 101,   // a very rare drop that sprouts wings and flies off the cube: catch it (PixelGoldenSnitch.cs)
     }
 
     /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, Charcoal, the filler Ash; Wildfire is its hazard).</summary>
@@ -221,7 +222,7 @@ public partial class PixelClicker : MonoBehaviour
     public static bool IsInfinityStone(PixelType type) => PixelBlockTags.Has(type, PixelTag.PrimeCube);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>A Dragon Cube or a God Cube: the rare collectible drops kept out of potions, crafting, pets, achievements and the Value upgrades.</summary>
-    public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type);
+    public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type) || type == PixelType.GoldenSnitch;   // (the rare collectibles: no pets, potions, crafting or pixel achievements; the Golden Snitch too)
 
     /// <summary>How many small cubes (1-7) a Dragon Cube carries; 0 for every other pixel type.</summary>
     public static int DragonCubeStars(PixelType type) => IsDragonCube(type) ? (int)type - (int)PixelType.DragonCube1 + 1 : 0;
@@ -1259,7 +1260,8 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelHazardTell>() == null) gameObject.AddComponent<PixelHazardTell>();   // hazard blocks get warning tells (glow, sign, sound)
         if (PixelFind.First<PixelBlockRules>() == null) gameObject.AddComponent<PixelBlockRules>();   // special blocks + hold blocks (data rules)
         if (PixelFind.First<PixelGreatOak>() == null) gameObject.AddComponent<PixelGreatOak>();   // Woodcutting's Great Oak bird nests
-        if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();   // Foraging's mold zone and glowing finds
+        if (PixelFind.First<PixelMold>() == null) gameObject.AddComponent<PixelMold>();
+        if (PixelFind.First<PixelGoldenSnitch>() == null) gameObject.AddComponent<PixelGoldenSnitch>();   // the very rare Golden Snitch that flies off the cube   // Foraging's mold zone and glowing finds
         if (PixelFind.First<PixelEggHatch>() == null) gameObject.AddComponent<PixelEggHatch>();   // the egg's hatching show
         if (PixelFind.First<PixelFirstPerson>() == null) gameObject.AddComponent<PixelFirstPerson>(); // run about on the floor at half the size of an old pixel
         if (PixelFind.First<PixelGuideVendor>() == null) gameObject.AddComponent<PixelGuideVendor>(); // Cubie, the shopkeeper who introduces the shop and the vendors
@@ -2038,6 +2040,16 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 62;
         }
 
+        if (looksVersion < 63)
+        {
+            // The Golden Snitch got its look.
+            System.Collections.Generic.List<PixelLook> list63 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook def63 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.GoldenSnitch);
+            if (def63 != null && PixelLooks.Find(list63.ToArray(), PixelType.GoldenSnitch) == null) list63.Add(def63);
+            looks = list63.ToArray();
+            looksVersion = 63;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2087,6 +2099,7 @@ public partial class PixelClicker : MonoBehaviour
 
         EnsureDragonCubes();
         EnsureGodCubes();
+        EnsureGoldenSnitch();
         foreach (PixelTier legacy in tiers) if (legacy != null && legacy.type == PixelType.HornetNest && legacy.displayName == "Hornet Nest") legacy.displayName = "Termite Hive";   // renamed
     }
 
@@ -2112,6 +2125,21 @@ public partial class PixelClicker : MonoBehaviour
                 unlockMode = TierUnlockMode.ShopOnly,
             });
         }
+    }
+
+    [Tooltip("Spawn weight of the Golden Snitch (a very rare drop that flies off the cube). 0 = the coded default (0.00003; a Dragon Cube is 0.0001).")]
+    [SerializeField] private float goldenSnitchSpawnWeight = 0f;
+
+    /// <summary>The Golden Snitch tier: a very rare drop with no requirements; it never stays on the cube (PixelGoldenSnitch makes it fly).</summary>
+    private void EnsureGoldenSnitch()
+    {
+        if (IndexOf(PixelType.GoldenSnitch) >= 0) return;
+        EnsureTier(new PixelTier
+        {
+            type = PixelType.GoldenSnitch, displayName = "Golden Snitch", color = new Color(1f, 0.78f, 0.22f, 1f), amountPerClick = 1,
+            spawnWeight = goldenSnitchSpawnWeight > 0f ? goldenSnitchSpawnWeight : 0.00003f,
+            rareDrop = true, glow = true, glowIntensity = 1.8f, spawnSwitch = SpawnSwitch.AlwaysOn, unlockMode = TierUnlockMode.ShopOnly,
+        });
     }
 
     /// <summary>The three Egyptian God Cube tiers (Slifer red, Ra gold, Obelisk blue): 1 payout, an insanely low spawn weight, no requirements, only one of each can be held.</summary>
@@ -2343,6 +2371,7 @@ public partial class PixelClicker : MonoBehaviour
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
+        if (tier.type == PixelType.GoldenSnitch) return;   // the Golden Snitch is never clicked off the cube: it flies (PixelGoldenSnitch)
         PixelBlockHold.OnClick(automatic);   // a stake being held grows +0.1 per click; every 5 clicks give the hold meter 1%
         if (tier.stallsHold) PixelBlockHold.Stall(tier.stallSeconds > 0f ? tier.stallSeconds : 1.5f, tier.stallRefill > 0f ? tier.stallRefill : 0.04f);   // every click on a stalling block freezes the hold meter and refills it a little
         if (!automatic && IsHazard(tier.type) && PixelBlockRules.HeldClearsHazard(tier.type)) { ClearHazardNow(tier); return; }   // a held Pesticide: one left click clears it
@@ -2535,6 +2564,11 @@ public partial class PixelClicker : MonoBehaviour
         {
             PixelHints.Announce("You found " + tiers[tierIndex].displayName + "! Only one of each God Cube can exist.");
             PixelHints.Trigger("god_first");
+            return;
+        }
+        if (tiers[tierIndex].type == PixelType.GoldenSnitch)
+        {
+            PixelHints.Announce("Your first Golden Snitch! It is in your Inventory now.");
             return;
         }
         if (tiers[tierIndex].type == PixelType.InfinityCubelette)
@@ -2977,6 +3011,19 @@ public partial class PixelClicker : MonoBehaviour
 
     /// <summary>A block carrying a stake (not 1) just appeared on the cube (its multiplier).</summary>
     public event System.Action<float> StakeAppeared;
+
+    /// <summary>A block was put on the cube (its tier index): fired after every Materialize (rolls, swaps, potions...). The Golden Snitch watches for itself here.</summary>
+    public event System.Action<int> PixelMaterialized;
+
+    /// <summary>The block on the cube is replaced by a fresh roll at once (the Golden Snitch flew off it).</summary>
+    public void ReplaceCurrentPixel()
+    {
+        if (!randomizeSpawnTier || pixelTransform == null) return;
+        hitsOnCurrentPixel = 0;
+        devSwapped = false;
+        currentTierIndex = RollTier();
+        Materialize(GetClickTier());
+    }
     private int upcomingTier = -1, previousTier = -1;   // the pre-rolled next block (only while the 'Next up' window asks for it) and the block that was on the cube before this one
 
     /// <summary>Is the pre-rolled next block still a legal spawn (a potion, skill or switch may have changed the rules since)?</summary>
@@ -3012,7 +3059,7 @@ public partial class PixelClicker : MonoBehaviour
         if (!randomizeSpawnTier || pixelTransform == null || tiers == null || tiers.Length == 0 || isSpawning || CubeHidden || fishingBusy) return false;
         int index = GetClickTierIndex();
         PixelType type = tiers[index].type;
-        if (IsHazard(type) || type == PixelType.Bottle || type == PixelType.Whale || type == PixelType.Fish || type == PixelType.Treasure) return false;
+        if (IsHazard(type) || type == PixelType.Bottle || type == PixelType.Whale || type == PixelType.Fish || type == PixelType.Treasure || type == PixelType.GoldenSnitch) return false;
         heldTier = index;
         heldHits = hitsOnCurrentPixel;   // a held block keeps the hits it had
         currentTierIndex = RollTier();
@@ -4678,6 +4725,7 @@ public partial class PixelClicker : MonoBehaviour
     private void Materialize(PixelTier tier)
     {
         using (materializeMarker.Auto()) MaterializeInner(tier);
+        PixelMaterialized?.Invoke(System.Array.IndexOf(tiers, tier));
     }
 
     private void MaterializeInner(PixelTier tier)

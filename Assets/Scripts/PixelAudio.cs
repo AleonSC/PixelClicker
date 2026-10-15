@@ -315,6 +315,11 @@ public partial class PixelAudio : MonoBehaviour
             Make("fish_splash", 0.04f, 0.9f, 1.15f),
             Make("chipper_feed", 0.08f, 0.95f, 1.05f),
             Make("recycler_shake", 0.5f, 1f, 1f),
+            Make("snitch_appear", 0.5f, 1f, 1f),
+            Make("snitch_buzz", 0.05f, 0.94f, 1.06f),
+            Make("snitch_ready", 0.3f, 1f, 1f),
+            Make("snitch_catch", 0.5f, 1f, 1f),
+            Make("snitch_miss", 0.2f, 0.95f, 1.05f),
             Make("rack_store", 0.05f, 0.9f, 1.1f),
             Make("farm_gleam", 0.3f, 0.95f, 1.05f),
             Make("traffic_start", 0.2f, 1f, 1f),
@@ -402,6 +407,11 @@ public partial class PixelAudio : MonoBehaviour
             case "pixel_obsidian": return new[] { PixelSynth.ObsidianPing(1), PixelSynth.ObsidianPing(2) };
             case "chipper_feed": return new[] { PixelSynth.Chipper(1), PixelSynth.Chipper(2), PixelSynth.Chipper(3) };
             case "recycler_shake": return new[] { PixelSynth.RecyclerShake(2f) };
+            case "snitch_appear": return new[] { PixelSnitchSynth.Appear() };
+            case "snitch_buzz": return new[] { PixelSnitchSynth.Buzz() };
+            case "snitch_ready": return new[] { PixelSnitchSynth.Ready() };
+            case "snitch_catch": return new[] { PixelSnitchSynth.Catch() };
+            case "snitch_miss": return new[] { PixelSnitchSynth.Miss() };
             case "rack_store": return new[] { PixelSynth.Wood(0, 1), PixelSynth.Wood(4, 2) };
             case "fish_splash": return new[] { PixelSynth.Fishing(0, 1), PixelSynth.Fishing(0, 2), PixelSynth.Fishing(0, 3) };
             case "pixel_fish": return new[] { PixelSynth.Fishing(0, 4), PixelSynth.Fishing(0, 5), PixelSynth.Fishing(0, 6) };

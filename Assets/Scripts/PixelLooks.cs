@@ -687,6 +687,10 @@ public static class PixelLooks
                             forceTranslucent = true, smoothness = 0.95f, metallic = 0f, glowScale = 0.3f,
                             outline = true, outlineUsesTierColor = false, outlineColor = new Color(0.65f, 0.25f, 1f, 1f),
                             outlineThickness = 0.04f, darkMatter = true, gravityWell = true },
+
+            // Golden Snitch: a polished gold ball (only seen in pictures / for an instant - on the cube it sprouts wings and flies: PixelGoldenSnitch).
+            new PixelLook { type = PixelClicker.PixelType.GoldenSnitch, useColor = true, color = new Color(1f, 0.78f, 0.22f, 1f),
+                            metallic = 0.92f, smoothness = 0.94f, emission = 0.35f, shine = true, blob = true },
         };
     }
 

@@ -578,6 +578,14 @@ public class PixelStats : MonoBehaviour
             Row("God Cubes found", gods + " / 3");
             Row("Prime Cubes found", primes + " / 6");
             if (Counter("infinity.forged") > 0d) Cnt("   Prime Cubelettes forged", "infinity.forged");
+            if (Counter("snitch.seen") > 0d)
+            {
+                Cnt("Golden Snitches seen", "snitch.seen");
+                Cnt("   Caught", "snitch.caught");
+                Cnt("   Escaped", "snitch.escaped");
+                double fastest = Counter("snitch.fastest");
+                if (fastest > 0d) Row("   Fastest catch", fastest.ToString("0.0") + "s");
+            }
         }
 
         PixelPets petSystem = PixelPets.Instance;

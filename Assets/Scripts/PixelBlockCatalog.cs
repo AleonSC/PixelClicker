@@ -206,6 +206,8 @@ public static class PixelBlockCatalog
             guide: t => "Firemaking block: a glowing coal, still hot."),
         B(PixelType.Ash, PixelTag.Firemaking | PixelTag.Standalone,
             guide: t => "Firemaking's filler block: grey ash. One click, almost no pay."),
+        B(PixelType.GoldenSnitch, PixelTag.Standalone,
+            guide: t => "An extremely rare drop. It never stays on the cube: it sprouts wings and darts round the screen. Keep your mouse on it to charge the bar (it does not charge while your mouse is off it), then click when the closing white ring meets the gold one. Catch it for a huge reward - 400 clicks' worth of your best pixel and maybe an Ultra pixel. Miss three times, or wait too long, and it escapes."),
         B(PixelType.Wildfire, PixelTag.Firemaking | PixelTag.Hazard | PixelTag.Standalone,
             guide: t => "A Firemaking HAZARD. Hit it " + t.clicksToCollect + " times and the fire spreads, burning up the husks around the cube, and Firemaking XP drops 10% for a minute. Right-click it to put it out safely."),
         B(PixelType.GreatOak, PixelTag.Wood | PixelTag.Standalone,
