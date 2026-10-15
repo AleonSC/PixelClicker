@@ -178,6 +178,9 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Id of a minigame that buying this pack switches on (e.g. ghost, blackhole). Empty = none.")]
         public string unlocksMinigame = "";
 
+        [Tooltip("Owning this pack turns on TREE MODE for Woodcutting (PixelTreeMode: filler rotation + trees in a designed order). Test pack.")]
+        public bool unlocksTreeMode = false;
+
         [Tooltip("Left out of the shop (never listed). It still exists and works: unlock or relock it with the Dev Tools 'Shop unlocks' widget. Used for the testing packs.")]
         public bool hideInShop = false;
 
@@ -1853,6 +1856,14 @@ public partial class PixelShop : MonoBehaviour
 
     /// <summary>The potions this shop sells (also used by the inventory UI so both see the same stock).</summary>
     public PixelConsumables Consumables => consumables;
+
+    /// <summary>Tree mode (PixelTreeMode): is a pack with unlocksTreeMode owned?</summary>
+    public bool TreeModeOwned()
+    {
+        if (packs == null) return false;
+        foreach (ShopPack p in packs) if (p != null && p.unlocksTreeMode && p.purchased) return true;
+        return false;
+    }
 
     /// <summary>Has the shop pack that unlocks this skill (by <see cref="ShopPack.skillId"/>) been bought?</summary>
     public bool IsSkillPackBought(string skillId)

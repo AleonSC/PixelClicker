@@ -1218,7 +1218,8 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelDragonFind>() == null) gameObject.AddComponent<PixelDragonFind>();   // the show when a Dragon Cube turns up
         if (PixelFind.First<PixelPixelGuide>() == null) gameObject.AddComponent<PixelPixelGuide>();   // the Pixel Guide window
         if (PixelFind.First<PixelShuffleBonus>() == null) gameObject.AddComponent<PixelShuffleBonus>();   // the shuffle bonus test (tap right click on filler blocks)
-        if (PixelFind.First<PixelFocus>() == null) gameObject.AddComponent<PixelFocus>();   // Focus potions (Lumberjack's Focus...: hold off a skill's hazard for a while)
+        if (PixelFind.First<PixelFocus>() == null) gameObject.AddComponent<PixelFocus>();
+        if (PixelFind.First<PixelTreeMode>() == null) gameObject.AddComponent<PixelTreeMode>();   // tree mode (Woodcutting trees, test pack)   // Focus potions (Lumberjack's Focus...: hold off a skill's hazard for a while)
         if (PixelFind.First<PixelBaitBucket>() == null) gameObject.AddComponent<PixelBaitBucket>();   // Fishing's bait bucket consumable
         if (PixelFind.First<PixelViewWindow>() == null) gameObject.AddComponent<PixelViewWindow>();   // the View window (key V): views, flat view, zoom, orbit controls
         if (PixelFind.First<PixelZoom>() == null) gameObject.AddComponent<PixelZoom>();   // zoom key (X): three levels, hold + wheel for any
@@ -2895,6 +2896,8 @@ public partial class PixelClicker : MonoBehaviour
         devSwapped = false;
         LiveCameFromQueue = false;
         if (IsValidTier(currentTierIndex)) previousTier = currentTierIndex;   // (what the 'Next up' window shows as 'before')
+        int outgoingTreeTag = liveTreeTag;
+        liveTreeTag = 0;
         while (nextInLine.Count > 0)
         {
             Vector2Int queued = nextInLine[0];   // a block bumped by the hold (PixelBlockHold) is next in line, with the hits it had taken
@@ -2905,12 +2908,20 @@ public partial class PixelClicker : MonoBehaviour
             pendingHits = queued.y;
             pendingStake = queuedStake;
             LiveCameFromQueue = true;
+            PixelTreeMode.OnLiveChanged(outgoingTreeTag, 0);
             return queued.x;
         }
-        int pick = UpcomingValid() ? upcomingTier : PickSpawnTier();   // the block the 'Next up' window showed (if it was still valid)
+        int pick, tag;
+        if (UpcomingValid()) { pick = upcomingTier; tag = upcomingTreeTag; }   // the block the 'Next up' window showed (if it was still valid)
+        else { pick = PickSpawnTier(); tag = PixelTreeMode.TakeTag(); }
         upcomingTier = -1;
+        upcomingTreeTag = 0;
+        PixelTreeMode.OnLiveChanged(outgoingTreeTag, tag);   // tree mode: the tree bar counts live tree blocks, Timber when the last one leaves
+        liveTreeTag = tag;
         return pick;
     }
+
+    private int upcomingTreeTag, liveTreeTag;   // tree mode (PixelTreeMode): the tag of the pre-rolled block and of the block on the cube
 
     // ---- Block Hold (PixelBlockHold.cs) ----
 
@@ -2941,7 +2952,7 @@ public partial class PixelClicker : MonoBehaviour
     {
         if (!randomizeSpawnTier || tiers == null || tiers.Length == 0) return -1;
         if (nextInLine.Count > 0 && IsValidTier(nextInLine[0].x)) return nextInLine[0].x;
-        if (!UpcomingValid()) upcomingTier = PickSpawnTier();
+        if (!UpcomingValid()) { upcomingTier = PickSpawnTier(); upcomingTreeTag = PixelTreeMode.TakeTag(); }
         return upcomingTier;
     }
 
@@ -3147,6 +3158,9 @@ public partial class PixelClicker : MonoBehaviour
 
     private int PickSpawnTier()
     {
+        PixelTreeMode.TakeTag();   // (clears a stale tag)
+        // Tree mode (Woodcutting with the Oak Trees test pack): filler rotation and trees in their designed order; no filler swap or special-block replacement.
+        if (devSpawnTiers == null && !(IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked) && PixelTreeMode.TryPick(this, out int treePick)) return treePick;
         int pick = PickSpawnTierBase();
         // Safety net: a block that is locked or belongs to a skill that is not in play must never come up on its own (dev spawning and forced blocks are exempt).
         if (devSpawnTiers == null && IsValidTier(pick) && !(IsValidTier(forcedTierIndex) && tiers[forcedTierIndex].unlocked)

@@ -1026,6 +1026,22 @@ public partial class PixelShop
         };
     }
 
+    /// <summary>Oak Trees (test): turns on Woodcutting's TREE MODE (PixelTreeMode). Not in the shop: unlock it with the Dev Tools 'Shop unlocks' widget.</summary>
+    private static ShopPack CreateOakTreesTestPack(int woodcutterIndex)
+    {
+        return new ShopPack
+        {
+            displayName = "Oak Trees (test)",
+            tab = ShopTab.Upgrades,
+            description = "TEST: Woodcutting tree mode. While Woodcutting is in play the cube rolls filler blocks (Twig, Leaf, Wood) and every few blocks an Oak tree arrives and plays out in order: leaves, a run of wood, then its special slots. Some trees are infested and end in a Termite Hive. Timber! when the last block is chopped.",
+            requirements = Needs(woodcutterIndex),
+            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 1 } },
+            rewardTiers = new PixelClicker.PixelTier[0],
+            unlocksTreeMode = true,
+            hideInShop = true,
+        };
+    }
+
     /// <summary>Default Robot Worker upgrade (Upgrades tab): a robot that keeps a chosen consumable running.</summary>
     private static ShopPack CreateRobotPack()
     {
@@ -1285,6 +1301,8 @@ public partial class PixelShop
                           requires = null, create = i => CreateRobotPack() },
         new DefaultPack { isThis = p => p.upgradeEffect == UpgradeEffect.BankCapacity,
                           requires = p => p.unlocksBank, create = CreateBankStoragePack },
+        new DefaultPack { isThis = p => p.unlocksTreeMode,
+                          requires = p => Rewards(p, PixelClicker.PixelType.Wood), create = CreateOakTreesTestPack },
     };
 
     /// <summary>
