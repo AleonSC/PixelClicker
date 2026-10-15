@@ -1120,6 +1120,13 @@ public partial class PixelShop
         int[] packOrder = new int[Mathf.Min(packs.Length, rows.Length)];
         for (int o = 0; o < packOrder.Length; o++) packOrder[o] = o;
         bool grouped = !searching && currentTab == ShopTab.Pixels;
+        if (!searching && currentTab == ShopTab.Upgrades)
+        {
+            // Upgrades tab: the Pixel Bank is listed right above Time Stop (only the shown order; the pack list itself keeps its indexes, which requirements point at).
+            int timeStop = System.Array.FindIndex(packs, p => p != null && p.unlocksTimeStop);
+            float Key(int i) => timeStop >= 0 && packs[i] != null && packs[i].unlocksBank ? timeStop - 0.5f : i;
+            System.Array.Sort(packOrder, (a, b) => Key(a) != Key(b) ? Key(a).CompareTo(Key(b)) : a.CompareTo(b));
+        }
         if (grouped) System.Array.Sort(packOrder, (a, b) =>
         {
             int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b]));

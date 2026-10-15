@@ -1089,3 +1089,4 @@
 [2026-10-15 15:42 UTC] Block Hold's meter now lasts half as long at the start; new Standard perks Steady grip (level 3) and Firm grip (level 5) each add 10% of that starting length.
 [2026-10-15 15:45 UTC] The Woodcutter's Pack is now the Lumberjack's Pack and costs 250 of each pure pixel (White, Gray, Black, Red, Green, Blue).
 [2026-10-15 15:50 UTC] To-do: added the crank clicker idea (Auto Clicker starts as a crank that stores clicks, a Motor upgrade makes it fully automatic).
+[2026-10-15 16:10 UTC] The shop's Upgrades tab now lists the Pixel Bank above Time Stop.
