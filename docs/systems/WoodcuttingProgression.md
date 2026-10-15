@@ -40,7 +40,7 @@ Why it works:
 | **Hazard defuse / Pesticide** | The Hive in an infested tree's last slot: right clicks (10) or a held Pesticide clear it, as now. |
 | **Great Oak** | A rare species (see "Species"); acorns lying on the floor raise its chance when a tree arrives. |
 | **Auto clicker** | Chops filler and trees like a manual click. It never touches a Hive (it waits for you), as now. |
-| **Focus potion** | Lumberjack's Focus: no tree is infested while it lasts. |
+| **Focus potion** | Lumberjack's Focus (made from collected Termite Hives): no tree is infested while it lasts. |
 
 ## When a tree arrives
 
@@ -76,8 +76,30 @@ A species is an ordered **slot list**. A slot is one of:
 - **Warned from the first block:** the tree bar shows a Hive icon, the tree's blocks get a darker, bored-through bark look, and a faint termite skitter plays. The player can then:
   - **prepare:** have a Pesticide ready to hold, or plan a Block Hold;
   - **accept it:** chop through and clear the Hive with right clicks at the end;
-  - **skip it** (idea): spend something (Pure pixels? a consumable?) to fell the tree early and lose the rest of it.
 - The Hive keeps today's rules: 4 left clicks set the termites loose, 10 right clicks clear it safely (and collect it).
+
+### Hives are a resource: Focus potions
+
+- Clearing a Hive **safely** (10 right clicks, or one click with a held Pesticide) collects it as currency (this already works: right-click clearing collects hazards and drops them as an old pixel). Breaking it with left clicks gives nothing and lets the termites loose.
+- **Termite Hives are the ingredient for Lumberjack's Focus.** The Lumberjack sells it for hives (and a little currency), or it is crafted from them. A Focus potion gives a stretch of trees with no Hives (proposed: the next 10 trees, or 60 seconds as today).
+- So a hive costs you something in the moment but pays off later: dealing with it well matters, and avoiding every hive would mean having no Focus potions.
+
+### The Infestation dial
+
+Unlocked by a perk or skill node (proposed: the **Infestation** node, from about level 12). A three-way setting in the Skills window for Woodcutting:
+
+| Setting | Hives | Trade-off |
+|---|---|---|
+| **Calm** | about half the normal infested chance | about 10% less Woodcutting XP; for quick, quiet chopping |
+| **Normal** | the normal infested chance | the default (and the only setting before the unlock) |
+| **Swarm** | about double the infested chance | about 15% more XP and many more hives to collect: the way to farm Focus potions |
+
+- A Focus potion still stops Hives completely while it lasts, on any setting (Calm only lowers them and costs XP, so potions keep their value).
+- The same dial can later be given to every skill's hazard (Pest in Farming, Gas Pocket in Mining, Mold in Foraging, Jellyfish in Fishing), so each hazard has a reason to exist besides being annoying.
+
+### Rejected: skipping infested trees
+
+A free or cheap "skip this tree" was considered and dropped: the warning would turn into a skip prompt and the decision (prepare, accept, clear) would disappear. With hives as a Focus potion ingredient, skipping would also throw away a resource. Players who want fewer hives use Calm or a Focus potion instead.
 
 ### The same system for other skills
 
@@ -135,7 +157,7 @@ How far ahead you can see is itself a reward: early on you react, later you plan
 | 7 | Perk: Keen eye - see the next two blocks. |
 | 8 | **Birch** trees. First skill point (see "Skill tree"). |
 | 10 | Evil Tree minigame can appear (it needs the Woodcutter's Pack today; gate it at 10). |
-| 12 | **Maple** trees. Lumberjack sells Lumberjack's Focus. |
+| 12 | **Maple** trees. Lumberjack sells Lumberjack's Focus (for Termite Hives); the **Infestation** skill node can be bought. |
 | 15, 20, 25, 30 | Mastery perks (see "Perks"). |
 
 ## Special trees
@@ -197,6 +219,7 @@ Points: 1 at level 8, then one every 4 levels (12, 16, 20...). Proposed nodes:
 | Acorn hoard | Acorns count double for the Great Oak chance. |
 | Big timber | Log runs are 2 blocks longer (more XP per Timber). |
 | Read the grain | See the next three blocks. |
+| Infestation | Unlocks the Infestation dial (Calm / Normal / Swarm). |
 | Chipper tune | The Wood Chipper gives more XP per wood pixel. |
 
 ## Cross-skill upgrades
@@ -225,9 +248,9 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 1. **Tree mode (shared system).** Data per skill pack: a filler pool, the tree-arrival settings (`minFiller` / `maxFiller`) and a list of species (unlock level, weight, slot list with Fixed / Run / Wildcard / Optional / Hazard slots, infested chance). `PixelClicker.RollTier` serves the filler rotation or the current tree's next slot. Built generic so Mining (veins), Foraging (bushes) and Fishing (spots) can use it later.
 2. **Tree bar + Timber + infested warning + lookahead.** The tree bar (`Oak 7 / 12`, Hive icon, near the Next Up window), the felling show, sound, Timber reward and stats; the infested look and sound; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
 3. **Woodcutting species + gating.** Oak, Pine, Birch, Maple, Great Oak and the filler pool; remove the per-block filler / hazard shares for Woodcutting.
-4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation.
+4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation; Focus made from collected hives (Lumberjack trade / recipe).
 5. **XP curve bands + XP per hit.** Then retune with the Balance report (which will need a "per tree" view).
-6. **Perks and skill tree nodes.**
+6. **Perks and skill tree nodes**, including the Infestation dial.
 7. **Cross-skill moves.** Whetstone to Mining (migration); Pesticide decision.
 8. **Special trees** beyond the Great Oak.
 
@@ -235,7 +258,8 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 
 - Species shapes, run lengths, unlock levels and the infested chance are proposals.
 - Filler stretch between trees (3-10 blocks proposed) and how much levels shorten it.
-- "Skip an infested tree": worth adding, and what does it cost?
+- Focus potion: how many hives per potion, and does it last N trees or N seconds?
+- Infestation dial numbers (Calm half / Swarm double, XP -10% / +15%) are proposals.
 - Should Pine bring its own block types later (e.g. Pine Log, Resin) or keep sharing Wood / Leaf?
 - Lookahead steps: the levels above (7 / 20 / 30 and the tree node) are a proposal.
 - Pesticide: leave it in Woodcutting, or move it to Farming / Foraging?
