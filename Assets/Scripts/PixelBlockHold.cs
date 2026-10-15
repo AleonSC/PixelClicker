@@ -5,7 +5,7 @@
 //   while it stays held). Letting go puts it back IN LINE (PixelClicker.ReturnHeldTier: it comes AFTER the block that is on the cube now, with the hits it had - RollTier hands it out - so a hazard that came up while you held is dealt with first and holding / releasing can never reroll the cube). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
-//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. All arc layers (track, glow, fill, ready pop) share ONE centre line (RingMid) and have round caps (BuildArcSprite(halfWidth, soft)); the tip sits on that line and is about the bar's thickness. The meter only shows while the mouse is on the cube or a block is held (meterOnlyOnHover, 0.35 s grace while the next block materializes). The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
+//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. All arc layers (track, glow, fill, ready pop) share ONE centre line (RingMid) and have round caps (PixelArcGraphic: a mesh band with round caps, no radial fill); the tip sits on that line and is about the bar's thickness. The meter only shows while the mouse is on the cube or a block is held (meterOnlyOnHover, 0.35 s grace while the next block materializes). The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
@@ -110,7 +110,7 @@ public class PixelBlockHold : MonoBehaviour
 
     public static PixelBlockHold Instance { get; private set; }
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; dotSprite = null; arcSprite = null; backSprite = null; glowSprite = null; }
+    private static void ResetStatics() { Instance = null; dotSprite = null; }
 
     private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 5f;
     private float RechargeSeconds => rechargeSeconds > 0f ? rechargeSeconds : 8f;
@@ -140,15 +140,15 @@ public class PixelBlockHold : MonoBehaviour
     // ---- the meter next to the cursor ----
     private GameObject canvasRoot;
     private RectTransform panel, canvasRect;
-    private Image fill, back;
+    private PixelArcGraphic fill, back;
     private TMPro.TMP_Text bonusLabel;
-    private Image glow, ready, tip, pill;
+    private PixelArcGraphic glow, ready;
+    private Image tip, pill;
     private TMPro.TMP_Text readout, caption;
     private RectTransform readoutRect;
     private readonly Image[] ticks = new Image[3];
     private bool wasFull = true;
     private static Sprite dotSprite;
-    private static Sprite arcSprite, backSprite, glowSprite;
     private const float ArcHalfDegrees = 55f;
 
     public bool Active => (unlocked || !requireShopPack) && !disableBlockHold;
@@ -553,31 +553,6 @@ public class PixelBlockHold : MonoBehaviour
     // The arc's shape, shared by every layer so they all sit on ONE curve: centre line at RingMid of the half-size, rounded ends.
     private const float RingMid = 0.88f, RingHalf = 0.09f;
 
-    /// <summary>A curved band along RingMid from -ArcHalfDegrees to +ArcHalfDegrees (0 = east) with ROUND caps that follow the curve; 'halfWidth' = half its thickness, 'soft' = edge fade (both in half-size units).</summary>
-    private static Sprite BuildArcSprite(float halfWidth, float soft)
-    {
-        const int n = 256;
-        Texture2D tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
-        Color32[] px = new Color32[n * n];
-        float c = (n - 1) * 0.5f;
-        float endRad = ArcHalfDegrees * Mathf.Deg2Rad;
-        Vector2 capTop = new Vector2(Mathf.Cos(endRad), Mathf.Sin(endRad)) * RingMid, capBottom = new Vector2(capTop.x, -capTop.y);
-        for (int y = 0; y < n; y++)
-            for (int x = 0; x < n; x++)
-            {
-                Vector2 q = new Vector2((x - c) / c, (y - c) / c);
-                float ang = Mathf.Atan2(q.y, q.x) * Mathf.Rad2Deg;   // 0 = east
-                float d = Mathf.Abs(ang) <= ArcHalfDegrees && q.x > 0f
-                    ? Mathf.Abs(q.magnitude - RingMid)                                      // along the band: distance to the centre line
-                    : Mathf.Min(Vector2.Distance(q, capTop), Vector2.Distance(q, capBottom)); // past an end: a round cap
-                float a = Mathf.Clamp01((halfWidth - d) / Mathf.Max(0.001f, soft) + 0.5f);
-                px[y * n + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(255f * a));
-            }
-        tex.SetPixels32(px);
-        tex.Apply();
-        return Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-    }
-
     /// <summary>A soft white dot (bright centre, fading edge): the glowing tip and the quarter marks.</summary>
     private static Sprite BuildDotSprite()
     {
@@ -662,8 +637,9 @@ public class PixelBlockHold : MonoBehaviour
         shown = Mathf.MoveTowards(shown, Mathf.Clamp01(meter), dt * 3.5f + Mathf.Abs(shown - meter) * 8f * dt);
         float k = Mathf.Clamp01(shown);
         float sweep = Mathf.Lerp(90f - ArcHalfDegrees, 90f + ArcHalfDegrees, k);   // degrees from the bottom (the arc sprite shows 35..145 degrees)
-        fill.fillAmount = sweep / 360f;
-        if (glow != null) glow.fillAmount = fill.fillAmount;
+        float endDeg = -90f + sweep;   // the fill runs from the bottom end of the arc up to the current level, round at both ends
+        fill.EndDegrees = endDeg;
+        if (glow != null) glow.EndDegrees = endDeg;
 
         bool flashing = flash > 0f;
         float pulse = flashing ? 0.5f + 0.5f * Mathf.Sin(time * 22f) : 0f;
@@ -678,6 +654,7 @@ public class PixelBlockHold : MonoBehaviour
         if (!holding && !flashing) c = Color.Lerp(c, new Color(0.35f, 0.5f, 0.75f, 1f), 0.45f);   // recharging: subdued
         if (!holding && cooldown > 0f && !flashing) c.a = 0.6f;   // waiting for the recharge to begin
         fill.color = c;
+        if (k < 0.01f) { Color none = c; none.a = 0f; fill.color = none; }   // empty: no stub at the bottom end
         if (readout != null) { Color rc2 = Color.Lerp(c, Color.white, 0.55f); rc2.a = 1f; readout.color = rc2; Color cc = c; cc.a = 1f; caption.color = cc; if (pill != null) pill.color = flashing ? Color.Lerp(new Color(0.04f, 0.05f, 0.09f, 0.78f), new Color(0.45f, 0f, 0f, 0.85f), pulse) : new Color(0.04f, 0.05f, 0.09f, 0.78f); }
         back.color = flashing ? Color.Lerp(new Color(0f, 0f, 0f, 0.6f), new Color(0.55f, 0f, 0f, 0.85f), pulse) : new Color(0f, 0f, 0f, 0.6f);
 
@@ -685,6 +662,7 @@ public class PixelBlockHold : MonoBehaviour
         if (glow != null)
         {
             Color gc = c; gc.a = holding ? 0.28f + 0.14f * Mathf.Sin(time * 6f) : 0.12f;
+            if (k < 0.01f) gc.a = 0f;
             glow.color = gc;
         }
 
@@ -711,7 +689,6 @@ public class PixelBlockHold : MonoBehaviour
             Color rc = Color.white; rc.a = rp * 0.8f;
             ready.color = rc;
             ready.rectTransform.sizeDelta = panel.sizeDelta * (1f + (1f - rp) * 0.12f);
-            ready.fillAmount = 1f;
         }
     }
 
@@ -719,9 +696,6 @@ public class PixelBlockHold : MonoBehaviour
     {
         canvasRoot = PixelUIKit.CreateCanvas("Block Hold", 55, new Vector2(1920f, 1080f), false);
         canvasRect = canvasRoot.GetComponent<RectTransform>();
-        if (arcSprite == null) arcSprite = BuildArcSprite(RingHalf, 0.02f);
-        if (backSprite == null) backSprite = BuildArcSprite(RingHalf + 0.035f, 0.02f);   // the dark track: the same curve, a little wider all round
-        if (glowSprite == null) glowSprite = BuildArcSprite(RingHalf + 0.07f, 0.09f);    // the soft glow: the same curve, wide and feathered
 
         GameObject p = new GameObject("Meter", typeof(RectTransform));
         p.transform.SetParent(canvasRoot.transform, false);
@@ -729,18 +703,20 @@ public class PixelBlockHold : MonoBehaviour
         panel.sizeDelta = new Vector2(230f, 230f);
         panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(0.5f, 0.5f);
 
-        Image Arc(string name, float scale, Sprite sprite = null)
+        PixelArcGraphic Arc(string name, float halfWidth, float feather)
         {
-            GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+            GameObject g = new GameObject(name, typeof(RectTransform), typeof(PixelArcGraphic));
             g.transform.SetParent(panel, false);
-            Image im = g.GetComponent<Image>();
-            im.sprite = sprite != null ? sprite : arcSprite;
-            im.raycastTarget = false;
+            PixelArcGraphic arc = g.GetComponent<PixelArcGraphic>();
+            arc.raycastTarget = false;
+            arc.Setup(RingMid, halfWidth, feather);
+            arc.StartDegrees = -ArcHalfDegrees;
+            arc.EndDegrees = ArcHalfDegrees;
             RectTransform r = g.GetComponent<RectTransform>();
             r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
-            r.sizeDelta = panel.sizeDelta * scale;
+            r.sizeDelta = panel.sizeDelta;
             r.anchoredPosition = Vector2.zero;
-            return im;
+            return arc;
         }
         Image Dot(string name, Vector2 pos, float size)
         {
@@ -755,20 +731,12 @@ public class PixelBlockHold : MonoBehaviour
             r.anchoredPosition = pos;
             return im;
         }
-        back = Arc("Back", 1f, backSprite);   // (every layer at the same size so they share one centre line and their ends line up)
-        glow = Arc("Glow", 1f, glowSprite);
-        fill = Arc("Fill", 1f);
-        ready = Arc("Ready", 1f, backSprite);
-        foreach (Image f in new[] { glow, fill })
-        {
-            f.type = Image.Type.Filled;
-            f.fillMethod = Image.FillMethod.Radial360;
-            f.fillOrigin = (int)Image.Origin360.Bottom;
-            f.fillClockwise = false;   // bottom -> right -> top
-        }
+        // Every layer is the same curve (centre line RingMid) with round caps; the fill and glow grow from the bottom end to the current level.
+        back = Arc("Back", RingHalf + 0.035f, 1.5f);
+        glow = Arc("Glow", RingHalf + 0.06f, 9f);
+        fill = Arc("Fill", RingHalf, 1.5f);
+        ready = Arc("Ready", RingHalf + 0.035f, 2f);
         ready.color = new Color(1f, 1f, 1f, 0f);
-        ready.type = Image.Type.Filled; ready.fillMethod = Image.FillMethod.Radial360; ready.fillOrigin = (int)Image.Origin360.Bottom; ready.fillClockwise = false;
-        ready.fillAmount = 1f;
         // Quarter marks: small dots on the track at 25 / 50 / 75 %.
         if (dotSprite == null) dotSprite = BuildDotSprite();
         float trackR = panel.sizeDelta.x * 0.5f * RingMid;
