@@ -47,6 +47,20 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     [Tooltip("How dark the screen gets while a vendor is here (time is frozen too).")]
     [SerializeField] private float visitDarkness = 0.6f;
 
+    [Header("Peek (they look in first; the game keeps running)")]
+    [Tooltip("Visitors first PEEK in from the right edge with a small bubble: click them to open the full visit (dark screen, time stops), or press X / ignore them and they leave. Off = the full visit at once.")]
+    [SerializeField] private bool usePeek = true;
+    [Min(1f)]
+    [Tooltip("Seconds a peeking visitor waits for a click before leaving (paused time doesn't count).")]
+    [SerializeField] private float peekSeconds = 20f;
+    [Range(0.1f, 1f)]
+    [Tooltip("A visitor you dismissed or ignored comes back after this share of the normal wait (0.5 = half as long).")]
+    [SerializeField] private float missedReturnFactor = 0.5f;
+    [Tooltip("The peek bubble's text. {0} = the visitor's name.")]
+    [SerializeField] private string peekText = "Psst! {0} is here. Click me to see what I've got!";
+    [Tooltip("Event log line when a peeking visitor leaves unanswered. {0} = the visitor's name.")]
+    [SerializeField] private string missedLog = "{0} stopped by and left.";
+
     [Header("Offer")]
     [Range(0f, 0.99f)]
     [Tooltip("How much cheaper the devices are than in the shop (0.8 = 80% off).")]
@@ -367,20 +381,70 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         dim.raycastTarget = false;
         PixelUIKit.Stretch(dim.rectTransform);
         dim.transform.SetAsFirstSibling();
-        Freeze();
-        PixelWindows.Register(this, 150, () => visiting, Leave);
 
         float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
         float visitorW = visitorRect.sizeDelta.x;
         float restX = -(visitorW * 0.5f + 50f);
         float hiddenX = visitorW * 0.5f + 40f;
         visitorRect.anchoredPosition = new Vector2(hiddenX, barH + 24f);
+        float startX = hiddenX;
+
+        if (usePeek)
+        {
+            // THE PEEK: they lean in from the right edge with a small bubble while the game keeps running. Click = the full visit; X / ignored = they leave.
+            int choice = 0;   // 1 = come in, 2 = go away
+            GameObject bubble = BuildPeek(() => { if (choice == 0) choice = 1; }, () => { if (choice == 0) choice = 2; });
+            float peekX = visitorW * 0.08f;   // about 40% of them shows
+            for (float t = 0f; t < 0.6f; t += Time.unscaledDeltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / 0.6f);
+                visitorRect.anchoredPosition = new Vector2(Mathf.Lerp(hiddenX, peekX, k), barH + 24f);
+                visitorRect.localRotation = Quaternion.Euler(0f, 0f, 9f * k);   // leaning in
+                yield return null;
+            }
+            if (bubble != null) bubble.SetActive(true);
+            float waited = 0f;
+            while (choice == 0 && waited < peekSeconds)
+            {
+                if (!PixelCalm.InMenu) waited += Time.unscaledDeltaTime;
+                visitorRect.anchoredPosition = new Vector2(peekX, barH + 24f + Mathf.Sin(Time.unscaledTime * 3f) * 4f);
+                yield return null;
+            }
+            if (bubble != null) Destroy(bubble);
+            if (peekButton != null) Destroy(peekButton);   // (the click catcher only belongs to the peek)
+            if (peekCatcher != null) Destroy(peekCatcher);
+            peekButton = null; peekCatcher = null;
+            if (choice != 1)
+            {
+                // Left unanswered: they duck out, and come back sooner than usual.
+                for (float t = 0f; t < 0.5f; t += Time.unscaledDeltaTime)
+                {
+                    float k = Mathf.SmoothStep(0f, 1f, t / 0.5f);
+                    visitorRect.anchoredPosition = new Vector2(Mathf.Lerp(peekX, hiddenX, k), barH + 24f);
+                    yield return null;
+                }
+                PixelHints.Announce(string.Format(missedLog, Pick(visitorName, DefaultName)));
+                if (canvasRoot != null) Destroy(canvasRoot);
+                canvasRoot = null;
+                dim = null;
+                visiting = false;
+                anyVisiting = false;
+                nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds * missedReturnFactor;
+                spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds) * missedReturnFactor;
+                yield break;
+            }
+            visitorRect.localRotation = Quaternion.identity;
+            startX = peekX;
+        }
+
+        Freeze();   // (only now: during the peek the game kept running)
+        PixelWindows.Register(this, 150, () => visiting, Leave);
 
         // Slide in from the right (the game keeps running while they walk in).
         for (float t = 0f; t < slideSeconds; t += Time.unscaledDeltaTime)
         {
             float k = Mathf.SmoothStep(0f, 1f, t / slideSeconds);
-            visitorRect.anchoredPosition = new Vector2(Mathf.Lerp(hiddenX, restX, k), barH + 24f + Mathf.Abs(Mathf.Sin(t * 9f)) * 10f);
+            visitorRect.anchoredPosition = new Vector2(Mathf.Lerp(startX, restX, k), barH + 24f + Mathf.Abs(Mathf.Sin(t * 9f)) * 10f);
             SetDim(k);
             yield return null;
         }
@@ -439,6 +503,48 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         anyVisiting = false;
         nextAnyVisitTime = Time.unscaledTime + sharedCooldownSeconds;
         spawnTimer = Random.Range(visitMinSeconds, visitMaxSeconds);
+    }
+
+    private Image peekCatcher;
+    private Button peekButton;
+
+    /// <summary>The peek's pieces: a click catcher over the visitor and a small speech bubble with an X (shown once they have leaned in).</summary>
+    private GameObject BuildPeek(System.Action accept, System.Action dismiss)
+    {
+        // Clicking the visitor (any part of the art) brings them in.
+        Image catcher = visitorRect.gameObject.AddComponent<Image>();
+        catcher.color = new Color(0f, 0f, 0f, 0f);
+        Button inButton = visitorRect.gameObject.AddComponent<Button>();
+        inButton.transition = Selectable.Transition.None;
+        inButton.onClick.AddListener(() => accept());
+        peekCatcher = catcher;
+        peekButton = inButton;
+
+        // The bubble, left of the peeking visitor.
+        GameObject b = new GameObject("Peek Bubble", typeof(RectTransform), typeof(Image), typeof(Button));
+        b.transform.SetParent(canvasRoot.transform, false);
+        Image bg = b.GetComponent<Image>();
+        PixelUIKit.StyleBox(bg);
+        b.GetComponent<Button>().onClick.AddListener(() => accept());
+        RectTransform br = b.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = new Vector2(1f, 0f);
+        br.pivot = new Vector2(1f, 0f);
+        br.sizeDelta = new Vector2(420f, 120f);
+        float barH = PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 0f;
+        br.anchoredPosition = new Vector2(-visitorRect.sizeDelta.x * 0.42f - 16f, barH + 24f + visitorRect.sizeDelta.y * 0.62f);
+        TMP_Text t = PixelUIKit.CreateText(Font, b.transform, "Text", string.Format(peekText, Pick(visitorName, DefaultName)), 26f, TextAlignmentOptions.Center, FontStyles.Bold, Color.white);
+        t.enableAutoSizing = true; t.fontSizeMax = 26f; t.fontSizeMin = 16f;
+        t.raycastTarget = false;
+        PixelUIKit.Stretch(t.rectTransform);
+        t.rectTransform.offsetMin = new Vector2(16f, 10f);
+        t.rectTransform.offsetMax = new Vector2(-46f, -10f);
+        Button x = PixelUIKit.CreateButton(Font, b.transform, "Dismiss", "X", new Vector2(36f, 36f), new Color(0.5f, 0.22f, 0.22f, 1f), Color.white, 22f);
+        RectTransform xr = x.GetComponent<RectTransform>();
+        xr.anchorMin = xr.anchorMax = xr.pivot = new Vector2(1f, 1f);
+        xr.anchoredPosition = new Vector2(-6f, -6f);
+        x.onClick.AddListener(() => dismiss());
+        b.SetActive(false);
+        return b;
     }
 
     private void SetDim(float amount)
