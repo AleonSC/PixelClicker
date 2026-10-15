@@ -2050,6 +2050,17 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 63;
         }
 
+        if (looksVersion < 64)
+        {
+            // The Golden Snitch became a gold cube (it sits on the cube until clicked).
+            System.Collections.Generic.List<PixelLook> list64 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            list64.RemoveAll(l => l != null && l.type == PixelType.GoldenSnitch);
+            PixelLook def64 = PixelLooks.Find(PixelLooks.CreateDefaults(), PixelType.GoldenSnitch);
+            if (def64 != null) list64.Add(def64);
+            looks = list64.ToArray();
+            looksVersion = 64;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.
@@ -2371,7 +2382,7 @@ public partial class PixelClicker : MonoBehaviour
 
         int tierIndex = GetClickTierIndex();
         PixelTier tier = tiers[tierIndex];
-        if (tier.type == PixelType.GoldenSnitch) return;   // the Golden Snitch is never clicked off the cube: it flies (PixelGoldenSnitch)
+        if (tier.type == PixelType.GoldenSnitch) { PixelGoldenSnitch.CubeClicked(automatic); return; }   // the Golden Snitch is never clicked off the cube: your click makes it fly (PixelGoldenSnitch)
         PixelBlockHold.OnClick(automatic);   // a stake being held grows +0.1 per click; every 5 clicks give the hold meter 1%
         if (tier.stallsHold) PixelBlockHold.Stall(tier.stallSeconds > 0f ? tier.stallSeconds : 1.5f, tier.stallRefill > 0f ? tier.stallRefill : 0.04f);   // every click on a stalling block freezes the hold meter and refills it a little
         if (!automatic && IsHazard(tier.type) && PixelBlockRules.HeldClearsHazard(tier.type)) { ClearHazardNow(tier); return; }   // a held Pesticide: one left click clears it

@@ -1102,3 +1102,5 @@
 [2026-10-15 17:38 UTC] Added the Golden Snitch: an extremely rare pixel that sprouts silver wings on the cube and darts round the screen; keep your mouse on it to charge its bar (it never charges otherwise), then click when the closing white ring meets the gold one to catch it for 400 clicks' worth of your best pixel and maybe an Ultra pixel (3 misses or 30 seconds and it escapes). Detailed model, gold trail, sparkles, own sounds, Stats rows.
 [2026-10-15 17:38 UTC] To-do: the golden snitch is done.
 [2026-10-15 17:41 UTC] Added a search bar to the Stats screen: typing shows only the stats whose name or value matches (and the sections they belong to, opened), or a whole section when its heading matches.
+[2026-10-15 17:43 UTC] Made the Golden Snitch bigger (64 to 110 px on screen) and slower (top speed about half, calmer darts) so it can actually be caught.
+[2026-10-15 17:45 UTC] The Golden Snitch is now a polished gold cube: it lands on the clicker cube and waits for your click (slips away after 2 minutes), then the gold cube sprouts wings and flies.

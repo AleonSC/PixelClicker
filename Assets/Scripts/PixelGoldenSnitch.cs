@@ -2,8 +2,10 @@
 // PixelGoldenSnitch.cs
 //   The GOLDEN SNITCH (PixelType.GoldenSnitch 101): a very rare drop (a rareDrop tier like the Dragon Cubes, PixelClicker.EnsureGoldenSnitch, spawnWeight
 //   goldenSnitchSpawnWeight 0.00003) that is never clicked off the cube (CollectInternal ignores it, Block Hold can't grab it). Component added by PixelClicker.Awake.
-//   1. SPROUT: the moment it lands on the cube (PixelClicker.PixelMaterialized) a detailed golden ball takes its place - engraved bands, filigree studs, a soft
-//      glow shell, a gold point light, sparkles - and two silver feathered wings unfold out of it (sproutSeconds 1.1, fluttering faster and faster). The cube
+//   0. ON THE CUBE: it lands (PixelClicker.PixelMaterialized) as a polished gold cube block and waits for a MANUAL click (PixelClicker.CollectInternal ->
+//      CubeClicked; the auto clicker leaves it alone). Nobody clicks it for onCubeSeconds (120) and it slips away (counts as escaped).
+//   1. SPROUT: the click swaps it for a detailed golden cube - engraved dark edges, a middle band, bright corner studs and face gems, a soft cube glow
+//      shell, a gold point light, sparkles - and two silver feathered wings unfold out of it (sproutSeconds 1.1, fluttering faster and faster). The cube
 //      rolls a fresh block behind it (PixelClicker.ReplaceCurrentPixel) and the snitch lifts off towards the camera.
 //   2. CHASE: it darts round the screen fast (viewport steering inside the black bars: quick darts to far points, little hops, feints, a flutter), leaving a gold
 //      trail, its wings buzzing (snitch_buzz). Keep the mouse ON it (hoverScale x its size on screen) and a bar above it charges (chargeSeconds 3.2 of hovering);
@@ -29,15 +31,17 @@ public class PixelGoldenSnitch : MonoBehaviour
     [Tooltip("Seconds the wings take to unfold on the cube before it flies.")]
     [SerializeField] private float sproutSeconds = 1.1f;
     [Tooltip("Its size on screen while flying, in pixels at 1080p.")]
-    [SerializeField] private float screenSizePx = 64f;
+    [SerializeField] private float screenSizePx = 110f;
     [Tooltip("Top flying speed in screen widths per second (at an empty bar).")]
-    [SerializeField] private float speed = 1.15f;
+    [SerializeField] private float speed = 0.6f;
     [Tooltip("Speed multiplier with a full bar (it gets wilder the closer you are).")]
-    [SerializeField] private float speedAtFull = 1.6f;
+    [SerializeField] private float speedAtFull = 1.35f;
     [Tooltip("Seconds between darts to a new point (min, max), shorter as the bar fills.")]
-    [SerializeField] private Vector2 dartSeconds = new Vector2(0.35f, 0.9f);
+    [SerializeField] private Vector2 dartSeconds = new Vector2(0.6f, 1.4f);
     [Tooltip("Speed multiplier while the capture ring closes (a little slower, so the timing is fair).")]
     [SerializeField] private float captureSlow = 0.6f;
+    [Tooltip("Seconds it waits on the cube for your click before it slips away unseen (0 = it waits forever).")]
+    [SerializeField] private float onCubeSeconds = 120f;
     [Tooltip("Seconds before it escapes off the screen if it is not caught.")]
     [SerializeField] private float lifetimeSeconds = 30f;
 
@@ -76,14 +80,26 @@ public class PixelGoldenSnitch : MonoBehaviour
     [Tooltip("The wings' colour (see-through silver).")]
     [SerializeField] private Color wingColor = new Color(0.96f, 0.95f, 0.88f, 0.72f);
 
-    private enum State { Idle, Sprouting, Chase, Capture, Escaping, Caught }
+    private enum State { Idle, OnCube, Sprouting, Chase, Capture, Escaping, Caught }
     private State state = State.Idle;
 
     /// <summary>A Golden Snitch is on the cube or flying.</summary>
     public static bool Active { get; private set; }
 
+    private static PixelGoldenSnitch instance;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Active = false; }
+    private static void ResetStatics() { Active = false; instance = null; }
+
+    /// <summary>
+    /// Called by PixelClicker.CollectInternal when the Golden Snitch block on the cube is clicked: a manual click makes it sprout
+    /// wings and fly (the auto clicker leaves it alone).
+    /// </summary>
+    public static void CubeClicked(bool automatic)
+    {
+        if (automatic || instance == null || instance.state != State.OnCube) return;
+        instance.Sprout();
+    }
 
     private PixelClicker clicker;
     private int snitchTier = -1;
@@ -112,7 +128,7 @@ public class PixelGoldenSnitch : MonoBehaviour
     private PixelArcGraphic ringTarget, ringShrink;
     private TMP_Text hintLabel;
 
-    private void Awake() { clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); }
+    private void Awake() { clicker = GetComponent<PixelClicker>(); if (clicker == null) clicker = PixelFind.First<PixelClicker>(); instance = this; }
     private void OnEnable() { if (clicker != null) clicker.PixelMaterialized += OnMaterialized; }
     private void OnDisable() { if (clicker != null) clicker.PixelMaterialized -= OnMaterialized; Cleanup(); }
 
@@ -136,12 +152,24 @@ public class PixelGoldenSnitch : MonoBehaviour
     // 1. Sprout
     // ------------------------------------------------------------------
 
+    /// <summary>It lands on the cube as a gold block and waits for a click.</summary>
     private void Begin(int tierIndex)
+    {
+        snitchTier = tierIndex;
+        Active = true;
+        state = State.OnCube;
+        stateT = 0f;
+        PixelStats.Count("snitch.seen");
+        PixelAudio.Play("snitch_appear");
+        PixelStatusLines.Set("snitch", "A GOLDEN SNITCH is on the cube! Click it to make it fly.", gold, 6f);
+        PixelHints.Announce("A Golden Snitch landed on the cube!");
+    }
+
+    /// <summary>The click: wings unfold out of the gold cube and it takes off.</summary>
+    private void Sprout()
     {
         Camera cam = Cam;
         if (cam == null) return;
-        snitchTier = tierIndex;
-        Active = true;
         state = State.Sprouting;
         stateT = 0f; life = 0f; charge = 0f; misses = 0; burstT = 0f; ringT = 0f;
         sproutPos = clicker.LiveWorldPosition - cam.transform.forward * clicker.PixelBaseSize * 0.9f;   // (just in front of the cube: the fresh block grows in behind it)
@@ -150,11 +178,9 @@ public class PixelGoldenSnitch : MonoBehaviour
         BuildModel();
         BuildUI();
         root.transform.position = sproutPos;
-        replacePending = true;   // (next frame: the cube rolls a fresh block behind it - not inside the Materialize call that brought it)
-        PixelStats.Count("snitch.seen");
-        PixelAudio.Play("snitch_appear");
-        PixelStatusLines.Set("snitch", "A GOLDEN SNITCH! Keep your mouse on it to charge, then click when the rings meet.", gold, 6f);
-        PixelHints.Announce("A Golden Snitch sprouted wings!");
+        replacePending = true;   // (next frame: the cube rolls a fresh block behind it - not inside the click that set it off)
+        PixelAudio.Play("snitch_ready");
+        PixelStatusLines.Set("snitch", "It flies! Keep your mouse on it to charge, then click when the rings meet.", gold, 6f);
     }
 
     // ------------------------------------------------------------------
@@ -164,6 +190,7 @@ public class PixelGoldenSnitch : MonoBehaviour
     private void Update()
     {
         if (state == State.Idle) return;
+        if (state == State.OnCube) { UpdateOnCube(); return; }
         if (replacePending) { replacePending = false; clicker.ReplaceCurrentPixel(); }
         Camera cam = Cam;
         if (cam == null || root == null) { Cleanup(); return; }
@@ -183,6 +210,20 @@ public class PixelGoldenSnitch : MonoBehaviour
         }
         AnimateModel(dt);
         UpdateUI(cam);
+    }
+
+    /// <summary>Waiting on the cube: if nobody clicks it for onCubeSeconds it slips away and the cube rolls a new block.</summary>
+    private void UpdateOnCube()
+    {
+        if (clicker == null) { Cleanup(); return; }
+        if (!clicker.IsValidTierIndex(clicker.CurrentClickTierIndex) || clicker.Tiers[clicker.CurrentClickTierIndex].type != PixelClicker.PixelType.GoldenSnitch) { Cleanup(); return; }   // (something else swapped the block)
+        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        stateT += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
+        if (onCubeSeconds <= 0f || stateT < onCubeSeconds) return;
+        PixelStats.Count("snitch.escaped");
+        PixelStatusLines.Set("snitch", "The Golden Snitch slipped away before you clicked it.", new Color(1f, 0.55f, 0.35f), 3f);
+        Cleanup();
+        clicker.ReplaceCurrentPixel();
     }
 
     private void UpdateSprout(Camera cam, float dt)
@@ -414,25 +455,29 @@ public class PixelGoldenSnitch : MonoBehaviour
         Color deep = new Color(gold.r * 0.62f, gold.g * 0.5f, gold.b * 0.25f, 1f), bright = Color.Lerp(gold, Color.white, 0.35f);
         body = new GameObject("Body").transform;
         body.SetParent(root.transform, false);
-        k.Prim(PrimitiveType.Sphere, "Ball", body, Vector3.zero, Vector3.one, gold, default, 0.92f, 0.94f, false, gold * 0.35f);
-        // Engraved bands: the equator and two crossing rings, with filigree studs round the equator.
-        k.Cyl("Band", body, Vector3.zero, 0.506f, 0.04f, deep, default, 0.9f, 0.85f);
-        k.Cyl("Band", body, Vector3.zero, 0.506f, 0.03f, deep, new Vector3(0f, 0f, 62f), 0.9f, 0.85f);
-        k.Cyl("Band", body, Vector3.zero, 0.506f, 0.03f, deep, new Vector3(0f, 0f, -62f), 0.9f, 0.85f);
-        for (int i = 0; i < 10; i++)
-        {
-            float a = i / 10f * Mathf.PI * 2f;
-            k.Ball("Stud", body, new Vector3(Mathf.Cos(a) * 0.5f, 0f, Mathf.Sin(a) * 0.5f), 0.035f, bright, 0.95f, 0.95f);
-        }
-        k.Ball("Cap", body, new Vector3(0f, 0.49f, 0f), 0.06f, bright, 0.95f, 0.95f);
-        k.Ball("Cap", body, new Vector3(0f, -0.49f, 0f), 0.06f, bright, 0.95f, 0.95f);
+        // A polished gold cube: darker engraved edges, a band round its middle, bright studs on the corners and a gem on each face.
+        const float h = 0.4f;   // (half its size: the cube is 0.8 across, the wings hinge on its sides)
+        k.Prim(PrimitiveType.Cube, "Cube", body, Vector3.zero, Vector3.one * (h * 2f), gold, default, 0.92f, 0.94f, false, gold * 0.35f);
+        for (int a = 0; a < 3; a++)
+            for (int i = 0; i < 4; i++)
+            {
+                float sx = (i & 1) == 0 ? -h : h, sy = (i & 2) == 0 ? -h : h;
+                Vector3 pos = a == 0 ? new Vector3(0f, sx, sy) : a == 1 ? new Vector3(sx, 0f, sy) : new Vector3(sx, sy, 0f);
+                Vector3 size = a == 0 ? new Vector3(h * 2.04f, 0.05f, 0.05f) : a == 1 ? new Vector3(0.05f, h * 2.04f, 0.05f) : new Vector3(0.05f, 0.05f, h * 2.04f);
+                k.Box("Edge", body, pos, size, deep, default, false, 0.9f, 0.85f);
+            }
+        k.Box("Band", body, Vector3.zero, new Vector3(h * 2.03f, 0.06f, h * 2.03f), deep, default, false, 0.9f, 0.85f);
+        for (int i = 0; i < 8; i++)
+            k.Ball("Stud", body, new Vector3((i & 1) == 0 ? -h : h, (i & 2) == 0 ? -h : h, (i & 4) == 0 ? -h : h), 0.06f, bright, 0.95f, 0.95f);
+        Vector3[] faces = { Vector3.up, Vector3.down, Vector3.forward, Vector3.back };
+        foreach (Vector3 f in faces) k.Ball("Gem", body, f * h, 0.07f, bright, 0.95f, 0.95f);
 
         // The glow shell (see-through, pulsing) and the light.
-        GameObject sh = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject sh = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Destroy(sh.GetComponent<Collider>());
         sh.name = "Glow";
         sh.transform.SetParent(root.transform, false);
-        sh.transform.localScale = Vector3.one * 1.45f;
+        sh.transform.localScale = Vector3.one * 1.15f;
         Renderer shr = sh.GetComponent<Renderer>();
         shr.sharedMaterial = clicker.CreateVisualMaterial(new Color(gold.r, gold.g, gold.b, 0.16f), true);
         shr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -487,7 +532,7 @@ public class PixelGoldenSnitch : MonoBehaviour
     {
         Transform hinge = new GameObject(side > 0f ? "Wing R" : "Wing L").transform;
         hinge.SetParent(root.transform, false);
-        hinge.localPosition = new Vector3(side * 0.47f, 0.08f, 0f);
+        hinge.localPosition = new Vector3(side * 0.44f, 0.08f, 0f);
         k.Ball("Knob", hinge, Vector3.zero, 0.085f, gold, 0.92f, 0.94f);
         float[] lengths = { 1.3f, 1.18f, 1.04f, 0.9f, 0.74f, 0.58f };
         for (int i = 0; i < lengths.Length; i++)
@@ -520,7 +565,7 @@ public class PixelGoldenSnitch : MonoBehaviour
         spin += dt * (flying ? 360f : 120f);
         if (body != null) body.localRotation = Quaternion.Euler(0f, spin, 12f * Mathf.Sin(Time.unscaledTime * 3f));
         float pulse = 1f + 0.08f * Mathf.Sin(Time.unscaledTime * 7f) + (hovering ? 0.12f : 0f);
-        if (shell != null) shell.localScale = Vector3.one * 1.45f * pulse;
+        if (shell != null) { shell.localScale = Vector3.one * 1.15f * pulse; if (body != null) shell.localRotation = body.localRotation; }
         if (glow != null) { glow.range = root.transform.lossyScale.x * 7f; glow.intensity = (hovering ? 3.4f : 2.2f) * (state == State.Caught ? 1.6f : 1f); }
         if (trail != null)
         {
