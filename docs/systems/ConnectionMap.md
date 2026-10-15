@@ -31,7 +31,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 |---|---|---|---|---|---|---|
 | **Standard** | the six basic pixels (+ Glass, Luminescent) | - | Pure pixels (the shop currency) | - | the shop | Built |
 | **Woodcutting** | Wood, Leaf, Twig, Sap, Bark, Acorn, Heartwood, Pinecone, Moss, Pesticide; Great Oak | Termite Hive | wood husks (Chipper XP, Kiln Charcoal, crafting); hives -> Focus potions | Whetstone (Mining, Designed); Pesticide charges (Farming, Designed) | Wood Chipper (Built), Pesticide Sprayer (Designed), Lumberjack (Built) | Built; tree rework Designed (`WoodcuttingProgression.md`) |
-| **Mining** | Stone (filler), Copper, Tin, Iron, Silver, Gold, Obsidian, Bedrock | Gas Pocket | Whetstone -> Woodcutting (Designed); metals -> Electrician? (Idea) | ? | Prospector (Built) | Built (perks mostly text) |
+| **Mining** | Rock (filler), Copper, Tin, Iron, Silver, Gold, Obsidian, Bedrock | Gas Pocket | Whetstone -> Woodcutting (Designed); metals -> Electrician? (Idea) | ? | Prospector (Built) | Built (perks mostly text) |
 | **Farming** | Dirt (filler), Seed, Water, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit | Pest | Pesticide charges -> Woodcutting (Designed); Saplings -> better trees (Idea) | water / sunlight: Solar daylight speeds growth (Built); Fishing water? (Idea) | Sprinkler (Built), Seeds (Built), Farmer visitor (Built) | Built |
 | **Foraging** | Weeds (filler), Berry, Mushroom, Herb, Truffle, Treasure | Mold | ? | ? | ? | Built (perks text only) |
 | **Fishing** | Water (filler), Fish, Seaweed, Shell, Pearl, Bait, Bottle, Whale | Jellyfish | ? (water / driftwood -> Farming? Idea) | ? | Bait Bucket (Built), Weak Spots minigame (Built) | Built |
