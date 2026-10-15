@@ -56,6 +56,16 @@ public class PixelPauseMenu : MonoBehaviour
     [Tooltip("Fallback font, used only when the PixelClicker's 'UI Font' is empty. Empty = TextMeshPro default font.")]
     [SerializeField] private TMP_FontAsset font;
 
+    [Header("Music player")]
+    [Tooltip("Show the music player (track list, arrows, mute, shuffle) at the bottom centre of the pause menu, like on the main menu.")]
+    [SerializeField] private bool showMusicPlayer = true;
+    [Min(0f)]
+    [Tooltip("Seconds the pause menu's music player stays after the menu opens or the mouse leaves it. 0 = the default (1.5).")]
+    [SerializeField] private float pauseMusicHideSeconds = 0f;
+    [Min(0f)]
+    [Tooltip("Seconds the pause menu's music player takes to fade out. 0 = the default (0.15; the main menu's takes 0.8).")]
+    [SerializeField] private float pauseMusicFadeSeconds = 0f;
+
     [Header("Pausing")]
     [Tooltip("Key that opens and closes the menu.")]
     [SerializeField] private PauseKey pauseKey = PauseKey.Escape;
@@ -1091,6 +1101,10 @@ public class PixelPauseMenu : MonoBehaviour
     private void BuildUI()
     {
         canvasRoot = PixelUIKit.CreateCanvas("PixelPauseMenu Canvas", sortingOrder, referenceResolution, true);
+        // The music player, at the main menu's spot (bottom centre) but without the caption: shown when the menu opens and while hovered, gone quickly otherwise.
+        if (showMusicPlayer)
+            PixelTitleMusic.Create(canvasRoot.transform, font, pauseMusicHideSeconds > 0f ? pauseMusicHideSeconds : 1.5f, false,
+                                   pauseMusicFadeSeconds > 0f ? pauseMusicFadeSeconds : 0.15f, () => IsPaused && !PixelTitleScreen.Showing);
         if (PixelFind.First<PixelFeedback>() == null) gameObject.AddComponent<PixelFeedback>();   // the Give feedback window
 
         // On-screen Pause button

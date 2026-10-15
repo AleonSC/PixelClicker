@@ -50,6 +50,7 @@ public static class PixelSettingsSync
         known.Add(new Known("PixelAudio.UiClicks", 0));
         // Music, per save: the music mute, the custom playlist (unticked songs) and the chosen song.
         known.Add(new Known("PixelClicker.Setting.MusicMuted", 0));
+        known.Add(new Known("PixelClicker.Setting.MusicShuffle", 0));
         known.Add(new Known("PixelClicker.Setting.PlaylistOff", 2));
         known.Add(new Known("PixelClicker.Setting.Song", 2));
         known.Add(new Known("PixelClicker.Setting.LogoFavorite", 0));   // the favourite main menu logo style (+ 1)

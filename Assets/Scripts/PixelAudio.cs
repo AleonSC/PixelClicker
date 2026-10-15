@@ -124,7 +124,9 @@ public partial class PixelAudio : MonoBehaviour
     // Per save (PixelSettingsSync): music mute, the playlist and the chosen song. (Named PixelClicker.Setting.* so a new game resets them; PixelAudio.* keys are the player's own and stay.)
     private const string PrefMusicMuted = "PixelClicker.Setting.MusicMuted";
     private const string PrefSong = "PixelClicker.Setting.Song";
+    private const string PrefMusicShuffle = "PixelClicker.Setting.MusicShuffle";   // 1 = shuffle, 0 = in order; missing = the Inspector's 'Shuffle Music'
     private bool musicMuted;
+    private bool shuffleOn = true;
 
     private float defaultMaster, defaultEffects, defaultMusic;
     private bool defaultMuted;
@@ -149,6 +151,7 @@ public partial class PixelAudio : MonoBehaviour
         instance.musicVolume = PlayerPrefs.HasKey(PrefMusic) ? PlayerPrefs.GetFloat(PrefMusic) : instance.defaultMusic;
         instance.muted = PlayerPrefs.HasKey(PrefMuted) ? PlayerPrefs.GetInt(PrefMuted) != 0 : instance.defaultMuted;
         instance.musicMuted = PlayerPrefs.GetInt(PrefMusicMuted, 0) != 0;
+        instance.shuffleOn = PlayerPrefs.GetInt(PrefMusicShuffle, instance.shuffleMusic ? 1 : 0) != 0;
         instance.playlistOff = null;   // read again (per save)
         instance.ApplyMusicVolume();
         instance.ApplySavedSong();
@@ -196,6 +199,13 @@ public partial class PixelAudio : MonoBehaviour
     }
 
     /// <summary>The music alone off (saved per save file; the speaker button on the main menu and Settings > Audio).</summary>
+    /// <summary>Is the next track picked at random (the music players' shuffle button)? Saved per save file; the default is the Inspector's 'Shuffle Music'.</summary>
+    public bool MusicShuffle
+    {
+        get => shuffleOn;
+        set { shuffleOn = value; PlayerPrefs.SetInt(PrefMusicShuffle, value ? 1 : 0); }
+    }
+
     public bool MusicMuted
     {
         get => musicMuted;
@@ -506,6 +516,7 @@ public partial class PixelAudio : MonoBehaviour
         if (PlayerPrefs.HasKey(PrefEffects)) effectsVolume = PlayerPrefs.GetFloat(PrefEffects);
         if (PlayerPrefs.HasKey(PrefMusic)) musicVolume = PlayerPrefs.GetFloat(PrefMusic);
         if (PlayerPrefs.HasKey(PrefMuted)) muted = PlayerPrefs.GetInt(PrefMuted) != 0;
+        shuffleOn = PlayerPrefs.GetInt(PrefMusicShuffle, shuffleMusic ? 1 : 0) != 0;
 
         EnsureDefaultSounds();
         FillSynthesizedClips();
@@ -961,7 +972,7 @@ public partial class PixelAudio : MonoBehaviour
         int next;
         int saved = lastTrack < 0 ? SavedSongIndex() : -1;
         if (saved >= 0) next = saved;   // the song this save file was left on
-        else if ((shuffleMusic || lastTrack < 0) && pool.Count > 1)
+        else if ((shuffleOn || lastTrack < 0) && pool.Count > 1)
         {
             do next = pool[UnityEngine.Random.Range(0, pool.Count)]; while (next == lastTrack);
         }

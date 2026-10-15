@@ -1045,3 +1045,4 @@
 [2026-10-15 12:14 UTC] Block Hold: every click while you hold a stake block adds 0.1 to the stake, and every 5 clicks give the hold meter 1% energy (your own clicks only; Inspector: stakePerClick, energyEveryClicks, energyPerClicks, autoClicksCount).
 [2026-10-15 12:29 UTC] Cleanup: one shared set of 'what is going on' checks (PixelCalm: in a menu, camera busy, calm moment for a tip) replaces the long copied conditions in the tutorials, perk popups, camera controls, saving and the View window.
 [2026-10-15 12:35 UTC] To-do: set up one save version and one list of save upgrade steps before release.
+[2026-10-15 12:38 UTC] The pause menu has the music player too (bottom centre like the main menu, no MUSIC label; shows when the menu opens and on hover, and vanishes much faster), and both players have a new shuffle button next to the mute button (saved per save file).
