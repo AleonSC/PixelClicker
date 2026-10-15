@@ -1351,12 +1351,23 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 34)
+        {
+            // The Prospector's Pack (testing price) leaves the shop too.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && IsDevOnlyPack(p)) p.hideInShop = true;
+            packDataVersion = Mathf.Max(packDataVersion, 34);
+            changed = true;
+        }
+
         return changed;
     }
 
-    /// <summary>Packs kept out of the shop (testing packs and Block Hold); the Dev Tools 'Shop unlocks' widget handles them.</summary>
+    /// <summary>Packs kept out of the shop (testing packs: Fire, Nuclear, Farmer's, Prospector's; and Block Hold); the Dev Tools 'Shop unlocks' widget handles them.</summary>
     private static bool IsDevOnlyPack(ShopPack p) =>
-        p.unlocksBlockHold || Rewards(p, PixelClicker.PixelType.Fire) || Rewards(p, PixelClicker.PixelType.Nuclear) || Rewards(p, PixelClicker.PixelType.Dirt);
+        p.unlocksBlockHold || Rewards(p, PixelClicker.PixelType.Fire) || Rewards(p, PixelClicker.PixelType.Nuclear) || Rewards(p, PixelClicker.PixelType.Dirt)
+        || Rewards(p, PixelClicker.PixelType.Copper);
 
     private static void ApplyWhaleClicks(PixelClicker.PixelTier t)
     {

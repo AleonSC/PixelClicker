@@ -695,6 +695,7 @@ public partial class PixelShop
         return new ShopPack
         {
             displayName = "Prospector's Pack",
+            hideInShop = true,   // testing price: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
             description = "Adds the Mining skill and seven ore pixels (Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Obsidian and Bedrock take 15-20 clicks but pay a lot. The ores only spawn while Mining is the skill in play (Skills window), plus plain Stone as filler and a Gas Pocket to watch out for.",
             requirements = Needs(-1),
