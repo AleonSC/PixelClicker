@@ -4,8 +4,7 @@
 //   packs cycle through their reward tiers every pictureCycleSeconds, Value rows, Consumables cards follow the drop-down, minigame
 //   packs use primitive models BuildMinigameModel for ghost/meteor/blackhole/bomb/pad/snake/sort/breakout - a new minigame needs a
 //   case + its id in ModelledMinigames). One hidden studio per distinct picture key (tier:<Type>, item:<name>, game:<id>; y -3900),
-//   drawn only while on screen (UpdatePictures); hidePictures, pictureResolution. Shop cost lines no longer print '(you have n)'
-//   (NoHave strips it from old saved format strings).
+//   drawn only while on screen (UpdatePictures); hidePictures, pictureResolution.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
