@@ -1,6 +1,7 @@
 // ---- System notes (moved here from CLAUDE.md) ----
 // PixelShopTutorial.cs
-//   Shop tutorial (added by PixelShop): the first time the Shop button is available (PixelShop.ShopAvailable) and the screen is calm
+//   Shop tutorial (added by PixelShop). ONLY the shop's blue '?' hold button plays it now (autoStart off: when the shop becomes available it is just marked
+//   done, DoneKey, so the tutorials waiting for it carry on; Cubie's shop hold no longer starts it). With autoStart on (old behaviour): the first time the Shop button is available (PixelShop.ShopAvailable) and the screen is calm
 //   (title screen over, PixelHints.IntroHoldsGuide false, no other tip, no takeover minigame, not paused; startDelay 2 s) a series of
 //   small "Got it" boxes (PixelNotice.Show(small: true, beside: shop.PanelRect), 440 wide, just right of the shop window) walks
 //   through the shop, each step opening its tab via PixelShop.TutorialOpen(tab, subTab): the currency list + overview, Pixels,
@@ -39,6 +40,8 @@ public class PixelShopTutorial : MonoBehaviour
 
     [Tooltip("Run the shop tutorial the first time the Shop button is available.")]
     [SerializeField] private bool enableTutorial = true;
+    [Tooltip("Play the tutorial by itself the first time the shop is available (and when Cubie's shop hold ends). Off (default): ONLY the shop's blue ? button plays it.")]
+    [SerializeField] private bool autoStart = false;
 
     [Min(0f)]
     [Tooltip("Seconds after the Shop becomes available (and nothing else is on screen) before the tutorial starts.")]
@@ -113,6 +116,13 @@ public class PixelShopTutorial : MonoBehaviour
     {
         if (running || !enableTutorial || shop == null || !shop.ShopAvailable) { readyTimer = 0f; return; }
         if (PixelStats.Total(DoneKey) >= 1d || !PixelHints.TipsEnabled) return;   // remembered per save (the tip flag in PlayerPrefs is global, so a new game never replayed it)
+        if (!autoStart)
+        {
+            // Only the blue ? button plays it: count it as seen, so the Toggles / Skills tutorials that wait for it carry on.
+            PixelStats.Best(DoneKey, 1d);
+            requested = false;
+            return;
+        }
 
         // Wait for a calm moment: title screen over, the new-game intro finished, no other tip, no minigame takeover, not paused.
         if (!PixelCalm.ForTip)
