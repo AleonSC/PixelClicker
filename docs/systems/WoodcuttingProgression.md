@@ -78,6 +78,26 @@ A species is an ordered **slot list**. A slot is one of:
   - **accept it:** chop through and clear the Hive with right clicks at the end;
 - The Hive keeps today's rules: 4 left clicks set the termites loose, 10 right clicks clear it safely (and collect it).
 
+### Dealing with Termite Hives: the toolkit
+
+Pesticide used to be pure luck (a random block you could only use if it showed up at the right moment). Now every play style has its own answer, and preparing is a real choice:
+
+| Approach | How it works | Suits |
+|---|---|---|
+| **Effort** | 10 right clicks clear the Hive and collect it (as now). | The clicker: free, but costs time and focus. |
+| **Preparation** | **Pesticide charges** (see below): one left click on the Hive with charges clears and collects it, using one charge. | The planner: bank charges whenever Pesticide shows up. |
+| **Automation** | A **Pesticide Sprayer** placed near the cube sprays any Hive that appears, using Pesticide husks fed in by hand or by belt. | The builder: a machine to set up and keep supplied. |
+| **Avoidance** | A Focus potion, or the Infestation dial on Calm (below). | Anyone who wants a quiet stretch. |
+
+**Pesticide charges (hold to harvest).** Pesticide stays a block in the rotation, but **holding it with Block Hold converts it into Pesticide charges** instead of paying currency (the game-wide "hold a utility block for its use" rule, see `PixelRules.md`). Its old pixel (husk) still drops, so it can be fed to a Pesticide Sprayer or used again. Charges are banked: every time Pesticide comes by you can hold it, so when a warned Hive arrives you already have answers stocked. When an infested tree is warned, the tree bar shows your charge count. (Later, Farming can produce charges too - the planned cross-skill link.)
+
+**When a Hive goes off anyway (the termites):**
+- Click threatened old pixels to save them (as now).
+- **Sap as bait:** termites go for Sap old pixels first and get stuck in them, so sap left on the floor near valuable husks is a cheap defence (and gives Sap a real job).
+- Husks riding a belt or stored in a Storage Crate are safe from termites: building already protects you.
+
+So a Hive has a full arc: **prevent** it (Focus, Calm), **prepare** (charges), **automate** (Sprayer), **respond** (right clicks) and **recover** (sap bait, saving pixels).
+
 ### Hives are a resource: Focus potions
 
 - Clearing a Hive **safely** (10 right clicks, or one click with a held Pesticide) collects it as currency (this already works: right-click clearing collects hazards and drops them as an old pixel). Breaking it with left clicks gives nothing and lets the termites loose.
@@ -142,7 +162,7 @@ How far ahead you can see is itself a reward: early on you react, later you plan
 | Heartwood | cores (6+) | 4 | Rare payoff. |
 | Termite Hive | last slot of an infested tree | 4 left / 10 right | The hazard. |
 | **Whetstone** | - | - | **Leaves Woodcutting:** comes from Mining (see "Cross-skill upgrades"). |
-| **Pesticide** | - | - | Proposed to come from Farming or Foraging (open question). |
+| Pesticide | trunk (rare, any tree) | 3 | A utility block: **hold** it for Pesticide charges (no currency; its husk still drops). |
 
 ## Level gating
 
@@ -229,9 +249,13 @@ Woodcutting stays the simple intro; other skills make it better:
 | From | Upgrade |
 |---|---|
 | **Mining** | **Whetstone** - moves to Mining as a block / item. Used in Woodcutting it gives the rapid clicks it gives today (Block Hold), or becomes a permanent "sharpened axe". |
-| Farming / Foraging | **Pesticide** (proposed): clears a Termite Hive instantly; also Saplings that grow better trees (from the existing to-do "Cross-skill links"). |
+| Farming / Foraging | **Pesticide charges** made in Farming (on top of holding the Pesticide block), and Saplings that grow better trees (from the existing to-do "Cross-skill links"). |
 | Electrician | **Chainsaw** (idea): a powered tool for the trunk part of a tree. |
 | Fishing | Idea: driftwood or a "log raft" that adds a bonus tree. |
+
+## Value, body and use (the game-wide rule)
+
+Woodcutting follows `PixelRules.md`: a click extracts a block's **value** (currency) and drops its drained **husk** (the old pixel = material, never currency by itself); **holding** a utility block (Pesticide) gives its **charges** instead of currency. Wood husks are material for the Wood Chipper (XP), the Kiln (Charcoal), crates, crafting and the Pesticide Sprayer.
 
 ## Economy and sinks
 
@@ -248,11 +272,12 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 1. **Tree mode (shared system).** Data per skill pack: a filler pool, the tree-arrival settings (`minFiller` / `maxFiller`) and a list of species (unlock level, weight, slot list with Fixed / Run / Wildcard / Optional / Hazard slots, infested chance). `PixelClicker.RollTier` serves the filler rotation or the current tree's next slot. Built generic so Mining (veins), Foraging (bushes) and Fishing (spots) can use it later.
 2. **Tree bar + Timber + infested warning + lookahead.** The tree bar (`Oak 7 / 12`, Hive icon, near the Next Up window), the felling show, sound, Timber reward and stats; the infested look and sound; the Next Up window learns to show 1-3 blocks ahead (`PixelClicker.PeekNextTier` becomes a peek of N).
 3. **Woodcutting species + gating.** Oak, Pine, Birch, Maple, Great Oak and the filler pool; remove the per-block filler / hazard shares for Woodcutting.
-4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation; Focus made from collected hives (Lumberjack trade / recipe).
+4. **Hook the existing mechanics in.** Block Hold keeps the tree's order; Shuffle only on filler; Great Oak becomes a species; Focus potion stops infestation; Focus made from collected hives (Lumberjack trade / recipe); holding Pesticide gives charges (and a left click on a Hive with charges clears it); Sap old pixels bait termites.
 5. **XP curve bands + XP per hit.** Then retune with the Balance report (which will need a "per tree" view).
 6. **Perks and skill tree nodes**, including the Infestation dial.
-7. **Cross-skill moves.** Whetstone to Mining (migration); Pesticide decision.
-8. **Special trees** beyond the Great Oak.
+7. **Cross-skill moves.** Whetstone to Mining (migration); Farming-made Pesticide charges.
+8. **Pesticide Sprayer** (a machine fed with Pesticide husks).
+9. **Special trees** beyond the Great Oak.
 
 ## Open questions
 
@@ -262,6 +287,7 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 - Infestation dial numbers (Calm half / Swarm double, XP -10% / +15%) are proposals.
 - Should Pine bring its own block types later (e.g. Pine Log, Resin) or keep sharing Wood / Leaf?
 - Lookahead steps: the levels above (7 / 20 / 30 and the tree node) are a proposal.
-- Pesticide: leave it in Woodcutting, or move it to Farming / Foraging?
+- Pesticide charges: how many per held block, and is there a cap on how many you can carry?
+- Pesticide Sprayer: its cost, range and how many husks per Hive.
 - XP per hit vs XP per block.
 - Should the auto clicker be able to fell whole trees, or stop at the core so heartwood is always hand-chopped?

@@ -7,6 +7,7 @@
 | Script / system | What it is (first sentence) | Details |
 |---|---|---|
 | `PixelClicker.cs` | Core. Click-me hint: while the Inventory UI's guide text ("Click N more...") shows and nothing has been collected yet (PixelClicker.ClickHint, set by PixelUI.UpdateGuide; | in the header comment of `PixelClicker.cs` |
+| Pixel rules (design) | A click gives a block's currency (its value) and drops its husk (old pixel = material, never currency); holding a utility block gives charges. Not built yet. | `docs/systems/PixelRules.md` |
 | `PixelBlockCatalog.cs` (+ `PixelBlockTags.cs`) | The block catalog: one card per pixel type with its TAGS (Wood, Hazard, Standalone, Ore... read by IsWoodBlock / IsHazard / IsStandalone etc.), its Pixel Guide text, its old-pixel text, and optional soundAs / fxAs (borrow another block's sounds / break burst). A new block = one card here. | in the header comment of `PixelBlockCatalog.cs` |
 | `PixelLooks.cs` | Per-pixel-type 3D look, separate from the tier data (the UI keeps the tier colour): | `docs/systems/PixelLooks.md` |
 | `PixelCameraIntro.cs` | Camera intro (added by PixelClicker.Awake): | in the header comment of `PixelCameraIntro.cs` |
