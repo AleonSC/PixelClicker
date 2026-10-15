@@ -664,7 +664,7 @@ public class PixelUI : MonoBehaviour
     private void UpdatePinnedSpaceSwitch()
     {
         if (!autoMode || !Compact || boxObject == null || !boxObject.activeSelf || compactSwitch == null) return;
-        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelFirstPerson.Active) return;
+        if (PixelCalm.InMenu || PixelFirstPerson.Active) return;
         if (!PixelKeys.KeyPressed(KeyCode.Space)) return;   // (ignored while typing in a text box)
         compactSwitch.onClick.Invoke();
     }

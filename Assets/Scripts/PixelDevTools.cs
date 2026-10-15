@@ -389,7 +389,7 @@ public class PixelDevTools : MonoBehaviour
     /// <summary>Middle click (with the on-screen selector on) swaps the pixel on the cube for the one chosen in the swap drop-down.</summary>
     private void UpdateMiddleSwap()
     {
-        if (clicker == null || swapDropdown == null || swapDropdown.value <= 0 || PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        if (clicker == null || swapDropdown == null || swapDropdown.value <= 0 || PixelCalm.InMenu) return;
         if (!PixelInput.MiddlePressed() || PixelInput.PointerOverUI() || IsTyping()) return;
         int v = swapDropdown.value - 1;   // (entry 0 = 'off')
         if (v < 0 || v >= swapChoices.Count) return;
@@ -1404,7 +1404,7 @@ public class PixelDevTools : MonoBehaviour
     private void UpdateGod()
     {
         if (!godMode || clicker == null || godRoot == null) return;
-        bool active = !PixelPauseMenu.IsPaused && !IsOpen && !PixelTitleScreen.Showing;
+        bool active = !PixelCalm.InMenu && !IsOpen;
         if (godRoot.activeSelf != active) godRoot.SetActive(active);
         if (!active) return;
 

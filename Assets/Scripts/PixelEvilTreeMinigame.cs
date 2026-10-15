@@ -149,7 +149,7 @@ public class PixelEvilTreeMinigame : PixelMinigame
         if (!running || treeActive || UserDisabled) return;
         spawnTimer -= Time.deltaTime;
         if (spawnTimer > 0f) return;
-        if (PixelMinigameLimits.AllowAnother(this) && !PixelPauseMenu.IsPaused && !PixelTitleScreen.Showing && !TakeoverActive) StartCoroutine(TreeRoutine());
+        if (PixelMinigameLimits.AllowAnother(this) && !PixelCalm.InMenu && !TakeoverActive) StartCoroutine(TreeRoutine());
         else spawnTimer = PixelMinigameLimits.RetrySeconds;
     }
 

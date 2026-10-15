@@ -194,7 +194,7 @@ public class PixelGoldenSnitch : MonoBehaviour
         if (replacePending) { replacePending = false; clicker.ReplaceCurrentPixel(); }
         Camera cam = Cam;
         if (cam == null || root == null) { Cleanup(); return; }
-        bool paused = PixelPauseMenu.IsPaused || PixelTitleScreen.Showing;
+        bool paused = PixelCalm.InMenu;
         if (canvasObject != null) canvasObject.SetActive(!paused);
         if (paused) return;
         float dt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);
@@ -217,7 +217,7 @@ public class PixelGoldenSnitch : MonoBehaviour
     {
         if (clicker == null) { Cleanup(); return; }
         if (!clicker.IsValidTierIndex(clicker.CurrentClickTierIndex) || clicker.Tiers[clicker.CurrentClickTierIndex].type != PixelClicker.PixelType.GoldenSnitch) { Cleanup(); return; }   // (something else swapped the block)
-        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        if (PixelCalm.InMenu) return;
         stateT += Mathf.Min(Time.unscaledDeltaTime, 0.05f);
         if (onCubeSeconds <= 0f || stateT < onCubeSeconds) return;
         PixelStats.Count("snitch.escaped");

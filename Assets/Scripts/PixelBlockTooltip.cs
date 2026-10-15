@@ -238,7 +238,7 @@ public class PixelBlockTooltip : MonoBehaviour
 
     private void UpdateAlt()
     {
-        bool alt = !(PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) && AltHeld();
+        bool alt = !(PixelCalm.InMenu) && AltHeld();
         if (alt && !altWas) { altDownAt = Time.unscaledTime; altPeek = false; }
         if (alt && !altPeek && Time.unscaledTime - altDownAt >= (altHoldSeconds > 0f ? altHoldSeconds : 0.25f)) altPeek = true;
         if (!alt && altWas)
@@ -257,7 +257,7 @@ public class PixelBlockTooltip : MonoBehaviour
 
     private bool Suppressed(bool whileHeld = false)
     {
-        return disableTooltip || EffectiveMode == ModeOff || clicker == null || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused ||
+        return disableTooltip || EffectiveMode == ModeOff || clicker == null || PixelCalm.InMenu ||
                PixelFirstPerson.Active || PixelRobotWorker.Piloting || PixelClicker.GodMode || PixelCameraIntro.Moving ||
                (!whileHeld && (PointerOverUI() || (grab != null && grab.HeldBody != null))) || PixelBank.HoseOn;
     }
@@ -281,7 +281,7 @@ public class PixelBlockTooltip : MonoBehaviour
         else hovering = !Suppressed() && clicker.TryGetBlockAt(PointerPosition(), out tier, out live, out body);
 
         // Pinned to My Window (its Info button): the card lives in the window instead of following the mouse, and keeps the last block shown while the mouse is over the window.
-        if (PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth) && !disableTooltip && EffectiveMode != ModeOff && !PixelTitleScreen.Showing && !PixelPauseMenu.IsPaused)
+        if (PixelMyWindow.TryGetHoverSlot(out RectTransform slot, out float slotWidth) && !disableTooltip && EffectiveMode != ModeOff && !PixelCalm.InMenu)
         {
             UpdateDocked(slot, slotWidth, hovering, tier, live, body);
             return;

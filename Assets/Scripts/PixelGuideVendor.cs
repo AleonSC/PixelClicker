@@ -357,7 +357,7 @@ public class PixelGuideVendor : MonoBehaviour
         if (leave || shop.WindowOpen)
         {
             ShopHold = false;
-            if (Time.timeScale <= 0f && !PixelPauseMenu.IsPaused && !PixelTitleScreen.Showing) Time.timeScale = holdScale;
+            if (Time.timeScale <= 0f && !PixelCalm.InMenu) Time.timeScale = holdScale;
             if (!leave) PixelShopTutorial.RequestStart();
             return;
         }

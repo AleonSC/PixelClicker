@@ -56,7 +56,7 @@ public class PixelMenuKeys : MonoBehaviour
 
     private void Update()
     {
-        if (PixelKeys.Typing || PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        if (PixelKeys.Typing || PixelCalm.InMenu) return;
         foreach (PixelAction action in MenuActions)
         {
             if (PixelKeys.Get(action) == KeyCode.None || !PixelKeys.Pressed(action)) continue;

@@ -88,7 +88,7 @@ public class PixelCustomKeys : MonoBehaviour
     {
         if (capturing >= 0) { UpdateCapture(); return; }
         if (viewVisible && (dirty || (scroll != null && Mathf.Abs(scroll.GetComponent<RectTransform>().rect.height - lastViewHeight) > 0.5f))) RebuildRows();
-        if (bindings.Count == 0 || PixelKeys.Typing || PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return;
+        if (bindings.Count == 0 || PixelKeys.Typing || PixelCalm.InMenu) return;
         foreach (Binding b in bindings)
             if (b.key != (int)KeyCode.None && PixelKeys.KeyPressed((KeyCode)b.key)) { Use(b.target); return; }
     }

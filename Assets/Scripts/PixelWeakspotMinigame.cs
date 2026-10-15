@@ -292,8 +292,8 @@ public class PixelWeakspotMinigame : PixelMinigame
 
     private bool CanStartNow(bool playerStarted = false)
     {
-        return PixelMinigameLimits.AllowAnother(this, playerStarted) && !PixelPauseMenu.IsPaused && !TakeoverActive && !clicker.CubeHidden
-            && !PixelTitleScreen.Showing && !PixelCameraIntro.Moving && !PixelCameraIntro.ClicksLocked
+        return PixelMinigameLimits.AllowAnother(this, playerStarted) && !PixelCalm.InMenu && !TakeoverActive && !clicker.CubeHidden
+            && !PixelCameraIntro.Moving && !PixelCameraIntro.ClicksLocked
             && !PixelTimeStop.IsStopped && !PixelTimeStop.IsSlowed && !PixelFirstPerson.Active && !PixelRobotWorker.Piloting
             && Mathf.Approximately(Time.timeScale, 1f);
     }

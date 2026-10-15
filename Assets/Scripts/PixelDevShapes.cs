@@ -432,7 +432,7 @@ public class PixelDevShapes : MonoBehaviour
         if (cam == null) cam = Camera.main;
         if (cam == null) return;
 
-        bool free = !PixelKeys.Typing && Time.timeScale > 0f && !PixelPauseMenu.IsPaused && !PixelTitleScreen.Showing;
+        bool free = !PixelKeys.Typing && Time.timeScale > 0f && !PixelCalm.InMenu;
         bool overUi = PointerOverUI();
         PixelClicker.DevClickBlock = free;   // the cube ignores clicks while the placer is open
         Shape hoverShape = free && !overUi ? PickShape() : null;

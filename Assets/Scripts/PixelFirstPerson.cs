@@ -242,7 +242,7 @@ public class PixelFirstPerson : MonoBehaviour
     private bool CanEnter()
     {
         if (disableFirstPerson || clicker == null || clicker.PixelTransform == null) return false;
-        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelMinigame.TakeoverActive || PixelBank.HoseOn || PixelRobotWorker.Piloting) return false;
+        if (PixelCalm.InMenu || PixelMinigame.TakeoverActive || PixelBank.HoseOn || PixelRobotWorker.Piloting) return false;
         if (Time.timeScale <= 0f && !PixelTimeStop.IsStopped) return false;
         if (PixelPets.PopupOpen || PixelGuideVendor.Visiting) return false;
         return true;

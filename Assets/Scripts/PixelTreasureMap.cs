@@ -89,7 +89,7 @@ public class PixelTreasureMap : MonoBehaviour
         if (!showing && queue.Count > 0) StartCoroutine(Show(queue.Dequeue()));
 
         Camera cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
-        bool blocked = cam == null || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PointerOverUI() || PixelClicker.GodMode;
+        bool blocked = cam == null || PixelCalm.InMenu || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PointerOverUI() || PixelClicker.GodMode;
         Mark hovered = null;
         float radius = clickRadiusPixels > 0f ? clickRadiusPixels : 80f;
         float best = float.MaxValue;

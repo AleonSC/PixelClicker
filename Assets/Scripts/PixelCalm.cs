@@ -3,7 +3,8 @@
 //   The shared "what is going on right now" checks, so each script stops building its own long condition (a new blocker - a new
 //   full-screen window, a new intro - is added HERE once):
 //   - InMenu: the game is not in front of the player (pause menu, title screen or its reverse swing). Autosave screenshots, saving,
-//     the View window.
+//     the View window, and every place that used to check "pause menu OR title screen" by hand (Block Hold, tooltips, keys, minigame starts, vendors, the snitch...).
+//     Code that cares about only ONE of them (the pause menu itself, the title screen itself) still checks it directly.
 //   - CameraBusy: something else owns the camera (title screen / its swing, the camera intro, a takeover minigame). Orbital / free cam / zoom.
 //   - ForTip: a calm moment for a tip box or tutorial (in the game, no other tip or tutorial dim, Cubie not visiting or about to (a visit whose trigger is met: AboutToVisit, not the whole time before his second visit), the
 //     new-game intro over, no takeover minigame, time running). Perk popups, the shop / skills / toggles tutorials.

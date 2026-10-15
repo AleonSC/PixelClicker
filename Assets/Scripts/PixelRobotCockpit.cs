@@ -54,7 +54,7 @@ public partial class PixelRobotWorker
     private bool CanPilot()
     {
         if (!Active || clicker == null || consumables == null || Piloting) return false;
-        if (PixelTitleScreen.Showing || PixelPauseMenu.IsPaused || PixelMinigame.TakeoverActive || PixelFirstPerson.Active || PixelBank.HoseOn) return false;
+        if (PixelCalm.InMenu || PixelMinigame.TakeoverActive || PixelFirstPerson.Active || PixelBank.HoseOn) return false;
         if (PixelCameraIntro.Moving || (Time.timeScale <= 0f && !PixelTimeStop.IsStopped)) return false;
         if (PixelPets.PopupOpen || PixelGuideVendor.Visiting) return false;
         return root != null && bodyT != null;

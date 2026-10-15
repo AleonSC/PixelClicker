@@ -1114,3 +1114,4 @@
 [2026-10-15 18:02 UTC] To-do: added super rare gear (Dragon Radar, God Cube relics, Seeker's Charm).
 [2026-10-15 18:02 UTC] To-do: added a list of pop culture homage ideas.
 [2026-10-15 18:09 UTC] Code cleanup: added PixelFind.Cached (remembers single components instead of searching the scene every call) and used it in the spots that searched every frame (Toggles tutorial, Block Hold stake intro, Skills tab dock).
+[2026-10-15 18:10 UTC] Code cleanup: every 'pause menu or title screen' check now uses the shared PixelCalm.InMenu (20 places in 17 scripts), so they also wait out the swing back to the title screen and a new menu blocker only has to be added in one place.

@@ -102,7 +102,7 @@ public class PixelDragonWish : MonoBehaviour
             }
         }
 
-        bool ready = clicker != null && !busy && clicker.HasAllDragonCubes && !PixelTitleScreen.Showing && !PixelPauseMenu.IsPaused
+        bool ready = clicker != null && !busy && clicker.HasAllDragonCubes && !PixelCalm.InMenu
                      && !PixelMinigame.TakeoverActive && Time.timeScale > 0f;
         if (ready) EnsureButton();
         if (buttonObject != null && buttonObject.activeSelf != ready) buttonObject.SetActive(ready);

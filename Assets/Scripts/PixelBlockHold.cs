@@ -255,7 +255,7 @@ public class PixelBlockHold : MonoBehaviour
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
         if (!Active || clicker == null) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); return; }
-        if (PixelTitleScreen.Showing || PixelPauseMenu.IsPaused)
+        if (PixelCalm.InMenu)
         {
             if (holding) Release(false);
             FinishReturn();   // (no slide while paused: the block goes straight back)

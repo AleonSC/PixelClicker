@@ -198,7 +198,7 @@ public abstract class PixelVisitorMinigame : PixelMinigame
         if (Time.timeScale <= 0f) return false;                       // paused or Time Stop
         if (PixelNotice.IsShowing || PixelHints.TipsPending) return false;
         if (PixelDragonFind.Playing || PixelDragonWish.Active || PixelPets.PopupOpen) return false;
-        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing) return false;
+        if (PixelCalm.InMenu) return false;
         return true;
     }
     private float savedTimeScale = 1f;
