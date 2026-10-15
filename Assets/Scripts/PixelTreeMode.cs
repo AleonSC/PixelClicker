@@ -380,7 +380,8 @@ public class PixelTreeMode : MonoBehaviour
     private void ShowBar()
     {
         if (!showTreeBar || liveName == null) return;
-        string text = liveName + "  " + liveIndex + " / " + liveTotal + (liveInfested ? "  -  infested: Termite Hive at the end" : "");
+        string text = liveName + "  " + liveIndex + " / " + liveTotal
+                      + (liveInfested ? "  -  infested: Termite Hive at the end (Pesticide charges: " + PixelBlockRules.Charges(PixelClicker.PixelType.HornetNest) + ")" : "");
         PixelStatusLines.Set(BarKey, text, liveInfested ? infestedColor : barColor);
         barShown = true;
     }

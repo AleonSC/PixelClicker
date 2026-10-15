@@ -70,6 +70,15 @@ public class PixelBlockRules : MonoBehaviour
         public bool clearsHazard = false;
         [Tooltip("The hazard this block clears instantly when held (e.g. HornetNest).")]
         public PixelClicker.PixelType hazardType = PixelClicker.PixelType.HornetNest;
+        [Min(0)]
+        [Tooltip("CHARGES: while held, the block is used up over 'Charge Seconds' (it shrinks to nothing and is gone, it does not go back in line) and gives this many charges, one at a time. Each charge clears the 'Charge Hazard' automatically when it comes up on the cube. 0 = no charges. Letting go early keeps the charges already given and still uses the block up.")]
+        public int chargesWhenHeld = 0;
+        [Min(0.1f)]
+        [Tooltip("Seconds of holding it takes to use the block up and give all its charges.")]
+        public float chargeSeconds = 1f;
+        [Tooltip("The hazard one charge clears automatically (e.g. HornetNest = the Termite Hive).")]
+        public PixelClicker.PixelType chargeHazard = PixelClicker.PixelType.HornetNest;
+
         [Tooltip("The text shown beside the hold meter while this block is held (e.g. 'Clicks x3').")]
         public string label = "";
     }
@@ -137,8 +146,13 @@ public class PixelBlockRules : MonoBehaviour
         if (!hazardPenalties.Exists(h => h != null && h.hazard == PixelClicker.PixelType.HornetNest))
             hazardPenalties.Add(new HazardHoldPenalty { hazard = PixelClicker.PixelType.HornetNest, loseFraction = 0.5f });
         if (!holdRules.Exists(r => r != null && r.type == PixelClicker.PixelType.Pesticide))
-            holdRules.Add(new HoldRule { name = "Pesticide", type = PixelClicker.PixelType.Pesticide, skillId = PixelSkills.WoodcuttingId, clearsHazard = true, hazardType = PixelClicker.PixelType.HornetNest, label = "Termite hives: instant clear" });
-        foreach (HoldRule r in holdRules) if (r != null && r.label == "Hornet nests: instant clear") r.label = "Termite hives: instant clear";
+            holdRules.Add(new HoldRule { name = "Pesticide", type = PixelClicker.PixelType.Pesticide, skillId = PixelSkills.WoodcuttingId, chargesWhenHeld = 3, chargeSeconds = 1f, chargeHazard = PixelClicker.PixelType.HornetNest, label = "Pesticide: 3 charges" });
+        // Pesticide used to clear a hive with one click while held; now holding uses it up for 3 charges that clear hives automatically.
+        foreach (HoldRule r in holdRules)
+            if (r != null && r.type == PixelClicker.PixelType.Pesticide && r.chargesWhenHeld == 0)
+            {
+                r.clearsHazard = false; r.chargesWhenHeld = 3; r.chargeSeconds = 1f; r.chargeHazard = PixelClicker.PixelType.HornetNest; r.label = "Pesticide: 3 charges";
+            }
     }
 
     // ---------------- special blocks ----------------
@@ -199,7 +213,25 @@ public class PixelBlockRules : MonoBehaviour
         }
     }
 
-    /// <summary>True while a held hold block (Pesticide) clears this hazard type with one left click.</summary>
+    // ---- Charges (held blocks that are used up for charges: Pesticide) - kept as stat counters 'charges.<Hazard>', so they are saved ----
+
+    /// <summary>How many charges against this hazard the player has.</summary>
+    public static int Charges(PixelClicker.PixelType hazard) => Mathf.Max(0, (int)PixelStats.Total("charges." + hazard));
+
+    /// <summary>Adds charges against a hazard (holding a charge block).</summary>
+    public static void AddCharges(PixelClicker.PixelType hazard, int count) { if (count > 0) PixelStats.Count("charges." + hazard, count); }
+
+    /// <summary>Uses one charge against this hazard; false when there is none.</summary>
+    public static bool UseCharge(PixelClicker.PixelType hazard)
+    {
+        int now = Charges(hazard);
+        if (now <= 0) return false;
+        PixelStats.Clear("charges." + hazard);
+        if (now > 1) PixelStats.Count("charges." + hazard, now - 1);
+        return true;
+    }
+
+    /// <summary>True while a held hold block clears this hazard type with one left click (HoldRule.clearsHazard).</summary>
     public static bool HeldClearsHazard(PixelClicker.PixelType hazard)
     {
         HoldRule r = ActiveHold;

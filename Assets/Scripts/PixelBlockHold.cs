@@ -211,6 +211,7 @@ public class PixelBlockHold : MonoBehaviour
         if (holding)
         {
             if (!PixelInput.RightHeld()) Release(false);
+            else if (UpdateCharging(dt)) { }   // a charge block (Pesticide) was used up
             else
             {
                 if (!Stalled) meter -= dt / (HeldIsHoldBlock() ? HoldBlockSeconds : HoldSeconds);   // (a stalling block, e.g. the Great Oak, freezes it)
@@ -287,10 +288,56 @@ public class PixelBlockHold : MonoBehaviour
     private float StakeValue(float heldSeconds) => 1f + StakeGrowth * heldSeconds;
     private float StakeWin(float heldSeconds) => Mathf.Clamp(StakeBaseWin + stakeWinChanceChangeAtFullHold * StakeProgress(heldSeconds), 0.05f, 0.95f);
 
+    // ---- Charge blocks (PixelBlockRules.HoldRule.chargesWhenHeld: Pesticide) ----
+
+    private float chargeTimer;
+    private int chargesGiven;
+
+    /// <summary>While a charge block is held it shrinks and hands out its charges; returns true when it has been used up (the hold is over).</summary>
+    private bool UpdateCharging(float dt)
+    {
+        if (!TryGetHeldType(out PixelClicker.PixelType type) || !PixelBlockRules.TryGetHold(type, out PixelBlockRules.HoldRule rule) || rule.chargesWhenHeld <= 0) return false;
+        float seconds = Mathf.Max(0.1f, rule.chargeSeconds);
+        chargeTimer += dt;
+        int due = Mathf.Min(rule.chargesWhenHeld, Mathf.FloorToInt(chargeTimer / seconds * rule.chargesWhenHeld + 0.0001f));
+        while (chargesGiven < due)
+        {
+            chargesGiven++;
+            PixelBlockRules.AddCharges(rule.chargeHazard, 1);
+            PixelAudio.Play("click", 1f + 0.15f * chargesGiven);
+        }
+        if (holder != null) holder.transform.localScale = Vector3.one * Mathf.Clamp01(1f - chargeTimer / seconds);
+        if (chargeTimer < seconds) return false;
+        UseUp(type, rule);
+        return true;
+    }
+
+    /// <summary>The charge block in hand is used up: it is gone (it does not go back in line).</summary>
+    private void UseUp(PixelClicker.PixelType type, PixelBlockRules.HoldRule rule)
+    {
+        holding = false;
+        heldTier = -1;
+        returning = false;
+        DestroyVisual();
+        cooldown = ReleaseCooldown;
+        PixelStats.Count("blocks.used." + type);
+        PixelAudio.Play("ui_click");
+        string block = NameOf(type), hazard = NameOf(rule.chargeHazard);
+        PixelHints.Announce("+" + chargesGiven + " " + block + " charge" + (chargesGiven == 1 ? "" : "s") + " (" + PixelBlockRules.Charges(rule.chargeHazard) + " in all): each clears a " + hazard + " automatically.");
+    }
+
+    private string NameOf(PixelClicker.PixelType type)
+    {
+        int i = clicker != null ? clicker.IndexOf(type) : -1;
+        return i >= 0 ? clicker.Tiers[i].displayName : type.ToString();
+    }
+
     private void Begin()
     {
         deferredSince = -1f;
         if (!clicker.TryPullLive(out heldTier, out heldHits)) return;
+        chargeTimer = 0f;
+        chargesGiven = 0;
         holding = true;
         holdStartedAt = Time.unscaledTime;
         returning = false;
@@ -301,6 +348,12 @@ public class PixelBlockHold : MonoBehaviour
 
     private void Release(bool exhausted)
     {
+        // A charge block that already gave charges is used up, even when let go early (no free charges from tapping it again and again).
+        if (chargesGiven > 0 && TryGetHeldType(out PixelClicker.PixelType chargeType) && PixelBlockRules.TryGetHold(chargeType, out PixelBlockRules.HoldRule chargeRule) && chargeRule.chargesWhenHeld > 0)
+        {
+            UseUp(chargeType, chargeRule);
+            return;
+        }
         holding = false;
         if (heldTier >= 0 && !exhausted) PixelShuffleBonus.OnRelease(heldTier, Time.unscaledTime - holdStartedAt);   // a quick tap on a filler = a shuffle (PixelShuffleBonus)
         // The block goes first in line (it comes after the block on the cube now); the picture of it only slides back for show.

@@ -2119,7 +2119,7 @@ public partial class PixelClicker : MonoBehaviour
 
         CleanOldPixels();
         using (solarMarker.Auto()) UpdateSolarClusters();
-        if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) { UpdateWeevil(); UpdateHazardExpiry(); }
+        if (Time.timeScale > 0f && !PixelPauseMenu.IsPaused) { UpdateWeevil(); UpdateHazardCharges(); UpdateHazardExpiry(); }
 
         if ((Time.timeScale <= 0f && !PixelTimeStop.IsStopped) || PixelPauseMenu.IsPaused) return; // paused (see PixelPauseMenu); Time Stop still lets the cube be clicked
         if (clicksBlocked || ExternalClickBlock || GodMode || PixelCameraIntro.ClicksLocked) return; // e.g. placing a device (PixelConsumables) or holding the hose (PixelBank)
@@ -4422,6 +4422,20 @@ public partial class PixelClicker : MonoBehaviour
     private int fishNeed, fishReel;   // reeling a fish in the long way (the Weak Spots minigame is switched off)
 
     /// <summary>A hazard block that sat on the cube too long leaves by itself (the cube rolls a new pixel).</summary>
+    [Tooltip("Seconds a hazard is on the cube before a charge against it (e.g. a Pesticide charge against the Termite Hive) clears it automatically, so you see it happen.")]
+    [SerializeField] private float chargeClearDelay = 0.35f;
+
+    /// <summary>A charge against the hazard on the cube (PixelBlockRules: Pesticide charges vs the Termite Hive) clears it automatically, using one charge.</summary>
+    private void UpdateHazardCharges()
+    {
+        if (pixelTransform == null || isSpawning || tiers == null || tiers.Length == 0 || CubeHidden) return;
+        PixelTier t = GetClickTier();
+        if (!IsHazard(t.type) || Time.time - liveSince < Mathf.Max(0f, chargeClearDelay)) return;
+        if (!PixelBlockRules.UseCharge(t.type)) return;
+        PixelStats.Count("charges.used." + t.type);
+        ClearHazardNow(t);
+    }
+
     private void UpdateHazardExpiry()
     {
         if (pixelTransform == null || isSpawning || tiers == null || tiers.Length == 0) return;

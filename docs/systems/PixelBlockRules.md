@@ -30,3 +30,9 @@ Special and hold blocks appear on the guide by themselves: PixelBlockRules.Ensur
 
 ## Hazards that drain the hold meter
 `HazardHoldPenalty` list: when a hazard GOES OFF (destroyed by clicking it, PixelClicker.TriggerHazard -> PixelBlockRules.OnHazardWentOff) the Block Hold meter loses `loseFraction` of its CURRENT charge (PixelBlockHold.LoseFraction; the meter flashes red briefly). Clearing the hazard safely (right clicks, a held Pesticide) does not count. Default: Hornet Nest, 50%.
+
+
+## Charge blocks (HoldRule.chargesWhenHeld)
+
+A hold rule with `chargesWhenHeld` > 0 turns its block into a CHARGE block: while it is held (Block Hold) it shrinks to nothing over `chargeSeconds` and hands out its charges one at a time, then it is gone (`PixelBlockHold.UpdateCharging` / `UseUp`; it does not go back in line). Letting go after the first charge also uses it up, so tapping cannot farm charges. Charges are stat counters `charges.<Hazard>` (saved with the stats): `PixelBlockRules.Charges / AddCharges / UseCharge`. When that hazard is on the cube for `PixelClicker.chargeClearDelay` (0.35 s), one charge clears it automatically and safely (`PixelClicker.UpdateHazardCharges` -> `ClearHazardNow`, stat `charges.used.<Hazard>`).
+Default: **Pesticide** = 3 charges over 1 second against the Termite Hive (`HornetNest`); it no longer clears a hive with a click while held (its old `clearsHazard` rule is switched off at start). The tree bar shows the charge count on an infested tree.
