@@ -241,7 +241,7 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(0, new SkillPack
             {
                 id = StandardId, displayName = "Standard", accent = new Color(0.5f, 0.55f, 0.65f),
-                baseXp = 80f, xpGrowth = 1.5f, perks = StandardPerks(),
+                baseXp = 380f, xpGrowth = 1.5f, perks = StandardPerks(),   // (level 2 at 380 XP: what level 4 used to take)
                 description = StandardDescription,
                 replaces = "-", spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)", xpFrom = "1 XP for every block you collect, whatever skill is trained",
             });
@@ -530,6 +530,7 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == StandardId)
             {
                 if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
+                if (Mathf.Approximately(pack.baseXp, 80f)) pack.baseXp = 380f;   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
                 if (pack.perks != null)   // the level 2 popup that introduces the skill
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP"))) perk.noticeText = StandardLevel2Notice;
