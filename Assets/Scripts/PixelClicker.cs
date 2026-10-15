@@ -164,37 +164,37 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
-    public static bool IsFishBlock(PixelType type) => (type >= PixelType.Fish && type <= PixelType.Driftwood) || type == PixelType.Bait || type == PixelType.Bottle || type == PixelType.Whale;
+    public static bool IsFishBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Fish);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The old Prospector ores that were dropped (Lead, Zinc, Nickel): they never spawn any more.</summary>
-    public static bool IsRetiredOre(PixelType type) => type == PixelType.Lead || type == PixelType.Zinc || type == PixelType.Nickel;
+    public static bool IsRetiredOre(PixelType type) => PixelBlockTags.Has(type, PixelTag.RetiredOre);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Foraging skill pack's blocks: Berry, Mushroom, Herb, Truffle and the filler Weeds (the Toadstool is its hazard).</summary>
-    public static bool IsForageBlock(PixelType type) => type >= PixelType.Berry && type <= PixelType.Weeds;
+    public static bool IsForageBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Forage);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Woodcutting skill pack's blocks: Wood, Bark, Sap, Leaf, Heartwood and the filler Twig (the Hornet Nest is its hazard).</summary>
-    public static bool IsWoodBlock(PixelType type) => type == PixelType.Wood || type == PixelType.Pinecone || type == PixelType.Moss || (type >= PixelType.Bark && type <= PixelType.Twig) || type == PixelType.GreatOak;
+    public static bool IsWoodBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Wood);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Farming skill pack's pixels: Seed, Water and the six new farm blocks (Dirt, Fertilizer, Pollen, Wheat, Weevil, Golden Fruit).</summary>
-    public static bool IsFarm(PixelType type) => type == PixelType.Seed || type == PixelType.Water || (type >= PixelType.Dirt && type <= PixelType.GoldenFruit);
+    public static bool IsFarm(PixelType type) => PixelBlockTags.Has(type, PixelTag.Farm);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>A HAZARD block (the Pest in Farming, the Gas Pocket in Mining): hit it too many times and it goes off.</summary>
-    public static bool IsHazard(PixelType type) => type == PixelType.Pest || type == PixelType.GasPocket || type == PixelType.HornetNest || type == PixelType.Toadstool || type == PixelType.Jellyfish || type == PixelType.Mold;
+    public static bool IsHazard(PixelType type) => PixelBlockTags.Has(type, PixelTag.Hazard);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The six Prospector ores (Copper, Tin, Iron, Lead, Zinc, Nickel).</summary>
-    public static bool IsOre(PixelType type) => (type >= PixelType.Copper && type <= PixelType.Nickel) || type == PixelType.Silver || type == PixelType.Gold || type == PixelType.Bedrock;
+    public static bool IsOre(PixelType type) => PixelBlockTags.Has(type, PixelTag.Ore);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>Pixel types with no integration beyond the basics (looks, sounds, click data, breaking): the Fire pixel and the Prospector ores. They get no potions, seeds, crafting, pets, achievements or Value upgrades.</summary>
-    public static bool IsStandalone(PixelType type) => type == PixelType.Fire || type == PixelType.Treasure || type == PixelType.Nuclear || IsOre(type) || (type >= PixelType.Wood && type <= PixelType.Whale) || type == PixelType.Mold || type == PixelType.WoodChips || type == PixelType.GreatOak || type == PixelType.Whetstone || type == PixelType.Acorn || type == PixelType.Pesticide || type == PixelType.Charcoal || type == PixelType.Pinecone || type == PixelType.Moss;
+    public static bool IsStandalone(PixelType type) => PixelBlockTags.Has(type, PixelTag.Standalone);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>Is this one of the seven Dragon Cubes (extremely rare drops that summon the cube dragon when all are gathered)?</summary>
-    public static bool IsDragonCube(PixelType type) => type >= PixelType.DragonCube1 && type <= PixelType.DragonCube7;
+    public static bool IsDragonCube(PixelType type) => PixelBlockTags.Has(type, PixelTag.DragonCube);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>Is this one of the three Egyptian God Cubes (Slifer, Ra, Obelisk): the rarest drops of all, only one of each can ever be held?</summary>
-    public static bool IsGodCube(PixelType type) => type == PixelType.GodSlifer || type == PixelType.GodRa || type == PixelType.GodObelisk || IsInfinityStone(type) || type == PixelType.InfinityCubelette;   // (the Prime Cubes and the Cubelette follow the same one-of-each rules and get a show of their own)
+    public static bool IsGodCube(PixelType type) => PixelBlockTags.Has(type, PixelTag.RareCollectible);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>One of the six Prime Cubes (Space, Mind, Reality, Power, Time, Soul).</summary>
-    public static bool IsInfinityStone(PixelType type) => type >= PixelType.StoneSpace && type <= PixelType.StoneSoul;
+    public static bool IsInfinityStone(PixelType type) => PixelBlockTags.Has(type, PixelTag.PrimeCube);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>A Dragon Cube or a God Cube: the rare collectible drops kept out of potions, crafting, pets, achievements and the Value upgrades.</summary>
     public static bool IsRareCube(PixelType type) => IsDragonCube(type) || IsGodCube(type);
@@ -3366,7 +3366,7 @@ public partial class PixelClicker : MonoBehaviour
     public float OldPixelWorldSize => PixelBaseSize * oldPixelScale;
 
     /// <summary>The 'plant' pixels: what the seedlings of a cracked Seed shell grow (Wheat, Pollen, Golden Fruit and Wood).</summary>
-    public static bool IsPlant(PixelType type) => type == PixelType.Wheat || type == PixelType.Pollen || type == PixelType.GoldenFruit;
+    public static bool IsPlant(PixelType type) => PixelBlockTags.Has(type, PixelTag.Plant);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>A random unlocked plant pixel (by spawn weight, so Golden Fruit stays rare); falls back to any growable type when no plant is unlocked yet. -1 if none.</summary>
     public int RandomPlantPixelTier()
@@ -4220,7 +4220,7 @@ public partial class PixelClicker : MonoBehaviour
 
     /// <summary>Electric, Wire, Battery and Resistor pixels carry the Electrician's current.</summary>
     /// <summary>The Electrician pack's own pixels (Wire, Battery, Capacitor, Resistor, Transistor, Fuse, Bulb).</summary>
-    public static bool IsElectricalBlock(PixelType t) => t >= PixelType.Wire && t <= PixelType.Bulb;
+    public static bool IsElectricalBlock(PixelType t) => PixelBlockTags.Has(t, PixelTag.Electrical);   // (the tag table in PixelBlockTags.cs)
 
     public static bool IsConductorType(PixelType t) =>
         t == PixelType.Electric || t == PixelType.Wire || t == PixelType.Battery || t == PixelType.Resistor;

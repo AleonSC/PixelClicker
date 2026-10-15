@@ -7,6 +7,7 @@
 | Script / system | What it is (first sentence) | Details |
 |---|---|---|
 | `PixelClicker.cs` | Core. Click-me hint: while the Inventory UI's guide text ("Click N more...") shows and nothing has been collected yet (PixelClicker.ClickHint, set by PixelUI.UpdateGuide; | in the header comment of `PixelClicker.cs` |
+| `PixelBlockTags.cs` | One table of TAGS per pixel type (Wood, Forage, Fish, Farm, Hazard, Ore, Standalone, DragonCube, RareCollectible, PrimeCube, Plant, Electrical...): IsWoodBlock / IsHazard / IsStandalone etc. read it. A new block = one line here, not several hand-written lists. | in the header comment of `PixelBlockTags.cs` |
 | `PixelLooks.cs` | Per-pixel-type 3D look, separate from the tier data (the UI keeps the tier colour): | `docs/systems/PixelLooks.md` |
 | `PixelCameraIntro.cs` | Camera intro (added by PixelClicker.Awake): | in the header comment of `PixelCameraIntro.cs` |
 | `Editor/PixelShaderKeepAlive.cs` | Editor-only ([InitializeOnLoad], menu Pixel Clicker > Rebuild Shader Keep-Alive Materials): | in the header comment of `PixelShaderKeepAlive.cs` |
@@ -194,6 +195,7 @@
 
 ### Data model
 - `PixelTier`: name, colour/`UIColor`, `PixelType` enum (see PixelClicker.cs; values are only ever appended so saves stay valid), `TierUnlockMode` (PreviousTierThreshold / ShopOnly), `spawnWeight`, `randomPayout` + `payoutMin/Max` (a random whole amount per harvest, e.g. Electric 1-15; `amountPerClick` = the average for estimates; migrated by `packDataVersion` 3), `clicksToCollect` (tough pixels: only the last click pays; `PixelClicker.PixelHit` event for the others), `startingAmount`, `translucent` / `materialOverride`, `glow` + `glowIntensity` (emission on a runtime material copy + point light), `vacuum` flag, `spawnSwitch` (Auto = Glass, Luminescent and the `IsSpecialType` types get a spawn toggle in the Toggles window, see `PixelTier.CanSwitchOff`; `spawnDisabled` saved; `CanSpawn` used by `PickSpawnTier`), `flyAway`/`flyDirection`/`flySpeed` (old pixel streaks away in a straight camera-relative line with a smooth tapered trail instead of falling - Meteor; `flyRandomDirection` + `flyAngleRange` 10-170 deg = a random direction on the top half of the screen), `count`, `totalCollected`, `unlocked`.
+- Block KINDS (wood, hazard, standalone, ore...) come from the tag table in `PixelBlockTags.cs`: give a new pixel type its tags there.
 - Spawn: weighted random among **unlocked** tiers only (`PickSpawnTier`).
 - Tough pixels raise `PixelHit` for hits 1..n-1 and `PixelFinalHit` (UI shows 'n/n', then the payout popup follows after `toughPayoutDelay`) on the breaking click. Click flow (`CollectInternal(bool automatic)`): `AddCurrency` → `PixelCollected` event → click effects → `Vacuum()` if vacuum tier → `SpawnFallingCopy` → roll next tier → `Materialize`.
 - Events: `CurrencyChanged`, `CurrencyGained`, `PixelCollected(tier, amount, automatic)`, `PixelsVacuumed(vacuumTier, total, count)`, `VacuumBreakdown(double[] perTier)`.
