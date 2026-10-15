@@ -1115,3 +1115,4 @@
 [2026-10-15 18:02 UTC] To-do: added a list of pop culture homage ideas.
 [2026-10-15 18:09 UTC] Code cleanup: added PixelFind.Cached (remembers single components instead of searching the scene every call) and used it in the spots that searched every frame (Toggles tutorial, Block Hold stake intro, Skills tab dock).
 [2026-10-15 18:10 UTC] Code cleanup: every 'pause menu or title screen' check now uses the shared PixelCalm.InMenu (20 places in 17 scripts), so they also wait out the swing back to the title screen and a new menu blocker only has to be added in one place.
+[2026-10-15 18:12 UTC] Code cleanup: one PixelStatics.ResetOnRestart registry replaces the 13 hand-written scene-reload handlers that clear static game state on Restart (one bad reset no longer stops the others); CLAUDE.md notes the rule.

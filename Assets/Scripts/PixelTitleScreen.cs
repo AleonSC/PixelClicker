@@ -25,12 +25,11 @@ public class PixelTitleScreen : MonoBehaviour
         Reversing = false;
         PlayTime = 0f;
         PlayedOnce = false;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (a reloaded scene has not been played yet: a New Game from its title can start at once instead of reloading again)
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { PlayedOnce = false; }
+    private static void OnSceneUnloaded() { PlayedOnce = false; }
 
     /// <summary>Game time (Time.time) when the game last started running: Awake, then each time Play is pressed.</summary>
     public static float PlayTime { get; private set; }

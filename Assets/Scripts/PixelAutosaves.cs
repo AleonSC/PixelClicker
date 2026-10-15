@@ -138,12 +138,11 @@ public static class PixelSaveShots
     private static void ResetStatics()
     {
         cached = null; runner = null; textures.Clear();
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (Restart reloads the scene: a save made while paused must not get the old game's last picture; the runner lives on, DontDestroyOnLoad)
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { cached = null; }
+    private static void OnSceneUnloaded() { cached = null; }
 
     // The rolling copy only runs once the runner exists; start it with the game, otherwise the first manual save (made from the pause menu) has no picture to use.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]

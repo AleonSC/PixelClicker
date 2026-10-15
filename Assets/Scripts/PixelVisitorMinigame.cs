@@ -186,11 +186,10 @@ public abstract class PixelVisitorMinigame : PixelMinigame
     {
         nextAnyVisitTime = 0f; anyVisiting = false;
         // (Restart reloads the scene: a visit cut short left anyVisiting on and no vendor ever came again in the new game)
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnVisitSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnVisitSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnVisitSceneUnloaded);
     }
 
-    private static void OnVisitSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { nextAnyVisitTime = 0f; anyVisiting = false; }
+    private static void OnVisitSceneUnloaded() { nextAnyVisitTime = 0f; anyVisiting = false; }
 
     /// <summary>Is it a calm moment for a vendor to walk in? Never over a tip box (or tips waiting), the dragon show / wish, a pet popup, a pause or the title screen.</summary>
     private static bool CalmForVisit()

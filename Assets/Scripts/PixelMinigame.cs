@@ -40,13 +40,12 @@ public abstract class PixelMinigame : MonoBehaviour
         AutoClickerPaused = false;
         claims.Clear();
         registry.Clear();
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // Settings > Restart reloads the scene but statics survive it: a round cut short left TakeoverActive / AutoClickerPaused on, and a
     // black hole's floor claim (its 'active' check reads the destroyed hole) kept blocking that spot in the new game.
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { TakeoverActive = false; AutoClickerPaused = false; claims.Clear(); }
+    private static void OnSceneUnloaded() { TakeoverActive = false; AutoClickerPaused = false; claims.Clear(); }
 
     private static readonly List<PixelMinigame> registry = new List<PixelMinigame>();
 

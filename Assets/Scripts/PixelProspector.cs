@@ -14,11 +14,10 @@ public static class PixelProspector
     private static void ResetStatics()
     {
         richAnnounced = false;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { richAnnounced = false; }   // (a Restart is a new session)
+    private static void OnSceneUnloaded() { richAnnounced = false; }   // (a Restart is a new session)
 
     /// <summary>The player's switch: the ores replace the basic pixels while it is on (and at least one ore is unlocked).</summary>
     public static bool Setting

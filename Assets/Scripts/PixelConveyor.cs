@@ -573,12 +573,11 @@ public class PixelConveyorSystem : MonoBehaviour
     private static void ResetSystem()
     {
         system = null; editorOpen = false;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (Restart reloads the scene: a speed window left open would keep editorOpen on and stop belt clicks in the new game)
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { editorOpen = false; }
+    private static void OnSceneUnloaded() { editorOpen = false; }
 
     public static void Ensure(PixelClicker c) { if (system == null) { GameObject go = new GameObject("Conveyor System"); system = go.AddComponent<PixelConveyorSystem>(); system.clicker = c; } }
 

@@ -181,12 +181,11 @@ public partial class PixelSkills : MonoBehaviour
     private static void ResetStatics()
     {
         penaltyLevels.Clear(); penaltyEnds.Clear(); Instance = null; offlineCache = -1; packCache = null; guestCache = null; offCache = null;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (Restart reloads the scene but statics survive it: a hazard penalty of the old game must not run on in the new one)
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { penaltyLevels.Clear(); penaltyEnds.Clear(); }
+    private static void OnSceneUnloaded() { penaltyLevels.Clear(); penaltyEnds.Clear(); }
 
     private float bundleCheckTimer;
 

@@ -21,13 +21,12 @@ public static class PixelWindows
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         entries.Clear();
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // Restart reloads the scene: windows whose owner was destroyed without Unregister would stay listed, and an open-check that reads
     // a plain field of the dead owner (no exception) kept AnyOpen() true in the new game. Only destroyed owners are dropped.
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+    private static void OnSceneUnloaded()
     {
         entries.RemoveAll(e => e.owner is UnityEngine.Object o && o == null);
     }

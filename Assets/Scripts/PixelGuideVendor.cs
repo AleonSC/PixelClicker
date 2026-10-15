@@ -138,12 +138,11 @@ public class PixelGuideVendor : MonoBehaviour
     private static void ResetStatics()
     {
         instance = null; PointOverride = null; ShopHold = false;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
-        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+        PixelStatics.ResetOnRestart(OnSceneUnloaded);
     }
 
     // (Restart reloads the scene: a tutorial's pointer callback into the destroyed old scene, or a shop hold, must not carry over)
-    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { PointOverride = null; ShopHold = false; }
+    private static void OnSceneUnloaded() { PointOverride = null; ShopHold = false; }
 
     private const string Stage1Key = "guide.stage1";
     private const string Stage2Key = "guide.stage2";
