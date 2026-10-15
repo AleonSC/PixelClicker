@@ -1018,3 +1018,4 @@
 [2026-10-15 07:46 UTC] To-do: added the first-hour husk machine (one cheap machine in the first 15-20 minutes that uses basic husks, so the husk game shows up in the first hour).
 [2026-10-15 08:04 UTC] Design docs: recorded the Pixel Bank's intended job (husk storage for later use, e.g. Electric husks before Electrician; stored husks carry no payout; one shared capacity) in PixelBank.md, PixelRules.md and the connection map.
 [2026-10-15 08:25 UTC] To-do: added the tutorial plan to the shared tutorial runner item (about 8-10 must-see boxes in the first hour, optional per-window tours behind a ? button, one-line tips when a feature first matters, a Value tab pulse, and a one-box husk machine intro).
+[2026-10-15 08:36 UTC] To-do: first-hour husk machine plan updated (Standard XP visible from the start, the first machine pays Standard XP via a deposit box, Standard perks as early unlocks, Husk Engine later, Recycler last as the lossy exception).
