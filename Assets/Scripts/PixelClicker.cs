@@ -2175,7 +2175,7 @@ public partial class PixelClicker : MonoBehaviour
                 return true;
             }
             Rigidbody rb = hit.rigidbody;
-            if (rb != null && oldPixels.Contains(rb))
+            if (rb != null && (oldPixels.Contains(rb) || PixelRecycler.Holds(rb)))   // (husks in a Recycler left the old-pixel list but still show their tooltip)
             {
                 OldPixelInfo info = rb.GetComponent<OldPixelInfo>();
                 if (info == null || info.tierIndex < 0 || info.tierIndex >= tiers.Length) return false;

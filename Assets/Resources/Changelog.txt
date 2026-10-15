@@ -1029,3 +1029,4 @@
 [2026-10-15 10:39 UTC] Cubie's visit texts now show in the Inspector like the first-time tips: the PixelGuideVendor page lists are filled with the built-in lines when empty, ready to edit.
 [2026-10-15 11:07 UTC] New Recycler consumable (first on the shop's Utilities card, 50 White): an open bin you drop husks into (up to 12, they stay inside as real pixels); press its red button and the lid shuts and each husk pays back 10% of its value. Cubie now turns up after 25 clicks and gives you a Recycler on his first visit ({recycler} page token), and the intro tips wait until the camera animation has finished.
 [2026-10-15 11:20 UTC] Inventory: the Consumables tab now opens on Devices. Recycler: shorter description so it fits, the lid slides over the top on rails instead of swinging, and husks inside it can no longer despawn (even when poked with Pixel Grabbing or when the bin is full).
+[2026-10-15 11:21 UTC] Recycler: husks inside it show their hover tooltip again.

@@ -39,6 +39,14 @@ public class PixelRecycler : MonoBehaviour
     /// <summary>True while the pointer is over a Recycler's button (clicks there belong to the Recycler, not the cube or Pixel Grabbing).</summary>
     public static bool ButtonHot => Time.frameCount - hotFrame <= 1;
 
+    /// <summary>Is this husk being kept in a Recycler (taken off the floor's old-pixel list)? The block tooltip still shows it.</summary>
+    public static bool Holds(Rigidbody body)
+    {
+        if (body == null) return false;
+        foreach (PixelRecycler r in all) if (r != null && r.inside.Contains(body)) return true;
+        return false;
+    }
+
     private PixelClicker clicker;
     private Transform lidPivot, button;
     private Collider buttonCollider;
