@@ -122,7 +122,7 @@ public partial class PixelSkills
         // Bottom-left corner of the bars: Log (corner), then the Skills tab.
         hud.Dock(tabRect, new Vector2(0f, 0f), () => WindowOpen || (tabDock != null && tabDock.PointerNear()), 0f, 1f, hud.ButtonSize.x + hud.CornerGap);
         tabDock = tabButton.GetComponent<PixelDockedButton>();
-        tabDock.blockPointer = () => { PixelBank b = PixelFind.First<PixelBank>(); return b != null && b.WindowIsOpen; };
+        tabDock.blockPointer = () => { PixelBank b = PixelFind.Cached<PixelBank>(); return b != null && b.WindowIsOpen; };
         tabGroup = tabObject.AddComponent<CanvasGroup>();
         tabButton.onClick.AddListener(Toggle);
         PixelMenuKeys.Register(PixelAction.Skills, tabButton);

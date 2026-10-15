@@ -471,7 +471,7 @@ public class PixelBlockHold : MonoBehaviour
         PixelClickerAura.StakeHighlight = Active && !Mathf.Approximately(live, 1f) ? (live > 1f ? new Color(0.3f, 1f, 0.45f, 1f) : new Color(1f, 0.25f, 0.2f, 1f)) : new Color(0f, 0f, 0f, 0f);
         if (!introTried && Active && !disableStake && !PixelTitleScreen.Showing && !PixelHints.IntroHoldsGuide)
         {
-            PixelStats stats = PixelFind.First<PixelStats>();
+            PixelStats stats = PixelFind.Cached<PixelStats>();
             if (stats != null && stats.ManualClicks >= 25) { introTried = true; PixelHints.Trigger("stake_intro"); }   // (shown once)
         }
         UpdateVisual();

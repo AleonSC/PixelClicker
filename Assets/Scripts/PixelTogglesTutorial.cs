@@ -79,10 +79,10 @@ public class PixelTogglesTutorial : MonoBehaviour
     private void Update()
     {
         if (running || !Due) { ready = 0f; return; }
-        PixelShop shop = PixelFind.First<PixelShop>();
+        PixelShop shop = PixelFind.Cached<PixelShop>();
         bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;
         if (shopTutorialDue || (shop != null && shop.WindowOpen) || !PixelToggles.TabVisible || !PixelCalm.ForTip ||
-            PixelWindows.AnyOpen() || PixelFind.First<PixelSkills>() is PixelSkills sk && sk.TutorialRunning)
+            PixelWindows.AnyOpen() || PixelFind.Cached<PixelSkills>() is PixelSkills sk && sk.TutorialRunning)
         {
             ready = 0f;
             return;

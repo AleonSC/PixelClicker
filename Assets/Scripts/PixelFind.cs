@@ -2,7 +2,12 @@
 // PixelFind.cs
 //   PixelFind.First<T>() / All<T>() / Count<T>(): the only place with the FindFirstObjectByType / FindObjectOfType version check. Use it instead
 //   of calling Unity's Find methods directly.
+//   PixelFind.Cached<T>(): the same as First, but it remembers the answer (searches again only when the remembered object was destroyed, e.g.
+//   after Settings > Restart reloads the scene, or when none was found yet). Use it for the game's single components (PixelShop, PixelStats,
+//   PixelSkills...) anywhere that runs often; First does a full scene search on every call.
 // ---------------------------------------------------
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -12,32 +17,49 @@ using UnityEngine;
 public static class PixelFind
 {
     /// <summary>The first object of type T in the scene (or null).</summary>
-    public static T First<T>() where T : Object
+    public static T First<T>() where T : UnityEngine.Object
     {
 #if UNITY_2023_1_OR_NEWER
-        return Object.FindFirstObjectByType<T>();
+        return UnityEngine.Object.FindFirstObjectByType<T>();
 #else
-        return Object.FindObjectOfType<T>();
+        return UnityEngine.Object.FindObjectOfType<T>();
 #endif
     }
 
+    private static readonly Dictionary<Type, UnityEngine.Object> cache = new Dictionary<Type, UnityEngine.Object>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() { cache.Clear(); }
+
+    /// <summary>
+    /// The first object of type T in the scene, remembered: later calls cost nothing until that object is destroyed (then it searches again).
+    /// For single components looked up often (in Update, per click). A null answer is not remembered, so it keeps looking until one exists.
+    /// </summary>
+    public static T Cached<T>() where T : UnityEngine.Object
+    {
+        if (cache.TryGetValue(typeof(T), out UnityEngine.Object o) && o != null) return (T)o;   // (Unity's != null is false for a destroyed object)
+        T found = First<T>();
+        if (found != null) cache[typeof(T)] = found; else cache.Remove(typeof(T));
+        return found;
+    }
+
     /// <summary>Every object of type T in the scene (a new array each call: for dev tools / one-off dumps, not for Update).</summary>
-    public static T[] All<T>() where T : Object
+    public static T[] All<T>() where T : UnityEngine.Object
     {
 #if UNITY_2023_1_OR_NEWER
-        return Object.FindObjectsByType<T>(FindObjectsSortMode.None);
+        return UnityEngine.Object.FindObjectsByType<T>(FindObjectsSortMode.None);
 #else
-        return Object.FindObjectsOfType<T>();
+        return UnityEngine.Object.FindObjectsOfType<T>();
 #endif
     }
 
     /// <summary>How many objects of type T are in the scene.</summary>
-    public static int Count<T>() where T : Object
+    public static int Count<T>() where T : UnityEngine.Object
     {
 #if UNITY_2023_1_OR_NEWER
-        return Object.FindObjectsByType<T>(FindObjectsSortMode.None).Length;
+        return UnityEngine.Object.FindObjectsByType<T>(FindObjectsSortMode.None).Length;
 #else
-        return Object.FindObjectsOfType<T>().Length;
+        return UnityEngine.Object.FindObjectsOfType<T>().Length;
 #endif
     }
 }
