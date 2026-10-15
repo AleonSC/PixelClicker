@@ -146,7 +146,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 | Dragon Cubes (wish), God Cubes, Prime Cubes + Gauntlet | Collection Log, gallery, Wizard | Built |
 | Pets | pixel types (a pet per type), Pet Treats | Built |
 | Crafting | potions, attuned devices, Magnetized Sorter | Built |
-| Pixel Bank | Glass storage; under the pixel rules: husk storage or a click-fed bank | Built (needs a new job) |
+| Pixel Bank | husk storage for later use (e.g. Electric husks before Electrician), one shared capacity; stored husks carry no payout (Designed) | Built; storage-only rework Designed |
 | Achievements, Collection Log | everything (goals) | Built |
 | Combo meter | clicking | Built |
 | Time Stop | clicking, devices | Built |
@@ -159,7 +159,7 @@ Machines can **break** from the wrong input (main cause) or gentle wear (optiona
 4. **Electrician as the factory skill:** confirm it is the home of belts, splitters, elevators, connectors, sorters and the Tiny Robot.
 5. **Dead-end outputs:** Charcoal, Wood Chips and Magic Wood need a use.
 6. **Minigames:** give each one a skill it feeds.
-7. **Pixel rules rework:** Vacuum, Pixel Bank and the Solar trickle need their new jobs.
+7. **Pixel rules rework:** the Vacuum and the Solar trickle need their new jobs (the Pixel Bank's is decided: husk storage, no payout).
 8. **Shop relics:** most shop pixels and devices are left over from early development. Decide which consumables stay shop-only from the start and which move to unlocks later (and from which skill).
 9. **Breakdowns:** which machines can break, which inputs break each one, whether wear exists, and which husks repair which machines.
 

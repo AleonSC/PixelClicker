@@ -1016,3 +1016,4 @@
 [2026-10-15 05:41 UTC] Design docs: added 'Hands first, machines later' (first person handles husks by hand) and machine breakdowns / first person repair to PixelRules.md, first person and repair rows plus the shop-relic and breakdown questions to the connection map, and a to-do line for breakdowns.
 [2026-10-15 06:42 UTC] To-do: added the rare set table cleanup (one data entry per super-rare family so new sets like the God / Prime / Dragon Cubes need one entry instead of edits in about eight files).
 [2026-10-15 07:46 UTC] To-do: added the first-hour husk machine (one cheap machine in the first 15-20 minutes that uses basic husks, so the husk game shows up in the first hour).
+[2026-10-15 08:04 UTC] Design docs: recorded the Pixel Bank's intended job (husk storage for later use, e.g. Electric husks before Electrician; stored husks carry no payout; one shared capacity) in PixelBank.md, PixelRules.md and the connection map.

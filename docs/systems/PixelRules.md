@@ -59,7 +59,7 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 - **Takes time and setup:** it processes one husk every so often (proposed: one every 1.5 seconds), so throughput is a real limit; husks are fed by belt, Funnel, Conveyor Connector or by hand (it is a belt acceptor like the Kiln).
 - **Upgrades through other skills:** Electrician power raises its speed; a later tier raises its rate (e.g. to 25%). Another cross-skill link.
 - **It competes with the other uses:** the same husk can go to the Recycler (a little currency), the Wood Chipper (XP), crafting (material) or the Pesticide Sprayer (charges). Choosing where husks go is the builder's puzzle.
-- **A home for the old systems:** the Vacuum and the Pixel Bank can collect husks and hand them to a Recycler instead of paying currency out directly.
+- **A home for the old systems:** the Vacuum can collect husks and hand them to a Recycler instead of paying currency out directly. (The Pixel Bank is storage, not a cash-in: see the table below.)
 - **Never better than clicking:** whatever its upgrades, the rate stays well below 100%, so a block never pays twice in full.
 
 ## Hands first, machines later (first person)
@@ -111,7 +111,7 @@ These pay old pixels out as currency today and must change (each to be designed 
 | System | Today | Direction |
 |---|---|---|
 | Vacuum pixel / Vacuum Device | pays the stored value of every old pixel it sucks up | collects husks as material or XP, or hands them to a Recycler / machines / a crate |
-| Pixel Bank (hose) | stores old pixels as banked currency | stores husks as material (a big storage) that can feed a Recycler, or becomes a currency-only bank fed by clicks |
+| Pixel Bank (hose) | stores old pixels with their payout, which comes back when they are spat out | **decided:** husk storage for their EFFECT, never to cash in: keep husks you cannot use yet (e.g. Electric husks before Electrician) and spit them out when a machine wants them. Stored husks carry no payout; capacity is one shared total (already how `PixelBank.IsFull` works) |
 | Solar old pixel | hovers and pays a small currency trickle | its trickle becomes something else (daylight, XP, or powering devices) |
 | `PixelClicker.ReleaseOldPixel(body, credit: true)` | re-adds the old pixel's reward | callers should not credit currency any more |
 
