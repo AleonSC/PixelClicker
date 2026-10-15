@@ -12,7 +12,7 @@
 //   PixelCarryHandles.BuildParts from BuildCrateBody, behaviour by the component): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
-//   to the crate; HandleHot blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
+//   to the crate; PixelPointerClaim blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
 //   ('S,slot,tier,amount;'). Tip device_StorageCrate.
 // ---------------------------------------------------
 using System.Collections;
@@ -31,13 +31,8 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
 {
     private const int Columns = 5, Rows = 2, Sections = Columns * Rows;
 
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over a crate (a click then belongs to the crate, not the cube).</summary>
-    public static bool HandleHot => hotFrame >= Time.frameCount - 1;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { hotFrame = -10; }
 
     private class Section
     {
@@ -196,16 +191,16 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         lastHeld = heldNow;
         CaptureRecentlyHeld();
 
-        if (carry != null && carry.Dragging) { hotFrame = Time.frameCount; return; }   // being carried by a handle (PixelCarryHandles moves it)
+        if (carry != null && carry.Dragging) { PixelPointerClaim.Claim(); return; }   // being carried by a handle (PixelCarryHandles moves it)
         if (PixelInput.PointerOverUI()) return;
 
         Vector2 pointer = PixelInput.PointerPosition();
         Ray ray = cam.ScreenPointToRay(pointer);
-        if (carry != null && carry.Over(ray)) { hotFrame = Time.frameCount; return; }   // the handles take this click (hover hand / drag)
+        if (carry != null && carry.Over(ray)) { PixelPointerClaim.Claim(); return; }   // the handles take this click (hover hand / drag)
         int picked = PickSection(pointer);
         bool over = picked >= 0 || HitTest(ray, out _);
         if (!over) return;
-        hotFrame = Time.frameCount;
+        PixelPointerClaim.Claim();
         if (!PixelInput.LeftPressed()) return;
 
         if (picked >= 0) TakeOut(picked);

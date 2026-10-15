@@ -214,7 +214,7 @@ public class PixelRecycler : MonoBehaviour
             if (i != null && i.heldByPlayer) Unfreeze(b);
         }
         bool hot = !processing && (carry == null || !carry.Dragging) && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
-        if (hot) hotFrame = Time.frameCount;
+        if (hot) hotFrame = PixelPointerClaim.Claim();
         if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
 
         tick -= Time.deltaTime;

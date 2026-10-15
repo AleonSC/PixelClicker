@@ -8,8 +8,9 @@
 //   pixels (waterCapacity 0 = 40) over it (ScanPixels, like the woodchipper): they are stored with their payout instead of splashing /
 //   despawning (a Water pixel dropped in is saved from breaking). Stored fish are live bait: PixelBaitBucket.FishBonus (fishBonusEach 0 =
 //   0.15 per fish, waterBonusEach 0 = 0.05 per water) is added to PixelBait.FishMultiplier, so Fish spawns more. Left-click the bucket
-//   (HandleHot / ClaimsPointer keep the cube and Pixel Grabbing out of it) takes the last stored pixel out into the mouse's hand. Not
-//   saved: a bucket is gone after a load (its contents are lost).
+//   (PixelPointerClaim / ClaimsPointer keep the cube and Pixel Grabbing out of it) takes the last stored pixel out into the mouse's hand. Not
+//   saved: a bucket is gone after a load (its contents are lost). Its bail is a carrying handle (shared PixelCarryHandles): drag it to move
+//   the bucket anywhere on the floor (scroll / Q / E turn it); the bucket's own click steps aside while the bail has the pointer.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -48,10 +49,7 @@ public class PixelBaitBucket : MonoBehaviour
     private struct Entry { public int tier; public double amount; public bool fish; }
 
     private static PixelBaitBucket instance;
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over the bucket (a click then belongs to it, not to the cube).</summary>
-    public static bool HandleHot => hotFrame >= Time.frameCount - 1;
 
     /// <summary>True when a bucket stands on the floor.</summary>
     public static bool Placed => instance != null && instance.root != null;
@@ -60,11 +58,12 @@ public class PixelBaitBucket : MonoBehaviour
     public static float FishBonus => instance != null && instance.root != null ? instance.Bonus() : 0f;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; hotFrame = -10; }
+    private static void ResetStatics() { instance = null; }
 
     private PixelClicker clicker;
     private Camera cam;
     private GameObject root;
+    private PixelCarryHandles carry;   // the bail works as a carrying handle
     private Transform waterDisc;
     private TextMeshPro label;
     private float appear, scale = 1f, scanTimer, floorY;
@@ -210,10 +209,11 @@ public class PixelBaitBucket : MonoBehaviour
 
     private void HandleMouse()
     {
+        if (carry != null && (carry.Dragging || PixelCarryHandles.Hot)) return;   // the bail has the pointer (carrying)
         if (cam == null || stored.Count == 0 && !Over()) return;
         if (PixelInput.PointerOverUI()) return;
         if (!Over()) return;
-        hotFrame = Time.frameCount;
+        PixelPointerClaim.Claim();
         if (stored.Count == 0 || !PixelInput.LeftPressed()) return;
         TakeOut();
     }
@@ -230,7 +230,7 @@ public class PixelBaitBucket : MonoBehaviour
     }
 
     /// <summary>Would a click at the pointer do something here? Pixel Grabbing steps aside then.</summary>
-    public static bool ClaimsPointer() => instance != null && instance.root != null && instance.stored.Count > 0 && instance.Over();
+    public static bool ClaimsPointer() => instance != null && instance.root != null && instance.stored.Count > 0 && instance.Over() && !PixelCarryHandles.Hot;
 
     private void TakeOut()
     {
@@ -352,7 +352,11 @@ public class PixelBaitBucket : MonoBehaviour
         Part("Band", PrimitiveType.Cylinder, r, new Vector3(0f, 0.55f, 0f), new Vector3(1.53f, 0.05f, 1.53f), dark);
         Part("Handle Post L", PrimitiveType.Cube, r, new Vector3(-0.78f, 1.2f, 0f), new Vector3(0.05f, 0.42f, 0.05f), dark);
         Part("Handle Post R", PrimitiveType.Cube, r, new Vector3(0.78f, 1.2f, 0f), new Vector3(0.05f, 0.42f, 0.05f), dark);
-        Part("Handle", PrimitiveType.Cube, r, new Vector3(0f, 1.42f, 0f), new Vector3(1.6f, 0.05f, 0.05f), dark);
+        Part("Handle", PrimitiveType.Cube, r, new Vector3(0f, 1.42f, 0f), new Vector3(1.6f, 0.09f, 0.09f), dark);
+        // The bail is a carrying handle (shared PixelCarryHandles, as on the Storage Crate and Recycler): drag it to move the bucket, scroll / Q / E turns it.
+        carry = root.AddComponent<PixelCarryHandles>();
+        carry.Init(() => cam);
+        carry.Blocked = () => appear < 0.95f || !wanted;
 
         GameObject lg = new GameObject("Label");
         lg.transform.SetParent(r, false);

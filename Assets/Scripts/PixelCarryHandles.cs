@@ -82,7 +82,7 @@ public class PixelCarryHandles : MonoBehaviour
         if (dragging)
         {
             if (!PixelInput.LeftHeld()) { dragging = false; return; }
-            hotFrame = Time.frameCount;
+            hotFrame = PixelPointerClaim.Claim();
             PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
             if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
             float turn = consumables != null ? consumables.TurnInput() : 0f;
@@ -97,7 +97,7 @@ public class PixelCarryHandles : MonoBehaviour
         if (PixelInput.PointerOverUI()) return;
         Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
         if (!Over(ray)) return;
-        hotFrame = Time.frameCount;
+        hotFrame = PixelPointerClaim.Claim();
         PixelHandCursor.Request(PixelHandCursor.Shape.Open);
         if (PixelInput.LeftPressed() && FloorPoint(ray, out Vector3 hit))
         {

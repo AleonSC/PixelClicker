@@ -151,13 +151,10 @@ public class PixelBeanstalk : MonoBehaviour
 {
     public static PixelBeanstalk Current { get; private set; }
 
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over a fruit of the stalk: PixelClicker then ignores cube clicks.</summary>
-    public static bool Hot => hotFrame >= Time.frameCount - 1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Current = null; hotFrame = -10; }
+    private static void ResetStatics() { Current = null; }
 
     private const int Segments = 18;
     private const float GrowSeconds = 7f;
@@ -382,7 +379,7 @@ public class PixelBeanstalk : MonoBehaviour
             if (dist <= radius && dist < best) { best = dist; hover = f; }
         }
         if (hover == null) return;
-        hotFrame = Time.frameCount;
+        PixelPointerClaim.Claim();
         if (LeftPressed()) Pick(hover);
     }
 

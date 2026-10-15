@@ -13,7 +13,7 @@
 //   to pipeReach, never inside the box), left-click puts it down, right-click puts it back; the mouse wheel over a pipe cycles which
 //   stored type it carries (floating model + 'xN'); every shootInterval a pipe with stock fires one pixel of its type from the nozzle
 //   (PixelClicker.SpawnStreamedPixel = SpawnStoredPixel with the Sorter's no-collision OldPixelStream); shot pixels are ignored by the
-//   magnet for 6 s. HandleHot (hovering / grabbing a pipe) blocks cube clicks via ExternalClickBlock. Saved in PlacedState.extra
+//   magnet for 6 s. PixelPointerClaim (hovering / grabbing a pipe) blocks cube clicks via ExternalClickBlock. Saved in PlacedState.extra
 //   (ExportState/ImportState). NOTE: it must not define its own Update / LateUpdate (they would hide the base's); per-frame work runs
 //   in OnTick.
 // ---------------------------------------------------
@@ -35,13 +35,8 @@ using static PixelInput;
 /// </summary>
 public class PixelMagnetSorterDevice : PixelPlacedDevice
 {
-    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { hotFrame = -10; }
 
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over (or dragging) one of a working Magnetized Sorter's pipes: PixelClicker then ignores cube clicks.</summary>
-    public static bool HandleHot => hotFrame >= Time.frameCount - 1;
 
     private class Stock { public int tier; public int count; public double total; }
 
@@ -208,7 +203,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
 
         if (grabbed != null)
         {
-            hotFrame = Time.frameCount;
+            PixelPointerClaim.Claim();
             if (RightPressed()) { grabbed.endLocal = grabbed.previousEnd; Rebuild(grabbed); grabbed = null; return; }
             if (PointerOnFloor(out Vector3 w))
             {
@@ -231,7 +226,7 @@ public class PixelMagnetSorterDevice : PixelPlacedDevice
         if (PointerOverUI()) return;
         Pipe hover = PipeUnderPointer(PointerPosition());
         if (hover == null) return;
-        hotFrame = Time.frameCount;
+        PixelPointerClaim.Claim();
 
         float scroll = ScrollY();
         if (Mathf.Abs(scroll) > 0.01f) CycleType(hover, scroll > 0f ? 1 : -1);

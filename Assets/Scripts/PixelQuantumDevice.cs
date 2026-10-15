@@ -10,7 +10,7 @@ using Unity.Profiling;
 //   (ReleaseOldPixel(body, false)) and dematerialized with a glitch (GlitchOut: scripts and colliders off, jittering, stretching
 //   slivers, flickering, then destroyed) while a small display model of that type glitches into the box (GlitchIn, AddModel: up to
 //   MaxVisible 18 models per type on a lane of the pad; the stored COUNT and total payout per type are kept in Slot). A floating label
-//   shows the bound types and counts (or 'Drop a pixel on the pad'). Left-click the organizer (HandleHot blocks cube clicks via
+//   shows the bound types and counts (or 'Drop a pixel on the pad'). Left-click the organizer (PixelPointerClaim blocks cube clicks via
 //   ExternalClickBlock) to release ReleasePerClick (6) stored pixels as ordinary old pixels with the average stored payout
 //   (SpawnStoredPixel, ignored by the organizer for 10 s); when its time runs out or it is removed (Ended) everything stored comes
 //   out. Saved in PlacedState.extra (ExportState/ImportState, 'Q,tier,count,total;'). It must not define its own Update / LateUpdate:
@@ -40,13 +40,8 @@ public class PixelQuantumDevice : PixelPlacedDevice
     private const float GlitchOutSeconds = 0.4f;
     private const float GlitchInSeconds = 0.45f;
 
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over a working organizer (a click then lets stored pixels out instead of clicking the cube).</summary>
-    public static bool HandleHot => hotFrame >= Time.frameCount - 1;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { hotFrame = -10; }
 
     private class Slot
     {
@@ -126,7 +121,7 @@ public class PixelQuantumDevice : PixelPlacedDevice
             Ray ray = cam.ScreenPointToRay(PixelInput.PointerPosition());
             if (HitTest(ray, out _))
             {
-                hotFrame = Time.frameCount;
+                PixelPointerClaim.Claim();
                 if (PixelInput.LeftPressed()) ReleaseSome(ReleasePerClick);
             }
         }

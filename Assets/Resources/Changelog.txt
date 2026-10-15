@@ -1037,3 +1037,5 @@
 [2026-10-15 11:42 UTC] Standard skill: every block you collect now gives exactly 1 Standard XP - manual or auto, any block, whatever skill you train, with no multipliers (Inspector: standardXpPerBlock).
 [2026-10-15 11:46 UTC] Standard level 2 popup now opens the Skills window on Standard, sits small to the right of it and frames the Standard card with the same pulsing gold glow the Shop button gets (new shared PixelHighlight, which the shop nudge now uses too).
 [2026-10-15 11:46 UTC] The Recycler has the Storage Crate's carrying handles: drag one to move the bin (scroll / Q / E turns it), with the husks inside riding along; the handles are now one shared piece of code (PixelCarryHandles) both use.
+[2026-10-15 11:50 UTC] Cleanup: the sorters, Quantum Organizer, Storage Crate, Recycler, carry handles, Bait Bucket, Egg, Beanstalk and Treasure Map now share one 'pointer claimed' flag (PixelPointerClaim) instead of each having its own, so the cube's click blocker checks one thing.
+[2026-10-15 11:50 UTC] The Bait Bucket's handle now works like the Storage Crate's: drag it to move the bucket anywhere on the floor (scroll / Q / E turns it).

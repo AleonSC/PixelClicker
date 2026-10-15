@@ -147,13 +147,10 @@ public class PixelEgg : MonoBehaviour
 {
     public static PixelEgg Current { get; private set; }
 
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over the egg: PixelClicker then ignores cube clicks.</summary>
-    public static bool Hot => hotFrame >= Time.frameCount - 1;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Current = null; hotFrame = -10; }
+    private static void ResetStatics() { Current = null; }
 
     private PixelClicker clicker;
     private Camera cam;
@@ -270,7 +267,7 @@ public class PixelEgg : MonoBehaviour
         Vector3 edge = cam.WorldToScreenPoint(transform.position + cam.transform.right * size * 0.75f);
         float radius = Mathf.Max(30f, Mathf.Abs(edge.x - screen.x));
         if (((Vector2)screen - PointerPosition()).magnitude > radius) return;
-        hotFrame = Time.frameCount;
+        PixelPointerClaim.Claim();
         if (LeftPressed()) Hit();
     }
 

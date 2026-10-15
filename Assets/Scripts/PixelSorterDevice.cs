@@ -17,13 +17,9 @@ public class PixelSorterDevice : PixelPlacedDevice
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         Current = null;
-        hotFrame = -10;
     }
 
-    private static int hotFrame = -10;
 
-    /// <summary>True while the mouse is over (or dragging) one of a working sorter's handles - its pipe end, ring, force slider or buttons. PixelClicker then ignores cube clicks.</summary>
-    public static bool HandleHot => hotFrame >= Time.frameCount - 1;
 
     /// <summary>The sorter that is currently working (null = none). <see cref="PixelClicker"/> asks it where to send each pixel.</summary>
     public static PixelSorterDevice Current { get; private set; }
@@ -106,7 +102,7 @@ public class PixelSorterDevice : PixelPlacedDevice
 
         if (drag != Drag.None)
         {
-            hotFrame = Time.frameCount;
+            PixelPointerClaim.Claim();
             if (!LeftHeld()) { drag = Drag.None; return; }
             UpdateDrag();
             return;
@@ -115,7 +111,7 @@ public class PixelSorterDevice : PixelPlacedDevice
         if (PointerOverUI()) return;
         Vector2 pointer = PointerPosition();
         Hover hover = FindHover(pointer);
-        if (hover != Hover.None) hotFrame = Time.frameCount;
+        if (hover != Hover.None) PixelPointerClaim.Claim();
         if (hover == Hover.None || !LeftPressed()) return;
 
         switch (hover)

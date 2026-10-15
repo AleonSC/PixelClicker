@@ -105,6 +105,7 @@ public class PixelTreasureMap : MonoBehaviour
             if (d < radius && d < best) { best = d; hovered = m; }
         }
         Hot = hovered != null;
+        if (Hot) PixelPointerClaim.Claim();
         if (hovered != null && LeftPressed() && Time.unscaledTime - lastDig > 0.1f)
         {
             lastDig = Time.unscaledTime;
