@@ -7,7 +7,7 @@
 //   (trackerPrev/Next, CycleTrainedSkill) switch the skill in training through Standard and every available pack. Its buttons: a
 //   padlock stick (trackerStuck: can't be dragged), downsize ('-' / '+': a one-line small version) and X (closes it; the Skills menu
 //   is NOT reopened). DOUBLE CLICKING the name (small or full; PixelDoubleClick) opens the Skills window on the skill in training with its tree beside it (never the expanded tree). Open / small / stuck / position are PlayerPrefs PixelClicker.Skills.Tracker* (global, not per save); hidden on
-//   the title screen and when no skill is trainable.
+//   the title screen and until the Skills button exists (SkillsTabUnlocked: Standard level 2), so Standard alone can be pinned.
 // ---------------------------------------------------
 using System.Collections.Generic;
 using TMPro;
@@ -345,7 +345,7 @@ public partial class PixelSkills
 
     private void ApplyTrackerVisibility()
     {
-        bool show = trackerOn && trackerBuilt && AnyTrainable && !PixelTitleScreen.Showing;
+        bool show = trackerOn && trackerBuilt && SkillsTabUnlocked && !PixelTitleScreen.Showing;   // (from Standard level 2, like the Skills button - not only once a skill pack is owned)
         if (trackerCanvas != null && trackerCanvas.activeSelf != show) trackerCanvas.SetActive(show);
         if (trackerPinImage != null) trackerPinImage.color = trackerOn ? new Color(0.2f, 0.6f, 0.3f, 1f) : new Color(0.3f, 0.3f, 0.35f, 1f);
     }
@@ -353,7 +353,7 @@ public partial class PixelSkills
     private void UpdateTracker()
     {
         if (!built) return;
-        if (!trackerBuilt && trackerOn && AnyTrainable) { EnsureTracker(); }
+        if (!trackerBuilt && trackerOn && SkillsTabUnlocked) { EnsureTracker(); }
         ApplyTrackerVisibility();
         if (!trackerBuilt || !trackerOn) return;
         trackerTimer -= Time.unscaledDeltaTime;
