@@ -2368,6 +2368,14 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
             defaultsVersion = 13;
         }
 
+        // The see-through laser floors got a real still picture (their menu icon / title picture was one flat pink colour at 16 px).
+        if (defaultsVersion < 14)
+        {
+            foreach (FloorStyle st in styles)
+                if (st != null && (st.name == "Neon Lasers" || st.name == "Laser Tracker")) st.resolution = Mathf.Max(st.resolution, 160);
+            defaultsVersion = 14;
+        }
+
         foreach (FloorStyle def in DefaultStyles())
             if (!styles.Exists(s => s.name == def.name)) styles.Add(def);
     }

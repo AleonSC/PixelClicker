@@ -10,6 +10,8 @@
 //   SEE-THROUGH LASERS (FloorStyle.hideBase: the floor picture is hidden - ApplyVisibility / the edge fade read HideBaseNow - but the collider stays):
 //     Neon Lasers (overlay Lasers: beams drifting / turning / pulsing over nothing, neon colours from the style), Laser Tracker (overlay LaserTracker:
 //     emitters round the cube shoot beams that all converge on the mouse's point on the floor, with a pulsing ring there).
+//     The beams are flat LineRenderer ribbons (TransformZ alignment, the transform turned Euler(90,0,0) so they face the camera from above). The style's
+//     still picture (ShadeLaserPicture, 160 px) is never on the floor; it is the menu icon and the title screen's background picture.
 //   PICNIC BLANKET: a gingham blanket with a woven texture, fringe, folds and crumbs on meadow grass, plus overlay Ant: a small 3D ant (built from
 //     primitives, no colliders) that walks to the mouse's point on the floor with a tripod leg gait and wiggling antennae, and wanders when the mouse is
 //     off the floor. The overlay fades with the floor (Display floor / the menu fade) and follows FloorStyle.overlay.
@@ -37,10 +39,10 @@ public partial class PixelFloor
         yield return Big("Mossy Glade", FloorPattern.MossyGlade, new Color(0.12f, 0.24f, 0.07f), new Color(0.38f, 0.55f, 0.15f), new Color(0.45f, 0.42f, 0.38f), 35);
         yield return Big("Prairie Grass", FloorPattern.PrairieGrass, new Color(0.55f, 0.45f, 0.2f), new Color(0.88f, 0.76f, 0.42f), new Color(0.6f, 0.35f, 0.75f), 37);
 
-        FloorStyle lasers = S("Neon Lasers", FloorPattern.NeonLasers, new Color(1f, 0.15f, 0.75f), new Color(0.1f, 0.95f, 1f), new Color(0.55f, 1f, 0.2f), 16, false, 8f, 1);
+        FloorStyle lasers = S("Neon Lasers", FloorPattern.NeonLasers, new Color(1f, 0.15f, 0.75f), new Color(0.1f, 0.95f, 1f), new Color(0.55f, 1f, 0.2f), 160, false, 8f, 1);
         lasers.hideBase = true; lasers.overlay = FloorOverlay.Lasers;
         yield return lasers;
-        FloorStyle tracker = S("Laser Tracker", FloorPattern.LaserTracker, new Color(1f, 0.1f, 0.2f), new Color(1f, 0.55f, 0.1f), new Color(0.2f, 0.85f, 1f), 16, false, 8f, 1);
+        FloorStyle tracker = S("Laser Tracker", FloorPattern.LaserTracker, new Color(1f, 0.1f, 0.2f), new Color(1f, 0.55f, 0.1f), new Color(0.2f, 0.85f, 1f), 160, false, 8f, 1);
         tracker.hideBase = true; tracker.overlay = FloorOverlay.LaserTracker;
         yield return tracker;
         FloorStyle picnic = Big("Picnic Blanket", FloorPattern.PicnicBlanket, new Color(0.82f, 0.12f, 0.14f), new Color(0.98f, 0.96f, 0.9f), new Color(0.2f, 0.5f, 0.15f), 39);
@@ -92,7 +94,48 @@ public partial class PixelFloor
             case FloorPattern.PrairieGrass: return ShadePrairie(s, u, v, x, y);
             case FloorPattern.PicnicBlanket: return ShadePicnic(s, u, v, x, y);
         }
-        return s.colorA;   // (the see-through laser floors: never shown)
+        if (s.pattern == FloorPattern.NeonLasers || s.pattern == FloorPattern.LaserTracker) return ShadeLaserPicture(s, u, v, s.pattern == FloorPattern.LaserTracker);
+        return s.colorA;
+    }
+
+    /// <summary>
+    /// The still picture of a see-through laser floor: the game never shows it on the floor (hideBase), but it is the style's menu icon and the
+    /// title screen's background picture - glowing beams in the style's three colours over a dark night (converging on the middle for the Tracker).
+    /// </summary>
+    private static Color ShadeLaserPicture(FloorStyle s, float u, float v, bool tracker)
+    {
+        Color[] pal = { s.colorA, s.colorB, s.colorC };
+        Color col = new Color(0.015f, 0.015f, 0.04f, 1f);
+        int beams = tracker ? 8 : 7;
+        for (int k = 0; k < beams; k++)
+        {
+            float d;
+            if (tracker)
+            {
+                // A segment from an emitter on a ring to the middle.
+                float ang = (k + 0.3f * PixelNoise.Hash(k, 1, 91)) / beams * Mathf.PI * 2f;
+                Vector2 a = new Vector2(0.5f + Mathf.Cos(ang) * 0.44f, 0.5f + Mathf.Sin(ang) * 0.44f), b = new Vector2(0.5f, 0.5f);
+                Vector2 ab = b - a, ap = new Vector2(u, v) - a;
+                float t = Mathf.Clamp01(Vector2.Dot(ap, ab) / ab.sqrMagnitude);
+                d = (ap - ab * t).magnitude;
+            }
+            else
+            {
+                // An endless line through a random point at a random angle.
+                float px = 0.15f + 0.7f * PixelNoise.Hash(k, 2, 77), py = 0.15f + 0.7f * PixelNoise.Hash(k, 3, 77), ang = PixelNoise.Hash(k, 4, 77) * Mathf.PI;
+                d = Mathf.Abs((u - px) * Mathf.Sin(ang) - (v - py) * Mathf.Cos(ang));
+            }
+            Color c = pal[k % 3];
+            float core = Mathf.Exp(-(d * d) / (0.006f * 0.006f)), glow = Mathf.Exp(-(d * d) / (0.035f * 0.035f)) * 0.45f;
+            col += c * glow + Color.Lerp(c, Color.white, 0.5f) * core;
+        }
+        if (tracker)
+        {
+            float r = Mathf.Abs(new Vector2(u - 0.5f, v - 0.5f).magnitude - 0.05f);
+            col += Color.Lerp(s.colorA, Color.white, 0.6f) * Mathf.Exp(-(r * r) / (0.008f * 0.008f));
+        }
+        col.r = Mathf.Min(1f, col.r); col.g = Mathf.Min(1f, col.g); col.b = Mathf.Min(1f, col.b); col.a = 1f;
+        return col;
     }
 
     /// <summary>
@@ -501,10 +544,16 @@ public class PixelFloorOverlay : MonoBehaviour
 
     private LineRenderer Line(string name, float width)
     {
-        if (lineMat == null) { Shader sh = PixelShaders.SpriteDefault(); lineMat = sh != null ? new Material(sh) : null; }
+        if (lineMat == null)
+        {
+            Shader sh = PixelShaders.SpriteDefault();
+            lineMat = sh != null ? new Material(sh) { name = "Floor Lasers", renderQueue = 3100 } : null;
+        }
         GameObject g = new GameObject(name);
         g.transform.SetParent(root.transform, false);
-        g.transform.rotation = Quaternion.LookRotation(Vector3.up);   // TransformZ alignment: the beam lies flat on the floor
+        // TransformZ alignment: the ribbon faces along the transform's Z, so Z must point straight down for the beam to lie flat on the floor.
+        // (LookRotation(Vector3.up) was degenerate - forward parallel to its 'up' - and left the ribbons standing on edge: invisible from above.)
+        g.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         LineRenderer lr = g.AddComponent<LineRenderer>();
         lr.sharedMaterial = lineMat;
         lr.useWorldSpace = true;

@@ -30,6 +30,8 @@
 //   MOVING: the carry handles move the bin through a kinematic Rigidbody (PixelCarryHandles), so loose husks are pushed instead of glitching through;
 //   while carried every husk inside is frozen into the bin each frame and any that still ends up outside is let go and uncounted at once
 //   (KeepContentsWhileCarried). A husk that leaves the bin is handed back to the floor's husk list (AdoptOldPixel), never left orphaned.
+//   Pressing the button freezes every counted husk into the bin first (a still-settling one could be jostled out by the shake, let go and caught
+//   again after the cycle) and tips any UNCOUNTED husk lying in the bin out over the front / back rim (EjectUncounted), also again before paying.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
 using System.Collections;
@@ -538,6 +540,33 @@ public class PixelRecycler : MonoBehaviour
         if (changed) RefreshCounter();
     }
 
+    /// <summary>
+    /// Husks lying in the bin that are NOT counted (the bin was full, or one fell in as the lid closed) are tipped out over the front / back rim,
+    /// so the bin holds exactly what is recycled and nothing seems to survive a cycle. (Over the Z rims: the handles stick out on the X ends.)
+    /// </summary>
+    private void EjectUncounted()
+    {
+        if (clicker == null) return;
+        IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
+        for (int i = pixels.Count - 1; i >= 0; i--)
+        {
+            Rigidbody b = pixels[i];
+            if (b == null || inside.Contains(b) || !KeepsHold(b.position)) continue;
+            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            if (info != null && info.heldByPlayer) continue;
+            Vector3 p = transform.InverseTransformPoint(b.position);
+            float side = p.z >= 0f ? 1f : -1f;
+            float size = b.transform.lossyScale.x;
+            b.position = transform.TransformPoint(new Vector3(p.x, wallH + size, side * (innerD * 0.5f + size * 1.2f)));
+            Vector3 push = transform.TransformDirection(new Vector3(0f, 0.6f, side)) * 1.2f;
+#if UNITY_6000_0_OR_NEWER
+            b.linearVelocity = push;
+#else
+            b.velocity = push;
+#endif
+        }
+    }
+
     private bool Inside(Vector3 world)
     {
         Vector3 p = transform.InverseTransformPoint(world);
@@ -564,6 +593,10 @@ public class PixelRecycler : MonoBehaviour
     {
         DropStrays();   // what is counted is exactly what gets recycled
         processing = true;   // (nothing is captured or let go until the bin is done; a shut lid also stops husks falling in)
+        // Every counted husk is frozen into the bin NOW: one still settling would be jostled by the shake (the bin's walls jump into it), could end
+        // up below the bin's floor, get let go uncounted and then be caught again after the cycle - a husk that seemed to survive recycling.
+        foreach (Rigidbody b in inside) Freeze(b);
+        EjectUncounted();
         PixelAudio.Play("ui_click");
         SetGlow(WorkGlow, 1f);
         if (hatchOpen) StartCoroutine(MoveHatch(false));   // the back hatch shuts too while it works
@@ -587,6 +620,7 @@ public class PixelRecycler : MonoBehaviour
         transform.localRotation = homeRot;
 
         DropStrays();   // (one pulled out during the shake is not paid for)
+        EjectUncounted();   // (and nothing uncounted is left lying in the bin when the lid opens)
         // Pay out and empty the bin.
         Dictionary<int, double> paid = new Dictionary<int, double>();
         int count = 0;
