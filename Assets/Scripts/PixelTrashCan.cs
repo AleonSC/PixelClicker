@@ -21,6 +21,8 @@ public class PixelTrashCan : MonoBehaviour, IPixelBeltAcceptor
     private float Pull => (pullSpeedCubes > 0f ? pullSpeedCubes : 7f) * unit;
 
     private static readonly List<PixelTrashCan> all = new List<PixelTrashCan>();
+    /// <summary>Every Trash Can (a Container Hose can end at one).</summary>
+    public static IReadOnlyList<PixelTrashCan> All => all;
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { all.Clear(); }
 

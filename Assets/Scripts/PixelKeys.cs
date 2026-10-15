@@ -231,12 +231,24 @@ public static class PixelKeys
         }
     }
 
+    private static int driveClaimFrame = -10;
+
+    /// <summary>Something driven by the player (the Vacuum Cleaner) uses W A S D and the arrow keys this frame: actions bound to them (S = Time Slow) are quiet.</summary>
+    public static void ClaimDriveKeys() => driveClaimFrame = Time.frameCount;
+
+    /// <summary>Are W A S D / the arrows claimed by something being driven (this frame or the last)?</summary>
+    public static bool DriveKeysClaimed => driveClaimFrame >= Time.frameCount - 1;
+
+    private static bool IsDriveKey(KeyCode k) =>
+        k == KeyCode.W || k == KeyCode.A || k == KeyCode.S || k == KeyCode.D || k == KeyCode.UpArrow || k == KeyCode.DownArrow || k == KeyCode.LeftArrow || k == KeyCode.RightArrow;
+
     /// <summary>True on the frame the action's key went down.</summary>
     public static bool Pressed(PixelAction action)
     {
         if (Typing || PixelCollectionGallery.Active) return false;
         KeyCode key = Get(action);
         if (key == KeyCode.None) return false;
+        if (DriveKeysClaimed && IsDriveKey(key)) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         if (Control(key, out var c) && c.wasPressedThisFrame) return true;
         if (key == KeyCode.Return && Control(KeyCode.KeypadEnter, out var n) && n.wasPressedThisFrame) return true;
@@ -274,6 +286,7 @@ public static class PixelKeys
         if (Typing || PixelCollectionGallery.Active) return false;
         KeyCode key = Get(action);
         if (key == KeyCode.None) return false;
+        if (DriveKeysClaimed && IsDriveKey(key)) return false;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
         return Control(key, out var c) && c.isPressed;
 #else

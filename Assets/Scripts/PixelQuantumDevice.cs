@@ -221,6 +221,34 @@ public class PixelQuantumDevice : PixelPlacedDevice
     }
 
     /// <summary>Lets up to 'count' stored pixels out (they keep their stored value and drop onto the floor round the pad).</summary>
+    /// <summary>Room left in the organizer (a Container Hose only pumps in what fits).</summary>
+    public int HoseRoom => IsDying ? 0 : Mathf.Max(0, capacity - stored);
+
+    /// <summary>A Container Hose pulls one stored pixel out (the first type with any): its type and average value; false when nothing is stored.</summary>
+    public bool TakeOneForHose(out int tier, out double amount)
+    {
+        tier = -1; amount = 0;
+        if (IsDying) return false;
+        foreach (Slot s in slots)
+        {
+            if (s.count <= 0) continue;
+            amount = s.total / s.count;
+            tier = s.tier;
+            s.count--;
+            s.total -= amount;
+            stored--;
+            if (s.models.Count > s.count && s.models.Count > 0)
+            {
+                Transform last = s.models[s.models.Count - 1];
+                s.models.RemoveAt(s.models.Count - 1);
+                if (last != null) { last.SetParent(null, true); StartCoroutine(GlitchOut(last.gameObject)); }
+            }
+            labelDirty = true;
+            return true;
+        }
+        return false;
+    }
+
     private void ReleaseSome(int count)
     {
         if (clicker == null || stored <= 0) return;

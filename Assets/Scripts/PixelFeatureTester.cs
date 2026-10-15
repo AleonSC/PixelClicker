@@ -11,7 +11,7 @@
 //   SAVING: every placed object is saved with the save file (PixelFeatureTester.ExportAll / ImportAll, TesterSave = feature name + JSON from the feature's ExportState / ImportState; hooked into
 //   PixelSaveGame after the placed devices are restored). LINKING (Solar Panel): after placing, linkPanel mode - click a device inside the ring; a right click on a placed panel starts it again.
 //   The Conveyor Belt is also a real game item (PixelConsumables DeviceKind.ConveyorBelt, on sale at Electrician level 5): its right click calls PixelFeatureTester.StartFeature("Conveyor Belt"), which places without the Dev Hub.
-//   Features now: Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
+//   Features now: Vacuum Cleaner (PixelVacuumCleaner.cs: drive with W A S D / arrows, hold left to suck with the nozzle, hold right to blow out), Container Hose (PixelContainerHose.cs: a single line from a crate / organizer to a Recycler / crate / organizer / trash can), Wood Chipper (PixelWoodChipper.cs), Conveyor Belt (PixelConveyor.cs, PixelFactoryKit.cs), Kiln (PixelKiln.cs; makes Charcoal old pixels), Solar Panel (PixelSolarPanel.cs).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -73,6 +73,9 @@ public class PixelFeatureTester : MonoBehaviour
     private PixelConsumables consumables;
     private TMP_Text statusLabel;
     private Feature placing;
+
+    /// <summary>A tester feature is being placed (its clicks belong to the placing).</summary>
+    public static bool Placing => instance != null && (instance.placing != null || instance.selecting);
     private GameObject ghost;
     private float yaw;
     private int placeStartFrame;
@@ -128,6 +131,13 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].singleLine = true;
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
+        RegisterLine("Container Hose",
+                     "A see-through hose from one container to another. Click the SOURCE - a Storage Crate or a Quantum Organizer - then the TARGET: a Recycler, another Storage Crate, a Quantum Organizer or a Trash Can (both clicks magnetize to the nearest container's top). It pumps the source's stored pixels through the hose one by one and drops them into the target, only as many as the target has room for. The ends follow the containers when you carry them.",
+                     c => PixelConveyor.CreateMarker(c), c => PixelContainerHose.CreatePreview(c), (g, a, b) => PixelContainerHose.UpdatePreview(g, a, b),
+                     (c, a, b) => PixelContainerHose.Place(c, a, b), PixelContainerHose.Snap);
+        features[features.Count - 1].singleLine = true;
+        features[features.Count - 1].export = PixelContainerHose.ExportState;
+        features[features.Count - 1].import = PixelContainerHose.ImportState;
         Register("Hose Adapter",
                  "A long open trough that snaps onto the end of a working Funnel's spout (bring the ghost near the spout) and carries what comes out of the hose. Start a conveyor belt at one of its two sides (the belt's first point snaps to the teal ports) or at its far end: the adapter hands the pixels to the belt that starts there, so the hose-to-belt connection is always clean.",
                  c => PixelConnector.CreateAdapterGhost(c), (c, p, yw) => PixelConnector.PlaceAdapter(c, p, yw));
@@ -135,6 +145,12 @@ public class PixelFeatureTester : MonoBehaviour
         features[features.Count - 1].groundPlane = true;
         features[features.Count - 1].export = PixelConnector.ExportState;
         features[features.Count - 1].import = PixelConnector.ImportState;
+        Register("Vacuum Cleaner",
+                 "A canister vacuum on wheels with a hose and a floor nozzle (to become a consumable). Left-click its body to drive it: W A S D or the arrow keys move it (diagonals too), relative to the camera. HOLD the left button to put the nozzle down where the mouse points (within the hose's reach) - husks round the nozzle are sucked into the tank (25 max, the counter shows how full). HOLD the right button away from it to blow the tank's husks back out towards the mouse - into a Recycler, a crate, wherever. Click the body again or press Escape to stop driving.",
+                 c => PixelVacuumCleaner.CreateGhost(c), (c, p, yw) => PixelVacuumCleaner.Place(c, p, yw));
+        features[features.Count - 1].groundPlane = true;
+        features[features.Count - 1].export = PixelVacuumCleaner.ExportState;
+        features[features.Count - 1].import = PixelVacuumCleaner.ImportState;
         Register("Trash Can",
                  "A plain cylinder that deletes things. Put it on the floor: every loose old pixel within a small radius (the teal ring) - thrown out of a Funnel hose, a machine or the end of a conveyor belt - is pulled to its mouth and vanishes, no credit. Belts and connectors that end at it feed it directly.",
                  c => PixelTrashCan.CreateGhost(c), (c, p, yw) => PixelTrashCan.Place(c, p, yw));

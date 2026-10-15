@@ -272,8 +272,9 @@ public class PixelOrbitCamera : MonoBehaviour
                 targetYaw -= d.x * k;
                 if (!TopDown) targetPitch += d.y * k;
             }
-            float turn = (PixelKeys.KeyHeld(KeyCode.RightArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.LeftArrow) ? 1f : 0f) + HoldTurn;
-            float tilt = TopDown ? 0f : (PixelKeys.KeyHeld(KeyCode.UpArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.DownArrow) ? 1f : 0f) + HoldTilt;
+            bool arrowsFree = !PixelKeys.DriveKeysClaimed;   // (the arrows drive the Vacuum Cleaner while it is driven)
+            float turn = !arrowsFree ? HoldTurn : (PixelKeys.KeyHeld(KeyCode.RightArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.LeftArrow) ? 1f : 0f) + HoldTurn;
+            float tilt = TopDown ? 0f : !arrowsFree ? HoldTilt : (PixelKeys.KeyHeld(KeyCode.UpArrow) ? 1f : 0f) - (PixelKeys.KeyHeld(KeyCode.DownArrow) ? 1f : 0f) + HoldTilt;
             float ks = V(keyDegreesPerSecond, 90f) * dt;
             targetYaw -= turn * ks;
             targetPitch += tilt * ks;

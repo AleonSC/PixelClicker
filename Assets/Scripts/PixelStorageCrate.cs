@@ -285,6 +285,26 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         s.model = model.transform;
     }
 
+    /// <summary>Free sections left (a Container Hose only pumps in what fits).</summary>
+    public int HoseRoom => IsDying ? 0 : FreeCount();
+
+    /// <summary>A Container Hose pulls one stored pixel out (the last filled section): its type and value; false when the crate is empty.</summary>
+    public bool TakeOneForHose(out int tier, out double amount)
+    {
+        tier = -1; amount = 0;
+        if (IsDying) return false;
+        for (int i = Sections - 1; i >= 0; i--)
+        {
+            Section s = sections[i];
+            if (s.tier < 0) continue;
+            tier = s.tier; amount = s.amount;
+            if (s.model != null) Destroy(s.model.gameObject);
+            s.model = null; s.tier = -1; s.amount = 0;
+            return true;
+        }
+        return false;
+    }
+
     private void TakeOut(int slot)
     {
         Section s = sections[slot];

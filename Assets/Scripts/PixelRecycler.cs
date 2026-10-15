@@ -57,6 +57,18 @@ public class PixelRecycler : MonoBehaviour
     [SerializeField] private Color counterColor = new Color(0.75f, 1f, 0.75f, 1f);
 
     private static readonly List<PixelRecycler> all = new List<PixelRecycler>();
+
+    /// <summary>Every Recycler in the scene (a Container Hose finds its end here).</summary>
+    public static IReadOnlyList<PixelRecycler> All => all;
+
+    /// <summary>A Container Hose may drop a husk in now: not working and not full.</summary>
+    public bool HoseCanTake => !processing && inside.Count < Mathf.Max(1, capacity);
+
+    /// <summary>How many more husks fit in the bin.</summary>
+    public int HoseRoom => Mathf.Max(0, Mathf.Max(1, capacity) - inside.Count);
+
+    /// <summary>Where a Container Hose lets its husks fall: above the middle of the bin.</summary>
+    public Vector3 HoseDropPoint => transform.TransformPoint(new Vector3(0f, wallH * 1.3f, 0f));
     private static int hotFrame = -10;
 
     /// <summary>True while the pointer is over a Recycler's button (clicks there belong to the Recycler, not the cube or Pixel Grabbing).</summary>
