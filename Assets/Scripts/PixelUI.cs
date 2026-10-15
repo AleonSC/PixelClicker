@@ -500,7 +500,7 @@ public class PixelUI : MonoBehaviour
     private float CompactTop => CompactToggleSize + panelPadding * 1.5f;
     private readonly System.Collections.Generic.List<TMP_Text> materialLabels = new System.Collections.Generic.List<TMP_Text>();
     private TMP_Text noMaterialsLabel;
-    private int consumableSubTab; // inside Consumables: 0 = Potions, 1 = Devices
+    private int consumableSubTab = 1; // inside Consumables: 0 = Potions, 1 = Devices (the default)
     private TMP_Dropdown categoryDropdown;
     private Image[] subTabImages;
     private TMP_Text activeLabel;

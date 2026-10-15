@@ -5,9 +5,11 @@
 //   Drop old pixels (husks) into it - Pixel Grabbing, or anything that lands inside: a husk that comes to rest inside the bin's walls is CAPTURED
 //   (PixelClicker.ReleaseOldPixel without credit, so it leaves the floor's old-pixel list: no despawn count, no cap, no vacuum, no termites; its
 //   OldPixelDespawn is Held so it never shrinks away). The husks stay in the bin as real physical pixels until it is closed. Up to 'capacity' (12)
-//   can be inside; a counter above the bin shows 'n / 12'. Click the red BUTTON on its front: the lid swings shut, every husk inside is recycled
+//   can be inside; a counter above the bin shows 'n / 12'. Husks inside never despawn (their OldPixelDespawn.Held is re-set every tick, so poking one with
+//   Pixel Grabbing cannot start its timer; one taken out of the bin is let go again; with the bin full, extra husks lying in it get KeepAlive). Click the
+//   red BUTTON on its front: the lid SLIDES forward along two rails from behind the bin to cover the top, every husk inside is recycled
 //   into payoutShare (10%) of its stored value as currency of its own type (pixel rules: the Recycler is the one machine that turns husks back into
-//   money, at a loss), the husks are destroyed, and the lid opens again. ButtonHot (the pointer is over a button) is part of
+//   money, at a loss), the husks are destroyed, and the lid slides back open. ButtonHot (the pointer is over a button) is part of
 //   PixelClicker.ExternalClickBlock and PixelGrab's guard, so pressing it neither clicks the cube nor grabs a pixel.
 //   Not saved: husks inside are lost on reload, and removing the Recycler destroys them. Not a belt acceptor yet.
 // ---------------------------------------------------
@@ -88,17 +90,26 @@ public class PixelRecycler : MonoBehaviour
             Vector3 p = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad) * u * 0.55f, h * 0.5f + Mathf.Sin(a * Mathf.Deg2Rad) * u * 0.55f, -(d + t) * 0.5f - t * 0.55f);
             kit.Box("Arrow " + i, tr, p, new Vector3(u * 0.9f, u * 0.18f, t * 0.2f), new Color(0.85f, 1f, 0.85f, 1f), new Vector3(0f, 0f, a + 90f));
         }
-        // The lid, hinged on the back wall's top edge; it starts open (swung back).
+        // The lid slides along the top: it starts open, pushed back behind the bin, and slides forward over the opening to close.
         GameObject pivot = new GameObject("Lid Pivot");
         pivot.transform.SetParent(tr, false);
-        pivot.transform.localPosition = new Vector3(0f, h, (d + t) * 0.5f);
-        kit.Box("Lid", pivot.transform, new Vector3(0f, t * 0.5f, -(d + t) * 0.5f), new Vector3(w + 2f * t, t, d + 2f * t), LidColor);
-        pivot.transform.localRotation = Quaternion.Euler(-105f, 0f, 0f);
+        pivot.transform.localPosition = LidOpen(u);
+        kit.Box("Lid", pivot.transform, new Vector3(0f, t * 0.5f, 0f), new Vector3(w + 2f * t, t, d + 2f * t), LidColor);
+        // Two rails on the side walls that the lid rides on, running back past the bin where the open lid rests.
+        for (int side = -1; side <= 1; side += 2)
+            kit.Box("Rail " + (side < 0 ? "L" : "R"), tr, new Vector3(side * (w + t) * 0.5f, h + t * 0.15f, (d + 2f * t) * 0.5f), new Vector3(t * 0.6f, t * 0.3f, 2f * d + 3f * t), new Color(0.6f, 0.62f, 0.6f, 1f), default, false, 0.7f, 0.5f);
+        // Posts holding up the far end of the rails.
+        for (int side = -1; side <= 1; side += 2)
+            kit.Box("Post " + (side < 0 ? "L" : "R"), tr, new Vector3(side * (w + t) * 0.5f, h * 0.5f, d + 1.5f * t), new Vector3(t * 0.6f, h, t * 0.6f), new Color(0.6f, 0.62f, 0.6f, 1f), default, false, 0.7f, 0.5f);
         // The button on top of the front wall.
         kit.Cyl("Button Base", tr, new Vector3(w * 0.32f, h + t * 0.4f, -(d + t) * 0.5f), u * 0.34f, t * 0.8f, new Color(0.15f, 0.15f, 0.15f, 1f));
         kit.Cyl("Button", tr, new Vector3(w * 0.32f, h + t * 1.1f, -(d + t) * 0.5f), u * 0.24f, t * 0.9f, ButtonColor, default, 0.1f, 0.6f, colliders);
         return root;
     }
+
+    /// <summary>Where the lid rests: closed = over the opening, open = slid back behind the bin.</summary>
+    private static Vector3 LidClosed(float u) => new Vector3(0f, HeightHusks * u, 0f);
+    private static Vector3 LidOpen(float u) => new Vector3(0f, HeightHusks * u, DepthHusks * u + 0.5f * u);
 
     private void Init(PixelClicker owner)
     {
@@ -159,15 +170,33 @@ public class PixelRecycler : MonoBehaviour
     {
         bool changed = false;
         inside.RemoveAll(b => b == null);
+        // Husks in the bin never despawn: their timer stays held every tick (Pixel Grabbing lets go of 'Held' when you poke one); one taken out of the bin is let go again.
+        for (int i = inside.Count - 1; i >= 0; i--)
+        {
+            OldPixelDespawn hold = inside[i].GetComponent<OldPixelDespawn>();
+            OldPixelInfo heldInfo = inside[i].GetComponent<OldPixelInfo>();
+            bool inHand = heldInfo != null && heldInfo.heldByPlayer;
+            if (Inside(inside[i].position) || inHand) { if (hold != null) hold.Held = true; continue; }
+            if (hold != null) hold.Held = false;
+            inside.RemoveAt(i);
+            changed = true;
+        }
         IReadOnlyList<Rigidbody> pixels = clicker.OldPixels;
-        for (int i = pixels.Count - 1; i >= 0 && inside.Count < Mathf.Max(1, capacity); i--)
+        for (int i = pixels.Count - 1; i >= 0; i--)
         {
             Rigidbody b = pixels[i];
             if (b == null || !Inside(b.position)) continue;
+            if (inside.Count >= Mathf.Max(1, capacity))   // the bin is full: husks lying in it anyway still never fade while they are inside
+            {
+                OldPixelDespawn keep = b.GetComponent<OldPixelDespawn>();
+                if (keep != null && !keep.IsDespawning) keep.KeepAlive();
+                continue;
+            }
             OldPixelInfo info = b.GetComponent<OldPixelInfo>();
             if (info == null) continue;
             OldPixelDespawn despawn = b.GetComponent<OldPixelDespawn>();
-            if (despawn != null && (despawn.Held || despawn.IsDespawning)) continue;   // still in the player's hand, or already vanishing
+            if (despawn != null && despawn.IsDespawning) continue;   // already vanishing
+            if (info.heldByPlayer) continue;                          // still in the player's hand
             if (!clicker.ReleaseOldPixel(b, false)) continue;
             if (despawn != null) despawn.Held = true;   // it never shrinks away while it is in the bin
             inside.Add(b);
@@ -195,7 +224,7 @@ public class PixelRecycler : MonoBehaviour
     {
         processing = true;
         PixelAudio.Play("ui_click");
-        yield return SwingLid(-105f, 0f);
+        yield return SlideLid(LidOpen(Unit(clicker)), LidClosed(Unit(clicker)));
 
         Dictionary<int, double> paid = new Dictionary<int, double>();
         int count = 0;
@@ -230,19 +259,18 @@ public class PixelRecycler : MonoBehaviour
             PixelAudio.Play("purchase");
             PixelHints.Announce("Recycled " + count + " husk" + (count == 1 ? "" : "s") + (sb.Length > 0 ? ": " + sb : "."));
         }
-        yield return SwingLid(0f, -105f);
+        yield return SlideLid(LidClosed(Unit(clicker)), LidOpen(Unit(clicker)));
         processing = false;
     }
 
-    private IEnumerator SwingLid(float from, float to)
+    private IEnumerator SlideLid(Vector3 from, Vector3 to)
     {
         if (lidPivot == null) yield break;
         float t = 0f, seconds = Mathf.Max(0.05f, lidSeconds);
         while (t < 1f)
         {
             t += Time.deltaTime / seconds;
-            float e = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
-            lidPivot.localRotation = Quaternion.Euler(Mathf.Lerp(from, to, e), 0f, 0f);
+            lidPivot.localPosition = Vector3.Lerp(from, to, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
             yield return null;
         }
     }

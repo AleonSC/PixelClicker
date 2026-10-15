@@ -9,3 +9,6 @@ Moved from CLAUDE.md. The script header comments and `CLAUDE.md` index point her
 ## Inventory currency groups (PixelUI.Refresh, CurrencyGroup)
 
 The Currency tab lists the pixel rows in GROUPS under foldable headers (click a header, '- PURE' / '+ PURE'; folded keys saved in PlayerPrefs `PixelClicker.Setting.InventoryFolded`, global): **Pure** = White..Blue (the base colours, the shop's money), **Composite: <Skill>** = a skill pack's goods (`PixelSkills.PackOfType`; Wood belongs to Woodcutting), one group per skill, **Exotic** = everything else (Glass, Mirror, Vacuum, Obsidian, Luminescent, Ghost, Meteor, Solar, Singularity, Dragon Cubes...). The Ultra row stays above all of them. The pinned (compact) Inventory shows the same order with no headers. Naming rule: 'Pure' is reserved for the base colours; there is no 'Raw' / 'Refined' ladder (refined results would be crafted items in Materials, not currency tiers).
+
+
+The Consumables tab opens on its **Devices** sub-tab by default (`PixelUI.consumableSubTab` starts at 1).

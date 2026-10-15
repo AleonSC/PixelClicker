@@ -618,7 +618,7 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.Recycler,
             displayName = "Recycler",
-            description = "An open bin that stays until you remove it. Drop old pixels (husks) into it with Pixel Grabbing - up to 12. Press the red button on its front: the lid shuts and every husk inside is recycled into 10% of its value as currency of its own type.",
+            description = "Drop up to 12 old pixels in, then press its red button: the lid closes and each one pays back 10% of its value.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
