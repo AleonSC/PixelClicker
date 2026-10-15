@@ -1057,3 +1057,4 @@
 [2026-10-15 13:20 UTC] Recycler: carrying it no longer lets husks glitch through (carried things now move through physics and push husks aside), and it has a small hatch in the back wall you can click open / shut in first person to toss husks in by hand.
 [2026-10-15 13:21 UTC] Hold meter: it now fades out (0.35 s) when you move off the cube instead of vanishing at once (Inspector: meterFadeSeconds).
 [2026-10-15 13:24 UTC] Recycler: the back hatch and its frame glow and gently pulse yellow while your first person crosshair is on it (Inspector: hatchHighlightColor).
+[2026-10-15 13:27 UTC] Carrying the Recycler (and the crate / bait bucket) is gentler: it moves at most 7 units a second and husks it shoves are slowed to 2.5, so they slide aside instead of flying off (Inspector: maxCarrySpeed, pushedSpeedCap).

@@ -7,7 +7,7 @@
 //     (PixelHandCursor), left-drag moves the root over the floor plane (kept on screen) with the fist cursor, scroll / Q / E turn it while dragging
 //     (PixelConsumables.TurnInput). Over(ray) / Dragging tell the owner the pointer is the handles'; static Hot (hovering or dragging any handles)
 //     is part of PixelClicker.ExternalClickBlock and PixelGrab's guard. 'Blocked' (a Func the owner sets) pauses it, e.g. while the Recycler works.
-//   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
+//   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through; it moves at most maxCarrySpeed (7 u/s) and husks it shoves are slowed to pushedSpeedCap (2.5 u/s) so they slide aside instead of flying. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -43,12 +43,52 @@ public class PixelCarryHandles : MonoBehaviour
     private Vector3 targetPos;
     private Quaternion targetRot;
 
+    [Tooltip("Fastest the carried thing moves towards the mouse (units per second): slower = gentler pushes on husks in the way.")]
+    [SerializeField] private float maxCarrySpeed = 7f;
+    [Tooltip("Husks shoved by the carried thing are slowed to at most this speed (units per second), so they slide aside instead of flying off.")]
+    [SerializeField] private float pushedSpeedCap = 2.5f;
+
+    private readonly Collider[] nearby = new Collider[64];
+
     private void FixedUpdate()
     {
-        if (!hasTarget || body == null) return;
-        body.MovePosition(targetPos);
-        body.MoveRotation(targetRot);
-        hasTarget = false;
+        if (body == null) return;
+        if (hasTarget)
+        {
+            float step = Mathf.Max(0.1f, maxCarrySpeed) * Time.fixedDeltaTime;
+            Vector3 next = Vector3.MoveTowards(body.position, targetPos, step);
+            body.MovePosition(next);
+            body.MoveRotation(Quaternion.RotateTowards(body.rotation, targetRot, 360f * Time.fixedDeltaTime));
+            if ((next - targetPos).sqrMagnitude < 0.000001f && Quaternion.Angle(body.rotation, targetRot) < 0.1f) hasTarget = false;
+        }
+        if (dragging || hasTarget) CalmPushed();
+    }
+
+    /// <summary>Loose rigidbodies (husks) next to the carried thing are slowed down, so being shoved never flings them across the floor.</summary>
+    private void CalmPushed()
+    {
+        Bounds b = new Bounds(transform.position, Vector3.zero);
+        bool any = false;
+        foreach (Collider c in GetComponentsInChildren<Collider>())
+        {
+            if (c == null || c.isTrigger) continue;
+            if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
+        }
+        if (!any) return;
+        b.Expand(0.6f);
+        int n = Physics.OverlapBoxNonAlloc(b.center, b.extents, nearby, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+        float cap = Mathf.Max(0.1f, pushedSpeedCap);
+        for (int i = 0; i < n; i++)
+        {
+            Rigidbody rb = nearby[i] != null ? nearby[i].attachedRigidbody : null;
+            if (rb == null || rb == body || rb.isKinematic) continue;
+#if UNITY_6000_0_OR_NEWER
+            if (rb.linearVelocity.sqrMagnitude > cap * cap) rb.linearVelocity = rb.linearVelocity.normalized * cap;
+#else
+            if (rb.velocity.sqrMagnitude > cap * cap) rb.velocity = rb.velocity.normalized * cap;
+#endif
+            if (rb.angularVelocity.sqrMagnitude > 25f) rb.angularVelocity = rb.angularVelocity.normalized * 5f;
+        }
     }
 
     private Vector3 CurrentPos => hasTarget ? targetPos : transform.position;
