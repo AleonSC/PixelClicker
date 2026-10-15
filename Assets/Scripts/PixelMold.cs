@@ -7,7 +7,7 @@
 //   spreadWidths old-pixel widths (a faint green disc on the floor, up to maxWidths). Right click (DefuseHazard) / the block leaving only STOPS the spreading - the zone stays and then
 //   fades by itself after zoneHoldSeconds + zoneFadeSeconds. Every infectInterval s the zone infects the old pixels lying inside it (PixelMoldy: a green shell that darkens; the pixel dies
 //   after killSeconds - the timer waits while it is held). SHAKE a held moldy pixel (PixelMoldy.FixedUpdate adds up the change of velocity of the dragged body) to shake the mold off:
-//   shakeNeeded cleans it and gives cleanImmuneSeconds (OldPixelInfo.moldImmuneUntil) so it is not re-infected at once. Not saved: a loaded game has no zone / mold.
+//   shakeNeeded cleans it and gives cleanImmuneSeconds (OldPixelInfo.moldImmuneUntil) so it is not re-infected at once, and gives cleanXp (3) Foraging XP (GiveCleanXp). The shell is a pale blue-green fuzz that turns whiter (moldRipeColor) as the pixel nears death - never dark, so moldy husks don't look like Truffles. Not saved: a loaded game has no zone / mold.
 //   GLOW: PixelMold.TryAttachGlow (called from PixelClicker.SpawnFallingCopy) gives a fresh Berry / Mushroom / Herb / Truffle old pixel a glowGlowChance chance to be a glowing variant;
 //   it only starts to glow (PixelForageGlow, shell fades in and pulses) once OldPixelDespawn.AgeFraction reaches glowStartFraction (0.5 = halfway through its lifespan).
 //   The glow is a look only for now (no extra pay). Also not saved.
@@ -41,7 +41,12 @@ public class PixelMold : MonoBehaviour
     [Tooltip("How often (seconds) the zone infects old pixels lying inside it. 0 = the default (0.5).")]
     [SerializeField] private float infectInterval = 0f;
     [Tooltip("Colour of the zone on the floor and the mold shells on infected pixels.")]
-    [SerializeField] private Color moldColor = new Color(0.45f, 0.75f, 0.25f, 1f);
+    [SerializeField] private Color moldColor = new Color(0.62f, 0.95f, 0.8f, 1f);
+    [Tooltip("Colour a mold shell grows towards as the pixel is about to die (a pale white fuzz - kept light so moldy husks never look like dark Truffles).")]
+    [SerializeField] private Color moldRipeColor = new Color(0.9f, 0.98f, 0.93f, 1f);
+    [Min(0f)]
+    [Tooltip("Foraging XP for shaking the mold off one husk.")]
+    [SerializeField] private float cleanXp = 3f;
 
     [Header("Infected pixels")]
     [Min(0f)]
@@ -73,6 +78,15 @@ public class PixelMold : MonoBehaviour
     public float CleanImmune => cleanImmuneSeconds > 0f ? cleanImmuneSeconds : 8f;
     public float GlowStart => glowStartFraction > 0f ? glowStartFraction : 0.5f;
     public Color MoldColor => moldColor;
+    public Color MoldRipeColor => moldRipeColor;
+
+    /// <summary>Shaking the mold off a husk trains Foraging (cleanXp, through the normal XP path with its popup).</summary>
+    public void GiveCleanXp()
+    {
+        PixelSkills s = PixelSkills.Instance;
+        PixelSkills.SkillPack pack = s != null ? s.Find(PixelSkills.ForagingId) : null;
+        if (pack != null && cleanXp > 0f) s.AddXp(pack, cleanXp);
+    }
 
     private PixelClicker clicker;
     private Vector3 center;
@@ -265,7 +279,7 @@ public class PixelMoldy : MonoBehaviour
         float k = Mathf.Clamp01(timer / owner.KillSeconds);
         if (mat != null)
         {
-            Color c = Color.Lerp(owner.MoldColor, new Color(0.12f, 0.16f, 0.07f), k);
+            Color c = Color.Lerp(owner.MoldColor, owner.MoldRipeColor, k);   // (pale fuzz, never dark: a moldy husk must not look like a Truffle)
             c.a = Mathf.Lerp(0.35f, 0.8f, k) + (held ? 0.1f * Mathf.Sin(Time.time * 30f) : 0f);
             mat.color = c;
         }
@@ -282,6 +296,7 @@ public class PixelMoldy : MonoBehaviour
         if (info != null) info.moldImmuneUntil = Time.time + owner.CleanImmune;
         PixelFarmFx.Break(PixelClicker.PixelType.Mold, transform.position, transform.lossyScale.x, owner.MoldColor);
         PixelAudio.Play("click");
+        owner.GiveCleanXp();   // cleaning a moldy husk trains Foraging
         Transform shellT = transform.Find("Shell");
         if (shellT != null) Destroy(shellT.gameObject);
         Destroy(this);

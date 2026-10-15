@@ -825,10 +825,10 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Berry, "Berry Pixels", new Color(0.75f, 0.15f, 0.35f, 1f), 1, 3, 1.0f),
                 Block(PixelClicker.PixelType.Mushroom, "Mushroom Pixels", new Color(0.82f, 0.4f, 0.3f, 1f), 2, 4, 0.6f),
                 Block(PixelClicker.PixelType.Herb, "Herb Pixels", new Color(0.3f, 0.7f, 0.35f, 1f), 1, 2, 0.9f),
-                Block(PixelClicker.PixelType.Truffle, "Truffle Pixels", new Color(0.34f, 0.23f, 0.17f, 1f), 3, 30, 0.1f),
+                Block(PixelClicker.PixelType.Truffle, "Truffle Pixels", new Color(0.16f, 0.1f, 0.07f, 1f), 3, 30, 0.1f),
                 Block(PixelClicker.PixelType.Weeds, "Weeds", new Color(0.55f, 0.62f, 0.35f, 1f), 1, 1, 1.0f),
                 // The two hazards: ONE left click sets them off, ONE right click clears them (a reaction check). Mold molds every husk on the field; the Toadstool makes the cube dodge.
-                Block(PixelClicker.PixelType.Mold, "Mold", new Color(0.4f, 0.55f, 0.25f, 1f), 1, 0, 0.05f),
+                Block(PixelClicker.PixelType.Mold, "Mold", new Color(0.62f, 0.92f, 0.78f, 1f), 1, 0, 0.05f),
                 Block(PixelClicker.PixelType.Toadstool, "Toadstool", new Color(0.62f, 0.25f, 0.65f, 1f), 1, 0, 0.05f),
             }
         };

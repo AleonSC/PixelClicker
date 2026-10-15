@@ -2008,6 +2008,22 @@ public partial class PixelClicker : MonoBehaviour
             looksVersion = 61;
         }
 
+        if (looksVersion < 62)
+        {
+            // Mold (pale fuzzy blue-green, glowing) and Truffle (near-black and glossy) were too alike: both replaced.
+            System.Collections.Generic.List<PixelLook> list62 = new System.Collections.Generic.List<PixelLook>(looks ?? new PixelLook[0]);
+            PixelLook[] defaults62 = PixelLooks.CreateDefaults();
+            foreach (PixelType t in new[] { PixelType.Mold, PixelType.Truffle })
+            {
+                PixelLook def = PixelLooks.Find(defaults62, t);
+                if (def == null) continue;
+                list62.RemoveAll(l => l != null && l.type == t);
+                list62.Add(def);
+            }
+            looks = list62.ToArray();
+            looksVersion = 62;
+        }
+
         if (pixelRenderer != null)
         {
             // A deleted / missing material shows as pink: build a plain one so the game still works.

@@ -586,7 +586,8 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.Herb, useColor = true, color = new Color(0.3f, 0.7f, 0.35f, 1f), metallic = 0f, smoothness = 0.25f, basicSurface = PixelLook.BasicSurface.Grain,
                             outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.04f, outlineShadeOfTier = true, outlineShade = -0.35f, outlineStrength = 0.7f,
                             customPhysics = true, bounce = 0.3f, friction = 0.6f, gravityMultiplier = 0.5f, wobble = true, wobbleAmount = 0.05f, farmFx = PixelLook.FarmAmbient.Leaves },
-            new PixelLook { type = PixelClicker.PixelType.Truffle, useColor = true, color = new Color(0.34f, 0.23f, 0.17f, 1f), metallic = 0.1f, smoothness = 0.55f, emission = 0.1f, shine = true,
+            // (Truffle = a near-black, glossy lump with a gold sparkle; Mold = a pale, fuzzy, faintly glowing blue-green: never confused - looksVersion 62.)
+            new PixelLook { type = PixelClicker.PixelType.Truffle, useColor = true, color = new Color(0.16f, 0.1f, 0.07f, 1f), metallic = 0.35f, smoothness = 0.82f, emission = 0.04f, shine = true,
                             jagged = true, farmFx = PixelLook.FarmAmbient.Sparkle },
             new PixelLook { type = PixelClicker.PixelType.Weeds, useColor = true, color = new Color(0.55f, 0.62f, 0.35f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain },
             new PixelLook { type = PixelClicker.PixelType.Acorn, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(0.68f, 0.46f, 0.22f, 1f), metallic = 0f, smoothness = 0.5f, basicSurface = PixelLook.BasicSurface.Grain, blob = true },
@@ -596,8 +597,9 @@ public static class PixelLooks
             new PixelLook { type = PixelClicker.PixelType.GreatOak, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(0.42f, 0.3f, 0.18f, 1f), metallic = 0f, smoothness = 0.08f, blockSurface = PixelLook.BlockSurface.Wood,
                             jagged = true, farmFx = PixelLook.FarmAmbient.Leaves },
             new PixelLook { type = PixelClicker.PixelType.WoodChips, customPhysics = true, bounce = 0.05f, friction = 0.9f, gravityMultiplier = 1f, useColor = true, color = new Color(0.82f, 0.62f, 0.36f, 1f), metallic = 0f, smoothness = 0.05f, basicSurface = PixelLook.BasicSurface.Grain, jagged = true },
-            new PixelLook { type = PixelClicker.PixelType.Mold, useColor = true, color = new Color(0.4f, 0.55f, 0.25f, 1f), metallic = 0f, smoothness = 0.1f, basicSurface = PixelLook.BasicSurface.Grain,
-                            blob = true, wobble = true, wobbleAmount = 0.05f, wobbleSpeed = 3f, farmFx = PixelLook.FarmAmbient.Spores },
+            new PixelLook { type = PixelClicker.PixelType.Mold, useColor = true, color = new Color(0.62f, 0.92f, 0.78f, 1f), metallic = 0f, smoothness = 0.02f, emission = 0.28f, basicSurface = PixelLook.BasicSurface.Grain,
+                            outline = true, outlineUsesTierColor = false, outlineBevel = true, outlineThickness = 0.05f, outlineShadeOfTier = true, outlineShade = 0.35f, outlineStrength = 0.6f,
+                            blob = true, wobble = true, wobbleAmount = 0.06f, wobbleSpeed = 2.5f, farmFx = PixelLook.FarmAmbient.Spores },
             new PixelLook { type = PixelClicker.PixelType.Toadstool, useColor = true, color = new Color(0.62f, 0.25f, 0.65f, 1f), metallic = 0f, smoothness = 0.35f, emission = 0.3f, basicSurface = PixelLook.BasicSurface.Mosaic,
                             blob = true, wobble = true, wobbleAmount = 0.07f, wobbleSpeed = 7f, farmFx = PixelLook.FarmAmbient.Spores },
 

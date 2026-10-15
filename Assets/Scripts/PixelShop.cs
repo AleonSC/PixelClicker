@@ -1407,6 +1407,28 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 37)
+        {
+            // Mold and Truffle got clearly different colours (their Inventory swatches too): Mold pale blue-green, Truffle near-black.
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type == PixelClicker.PixelType.Mold) t.color = new Color(0.62f, 0.92f, 0.78f, 1f);
+                    if (t.type == PixelClicker.PixelType.Truffle) t.color = new Color(0.16f, 0.1f, 0.07f, 1f);
+                }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && p.rewardTiers != null)
+                        foreach (PixelClicker.PixelTier t in p.rewardTiers)
+                        {
+                            if (t == null) continue;
+                            if (t.type == PixelClicker.PixelType.Mold) t.color = new Color(0.62f, 0.92f, 0.78f, 1f);
+                            if (t.type == PixelClicker.PixelType.Truffle) t.color = new Color(0.16f, 0.1f, 0.07f, 1f);
+                        }
+            packDataVersion = Mathf.Max(packDataVersion, 37);
+            changed = true;
+        }
+
         if (packDataVersion < 36)
         {
             // The Woodcutter's Pack (the first skill pack, Cubie's 'starter set') costs a little more: 250 White (was 150).
