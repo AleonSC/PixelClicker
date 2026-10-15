@@ -5,7 +5,7 @@
 //   showPauseButtonOnScreen): sets Time.timeScale = 0, Resume (alone) / Save-Load + Stats / Settings + Game Guide (Controls, How To
 //   Play, Database tabs) / Give feedback (alone) / Quit (alone; opens a 'Quit to...' box with Desktop and Main menu - Main menu saves,
 //   then PixelTitleScreen.ReturnToMenu()) (MenuEntry.fullRow) (Restart now lives on the Stats screen, Report Folder moved to the Dev
-//   Tools panel; the Stats screen shows one total "Potions used" row instead of the potions drop-down) (Settings: tick boxes for cube
+//   Tools panel; the Stats screen shows one total "Potions used" row instead of the potions drop-down; a search box over the Stats list filters rows by name / value and shows a section when its heading or any row matches, StatRowsShown) (Settings: tick boxes for cube
 //   rotation, pulsing, "Abbreviate numbers" and "Hide purchased shop items" (static PixelShop.HidePurchased, PlayerPrefs;
 //   HiddenAsPurchased in the shop list keeps a bought pack listed while it still has upgrades to buy) ->
 //   PixelClicker.AllowRotation/AllowPulsing and static PixelClicker.AbbreviateNumbers (read by FormatNumber, PixelUI, PixelLog and the
@@ -244,6 +244,10 @@ public class PixelPauseMenu : MonoBehaviour
 
     [Tooltip("Title of the Stats section.")]
     [SerializeField] private string statsTitle = "Stats";
+    [Tooltip("Placeholder in the Stats screen's search box (filters the rows by name or value as you type).")]
+    [SerializeField] private string statsSearchPlaceholder = "Search stats...";
+    [Tooltip("Shown in the Stats list when the search matches nothing.")]
+    [SerializeField] private string statsNoMatchText = "No stats match your search.";
 
     [Tooltip("Title of the Settings section.")]
     [SerializeField] private string settingsTitle = "Settings";
@@ -613,6 +617,7 @@ public class PixelPauseMenu : MonoBehaviour
     private string statsSignature = "";
     private RectTransform statsPanelRect, statsRestartRect;
     private float statsContentHeight, statsListTop;
+    private TMP_InputField statsSearchField;
     private GameObject keysPanel, playlistPanel;
     private Toggle muteMusicToggle;
     private readonly List<Toggle> playlistToggles = new List<Toggle>();
@@ -1536,6 +1541,24 @@ public class PixelPauseMenu : MonoBehaviour
     {
         statsPanel = BuildSectionPanel("Stats Panel", statsTitle, out float y);
         statsPanelRect = statsPanel.GetComponent<RectTransform>();
+
+        // Search box over the list: typing shows only the rows (and sections) whose name or value matches.
+        float searchH = rowFontSize * 1.5f;
+        statsSearchField = PixelUIKit.CreateInputField(font, statsPanel.transform, "Stats Search", new Vector2(0f, searchH),
+                                                       tickBoxColor, textColor, rowFontSize * 0.85f, statsSearchPlaceholder);
+        RectTransform ssr = statsSearchField.GetComponent<RectTransform>();
+        ssr.anchorMin = new Vector2(0f, 1f);
+        ssr.anchorMax = new Vector2(1f, 1f);
+        ssr.pivot = new Vector2(0.5f, 1f);
+        ssr.sizeDelta = new Vector2(-60f, searchH);
+        ssr.anchoredPosition = new Vector2(0f, -y);
+        statsSearchField.onValueChanged.AddListener(_ =>
+        {
+            RebuildStatRows();
+            PixelUIKit.UpdateScrollView(statsScroll, statsBar, statsContentHeight, statsViewHeight);
+        });
+        StyleSearchBox(statsSearchField);
+        y += searchH + 10f;
         statsListTop = y;
 
         // The stats scroll when there are more than fit.
@@ -3222,11 +3245,10 @@ public class PixelPauseMenu : MonoBehaviour
         else
         {
             int v = 0;
-            bool hidden = false;
+            bool[] shown = StatRowsShown(lines);
             for (int i = 0; i < lines.Count; i++)
             {
-                if (lines[i].header) { hidden = !expandedStatSections.Contains(lines[i].label); continue; }
-                if (hidden) continue;
+                if (lines[i].header || !shown[i]) continue;
                 if (v < statValueTexts.Count) statValueTexts[v++].text = lines[i].value;
             }
         }
@@ -3272,23 +3294,69 @@ public class PixelPauseMenu : MonoBehaviour
         float cy = 0f;
         if (lines != null)
         {
-            bool hidden = false;
-            foreach (PixelStats.Line line in lines)
+            bool[] shown = StatRowsShown(lines);
+            bool searching = StatsQuery.Length > 0;
+            bool anyShown = false;
+            for (int i = 0; i < lines.Count; i++)
             {
+                if (!shown[i]) continue;
+                anyShown = true;
+                PixelStats.Line line = lines[i];
                 if (line.header)
                 {
-                    hidden = !expandedStatSections.Contains(line.label);
-                    AddStatSectionHeader(statsContent, line.label, hidden, ref cy);
+                    // While searching, matching sections show open (the "-" sign); clicking still folds them for later.
+                    bool folded = !searching && !expandedStatSections.Contains(line.label);
+                    AddStatSectionHeader(statsContent, line.label, folded, ref cy);
                 }
-                else if (!hidden)
+                else
                 {
                     TMP_Text value = AddStatRow(statsContent, line.label, ref cy);
                     value.text = line.value;
                     statValueTexts.Add(value);
                 }
             }
+            if (searching && !anyShown)
+            {
+                TMP_Text none = AddStatRow(statsContent, statsNoMatchText, ref cy);
+                none.text = "";
+            }
         }
         statsContentHeight = cy;
+    }
+
+    /// <summary>The Stats search text, trimmed and lower case ("" = no search).</summary>
+    private string StatsQuery => statsSearchField != null && statsSearchField.text != null
+        ? statsSearchField.text.Trim().ToLowerInvariant() : "";
+
+    /// <summary>
+    /// Which of the Stats lines are on screen. No search: every heading, plus the rows of unfolded sections. Searching: a row
+    /// shows when its name or value matches (or its section heading matches), and a heading shows when it or any of its rows match.
+    /// </summary>
+    private bool[] StatRowsShown(List<PixelStats.Line> lines)
+    {
+        bool[] shown = new bool[lines.Count];
+        string q = StatsQuery;
+        int headerAt = -1;
+        bool headerMatch = false, open = true;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            PixelStats.Line l = lines[i];
+            if (l.header)
+            {
+                headerAt = i;
+                open = expandedStatSections.Contains(l.label);
+                headerMatch = q.Length > 0 && l.label != null && l.label.ToLowerInvariant().Contains(q);
+                shown[i] = q.Length == 0 || headerMatch;
+                continue;
+            }
+            if (q.Length == 0) { shown[i] = open; continue; }
+            bool match = headerMatch
+                         || (l.label != null && l.label.ToLowerInvariant().Contains(q))
+                         || (l.value != null && l.value.ToLowerInvariant().Contains(q));
+            shown[i] = match;
+            if (match && headerAt >= 0) shown[headerAt] = true;
+        }
+        return shown;
     }
 
     /// <summary>Two half-width buttons side by side on one row (keeps the menu short).</summary>
