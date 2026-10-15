@@ -57,7 +57,7 @@ public class PixelFreeCam : MonoBehaviour
     {
         clicker = c;
         PixelZoom.ResetNow();
-        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) return false;
+        if (PixelPauseMenu.IsPaused || PixelCalm.CameraBusy) return false;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return false;
         cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return false;
@@ -94,7 +94,7 @@ public class PixelFreeCam : MonoBehaviour
     private void Update()
     {
         if (!Active) return;
-        if (cam == null || clicker == null || PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) { Finish(); return; }
+        if (cam == null || clicker == null || PixelCalm.CameraBusy) { Finish(); return; }
         if (Home != null) Home.aspect = cam.aspect;
         Vector2 pointer = PixelInput.PointerPosition();
         bool playable = !PixelPauseMenu.IsPaused && !PixelKeys.Typing && (Time.timeScale > 0f || PixelTimeStop.IsStopped);

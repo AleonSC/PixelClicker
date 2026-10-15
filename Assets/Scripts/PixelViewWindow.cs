@@ -157,7 +157,7 @@ public class PixelViewWindow : MonoBehaviour
     private void Update()
     {
         if (disableViewWindow || clicker == null) return;
-        bool blocked = PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelTitleScreen.Reversing;
+        bool blocked = PixelCalm.InMenu;
         if (!blocked && !PixelCameraIntro.Moving && !PixelMinigame.TakeoverActive)
         {
             if (pendingApply) ApplySaved();

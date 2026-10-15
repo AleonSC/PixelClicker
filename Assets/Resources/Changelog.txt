@@ -1043,3 +1043,4 @@
 [2026-10-15 12:03 UTC] No more blocks left out: skill blocks and hazards now have pets and achievements, skill blocks have Value upgrades (capped by their own skill) and every block can go into 2-type combo potions (3-type combos stay the basic / special pixels only, to keep the potion count sane).
 [2026-10-15 12:09 UTC] To-do: added the 3-type combo potion rework (build combos on demand so skill blocks can be in 3-type combos).
 [2026-10-15 12:14 UTC] Block Hold: every click while you hold a stake block adds 0.1 to the stake, and every 5 clicks give the hold meter 1% energy (your own clicks only; Inspector: stakePerClick, energyEveryClicks, energyPerClicks, autoClicksCount).
+[2026-10-15 12:29 UTC] Cleanup: one shared set of 'what is going on' checks (PixelCalm: in a menu, camera busy, calm moment for a tip) replaces the long copied conditions in the tutorials, perk popups, camera controls, saving and the View window.

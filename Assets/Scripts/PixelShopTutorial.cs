@@ -115,8 +115,7 @@ public class PixelShopTutorial : MonoBehaviour
         if (PixelStats.Total(DoneKey) >= 1d || !PixelHints.TipsEnabled) return;   // remembered per save (the tip flag in PlayerPrefs is global, so a new game never replayed it)
 
         // Wait for a calm moment: title screen over, the new-game intro finished, no other tip, no minigame takeover, not paused.
-        if (PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide || PixelGuideVendor.Pending || PixelGuideVendor.Visiting || PixelNotice.IsShowing || PixelPauseMenu.IsPaused ||
-            PixelMinigame.TakeoverActive || Time.timeScale <= 0f)
+        if (!PixelCalm.ForTip)
         {
             readyTimer = 0f;
             return;

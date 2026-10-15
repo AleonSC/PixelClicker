@@ -1105,7 +1105,7 @@ public partial class PixelSkills : MonoBehaviour
     {
         if (perkNotices.Count == 0) return;
         if (!PixelHints.TipsEnabled) { perkNotices.Clear(); return; }
-        if (PixelNotice.IsShowing || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PixelMinigame.TakeoverActive || PixelGuideVendor.Visiting) return;
+        if (!PixelCalm.ForTip) return;
         PerkNotice notice = perkNotices.Dequeue();
         int index = packs.FindIndex(p => p.id == notice.packId);
         if (!notice.inWindow || !built || index < 0 || PixelTutorialDim.Active) { PixelNotice.Show(notice.text); return; }

@@ -193,7 +193,7 @@ public class PixelOrbitCamera : MonoBehaviour
     {
         if (disableOrbit || Active || clicker == null || clicker.PixelTransform == null) return false;
         PixelZoom.ResetNow();   // (the orbit starts from the normal view, not a zoomed one)
-        if (PixelPauseMenu.IsPaused || PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) return false;
+        if (PixelPauseMenu.IsPaused || PixelCalm.CameraBusy) return false;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return false;
         cam = clicker.TargetCamera != null ? clicker.TargetCamera : Camera.main;
         if (cam == null) return false;
@@ -255,7 +255,7 @@ public class PixelOrbitCamera : MonoBehaviour
     {
         if (!Active) return;
         if (cam == null || clicker == null || clicker.PixelTransform == null) { Finish(true); return; }
-        if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) { Finish(true); return; }
+        if (PixelCalm.CameraBusy) { Finish(true); return; }
         if (!returning) foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) { Exit(); break; }   // (a round that moves the cube about on screen needs the normal view)
         if (orbitHome != null) orbitHome.aspect = cam.aspect;
         if (returning) return;

@@ -192,7 +192,7 @@ public static class PixelSaveShots
         }
     }
 
-    private static bool GameVisible => !PixelPauseMenu.IsPaused && !PixelTitleScreen.Showing && !PixelTitleScreen.Reversing && Screen.width > 8 && Screen.height > 8;
+    private static bool GameVisible => !PixelCalm.InMenu && Screen.width > 8 && Screen.height > 8;
 
     private class ShotRunner : MonoBehaviour
     {

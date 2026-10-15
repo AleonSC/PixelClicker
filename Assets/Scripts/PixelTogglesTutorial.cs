@@ -82,8 +82,7 @@ public class PixelTogglesTutorial : MonoBehaviour
         if (running || !Due) { ready = 0f; return; }
         PixelShop shop = PixelFind.First<PixelShop>();
         bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;
-        if (shopTutorialDue || (shop != null && shop.WindowOpen) || !PixelToggles.TabVisible || PixelTutorialDim.Active || PixelTitleScreen.Showing || PixelHints.IntroHoldsGuide ||
-            PixelGuideVendor.Pending || PixelGuideVendor.Visiting || PixelNotice.IsShowing || PixelPauseMenu.IsPaused || PixelMinigame.TakeoverActive || Time.timeScale <= 0f ||
+        if (shopTutorialDue || (shop != null && shop.WindowOpen) || !PixelToggles.TabVisible || !PixelCalm.ForTip ||
             PixelWindows.AnyOpen() || PixelFind.First<PixelSkills>() is PixelSkills sk && sk.TutorialRunning)
         {
             ready = 0f;

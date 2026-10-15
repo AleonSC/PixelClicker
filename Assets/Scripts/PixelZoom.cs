@@ -89,7 +89,7 @@ public class PixelZoom : MonoBehaviour
 
     private bool NeedsNormalView()
     {
-        if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelCameraIntro.Moving || PixelMinigame.TakeoverActive) return true;
+        if (PixelCalm.CameraBusy) return true;
         if (PixelFirstPerson.Active || PixelOrbitCamera.Active || PixelFreeCam.Active) return true;
         foreach (PixelMinigame m in PixelMinigame.All) if (m != null && m.Busy && m.NeedsNormalCamera) return true;
         return false;

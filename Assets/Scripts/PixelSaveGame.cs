@@ -530,7 +530,7 @@ public class PixelSaveGame : MonoBehaviour
         float interval = AutoSaveInterval;
         if (interval <= 0f) return;
         // The timer only runs while the game is being played: not on the main menu, not while the pause menu (or the Save / Load window) is open.
-        if (PixelTitleScreen.Showing || PixelTitleScreen.Reversing || PixelPauseMenu.IsPaused) return;
+        if (PixelCalm.InMenu) return;
 
         autoSaveTimer += Time.unscaledDeltaTime;
         if (autoSaveTimer >= interval)
