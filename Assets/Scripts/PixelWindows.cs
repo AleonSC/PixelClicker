@@ -4,7 +4,7 @@
 //   AnyOpenExcept(this) turns true; the event log fades out whenever any registered window opens, see PixelHints.Update). Static
 //   registry of closable windows (placing a device 100, shop upgrades window 40, shop 30, log 20, inventory 10). Escape closes the
 //   topmost one; the pause menu only opens on Escape when none is open. New windows should PixelWindows.Register(this, priority,
-//   isOpen, close) and Unregister(this) in OnDestroy.
+//   isOpen, close) and Unregister(this) in OnDestroy. Entries whose owner was destroyed are dropped on every scene unload (Restart).
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,15 @@ public static class PixelWindows
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
     {
         entries.Clear();
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+
+    // Restart reloads the scene: windows whose owner was destroyed without Unregister would stay listed, and an open-check that reads
+    // a plain field of the dead owner (no exception) kept AnyOpen() true in the new game. Only destroyed owners are dropped.
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+    {
+        entries.RemoveAll(e => e.owner is UnityEngine.Object o && o == null);
     }
 
     private class Entry

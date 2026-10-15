@@ -1081,3 +1081,4 @@
 [2026-10-15 14:59 UTC] Shaking the mold off a moldy husk now gives 3 Foraging XP.
 [2026-10-15 15:09 UTC] Fixed old status lines (like the Oak tree bar) coming back after Settings > Restart: the top status lines are now cleared whenever the scene reloads.
 [2026-10-15 15:12 UTC] Fixed the Standard level 2 popup never showing early: tips and popups no longer wait for the whole time before Cubie's second visit, only while one of his visits is actually due (PixelGuideVendor.AboutToVisit).
+[2026-10-15 15:18 UTC] Restart audit: 11 scripts now clear leftover game state when the scene reloads (minigame takeover flags and floor claims, a vendor visit in progress, Golden Hour / capacitor / transistor effects, frozen husks, hazard XP penalties, the belt editor, Cubie's shop hold and pointer, stale windows, the old game's tester objects, the last autosave picture, the rich-vein message and the title screen's played flag).

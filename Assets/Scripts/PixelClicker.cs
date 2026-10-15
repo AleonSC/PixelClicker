@@ -58,6 +58,20 @@ public partial class PixelClicker : MonoBehaviour
         FlyAwayLaunched = null;
         abbreviateCache = -1;
         WishMultiplier = 1f;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+
+    // Settings > Restart reloads the scene but statics survive it: game state from the old game (a Capacitor charge, a Transistor boost,
+    // the Golden Hour multiplier, a click block / spin hold of a round cut short) must not carry into the new one. Dev switches stay.
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene)
+    {
+        ExternalClickBlock = false;
+        HoldSpin = false;
+        ClickHint = false;
+        capacitorCharge = 0;
+        transistorBoost = 1d;
+        WishMultiplier = 1f;
     }
 
     // ------------------------------------------------------------------
@@ -5946,7 +5960,12 @@ public class OldPixelDespawn : MonoBehaviour
         DevNoDespawn = false;
         HoldAll = false;
         rateOwner = null;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
     }
+
+    // (Restart reloads the scene: a black hole / takeover round cut short must not leave every husk frozen or held in the new game)
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { Frozen = false; HoldAll = false; }
 
     private float lifetime, swellScale, swellSeconds, shrinkSeconds, age, phaseTime;
     private bool despawning, naturalEnd;

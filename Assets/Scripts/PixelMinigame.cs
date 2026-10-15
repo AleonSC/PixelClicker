@@ -13,6 +13,7 @@
 //   generically - a new minigame needs no changes to PixelShop or PixelSaveGame. For the dev tools' Despawn button a minigame must
 //   call Track(go) on everything it puts in the scene (roots, messages, effects) and override OnDespawned() to reset its busy flag /
 //   spawn timer (DespawnNow() stops its coroutines and destroys the tracked objects).
+//   TakeoverActive, AutoClickerPaused and the floor area claims are cleared on every scene unload (Settings > Restart).
 // ---------------------------------------------------
 using System.Collections.Generic;
 using UnityEngine;
@@ -39,7 +40,13 @@ public abstract class PixelMinigame : MonoBehaviour
         AutoClickerPaused = false;
         claims.Clear();
         registry.Clear();
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
     }
+
+    // Settings > Restart reloads the scene but statics survive it: a round cut short left TakeoverActive / AutoClickerPaused on, and a
+    // black hole's floor claim (its 'active' check reads the destroyed hole) kept blocking that spot in the new game.
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { TakeoverActive = false; AutoClickerPaused = false; claims.Clear(); }
 
     private static readonly List<PixelMinigame> registry = new List<PixelMinigame>();
 

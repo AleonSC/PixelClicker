@@ -57,7 +57,15 @@ public class PixelFeatureTester : MonoBehaviour
     private static PixelFeatureTester instance;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; }
+    private static void ResetStatics()
+    {
+        instance = null; kept = null;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+
+    // (Restart reloads the scene: the old game's loaded test objects must not be written into the new game's saves)
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { kept = null; }
 
     public static void Boot()
     {

@@ -135,7 +135,15 @@ public static class PixelSaveShots
     private static readonly Dictionary<string, KeyValuePair<long, Texture2D>> textures = new Dictionary<string, KeyValuePair<long, Texture2D>>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { cached = null; runner = null; textures.Clear(); }
+    private static void ResetStatics()
+    {
+        cached = null; runner = null; textures.Clear();
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded -= OnSceneUnloaded;
+        UnityEngine.SceneManagement.SceneManager.sceneUnloaded += OnSceneUnloaded;
+    }
+
+    // (Restart reloads the scene: a save made while paused must not get the old game's last picture; the runner lives on, DontDestroyOnLoad)
+    private static void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) { cached = null; }
 
     // The rolling copy only runs once the runner exists; start it with the game, otherwise the first manual save (made from the pause menu) has no picture to use.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
