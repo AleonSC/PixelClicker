@@ -1046,3 +1046,4 @@
 [2026-10-15 12:29 UTC] Cleanup: one shared set of 'what is going on' checks (PixelCalm: in a menu, camera busy, calm moment for a tip) replaces the long copied conditions in the tutorials, perk popups, camera controls, saving and the View window.
 [2026-10-15 12:35 UTC] To-do: set up one save version and one list of save upgrade steps before release.
 [2026-10-15 12:38 UTC] The pause menu has the music player too (bottom centre like the main menu, no MUSIC label; shows when the menu opens and on hover, and vanishes much faster), and both players have a new shuffle button next to the mute button (saved per save file).
+[2026-10-15 12:48 UTC] Recycler rework: holds 10 husks, pays back 50%, has a fancier model (pillars, metal rim, glowing band, status lamp), a slatted lid that stretches out of the inner back edge to cover it, and shakes harder and harder for 2 seconds before paying; nothing can be put in until it is done.

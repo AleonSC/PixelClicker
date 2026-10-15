@@ -119,7 +119,7 @@ public class PixelConsumables : MonoBehaviour
         Gauntlet = 17,
         /// <summary>Not consumed: a belt-laying tool on sale from Electrician level 5. Right-click starts placing conveyor belts (PixelFeatureTester.StartFeature); hold the right button on a belt to remove it.</summary>
         ConveyorBelt = 18,
-        /// <summary>Placed, permanent: an open bin (PixelRecycler). Drop husks in, press its button: the lid shuts and every husk inside pays back 10% of its value as currency.</summary>
+        /// <summary>Placed, permanent: an open bin (PixelRecycler). Drop husks in, press its button: the lid shuts and every husk inside pays back 50% of its value as currency.</summary>
         Recycler = 19,
     }
 
@@ -618,7 +618,7 @@ public class PixelConsumables : MonoBehaviour
         {
             kind = DeviceKind.Recycler,
             displayName = "Recycler",
-            description = "Drop up to 12 old pixels in, then press its red button: the lid closes and each one pays back 10% of its value.",
+            description = "Drop up to 10 husks in, then press its red button: the lid closes and each one pays back 50% of its value.",
             requiredType = PixelClicker.PixelType.White,
             costs = new[]
             {
@@ -1069,6 +1069,10 @@ public class PixelConsumables : MonoBehaviour
         if (devices != null)
             foreach (Device d in devices)
                 if (d != null && d.kind == DeviceKind.Gauntlet && d.displayName != null && d.displayName.StartsWith("Infinity")) { Device fresh = CreateDefaultGauntlet(); d.displayName = fresh.displayName; d.description = fresh.description; }   // renamed (Prime Gauntlet)
+
+        if (devices != null)
+            foreach (Device d in devices)
+                if (d != null && d.kind == DeviceKind.Recycler && d.description != null && d.description.Contains("up to 12")) d.description = CreateDefaultRecycler().description;   // 10 husks / 50% now
 
         if (devices != null)
             foreach (Device d in devices)
