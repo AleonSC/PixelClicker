@@ -1086,3 +1086,4 @@
 [2026-10-15 15:26 UTC] Standard now reaches level 2 at 380 XP (what level 4 used to take); its whole curve is 4.75x longer, still growing x1.5 per level.
 [2026-10-15 15:32 UTC] Every skill's XP curve now takes twice as long (new PixelSkills 'XP Curve Scale' setting, 2): Standard level 2 is at 760 XP, and every other skill's levels are doubled the same way.
 [2026-10-15 15:34 UTC] Did you know box docking reworked: no separate ? button any more - the box itself docks to the side at the height you drop it, slides into the side when docked, and slides out for a while (then back in) when a tip triggers; new Settings button 'Reset tips location' under the achievement popup reset.
+[2026-10-15 15:42 UTC] Block Hold's meter now lasts half as long at the start; new Standard perks Steady grip (level 3) and Firm grip (level 5) each add 10% of that starting length.

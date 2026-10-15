@@ -530,7 +530,16 @@ public partial class PixelSkills : MonoBehaviour
             if (pack.id == StandardId)
             {
                 if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
-                if (Mathf.Approximately(pack.baseXp, 80f)) pack.baseXp = 380f;   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
+                if (Mathf.Approximately(pack.baseXp, 80f)) pack.baseXp = 380f;
+                if (pack.perks != null && !System.Array.Exists(pack.perks, pk => pk != null && pk.text != null && pk.text.StartsWith("Steady grip")))
+                {
+                    // The grip perks (Block Hold starts at half length; level 3 and level 5 each add 10% of it): added to a saved Standard pack, kept in level order.
+                    System.Collections.Generic.List<Perk> withGrip = new System.Collections.Generic.List<Perk>(pack.perks);
+                    foreach (Perk def in StandardPerks())
+                        if (def.text.StartsWith("Steady grip") || def.text.StartsWith("Firm grip")) withGrip.Add(def);
+                    withGrip.Sort((x, y) => (x != null ? x.level : 0).CompareTo(y != null ? y.level : 0));
+                    pack.perks = withGrip.ToArray();
+                }   // level 2 now takes the 380 XP level 4 used to (the whole curve x4.75, growth stays 1.5)
                 if (pack.perks != null)   // the level 2 popup that introduces the skill
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP"))) perk.noticeText = StandardLevel2Notice;

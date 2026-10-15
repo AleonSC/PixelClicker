@@ -6,7 +6,8 @@
 //   (level-1) x lifetimePerLevel 5 s (old pixels last oldPixelLifetime 15 s by default, so Standard level 2 = 20 s; the field was
 //   renamed from fallingCopyLifetime so the old saved 6 s is dropped), added in PixelClicker.FallingCopyLifetime, which all old-pixel
 //   despawn timers read) and Roomy floor (StandardCapacityBonus = (level-3) x capacityPerLevel 5 from level 4, added to
-//   PixelClicker.OldPixelCap); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
+//   PixelClicker.OldPixelCap), Steady grip (level 3) and Firm grip (level 5): Block Hold's meter starts at half length and each adds 10% of that
+//   (PixelBlockHold.GripFactor reads the Standard level); 'Sharper clicks' (level 7) is still 'coming soon'. Standard shows level / XP bars in the Skills window
 //   and the tracker like any skill, has no bonus bank, filler, hazard or tree and does not count towards Mastery. Minigame bonus XP
 //   still skips Standard.
 //   Standard's XP popups and level-up log lines show from the very FIRST click (no longer only once a skill pack exists). Its level 2 perk carries the
@@ -87,7 +88,9 @@ public partial class PixelSkills
     private static Perk[] StandardPerks() => new[]
     {
         new Perk { level = 2, text = "Lingering pixels: old pixels last 5 seconds longer for every level", implemented = true, noticeText = StandardLevel2Notice },
+        new Perk { level = 3, text = "Steady grip: Block Hold lasts 10% longer", implemented = true },
         new Perk { level = 4, text = "Roomy floor: room for 5 more old pixels for every level", implemented = true },
+        new Perk { level = 5, text = "Firm grip: Block Hold lasts another 10% longer", implemented = true },
         new Perk { level = 7, text = "Sharper clicks: a small bonus to every pixel" },
     };
 }

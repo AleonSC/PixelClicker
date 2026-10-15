@@ -2,7 +2,7 @@
 // PixelBlockHold.cs
 //   Block Hold (shop pack with unlocksBlockHold, Upgrades tab, cheap while testing; component added by PixelShop / PixelClicker.Awake, Activate / Deactivate like the Bank):
 //   HOLD the RIGHT mouse button on the block on the cube to pull it out of the rotation (PixelClicker.TryPullLive: the cube rolls a new block at once, so you can keep clicking
-//   while it stays held). Letting go puts it back IN LINE (PixelClicker.ReturnHeldTier: it comes AFTER the block that is on the cube now, with the hits it had - RollTier hands it out - so a hazard that came up while you held is dealt with first and holding / releasing can never reroll the cube). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
+//   while it stays held). Letting go puts it back IN LINE (PixelClicker.ReturnHeldTier: it comes AFTER the block that is on the cube now, with the hits it had - RollTier hands it out - so a hazard that came up while you held is dealt with first and holding / releasing can never reroll the cube). The hold drains a meter (holdSeconds x GripFactor: half of it at the start - startHoldShare 0.5 - plus 10% of that half at Standard level 3 and again at level 5, gripPerkBoost); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
 //   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. All arc layers (track, glow, fill, ready pop) share ONE centre line (RingMid) and have round caps (PixelArcGraphic: a mesh band with round caps, no radial fill); the tip sits on that line and is about the bar's thickness. The meter only shows while the mouse is on the cube or a block is held (meterOnlyOnHover, 0.35 s grace while the next block materializes) and fades out over meterFadeSeconds (0.35) instead of vanishing. The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
@@ -115,7 +115,26 @@ public class PixelBlockHold : MonoBehaviour
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() { Instance = null; dotSprite = null; }
 
-    private float HoldSeconds => holdSeconds > 0f ? holdSeconds : 5f;
+    private float HoldSeconds => (holdSeconds > 0f ? holdSeconds : 5f) * GripFactor;
+
+    [Header("Grip (Standard perks)")]
+    [Range(0.05f, 1f)]
+    [Tooltip("Share of the full hold length you get at the start (0.5 = half). Standard's grip perks add to it.")]
+    [SerializeField] private float startHoldShare = 0.5f;
+    [Min(0f)]
+    [Tooltip("Each grip perk (Standard level 3 and level 5) adds this share of the STARTING hold length (0.1 = +10% of the halved hold).")]
+    [SerializeField] private float gripPerkBoost = 0.1f;
+
+    /// <summary>How much of the hold length the player has now: startHoldShare, + gripPerkBoost of it at Standard level 3 and again at level 5.</summary>
+    private float GripFactor
+    {
+        get
+        {
+            int lvl = PixelSkills.LevelOfId(PixelSkills.StandardId);
+            int perks = (lvl >= 3 ? 1 : 0) + (lvl >= 5 ? 1 : 0);
+            return Mathf.Clamp(startHoldShare, 0.05f, 1f) * (1f + gripPerkBoost * perks);
+        }
+    }
     private float RechargeSeconds => rechargeSeconds > 0f ? rechargeSeconds : 8f;
     private float ReleaseCooldown => releaseCooldownSeconds > 0f ? releaseCooldownSeconds : 0.5f;
     private float ExhaustCooldown => exhaustCooldownSeconds > 0f ? exhaustCooldownSeconds : 3f;
