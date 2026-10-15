@@ -201,7 +201,7 @@ public static class PixelBlockCatalog
         B(PixelType.Acorn, PixelTag.Standalone,
             guide: t => "Woodcutting block: an acorn. One click, pays a little. The trick is its OLD pixel: every acorn lying on the field raises the chance that a wood block turns into a Great Oak (they only have to be there - no gathering). With enough of them out the chance is far higher. Acorns despawn like other old pixels, so keep them coming."),
         B(PixelType.Pesticide, PixelTag.Standalone,
-            guide: t => "Woodcutting block: a canister of pesticide. It takes " + t.clicksToCollect + " clicks and pays a little - grab it with Block Hold instead. Held for a second, it is used up (it shrinks away) and gives 3 Pesticide charges. Each charge clears the next Termite Hive automatically, safely (no termites, no XP penalty). Letting go early keeps the charges you already got, but the canister is still used up."),
+            guide: t => "Woodcutting block: a canister of pesticide. It takes " + t.clicksToCollect + " clicks and pays a little - grab it with Block Hold instead. Held for a second, it is used up (it shrinks to husk size and pops off as a husk, no currency) and gives 3 Pesticide charges. Each charge clears the next Termite Hive automatically, safely (no termites, no XP penalty). Letting go early keeps the charges you already got, but the canister is still used up."),
         B(PixelType.Charcoal, PixelTag.Standalone),
         B(PixelType.GodSlifer, PixelTag.RareCollectible,
             guide: t => "One of the three Egyptian God Cubes: Slifer the Sky Dragon, a red cube held together by storm lightning. The rarest kind of drop in the game (roughly 1 in 7 million pixels). It pays 1 of itself and you can only ever hold one."),

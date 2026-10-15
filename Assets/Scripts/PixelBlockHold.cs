@@ -306,19 +306,30 @@ public class PixelBlockHold : MonoBehaviour
             PixelBlockRules.AddCharges(rule.chargeHazard, 1);
             PixelAudio.Play("click", 1f + 0.15f * chargesGiven);
         }
-        if (holder != null) holder.transform.localScale = Vector3.one * Mathf.Clamp01(1f - chargeTimer / seconds);
+        if (holder != null)   // it shrinks down to husk size (an old pixel's size), then pops off as a husk
+        {
+            float huskScale = clicker.PixelBaseSize > 0f ? Mathf.Clamp01(clicker.OldPixelWorldSize / clicker.PixelBaseSize) : 0.5f;
+            holder.transform.localScale = Vector3.one * Mathf.Lerp(1f, huskScale, Mathf.Clamp01(chargeTimer / seconds));
+        }
         if (chargeTimer < seconds) return false;
         UseUp(type, rule);
         return true;
     }
 
-    /// <summary>The charge block in hand is used up: it is gone (it does not go back in line).</summary>
+    /// <summary>The charge block in hand is used up: it pops off as a husk (an old pixel worth nothing; no currency) and does not go back in line.</summary>
     private void UseUp(PixelClicker.PixelType type, PixelBlockRules.HoldRule rule)
     {
+        int usedTier = heldTier;
+        Vector3 at = holder != null ? holder.transform.position : clicker.LiveWorldPosition;
         holding = false;
         heldTier = -1;
         returning = false;
         DestroyVisual();
+        if (clicker.IsValidTierIndex(usedTier))
+        {
+            Vector2 side = Random.insideUnitCircle.normalized * 1.2f;
+            clicker.SpawnStoredPixel(usedTier, 0d, at, new Vector3(side.x, 3.5f, side.y));   // the husk pops off (pixel rules: material, it pays nothing)
+        }
         cooldown = ReleaseCooldown;
         PixelStats.Count("blocks.used." + type);
         PixelAudio.Play("ui_click");
