@@ -5,7 +5,7 @@
 //   while it stays held). Letting go puts it back IN LINE (PixelClicker.ReturnHeldTier: it comes AFTER the block that is on the cube now, with the hits it had - RollTier hands it out - so a hazard that came up while you held is dealt with first and holding / releasing can never reroll the cube). The hold drains a meter (holdSeconds); letting go starts a short cooldown (releaseCooldownSeconds) before the meter recharges
 //   (rechargeSeconds for empty -> full). If the meter runs dry while holding, the block is put back anyway, the meter flashes red and the cooldown is longer
 //   (exhaustCooldownSeconds). Can't be held: hazards, Bottle / Whale / Fish / Treasure, or while a fish is being reeled in. A block with hits CAN be held and keeps them.
-//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. All arc layers (track, glow, fill, ready pop) share ONE centre line (RingMid) and have round caps (PixelArcGraphic: a mesh band with round caps, no radial fill); the tip sits on that line and is about the bar's thickness. The meter only shows while the mouse is on the cube or a block is held (meterOnlyOnHover, 0.35 s grace while the next block materializes). The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
+//   Releasing a held block over a hazard moves the hazard to next in line (it is not removed). Filler can be held. The look (beam, aura, side slide, cursor arc meter) is described at the end of these notes. METER LOOK: the arc fill glides to the real value, goes blue -> amber -> red as it runs low (flickering faster the lower it gets), has a soft glow behind it, a bright pulsing tip riding the end of the fill, quarter-mark dots and a white "ready again" pop when a recharge finishes. All arc layers (track, glow, fill, ready pop) share ONE centre line (RingMid) and have round caps (PixelArcGraphic: a mesh band with round caps, no radial fill); the tip sits on that line and is about the bar's thickness. The meter only shows while the mouse is on the cube or a block is held (meterOnlyOnHover, 0.35 s grace while the next block materializes) and fades out over meterFadeSeconds (0.35) instead of vanishing. The hold lasts 5 seconds by default, 10 for a hold block (PixelBlockRules: Whetstone, Pesticide...).
 //   HOLD BLOCKS: what a held block gives is data (PixelBlockRules.HoldRule: rapid extra clicks / payout / XP multiplier + a label shown beside the meter); Whetstone (Woodcutting, 3 hits) = 2 extra rapid clicks (x3 at once).
 //   A partly broken block keeps its hits through the hold (TryPullLive -> ReturnHeldTier -> pendingHits), so a whetstone you only noticed after a click or two can still be grabbed.
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
@@ -92,6 +92,9 @@ public class PixelBlockHold : MonoBehaviour
     [Header("Look")]
     [Tooltip("Show the hold meter only while the mouse is over the cube (or a block is held). Off = whenever it is not full.")]
     [SerializeField] private bool meterOnlyOnHover = true;
+    [Min(0f)]
+    [Tooltip("Seconds the hold meter takes to fade out after you leave the cube (or it fills up).")]
+    [SerializeField] private float meterFadeSeconds = 0.35f;
     [Tooltip("Colour of the meter, the beam and the aura around the held block.")]
     [SerializeField] private Color meterColor = new Color(0.45f, 0.85f, 1f, 1f);
     [Min(0f)]
@@ -574,6 +577,8 @@ public class PixelBlockHold : MonoBehaviour
     }
 
     private float lastCubeHover = -99f;
+    private float meterAlpha;
+    private CanvasGroup meterGroup;
 
     /// <summary>The meter only shows while the mouse is on the cube (or a block is held); a short grace covers the moment the next block materializes.</summary>
     private bool MeterHovered()
@@ -586,11 +591,16 @@ public class PixelBlockHold : MonoBehaviour
     private void UpdateMeter()
     {
         bool full = meter >= 0.999f;
-        bool show = Active && !PixelTitleScreen.Showing && (holding || returning || flash > 0f || cooldown > 0f || !full || readyPop > 0f) && MeterHovered();
-        if (!show) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); wasFull = true; return; }
+        bool allowed = Active && !PixelTitleScreen.Showing;
+        bool show = allowed && (holding || returning || flash > 0f || cooldown > 0f || !full || readyPop > 0f) && MeterHovered();
+        // Fades in quickly and out over meterFadeSeconds (leaving the cube, or the meter filling up); gone at once on the title screen.
+        float fadeDt = Time.unscaledDeltaTime;
+        meterAlpha = !allowed ? 0f : Mathf.MoveTowards(meterAlpha, show ? 1f : 0f, fadeDt / (show ? 0.12f : Mathf.Max(0.01f, meterFadeSeconds)));
+        if (meterAlpha <= 0f) { if (canvasRoot != null && canvasRoot.activeSelf) canvasRoot.SetActive(false); wasFull = full; return; }
         if (canvasRoot == null) BuildMeter();
         if (canvasRoot == null) return;
         canvasRoot.SetActive(true);
+        if (meterGroup != null) meterGroup.alpha = meterAlpha;
         float dt = Time.unscaledDeltaTime;
         float time = Time.unscaledTime;
 
@@ -695,6 +705,9 @@ public class PixelBlockHold : MonoBehaviour
     private void BuildMeter()
     {
         canvasRoot = PixelUIKit.CreateCanvas("Block Hold", 55, new Vector2(1920f, 1080f), false);
+        meterGroup = canvasRoot.AddComponent<CanvasGroup>();
+        meterGroup.blocksRaycasts = false;
+        meterGroup.interactable = false;
         canvasRect = canvasRoot.GetComponent<RectTransform>();
 
         GameObject p = new GameObject("Meter", typeof(RectTransform));
