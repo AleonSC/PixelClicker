@@ -279,6 +279,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string autosavesText = "Autosaves";
     [Tooltip("Label of the Settings button that puts the achievement popup back to its default spot (the middle, above the combo meter).")]
     [SerializeField] private string resetPopupPinText = "Reset achievement popup position";
+    [Tooltip("Settings > Accessibility (under the achievement popup reset): the button that puts the Did you know tips box back at its default spot (docked at the right edge, near the top).")]
+    [SerializeField] private string resetTipsLocationText = "Reset tips location";
     [Tooltip("Label of the Settings tick box for the drop guide: a line and ring that show where a held old pixel would land.")]
     [SerializeField] private string dropGuideLabel = "Drop guide for held pixels";
     [Tooltip("Label of the custom UI button colour tick box in Settings (the eyedropper beside it picks the colour).")]
@@ -2522,7 +2524,8 @@ public class PixelPauseMenu : MonoBehaviour
         string[] scaleNames = new string[PixelDisplaySettings.UIScaleChoices.Length];
         for (int i = 0; i < scaleNames.Length; i++) scaleNames[i] = Mathf.RoundToInt(PixelDisplaySettings.UIScaleChoices[i] * 100f) + "%";
         AddDropdownRow(list, uiScaleLabel, scaleNames, NearestUiScaleIndex, v => PixelDisplaySettings.SavedUIScale = PixelDisplaySettings.UIScaleChoices[v], ref y);
-        AddWideButtonRow(list, resetPopupPinText, () => { PixelAchievements ach = PixelFind.First<PixelAchievements>(); if (ach != null) ach.ResetPopupPin(); }, ref y);   // (last in this section)
+        AddWideButtonRow(list, resetPopupPinText, () => { PixelAchievements ach = PixelFind.First<PixelAchievements>(); if (ach != null) ach.ResetPopupPin(); }, ref y);
+        AddWideButtonRow(list, resetTipsLocationText, () => { PixelDidYouKnow tips = PixelFind.First<PixelDidYouKnow>(); if (tips != null) tips.ResetLocation(); }, ref y);   // (last in this section)
 
         // ---- Display ----
         AddSettingsSectionHeader(list, headerDisplay, ref y);
