@@ -1106,3 +1106,10 @@
 [2026-10-15 17:45 UTC] The Golden Snitch is now a polished gold cube: it lands on the clicker cube and waits for your click (slips away after 2 minutes), then the gold cube sprouts wings and flies.
 [2026-10-15 17:50 UTC] Dev Hub: the Dragon Cube / God Cube / God show widgets became one 'Super Rares' widget - pick any rare cube (Golden Snitch included) and Spawn it on the clicker cube, plus a button that gives a Prime Gauntlet.
 [2026-10-15 17:51 UTC] Dev Hub: the 'Farmer always has dragon seeds' tick box moved into the Super Rares widget (second row).
+[2026-10-15 18:02 UTC] To-do: added the gear system (one slot because you're a cube, more faces unlock later).
+[2026-10-15 18:02 UTC] To-do: added first person as a mid-game unlock (the Cube Visor).
+[2026-10-15 18:02 UTC] To-do: added the alien vendor whose UFO lands at the floor's edge in first person.
+[2026-10-15 18:02 UTC] To-do: added the alien's first person relics (Grav Boots, Tractor Glove, Xeno Lens, Blink Core, Probe Drone).
+[2026-10-15 18:02 UTC] To-do: added the Prime Gauntlet as gear with a power per Prime Cube and the Snap.
+[2026-10-15 18:02 UTC] To-do: added super rare gear (Dragon Radar, God Cube relics, Seeker's Charm).
+[2026-10-15 18:02 UTC] To-do: added a list of pop culture homage ideas.
