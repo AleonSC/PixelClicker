@@ -803,7 +803,7 @@ public partial class PixelSkills
         UpdateTreeLayout();
         if (!built) return;
 
-        bool available = AnyTrainable;
+        bool available = SkillsTabUnlocked;
         if (tabObject.activeSelf != available) tabObject.SetActive(available);
 
         // The tab tucks away while the window is up and fades back in afterwards, like the Bank tabs.

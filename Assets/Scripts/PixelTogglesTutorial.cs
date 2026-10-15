@@ -4,8 +4,8 @@
 //   PixelTogglesTutorial.Request() (stat guide.togglesDue, saved) INSTEAD OF the plain hint box beside the Toggles tab (with tips off the old hint box still shows). At the next calm moment (title screen over,
 //   no Cubie visit, no other tip / window / tutorial, shop closed, not paused, startDelay 2 s) the screen dims and pauses (PixelTutorialDim) and Cubie narrates like the shop tutorial (BeginNarration, stick
 //   at the part each step describes via PixelGuideVendor.PointOverride, small Got it boxes that follow the Toggles window - PixelNotice nearScreen): the Toggles tab, the Upgrades group (where the Auto Clicker
-//   is ticked on), the other groups, then a HINT AT SKILLS: skills train from the pixels you collect and the first one comes with the Woodcutter's Pack (the lumberjack's set) in the Shop's Pixels tab, which makes
-//   the Skills tab appear (the Skills tutorial then plays by itself; it waits while this one is due or running). Steps are an Inspector list (empty = the built-ins). Done = stat guide.togglesTutorial
+//   is ticked on), the other groups. (The old last step, a hint at skills and the Woodcutter's Pack, was removed: the Skills tab now appears with Standard's level-2 popup.)
+//   Steps are an Inspector list (empty = the built-ins). Done = stat guide.togglesTutorial
 //   (Settings > Replay tutorial clears it and, when the Toggles tab is there, asks for it again). Skipped entirely when TipsEnabled is off.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -73,7 +73,6 @@ public class PixelTogglesTutorial : MonoBehaviour
             new Step { focus = Focus.Tab, group = -2, text = "Psst - you bought the Auto Clicker! It starts switched OFF. See the Toggles tab on the right edge of the screen? Every on / off switch in the game lives there. Let me open it." },
             new Step { focus = Focus.Window, group = 1, text = "Upgrades: here is your Auto Clicker. Tick it to start it, untick it to stop. Pixel Grabbing and Time Stop will show up here as soon as you own them." },
             new Step { focus = Focus.Window, group = 0, text = "Only things you own are listed. Pixels: some special pixels (like Glass) spawn on their own, so switch off the ones you don't want. Minigames, Vendors and Pets get their own groups, so you can shape your own game." },
-            new Step { focus = Focus.ShopButton, group = -2, text = "One more thing, between us... Everything you collect trains SKILLS. Open the Shop, go to the Pixels tab and buy the Woodcutter's Pack - a lumberjack's starter set. It unlocks Woodcutting, your first skill, and a Skills tab appears on the left edge." },
         };
     }
 
@@ -91,6 +90,7 @@ public class PixelTogglesTutorial : MonoBehaviour
         ready += Time.unscaledDeltaTime;
         if (ready < (startDelay > 0f ? startDelay : 2f)) return;
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
+        steps.RemoveAll(st => st != null && st.text != null && st.text.Contains("Woodcutter's Pack"));   // (skills are introduced by Standard's level-2 popup now, not here; also drops it from a saved Inspector list)
         running = true;
         PixelTutorialDim.Begin(() => ShowStep(0));
     }

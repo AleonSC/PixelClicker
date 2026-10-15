@@ -2437,7 +2437,7 @@ public partial class PixelShop : MonoBehaviour
                 {
                     if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
                     if (PixelClicker.IsFarm(reward.type) && reward.type != PixelClicker.PixelType.Dirt) continue;   // and one for the Farmer's Pack
-                    if (PixelClicker.IsWoodBlock(reward.type) && reward.type != PixelClicker.PixelType.Wood) continue;   // and one for the Woodcutter's Pack
+                    if (PixelClicker.IsWoodBlock(reward.type)) continue;   // no Got-it box for the Woodcutter's Pack (the Skills window introduces Woodcutting)
                     if (PixelClicker.IsFishBlock(reward.type) && reward.type != PixelClicker.PixelType.Fish) continue;   // and one for the Angler's Pack
                     if (reward.type == PixelClicker.PixelType.Obsidian && Rewards(pack, PixelClicker.PixelType.Copper)) continue;   // Obsidian comes with the Prospector's Pack
                     if (PixelClicker.IsForageBlock(reward.type) && reward.type != PixelClicker.PixelType.Berry) continue;   // and one for the Forager's Pack

@@ -39,6 +39,8 @@ public partial class PixelSkills
     [Header("Skills tutorial")]
     [Tooltip("Run the skills tutorial the first time a skill pack becomes available.")]
     [SerializeField] private bool enableTutorial = true;
+    [Tooltip("Cubie walks through the Skills window by himself the first time a skill pack is available. Off: skills are introduced by Standard's level-2 popup instead (Settings > Replay tutorial still plays the walk-through).")]
+    [SerializeField] private bool autoStartTutorial = false;
 
     [Min(0f)]
     [Tooltip("Seconds of calm (no tip, no visitor, not paused) before the tutorial starts (0 = 2).")]
@@ -73,7 +75,7 @@ public partial class PixelSkills
     /// <summary>Called every frame from the window's Update: starts the tutorial when it is due.</summary>
     private void UpdateTutorialStart(bool available, bool open)
     {
-        if (tutorialRunning || !enableTutorial || !available) { tutorialReady = 0f; return; }
+        if (tutorialRunning || !enableTutorial || !autoStartTutorial || !available) { tutorialReady = 0f; return; }
         if (PixelStats.Total(TutorialDoneKey) >= 1d || !PixelHints.TipsEnabled) return;
         PixelShop shop = PixelFind.First<PixelShop>();
         bool shopTutorialDue = shop != null && shop.ShopAvailable && PixelStats.Total(PixelShopTutorial.DoneKey) < 1d;

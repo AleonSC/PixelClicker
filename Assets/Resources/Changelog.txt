@@ -1074,3 +1074,6 @@
 [2026-10-15 14:33 UTC] The visitors' peek speech bubble is now a dark box, so its white text is readable (it was white on white).
 [2026-10-15 14:44 UTC] Reworked the Vacuum Cleaner tester feature: it is over twice as big and faster, W A S D / arrows drive it, its wide front intake sucks husks up and the hose spits them back out automatically wherever the mouse aims (no mouse buttons needed).
 [2026-10-15 14:44 UTC] Fixed the Container Hose: placed containers have no colliders, so it often could not find what was clicked and sat idle; it now finds containers by their model, snaps to the one under the mouse, works if clicked target-first, and shows why it is idle over its middle.
+[2026-10-15 14:48 UTC] The 'Did you know' tips now dock as a real '?' menu button on the side edge (like the other docked buttons): it peeks out, slides out when a tip rolls, the tip box slides out beside it, and clicking the button shows the last tip again; drop the box at either side edge to move the button there.
+[2026-10-15 14:48 UTC] Buying the Woodcutter's Pack no longer shows a 'Got it' box about the wood blocks.
+[2026-10-15 14:48 UTC] Cubie no longer introduces skills (the Toggles tutorial's skills hint and the automatic Skills walk-through are off); the Skills button now appears with the Standard level 2 popup instead.

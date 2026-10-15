@@ -6,12 +6,13 @@
 //   plus no open window, not in first person); a busy moment just waits and retries. Tips come from a shuffled bag, so none repeats before all were seen.
 //   Settings > Gameplay 'Did you know tips' (Enabled, PlayerPrefs PixelClicker.Setting.DidYouKnow, per save via PixelSettingsSync).
 //   TWO PLACES (PlayerPrefs PixelClicker.Setting.DidYouKnowDock / X / Y, the player's machine, not per save):
-//   - DOCKED to the left or right screen edge (default: right edge, top, just under the black bar): between tips only a thin sliver of the box peeks
-//     out (wider when the mouse is near); a tip makes the box SLIDE OUT, a click on it or showSeconds (12 s, paused while hovered) slides it away
-//     again. Clicking the peeking sliver shows the last tip again.
+//   - DOCKED (default, right edge): a square '?' button docked on the side edge like the other menu buttons (PixelHud.Dock, anchor (1 or 0, 0.5), dockOffsetY
+//     300 above the middle; it peeks as a sliver and slides out near the mouse). A tip makes the button slide out (keepOut while showing) and the tip box SLIDE OUT
+//     from the edge beside it; a click on the box or showSeconds (12 s, paused while hovered) slides the box away and the button back. Clicking the button shows
+//     the last tip again (or hides the one showing).
 //   - FLOATING anywhere: the box pops in at its pinned spot and fades out the same way.
 //   MOVING it works like the achievement popup: hold the left mouse button on the box (holdSeconds 0.5, PixelHold ring) and it follows the mouse; a left
-//   click puts it down - within dockSnap of the left / right screen edge it DOCKS to that edge at that height, anywhere else it floats there; a right
+//   click puts it down - within dockSnap of the left / right screen edge it DOCKS to that edge (the button moves there), anywhere else it floats there; a right
 //   click puts it back to the default (docked right, top). A quick click (no hold) just dismisses the tip. Kept inside the black bars.
 // ---------------------------------------------------
 using System.Collections.Generic;
@@ -53,14 +54,10 @@ public class PixelDidYouKnow : MonoBehaviour
     [SerializeField] private float boxWidth = 500f;
     [Tooltip("Size of the '?' icon square on the box's inner side.")]
     [SerializeField] private float iconSize = 52f;
-    [Tooltip("How much of a docked box peeks out between tips (canvas units).")]
-    [SerializeField] private float sliver = 12f;
-    [Tooltip("How much of a docked box peeks out while the mouse is near it (canvas units).")]
-    [SerializeField] private float sliverNear = 40f;
-    [Tooltip("How close the mouse must come to the peeking sliver for it to widen (canvas units).")]
-    [SerializeField] private float nearDistance = 110f;
     [Tooltip("Gap from the screen edge / black bar when shown (canvas units).")]
     [SerializeField] private float edgeGap = 16f;
+    [Tooltip("How far above the middle of the side edge the docked '?' button sits (canvas units; the tip box slides out beside it).")]
+    [SerializeField] private float dockOffsetY = 300f;
     [Tooltip("Putting the box down this close to the left / right screen edge docks it there (canvas units).")]
     [SerializeField] private float dockSnap = 120f;
     [Tooltip("Hold the left mouse button this long on the box to pick it up (seconds).")]
@@ -105,10 +102,11 @@ public class PixelDidYouKnow : MonoBehaviour
     private float playTime, nextTipAt, calmTimer;
     private bool showing;          // a tip is out (or sliding out)
     private float showTimer;
-    private float shown;           // 0 = away (docked: only the sliver) .. 1 = fully out
+    private float shown;           // 0 = away .. 1 = fully out
     private int dock = 1;          // 0 floating, 1 right, 2 left
     private Vector2 floatPos;      // floating: the box's centre, canvas units from the screen's middle
-    private float dockY;           // docked: the box's top, canvas units down from the top of the screen
+    private RectTransform dockButton;   // the '?' button docked on the side edge like the other menu buttons
+    private PixelHud hud;
     private bool placing;
     private int placeFrame;
     private bool pressOnBox;
@@ -128,7 +126,6 @@ public class PixelDidYouKnow : MonoBehaviour
         nextTipAt = Mathf.Max(5f, firstDelaySeconds);
         dock = Mathf.Clamp(PlayerPrefs.GetInt(PrefDock, 1), 0, 2);
         floatPos = new Vector2(PlayerPrefs.GetFloat(PrefX, 0f), PlayerPrefs.GetFloat(PrefY, 0f));
-        dockY = PlayerPrefs.HasKey(PrefY) && dock != 0 ? PlayerPrefs.GetFloat(PrefY, 0f) : -1f;   // -1 = the default spot under the bar
     }
 
     private void LoadTips()
@@ -152,14 +149,17 @@ public class PixelDidYouKnow : MonoBehaviour
         if (!Enabled)
         {
             if (box != null && box.gameObject.activeSelf) { showing = false; placing = false; shown = 0f; box.gameObject.SetActive(false); }
+            if (dockButton != null && dockButton.gameObject.activeSelf) dockButton.gameObject.SetActive(false);
             return;
         }
         if (box == null) Build();
         if (box == null) return;
         bool inMenu = PixelCalm.InMenu;
-        // Docked: the sliver stays on screen in the game; everything hides on the main menu / pause menu.
-        bool visible = !inMenu && (dock != 0 || showing || shown > 0.001f || placing);
+        // The docked '?' button peeks from its edge like the other menu buttons; the box shows only while a tip is out. Both hide on the menus.
+        bool visible = !inMenu && (showing || shown > 0.001f || placing);
         if (box.gameObject.activeSelf != visible) box.gameObject.SetActive(visible);
+        bool buttonOn = !inMenu && dock != 0;
+        if (dockButton != null && dockButton.gameObject.activeSelf != buttonOn) dockButton.gameObject.SetActive(buttonOn);
         if (inMenu) return;
 
         float dt = Time.unscaledDeltaTime;
@@ -214,7 +214,7 @@ public class PixelDidYouKnow : MonoBehaviour
     private void Hide() { showing = false; }
 
     // ------------------------------------------------------------------
-    // Pointer: quick click = dismiss (or, on the docked sliver, show the last tip again); hold = pick it up
+    // Pointer: quick click on the box = dismiss; hold = pick it up (the docked '?' button shows the last tip again)
     // ------------------------------------------------------------------
 
     private bool Over() => box != null && box.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(box, PixelInput.PointerPosition(), null);
@@ -222,7 +222,7 @@ public class PixelDidYouKnow : MonoBehaviour
     private void HandlePointer()
     {
         bool over = Over();
-        bool canHold = over && (showing || dock != 0);
+        bool canHold = over && showing;
         if (PixelInput.LeftPressed() && over) { pressOnBox = true; pressTime = Time.unscaledTime; }
         if (canHold && PixelHold.Update(this, box, Mathf.Max(0.1f, holdSeconds), "", ringColor, true, null, true))
         {
@@ -241,8 +241,6 @@ public class PixelDidYouKnow : MonoBehaviour
             if (over && Time.unscaledTime - pressTime < 0.3f)
             {
                 if (showing) Hide();
-                else if (dock != 0 && !string.IsNullOrEmpty(lastTip)) ShowTip(lastTip);   // the docked sliver: the last tip again
-                else if (dock != 0 && tips.Count > 0) ShowTip(NextTip());
                 PixelAudio.Play("ui_click");
             }
         }
@@ -266,16 +264,16 @@ public class PixelDidYouKnow : MonoBehaviour
         if (!place && !reset) return;
         if (reset)
         {
-            dock = 1; dockY = -1f;
+            dock = 1;
             PlayerPrefs.DeleteKey(PrefX); PlayerPrefs.DeleteKey(PrefY);
             PlayerPrefs.SetInt(PrefDock, dock);
+            DockButton();
         }
         else if (nearLeft || nearRight)
         {
             dock = nearRight ? 1 : 2;
-            dockY = Mathf.Max(0f, r.height * 0.5f - (box.anchoredPosition.y + boxHeight * 0.5f));
             PlayerPrefs.SetInt(PrefDock, dock);
-            PlayerPrefs.SetFloat(PrefY, dockY);
+            DockButton();   // (the '?' button moves to that edge)
         }
         else
         {
@@ -336,30 +334,20 @@ public class PixelDidYouKnow : MonoBehaviour
             group.blocksRaycasts = shown > 0.5f;
             return;
         }
+        // Docked: the box slides out from the edge to sit beside the '?' button (same height), and back off the screen.
         box.localScale = Vector3.one;
         group.alpha = 1f;
         group.blocksRaycasts = true;
-        float bar = TopLimit;
-        float top = dockY < 0f ? bar + edgeGap : dockY;
-        top = Mathf.Clamp(top, bar, Mathf.Max(bar, r.height - bar - boxHeight));
-        box.anchorMin = box.anchorMax = new Vector2(right ? 1f : 0f, 1f);
-        box.pivot = new Vector2(right ? 1f : 0f, 1f);
-        // Away: only the sliver peeks in (wider when the mouse is near); out: the box sits edgeGap from the edge.
-        float peek = sliver;
-        if (!showing && RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, PixelInput.PointerPosition(), null, out Vector2 m))
-        {
-            float edgeX = right ? r.width * 0.5f : -r.width * 0.5f;
-            float topY = r.height * 0.5f - top;
-            bool nearY = m.y <= topY + nearDistance * 0.5f && m.y >= topY - boxHeight - nearDistance * 0.5f;
-            if (nearY && Mathf.Abs(m.x - edgeX) < nearDistance + sliverNear) peek = sliverNear;
-        }
-        peekNow = Mathf.Lerp(peekNow, peek, 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime));
-        float awayX = boxWidth - peekNow, outX = -edgeGap;
+        float buttonW = dockButton != null ? dockButton.sizeDelta.x : 60f;
+        float inset = hud != null ? hud.SideShownInset : edgeGap;
+        float hy = Mathf.Max(0f, r.height * 0.5f - TopLimit - boxHeight * 0.5f);
+        box.anchorMin = box.anchorMax = new Vector2(right ? 1f : 0f, 0.5f);
+        box.pivot = new Vector2(right ? 1f : 0f, 0.5f);
+        float awayX = boxWidth + 40f, outX = -(inset + buttonW + 12f);
         float x = Mathf.Lerp(awayX, outX, ease);
-        box.anchoredPosition = new Vector2(right ? x : -x, -top);
+        box.anchoredPosition = new Vector2(right ? x : -x, Mathf.Clamp(dockOffsetY, -hy, hy));
     }
 
-    private float peekNow;
 
     private void SetTexts(string head, string body)
     {
@@ -369,6 +357,14 @@ public class PixelDidYouKnow : MonoBehaviour
         float bodyH = bodyLabel.GetPreferredValues(body, textW, 0f).y;
         boxHeight = Mathf.Max(iconSize + 28f, 12f + headingFontSize * 1.35f + bodyH + 18f);
         box.sizeDelta = new Vector2(boxWidth, boxHeight);
+    }
+
+    /// <summary>Docks the '?' button on the box's edge (right or left, dockOffsetY above the middle), square, sliding like the other menu buttons.</summary>
+    private void DockButton()
+    {
+        if (dockButton == null || hud == null) return;
+        float square = hud.ButtonSize.x > 0f ? hud.ButtonSize.y / hud.ButtonSize.x : 0.4f;
+        hud.Dock(dockButton, new Vector2(dock == 2 ? 0f : 1f, 0.5f), () => showing || placing, dockOffsetY, square);
     }
 
     private void Build()
@@ -414,6 +410,18 @@ public class PixelDidYouKnow : MonoBehaviour
         b.anchorMin = Vector2.zero; b.anchorMax = Vector2.one;
         b.offsetMin = Vector2.zero; b.offsetMax = new Vector2(0f, -headingFontSize * 1.35f);
         bodyLabel.textWrappingMode = TextWrappingModes.Normal;
+
+        // The docked '?' button: peeks from the side edge like the other menu buttons, slides out while a tip shows; a click shows the last tip again.
+        Button b2 = PixelUIKit.CreateButton(font, canvasObject.transform, "Did You Know Button", "?", new Vector2(60f, 60f), iconBoxColor, accentColor, 34f);
+        dockButton = b2.GetComponent<RectTransform>();
+        b2.onClick.AddListener(() =>
+        {
+            if (showing) Hide();
+            else if (!string.IsNullOrEmpty(lastTip)) ShowTip(lastTip);
+            else if (tips.Count > 0) ShowTip(NextTip());
+        });
+        hud = PixelHud.Ensure(gameObject);
+        DockButton();
 
         SetTexts(heading, "");
         shown = 0f;
