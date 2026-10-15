@@ -60,3 +60,4 @@
 [ ] 3-type combo potion rework: build combo potions when they are first crafted (not all up front in PixelConsumables.AppendComboPotions) and number items so new potions don't shift device indexes, so skill blocks can be in 3-type combos too (today ~75,000 would be built at start)
 [ ] Before release: one saveVersion number in the save file and ONE list of upgrade steps in PixelSaveGame (v1 -> v2 -> ...) run in order when an older save loads, instead of the scattered packDataVersion / looksVersion fix-ups; the first public build is version 1
 [ ] Crank clicker: first Auto Clicker purchase becomes a crank (every few manual clicks store one, capped, tick it in Toggles to spend them), a 'Motor' upgrade makes it fully automatic (and unlocks offline progress); keep one purchase with a mode, update Toggles / offline / Cubie tutorial text
+[ ] The golden snitch (idea to flesh out: a rare, fast golden pixel that zips around the screen and has to be caught for a big reward)

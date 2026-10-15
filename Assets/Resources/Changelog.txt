@@ -1098,3 +1098,4 @@
 [2026-10-15 16:39 UTC] Hovering a skill's XP bar (each card in the Skills list, the Skills window's header bar and the pinned tracker) now shows an XP box: 'Skill: level/level', Current XP, Next level (the total it needs) and Remainder.
 [2026-10-15 17:00 UTC] The Skills button (and the pinned tracker) now also appears as soon as a skill pack is owned - e.g. after Dev Tools unlocks everything - not only at Standard level 2.
 [2026-10-15 17:06 UTC] Dev Hub: the two unlock-everything buttons became one 'Unlock' widget (drop-down: All shop items - every pack and pixel - or one pack; Unlock / Relock) and a new 'Max XP' widget (drop-down: All skills or one skill; Max XP / Reset XP).
+[2026-10-15 17:07 UTC] To-do: added the golden snitch idea.
