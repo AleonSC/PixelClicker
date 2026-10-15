@@ -8,8 +8,8 @@
 //   payout is kept, a spinning CreateDisplayPixel model sits in the compartment). Left-click a stored pixel (PickSection, screen
 //   distance) to take it out: SpawnStoredPixel at the compartment and PixelGrab.BeginHold puts it in the mouse's hand. A pixel you
 //   hold and let go of above the crate is stored at once (any pixel tagged 'recently held by the player' - OldPixelInfo.RecentlyHeld, PixelGrab.recentlyHeldSeconds - that ends up in the footprint is stored too, from ANY height: CaptureRecentlyHeld) (TryStoreReleased: PixelGrab.HeldBody was a pixel last frame and is not now,
-//   and it is inside the footprint and below ~3 units above it). Two grip handles on the short (+/-X) ends (Handle parts built by
-//   BuildCrateBody): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
+//   and it is inside the footprint and below ~3 units above it). Two grip handles on the short (+/-X) ends (the shared PixelCarryHandles: parts by
+//   PixelCarryHandles.BuildParts from BuildCrateBody, behaviour by the component): hovering one shows the open-hand cursor (PixelHandCursor: code-drawn open hand / fist textures set with
 //   Cursor.SetCursor, requested per frame, normal cursor returns when nobody asks), left-drag moves the crate over the floor plane
 //   (DragTo, kept on screen) with the fist cursor, and while dragging scroll / Q / E turn it (PixelConsumables.TurnInput; also when placing it; the yaw is saved in PlacedState). PixelStorageCrate.ClaimsPointer() makes PixelGrab step aside when the click belongs
 //   to the crate; HandleHot blocks cube clicks. Removing it (Ended) lets everything out. Saved in PlacedState.extra
@@ -49,12 +49,9 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
     private readonly Section[] sections = new Section[Sections];
     private readonly Dictionary<Rigidbody, float> ignoreUntil = new Dictionary<Rigidbody, float>();
     private float width, depth, wallHeight, cell;
-    private readonly List<Renderer> handles = new List<Renderer>();
+    private PixelCarryHandles carry;   // the two grip handles (shared with the Recycler)
     private PixelGrab grab;
     private Rigidbody lastHeld;
-    private bool dragging;
-    private PixelConsumables consumables;
-    private Vector3 dragOffset;
 
     public void Init(PixelClicker owner, Camera camera, PixelConsumables.Device settings, float shrinkTime)
     {
@@ -64,7 +61,9 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         depth = cell * Rows;
         wallHeight = settings.bodyHeight;
         for (int i = 0; i < Sections; i++) sections[i] = new Section();
-        foreach (Renderer r in GetComponentsInChildren<Renderer>()) if (r.name == "Handle") handles.Add(r);
+        carry = gameObject.AddComponent<PixelCarryHandles>();
+        carry.Init(() => cam);
+        carry.Blocked = () => IsDying;
         Ended += _ => { ReleaseAll(); PixelConveyorSystem.Unregister(this); };
         PixelConveyorSystem.Register(this);   // a conveyor belt that ends at the crate feeds it directly
     }
@@ -174,7 +173,7 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         if (IsDying || clicker == null || cam == null) return false;
         Vector2 pointer = PixelInput.PointerPosition();
         Ray ray = cam.ScreenPointToRay(pointer);
-        if (dragging || OverHandle(ray)) return true;
+        if (carry != null && (carry.Dragging || carry.Over(ray))) return true;
         if (PickSection(pointer) >= 0) return true;
         return HitTest(ray, out _) && FreeCount() > 0 && FindLoose().Count > 0;
     }
@@ -197,40 +196,12 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
         lastHeld = heldNow;
         CaptureRecentlyHeld();
 
-        if (dragging)
-        {
-            if (!PixelInput.LeftHeld()) dragging = false;
-            else
-            {
-                hotFrame = Time.frameCount;
-                PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
-                // Scroll or Q / E turns the crate while it is being moved (the same turning as when placing it).
-                if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
-                float turn = consumables != null ? consumables.TurnInput() : 0f;
-                if (!Mathf.Approximately(turn, 0f))
-                {
-                    transform.Rotate(0f, turn, 0f, Space.World);
-                    dragOffset = Quaternion.Euler(0f, turn, 0f) * dragOffset;   // the grabbed point swings round the centre with it
-                }
-                DragTo(cam.ScreenPointToRay(PixelInput.PointerPosition()));
-                return;
-            }
-        }
+        if (carry != null && carry.Dragging) { hotFrame = Time.frameCount; return; }   // being carried by a handle (PixelCarryHandles moves it)
         if (PixelInput.PointerOverUI()) return;
 
         Vector2 pointer = PixelInput.PointerPosition();
         Ray ray = cam.ScreenPointToRay(pointer);
-        if (OverHandle(ray))
-        {
-            hotFrame = Time.frameCount;
-            PixelHandCursor.Request(PixelHandCursor.Shape.Open);
-            if (PixelInput.LeftPressed() && FloorPoint(ray, out Vector3 hit))
-            {
-                dragging = true;
-                dragOffset = transform.position - hit;
-            }
-            return;
-        }
+        if (carry != null && carry.Over(ray)) { hotFrame = Time.frameCount; return; }   // the handles take this click (hover hand / drag)
         int picked = PickSection(pointer);
         bool over = picked >= 0 || HitTest(ray, out _);
         if (!over) return;
@@ -239,32 +210,6 @@ public class PixelStorageCrate : PixelPlacedDevice, IPixelBeltAcceptor, IPixelPo
 
         if (picked >= 0) TakeOut(picked);
         else StoreLoose();
-    }
-
-    private bool OverHandle(Ray ray)
-    {
-        foreach (Renderer r in handles)
-            if (r != null && r.enabled && r.bounds.IntersectRay(ray, out _)) return true;
-        return false;
-    }
-
-    private bool FloorPoint(Ray ray, out Vector3 point)
-    {
-        point = default;
-        Plane plane = new Plane(Vector3.up, transform.position);
-        if (!plane.Raycast(ray, out float enter)) return false;
-        point = ray.GetPoint(enter);
-        return true;
-    }
-
-    private void DragTo(Ray ray)
-    {
-        if (!FloorPoint(ray, out Vector3 hit)) return;
-        Vector3 target = hit + dragOffset;
-        target.y = transform.position.y;
-        Vector3 vp = cam.WorldToViewportPoint(target);
-        if (vp.z <= 0f || vp.x < 0.04f || vp.x > 0.96f || vp.y < 0.1f || vp.y > 0.9f) return;   // never off the screen
-        transform.position = target;
     }
 
     /// <summary>A held pixel was let go: if it is above the crate's top, store it.</summary>

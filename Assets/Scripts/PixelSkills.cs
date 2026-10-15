@@ -24,6 +24,8 @@ public partial class PixelSkills : MonoBehaviour
         [TextArea(2, 5)]
         [Tooltip("A tutorial popup shown once when this level is reached (empty = none). Only with first-time tips on.")]
         public string noticeText = "";
+        [Tooltip("Show the popup beside the Skills window: the window opens on this skill and its card gets the pulsing gold frame (PixelHighlight) until Got it is pressed. Off = the usual box on its own.")]
+        public bool noticeInWindow = false;
         [Tooltip("A pixel type (name) this perk unlocks as a toggle: from this level the skill-only block can be switched on in the Toggles window so it also spawns in other rotations (like a tree node's Guest Type).")]
         public string guestType = "";
     }
@@ -490,7 +492,10 @@ public partial class PixelSkills : MonoBehaviour
                 if (pack.perks == null || pack.perks.Length == 0) pack.perks = StandardPerks();
                 if (pack.perks != null)   // the level 2 popup that introduces the skill
                     foreach (Perk perk in pack.perks)
-                        if (perk != null && perk.level == 2 && string.IsNullOrEmpty(perk.noticeText)) perk.noticeText = StandardLevel2Notice;
+                        if (perk != null && perk.level == 2 && (string.IsNullOrEmpty(perk.noticeText) || perk.noticeText.Contains("Every pixel you click gives Standard XP"))) perk.noticeText = StandardLevel2Notice;
+                if (perkWindowVersion < 1 && pack.perks != null)   // the level 2 popup opens the Skills window and frames the Standard card
+                    foreach (Perk perk in pack.perks)
+                        if (perk != null && perk.level == 2) perk.noticeInWindow = true;
                 if (pack.perks != null)
                     foreach (Perk perk in pack.perks)
                         if (perk != null && perk.text != null && perk.text.Contains("last 2 seconds longer")) perk.text = perk.text.Replace("last 2 seconds longer", "last 5 seconds longer");
@@ -502,6 +507,8 @@ public partial class PixelSkills : MonoBehaviour
                     pack.spawns = "White, Gray, Black, Red, Green, Blue (+ Glass, Luminescent once bought)";
             }
         }
+
+        perkWindowVersion = Mathf.Max(perkWindowVersion, 1);
 
         // Offline Progression is listed right under Standard.
         int offlineAt = packs.FindIndex(p => p.id == OfflineId);
@@ -1076,7 +1083,9 @@ public partial class PixelSkills : MonoBehaviour
     }
 
     // ---- Perk popups and level-gated unlocks ----
-    private readonly System.Collections.Generic.Queue<string> perkNotices = new System.Collections.Generic.Queue<string>();
+    private struct PerkNotice { public string text; public string packId; public bool inWindow; }
+    private readonly System.Collections.Generic.Queue<PerkNotice> perkNotices = new System.Collections.Generic.Queue<PerkNotice>();
+    private readonly object perkHighlightKey = new object();
 
     /// <summary>A level was reached: every perk of that level with a popup text queues its tutorial box once (it waits for a calm moment, see UpdatePerkNotices).</summary>
     private void QueuePerkNotices(SkillPack pack, int before, int after)
@@ -1088,7 +1097,7 @@ public partial class PixelSkills : MonoBehaviour
             string key = "perknotice." + pack.id + "." + perk.level;
             if (PixelStats.Total(key) >= 1d) continue;
             PixelStats.Count(key);
-            perkNotices.Enqueue(perk.noticeText);
+            perkNotices.Enqueue(new PerkNotice { text = perk.noticeText, packId = pack.id, inWindow = perk.noticeInWindow });
         }
     }
 
@@ -1097,7 +1106,16 @@ public partial class PixelSkills : MonoBehaviour
         if (perkNotices.Count == 0) return;
         if (!PixelHints.TipsEnabled) { perkNotices.Clear(); return; }
         if (PixelNotice.IsShowing || PixelTitleScreen.Showing || PixelPauseMenu.IsPaused || Time.timeScale <= 0f || PixelMinigame.TakeoverActive || PixelGuideVendor.Visiting) return;
-        PixelNotice.Show(perkNotices.Dequeue());
+        PerkNotice notice = perkNotices.Dequeue();
+        int index = packs.FindIndex(p => p.id == notice.packId);
+        if (!notice.inWindow || !built || index < 0 || PixelTutorialDim.Active) { PixelNotice.Show(notice.text); return; }
+        // Beside the Skills window: it opens on this skill, the small box sits to its right and the skill's card pulses gold until Got it.
+        OpenWindow();
+        selected = index;
+        RefreshWindow();
+        RectTransform card = index < cards.Count && cards[index].button != null ? cards[index].button.GetComponent<RectTransform>() : null;
+        if (card != null) PixelHighlight.Set(perkHighlightKey, card);
+        PixelNotice.Show(notice.text, 0f, () => PixelHighlight.Clear(perkHighlightKey), small: true, beside: windowRect);
     }
 
     /// <summary>The level of a skill by id (1 when the skill or the system is missing).</summary>

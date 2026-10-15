@@ -17,7 +17,9 @@
 //   and is captured anew if dropped back in). Husks above or in the opening get KeepAlive every check, and PixelGrab calls KeepIfOver on letting go, so an
 //   old husk's timer cannot run out in the moment before the bin captures it (that used to make a dropped husk vanish uncounted). Loaded husks are put straight into the bin, frozen (ImportState).
 //   SAVED: the husks inside go into PlacedState.extra ('Type,amount;', ExportState / ImportState via PixelConsumables) and are spawned back into the bin on
-//   load. A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
+//   load. HANDLES: the Storage Crate's grip handles on both short ends (shared PixelCarryHandles: BuildParts in Build, the component added by Place):
+//   drag one to carry the bin over the floor (scroll / Q / E turn it); everything inside is frozen into the bin while it is carried; not while processing.
+//   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
 using System.Collections;
 using System.Collections.Generic;
@@ -82,6 +84,7 @@ public class PixelRecycler : MonoBehaviour
     }
 
     private PixelClicker clicker;
+    private PixelCarryHandles carry;   // the grip handles (shared with the Storage Crate)
     private Vector3 baseScale = Vector3.one;
     private Transform lidPivot, button;
     private Collider buttonCollider;
@@ -106,6 +109,9 @@ public class PixelRecycler : MonoBehaviour
         root.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yaw, 0f));
         PixelRecycler r = root.AddComponent<PixelRecycler>();
         r.Init(clicker);
+        r.carry = root.AddComponent<PixelCarryHandles>();
+        r.carry.Init(() => clicker != null ? clicker.TargetCamera : null);
+        r.carry.Blocked = () => r.processing;   // no carrying while the lid is shut and the husks are being processed
         return root;
     }
 
@@ -147,6 +153,8 @@ public class PixelRecycler : MonoBehaviour
         // Posts holding up the far end of the rails.
         for (int side = -1; side <= 1; side += 2)
             kit.Box("Post " + (side < 0 ? "L" : "R"), tr, new Vector3(side * (w + t) * 0.5f, h * 0.5f, d + 1.5f * t), new Vector3(t * 0.6f, h, t * 0.6f), new Color(0.6f, 0.62f, 0.6f, 1f), default, false, 0.7f, 0.5f);
+        // Carrying handles on the short ends, the same as the Storage Crate's (shared PixelCarryHandles): drag one to move the bin, scroll / Q / E turns it.
+        PixelCarryHandles.BuildParts((n, p, size, c) => kit.Box(n, tr, p, size, c), w * 0.5f + t, d, h * 0.55f, 0.68f * u);
         // The button on top of the front wall.
         kit.Cyl("Button Base", tr, new Vector3(w * 0.32f, h + t * 0.4f, -(d + t) * 0.5f), u * 0.34f, t * 0.8f, new Color(0.15f, 0.15f, 0.15f, 1f));
         kit.Cyl("Button", tr, new Vector3(w * 0.32f, h + t * 1.1f, -(d + t) * 0.5f), u * 0.24f, t * 0.9f, ButtonColor, default, 0.1f, 0.6f, colliders);
@@ -205,7 +213,7 @@ public class PixelRecycler : MonoBehaviour
             OldPixelInfo i = b.GetComponent<OldPixelInfo>();
             if (i != null && i.heldByPlayer) Unfreeze(b);
         }
-        bool hot = !processing && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
+        bool hot = !processing && (carry == null || !carry.Dragging) && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
         if (hot) hotFrame = Time.frameCount;
         if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
 
@@ -300,7 +308,7 @@ public class PixelRecycler : MonoBehaviour
         inside.RemoveAll(b => b == null);
         // While the floor's props fade (main menu, after a load) the bin is being scaled: everything inside is frozen into it and moves with it; no capturing or letting go.
         bool fading = (transform.localScale - baseScale).sqrMagnitude > 0.0001f;
-        if (fading)
+        if (fading || (carry != null && carry.Dragging))   // (being carried by a handle: the husks ride along frozen in the bin)
         {
             foreach (Rigidbody b in inside) Freeze(b);
             return;
