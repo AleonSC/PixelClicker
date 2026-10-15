@@ -896,7 +896,8 @@ public class PixelHints : MonoBehaviour
             freshAtStart = !AnyCollected();
             freshJudged = true;
         }
-        introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play)
+        if (PixelCameraIntro.Moving || PixelCameraIntro.ClicksLocked) { introWait = 0f; return; }   // the intro tips wait until the camera animation is over
+        introWait += Time.unscaledDeltaTime; // counts from the moment the game starts (after Play) and the camera intro has finished
         if (introWait < introDelay) return;
         introChecked = true;
         if (!showIntro || !hintsEnabled || !TipsEnabled || Seen("intro_log"))

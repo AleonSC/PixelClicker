@@ -45,7 +45,7 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 
 | Machine / system | Turns husks into |
 |---|---|
-| **Recycler** (planned) | currency, at **15%** of the block's click value |
+| **Recycler** (built: `PixelRecycler.cs`) | currency, at **10%** of each husk's value |
 | Wood Chipper | skill XP (and Wood Chips) |
 | Kiln | Charcoal (fuel / material) |
 | Storage Crate | stored material for later |
@@ -53,7 +53,9 @@ Machines exist to turn husks into something useful; despawning hurts because unu
 | Crafting (planned) | recipe ingredients |
 | Conveyor belts, sorters, connectors | moving husks to the right machine |
 
-## The Recycler (planned machine)
+## The Recycler (built 2026-10-15, `PixelRecycler.cs`)
+
+Built version: an open bin (DeviceKind.Recycler, first on the shop's Utilities card, 50 White; Cubie gives one on his first visit). Drop up to 12 husks in, press the red button on its front: the lid shuts and each husk pays back **10%** of its value as currency of its type. The husks stay in the bin as physical pixels until then. The notes below are the original plan; the live numbers are on the component.
 
 - **What it does:** takes husks in and pays out currency of that block's type at **15% of the block's click value** per husk (start value, to be tuned). A Wood husk from a Wood block that pays 3 gives 0.45 Wood.
 - **Takes time and setup:** it processes one husk every so often (proposed: one every 1.5 seconds), so throughput is a real limit; husks are fed by belt, Funnel, Conveyor Connector or by hand (it is a belt acceptor like the Kiln).

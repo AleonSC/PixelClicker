@@ -18,6 +18,8 @@
 //   vendor the player switched off in Toggles is never restarted; PixelVisitorMinigame.ScheduleFirstVisit). All texts / numbers are
 //   Inspector fields (disableGuide turns it all off). The page lists (visitOnePages / visitTwoPages) are filled with the built-in lines when empty
 //   (EnsureDefaultPages in Awake and the editor's OnValidate, like PixelHints), so Cubie's lines are edited in the Inspector.
+//   Visit 1 waits until the player has clicked visitOneAfterClicks (25) pixels by hand. A visit-1 page containing {recycler} hands over a Recycler
+//   (PixelConsumables.GiveDevice; text recyclerGiftText); a page list without the token still gets it when the visit ends.
 // ---------------------------------------------------
 using System.Collections;
 using System.Text;
@@ -50,6 +52,13 @@ public class PixelGuideVendor : MonoBehaviour
     [Min(0f)]
     [Tooltip("Seconds of calm (title screen over, no tip box, no minigame round, not paused) before a visit starts.")]
     [SerializeField] private float calmSeconds = 1.5f;
+
+    [Min(0)]
+    [Tooltip("Visit 1 waits until the player has clicked this many pixels by hand (so Cubie does not turn up the moment the game starts).")]
+    [SerializeField] private int visitOneAfterClicks = 25;
+
+    [Tooltip("Text that replaces {recycler} on the page where Cubie hands over the Recycler (visit 1).")]
+    [SerializeField] private string recyclerGiftText = "<b>+1 Recycler</b> (in your Consumables)";
 
     [Min(0.1f)]
     [Tooltip("Seconds he takes to slide in (and out).")]
@@ -450,6 +459,7 @@ public class PixelGuideVendor : MonoBehaviour
                 }
             }
             else if (ShopThere) StartCoroutine(Visit(true));
+            else if (!s1 && stats.ManualClicks < visitOneAfterClicks) { if (lastBlocker != "clicks") { lastBlocker = "clicks"; PixelDebug.Info("Cubie visit 1 waits for " + visitOneAfterClicks + " clicks", this); } }
             else if (!s1) { PixelDebug.Info("Cubie starts visit 1", this); StartCoroutine(Visit(false)); }
             else if (lastBlocker != "s1done") { lastBlocker = "s1done"; PixelDebug.Info("Cubie visit 1 is already recorded (guide.stage1) - he waits for the shop", this); }
             return;
@@ -508,6 +518,7 @@ public class PixelGuideVendor : MonoBehaviour
         "Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation.",
         "See, pixels are money around here. The white, gray and black ones, then red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.",
         "Now, how do you get them? You click. And click. And click some more. Same thing, all day. Don't look at me like that, everybody starts at the bottom.",
+        "Oh, and those leftover bits piling up on the floor? Don't just let them rot. Take this Recycler: toss them in, hit the button, and you get a little something back.\n\n{recycler}",
         "Think of it as paying your dues. Tedious? Absolutely. But grind long enough and the good stuff opens up. Come find me when you've got a pile worth my time.",
     };
 
@@ -554,6 +565,11 @@ public class PixelGuideVendor : MonoBehaviour
             wantBack = false;
             if (backButton != null) backButton.gameObject.SetActive(i > 0);
             string text = pages[i];
+            if (text.Contains("{recycler}"))
+            {
+                if (!recyclerGiven && !replaying) { recyclerGiven = true; GiveRecycler(); }
+                text = text.Replace("{recycler}", recyclerGiftText);
+            }
             if (text.Contains("{gift}"))
             {
                 if (giftLine == null) giftLine = replaying ? "(You already got yours, no seconds!)" : GiveGift();   // handed over once, even if the player goes back to this page
@@ -601,6 +617,7 @@ public class PixelGuideVendor : MonoBehaviour
         PixelPop.Hide(panel.gameObject);
         PixelWindows.Unregister(this);
         Unfreeze();
+        if (!second && !recyclerGiven && !replaying) { recyclerGiven = true; GiveRecycler(); }   // (a page list without {recycler} still hands it over)
         PixelStats.Best(Stage1Key, 1d);
         if (second)
         {
@@ -626,6 +643,17 @@ public class PixelGuideVendor : MonoBehaviour
         canvasRoot = null;
         visiting = false;
         calmTimer = 0f;
+    }
+
+    private bool recyclerGiven;
+
+    /// <summary>Visit 1: Cubie gives the player a Recycler (it goes into the Consumables).</summary>
+    private void GiveRecycler()
+    {
+        PixelConsumables consumables = PixelFind.First<PixelConsumables>();
+        if (consumables == null || !consumables.GiveDevice(PixelConsumables.DeviceKind.Recycler, 1)) return;
+        PixelAudio.Play("purchase");
+        PixelHints.Announce(characterName + " gave you a Recycler! It is in your Consumables.");
     }
 
     /// <summary>Hands over the gift (a few random unlocked pixel types, random amounts) and returns the text listing it.</summary>

@@ -65,7 +65,7 @@ Keep this map current: when a system gets a new link (or loses one), change its 
 | Ghost Bait / Pet Treat | - | ghosts sooner / hyper pets | - | Ghost minigame / Pets | Built |
 | Gauntlet | the six Prime Cubes | the Prime Cubelette | - | collectibles (Wizard) | Built |
 | Lumberjack's Focus | Termite Hives (Designed) | trees without hives for a while | hazards | Woodcutting | Built as a dev widget; hive recipe Designed |
-| **Recycler** | husks | currency at 15% of the click value | despawn | Electrician (speed) | Designed (`PixelRules.md`) |
+| **Recycler** | husks (fill the bin, press its button) | currency at 10% of each husk's value | despawn | early game (Cubie's gift); Electrician speed later (Idea) | Built |
 | **Pesticide Sprayer** | Pesticide husks | clears hives automatically | hazards | Woodcutting / Farming | Designed |
 
 ### Factory machines (Dev Hub tester features today)

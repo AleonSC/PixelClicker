@@ -200,6 +200,11 @@ public partial class PixelShop
             else if (card.seeds) { if (seedItem && !consumables.IsDragonSeed(i)) list.Add(i); }          // the Seeds card: seeds only
             else if (!seedItem && consumables.IsDevice(i) == card.utilities) list.Add(i);
         }
+        if (card.utilities)   // the Recycler stands first on the Utilities card
+        {
+            int r = list.FindIndex(i => consumables.IsDevice(i) && consumables.DeviceKindOf(i) == PixelConsumables.DeviceKind.Recycler);
+            if (r > 0) { int recyclerItem = list[r]; list.RemoveAt(r); list.Insert(0, recyclerItem); }
+        }
 
         // Rebuild the drop-down's entries only when something changed, keeping the selection.
         StringBuilder sb = new StringBuilder();

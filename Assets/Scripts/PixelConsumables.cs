@@ -119,6 +119,8 @@ public class PixelConsumables : MonoBehaviour
         Gauntlet = 17,
         /// <summary>Not consumed: a belt-laying tool on sale from Electrician level 5. Right-click starts placing conveyor belts (PixelFeatureTester.StartFeature); hold the right button on a belt to remove it.</summary>
         ConveyorBelt = 18,
+        /// <summary>Placed, permanent: an open bin (PixelRecycler). Drop husks in, press its button: the lid shuts and every husk inside pays back 10% of its value as currency.</summary>
+        Recycler = 19,
     }
 
     /// <summary>A consumable object you place in the world (the Vacuum Device, the Fan).</summary>
@@ -610,6 +612,28 @@ public class PixelConsumables : MonoBehaviour
         };
     }
 
+    private static Device CreateDefaultRecycler()
+    {
+        return new Device
+        {
+            kind = DeviceKind.Recycler,
+            displayName = "Recycler",
+            description = "An open bin that stays until you remove it. Drop old pixels (husks) into it with Pixel Grabbing - up to 12. Press the red button on its front: the lid shuts and every husk inside is recycled into 10% of its value as currency of its own type.",
+            requiredType = PixelClicker.PixelType.White,
+            costs = new[]
+            {
+                new PixelShop.PackCost { type = PixelClicker.PixelType.White, amount = 50 },
+            },
+            maxHeld = 2,
+            durationSeconds = 1e9f,
+            radius = 1f,
+            color = new Color(0.25f, 0.55f, 0.32f, 1f),
+            bodyDiameter = 3f,
+            bodyHeight = 2f,
+            placingMessage = "Scroll or Q / E to turn the {0}, click the floor to place it  (right-click to cancel)",
+        };
+    }
+
     private static Device CreateDefaultFunnel()
     {
         return new Device
@@ -1030,6 +1054,7 @@ public class PixelConsumables : MonoBehaviour
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Funnel, CreateDefaultFunnel),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Gauntlet, CreateDefaultGauntlet),
                     new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.ConveyorBelt, CreateDefaultConveyorBelt),
+                    new System.Collections.Generic.KeyValuePair<DeviceKind, Func<Device>>(DeviceKind.Recycler, CreateDefaultRecycler),
                 })
                 {
                     DeviceKind wanted = extra.Key;
@@ -1823,6 +1848,9 @@ public class PixelConsumables : MonoBehaviour
                 case DeviceKind.Funnel:
                     root = PixelFunnel.CreateDisplay(clicker);
                     break;
+                case DeviceKind.Recycler:
+                    root = PixelRecycler.CreateDisplay(clicker);
+                    break;
                 case DeviceKind.ComboFuel:
                 case DeviceKind.GhostBait:
                 case DeviceKind.PetTreat:
@@ -1971,6 +1999,16 @@ public class PixelConsumables : MonoBehaviour
         return (d.description ?? "")
             .Replace("{radius}", d.radius.ToString("0.##"))
             .Replace("{duration}", DeviceSeconds(d).ToString("0.##"));
+    }
+
+    /// <summary>Gives the player devices of a kind (a gift, e.g. Cubie's Recycler). False if there is no such device.</summary>
+    public bool GiveDevice(DeviceKind kind, int amount = 1)
+    {
+        if (devices == null || amount <= 0) return false;
+        int index = Array.FindIndex(devices, d => d != null && d.kind == kind);
+        if (index < 0) return false;
+        AddItem(potions.Length + index, amount);
+        return true;
     }
 
     /// <summary>Adds items to the inventory (a shop purchase).</summary>
@@ -2255,7 +2293,7 @@ public class PixelConsumables : MonoBehaviour
         if (hasPoint) preview.transform.position = point;
 
         // A fan can be turned with the mouse wheel or Q / E.
-        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel)
+        if (devices[placingIndex].kind == DeviceKind.Fan || devices[placingIndex].kind == DeviceKind.MagnetSorter || devices[placingIndex].kind == DeviceKind.StorageCrate || devices[placingIndex].kind == DeviceKind.WoodChipper || devices[placingIndex].kind == DeviceKind.Funnel || devices[placingIndex].kind == DeviceKind.Recycler)
         {
             rawYaw += TurnInput();
             placingYaw = PixelSnap.Active ? PixelSnap.Yaw(rawYaw) : rawYaw;   // snap the turn to angle steps unless Shift is held (the raw turn keeps counting so Q / E stay smooth)
@@ -2411,7 +2449,7 @@ public class PixelConsumables : MonoBehaviour
 
         Device effective = EffectiveDevice(d);
         PixelPlacedDevice placed = SpawnDevice(index, point, placingYaw, UsesKind(d.kind) ? effective.uses : DeviceSeconds(effective), 0f, 0f, -1);
-        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
+        if (placed != null && d.kind != DeviceKind.StorageCrate && d.kind != DeviceKind.WoodChipper && d.kind != DeviceKind.Funnel && d.kind != DeviceKind.Recycler) placed.Disarm();   // (the crate needs no switching on) starts grey and idle until you left-click it
 
         EndPlacement();
         DevicePlaced?.Invoke(d.kind);
@@ -2489,6 +2527,13 @@ public class PixelConsumables : MonoBehaviour
             PixelChipperDevice chipperDevice = root.AddComponent<PixelChipperDevice>();
             chipperDevice.Init(clicker, cam, shrinkSeconds);
             result = chipperDevice;
+        }
+        else if (d.kind == DeviceKind.Recycler)
+        {
+            GameObject root = PixelRecycler.Place(clicker, point, yaw);
+            PixelChipperDevice recyclerDevice = root.AddComponent<PixelChipperDevice>();   // (the permanent-device stub; the behaviour is in PixelRecycler)
+            recyclerDevice.Init(clicker, cam, shrinkSeconds);
+            result = recyclerDevice;
         }
         else if (d.kind == DeviceKind.Funnel)
         {
@@ -2678,6 +2723,11 @@ public class PixelConsumables : MonoBehaviour
         {
             suckPoint = null; timer = null;
             return isPreview ? PixelWoodChipper.CreateGhost(clicker) : displayOnly ? PixelWoodChipper.CreateDisplay(clicker) : PixelWoodChipper.Place(clicker, Vector3.zero, 0f);
+        }
+        if (d.kind == DeviceKind.Recycler)
+        {
+            suckPoint = null; timer = null;
+            return isPreview ? PixelRecycler.CreateGhost(clicker) : displayOnly ? PixelRecycler.CreateDisplay(clicker) : PixelRecycler.Place(clicker, Vector3.zero, 0f);
         }
 
         GameObject root = new GameObject(isPreview ? d.displayName + " (Preview)" : d.displayName);
