@@ -784,9 +784,13 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (exitHold && PixelTitleScreen.Showing) exitHold = false;
         bool hide = HidesOnTitle && (exitHold || (PixelTitleWanderers.LiveBackground && (PixelTitleScreen.Showing || PixelCameraIntro.Moving)));
         // Old pixels and devices go first when leaving and come last when arriving: they fade out, THEN the floor; the floor fades in, THEN they do.
-        float propsTarget = !HidesOnTitle ? 1f : (hide ? 0f : ((visibility >= 0.999f || FloorOff) ? 1f : 0f));
+        // (Props only wait for the floor after a real arrival - the title screen / leaving it. A floor fade-in for any other reason, e.g. coming back
+        // from first person, where the floor is off, must not shrink every husk and device away and back.)
+        if (hide) propsWaitForFloor = true;
+        float propsTarget = !HidesOnTitle ? 1f : (hide ? 0f : ((!propsWaitForFloor || visibility >= 0.999f || FloorOff) ? 1f : 0f));
         float fadeDt = Mathf.Min(Time.unscaledDeltaTime, 0.05f);   // (a long frame, e.g. while a report is built, must not make the fade jump)
         propsK = Mathf.MoveTowards(propsK, propsTarget, fadeDt / (propsTarget < propsK ? FadeTime * FadeOutFactor : FadeTime));
+        if (propsWaitForFloor && !hide && propsK >= 0.999f) propsWaitForFloor = false;
         if (hide && exitHold && propsK > 0.001f) hide = false;   // (the floor stays until the props are gone)
         float target = (hide || FloorOff) ? 0f : 1f;
         if (!visibilityInit) { visibilityInit = true; visibility = target; }
@@ -871,6 +875,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
     }
 
     private float propsK = 1f;
+    private bool propsWaitForFloor = true;   // set while the floor is hidden for the title; cleared once the props are back
     private readonly Dictionary<Transform, Vector3> propScales = new Dictionary<Transform, Vector3>();
     private readonly List<Transform> propList = new List<Transform>();
     private readonly List<ParticleSystem> stoppedParticles = new List<ParticleSystem>();

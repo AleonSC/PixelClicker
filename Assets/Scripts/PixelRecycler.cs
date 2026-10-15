@@ -27,7 +27,9 @@
 //   BACK HATCH: a small door in the back wall (the wall is built in four pieces round the hole, metal frame, slatted door with a handle). In first
 //   person, click it with the crosshair (within hatchReachHusks) and it slides up into the hole's top edge the same way the lid stretches
 //   (Hatch Pivot y scale 1 = shut, 0.03 = open; aim at the hole to shut it again; the door and frame glow hatchHighlightColor while the crosshair is on it), so husks can be tossed in by hand. It shuts while the bin works.
-//   MOVING: the carry handles move the bin through a kinematic Rigidbody (PixelCarryHandles), so loose husks are pushed instead of glitching through.
+//   MOVING: the carry handles move the bin through a kinematic Rigidbody (PixelCarryHandles), so loose husks are pushed instead of glitching through;
+//   while carried every husk inside is frozen into the bin each frame and any that still ends up outside is let go and uncounted at once
+//   (KeepContentsWhileCarried). A husk that leaves the bin is handed back to the floor's husk list (AdoptOldPixel), never left orphaned.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
 using System.Collections;
@@ -305,6 +307,7 @@ public class PixelRecycler : MonoBehaviour
         if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
 
         UpdateHatch();
+        if (carry != null && carry.Dragging) KeepContentsWhileCarried();
 
         tick -= Time.deltaTime;
         if (tick > 0f || processing) return;
@@ -411,6 +414,7 @@ public class PixelRecycler : MonoBehaviour
             if (Inside(inside[i].position) || inHand) { if (hold != null) hold.Held = true; Settle(inside[i], inHand); continue; }
             if (hold != null) hold.Held = false;
             Unfreeze(inside[i]);
+            if (clicker != null) clicker.AdoptOldPixel(inside[i]);   // back on the floor's husk list (grabbable, despawns, can be caught again)
             inside.RemoveAt(i);
             changed = true;
         }
@@ -439,6 +443,28 @@ public class PixelRecycler : MonoBehaviour
             changed = true;
         }
         if (changed) { RefreshCounter(); PixelAudio.Play("click"); }
+    }
+
+    /// <summary>
+    /// While the bin is carried: every husk in it is frozen into it AT ONCE (not on the next 0.1 s check, so none is left behind as the bin starts to
+    /// move), and any husk that still ends up outside the walls is let go and taken off the count straight away.
+    /// </summary>
+    private void KeepContentsWhileCarried()
+    {
+        bool changed = false;
+        for (int i = inside.Count - 1; i >= 0; i--)
+        {
+            Rigidbody b = inside[i];
+            if (b == null) { inside.RemoveAt(i); changed = true; continue; }
+            if (Inside(b.position)) { Freeze(b); continue; }
+            OldPixelDespawn hold = b.GetComponent<OldPixelDespawn>();
+            if (hold != null) hold.Held = false;
+            Unfreeze(b);
+            inside.RemoveAt(i);
+            if (clicker != null) clicker.AdoptOldPixel(b);   // a normal husk on the floor again
+            changed = true;
+        }
+        if (changed) RefreshCounter();
     }
 
     /// <summary>A captured husk that has lain still for a moment is frozen in place (kinematic), so the pile can't jitter or bounce; picking it up unfreezes it.</summary>
