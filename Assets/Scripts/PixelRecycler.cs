@@ -411,8 +411,9 @@ public class PixelRecycler : MonoBehaviour
             OldPixelDespawn hold = inside[i].GetComponent<OldPixelDespawn>();
             OldPixelInfo heldInfo = inside[i].GetComponent<OldPixelInfo>();
             bool inHand = heldInfo != null && heldInfo.heldByPlayer;
-            if (Inside(inside[i].position) || inHand) { if (hold != null) hold.Held = true; Settle(inside[i], inHand); continue; }
-            if (hold != null) hold.Held = false;
+            // A husk in the player's hand is never counted; one bouncing up a little above the walls stays counted (KeepsHold), only one that left the bin is let go.
+            if (!inHand && KeepsHold(inside[i].position)) { if (hold != null) hold.Held = true; Settle(inside[i], false); continue; }
+            if (hold != null && !inHand) hold.Held = false;
             Unfreeze(inside[i]);
             if (clicker != null) clicker.AdoptOldPixel(inside[i]);   // back on the floor's husk list (grabbable, despawns, can be caught again)
             inside.RemoveAt(i);
@@ -456,7 +457,8 @@ public class PixelRecycler : MonoBehaviour
         {
             Rigidbody b = inside[i];
             if (b == null) { inside.RemoveAt(i); changed = true; continue; }
-            if (Inside(b.position)) { Freeze(b); continue; }
+            OldPixelInfo carriedInfo = b.GetComponent<OldPixelInfo>();
+            if ((carriedInfo == null || !carriedInfo.heldByPlayer) && KeepsHold(b.position)) { Freeze(b); continue; }
             OldPixelDespawn hold = b.GetComponent<OldPixelDespawn>();
             if (hold != null) hold.Held = false;
             Unfreeze(b);
@@ -509,6 +511,33 @@ public class PixelRecycler : MonoBehaviour
         if (b.isKinematic) b.isKinematic = false;
     }
 
+    /// <summary>Is a husk that is already counted still in the bin? Like Inside, but it may bounce up to two wall heights above the floor of the bin.</summary>
+    private bool KeepsHold(Vector3 world)
+    {
+        Vector3 p = transform.InverseTransformPoint(world);
+        return Mathf.Abs(p.x) <= innerW * 0.5f && Mathf.Abs(p.z) <= innerD * 0.5f && p.y >= -0.05f && p.y <= wallH * 2f;
+    }
+
+    /// <summary>Takes out anything that should not be recycled right now: husks in the player's hand or no longer in the bin go back to the floor; the counter is redone.</summary>
+    private void DropStrays()
+    {
+        bool changed = false;
+        for (int i = inside.Count - 1; i >= 0; i--)
+        {
+            Rigidbody b = inside[i];
+            if (b == null) { inside.RemoveAt(i); changed = true; continue; }
+            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            if (info != null && !info.heldByPlayer && KeepsHold(b.position)) continue;
+            OldPixelDespawn hold = b.GetComponent<OldPixelDespawn>();
+            if (hold != null && (info == null || !info.heldByPlayer)) hold.Held = false;
+            Unfreeze(b);
+            if (clicker != null) clicker.AdoptOldPixel(b);
+            inside.RemoveAt(i);
+            changed = true;
+        }
+        if (changed) RefreshCounter();
+    }
+
     private bool Inside(Vector3 world)
     {
         Vector3 p = transform.InverseTransformPoint(world);
@@ -533,6 +562,7 @@ public class PixelRecycler : MonoBehaviour
 
     private IEnumerator Process()
     {
+        DropStrays();   // what is counted is exactly what gets recycled
         processing = true;   // (nothing is captured or let go until the bin is done; a shut lid also stops husks falling in)
         PixelAudio.Play("ui_click");
         SetGlow(WorkGlow, 1f);
@@ -556,6 +586,7 @@ public class PixelRecycler : MonoBehaviour
         transform.localPosition = home;
         transform.localRotation = homeRot;
 
+        DropStrays();   // (one pulled out during the shake is not paid for)
         // Pay out and empty the bin.
         Dictionary<int, double> paid = new Dictionary<int, double>();
         int count = 0;
