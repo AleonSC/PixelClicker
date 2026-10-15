@@ -24,6 +24,10 @@
 //   SAVED: the husks inside go into PlacedState.extra ('Type,amount;', ExportState / ImportState via PixelConsumables) and are spawned back into the bin on
 //   load. HANDLES: the Storage Crate's grip handles on both short ends (shared PixelCarryHandles: BuildParts in Build, the component added by Place):
 //   drag one to carry the bin over the floor (scroll / Q / E turn it); everything inside is frozen into the bin while it is carried; not while processing.
+//   BACK HATCH: a small door in the back wall (the wall is built in four pieces round the hole, metal frame, slatted door with a handle). In first
+//   person, click it with the crosshair (within hatchReachHusks) and it slides up into the hole's top edge the same way the lid stretches
+//   (Hatch Pivot y scale 1 = shut, 0.03 = open; aim at the hole to shut it again), so husks can be tossed in by hand. It shuts while the bin works.
+//   MOVING: the carry handles move the bin through a kinematic Rigidbody (PixelCarryHandles), so loose husks are pushed instead of glitching through.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
 using System.Collections;
@@ -93,7 +97,11 @@ public class PixelRecycler : MonoBehaviour
     private PixelClicker clicker;
     private PixelCarryHandles carry;   // the grip handles (shared with the Storage Crate)
     private Vector3 baseScale = Vector3.one;
-    private Transform lidPivot, button;
+    private Transform lidPivot, button, hatchPivot;
+    private readonly List<Collider> hatchColliders = new List<Collider>();
+    private bool hatchOpen, hatchMoving;
+    [Tooltip("How far away (in husk widths) the back hatch can be clicked from in first person.")]
+    [SerializeField] private float hatchReachHusks = 12f;
     private Renderer lampRenderer;
     private readonly List<Renderer> bandRenderers = new List<Renderer>();
     private static readonly Color IdleGlow = new Color(0.35f, 1f, 0.55f, 1f), WorkGlow = new Color(1f, 0.7f, 0.2f, 1f);
@@ -151,7 +159,31 @@ public class PixelRecycler : MonoBehaviour
         // Floor and walls (inner liner a darker green), with the opening on top.
         kit.Box("Base", tr, new Vector3(0f, t * 1.1f, 0f), new Vector3(w + 2f * t, t * 0.4f, d + 2f * t), liner, default, colliders);
         kit.Box("Wall Front", tr, new Vector3(0f, h * 0.5f, -(d + t) * 0.5f), new Vector3(w + 2f * t, h, t), BodyColor, default, colliders, 0.3f, 0.55f);
-        kit.Box("Wall Back", tr, new Vector3(0f, h * 0.5f, (d + t) * 0.5f), new Vector3(w + 2f * t, h, t), BodyColor, default, colliders, 0.3f, 0.55f);
+        // The back wall has a small HATCH in it (opened from first person to toss husks in by hand): the wall is four pieces round the hole.
+        float zb = (d + t) * 0.5f, hw2 = HatchWidth(u) * 0.5f, hb = HatchBottom(u), ht = hb + HatchHeight(u), fullW = w + 2f * t;
+        float sideW = fullW * 0.5f - hw2;
+        kit.Box("Wall Back L", tr, new Vector3(-(hw2 + sideW * 0.5f), h * 0.5f, zb), new Vector3(sideW, h, t), BodyColor, default, colliders, 0.3f, 0.55f);
+        kit.Box("Wall Back R", tr, new Vector3(hw2 + sideW * 0.5f, h * 0.5f, zb), new Vector3(sideW, h, t), BodyColor, default, colliders, 0.3f, 0.55f);
+        kit.Box("Wall Back Low", tr, new Vector3(0f, hb * 0.5f, zb), new Vector3(hw2 * 2f, hb, t), BodyColor, default, colliders, 0.3f, 0.55f);
+        kit.Box("Wall Back High", tr, new Vector3(0f, (ht + h) * 0.5f, zb), new Vector3(hw2 * 2f, h - ht, t), BodyColor, default, colliders, 0.3f, 0.55f);
+        // A metal frame round the hole.
+        kit.Box("Hatch Frame Top", tr, new Vector3(0f, ht + t * 0.12f, zb + t * 0.55f), new Vector3(hw2 * 2f + t * 0.5f, t * 0.25f, t * 0.15f), metal, default, false, 0.85f, 0.7f);
+        kit.Box("Hatch Frame Bottom", tr, new Vector3(0f, hb - t * 0.12f, zb + t * 0.55f), new Vector3(hw2 * 2f + t * 0.5f, t * 0.25f, t * 0.15f), metal, default, false, 0.85f, 0.7f);
+        kit.Box("Hatch Frame L", tr, new Vector3(-hw2 - t * 0.12f, (hb + ht) * 0.5f, zb + t * 0.55f), new Vector3(t * 0.25f, ht - hb + t * 0.5f, t * 0.15f), metal, default, false, 0.85f, 0.7f);
+        kit.Box("Hatch Frame R", tr, new Vector3(hw2 + t * 0.12f, (hb + ht) * 0.5f, zb + t * 0.55f), new Vector3(t * 0.25f, ht - hb + t * 0.5f, t * 0.15f), metal, default, false, 0.85f, 0.7f);
+        // The hatch door: slats tucked under the hole's top edge that stretch DOWN over it, the same way the lid stretches over the top
+        // (Hatch Pivot y scale: HatchOpenScale = tucked away, 1 = shut). It starts shut.
+        GameObject hatch = new GameObject("Hatch Pivot");
+        hatch.transform.SetParent(tr, false);
+        hatch.transform.localPosition = new Vector3(0f, ht, zb);
+        const int hatchSlats = 4;
+        float holeH = ht - hb;
+        for (int i = 0; i < hatchSlats; i++)
+        {
+            Color c = i % 2 == 0 ? LidColor : Color.Lerp(LidColor, metal, 0.35f);
+            kit.Box("Hatch Slat " + i, hatch.transform, new Vector3(0f, -(i + 0.5f) / hatchSlats * holeH, 0f), new Vector3(hw2 * 2f, holeH / hatchSlats * 0.94f, t * 0.6f), c, default, colliders, 0.45f, 0.6f);
+        }
+        kit.Box("Hatch Handle", hatch.transform, new Vector3(0f, -holeH * 0.85f, t * 0.45f), new Vector3(hw2 * 0.6f, t * 0.18f, t * 0.25f), metal, default, false, 0.85f, 0.7f);
         kit.Box("Wall Left", tr, new Vector3(-(w + t) * 0.5f, h * 0.5f, 0f), new Vector3(t, h, d), BodyColor, default, colliders, 0.3f, 0.55f);
         kit.Box("Wall Right", tr, new Vector3((w + t) * 0.5f, h * 0.5f, 0f), new Vector3(t, h, d), BodyColor, default, colliders, 0.3f, 0.55f);
         // Brushed-metal corner pillars, a little taller than the walls, and a metal rim round the opening.
@@ -202,6 +234,12 @@ public class PixelRecycler : MonoBehaviour
         return root;
     }
 
+    // The back hatch's hole, in husk widths (u): its width, how high its bottom edge sits, its height.
+    private static float HatchWidth(float u) => 1.7f * u;
+    private static float HatchBottom(float u) => 0.9f * u;
+    private static float HatchHeight(float u) => 1.2f * u;
+    private const float HatchOpenScale = 0.03f;
+
     /// <summary>The lid pivot's z scale: tucked away under the back rim, or stretched over the whole opening.</summary>
     private const float LidOpenScale = 0.02f, LidClosedScale = 1f;
 
@@ -212,6 +250,8 @@ public class PixelRecycler : MonoBehaviour
         innerW = WidthHusks * u; innerD = DepthHusks * u; wallH = HeightHusks * u;
         baseScale = transform.localScale;
         lidPivot = transform.Find("Lid Pivot");
+        hatchPivot = transform.Find("Hatch Pivot");
+        if (hatchPivot != null) foreach (Collider c in hatchPivot.GetComponentsInChildren<Collider>()) hatchColliders.Add(c);
         Transform lamp = transform.Find("Lamp");
         lampRenderer = lamp != null ? lamp.GetComponent<Renderer>() : null;
         foreach (string band in new[] { "Band Front", "Band Back", "Band Left", "Band Right" })
@@ -263,6 +303,8 @@ public class PixelRecycler : MonoBehaviour
         bool hot = !processing && (carry == null || !carry.Dragging) && buttonCollider != null && cam != null && !PixelInput.PointerOverUI() && PointerOnButton(cam);
         if (hot) hotFrame = PixelPointerClaim.Claim();
         if (hot && PixelInput.LeftPressed() && Time.timeScale > 0f && !PixelPauseMenu.IsPaused) StartCoroutine(Process());
+
+        UpdateHatch();
 
         tick -= Time.deltaTime;
         if (tick > 0f || processing) return;
@@ -468,6 +510,7 @@ public class PixelRecycler : MonoBehaviour
         processing = true;   // (nothing is captured or let go until the bin is done; a shut lid also stops husks falling in)
         PixelAudio.Play("ui_click");
         SetGlow(WorkGlow, 1f);
+        if (hatchOpen) StartCoroutine(MoveHatch(false));   // the back hatch shuts too while it works
         yield return StretchLid(LidOpenScale, LidClosedScale);
 
         // Shake, harder and harder, for processSeconds; the band pulses faster with it.
@@ -530,6 +573,48 @@ public class PixelRecycler : MonoBehaviour
     {
         PixelClicker.PixelTier t = clicker.Tiers[tierIndex];
         return System.Math.Max(0d, t.amountPerClick) * clicker.PayoutMultiplier(tierIndex);
+    }
+
+    /// <summary>First person: click the back hatch (crosshair on it, within reach) to open / shut it, so husks can be tossed in by hand.</summary>
+    private void UpdateHatch()
+    {
+        if (hatchPivot == null || hatchMoving || processing || !PixelFirstPerson.Active) return;
+        if (!PixelInput.LeftPressed() || PixelPauseMenu.IsPaused || Time.timeScale <= 0f) return;
+        if (!PixelFirstPerson.TryGetViewRay(out Ray ray)) return;
+        float reach = Unit(clicker) * Mathf.Max(1f, hatchReachHusks);
+        bool onHatch = false;
+        foreach (Collider c in hatchColliders) if (c != null && c.Raycast(ray, out _, reach)) { onHatch = true; break; }
+        if (!onHatch && hatchOpen)
+        {
+            // An open hatch has its slats tucked away: aim at the hole itself to shut it again.
+            Vector3 local = transform.InverseTransformPoint(ray.origin), dir = transform.InverseTransformDirection(ray.direction);
+            float u = Unit(clicker), zb = (DepthHusks * u + 0.25f * u) * 0.5f;
+            if (Mathf.Abs(dir.z) > 0.001f)
+            {
+                float k = (zb - local.z) / dir.z;
+                Vector3 p = local + dir * k;
+                onHatch = k > 0f && k < reach && Mathf.Abs(p.x) <= HatchWidth(u) * 0.5f && p.y >= HatchBottom(u) && p.y <= HatchBottom(u) + HatchHeight(u);
+            }
+        }
+        if (onHatch) StartCoroutine(MoveHatch(!hatchOpen));
+    }
+
+    private IEnumerator MoveHatch(bool open)
+    {
+        if (hatchPivot == null) yield break;
+        hatchMoving = true;
+        hatchOpen = open;
+        PixelAudio.Play("ui_click");
+        float from = hatchPivot.localScale.y, to = open ? HatchOpenScale : 1f, t = 0f, seconds = Mathf.Max(0.05f, lidSeconds);
+        while (t < 1f)
+        {
+            t += Time.deltaTime / seconds;
+            Vector3 sc = hatchPivot.localScale;
+            sc.y = Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t)));
+            hatchPivot.localScale = sc;
+            yield return null;
+        }
+        hatchMoving = false;
     }
 
     /// <summary>Stretches the lid out of the inner back edge over the opening (or pulls it back in).</summary>

@@ -7,7 +7,7 @@
 //     (PixelHandCursor), left-drag moves the root over the floor plane (kept on screen) with the fist cursor, scroll / Q / E turn it while dragging
 //     (PixelConsumables.TurnInput). Over(ray) / Dragging tell the owner the pointer is the handles'; static Hot (hovering or dragging any handles)
 //     is part of PixelClicker.ExternalClickBlock and PixelGrab's guard. 'Blocked' (a Func the owner sets) pauses it, e.g. while the Recycler works.
-//   The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
+//   Moves go through a kinematic Rigidbody on the root (MovePosition / MoveRotation in FixedUpdate) so loose husks are pushed, not passed through. The position / yaw are the root's own, so the saved PlacedState picks up where it was carried to.
 // ---------------------------------------------------
 using System;
 using System.Collections.Generic;
@@ -38,6 +38,27 @@ public class PixelCarryHandles : MonoBehaviour
     private PixelConsumables consumables;
     private bool dragging;
     private Vector3 dragOffset;
+    private Rigidbody body;
+    private bool hasTarget;
+    private Vector3 targetPos;
+    private Quaternion targetRot;
+
+    private void FixedUpdate()
+    {
+        if (!hasTarget || body == null) return;
+        body.MovePosition(targetPos);
+        body.MoveRotation(targetRot);
+        hasTarget = false;
+    }
+
+    private Vector3 CurrentPos => hasTarget ? targetPos : transform.position;
+    private Quaternion CurrentRot => hasTarget ? targetRot : transform.rotation;
+
+    private void MoveTo(Vector3 pos, Quaternion rot)
+    {
+        if (body == null) { transform.SetPositionAndRotation(pos, rot); return; }
+        targetPos = pos; targetRot = rot; hasTarget = true;
+    }
 
     /// <summary>Builds the handle parts: on each short (+/-X) end two arms and a grip bar, named "Handle". 'halfWidth' = where the end faces are,
     /// 'depth' = the thing's depth along Z, 'y' = the height of the handles, 'size' = how far they stick out (the Storage Crate uses 0.34).</summary>
@@ -58,6 +79,14 @@ public class PixelCarryHandles : MonoBehaviour
     public void Init(Func<Camera> cam)
     {
         cameraSource = cam;
+        // A kinematic Rigidbody on the root: the carried thing is moved through the physics engine (MovePosition / MoveRotation), so loose husks
+        // are pushed aside instead of the colliders teleporting into them (that let husks glitch through the walls).
+        body = GetComponent<Rigidbody>();
+        if (body == null) body = gameObject.AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        body.useGravity = false;
+        body.interpolation = RigidbodyInterpolation.None;   // (smoothed only while carried: otherwise the owner may move the transform itself, e.g. the Recycler's shake)
+        body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         handles.Clear();
         foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) if (r.name == "Handle") handles.Add(r);
     }
@@ -77,18 +106,18 @@ public class PixelCarryHandles : MonoBehaviour
         if (handles.Count == 0) return;
         Camera cam = Cam;
         bool blocked = Blocked != null && Blocked();
-        if (cam == null || blocked || Time.timeScale <= 0f || PixelPauseMenu.IsPaused) { dragging = false; return; }
+        if (cam == null || blocked || Time.timeScale <= 0f || PixelPauseMenu.IsPaused) { if (dragging) StopDrag(); return; }
 
         if (dragging)
         {
-            if (!PixelInput.LeftHeld()) { dragging = false; return; }
+            if (!PixelInput.LeftHeld()) { StopDrag(); return; }
             hotFrame = PixelPointerClaim.Claim();
             PixelHandCursor.Request(PixelHandCursor.Shape.Closed);
             if (consumables == null) consumables = PixelFind.First<PixelConsumables>();
             float turn = consumables != null ? consumables.TurnInput() : 0f;
             if (!Mathf.Approximately(turn, 0f))
             {
-                transform.Rotate(0f, turn, 0f, Space.World);
+                MoveTo(CurrentPos, Quaternion.Euler(0f, turn, 0f) * CurrentRot);
                 dragOffset = Quaternion.Euler(0f, turn, 0f) * dragOffset;   // the grabbed point swings round the centre with it
             }
             DragTo(cam, cam.ScreenPointToRay(PixelInput.PointerPosition()));
@@ -102,14 +131,21 @@ public class PixelCarryHandles : MonoBehaviour
         if (PixelInput.LeftPressed() && FloorPoint(ray, out Vector3 hit))
         {
             dragging = true;
-            dragOffset = transform.position - hit;
+            dragOffset = CurrentPos - hit;
+            if (body != null) body.interpolation = RigidbodyInterpolation.Interpolate;
         }
+    }
+
+    private void StopDrag()
+    {
+        dragging = false;
+        if (body != null) body.interpolation = RigidbodyInterpolation.None;
     }
 
     private bool FloorPoint(Ray ray, out Vector3 point)
     {
         point = default;
-        Plane plane = new Plane(Vector3.up, transform.position);
+        Plane plane = new Plane(Vector3.up, CurrentPos);
         if (!plane.Raycast(ray, out float enter)) return false;
         point = ray.GetPoint(enter);
         return true;
@@ -119,9 +155,9 @@ public class PixelCarryHandles : MonoBehaviour
     {
         if (!FloorPoint(ray, out Vector3 hit)) return;
         Vector3 target = hit + dragOffset;
-        target.y = transform.position.y;
+        target.y = CurrentPos.y;
         Vector3 vp = cam.WorldToViewportPoint(target);
         if (vp.z <= 0f || vp.x < screenMargin.x || vp.x > 1f - screenMargin.x || vp.y < screenMargin.y || vp.y > 1f - screenMargin.y) return;   // never off the screen
-        transform.position = target;
+        MoveTo(target, CurrentRot);
     }
 }
