@@ -1077,7 +1077,7 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>The old Old Pixel Capacity upgrade (5 levels, base 50): NO LONGER sold (not in the default table); kept as the reference for rebalancing it into a Standard skill reward.</summary>
+    /// <summary>The old Old Pixel Capacity upgrade (5 levels, base 50): NO LONGER sold (not in the default table, MigrateOldPackData removes saved copies); kept as the reference for rebalancing it into a Standard skill reward.</summary>
     private static ShopPack CreateOldPixelCapPack()
     {
         return new ShopPack

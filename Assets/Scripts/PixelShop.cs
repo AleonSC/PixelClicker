@@ -184,6 +184,16 @@ public partial class PixelShop : MonoBehaviour
         [Tooltip("Left out of the shop (never listed). It still exists and works: unlock or relock it with the Dev Tools 'Shop unlocks' widget. Used for the testing packs.")]
         public bool hideInShop = false;
 
+        // Older versions used one tick box per minigame. They are read once and turned into the ids above.
+        // Older versions had one required pack index and one minigame goal id here; they are moved into 'requirements'.
+        [HideInInspector] public int requiresPackIndex = -1;
+        [HideInInspector] public string requiresMinigameGoal = "";
+
+        [HideInInspector] public bool unlocksGhostMinigame;
+        [HideInInspector] public bool unlocksBlackholeMinigame;
+        [HideInInspector] public bool requiresSingularity;
+        [HideInInspector] public bool requiresGhosts;
+
         [Tooltip("Runtime: has this pack been bought? (Packs with reward tiers also count as bought once all their tiers are unlocked.)")]
         public bool purchased = false;
 
@@ -806,7 +816,7 @@ public partial class PixelShop : MonoBehaviour
     /// </summary>
     private bool EnsureDefaultPacks()
     {
-        bool changed = false;
+        bool changed = MigrateOldPackData();
         if (!addDefaultPacks) return changed;
         if (packs == null) packs = new ShopPack[0];
 
@@ -821,16 +831,842 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
-        // ---- Future migrations of saved Inspector pack data go here (see packDataVersion below). ----
+        // The Mirror pixel is listed after Electric and before Vacuum: move it there once in lists that got it appended at the end.
+        if (packDataVersion < 6)
+        {
+            int mirrorIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Mirror));
+            int vacuumIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Vacuum));
+            if (mirrorIndex >= 0 && vacuumIndex >= 0 && mirrorIndex > vacuumIndex) MovePack(mirrorIndex, vacuumIndex);
+            if (mirrorIndex >= 0) { packDataVersion = 6; changed = true; }
+        }
+
+        // The Seed pixel is listed before Electric: move it there once in lists that got it appended at the end.
+        if (packDataVersion < 7)
+        {
+            int seedIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Seed));
+            int electricIdx = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Electric));
+            if (seedIndex >= 0 && electricIdx >= 0 && seedIndex > electricIdx) MovePack(seedIndex, electricIdx);
+            if (seedIndex >= 0) { packDataVersion = 7; changed = true; }
+        }
+
+        // The Seed is a cracking shell now (3 clicks, pays 6 on the last, a sprout grows a random pixel): update packs saved with the first Seed version.
+        if (packDataVersion < 8 && packs != null)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Seed)) continue;
+                ShopPack fresh = CreateSeedPixelPack(-1);
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (reward.type != PixelClicker.PixelType.Seed) continue;
+                    if (reward.clicksToCollect <= 1) reward.clicksToCollect = 3;
+                    if (Mathf.Approximately((float)reward.amountPerClick, 2f)) reward.amountPerClick = 6;
+                }
+                if (pack.description != null && pack.description.StartsWith("Adds the Seed pixel: a brown cube with a sprout")) pack.description = fresh.description;
+                packDataVersion = 8;
+                changed = true;
+            }
+        }
+        // The Seed shell now takes 8 clicks and pays 15 (it was 3 and 6): only the previous defaults are changed.
+        if (packDataVersion < 9 && packs != null)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Seed)) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (reward.type != PixelClicker.PixelType.Seed) continue;
+                    if (reward.clicksToCollect == 3) reward.clicksToCollect = 8;
+                    if (Mathf.Approximately((float)reward.amountPerClick, 6f)) reward.amountPerClick = 15;
+                }
+                if (pack.description != null && pack.description.StartsWith("Adds the Seed pixel: a brown shell you click a few times to crack."))
+                    pack.description = CreateSeedPixelPack(-1).description;
+                packDataVersion = 9;
+                changed = true;
+            }
+        }
+        // The Water pixel is listed right after Seed (before Electric): move it there once in lists that got it appended at the end.
+        if (packDataVersion < 10)
+        {
+            int waterIndex = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Water));
+            int electricAt = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Electric));
+            if (waterIndex >= 0 && electricAt >= 0 && waterIndex > electricAt) MovePack(waterIndex, electricAt);
+            if (waterIndex >= 0) { packDataVersion = Mathf.Max(packDataVersion, 10); changed = true; }
+        }
+        // Vacuum (0.2 -> 0.28) and Electric (0.15 -> 0.2) pixels are slightly more common; only the old defaults are changed, not a value you typed.
+        if (packDataVersion < 11 && packs != null)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack == null || pack.rewardTiers == null) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                {
+                    if (reward.type == PixelClicker.PixelType.Vacuum && Mathf.Approximately(reward.spawnWeight, 0.2f)) reward.spawnWeight = 0.28f;
+                    if (reward.type == PixelClicker.PixelType.Electric && Mathf.Approximately(reward.spawnWeight, 0.15f)) reward.spawnWeight = 0.2f;
+                }
+            }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type == PixelClicker.PixelType.Vacuum && Mathf.Approximately(t.spawnWeight, 0.2f)) t.spawnWeight = 0.28f;
+                    if (t.type == PixelClicker.PixelType.Electric && Mathf.Approximately(t.spawnWeight, 0.15f)) t.spawnWeight = 0.2f;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 11);
+            changed = true;
+        }
+        // The Meteor became a 3-click rock with glowing cracks (it paid 15 for one click, now 45 for three) and no longer glows as a flat colour.
+        if (packDataVersion < 12)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null) continue;
+                    foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    {
+                        if (reward.type != PixelClicker.PixelType.Meteor) continue;
+                        if (reward.clicksToCollect <= 1) reward.clicksToCollect = 3;
+                        if (Mathf.Approximately((float)reward.amountPerClick, 15f)) reward.amountPerClick = 45;
+                        reward.glow = false;
+                    }
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type != PixelClicker.PixelType.Meteor) continue;
+                    if (t.clicksToCollect <= 1) t.clicksToCollect = 3;
+                    if (Mathf.Approximately((float)t.amountPerClick, 15f)) t.amountPerClick = 45;
+                    t.glow = false;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 12);
+            changed = true;
+        }
+        // Stone (the old Rock block) is Mining's filler: one click, tiny pay, and part of the Prospector's Pack.
+        if (packDataVersion < 13)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Copper) || Rewards(pack, PixelClicker.PixelType.Rock)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> withStone = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
+                    withStone.Insert(0, new PixelClicker.PixelTier
+                    {
+                        type = PixelClicker.PixelType.Rock, displayName = "Stone Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
+                        clicksToCollect = 1, amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+                    });
+                    pack.rewardTiers = withStone.ToArray();
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type != PixelClicker.PixelType.Rock) continue;
+                    t.displayName = "Stone Pixels";
+                    t.clicksToCollect = 1;
+                    t.amountPerClick = 1;
+                    t.spawnWeight = 1f;
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 13);
+            changed = true;
+        }
+        // The hazard blocks (Gas Pocket for Mining, Pest for Farming) join the Prospector's and Farmer's Packs.
+        if (packDataVersion < 14)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null) continue;
+                    PixelClicker.PixelTier add = null;
+                    if (Rewards(pack, PixelClicker.PixelType.Copper) && !Rewards(pack, PixelClicker.PixelType.GasPocket))
+                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.GasPocket, displayName = "Gas Pocket", color = new Color(0.78f, 0.85f, 0.25f, 1f), clicksToCollect = 5, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
+                    else if (Rewards(pack, PixelClicker.PixelType.Dirt) && !Rewards(pack, PixelClicker.PixelType.Pest))
+                        add = new PixelClicker.PixelTier { type = PixelClicker.PixelType.Pest, displayName = "Pest", color = new Color(0.4f, 0.45f, 0.14f, 1f), clicksToCollect = 6, amountPerClick = 0, spawnWeight = 0.05f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly };
+                    if (add == null) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers) { add };
+                    pack.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 14);
+            changed = true;
+        }
+
+        // The Farmer's Pack keeps every farm block (a saved list could lack Seed or Water, which used to be sold alone) and Dirt takes a few digs.
+        if (packDataVersion < 15)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Dirt)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
+                    foreach (PixelClicker.PixelTier def in CreateFarmerPack().rewardTiers)
+                        if (!list.Exists(t => t.type == def.type)) list.Add(def);
+                    foreach (PixelClicker.PixelTier t in list)
+                        if (t.type == PixelClicker.PixelType.Dirt && t.clicksToCollect <= 1) t.clicksToCollect = 3;
+                    pack.rewardTiers = list.ToArray();
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                    if (t.type == PixelClicker.PixelType.Dirt && t.clicksToCollect <= 1) t.clicksToCollect = 3;
+            packDataVersion = Mathf.Max(packDataVersion, 15);
+            changed = true;
+        }
+
+        if (packDataVersion < 16)
+        {
+            // The Combo Meter is listed right above the Auto Clicker (the intro goals lead from one to the other).
+            if (packs != null)
+            {
+                int comboAt = Array.FindIndex(packs, p => p != null && p.upgradeEffect == UpgradeEffect.ComboMeter);
+                int autoAt = Array.FindIndex(packs, p => p != null && p.unlocksAutoClicker);
+                if (comboAt >= 0 && autoAt >= 0 && comboAt > autoAt) MovePack(comboAt, autoAt);
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 16);
+            changed = true;
+        }
+
+        // The Wood Pixel pack becomes the Woodcutter's Pack (Woodcutting skill): six wood blocks and a hazard.
+        if (packDataVersion < 17)
+        {
+            if (packs != null)
+                foreach (ShopPack pack in packs)
+                {
+                    if (pack == null || pack.rewardTiers == null || !Rewards(pack, PixelClicker.PixelType.Wood) || Rewards(pack, PixelClicker.PixelType.Dirt)) continue;
+                    ShopPack def = CreateWoodPixelPack();
+                    pack.displayName = def.displayName;
+                    pack.description = def.description;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
+                    foreach (PixelClicker.PixelTier t in def.rewardTiers)
+                        if (!list.Exists(x => x.type == t.type)) list.Add(t);
+                    foreach (PixelClicker.PixelTier t in list)
+                        if (t.type == PixelClicker.PixelType.Wood && t.clicksToCollect <= 1) { t.clicksToCollect = 2; t.amountPerClick = 3; t.spawnWeight = 1f; }
+                    pack.rewardTiers = list.ToArray();
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                    if (t.type == PixelClicker.PixelType.Wood && t.clicksToCollect <= 1) { t.clicksToCollect = 2; t.amountPerClick = 3; t.spawnWeight = 1f; }
+            packDataVersion = Mathf.Max(packDataVersion, 17);
+            changed = true;
+        }
+
+        if (packDataVersion < 18)
+        {
+            // The Forager's Pack (Foraging skill) is new: add it to saved lists that lack it.
+            if (packs != null && !System.Array.Exists(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Berry)))
+            {
+                System.Collections.Generic.List<ShopPack> withForager = new System.Collections.Generic.List<ShopPack>(packs) { CreateForagerPack() };
+                packs = withForager.ToArray();
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 18);
+            changed = true;
+        }
+
+        if (packDataVersion < 19)
+        {
+            // New Angler's Pack (Fishing skill), and the Prospector's Pack changes its ores: Lead / Zinc / Nickel are out, Silver / Gold / Obsidian / Bedrock are in.
+            if (packs != null && !System.Array.Exists(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Fish)))
+            {
+                System.Collections.Generic.List<ShopPack> withAngler = new System.Collections.Generic.List<ShopPack>(packs) { CreateAnglerPack() };
+                packs = withAngler.ToArray();
+            }
+            int prospectorAt = packs == null ? -1 : System.Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Copper) && !Rewards(p, PixelClicker.PixelType.Fish));
+            if (prospectorAt >= 0)
+            {
+                ShopPack prospector = packs[prospectorAt];
+                ShopPack fresh = CreateProspectorPack();
+                prospector.description = fresh.description;
+                System.Collections.Generic.List<PixelClicker.PixelTier> ores = new System.Collections.Generic.List<PixelClicker.PixelTier>();
+                foreach (PixelClicker.PixelTier t in prospector.rewardTiers)
+                    if (!PixelClicker.IsRetiredOre(t.type)) ores.Add(t);
+                foreach (PixelClicker.PixelTier t in fresh.rewardTiers)
+                    if (!ores.Exists(x => x.type == t.type)) ores.Add(t);
+                prospector.rewardTiers = ores.ToArray();
+                // The old Obsidian Pixel pack goes: anything that needed it now needs the Prospector's Pack.
+                int obsidianAt = System.Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Obsidian) && !Rewards(p, PixelClicker.PixelType.Copper));
+                if (obsidianAt >= 0)
+                {
+                    System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
+                    kept.RemoveAt(obsidianAt);
+                    packs = kept.ToArray();
+                    int newProspector = prospectorAt > obsidianAt ? prospectorAt - 1 : prospectorAt;
+                    foreach (ShopPack other in packs)
+                    {
+                        if (other == null || other.requirements == null) continue;
+                        foreach (PackRequirement r in other.requirements)
+                        {
+                            if (r.kind != RequirementKind.Pack) continue;
+                            if (r.packIndex == obsidianAt) r.packIndex = newProspector;
+                            else if (r.packIndex > obsidianAt) r.packIndex--;
+                        }
+                    }
+                }
+                // Obsidian is a 15-click rock now (and the ores' payouts follow the new pack).
+                ShopPack source = CreateProspectorPack();
+                foreach (PixelClicker.PixelTier def in source.rewardTiers)
+                {
+                    if (def.type != PixelClicker.PixelType.Obsidian) continue;
+                    foreach (PixelClicker.PixelTier t in packs[System.Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Copper))].rewardTiers)
+                        if (t.type == def.type) { t.clicksToCollect = def.clicksToCollect; t.amountPerClick = def.amountPerClick; t.spawnWeight = def.spawnWeight; }
+                    if (clicker != null)
+                        foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                            if (t.type == def.type) { t.clicksToCollect = def.clicksToCollect; t.amountPerClick = def.amountPerClick; t.spawnWeight = def.spawnWeight; }
+                }
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 19);
+            changed = true;
+        }
+
+        if (packDataVersion < 20)
+        {
+            // Bedrock needs a random 20-30 clicks now.
+            PixelClicker.PixelTier def = null;
+            foreach (PixelClicker.PixelTier t in CreateProspectorPack().rewardTiers) if (t.type == PixelClicker.PixelType.Bedrock) def = t;
+            if (def != null)
+            {
+                void Apply(PixelClicker.PixelTier t)
+                {
+                    if (t == null || t.type != PixelClicker.PixelType.Bedrock) return;
+                    t.clicksToCollect = def.clicksToCollect; t.randomClicks = true; t.randomClicksMin = def.randomClicksMin; t.randomClicksMax = def.randomClicksMax;
+                }
+                if (packs != null)
+                    foreach (ShopPack p in packs)
+                        if (p != null && p.rewardTiers != null) foreach (PixelClicker.PixelTier t in p.rewardTiers) Apply(t);
+                if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) Apply(t);
+            }
+            packDataVersion = Mathf.Max(packDataVersion, 20);
+            changed = true;
+        }
+
+        if (packDataVersion < 21)
+        {
+            // Fishing: Water replaces Driftwood as the filler, and Fish is a rare one-click catch (a Weak Spots round decides it).
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier fishDef = null, waterDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers)
+            {
+                if (t.type == PixelClicker.PixelType.Fish) fishDef = t;
+                if (t.type == PixelClicker.PixelType.Water) waterDef = t;
+            }
+            void ApplyFish(PixelClicker.PixelTier t)
+            {
+                if (t == null || t.type != PixelClicker.PixelType.Fish || fishDef == null) return;
+                t.clicksToCollect = fishDef.clicksToCollect; t.amountPerClick = fishDef.amountPerClick; t.spawnWeight = fishDef.spawnWeight;
+            }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers);
+                    list.RemoveAll(t => t != null && t.type == PixelClicker.PixelType.Driftwood);
+                    if (waterDef != null && !list.Exists(t => t != null && t.type == PixelClicker.PixelType.Water)) list.Add(waterDef.Clone());
+                    p.rewardTiers = list.ToArray();
+                    foreach (PixelClicker.PixelTier t in p.rewardTiers) ApplyFish(t);
+                }
+            if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) ApplyFish(t);
+            packDataVersion = Mathf.Max(packDataVersion, 21);
+            changed = true;
+        }
+
+        if (packDataVersion < 22)
+        {
+            // Fishing: the Jellyfish takes 9 clicks and the Bait block joins the pack.
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier jellyDef = null, baitDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers)
+            {
+                if (t.type == PixelClicker.PixelType.Jellyfish) jellyDef = t;
+                if (t.type == PixelClicker.PixelType.Bait) baitDef = t;
+            }
+            void ApplyJelly(PixelClicker.PixelTier t)
+            {
+                if (t != null && t.type == PixelClicker.PixelType.Jellyfish && jellyDef != null) t.clicksToCollect = jellyDef.clicksToCollect;
+            }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish)) continue;
+                    if (baitDef != null && !Rewards(p, PixelClicker.PixelType.Bait))
+                    {
+                        System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { baitDef.Clone() };
+                        p.rewardTiers = list.ToArray();
+                    }
+                    foreach (PixelClicker.PixelTier t in p.rewardTiers) ApplyJelly(t);
+                }
+            if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) ApplyJelly(t);
+            packDataVersion = Mathf.Max(packDataVersion, 22);
+            changed = true;
+        }
+
+        if (packDataVersion < 23)
+        {
+            // Fishing's special blocks: the message in a bottle and the whale join the Angler's Pack.
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier bottleDef = null, whaleDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers)
+            {
+                if (t.type == PixelClicker.PixelType.Bottle) bottleDef = t;
+                if (t.type == PixelClicker.PixelType.Whale) whaleDef = t;
+            }
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers);
+                    if (bottleDef != null && !Rewards(p, PixelClicker.PixelType.Bottle)) list.Add(bottleDef.Clone());
+                    if (whaleDef != null && !Rewards(p, PixelClicker.PixelType.Whale)) list.Add(whaleDef.Clone());
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 23);
+            changed = true;
+        }
+
+        if (packDataVersion < 24)
+        {
+            // Fishing's fixed spawn table brings Driftwood back (5% of the pixels) as a second filler.
+            ShopPack def = CreateAnglerPack();
+            PixelClicker.PixelTier driftDef = null;
+            foreach (PixelClicker.PixelTier t in def.rewardTiers) if (t.type == PixelClicker.PixelType.Driftwood) driftDef = t;
+            if (packs != null && driftDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Fish) || Rewards(p, PixelClicker.PixelType.Driftwood)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { driftDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 24);
+            changed = true;
+        }
+
+        if (packDataVersion < 25)
+        {
+            // The Whale takes a random 15-50 clicks (was 15-100).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null) continue;
+                    foreach (PixelClicker.PixelTier t in p.rewardTiers) ApplyWhaleClicks(t);
+                }
+            if (clicker != null) foreach (PixelClicker.PixelTier t in clicker.Tiers) ApplyWhaleClicks(t);
+            packDataVersion = Mathf.Max(packDataVersion, 25);
+            changed = true;
+        }
+
+        if (packDataVersion < 26)
+        {
+            // Foraging: the Mold block joins the Forager's Pack (the Toadstool is switched off in the Skills pack, its tier stays).
+            PixelClicker.PixelTier moldDef = null;
+            foreach (PixelClicker.PixelTier t in CreateForagerPack().rewardTiers) if (t.type == PixelClicker.PixelType.Mold) moldDef = t;
+            if (packs != null && moldDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Berry) || Rewards(p, PixelClicker.PixelType.Mold)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { moldDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 26);
+            changed = true;
+        }
+
+        if (packDataVersion < 27)
+        {
+            // Woodcutting: the Whetstone joins the Woodcutter's Pack as a base block.
+            PixelClicker.PixelTier stoneDef = null;
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Whetstone) stoneDef = t;
+            if (packs != null && stoneDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood) || Rewards(p, PixelClicker.PixelType.Whetstone)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { stoneDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 27);
+            changed = true;
+        }
+
+        if (packDataVersion < 28)
+        {
+            // Woodcutting: the Acorn joins the Woodcutter's Pack as a base block.
+            PixelClicker.PixelTier acornDef = null;
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Acorn) acornDef = t;
+            if (packs != null && acornDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood) || Rewards(p, PixelClicker.PixelType.Acorn)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { acornDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 28);
+            changed = true;
+        }
+
+        if (packDataVersion < 29)
+        {
+            // The auto clicker's Multi-Click tops out at 3x for now: cut the levels above it (a saved level is clamped when the save loads).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.upgradeEffect != UpgradeEffect.AutoClickerClicks || p.levels == null) continue;
+                    System.Collections.Generic.List<PackLevel> keep = new System.Collections.Generic.List<PackLevel>();
+                    foreach (PackLevel l in p.levels) if (l != null && l.value <= 3.001f) keep.Add(l);
+                    if (keep.Count > 0 && keep.Count < p.levels.Length) { p.levels = keep.ToArray(); p.level = Mathf.Clamp(p.level, 0, p.levels.Length); }
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 29);
+            changed = true;
+        }
+
+        if (packDataVersion < 30)
+        {
+            // Woodcutting: the Pesticide joins the Woodcutter's Pack as a base block.
+            PixelClicker.PixelTier pestDef = null;
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Pesticide) pestDef = t;
+            if (packs != null && pestDef != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood) || Rewards(p, PixelClicker.PixelType.Pesticide)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers) { pestDef.Clone() };
+                    p.rewardTiers = list.ToArray();
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 30);
+            changed = true;
+        }
+
+        if (packDataVersion < 31)
+        {
+            // Woodcutting: Pinecone and Moss (the other two fillers) join the Woodcutter's Pack, and the Hornet Nest became the Termite Hive.
+            System.Collections.Generic.List<PixelClicker.PixelTier> fillerDefs = new System.Collections.Generic.List<PixelClicker.PixelTier>();
+            foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Pinecone || t.type == PixelClicker.PixelType.Moss) fillerDefs.Add(t);
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || p.rewardTiers == null || !Rewards(p, PixelClicker.PixelType.Wood)) continue;
+                    System.Collections.Generic.List<PixelClicker.PixelTier> list = new System.Collections.Generic.List<PixelClicker.PixelTier>(p.rewardTiers);
+                    foreach (PixelClicker.PixelTier d in fillerDefs) if (!Rewards(p, d.type)) list.Add(d.Clone());
+                    foreach (PixelClicker.PixelTier t in list) if (t != null && t.type == PixelClicker.PixelType.HornetNest && t.displayName == "Hornet Nest") t.displayName = "Termite Hive";
+                    p.rewardTiers = list.ToArray();
+                    if (p.description != null) p.description = p.description.Replace("Hornet Nest", "Termite Hive");
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 31);
+            changed = true;
+        }
+
+        if (packDataVersion < 32)
+        {
+            // The Termite Hive takes 4 hits to break now (was 5).
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && p.rewardTiers != null)
+                        foreach (PixelClicker.PixelTier t in p.rewardTiers)
+                            if (t != null && t.type == PixelClicker.PixelType.HornetNest && t.clicksToCollect == 5) t.clicksToCollect = 4;
+            packDataVersion = Mathf.Max(packDataVersion, 32);
+            changed = true;
+        }
+
+        if (packDataVersion < 33)
+        {
+            // The testing packs (Fire, Nuclear, Farmer's) and Block Hold (free from the start) leave the shop: unlock them with the Dev Tools 'Shop unlocks' widget.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && IsDevOnlyPack(p)) p.hideInShop = true;
+            packDataVersion = Mathf.Max(packDataVersion, 33);
+            changed = true;
+        }
+
+        if (packDataVersion < 34)
+        {
+            // The Prospector's Pack (testing price) leaves the shop too.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && IsDevOnlyPack(p)) p.hideInShop = true;
+            packDataVersion = Mathf.Max(packDataVersion, 34);
+            changed = true;
+        }
 
         return changed;
     }
 
-    // Version of the saved (Inspector) pack data; history cleared 2026-10-15 (the last old version was 34, so a new component starts there).
-    // Add 'if (packDataVersion < 35) { ...; packDataVersion = 35; changed = true; }' style blocks in EnsureDefaultPacks for future Inspector-data changes.
-    [SerializeField, HideInInspector] private int packDataVersion = 34;
+    /// <summary>Packs kept out of the shop (testing packs: Fire, Nuclear, Farmer's, Prospector's; and Block Hold); the Dev Tools 'Shop unlocks' widget handles them.</summary>
+    private static bool IsDevOnlyPack(ShopPack p) =>
+        p.unlocksBlockHold || Rewards(p, PixelClicker.PixelType.Fire) || Rewards(p, PixelClicker.PixelType.Nuclear) || Rewards(p, PixelClicker.PixelType.Dirt)
+        || Rewards(p, PixelClicker.PixelType.Copper);
 
+    private static void ApplyWhaleClicks(PixelClicker.PixelTier t)
+    {
+        if (t == null || t.type != PixelClicker.PixelType.Whale) return;
+        t.randomClicks = true;
+        t.randomClicksMin = Mathf.Min(t.randomClicksMin, 50);
+        t.randomClicksMax = 50;
+        t.clicksToCollect = 33;   // (the average of 15-50, used for estimates)
+    }
+
+    [SerializeField, HideInInspector] private int packDataVersion; // 1 = Obsidian pays 7 (was 5); 2 = Singularity spawn weight 0.08 (was 0.2); 3 = Electric pays a random 1-15; 4 = Electric pack gets its real price + Luminescent requirement; 5 = Electric becomes an early unlock (8K RGB, needs the Auto Clicker pack, listed before Vacuum)
+
+    /// <summary>Moves the pack at 'from' to position 'to' in the list and renumbers every pack requirement that refers to a pack index.</summary>
+    private void MovePack(int from, int to)
+    {
+        if (packs == null || from == to || from < 0 || to < 0 || from >= packs.Length || to >= packs.Length) return;
+        int[] map = new int[packs.Length]; // old index -> new index
+        System.Collections.Generic.List<int> order = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < packs.Length; i++) order.Add(i);
+        order.RemoveAt(from);
+        order.Insert(to, from);
+        for (int newIndex = 0; newIndex < order.Count; newIndex++) map[order[newIndex]] = newIndex;
+
+        ShopPack[] moved = new ShopPack[packs.Length];
+        for (int newIndex = 0; newIndex < order.Count; newIndex++) moved[newIndex] = packs[order[newIndex]];
+        foreach (ShopPack pack in moved)
+        {
+            if (pack == null || pack.requirements == null) continue;
+            foreach (PackRequirement r in pack.requirements)
+                if (r.kind == RequirementKind.Pack && r.packIndex >= 0 && r.packIndex < map.Length) r.packIndex = map[r.packIndex];
+        }
+        packs = moved;
+    }
+
+    /// <summary>Brings packs saved by older versions up to date (renames, tab, minigame ids). Returns true if anything changed.</summary>
     private const string glassToggleHint = "Glass unlocked!\nIt is switched ON by default and now spawns with your other pixels. Open the Toggles window (the tab on the right edge of the screen), go to Pixels and untick Glass if you don't want it. Crafting is unlocked too!";
+
+    private bool MigrateOldPackData()
+    {
+        bool renamed = false;
+
+        // The Robot Worker is the UFO Helper now (saves are matched by pack name, PixelSaveGame knows the old one too).
+        if (packs != null)
+            foreach (ShopPack rp in packs)
+                if (rp != null && rp.unlocksRobot && rp.displayName == "Robot Worker") { rp.displayName = "UFO Helper"; renamed = true; }
+
+
+        // The short-lived Pong pack (replaced by Breakout) may still be saved in the scene's pack list: take it out, and fix the
+        // pack numbers the other packs' requirements point at.
+        if (packs != null)
+        {
+            for (int i = packs.Length - 1; i >= 0; i--)
+            {
+                ShopPack pack = packs[i];
+                bool pong = pack != null && (string.Equals(pack.displayName, "Pong", StringComparison.OrdinalIgnoreCase)
+                                             || string.Equals(pack.unlocksMinigame, "pong", StringComparison.OrdinalIgnoreCase)
+                                             // The visitors (Wizard, Tinkerer, Pixel Entrepreneur) are no longer bought: Cubie's guide starts them.
+                                             || string.Equals(pack.unlocksMinigame, "wizard", StringComparison.OrdinalIgnoreCase)
+                                             || string.Equals(pack.unlocksMinigame, "tinkerer", StringComparison.OrdinalIgnoreCase)
+                                             || string.Equals(pack.unlocksMinigame, "entrepreneur", StringComparison.OrdinalIgnoreCase)
+                                             // Seed and Water are part of the Farmer's Pack (Farming skill) now, no longer sold on their own.
+                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1
+                                                 && (pack.rewardTiers[0].type == PixelClicker.PixelType.Seed || pack.rewardTiers[0].type == PixelClicker.PixelType.Water))
+                                             // Pixel Grabbing is unlocked from the start now (it keeps its switch in the Toggles window).
+                                             || pack.unlocksGrabbing
+                                             // Old Pixel Capacity is no longer sold: it will come back as a Standard skill reward (see the to-do list).
+                                             || pack.upgradeEffect == UpgradeEffect.OldPixelCap
+                                             // Crafting comes with the Glass pixel now (a standalone Crafting pack has no reward pixels).
+                                             || (pack.unlocksCrafting && (pack.rewardTiers == null || pack.rewardTiers.Length == 0))
+                                             // Stone (the old Rock block) is Mining's filler now: it comes with the Prospector's Pack, no longer sold on its own.
+                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Rock)
+                                             // Electric is part of the Electrician's Pack now, no longer sold on its own.
+                                             || (pack.rewardTiers != null && pack.rewardTiers.Length == 1 && pack.rewardTiers[0].type == PixelClicker.PixelType.Electric
+                                                 && string.IsNullOrEmpty(pack.skillId)));
+                if (!pong) continue;
+                System.Collections.Generic.List<ShopPack> kept = new System.Collections.Generic.List<ShopPack>(packs);
+                kept.RemoveAt(i);
+                packs = kept.ToArray();
+                foreach (ShopPack other in packs)
+                {
+                    if (other == null || other.requirements == null) continue;
+                    System.Collections.Generic.List<PackRequirement> reqs = new System.Collections.Generic.List<PackRequirement>();
+                    foreach (PackRequirement r in other.requirements)
+                    {
+                        if (r.kind == RequirementKind.Pack)
+                        {
+                            if (r.packIndex == i) continue;          // it needed Pong: drop that requirement
+                            if (r.packIndex > i) r.packIndex--;      // the packs after it moved up one
+                        }
+                        reqs.Add(r);
+                    }
+                    other.requirements = reqs.ToArray();
+                }
+                renamed = true;
+            }
+        }
+
+        // A saved Electrician's Pack from before it held every electrical pixel (and Electric itself) is brought up to date: its pixels, price and the Auto Clicker requirement;
+        // the Mirror pixel then needs it (it used to need the Electric Pixel pack, which is gone).
+        if (packs != null)
+        {
+            int electricianAt = Array.FindIndex(packs, p => p != null && p.skillId == PixelSkills.ElectricianId);
+            int autoAt = Array.FindIndex(packs, p => p != null && p.unlocksAutoClicker);
+            if (electricianAt >= 0)
+            {
+                ShopPack ep = packs[electricianAt];
+                if (ep.rewardTiers == null || ep.rewardTiers.Length < 8)
+                {
+                    ep.rewardTiers = ElectricianTiers();
+                    ep.costs = ElectricianCosts();
+                    ep.requirements = Needs(autoAt);
+                    ep.description = CreateElectricianPack(autoAt).description;
+                    renamed = true;
+                }
+                int mirrorAt = Array.FindIndex(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Mirror));
+                if (mirrorAt >= 0)
+                {
+                    ShopPack mp = packs[mirrorAt];
+                    bool hasPackReq = false;
+                    if (mp.requirements != null) foreach (PackRequirement r in mp.requirements) if (r.kind == RequirementKind.Pack && r.packIndex >= 0) hasPackReq = true;
+                    if (!hasPackReq)
+                    {
+                        System.Collections.Generic.List<PackRequirement> reqs = new System.Collections.Generic.List<PackRequirement>(mp.requirements ?? new PackRequirement[0]);
+                        reqs.Add(new PackRequirement { kind = RequirementKind.Pack, packIndex = electricianAt });
+                        mp.requirements = reqs.ToArray();
+                        renamed = true;
+                    }
+                }
+            }
+        }
+
+        // The Glass pack unlocks Crafting (price raised to match); older saved Glass packs are brought up to date unless the price was edited.
+        if (packs != null)
+        {
+            ShopPack glassPack = Array.Find(packs, p => p != null && Rewards(p, PixelClicker.PixelType.Glass));
+            if (glassPack != null && !glassPack.unlocksCrafting)
+            {
+                glassPack.unlocksCrafting = true;
+                if (glassPack.costs != null && glassPack.costs.Length == 3 && glassPack.costs[0].amount == 2500) glassPack.costs = GlassCosts();
+                if (glassPack.description == "Adds the see-through Glass pixel to the random spawn pool.") glassPack.description = CreateGlassPack(-1).description;
+                renamed = true;
+            }
+        }
+
+        // Obsidian now pays +7 per 5 clicks (it was +5); only changes the old default, not a value you typed.
+        if (packDataVersion < 1)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack.rewardTiers == null) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    if (reward.type == PixelClicker.PixelType.Obsidian && reward.amountPerClick == 5d && reward.clicksToCollect == 5)
+                        reward.amountPerClick = 7d;
+            }
+            packDataVersion = 1;
+            renamed = true;
+        }
+
+        // Singularity pixels are rarer now (spawn weight 0.2 -> 0.08); only the old default is changed, not a value you typed.
+        if (packDataVersion < 2)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack.rewardTiers == null) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    if (reward.type == PixelClicker.PixelType.Singularity && Mathf.Approximately(reward.spawnWeight, 0.2f))
+                        reward.spawnWeight = 0.08f;
+            }
+            packDataVersion = 2;
+            renamed = true;
+        }
+
+        // Electric pixels pay a random 1-15 per harvest (they paid a flat 10); only the old default is changed.
+        if (packDataVersion < 3)
+        {
+            foreach (ShopPack pack in packs)
+            {
+                if (pack.rewardTiers == null) continue;
+                foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                    if (reward.type == PixelClicker.PixelType.Electric)
+                    {
+                        reward.randomPayout = true;
+                        reward.payoutMin = 1;
+                        reward.payoutMax = 15;
+                        if (reward.amountPerClick == 10d) reward.amountPerClick = 8d;
+                    }
+            }
+            packDataVersion = 3;
+            renamed = true;
+        }
+
+        // The Electric pixel is a proper pack now (it was a 10 White test pack): real price, needs the Luminescent pack, rarer.
+        // Only the old test values are replaced, not anything you typed.
+        if (packDataVersion < 4)
+        {
+            int luminescentIndex = Array.FindIndex(packs, p => Rewards(p, PixelClicker.PixelType.Luminescent));
+            foreach (ShopPack pack in packs)
+            {
+                if (!Rewards(pack, PixelClicker.PixelType.Electric)) continue;
+                bool oldCost = pack.costs != null && pack.costs.Length == 1 && pack.costs[0].type == PixelClicker.PixelType.White && pack.costs[0].amount == 10d;
+                if (oldCost)
+                {
+                    ShopPack fresh = CreateElectricPixelPack(luminescentIndex);
+                    pack.costs = fresh.costs;
+                    pack.description = fresh.description;
+                    pack.requirements = fresh.requirements;
+                    foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                        if (reward.type == PixelClicker.PixelType.Electric && Mathf.Approximately(reward.spawnWeight, 0.5f)) reward.spawnWeight = 0.35f;
+                }
+            }
+            packDataVersion = 4;
+            renamed = true;
+        }
+
+        // The Electric pixel is an EARLY unlock (a slight boost to the auto clicker): cheaper, needs the Auto Clicker pack, rarer,
+        // and sits in the list just before the Vacuum pixel. Only the previous default values are replaced.
+        if (packDataVersion < 5)
+        {
+            int autoIndex = Array.FindIndex(packs, p => p != null && p.unlocksAutoClicker);
+            int electricIndex = Array.FindIndex(packs, p => Rewards(p, PixelClicker.PixelType.Electric));
+            if (electricIndex >= 0)
+            {
+                ShopPack pack = packs[electricIndex];
+                bool previousCost = pack.costs != null && pack.costs.Length == 2 && pack.costs[0].type == PixelClicker.PixelType.Obsidian && pack.costs[0].amount == 2000000d;
+                if (previousCost)
+                {
+                    ShopPack fresh = CreateElectricPixelPack(autoIndex);
+                    pack.costs = fresh.costs;
+                    pack.requirements = fresh.requirements;
+                    foreach (PixelClicker.PixelTier reward in pack.rewardTiers)
+                        if (reward.type == PixelClicker.PixelType.Electric && Mathf.Approximately(reward.spawnWeight, 0.35f)) reward.spawnWeight = 0.15f;
+                }
+
+                // Move it to just before the Vacuum pack (requirements refer to packs by index, so they are renumbered).
+                int vacuumIndex = Array.FindIndex(packs, p => Rewards(p, PixelClicker.PixelType.Vacuum));
+                if (vacuumIndex >= 0 && electricIndex > vacuumIndex) MovePack(electricIndex, vacuumIndex);
+            }
+            packDataVersion = 5;
+            renamed = true;
+        }
+
+        // Turn the old per-minigame tick boxes into minigame ids.
+        foreach (ShopPack pack in packs)
+        {
+            if (pack.unlocksGhostMinigame) { pack.unlocksMinigame = "ghost"; pack.unlocksGhostMinigame = false; renamed = true; }
+            if (pack.unlocksBlackholeMinigame) { pack.unlocksMinigame = "blackhole"; pack.unlocksBlackholeMinigame = false; renamed = true; }
+            if (pack.requiresGhosts) { pack.requiresMinigameGoal = "ghost"; pack.requiresGhosts = false; renamed = true; }
+            if (pack.requiresSingularity) { pack.requiresMinigameGoal = "blackhole"; pack.requiresSingularity = false; renamed = true; }
+        }
+
+        // Turn the old single requirement fields into the requirements list.
+        foreach (ShopPack pack in packs)
+        {
+            bool hadPack = pack.requiresPackIndex >= 0;
+            bool hadGoal = !string.IsNullOrEmpty(pack.requiresMinigameGoal);
+            if (!hadPack && !hadGoal) continue;
+
+            System.Collections.Generic.List<PackRequirement> list = new System.Collections.Generic.List<PackRequirement>();
+            if (pack.requirements != null) list.AddRange(pack.requirements);
+            if (hadPack) list.Add(new PackRequirement { kind = RequirementKind.Pack, packIndex = pack.requiresPackIndex });
+            if (hadGoal) list.Add(new PackRequirement { kind = RequirementKind.MinigameGoal, minigameId = pack.requiresMinigameGoal });
+
+            pack.requirements = list.ToArray();
+            pack.requiresPackIndex = -1;
+            pack.requiresMinigameGoal = "";
+            renamed = true;
+        }
+
+        // Older components saved the previous names; Glass and Vacuum are single pixels listed on the Pixels tab.
+        foreach (ShopPack pack in packs)
+        {
+            if (pack.rewardTiers == null) continue;
+            bool isGlass = Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Glass);
+            bool isVacuum = Array.Exists(pack.rewardTiers, r => r.type == PixelClicker.PixelType.Vacuum);
+            if (!isGlass && !isVacuum) continue;
+
+            if (pack.displayName == "Glass Pack") { pack.displayName = "Glass Pixel"; renamed = true; }
+            if (pack.displayName == "Vacuum Pack") { pack.displayName = "Vacuum Pixel"; renamed = true; }
+            if (pack.tab != ShopTab.Pixels) { pack.tab = ShopTab.Pixels; renamed = true; }
+        }
+
+        return renamed;
+    }
 
 #if UNITY_EDITOR
     private void OnValidate()

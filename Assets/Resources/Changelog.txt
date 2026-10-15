@@ -1050,3 +1050,4 @@
 [2026-10-15 12:57 UTC] Recycler: its own code-made shaking sound (motor winding up, rattles getting faster, a clunk when it pays), and it now pays 50% of what a click on that block pays right now, so your current Value upgrades count.
 [2026-10-15 12:58 UTC] Cleanup: removed about 1,600 lines of old one-time fix-ups for saved shop packs and pixel looks (and leftover old shop fields); the version numbers stay so future changes to saved Inspector data still have a place to go.
 [2026-10-15 13:05 UTC] Hold meter: the bar's layers now share one curve with rounded ends, the glowing dot sits exactly on the bar (and is bar-sized), and the meter only shows while the mouse is over the cube (or while holding).
+[2026-10-15 13:07 UTC] Reverted the removal of the old shop-pack and pixel-look fix-ups: the scene still holds the old data and those fix-ups repair it on every Play (white RGB outlines and missing early-cube textures came back without them).

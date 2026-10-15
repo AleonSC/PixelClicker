@@ -238,7 +238,7 @@ public partial class PixelShop
             ApplyLevelWidgets(row, level, u.maxLevel);
             row.descLabel.text = OperationStatText(u);   // the orange '!' box shows this as its tooltip
             row.costLabel.text = maxed ? "" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
-                                 string.Format(operationCostFormat, PixelClicker.FormatNumberShort(cost), pixelName, PixelClicker.FormatNumberShort(have)) + "</color>";
+                                 string.Format(NoHave(operationCostFormat), PixelClicker.FormatNumberShort(cost), pixelName, PixelClicker.FormatNumberShort(have)) + "</color>";
             bool canBuy = !maxed && enough;
             row.buyButton.interactable = canBuy;
             row.buyLabel.text = maxed ? maxedText : upgradeText;

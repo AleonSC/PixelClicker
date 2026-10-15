@@ -15,6 +15,12 @@ public partial class PixelShop
     // Runtime
     // ------------------------------------------------------------------
 
+    /// <summary>Drops a "(you have {n})" part from a format string (scenes saved earlier still carry it).</summary>
+    private static string NoHave(string format)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(format ?? "", @"\s*\((you have|owned)[^)]*\)", "");
+    }
+
     private class PackRow
     {
         public RectTransform rect;
@@ -722,7 +728,7 @@ public partial class PixelShop
                 string need = t >= 0 ? clicker.Tiers[t].displayName : consumables.ItemRequiredType(i).ToString();
                 PixelUIKit.SetText(row.costLabel, "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(lockedRequirementFormat, need) + "</color>");
             }
-            else if (full) PixelUIKit.SetText(row.costLabel, "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(potionFullFormat, consumables.ItemCapacity(i), PixelConsumables.OwnedText(consumables.ItemOwned(i))) + "</color>");
+            else if (full) PixelUIKit.SetText(row.costLabel, "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(NoHave(potionFullFormat), consumables.ItemCapacity(i), PixelConsumables.OwnedText(consumables.ItemOwned(i))) + "</color>");
             else PixelUIKit.SetText(row.costLabel, BuildCostText(cost, true));
             row.buyButton.interactable = canBuy;
             PixelUIKit.SetText(row.buyLabel, locked ? lockedText : full ? potionFullText : string.Format(buyCountFormat, 1));
@@ -1230,7 +1236,7 @@ public partial class PixelShop
 
             bool enough = PixelClicker.InfiniteResources || tier.count >= cost;
             row.costLabel.text = maxed ? "" : capped ? "<color=#" + ColorUtility.ToHtmlStringRGB(unaffordableColor) + ">" + string.Format(valueCappedFormat, capSkill, capLevel) + "</color>" : "<color=#" + ColorUtility.ToHtmlStringRGB(enough ? affordableColor : unaffordableColor) + ">" +
-                                 string.Format(valueCostFormat, PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.count)) + "</color>";
+                                 string.Format(NoHave(valueCostFormat), PixelClicker.FormatNumberShort(cost), tier.displayName, PixelClicker.FormatNumberShort(tier.count)) + "</color>";
 
             bool canBuy = !maxed && !capped && enough;
             row.buyButton.interactable = canBuy;
