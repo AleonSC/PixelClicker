@@ -695,8 +695,8 @@ public class PixelBlackholeMinigame : PixelMinigame
         if (!showFirstHoleHint || singularityCount > 0d) return;
         try
         {
-            if (PlayerPrefs.GetInt(HintPref, 0) != 0) return;
-            PlayerPrefs.SetInt(HintPref, 1);
+            if (PixelPrefs.GetInt(HintPref, 0) != 0) return;
+            PixelPrefs.SetInt(HintPref, 1);
         }
         catch (System.Exception) { /* no PlayerPrefs: just show it */ }
 

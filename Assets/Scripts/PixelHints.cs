@@ -400,15 +400,15 @@ public class PixelHints : MonoBehaviour
     /// <summary>Show the first-time tip boxes? (The event log still records them either way.)</summary>
     public static bool TipsEnabled
     {
-        get => PlayerPrefs.GetInt(PrefTips, 1) != 0;
-        set { PlayerPrefs.SetInt(PrefTips, value ? 1 : 0); PlayerPrefs.Save(); }
+        get => PixelPrefs.GetInt(PrefTips, 1) != 0;
+        set { PixelPrefs.SetInt(PrefTips, value ? 1 : 0); PixelPrefs.Save(); }
     }
 
     /// <summary>Show the event log overlay at the bottom left? (Events are still recorded and saved.)</summary>
     public static bool EventLogEnabled
     {
-        get => PlayerPrefs.GetInt(PrefEventLog, 1) != 0;
-        set { PlayerPrefs.SetInt(PrefEventLog, value ? 1 : 0); PlayerPrefs.Save(); RefreshLog(); }
+        get => PixelPrefs.GetInt(PrefEventLog, 1) != 0;
+        set { PixelPrefs.SetInt(PrefEventLog, value ? 1 : 0); PixelPrefs.Save(); RefreshLog(); }
     }
 
     public static readonly string[] LogSizeNames = { "Small", "Medium", "Large" };
@@ -417,8 +417,8 @@ public class PixelHints : MonoBehaviour
     /// <summary>Event log text size: 0 = small, 1 = medium (the Inspector size), 2 = large.</summary>
     public static int LogSizeChoice
     {
-        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefLogSize, 1), 0, LogSizeNames.Length - 1);
-        set { PlayerPrefs.SetInt(PrefLogSize, Mathf.Clamp(value, 0, LogSizeNames.Length - 1)); PlayerPrefs.Save(); RefreshLog(); }
+        get => Mathf.Clamp(PixelPrefs.GetInt(PrefLogSize, 1), 0, LogSizeNames.Length - 1);
+        set { PixelPrefs.SetInt(PrefLogSize, Mathf.Clamp(value, 0, LogSizeNames.Length - 1)); PixelPrefs.Save(); RefreshLog(); }
     }
 
     /// <summary>Rebuilds the event log lines (new text size) and hides it if it was switched off.</summary>
@@ -456,11 +456,11 @@ public class PixelHints : MonoBehaviour
         {
             if (instance != null && instance.hints != null)
                 foreach (Hint h in instance.hints)
-                    if (h != null && !string.IsNullOrEmpty(h.id)) PlayerPrefs.DeleteKey(PrefPrefix + h.id);
-            PlayerPrefs.DeleteKey(PrefPrefix + "intro_log");
-            PlayerPrefs.DeleteKey(PrefPrefix + "shop_tutorial");
-            PlayerPrefs.DeleteKey(PrefPrefix + "BlackHole");
-            PlayerPrefs.Save();
+                    if (h != null && !string.IsNullOrEmpty(h.id)) PixelPrefs.DeleteKey(PrefPrefix + h.id);
+            PixelPrefs.DeleteKey(PrefPrefix + "intro_log");
+            PixelPrefs.DeleteKey(PrefPrefix + "shop_tutorial");
+            PixelPrefs.DeleteKey(PrefPrefix + "BlackHole");
+            PixelPrefs.Save();
         }
         catch (Exception) { /* no PlayerPrefs: nothing to forget */ }
     }
@@ -479,13 +479,13 @@ public class PixelHints : MonoBehaviour
 
     private static bool Seen(string id)
     {
-        try { return PlayerPrefs.GetInt(PrefPrefix + id, 0) != 0; }
+        try { return PixelPrefs.GetInt(PrefPrefix + id, 0) != 0; }
         catch (Exception) { return false; }
     }
 
     private static void MarkSeen(string id)
     {
-        try { PlayerPrefs.SetInt(PrefPrefix + id, 1); }
+        try { PixelPrefs.SetInt(PrefPrefix + id, 1); }
         catch (Exception) { /* no PlayerPrefs: it may show again next session */ }
     }
 

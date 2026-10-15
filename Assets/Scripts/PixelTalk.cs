@@ -22,8 +22,8 @@ public static class PixelTalk
     /// <summary>Are the talking blips switched off? (Saved per save profile.)</summary>
     public static bool Muted
     {
-        get { if (mutedCache < 0) mutedCache = PlayerPrefs.GetInt(Pref, 0); return mutedCache != 0; }
-        set { mutedCache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, mutedCache); PlayerPrefs.Save(); }
+        get { if (mutedCache < 0) mutedCache = PixelPrefs.GetInt(Pref, 0); return mutedCache != 0; }
+        set { mutedCache = value ? 1 : 0; PixelPrefs.SetInt(Pref, mutedCache); PixelPrefs.Save(); }
     }
 
     public static void ReloadFromPrefs() { mutedCache = -1; }

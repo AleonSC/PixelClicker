@@ -67,15 +67,15 @@ public class PixelDayNight : MonoBehaviour
     /// <summary>Settings > Interface: the cycle is on (default on).</summary>
     public static bool Enabled
     {
-        get { if (onCache < 0) onCache = PlayerPrefs.GetInt(PrefOn, 1); return onCache != 0; }
-        set { onCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefOn, onCache); }
+        get { if (onCache < 0) onCache = PixelPrefs.GetInt(PrefOn, 1); return onCache != 0; }
+        set { onCache = value ? 1 : 0; PixelPrefs.SetInt(PrefOn, onCache); }
     }
 
     /// <summary>Settings > Interface: index into <see cref="LengthMinutes"/> (default 8 minutes).</summary>
     public static int LengthChoice
     {
-        get { if (lengthCache < 0) lengthCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefLength, 1), 0, LengthMinutes.Length - 1); return lengthCache; }
-        set { lengthCache = Mathf.Clamp(value, 0, LengthMinutes.Length - 1); PlayerPrefs.SetInt(PrefLength, lengthCache); }
+        get { if (lengthCache < 0) lengthCache = Mathf.Clamp(PixelPrefs.GetInt(PrefLength, 1), 0, LengthMinutes.Length - 1); return lengthCache; }
+        set { lengthCache = Mathf.Clamp(value, 0, LengthMinutes.Length - 1); PixelPrefs.SetInt(PrefLength, lengthCache); }
     }
 
     /// <summary>After a save file's settings were loaded.</summary>

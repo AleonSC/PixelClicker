@@ -254,8 +254,8 @@ public class PixelSaveGame : MonoBehaviour
     /// </summary>
     public int CurrentSlot
     {
-        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefSlot, 1), 1, SlotCount);
-        private set { PlayerPrefs.SetInt(PrefSlot, Mathf.Clamp(value, 1, SlotCount)); PlayerPrefs.Save(); }
+        get => Mathf.Clamp(PixelPrefs.GetInt(PrefSlot, 1), 1, SlotCount);
+        private set { PixelPrefs.SetInt(PrefSlot, Mathf.Clamp(value, 1, SlotCount)); PixelPrefs.Save(); }
     }
 
     private string PathFor(int slot)
@@ -370,7 +370,7 @@ public class PixelSaveGame : MonoBehaviour
             }
         }
         catch (Exception) { }
-        return PlayerPrefs.GetString(PendingNamePref + slot, "");
+        return PixelPrefs.GetString(PendingNamePref + slot, "");
     }
 
     /// <summary>Deletes a slot's save (file, screenshot and the pending name). The slot stays, empty. Returns false if the file could not be removed.</summary>
@@ -384,8 +384,8 @@ public class PixelSaveGame : MonoBehaviour
             if (File.Exists(meta)) File.Delete(meta);
             if (File.Exists(thumb)) File.Delete(thumb);
             PixelSaveShots.Forget(thumb);
-            PlayerPrefs.DeleteKey(PendingNamePref + slot);
-            PlayerPrefs.Save();
+            PixelPrefs.DeleteKey(PendingNamePref + slot);
+            PixelPrefs.Save();
             if (logToConsole) Debug.Log("PixelSaveGame: deleted the save in slot " + slot + ".", this);
             return true;
         }
@@ -413,15 +413,15 @@ public class PixelSaveGame : MonoBehaviour
                     File.WriteAllText(temp, JsonUtility.ToJson(d, true));
                     File.Delete(path);
                     File.Move(temp, path);
-                    PlayerPrefs.DeleteKey(PendingNamePref + slot);
+                    PixelPrefs.DeleteKey(PendingNamePref + slot);
                     return;
                 }
             }
             catch (Exception e) { Debug.LogWarning("PixelSaveGame: could not rename the save - " + e.Message, this); }
         }
-        if (name.Length == 0) PlayerPrefs.DeleteKey(PendingNamePref + slot);
-        else PlayerPrefs.SetString(PendingNamePref + slot, name);
-        PlayerPrefs.Save();
+        if (name.Length == 0) PixelPrefs.DeleteKey(PendingNamePref + slot);
+        else PixelPrefs.SetString(PendingNamePref + slot, name);
+        PixelPrefs.Save();
     }
 
     /// <summary>Main menu 'New Game': from now on autosave and quit-save write into this slot.</summary>
@@ -505,15 +505,15 @@ public class PixelSaveGame : MonoBehaviour
     /// <summary>Index into <see cref="AutoSaveChoices"/>; -1 (never chosen) = use the Inspector's interval.</summary>
     public static int AutoSaveChoice
     {
-        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefAutoSave, -1), -1, AutoSaveChoices.Length - 1);
-        set { PlayerPrefs.SetInt(PrefAutoSave, Mathf.Clamp(value, 0, AutoSaveChoices.Length - 1)); PlayerPrefs.Save(); }
+        get => Mathf.Clamp(PixelPrefs.GetInt(PrefAutoSave, -1), -1, AutoSaveChoices.Length - 1);
+        set { PixelPrefs.SetInt(PrefAutoSave, Mathf.Clamp(value, 0, AutoSaveChoices.Length - 1)); PixelPrefs.Save(); }
     }
 
     /// <summary>Show the "saved" message after every autosave? (Settings; before it is chosen, the Inspector's choice applies.)</summary>
     public static int AutoSaveMessageChoice // -1 = not chosen yet, 0 = no, 1 = yes
     {
-        get => PlayerPrefs.GetInt(PrefAutoSaveMessage, -1);
-        set { PlayerPrefs.SetInt(PrefAutoSaveMessage, value != 0 ? 1 : 0); PlayerPrefs.Save(); }
+        get => PixelPrefs.GetInt(PrefAutoSaveMessage, -1);
+        set { PixelPrefs.SetInt(PrefAutoSaveMessage, value != 0 ? 1 : 0); PixelPrefs.Save(); }
     }
 
     /// <summary>The autosave interval in use (the player's choice, else the Inspector value). 0 = off.</summary>
@@ -740,7 +740,7 @@ public class PixelSaveGame : MonoBehaviour
                 File.WriteAllText(temp, json);
                 if (File.Exists(path)) File.Delete(path);
                 File.Move(temp, path);
-                PlayerPrefs.DeleteKey(PendingNamePref + slot);   // (the name is in the file now)
+                PixelPrefs.DeleteKey(PendingNamePref + slot);   // (the name is in the file now)
                 shots.Add(PixelSaveShots.ThumbPath(path));   // a screenshot of the game goes next to every save, shown in the hover tooltips
             }
             else

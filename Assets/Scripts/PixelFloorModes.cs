@@ -24,13 +24,13 @@ public partial class PixelFloor
     {
         get
         {
-            if (offModeCache < 0) offModeCache = Mathf.Clamp(PlayerPrefs.GetInt(OffModePref, 0), 0, OffModeNames.Length - 1);
+            if (offModeCache < 0) offModeCache = Mathf.Clamp(PixelPrefs.GetInt(OffModePref, 0), 0, OffModeNames.Length - 1);
             return offModeCache;
         }
         set
         {
             offModeCache = Mathf.Clamp(value, 0, OffModeNames.Length - 1);
-            PlayerPrefs.SetInt(OffModePref, offModeCache);
+            PixelPrefs.SetInt(OffModePref, offModeCache);
         }
     }
 

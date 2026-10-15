@@ -1235,7 +1235,7 @@ public class PixelLog : MonoBehaviour
     private static bool IsPixelKind(PixelAchievements.Kind k) =>
         k == PixelAchievements.Kind.CollectPixelType || k == PixelAchievements.Kind.ClickPixelType;
 
-    private bool ShowsClicks(PixelClicker.PixelType type) => PlayerPrefs.GetInt(ModePrefKey + (int)type, 0) == 1;
+    private bool ShowsClicks(PixelClicker.PixelType type) => PixelPrefs.GetInt(ModePrefKey + (int)type, 0) == 1;
 
     /// <summary>Groups the achievements: one group per pixel type for the two per-pixel kinds, a group of one for the rest.</summary>
     private void BuildAchievementGroups()
@@ -1260,7 +1260,7 @@ public class PixelLog : MonoBehaviour
     {
         if (groupIndex < 0 || groupIndex >= achievementGroups.Count || achievementGroups[groupIndex].Count < 2) return;
         PixelClicker.PixelType type = achievements.GetPixelType(achievementGroups[groupIndex][0]);
-        PlayerPrefs.SetInt(ModePrefKey + (int)type, ShowsClicks(type) ? 0 : 1);
+        PixelPrefs.SetInt(ModePrefKey + (int)type, ShowsClicks(type) ? 0 : 1);
         Refresh();
     }
 

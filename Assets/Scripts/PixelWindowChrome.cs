@@ -47,7 +47,7 @@ public class PixelWindowChrome : MonoBehaviour
         resizeGrip.sizeDelta = new Vector2(30f, 30f);
         resizeGrip.anchoredPosition = new Vector2(-4f, 4f);
         g.GetComponent<PixelChromeResizeGrip>().chrome = this;
-        float saved = PlayerPrefs.GetFloat(prefKey + ".Scale", 1f);
+        float saved = PixelPrefs.GetFloat(prefKey + ".Scale", 1f);
         window.localScale = Vector3.one * Mathf.Clamp(saved, minScale, maxScale);
         if (minimized) { g.SetActive(false); hidden.Add(g); }   // (folded up: the grip comes back with the rest)
     }
@@ -66,7 +66,7 @@ public class PixelWindowChrome : MonoBehaviour
         UpdateHint();
     }
 
-    internal void ResizeEnded() { PlayerPrefs.SetFloat(prefKey + ".Scale", window.localScale.x); Save(); }
+    internal void ResizeEnded() { PixelPrefs.SetFloat(prefKey + ".Scale", window.localScale.x); Save(); }
 
     /// <summary>Optional: where the window goes the first time ever (canvas size in, anchored position from the top left out). Without it the window is centred.</summary>
     public System.Func<Vector2, Vector2> defaultPlacer;
@@ -102,7 +102,7 @@ public class PixelWindowChrome : MonoBehaviour
         if (minimized && hidden.Remove(go)) go.SetActive(true);
     }
 
-    private static int Get(string k, int d) => PlayerPrefs.GetInt(k, d);
+    private static int Get(string k, int d) => PixelPrefs.GetInt(k, d);
 
     private void Build(RectTransform win, TMP_FontAsset font, string key, float header, float right, float top, float size, Color buttonColor, Color labelColor, float labelSize)
     {
@@ -145,9 +145,9 @@ public class PixelWindowChrome : MonoBehaviour
         hintGo.SetActive(false);
 
         dockSide = Mathf.Clamp(Get(prefKey + ".Dock", 0), -1, 1);
-        dockY = PlayerPrefs.GetFloat(prefKey + ".DockY", -120f);
+        dockY = PixelPrefs.GetFloat(prefKey + ".DockY", -120f);
         restoreHeight = win.sizeDelta.y;
-        if (PlayerPrefs.HasKey(prefKey + ".X")) { win.anchoredPosition = new Vector2(PlayerPrefs.GetFloat(prefKey + ".X"), PlayerPrefs.GetFloat(prefKey + ".Y")); placed = true; }
+        if (PixelPrefs.HasKey(prefKey + ".X")) { win.anchoredPosition = new Vector2(PixelPrefs.GetFloat(prefKey + ".X"), PixelPrefs.GetFloat(prefKey + ".Y")); placed = true; }
         if (Get(prefKey + ".Min", 0) != 0) SetMinimized(true, false);
         ApplyState();
     }
@@ -164,10 +164,10 @@ public class PixelWindowChrome : MonoBehaviour
 
     private void Save()
     {
-        PlayerPrefs.SetFloat(prefKey + ".X", window.anchoredPosition.x);
-        PlayerPrefs.SetFloat(prefKey + ".Y", window.anchoredPosition.y);
-        PlayerPrefs.SetInt(prefKey + ".Dock", dockSide);
-        PlayerPrefs.SetFloat(prefKey + ".DockY", dockY);
+        PixelPrefs.SetFloat(prefKey + ".X", window.anchoredPosition.x);
+        PixelPrefs.SetFloat(prefKey + ".Y", window.anchoredPosition.y);
+        PixelPrefs.SetInt(prefKey + ".Dock", dockSide);
+        PixelPrefs.SetFloat(prefKey + ".DockY", dockY);
     }
 
     private float BarInset() => (PixelHud.Instance != null ? PixelHud.Instance.BarHeight : 84f) + EdgeMargin;
@@ -213,7 +213,7 @@ public class PixelWindowChrome : MonoBehaviour
         }
         window.sizeDelta = new Vector2(window.sizeDelta.x, minimized ? headerHeight : restoreHeight);
         Clamp();
-        if (save) { PlayerPrefs.SetInt(prefKey + ".Min", minimized ? 1 : 0); Save(); }
+        if (save) { PixelPrefs.SetInt(prefKey + ".Min", minimized ? 1 : 0); Save(); }
     }
 
     private void TryDock()

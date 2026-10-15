@@ -945,15 +945,15 @@ public class PixelUI : MonoBehaviour
     /// <summary>Show the "+N" popups at the cursor / over the cube? (The inventory's "+N" next to each pixel is not affected.)</summary>
     public static bool PopupsEnabled
     {
-        get => PlayerPrefs.GetInt(PrefPopups, 1) != 0;
-        set { PlayerPrefs.SetInt(PrefPopups, value ? 1 : 0); PlayerPrefs.Save(); }
+        get => PixelPrefs.GetInt(PrefPopups, 1) != 0;
+        set { PixelPrefs.SetInt(PrefPopups, value ? 1 : 0); PixelPrefs.Save(); }
     }
 
     /// <summary>Popup size: 0 = small ... 3 = extra large; 1 (medium) is the size set in the Inspector.</summary>
     public static int PopupSizeChoice
     {
-        get => Mathf.Clamp(PlayerPrefs.GetInt(PrefPopupSize, 1), 0, PopupSizeNames.Length - 1);
-        set { PlayerPrefs.SetInt(PrefPopupSize, Mathf.Clamp(value, 0, PopupSizeNames.Length - 1)); PlayerPrefs.Save(); }
+        get => Mathf.Clamp(PixelPrefs.GetInt(PrefPopupSize, 1), 0, PopupSizeNames.Length - 1);
+        set { PixelPrefs.SetInt(PrefPopupSize, Mathf.Clamp(value, 0, PopupSizeNames.Length - 1)); PixelPrefs.Save(); }
     }
 
     private static float PopupScale => PopupSizeScale[PopupSizeChoice];
@@ -1208,13 +1208,13 @@ public class PixelUI : MonoBehaviour
     {
         get
         {
-            if (currencyNamesCache < 0) currencyNamesCache = PlayerPrefs.GetInt(PrefCurrencyNames, 0);
+            if (currencyNamesCache < 0) currencyNamesCache = PixelPrefs.GetInt(PrefCurrencyNames, 0);
             return currencyNamesCache != 0;
         }
         set
         {
             currencyNamesCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefCurrencyNames, currencyNamesCache);
+            PixelPrefs.SetInt(PrefCurrencyNames, currencyNamesCache);
         }
     }
 
@@ -1233,13 +1233,13 @@ public class PixelUI : MonoBehaviour
     {
         get
         {
-            if (compactCache < 0) compactCache = PlayerPrefs.GetInt(PrefCompact, 0);
+            if (compactCache < 0) compactCache = PixelPrefs.GetInt(PrefCompact, 0);
             return compactCache;
         }
         set
         {
             compactCache = Mathf.Clamp(value, 0, 2);
-            PlayerPrefs.SetInt(PrefCompact, compactCache);
+            PixelPrefs.SetInt(PrefCompact, compactCache);
         }
     }
 
@@ -1477,7 +1477,7 @@ public class PixelUI : MonoBehaviour
         if (foldedGroups == null)
         {
             foldedGroups = new HashSet<string>();
-            foreach (string part in PlayerPrefs.GetString(PrefFolded, "").Split(',')) if (part.Length > 0) foldedGroups.Add(part);
+            foreach (string part in PixelPrefs.GetString(PrefFolded, "").Split(',')) if (part.Length > 0) foldedGroups.Add(part);
         }
         return foldedGroups.Contains(key);
     }
@@ -1486,7 +1486,7 @@ public class PixelUI : MonoBehaviour
     {
         CurrencyFolded(key);   // loads the set
         if (!foldedGroups.Remove(key)) foldedGroups.Add(key);
-        PlayerPrefs.SetString(PrefFolded, string.Join(",", foldedGroups));
+        PixelPrefs.SetString(PrefFolded, string.Join(",", foldedGroups));
     }
 
     /// <summary>Which group a pixel type's row is listed under: 'pure' = White..Blue, 'composite.&lt;skill&gt;' = a skill pack's goods, else 'exotic'.</summary>
@@ -1758,8 +1758,8 @@ public class PixelUI : MonoBehaviour
     {
         if (compactPrefsLoaded) return;
         compactPrefsLoaded = true;
-        compactSmall = PlayerPrefs.GetInt(PrefCompactSmall, 0) == 1;
-        compactStuck = PlayerPrefs.GetInt(PrefCompactStuck, 0) == 1;
+        compactSmall = PixelPrefs.GetInt(PrefCompactSmall, 0) == 1;
+        compactStuck = PixelPrefs.GetInt(PrefCompactStuck, 0) == 1;
     }
 
     /// <summary>Two small buttons stacked at the pinned window's top right: minimise (- / +) and stick (a padlock), plus the drag handler on the whole box.</summary>
@@ -1781,7 +1781,7 @@ public class PixelUI : MonoBehaviour
         compactSmallButton.onClick.AddListener(() =>
         {
             compactSmall = !compactSmall;
-            PlayerPrefs.SetInt(PrefCompactSmall, compactSmall ? 1 : 0);
+            PixelPrefs.SetInt(PrefCompactSmall, compactSmall ? 1 : 0);
             Refresh();
         });
         PixelHoverTip t1 = compactSmallButton.gameObject.AddComponent<PixelHoverTip>();
@@ -1798,7 +1798,7 @@ public class PixelUI : MonoBehaviour
         compactStickButton.onClick.AddListener(() =>
         {
             compactStuck = !compactStuck;
-            PlayerPrefs.SetInt(PrefCompactStuck, compactStuck ? 1 : 0);
+            PixelPrefs.SetInt(PrefCompactStuck, compactStuck ? 1 : 0);
             UpdatePinnedPlacement();
         });
         PixelHoverTip t2 = compactStickButton.gameObject.AddComponent<PixelHoverTip>();
@@ -1849,8 +1849,8 @@ public class PixelUI : MonoBehaviour
 
     private void SaveCompactPosition()
     {
-        PlayerPrefs.SetFloat(PrefCompactX, compactDesired.x);
-        PlayerPrefs.SetFloat(PrefCompactY, compactDesired.y);
+        PixelPrefs.SetFloat(PrefCompactX, compactDesired.x);
+        PixelPrefs.SetFloat(PrefCompactY, compactDesired.y);
     }
 
     /// <summary>Keeps the pinned window fully on screen, between the black bars.</summary>
@@ -1879,8 +1879,8 @@ public class PixelUI : MonoBehaviour
         if (compact && !compactPlaced)
         {
             compactPlaced = true;
-            compactDesired = PlayerPrefs.HasKey(PrefCompactX)
-                ? new Vector2(PlayerPrefs.GetFloat(PrefCompactX), PlayerPrefs.GetFloat(PrefCompactY))
+            compactDesired = PixelPrefs.HasKey(PrefCompactX)
+                ? new Vector2(PixelPrefs.GetFloat(PrefCompactX), PixelPrefs.GetFloat(PrefCompactY))
                 : boxRect.anchoredPosition;
         }
         else if (!compact && compactPlaced)

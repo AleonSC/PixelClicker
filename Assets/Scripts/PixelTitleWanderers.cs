@@ -97,13 +97,13 @@ public class PixelTitleWanderers : MonoBehaviour
     {
         get
         {
-            if (liveCache < 0) liveCache = PlayerPrefs.GetInt(LivePref, 1);
+            if (liveCache < 0) liveCache = PixelPrefs.GetInt(LivePref, 1);
             return liveCache == 1;
         }
         set
         {
             liveCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(LivePref, liveCache);
+            PixelPrefs.SetInt(LivePref, liveCache);
         }
     }
 
@@ -117,13 +117,13 @@ public class PixelTitleWanderers : MonoBehaviour
     {
         get
         {
-            if (blurCache < 0) blurCache = PlayerPrefs.GetInt(BlurPref, 1);
+            if (blurCache < 0) blurCache = PixelPrefs.GetInt(BlurPref, 1);
             return blurCache == 1;
         }
         set
         {
             blurCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(BlurPref, blurCache);
+            PixelPrefs.SetInt(BlurPref, blurCache);
         }
     }
 
@@ -132,8 +132,8 @@ public class PixelTitleWanderers : MonoBehaviour
     /// <summary>How strong the title blur is, 0 (barely blurred) .. 1 (the full strong blur, the default).</summary>
     public static float BlurAmount
     {
-        get { return PlayerPrefs.GetFloat(BlurAmountPref, 1f); }
-        set { PlayerPrefs.SetFloat(BlurAmountPref, Mathf.Clamp01(value)); }
+        get { return PixelPrefs.GetFloat(BlurAmountPref, 1f); }
+        set { PixelPrefs.SetFloat(BlurAmountPref, Mathf.Clamp01(value)); }
     }
 
     private const string PetsPref = "PixelClicker.Setting.TitlePets";
@@ -141,8 +141,8 @@ public class PixelTitleWanderers : MonoBehaviour
     /// <summary>On = the current save's pets hop along the bottom of the main menu and its UFO helper (if bought and switched on) flies along the top.</summary>
     public static bool PetsEnabled
     {
-        get { return PlayerPrefs.GetInt(PetsPref, 0) == 1; }
-        set { PlayerPrefs.SetInt(PetsPref, value ? 1 : 0); }
+        get { return PixelPrefs.GetInt(PetsPref, 0) == 1; }
+        set { PixelPrefs.SetInt(PetsPref, value ? 1 : 0); }
     }
 
     private const string FloorPref = "PixelClicker.Setting.DisplayFloor";
@@ -153,13 +153,13 @@ public class PixelTitleWanderers : MonoBehaviour
     {
         get
         {
-            if (floorCache < 0) floorCache = PlayerPrefs.GetInt(FloorPref, 0);
+            if (floorCache < 0) floorCache = PixelPrefs.GetInt(FloorPref, 0);
             return floorCache == 1;
         }
         set
         {
             floorCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(FloorPref, floorCache);
+            PixelPrefs.SetInt(FloorPref, floorCache);
         }
     }
 
@@ -188,8 +188,8 @@ public class PixelTitleWanderers : MonoBehaviour
 
     public static bool Enabled
     {
-        get { return PlayerPrefs.GetInt(Pref, 0) == 1; }
-        set { PlayerPrefs.SetInt(Pref, value ? 1 : 0); }
+        get { return PixelPrefs.GetInt(Pref, 0) == 1; }
+        set { PixelPrefs.SetInt(Pref, value ? 1 : 0); }
     }
 
     /// <summary>Builds the layer the vendors walk on (behind the title's widgets) and the toggle, under 'foreground'.</summary>

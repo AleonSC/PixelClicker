@@ -67,8 +67,8 @@ public class PixelCameraIntro : MonoBehaviour
     /// <summary>The player's Settings choice: play the camera intro at the start of the game.</summary>
     public static bool Enabled
     {
-        get => PlayerPrefs.GetInt(PrefIntro, 1) != 0;
-        set { PlayerPrefs.SetInt(PrefIntro, value ? 1 : 0); PlayerPrefs.Save(); }
+        get => PixelPrefs.GetInt(PrefIntro, 1) != 0;
+        set { PixelPrefs.SetInt(PrefIntro, value ? 1 : 0); PixelPrefs.Save(); }
     }
 
     private Camera cam;

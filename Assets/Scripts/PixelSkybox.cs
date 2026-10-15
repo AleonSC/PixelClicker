@@ -190,7 +190,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
 
     private void Start()
     {
-        string saved = PlayerPrefs.GetString(PrefStyle, defaultStyle);
+        string saved = PixelPrefs.GetString(PrefStyle, defaultStyle);
         int index = styles.FindIndex(s => s.name == saved);
         SetStyle(index >= 0 ? index : 0);
     }
@@ -205,7 +205,7 @@ public partial class PixelSkybox : MonoBehaviour, IPixelLookSource
         if (styles.Count == 0) return;
         index = ((index % styles.Count) + styles.Count) % styles.Count;
         current = index;
-        PlayerPrefs.SetString(PrefStyle, styles[index].name);
+        PixelPrefs.SetString(PrefStyle, styles[index].name);
         Apply(index);
         StyleChanged?.Invoke(index);
     }

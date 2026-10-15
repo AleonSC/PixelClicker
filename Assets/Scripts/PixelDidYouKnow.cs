@@ -85,8 +85,8 @@ public class PixelDidYouKnow : MonoBehaviour
     /// <summary>Settings > Gameplay 'Did you know tips' (on by default).</summary>
     public static bool Enabled
     {
-        get { if (onCache < 0) onCache = PlayerPrefs.GetInt(PrefOn, 1); return onCache != 0; }
-        set { onCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefOn, onCache); }
+        get { if (onCache < 0) onCache = PixelPrefs.GetInt(PrefOn, 1); return onCache != 0; }
+        set { onCache = value ? 1 : 0; PixelPrefs.SetInt(PrefOn, onCache); }
     }
 
     /// <summary>Forgets the cached setting (a save's settings were loaded).</summary>
@@ -123,9 +123,9 @@ public class PixelDidYouKnow : MonoBehaviour
     {
         LoadTips();
         nextTipAt = Mathf.Max(5f, firstDelaySeconds);
-        dock = Mathf.Clamp(PlayerPrefs.GetInt(PrefDock, 1), 0, 2);
-        floatPos = new Vector2(PlayerPrefs.GetFloat(PrefX, 0f), PlayerPrefs.GetFloat(PrefY, 0f));
-        dockY = dock != 0 && PlayerPrefs.HasKey(PrefY) ? PlayerPrefs.GetFloat(PrefY, 0f) : float.NaN;
+        dock = Mathf.Clamp(PixelPrefs.GetInt(PrefDock, 1), 0, 2);
+        floatPos = new Vector2(PixelPrefs.GetFloat(PrefX, 0f), PixelPrefs.GetFloat(PrefY, 0f));
+        dockY = dock != 0 && PixelPrefs.HasKey(PrefY) ? PixelPrefs.GetFloat(PrefY, 0f) : float.NaN;
     }
 
     private void LoadTips()
@@ -265,17 +265,17 @@ public class PixelDidYouKnow : MonoBehaviour
         {
             dock = nearRight ? 1 : 2;
             dockY = box.anchoredPosition.y;   // (docks at the height where it was dropped)
-            PlayerPrefs.SetInt(PrefDock, dock);
-            PlayerPrefs.SetFloat(PrefY, dockY);
+            PixelPrefs.SetInt(PrefDock, dock);
+            PixelPrefs.SetFloat(PrefY, dockY);
             docked = true;
         }
         else
         {
             dock = 0;
             floatPos = box.anchoredPosition;
-            PlayerPrefs.SetInt(PrefDock, 0);
-            PlayerPrefs.SetFloat(PrefX, floatPos.x);
-            PlayerPrefs.SetFloat(PrefY, floatPos.y);
+            PixelPrefs.SetInt(PrefDock, 0);
+            PixelPrefs.SetFloat(PrefX, floatPos.x);
+            PixelPrefs.SetFloat(PrefY, floatPos.y);
         }
         PixelAudio.Play("ui_click");
         placing = false;
@@ -346,9 +346,9 @@ public class PixelDidYouKnow : MonoBehaviour
     {
         dock = 1;
         dockY = float.NaN;
-        PlayerPrefs.DeleteKey(PrefX);
-        PlayerPrefs.DeleteKey(PrefY);
-        PlayerPrefs.SetInt(PrefDock, dock);
+        PixelPrefs.DeleteKey(PrefX);
+        PixelPrefs.DeleteKey(PrefY);
+        PixelPrefs.SetInt(PrefDock, dock);
         if (box != null) Layout();
     }
 

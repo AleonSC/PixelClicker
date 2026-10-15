@@ -669,12 +669,12 @@ public partial class PixelSkills : MonoBehaviour
         {
             if (packCache == null)
             {
-                packCache = PlayerPrefs.GetString(PackPref, "");
-                if (string.IsNullOrEmpty(packCache) && PlayerPrefs.GetInt("PixelClicker.Setting.Prospector", 0) != 0) packCache = MiningId;
+                packCache = PixelPrefs.GetString(PackPref, "");
+                if (string.IsNullOrEmpty(packCache) && PixelPrefs.GetInt("PixelClicker.Setting.Prospector", 0) != 0) packCache = MiningId;
             }
             return packCache;
         }
-        set { packCache = value ?? ""; PlayerPrefs.SetString(PackPref, packCache); }
+        set { packCache = value ?? ""; PixelPrefs.SetString(PackPref, packCache); }
     }
 
     // ---- Preview (PixelBalanceReport only): pretend a pack is in play at a skill level, with all of its pixels unlocked. Always set / cleared in a try-finally. ----
@@ -903,7 +903,7 @@ public partial class PixelSkills : MonoBehaviour
             if (guestCache == null)
             {
                 guestCache = new System.Collections.Generic.HashSet<string>();
-                foreach (string part in PlayerPrefs.GetString(GuestPref, "").Split(',')) if (part.Length > 0) guestCache.Add(part);
+                foreach (string part in PixelPrefs.GetString(GuestPref, "").Split(',')) if (part.Length > 0) guestCache.Add(part);
             }
             return guestCache;
         }
@@ -925,7 +925,7 @@ public partial class PixelSkills : MonoBehaviour
             if (offCache == null)
             {
                 offCache = new System.Collections.Generic.HashSet<string>();
-                foreach (string part in PlayerPrefs.GetString(OffPref, "").Split(',')) if (part.Length > 0) offCache.Add(part);
+                foreach (string part in PixelPrefs.GetString(OffPref, "").Split(',')) if (part.Length > 0) offCache.Add(part);
             }
             return offCache;
         }
@@ -935,7 +935,7 @@ public partial class PixelSkills : MonoBehaviour
     public void SetOptIn(PixelClicker.PixelType type, bool on)
     {
         if (on) OffSet.Remove(type.ToString()); else OffSet.Add(type.ToString());
-        PlayerPrefs.SetString(OffPref, string.Join(",", OffSet));
+        PixelPrefs.SetString(OffPref, string.Join(",", OffSet));
         Changed?.Invoke();
     }
 
@@ -960,7 +960,7 @@ public partial class PixelSkills : MonoBehaviour
     public void SetGuest(PixelClicker.PixelType type, bool on)
     {
         if (on) GuestSet.Add(type.ToString()); else GuestSet.Remove(type.ToString());
-        PlayerPrefs.SetString(GuestPref, string.Join(",", GuestSet));
+        PixelPrefs.SetString(GuestPref, string.Join(",", GuestSet));
         Changed?.Invoke();
     }
 
@@ -998,10 +998,10 @@ public partial class PixelSkills : MonoBehaviour
     {
         get
         {
-            if (offlineCache < 0) offlineCache = PlayerPrefs.GetInt(OfflinePref, 0) != 0 ? 1 : 0;
+            if (offlineCache < 0) offlineCache = PixelPrefs.GetInt(OfflinePref, 0) != 0 ? 1 : 0;
             return offlineCache != 0;
         }
-        private set { offlineCache = value ? 1 : 0; PlayerPrefs.SetInt(OfflinePref, offlineCache); }
+        private set { offlineCache = value ? 1 : 0; PixelPrefs.SetInt(OfflinePref, offlineCache); }
     }
 
     /// <summary>A save file with its own settings was loaded: read the switch again.</summary>

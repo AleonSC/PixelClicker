@@ -18,8 +18,8 @@ public class PixelClickerAura : MonoBehaviour
     /// <summary>Settings > Interface > Clicker glow aura (default on).</summary>
     public static bool Enabled
     {
-        get { if (cache < 0) cache = PlayerPrefs.GetInt(Pref, 1); return cache != 0; }
-        set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
+        get { if (cache < 0) cache = PixelPrefs.GetInt(Pref, 1); return cache != 0; }
+        set { cache = value ? 1 : 0; PixelPrefs.SetInt(Pref, cache); PixelPrefs.Save(); }
     }
 
     /// <summary>Set every frame by the shuffle bonus: the block on the cube is a combo block, so the aura lights up gold and pulses (even when the aura setting is off).</summary>
@@ -37,8 +37,8 @@ public class PixelClickerAura : MonoBehaviour
     /// <summary>Where the colour comes from: 0 = the pixel being clicked, 1 = the custom colour (eyedropper in Settings), 2 = a slow rainbow.</summary>
     public static int Mode
     {
-        get { if (modeCache < 0) modeCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefMode, 0), 0, 2); return modeCache; }
-        set { modeCache = Mathf.Clamp(value, 0, 2); PlayerPrefs.SetInt(PrefMode, modeCache); PlayerPrefs.Save(); }
+        get { if (modeCache < 0) modeCache = Mathf.Clamp(PixelPrefs.GetInt(PrefMode, 0), 0, 2); return modeCache; }
+        set { modeCache = Mathf.Clamp(value, 0, 2); PixelPrefs.SetInt(PrefMode, modeCache); PixelPrefs.Save(); }
     }
 
     /// <summary>The custom colour (default a soft sky blue).</summary>
@@ -46,7 +46,7 @@ public class PixelClickerAura : MonoBehaviour
     {
         get
         {
-            if (colorCache == null) { colorCache = PlayerPrefs.GetString(PrefColor, ""); colorParsed = ColorUtility.TryParseHtmlString("#" + colorCache, out Color c) ? c : (Color?)null; }
+            if (colorCache == null) { colorCache = PixelPrefs.GetString(PrefColor, ""); colorParsed = ColorUtility.TryParseHtmlString("#" + colorCache, out Color c) ? c : (Color?)null; }
             return colorParsed ?? new Color(0.45f, 0.8f, 1f);
         }
     }
@@ -57,8 +57,8 @@ public class PixelClickerAura : MonoBehaviour
         c.a = 1f;
         colorCache = ColorUtility.ToHtmlStringRGB(c);
         colorParsed = c;
-        PlayerPrefs.SetString(PrefColor, colorCache);
-        PlayerPrefs.Save();
+        PixelPrefs.SetString(PrefColor, colorCache);
+        PixelPrefs.Save();
     }
 
     public static void ReloadFromPrefs() { cache = -1; modeCache = -1; colorCache = null; colorParsed = null; }

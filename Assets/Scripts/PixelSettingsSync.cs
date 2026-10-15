@@ -27,10 +27,27 @@ public static class PixelSettingsSync
     }
 
     private static List<Known> known;
+    private static bool builtInsDeclared;
 
+    /// <summary>
+    /// Every per-save key: this file's built-in list (declared to PixelPrefs once) plus any key another script declared with
+    /// PixelPrefs.DeclarePerSave. Rebuilt on each call, so a key declared later is included too.
+    /// </summary>
     private static List<Known> Known_()
     {
-        if (known != null) return known;
+        if (!builtInsDeclared)
+        {
+            builtInsDeclared = true;
+            foreach (Known k in BuiltIns()) PixelPrefs.DeclarePerSave(k.key, (PixelPrefs.Kind)k.kind);
+        }
+        List<Known> all = new List<Known>();
+        foreach (KeyValuePair<string, PixelPrefs.Kind> kv in PixelPrefs.PerSaveKeys()) all.Add(new Known(kv.Key, (int)kv.Value));
+        return all;
+    }
+
+    /// <summary>The built-in per-save keys (new per-save settings can declare themselves with PixelPrefs.DeclarePerSave instead).</summary>
+    private static List<Known> BuiltIns()
+    {
         known = new List<Known>();
         // Player settings. The look of the interface (UI colour, button colour, neon bar glow + its colours, bar colour, clicker aura) is NOT listed here on purpose: it belongs to the
         // player's machine, not to a save. Kept per save it was overwritten by the last save's copy on every start (anything changed after the last save was lost).
@@ -65,7 +82,7 @@ public static class PixelSettingsSync
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { known = null; baseline = null; }
+    private static void ResetStatics() { known = null; baseline = null; builtInsDeclared = false; }
 
     private static string baseline;
 
@@ -90,10 +107,10 @@ public static class PixelSettingsSync
         List<Entry> list = new List<Entry>();
         foreach (Known k in Known_())
         {
-            if (!PlayerPrefs.HasKey(k.key)) continue;
-            string value = k.kind == 0 ? PlayerPrefs.GetInt(k.key).ToString()
-                         : k.kind == 1 ? PlayerPrefs.GetFloat(k.key).ToString("R", System.Globalization.CultureInfo.InvariantCulture)
-                         : PlayerPrefs.GetString(k.key);
+            if (!PixelPrefs.HasKey(k.key)) continue;
+            string value = k.kind == 0 ? PixelPrefs.GetInt(k.key).ToString()
+                         : k.kind == 1 ? PixelPrefs.GetFloat(k.key).ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+                         : PixelPrefs.GetString(k.key);
             list.Add(new Entry { key = k.key, kind = k.kind, value = value });
         }
         return list.ToArray();
@@ -109,16 +126,16 @@ public static class PixelSettingsSync
 
         foreach (Known k in Known_())
         {
-            if (!byKey.TryGetValue(k.key, out Entry e) || e.kind != k.kind) { PlayerPrefs.DeleteKey(k.key); continue; } // not stored (or stored in the old, wrong form) = this file uses the default
+            if (!byKey.TryGetValue(k.key, out Entry e) || e.kind != k.kind) { PixelPrefs.DeleteKey(k.key); continue; } // not stored (or stored in the old, wrong form) = this file uses the default
             try
             {
-                if (k.kind == 0) PlayerPrefs.SetInt(k.key, int.Parse(e.value));
-                else if (k.kind == 1) PlayerPrefs.SetFloat(k.key, float.Parse(e.value, System.Globalization.CultureInfo.InvariantCulture));
-                else PlayerPrefs.SetString(k.key, e.value ?? "");
+                if (k.kind == 0) PixelPrefs.SetInt(k.key, int.Parse(e.value));
+                else if (k.kind == 1) PixelPrefs.SetFloat(k.key, float.Parse(e.value, System.Globalization.CultureInfo.InvariantCulture));
+                else PixelPrefs.SetString(k.key, e.value ?? "");
             }
-            catch (FormatException) { PlayerPrefs.DeleteKey(k.key); }
+            catch (FormatException) { PixelPrefs.DeleteKey(k.key); }
         }
-        PlayerPrefs.Save();
+        PixelPrefs.Save();
 
         Reload();
         MarkBaseline();
@@ -130,9 +147,9 @@ public static class PixelSettingsSync
         foreach (Known k in Known_())
         {
             if (k.key.StartsWith("PixelClicker.Key.") || k.key.StartsWith("PixelAudio.")) continue;
-            PlayerPrefs.DeleteKey(k.key);
+            PixelPrefs.DeleteKey(k.key);
         }
-        PlayerPrefs.Save();
+        PixelPrefs.Save();
         Reload();
         MarkBaseline();
     }

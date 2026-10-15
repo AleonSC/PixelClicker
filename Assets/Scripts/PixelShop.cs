@@ -1917,10 +1917,10 @@ public partial class PixelShop : MonoBehaviour
     {
         get
         {
-            if (hidePurchasedCache < 0) hidePurchasedCache = PlayerPrefs.GetInt(PrefHidePurchased, 0) != 0 ? 1 : 0;
+            if (hidePurchasedCache < 0) hidePurchasedCache = PixelPrefs.GetInt(PrefHidePurchased, 0) != 0 ? 1 : 0;
             return hidePurchasedCache != 0;
         }
-        set { hidePurchasedCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefHidePurchased, hidePurchasedCache); }
+        set { hidePurchasedCache = value ? 1 : 0; PixelPrefs.SetInt(PrefHidePurchased, hidePurchasedCache); }
     }
 
     private static bool IsLeveled(ShopPack pack) => pack.levels != null && pack.levels.Length > 0;

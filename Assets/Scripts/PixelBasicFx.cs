@@ -23,14 +23,14 @@ public static class PixelBasicFx
     {
         get
         {
-            if (levelCache < 0) levelCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefKey, 2), 0, LevelNames.Length - 1);
+            if (levelCache < 0) levelCache = Mathf.Clamp(PixelPrefs.GetInt(PrefKey, 2), 0, LevelNames.Length - 1);
             return levelCache;
         }
         set
         {
             levelCache = Mathf.Clamp(value, 0, LevelNames.Length - 1);
-            PlayerPrefs.SetInt(PrefKey, levelCache);
-            PlayerPrefs.Save();
+            PixelPrefs.SetInt(PrefKey, levelCache);
+            PixelPrefs.Save();
         }
     }
 

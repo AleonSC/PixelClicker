@@ -140,7 +140,7 @@ public partial class PixelShop
         BuildCurrencyTooltip();
 
         // The pull-out arrow sits at the top left of the shop window (it rides the left edge of the currency panel when that is out).
-        currencyOut = PlayerPrefs.GetInt(PrefCurrencyOut, 0) != 0;
+        currencyOut = PixelPrefs.GetInt(PrefCurrencyOut, 0) != 0;
         currencySlide = currencyOut ? 1f : 0f;
         currencyArrow = PixelUIKit.CreateButton(font, shopPanel, "Currency Arrow", "", new Vector2(52f, 68f), new Color(0.3f, 0.34f, 0.46f, 1f), Color.white, 28f);
         RectTransform ar2 = currencyArrow.GetComponent<RectTransform>();
@@ -151,7 +151,7 @@ public partial class PixelShop
         currencyArrow.onClick.AddListener(() =>
         {
             currencyOut = !currencyOut;
-            PlayerPrefs.SetInt(PrefCurrencyOut, currencyOut ? 1 : 0);
+            PixelPrefs.SetInt(PrefCurrencyOut, currencyOut ? 1 : 0);
             PixelAudio.Play("ui_click");
         });
         ApplyCurrencySlide();

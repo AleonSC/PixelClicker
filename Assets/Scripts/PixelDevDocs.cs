@@ -95,7 +95,7 @@ public class PixelDevDocs : MonoBehaviour
         }
         LoadNotes();
         BuildNotes(roots[2]);
-        sub = Mathf.Clamp(PlayerPrefs.GetInt(PrefSub, 0), 0, 2);
+        sub = Mathf.Clamp(PixelPrefs.GetInt(PrefSub, 0), 0, 2);
         ApplySub();
         PixelDevHub.SetTabCallback("docs", SetVisible);
     }
@@ -118,7 +118,7 @@ public class PixelDevDocs : MonoBehaviour
     private void Select(int index)
     {
         sub = index;
-        PlayerPrefs.SetInt(PrefSub, sub);
+        PixelPrefs.SetInt(PrefSub, sub);
         ApplySub();
         if (visible) Shown?.Invoke(sub);
     }

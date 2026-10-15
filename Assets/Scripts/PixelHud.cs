@@ -175,13 +175,13 @@ public class PixelHud : MonoBehaviour
     {
         get
         {
-            if (barGlowCache < 0) barGlowCache = PlayerPrefs.GetInt(PrefBarGlow, 1);
+            if (barGlowCache < 0) barGlowCache = PixelPrefs.GetInt(PrefBarGlow, 1);
             return barGlowCache != 0;
         }
         set
         {
             barGlowCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefBarGlow, barGlowCache);
+            PixelPrefs.SetInt(PrefBarGlow, barGlowCache);
         }
     }
 
@@ -194,14 +194,14 @@ public class PixelHud : MonoBehaviour
     {
         get
         {
-            if (glowHueCache < 0f) glowHueCache = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefGlowHue, 0f));
+            if (glowHueCache < 0f) glowHueCache = Mathf.Clamp01(PixelPrefs.GetFloat(PrefGlowHue, 0f));
             return glowHueCache;
         }
         set
         {
             glowHueCache = Mathf.Clamp01(value);
-            PlayerPrefs.SetFloat(PrefGlowHue, glowHueCache);
-            if (glowColorCache != "") { glowColorCache = ""; glowColorParsed = null; PlayerPrefs.SetString(PrefGlowColor, ""); }   // the slider takes over from a picked colour
+            PixelPrefs.SetFloat(PrefGlowHue, glowHueCache);
+            if (glowColorCache != "") { glowColorCache = ""; glowColorParsed = null; PixelPrefs.SetString(PrefGlowColor, ""); }   // the slider takes over from a picked colour
         }
     }
 
@@ -210,13 +210,13 @@ public class PixelHud : MonoBehaviour
     {
         get
         {
-            if (glowCycleCache < 0) glowCycleCache = PlayerPrefs.GetInt(PrefGlowCycle, 1);
+            if (glowCycleCache < 0) glowCycleCache = PixelPrefs.GetInt(PrefGlowCycle, 1);
             return glowCycleCache != 0;
         }
         set
         {
             glowCycleCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefGlowCycle, glowCycleCache);
+            PixelPrefs.SetInt(PrefGlowCycle, glowCycleCache);
         }
     }
 
@@ -231,14 +231,14 @@ public class PixelHud : MonoBehaviour
     {
         get
         {
-            if (glowColorCache == null) { glowColorCache = PlayerPrefs.GetString(PrefGlowColor, ""); glowColorParsed = ParseGlowColor(glowColorCache); }
+            if (glowColorCache == null) { glowColorCache = PixelPrefs.GetString(PrefGlowColor, ""); glowColorParsed = ParseGlowColor(glowColorCache); }
             return glowColorParsed;
         }
         set
         {
             glowColorCache = value.HasValue ? ColorUtility.ToHtmlStringRGB(value.Value) : "";
             glowColorParsed = ParseGlowColor(glowColorCache);
-            PlayerPrefs.SetString(PrefGlowColor, glowColorCache);
+            PixelPrefs.SetString(PrefGlowColor, glowColorCache);
         }
     }
 
@@ -249,7 +249,7 @@ public class PixelHud : MonoBehaviour
         GlowHue = h;                      // (clears any older custom colour)
         GlowCustomColor = new Color(c.r, c.g, c.b, 1f);
         GlowCycle = false;
-        PlayerPrefs.Save();
+        PixelPrefs.Save();
     }
 
     /// <summary>The glow colour of one edge: the picked colour while it is static, else the hue (drifting with time while cycling).</summary>
@@ -273,8 +273,8 @@ public class PixelHud : MonoBehaviour
     private static void ReadBarColor()
     {
         if (barColorCache != null) return;
-        barColorCache = PlayerPrefs.GetString(PrefBarColor, "");
-        barColorOnCache = PlayerPrefs.GetInt(PrefBarColorOn, 0);
+        barColorCache = PixelPrefs.GetString(PrefBarColor, "");
+        barColorOnCache = PixelPrefs.GetInt(PrefBarColorOn, 0);
         barColorParsed = ParseGlowColor(barColorCache) ?? Color.black;
     }
 
@@ -282,7 +282,7 @@ public class PixelHud : MonoBehaviour
     public static bool BarColorOn
     {
         get { ReadBarColor(); return barColorOnCache == 1; }
-        set { ReadBarColor(); barColorOnCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefBarColorOn, barColorOnCache); BarColorVersion++; }
+        set { ReadBarColor(); barColorOnCache = value ? 1 : 0; PixelPrefs.SetInt(PrefBarColorOn, barColorOnCache); BarColorVersion++; }
     }
 
     /// <summary>The picked bar colour (black until one is picked).</summary>
@@ -294,9 +294,9 @@ public class PixelHud : MonoBehaviour
         ReadBarColor();
         barColorCache = ColorUtility.ToHtmlStringRGB(c);
         barColorParsed = new Color(c.r, c.g, c.b, 1f);
-        PlayerPrefs.SetString(PrefBarColor, barColorCache);
+        PixelPrefs.SetString(PrefBarColor, barColorCache);
         BarColorOn = true;
-        PlayerPrefs.Save();
+        PixelPrefs.Save();
     }
 
     /// <summary>A bar's colour: the picked colour (keeping the bar's own opacity) while the custom colour is on, else the colour it came with.</summary>
@@ -442,13 +442,13 @@ public class PixelHud : MonoBehaviour
     {
         get
         {
-            if (buttonModeCache < 0) buttonModeCache = Mathf.Clamp(PlayerPrefs.GetInt(PrefButtonMode, 0), 0, 2);
+            if (buttonModeCache < 0) buttonModeCache = Mathf.Clamp(PixelPrefs.GetInt(PrefButtonMode, 0), 0, 2);
             return buttonModeCache;
         }
         set
         {
             buttonModeCache = Mathf.Clamp(value, 0, 2);
-            PlayerPrefs.SetInt(PrefButtonMode, buttonModeCache);
+            PixelPrefs.SetInt(PrefButtonMode, buttonModeCache);
         }
     }
 

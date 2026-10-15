@@ -1111,7 +1111,7 @@ public partial class PixelClicker : MonoBehaviour
         set
         {
             allowRotation = value;
-            PlayerPrefs.SetInt(PrefRotation, value ? 1 : 0);
+            PixelPrefs.SetInt(PrefRotation, value ? 1 : 0);
             if (!value && pixelTransform != null) pixelTransform.rotation = startRotation;   // back to the default pose
         }
     }
@@ -1119,9 +1119,9 @@ public partial class PixelClicker : MonoBehaviour
     /// <summary>Reads the rotation / pulsing / background / abbreviate settings from PlayerPrefs again (a save file with its own settings was loaded).</summary>
     public void ReloadSettingsFromPrefs()
     {
-        allowRotation = PlayerPrefs.GetInt(PrefRotation, 1) != 0;
-        allowPulsing = PlayerPrefs.GetInt(PrefPulsing, 1) != 0;
-        if (PlayerPrefs.HasKey(PrefBackground)) Application.runInBackground = PlayerPrefs.GetInt(PrefBackground) != 0;
+        allowRotation = PixelPrefs.GetInt(PrefRotation, 1) != 0;
+        allowPulsing = PixelPrefs.GetInt(PrefPulsing, 1) != 0;
+        if (PixelPrefs.HasKey(PrefBackground)) Application.runInBackground = PixelPrefs.GetInt(PrefBackground) != 0;
         abbreviateCache = -1;
     }
 
@@ -1129,14 +1129,14 @@ public partial class PixelClicker : MonoBehaviour
     public bool RunInBackground
     {
         get => Application.runInBackground;
-        set { Application.runInBackground = value; PlayerPrefs.SetInt(PrefBackground, value ? 1 : 0); }
+        set { Application.runInBackground = value; PixelPrefs.SetInt(PrefBackground, value ? 1 : 0); }
     }
 
     /// <summary>Player setting (accessibility): turns the cube's pulsing (size and brightness) on or off. Remembered between sessions.</summary>
     public bool AllowPulsing
     {
         get => allowPulsing;
-        set { allowPulsing = value; PlayerPrefs.SetInt(PrefPulsing, value ? 1 : 0); }
+        set { allowPulsing = value; PixelPrefs.SetInt(PrefPulsing, value ? 1 : 0); }
     }
     private float hitPunchTimer;
     private Color currentColor = Color.white;
@@ -2094,9 +2094,9 @@ public partial class PixelClicker : MonoBehaviour
         if (fullSizeHitbox) BuildHitbox();
 
         propertyBlock = new MaterialPropertyBlock();
-        allowRotation = PlayerPrefs.GetInt(PrefRotation, 1) != 0;
-        allowPulsing = PlayerPrefs.GetInt(PrefPulsing, 1) != 0;
-        if (PlayerPrefs.HasKey(PrefBackground)) Application.runInBackground = PlayerPrefs.GetInt(PrefBackground) != 0;
+        allowRotation = PixelPrefs.GetInt(PrefRotation, 1) != 0;
+        allowPulsing = PixelPrefs.GetInt(PrefPulsing, 1) != 0;
+        if (PixelPrefs.HasKey(PrefBackground)) Application.runInBackground = PixelPrefs.GetInt(PrefBackground) != 0;
         colorPropertyId = Shader.PropertyToID(colorPropertyName);
 
         // Apply start-unlocked flags.
@@ -5813,10 +5813,10 @@ public partial class PixelClicker : MonoBehaviour
     {
         get
         {
-            if (abbreviateCache < 0) abbreviateCache = PlayerPrefs.GetInt(PrefAbbreviate, 1) != 0 ? 1 : 0;
+            if (abbreviateCache < 0) abbreviateCache = PixelPrefs.GetInt(PrefAbbreviate, 1) != 0 ? 1 : 0;
             return abbreviateCache != 0;
         }
-        set { abbreviateCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefAbbreviate, abbreviateCache); }
+        set { abbreviateCache = value ? 1 : 0; PixelPrefs.SetInt(PrefAbbreviate, abbreviateCache); }
     }
 
     // Short-scale suffixes, one per factor of 1000: K, M, B, T, Qa, Qi, Sx, Sp, Oc, No, then Dc (1e33), UDc, DDc ...

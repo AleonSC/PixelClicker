@@ -84,7 +84,7 @@ public partial class PixelPets
     private void LoadCustomOutfits(bool reapply)
     {
         customOutfits = new List<COutfit>();
-        string json = PlayerPrefs.GetString(PrefCustom, "");
+        string json = PixelPrefs.GetString(PrefCustom, "");
         if (!string.IsNullOrEmpty(json))
         {
             try { CBlob blob = JsonUtility.FromJson<CBlob>(json); if (blob != null && blob.outfits != null) customOutfits = blob.outfits; }
@@ -95,7 +95,7 @@ public partial class PixelPets
 
     private void SaveCustomOutfits()
     {
-        PlayerPrefs.SetString(PrefCustom, JsonUtility.ToJson(new CBlob { outfits = customOutfits }));
+        PixelPrefs.SetString(PrefCustom, JsonUtility.ToJson(new CBlob { outfits = customOutfits }));
     }
 
     /// <summary>The outfit numbers a pet of this type can cycle through: every built-in outfit, then the custom ones that fit it.</summary>

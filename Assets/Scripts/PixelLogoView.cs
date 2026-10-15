@@ -33,7 +33,7 @@ public class PixelLogoView : MonoBehaviour
     public static void ReloadFavorite()
     {
         if (current == null) return;
-        int fav = PlayerPrefs.GetInt(FavoritePref, 0) - 1;
+        int fav = PixelPrefs.GetInt(FavoritePref, 0) - 1;
         if (fav >= 0 && fav < Styles.Length && fav != current.style) current.SetStyle(fav);
         else current.RefreshStars();
     }
@@ -70,7 +70,7 @@ public class PixelLogoView : MonoBehaviour
         return inside;
     }
 
-    private bool IsFavorite => PlayerPrefs.GetInt(FavoritePref, 0) - 1 == style;
+    private bool IsFavorite => PixelPrefs.GetInt(FavoritePref, 0) - 1 == style;
 
     private void RefreshStars()
     {
@@ -88,7 +88,7 @@ public class PixelLogoView : MonoBehaviour
     {
         if (group != null && group.alpha < 0.9f) return;
         bool wasFav = IsFavorite;
-        PlayerPrefs.SetInt(FavoritePref, wasFav ? 0 : style + 1);
+        PixelPrefs.SetInt(FavoritePref, wasFav ? 0 : style + 1);
         RefreshStars();
         PixelAudio.Play("ui_click");
         nameT = 0f;
@@ -261,11 +261,11 @@ public class PixelLogoView : MonoBehaviour
         if (palette == null || palette.Length == 0) palette = new[] { Color.white };
         unit = width / (TotalCols + 3);
         // A different style every time the game starts (never the one used last time).
-        int last = PlayerPrefs.GetInt(Pref, -1);
-        int fav = PlayerPrefs.GetInt(FavoritePref, 0) - 1;   // the favourite logo of this save (0 = none)
+        int last = PixelPrefs.GetInt(Pref, -1);
+        int fav = PixelPrefs.GetInt(FavoritePref, 0) - 1;   // the favourite logo of this save (0 = none)
         if (fav >= 0 && fav < Styles.Length) style = fav;
         else do style = Random.Range(0, Styles.Length); while (style == last && Styles.Length > 1);
-        PlayerPrefs.SetInt(Pref, style);
+        PixelPrefs.SetInt(Pref, style);
         current = this;
 
         RectTransform glowLayer = MakeLayer("Glows"), shadowLayer = MakeLayer("Shadows"), bodyLayer = MakeLayer("Bodies");
@@ -358,7 +358,7 @@ public class PixelLogoView : MonoBehaviour
         style = index;
         introT = 0f;
         nameT = 0f;
-        PlayerPrefs.SetInt(Pref, style);
+        PixelPrefs.SetInt(Pref, style);
         RefreshStars();
         if (nameLabel != null) nameLabel.text = Styles[style].name.ToUpperInvariant() + "   " + (style + 1) + " / " + Styles.Length;
     }

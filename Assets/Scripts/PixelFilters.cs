@@ -90,15 +90,15 @@ public class PixelFilters : MonoBehaviour
     /// <summary>Index of the chosen filter (0 = Off).</summary>
     public static int Choice
     {
-        get { if (choice < 0) choice = PlayerPrefs.GetInt(PrefChoice, 0); return choice; }
-        set { choice = Mathf.Max(0, value); PlayerPrefs.SetInt(PrefChoice, choice); PlayerPrefs.Save(); if (Instance != null) Instance.Refresh(); }
+        get { if (choice < 0) choice = PixelPrefs.GetInt(PrefChoice, 0); return choice; }
+        set { choice = Mathf.Max(0, value); PixelPrefs.SetInt(PrefChoice, choice); PixelPrefs.Save(); if (Instance != null) Instance.Refresh(); }
     }
 
     /// <summary>How strong the filter is (0..1).</summary>
     public static float Strength
     {
-        get { if (strength < 0f) strength = PlayerPrefs.GetFloat(PrefStrength, 1f); return strength; }
-        set { strength = Mathf.Clamp01(value); PlayerPrefs.SetFloat(PrefStrength, strength); PlayerPrefs.Save(); if (Instance != null) Instance.Refresh(); }
+        get { if (strength < 0f) strength = PixelPrefs.GetFloat(PrefStrength, 1f); return strength; }
+        set { strength = Mathf.Clamp01(value); PixelPrefs.SetFloat(PrefStrength, strength); PixelPrefs.Save(); if (Instance != null) Instance.Refresh(); }
     }
 
     public static void ReloadFromPrefs() { choice = -1; strength = -1f; if (Instance != null) Instance.Refresh(); }

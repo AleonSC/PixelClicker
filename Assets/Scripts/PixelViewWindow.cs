@@ -74,11 +74,11 @@ public class PixelViewWindow : MonoBehaviour
     /// <summary>A save file with its own settings was loaded (or the game just started): the saved view is applied again as soon as it can be.</summary>
     public static void ReloadFromPrefs()
     {
-        InvertScroll = PlayerPrefs.GetInt(PrefInvert, 1) != 0;
+        InvertScroll = PixelPrefs.GetInt(PrefInvert, 1) != 0;
         if (instance != null) instance.pendingApply = true;
     }
 
-    private static void SaveKind(PixelViewKind kind) { if (kind == PixelViewKind.FreeCam) return; PlayerPrefs.SetInt(PrefKind, kind == PixelViewKind.FirstPerson ? 0 : (int)kind); }   // (the free cam is never the saved view)   // (first person is never restored by itself)
+    private static void SaveKind(PixelViewKind kind) { if (kind == PixelViewKind.FreeCam) return; PixelPrefs.SetInt(PrefKind, kind == PixelViewKind.FirstPerson ? 0 : (int)kind); }   // (the free cam is never the saved view)   // (first person is never restored by itself)
     private static Vector2 savedPosition = new Vector2(-40f, 0f);
 
     /// <summary>True while the window is open (first person gives the mouse back meanwhile).</summary>
@@ -142,7 +142,7 @@ public class PixelViewWindow : MonoBehaviour
         clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
         PixelWindows.Register(this, 130, () => IsOpen, Close);
-        InvertScroll = PlayerPrefs.GetInt(PrefInvert, 1) != 0;
+        InvertScroll = PixelPrefs.GetInt(PrefInvert, 1) != 0;
         pendingApply = true;   // the saved view, or the default view when nothing is saved
     }
 
@@ -171,7 +171,7 @@ public class PixelViewWindow : MonoBehaviour
         if (PixelOrbitCamera.Active && orbitNow != null)   // the wheel zooms too: remember where it ended up
         {
             float f = orbitNow.DistanceFraction;
-            if (Mathf.Abs(f - lastSavedZoom) > 0.004f) { lastSavedZoom = f; PlayerPrefs.SetFloat(PrefOrbitZoom, f); }
+            if (Mathf.Abs(f - lastSavedZoom) > 0.004f) { lastSavedZoom = f; PixelPrefs.SetFloat(PrefOrbitZoom, f); }
         }
         if (IsOpen && blocked) { Close(); return; }
         if (!blocked && !PixelKeys.Typing && !PixelTutorialDim.Active && PixelKeys.Pressed(PixelAction.ViewWindow))
@@ -186,7 +186,7 @@ public class PixelViewWindow : MonoBehaviour
     private void ApplySaved()
     {
         pendingApply = false;
-        PixelViewKind kind = (PixelViewKind)Mathf.Clamp(PlayerPrefs.GetInt(PrefKind, (int)startView), 0, 3);
+        PixelViewKind kind = (PixelViewKind)Mathf.Clamp(PixelPrefs.GetInt(PrefKind, (int)startView), 0, 3);
         if (kind == PixelViewKind.FirstPerson || kind == PixelViewKind.Default) kind = PixelViewKind.TopDown;   // (first person is never restored by itself; the old Default view is Top down now)
         if (CurrentView != kind && !SetView(kind, false)) return;   // (the camera could not start it just now: Update tries again in a moment)
         if (CurrentView == PixelViewKind.Orbital || CurrentView == PixelViewKind.TopDown)
@@ -194,10 +194,10 @@ public class PixelViewWindow : MonoBehaviour
             PixelOrbitCamera orbit = PixelOrbitCamera.Instance;
             if (orbit != null)
             {
-                orbit.DistanceFraction = PlayerPrefs.GetFloat(PrefOrbitZoom, startZoom);
+                orbit.DistanceFraction = PixelPrefs.GetFloat(PrefOrbitZoom, startZoom);
                 lastSavedZoom = orbit.DistanceFraction;
-                if (PlayerPrefs.HasKey(PrefSpeed)) orbit.AutoSpeed = PlayerPrefs.GetFloat(PrefSpeed, 10f);
-                orbit.AutoOrbit = PlayerPrefs.GetInt(PrefAuto, 0) == 1;
+                if (PixelPrefs.HasKey(PrefSpeed)) orbit.AutoSpeed = PixelPrefs.GetFloat(PrefSpeed, 10f);
+                orbit.AutoOrbit = PixelPrefs.GetInt(PrefAuto, 0) == 1;
             }
         }
     }
@@ -481,7 +481,7 @@ public class PixelViewWindow : MonoBehaviour
         zoomSlider = SliderRow(window.transform, y, "Zoom", 0.35f, 2f, v =>
         {
             PixelOrbitCamera orbit = PixelOrbitCamera.Instance;
-            if (PixelOrbitCamera.Active && orbit != null) { orbit.DistanceFraction = v; PlayerPrefs.SetFloat(PrefOrbitZoom, v); }
+            if (PixelOrbitCamera.Active && orbit != null) { orbit.DistanceFraction = v; PixelPrefs.SetFloat(PrefOrbitZoom, v); }
             else PixelZoom.SetTarget(v);
         }, out zoomRow, out zoomValue);
         y += RowH + 14f;
@@ -494,11 +494,11 @@ public class PixelViewWindow : MonoBehaviour
         TMP_Text head = Label(orbitSection.transform, "ORBIT CONTROLS", 22f, FontStyles.Bold, new Color(0.7f, 0.8f, 1f));
         Place(head.rectTransform, Pad + 6f, oy, Width - Pad * 2f, 30f);
         oy += 36f;
-        autoTick = TickRow(orbitSection.transform, oy, "Auto orbit", on => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoOrbit = on; PlayerPrefs.SetInt(PrefAuto, on ? 1 : 0); }, out _);
+        autoTick = TickRow(orbitSection.transform, oy, "Auto orbit", on => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoOrbit = on; PixelPrefs.SetInt(PrefAuto, on ? 1 : 0); }, out _);
         oy += RowH + 6f;
-        invertTick = TickRow(orbitSection.transform, oy, "Invert Ctrl + scroll zoom", on => { InvertScroll = on; PlayerPrefs.SetInt(PrefInvert, on ? 1 : 0); }, out _);
+        invertTick = TickRow(orbitSection.transform, oy, "Invert Ctrl + scroll zoom", on => { InvertScroll = on; PixelPrefs.SetInt(PrefInvert, on ? 1 : 0); }, out _);
         oy += RowH + 6f;
-        speedSlider = SliderRow(orbitSection.transform, oy, "Auto speed", 2f, 60f, v => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoSpeed = v; PlayerPrefs.SetFloat(PrefSpeed, v); }, out _, out speedValue);
+        speedSlider = SliderRow(orbitSection.transform, oy, "Auto speed", 2f, 60f, v => { if (PixelOrbitCamera.Instance != null) PixelOrbitCamera.Instance.AutoSpeed = v; PixelPrefs.SetFloat(PrefSpeed, v); }, out _, out speedValue);
         oy += RowH + 14f;
         float bw = (Width - Pad * 2f - 12f) / 2f;
         leftBtn = HoldButton(orbitSection.transform, "Turn left", Pad, oy, bw);

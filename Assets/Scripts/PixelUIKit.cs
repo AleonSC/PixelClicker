@@ -155,13 +155,13 @@ public static class PixelUIKit
     {
         get
         {
-            if (uiColorCache < 0) uiColorCache = PlayerPrefs.GetInt(PrefUiColor, 0);
+            if (uiColorCache < 0) uiColorCache = PixelPrefs.GetInt(PrefUiColor, 0);
             return uiColorCache != 0;
         }
         set
         {
             uiColorCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefUiColor, uiColorCache);
+            PixelPrefs.SetInt(PrefUiColor, uiColorCache);
             RefreshWindows();
         }
     }
@@ -171,13 +171,13 @@ public static class PixelUIKit
     {
         get
         {
-            if (uiHueCache < 0f) uiHueCache = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefUiHue, 0.6f));
+            if (uiHueCache < 0f) uiHueCache = Mathf.Clamp01(PixelPrefs.GetFloat(PrefUiHue, 0.6f));
             return uiHueCache;
         }
         set
         {
             uiHueCache = Mathf.Round(Mathf.Clamp01(value) * 48f) / 48f;   // in steps, so dragging the slider doesn't build a new frame picture for every pixel of movement
-            PlayerPrefs.SetFloat(PrefUiHue, uiHueCache);
+            PixelPrefs.SetFloat(PrefUiHue, uiHueCache);
             if (UiColorOn) RefreshWindows();
         }
     }
@@ -187,7 +187,7 @@ public static class PixelUIKit
     {
         get
         {
-            if (uiSatCache < 0f) uiSatCache = Mathf.Clamp(PlayerPrefs.GetFloat(PrefUiSat, 0.55f), 0.2f, 1f);
+            if (uiSatCache < 0f) uiSatCache = Mathf.Clamp(PixelPrefs.GetFloat(PrefUiSat, 0.55f), 0.2f, 1f);
             return uiSatCache;
         }
     }
@@ -199,10 +199,10 @@ public static class PixelUIKit
         uiHueCache = Mathf.Round(Mathf.Clamp01(h) * 96f) / 96f;
         uiSatCache = Mathf.Clamp(Mathf.Round(s * 24f) / 24f, 0.2f, 1f);
         uiColorCache = 1;
-        PlayerPrefs.SetFloat(PrefUiHue, uiHueCache);
-        PlayerPrefs.SetFloat(PrefUiSat, uiSatCache);
-        PlayerPrefs.SetInt(PrefUiColor, 1);
-        PlayerPrefs.Save();
+        PixelPrefs.SetFloat(PrefUiHue, uiHueCache);
+        PixelPrefs.SetFloat(PrefUiSat, uiSatCache);
+        PixelPrefs.SetInt(PrefUiColor, 1);
+        PixelPrefs.Save();
         RefreshWindows();
     }
 
@@ -370,12 +370,12 @@ public static class PixelUIKit
     /// <summary>Use the player's own colour for the (neutral) buttons. Off by default. Coloured buttons (red Quit, green confirm...) keep their meaning colour. Applies to every button at once.</summary>
     public static bool ButtonColorOn
     {
-        get { if (buttonColorCache < 0) buttonColorCache = PlayerPrefs.GetInt(PrefButtonColor, 0); return buttonColorCache != 0; }
-        set { buttonColorCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefButtonColor, buttonColorCache); RefreshButtons(); }
+        get { if (buttonColorCache < 0) buttonColorCache = PixelPrefs.GetInt(PrefButtonColor, 0); return buttonColorCache != 0; }
+        set { buttonColorCache = value ? 1 : 0; PixelPrefs.SetInt(PrefButtonColor, buttonColorCache); RefreshButtons(); }
     }
 
-    private static float ButtonHue { get { if (buttonHueCache < 0f) buttonHueCache = Mathf.Clamp01(PlayerPrefs.GetFloat(PrefButtonHue, 0.6f)); return buttonHueCache; } }
-    private static float ButtonSat { get { if (buttonSatCache < 0f) buttonSatCache = Mathf.Clamp(PlayerPrefs.GetFloat(PrefButtonSat, 0.55f), 0.2f, 1f); return buttonSatCache; } }
+    private static float ButtonHue { get { if (buttonHueCache < 0f) buttonHueCache = Mathf.Clamp01(PixelPrefs.GetFloat(PrefButtonHue, 0.6f)); return buttonHueCache; } }
+    private static float ButtonSat { get { if (buttonSatCache < 0f) buttonSatCache = Mathf.Clamp(PixelPrefs.GetFloat(PrefButtonSat, 0.55f), 0.2f, 1f); return buttonSatCache; } }
 
     /// <summary>Makes the buttons take on the colour of 'c' (hue and how colourful it is) and switches the custom button colour on. Used by the eyedropper in Settings.</summary>
     public static void SetButtonColorFromColor(Color c)
@@ -384,10 +384,10 @@ public static class PixelUIKit
         buttonHueCache = Mathf.Clamp01(h);
         buttonSatCache = Mathf.Clamp(s, 0.2f, 1f);
         buttonColorCache = 1;
-        PlayerPrefs.SetFloat(PrefButtonHue, buttonHueCache);
-        PlayerPrefs.SetFloat(PrefButtonSat, buttonSatCache);
-        PlayerPrefs.SetInt(PrefButtonColor, 1);
-        PlayerPrefs.Save();
+        PixelPrefs.SetFloat(PrefButtonHue, buttonHueCache);
+        PixelPrefs.SetFloat(PrefButtonSat, buttonSatCache);
+        PixelPrefs.SetInt(PrefButtonColor, 1);
+        PixelPrefs.Save();
         RefreshButtons();
     }
 

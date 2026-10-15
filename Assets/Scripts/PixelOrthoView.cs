@@ -42,14 +42,14 @@ public class PixelOrthoView : MonoBehaviour
     {
         get
         {
-            if (enabledCache < 0) enabledCache = PlayerPrefs.GetInt(PrefEnabled, 0);
+            if (enabledCache < 0) enabledCache = PixelPrefs.GetInt(PrefEnabled, 0);
             return enabledCache != 0;
         }
         set
         {
             enabledCache = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefEnabled, enabledCache);
-            PlayerPrefs.Save();
+            PixelPrefs.SetInt(PrefEnabled, enabledCache);
+            PixelPrefs.Save();
         }
     }
 

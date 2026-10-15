@@ -65,7 +65,7 @@ public class PixelCustomKeys : MonoBehaviour
     private void Load()
     {
         bindings.Clear();
-        string json = PlayerPrefs.GetString(Pref, "");
+        string json = PixelPrefs.GetString(Pref, "");
         if (string.IsNullOrEmpty(json)) return;
         try
         {
@@ -77,7 +77,7 @@ public class PixelCustomKeys : MonoBehaviour
 
     private void Save()
     {
-        PlayerPrefs.SetString(Pref, JsonUtility.ToJson(new Store { list = bindings.ToArray() }));
+        PixelPrefs.SetString(Pref, JsonUtility.ToJson(new Store { list = bindings.ToArray() }));
     }
 
     // ------------------------------------------------------------------

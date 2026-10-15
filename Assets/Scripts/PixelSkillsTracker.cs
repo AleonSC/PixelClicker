@@ -44,9 +44,9 @@ public partial class PixelSkills
 
     private void LoadTrackerPrefs()
     {
-        trackerOn = PlayerPrefs.GetInt(TrackerOnPref, 0) == 1;
-        trackerSmall = PlayerPrefs.GetInt(TrackerSmallPref, 0) == 1;
-        trackerStuck = PlayerPrefs.GetInt(TrackerStuckPref, 0) == 1;
+        trackerOn = PixelPrefs.GetInt(TrackerOnPref, 0) == 1;
+        trackerSmall = PixelPrefs.GetInt(TrackerSmallPref, 0) == 1;
+        trackerStuck = PixelPrefs.GetInt(TrackerStuckPref, 0) == 1;
     }
 
     /// <summary>The pin button in the Skills window: close the window and pin the tracker (or, if it is already up, take it away again).</summary>
@@ -94,7 +94,7 @@ public partial class PixelSkills
     private void SetTracker(bool on)
     {
         trackerOn = on;
-        PlayerPrefs.SetInt(TrackerOnPref, on ? 1 : 0);
+        PixelPrefs.SetInt(TrackerOnPref, on ? 1 : 0);
         if (on) { EnsureTracker(); RefreshTracker(); }
         ApplyTrackerVisibility();
     }
@@ -112,13 +112,13 @@ public partial class PixelSkills
         PixelUIKit.StyleWindow(trackerPanelImage, new Color(0.1f, 0.1f, 0.13f, 0.93f));
         trackerRect = trackerPanel.GetComponent<RectTransform>();
         trackerRect.anchorMin = trackerRect.anchorMax = trackerRect.pivot = new Vector2(0.5f, 0.5f);
-        trackerRect.anchoredPosition = new Vector2(PlayerPrefs.GetFloat(TrackerXPref, -700f), PlayerPrefs.GetFloat(TrackerYPref, 300f));
+        trackerRect.anchoredPosition = new Vector2(PixelPrefs.GetFloat(TrackerXPref, -700f), PixelPrefs.GetFloat(TrackerYPref, 300f));
 
         trackerDrag = trackerPanel.AddComponent<PixelPopoutDrag>();
         trackerDrag.target = trackerRect;
         trackerDrag.canvas = trackerCanvas.GetComponent<Canvas>();
         trackerDesired = trackerRect.anchoredPosition;
-        trackerDrag.onMoved = () => { trackerDesired = trackerRect.anchoredPosition; KeepTrackerOnScreen(); trackerDesired = trackerRect.anchoredPosition; PlayerPrefs.SetFloat(TrackerXPref, trackerDesired.x); PlayerPrefs.SetFloat(TrackerYPref, trackerDesired.y); };
+        trackerDrag.onMoved = () => { trackerDesired = trackerRect.anchoredPosition; KeepTrackerOnScreen(); trackerDesired = trackerRect.anchoredPosition; PixelPrefs.SetFloat(TrackerXPref, trackerDesired.x); PixelPrefs.SetFloat(TrackerYPref, trackerDesired.y); };
 
         trackerName = PixelUIKit.CreateText(Font, trackerPanel.transform, "Name", "", 30f, TextAlignmentOptions.MidlineLeft, FontStyles.Bold, textColor);
         trackerName.raycastTarget = true;   // double click the name: open that skill and its tree (drags still reach the panel behind it)
@@ -168,7 +168,7 @@ public partial class PixelSkills
         trackerSize.onClick.AddListener(() =>
         {
             trackerSmall = !trackerSmall;
-            PlayerPrefs.SetInt(TrackerSmallPref, trackerSmall ? 1 : 0);
+            PixelPrefs.SetInt(TrackerSmallPref, trackerSmall ? 1 : 0);
             LayoutTracker();
         });
         trackerStick = PixelUIKit.CreateButton(Font, trackerPanel.transform, "Stick", "", new Vector2(40f, 40f), new Color(0.3f, 0.3f, 0.35f, 1f), textColor, 22f);
@@ -178,7 +178,7 @@ public partial class PixelSkills
         trackerStick.onClick.AddListener(() =>
         {
             trackerStuck = !trackerStuck;
-            PlayerPrefs.SetInt(TrackerStuckPref, trackerStuck ? 1 : 0);
+            PixelPrefs.SetInt(TrackerStuckPref, trackerStuck ? 1 : 0);
             LayoutTracker();
         });
         foreach (Button b in new[] { trackerClose, trackerSize, trackerStick })

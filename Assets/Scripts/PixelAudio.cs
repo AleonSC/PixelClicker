@@ -138,20 +138,20 @@ public partial class PixelAudio : MonoBehaviour
     /// <summary>Settings > Audio > 'UI click sounds': the click sound of every UI button / tick box (sound ids ui_click, ui_scroll and menu_open: the click, the scroll tick and the menu bloop). On by default.</summary>
     public static bool UiClicks
     {
-        get { if (uiClicksCache < 0) uiClicksCache = PlayerPrefs.GetInt(PrefUiClicks, 1); return uiClicksCache != 0; }
-        set { uiClicksCache = value ? 1 : 0; PlayerPrefs.SetInt(PrefUiClicks, uiClicksCache); PlayerPrefs.Save(); }
+        get { if (uiClicksCache < 0) uiClicksCache = PixelPrefs.GetInt(PrefUiClicks, 1); return uiClicksCache != 0; }
+        set { uiClicksCache = value ? 1 : 0; PixelPrefs.SetInt(PrefUiClicks, uiClicksCache); PixelPrefs.Save(); }
     }
 
     public static void ReloadFromPrefs()
     {
         uiClicksCache = -1;
         if (instance == null) return;
-        instance.masterVolume = PlayerPrefs.HasKey(PrefMaster) ? PlayerPrefs.GetFloat(PrefMaster) : instance.defaultMaster;
-        instance.effectsVolume = PlayerPrefs.HasKey(PrefEffects) ? PlayerPrefs.GetFloat(PrefEffects) : instance.defaultEffects;
-        instance.musicVolume = PlayerPrefs.HasKey(PrefMusic) ? PlayerPrefs.GetFloat(PrefMusic) : instance.defaultMusic;
-        instance.muted = PlayerPrefs.HasKey(PrefMuted) ? PlayerPrefs.GetInt(PrefMuted) != 0 : instance.defaultMuted;
-        instance.musicMuted = PlayerPrefs.GetInt(PrefMusicMuted, 0) != 0;
-        instance.shuffleOn = PlayerPrefs.GetInt(PrefMusicShuffle, instance.shuffleMusic ? 1 : 0) != 0;
+        instance.masterVolume = PixelPrefs.HasKey(PrefMaster) ? PixelPrefs.GetFloat(PrefMaster) : instance.defaultMaster;
+        instance.effectsVolume = PixelPrefs.HasKey(PrefEffects) ? PixelPrefs.GetFloat(PrefEffects) : instance.defaultEffects;
+        instance.musicVolume = PixelPrefs.HasKey(PrefMusic) ? PixelPrefs.GetFloat(PrefMusic) : instance.defaultMusic;
+        instance.muted = PixelPrefs.HasKey(PrefMuted) ? PixelPrefs.GetInt(PrefMuted) != 0 : instance.defaultMuted;
+        instance.musicMuted = PixelPrefs.GetInt(PrefMusicMuted, 0) != 0;
+        instance.shuffleOn = PixelPrefs.GetInt(PrefMusicShuffle, instance.shuffleMusic ? 1 : 0) != 0;
         instance.playlistOff = null;   // read again (per save)
         instance.ApplyMusicVolume();
         instance.ApplySavedSong();
@@ -174,28 +174,28 @@ public partial class PixelAudio : MonoBehaviour
     public float MasterVolume
     {
         get => masterVolume;
-        set { masterVolume = Mathf.Clamp01(value); PlayerPrefs.SetFloat(PrefMaster, masterVolume); ApplyMusicVolume(); }
+        set { masterVolume = Mathf.Clamp01(value); PixelPrefs.SetFloat(PrefMaster, masterVolume); ApplyMusicVolume(); }
     }
 
     /// <summary>Sound effect volume 0..1 (saved).</summary>
     public float EffectsVolume
     {
         get => effectsVolume;
-        set { effectsVolume = Mathf.Clamp01(value); PlayerPrefs.SetFloat(PrefEffects, effectsVolume); }
+        set { effectsVolume = Mathf.Clamp01(value); PixelPrefs.SetFloat(PrefEffects, effectsVolume); }
     }
 
     /// <summary>Music volume 0..1 (saved).</summary>
     public float MusicVolume
     {
         get => musicVolume;
-        set { musicVolume = Mathf.Clamp01(value); PlayerPrefs.SetFloat(PrefMusic, musicVolume); ApplyMusicVolume(); }
+        set { musicVolume = Mathf.Clamp01(value); PixelPrefs.SetFloat(PrefMusic, musicVolume); ApplyMusicVolume(); }
     }
 
     /// <summary>All sound off (saved).</summary>
     public bool Muted
     {
         get => muted;
-        set { muted = value; PlayerPrefs.SetInt(PrefMuted, muted ? 1 : 0); ApplyMusicVolume(); }
+        set { muted = value; PixelPrefs.SetInt(PrefMuted, muted ? 1 : 0); ApplyMusicVolume(); }
     }
 
     /// <summary>The music alone off (saved per save file; the speaker button on the main menu and Settings > Audio).</summary>
@@ -203,13 +203,13 @@ public partial class PixelAudio : MonoBehaviour
     public bool MusicShuffle
     {
         get => shuffleOn;
-        set { shuffleOn = value; PlayerPrefs.SetInt(PrefMusicShuffle, value ? 1 : 0); }
+        set { shuffleOn = value; PixelPrefs.SetInt(PrefMusicShuffle, value ? 1 : 0); }
     }
 
     public bool MusicMuted
     {
         get => musicMuted;
-        set { musicMuted = value; PlayerPrefs.SetInt(PrefMusicMuted, musicMuted ? 1 : 0); ApplyMusicVolume(); }
+        set { musicMuted = value; PixelPrefs.SetInt(PrefMusicMuted, musicMuted ? 1 : 0); ApplyMusicVolume(); }
     }
 
     // ------------------------------------------------------------------
@@ -524,11 +524,11 @@ public partial class PixelAudio : MonoBehaviour
         defaultMaster = masterVolume; defaultEffects = effectsVolume; defaultMusic = musicVolume; defaultMuted = muted;
 
         // The player's saved choices win over the Inspector's first-run values.
-        if (PlayerPrefs.HasKey(PrefMaster)) masterVolume = PlayerPrefs.GetFloat(PrefMaster);
-        if (PlayerPrefs.HasKey(PrefEffects)) effectsVolume = PlayerPrefs.GetFloat(PrefEffects);
-        if (PlayerPrefs.HasKey(PrefMusic)) musicVolume = PlayerPrefs.GetFloat(PrefMusic);
-        if (PlayerPrefs.HasKey(PrefMuted)) muted = PlayerPrefs.GetInt(PrefMuted) != 0;
-        shuffleOn = PlayerPrefs.GetInt(PrefMusicShuffle, shuffleMusic ? 1 : 0) != 0;
+        if (PixelPrefs.HasKey(PrefMaster)) masterVolume = PixelPrefs.GetFloat(PrefMaster);
+        if (PixelPrefs.HasKey(PrefEffects)) effectsVolume = PixelPrefs.GetFloat(PrefEffects);
+        if (PixelPrefs.HasKey(PrefMusic)) musicVolume = PixelPrefs.GetFloat(PrefMusic);
+        if (PixelPrefs.HasKey(PrefMuted)) muted = PixelPrefs.GetInt(PrefMuted) != 0;
+        shuffleOn = PixelPrefs.GetInt(PrefMusicShuffle, shuffleMusic ? 1 : 0) != 0;
 
         EnsureDefaultSounds();
         FillSynthesizedClips();
@@ -789,7 +789,7 @@ public partial class PixelAudio : MonoBehaviour
             if (playlistOff == null)
             {
                 playlistOff = new HashSet<string>();
-                foreach (string part in PlayerPrefs.GetString(PrefPlaylistOff, "").Split('|')) if (part.Length > 0) playlistOff.Add(part);
+                foreach (string part in PixelPrefs.GetString(PrefPlaylistOff, "").Split('|')) if (part.Length > 0) playlistOff.Add(part);
             }
             return playlistOff;
         }
@@ -812,7 +812,7 @@ public partial class PixelAudio : MonoBehaviour
         if (i < 0 || i >= MusicTrackCount) return false;
         if (!on && IsTrackEnabled(i) && EnabledTrackCount <= 1) return false;
         if (on) PlaylistOff.Remove(TrackKey(i)); else PlaylistOff.Add(TrackKey(i));
-        PlayerPrefs.SetString(PrefPlaylistOff, string.Join("|", PlaylistOff));
+        PixelPrefs.SetString(PrefPlaylistOff, string.Join("|", PlaylistOff));
         return true;
     }
 
@@ -820,7 +820,7 @@ public partial class PixelAudio : MonoBehaviour
     public void EnableAllTracks()
     {
         PlaylistOff.Clear();
-        PlayerPrefs.SetString(PrefPlaylistOff, "");
+        PixelPrefs.SetString(PrefPlaylistOff, "");
     }
 
     // ---- Track choice (the main menu's music selector) ----
@@ -863,7 +863,7 @@ public partial class PixelAudio : MonoBehaviour
     public void SelectMusicTrack(int i)
     {
         if (i < 0 || musicTracks == null || i >= musicTracks.Length || musicTracks[i] == null) return;
-        PlayerPrefs.SetString(PrefSong, TrackKey(i));
+        PixelPrefs.SetString(PrefSong, TrackKey(i));
         if (cueActive >= 0) { cueSpent = cueActive; cueTarget = -1; }   // picking a song overrides the cue that is playing (until its trigger has ended once)
         PlayTrack(i);
     }
@@ -931,7 +931,7 @@ public partial class PixelAudio : MonoBehaviour
     /// <summary>The index of this save file's chosen song (-1 = none chosen, or it is not in the list any more).</summary>
     private int SavedSongIndex()
     {
-        string name = PlayerPrefs.GetString(PrefSong, "");
+        string name = PixelPrefs.GetString(PrefSong, "");
         if (name.Length == 0 || musicTracks == null) return -1;
         for (int i = 0; i < musicTracks.Length; i++) if (musicTracks[i] != null && musicTracks[i].name == name) return i;
         return -1;

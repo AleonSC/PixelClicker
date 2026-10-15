@@ -380,7 +380,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         originalMaterials = floorRenderer.sharedMaterials;
         BuildUvMap();
 
-        string saved = PlayerPrefs.GetString(PrefStyle, defaultStyle);
+        string saved = PixelPrefs.GetString(PrefStyle, defaultStyle);
         switch (saved)   // styles that were renamed
         {
             case "Dragon Radar": saved = "Radar"; break;
@@ -523,7 +523,7 @@ public partial class PixelFloor : MonoBehaviour, IPixelLookSource
         if (styles.Count == 0) return;
         index = ((index % styles.Count) + styles.Count) % styles.Count;
         current = index;
-        PlayerPrefs.SetString(PrefStyle, styles[index].name);
+        PixelPrefs.SetString(PrefStyle, styles[index].name);
         Apply(styles[index]);
         StyleChanged?.Invoke(index);
     }

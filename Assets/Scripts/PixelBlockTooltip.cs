@@ -31,10 +31,10 @@ public class PixelBlockTooltip : MonoBehaviour
     {
         get
         {
-            if (PlayerPrefs.HasKey(PrefMode)) return Mathf.Clamp(PlayerPrefs.GetInt(PrefMode, 0), 0, 2);
-            return PlayerPrefs.GetInt(PrefEnabled, 1) != 0 ? ModeFull : ModeOff;
+            if (PixelPrefs.HasKey(PrefMode)) return Mathf.Clamp(PixelPrefs.GetInt(PrefMode, 0), 0, 2);
+            return PixelPrefs.GetInt(PrefEnabled, 1) != 0 ? ModeFull : ModeOff;
         }
-        set { PlayerPrefs.SetInt(PrefMode, Mathf.Clamp(value, 0, 2)); PlayerPrefs.Save(); }
+        set { PixelPrefs.SetInt(PrefMode, Mathf.Clamp(value, 0, 2)); PixelPrefs.Save(); }
     }
 
     /// <summary>Show the tooltip when hovering a block at all? (Mode is not Off.)</summary>

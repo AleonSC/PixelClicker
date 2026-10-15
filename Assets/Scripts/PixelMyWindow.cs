@@ -123,7 +123,7 @@ public class PixelMyWindow : MonoBehaviour
     private const string PrefHoverDocked = "PixelClicker.MyWindow.HoverDocked";
 
     /// <summary>Is the hover tooltip pinned into My Window (the player's own choice, kept on this machine)? While it is and My Window is open, the block tooltip no longer follows the mouse: whatever is hovered shows in the window.</summary>
-    public static bool HoverDocked => PlayerPrefs.GetInt(PrefHoverDocked, 0) != 0;
+    public static bool HoverDocked => PixelPrefs.GetInt(PrefHoverDocked, 0) != 0;
 
     private RectTransform hoverSlot;
     private TMP_Text hoverPlaceholder;
@@ -154,7 +154,7 @@ public class PixelMyWindow : MonoBehaviour
     private const string PrefLogDocked = "PixelClicker.MyWindow.LogDocked";
 
     /// <summary>Is the event log docked into My Window as a tab (the player's own choice, kept on this machine)? While it is and My Window is open, the log overlay at the bottom left stays away.</summary>
-    public static bool LogDocked => PlayerPrefs.GetInt(PrefLogDocked, 0) != 0;
+    public static bool LogDocked => PixelPrefs.GetInt(PrefLogDocked, 0) != 0;
 
     /// <summary>Opens My Window on its Event log tab (the event log key does this while the log is docked).</summary>
     public static void ShowLogTab()
@@ -274,7 +274,7 @@ public class PixelMyWindow : MonoBehaviour
     {
         BuildUI();
         LoadEntries();
-        open = PlayerPrefs.GetInt(PrefPrefix + "Open", 0) != 0;
+        open = PixelPrefs.GetInt(PrefPrefix + "Open", 0) != 0;
         if (minimized) windowRect.sizeDelta = new Vector2(windowRect.sizeDelta.x, HeaderHeight);
         ApplyDockState();
         Layout();
@@ -290,7 +290,7 @@ public class PixelMyWindow : MonoBehaviour
 
     private void LoadEntries()
     {
-        string json = PlayerPrefs.GetString(PrefEntries, "");
+        string json = PixelPrefs.GetString(PrefEntries, "");
         blob = new Blob();
         if (!string.IsNullOrEmpty(json))
         {
@@ -303,21 +303,21 @@ public class PixelMyWindow : MonoBehaviour
 
     private void SaveEntries()
     {
-        PlayerPrefs.SetString(PrefEntries, JsonUtility.ToJson(blob));
+        PixelPrefs.SetString(PrefEntries, JsonUtility.ToJson(blob));
     }
 
     private void SaveGeometry()
     {
         geometryDirty = false;
-        PlayerPrefs.SetFloat(PrefPrefix + "X", windowRect.anchoredPosition.x);
-        PlayerPrefs.SetFloat(PrefPrefix + "Y", windowRect.anchoredPosition.y);
-        PlayerPrefs.SetFloat(PrefPrefix + "W", windowRect.sizeDelta.x);
-        PlayerPrefs.SetFloat(PrefPrefix + "H", minimized ? restoreHeight : windowRect.sizeDelta.y);
-        PlayerPrefs.SetInt(PrefPrefix + "Open", open ? 1 : 0);
-        PlayerPrefs.SetInt(PrefPrefix + "Layout", 2);
-        PlayerPrefs.SetInt(PrefPrefix + "Min", minimized ? 1 : 0);
-        PlayerPrefs.SetInt(PrefPrefix + "Dock", dockSide);
-        PlayerPrefs.SetFloat(PrefPrefix + "DockY", dockY);
+        PixelPrefs.SetFloat(PrefPrefix + "X", windowRect.anchoredPosition.x);
+        PixelPrefs.SetFloat(PrefPrefix + "Y", windowRect.anchoredPosition.y);
+        PixelPrefs.SetFloat(PrefPrefix + "W", windowRect.sizeDelta.x);
+        PixelPrefs.SetFloat(PrefPrefix + "H", minimized ? restoreHeight : windowRect.sizeDelta.y);
+        PixelPrefs.SetInt(PrefPrefix + "Open", open ? 1 : 0);
+        PixelPrefs.SetInt(PrefPrefix + "Layout", 2);
+        PixelPrefs.SetInt(PrefPrefix + "Min", minimized ? 1 : 0);
+        PixelPrefs.SetInt(PrefPrefix + "Dock", dockSide);
+        PixelPrefs.SetFloat(PrefPrefix + "DockY", dockY);
     }
 
     // ------------------------------------------------------------------
@@ -347,20 +347,20 @@ public class PixelMyWindow : MonoBehaviour
         windowRect = windowObject.GetComponent<RectTransform>();
         windowRect.anchorMin = windowRect.anchorMax = windowRect.pivot = new Vector2(0f, 1f);
         Vector2 size = defaultSize.x > 100f && defaultSize.y > 100f ? defaultSize : new Vector2(450f, 660f);
-        bool saved = PlayerPrefs.GetInt(PrefPrefix + "Layout", 0) == 2;   // (older saved places / sizes are ignored once: the window now opens tall at the right)
-        windowRect.sizeDelta = saved ? new Vector2(Mathf.Max(MinSize.x, PlayerPrefs.GetFloat(PrefPrefix + "W", size.x)), Mathf.Max(MinSize.y, PlayerPrefs.GetFloat(PrefPrefix + "H", size.y))) : size;
+        bool saved = PixelPrefs.GetInt(PrefPrefix + "Layout", 0) == 2;   // (older saved places / sizes are ignored once: the window now opens tall at the right)
+        windowRect.sizeDelta = saved ? new Vector2(Mathf.Max(MinSize.x, PixelPrefs.GetFloat(PrefPrefix + "W", size.x)), Mathf.Max(MinSize.y, PixelPrefs.GetFloat(PrefPrefix + "H", size.y))) : size;
         restoreHeight = windowRect.sizeDelta.y;
         Vector2 cs = canvasRect.rect.size;
         if (cs.x < 100f || cs.y < 100f) cs = new Vector2(1920f, 1080f);
         float inset = BarInset();
         windowRect.anchoredPosition = saved
-            ? new Vector2(PlayerPrefs.GetFloat(PrefPrefix + "X", 60f), PlayerPrefs.GetFloat(PrefPrefix + "Y", -170f))
+            ? new Vector2(PixelPrefs.GetFloat(PrefPrefix + "X", 60f), PixelPrefs.GetFloat(PrefPrefix + "Y", -170f))
             : new Vector2(cs.x - windowRect.sizeDelta.x - 22f, -(cs.y - inset - windowRect.sizeDelta.y));   // right side, just above the bottom bar
         if (saved)
         {
-            minimized = PlayerPrefs.GetInt(PrefPrefix + "Min", 0) != 0;
-            dockSide = PlayerPrefs.GetInt(PrefPrefix + "Dock", 0);
-            dockY = PlayerPrefs.GetFloat(PrefPrefix + "DockY", windowRect.anchoredPosition.y);
+            minimized = PixelPrefs.GetInt(PrefPrefix + "Min", 0) != 0;
+            dockSide = PixelPrefs.GetInt(PrefPrefix + "Dock", 0);
+            dockY = PixelPrefs.GetFloat(PrefPrefix + "DockY", windowRect.anchoredPosition.y);
         }
 
         // Header: title (drag handle), Edit, close.
@@ -707,7 +707,7 @@ public class PixelMyWindow : MonoBehaviour
 
     private void ToggleHoverDock()
     {
-        PlayerPrefs.SetInt(PrefHoverDocked, HoverDocked ? 0 : 1);
+        PixelPrefs.SetInt(PrefHoverDocked, HoverDocked ? 0 : 1);
         hoverShownH = -1f;
         Layout();
     }
@@ -715,7 +715,7 @@ public class PixelMyWindow : MonoBehaviour
     private void ToggleLogDock()
     {
         bool now = !LogDocked;
-        PlayerPrefs.SetInt(PrefLogDocked, now ? 1 : 0);
+        PixelPrefs.SetInt(PrefLogDocked, now ? 1 : 0);
         showLogTab = now;   // docking it opens the tab straight away
         Layout();
         if (now) RebuildLog();

@@ -576,7 +576,7 @@ public class PixelPauseMenu : MonoBehaviour
     /// <summary>Reads the "pause stops the game" setting again (a save file with its own settings was loaded).</summary>
     public void ReloadSettingsFromPrefs()
     {
-        pauseStopsGame = PlayerPrefs.GetInt(PrefPauseStops, 1) != 0;
+        pauseStopsGame = PixelPrefs.GetInt(PrefPauseStops, 1) != 0;
     }
     private bool pauseStopsGame = true;
 
@@ -2487,7 +2487,7 @@ public class PixelPauseMenu : MonoBehaviour
         pauseStopsToggle = AddToggleRow(list, pauseStopsLabel, pauseStopsGame, on =>
         {
             pauseStopsGame = on;
-            PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
+            PixelPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
             ApplyFreeze(); // takes effect right away, even though the menu is open
         }, ref y);
         AddSettingToggle(list, didYouKnowLabel, () => PixelDidYouKnow.Enabled, on => PixelDidYouKnow.Enabled = on, ref y);

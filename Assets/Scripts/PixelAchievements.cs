@@ -776,11 +776,11 @@ public class PixelAchievements : MonoBehaviour
         popupRect = panel.GetComponent<RectTransform>();
         popupRect.anchorMin = popupRect.anchorMax = new Vector2(0.5f, 0.5f);
         popupRect.pivot = new Vector2(0f, 0.5f);   // positions are the popup's LEFT edge, measured from the middle of the screen (so collapsing it does not move the icon)
-        popupCollapsed = PlayerPrefs.GetInt(PrefPopupCollapsed, 0) != 0;
+        popupCollapsed = PixelPrefs.GetInt(PrefPopupCollapsed, 0) != 0;
         popupWidth = popupCollapsed ? CollapsedWidth : popupExpandedSize.x;
         popupRect.sizeDelta = new Vector2(popupWidth, popupExpandedSize.y);
-        popupPinned = PlayerPrefs.HasKey(PrefPopupX) && PlayerPrefs.HasKey(PrefPopupY);
-        popupPinnedPos = new Vector2(PlayerPrefs.GetFloat(PrefPopupX, 0f), PlayerPrefs.GetFloat(PrefPopupY, 0f));
+        popupPinned = PixelPrefs.HasKey(PrefPopupX) && PixelPrefs.HasKey(PrefPopupY);
+        popupPinnedPos = new Vector2(PixelPrefs.GetFloat(PrefPopupX, 0f), PixelPrefs.GetFloat(PrefPopupY, 0f));
         PositionPopup();
 
         // The icon box: a dark rounded square on the left with the spinning cube in it.
@@ -897,15 +897,15 @@ public class PixelAchievements : MonoBehaviour
     public void ResetPopupPin()
     {
         popupPinned = false;
-        PlayerPrefs.DeleteKey(PrefPopupX);
-        PlayerPrefs.DeleteKey(PrefPopupY);
+        PixelPrefs.DeleteKey(PrefPopupX);
+        PixelPrefs.DeleteKey(PrefPopupY);
         PositionPopup();
     }
 
     private void SetCollapsed(bool collapsed)
     {
         popupCollapsed = collapsed;
-        PlayerPrefs.SetInt(PrefPopupCollapsed, collapsed ? 1 : 0);
+        PixelPrefs.SetInt(PrefPopupCollapsed, collapsed ? 1 : 0);
         if (popupArrow != null) popupArrow.text = collapsed ? ">" : "<";
         PixelAudio.Play("ui_click");
     }
@@ -970,8 +970,8 @@ public class PixelAchievements : MonoBehaviour
         {
             popupPinned = true;
             popupPinnedPos = popupRect.anchoredPosition;
-            PlayerPrefs.SetFloat(PrefPopupX, popupPinnedPos.x);
-            PlayerPrefs.SetFloat(PrefPopupY, popupPinnedPos.y);
+            PixelPrefs.SetFloat(PrefPopupX, popupPinnedPos.x);
+            PixelPrefs.SetFloat(PrefPopupY, popupPinnedPos.y);
             PixelAudio.Play("ui_click");
         }
         else ResetPopupPin();

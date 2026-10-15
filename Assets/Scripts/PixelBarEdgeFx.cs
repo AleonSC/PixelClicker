@@ -23,8 +23,8 @@ public static class PixelBarStyle
 
     public static int Current
     {
-        get { if (cache < 0) cache = Mathf.Clamp(PlayerPrefs.GetInt(Pref, 0), 0, Names.Length - 1); return cache; }
-        set { cache = Mathf.Clamp(value, 0, Names.Length - 1); PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
+        get { if (cache < 0) cache = Mathf.Clamp(PixelPrefs.GetInt(Pref, 0), 0, Names.Length - 1); return cache; }
+        set { cache = Mathf.Clamp(value, 0, Names.Length - 1); PixelPrefs.SetInt(Pref, cache); PixelPrefs.Save(); }
     }
 }
 

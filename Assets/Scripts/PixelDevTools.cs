@@ -274,22 +274,22 @@ public class PixelDevTools : MonoBehaviour
     private const string PrefPrefix = "PixelClicker.Dev.";
 
     private bool GetBool(string key, bool fallback) =>
-        !rememberSettings ? fallback : PlayerPrefs.GetInt(PrefPrefix + key, fallback ? 1 : 0) != 0;
+        !rememberSettings ? fallback : PixelPrefs.GetInt(PrefPrefix + key, fallback ? 1 : 0) != 0;
 
     private void SetBool(string key, bool value)
     {
         if (!rememberSettings) return;
-        PlayerPrefs.SetInt(PrefPrefix + key, value ? 1 : 0);
-        PlayerPrefs.Save();
+        PixelPrefs.SetInt(PrefPrefix + key, value ? 1 : 0);
+        PixelPrefs.Save();
     }
 
-    private int GetInt(string key, int fallback) => !rememberSettings ? fallback : PlayerPrefs.GetInt(PrefPrefix + key, fallback);
+    private int GetInt(string key, int fallback) => !rememberSettings ? fallback : PixelPrefs.GetInt(PrefPrefix + key, fallback);
 
     private void SetInt(string key, int value)
     {
         if (!rememberSettings) return;
-        PlayerPrefs.SetInt(PrefPrefix + key, value);
-        PlayerPrefs.Save();
+        PixelPrefs.SetInt(PrefPrefix + key, value);
+        PixelPrefs.Save();
     }
 
     private int clickCount = 1;
@@ -344,7 +344,7 @@ public class PixelDevTools : MonoBehaviour
         PixelFloor.DoubleArea = doubleFloor;
         godMode = GetBool("God", godMode);
         clickCount = Mathf.Max(1, GetInt("ClickCount", 1));
-        if (rememberSettings) defaultAmount = PlayerPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
+        if (rememberSettings) defaultAmount = PixelPrefs.GetString(PrefPrefix + "Amount", defaultAmount);
     }
 
     private void Start()
@@ -706,7 +706,7 @@ public class PixelDevTools : MonoBehaviour
         amountField = PixelUIKit.CreateInputField(font, content, "Amount Field", new Vector2(fieldW, rowHeight),
                                                   boxColor, textColor, fontSize, "amount");
         amountField.text = defaultAmount;
-        amountField.onValueChanged.AddListener(text => { if (rememberSettings) PlayerPrefs.SetString(PrefPrefix + "Amount", text); });
+        amountField.onValueChanged.AddListener(text => { if (rememberSettings) PixelPrefs.SetString(PrefPrefix + "Amount", text); });
         Place(amountField.GetComponent<RectTransform>(), 40f + dropW + 10f, y, fieldW);
         Button add = IconButton(content, "Add Button", DevIcons.PlusSprite(), new Color(0.3f, 0.78f, 0.38f, 1f), rowHeight);
         Place(add.GetComponent<RectTransform>(), 40f + dropW + fieldW + 20f, y, rowHeight);

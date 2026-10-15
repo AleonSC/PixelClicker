@@ -373,7 +373,7 @@ public class PixelDevShapes : MonoBehaviour
 
     private void Load()
     {
-        string json = PlayerPrefs.GetString(PrefData, "");
+        string json = PixelPrefs.GetString(PrefData, "");
         if (string.IsNullOrEmpty(json)) return;
         try { blob = JsonUtility.FromJson<SaveBlob>(json) ?? new SaveBlob(); }
         catch (Exception) { blob = new SaveBlob(); }
@@ -384,8 +384,8 @@ public class PixelDevShapes : MonoBehaviour
     private void SaveNow()
     {
         dirty = false;
-        PlayerPrefs.SetString(PrefData, JsonUtility.ToJson(blob));
-        PlayerPrefs.Save();
+        PixelPrefs.SetString(PrefData, JsonUtility.ToJson(blob));
+        PixelPrefs.Save();
     }
 
     // ------------------------------------------------------------------

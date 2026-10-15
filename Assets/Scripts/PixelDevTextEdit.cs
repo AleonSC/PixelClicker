@@ -61,7 +61,7 @@ public class PixelDevTextEdit : MonoBehaviour
         custom.Clear();
         try
         {
-            Store s = JsonUtility.FromJson<Store>(PlayerPrefs.GetString(Pref, ""));
+            Store s = JsonUtility.FromJson<Store>(PixelPrefs.GetString(Pref, ""));
             if (s != null && s.entries != null) foreach (Entry e in s.entries) if (e != null && !string.IsNullOrEmpty(e.path)) custom[e.path] = e.text ?? "";
         }
         catch (Exception) { }
@@ -76,7 +76,7 @@ public class PixelDevTextEdit : MonoBehaviour
     {
         Store s = new Store();
         foreach (KeyValuePair<string, string> kv in custom) s.entries.Add(new Entry { path = kv.Key, text = kv.Value });
-        PlayerPrefs.SetString(Pref, JsonUtility.ToJson(s));
+        PixelPrefs.SetString(Pref, JsonUtility.ToJson(s));
     }
 
     // ---------------- finding labels ----------------

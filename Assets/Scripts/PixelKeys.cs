@@ -104,7 +104,7 @@ public static class PixelKeys
         current = new KeyCode[Defaults.Length];
         for (int i = 0; i < current.Length; i++)
         {
-            int saved = PlayerPrefs.GetInt(PrefPrefix + (PixelAction)i, (int)Defaults[i]);
+            int saved = PixelPrefs.GetInt(PrefPrefix + (PixelAction)i, (int)Defaults[i]);
             current[i] = Enum.IsDefined(typeof(KeyCode), saved) ? (KeyCode)saved : Defaults[i];
         }
     }
@@ -149,8 +149,8 @@ public static class PixelKeys
 
     private static void Save(int index)
     {
-        PlayerPrefs.SetInt(PrefPrefix + (PixelAction)index, (int)current[index]);
-        PlayerPrefs.Save();
+        PixelPrefs.SetInt(PrefPrefix + (PixelAction)index, (int)current[index]);
+        PixelPrefs.Save();
     }
 
     /// <summary>The name of an action's key as shown to the player.</summary>

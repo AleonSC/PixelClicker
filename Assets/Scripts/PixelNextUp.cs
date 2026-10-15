@@ -38,8 +38,8 @@ public class PixelNextUp : MonoBehaviour
     private static int enabledCache = -1;
     public static bool Enabled
     {
-        get { if (enabledCache < 0) enabledCache = PlayerPrefs.GetInt(Pref, 1); return enabledCache != 0; }
-        set { enabledCache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, enabledCache); PlayerPrefs.Save(); }
+        get { if (enabledCache < 0) enabledCache = PixelPrefs.GetInt(Pref, 1); return enabledCache != 0; }
+        set { enabledCache = value ? 1 : 0; PixelPrefs.SetInt(Pref, enabledCache); PixelPrefs.Save(); }
     }
     public static void ReloadFromPrefs() { enabledCache = -1; }
 

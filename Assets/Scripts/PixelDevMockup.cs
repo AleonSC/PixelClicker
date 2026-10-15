@@ -111,7 +111,7 @@ public class PixelDevMockup : MonoBehaviour
         instance = this;
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
-        keepWhenClosed = PlayerPrefs.GetInt(PrefKeep, 0) != 0;
+        keepWhenClosed = PixelPrefs.GetInt(PrefKeep, 0) != 0;
         PixelUIKit.EnsureEventSystem();
         PixelDevMockWindow.Boot();
 
@@ -469,7 +469,7 @@ public class PixelDevMockup : MonoBehaviour
 
     private void Load()
     {
-        string json = PlayerPrefs.GetString(PrefData, "");
+        string json = PixelPrefs.GetString(PrefData, "");
         if (string.IsNullOrEmpty(json)) return;
         try { blob = JsonUtility.FromJson<SaveBlob>(json) ?? new SaveBlob(); }
         catch (Exception) { blob = new SaveBlob(); }
@@ -481,8 +481,8 @@ public class PixelDevMockup : MonoBehaviour
     private void SaveNow()
     {
         dirty = false;
-        PlayerPrefs.SetString(PrefData, JsonUtility.ToJson(blob));
-        PlayerPrefs.Save();
+        PixelPrefs.SetString(PrefData, JsonUtility.ToJson(blob));
+        PixelPrefs.Save();
     }
 
     private void Update()
@@ -597,7 +597,7 @@ public class PixelDevMockup : MonoBehaviour
         Button keep = MakeButton(t, "Keep", 16f, y, 230f, grey, () =>
         {
             keepWhenClosed = !keepWhenClosed;
-            PlayerPrefs.SetInt(PrefKeep, keepWhenClosed ? 1 : 0);
+            PixelPrefs.SetInt(PrefKeep, keepWhenClosed ? 1 : 0);
             ApplyVisibility();
             RefreshAll();
         }, 17f);

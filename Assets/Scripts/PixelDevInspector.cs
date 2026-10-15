@@ -232,7 +232,7 @@ public class PixelDevInspector : MonoBehaviour
         PixelClicker clicker = PixelFind.First<PixelClicker>();
         font = clicker != null ? clicker.UIFont : null;
         PixelUIKit.EnsureEventSystem();
-        tab = Mathf.Clamp(PlayerPrefs.GetInt(PrefTab, 0), 0, 1);
+        tab = Mathf.Clamp(PixelPrefs.GetInt(PrefTab, 0), 0, 1);
         Build();
         PixelDevHub.SetTabCallback("inspector", SetVisible);
     }
@@ -329,7 +329,7 @@ public class PixelDevInspector : MonoBehaviour
     private void SetTab(int index)
     {
         tab = index;
-        PlayerPrefs.SetInt(PrefTab, tab);
+        PixelPrefs.SetInt(PrefTab, tab);
         Layout();
         if (tab == 0) RebuildWorld(); else RebuildSelected();
     }

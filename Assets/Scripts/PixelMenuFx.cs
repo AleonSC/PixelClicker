@@ -28,8 +28,8 @@ public static class PixelMenuFx
     /// <summary>Settings > Interface > Fancy pause menu (off = the classic menu).</summary>
     public static bool Enabled
     {
-        get { if (cache < 0) cache = PlayerPrefs.GetInt(Pref, 1); return cache != 0; }
-        set { cache = value ? 1 : 0; PlayerPrefs.SetInt(Pref, cache); PlayerPrefs.Save(); }
+        get { if (cache < 0) cache = PixelPrefs.GetInt(Pref, 1); return cache != 0; }
+        set { cache = value ? 1 : 0; PixelPrefs.SetInt(Pref, cache); PixelPrefs.Save(); }
     }
 
     public static void ReloadFromPrefs() { cache = -1; }

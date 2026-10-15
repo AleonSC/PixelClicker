@@ -250,7 +250,7 @@ public class PixelDevHub : MonoBehaviour
             { "main", "Main", "700" }, { "docs", "Docs", "700" }, { "tester", "Tester", "700" },
             { "inspector", "Inspector", "700" }, { "shapes", "Shapes", "500" }, { "uimock", "UI Mock", "500" },
         };
-        string saved = PlayerPrefs.GetString(P + "Order", "");
+        string saved = PixelPrefs.GetString(P + "Order", "");
         List<string> order = new List<string>(saved.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
         for (int i = 0; i < defs.GetLength(0); i++) if (!order.Contains(defs[i, 0])) order.Add(defs[i, 0]);
         foreach (string id in order)
@@ -263,7 +263,7 @@ public class PixelDevHub : MonoBehaviour
                 tabs.Add(t);
             }
         }
-        active = Find(PlayerPrefs.GetString(P + "Active", "main")) ?? tabs[0];
+        active = Find(PixelPrefs.GetString(P + "Active", "main")) ?? tabs[0];
 
         chrome = PixelWindowChrome.Attach(windowRect, font, P + "Window", HeaderH, 8f + 40f + 8f, 6f, 40f, new Color(0.3f, 0.36f, 0.5f, 1f), TextColor, 26f);
         chrome.Keep(title.gameObject);
@@ -274,11 +274,11 @@ public class PixelDevHub : MonoBehaviour
         gameObject.AddComponent<PixelDevTextEdit>().Setup(canvasRoot.transform, font);   // right click any label to set your own text
 
         // Tabs that were floating when the game last closed come back where they were.
-        foreach (string id in PlayerPrefs.GetString(P + "Floating", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string id in PixelPrefs.GetString(P + "Floating", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
         {
             Tab t = Find(id);
             if (t == null || DockedCount() <= 1) continue;
-            PopOut(t, new Vector2(PlayerPrefs.GetFloat(P + "Float." + id + ".X", 200f), PlayerPrefs.GetFloat(P + "Float." + id + ".Y", -200f)), true);
+            PopOut(t, new Vector2(PixelPrefs.GetFloat(P + "Float." + id + ".X", 200f), PixelPrefs.GetFloat(P + "Float." + id + ".Y", -200f)), true);
         }
         if (active.floating) active = FirstDocked();
         LayoutTabs(null);
@@ -510,8 +510,8 @@ public class PixelDevHub : MonoBehaviour
         Vector2 pointer = PixelInput.PointerPosition();
         bool overHub = windowRect.gameObject.activeSelf && !chrome.Minimized && pointer.x >= corners[0].x && pointer.x <= corners[2].x && pointer.y >= corners[0].y && pointer.y <= corners[2].y;
         if (overHub) { Dock(t); return; }
-        PlayerPrefs.SetFloat(P + "Float." + t.id + ".X", t.window.anchoredPosition.x);
-        PlayerPrefs.SetFloat(P + "Float." + t.id + ".Y", t.window.anchoredPosition.y);
+        PixelPrefs.SetFloat(P + "Float." + t.id + ".X", t.window.anchoredPosition.x);
+        PixelPrefs.SetFloat(P + "Float." + t.id + ".Y", t.window.anchoredPosition.y);
     }
 
     private void Dock(Tab t)
@@ -532,9 +532,9 @@ public class PixelDevHub : MonoBehaviour
     {
         List<string> order = new List<string>(), floating = new List<string>();
         foreach (Tab t in tabs) { order.Add(t.id); if (t.floating) floating.Add(t.id); }
-        PlayerPrefs.SetString(P + "Order", string.Join(",", order));
-        PlayerPrefs.SetString(P + "Floating", string.Join(",", floating));
-        PlayerPrefs.SetString(P + "Active", active != null ? active.id : "main");
+        PixelPrefs.SetString(P + "Order", string.Join(",", order));
+        PixelPrefs.SetString(P + "Floating", string.Join(",", floating));
+        PixelPrefs.SetString(P + "Active", active != null ? active.id : "main");
     }
 
     // ------------------------------------------------------------------
@@ -544,7 +544,7 @@ public class PixelDevHub : MonoBehaviour
         if (open == on) return;
         open = on;
         canvasRoot.SetActive(on);
-        PlayerPrefs.SetInt(P + "Open", on ? 1 : 0);
+        PixelPrefs.SetInt(P + "Open", on ? 1 : 0);
         PixelDevMockup.SetWindowOpen(on);
         OpenChanged?.Invoke(on);
         if (!on) UpdateVisibility();
@@ -552,7 +552,7 @@ public class PixelDevHub : MonoBehaviour
 
     private void Start()
     {
-        if (PlayerPrefs.GetInt(P + "Open", 0) != 0) SetOpen(true);   // (here, not in Awake: the tools that boot the hub from their own Awake must be finished first)
+        if (PixelPrefs.GetInt(P + "Open", 0) != 0) SetOpen(true);   // (here, not in Awake: the tools that boot the hub from their own Awake must be finished first)
         PixelWindows.Register(this, 200, () => open, () => SetOpen(false));   // Escape closes it
     }
 
@@ -749,13 +749,13 @@ public class PixelWidgetBoard
     {
         List<string> ids = new List<string>();
         foreach (Item it in items) if (it.minimized) ids.Add(it.id);
-        PlayerPrefs.SetString(prefKey + ".Min", string.Join(",", ids));
+        PixelPrefs.SetString(prefKey + ".Min", string.Join(",", ids));
     }
 
     /// <summary>Applies the saved order and lays everything out (call once after adding every card).</summary>
     public void Finish()
     {
-        string saved = PlayerPrefs.GetString(prefKey, "");
+        string saved = PixelPrefs.GetString(prefKey, "");
         if (saved.Length > 0)
         {
             List<Item> ordered = new List<Item>();
@@ -776,12 +776,12 @@ public class PixelWidgetBoard
             items.Clear();
             items.AddRange(ordered);
         }
-        foreach (string id in PlayerPrefs.GetString(prefKey + ".Min", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string id in PixelPrefs.GetString(prefKey + ".Min", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
         {
             Item it = items.Find(x => x.id == id);
             if (it != null) SetMinimized(it, true, false);
         }
-        foreach (string id in PlayerPrefs.GetString(prefKey + ".Fav", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (string id in PixelPrefs.GetString(prefKey + ".Fav", "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
         {
             Item it = items.Find(x => x.id == id);
             if (it != null) { it.favorite = true; ApplyFavoriteLook(it); }
@@ -843,7 +843,7 @@ public class PixelWidgetBoard
     {
         List<string> ids = new List<string>();
         foreach (Item it in items) ids.Add(it.id);
-        PlayerPrefs.SetString(prefKey, string.Join(",", ids));
+        PixelPrefs.SetString(prefKey, string.Join(",", ids));
     }
 
     /// <summary>Favorites first (keeping their order), then the others (keeping theirs).</summary>
@@ -873,7 +873,7 @@ public class PixelWidgetBoard
         SaveOrder();
         List<string> favs = new List<string>();
         foreach (Item it in items) if (it.favorite) favs.Add(it.id);
-        PlayerPrefs.SetString(prefKey + ".Fav", string.Join(",", favs));
+        PixelPrefs.SetString(prefKey + ".Fav", string.Join(",", favs));
         PixelAudio.Play("ui_click");
     }
 

@@ -51,13 +51,13 @@ public static class PixelDisplaySettings
     private static void ApplySavedOnStart()
     {
         // Only settings the player actually changed are applied; a first run keeps the project's own defaults.
-        if (PlayerPrefs.HasKey(PrefQuality))
-            QualitySettings.SetQualityLevel(Mathf.Clamp(PlayerPrefs.GetInt(PrefQuality), 0, QualitySettings.names.Length - 1), true);
-        if (PlayerPrefs.HasKey(PrefVSync)) QualitySettings.vSyncCount = PlayerPrefs.GetInt(PrefVSync) != 0 ? 1 : 0;
+        if (PixelPrefs.HasKey(PrefQuality))
+            QualitySettings.SetQualityLevel(Mathf.Clamp(PixelPrefs.GetInt(PrefQuality), 0, QualitySettings.names.Length - 1), true);
+        if (PixelPrefs.HasKey(PrefVSync)) QualitySettings.vSyncCount = PixelPrefs.GetInt(PrefVSync) != 0 ? 1 : 0;
 
-        if (PlayerPrefs.HasKey(PrefFullscreen) || PlayerPrefs.HasKey(PrefResW))
-            ApplyScreen(PlayerPrefs.GetInt(PrefResW, Screen.width), PlayerPrefs.GetInt(PrefResH, Screen.height),
-                        PlayerPrefs.GetInt(PrefFullscreen, Screen.fullScreen ? 1 : 0) != 0);
+        if (PixelPrefs.HasKey(PrefFullscreen) || PixelPrefs.HasKey(PrefResW))
+            ApplyScreen(PixelPrefs.GetInt(PrefResW, Screen.width), PixelPrefs.GetInt(PrefResH, Screen.height),
+                        PixelPrefs.GetInt(PrefFullscreen, Screen.fullScreen ? 1 : 0) != 0);
     }
 
     // ------------------------------------------------------------------
@@ -74,8 +74,8 @@ public static class PixelDisplaySettings
         {
             value = Mathf.Clamp(value, 0, QualitySettings.names.Length - 1);
             QualitySettings.SetQualityLevel(value, true);
-            PlayerPrefs.SetInt(PrefQuality, value);
-            PlayerPrefs.Save();
+            PixelPrefs.SetInt(PrefQuality, value);
+            PixelPrefs.Save();
         }
     }
 
@@ -85,8 +85,8 @@ public static class PixelDisplaySettings
         set
         {
             QualitySettings.vSyncCount = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefVSync, value ? 1 : 0);
-            PlayerPrefs.Save();
+            PixelPrefs.SetInt(PrefVSync, value ? 1 : 0);
+            PixelPrefs.Save();
         }
     }
 
@@ -132,10 +132,10 @@ public static class PixelDisplaySettings
         Screen.SetResolution(Mathf.Max(320, width), Mathf.Max(240, height),
                              fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
         if (!save) return;
-        PlayerPrefs.SetInt(PrefResW, width);
-        PlayerPrefs.SetInt(PrefResH, height);
-        PlayerPrefs.SetInt(PrefFullscreen, fullscreen ? 1 : 0);
-        PlayerPrefs.Save();
+        PixelPrefs.SetInt(PrefResW, width);
+        PixelPrefs.SetInt(PrefResH, height);
+        PixelPrefs.SetInt(PrefFullscreen, fullscreen ? 1 : 0);
+        PixelPrefs.Save();
     }
 
     // ------------------------------------------------------------------
@@ -155,11 +155,11 @@ public static class PixelDisplaySettings
     /// <summary>The scale chosen in Settings (used from the next start).</summary>
     public static float SavedUIScale
     {
-        get => Mathf.Clamp(PlayerPrefs.GetFloat(PrefUiScale, 1f), UIScaleChoices[0], UIScaleChoices[UIScaleChoices.Length - 1]);
+        get => Mathf.Clamp(PixelPrefs.GetFloat(PrefUiScale, 1f), UIScaleChoices[0], UIScaleChoices[UIScaleChoices.Length - 1]);
         set
         {
-            PlayerPrefs.SetFloat(PrefUiScale, value);
-            PlayerPrefs.Save();
+            PixelPrefs.SetFloat(PrefUiScale, value);
+            PixelPrefs.Save();
         }
     }
 
@@ -181,14 +181,14 @@ public static class PixelDisplaySettings
     {
         get
         {
-            if (dropGuide < 0) dropGuide = PlayerPrefs.GetInt(PrefDropGuide, 1);
+            if (dropGuide < 0) dropGuide = PixelPrefs.GetInt(PrefDropGuide, 1);
             return dropGuide != 0;
         }
         set
         {
             dropGuide = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefDropGuide, dropGuide);
-            PlayerPrefs.Save();
+            PixelPrefs.SetInt(PrefDropGuide, dropGuide);
+            PixelPrefs.Save();
         }
     }
 
@@ -200,14 +200,14 @@ public static class PixelDisplaySettings
     {
         get
         {
-            if (colorBlind < 0) colorBlind = PlayerPrefs.GetInt(PrefColorBlind, 0);
+            if (colorBlind < 0) colorBlind = PixelPrefs.GetInt(PrefColorBlind, 0);
             return colorBlind != 0;
         }
         set
         {
             colorBlind = value ? 1 : 0;
-            PlayerPrefs.SetInt(PrefColorBlind, colorBlind);
-            PlayerPrefs.Save();
+            PixelPrefs.SetInt(PrefColorBlind, colorBlind);
+            PixelPrefs.Save();
             ColorBlindChanged?.Invoke();
         }
     }
