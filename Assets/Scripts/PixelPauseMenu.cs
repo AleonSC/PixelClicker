@@ -295,6 +295,8 @@ public class PixelPauseMenu : MonoBehaviour
     [SerializeField] private string filterStrengthLabel = "Filter strength";
     [SerializeField] private string cameraIntroLabel = "Camera intro (next start)";
     [SerializeField] private string dayNightLabel = "Day / night cycle";
+    [Tooltip("Settings > Gameplay: label of the 'Did you know?' tips switch.")]
+    [SerializeField] private string didYouKnowLabel = "Did you know tips";
     [SerializeField] private string dayNightLengthLabel = "Length of a day";
     [SerializeField] private string autoSaveLabel = "Autosave every";
     [SerializeField] private string autoSaveMessageLabel = "Show autosave message";
@@ -2463,6 +2465,7 @@ public class PixelPauseMenu : MonoBehaviour
             PlayerPrefs.SetInt(PrefPauseStops, on ? 1 : 0);
             ApplyFreeze(); // takes effect right away, even though the menu is open
         }, ref y);
+        AddSettingToggle(list, didYouKnowLabel, () => PixelDidYouKnow.Enabled, on => PixelDidYouKnow.Enabled = on, ref y);
         AddSettingToggle(list, dayNightLabel, () => PixelDayNight.Enabled, on => PixelDayNight.Enabled = on, ref y);
         AddDropdownRow(list, dayNightLengthLabel, PixelDayNight.LengthNames, () => PixelDayNight.LengthChoice, v => PixelDayNight.LengthChoice = v, ref y);
         if (saveGame != null)

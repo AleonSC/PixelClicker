@@ -1239,6 +1239,7 @@ public partial class PixelClicker : MonoBehaviour
         if (PixelFind.First<PixelMyWindow>() == null) gameObject.AddComponent<PixelMyWindow>();   // the player's own window
         if (PixelFind.First<PixelDaylight>() == null) gameObject.AddComponent<PixelDaylight>();   // Solar's daylight bar
         if (PixelFind.First<PixelNextUp>() == null) gameObject.AddComponent<PixelNextUp>();   // the 'Next up' window (Block Hold)
+        if (PixelFind.First<PixelDidYouKnow>() == null) gameObject.AddComponent<PixelDidYouKnow>();   // random 'Did you know?' tips
         if (PixelFind.First<PixelFilters>() == null) gameObject.AddComponent<PixelFilters>();   // the screen filters (CRT, VHS...)
         if (PixelFind.First<PixelBlockHold>() == null) gameObject.AddComponent<PixelBlockHold>();   // the Block Hold upgrade
         if (PixelFind.First<PixelHazardTell>() == null) gameObject.AddComponent<PixelHazardTell>();   // hazard blocks get warning tells (glow, sign, sound)

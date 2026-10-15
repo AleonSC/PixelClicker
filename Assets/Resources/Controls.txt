@@ -78,3 +78,4 @@ Q (when ticked in Dev Tools) | Clear all old pixels
 Click an exit pipe, move, click again | Grab the pipe and put its end down anywhere in reach (right-click puts it back)
 Mouse wheel over an exit pipe | Choose which stored pixel type that pipe shoots out
 Hold left click on an achievement popup | Fills a small ring, then the popup follows the mouse: click to pin it there, right-click to put it back above the combo meter
+Hold left click on the Did you know box | It follows the mouse: click to put it down (at the left or right screen edge it docks there), right-click puts it back; a quick click closes the tip
