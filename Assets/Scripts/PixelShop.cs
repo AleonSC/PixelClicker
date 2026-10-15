@@ -950,7 +950,7 @@ public partial class PixelShop : MonoBehaviour
                     System.Collections.Generic.List<PixelClicker.PixelTier> withStone = new System.Collections.Generic.List<PixelClicker.PixelTier>(pack.rewardTiers);
                     withStone.Insert(0, new PixelClicker.PixelTier
                     {
-                        type = PixelClicker.PixelType.Rock, displayName = "Stone Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
+                        type = PixelClicker.PixelType.Rock, displayName = "Rock Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
                         clicksToCollect = 1, amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                     });
                     pack.rewardTiers = withStone.ToArray();
@@ -959,7 +959,7 @@ public partial class PixelShop : MonoBehaviour
                 foreach (PixelClicker.PixelTier t in clicker.Tiers)
                 {
                     if (t.type != PixelClicker.PixelType.Rock) continue;
-                    t.displayName = "Stone Pixels";
+                    t.displayName = "Rock Pixels";
                     t.clicksToCollect = 1;
                     t.amountPerClick = 1;
                     t.spawnWeight = 1f;
@@ -1367,6 +1367,46 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 35)
+        {
+            // Foraging's hazards take ONE click each (and the Toadstool is back), the Prospector's / Farmer's Packs are sold for real, the Fire Pixel test pack
+            // became the Firemaker's Pack, Lead / Zinc / Nickel are back in Mining and Stone is called Rock again.
+            if (packs != null)
+                for (int i = 0; i < packs.Length; i++)
+                {
+                    ShopPack p = packs[i];
+                    if (p == null) continue;
+                    if (Rewards(p, PixelClicker.PixelType.Fire))
+                    {
+                        ShopPack fresh = CreateFirePixelPack();
+                        p.displayName = fresh.displayName; p.description = fresh.description; p.rewardTiers = fresh.rewardTiers; p.hideInShop = true;
+                    }
+                    if (Rewards(p, PixelClicker.PixelType.Copper))
+                    {
+                        ShopPack fresh = CreateProspectorPack();
+                        p.hideInShop = false; p.costs = fresh.costs; p.description = fresh.description; p.rewardTiers = fresh.rewardTiers;
+                    }
+                    if (Rewards(p, PixelClicker.PixelType.Dirt))
+                    {
+                        ShopPack fresh = CreateFarmerPack();
+                        p.hideInShop = false; p.costs = fresh.costs; p.description = fresh.description;
+                    }
+                    if (Rewards(p, PixelClicker.PixelType.Berry))
+                    {
+                        ShopPack fresh = CreateForagerPack();
+                        p.rewardTiers = fresh.rewardTiers; p.description = fresh.description;
+                    }
+                }
+            if (clicker != null)
+                foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                {
+                    if (t.type == PixelClicker.PixelType.Mold || t.type == PixelClicker.PixelType.Toadstool) t.clicksToCollect = 1;
+                    if (t.type == PixelClicker.PixelType.Rock) t.displayName = "Rock Pixels";
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 35);
+            changed = true;
+        }
+
         if (packDataVersion < 34)
         {
             // The Prospector's Pack (testing price) leaves the shop too.
@@ -1382,8 +1422,7 @@ public partial class PixelShop : MonoBehaviour
 
     /// <summary>Packs kept out of the shop (testing packs: Fire, Nuclear, Farmer's, Prospector's; and Block Hold); the Dev Tools 'Shop unlocks' widget handles them.</summary>
     private static bool IsDevOnlyPack(ShopPack p) =>
-        p.unlocksBlockHold || Rewards(p, PixelClicker.PixelType.Fire) || Rewards(p, PixelClicker.PixelType.Nuclear) || Rewards(p, PixelClicker.PixelType.Dirt)
-        || Rewards(p, PixelClicker.PixelType.Copper);
+        p.unlocksBlockHold || Rewards(p, PixelClicker.PixelType.Fire) || Rewards(p, PixelClicker.PixelType.Nuclear);   // (the Farmer's and Prospector's Packs are in the shop now, with real prices)
 
     private static void ApplyWhaleClicks(PixelClicker.PixelTier t)
     {

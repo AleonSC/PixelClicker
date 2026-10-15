@@ -142,7 +142,7 @@ public partial class PixelClicker : MonoBehaviour
         Bait = 72,        // Fishing: drops bait pellets that make fish appear more often
         Bottle = 73,      // Fishing's special block: a message in a bottle (breaking it gives a treasure map)
         Whale = 74,       // Fishing's special block: a whale that fights the line
-        Mold = 75,        // Foraging's hazard block now (replaced the Toadstool, which is switched off for the moment): see PixelMold.cs
+        Mold = 75,        // one of Foraging's two hazard blocks (with the Toadstool): see PixelMold.cs
         Charcoal = 81,    // made by the Kiln (PixelKiln): a standalone block that only exists as an old pixel
         GodSlifer = 82,   // the three Egyptian God Cubes (PixelGodFind.cs): the rarest drops in the game, only one of each can be held
         GodRa = 83,
@@ -161,12 +161,22 @@ public partial class PixelClicker : MonoBehaviour
         Whetstone = 78,   // Woodcutting's base block that can be held (Block Hold): while it is held every manual click is followed by a rapid burst of extra clicks (PixelBlockRules HoldRule.extraClicks)
         GreatOak = 77,    // Woodcutting's rare giant block (50-100 clicks, shakes bird nests loose): see PixelGreatOak.cs
         WoodChips = 76,   // spat out by the Wood Chipper (every 5 wood pixels shredded): never spawns on the cube, only exists as an old pixel (PixelWoodChipper)
+        Tinder = 94,      // Firemaking (dev-only skill pack, mechanics to come): dry fluff and grass
+        Kindling = 95,    // Firemaking: a bundle of thin sticks
+        Firewood = 96,    // Firemaking: a split log
+        Flint = 97,       // Firemaking: a striker stone that throws sparks
+        Ember = 98,       // Firemaking: a glowing coal
+        Ash = 99,         // Firemaking's filler block
+        Wildfire = 100,   // Firemaking's hazard block: set it off and the flames spread over the husks around the cube
     }
+
+    /// <summary>The Firemaking skill pack's blocks (Fire, Tinder, Kindling, Firewood, Flint, Ember, Charcoal, the filler Ash; Wildfire is its hazard).</summary>
+    public static bool IsFireBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Firemaking);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Fishing skill pack's blocks: Fish, Seaweed, Shell, Pearl and the filler Driftwood (the Jellyfish is its hazard).</summary>
     public static bool IsFishBlock(PixelType type) => PixelBlockTags.Has(type, PixelTag.Fish);   // (the tag table in PixelBlockTags.cs)
 
-    /// <summary>The old Prospector ores that were dropped (Lead, Zinc, Nickel): they never spawn any more.</summary>
+    /// <summary>Ores taken out of Mining (none at the moment: Lead, Zinc and Nickel are back). Tag a block RetiredOre to keep it out of the spawns.</summary>
     public static bool IsRetiredOre(PixelType type) => PixelBlockTags.Has(type, PixelTag.RetiredOre);   // (the tag table in PixelBlockTags.cs)
 
     /// <summary>The Foraging skill pack's blocks: Berry, Mushroom, Herb, Truffle and the filler Weeds (the Toadstool is its hazard).</summary>
@@ -366,7 +376,7 @@ public partial class PixelClicker : MonoBehaviour
         /// <summary>True for the special pixels (Vacuum, Obsidian, Singularity, Ghost, Meteor, Electric, Mirror, Seed) that can have their spawning switched off.</summary>
         public static bool IsSpecialType(PixelType t) =>
             t == PixelType.Vacuum || t == PixelType.Singularity ||
-            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Solar || t == PixelType.Mirror || t == PixelType.Fire || t == PixelType.Treasure || t == PixelType.Nuclear;
+            t == PixelType.Ghost || t == PixelType.Meteor || t == PixelType.Solar || t == PixelType.Mirror || t == PixelType.Treasure || t == PixelType.Nuclear;   // (Fire is a Firemaking block now: no spawn switch)
 
         /// <summary>True if the player may switch this pixel's spawning off.</summary>
         public bool CanSwitchOff
@@ -3123,6 +3133,7 @@ public partial class PixelClicker : MonoBehaviour
     private float SpawnShareCore(int i)
     {
         if (TryFishingShare(i, out float fishShare)) return fishShare;
+        if (PixelSkills.TryGetUniformPool(this, uniformPool)) return uniformPool.Contains(i) ? 1f / uniformPool.Count : 0f;   // a truly random rotation
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int k = 0; k < tiers.Length; k++)
@@ -3197,6 +3208,7 @@ public partial class PixelClicker : MonoBehaviour
     }
 
     private readonly System.Collections.Generic.List<PixelType> fillerFamilyScratch = new System.Collections.Generic.List<PixelType>();
+    private readonly System.Collections.Generic.List<int> uniformPool = new System.Collections.Generic.List<int>();
 
     private int PickSpawnTierBase()
     {
@@ -3213,6 +3225,7 @@ public partial class PixelClicker : MonoBehaviour
         // A skill pack in play (Mining, Farming): its pixels replace the basic pixels (White..Blue, Glass, Luminescent) in what spawns; the pixels of
         // packs that are not in play stay out unless the player turned them on as guests (a skill tree unlock).
         if (TryPickFishing(out int fishPick)) return fishPick;   // Fishing has its own fixed table
+        if (PixelSkills.TryGetUniformPool(this, uniformPool)) return uniformPool[UnityEngine.Random.Range(0, uniformPool.Count)];   // a truly random rotation (Foraging)
         SpecialInfo(out int fillerIndex, out float fillerWeight, out int hazardIndex, out float hazardWeight);
         float total = 0f;
         for (int i = 0; i < tiers.Length; i++)
@@ -4552,9 +4565,26 @@ public partial class PixelClicker : MonoBehaviour
             what = killed > 0 ? (disablePestSwarm ? "The pests ate " : "A swarm of pests is going for ") + killed + " sprout" + (killed == 1 ? "" : "s") + "!" : "The pests swarm out!";
             if (!disableFarmFx) PixelFarmFx.Break(PixelType.Weevil, pos, PixelBaseSize, tier.color);
         }
-        else if (tier.type == PixelType.Toadstool || tier.type == PixelType.Jellyfish)
+        else if (tier.type == PixelType.Toadstool)
         {
-            what = tier.type == PixelType.Jellyfish ? "The jellyfish stung everything around it!" : "The toadstool burst in a cloud of poison spores!";
+            what = "The toadstool burst in a cloud of dizzy spores - the cube keeps jerking away from your cursor!";
+            if (!disableFarmFx) PixelFarmFx.Break(tier.type, pos, PixelBaseSize, tier.color);
+            PixelToadstoolDaze.Begin(this);
+        }
+        else if (tier.type == PixelType.Wildfire)
+        {
+            what = "The wildfire spread and burned up the husks around the cube!";
+            if (!disableFireFx) FireBurstFx.Play(pos, PixelBaseSize * 1.6f);
+            float burnReach = OldPixelWorldSize * (gasBlastWidths > 0f ? gasBlastWidths : 4f) * 1.5f;
+            for (int i = oldPixels.Count - 1; i >= 0; i--)
+            {
+                Rigidbody b = oldPixels[i];
+                if (b != null && (b.position - pos).sqrMagnitude <= burnReach * burnReach) ReleaseOldPixel(b, false);
+            }
+        }
+        else if (tier.type == PixelType.Jellyfish)
+        {
+            what = "The jellyfish stung everything around it!";
             if (!disableFarmFx) PixelFarmFx.Break(tier.type, pos, PixelBaseSize, tier.color);
             float sporeReach = OldPixelWorldSize * (gasBlastWidths > 0f ? gasBlastWidths : 4f);
             if (tier.type == PixelType.Jellyfish)

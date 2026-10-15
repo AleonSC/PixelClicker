@@ -99,6 +99,8 @@ public partial class PixelSkills : MonoBehaviour
         [Range(0f, 0.5f)]
         [Tooltip("The most its share can reach. 0 = the default (0.08).")]
         public float hazardMaxShare = 0f;
+        [Tooltip("A truly random rotation: every block of this pack (filler and hazards included) is equally likely, with no filler / hazard shares and no spawn weights - a pure reaction check (Foraging).")]
+        public bool uniformRotation = false;
         public Perk[] perks = new Perk[0];
         [Tooltip("The skill tree: nodes you buy with skill points (one point per level above 1).")]
         public TreeNode[] nodes = new TreeNode[0];
@@ -119,6 +121,23 @@ public partial class PixelSkills : MonoBehaviour
     private const string ConveyorWidestPerkText = "Wider belts: conveyor belts are three cubes wide";
     private const string ConveyorWidestNotice = "Electrician level 20! Every conveyor belt is now three cubes wide.";
     private const string StandardDescription = "The usual rotation: the six monochrome and RGB pixels (Glass and Luminescent join in once bought, and have their own switches in Toggles). Standard is a skill too: it levels as you click and its perks - like longer-lasting old pixels - help in every rotation. Every block you collect gives it 1 XP, whatever skill you train.";
+    private const string ForagingDescription = "Swap the basic cubes for foraged goods: berries, mushrooms, herbs, rare truffles and useless weeds - in a TRULY RANDOM rotation (every block equally likely). Two hazards keep you sharp: the Mold (one left click and it covers every husk on the field) and the Toadstool (one left click and its spores make the cube dodge your cursor). One right click clears either - a pure reaction check. Pick blocks for foraging XP.";
+    private const string ForagingSpawns = "Weeds, Berry, Mushroom, Herb, Truffle, Mold, Toadstool (all equally likely)";
+    private const string MiningDescription = "Swap the basic cubes for tough ores and plain Rock. Rock is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Copper, tin, iron, lead, zinc, nickel, silver and gold break in a few clicks; obsidian and bedrock take 15-20 clicks but pay a lot. Break ores for mining XP; some are rich veins that pay big.";
+    private const string MiningSpawns = "Rock, Copper, Tin, Iron, Lead, Zinc, Nickel, Silver, Gold, Obsidian, Bedrock";
+
+    private static PixelClicker.PixelType[] MiningTypes() => new[]
+    {
+        PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Lead, PixelClicker.PixelType.Zinc, PixelClicker.PixelType.Nickel,
+        PixelClicker.PixelType.Silver, PixelClicker.PixelType.Gold, PixelClicker.PixelType.Obsidian, PixelClicker.PixelType.Bedrock, PixelClicker.PixelType.Rock, PixelClicker.PixelType.GasPocket
+    };
+
+    private static PixelClicker.PixelType[] FiremakingTypes() => new[]
+    {
+        PixelClicker.PixelType.Tinder, PixelClicker.PixelType.Kindling, PixelClicker.PixelType.Firewood, PixelClicker.PixelType.Flint, PixelClicker.PixelType.Ember,
+        PixelClicker.PixelType.Fire, PixelClicker.PixelType.Charcoal, PixelClicker.PixelType.Ash, PixelClicker.PixelType.Wildfire
+    };
+
     public const string MiningId = "mining";
     public const string WoodcuttingId = "woodcutting";
     public const string ForagingId = "foraging";
@@ -126,6 +145,7 @@ public partial class PixelSkills : MonoBehaviour
     public const string OfflineId = "offline";
     public const string FarmingId = "farming";
     public const string ElectricianId = "electrician";
+    public const string FiremakingId = "firemaking";
 
     [Header("Skill switch block (test)")]
     [Tooltip("Tick to turn the test off: choosing a skill normally swaps the block on the cube for a Glass pixel at once (a 'skill switch' block).")]
@@ -176,7 +196,7 @@ public partial class PixelSkills : MonoBehaviour
                 if (shop == null) shop = PixelFind.First<PixelShop>();
                 if (shop == null || !shop.IsSkillPackBought(ElectricianId)) continue;   // bought: every one of its pixels is unlocked
             }
-            else if ((p.id != FarmingId && p.id != MiningId && p.id != WoodcuttingId && p.id != ForagingId && p.id != FishingId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
+            else if ((p.id != FarmingId && p.id != MiningId && p.id != WoodcuttingId && p.id != ForagingId && p.id != FishingId && p.id != FiremakingId) || !clicker.IsUnlocked(p.types[0])) continue;   // (Mining: the first ore unlocked brings Stone, its filler, too)
             foreach (PixelClicker.PixelType t in p.types)
             {
                 int i = clicker.IndexOf(t);
@@ -242,14 +262,14 @@ public partial class PixelSkills : MonoBehaviour
             packs.Insert(Mathf.Min(packs.Count, 2), new SkillPack
             {
                 id = ForagingId, displayName = "Foraging", accent = new Color(0.78f, 0.28f, 0.4f),
-                description = "Swap the basic cubes for foraged goods: berries, mushrooms, herbs and rare truffles. Weeds are a useless filler block that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more. Watch out for the mold, which spreads over the pixels you drop: shake them clean. Pick blocks for foraging XP: a cheap early skill that leads on towards farming.",
-                replaces = "Monochrome, RGB", spawns = "Weeds, Berry, Mushroom, Herb, Truffle",
+                description = ForagingDescription,
+                replaces = "Monochrome, RGB", spawns = ForagingSpawns,
                 xpFrom = "Collecting foraged blocks",
                 unlockHint = "Buy the Forager's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb, PixelClicker.PixelType.Truffle,
-                                PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold },
-                fillerType = "Weeds", hazardType = "Mold",
+                                PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold, PixelClicker.PixelType.Toadstool },
+                fillerType = "Weeds", hazardType = "Mold,Toadstool", uniformRotation = true,
                 perks = new[]
                 {
                     new Perk { level = 2, text = "Keen eyes: berries show up more often" },
@@ -277,15 +297,27 @@ public partial class PixelSkills : MonoBehaviour
                     new Perk { level = 6, text = "Pearl diver: pearls show up more often" },
                 },
             });
+        if (!packs.Exists(p => p.id == FiremakingId))
+            packs.Add(new SkillPack
+            {
+                id = FiremakingId, displayName = "Firemaking", accent = new Color(0.95f, 0.45f, 0.12f),
+                description = "TEST SKILL (Dev Tools only for now; its mechanics are still to come): swap the basic cubes for fire goods - tinder, kindling, firewood, flint, embers, flames and charcoal - with plain ash as the filler. Watch out for the wildfire hazard.",
+                replaces = "Monochrome, RGB", spawns = "Ash, Tinder, Kindling, Firewood, Flint, Ember, Fire, Charcoal", xpFrom = "Collecting fire blocks",
+                unlockHint = "Dev Tools only (Shop unlocks: Firemaker's Pack)",
+                baseXp = 80f, xpGrowth = 1.5f,
+                types = FiremakingTypes(),
+                fillerType = "Ash", hazardType = "Wildfire",
+                perks = new[] { new Perk { level = 2, text = "Coming soon" } },
+            });
         if (!packs.Exists(p => p.id == MiningId))
             packs.Add(new SkillPack
             {
                 id = MiningId, displayName = "Mining", accent = new Color(0.86f, 0.46f, 0.26f),
-                description = "Swap the basic cubes for tough ores and plain Stone. Stone is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Copper, tin, iron, silver and gold break in a few clicks; obsidian and bedrock take 15-20 clicks but pay a lot. Break ores for mining XP; some are rich veins that pay big.",
-                replaces = "Monochrome, RGB", spawns = "Stone, Copper, Tin, Iron, Silver, Gold, Obsidian, Bedrock", xpFrom = "Breaking ore pixels",
+                description = MiningDescription,
+                replaces = "Monochrome, RGB", spawns = MiningSpawns, xpFrom = "Breaking ore pixels",
                 unlockHint = "Buy Prospector's Pack in the Shop",
                 baseXp = 100f, xpGrowth = 1.6f,
-                types = new[] { PixelClicker.PixelType.Copper, PixelClicker.PixelType.Tin, PixelClicker.PixelType.Iron, PixelClicker.PixelType.Silver, PixelClicker.PixelType.Gold, PixelClicker.PixelType.Obsidian, PixelClicker.PixelType.Bedrock, PixelClicker.PixelType.Rock, PixelClicker.PixelType.GasPocket },
+                types = MiningTypes(),
                 fillerType = "Rock", hazardType = "GasPocket",
                 perks = new[]
                 {
@@ -365,7 +397,7 @@ public partial class PixelSkills : MonoBehaviour
                     pack.types = withStone.ToArray();
                 }
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Rock.ToString();
-                if (pack.spawns != null && !pack.spawns.Contains("Stone")) pack.spawns = "Stone, " + pack.spawns;
+                if (pack.spawns != null && !pack.spawns.Contains("Rock")) pack.spawns = "Rock, " + pack.spawns;
             }
             if (pack.id == FarmingId && string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Dirt.ToString();
             if (pack.id == FarmingId)
@@ -435,29 +467,29 @@ public partial class PixelSkills : MonoBehaviour
             }
             if (pack.id == MiningId && pack.types != null)
             {
-                // The ores changed: Lead / Zinc / Nickel are gone, Silver / Gold / Obsidian / Bedrock joined.
+                // Every ore is in: Lead / Zinc / Nickel are back alongside Silver / Gold / Obsidian / Bedrock; the filler is called Rock.
                 System.Collections.Generic.List<PixelClicker.PixelType> mine = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types);
                 mine.RemoveAll(PixelClicker.IsRetiredOre);
-                foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Silver, PixelClicker.PixelType.Gold, PixelClicker.PixelType.Obsidian, PixelClicker.PixelType.Bedrock })
+                foreach (PixelClicker.PixelType t in MiningTypes())
                     if (!mine.Contains(t)) mine.Add(t);
                 pack.types = mine.ToArray();
-                if (pack.spawns != null && pack.spawns.Contains("Lead"))
-                {
-                    pack.spawns = "Stone, Copper, Tin, Iron, Silver, Gold, Obsidian, Bedrock";
-                    pack.description = "Swap the basic cubes for tough ores and plain Stone. Stone is a useless filler block that is most of what you see at first; as your mining level rises it gets rarer and the ores show up more. Copper, tin, iron, silver and gold break in a few clicks; obsidian and bedrock take 15-20 clicks but pay a lot. Break ores for mining XP; some are rich veins that pay big.";
-                }
+                pack.spawns = MiningSpawns;
+                pack.description = MiningDescription;
             }
             if (pack.id == ForagingId)
             {
                 System.Collections.Generic.List<PixelClicker.PixelType> forage = new System.Collections.Generic.List<PixelClicker.PixelType>(pack.types ?? new PixelClicker.PixelType[0]);
                 foreach (PixelClicker.PixelType t in new[] { PixelClicker.PixelType.Berry, PixelClicker.PixelType.Mushroom, PixelClicker.PixelType.Herb,
-                                                             PixelClicker.PixelType.Truffle, PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold })
-                    if (!forage.Contains(t)) forage.Add(t);
-                forage.Remove(PixelClicker.PixelType.Toadstool);   // the Toadstool is switched off for now (the Mold took its place)
+                                                             PixelClicker.PixelType.Truffle, PixelClicker.PixelType.Weeds, PixelClicker.PixelType.Mold, PixelClicker.PixelType.Toadstool })
+                    if (!forage.Contains(t)) forage.Add(t);   // (the Toadstool is back beside the Mold)
                 pack.types = forage.ToArray();
                 if (string.IsNullOrEmpty(pack.fillerType)) pack.fillerType = PixelClicker.PixelType.Weeds.ToString();
-                if (string.IsNullOrEmpty(pack.hazardType) || pack.hazardType == "Toadstool") pack.hazardType = PixelClicker.PixelType.Mold.ToString();
+                pack.hazardType = "Mold,Toadstool";
+                pack.uniformRotation = true;   // a truly random rotation: a pure reaction check
+                pack.description = ForagingDescription;
+                pack.spawns = ForagingSpawns;
             }
+            if (pack.id == FiremakingId && (pack.types == null || pack.types.Length == 0)) pack.types = FiremakingTypes();
             if (pack.id == MiningId || pack.id == FarmingId)
             {
                 PixelClicker.PixelType hazard = pack.id == MiningId ? PixelClicker.PixelType.GasPocket : PixelClicker.PixelType.Pest;
@@ -709,6 +741,42 @@ public partial class PixelSkills : MonoBehaviour
     /// <summary>Is this type one of the fillers (the main one or an extra) of the pack in play?</summary>
     public static bool IsFillerType(PixelClicker.PixelType type) => GetFillerFamily(familyScratch) && familyScratch.Contains(type);
 
+    /// <summary>A pack's hazard setting may list several blocks ("Mold,Toadstool"): one of them, picked at random each time. False when none parses.</summary>
+    private static bool TryParseHazard(string list, out PixelClicker.PixelType type)
+    {
+        type = PixelClicker.PixelType.White;
+        string[] parts = list.Split(',');
+        int found = 0;
+        foreach (string raw in parts)
+        {
+            if (!Enum.TryParse(raw.Trim(), out PixelClicker.PixelType t)) continue;
+            found++;
+            if (UnityEngine.Random.value < 1f / found) type = t;
+        }
+        return found > 0;
+    }
+
+    /// <summary>
+    /// A truly random rotation (SkillPack.uniformRotation, Foraging): fills 'pool' with the spawnable blocks of the pack in play, each equally likely.
+    /// False when the pack in play doesn't use one.
+    /// </summary>
+    public static bool TryGetUniformPool(PixelClicker clicker, System.Collections.Generic.List<int> pool)
+    {
+        pool.Clear();
+        PixelSkills s = Instance;
+        if (s == null || s.disableSkills || clicker == null) return false;
+        SkillPack pack = s.Find(s.ActiveId);
+        if (pack == null || !pack.uniformRotation || pack.types == null) return false;
+        foreach (PixelClicker.PixelType t in pack.types)
+        {
+            if (PreviewLevel <= 0 && PixelFocus.HoldsOffHazards(pack.id) && PixelClicker.IsHazard(t)) continue;
+            int i = clicker.IndexOf(t);
+            if (i < 0 || !clicker.Tiers[i].CanSpawn || LeftOutOfSpawns(t)) continue;
+            pool.Add(i);
+        }
+        return pool.Count > 0;
+    }
+
     /// <summary>The hazard block of the pack in play and its share of the spawns now (grows a little with level). False when there is none.</summary>
     public static bool TryGetHazard(out PixelClicker.PixelType type, out float share)
     {
@@ -717,7 +785,7 @@ public partial class PixelSkills : MonoBehaviour
         PixelSkills s = Instance;
         if (s == null) return false;
         SkillPack pack = s.Find(s.ActiveId);
-        if (pack == null || string.IsNullOrEmpty(pack.hazardType) || !Enum.TryParse(pack.hazardType, out type)) return false;
+        if (pack == null || string.IsNullOrEmpty(pack.hazardType) || !TryParseHazard(pack.hazardType, out type)) return false;
         if (PreviewLevel <= 0 && PixelFocus.HoldsOffHazards(pack.id)) return false;   // a focus potion of this skill is active (PixelFocus): no hazard spawns
         float start = pack.hazardBaseShare > 0f ? pack.hazardBaseShare : 0.03f;
         float per = pack.hazardPerLevelShare > 0f ? pack.hazardPerLevelShare : 0.002f;
@@ -775,7 +843,7 @@ public partial class PixelSkills : MonoBehaviour
     public static bool LeftOutOfSpawns(PixelClicker.PixelType type)
     {
         PixelSkills s = Instance;
-        if (PixelClicker.IsRetiredOre(type) || type == PixelClicker.PixelType.Toadstool) return true;   // the dropped Lead / Zinc / Nickel and the switched-off Toadstool never spawn (the blocks stay in the game for the dev tools)
+        if (PixelClicker.IsRetiredOre(type)) return true;   // ores tagged RetiredOre never spawn (none at the moment)
         if (IsOptIn(type)) return !OptInOn(type);   // Wood and Rock: on by default once unlocked, switchable in the Toggles window
         if (s == null) return PixelClicker.IsOre(type) || PixelClicker.IsFarm(type) || PixelClicker.IsWoodBlock(type) || PixelClicker.IsForageBlock(type) || PixelClicker.IsFishBlock(type) || type == PixelClicker.PixelType.Obsidian || type == PixelClicker.PixelType.Jellyfish || type == PixelClicker.PixelType.HornetNest || type == PixelClicker.PixelType.Toadstool || type == PixelClicker.PixelType.Mold;
         SkillPack owner = s.PackOfType(type);

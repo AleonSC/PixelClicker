@@ -589,29 +589,64 @@ public partial class PixelShop
     /// Default Fire Pixel pack (Pixels tab): a TESTING pixel (5 White, no requirements). Clicking it bursts a ring of flames round the cube; the
     /// old pixel falls while it burns away. No potions, pets, crafting or other integration.
     /// </summary>
+    /// <summary>
+    /// The Firemaker's Pack (was the Fire Pixel test pack; it keeps the Fire block so it is still recognised as the same pack): adds the Firemaking skill
+    /// (DEV ONLY for now: hidden from the shop, unlock it with the Dev Tools 'Shop unlocks' widget; mechanics still to come) and its blocks.
+    /// </summary>
     private static ShopPack CreateFirePixelPack()
     {
+        PixelClicker.PixelTier Block(PixelClicker.PixelType type, string name, Color color, int hits, double pay, float weight, bool glow = false) => new PixelClicker.PixelTier
+        {
+            type = type, displayName = name, color = color, clicksToCollect = hits, amountPerClick = pay, spawnWeight = weight, glow = glow, glowIntensity = glow ? 1.4f : 0f,
+            unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+        };
         return new ShopPack
         {
-            displayName = "Fire Pixel",
-            hideInShop = true,   // testing pack: Dev Tools 'Shop unlocks' only
+            displayName = "Firemaker's Pack",
+            hideInShop = true,   // dev-only skill pack for now: Dev Tools 'Shop unlocks'
             tab = ShopTab.Pixels,
-            description = "TEST: Adds the Fire pixel, a glowing orange cube with flames rising off it. Clicking it bursts a ring of fire round the cube, and the old pixel burns away as it falls.",
+            description = "TEST: Adds the Firemaking skill and its blocks: Tinder, Kindling, Firewood, Flint, Ember, Fire and Charcoal, with plain Ash as the filler and a Wildfire hazard. They only spawn while Firemaking is the pack in play (Skills window). Mechanics still to come.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 5 } },
             rewardTiers = new[]
             {
-                new PixelClicker.PixelTier
-                {
-                    type = PixelClicker.PixelType.Fire, displayName = "Fire Pixels",
-                    color = new Color(1f, 0.45f, 0.1f, 1f), glow = true, glowIntensity = 1.5f,
-                    amountPerClick = 6,
-                    spawnWeight = 0.5f,
-                    unlockMode = PixelClicker.TierUnlockMode.ShopOnly
-                },
+                Block(PixelClicker.PixelType.Tinder, "Tinder Pixels", new Color(0.86f, 0.76f, 0.46f, 1f), 1, 2, 1.0f),
+                Block(PixelClicker.PixelType.Kindling, "Kindling Pixels", new Color(0.62f, 0.44f, 0.24f, 1f), 2, 3, 0.9f),
+                Block(PixelClicker.PixelType.Firewood, "Firewood Pixels", new Color(0.48f, 0.3f, 0.16f, 1f), 3, 5, 0.7f),
+                Block(PixelClicker.PixelType.Flint, "Flint Pixels", new Color(0.32f, 0.33f, 0.38f, 1f), 2, 4, 0.6f),
+                Block(PixelClicker.PixelType.Ember, "Ember Pixels", new Color(1f, 0.38f, 0.12f, 1f), 1, 6, 0.4f, true),
+                Block(PixelClicker.PixelType.Fire, "Fire Pixels", new Color(1f, 0.45f, 0.1f, 1f), 1, 6, 0.5f, true),
+                Block(PixelClicker.PixelType.Charcoal, "Charcoal Pixels", new Color(0.16f, 0.15f, 0.15f, 1f), 2, 8, 0.3f),
+                Block(PixelClicker.PixelType.Ash, "Ash", new Color(0.62f, 0.6f, 0.58f, 1f), 1, 1, 1.0f),
+                // The hazard: hit it too often and the fire spreads, burning the husks around the cube (right-click it to put it out).
+                Block(PixelClicker.PixelType.Wildfire, "Wildfire", new Color(1f, 0.25f, 0.05f, 1f), 5, 0, 0.05f, true),
             }
         };
     }
+
+    /// <summary>The returning Mining ores (Lead, Zinc, Nickel), tuned between Iron and Silver.</summary>
+    private static PixelClicker.PixelTier ProspectorOre(PixelClicker.PixelType type) => new PixelClicker.PixelTier
+    {
+        type = type,
+        displayName = type + " Ore",
+        color = type == PixelClicker.PixelType.Lead ? new Color(0.42f, 0.44f, 0.5f, 1f) : type == PixelClicker.PixelType.Zinc ? new Color(0.7f, 0.74f, 0.76f, 1f) : new Color(0.6f, 0.62f, 0.52f, 1f),
+        clicksToCollect = type == PixelClicker.PixelType.Nickel ? 4 : 3,
+        amountPerClick = type == PixelClicker.PixelType.Lead ? 5 : type == PixelClicker.PixelType.Zinc ? 6 : 8,
+        spawnWeight = type == PixelClicker.PixelType.Lead ? 0.7f : type == PixelClicker.PixelType.Zinc ? 0.65f : 0.55f,
+        unlockMode = PixelClicker.TierUnlockMode.ShopOnly
+    };
+
+    /// <summary>The Prospector's Pack's price (Mining is a mid-game skill: well above the 150-White starter packs).</summary>
+    private static PackCost[] ProspectorCosts() => new[]
+    {
+        new PackCost { type = PixelClicker.PixelType.White, amount = 2000 }, new PackCost { type = PixelClicker.PixelType.Gray, amount = 1000 }
+    };
+
+    /// <summary>The Farmer's Pack's price.</summary>
+    private static PackCost[] FarmerCosts() => new[]
+    {
+        new PackCost { type = PixelClicker.PixelType.White, amount = 1500 }, new PackCost { type = PixelClicker.PixelType.Gray, amount = 750 }
+    };
 
     /// <summary>
     /// Default Nuclear Pixel pack (Pixels tab): a TESTING pixel (10 White, no requirements). A glowing radioactive cube; its old pixel makes every
@@ -695,22 +730,22 @@ public partial class PixelShop
         return new ShopPack
         {
             displayName = "Prospector's Pack",
-            hideInShop = true,   // testing price: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
-            description = "Adds the Mining skill and seven ore pixels (Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Obsidian and Bedrock take 15-20 clicks but pay a lot. The ores only spawn while Mining is the skill in play (Skills window), plus plain Stone as filler and a Gas Pocket to watch out for.",
+            description = "Adds the Mining skill and ten ore pixels (Copper, Tin, Iron, Lead, Zinc, Nickel, Silver, Gold, Obsidian and Bedrock): rocks that crack and shed chips as you hit them, break in a shower of nuggets and are sometimes a glittering rich vein that pays big. Obsidian and Bedrock take 15-20 clicks but pay a lot. The ores only spawn while Mining is the skill in play (Skills window), plus plain Stone as filler and a Gas Pocket to watch out for.",
             requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            costs = ProspectorCosts(),
             rewardTiers = new[]
             {
-                // Stone: Mining's filler block (one click, pays almost nothing; most of what spawns at low mining level).
+                // Rock: Mining's filler block (one click, pays almost nothing; most of what spawns at low mining level).
                 new PixelClicker.PixelTier
                 {
-                    type = PixelClicker.PixelType.Rock, displayName = "Stone Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
+                    type = PixelClicker.PixelType.Rock, displayName = "Rock Pixels", color = new Color(0.55f, 0.55f, 0.58f, 1f),
                     clicksToCollect = 1, amountPerClick = 1, spawnWeight = 1f, unlockMode = PixelClicker.TierUnlockMode.ShopOnly
                 },
                 Ore(PixelClicker.PixelType.Copper, "Copper Ore", new Color(0.86f, 0.46f, 0.26f, 1f), 2, 3, 1.0f),
                 Ore(PixelClicker.PixelType.Tin, "Tin Ore", new Color(0.75f, 0.8f, 0.84f, 1f), 2, 3, 0.9f),
                 Ore(PixelClicker.PixelType.Iron, "Iron Ore", new Color(0.62f, 0.36f, 0.3f, 1f), 3, 5, 0.8f),
+                ProspectorOre(PixelClicker.PixelType.Lead), ProspectorOre(PixelClicker.PixelType.Zinc), ProspectorOre(PixelClicker.PixelType.Nickel),
                 Ore(PixelClicker.PixelType.Silver, "Silver Ore", new Color(0.88f, 0.9f, 0.95f, 1f), 4, 9, 0.5f),
                 Ore(PixelClicker.PixelType.Gold, "Gold Ore", new Color(1f, 0.82f, 0.25f, 1f), 5, 14, 0.35f),
                 // The two big rocks: 15-20 clicks each, but a good chunk of currency (and skill XP) when they finally break.
@@ -782,7 +817,7 @@ public partial class PixelShop
         {
             displayName = "Forager's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Foraging skill and five foraged blocks: Berry, Mushroom, Herb, Truffle (rare) and Weeds, plus a spreading Mold to watch out for. They only spawn while Foraging is the pack in play (Skills window). Weeds are a useless filler that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more.",
+            description = "Adds the Foraging skill and five foraged blocks: Berry, Mushroom, Herb, Truffle (rare) and Weeds, in a truly random rotation, plus two hazards (Mold and Toadstool: one right click clears them, one left click sets them off). They only spawn while Foraging is the pack in play (Skills window). Weeds are a useless filler that is most of what you see at first; as your foraging level rises they get rarer and the good finds show up more.",
             requirements = Needs(-1),
             costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 150 } },
             rewardTiers = new[]
@@ -792,8 +827,9 @@ public partial class PixelShop
                 Block(PixelClicker.PixelType.Herb, "Herb Pixels", new Color(0.3f, 0.7f, 0.35f, 1f), 1, 2, 0.9f),
                 Block(PixelClicker.PixelType.Truffle, "Truffle Pixels", new Color(0.34f, 0.23f, 0.17f, 1f), 3, 30, 0.1f),
                 Block(PixelClicker.PixelType.Weeds, "Weeds", new Color(0.55f, 0.62f, 0.35f, 1f), 1, 1, 1.0f),
-                // The Mold: a hazard (every click spreads mold over the fallen pixels, see PixelMold.cs; it pays nothing). The Toadstool (type kept) is switched off for now.
-                Block(PixelClicker.PixelType.Mold, "Mold", new Color(0.4f, 0.55f, 0.25f, 1f), 8, 0, 0.05f),
+                // The two hazards: ONE left click sets them off, ONE right click clears them (a reaction check). Mold molds every husk on the field; the Toadstool makes the cube dodge.
+                Block(PixelClicker.PixelType.Mold, "Mold", new Color(0.4f, 0.55f, 0.25f, 1f), 1, 0, 0.05f),
+                Block(PixelClicker.PixelType.Toadstool, "Toadstool", new Color(0.62f, 0.25f, 0.65f, 1f), 1, 0, 0.05f),
             }
         };
     }
@@ -858,11 +894,10 @@ public partial class PixelShop
         return new ShopPack
         {
             displayName = "Farmer's Pack",
-            hideInShop = true,   // testing pack: Dev Tools 'Shop unlocks' only
             tab = ShopTab.Pixels,
-            description = "TEST: Adds eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles or Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",
+            description = "Adds the Farming skill and eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles or Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",
             requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 10 } },
+            costs = FarmerCosts(),
             rewardTiers = new[]
             {
                 Block(PixelClicker.PixelType.Dirt, "Dirt Pixels", new Color(0.42f, 0.28f, 0.16f, 1f), 3, 1, 1.0f),

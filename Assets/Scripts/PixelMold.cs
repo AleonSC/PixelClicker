@@ -2,7 +2,8 @@
 // PixelMold.cs
 //   Foraging's Mold block (PixelType.Mold 75, a hazard-style block that replaced the Toadstool in the Foraging pack; the Toadstool still exists but is switched off for now)
 //   and the glowing Foraging finds. Component added by PixelClicker.Awake (PixelMold.Instance, Inspector fields for every number).
-//   MOLD: every left click on the Mold block on the cube calls PixelMold.Spread (PixelClicker.CollectInternal / TriggerHazard) = the mold zone around the cube grows by
+//   MOLD (Foraging hazard, 1 left click sets it off, 1 right click clears it): with wholeMap (on) setting it off molds EVERY husk on the field at once;
+//   zoneHoldSeconds 0 = 30 and killSeconds 0 = 22 (longer than before). Old notes: every left click on the Mold block on the cube calls PixelMold.Spread (PixelClicker.CollectInternal / TriggerHazard) = the mold zone around the cube grows by
 //   spreadWidths old-pixel widths (a faint green disc on the floor, up to maxWidths). Right click (DefuseHazard) / the block leaving only STOPS the spreading - the zone stays and then
 //   fades by itself after zoneHoldSeconds + zoneFadeSeconds. Every infectInterval s the zone infects the old pixels lying inside it (PixelMoldy: a green shell that darkens; the pixel dies
 //   after killSeconds - the timer waits while it is held). SHAKE a held moldy pixel (PixelMoldy.FixedUpdate adds up the change of velocity of the dragged body) to shake the mold off:
@@ -22,6 +23,8 @@ public class PixelMold : MonoBehaviour
     private static void ResetStatics() { Instance = null; }
 
     [Header("Mold zone")]
+    [Tooltip("Setting the Mold off covers the WHOLE field at once (every husk lying anywhere gets moldy). Off = the old growing zone round the cube.")]
+    [SerializeField] private bool wholeMap = true;
     [Min(0f)]
     [Tooltip("How far the mold spreads with each click on the Mold block, in old-pixel widths. 0 = the default (0.9).")]
     [SerializeField] private float spreadWidths = 0f;
@@ -29,7 +32,7 @@ public class PixelMold : MonoBehaviour
     [Tooltip("Widest the mold zone gets, in old-pixel widths. 0 = the default (8).")]
     [SerializeField] private float maxWidths = 0f;
     [Min(0f)]
-    [Tooltip("Seconds after the last spread before the zone starts to fade. 0 = the default (20).")]
+    [Tooltip("Seconds after the last spread before the zone starts to fade. 0 = the default (30).")]
     [SerializeField] private float zoneHoldSeconds = 0f;
     [Min(0f)]
     [Tooltip("Seconds the zone takes to fade away completely. 0 = the default (25).")]
@@ -42,7 +45,7 @@ public class PixelMold : MonoBehaviour
 
     [Header("Infected pixels")]
     [Min(0f)]
-    [Tooltip("Seconds an infected pixel survives before the mold kills it (the time stops while you hold it). 0 = the default (15).")]
+    [Tooltip("Seconds an infected pixel survives before the mold kills it (the time stops while you hold it). 0 = the default (22).")]
     [SerializeField] private float killSeconds = 0f;
     [Min(0f)]
     [Tooltip("How much a held pixel must be shaken (added up change of speed, world units per second) to shake the mold off. 0 = the default (28).")]
@@ -65,7 +68,7 @@ public class PixelMold : MonoBehaviour
 
     public float SpreadWidths => spreadWidths > 0f ? spreadWidths : 0.9f;
     public float MaxWidths => maxWidths > 0f ? maxWidths : 8f;
-    public float KillSeconds => killSeconds > 0f ? killSeconds : 15f;
+    public float KillSeconds => killSeconds > 0f ? killSeconds : 22f;
     public float ShakeNeeded => shakeNeeded > 0f ? shakeNeeded : 28f;
     public float CleanImmune => cleanImmuneSeconds > 0f ? cleanImmuneSeconds : 8f;
     public float GlowStart => glowStartFraction > 0f ? glowStartFraction : 0.5f;
@@ -97,7 +100,7 @@ public class PixelMold : MonoBehaviour
             if (Physics.Raycast(pos, Vector3.down, out RaycastHit hit, 60f, ~0, QueryTriggerInteraction.Ignore)) floorY = hit.point.y;
             center = new Vector3(pos.x, floorY + 0.02f, pos.z);
         }
-        radius = Mathf.Min(MaxWidths * widthUnit, radius + SpreadWidths * widthUnit * steps);
+        radius = wholeMap ? 1000f : Mathf.Min(MaxWidths * widthUnit, radius + SpreadWidths * widthUnit * steps);   // (whole map: every husk anywhere is in reach)
         lastSpread = Time.time;
         EnsureDisc();
     }
@@ -120,14 +123,14 @@ public class PixelMold : MonoBehaviour
         if (!(Time.timeScale > 0f) || PixelPauseMenu.IsPaused) return;
 
         // Fade away on its own once it has not been fed for a while.
-        float hold = zoneHoldSeconds > 0f ? zoneHoldSeconds : 20f, fade = zoneFadeSeconds > 0f ? zoneFadeSeconds : 25f;
+        float hold = zoneHoldSeconds > 0f ? zoneHoldSeconds : 30f, fade = zoneFadeSeconds > 0f ? zoneFadeSeconds : 25f;
         float sinceSpread = Time.time - lastSpread;
         float fadeK = sinceSpread <= hold ? 0f : Mathf.Clamp01((sinceSpread - hold) / fade);
         if (fadeK >= 1f) { radius = 0f; if (disc != null) { Destroy(disc.gameObject); disc = null; } return; }
 
         if (disc != null)
         {
-            float shown = radius * (1f - fadeK * 0.5f);
+            float shown = Mathf.Min(radius, 40f) * (1f - fadeK * 0.5f);   // (the whole-map zone is drawn as a big green sheet, not a 1000-unit disc)
             disc.position = center;
             disc.localScale = new Vector3(shown * 2f, 0.004f, shown * 2f);
             Color c = moldColor;
