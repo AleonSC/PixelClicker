@@ -1407,6 +1407,16 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 39)
+        {
+            // Skill packs are chosen in the Skills window only: saved descriptions still said '(Toggles or Skills window)'.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                    if (p != null && p.description != null) p.description = p.description.Replace("(Toggles or Skills window)", "(Skills window)");
+            packDataVersion = Mathf.Max(packDataVersion, 39);
+            changed = true;
+        }
+
         if (packDataVersion < 38)
         {
             // The Woodcutter's Pack is the Lumberjack's Pack now and costs 250 of each pure pixel.

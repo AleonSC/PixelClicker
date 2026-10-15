@@ -481,7 +481,7 @@ public class PixelStats : MonoBehaviour
             Row("All pixels", number(clickTotal));
         }
 
-        Head("Old pixels");
+        Head("Husks");
         Cnt("Vacuumed up", "old.vacuumed");
         Cnt("Stored in the bank", "old.banked");
         Cnt("Grabbed", "old.grabbed");
@@ -513,14 +513,14 @@ public class PixelStats : MonoBehaviour
             foreach (PixelClicker.PixelTier t in clicker.Tiers)
                 if (PixelPets.CanHavePet(t.type)) Row("   " + (petSystem.IsOwned(t.type) ? petSystem.NameOf(t.type) : "???"), petSystem.IsOwned(t.type) ? (petSystem.IsOn(t.type) ? "Roaming" : "Switched off") : "-");
             if (petSystem.IsOwned(PixelClicker.PixelType.Vacuum) || Counter("pet.vacuum") > 0d)
-                Cnt("Old pixels sucked by the Vacuum Pet", "pet.vacuum");
+                Cnt("Husks sucked by the Vacuum Pet", "pet.vacuum");
         }
 
         Head("Minigames");
         double ultra = clicker != null ? clicker.UltraEarned : 0d;
         Num("Ultra pixels earned", ultra);
         string[] ultraIds = { "pad", "snake", "sort", "breakout", "blackhole" };
-        string[] ultraNames = { "Ultra Pad", "Snake", "Sorting Race", "Breakout", "Black Hole" };
+        string[] ultraNames = { "Ultra Holes", "Snake", "Sorting Race", "Breakout", "Black Hole" };
         for (int i = 0; i < ultraIds.Length; i++)
             if (Counter("ultra." + ultraIds[i]) > 0d) Num("   from " + ultraNames[i], Counter("ultra." + ultraIds[i]));
         if (Seen("ghost", "ghost.kept") || ghostsClicked > 0)

@@ -521,7 +521,7 @@ public partial class PixelShop
             displayName = "Electrician's Pack",
             tab = ShopTab.Pixels,
             skillId = PixelSkills.ElectricianId,
-            description = "Unlocks the Electrician skill and its eight pixels: Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse and Bulb. While the skill is in play (Toggles or Skills window) they replace the basic cubes. Wire, Battery and Resistor carry your device links, a Battery also sets off an Overcharge, a Capacitor stores charge from every other click, a Transistor doubles your next click, a Fuse pays big if you click it fast and a Bulb shines brighter the more wired pixels lie around.",
+            description = "Unlocks the Electrician skill and its eight pixels: Electric, Wire, Battery, Capacitor, Resistor, Transistor, Fuse and Bulb. While the skill is in play (Skills window) they replace the basic cubes. Wire, Battery and Resistor carry your device links, a Battery also sets off an Overcharge, a Capacitor stores charge from every other click, a Transistor doubles your next click, a Fuse pays big if you click it fast and a Bulb shines brighter the more wired pixels lie around.",
             requirements = Needs(requiresAutoClickerIndex),
             costs = ElectricianCosts(),
             rewardTiers = ElectricianTiers(),
@@ -895,7 +895,7 @@ public partial class PixelShop
         {
             displayName = "Farmer's Pack",
             tab = ShopTab.Pixels,
-            description = "Adds the Farming skill and eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Toggles or Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",
+            description = "Adds the Farming skill and eight farm blocks: Dirt, Seed, Water, Fertilizer, Pollen, Wheat, Weevil and Golden Fruit. They only spawn while Farming is the pack in play (Skills window) and are a farm in themselves: seeds grow sprouts, water, dirt and fertilizer speed them up, pollen doubles a sprout's pixel, wheat pays more the busier your field is, and weevils eat sprouts until you click them.",
             requirements = Needs(-1),
             costs = FarmerCosts(),
             rewardTiers = new[]

@@ -4,80 +4,109 @@
 // A blank line leaves a gap. Long lines wrap by themselves. Simple tags like <b>bold</b> and <i>italic</i> work.
 
 # The Goal
-Click the cube to collect pixels. Every pixel type is its own currency. Collect enough of one type and the next, better type unlocks. Spend your pixels in the Shop to unlock new pixel types, upgrades, potions, devices and minigames.
+Click the cube to collect pixels. Every pixel type is its own currency. Collect enough of one type and the next type unlocks; spend your pixels in the Shop on new pixels, skills, upgrades, devices and minigames. There is always something new to unlock.
 
-# Collecting
-Each click pays out the pixel the cube is showing. A smaller copy of that pixel then falls to the floor: an "old pixel". Old pixels vanish after a few seconds, but a lot of the game is about doing something useful with them before they do.
-The cube is also clicked for you by the Auto Clicker once you buy it and switch it on (it starts off: open the Toggles window on the right edge, go to Upgrades and tick it), even while the game is closed (you get a "Welcome back" payout for the time away).
-Clicks are limited to about 14 per second.
+# Collecting and Husks
+Each click breaks the block on the cube and pays its value in that pixel. Most blocks break in one click; tough ones (ores, chests, rare blocks) need several hits and only the last one pays.
+Every broken block drops a <b>husk</b>: a small copy that falls to the floor. A husk never pays money by itself - it is material. You can pick husks up, throw them, feed them to devices and minigames, and some husks do something special where they land. Husks fade away after a while, and only so many can lie around at once.
+<b>Pixel Grabbing</b> works from the start: hold the left button on a husk to drag it, let go to drop or throw it. It has an on / off switch in the Toggles window.
+The <b>Recycler</b> is the one way to turn husks back into money: drop up to 10 husks into the bin, press its red button, and each one pays back half of what a click on that block pays now.
+
+# Block Hold and the Stake
+Hold the RIGHT mouse button on the cube to pull its block out of the line. The cube gives you a new block at once, so you keep clicking, while a meter beside the cursor drains. Let go and the held block comes back next in line, with any hits it already had. If the meter runs dry the block goes back anyway and the meter takes longer to recharge. Hazards and a few special blocks can't be held.
+Hold one of the six basic blocks (White, Gray, Black, Red, Green, Blue) for a moment and you put a <b>stake</b> on it. The longer you hold - and the more you click meanwhile - the bigger it grows. When the block comes round again it glows green and pays the stake (most of the time) or glows red and pays nothing.
+The meter starts short; Standard skill perks make it longer, and every few of your own clicks give it a little energy. Some skill blocks give a bonus while held, like the Whetstone (extra clicks) or Pesticide (charges that clear Termite Hives).
+The <b>Next up</b> window at the left shows the block coming next, the one on the cube and the one before (switch it off in Settings > Interface).
+
+# Cubie
+Cubie, a suspicious little cube, drops by now and then to show you around. After you have clicked 50 White pixels he pays his first visit and gives you a Recycler. When the Shop opens he comes back with a gift and introduces the other visitors. You can replay his visits with Settings > Replay tutorial.
 
 # The Shop
-The Shop button appears once you have unlocked the Black pixel. It has four tabs:
-<b>Pixels</b> - packs that unlock new pixel types (RGB, Glass, Vacuum, Obsidian and more).
-<b>Upgrades</b> - the Auto Clicker and its upgrades, Combo Meter, Pixel Grabbing, Time Stop and its Time Slow upgrade, the Pixel Bank and its storage upgrades. The "Value" sub-tab makes each pixel type pay more, paid for with that same pixel; every level costs a bit more than the last, and every 25 levels the payout doubles. Shift-click buys as many levels as you can afford. The "Features" sub-tab holds the feature unlocks. Ultra pixels are a rare second currency, one general kind (not per pixel type), shown at the very top of your Inventory's Currency tab; the Ultra Pad, Snake, Breakout, Sorting Race and Black Holes can reward them.
-<b>Consumables</b> - potions and utilities (see below).
-<b>Minigames</b> - events that appear on their own once bought.
-Things you can't buy yet show in grey with what they need.
+The Shop button appears once you unlock the Black pixel. It has four tabs:
+<b>Pixels</b> - new pixel types (RGB, Glass, Vacuum, Luminescent, Mirror, Treasure and more) and the skill packs.
+<b>Upgrades</b> - three sub-tabs. <i>Features</i>: the Auto Clicker, Faster Clicking, Multi-Click, Combo Meter, Pixel Bank, Time Stop and Time Slow, UFO Helper and more. <i>Value</i>: make each pixel type pay more, paid for in that same pixel; a type's Value level can't go above the level of the skill it belongs to (Standard for the basic pixels). Shift-click buys as many levels as you can afford. <i>Operation</i>: make your devices last longer, reach further, hold more.
+<b>Consumables</b> - potions, devices and supplies.
+<b>Minigames</b> - events that turn up by themselves once bought.
+Things you can't buy yet show in grey with what they need. Hold the blue ? button for a tour of the shop.
+<b>Ultra pixels</b> are a rare extra currency shown at the top of your Inventory. Some minigames (Ultra Holes and others) can reward them, and they make your pixels pay more.
 
-# Special Pixels
-<b>Glass</b> - the ingredient for potions in Crafting. Buying the Glass pixel also unlocks Crafting. Glass and Luminescent have switches in the Toggles window (on by default).
-<b>Vacuum</b> - when you collect one, every old pixel on the floor flies into the cube and pays out again.
-<b>Obsidian</b> and <b>Luminescent</b> - tougher or rarer pixels worth more.
-<b>Singularity</b>, <b>Ghost</b> and <b>Meteor</b> - rare pixels you earn by playing their minigames.
-<b>Electric</b> - a cube of crackling lightning that pays a random amount each time. Clicking one overcharges your auto clicker with a burst of clicks, and Electric pixels lying on the floor arc to your placed devices: every pixel that links adds a second to the device, and they all vanish when it ends.
+# Skills
+Every block you collect gives 1 XP to <b>Standard</b>, your base skill. At Standard level 2 the Skills button appears and the Skills window opens. Standard's perks help everywhere: husks last longer, more husks can lie on the floor, and the Block Hold meter grows.
+<b>Skill packs</b> are bought in the Shop's Pixels tab: the Lumberjack's Pack (Woodcutting), Forager's Pack (Foraging), Angler's Pack (Fishing), Prospector's Pack (Mining), Farmer's Pack (Farming) and Electrician's Pack. Choose which one you train in the Skills window with the Train button. While a pack is in play its own blocks replace the basic pixels and you level that skill.
+Each pack has a <b>filler</b> block (plain and common at first, rarer as you level up), better blocks, rare special finds, perks at each level and a <b>skill tree</b> that gets a point every level. The <b>Mastery</b> bar at the bottom of the Skills window shows the progress of all your skills together.
+<b>Hazards</b> - every pack has a bad block that pays nothing (the Termite Hive, Gas Pocket, Jellyfish, Mold, Toadstool, Pest...). It glows orange with a warning sign. Breaking it with left clicks sets it off (husks get eaten, blown away or moldy, or you get dizzy). RIGHT-click it instead to clear it safely - some need several right clicks. Left alone, it leaves after a few seconds.
+<b>Weak Spots</b> - while a skill pack is in play the camera sometimes zooms in and time slows: click every glowing spot before the time runs out for bonus XP. Clicking a Fish starts one too: hit every spot to catch it.
+Tap right-click on a pack's filler block to shuffle it behind the next block. Do it again each time it comes back to build a shuffle combo, then break the filler for bonus XP.
+Every minigame you own and keep switched on adds to your XP gain.
 
-# The Dragon Cubes
-Seven glassy orange cubes, each with 1 to 7 small dark cubes inside, turn up among the random pixels - extremely rarely, with no requirements. Click one to collect it. Hold all seven at once and a Summon the Dragon button appears: the cubes are used up, time stops, and a cube dragon offers you three wishes. Pick one: a big payout, a Golden Hour of triple income, Ultra pixels, potions, or a new pet.
+# The Auto Clicker and Upgrades
+<b>Auto Clicker</b> - clicks the cube for you. It starts switched off: open the Toggles window (right edge) and tick it under Upgrades. Faster Clicking and Multi-Click make it stronger. Auto clicks give less skill XP than your own.
+<b>Combo Meter</b> - quick clicks build a combo; each milestone (10, 50, 200, 500, 1000) raises your click bonus (up to x5); each level you buy unlocks the next milestone.
+<b>Time Stop</b> - press {key:TimeStop} to freeze everything, even timers. It drains an energy meter; you can still click the cube, and the husks burst out when time resumes. <b>Time Slow</b> ({key:TimeSlow}) slows time instead, drains the meter more slowly and lets you grab speeding meteor husks.
+<b>Crafting</b> - comes with the Glass pixel. Put two things in the boxes to make potions (a pixel + Glass), combo potions (a potion + another pixel) and devices. Recipes you have crafted go into the recipe book.
+<b>Pixel Bank</b> - stores husks to use later. Press {key:Hose} for the hose: the nozzle hangs over the red dot, left-click drops the selected pixel, right-click sucks up a husk, hold right-click to suck up an area. Bank Storage upgrades make it hold more.
+<b>UFO Helper</b> - a little UFO hovers about. Click it and pick a device: whenever that device runs out, the UFO beams down a new one where you placed its ghost (if you have one spare). It can also abduct loose husks into your Pixel Bank, or let you ride along inside.
 
 # Potions and Devices
-Open the inventory's Consumables tab (it has Potions and Devices sub-tabs). Right-click a potion to drink it: for a while only that pixel type spawns. Drink them one after another to keep it going. You can hold up to 10 of each potion. A potion is priced to pay back about 3 times what it cost, so its price grows with your clicking speed and that pixel's upgrades; crafting a potion costs a bit less in its pixel, plus the Glass. Device prices rise with the Value level of the pixels they cost. Three special items sit in the Devices list: Combo Fuel (hold 3) is used by itself when your combo bar runs out - it keeps the combo and refills the bar; Ghost Bait (hold 1, right-click) calls three slow ghosts sooner; Pet Treat (hold 5, right-click) makes your pets hyper and glowing for a minute and doubles the extra spawn chance they give. During a Vacuum potion only every 10th Vacuum pixel vacuums the floor.
-Right-click a device (Vacuum Device, Fan, Sorter...) to place it. A placed device is grey and asleep (its timer does not run) until you left-click it once; then it fades into colour and starts working. The Vacuum Device pulls in old pixels and collects them again, but only for 5 seconds. Upgrade every consumable in the shop under Upgrades > Operation (longer run time, more reach, more strength, more storage...). The Fan blows old pixels along the floor. The Sorter wraps around the cube and spits every pixel you collect out of an aimable pipe.
-Hold the right mouse button on a placed device to remove it, or on the "Active:" line at the top to cancel a potion. There is no refund.
+Open the Inventory's Consumables tab. Right-click a potion to drink it: for a while only that pixel type comes up. Right-click a device to place it, then left-click the floor. Placing snaps to a grid; hold Shift for free placement. A placed timed device stays grey and asleep until you left-click it once. Hold the right button on a placed device to remove it, or on the potion line at the top to cancel a potion (no refunds).
+<b>Recycler</b> - turns up to 10 husks into half their value. <b>Storage Crate</b> - holds 10 husks; drop them on it and click the crate, click one to take it out. Drag either by its handles to move it.
+<b>Fan</b> blows husks along the floor. <b>Vacuum Device</b> pulls husks in for skill XP. <b>Magnet</b> heaps husks around itself. <b>Sorter</b> wraps around the cube and spits every husk out of an aimable pipe. <b>Quantum Organizer</b> stores husks of up to three types. <b>Funnel</b> catches husks under the cube and carries them to an output on the floor. <b>Sprinkler</b> waters growing sprouts.
+<b>Charge Booster</b> and <b>Lightning Rod</b> work with Electric pixels: Electric husks link to nearby devices and keep them running.
+Crafting a Fan, Vacuum Device or Magnet with a single-pixel potion makes an attuned copy that only moves husks of that type. Some devices come from skills or vendors: the Wood Chipper (Woodcutting), the Bait Bucket (Fishing), the Conveyor Belt Kit (Electrician).
+Special items: <b>Combo Fuel</b> keeps your combo alive when the bar runs out, <b>Ghost Bait</b> calls three slow ghosts, <b>Pet Treat</b> makes your pets hyper for a minute.
+
+# Special Pixels
+<b>Glass</b> - the ingredient for potions; it also unlocks Crafting.
+<b>Vacuum</b> - clicking it sucks every husk on the floor into it.
+<b>Luminescent</b> - glows and leaves a trail of light as it falls.
+<b>Mirror</b> - pays again what the last different pixel paid.
+<b>Treasure</b> - a chest that takes 1 to 20 hits and pours out a pile of pixels.
+<b>Ghost</b>, <b>Meteor</b>, <b>Solar</b> and <b>Singularity</b> - earned through their minigames. A Meteor husk streaks off and can knock down a star (Stardust) that unlocks Solar; feeding black holes unlocks the Singularity, whose husk pulls other husks in.
+Hover any block or husk to see what it does, or open the <b>Rotation</b> window (right edge) for every pixel that can come up right now.
 
 # Minigames
-<b>Ghost Hunt</b> - a faint cube floats by. Click it for a free potion. With Pixel Grabbing you can also catch the falling potion and drop it on the backpack icon to keep it - kept potions can take you past the usual potion limit.
-<b>Black Hole</b> - a swirling hole opens on the floor and swallows old pixels. While it is open, old pixels stop vanishing. A counter above it shows how many pixels you have fed it out of the 250 needed to unlock the Singularity Pixel. Push old pixels toward it with the fan, Pixel Grabbing or the hose.
-<b>Bomb Defusal</b> - a bomb appears. Cut the wire of the colour you own the most of (Red, Green or Blue) before the timer runs out. A wrong wire or running out of time clears your old pixels. Defusing earns bomb parts.
-<b>Ultra Pad</b> - a coloured pad appears on one side of the cube. Throw or drop old pixels of that colour onto it for a chance at an Ultra pixel (the other minigames give a smaller chance for the pixels they use). Pixels of any other colour cost you some of that currency.
-<b>Meteor Strike</b> - a meteor drifts by. Click it for meteor chunks.
-<b>Sorting Race</b> - now and then some old pixels freeze in a jumbled grid. Click one pixel and then another to swap them, and get every type together in one unbroken group before the timer ends. The faster you finish, the bigger the payout; if time runs out they just drop.
-<b>Snake</b> - now and then every old pixel freezes and stops despawning. Steer the snake head with the arrow keys (or the on-screen arrows): each pixel it touches joins its tail. Eat them all without biting yourself for 10x their worth; bite yourself or run out of time and they just drop.
-Switch any of them off in the Toggles window.
+Buy them in the Shop's Minigames tab; they turn up now and then by themselves. Switch any of them off in the Toggles window.
+<b>Ghost Hunt</b> - a faint cube floats by: click it for a free potion. Catch the falling potion and drop it on the backpack icon to keep it.
+<b>Black Hole</b> - a hole on the floor swallows husks. Feed it to unlock the Singularity pixel.
+<b>Meteor Strike</b> - a huge meteor drifts by: click it for meteor chunks and Mining XP.
+<b>Evil Tree</b> - a giant flailing tree: chop through its health bar for Magic Wood and Woodcutting XP.
+<b>Bomb Defusal</b> - cut the wire of the colour (Red, Green or Blue) you hold the most of before the timer ends. Defusing earns bomb parts.
+<b>Ultra Holes</b> - four holes open in the floor; drop the wanted husk into the marked hole for its value and a chance at an Ultra pixel.
+<b>Snake</b> - steer a snake with the arrow keys and eat every frozen husk without biting yourself.
+<b>Sorting Race</b> - swap husks in a grid until every type sits together.
+<b>Breakout</b> - husks become bricks; bounce the ball with your paddle.
+<b>Cube Dash</b>, <b>Cube Evasion</b> and <b>Cube Blink</b> - the cube runs, dashes or teleports; click it as often as you can.
+<b>Red Light Green Light</b> - click on green, never on red, and in time with the ring on yellow.
 
-# Upgrades Worth Knowing
-<b>Pixel Grabbing</b> - click and drag old pixels, then let go to throw them.
-<b>Time Stop</b> - press T to freeze everything, including timers. It drains an energy meter (shown only while it is in use); time resumes when you press T again or the meter runs out, and the meter refills right away. You can still click the cube while time is stopped - the old pixels pile up and burst out when time resumes. The Time Slow upgrade lets you slow time instead (press S): it drains the same meter more slowly, and meteor pixels crawl enough to be grabbed with Pixel Grabbing.
-<b>Combo Meter</b> - quick clicks build a combo. Reaching a combo milestone (10, 50, 200, 500, 1000) raises your click bonus (x1.5 up to x5); each upgrade level unlocks the next milestone, and every milestone makes the meter flashier (shake, flames, glow, lightning, and finally an explosion).
-<b>Crafting</b> - combine two items to make potions and more.
-<b>Pixel Bank</b> - store old pixels and spit them back out. Press B for the hose. The hose hangs from the ceiling and the nozzle points straight down; a red laser beam and dot show what it is pointing at. Left-click drops the selected pixel onto the dot, right-click sucks up the old pixel the dot is on, and holding the right button sucks up every old pixel of the selected type in a ring round the dot (with nothing selected, it takes the type of the pixel under the dot). Bank Storage upgrades raise how much it holds (they cost glass, vacuum pixels and bomb parts).
+# Visitors
+Visitors drop by as you progress: the Wizard, the Tinkerer, the Farmer (seeds), the Pixel Entrepreneur, and while you train their skill the Lumberjack and the Prospector, who buy your skill blocks for basic pixels. A visitor first peeks in from the side: click them to see what they offer, or click the X to send them away (they come back later). A couple of very rare cats visit too. Switch visitors off in the Toggles window (Vendors tab).
 
-# Useful Windows
-<b>Inventory</b> (top left) - your pixels, and your potions and devices.
-<b>Log</b> (bottom left) - your achievements and goals. (Click counts per pixel are in Settings > Stats.)
-<b>Toggles</b> (right edge) - switch pixel spawns, upgrades and minigames on or off.
-<b>Bank</b> (left edge) - what the Pixel Bank holds.
-Buttons slide out of the edge of the screen when your mouse gets close to them.
-
-# Saving
-The game saves by itself and when you quit. You can also Save and Load from the pause menu. Restart deletes everything.
-
-# If Something Goes Wrong
-The game writes error and crash reports to text files. If it crashes or misbehaves, open Pause > Report Folder and send the newest .txt file to the developer. If the game closed unexpectedly last time, a box tells you so when you start it.
+# Rare Finds
+<b>Dragon Cubes</b> - seven glassy orange cubes with 1 to 7 stars inside turn up extremely rarely, with no requirements. Hold all seven and a Summon the Dragon button appears: the dragon grants you one wish (a pet, a big payout, a Golden Hour of triple income, Ultra pixels or potions).
+<b>God Cubes</b> and <b>Prime Cubes</b> - even rarer, one of each at most. Hold all six Prime Cubes and the Wizard offers a Gauntlet to forge them into something special.
+The <b>Collection Log</b> (the book button in the Log window) shows what you have found, and its camera button walks you into a gallery of them.
 
 # Pets
-Very rarely, clicking a pixel gives you a pet: a pixel-sized cube of that type that roams the floor by itself, hopping and rolling around. You can only have one pet per pixel type, and each can be switched on or off in the Toggles window under Pets. Hover a pet to make it stand still, or click and drag it to pick it up and throw it. The Ghost pet floats instead of rolling. A pet that is switched on makes its pixel type spawn more often. Hovering a pet shows its name tag: click the pencil to rename it and change its outfit in a 3D view (drag to turn it, use the arrows to try outfits).
+Very rarely, collecting a pixel gives you a pet of that type: a little cube that roams the floor and makes its pixel come up more often. Hover a pet to stop it, drag it to throw it, and click the pencil on its name tag to rename it and dress it up. Switch pets on or off in the Toggles window (Pets tab).
 
-# Charge Booster and Lightning Rod
-Charge Booster | Place it, let Electric pixels link to it to fill its meter, then click it for a super-charged auto clicker. It dissolves after a number of auto clicks.
-Lightning Rod | Place it: lightning strikes it every few seconds and turns the old pixels around it into Electric pixels. It dissolves after a number of strikes.
+# Windows and Menus
+<b>Inventory</b> (top left) - your pixels and your consumables.
+<b>Log</b> (bottom left) - goals, achievements and the Collection Log.
+<b>Toggles</b> (right edge, after the Auto Clicker) - switch pixels, upgrades, minigames, visitors and pets on or off.
+<b>Rotation</b> (right edge) - every pixel that can come up now.
+<b>Pocket</b> (right edge) - your own window: pin pixels, skills, goals and notes, and set your own keys for any item in its Keybinds tab.
+<b>Skills</b> and <b>Bank</b> (left edge) - your skills, and what the Pixel Bank holds.
+<b>View window</b> ({key:ViewWindow}) - pick the camera: Top down (normal), Orbital, First person or Free cam, plus flat view and zoom. Ctrl + mouse wheel zooms.
+<b>Game Guide</b> (pause menu) - these controls and tips, and the Game Database where you can look up any pixel, pack, skill, item or recipe.
+Buttons slide out of the screen edge when your mouse gets close. Every menu button can get its own key in Settings > Change keybinds.
+"Did you know?" tips pop up now and then when things are calm; switch them off in Settings > Gameplay.
 
-# Cubie and the vendors
-Cubie | A suspicious cube who greets you at the start, shows you the shop once you have money, and gives you a gift pack.
-Seeds | Buy seeds in the shop's Consumables tab (or from the Farmer). Right-click a seed in the Inventory (Consumables > Seeds), then click the floor to plant it: it grows that pixel type. Rare pixels cost more seeds.
-Vendors | The Wizard, Tinkerer, Farmer (seeds) and Pixel Entrepreneur drop by as you progress. Switch any of them off in the Toggles menu (Vendors tab).
+# First Person
+Tick First person in the View window to shrink down and walk the floor. Click the clicker cube from anywhere by aiming at it, pick up husks, stick them together into builds, throw them, and chop wood husks with the axe (hotbar slot 1). Esc leaves.
 
-# Camera views
-First person | Open the View window with {key:ViewWindow} and tick First person to shrink to one and a half old pixels tall and run about on the floor. The game keeps running: old pixels still fall and you can nudge them gently as you run into them. Right-click a cube to pick it up (you can carry a few, stacked in front of you); right-click again puts the top one down and left-click throws it. Aim the crosshair at the clicker cube (any distance) and click to click it. Press {key:FirstPerson} again for the orbital camera: drag with the middle mouse button (or use the arrow keys) to swing round the cube and click it from any side, Ctrl + wheel zooms.
+# Saving and Offline Progress
+The game saves by itself and when you quit; you can also Save and Load slots from the pause menu (hold right-click on a slot to delete it). The Autosaves button lists recent autosaves to go back to. Restart (on the Stats screen) deletes everything.
+If your Auto Clicker was running when you left, you get a "Welcome back" payout for the time away.
 
-# UFO Helper (Robot Worker upgrade)
-UFO Helper | Buy the Robot Worker upgrade and a little UFO hovers about the map (never right over the cube) with a bubble showing an alien face. Click it, choose a device (Vacuum, Fan, Sorter, Charge Booster, Lightning Rod, Sprinkler) and place its ghost like you would the real one. Whenever that device runs out the UFO flies over and beams a new one down onto the ghost, already switched on, as long as you have one left. Or pick "Abduct a pixel into the bank" and it beams loose pixels of one type into your Pixel Bank. Click it again to change or stop the job.
+# If Something Goes Wrong
+Use <b>Give feedback</b> in the pause menu (or {key:Feedback}) to write what happened and add screenshots you can draw on. The game also keeps error reports in a CrashReports folder, and tells you at start if it closed unexpectedly last time.

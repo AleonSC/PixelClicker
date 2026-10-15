@@ -5,77 +5,132 @@
 // {key:TimeStop}, {key:TimeSlow}, {key:Hose}, {key:EventLog}, {key:RotateLeft}, {key:RotateRight}, {key:ViewWindow} are replaced by the player's current key bindings (Settings > Key Bindings).
 
 # Mouse
-Left-click the cube | Collect a pixel
-Left-click a button | Use it
+Left-click the cube | Hit the block (collect it)
+Hold right-click on the cube | Block Hold: pull the block out of the line
+Right-click a hazard block | Clear it safely (some need several clicks)
+Tap right-click on a skill's filler | Shuffle it back (starts a shuffle combo)
+Hover a block or husk | Show its tooltip
 Mouse to a screen edge | Slide out the docked buttons
-Right-click (inventory item) | Drink a potion / start placing a device
-Hold right-click (placed device) | Remove it
-Hold right-click ("Active:" line) | Cancel the potion
+Hold right-click on a potion line | Cancel the running potion (no refund)
 
 # Keyboard
 Esc | Pause menu / close the top window
-{key:TimeStop} | Stop and resume time (Time Stop; uses an energy meter, you can still click the cube)
-Arrow keys | Steer the snake during a Snake round (or use the on-screen arrows)
-{key:ViewWindow} | Open / close the View window: pick First person (WASD, mouse, Space, Shift; click the cube to click it; right-click a cube to carry it, right-click again drops it, left-click throws it; Esc leaves), Orbital (middle mouse drag or arrow keys turn round the cube) or Top down (the normal view); Ctrl + mouse wheel zooms the camera; tick Orthographic (flat) view (not in first person); zoom slider; Auto orbit and turn / tilt buttons
-{key:Feedback} | Give feedback (opens a window with a text box and screenshots you can draw on; saved to the Feedback folder). Also in Settings.
-{key:TimeSlow} | Slow time and back to normal (Time Slow upgrade; shares the Time Stop meter; slowed meteor pixels can be grabbed)
-{key:Hose} | Equip / put away the hose (Pixel Bank)
-{key:EventLog} | Open the whole event log (a new event only shows its newest line); press it again (or right-click) to hide it. Left-click a line to reopen its tip, mouse wheel scrolls
-{key:RotateLeft} or {key:RotateRight} | Turn a fan or sorter while placing it
-Mouse wheel | Turn a fan or sorter while placing it
-Mouse wheel while holding a pixel | Raise or lower it
-Ctrl + mouse wheel | Zoom the camera (the plain wheel never moves the camera)
-
-# Placing a Device
-Left-click the floor | Place a Vacuum Device or Fan
-Scroll or {key:RotateLeft} / {key:RotateRight} | Turn a Fan or the Sorter's pipe
-Left-click (Sorter) | Confirm the pipe's direction
-Left-click in the cone | Place the Sorter with that bend
-Hold Shift | Free placement (placing snaps to a grid and to turn steps by default)
-Right-click | Go back / cancel
+{key:ViewWindow} | Open / close the View window
+{key:TimeStop} | Stop / resume time (Time Stop upgrade)
+{key:TimeSlow} | Slow time / back to normal (Time Slow upgrade)
+{key:Hose} | Equip / put away the Pixel Bank hose
+{key:EventLog} | Show the whole event log (again to hide)
+{key:Feedback} | Give feedback (text box + screenshots)
+Alt (tap) | Cycle block tooltips: Full / Minimal / Off
+Alt (hold) | Peek at the other tooltip kind
+Space (Inventory pinned) | Flip between pixels and consumables
 
 # Pixel Grabbing
-Hold left-click on an old pixel | Pick it up and drag it
-Release | Drop or throw it
+Hold left-click on a husk | Pick it up and drag it
+Let go | Drop it, or throw it if you are moving
+Let go slowly | Set it down gently
 
-# Pixel Bank Hose
+# Block Hold
+Hold right-click on the cube | Hold the block while the meter drains
+Let go | The block goes back, next in line
+Hold one of the six basic blocks | Put a stake on it (green = pays more)
+Keep clicking while holding | Raises the stake and refills the meter
+
+# View and camera ({key:ViewWindow})
+Ctrl + mouse wheel | Zoom (or flying speed in Free cam)
+Middle mouse drag | Turn (and tilt in Orbital)
+Arrow keys | Turn / tilt in Orbital and Top down
+View window tick boxes | First person / Orbital / Top down / Free cam
+Orthographic tick box | Flat view (not in first person)
+Free cam: W A S D, Space / C | Fly about, up / down
+Free cam: Shift | Fly fast
+
+# First person
+W A S D / arrows | Walk
+Shift | Run
+Space | Jump
+Mouse | Look around
+Left-click the clicker cube | Click it
+Left-click a husk | Pick it up
+Mouse wheel (holding) | Closer / farther
+Hold right-click + mouse (holding) | Turn the held cube
+Tap left-click (holding) | Stick it on the white ghost, or set it down
+Hold left-click, let go (holding) | Throw it
+Left-click a build | Pick up the whole build
+Hold right-click on a stuck cube | Pry it loose
+Mouse wheel / 1-5 (empty hands) | Pick a hotbar slot (slot 1 = axe)
+Esc | Leave first person
+
+# Placing devices
+Right-click an item in the Inventory | Drink a potion / start placing a device
+Left-click the floor | Place the device
+Mouse wheel or {key:RotateLeft} / {key:RotateRight} | Turn it while placing
+Hold Shift | Free placement (no grid or turn steps)
+Right-click | Go back / cancel
+Left-click a placed device | Wake it up (its timer starts)
+Hold right-click on a placed device | Remove it (no refund)
+
+# Device controls
+Drag a carry handle | Move a Storage Crate, Recycler or Bait Bucket
+Mouse wheel / {key:RotateLeft} / {key:RotateRight} (dragging) | Turn it
+Recycler red button | Recycle the husks inside
+Click the Storage Crate | Store the husks lying on it
+Click a stored pixel | Take it back out
+Sorter: left-click (step 1) | Confirm the pipe's direction
+Sorter: left-click in the cone | Place it with that bend
+Sorter buttons 1-3 | Change how hard it spits
+Magnetized Sorter: click a pipe, then a spot | Move that exit pipe
+Magnetized Sorter: wheel over a pipe | Choose what that pipe shoots
+Conveyor Belt Kit: click, click | Lay a belt between two points
+Conveyor Belt Kit: mouse wheel | Raise or lower the belt's end
+Conveyor Belt Kit: right-click | End the chain
+
+# Pixel Bank hose ({key:Hose})
 Mouse wheel | Choose which stored pixel to use
-Left-click | Spit one out
-Move the mouse | The nozzle hangs from the ceiling above the spot you point at; the red laser dot shows where it is pointing
-Left-click | Drop the selected pixel onto the red dot
-Right-click | Suck up the old pixel the red dot is on
-Hold right-click | Suck up an area of the selected pixel type
 Click a Bank row | Select that pixel type
+Move the mouse | The nozzle follows; the red dot shows its aim
+Left-click | Drop the selected pixel on the red dot
+Right-click | Suck up the husk under the red dot
+Hold right-click | Suck up an area of the selected type
 
-# UFO Helper (Ride along)
-Mouse | Look around the cabin
-W A S D / Arrows | Walk about the cabin
-Esc | Climb out
-
-# Devices and Minigames
-Click buttons 1-3 on the Sorter | Change how hard it spits
-Drag the Sorter's force slider | Set exactly how hard it spits (the pipe's end bends it, dragging the ring turns it)
+# Minigames and visitors
+Click the ghost or meteor | Get the reward
 Click a wire (Bomb) | Cut it
-Click the ghost or meteor | Collect the reward
+Arrow keys or on-screen arrows | Steer the snake (Snake)
+Mouse or left / right arrows | Move the paddle (Breakout)
+Click two husks | Swap them (Sorting Race)
+Click every glowing spot | Catch the fish (Weak Spots)
+Click a peeking visitor | Start the visit
+X on a visitor's bubble | Send them away
 
 # Shop
 Shift-click a Value upgrade | Buy as many levels as you can afford
+Hold the blue ? button | Replay the shop tour
 
 # Crafting
 Click or drag an item | Put it in a box
 Right-click a box | Empty it
 
-# Log
-Click an achievement row | Switch Collector / Clicker
+# UFO Helper (ride along)
+Mouse | Look around the cabin
+W A S D / arrows | Walk about the cabin
+Esc | Climb out
 
-# Dev Tools
-Q (when ticked in Dev Tools) | Clear all old pixels
+# Collection Log gallery
+Mouse | Look around
+W A S D / arrows | Walk
+Shift | Run
+Esc | Leave
+
+# Moving popups and tips
+Hold left-click on an achievement popup | Pick it up; click to pin it, right-click resets
+Hold left-click on the Did you know box | Pick it up; click to drop or dock at an edge
+Quick click on the Did you know box | Close the tip
+
+# Saving
+Hold right-click on a save slot | Delete that save
 
 # Menu shortcuts
-(blank until you pick one in Settings > Key Bindings) | Open / close Inventory, Shop, Log, Crafting, Toggles, Pixel Bank and Skills (Backspace in the binding screen clears a key)
-
-# Magnetized Sorter
-Click an exit pipe, move, click again | Grab the pipe and put its end down anywhere in reach (right-click puts it back)
-Mouse wheel over an exit pipe | Choose which stored pixel type that pipe shoots out
-Hold left click on an achievement popup | Fills a small ring, then the popup follows the mouse: click to pin it there, right-click to put it back above the combo meter
-Hold left click on the Did you know box | It follows the mouse: click to put it down (at the left or right screen edge it docks there), right-click puts it back; a quick click closes the tip
+Settings > Change keybinds | Keys for Inventory, Shop, Log, Crafting, Toggles, Bank, Skills
+Backspace (binding screen) | Clear a key
+Pocket > Keybinds tab | Bind any potion, device or tool to your own key

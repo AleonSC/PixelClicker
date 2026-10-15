@@ -447,7 +447,7 @@ public class PixelViewWindow : MonoBehaviour
         tip.SetActive(false);
         string[] tips =
         {
-            "<b>First person controls</b>\nWASD  -  move\nShift  -  run\nSpace  -  jump\nClick the cube  -  click it\nRight-click a cube  -  carry it\n(again = drop, left-click = throw)\nEsc  -  leave\n{key:ViewWindow}  -  this window",
+            "<b>First person controls</b>\nWASD  -  move\nShift  -  run\nSpace  -  jump\nClick the cube  -  click it\nLeft-click a husk  -  pick it up\nMouse wheel  -  closer / farther\nTap left-click  -  set it down\nHold left-click, let go  -  throw\nEsc  -  leave\n{key:ViewWindow}  -  this window",
             "<b>Orbital controls</b>\nMiddle mouse drag  -  turn and tilt\nArrow keys  -  turn and tilt\nCtrl + mouse wheel  -  zoom\nTurn / tilt buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
             "<b>Top down controls</b>\nMiddle mouse drag  -  turn\nLeft / right arrow keys  -  turn\nCtrl + mouse wheel  -  zoom\nTurn buttons and Auto orbit  -  below\n{key:ViewWindow}  -  this window",
             "<b>Free cam controls</b>\nW / A / S / D  -  fly\nSpace / C  -  up / down\nShift  -  fast\nMiddle mouse drag or arrow keys  -  look\nCtrl + mouse wheel  -  flying speed\n{key:ViewWindow}  -  this window",

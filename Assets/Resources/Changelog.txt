@@ -1091,3 +1091,5 @@
 [2026-10-15 15:50 UTC] To-do: added the crank clicker idea (Auto Clicker starts as a crank that stores clicks, a Motor upgrade makes it fully automatic).
 [2026-10-15 16:10 UTC] The shop's Upgrades tab now lists the Pixel Bank above Time Stop.
 [2026-10-15 16:12 UTC] Game Database: the 'References in the game' heading no longer runs under the Pin to Pocket button (it stops short of it and shrinks to fit).
+[2026-10-15 16:19 UTC] Rewrote the Game Guide's Controls and How To Play texts to match the current game (husks, Block Hold and stakes, Cubie, skills and skill packs, the View window, shop sub-tabs, new minigames, rare cubes, windows, saving), removing retired controls and features.
+[2026-10-15 16:19 UTC] Fixed stale texts: the View window's first person tip (no more right-click carrying), skill pack descriptions no longer say they are chosen in Toggles, and the Stats screen says Husks / Ultra Holes instead of Old pixels / Ultra Pad.
