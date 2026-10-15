@@ -1056,3 +1056,4 @@
 [2026-10-15 13:15 UTC] Hold meter: the arc layers are now drawn as a mesh with real rounded ends (new PixelArcGraphic), so the blue fill starts at the bottom end of the track, rounds off, and its top end is round too.
 [2026-10-15 13:20 UTC] Recycler: carrying it no longer lets husks glitch through (carried things now move through physics and push husks aside), and it has a small hatch in the back wall you can click open / shut in first person to toss husks in by hand.
 [2026-10-15 13:21 UTC] Hold meter: it now fades out (0.35 s) when you move off the cube instead of vanishing at once (Inspector: meterFadeSeconds).
+[2026-10-15 13:24 UTC] Recycler: the back hatch and its frame glow and gently pulse yellow while your first person crosshair is on it (Inspector: hatchHighlightColor).

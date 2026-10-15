@@ -26,7 +26,7 @@
 //   drag one to carry the bin over the floor (scroll / Q / E turn it); everything inside is frozen into the bin while it is carried; not while processing.
 //   BACK HATCH: a small door in the back wall (the wall is built in four pieces round the hole, metal frame, slatted door with a handle). In first
 //   person, click it with the crosshair (within hatchReachHusks) and it slides up into the hole's top edge the same way the lid stretches
-//   (Hatch Pivot y scale 1 = shut, 0.03 = open; aim at the hole to shut it again), so husks can be tossed in by hand. It shuts while the bin works.
+//   (Hatch Pivot y scale 1 = shut, 0.03 = open; aim at the hole to shut it again; the door and frame glow hatchHighlightColor while the crosshair is on it), so husks can be tossed in by hand. It shuts while the bin works.
 //   MOVING: the carry handles move the bin through a kinematic Rigidbody (PixelCarryHandles), so loose husks are pushed instead of glitching through.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
@@ -578,25 +578,59 @@ public class PixelRecycler : MonoBehaviour
     /// <summary>First person: click the back hatch (crosshair on it, within reach) to open / shut it, so husks can be tossed in by hand.</summary>
     private void UpdateHatch()
     {
-        if (hatchPivot == null || hatchMoving || processing || !PixelFirstPerson.Active) return;
-        if (!PixelInput.LeftPressed() || PixelPauseMenu.IsPaused || Time.timeScale <= 0f) return;
-        if (!PixelFirstPerson.TryGetViewRay(out Ray ray)) return;
+        bool aimed = !processing && PixelFirstPerson.Active && !PixelPauseMenu.IsPaused && HatchAimed();
+        UpdateHatchHighlight(aimed);
+        if (!aimed || hatchMoving || !PixelInput.LeftPressed() || Time.timeScale <= 0f) return;
+        StartCoroutine(MoveHatch(!hatchOpen));
+    }
+
+    /// <summary>Is the first person crosshair on the hatch (its door, or the open hole) within reach?</summary>
+    private bool HatchAimed()
+    {
+        if (hatchPivot == null || !PixelFirstPerson.TryGetViewRay(out Ray ray)) return false;
         float reach = Unit(clicker) * Mathf.Max(1f, hatchReachHusks);
-        bool onHatch = false;
-        foreach (Collider c in hatchColliders) if (c != null && c.Raycast(ray, out _, reach)) { onHatch = true; break; }
-        if (!onHatch && hatchOpen)
+        foreach (Collider c in hatchColliders) if (c != null && c.Raycast(ray, out _, reach)) return true;
+        // An open hatch has its slats tucked away: the hole itself counts (aim at it to shut it again).
+        Vector3 local = transform.InverseTransformPoint(ray.origin), dir = transform.InverseTransformDirection(ray.direction);
+        float u = Unit(clicker), zb = (DepthHusks * u + 0.25f * u) * 0.5f;
+        if (Mathf.Abs(dir.z) < 0.001f) return false;
+        float k = (zb - local.z) / dir.z;
+        Vector3 p = local + dir * k;
+        return k > 0f && k * transform.lossyScale.x < reach && Mathf.Abs(p.x) <= HatchWidth(u) * 0.5f && p.y >= HatchBottom(u) && p.y <= HatchBottom(u) + HatchHeight(u);
+    }
+
+    [Tooltip("Colour the back hatch and its frame glow while the first person crosshair is on it.")]
+    [SerializeField] private Color hatchHighlightColor = new Color(1f, 0.9f, 0.4f, 1f);
+
+    private readonly List<Renderer> hatchRenderers = new List<Renderer>();
+    private readonly List<Color> hatchBaseColors = new List<Color>();
+    private float hatchGlow;
+
+    /// <summary>The hatch's door and frame glow (pulsing gently) while aimed at, fading back when not.</summary>
+    private void UpdateHatchHighlight(bool aimed)
+    {
+        if (hatchRenderers.Count == 0)
         {
-            // An open hatch has its slats tucked away: aim at the hole itself to shut it again.
-            Vector3 local = transform.InverseTransformPoint(ray.origin), dir = transform.InverseTransformDirection(ray.direction);
-            float u = Unit(clicker), zb = (DepthHusks * u + 0.25f * u) * 0.5f;
-            if (Mathf.Abs(dir.z) > 0.001f)
+            foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+                if (r.name.StartsWith("Hatch")) { hatchRenderers.Add(r); hatchBaseColors.Add(r.material.color); }
+            if (hatchRenderers.Count == 0) return;
+        }
+        float target = aimed ? 1f : 0f;
+        if (Mathf.Approximately(hatchGlow, target) && !aimed) return;
+        hatchGlow = Mathf.MoveTowards(hatchGlow, target, Time.unscaledDeltaTime / 0.12f);
+        float pulse = hatchGlow * (0.75f + 0.25f * Mathf.Sin(Time.unscaledTime * 6f));
+        for (int i = 0; i < hatchRenderers.Count; i++)
+        {
+            Renderer r = hatchRenderers[i];
+            if (r == null) continue;
+            Material m = r.material;
+            m.color = Color.Lerp(hatchBaseColors[i], hatchHighlightColor, pulse * 0.55f);
+            if (m.HasProperty("_EmissionColor"))
             {
-                float k = (zb - local.z) / dir.z;
-                Vector3 p = local + dir * k;
-                onHatch = k > 0f && k < reach && Mathf.Abs(p.x) <= HatchWidth(u) * 0.5f && p.y >= HatchBottom(u) && p.y <= HatchBottom(u) + HatchHeight(u);
+                m.EnableKeyword("_EMISSION");
+                m.SetColor("_EmissionColor", hatchHighlightColor * (pulse * 0.9f));
             }
         }
-        if (onHatch) StartCoroutine(MoveHatch(!hatchOpen));
     }
 
     private IEnumerator MoveHatch(bool open)
