@@ -263,7 +263,7 @@ public partial class PixelShop
         };
     }
 
-    /// <summary>Default Evil Tree pack (Minigames tab): switches on the evil tree minigame. Needs the Woodcutter's Pack first.</summary>
+    /// <summary>Default Evil Tree pack (Minigames tab): switches on the evil tree minigame. Needs the Lumberjack's Pack first.</summary>
     private static ShopPack CreateEvilTreePack(int requiresWoodIndex)
     {
         return new ShopPack
@@ -762,7 +762,7 @@ public partial class PixelShop
     }
 
     /// <summary>
-    /// Default Woodcutter's Pack (Pixels tab): cheap, the intro skill. Six wood blocks for the Woodcutting skill: Wood, Bark, Sap, Leaf, Heartwood and
+    /// Default Lumberjack's Pack (Pixels tab): cheap, the intro skill. Six wood blocks for the Woodcutting skill: Wood, Bark, Sap, Leaf, Heartwood and
     /// the fillers Twig, Pinecone and Moss, plus the Termite Hive hazard. They only spawn while Woodcutting is the pack in play (Skills window).
     /// </summary>
     private static ShopPack CreateWoodPixelPack()
@@ -774,11 +774,11 @@ public partial class PixelShop
         };
         return new ShopPack
         {
-            displayName = "Woodcutter's Pack",
+            displayName = "Lumberjack's Pack",
             tab = ShopTab.Pixels,
             description = "Adds the Woodcutting skill and the wood blocks: Wood, Bark, Sap, Leaf, Heartwood (rare) and the fillers Twig, Pinecone and Moss, plus a Termite Hive to watch out for and a Whetstone (hold it with Block Hold and your clicks count for more). They only spawn while Woodcutting is the pack in play (Skills window). The fillers are useless and most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more.",
             requirements = Needs(-1),
-            costs = new[] { new PackCost { type = PixelClicker.PixelType.White, amount = 250 } },
+            costs = AllSix(250),   // 250 of each pure pixel (White, Gray, Black, Red, Green, Blue)
             rewardTiers = new[]
             {
                 Block(PixelClicker.PixelType.Wood, "Wood Pixels", new Color(0.6f, 0.4f, 0.22f, 1f), 2, 3, 1.0f),

@@ -1481,7 +1481,7 @@ public class PixelLog : MonoBehaviour
             }
         }
 
-        // After the Auto Clicker (and Cubie's Toggles tutorial that hints at skills; with tips off straight away): buy the Woodcutter's Pack, the first skill.
+        // After the Auto Clicker (and Cubie's Toggles tutorial that hints at skills; with tips off straight away): buy the Lumberjack's Pack, the first skill.
         if (shop != null && shop.ShopAvailable && shop.AutoClickerBought() && (PixelStats.Total(PixelTogglesTutorial.DoneKey) >= 1d || !PixelHints.TipsEnabled) &&
             shop.TryGetWoodcutterGoal(out string woodName, out string woodCost, out double woodHave, out double woodNeed))
         {

@@ -212,7 +212,7 @@ public class PixelHints : MonoBehaviour
             case "pixel_Dirt": return "You unlocked the Farmer's Pack!";
             case "pixel_Fish": return "You unlocked the Angler's Pack!";
             case "pixel_Berry": return "You unlocked the Forager's Pack!";
-            case "pixel_Wood": return "You unlocked the Woodcutter's Pack!";
+            case "pixel_Wood": return "You unlocked the Lumberjack's Pack!";
             case "pixel_Rock": return "You unlocked Rock Pixels!";
             case "dragon_first": return "You found a Dragon Cube!";
             case "god_first": return "You found a God Cube!";
@@ -282,7 +282,7 @@ public class PixelHints : MonoBehaviour
         H("woodworking", "Your woodchipper and log rack are set up! While you train Woodcutting they stand at the sides of the screen. Drag old blocks into them with Pixel Grabbing for bonus XP: scraps (Bark, Sap, Leaf and Twig) go in the chipper, logs (Wood and Heartwood) on the rack. The blocks are used up, but they fill your bonus XP bank, which doubles the XP of your next chops."),
         H("pixel_Fish", "Angler's Pack unlocked! The Fishing skill: very common Water, Seaweed, Shell, rare Pearl and rare Fish, plus a stinging Jellyfish to avoid. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Click a Fish to start a Weak Spots round: hit every spot to catch it, miss and it gets away. Bait blocks drop pellets that bring more fish - but a Jellyfish that goes off fries them all. Rarer finds: a Message in a Bottle (break it to unroll a treasure map, then dig up the X; right-click it to ignore it) and the mighty Whale, which fights the line and runs from your mouse while you click it down."),
         H("pixel_Berry", "Forager's Pack unlocked! The Foraging skill: Berry, Mushroom, Herb and rare Truffle blocks, plus Weeds as filler and a spreading Mold to deal with (shake infected pixels clean). Open the Skills window to train it: its blocks replace the basic pixels while it is in play. Weeds are a useless filler that gets rarer as you level."),
-        H("pixel_Wood", "Woodcutter's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your old pixels, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level."),
+        H("pixel_Wood", "Lumberjack's Pack unlocked! The Woodcutting skill: wood blocks (Wood, Bark, Sap, Leaf, Heartwood) and three fillers (Twig, Pinecone, Moss) plus a Termite Hive to avoid: break it and termites go for your old pixels, so click them to save them. Open the Skills window to train it: its blocks replace the basic pixels while it is in play. The fillers are useless and get rarer as you level."),
         H("pixel_Rock", "Rock Pixels unlocked! Rock is Mining's filler block: plain and almost worthless, and most of what appears at first. As your mining level rises it gets rarer."),
         H("pixel_Copper", "Prospector's ores unlocked! Copper, Tin, Iron, Silver, Gold, Obsidian and Bedrock are tough rocks: hit them to crack them open (obsidian and bedrock take 15-20 clicks but pay a lot). A glittering one is a rich vein and pays 5x. The ores only spawn while Mining is the skill you are training: pick it in the Skills window."),
         H("pixel_Water", "Water Pixels unlocked! When an old Water pixel splashes on the ground near Seed sprouts or the Seed pet, they grow and sow much faster for a while. The water is used up either way. Stream them over your sprouts with a Sorter!"),
@@ -317,6 +317,7 @@ public class PixelHints : MonoBehaviour
             Hint existing = hints.Find(h => h != null && h.id == d.id);
             if (existing != null)
             {
+                if (existing.text != null && existing.text.Contains("Woodcutter's Pack")) { existing.text = existing.text.Replace("Woodcutter's Pack", "Lumberjack's Pack"); changed = true; }   // (renamed pack)
                 if (string.IsNullOrEmpty(existing.shortText) && !string.IsNullOrEmpty(d.shortText)) { existing.shortText = d.shortText; changed = true; }
                 continue;
             }

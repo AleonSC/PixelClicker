@@ -4,7 +4,7 @@
 //   PixelTogglesTutorial.Request() (stat guide.togglesDue, saved) INSTEAD OF the plain hint box beside the Toggles tab (with tips off the old hint box still shows). At the next calm moment (title screen over,
 //   no Cubie visit, no other tip / window / tutorial, shop closed, not paused, startDelay 2 s) the screen dims and pauses (PixelTutorialDim) and Cubie narrates like the shop tutorial (BeginNarration, stick
 //   at the part each step describes via PixelGuideVendor.PointOverride, small Got it boxes that follow the Toggles window - PixelNotice nearScreen): the Toggles tab, the Upgrades group (where the Auto Clicker
-//   is ticked on), the other groups. (The old last step, a hint at skills and the Woodcutter's Pack, was removed: the Skills tab now appears with Standard's level-2 popup.)
+//   is ticked on), the other groups. (The old last step, a hint at skills and the Lumberjack's Pack, was removed: the Skills tab now appears with Standard's level-2 popup.)
 //   Steps are an Inspector list (empty = the built-ins). Done = stat guide.togglesTutorial
 //   (Settings > Replay tutorial clears it and, when the Toggles tab is there, asks for it again). Skipped entirely when TipsEnabled is off.
 // ---------------------------------------------------
@@ -90,7 +90,7 @@ public class PixelTogglesTutorial : MonoBehaviour
         ready += Time.unscaledDeltaTime;
         if (ready < (startDelay > 0f ? startDelay : 2f)) return;
         if (steps == null || steps.Count == 0) steps = DefaultSteps();
-        steps.RemoveAll(st => st != null && st.text != null && st.text.Contains("Woodcutter's Pack"));   // (skills are introduced by Standard's level-2 popup now, not here; also drops it from a saved Inspector list)
+        steps.RemoveAll(st => st != null && st.text != null && (st.text.Contains("Lumberjack's Pack") || st.text.Contains("Woodcutter's Pack")));   // (skills are introduced by Standard's level-2 popup now, not here; also drops it from a saved Inspector list)
         running = true;
         PixelTutorialDim.Begin(() => ShowStep(0));
     }

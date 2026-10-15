@@ -1124,7 +1124,7 @@ public partial class PixelShop
         {
             int d = SectionOf(packs[a]).CompareTo(SectionOf(packs[b]));
             if (d != 0) return d;
-            if (IsWoodcutterPack(packs[a]) != IsWoodcutterPack(packs[b])) return IsWoodcutterPack(packs[a]) ? -1 : 1;   // the Woodcutter's Pack stands first in the Pixels tab
+            if (IsWoodcutterPack(packs[a]) != IsWoodcutterPack(packs[b])) return IsWoodcutterPack(packs[a]) ? -1 : 1;   // the Lumberjack's Pack stands first in the Pixels tab
             return a.CompareTo(b);
         });
         int lastSection = -1;
@@ -1261,7 +1261,7 @@ public partial class PixelShop
     private readonly bool[] sectionCollapsed = { false, true, true };   // the two sections start collapsed
 
     /// <summary>Which Pixels-tab section a pack belongs to: 0 = the RGB pack (listed above the sections, hidden once bought), 1 = single toggleable pixels (Glass, Luminescent, Obsidian...), 2 = skill packs (many pixels at once).</summary>
-    /// <summary>The Woodcutter's Pack (the first skill pack): it is listed FIRST in the Pixels tab, above the RGB pack and the sections, and stays listed once bought.</summary>
+    /// <summary>The Lumberjack's Pack (the first skill pack): it is listed FIRST in the Pixels tab, above the RGB pack and the sections, and stays listed once bought.</summary>
     private static bool IsWoodcutterPack(ShopPack pack) => pack != null && Rewards(pack, PixelClicker.PixelType.Wood);
 
     private static int SectionOf(ShopPack pack)

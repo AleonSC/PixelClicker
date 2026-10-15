@@ -176,7 +176,7 @@ How far ahead you can see is itself a reward: early on you react, later you plan
 | 6 | **Heartwood** cores can roll. |
 | 7 | Perk: Keen eye - see the next two blocks. |
 | 8 | **Birch** trees. First skill point (see "Skill tree"). |
-| 10 | Evil Tree minigame can appear (it needs the Woodcutter's Pack today; gate it at 10). |
+| 10 | Evil Tree minigame can appear (it needs the Lumberjack's Pack today; gate it at 10). |
 | 12 | **Maple** trees. Lumberjack sells Lumberjack's Focus (for Termite Hives); the **Infestation** skill node can be bought. |
 | 15, 20, 25, 30 | Mastery perks (see "Perks"). |
 
@@ -264,7 +264,7 @@ Wood goods today only sell to the Lumberjack. Proposed sinks, to decide later: M
 ## Saves and migrations
 
 - **Tree state** (the species, the position in its slot list and what its runs / wildcards rolled, whether it is infested) is saved with the skill state so a reload does not reroll a half-chopped tree; an old save simply starts in the filler rotation.
-- **Whetstone** leaves the Woodcutter's Pack: a `packDataVersion` bump removes it from saved packs (the tier stays unlocked so counts are not lost) and adds it to Mining's side.
+- **Whetstone** leaves the Lumberjack's Pack: a `packDataVersion` bump removes it from saved packs (the tier stays unlocked so counts are not lost) and adds it to Mining's side.
 - The Hive's per-pack shares (`hazardBaseShare` / `hazardPerLevelShare`) and the filler fade (`fillerStartShare` / `fillerEndShare`) are no longer used while tree mode is on; they stay for the other skills until they move over.
 
 ## Build plan (in steps)

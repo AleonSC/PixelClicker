@@ -1,6 +1,6 @@
 // ---- System notes ----
 // PixelEvilTreeMinigame.cs
-//   Evil Tree minigame (id eviltree, pack unlocksMinigame = "eviltree", Minigames tab, needs the Woodcutter's Pack; extends PixelMinigame): now and then (firstDelay 60 s, then minInterval 150 ..
+//   Evil Tree minigame (id eviltree, pack unlocksMinigame = "eviltree", Minigames tab, needs the Lumberjack's Pack; extends PixelMinigame): now and then (firstDelay 60 s, then minInterval 150 ..
 //   maxInterval 300 s, PixelMinigameLimits.AllowAnother) a sapling sprouts on the floor near the cube (PixelBait.FindGround, kept inside the view) and GROWS over growSeconds (14) into a giant tree
 //   (heightInCubes 5 cubes tall) with glowing eyes and a jagged mouth. It FLAILS so it is hard to click: the whole tree leans and jerks to new spots (the click colliders move with it), its arms
 //   whip about, and it flails harder as it grows. It has a HEALTH BAR (health 40, each manual click on it does damagePerClick 1; the auto clicker never hits it): at 0 it topples over and pays

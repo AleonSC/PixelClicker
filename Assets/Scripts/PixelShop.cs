@@ -1021,7 +1021,7 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
-        // The Wood Pixel pack becomes the Woodcutter's Pack (Woodcutting skill): six wood blocks and a hazard.
+        // The Wood Pixel pack becomes the Lumberjack's Pack (Woodcutting skill): six wood blocks and a hazard.
         if (packDataVersion < 17)
         {
             if (packs != null)
@@ -1265,7 +1265,7 @@ public partial class PixelShop : MonoBehaviour
 
         if (packDataVersion < 27)
         {
-            // Woodcutting: the Whetstone joins the Woodcutter's Pack as a base block.
+            // Woodcutting: the Whetstone joins the Lumberjack's Pack as a base block.
             PixelClicker.PixelTier stoneDef = null;
             foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Whetstone) stoneDef = t;
             if (packs != null && stoneDef != null)
@@ -1281,7 +1281,7 @@ public partial class PixelShop : MonoBehaviour
 
         if (packDataVersion < 28)
         {
-            // Woodcutting: the Acorn joins the Woodcutter's Pack as a base block.
+            // Woodcutting: the Acorn joins the Lumberjack's Pack as a base block.
             PixelClicker.PixelTier acornDef = null;
             foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Acorn) acornDef = t;
             if (packs != null && acornDef != null)
@@ -1312,7 +1312,7 @@ public partial class PixelShop : MonoBehaviour
 
         if (packDataVersion < 30)
         {
-            // Woodcutting: the Pesticide joins the Woodcutter's Pack as a base block.
+            // Woodcutting: the Pesticide joins the Lumberjack's Pack as a base block.
             PixelClicker.PixelTier pestDef = null;
             foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Pesticide) pestDef = t;
             if (packs != null && pestDef != null)
@@ -1328,7 +1328,7 @@ public partial class PixelShop : MonoBehaviour
 
         if (packDataVersion < 31)
         {
-            // Woodcutting: Pinecone and Moss (the other two fillers) join the Woodcutter's Pack, and the Hornet Nest became the Termite Hive.
+            // Woodcutting: Pinecone and Moss (the other two fillers) join the Lumberjack's Pack, and the Hornet Nest became the Termite Hive.
             System.Collections.Generic.List<PixelClicker.PixelTier> fillerDefs = new System.Collections.Generic.List<PixelClicker.PixelTier>();
             foreach (PixelClicker.PixelTier t in CreateWoodPixelPack().rewardTiers) if (t.type == PixelClicker.PixelType.Pinecone || t.type == PixelClicker.PixelType.Moss) fillerDefs.Add(t);
             if (packs != null)
@@ -1407,6 +1407,22 @@ public partial class PixelShop : MonoBehaviour
             changed = true;
         }
 
+        if (packDataVersion < 38)
+        {
+            // The Woodcutter's Pack is the Lumberjack's Pack now and costs 250 of each pure pixel.
+            if (packs != null)
+                foreach (ShopPack p in packs)
+                {
+                    if (p == null || (p.displayName != "Woodcutter's Pack" && p.displayName != "Lumberjack's Pack")) continue;
+                    ShopPack fresh = CreateWoodPixelPack();
+                    p.displayName = fresh.displayName;
+                    p.costs = fresh.costs;
+                    if (p.description != null) p.description = p.description.Replace("Woodcutter's Pack", "Lumberjack's Pack");
+                }
+            packDataVersion = Mathf.Max(packDataVersion, 38);
+            changed = true;
+        }
+
         if (packDataVersion < 37)
         {
             // Mold and Truffle got clearly different colours (their Inventory swatches too): Mold pale blue-green, Truffle near-black.
@@ -1431,10 +1447,10 @@ public partial class PixelShop : MonoBehaviour
 
         if (packDataVersion < 36)
         {
-            // The Woodcutter's Pack (the first skill pack, Cubie's 'starter set') costs a little more: 250 White (was 150).
+            // The Lumberjack's Pack (the first skill pack, Cubie's 'starter set') costs a little more: 250 White (was 150).
             if (packs != null)
                 foreach (ShopPack p in packs)
-                    if (p != null && p.displayName == "Woodcutter's Pack") p.costs = CreateWoodPixelPack().costs;
+                    if (p != null && (p.displayName == "Woodcutter's Pack" || p.displayName == "Lumberjack's Pack")) p.costs = CreateWoodPixelPack().costs;
             packDataVersion = Mathf.Max(packDataVersion, 36);
             changed = true;
         }
@@ -2086,7 +2102,7 @@ public partial class PixelShop : MonoBehaviour
     public bool TryGetAutoClickerGoal(out string packName, out string costText, out double have, out double need)
         => TryGetPackGoal(p => p.unlocksAutoClicker, false, out packName, out costText, out have, out need);
 
-    /// <summary>The Woodcutter's Pack goal (shown after the Toggles tutorial's skills hint): false once it is bought.</summary>
+    /// <summary>The Lumberjack's Pack goal (shown after the Toggles tutorial's skills hint): false once it is bought.</summary>
     public bool TryGetWoodcutterGoal(out string packName, out string costText, out double have, out double need)
         => TryGetPackGoal(p => Rewards(p, PixelClicker.PixelType.Wood), false, out packName, out costText, out have, out need);
 
@@ -2459,7 +2475,7 @@ public partial class PixelShop : MonoBehaviour
                 {
                     if (PixelClicker.IsOre(reward.type) && reward.type != PixelClicker.PixelType.Copper) continue; // one tip for the whole Prospector's Pack
                     if (PixelClicker.IsFarm(reward.type) && reward.type != PixelClicker.PixelType.Dirt) continue;   // and one for the Farmer's Pack
-                    if (PixelClicker.IsWoodBlock(reward.type)) continue;   // no Got-it box for the Woodcutter's Pack (the Skills window introduces Woodcutting)
+                    if (PixelClicker.IsWoodBlock(reward.type)) continue;   // no Got-it box for the Lumberjack's Pack (the Skills window introduces Woodcutting)
                     if (PixelClicker.IsFishBlock(reward.type) && reward.type != PixelClicker.PixelType.Fish) continue;   // and one for the Angler's Pack
                     if (reward.type == PixelClicker.PixelType.Obsidian && Rewards(pack, PixelClicker.PixelType.Copper)) continue;   // Obsidian comes with the Prospector's Pack
                     if (PixelClicker.IsForageBlock(reward.type) && reward.type != PixelClicker.PixelType.Berry) continue;   // and one for the Forager's Pack

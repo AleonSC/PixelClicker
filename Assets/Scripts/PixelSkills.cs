@@ -252,7 +252,7 @@ public partial class PixelSkills : MonoBehaviour
                 description = "Swap the basic cubes for wood blocks: wood, bark, sap, leaves and rare heartwood, plus three useless filler blocks (twigs, pinecones and moss) that are most of what you see at first; as your woodcutting level rises it gets rarer and the other blocks show up more. Watch out for the termite hive. Chop blocks for woodcutting XP: the simple first skill.",
                 replaces = "Monochrome, RGB", spawns = "Twig, Wood, Bark, Sap, Leaf, Heartwood",
                 xpFrom = "Collecting wood blocks",
-                unlockHint = "Buy the Woodcutter's Pack in the Shop",
+                unlockHint = "Buy the Lumberjack's Pack in the Shop",
                 baseXp = 60f, xpGrowth = 1.45f,
                 types = new[] { PixelClicker.PixelType.Wood, PixelClicker.PixelType.Bark, PixelClicker.PixelType.Sap, PixelClicker.PixelType.Leaf,
                                 PixelClicker.PixelType.Heartwood, PixelClicker.PixelType.Twig, PixelClicker.PixelType.Pinecone, PixelClicker.PixelType.Moss, PixelClicker.PixelType.HornetNest, PixelClicker.PixelType.GreatOak, PixelClicker.PixelType.Whetstone, PixelClicker.PixelType.Acorn, PixelClicker.PixelType.Pesticide },
@@ -519,6 +519,8 @@ public partial class PixelSkills : MonoBehaviour
         // Texts saved in older scenes still say the skill packs replace Glass and Luminescent too.
         foreach (SkillPack pack in packs)
         {
+            if (pack.unlockHint != null) pack.unlockHint = pack.unlockHint.Replace("Woodcutter's Pack", "Lumberjack's Pack");   // (renamed pack)
+            if (pack.description != null) pack.description = pack.description.Replace("Woodcutter's Pack", "Lumberjack's Pack");
             if (pack.replaces != null) pack.replaces = pack.replaces.Replace("Monochrome, RGB, Glass, Luminescent", "Monochrome, RGB");
             if (pack.id == OfflineId)
             {
