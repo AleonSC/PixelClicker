@@ -707,7 +707,8 @@ public partial class PixelPets : MonoBehaviour
         }
 
         UpdateTag(allowed);
-        HoveringPet = hovered != null || held != null || (tagPet != null && TagVisible);
+        UpdatePetMenu(allowed);   // right-click a pet: 'Pet away' (PixelPetsMenu)
+        HoveringPet = hovered != null || held != null || (tagPet != null && TagVisible) || MenuOpen;
         if (HoveringPet && !blockingClicks) { blockingClicks = true; PixelClicker.ExternalClickBlock = true; }
         else if (!HoveringPet && blockingClicks) { blockingClicks = false; PixelClicker.ExternalClickBlock = PixelBank.HoseOn; }
     }

@@ -8,3 +8,6 @@ Pets (added by `PixelClicker.Awake`, singleton `PixelPets.Instance`): every clic
 
 ## Which pixels have pets
 `PixelPets.CanHavePet(type)`: every pixel type except the seven Dragon Cubes and the hazards (Pest, Gas Pocket, Hornet Nest, Toadstool, Jellyfish, Mold). It used to skip all standalone pixels (Fire, the ores, the skill blocks...); they have pets now. The pet find roll (`OnCollected`), the 'Pet' achievements (`PixelAchievements.RegisterPetAchievements`, one per pet type) and the Game Database's Pet entries all use it. The Collect / Click achievements follow the same idea (`PixelAchievements.NoPixelAchievements`: only Dragon Cubes and hazards are left out).
+
+
+**Right-click menu (2026-10-16, `PixelPetsMenu.cs`):** right-click a pet for a small menu at the pointer with its name and 'Pet away' (`SetOn(type, false)`, turned back on in Toggles > Pets). Clicking elsewhere / Escape closes it.

@@ -64,6 +64,7 @@
 | `PixelCrafting.cs` | Crafting (shop pack with unlocksCrafting, Upgrades tab): | `docs/systems/PixelCrafting.md` |
 | `PixelPets.cs` | Pets (added by PixelClicker.Awake, singleton PixelPets.Instance): | `docs/systems/PixelPets.md` |
 | `PixelPetsCustomize.cs` | Part of partial class PixelPets: names and outfits. | `docs/systems/PixelPetsCustomize.md` |
+| `PixelPetsMenu.cs` | Part of partial class PixelPets: right-click a pet for a small menu (its name + 'Pet away' = switch it off like its Toggles > Pets switch). | in the header comment of `PixelPetsMenu.cs` |
 | `PixelPetsStudio.cs` | Part of partial class PixelPets: the Outfit Studio (button 'Design outfits' in the Customize Pet window, own canvas customizeSortingOrder + 20, PixelWindows 170). | in the header comment of `PixelPetsStudio.cs` |
 | `PixelToggles.cs` | Toggles window: a button docked to the middle of the right edge (PixelHud.Dock with anchor (1, 0.5) = side docking, slides sideways) stays hidden until the Auto Clicker is bought (hideUntilAutoClicker | `docs/systems/PixelToggles.md` |
 | `PixelMyWindow.cs` | Pocket, formerly My Window (the player's own window; component added by PixelClicker.Awake): | in the header comment of `PixelMyWindow.cs` |
