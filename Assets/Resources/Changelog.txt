@@ -1122,3 +1122,4 @@
 [2026-10-16 01:33 UTC] Notes: the user reads the code now and then to learn, so it stays readable and commented (second to keeping Claude's work safe).
 [2026-10-16 01:39 UTC] Code split 1/6: the husk helper components (ScaledGravity, OldPixelImpact, OldPixelPopIn, OldPixelFlight, OldPixelDespawn, OldPixelInfo) moved out of PixelClicker.cs into their own file PixelHusks.cs (no behaviour change).
 [2026-10-16 01:39 UTC] Code split 2/6: PixelClicker's data shapes (the PixelType enum, PixelTier, the block type checks) moved into PixelClickerTypes.cs, still part of the same class (no behaviour change).
+[2026-10-16 01:40 UTC] Code split 3/6: the 60-odd Pixel Looks fix-up steps moved out of PixelClicker.Awake into RunLookFixups in PixelClickerLookFixups.cs (same order, no behaviour change).
