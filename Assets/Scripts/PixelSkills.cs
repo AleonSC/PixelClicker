@@ -512,6 +512,7 @@ public partial class PixelSkills : MonoBehaviour
             System.Collections.Generic.List<TreeNode> merged = new System.Collections.Generic.List<TreeNode>(pack.nodes ?? new TreeNode[0]);
             foreach (TreeNode def in DefaultNodes(pack.id))
                 if (!merged.Exists(n => n.id == def.id)) merged.Add(def);
+                else if (def.id == "hold" && pack.id == StandardId) { TreeNode saved = merged.Find(n => n.id == def.id); if (saved.description != null && saved.description.Contains("Holding a basic block puts a stake")) saved.description = def.description; }   // (2026-10-16: right-hold is each block's second action)
             pack.nodes = merged.ToArray();
         }
 
@@ -597,7 +598,7 @@ public partial class PixelSkills : MonoBehaviour
             return new[]
             {
                 // Two ways to vary plain clicking - the first skill point picks one, later points can take the other and branch on.
-                new TreeNode { id = "hold", displayName = "Block Hold", description = "Hold the RIGHT mouse button on the cube to pull its block out of the rotation while a meter drains. Holding a basic block puts a stake on it: it may pay much more when it comes round again... or nothing.", row = 0, cost = 1, implemented = true },
+                new TreeNode { id = "hold", displayName = "Block Hold", description = "Unlocks the right mouse button's HOLD on the cube's block: a second action that depends on the block. On the pure pixels (white, gray, black, red, green, blue) holding puts a stake on it - it may pay much more when it comes round again, or nothing. Skill blocks do their own job instead (Pesticide gives charges, the Whetstone rapid clicks...). The held block steps out of the rotation while a meter drains.", row = 0, cost = 1, implemented = true },
                 new TreeNode { id = "lucky", displayName = "Lucky stake", description = "Stakes pay off 10% more often.", requires = "hold", row = 0, cost = 1, implemented = true },
                 new TreeNode { id = "highroller", displayName = "High roller", description = "Stakes grow 50% faster while you hold.", requires = "lucky", row = 0, cost = 2, implemented = true },
                 new TreeNode { id = "power", displayName = "Power Click", description = "Hold the LEFT mouse button on the cube to charge, let go at full charge: one click worth 25 clicks. Long cooldown.", row = 2, cost = 1, implemented = true },

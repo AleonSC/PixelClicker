@@ -126,7 +126,7 @@ public class PixelHints : MonoBehaviour
 
     [TextArea(2, 5)]
     [Tooltip("Fourth new-game intro tip, right after the one about clicking: the right click (Block Hold and its stake). Empty = the built-in text.")]
-    [SerializeField] private string introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing.";
+    [SerializeField] private string introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.";
 
     [TextArea(2, 5)]
     [Tooltip("Tip shown with the Inventory open.")]
@@ -341,6 +341,7 @@ public class PixelHints : MonoBehaviour
 
     private void Awake()
     {
+        if (introRightClickText == "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing.") introRightClickText = "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held.";   // (2026-10-16: right-hold is each block's second action)
         if (instance != null && instance != this) { Destroy(this); return; }
         instance = this;
         EnsureDefaultHints();
@@ -947,7 +948,7 @@ public class PixelHints : MonoBehaviour
                     if (hold == null || !hold.Active) { finish(); return; }   // Block Hold comes from the Standard skill tree now: no right-click tip until it is unlocked
                     // Fourth tip, right after the one about clicking: the right click (Block Hold + stake).
                     string right = string.IsNullOrEmpty(introRightClickText)
-                        ? "Try the right mouse button too: HOLD it on the block on the cube to pull the block out of the rotation. On the basic blocks (black, gray, white, red, green and blue) the longer you hold (watch the meter by your cursor), the more the block is worth when it comes round again - but the stake can also go bad and pay nothing."
+                        ? "Try the right mouse button too: HOLD it on the block on the cube. It's each block's second action. On the pure pixels (black, gray, white, red, green and blue) it puts a stake on the block - the longer you hold (watch the meter by your cursor), the more it is worth when it comes round again, but the stake can also go bad and pay nothing. Skill blocks you meet later do their own thing when held."
                         : introRightClickText;
                     MarkSeen("stake_intro");   // (the later 25-click reminder is not needed now)
                     PixelNotice.Show(right, 0f, compact: true, onClosed: () => finish());

@@ -6,7 +6,7 @@
 
 # Mouse
 Left-click the cube | Hit the block (collect it)
-Hold right-click on the cube | Block Hold: pull the block out of the line
+Hold right-click on the cube | The block's second action (Block Hold): a stake on pure pixels, the block's own job on skill blocks
 Right-click a hazard block | Clear it safely (some need several clicks)
 Tap right-click on a skill's filler | Shuffle it back (starts a shuffle combo)
 Hover a block or husk | Show its tooltip
@@ -33,7 +33,7 @@ Let go slowly | Set it down gently
 # Block Hold
 Hold right-click on the cube | Hold the block while the meter drains
 Let go | The block goes back, next in line
-Hold one of the six basic blocks | Put a stake on it (green = pays more)
+Hold a pure pixel (white, gray, black, red, green, blue) | Put a stake on it (green = pays more)
 Keep clicking while holding | Raises the stake and refills the meter
 
 # View and camera ({key:ViewWindow})

@@ -6,8 +6,8 @@
 You can hold the left mouse button on this box to move it. Put it at a screen edge to dock it there.
 Every pixel type is its own currency. Collect enough of one and the next type unlocks.
 The pixels that fall off the cube are husks. They are material, not money - find something useful to do with them before they fade.
-Hold the right mouse button on the cube to keep its block out of the rotation for a while (Block Hold).
-Holding a plain block with Block Hold puts a stake on it: when it comes round again it pays more - or nothing.
+Holding the right mouse button on the cube is each block's second action (Block Hold, from Standard's skill tree): a stake on pure pixels, a special job on skill blocks.
+Holding a pure pixel (white, gray, black, red, green, blue) puts a stake on it: when it comes round again it pays more - or nothing.
 Hover over the cube or a husk to see what it is. The Pixel Guide tells you more about every block.
 Every husk that lands in the Recycler pays back half its value and some XP. Several of the same colour in a row build a streak for more XP.
 Grab the handles on the Recycler or the Storage Crate to carry them somewhere else. Scroll while carrying to turn them.

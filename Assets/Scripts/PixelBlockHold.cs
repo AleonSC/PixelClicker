@@ -11,7 +11,9 @@
 //   A right press within rightSpamGapSeconds (0.45) of another right press or of a hazard right click never starts a hold (spamming a hazard away must not grab the next block).
 //   STALL: PixelTier.stallsHold / stallSeconds (Great Oak): every click on such a block freezes the drain for stallSeconds and adds stallRefill (0.04) of the meter (PixelBlockHold.Stall), the meter turns icy while frozen.
 //   UNLOCKED BY THE STANDARD SKILL TREE (node 'hold', requireTreeNode on; 2026-10-16 - before that it was available from the start; requireShopPack off; the shop pack is no longer needed).
-//   Tree branches: 'lucky' (+10% stake win chance) -> 'highroller' (stakes grow 50% faster). STAKE (disableStake, stake* fields): holding one of the SIX BASIC blocks (IsStakeBlock: Black, Gray, White, Red, Green, Blue - nothing else)  for at least stakeMinSeconds
+//   Tree branches: 'lucky' (+10% stake win chance) -> 'highroller' (stakes grow 50% faster).
+//   DESIGN RULE (2026-10-16): right-hold is each block's SECOND ACTION. Only the six pure pixels get a STAKE (they are the money); skill blocks do a
+//   utility instead (PixelBlockRules hold rules: Pesticide charges, Whetstone rapid clicks...). Texts describe it that way, never 'stake on any block'. STAKE (disableStake, stake* fields): holding one of the SIX BASIC blocks (IsStakeBlock: Black, Gray, White, Red, Green, Blue - nothing else)  for at least stakeMinSeconds
 //   (0.75) puts a stake on it: the value grows 1 + stakeGrowthPerSecond (0.6) x seconds held; on release the outcome is rolled (stakeWinChance 0.6, +/- stakeWinChanceChangeAtFullHold over a full meter) -
 //   pays that multiplier or stakeLossValue (0 = nothing) - and travels with the block through the queue (PixelClicker.nextInLineStake -> liveStake, payout x liveStake). It is revealed when the block comes
 //   round again: its aura glows green / red (PixelClickerAura.StakeHighlight), a top status line says what it is worth and a good / bad sound plays. While holding, the label by the meter shows the value and the chance.
