@@ -1218,3 +1218,5 @@
 [2026-10-16 17:00 UTC] Visitor names (Big Tim the Lumberjack...) stay on one line and shrink to fit their box, long greetings shrink instead of being cut off, and Big Tim's greeting is shorter.
 [2026-10-16 17:05 UTC] Big Tim's potions now cost some of their own material plus a random pure pixel (rolled each visit), and he brings 0-2 of each potion so some don't show up every time.
 [2026-10-16 17:05 UTC] Lumberjack's Focus now costs 3 Termite Hives plus two different random pure pixels (rolled each visit).
+[2026-10-16 17:05 UTC] Lumberjack's Focus also costs some of one random woodcutting pixel (with the Termite Hives and two random pure pixels).
+[2026-10-16 17:05 UTC] Fixed rerolling Big Tim's offers by spamming 'Ask for an offer': his random roll is now fixed per wood / pay pair for the whole visit (a new visit rolls again).

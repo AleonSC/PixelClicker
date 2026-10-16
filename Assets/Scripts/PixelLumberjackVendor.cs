@@ -5,12 +5,12 @@
 //   and bark), plain POTIONS of the Lumberjack pack's pixels (Wood, Bark, Sap, Leaf, Heartwood, Twig, Acorn, Whetstone, Pesticide) and NOW AND THEN (focusChance 35% a visit) the
 //   LUMBERJACK'S FOCUS item (DeviceKind.FocusPotion, 1-2 in stock). PRICES (RollVisitPrice, once per visit): a potion costs some of its own material
 //   (potionMaterialRange 10-30) + ONE random pure pixel (potionPureFraction 30-60% of its normal price); Focus costs focusHiveCost (3) Termite Hives + TWO
-//   different random pure pixels (focusPureRange 100-300 each). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
+//   different random pure pixels (focusPureRange 100-300 each) + some of one random woodcutting pixel you have unlocked (focusWoodRange 10-30). Each potion comes 0-2 times (potionStockLow / High) - 0 = not on sale this visit. SELL tab (2026-10-16, its own panel - PixelVisitorMinigame.CustomSellPanel): pick ANY woodcutting currency you hold
 //   (drop-down), the AMOUNT (slider + 10% / 25% / 50% / All), what to be paid in (a pure pixel you have unlocked), then 'Ask for an offer' - he names a RANDOM price; Accept or Decline.
 //   OFFER FORMULA (Offer): fair = amount x UnitValue(wood) / UnitValue(pure)   [UnitValue = 1 / (spawn weight x pay per click / clicks) - the rarer, the more it is worth]
 //     x sellRate (0.8, his cut)  x bulk = 1 - bulkDiscountMax (0.3) x amount / (amount + bulkHalfAmount 400)  [big piles get a worse rate per unit]
 //     x mood (rolled once per visit, moodRange 0.85-1.15)  x roll = the average of two randoms in offerRollRange 0.7-1.25 (usually near the middle, rarely an extreme)
-//     x patience = 1 - haggleStep (0.07) x earlier asks this visit (min 0.6: re-asking for a better price slowly sours him)
+//     (the roll is made ONCE per wood / pay pair per visit - asking again or changing the amount never rerolls it; a new visit rolls again)
 //     x (1 + Woodcutting level x levelBonusPerLevel 1%, max 30%), rounded down, at least 1.
 //   Only visits while Woodcutting is the skill in training (CanVisit); started by PixelGuideVendor.StartVendors as soon as Woodcutting is available; counters lumberjack.bought / lumberjack.sold.
 // ---------------------------------------------------
@@ -42,9 +42,6 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [Min(1f)]
     [Tooltip("Amount at which half of the bulk discount applies.")]
     [SerializeField] private float bulkHalfAmount = 400f;
-    [Range(0f, 0.3f)]
-    [Tooltip("Each time you ask again this visit, his offers drop by this much (haggling sours him). Never below 60%.")]
-    [SerializeField] private float haggleStep = 0.07f;
     [Range(0f, 0.05f)]
     [Tooltip("Better prices per Woodcutting level (0.01 = +1% a level, at most +30%).")]
     [SerializeField] private float levelBonusPerLevel = 0.01f;
@@ -67,6 +64,8 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     [SerializeField] private Vector2 potionPureFraction = new Vector2(0.3f, 0.6f);
     [Tooltip("Lumberjack's Focus: how many Termite Hives it costs.")]
     [SerializeField] private int focusHiveCost = 3;
+    [Tooltip("Lumberjack's Focus: the amount (min, max) of its random woodcutting pixel.")]
+    [SerializeField] private Vector2 focusWoodRange = new Vector2(10f, 30f);
     [Tooltip("Lumberjack's Focus: the amount (min, max) of EACH of its two random pure pixels.")]
     [SerializeField] private Vector2 focusPureRange = new Vector2(100f, 300f);
 
@@ -124,6 +123,12 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         {
             if (consumables.DeviceKindOf(item) != PixelConsumables.DeviceKind.FocusPotion) return null;   // (the Wood Chipper keeps its normal price)
             List<PixelShop.PackCost> focus = new List<PixelShop.PackCost> { new PixelShop.PackCost { type = PixelClicker.PixelType.HornetNest, amount = Mathf.Max(1, focusHiveCost) } };
+            // ...plus some of one random woodcutting pixel you have unlocked (not the hive itself)
+            List<PixelClicker.PixelType> wood = new List<PixelClicker.PixelType>();
+            foreach (PixelClicker.PixelTier t in clicker.Tiers)
+                if (t.unlocked && IsPackPixel(t.type) && t.type != PixelClicker.PixelType.HornetNest) wood.Add(t.type);
+            if (wood.Count > 0)
+                focus.Add(new PixelShop.PackCost { type = wood[Random.Range(0, wood.Count)], amount = Mathf.Round(Random.Range(Mathf.Min(focusWoodRange.x, focusWoodRange.y), Mathf.Max(focusWoodRange.x, focusWoodRange.y))) });
             for (int n = 0; n < 2 && pure.Count > 0; n++)
             {
                 int k = Random.Range(0, pure.Count);
@@ -189,6 +194,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     private readonly List<int> payTiers = new List<int>();
     private float mood = 1f;
     private int asks;
+    private readonly Dictionary<long, double> visitRolls = new Dictionary<long, double>();   // (wood tier, pay tier) -> his random roll, fixed for the whole visit
     private double offerAmount, offerGet;
     private int offerWood = -1, offerPay = -1;
     private bool panelUpdating;
@@ -197,6 +203,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
     {
         mood = Random.Range(Mathf.Min(moodRange.x, moodRange.y), Mathf.Max(moodRange.x, moodRange.y));
         asks = 0;
+        visitRolls.Clear();
         offerWood = -1;
         TMP_FontAsset font = VendorFont;
         Color box = new Color(0.16f, 0.16f, 0.22f, 1f), green = new Color(0.2f, 0.55f, 0.3f, 1f), grey = new Color(0.3f, 0.3f, 0.38f, 1f);
@@ -325,11 +332,16 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         double fair = amount * UnitValue(tiers[wood]) / UnitValue(tiers[pay]);
         double rate = sellRate > 0f ? sellRate : 0.8f;
         double bulk = 1d - bulkDiscountMax * amount / (amount + System.Math.Max(1d, bulkHalfAmount));
-        float lo = Mathf.Min(offerRollRange.x, offerRollRange.y), hi = Mathf.Max(offerRollRange.x, offerRollRange.y);
-        double roll = (Random.Range(lo, hi) + Random.Range(lo, hi)) * 0.5;
-        double patience = System.Math.Max(0.6, 1d - haggleStep * asks);
+        // His random roll is made ONCE per wood / pay pair per visit, so asking again (or changing the amount) never rerolls the price.
+        long key = (long)wood * 100000L + pay;
+        if (!visitRolls.TryGetValue(key, out double roll))
+        {
+            float lo = Mathf.Min(offerRollRange.x, offerRollRange.y), hi = Mathf.Max(offerRollRange.x, offerRollRange.y);
+            roll = (Random.Range(lo, hi) + Random.Range(lo, hi)) * 0.5;
+            visitRolls[key] = roll;
+        }
         double level = 1d + System.Math.Min(0.3, levelBonusPerLevel * PixelSkills.LevelOfId(PixelSkills.WoodcuttingId));
-        return System.Math.Max(1d, System.Math.Floor(fair * rate * bulk * mood * roll * patience * level));
+        return System.Math.Max(1d, System.Math.Floor(fair * rate * bulk * mood * roll * level));
     }
 
     private void AskOffer()
@@ -342,7 +354,7 @@ public class PixelLumberjackVendor : PixelVisitorMinigame
         asks++;
         PixelClicker.PixelTier[] tiers = clicker.Tiers;
         string say = asks <= 1 ? (mood >= 1.05f ? "Good day today! " : mood <= 0.92f ? "Rough morning... " : "")
-                   : asks <= 3 ? "Hmm, again? " : "You're testing my patience, friend. ";
+                   : "Same as before, friend - my price is my price. ";
         string gold = ColorUtility.ToHtmlStringRGB(new Color(1f, 0.85f, 0.4f));
         PixelUIKit.SetText(offerLabel, say + "I'll give you <b><color=#" + gold + ">" + PixelClicker.FormatNumber(offerGet) + " " + tiers[pay].displayName + "</color></b> for "
                                        + PixelClicker.FormatNumberShort(amount) + " " + tiers[wood].displayName + ".");
