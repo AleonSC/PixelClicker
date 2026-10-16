@@ -147,7 +147,7 @@ public static class PixelBlockCatalog
         B(PixelType.Bark, PixelTag.Wood | PixelTag.Standalone,
             guide: t => "Woodcutting block: rough bark. One chop, pays a little."),
         B(PixelType.Sap, PixelTag.Wood | PixelTag.Standalone,
-            guide: t => "Woodcutting block: a blob of sticky sap. It pays well for one chop, and an old Sap pixel does not bounce when it lands."),
+            guide: t => "Woodcutting block: a blob of sticky sap. It pays well for one chop. A Sap husk doesn't bounce, and it keeps the woodcutting husks around it fresh: each one that comes inside its yellow circle lasts 5 s longer (once), and the sap gains 1 s for each of them."),
         B(PixelType.Leaf, PixelTag.Wood | PixelTag.Standalone,
             guide: t => "Woodcutting block: a flat green leaf with a pale midrib. One chop, pays little. An old Leaf pixel drifts down slowly instead of dropping."),
         B(PixelType.Heartwood, PixelTag.Wood | PixelTag.Standalone,

@@ -61,6 +61,7 @@ public static class PixelSystems
         new Entry(typeof(PixelOrbitCamera), "Camera"),
         new Entry(typeof(PixelClickerAura), "World"),
         new Entry(typeof(PixelDayNight), "World"),
+        new Entry(typeof(PixelSapField), "World"),
         new Entry(typeof(PixelMyWindow), "UI"),
         new Entry(typeof(PixelDaylight), "World"),
         new Entry(typeof(PixelNextUp), "UI"),

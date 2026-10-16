@@ -1230,3 +1230,4 @@
 [2026-10-16 17:27 UTC] Code: the instant-use items (Ghost Bait, Pet Treat, Bait Bucket, Prime Gauntlet, Conveyor Belt, Lumberjack's Focus, Pesticide Spray, Combo Fuel) now live in one data-driven list (PixelInstantItems) instead of hand-written cases.
 [2026-10-16 17:27 UTC] The skill level-up badge now lasts a little longer (3.6 s) and follows the mouse, sitting just above the pointer over the +XP popups.
 [2026-10-16 17:29 UTC] To-do: added block 'power' bonuses (a block-specific special effect when you charge a left click on it).
+[2026-10-16 17:32 UTC] Sap husks now keep woodcutting husks fresh: a soft yellow circle round each Sap husk; every woodcutting husk that comes inside it lasts 5 s longer (once per husk) and glows faintly yellow while inside, and the sap gains 1 s for each different husk in its circle.
