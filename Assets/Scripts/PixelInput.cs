@@ -136,6 +136,17 @@ public static class PixelInput
 #endif
     }
 
+    /// <summary>True on the frame any keyboard key or mouse button goes down (skipping intros).</summary>
+    public static bool AnyInputPressed()
+    {
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+        return (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) ||
+               (Mouse.current != null && (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame || Mouse.current.middleButton.wasPressedThisFrame));
+#else
+        return Input.anyKeyDown;
+#endif
+    }
+
     /// <summary>True while the mouse is over a UI element (so clicks on UI don't also hit the game).</summary>
     public static bool PointerOverUI() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }

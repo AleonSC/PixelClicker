@@ -1166,3 +1166,4 @@
 [2026-10-16 13:29 UTC] Edge-click aiming: clicking near the edge of the cube throws its husk out of that side (within about 25 degrees), the middle still scatters at random, so husks can be aimed at the Recycler while clicking.
 [2026-10-16 13:29 UTC] Recycler streak: a husk of a different colour now halves the streak instead of ending it (Streak Keep On Switch), since full resets made streaks impossible once Gray was in the mix.
 [2026-10-16 13:29 UTC] To-do: edge-click husk aiming marked done.
+[2026-10-16 13:36 UTC] Main menu launch intro: the black screen folds down into the menu bar, then the logo drops in and the buttons pop in one after another (any key or click skips it).

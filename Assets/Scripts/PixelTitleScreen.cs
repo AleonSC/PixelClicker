@@ -16,7 +16,7 @@ using UnityEngine.UI;
 /// Added automatically by PixelClicker.
 /// </summary>
 [DefaultExecutionOrder(1000)]
-public class PixelTitleScreen : MonoBehaviour
+public partial class PixelTitleScreen : MonoBehaviour
 {
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() // keeps static state clean when Enter Play Mode skips the domain reload
@@ -335,7 +335,11 @@ public class PixelTitleScreen : MonoBehaviour
             ApplyTransition(TransitionSeconds); // everything hidden, then it comes in
             StartCoroutine(ReturnRoutine());
         }
-        else ApplyTransition(0f);
+        else
+        {
+            ApplyTransition(0f);
+            if (playIntro && !PixelSaveGame.AutoStartNewGame) StartCoroutine(IntroRoutine());   // launch: the black screen folds down into the bar (PixelTitleIntro.cs)
+        }
     }
 
     private IEnumerator ReturnRoutine()
@@ -464,7 +468,7 @@ public class PixelTitleScreen : MonoBehaviour
                 float shrink = Mathf.Clamp(Mathf.Min(1f, (room - top - logoBobAmount) / natural), 0.3f, 1f);
                 logoRect.localScale = new Vector3(shrink, shrink, 1f);   // (the cells of the logo scale with their container)
             }
-            logoRect.anchoredPosition = new Vector2(0f, -top + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
+            logoRect.anchoredPosition = new Vector2(0f, -top + logoIntroOffset + Mathf.Sin(Time.unscaledTime * logoBobSpeed * Mathf.PI * 2f) * logoBobAmount);
         }
     }
 
