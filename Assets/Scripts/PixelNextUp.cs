@@ -1,7 +1,7 @@
 // ---- System notes ----
 // PixelNextUp.cs
 //   The window has a header (title + '-' button) and is a PixelWindowChrome window: drag it by the header, minimize it to the header, dock it against the left / right screen side (slides out on hover); remembered in PlayerPrefs PixelClicker.NextUp.Window.*.
-//   The 'Next up' window (component added by PixelClicker.Awake; shown while the Block Hold upgrade is owned and Settings > Interface > 'Next-up window' is on, PlayerPrefs
+//   The 'Next up' window (component added by PixelClicker.Awake; shown from the start (onlyWithBlockHold off; on = only once Block Hold is unlocked in the Standard tree) while Settings > Interface > 'Next-up window' is on, PlayerPrefs
 //   PixelClicker.Setting.NextUp, default on): a slim vertical window at the left edge with THREE spinning cubes - the block coming NEXT on top, the block on the cube NOW in the middle
 //   (bigger) and the block BEFORE it at the bottom (dim). When the block changes the cubes slide down one slot (the new next slides in from above, the old 'before' slides out below);
 //   any other change (a Block Hold swap) pops the changed cubes in and out. Data: PixelClicker.PeekNextTier() (a block put back by Block Hold that waits in line, else the pre-rolled
@@ -18,6 +18,8 @@ public class PixelNextUp : MonoBehaviour
     [Header("Window")]
     [Tooltip("Where the window sits the first time: offset from the middle of the left screen edge (pixels, canvas units). After that the player drags it (it remembers), minimizes it with '-' or docks it by dragging it against a screen side.")]
     [SerializeField] private Vector2 position = new Vector2(24f, 0f);
+    [Tooltip("Show the window only once Block Hold is unlocked (Standard skill tree). Off = from the start of the game (Block Hold moved to the skill tree, and the window is handy on its own).")]
+    [SerializeField] private bool onlyWithBlockHold = false;
     [Min(0f)]
     [Tooltip("Distance between two cubes (pixels). 0 = the default (112).")]
     [SerializeField] private float slotSpacing = 0f;
@@ -75,7 +77,7 @@ public class PixelNextUp : MonoBehaviour
     private void Update()
     {
         if (clicker == null) clicker = PixelFind.First<PixelClicker>();
-        bool show = clicker != null && Enabled && PixelBlockHold.Instance != null && PixelBlockHold.Instance.Active
+        bool show = clicker != null && Enabled && (!onlyWithBlockHold || (PixelBlockHold.Instance != null && PixelBlockHold.Instance.Active))
                     && !PixelTitleScreen.Showing && !PixelTitleScreen.Reversing && clicker.Tiers != null && clicker.Tiers.Length > 0;
         if (!show)
         {
