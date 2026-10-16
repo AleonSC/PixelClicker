@@ -429,11 +429,11 @@ public class PixelDevTools : MonoBehaviour
     private void RefreshSessionLabel()
     {
         if (sessionLabel == null) return;
-        if (!PixelSessionRecorder.Recording) { sessionLabel.text = sessionStartText; sessionShownSecond = -1; return; }
+        if (!PixelSessionRecorder.Recording) { sessionLabel.text = sessionStartLabel; sessionShownSecond = -1; return; }
         int s = Mathf.FloorToInt(PixelSessionRecorder.ElapsedSeconds);
         if (s == sessionShownSecond) return;
         sessionShownSecond = s;
-        sessionLabel.text = sessionStopText.Replace("{time}", (s / 60).ToString("00") + ":" + (s % 60).ToString("00"));
+        sessionLabel.text = sessionStopLabel.Replace("{time}", (s / 60).ToString("00") + ":" + (s % 60).ToString("00"));
     }
 
     private void Update()
@@ -492,11 +492,23 @@ public class PixelDevTools : MonoBehaviour
     }
 
 
+    [Header("Dev reports widget (short labels for its half-width buttons; the long explanations are in the hover tips)")]
+    [Tooltip("Dev reports button: opens the crash report folder.")]
+    [SerializeField] private string reportsCrashLabel = "Crash folder";
+    [Tooltip("Dev reports button: snapshot of the view bounds.")]
+    [SerializeField] private string reportsBoundsLabel = "Bounds";
+    [Tooltip("Dev reports button: mark this moment (screenshot + report).")]
+    [SerializeField] private string reportsMomentLabel = "Mark moment";
+    [Tooltip("Dev reports button: UI layout dump.")]
+    [SerializeField] private string reportsUiLabel = "UI dump";
+    [Tooltip("Dev reports button: skill balance report.")]
+    [SerializeField] private string reportsBalanceLabel = "Balance";
+
     [Header("Session recorder")]
     [Tooltip("Label of the session recorder button while nothing is recorded (PixelSessionRecorder).")]
-    [SerializeField] private string sessionStartText = "Start session recording";
+    [SerializeField] private string sessionStartLabel = "Record session";
     [Tooltip("Label of the session recorder button while recording ({time} = game time recorded so far).")]
-    [SerializeField] private string sessionStopText = "Stop & save session ({time})";
+    [SerializeField] private string sessionStopLabel = "Stop & save {time}";
 
     [Header("Balance report")]
     [Tooltip("Label of the Tools tab button that writes the skill balance report (PixelBalanceReport) - paste the file / clipboard into any AI.")]
@@ -773,28 +785,28 @@ public class PixelDevTools : MonoBehaviour
             float half = (inner - 10f) * 0.5f, x2 = 40f + half + 10f, y2 = y + rowHeight + WidgetRowGap, y3 = y2 + rowHeight + WidgetRowGap;
 
             // Row 1: crash report folder | snapshot bounds (waits so the panel can be closed first)
-            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", "Open crash report folder", new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Button report = PixelUIKit.CreateButton(font, content, "Report Folder Button", reportsCrashLabel, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
             Place(report.GetComponent<RectTransform>(), 40f, y, half);
             report.onClick.AddListener(PixelCrashLog.OpenFolder);
             report.interactable = PixelCrashLog.Available;   // (crash reports switched off: the button stays, greyed out)
             AddTip(report.gameObject, reportTipText);
-            Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", boundsSnapshotText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Button snap = PixelUIKit.CreateButton(font, content, "Bounds Snapshot Button", reportsBoundsLabel, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
             Place(snap.GetComponent<RectTransform>(), x2, y, half);
             snap.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelBoundsSnapshot.Capture(), "Bounds snapshot")));
 
             // Row 2: mark this moment | UI layout dump (same wait; the keys F10 / F11 need no wait)
-            Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", markMomentText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Button moment = PixelUIKit.CreateButton(font, content, "Mark Moment Button", reportsMomentLabel, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
             Place(moment.GetComponent<RectTransform>(), 40f, y2, half);
             moment.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.MarkMoment(), "Marked moment")));
-            Button uiDump = PixelUIKit.CreateButton(font, content, "UI Layout Button", uiDumpText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Button uiDump = PixelUIKit.CreateButton(font, content, "UI Layout Button", reportsUiLabel, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
             Place(uiDump.GetComponent<RectTransform>(), x2, y2, half);
             uiDump.onClick.AddListener(() => StartCoroutine(ProbeRoutine(() => PixelDevProbe.UiLayoutDump(), "UI layout dump")));
 
             // Row 3: skill balance report (no wait) | session recorder (Start, then Stop & save)
-            Button balance = PixelUIKit.CreateButton(font, content, "Balance Report Button", balanceReportText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Button balance = PixelUIKit.CreateButton(font, content, "Balance Report Button", reportsBalanceLabel, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
             Place(balance.GetComponent<RectTransform>(), 40f, y3, half);
             balance.onClick.AddListener(() => PixelBalanceReport.Capture(balanceManualCps, balanceAutoCps, (int[])balanceLevels.Clone()));
-            Button session = PixelUIKit.CreateButton(font, content, "Session Recorder Button", sessionStartText, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
+            Button session = PixelUIKit.CreateButton(font, content, "Session Recorder Button", sessionStartLabel, new Vector2(half, rowHeight), buttonColor, textColor, fontSize);
             Place(session.GetComponent<RectTransform>(), x2, y3, half);
             sessionLabel = session.GetComponentInChildren<TMP_Text>();
             session.onClick.AddListener(() =>
@@ -804,10 +816,10 @@ public class PixelDevTools : MonoBehaviour
                 RefreshSessionLabel();
             });
             AddTip(session.gameObject, "Records a real play session (clicking speed, income per minute, milestones, husks) and writes a report to paste to Claude. Only time in the game counts.");
-            AddTip(balance.gameObject, "Skill balance report: XP and pay per click for every skill at the reference speeds, copied to the clipboard.");
-            AddTip(moment.gameObject, "Screenshot + a report of this moment (also the F10 key).");
-            AddTip(uiDump.gameObject, "Every open UI element as text (positions, sizes, texts).");
-            AddTip(snap.gameObject, "The camera / floor / view-bounds numbers, for tuning where husks can go.");
+            AddTip(balance.gameObject, "Balance report: XP and pay per click for every skill at the reference clicking speeds, saved and copied to the clipboard.");
+            AddTip(moment.gameObject, "Mark this moment: a screenshot + a report of the game right now (waits 3 s so you can close this window; the F10 key does it at once).");
+            AddTip(uiDump.gameObject, "UI layout dump: every open UI element as text - positions, sizes, texts (waits 3 s).");
+            AddTip(snap.gameObject, "Snapshot bounds: the camera / floor / view-bounds numbers, for tuning where husks can go (waits 3 s).");
             Widget(content, board, "devreports", ws, y, 3);
             y += rowHeight + 24f;
             ws = content.childCount;
@@ -1615,6 +1627,11 @@ public class PixelDevTools : MonoBehaviour
         tipRect.pivot = new Vector2(0f, 1f);
         tipLabel = PixelUIKit.CreateText(font, go.transform, "Text", "", fontSize * 0.8f, TextAlignmentOptions.TopLeft, FontStyles.Normal, textColor);
         tipLabel.raycastTarget = false;
+#if UNITY_2023_1_OR_NEWER
+        tipLabel.textWrappingMode = TextWrappingModes.Normal;   // long tips wrap inside the box (max width below) instead of running off the screen on one line
+#else
+        tipLabel.enableWordWrapping = true;
+#endif
         RectTransform lr = tipLabel.rectTransform;
         lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
         lr.offsetMin = new Vector2(12f, 8f); lr.offsetMax = new Vector2(-12f, -8f);
