@@ -9,7 +9,7 @@ The pixels that fall off the cube are husks. They are material, not money - find
 Hold the right mouse button on the cube to keep its block out of the rotation for a while (Block Hold).
 Holding a plain block with Block Hold puts a stake on it: when it comes round again it pays more - or nothing.
 Hover over the cube or a husk to see what it is. The Pixel Guide tells you more about every block.
-The Recycler takes up to 10 husks. Press its button and each one pays back half of its value.
+Every husk that lands in the Recycler pays back half its value and some XP. Several of the same colour in a row build a streak for more XP.
 Grab the handles on the Recycler or the Storage Crate to carry them somewhere else. Scroll while carrying to turn them.
 In first person you can open the Recycler's back hatch and toss husks in by hand.
 Press {key:ViewWindow} to open the View window: first person, orbital or top down, plus a zoom slider.

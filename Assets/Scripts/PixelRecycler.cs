@@ -32,6 +32,13 @@
 //   (KeepContentsWhileCarried). A husk that leaves the bin is handed back to the floor's husk list (AdoptOldPixel), never left orphaned.
 //   Pressing the button freezes every counted husk into the bin first (a still-settling one could be jostled out by the shake, let go and caught
 //   again after the cycle) and tips any UNCOUNTED husk lying in the bin out over the front / back rim (EjectUncounted), also again before paying.
+//   AUTO RECYCLING (autoRecycle, on by default since 2026-10-16 - the session reports showed nobody stopped clicking to fill the bin): every husk that is
+//   captured is recycled on its own recycleDelay (0.5 s) later - no button, no filling up (RecycleDue from Capture, RecycleOne). Each pays payoutShare of its
+//   value as currency AND skill XP (xpPerHusk 1 x the STREAK multiplier, PixelSkills.AddHuskXp: the husk's own skill, pure husks train Standard). The streak
+//   grows by streakStep (0.2) for each husk of the SAME type as the one before, up to streakMaxMultiplier (20), and ends after streakTimeout (6 s) without a
+//   recycled husk or on a different type; the counter above the bin shows 'Gray streak x1.4 XP', the band glows warmer and the click sound climbs with it.
+//   Stats recycler.husks / paid / xp, Best recycler.streak. The idea is that husks reach it WITHOUT the player stopping (bin placed where husks land; edge-click
+//   aiming is planned). The button / capacity / lid cycle below is the old manual mode (autoRecycle off) and still works in auto mode for anything left inside.
 //   A FULL bin makes its button flash and pulse (UpdateButtonFlash, flashColor). Removing the Recycler destroys what is inside. Not a belt acceptor yet.
 // ---------------------------------------------------
 using System.Collections;
@@ -53,6 +60,20 @@ public class PixelRecycler : MonoBehaviour
     [SerializeField] private float processSeconds = 2f;
     [Tooltip("Strongest shake at the end of processing, in husk widths.")]
     [SerializeField] private float shakeStrength = 0.12f;
+    [Header("Auto recycling (2026-10-16)")]
+    [Tooltip("Every husk that lands in the bin is recycled on its own a moment later - no button, no filling up. Off = the old way (fill the bin, press the button).")]
+    [SerializeField] private bool autoRecycle = true;
+    [Tooltip("Seconds a husk lies in the bin before it is recycled.")]
+    [SerializeField] private float recycleDelay = 0.5f;
+    [Tooltip("Skill XP per recycled husk before the streak bonus (it trains the husk's own skill; pure husks train Standard).")]
+    [SerializeField] private float xpPerHusk = 1f;
+    [Tooltip("STREAK: each husk of the SAME type as the one before raises the XP multiplier by this much (0.2 = x1.2, x1.4...). A different type starts the streak again.")]
+    [SerializeField] private float streakStep = 0.2f;
+    [Tooltip("Highest streak multiplier.")]
+    [SerializeField] private float streakMaxMultiplier = 20f;
+    [Tooltip("Seconds without a recycled husk before the streak ends.")]
+    [SerializeField] private float streakTimeout = 6f;
+
     [Tooltip("Colour of the 'n / 12' counter above the bin.")]
     [SerializeField] private Color counterColor = new Color(0.75f, 1f, 0.75f, 1f);
 
@@ -126,6 +147,9 @@ public class PixelRecycler : MonoBehaviour
     private Vector3 buttonScale;
     private TextMeshPro counter;
     private readonly List<Rigidbody> inside = new List<Rigidbody>();
+    private readonly Dictionary<Rigidbody, float> capturedAt = new Dictionary<Rigidbody, float>();   // auto recycling: when each husk was caught
+    private int streakTier = -1, streakCount;
+    private float lastRecycleTime = -100f, streakShownUntil;
     private readonly Dictionary<Rigidbody, float> restSeconds = new Dictionary<Rigidbody, float>();   // how long each captured husk has lain still
     private float tick;
     private bool processing;
@@ -455,9 +479,60 @@ public class PixelRecycler : MonoBehaviour
             if (!clicker.ReleaseOldPixel(b, false)) continue;
             if (despawn != null) despawn.Held = true;   // it never shrinks away while it is in the bin
             inside.Add(b);
+            capturedAt[b] = Time.time;
             changed = true;
         }
         if (changed) { RefreshCounter(); PixelAudio.Play("click"); }
+        if (autoRecycle) RecycleDue();
+    }
+
+    // ---- Auto recycling + streak ----
+
+    private float StreakMultiplier => Mathf.Min(Mathf.Max(1f, streakMaxMultiplier), 1f + Mathf.Max(0f, streakStep) * streakCount);
+
+    /// <summary>Auto mode: every husk that has lain in the bin for recycleDelay is recycled now (not one in the player's hand).</summary>
+    private void RecycleDue()
+    {
+        if (Time.time - lastRecycleTime > streakTimeout && streakTier >= 0) { streakCount = 0; streakTier = -1; SetGlow(IdleGlow, 1f); RefreshCounter(); }
+        for (int i = inside.Count - 1; i >= 0; i--)
+        {
+            Rigidbody b = inside[i];
+            if (b == null) { inside.RemoveAt(i); continue; }
+            if (!capturedAt.TryGetValue(b, out float at)) { capturedAt[b] = Time.time; continue; }   // (loaded / older husks: their timer starts now)
+            if (Time.time - at < Mathf.Max(0f, recycleDelay)) continue;
+            OldPixelInfo info = b.GetComponent<OldPixelInfo>();
+            if (info != null && info.heldByPlayer) continue;
+            inside.RemoveAt(i);
+            capturedAt.Remove(b);
+            restSeconds.Remove(b);
+            RecycleOne(b, info);
+        }
+    }
+
+    /// <summary>One husk: currency back (payoutShare of what a click on it pays now) and skill XP x the same-type streak; the husk is gone.</summary>
+    private void RecycleOne(Rigidbody b, OldPixelInfo info)
+    {
+        Vector3 at = b.position;
+        Destroy(b.gameObject);
+        if (info == null || clicker == null || !clicker.IsValidTierIndex(info.tierIndex)) return;
+        int tier = info.tierIndex;
+        bool sameStreak = tier == streakTier && Time.time - lastRecycleTime <= streakTimeout;
+        streakCount = sameStreak ? streakCount + 1 : 0;
+        streakTier = tier;
+        lastRecycleTime = Time.time;
+        float mult = StreakMultiplier;
+        double pay = CurrentValue(tier) * payoutShare;
+        if (pay > 0d) clicker.AddCurrency(tier, pay);
+        double xp = Mathf.Max(0f, xpPerHusk) * mult;
+        if (xp > 0d && PixelSkills.Instance != null) PixelSkills.Instance.AddHuskXp(tier, xp);
+        PixelStats.Count("recycler.husks");
+        PixelStats.Count("recycler.paid", pay);
+        PixelStats.Count("recycler.xp", xp);
+        PixelStats.Best("recycler.streak", streakCount + 1);
+        PixelAudio.Play("ui_click", 0.6f + 0.05f * Mathf.Min(streakCount, 12));   // (the pitch climbs with the streak)
+        SetGlow(Color.Lerp(IdleGlow, WorkGlow, Mathf.Clamp01(streakCount / 10f)), 1.4f);
+        streakShownUntil = Time.time + streakTimeout;
+        RefreshCounter();
     }
 
     /// <summary>
@@ -595,6 +670,14 @@ public class PixelRecycler : MonoBehaviour
     private void RefreshCounter()
     {
         if (counter == null) return;
+        if (autoRecycle)
+        {
+            // Auto mode: the counter shows the streak (type + multiplier) while it lasts.
+            bool showStreak = clicker != null && clicker.IsValidTierIndex(streakTier) && streakCount > 0 && Time.time - lastRecycleTime <= streakTimeout;
+            counter.text = showStreak ? clicker.Tiers[streakTier].displayName.Replace(" Pixels", "") + " streak\n<size=80%>x" + StreakMultiplier.ToString("0.0") + " XP</size>"
+                                      : "<size=70%>drop husks in</size>";
+            return;
+        }
         int cap = Mathf.Max(1, capacity);
         counter.text = inside.Count + " / " + cap + (inside.Count >= cap ? "\n<size=60%>full - press the button</size>" : "");
     }

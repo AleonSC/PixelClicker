@@ -550,7 +550,7 @@ public class PixelGuideVendor : MonoBehaviour
         "Psst... over here. The name's Cubie. I deal in pixels. A very legitimate little operation.",
         "See, pixels are money around here. The white, gray and black ones, then red, green and blue later. Why those? Why not the shiny ones? Who knows. That's just what we're all told, so we go with it.",
         "Now, how do you get them? You click. And click. And click some more. Same thing, all day. Don't look at me like that, everybody starts at the bottom.",
-        "Oh, and those leftover bits piling up on the floor? Don't just let them rot. Take this Recycler: toss them in, hit the button, and you get a little something back.\n\n{recycler}",
+        "Oh, and those leftover bits piling up on the floor? Don't just let them rot. Take this Recycler: anything that lands in it gets recycled for a little something back. Same colour in a row? Even better.\n\n{recycler}",
         "Think of it as paying your dues. Tedious? Absolutely. But grind long enough and the good stuff opens up. Come find me when you've got a pile worth my time.",
     };
 

@@ -1161,3 +1161,5 @@
 [2026-10-16 12:33 UTC] To-do: edge-click husk aiming, to build after the two Recycler test runs.
 [2026-10-16 12:34 UTC] Session report: shows reading time (Cubie's visits, tip boxes), time with a window open, and the clicking speed outside reading time.
 [2026-10-16 12:35 UTC] Session report: Cubie's gift pack is listed under Gifts with its time and no longer counted as income.
+[2026-10-16 12:57 UTC] Session recorder: a recording now carries on through a scene reload (new game / back from the main menu), and a small REC button in the game stops and saves it.
+[2026-10-16 12:57 UTC] Recycler rework: every husk that lands in the bin is recycled by itself (no button, no 10-husk limit) for half its value plus skill XP, and husks of the same colour in a row build a streak (+0.2x XP each, up to x20, ends after 6 s) shown above the bin.

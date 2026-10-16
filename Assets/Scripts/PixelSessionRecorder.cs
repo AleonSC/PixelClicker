@@ -17,7 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PixelSessionRecorder : MonoBehaviour
 {
@@ -34,11 +36,22 @@ public class PixelSessionRecorder : MonoBehaviour
     [Min(5)]
     [Tooltip("Window (seconds) for the 'best clicking speed' figure.")]
     [SerializeField] private int bestWindowSeconds = 10;
+    [Tooltip("While a session is being recorded (Dev Hub / main menu button), a small 'REC m:ss' button shows in the game; click it to stop and save the report.")]
+    [SerializeField] private bool showRecButton = true;
+    [Tooltip("Where the in-game REC button sits: anchor corner of the screen (0,1 = top left, 1,1 = top right).")]
+    [SerializeField] private Vector2 recButtonAnchor = new Vector2(1f, 1f);
+    [Tooltip("Offset of the REC button from its anchor corner, in pixels at 1080p.")]
+    [SerializeField] private Vector2 recButtonOffset = new Vector2(-24f, -96f);
 
     public static PixelSessionRecorder Instance { get; private set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { Instance = null; GiftFrom = null; }
+    private static void ResetStatics() { Instance = null; GiftFrom = null; carried = null; }
+
+    // A recording SURVIVES a scene reload (New game / Restart / back from the main menu reload the scene and with it this component): the old
+    // component's recording state is kept here in OnDestroy and copied into the new one in Awake (CarryOver).
+    private static PixelSessionRecorder carried;
+    private readonly Dictionary<string, double> totalsAtReload = new Dictionary<string, double>();   // stat counters as the old scene ended (a new game may restart them)
 
     /// <summary>A session is being recorded right now.</summary>
     public static bool Recording => Instance != null && Instance.recording;
@@ -54,7 +67,7 @@ public class PixelSessionRecorder : MonoBehaviour
     }
 
     private static readonly string[] HuskKeys =
-        { "old.despawned", "old.capped", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "old.shredded", "old.shattered", "old.banked", "old.attached" };
+        { "old.despawned", "old.capped", "old.grabbed", "old.vacuumed", "recycler.husks", "recycler.paid", "recycler.xp", "old.shredded", "old.shattered", "old.banked", "old.attached" };
 
     private static readonly string[] HoldKeys = { "hold.count", "stake.placed", "stake.won", "stake.lost" };
 
@@ -107,12 +120,72 @@ public class PixelSessionRecorder : MonoBehaviour
     {
         Instance = this;
         clicker = PixelFind.First<PixelClicker>();
+        if (carried != null && carried != this) CarryOver(carried);
+        carried = null;
     }
 
     private void OnDestroy()
     {
         Unsubscribe();
+        if (recording)
+        {
+            carried = this;   // (a scene reload: the next scene's recorder picks the recording up)
+            totalsAtReload.Clear();
+            foreach (string k in statsAtStart.Keys) totalsAtReload[k] = PixelStats.Total(k);
+        }
+        if (recButton != null) Destroy(recButton.transform.root.gameObject);
         if (Instance == this) Instance = null;
+    }
+
+    /// <summary>
+    /// Takes over a recording from the recorder of the previous scene: every RUN-TIME field (not the Inspector settings, not the scene references) is
+    /// copied across, then it listens to the new scene's clicker. Done field by field with reflection so a new field can never be forgotten here.
+    /// </summary>
+    private void CarryOver(PixelSessionRecorder old)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+        foreach (System.Reflection.FieldInfo f in typeof(PixelSessionRecorder).GetFields(flags))
+        {
+            if (f.IsDefined(typeof(SerializeField), false) || typeof(UnityEngine.Object).IsAssignableFrom(f.FieldType)) continue;
+            f.SetValue(this, f.GetValue(old));
+        }
+        if (!recording || clicker == null) { recording = false; return; }
+        clicker.CurrencyGained += OnGained;
+        clicker.PixelCollected += OnCollected;
+        SnapshotPolledState();   // (the reloaded game must not look like a burst of new unlocks)
+        // Counters may have started again (a new game): shift each start value so the report keeps counting from where it was.
+        foreach (KeyValuePair<string, double> kv in totalsAtReload)
+            if (statsAtStart.ContainsKey(kv.Key)) statsAtStart[kv.Key] += PixelStats.Total(kv.Key) - kv.Value;
+        clicksSeeded = false;   // (the click counters are taken as a fresh baseline on the next sample)
+        lastStandardXp = SkillXp(PixelSkills.StandardId);
+        lastSkillXp = TrainingXp();
+        Mark("Scene reloaded (main menu / new game) - recording carried on");
+    }
+
+    // ---- the in-game REC button (stop & save without opening the Dev Hub) ----
+    private Button recButton;
+    private TMP_Text recLabel;
+
+    private void UpdateRecButton()
+    {
+        bool show = showRecButton && recording && !autoMode && !PixelCalm.InMenu;
+        if (!show) { if (recButton != null && recButton.gameObject.activeSelf) recButton.gameObject.SetActive(false); return; }
+        if (recButton == null)
+        {
+            GameObject canvas = PixelUIKit.CreateCanvas("Session REC Button", 950, new Vector2(1920f, 1080f), true);
+            PixelUIKit.EnsureEventSystem();
+            recButton = PixelUIKit.CreateButton(clicker != null ? clicker.UIFont : null, canvas.transform, "REC", "", new Vector2(200f, 46f), new Color(0.55f, 0.08f, 0.1f, 0.92f), Color.white, 20f);
+            RectTransform r = recButton.GetComponent<RectTransform>();
+            r.anchorMin = r.anchorMax = r.pivot = recButtonAnchor;
+            r.anchoredPosition = recButtonOffset;
+            recLabel = recButton.GetComponentInChildren<TMP_Text>();
+            recButton.onClick.AddListener(() => StopAndSave());
+        }
+        if (!recButton.gameObject.activeSelf) recButton.gameObject.SetActive(true);
+        int sec = Mathf.FloorToInt(elapsed);
+        bool blink = Mathf.Repeat(Time.unscaledTime, 1f) < 0.6f;
+        string text = (blink ? "<color=#FF6060>REC</color> " : "<color=#802020>REC</color> ") + (sec / 60) + ":" + (sec % 60).ToString("00") + "  <size=70%>STOP</size>";
+        if (recLabel != null && recLabel.text != text) recLabel.text = text;
     }
 
     private void OnApplicationQuit()
@@ -196,6 +269,8 @@ public class PixelSessionRecorder : MonoBehaviour
             autoStarted = true;
             Begin(true);
         }
+        if (carried != null && carried != this && !recording) { CarryOver(carried); carried = null; }   // (in case this scene's Awake ran before the old recorder was destroyed)
+        UpdateRecButton();
         if (!recording || PixelCalm.InMenu) return;   // only time in the game counts
 
         float dt = Mathf.Min(Time.unscaledDeltaTime, 0.25f);
@@ -388,8 +463,9 @@ public class PixelSessionRecorder : MonoBehaviour
         {
             statsAtStart.TryGetValue(k, out double was);
             double now = PixelStats.Total(k) - was;
-            sb.AppendLine("  " + HuskLabel(k) + ": " + (k == "recycler.paid" ? PixelClicker.FormatNumber(now) : now.ToString("F0")));
+            sb.AppendLine("  " + HuskLabel(k) + ": " + (k == "recycler.paid" || k == "recycler.xp" ? PixelClicker.FormatNumber(now) : now.ToString("F0")));
         }
+        sb.AppendLine("  Longest Recycler streak (this save): " + PixelStats.Total("recycler.streak").ToString("F0"));
         sb.AppendLine();
 
         sb.AppendLine("== BLOCK HOLD AND STAKES ==");
@@ -479,6 +555,7 @@ public class PixelSessionRecorder : MonoBehaviour
             case "old.vacuumed": return "Vacuumed";
             case "recycler.husks": return "Recycled";
             case "recycler.paid": return "Recycler paid (currency)";
+            case "recycler.xp": return "Recycler XP (with streaks)";
             case "old.shredded": return "Shredded";
             case "old.shattered": return "Shattered";
             case "old.banked": return "Stored in the Pixel Bank";
